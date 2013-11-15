@@ -131,22 +131,23 @@ static uint8_t ov9650_qqvga_rgb565[][2] = {
     {OV9650_COM3,   0x04},  /*  Vario Pixels */
     {OV9650_COM4,   0x80},  /*  Vario Pixels */
 //    {OV9650_CLKRC,  0x81},  /*  Clock control */
-    {OV9650_CLKRC,  0x80},  /*  Clock control */
+    {OV9650_CLKRC,  0x87},  /*  Clock control */
     {OV9650_COM5,   0x00},  /*  System clock  */
     {OV9650_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
       
     /* See Implementation Guide Section 3.4.1.2 */
+    {OV9650_ADC,    0x91},  /*  reserved  */
+    {OV9650_ACOM38, 0x12},  /*  reserved  */
+#if 0
       //15FPS
-      {OV9650_ADC,    0x91},  /*  reserved  */
-//    {OV9650_ACOM38, 0x12},  /*  reserved  */
-//    {OV9650_OFON,   0x43},  /*  Power down register  */
-//    {0x35,          0x91},  /*  reserved  */
-
+      {OV9650_OFON,   0x43},  /*  Power down register  */
+      {0x35,          0x91},  /*  reserved  */
+#else
       //30FPS
+      //{OV9650_ACOM38, 0x92},  /*  reserved  */
       {OV9650_OFON,   0x50},  /*  Power down register  */
-      {OV9650_ACOM38, 0x92},  /*  reserved  */
       {0x35,          0x81},  /*  reserved  */
-
+#endif
 
     /* YUV Format /Special Effects Controls */
     {OV9650_TSLB,   0x01},  /*  YUVU/DBLC Enable */
