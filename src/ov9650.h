@@ -1,6 +1,7 @@
 #ifndef __OV9650_H__
 #define __OV9650_H__
 #include <stdint.h>
+#include "imlib.h"
 /* OV9650 Registers definition */
 #define OV9650_GAIN       0x00
 #define OV9650_BLUE       0x01
@@ -105,28 +106,39 @@
 #define OV9650_COM26      0xA5
 #define OV9650_GGAIN      0xA6
 #define OV9650_VGAST      0xA7
-enum ov9650_config_t { 
+
+enum ov9650_config { 
   QQVGA_RGB565, /* QQVGA160x120/RGB565*/
   QQVGA_YUV422, /* QQVGA160x120/YUV422*/
 };
 
-struct ov9650_id_t {
+enum ov9650_commands { 
+    SNAPSHOT=1,
+    COLOR_TRACK,     
+    MOTION_DETECTION,
+};
+
+struct ov9650_id {
     uint8_t MIDH;
     uint8_t MIDL;
     uint8_t PID;
     uint8_t VER;
 };
 
+struct ov9650_handle {
+    struct ov9650_id id;
+    enum ov9650_config config;
+    struct frame_buffer frame_buffer;
+};
+
 /* Hardware initialization */
-int ov9650_init();
+int ov9650_init(struct ov9650_handle *ov9650);
 /* Reset sensor */
-void ov9650_reset();
-void ov9650_read_id(struct ov9650_id_t *id);
+void ov9650_reset(struct ov9650_handle *ov9650);
 /* Configure sensor */
-int ov9650_config(enum ov9650_config_t config);
-int ov9650_set_brightness(int level);
-void ov9650_set_exposure(uint16_t exposure);
-int ov9650_snapshot();
-uint8_t *get_frame_buffer();
+int ov9650_config(struct ov9650_handle *ov9650, enum ov9650_config config);
+int ov9650_set_brightness(struct ov9650_handle *ov9650, int level);
+int ov9650_set_exposure(struct ov9650_handle *ov9650, uint16_t exposure);
+int ov9650_snapshot(struct ov9650_handle *ov9650);
 void delay(uint32_t ntime);
 #endif /* __OV9650_H__ */

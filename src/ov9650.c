@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <stdlib.h>
+#include <strings.h>
 #include <stm32f4xx_tim.h>
 #include <stm32f4xx_i2c.h>
 #include <stm32f4xx_gpio.h>
@@ -8,11 +10,10 @@
 #include <stm32f4xx_dcmi.h>
 #include "sccb.h"
 #include "ov9650.h"
-#define DCMI_DR_ADDRESS                (DCMI_BASE + 0x28)
-#define FRAME_BUFFER_SIZE              (160 * 120 * 2) /* width * height * bpp */
+#define NUM_BR_LEVELS       7
+#define DCMI_DR_ADDRESS     (DCMI_BASE + 0x28)
 #define BREAK() __asm__ volatile ("BKPT")
-static uint8_t frame_ready = 0;
-uint8_t frame_buffer[FRAME_BUFFER_SIZE];
+static volatile int frame_ready = 0;
 
 static uint8_t ov9650_init_regs[][2] = {
     /* See Implementation Guide */
@@ -332,7 +333,6 @@ static void extclk_config(int frequency)
 
 static int dcmi_config()
 {
-    DMA_InitTypeDef  DMA_InitStructure;
     DCMI_InitTypeDef DCMI_InitStructure;
     NVIC_InitTypeDef NVIC_InitStructure;
     GPIO_InitTypeDef GPIO_InitStructure;
@@ -383,6 +383,7 @@ static int dcmi_config()
     /*** DCMI Configuration ***/ 
     DCMI_DeInit();
     DCMI_Cmd(DISABLE);
+
     /* Enable DCMI clock */
     RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_DCMI, ENABLE);
 
@@ -405,8 +406,31 @@ static int dcmi_config()
     /* Init DCMI */ 
     DCMI_Init(&DCMI_InitStructure);
 
+#if 0
+    /* Configure DCMI Interrupts */
+    DCMI_ITConfig(DCMI_IT_OVF, ENABLE);
+    DCMI_ITConfig(DCMI_IT_ERR, ENABLE);
+    //DCMI_ITConfig(DCMI_IT_FRAME, ENABLE);
+    //DCMI_ITConfig(DCMI_IT_LINE, ENABLE);
+    //DCMI_ITConfig(DCMI_IT_VSYNC, ENABLE);
 
-    /*** DMA Configuration ***/
+    NVIC_InitStructure.NVIC_IRQChannel = DCMI_IRQn;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    NVIC_Init(&NVIC_InitStructure); 
+#endif
+
+    /* Enable DCMI Perphieral */
+    DCMI_Cmd(ENABLE);
+    return 0;
+}
+
+int dma_config(uint8_t *buffer, uint32_t size)
+{
+    DMA_InitTypeDef  DMA_InitStructure;
+    NVIC_InitTypeDef NVIC_InitStructure;
+
     /* Enable DMA2 clock */
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
 
@@ -420,10 +444,10 @@ static int dcmi_config()
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
 
     /* Number of data items to be transferred in multiples of (Mburst beat*(Msize)/(Psize))*/
-    DMA_InitStructure.DMA_BufferSize = FRAME_BUFFER_SIZE/4;
+    DMA_InitStructure.DMA_BufferSize = size/4;
 
     /* Base memory and peripheral addresses */
-    DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) frame_buffer;
+    DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) buffer;
     DMA_InitStructure.DMA_PeripheralBaseAddr = DCMI_DR_ADDRESS;	
 
     /* Memory and peripheral address increments */
@@ -471,69 +495,67 @@ static int dcmi_config()
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStructure); 
 
-#if 0
-    /* Configure DCMI Interrupts */
-    DCMI_ITConfig(DCMI_IT_OVF, ENABLE);
-    DCMI_ITConfig(DCMI_IT_ERR, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_FRAME, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_LINE, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_VSYNC, ENABLE);
-
-    NVIC_InitStructure.NVIC_IRQChannel = DCMI_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure); 
-#endif
-
-    /* Enable DCMI Perphieral */
-    DCMI_Cmd(ENABLE);
     return 0;
 }
 
-int ov9650_init() 
+int ov9650_init(struct ov9650_handle *ov9650) 
 {
+    /* Initialize SCCB interface */
     SCCB_Init();
     delay(1000);
 
+    /* Configure the external clock (XCLK) */
     extclk_config(24000000);
     delay(1000);
 
+    /* Configure the DCMI interface */
     dcmi_config();
+    
+    bzero(ov9650, sizeof(struct ov9650_handle));
+
+    /* read sensor id */
+    ov9650->id.MIDH = SCCB_Read(OV9650_MIDH);
+    ov9650->id.MIDL = SCCB_Read(OV9650_MIDL);
+    ov9650->id.PID  = SCCB_Read(OV9650_PID);
+    ov9650->id.VER  = SCCB_Read(OV9650_VER);
     return 0;
 }
 
-void ov9650_reset()
+void ov9650_reset(struct ov9650_handle *ov9650)
 {
   SCCB_Write(OV9650_COM7, 0x80);
   delay(10000);
 }
 
-void ov9650_read_id(struct ov9650_id_t *id)
-{
-    id->MIDH = SCCB_Read(OV9650_MIDH);
-    id->MIDL = SCCB_Read(OV9650_MIDL);
-    id->PID = SCCB_Read(OV9650_PID);
-    id->VER = SCCB_Read(OV9650_VER);
-}
-
-int ov9650_config(enum ov9650_config_t config)
+int ov9650_config(struct ov9650_handle *ov9650, enum ov9650_config config)
 {
     int i=0;
     uint8_t (*regs)[2];
 
-    ov9650_reset();
+    /* Reset all registers to their default values */
+    ov9650_reset(ov9650);
           
+    ov9650->config = config;
+    struct frame_buffer *frame_buffer = &ov9650->frame_buffer;
+
     switch (config) {
         case QQVGA_RGB565:
+            frame_buffer->width  = 160;
+            frame_buffer->height = 120;
+            frame_buffer->bpp    = 2;
             regs = ov9650_qqvga_rgb565;
             break;
-      case QQVGA_YUV422:
+        case QQVGA_YUV422:
+            frame_buffer->width  = 160;
+            frame_buffer->height = 120;
+            frame_buffer->bpp    = 2;
             regs = ov9650_qqvga_yuv422;
             break;
+        default:
+            return -1;
     }
 
-    /* write image configuration first */
+    /* Write image configuration first */
     while (regs[i][0]) {
         SCCB_Write(regs[i][0], regs[i][1]);
         while (SCCB_Read(regs[i][0]) != regs[i][1]) {
@@ -542,7 +564,7 @@ int ov9650_config(enum ov9650_config_t config)
         i++;
     }
 
-    /* write general sensor configuration */
+    /* Write general sensor configuration */
     i=0;
     regs = ov9650_init_regs;
     while (regs[i][0]) {
@@ -552,12 +574,22 @@ int ov9650_config(enum ov9650_config_t config)
         }  
         i++;
     }
+
+    /* realloc frame buffer */
+    frame_buffer->pixels = realloc(frame_buffer->pixels, 
+            frame_buffer->width * frame_buffer->height * frame_buffer->bpp);
+
+    if (frame_buffer->pixels == NULL) {
+        return -1;
+    }
+
+    /* Configure the DMA stream */
+    dma_config(frame_buffer->pixels, frame_buffer->width * frame_buffer->height * frame_buffer->bpp);
+
     return 0;
 }   
 
-#define NUM_BR_LEVELS 7
-
-int ov9650_set_brightness(int level)
+int ov9650_set_brightness(struct ov9650_handle *ov9650, int level)
 {
     int i;
     static uint8_t regs[NUM_BR_LEVELS + 1][3] = {
@@ -579,33 +611,40 @@ int ov9650_set_brightness(int level)
     for (i=0; i<3; i++) {
         SCCB_Write(regs[0][i], regs[level][i]);
     }
+
+    return 0;
 }
 
-void ov9650_set_exposure(uint16_t exposure)
+int ov9650_set_exposure(struct ov9650_handle *ov9650, uint16_t exposure)
 {
    uint8_t val;
    val = SCCB_Read(OV9650_COM1);
+
    /* exposure [1:0] */
    SCCB_Write(OV9650_COM1, val | (exposure&0x03));
+
    /* exposure [9:2] */
    SCCB_Write(OV9650_AECH, ((exposure>>2)&0xFF));
+
    /* exposure [15:10] */
    SCCB_Write(OV9650_AECHM, ((exposure>>10)&0x3F));
+    
+   return 0;
 }
 
-uint8_t *get_frame_buffer()
+int ov9650_snapshot(struct ov9650_handle *ov9650)
 {
-    return frame_buffer;
-}
-
-int ov9650_snapshot()
-{
+    /* clear frame_ready flag */
     frame_ready = 0;
+    /* re-enable DCMI interface */
     DCMI_CaptureCmd(ENABLE);
-    while (!frame_ready) {
-        /* wait for frame transfer to finish */
-        delay(100);
-    }            
+
+    /* wait for dma transfer to finish */
+    while (!frame_ready);
+
+    /* wait for DCMI to be disabled */
+    while (DCMI->CR & DCMI_CR_CAPTURE);
+
     return 0;
 }
 
