@@ -1,5 +1,6 @@
 #include "imlib.h"
 #include <stdlib.h>
+#include <string.h>
 
 #define MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -60,7 +61,22 @@ void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv)
     }
 }
 
-void imlib_color_track(struct frame_buffer *frame_buffer, struct color *color, struct point *point, int threshold)
+/* converts a grayscale buffer to RGB565 to display on LCDs */
+void imlib_grayscale_to_rgb565(struct frame_buffer *fb)
+{
+#if 0
+    int i;
+    for (i=0; i<(fb->width * fb->height * fb->bpp); i++) {
+        uint8_t y = fb->pixels[i];
+        uint8_t r = y*31/255;
+        uint8_t g = y*63/255;
+        uint8_t b = y*31/255;
+        //uint16_t rgb = (r << 11) | (g << 5) | b;
+    }
+#endif
+}
+
+void imlib_color_track(struct frame_buffer *fb, struct color *color, struct point *point, int threshold)
 {
     int x,y;
     uint8_t p0,p1;
@@ -74,11 +90,11 @@ void imlib_color_track(struct frame_buffer *frame_buffer, struct color *color, s
     //to avoid sqrt we use squared values
     threshold *= threshold;
 
-    for (y=0; y<frame_buffer->height; y++) {
-        for (x=0; x<frame_buffer->width; x++) {
-            int i=y*frame_buffer->width*frame_buffer->bpp+x*frame_buffer->bpp;
-            p0 = frame_buffer->pixels[i];
-            p1 = frame_buffer->pixels[i+1];
+    for (y=0; y<fb->height; y++) {
+        for (x=0; x<fb->width; x++) {
+            int i=y*fb->width*fb->bpp+x*fb->bpp;
+            p0 = fb->pixels[i];
+            p1 = fb->pixels[i+1];
 
             /* map RGB565 to RGB888 */
             rgb.r = (uint8_t) (p0>>3) * 255/31;

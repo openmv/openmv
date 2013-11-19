@@ -36,6 +36,7 @@ struct frame_buffer {
 
 float imlib_distance(struct color *c0, struct color *c1);
 void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv);
-void imlib_color_track(struct frame_buffer *buffer, struct color *color, struct point *point, int threshold);
-void imlib_erosion_filter(struct frame_buffer *buffer, uint8_t *kernel, int k_size);
+void imlib_grayscale_to_rgb565(struct frame_buffer *fb);
+void imlib_color_track(struct frame_buffer *fb, struct color *color, struct point *point, int threshold);
+void imlib_erosion_filter(struct frame_buffer *fb, uint8_t *kernel, int k_size);
 #endif //__IMLIB_H__

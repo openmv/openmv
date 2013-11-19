@@ -107,15 +107,33 @@
 #define OV9650_GGAIN      0xA6
 #define OV9650_VGAST      0xA7
 
-enum ov9650_config { 
-  QQVGA_RGB565, /* QQVGA160x120/RGB565*/
-  QQVGA_YUV422, /* QQVGA160x120/YUV422*/
+enum ov9650_pixfmt { 
+    PIXFMT_RGB565, /* 2BPP/RGB565*/
+    PIXFMT_YUV422, /* 2BPP/YUV422*/
+};
+
+enum ov9650_framesize { 
+    FRAMESIZE_SXGA, /* 1280x1024 */
+    FRAMESIZE_VGA,  /* 640x480   */
+    FRAMESIZE_CIF,  /* 352x288   */
+    FRAMESIZE_QVGA, /* 320x240   */
+    FRAMESIZE_QCIF, /* 176x144   */
+    FRAMESIZE_QQVGA,/* 160x120   */
+    FRAMESIZE_QQCIF /* 88x72     */
+};
+
+enum ov9650_framerate { 
+    FRAMERATE_2FPS =0x9F,
+    FRAMERATE_8FPS =0x87,
+    FRAMERATE_15FPS=0x83,
+    FRAMERATE_30FPS=0x81,
+    FRAMERATE_60FPS=0x80,
 };
 
 enum ov9650_commands { 
-    SNAPSHOT=1,
-    COLOR_TRACK,     
-    MOTION_DETECTION,
+    OV9650_SNAPSHOT=1,
+    OV9650_COLOR_TRACK, 
+    OV9650_MOTION_DETECTION,
 };
 
 struct ov9650_id {
@@ -127,7 +145,9 @@ struct ov9650_id {
 
 struct ov9650_handle {
     struct ov9650_id id;
-    enum ov9650_config config;
+    enum ov9650_pixfmt pixfmt;
+    enum ov9650_framesize framesize;
+    enum ov9650_framerate framerate;
     struct frame_buffer frame_buffer;
 };
 
@@ -135,8 +155,9 @@ struct ov9650_handle {
 int ov9650_init(struct ov9650_handle *ov9650);
 /* Reset sensor */
 void ov9650_reset(struct ov9650_handle *ov9650);
-/* Configure sensor */
-int ov9650_config(struct ov9650_handle *ov9650, enum ov9650_config config);
+int ov9650_set_pixfmt(struct ov9650_handle *ov9650, enum ov9650_pixfmt pixfmt);
+int ov9650_set_framerate(struct ov9650_handle *ov9650, enum ov9650_framerate framerate);
+int ov9650_set_framesize(struct ov9650_handle *ov9650, enum ov9650_framesize framesize);
 int ov9650_set_brightness(struct ov9650_handle *ov9650, int level);
 int ov9650_set_exposure(struct ov9650_handle *ov9650, uint16_t exposure);
 int ov9650_snapshot(struct ov9650_handle *ov9650);
