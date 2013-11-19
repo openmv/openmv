@@ -6,11 +6,7 @@
 #include <stm32f4xx_tim.h>
 #include <stm32f4xx_usart.h>
 #include <ov9650.h>
-#define LED_RED_PIN     GPIO_Pin_4
-#define LED_BLUE_PIN    GPIO_Pin_5
-#define LED_GREEN_PIN   GPIO_Pin_6
-static uint16_t led_pin=LED_BLUE_PIN;
-static uint16_t old_pin=LED_BLUE_PIN;
+static uint16_t led;
 
 void TIM3_IRQHandler(void)
 {
@@ -18,10 +14,10 @@ void TIM3_IRQHandler(void)
     TIM_ClearITPendingBit(TIM3, TIM_IT_Update);
 
     /* Toggle LED1 */
-    GPIO_ToggleBits(GPIOD, led_pin);
+    GPIO_ToggleBits(GPIOD, led);
 }
 
-void rgb_led_init()
+void rgb_led_init(enum led_color color)
 {
     GPIO_InitTypeDef  GPIO_InitStructure;
     NVIC_InitTypeDef  NVIC_InitStructure;
@@ -44,7 +40,6 @@ void rgb_led_init()
     GPIO_SetBits(GPIOD, GPIO_Pin_5);
     GPIO_SetBits(GPIOD, GPIO_Pin_6);
 
-#if 1 /* LED flash */
     /* Enable TIM2 clock */
     RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
@@ -82,26 +77,16 @@ void rgb_led_init()
 
     /* TIM2 enable counters */
     TIM_Cmd(TIM3, ENABLE);
-#endif
+
+    led=color;
 }
 
 
 void rgb_led_set_color(enum led_color color)
 {
-    switch (color) {
-        case LED_RED:
-            old_pin = led_pin;
-            led_pin = LED_RED_PIN;
-            break;
-        case LED_GREEN:
-            old_pin = led_pin;
-            led_pin = LED_GREEN_PIN;
-            break;
-        case LED_BLUE:
-            old_pin = led_pin;
-            led_pin = LED_BLUE_PIN;
-            break;
-    }
+    int old_pin = led;
+    led = color;
 
+    /* turn off old LED */
     GPIO_SetBits(GPIOD, old_pin);
 }
