@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <stm32f4xx_tim.h>
 #include <stm32f4xx_i2c.h>
 #include <stm32f4xx_gpio.h>
@@ -18,8 +18,18 @@ static volatile int frame_ready = 0;
 static uint8_t ov9650_init_regs[][2] = {
     /* See Implementation Guide */
     {OV9650_COM2,   0x01},  /*  Output drive x2 */
+    {OV9650_COM5,   0x00},  /*  System clock  */
+    {OV9650_CLKRC,  0x81},  /*  Clock control 30 FPS*/
     {OV9650_MVFP,   0x00},  /*  Mirror/VFlip */
-      
+    //{0x22, 0x7f}, // ff/7f/3f/1f for 60/30/15/7.5fps
+    //{0x23, 0x03}, // 01/03/07/0f for 60/30/15/7.5fps
+
+    {OV9650_COM7,   0x14},  /*  QVGA/RGB565 */    
+    {OV9650_COM1,   0x24},  /*  QQVGA-QQCIF/Skip Option */
+    {OV9650_COM3,   0x04},  /*  Vario Pixels */
+    {OV9650_COM4,   0x80},  /*  Vario Pixels */
+    {OV9650_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
+ 
     /* Dummy pixels settings */
     {OV9650_EXHCH,  0x00},  /*  Dummy Pixel Insert MSB */
     {OV9650_EXHCL,  0x00},  /*  Dummy Pixel Insert LSB */
@@ -125,32 +135,28 @@ static uint8_t ov9650_init_regs[][2] = {
     {0x00,  0x00}
 };
 
-static uint8_t ov9650_qqvga_rgb565[][2] = {
+static uint8_t ov9650_rgb565_regs[][2] = {
     /* See Implementation Guide */
     {OV9650_COM7,   0x14},  /*  QVGA/RGB565 */    
     {OV9650_COM1,   0x24},  /*  QQVGA-QQCIF/Skip Option */
     {OV9650_COM3,   0x04},  /*  Vario Pixels */
     {OV9650_COM4,   0x80},  /*  Vario Pixels */
-//    {OV9650_CLKRC,  0x81},  /*  Clock control */
-    {OV9650_CLKRC,  0x87},  /*  Clock control */
-    {OV9650_COM5,   0x00},  /*  System clock  */
     {OV9650_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
       
     /* See Implementation Guide Section 3.4.1.2 */
-    {OV9650_ADC,    0x91},  /*  reserved  */
-    {OV9650_ACOM38, 0x12},  /*  reserved  */
 #if 0
-      //15FPS
-      {OV9650_OFON,   0x43},  /*  Power down register  */
-      {0x35,          0x91},  /*  reserved  */
+    {OV9650_OFON,   0x43},  /*  Power down register  */
+    {OV9650_ACOM38, 0x12},  /*  reserved  */
+    {OV9650_ADC,    0x00},  /*  reserved  */
+    {OV9650_RSVD35, 0x91},  /*  reserved  */
 #else
-      //30FPS
-      //{OV9650_ACOM38, 0x92},  /*  reserved  */
-      {OV9650_OFON,   0x50},  /*  Power down register  */
-      {0x35,          0x81},  /*  reserved  */
+    /* for higher frame rates */
+    {OV9650_OFON,   0x50},  /*  Power down register  */
+    {OV9650_ACOM38, 0x12},  /*  reserved  */
+    {OV9650_ADC,    0x00},  /*  reserved  */
+    {OV9650_RSVD35, 0x81},  /*  reserved  */
 #endif
-
-    /* YUV Format /Special Effects Controls */
+    /* YUV fmt /Special Effects Controls */
     {OV9650_TSLB,   0x01},  /*  YUVU/DBLC Enable */
     {OV9650_MANU,   0xC0},  /*  Manual U */
     {OV9650_MANV,   0x80},  /*  Manual V */
@@ -173,20 +179,21 @@ static uint8_t ov9650_qqvga_rgb565[][2] = {
     {0x00,  0x00}
 };
 
-static uint8_t ov9650_qqvga_yuv422[][2] = {
+static uint8_t ov9650_yuv422_regs[][2] = {
     /* See Implementation Guide */
     {OV9650_COM7,   0x10},  /*  QVGA */
     {OV9650_COM1,   0x24},  /*  QQVGA-QQCIF/Skip Option */
-    {OV9650_CLKRC,  0x81},  /*  Clock control */
-    {OV9650_COM5,   0x00},  /*  System clock  */
+    {OV9650_COM3,   0x04},  /*  Vario Pixels */
+    {OV9650_COM4,   0x80},  /*  Vario Pixels */
     {OV9650_COM15,  0xC0},  /*  Output range 0x00-0xFF  */
  
     /* See Implementation Guide Section 3.4.1.2 */
-    {OV9650_ADC,    0x91},  /*  reserved  */
+    {OV9650_OFON,   0x50},  /*  Power down register  */
     {OV9650_ACOM38, 0x12},  /*  reserved  */
-    {OV9650_OFON,   0x43},  /*  Power down register  */
+    {OV9650_ADC,    0x00},  /*  reserved  */
+    {OV9650_RSVD35, 0x81},  /*  reserved  */
 
-    /* YUV Format /Special Effects Controls */
+    /* YUV fmt /Special Effects Controls */
     {OV9650_TSLB,   0x01},  /*  YUVU/DBLC Enable */
     {OV9650_MANU,   0xC0},  /*  Manual U */
     {OV9650_MANV,   0x80},  /*  Manual V */
@@ -204,7 +211,6 @@ static uint8_t ov9650_qqvga_yuv422[][2] = {
     {OV9650_MTX8,   0x40},
     {OV9650_MTX9,   0x40},
     {OV9650_MTXS,   0x0d},
-//    {OV9650_HV,     0x00},
 
     /* NULL reg */
     {0x00,  0x00}
@@ -500,17 +506,33 @@ int dma_config(uint8_t *buffer, uint32_t size)
 
 int ov9650_init(struct ov9650_handle *ov9650) 
 {
+    int i=0;
+    uint8_t (*regs)[2];
+
     /* Initialize SCCB interface */
     SCCB_Init();
-    delay(1000);
+    systick_sleep(100);
 
     /* Configure the external clock (XCLK) */
     extclk_config(24000000);
-    delay(1000);
+    systick_sleep(100);
 
     /* Configure the DCMI interface */
     dcmi_config();
     
+    //ov9650_reset(ov9650);
+
+    /* Write initial general sensor registers */
+    i=0;
+    regs = ov9650_init_regs;
+    while (regs[i][0]) {
+        SCCB_Write(regs[i][0], regs[i][1]);
+        while (SCCB_Read(regs[i][0]) != regs[i][1]) {
+            SCCB_Write(regs[i][0], regs[i][1]);
+        }  
+        i++;
+    }
+
     bzero(ov9650, sizeof(struct ov9650_handle));
 
     /* read sensor id */
@@ -523,39 +545,32 @@ int ov9650_init(struct ov9650_handle *ov9650)
 
 void ov9650_reset(struct ov9650_handle *ov9650)
 {
-  SCCB_Write(OV9650_COM7, 0x80);
-  delay(10000);
+    SCCB_Write(OV9650_COM7, 0x80);
+    systick_sleep(500);
 }
 
-int ov9650_config(struct ov9650_handle *ov9650, enum ov9650_config config)
+
+int ov9650_set_pixfmt(struct ov9650_handle *ov9650, enum ov9650_pixfmt pixfmt)
 {
     int i=0;
     uint8_t (*regs)[2];
+    struct frame_buffer *fb = &ov9650->frame_buffer;
 
-    /* Reset all registers to their default values */
-    ov9650_reset(ov9650);
-          
-    ov9650->config = config;
-    struct frame_buffer *frame_buffer = &ov9650->frame_buffer;
-
-    switch (config) {
-        case QQVGA_RGB565:
-            frame_buffer->width  = 160;
-            frame_buffer->height = 120;
-            frame_buffer->bpp    = 2;
-            regs = ov9650_qqvga_rgb565;
+    ov9650->pixfmt = pixfmt;
+    switch (pixfmt) {
+        case PIXFMT_RGB565:
+            fb->bpp    = 2;
+            regs = ov9650_rgb565_regs;
             break;
-        case QQVGA_YUV422:
-            frame_buffer->width  = 160;
-            frame_buffer->height = 120;
-            frame_buffer->bpp    = 2;
-            regs = ov9650_qqvga_yuv422;
+        case PIXFMT_YUV422:
+            fb->bpp    = 2;
+            regs = ov9650_yuv422_regs;
             break;
         default:
             return -1;
     }
 
-    /* Write image configuration first */
+    /* Write pixel format registers */
     while (regs[i][0]) {
         SCCB_Write(regs[i][0], regs[i][1]);
         while (SCCB_Read(regs[i][0]) != regs[i][1]) {
@@ -564,28 +579,52 @@ int ov9650_config(struct ov9650_handle *ov9650, enum ov9650_config config)
         i++;
     }
 
-    /* Write general sensor configuration */
-    i=0;
-    regs = ov9650_init_regs;
-    while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
-        while (SCCB_Read(regs[i][0]) != regs[i][1]) {
-            SCCB_Write(regs[i][0], regs[i][1]);
-        }  
-        i++;
+    return 0;
+}
+
+int ov9650_set_framesize(struct ov9650_handle *ov9650, enum ov9650_framesize framesize)
+{
+    ov9650->framesize = framesize;
+    struct frame_buffer *fb = &ov9650->frame_buffer;
+
+    switch (framesize) {
+        case FRAMESIZE_QQVGA:
+            fb->width  = 160;
+            fb->height = 120;
+            break;
+        default:
+            return -1;
     }
 
     /* realloc frame buffer */
-    frame_buffer->pixels = realloc(frame_buffer->pixels, 
-            frame_buffer->width * frame_buffer->height * frame_buffer->bpp);
+    fb->pixels = realloc(fb->pixels, 
+            fb->width * fb->height * fb->bpp);
 
-    if (frame_buffer->pixels == NULL) {
+    if (fb->pixels == NULL) {
         return -1;
     }
 
-    /* Configure the DMA stream */
-    dma_config(frame_buffer->pixels, frame_buffer->width * frame_buffer->height * frame_buffer->bpp);
+    /* Reconfigure the DMA stream */
+    dma_config(fb->pixels, fb->width * fb->height * fb->bpp);
 
+    #include "rgb_led.h"
+    /* The sensor needs time to stablize especially 
+       when using the automatic functions of the camera */
+    rgb_led_set_color(LED_GREEN);
+    systick_sleep(5000);
+    rgb_led_set_color(LED_BLUE);
+
+    return 0;
+}
+
+int ov9650_set_framerate(struct ov9650_handle *ov9650, enum ov9650_framerate framerate)
+{
+    ov9650->framerate=framerate;
+    /* Write framerate register */
+    SCCB_Write(OV9650_CLKRC, framerate);
+    while (SCCB_Read(OV9650_CLKRC) != framerate) {
+        SCCB_Write(OV9650_CLKRC, framerate);
+    }  
     return 0;
 }   
 
