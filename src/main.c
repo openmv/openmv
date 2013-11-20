@@ -36,24 +36,15 @@ int main(void)
         ov9650.id.PID != 0x96) {
         goto error;
     }
-
-    /* Configure image size and format and FPS */
-    if (ov9650_set_pixfmt(&ov9650, PIXFMT_RGB565) != 0) {
-        goto error;
-    }
- 
-    /* Configure image size and format and FPS */
-    if (ov9650_set_framesize(&ov9650, FRAMESIZE_QQVGA) != 0) {
-        goto error;
-    }
-
-    /* Configure image size and format and FPS */
-    if (ov9650_set_framerate(&ov9650, FRAMERATE_30FPS) != 0) {
-        goto error;
-    }
-
+   
     /* Set sensor brightness level -3..+3 */
     ov9650_set_brightness(&ov9650, 2);
+
+    /* The sensor needs time to stablize especially 
+       when using the automatic functions of the camera */
+    rgb_led_set_color(LED_GREEN);
+    systick_sleep(5000);
+    rgb_led_set_color(LED_BLUE);
 
 #if 0
     /* FPS test */
@@ -70,10 +61,30 @@ int main(void)
 
     while (1) {
         switch (usart_recv()) {
-            case OV9650_SNAPSHOT: {
+            case CMD_SET_PIXFORMAT:
+                /* Configure image size and format and FPS */
+                if (ov9650_set_pixformat(&ov9650, usart_recv()) != 0) {
+                    goto error;
+                }
+                break;
+
+            case CMD_SET_FRAMESIZE:
+                /* Configure image size and format and FPS */
+                if (ov9650_set_framesize(&ov9650, usart_recv()) != 0) {
+                    goto error;
+                }
+                break;
+
+            case CMD_SET_FRAMERATE:           
+                /* Configure framerate */
+                if (ov9650_set_framerate(&ov9650, usart_recv()) != 0) {
+                    goto error;
+                }
+                break;
+
+            case CMD_SNAPSHOT: {
                 int i;
                 struct frame_buffer *fb = &ov9650.frame_buffer;
-
                 if (ov9650_snapshot(&ov9650) != 0) {
                     goto error;
                 }
@@ -83,29 +94,34 @@ int main(void)
                 }
                 break;
             }
-            case OV9650_COLOR_TRACK: {
+            case CMD_COLOR_TRACK: {
                 struct point point= {0};
                 struct frame_buffer *fb = &ov9650.frame_buffer;
-
-                /* Color struct */
+                struct color hsv;
+                #if 0
+                /* red */
                 struct color color= {
                     .h = 0,
                     .s = 70,
                     .v = 25
                 };
-    
+                #endif
+                hsv.h = usart_recv();
+                hsv.s = usart_recv();
+                hsv.v = usart_recv();
+
                 if (ov9650_snapshot(&ov9650) != 0) {
                     goto error;
                 }
 
-                imlib_color_track(&ov9650.frame_buffer, &color, &point, 10);
+                imlib_color_track(&ov9650.frame_buffer, &hsv, &point, 10);
 
                 /* Send point coords from 0%..100% */
                 usart_send(point.x*100/fb->width);
                 usart_send(point.y*100/fb->height);
                 break;
             }
-            case OV9650_MOTION_DETECTION: {
+            case CMD_MOTION_DETECTION: {
                 int i;
                 int pixels;
                 struct frame_buffer *fb = &ov9650.frame_buffer;
@@ -115,7 +131,7 @@ int main(void)
                     goto error;
                 }
 
-                if (ov9650.pixfmt != PIXFMT_YUV422) {
+                if (ov9650.pixformat != PIXFORMAT_YUV422) {
                     /* Switch sensor to YUV422 to get 
                        a grayscale image from the Y channel */
 //                    if (ov9650_config(&ov9650, OV9650_QQVGA_YUV422, OV9650_30FPS) != 0) {

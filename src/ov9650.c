@@ -10,6 +10,8 @@
 #include <stm32f4xx_dcmi.h>
 #include "sccb.h"
 #include "ov9650.h"
+#include "systick.h"
+#include "ov9650_regs.h"
 #define NUM_BR_LEVELS       7
 #define DCMI_DR_ADDRESS     (DCMI_BASE + 0x28)
 #define BREAK() __asm__ volatile ("BKPT")
@@ -17,63 +19,64 @@ static volatile int frame_ready = 0;
 
 static uint8_t ov9650_init_regs[][2] = {
     /* See Implementation Guide */
-    {OV9650_COM2,   0x01},  /*  Output drive x2 */
-    {OV9650_COM5,   0x00},  /*  System clock  */
-    {OV9650_CLKRC,  0x81},  /*  Clock control 30 FPS*/
-    {OV9650_MVFP,   0x00},  /*  Mirror/VFlip */
+    {REG_COM2,   0x01},  /*  Output drive x2 */
+    {REG_COM5,   0x00},  /*  System clock  */
+    {REG_CLKRC,  0x81},  /*  Clock control 30 FPS*/
+    {REG_MVFP,   0x00},  /*  Mirror/VFlip */
     //{0x22, 0x7f}, // ff/7f/3f/1f for 60/30/15/7.5fps
     //{0x23, 0x03}, // 01/03/07/0f for 60/30/15/7.5fps
 
-    {OV9650_COM7,   0x14},  /*  QVGA/RGB565 */    
-    {OV9650_COM1,   0x24},  /*  QQVGA-QQCIF/Skip Option */
-    {OV9650_COM3,   0x04},  /*  Vario Pixels */
-    {OV9650_COM4,   0x80},  /*  Vario Pixels */
-    {OV9650_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
+    /* Default QQVGA-RGB565 */
+    {REG_COM7,   0x14},  /*  QVGA/RGB565 */    
+    {REG_COM1,   0x24},  /*  QQVGA/Skip Option */
+    {REG_COM3,   0x04},  /*  Vario Pixels */
+    {REG_COM4,   0x80},  /*  Vario Pixels */
+    {REG_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
  
     /* Dummy pixels settings */
-    {OV9650_EXHCH,  0x00},  /*  Dummy Pixel Insert MSB */
-    {OV9650_EXHCL,  0x00},  /*  Dummy Pixel Insert LSB */
+    {REG_EXHCH,  0x00},  /*  Dummy Pixel Insert MSB */
+    {REG_EXHCL,  0x00},  /*  Dummy Pixel Insert LSB */
 
-    {OV9650_ADVFH,  0x00},  /*  Dummy Pixel Insert MSB */
-    {OV9650_ADVFL,  0x00},  /*  Dummy Pixel Insert LSB */
+    {REG_ADVFH,  0x00},  /*  Dummy Pixel Insert MSB */
+    {REG_ADVFL,  0x00},  /*  Dummy Pixel Insert LSB */
 
     /* See Implementation Guide Section 3.4.1.2 */
-    {OV9650_COM8,   0xA7}, /* Enable Fast Mode AEC/Auto Banding Filter/AGC/AWB/AEC */
+    {REG_COM8,   0xA7}, /* Enable Fast Mode AEC/Auto Banding Filter/AGC/AWB/AEC */
     {0x60,          0x8C}, /* Normal AWB, 0x0C for Advanced AWB */
-    {OV9650_AEW,    0x74}, /* AGC/AEC Threshold Upper Limit */
-    {OV9650_AEB,    0x68}, /* AGC/AEC Threshold Lower Limit */
-    {OV9650_VPT,    0xC3}, /* Fast AEC operating region */
+    {REG_AEW,    0x74}, /* AGC/AEC Threshold Upper Limit */
+    {REG_AEB,    0x68}, /* AGC/AEC Threshold Lower Limit */
+    {REG_VPT,    0xC3}, /* Fast AEC operating region */
 
     /* See OV9650 Implementation Guide */
-    {OV9650_CHLF,   0xE2}, /* External Regulator */
-    {OV9650_GRCOM,  0x3F}, /* Analog BLC/External Regulator */
+    {REG_CHLF,   0xE2}, /* External Regulator */
+    {REG_GRCOM,  0x3F}, /* Analog BLC/External Regulator */
 
     /* See OV9650 Implementation Guide */
-    {OV9650_COM11,  0x01}, /* Automatic/Manual Banding Filter */
-    {OV9650_MBD,    0x1a}, /* Manual banding filter LSB */
-    {OV9650_COM12,  0x04}, /* HREF options/ UV average  */
-    {OV9650_COM9,   0x48}, /* Gain ceiling [6:4]/Over-Exposure */
-    {OV9650_COM16,  0x02}, /* Color matrix coeff double option */
-    {OV9650_COM13,  0x10}, /* Gamma/Colour Matrix/UV delay */
-    {OV9650_COM23,  0x00}, /* Disable Color bar/Analog Color Gain */
-    {OV9650_PSHFT,  0x00}, /* Pixel delay after HREF  */
-    {OV9650_COM10,  0x00}, /* Slave mode, HREF vs HSYNC, signals negate */
-    {OV9650_EDGE,   0xa6}, /* Edge enhancement treshhold and factor */
-    {OV9650_COM6,   0x43}, /* HREF & ADBLC options */
-    {OV9650_COM22,  0x00}, /* Edge enhancement/Denoising */
+    {REG_COM11,  0x01}, /* Automatic/Manual Banding Filter */
+    {REG_MBD,    0x1a}, /* Manual banding filter LSB */
+    {REG_COM12,  0x04}, /* HREF options/ UV average  */
+    {REG_COM9,   0x48}, /* Gain ceiling [6:4]/Over-Exposure */
+    {REG_COM16,  0x02}, /* Color matrix coeff double option */
+    {REG_COM13,  0x10}, /* Gamma/Colour Matrix/UV delay */
+    {REG_COM23,  0x00}, /* Disable Color bar/Analog Color Gain */
+    {REG_PSHFT,  0x00}, /* Pixel delay after HREF  */
+    {REG_COM10,  0x00}, /* Slave mode, HREF vs HSYNC, signals negate */
+    {REG_EDGE,   0xa6}, /* Edge enhancement treshhold and factor */
+    {REG_COM6,   0x43}, /* HREF & ADBLC options */
+    {REG_COM22,  0x00}, /* Edge enhancement/Denoising */
 
-//  {OV9650_AECH,   0x00}, /* Exposure Value MSB */
-//  {OV9650_AECHM,  0x00}, /* Exposure Value LSB */
+//  {REG_AECH,   0x00}, /* Exposure Value MSB */
+//  {REG_AECHM,  0x00}, /* Exposure Value LSB */
 
     #if 0
     /* Windowing Settings */
-    {OV9650_HSTART, 0x1d},  /*  Horiz start high bits  */
-    {OV9650_HSTOP,  0xbd},  /*  Horiz stop high bits  */
-    {OV9650_HREF,   0xbf},  /*  HREF pieces  */
+    {REG_HSTART, 0x1d},  /*  Horiz start high bits  */
+    {REG_HSTOP,  0xbd},  /*  Horiz stop high bits  */
+    {REG_HREF,   0xbf},  /*  HREF pieces  */
     
-    {OV9650_VSTART, 0x00},  /*  Vert start high bits  */
-    {OV9650_VSTOP,  0x80},  /*  Vert stop high bits  */
-    {OV9650_VREF,   0x12},  /*  Pieces of GAIN, VSTART, VSTOP  */
+    {REG_VSTART, 0x00},  /*  Vert start high bits  */
+    {REG_VSTOP,  0x80},  /*  Vert stop high bits  */
+    {REG_VREF,   0x12},  /*  Pieces of GAIN, VSTART, VSTOP  */
     #endif 
 
     /* Gamma curve P */
@@ -137,43 +140,41 @@ static uint8_t ov9650_init_regs[][2] = {
 
 static uint8_t ov9650_rgb565_regs[][2] = {
     /* See Implementation Guide */
-    {OV9650_COM7,   0x14},  /*  QVGA/RGB565 */    
-    {OV9650_COM1,   0x24},  /*  QQVGA-QQCIF/Skip Option */
-    {OV9650_COM3,   0x04},  /*  Vario Pixels */
-    {OV9650_COM4,   0x80},  /*  Vario Pixels */
-    {OV9650_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
+    {REG_COM3,   0x04},  /*  Vario Pixels */
+    {REG_COM4,   0x80},  /*  Vario Pixels */
+    {REG_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
       
     /* See Implementation Guide Section 3.4.1.2 */
 #if 0
-    {OV9650_OFON,   0x43},  /*  Power down register  */
-    {OV9650_ACOM38, 0x12},  /*  reserved  */
-    {OV9650_ADC,    0x00},  /*  reserved  */
-    {OV9650_RSVD35, 0x91},  /*  reserved  */
+    {REG_OFON,   0x43},  /*  Power down register  */
+    {REG_ACOM38, 0x12},  /*  reserved  */
+    {REG_ADC,    0x00},  /*  reserved  */
+    {REG_RSVD35, 0x91},  /*  reserved  */
 #else
     /* for higher frame rates */
-    {OV9650_OFON,   0x50},  /*  Power down register  */
-    {OV9650_ACOM38, 0x12},  /*  reserved  */
-    {OV9650_ADC,    0x00},  /*  reserved  */
-    {OV9650_RSVD35, 0x81},  /*  reserved  */
+    {REG_OFON,   0x50},  /*  Power down register  */
+    {REG_ACOM38, 0x12},  /*  reserved  */
+    {REG_ADC,    0x00},  /*  reserved  */
+    {REG_RSVD35, 0x81},  /*  reserved  */
 #endif
     /* YUV fmt /Special Effects Controls */
-    {OV9650_TSLB,   0x01},  /*  YUVU/DBLC Enable */
-    {OV9650_MANU,   0xC0},  /*  Manual U */
-    {OV9650_MANV,   0x80},  /*  Manual V */
+    {REG_TSLB,   0x01},  /*  YUVU/DBLC Enable */
+    {REG_MANU,   0xC0},  /*  Manual U */
+    {REG_MANV,   0x80},  /*  Manual V */
 
     /* RGB color matrix */
-    {OV9650_MTX1,   0x71},
-    {OV9650_MTX2,   0x3e},
-    {OV9650_MTX3,   0x0c},
+    {REG_MTX1,   0x71},
+    {REG_MTX2,   0x3e},
+    {REG_MTX3,   0x0c},
 
-    {OV9650_MTX4,   0x33},
-    {OV9650_MTX5,   0x72},
-    {OV9650_MTX6,   0x00},
+    {REG_MTX4,   0x33},
+    {REG_MTX5,   0x72},
+    {REG_MTX6,   0x00},
 
-    {OV9650_MTX7,   0x2b},
-    {OV9650_MTX8,   0x66},
-    {OV9650_MTX9,   0xd2},
-    {OV9650_MTXS,   0x65},
+    {REG_MTX7,   0x2b},
+    {REG_MTX8,   0x66},
+    {REG_MTX9,   0xd2},
+    {REG_MTXS,   0x65},
 
     /* NULL reg */
     {0x00,  0x00}
@@ -181,36 +182,34 @@ static uint8_t ov9650_rgb565_regs[][2] = {
 
 static uint8_t ov9650_yuv422_regs[][2] = {
     /* See Implementation Guide */
-    {OV9650_COM7,   0x10},  /*  QVGA */
-    {OV9650_COM1,   0x24},  /*  QQVGA-QQCIF/Skip Option */
-    {OV9650_COM3,   0x04},  /*  Vario Pixels */
-    {OV9650_COM4,   0x80},  /*  Vario Pixels */
-    {OV9650_COM15,  0xC0},  /*  Output range 0x00-0xFF  */
+    {REG_COM3,   0x04},  /*  Vario Pixels */
+    {REG_COM4,   0x80},  /*  Vario Pixels */
+    {REG_COM15,  0xC0},  /*  Output range 0x00-0xFF  */
  
     /* See Implementation Guide Section 3.4.1.2 */
-    {OV9650_OFON,   0x50},  /*  Power down register  */
-    {OV9650_ACOM38, 0x12},  /*  reserved  */
-    {OV9650_ADC,    0x00},  /*  reserved  */
-    {OV9650_RSVD35, 0x81},  /*  reserved  */
+    {REG_OFON,   0x50},  /*  Power down register  */
+    {REG_ACOM38, 0x12},  /*  reserved  */
+    {REG_ADC,    0x00},  /*  reserved  */
+    {REG_RSVD35, 0x81},  /*  reserved  */
 
     /* YUV fmt /Special Effects Controls */
-    {OV9650_TSLB,   0x01},  /*  YUVU/DBLC Enable */
-    {OV9650_MANU,   0xC0},  /*  Manual U */
-    {OV9650_MANV,   0x80},  /*  Manual V */
+    {REG_TSLB,   0x01},  /*  YUVU/DBLC Enable */
+    {REG_MANU,   0xC0},  /*  Manual U */
+    {REG_MANV,   0x80},  /*  Manual V */
 
     /* YUV color matrix */
-    {OV9650_MTX1,   0x3a},
-    {OV9650_MTX2,   0x3d},
-    {OV9650_MTX3,   0x03},
+    {REG_MTX1,   0x3a},
+    {REG_MTX2,   0x3d},
+    {REG_MTX3,   0x03},
 
-    {OV9650_MTX4,   0x12},
-    {OV9650_MTX5,   0x26},
-    {OV9650_MTX6,   0x38},
+    {REG_MTX4,   0x12},
+    {REG_MTX5,   0x26},
+    {REG_MTX6,   0x38},
 
-    {OV9650_MTX7,   0x40},
-    {OV9650_MTX8,   0x40},
-    {OV9650_MTX9,   0x40},
-    {OV9650_MTXS,   0x0d},
+    {REG_MTX7,   0x40},
+    {REG_MTX8,   0x40},
+    {REG_MTX9,   0x40},
+    {REG_MTXS,   0x0d},
 
     /* NULL reg */
     {0x00,  0x00}
@@ -536,33 +535,33 @@ int ov9650_init(struct ov9650_handle *ov9650)
     bzero(ov9650, sizeof(struct ov9650_handle));
 
     /* read sensor id */
-    ov9650->id.MIDH = SCCB_Read(OV9650_MIDH);
-    ov9650->id.MIDL = SCCB_Read(OV9650_MIDL);
-    ov9650->id.PID  = SCCB_Read(OV9650_PID);
-    ov9650->id.VER  = SCCB_Read(OV9650_VER);
+    ov9650->id.MIDH = SCCB_Read(REG_MIDH);
+    ov9650->id.MIDL = SCCB_Read(REG_MIDL);
+    ov9650->id.PID  = SCCB_Read(REG_PID);
+    ov9650->id.VER  = SCCB_Read(REG_VER);
     return 0;
 }
 
 void ov9650_reset(struct ov9650_handle *ov9650)
 {
-    SCCB_Write(OV9650_COM7, 0x80);
+    SCCB_Write(REG_COM7, 0x80);
     systick_sleep(500);
 }
 
 
-int ov9650_set_pixfmt(struct ov9650_handle *ov9650, enum ov9650_pixfmt pixfmt)
+int ov9650_set_pixformat(struct ov9650_handle *ov9650, enum ov9650_pixformat pixformat)
 {
     int i=0;
     uint8_t (*regs)[2];
     struct frame_buffer *fb = &ov9650->frame_buffer;
 
-    ov9650->pixfmt = pixfmt;
-    switch (pixfmt) {
-        case PIXFMT_RGB565:
+    ov9650->pixformat = pixformat;
+    switch (pixformat) {
+        case PIXFORMAT_RGB565:
             fb->bpp    = 2;
             regs = ov9650_rgb565_regs;
             break;
-        case PIXFMT_YUV422:
+        case PIXFORMAT_YUV422:
             fb->bpp    = 2;
             regs = ov9650_yuv422_regs;
             break;
@@ -587,14 +586,37 @@ int ov9650_set_framesize(struct ov9650_handle *ov9650, enum ov9650_framesize fra
     ov9650->framesize = framesize;
     struct frame_buffer *fb = &ov9650->frame_buffer;
 
+    uint8_t com7=0x00;
+    uint8_t com1=0x04; /* Skip option */
+
     switch (framesize) {
+        case FRAMESIZE_QQCIF:
+            fb->width  = 88;
+            fb->height = 72;
+            com7 |= REG_COM7_QCIF;
+            com1 |= REG_COM1_QQCIF;
+            break;
         case FRAMESIZE_QQVGA:
             fb->width  = 160;
             fb->height = 120;
+            com7 |= REG_COM7_QVGA;
+            com1 |= REG_COM1_QQVGA;
+            break;
+        case FRAMESIZE_QCIF:
+            fb->width  = 176;
+            fb->height = 144;
+            com7 |= REG_COM7_QCIF;
             break;
         default:
             return -1;
     }
+
+    if (ov9650->pixformat == PIXFORMAT_RGB565) {
+        com7 |= REG_COM7_RGB;
+    }
+
+    SCCB_Write(REG_COM1, com1);
+    SCCB_Write(REG_COM7, com7);
 
     /* realloc frame buffer */
     fb->pixels = realloc(fb->pixels, 
@@ -606,14 +628,6 @@ int ov9650_set_framesize(struct ov9650_handle *ov9650, enum ov9650_framesize fra
 
     /* Reconfigure the DMA stream */
     dma_config(fb->pixels, fb->width * fb->height * fb->bpp);
-
-    #include "rgb_led.h"
-    /* The sensor needs time to stablize especially 
-       when using the automatic functions of the camera */
-    rgb_led_set_color(LED_GREEN);
-    systick_sleep(5000);
-    rgb_led_set_color(LED_BLUE);
-
     return 0;
 }
 
@@ -621,9 +635,9 @@ int ov9650_set_framerate(struct ov9650_handle *ov9650, enum ov9650_framerate fra
 {
     ov9650->framerate=framerate;
     /* Write framerate register */
-    SCCB_Write(OV9650_CLKRC, framerate);
-    while (SCCB_Read(OV9650_CLKRC) != framerate) {
-        SCCB_Write(OV9650_CLKRC, framerate);
+    SCCB_Write(REG_CLKRC, framerate);
+    while (SCCB_Read(REG_CLKRC) != framerate) {
+        SCCB_Write(REG_CLKRC, framerate);
     }  
     return 0;
 }   
@@ -632,7 +646,7 @@ int ov9650_set_brightness(struct ov9650_handle *ov9650, int level)
 {
     int i;
     static uint8_t regs[NUM_BR_LEVELS + 1][3] = {
-        { OV9650_AEW, OV9650_AEB, OV9650_VPT },
+        { REG_AEW, REG_AEB, REG_VPT },
         { 0x1c, 0x12, 0x50 }, /* -3 */
         { 0x3d, 0x30, 0x71 }, /* -2 */
         { 0x50, 0x44, 0x92 }, /* -1 */
@@ -657,16 +671,16 @@ int ov9650_set_brightness(struct ov9650_handle *ov9650, int level)
 int ov9650_set_exposure(struct ov9650_handle *ov9650, uint16_t exposure)
 {
    uint8_t val;
-   val = SCCB_Read(OV9650_COM1);
+   val = SCCB_Read(REG_COM1);
 
    /* exposure [1:0] */
-   SCCB_Write(OV9650_COM1, val | (exposure&0x03));
+   SCCB_Write(REG_COM1, val | (exposure&0x03));
 
    /* exposure [9:2] */
-   SCCB_Write(OV9650_AECH, ((exposure>>2)&0xFF));
+   SCCB_Write(REG_AECH, ((exposure>>2)&0xFF));
 
    /* exposure [15:10] */
-   SCCB_Write(OV9650_AECHM, ((exposure>>10)&0x3F));
+   SCCB_Write(REG_AECHM, ((exposure>>10)&0x3F));
     
    return 0;
 }
