@@ -1,10 +1,10 @@
 BIN     = "openmv"
-OBJ     = main.o ov9650.o sccb.o rgb_led.o usart.o imlib.o systick.o
-LIB     = -lc -lcm4 
+OBJ     = main.o ov9650.o sccb.o rgb_led.o usart.o imlib.o systick.o array.o
+LIB     = -lc -lcm4 -lm
 FLAGS   = -mcpu=cortex-m4 -mthumb -mcpu=cortex-m4 -mthumb -mthumb-interwork -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16
 AFLAGS  = $(FLAGS)  
-CFLAGS  = $(FLAGS) -O0 -ggdb -Wall -I. -Iinclude -I/usr/local/stm32f4/include
-LDFLAGS = $(FLAGS) -Wl,-Map=$(BIN).map -T/usr/local/stm32f4/stm32_flash.ld -L. -L./lib -L/usr/local/stm32f4/lib
+CFLAGS  = $(FLAGS) -O0 -ggdb -Wall -I. -I../include
+LDFLAGS = $(FLAGS) -Wl,-Map=$(BIN).map -T../stm32_flash.ld -L. -L../lib
 
 CC = arm-none-eabi-gcc
 AS = arm-none-eabi-as
