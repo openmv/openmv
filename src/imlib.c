@@ -1,6 +1,12 @@
-#include "imlib.h"
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <stm32f4xx.h>
+#include <core_cm4.h>
+#include <core_cm4_simd.h>
+#include "array.h"
+#include "imlib.h"
+#include "cascade.h"
 
 #define MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -18,8 +24,7 @@ float imlib_distance(struct color *c0, struct color *c1)
     sum += (c0->r - c1->r) * (c0->r - c1->r);
     sum += (c0->g - c1->g) * (c0->g - c1->g);
     sum += (c0->b - c1->b) * (c0->b - c1->b);
-//    return sqrtf(sum);
-    return 0.0;
+    return sqrtf(sum);
 }
 
 void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv)
@@ -152,3 +157,287 @@ void imlib_erosion_filter(struct frame_buffer *fb, uint8_t *kernel, int k_size)
     memcpy(fb->pixels, dst, w*h);
     free(dst);
 }
+
+void imlib_integral_image(struct frame_buffer *src, struct integral_image *sum)
+{
+  int x, y, s,t;
+  unsigned char *data = src->data;
+  typeof(*sum->data) *sumData = sum->data;
+  for (y=0; y<src->height; y++) {
+      s = 0;
+      /* loop over the number of columns */
+      for (x=0; x<src->width; x++) {
+	      /* sum of the current row (integer)*/
+     	  s += data[y*src->width+x];
+    	  t = s;
+    	  if (y != 0) {
+	          t += sumData[(y-1)*src->width+x];
+	      }
+	      sumData[y*src->width+x]=t;
+	 }
+  }
+}
+
+void imlib_scale_image(struct frame_buffer *src, struct frame_buffer *dst)
+{
+    int x, y, i, j;
+    uint8_t *t, *p;
+    int w1 = src->width;
+    int h1 = src->height;
+    int w2 = dst->width;
+    int h2 = dst->height;
+
+    int rat = 0;
+
+    uint8_t *src_data = src->pixels;
+    uint8_t *dst_data = dst->pixels;
+
+    int x_ratio = (int)((w1<<16)/w2) +1;
+    int y_ratio = (int)((h1<<16)/h2) +1;
+
+    for (i=0;i<h2;i++){
+        t = dst_data + i*w2;
+        y = ((i*y_ratio)>>16);
+        p = src_data + y*w1;
+        rat = 0;
+        for (j=0;j<w2;j++) {
+            x = (rat>>16);
+            *t++ = p[x];
+            rat += x_ratio;
+        }
+    }
+}
+
+void imlib_draw_rectangle(struct frame_buffer* image, struct rectangle *r)
+{
+	int i;
+	int col = image->width;
+	for (i = 0; i < r->width; i++) {
+      image->data[col*r->y + r->x + i] = 21;
+	}
+	for (i = 0; i < r->height; i++) {
+		image->data[col*(r->y+i) + r->x + r->width] = 21;
+	}
+	for (i = 0; i < r->width; i++) {
+		image->data[col*(r->y + r->height) + r->x + r->width - i] = 21;
+	}
+	for (i = 0; i < r->height; i++) {
+		image->data[col*(r->y + r->height - i) + r->x] = 21;
+	}
+}
+
+/* Viola-Jones face detector implementation 
+ * Original Author:   Francesco Comaschi (f.comaschi@tue.nl)
+ */
+static int evalWeakClassifier(struct integral_image *sum, int std, int p_offset, int tree_index, int w_index, int r_index )
+{
+    struct rectangle tr;
+
+    /* the node threshold is multiplied by the standard deviation of the image */
+    int t = tree_thresh_array[tree_index] * std;
+
+    /* this is just a hack will be removed when
+       we add the number of rects to the classifier */
+    tr.x = rectangles_array[r_index + 8];
+    tr.y = rectangles_array[r_index + 9];
+    tr.w = rectangles_array[r_index + 10];
+    tr.h = rectangles_array[r_index + 11];
+
+    int i,k, sumw=0;
+
+    if ((tr.x)&& (tr.y) &&(tr.width) &&(tr.height)) {
+        k = 3;
+    } else {
+        k = 2;
+    }
+
+    for (i=0; i<k; i++) {
+        tr.x = rectangles_array[r_index + i*4 + 0];
+        tr.y = rectangles_array[r_index + i*4 + 1];
+        tr.w = rectangles_array[r_index + i*4 + 2];
+        tr.h = rectangles_array[r_index + i*4 + 3];
+
+        sumw += (
+             *((sum->data + sum->width*(tr.y ) + (tr.x ))                         + p_offset)
+           - *((sum->data + sum->width*(tr.y ) + (tr.x  + tr.width))              + p_offset)
+           - *((sum->data + sum->width*(tr.y  + tr.height) + (tr.x ))             + p_offset)
+           + *((sum->data + sum->width*(tr.y  + tr.height) + (tr.x  + tr.width))  + p_offset))
+           * weights_array[w_index + i];
+    }
+    
+    if (sumw >= t) {
+        return alpha2_array[tree_index];
+    }
+
+    return alpha1_array[tree_index];
+}
+
+static int runCascadeClassifier(struct cascade* cascade, struct point pt, int start_stage)
+{
+    int i, j;
+    int p_offset;
+    uint32_t mean;
+    uint32_t std;
+
+    int w_index = 0;
+    int r_index = 0;
+    int stage_sum;
+    int tree_index = 0;
+      
+    int x,y,offset;
+    uint32_t sumsq=0;
+    vec_t v0, v1;
+
+    for (y=pt.y; y<24; y++) {
+      for (x=pt.x; x<24; x+=2) {
+          offset = y*cascade->img->width+x;
+          v0.s0 = cascade->img->data[offset+0]; 
+          v0.s1 = cascade->img->data[offset+1]; 
+
+          v1.s0 = cascade->img->data[offset+0]; 
+          v1.s1 = cascade->img->data[offset+1]; 
+          sumsq = __SMLAD(v0.i, v1.i, sumsq);
+      }
+    }
+
+    /* Image normalization */
+    int win_w = cascade->window.width - 1;
+    int win_h = cascade->window.height - 1;
+
+    p_offset = pt.y * (cascade->sum.width) + pt.x;
+
+    mean = cascade->sum.data[p_offset]
+         - cascade->sum.data[win_w + p_offset]
+         - cascade->sum.data[cascade->sum.width * win_h + p_offset]
+         + cascade->sum.data[cascade->sum.width * win_h + win_w + p_offset];
+
+    std = sqrtf(sumsq * cascade->window.width * cascade->window.height - mean * mean);
+//    if (std < 10) {
+//        return -1;
+//    }
+    for (i=start_stage; i<cascade->n_stages; i++) {
+        stage_sum = 0;
+        for (j=0; j<stages_array[i]; j++, tree_index++, w_index+=3, r_index+=12) {
+            /* send the shifted window to a haar filter */
+              stage_sum += evalWeakClassifier(&cascade->sum, std, p_offset, tree_index, w_index, r_index);
+        } 
+
+        /* If the sum is below the stage threshold, no faces are detected */
+        if (stage_sum < 0.8*stages_thresh_array[i]) {
+            return -i;
+        }
+    }
+
+    return 1;
+}
+
+static void ScaleImageInvoker(struct cascade *cascade, float factor, int sum_row, int sum_col, struct array *vec)
+{
+    int result;
+    int x, y, x2, y2;
+
+    struct point p;
+    struct size win_size;
+
+    win_size.width =  roundf(cascade->window.width*factor);
+    win_size.height =  roundf(cascade->window.height*factor);
+
+    /* When filter window shifts to image boarder, some margin need to be kept */
+    y2 = sum_row - win_size.height;
+    x2 = sum_col - win_size.width;
+
+    /* Shift the filter window over the image. */
+    for (x=0; x<=x2; x+=cascade->step) {
+        for (y=0; y<=y2; y+=cascade->step) {
+            p.x = x;
+            p.y = y;
+
+            result = runCascadeClassifier(cascade, p, 0);
+
+            /* If a face is detected, record the coordinates of the filter window */
+            if (result > 0) {
+                struct rectangle *r = malloc(sizeof(struct rectangle));
+                r->x = roundf(x*factor);
+                r->y = roundf(y*factor);
+                r->w = win_size.width;
+                r->h = win_size.height;
+                array_push_back(vec, r);
+            }
+        }
+    }
+}
+
+struct array *imlib_detect_objects(struct cascade *cascade, struct frame_buffer *fb)
+{
+    /* scaling factor */
+    float factor;
+
+    /* group overlaping windows */
+    const float GROUP_EPS = 0.4f;
+
+    struct array *objects;
+
+    struct frame_buffer img;
+    struct integral_image sum;
+
+    /* allocate buffer for scaled image */
+    img.width    = fb->width;
+    img.height   = fb->height;
+    /* use the second half of the frame_buffer */
+    img.pixels   = fb->pixels+(fb->width * fb->height);
+
+    /* allocate buffer for integral image */
+    sum.width    = fb->width;
+    sum.height   = fb->height;
+    sum.data   = malloc(fb->width *fb->height*sizeof(*sum.data));
+
+    /* allocate the detections array */
+    array_alloc(&objects, free);
+
+    /* set cascade image pointer */
+    cascade->img = &img;
+
+    /* iterate over the image pyramid */
+    for(factor=1.0f; ; factor*=cascade->scale_factor) {
+        /* size of the scaled image */
+        struct size sz = { 
+            (fb->width/factor), 
+            (fb->height/factor) 
+        };
+
+        /* if scaled image is smaller than the original detection window, break */
+        if ((sz.width  - cascade->window.width)  <= 0 ||
+            (sz.height - cascade->window.height) <= 0) {
+            break;
+        }
+
+        /* Set the width and height of the images */ 
+        img.width  = sz.width;
+        img.height = sz.height;
+
+        sum.width  = sz.width;
+        sum.height = sz.height;
+
+        /* downsample using nearest neighbor */
+        imlib_scale_image(fb, &img);
+
+        /* compute a new integral image */
+        imlib_integral_image(&img, &sum);
+
+        /* sets images for haar classifier cascade */
+        cascade->sum = sum;
+
+        /* process the current scale with the cascaded fitler. */
+        ScaleImageInvoker(cascade, factor, sum.height, sum.width, objects);
+    } 
+
+//    if (minNeighbors != 0 && array_length(objects)) {
+//        groupRectangles(objects, minNeighbors, GROUP_EPS);
+//    }
+
+    free(sum.data);
+
+    return objects;
+}
+
+

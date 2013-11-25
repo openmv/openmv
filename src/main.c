@@ -11,8 +11,63 @@
 #include "rgb_led.h"
 #include "usart.h"
 #include "imlib.h"
+#include "array.h"
 #include "systick.h"
 #define BREAK() __asm__ volatile ("BKPT");
+#define TEST 0
+int face_detection(struct ov9650_handle *ov9650)
+{
+    int i;
+    /* detected objects array */
+    struct array *objects;
+
+    /* detection parameters */
+    struct cascade cascade = {
+        .step = 2,
+        .n_stages = 15,
+        .window = {24, 24},
+        .scale_factor = 1.10f,
+    };
+
+    if (ov9650_snapshot(ov9650) != 0) {
+        return -1;
+    }
+
+    /* extract YUV422 Y channel */
+    struct frame_buffer *fb = &ov9650->frame_buffer;
+    for (i=0; i<(fb->width * fb->height); i++) {
+        fb->pixels[i] = fb->pixels[i*2]; 
+    }
+    objects = imlib_detect_objects(&cascade, &ov9650->frame_buffer);
+
+    int objs = array_length(objects);
+#if (!TEST)
+    if (objs) {
+        for (i=0; i<objs; i++) {
+            imlib_draw_rectangle(fb, array_at(objects, i));
+        }
+        /* YUV422 to grayscale */
+        for (i=0; i<(fb->width * fb->height); i++) {
+            uint8_t y = fb->pixels[i];
+            uint8_t r,g,b;
+            if (y==21) {
+                r = 31;
+                g = 0;
+                b = 0;
+            } else {
+                r = y*31/255;
+                g = y*63/255;
+                b = y*31/255;
+            }
+            uint16_t rgb = (r << 11) | (g << 5) | b;
+            usart_send(rgb>>8);
+            usart_send(rgb&0xFF);
+        }
+    }
+#endif
+    array_free(objects);
+    return 0;
+}
 
 int main(void)
 {
@@ -36,9 +91,23 @@ int main(void)
         ov9650.id.PID != 0x96) {
         goto error;
     }
+
+    if (ov9650_set_pixformat(&ov9650, PIXFORMAT_YUV422) != 0) {
+        goto error;
+    }
+
+    /* Configure image size and format and FPS */
+    if (ov9650_set_framesize(&ov9650, FRAMESIZE_QQVGA) != 0) {
+        goto error;
+    }
+
+    /* Configure framerate */
+    if (ov9650_set_framerate(&ov9650, FRAMERATE_30FPS) != 0) {
+        goto error;
+    }
    
     /* Set sensor brightness level -3..+3 */
-    ov9650_set_brightness(&ov9650, 2);
+    ov9650_set_brightness(&ov9650, 3);
 
     /* The sensor needs time to stablize especially 
        when using the automatic functions of the camera */
@@ -46,13 +115,15 @@ int main(void)
     systick_sleep(5000);
     rgb_led_set_color(LED_BLUE);
 
-#if 0
+#if TEST
     /* FPS test */
     while (1) {
         int fps = 0;
         uint32_t ticks = systick_current_millis();
         while (systick_current_millis()-ticks<1000) {
-            ov9650_snapshot(&ov9650);
+            if (face_detection(&ov9650) !=0) {
+                goto error;
+            }
             fps++;
         }
         BREAK();
@@ -88,23 +159,32 @@ int main(void)
                 if (ov9650_snapshot(&ov9650) != 0) {
                     goto error;
                 }
-
+#if 0
+                /* YUV422 to grayscale */
+                for (i=0; i<(fb->width * fb->height * fb->bpp); i+=2) {
+                    uint8_t y = fb->pixels[i];
+                    uint8_t r = y*31/255;
+                    uint8_t g = y*63/255;
+                    uint8_t b = y*31/255;
+                    uint16_t rgb = (r << 11) | (g << 5) | b;
+                    usart_send(rgb>>8);
+                    usart_send(rgb&0xFF);
+                }
+#else
                 for (i=0; i<(fb->width * fb->height * fb->bpp); i++) {
                     usart_send(fb->pixels[i]);
                 }
+#endif
                 break;
             }
+
             case CMD_COLOR_TRACK: {
                 struct point point= {0};
                 struct frame_buffer *fb = &ov9650.frame_buffer;
                 struct color hsv;
                 #if 0
                 /* red */
-                struct color color= {
-                    .h = 0,
-                    .s = 70,
-                    .v = 25
-                };
+                //struct color color= {.h = 0, .s = 70, .v = 25};
                 #endif
                 hsv.h = usart_recv();
                 hsv.s = usart_recv();
@@ -121,6 +201,7 @@ int main(void)
                 usart_send(point.y*100/fb->height);
                 break;
             }
+
             case CMD_MOTION_DETECTION: {
                 int i;
                 int pixels;
@@ -188,6 +269,14 @@ int main(void)
                         }
                         break;
                     }
+                }
+                break;
+            }             
+
+            case CMD_FACE_DETECTION: {
+//             case 0: {
+                while(1) {
+                    face_detection(&ov9650);
                 }
                 break;
             }

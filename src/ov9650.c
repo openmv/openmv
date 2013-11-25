@@ -42,7 +42,7 @@ static uint8_t ov9650_init_regs[][2] = {
 
     /* See Implementation Guide Section 3.4.1.2 */
     {REG_COM8,   0xA7}, /* Enable Fast Mode AEC/Auto Banding Filter/AGC/AWB/AEC */
-    {0x60,          0x8C}, /* Normal AWB, 0x0C for Advanced AWB */
+    {0x60,       0x8C}, /* Normal AWB, 0x0C for Advanced AWB */
     {REG_AEW,    0x74}, /* AGC/AEC Threshold Upper Limit */
     {REG_AEB,    0x68}, /* AGC/AEC Threshold Lower Limit */
     {REG_VPT,    0xC3}, /* Fast AEC operating region */
@@ -616,7 +616,16 @@ int ov9650_set_framesize(struct ov9650_handle *ov9650, enum ov9650_framesize fra
     }
 
     SCCB_Write(REG_COM1, com1);
+    while (SCCB_Read(REG_COM1) != com1) {
+        SCCB_Write(REG_COM1, com1);
+    }  
+
     SCCB_Write(REG_COM7, com7);
+    while (SCCB_Read(REG_COM7) != com7) {
+        SCCB_Write(REG_COM7, com7);
+    }  
+//    SCCB_Write(REG_COM1, com1);
+//    SCCB_Write(REG_COM7, com7);
 
     /* realloc frame buffer */
     fb->pixels = realloc(fb->pixels, 

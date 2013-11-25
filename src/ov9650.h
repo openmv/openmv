@@ -32,6 +32,7 @@ enum ov9650_command {
     CMD_SET_PIXFORMAT,
     CMD_SET_FRAMERATE,
     CMD_SET_FRAMESIZE,
+    CMD_FACE_DETECTION,
 };
 
 struct ov9650_id {
