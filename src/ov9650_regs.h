@@ -107,6 +107,8 @@
 /* register bits */
 #define REG_COM1_QQCIF   (1<<5)
 #define REG_COM1_QQVGA   (1<<5)
+#define REG_COM1_SKIP2   (1<<2)
+#define REG_COM1_SKIP3   (1<<3)
 #define REG_COM7_RGB     (1<<2)
 #define REG_COM7_QCIF    (1<<3)
 #define REG_COM7_QVGA    (1<<4)

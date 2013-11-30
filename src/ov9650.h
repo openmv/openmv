@@ -5,6 +5,7 @@
 enum ov9650_pixformat { 
     PIXFORMAT_RGB565, /* 2BPP/RGB565*/
     PIXFORMAT_YUV422, /* 2BPP/YUV422*/
+    PIXFORMAT_GRAYSCALE, /* 1BPP/GRAYSCALE*/
 };
 
 enum ov9650_framesize { 
@@ -33,6 +34,11 @@ enum ov9650_command {
     CMD_SET_FRAMERATE,
     CMD_SET_FRAMESIZE,
     CMD_FACE_DETECTION,
+};
+
+enum cmd_result { 
+    CMD_ACK  =0x01,
+    CMD_NACK =0x02,
 };
 
 struct ov9650_id {

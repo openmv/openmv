@@ -117,13 +117,11 @@ void imlib_color_track(struct frame_buffer *fb, struct color *color, struct poin
                 pixels++;
                 point->x += x;
                 point->y += y;
-            } else {
-                x+=2;
             }
         }
     }
 
-    if (pixels < 10) {
+    if (pixels < 100) {
         point->x = 0;
         point->y = 0;
     } else {
@@ -211,19 +209,47 @@ void imlib_scale_image(struct frame_buffer *src, struct frame_buffer *dst)
 void imlib_draw_rectangle(struct frame_buffer* image, struct rectangle *r)
 {
 	int i;
-	int col = image->width;
-	for (i = 0; i < r->width; i++) {
-      image->data[col*r->y + r->x + i] = 21;
+    int bpp = image->bpp;
+	int col = image->width*image->bpp;
+    uint8_t c=0xff;
+	for (i = 0; i < r->width*bpp; i++) {
+        image->data[r->y*col + r->x*bpp + i] = c;
 	}
+
 	for (i = 0; i < r->height; i++) {
-		image->data[col*(r->y+i) + r->x + r->width] = 21;
+		image->data[col*(r->y+i) + r->x*bpp + r->width*bpp] = c;
 	}
-	for (i = 0; i < r->width; i++) {
-		image->data[col*(r->y + r->height) + r->x + r->width - i] = 21;
+
+	for (i = 0; i < r->width*bpp; i++) {
+		image->data[col*(r->y + r->height) + r->x*bpp + r->width*bpp - i] = c;
 	}
+
 	for (i = 0; i < r->height; i++) {
-		image->data[col*(r->y + r->height - i) + r->x] = 21;
+		image->data[col*(r->y + r->height - i) + r->x*bpp] =c;
 	}
+}
+
+#define MAX_GRAY_LEVEL (255)
+void imlib_histeq(struct frame_buffer *fb)
+{
+    int i, sum;
+    int a = fb->width*fb->height;
+    uint32_t hist[MAX_GRAY_LEVEL+1]={0}; 
+
+    /* compute image histogram */
+    for (i=0; i<a; i++) {
+        hist[fb->pixels[i]]+=1;
+    }
+
+    /* compute the CDF */ 
+    for (i=0, sum=0; i<MAX_GRAY_LEVEL+1; i++) {
+        sum += hist[i];
+        hist[i] = sum;
+    }
+
+    for (i=0; i<a; i++) {
+        fb->pixels[i] = (uint8_t) ((MAX_GRAY_LEVEL/(float)a) * hist[fb->pixels[i]]);
+    }
 }
 
 /* Viola-Jones face detector implementation 
@@ -323,7 +349,7 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
         } 
 
         /* If the sum is below the stage threshold, no faces are detected */
-        if (stage_sum < 0.8*stages_thresh_array[i]) {
+        if (stage_sum < 0.9*stages_thresh_array[i]) {
             return -i;
         }
     }
