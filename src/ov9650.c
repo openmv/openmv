@@ -18,14 +18,11 @@
 static volatile int frame_ready = 0;
 
 static uint8_t ov9650_init_regs[][2] = {
-    {REG_BLUE,   0x80},
-    {REG_RED,    0x80},
-
     /* See Implementation Guide */
     {REG_COM2,   0x01},  /*  Output drive x2 */
     {REG_COM5,   0x00},  /*  System clock  */
     {REG_CLKRC,  0x81},  /*  Clock control 30 FPS*/
-    {REG_MVFP,   0x00},  /*  Mirror/VFlip */
+    {REG_MVFP,   0x10},  /*  Mirror/VFlip */
 
     /* Default QQVGA-RGB565 */
     {REG_COM7,   0x14},  /*  QVGA/RGB565 */    
@@ -42,7 +39,7 @@ static uint8_t ov9650_init_regs[][2] = {
     {REG_ADVFL,  0x00},  /*  Dummy Pixel Insert LSB */
 
     /* See Implementation Guide Section 3.4.1.2 */
-    {REG_COM8,   0xA3}, /* Enable Fast Mode AEC/Enable Banding Filter/AGC/AWB/AEC */
+    {REG_COM8,   0xA7}, /* Enable Fast Mode AEC/Enable Banding Filter/AGC/AWB/AEC */
     {0x60,       0x8C}, /* Normal AWB, 0x0C for Advanced AWB */
     {REG_AEW,    0x74}, /* AGC/AEC Threshold Upper Limit */
     {REG_AEB,    0x68}, /* AGC/AEC Threshold Lower Limit */
@@ -53,10 +50,11 @@ static uint8_t ov9650_init_regs[][2] = {
 //    {REG_GRCOM,  0x3F}, /* Analog BLC/External Regulator */
 
     /* See OV9650 Implementation Guide */
-    {REG_COM11,  0x01}, /* Automatic/Manual Banding Filter */
-    {REG_MBD,    0x1a}, /* Manual banding filter LSB */
+    {REG_COM11,  0x01}, /* Night Mode-Automatic/Manual Banding Filter */
+    {REG_MBD,    0x1a}, /* MBD[7:0] Manual banding filter LSB */
+    {REG_HV,     0x14}, /* HV[0]    Manual banding filter MSB */
     {REG_COM12,  0x04}, /* HREF options/ UV average  */
-    {REG_COM9,   0x58}, /* Gain ceiling [6:4]/Over-Exposure */
+    {REG_COM9,   0x40}, /* Gain ceiling [6:4]/Over-Exposure */
     {REG_COM16,  0x02}, /* Color matrix coeff double option */
     {REG_COM13,  0x10}, /* Gamma/Colour Matrix/UV delay */
     {REG_COM23,  0x00}, /* Disable Color bar/Analog Color Gain */
@@ -64,8 +62,10 @@ static uint8_t ov9650_init_regs[][2] = {
     {REG_COM10,  0x00}, /* Slave mode, HREF vs HSYNC, signals negate */
     {REG_EDGE,   0xa6}, /* Edge enhancement treshhold and factor */
     {REG_COM6,   0x43}, /* HREF & ADBLC options */
-    {REG_COM22,  0x00}, /* Edge enhancement/Denoising */
+    {REG_COM22,  0x20}, /* Edge enhancement/Denoising */
+    {REG_COM21,  0x00}, /* COM21[3] Digital Zoom */
 
+    /* When AEC is not used */
 //  {REG_AECH,   0x00}, /* Exposure Value MSB */
 //  {REG_AECHM,  0x00}, /* Exposure Value LSB */
 
@@ -116,25 +116,25 @@ static uint8_t ov9650_init_regs[][2] = {
     {0x8a,  0xe6},
 
     /* Reserved Registers, see OV965x App Note */
-    {0x16,  0x06}, 
-    {0x34,  0xbf}, 
+    {0x16,  0x07}, 
+    {0x34,  180},
     //{0xa8,  0x80},/* this doesn't work with QQCIF/QCIF */
     {0x96,  0x04}, 
     {0x8e,  0x00}, 
-    {0x8b,  0x06}, 
     {0x35,  0x91}, 
     {0x94,  0x88},
     {0x95,  0x88},
     {0xa9,  0xb8},
     {0xaa,  0x92},
     {0xab,  0x0a},
+    /*
     {0x5c,  0x96}, 
     {0x5d,  0x96},
     {0x5e,  0x10},
     {0x59,  0xeb},
     {0x5a,  0x9c},
     {0x5b,  0x55},
-
+        */
     /* NULL reg */
     {0x00,  0x00}
 };
@@ -148,7 +148,7 @@ static uint8_t ov9650_rgb565_regs[][2] = {
     /* See Implementation Guide Section 3.4.1.2 */
     {REG_OFON,   0x43},  /*  Power down register  */
     {REG_ACOM38, 0x12},  /*  reserved  */
-    {REG_ADC,    0x00},  /*  reserved  */
+    {REG_ADC,    0xFF},  /*  reserved  */
     {REG_RSVD35, 0x81},  /*  reserved  */
     
     /* YUV fmt /Special Effects Controls */
@@ -252,7 +252,7 @@ void DMA2_Stream1_IRQHandler(void)
 
 void delay(uint32_t ntime)
 {
-    uint32_t x;
+    volatile uint32_t x;
     while (ntime) {
         for (x=0; x<10000; x--);        
         ntime--;

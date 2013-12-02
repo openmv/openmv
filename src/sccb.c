@@ -23,7 +23,7 @@
 
 static void delay(void)
 {
-   uint32_t d = 10;
+   volatile uint32_t d = 10;
    while(d--) {
    }
 }

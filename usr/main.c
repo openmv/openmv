@@ -13,6 +13,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include "ov9650.h"
+#include "ov9650_regs.h"
 #define USB_VID        (0x0483) /* vendor id    */
 #define USB_PID        (0x5740) /* product id   */
 #define EP_IN          (0x81)   /* IN endpoint  */
@@ -91,50 +92,32 @@ long get_time_ms()
     return timeval.tv_sec * 1000 + (long) (timeval.tv_usec * 0.001f);
 }
 
-SDL_Surface *flip_surface(SDL_Surface *surface)
+int write_image(char *path, struct frame_buffer *image)
 {
-    int x,rx,y,ry;
-    //Pointer to the soon to be flipped surface
-    SDL_Surface *flipped = NULL;
+    int i;
+	FILE *fp = fopen(path, "w");
+	if (fp == NULL) {
+		printf("Unable to open file %s\n", path);
+		return -1;
+	}
+    /* write header */
+    fprintf(fp, "P5\n%d %d\n%d\n", image->width, image->height, 255);
+	
+    /* write pixels */
+	for (i = 0; i < (image->width * image->height); i++) {
+		fprintf(fp, "%c", image->pixels[i]);
+	}
+	fclose(fp);
+	return 0;
+}
 
-    //If the image is color keyed
-    if (surface->flags & SDL_SRCCOLORKEY) {
-        flipped = SDL_CreateRGBSurface(SDL_SWSURFACE, surface->w, surface->h,
-                surface->format->BitsPerPixel, surface->format->Rmask, surface->format->Gmask, surface->format->Bmask, 0);
-    } else {
-        flipped = SDL_CreateRGBSurface(SDL_SWSURFACE, surface->w, surface->h, 
-                surface->format->BitsPerPixel, surface->format->Rmask, surface->format->Gmask, surface->format->Bmask, 0);
-    }
-
-    //If the surface must be locked
-    if (SDL_MUSTLOCK(surface)) {
-        //Lock the surface
-        SDL_LockSurface( surface );
-    }
-
-    //Go through columns
-    for (x=0, rx=flipped->w-1; x<flipped->w; x++, rx--) {
-        //Go through rows
-        for (y=0, ry=flipped->h-1; y<flipped->h; y++, ry--) {
-            //Get pixel
-            Uint32 pixel = ((Uint32*)surface->pixels)[( y * surface->w ) + x];
-            ((Uint32*)flipped->pixels)[( ry * surface->w ) + x] =pixel;
-        }
-    }
-
-    //Unlock surface
-    if(SDL_MUSTLOCK(surface)) {
-        SDL_UnlockSurface(surface);
-    }
-
-    //Copy color key
-    if (surface->flags & SDL_SRCCOLORKEY) {
-        SDL_SetColorKey(flipped, SDL_RLEACCEL | SDL_SRCCOLORKEY, surface->format->colorkey);
-    }
-
-    SDL_BlitSurface(flipped, NULL, surface, NULL);   
-    SDL_FreeSurface(flipped);
-    return 0;
+void write_reg(reg, val)
+{
+    uint8_t cmd_buf[3];
+    cmd_buf[0] = CMD_WRITE_REG;
+    cmd_buf[1] = reg;
+    cmd_buf[2] = val;
+    bulk_xfr(EP_OUT, cmd_buf, 3);
 }
 
 int main (int argc, char **argv) 
@@ -249,12 +232,16 @@ int main (int argc, char **argv)
     /*install signal handlers*/
     sigaction(SIGINT, &act, NULL);
 
-    libusb_set_debug(NULL, DEBUG_LEVEL);    /*set debugging level*/
+    /*set debugging level*/
+    libusb_set_debug(NULL, DEBUG_LEVEL); 
 
     if ((dev = libusb_open_device_with_vid_pid(NULL, USB_VID, USB_PID)) == NULL){
         fprintf(stderr, "Device could not be found.\n");
         exit(1);
     }
+
+    /* reset device */
+    libusb_reset_device(dev);
 
     /* claim interace zero */
     if (libusb_claim_interface(dev, 0) != 0) {
@@ -300,8 +287,6 @@ int main (int argc, char **argv)
         exit(1);
     }    
 
-    libusb_reset_device(dev);
-
     /* set pixelformat */
     cmd_buf[0] = CMD_SET_PIXFORMAT;
     cmd_buf[1] = ov9650.pixformat;
@@ -316,6 +301,11 @@ int main (int argc, char **argv)
     cmd_buf[0] = CMD_SET_FRAMERATE;
     cmd_buf[1] = ov9650.framerate;
     bulk_xfr(EP_OUT, cmd_buf, 2);
+
+    cmd_buf[0] = CMD_WRITE_REG;
+    cmd_buf[1] = REG_COM9;
+    cmd_buf[2] = 0x50;
+    bulk_xfr(EP_OUT, cmd_buf, 3);
 
     sleep(1);
 
@@ -367,30 +357,59 @@ int main (int argc, char **argv)
             pixels[3]=0;
         }
 
-        flip_surface(surface);
-        SDL_BlitSurface(surface, NULL, screen, NULL);   
-
         ++frames;
         t_elapsed = get_time_ms() - t_start;
         t_total += t_elapsed;        
+
         char text_buf[64];
-        //printf("FPS %d\n", ((1000 /(t_total/frames))));
+        static uint8_t v=0;
+        char buf[9]={0};
+        for (i=0; i<8; i++) {
+            buf[i]=(((v<<i)&0x80)>>7)+48;
+        }
+  //      write_reg(REG_GAIN, v);
+//        sprintf(text_buf, "REG %d %s", v, buf);
+
         sprintf(text_buf, "FPS %.2f", 1000/(float)(t_total / frames));
+   
+        SDL_PollEvent(&event);
+
+        switch (event.type) {
+            case SDL_QUIT:
+                exit(0);     
+            case SDL_KEYDOWN:
+                switch (event.key.keysym.sym) {
+                    case SDLK_0:
+                        v=0;
+                        break;
+                    case SDLK_KP_PLUS:
+                        v++;
+                        break;
+                    case SDLK_KP_MINUS:
+                        v--;
+                        break;
+                    case SDLK_s:
+                        printf("snapshot...\n");
+                        write_image("snapshot.pgm", fb);
+                        break;
+                    case SDLK_ESCAPE:
+                        exit(0);     
+                    default:
+                        break;
+                }
+                break;
+        }
 
         SDL_Color fg = {255, 0, 0, 0}; 
         SDL_Surface *text = TTF_RenderText_Solid(font, text_buf, fg);
         SDL_Rect rect = {0, 0, 0, 0};
-        SDL_BlitSurface(text, NULL, screen, &rect);
+        SDL_BlitSurface(text, NULL, surface, &rect);
+        SDL_BlitSurface(surface, NULL, screen, NULL);   
         SDL_FreeSurface(text);
 
         /*flush*/
         SDL_UpdateRect(screen, 0, 0,  fb->width, fb->height);
 
-        SDL_PollEvent(&event);
-        if (event.type == SDL_QUIT) {
-            exit(0);     
-        }
-        
     }
     return 0;
 }

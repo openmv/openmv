@@ -45,7 +45,7 @@ MEMORY
   FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 512K
   RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
   MEMORY_B1 (rx)  : ORIGIN = 0x60000000, LENGTH = 0K
-  ccm (w!rx)      : ORIGIN = 0x10000000, LENGTH = 64K                   
+  CCM (w!rx)      : ORIGIN = 0x10000000, LENGTH = 64K                   
 }
 
 /* Define output sections */
@@ -116,6 +116,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
+
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 
@@ -123,10 +124,18 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
   } >RAM
 
-  .ccm : /*define section*/
+  /* This section will load the .ccm data into FLASH,
+     a C function in .init section copies the .ccm data
+     from FLASH to CCM memory in runtime. */
+  _eidata = (_sidata + SIZEOF(.data) + SIZEOF(.jcr));
+  .ccm : AT ( _sidata + SIZEOF(.data) + SIZEOF(.jcr))
   {
+    . = ALIGN(4);
+    _sccm = .;
     *(.ccm)
-  }>ccm
+    . = ALIGN(4);      
+    _eccm = .;
+  }>CCM
 
   /* Uninitialized data section */
   . = ALIGN(4);

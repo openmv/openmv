@@ -1,9 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <arm_math.h>
 #include <stm32f4xx.h>
-#include <core_cm4.h>
-#include <core_cm4_simd.h>
 #include "array.h"
 #include "imlib.h"
 #include "cascade.h"
@@ -302,8 +301,8 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
 {
     int i, j;
     int p_offset;
-    uint32_t mean;
-    uint32_t std;
+    int32_t mean;
+    int32_t std;
 
     int w_index = 0;
     int r_index = 0;
@@ -338,9 +337,7 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
          + cascade->sum.data[cascade->sum.width * win_h + win_w + p_offset];
 
     std = sqrtf(sumsq * cascade->window.width * cascade->window.height - mean * mean);
-//    if (std < 10) {
-//        return -1;
-//    }
+
     for (i=start_stage; i<cascade->n_stages; i++) {
         stage_sum = 0;
         for (j=0; j<stages_array[i]; j++, tree_index++, w_index+=3, r_index+=12) {
@@ -349,7 +346,7 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
         } 
 
         /* If the sum is below the stage threshold, no faces are detected */
-        if (stage_sum < 0.9*stages_thresh_array[i]) {
+        if (stage_sum < 0.25*stages_thresh_array[i]) {
             return -i;
         }
     }
@@ -392,6 +389,89 @@ static void ScaleImageInvoker(struct cascade *cascade, float factor, int sum_row
         }
     }
 }
+
+struct rectangle *rectangle_clone(struct rectangle *rect)
+{
+    struct rectangle *rectangle;
+    rectangle = malloc(sizeof(struct rectangle));
+    memcpy(rectangle, rect, sizeof(struct rectangle));
+    return rectangle;
+}
+
+void rectangle_add(struct rectangle *rect0, struct rectangle *rect1)
+{
+    rect0->x += rect1->x;
+    rect0->y += rect1->y;
+    rect0->w += rect1->w;
+    rect0->h += rect1->h;
+}
+
+void rectangle_div(struct rectangle *rect0, int c)
+{
+    rect0->x /= c;
+    rect0->y /= c;
+    rect0->w /= c;
+    rect0->h /= c;
+}
+
+void rectangle_merge(struct rectangle *rect0, struct rectangle *rect1)
+{
+    rect0->x = (rect0->x < rect1->x)? rect0->x:rect1->x;
+    rect0->y = (rect0->y < rect1->y)? rect0->y:rect1->y;
+    rect0->w = (rect0->w > rect1->w)? rect0->w:rect1->w;
+    rect0->h = (rect0->h > rect1->h)? rect0->h:rect1->h;
+
+}
+
+int rectangle_intersects(struct rectangle *rect0, struct rectangle *rect1)
+{
+    return  ((rect0->x < (rect1->x+rect1->w)) &&
+             (rect0->y < (rect1->y+rect1->h)) &&
+             ((rect0->x+rect0->w) > rect1->x) &&
+             ((rect0->y+rect0->h) > rect1->y));
+}
+
+struct array *imlib_merge_detections(struct array *rectangles)
+{
+    int j;
+    struct array *objects;
+    struct array *overlap;
+    struct rectangle *rect1, *rect2;
+
+    array_alloc(&objects, free);
+    array_alloc(&overlap, free);
+
+    /* merge overlaping detections */
+    while (array_length(rectangles)) {
+        /* check for overlaping detections */
+        rect1 = (struct rectangle *) array_at(rectangles, 0);
+        for (j=1; j<array_length(rectangles); j++) {
+            rect2 = (struct rectangle *) array_at(rectangles, j);
+            if (rectangle_intersects(rect1, rect2)) { 
+                array_push_back(overlap, rectangle_clone(rect2));
+                array_erase(rectangles, j--);
+            }
+        }
+
+        /* add the overlaping detections */
+        int count = array_length(overlap)+1;
+        while (array_length(overlap)) {
+            rect2 = (struct rectangle *) array_at(overlap, 0);
+            rectangle_add(rect1, rect2);
+            array_erase(overlap, 0);
+        }
+        
+        /* average the overlaping detections */
+        rectangle_div(rect1, count);
+        array_push_back(objects, rectangle_clone(rect1));
+        array_erase(rectangles, 0);
+    }
+
+    array_free(overlap);
+    array_free(rectangles);
+    return objects;  
+}
+
 
 struct array *imlib_detect_objects(struct cascade *cascade, struct frame_buffer *fb)
 {
@@ -457,12 +537,9 @@ struct array *imlib_detect_objects(struct cascade *cascade, struct frame_buffer 
         ScaleImageInvoker(cascade, factor, sum.height, sum.width, objects);
     } 
 
-//    if (minNeighbors != 0 && array_length(objects)) {
-//        groupRectangles(objects, minNeighbors, GROUP_EPS);
-//    }
-
     free(sum.data);
 
+    objects = imlib_merge_detections(objects);
     return objects;
 }
 

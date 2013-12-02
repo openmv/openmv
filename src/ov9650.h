@@ -9,13 +9,13 @@ enum ov9650_pixformat {
 };
 
 enum ov9650_framesize { 
-    FRAMESIZE_SXGA, /* 1280x1024 */
-    FRAMESIZE_VGA,  /* 640x480   */
-    FRAMESIZE_CIF,  /* 352x288   */
-    FRAMESIZE_QVGA, /* 320x240   */
-    FRAMESIZE_QCIF, /* 176x144   */
+    FRAMESIZE_QQCIF, /* 88x72     */
     FRAMESIZE_QQVGA,/* 160x120   */
-    FRAMESIZE_QQCIF /* 88x72     */
+    FRAMESIZE_QCIF, /* 176x144   */
+    FRAMESIZE_QVGA, /* 320x240   */
+    FRAMESIZE_CIF,  /* 352x288   */
+    FRAMESIZE_VGA,  /* 640x480   */
+    FRAMESIZE_SXGA, /* 1280x1024 */
 };
 
 enum ov9650_framerate { 
@@ -34,6 +34,7 @@ enum ov9650_command {
     CMD_SET_FRAMERATE,
     CMD_SET_FRAMESIZE,
     CMD_FACE_DETECTION,
+    CMD_WRITE_REG,
 };
 
 enum cmd_result { 
