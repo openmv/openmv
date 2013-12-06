@@ -24,6 +24,11 @@ static uint8_t ov9650_init_regs[][2] = {
     {REG_CLKRC,  0x81},  /*  Clock control 30 FPS*/
     {REG_MVFP,   0x10},  /*  Mirror/VFlip */
 
+    {REG_OFON,   0x43},  /*  Power down register  */
+    {REG_ACOM38, 0x12},  /*  reserved  */
+    {REG_ADC,    0x91},  /*  reserved  */
+    {REG_RSVD35, 0x81},  /*  reserved  */
+
     /* Default QQVGA-RGB565 */
     {REG_COM7,   0x14},  /*  QVGA/RGB565 */    
     {REG_COM1,   0x24},  /*  QQVGA/Skip Option */
@@ -31,6 +36,11 @@ static uint8_t ov9650_init_regs[][2] = {
     {REG_COM4,   0x80},  /*  Vario Pixels */
     {REG_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
  
+    /* YUV fmt /Special Effects Controls */
+    {REG_TSLB,   0x01},  /*  YUVU/DBLC Enable/Bitwise reverse*/
+    {REG_MANU,   0x80},  /*  Manual U */
+    {REG_MANV,   0x80},  /*  Manual V */
+
     /* Dummy pixels settings */
     {REG_EXHCH,  0x00},  /*  Dummy Pixel Insert MSB */
     {REG_EXHCL,  0x00},  /*  Dummy Pixel Insert LSB */
@@ -41,18 +51,15 @@ static uint8_t ov9650_init_regs[][2] = {
     /* See Implementation Guide Section 3.4.1.2 */
     {REG_COM8,   0xA7}, /* Enable Fast Mode AEC/Enable Banding Filter/AGC/AWB/AEC */
     {0x60,       0x8C}, /* Normal AWB, 0x0C for Advanced AWB */
-    {REG_AEW,    0x74}, /* AGC/AEC Threshold Upper Limit */
-    {REG_AEB,    0x68}, /* AGC/AEC Threshold Lower Limit */
+    {REG_AEW,    0x70}, /* AGC/AEC Threshold Upper Limit */
+    {REG_AEB,    0x64}, /* AGC/AEC Threshold Lower Limit */
     {REG_VPT,    0xC3}, /* Fast AEC operating region */
 
-    /* See OV9650 Implementation Guide */
-//    {REG_CHLF,   0xE2}, /* External Regulator */
-//    {REG_GRCOM,  0x3F}, /* Analog BLC/External Regulator */
 
     /* See OV9650 Implementation Guide */
     {REG_COM11,  0x01}, /* Night Mode-Automatic/Manual Banding Filter */
     {REG_MBD,    0x1a}, /* MBD[7:0] Manual banding filter LSB */
-    {REG_HV,     0x14}, /* HV[0]    Manual banding filter MSB */
+    {REG_HV,     0x0A}, /* HV[0]    Manual banding filter MSB */
     {REG_COM12,  0x04}, /* HREF options/ UV average  */
     {REG_COM9,   0x40}, /* Gain ceiling [6:4]/Over-Exposure */
     {REG_COM16,  0x02}, /* Color matrix coeff double option */
@@ -63,13 +70,20 @@ static uint8_t ov9650_init_regs[][2] = {
     {REG_EDGE,   0xa6}, /* Edge enhancement treshhold and factor */
     {REG_COM6,   0x43}, /* HREF & ADBLC options */
     {REG_COM22,  0x20}, /* Edge enhancement/Denoising */
+
+    /* Some registers discovered with probing */
     {REG_COM21,  0x00}, /* COM21[3] Digital Zoom */
+    {REG_GRCOM,  0x24}, /* Affetcs AWB */
+    {0xaa,  0x00},      /* some edge effect 0x80 */
+    {0xab,  0x00},      /* makes image blurry 0x40 */
 
+#if 0
     /* When AEC is not used */
-//  {REG_AECH,   0x00}, /* Exposure Value MSB */
-//  {REG_AECHM,  0x00}, /* Exposure Value LSB */
+    {REG_AECH,   0x00}, /* Exposure Value MSB */
+    {REG_AECHM,  0x00}, /* Exposure Value LSB */
+#endif
 
-    #if 0
+#if 0
     /* Windowing Settings */
     {REG_HSTART, 0x1d},  /*  Horiz start high bits  */
     {REG_HSTOP,  0xbd},  /*  Horiz stop high bits  */
@@ -78,10 +92,11 @@ static uint8_t ov9650_init_regs[][2] = {
     {REG_VSTART, 0x00},  /*  Vert start high bits  */
     {REG_VSTOP,  0x80},  /*  Vert stop high bits  */
     {REG_VREF,   0x12},  /*  Pieces of GAIN, VSTART, VSTOP  */
-    #endif 
+#endif 
 
-    /* Gamma curve P */
-    {0x6C,  0x40},
+#if 1
+    /* gamma curve p */
+    {0x6c,  0x40},
     {0x6d,  0x30},
     {0x6e,  0x4b},
     {0x6f,  0x60},
@@ -117,24 +132,18 @@ static uint8_t ov9650_init_regs[][2] = {
 
     /* Reserved Registers, see OV965x App Note */
     {0x16,  0x07}, 
-    {0x34,  180},
-    //{0xa8,  0x80},/* this doesn't work with QQCIF/QCIF */
     {0x96,  0x04}, 
     {0x8e,  0x00}, 
-    {0x35,  0x91}, 
     {0x94,  0x88},
     {0x95,  0x88},
-    {0xa9,  0xb8},
-    {0xaa,  0x92},
-    {0xab,  0x0a},
-    /*
     {0x5c,  0x96}, 
     {0x5d,  0x96},
     {0x5e,  0x10},
     {0x59,  0xeb},
     {0x5a,  0x9c},
     {0x5b,  0x55},
-        */
+#endif
+
     /* NULL reg */
     {0x00,  0x00}
 };
@@ -145,17 +154,6 @@ static uint8_t ov9650_rgb565_regs[][2] = {
     {REG_COM4,   0x80},  /*  Vario Pixels */
     {REG_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
       
-    /* See Implementation Guide Section 3.4.1.2 */
-    {REG_OFON,   0x43},  /*  Power down register  */
-    {REG_ACOM38, 0x12},  /*  reserved  */
-    {REG_ADC,    0xFF},  /*  reserved  */
-    {REG_RSVD35, 0x81},  /*  reserved  */
-    
-    /* YUV fmt /Special Effects Controls */
-    {REG_TSLB,   0x01},  /*  YUVU/DBLC Enable */
-    {REG_MANU,   0x80},  /*  Manual U */
-    {REG_MANV,   0x80},  /*  Manual V */
-
     /* RGB color matrix */
     {REG_MTX1,   0x71},
     {REG_MTX2,   0x3e},
@@ -180,17 +178,6 @@ static uint8_t ov9650_yuv422_regs[][2] = {
     {REG_COM4,   0x80},  /*  Vario Pixels */
     {REG_COM15,  0xC0},  /*  Output range 0x00-0xFF  */
  
-    /* See Implementation Guide Section 3.4.1.2 */
-    {REG_OFON,   0x50},  /*  Power down register  */
-    {REG_ACOM38, 0x12},  /*  reserved  */
-    {REG_ADC,    0x00},  /*  reserved  */
-    {REG_RSVD35, 0x81},  /*  reserved  */
-
-    /* YUV fmt /Special Effects Controls */
-    {REG_TSLB,   0x01},  /*  YUVU/DBLC Enable */
-    {REG_MANU,   0x80},  /*  Manual U */
-    {REG_MANV,   0x80},  /*  Manual V */
-
     /* YUV color matrix */
     {REG_MTX1,   0x3a},
     {REG_MTX2,   0x3d},
@@ -276,19 +263,19 @@ void delay(uint32_t ntime)
                  
    TIM3 Channel1 duty cycle = (TIM3_CCR1/ TIM3_ARR)* 100 = 50%
  */   
-#define PWM_TIMER       TIM2
-#define PWM_TIMER_CHAN  TIM2
+#define PWM_TIMER       TIM3
+#define PWM_TIMER_CHAN  TIM3
 static void extclk_config(int frequency)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
     TIM_OCInitTypeDef  TIM_OCInitStructure;
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 
     /* TIM channel GPIO configuration */
-    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_3;
+    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_4;
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
@@ -296,7 +283,7 @@ static void extclk_config(int frequency)
     GPIO_Init(GPIOB, &GPIO_InitStructure); 
 
     /* Connect TIM pins to AF */  
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource3, GPIO_AF_TIM2);
+    GPIO_PinAFConfig(GPIOB, GPIO_PinSource4, GPIO_AF_TIM3);
 
     /* Calculate the prescaler value */ 
 //    int tclk  = 84000000;
@@ -313,21 +300,21 @@ static void extclk_config(int frequency)
     TIM_TimeBaseStructure.TIM_Prescaler = prescaler;
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+    TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
 
     /* PWM1 Mode configuration: Channel2 */
     TIM_OCInitStructure.TIM_Pulse = period/2;
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OC2Init(TIM2, &TIM_OCInitStructure);
+    TIM_OC1Init(TIM3, &TIM_OCInitStructure);
 
-    TIM_OC2PreloadConfig(TIM2, TIM_OCPreload_Enable);
-    TIM_ARRPreloadConfig(TIM2, ENABLE);
+    TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
+    TIM_ARRPreloadConfig(TIM3, ENABLE);
 
     /* TIM3 enable counter */
-    TIM_Cmd(TIM2, ENABLE);
-    TIM_CtrlPWMOutputs(TIM2, ENABLE);
+    TIM_Cmd(TIM3, ENABLE);
+    TIM_CtrlPWMOutputs(TIM3, ENABLE);
 }
 
 static int dcmi_config()
@@ -499,32 +486,19 @@ int dma_config(uint8_t *buffer, uint32_t size)
 
 int ov9650_init(struct ov9650_handle *ov9650) 
 {
-    int i=0;
-    uint8_t (*regs)[2];
-
     /* Initialize SCCB interface */
     SCCB_Init();
-    systick_sleep(100);
+    systick_sleep(10);
 
     /* Configure the external clock (XCLK) */
     extclk_config(24000000);
-    systick_sleep(100);
+    systick_sleep(10);
 
     /* Configure the DCMI interface */
     dcmi_config();
     
-    //ov9650_reset(ov9650);
-
-    /* Write initial general sensor registers */
-    i=0;
-    regs = ov9650_init_regs;
-    while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
-        while (SCCB_Read(regs[i][0]) != regs[i][1]) {
-            SCCB_Write(regs[i][0], regs[i][1]);
-        }  
-        i++;
-    }
+    /* Reset Sensor */
+    ov9650_reset(ov9650);
 
     bzero(ov9650, sizeof(struct ov9650_handle));
 
@@ -538,8 +512,18 @@ int ov9650_init(struct ov9650_handle *ov9650)
 
 void ov9650_reset(struct ov9650_handle *ov9650)
 {
+    int i=0;
+    uint8_t (*regs)[2]=ov9650_init_regs;
+
+    /* Reset registers to default values */
     SCCB_Write(REG_COM7, 0x80);
-    systick_sleep(500);
+    systick_sleep(10);
+
+    /* Write general sensor registers */
+    while (regs[i][0]) {
+        SCCB_Write(regs[i][0], regs[i][1]);
+        i++;
+    }
 }
 
 
@@ -581,9 +565,6 @@ int ov9650_set_pixformat(struct ov9650_handle *ov9650, enum ov9650_pixformat pix
     /* Write pixel format registers */
     while (regs[i][0]) {
         SCCB_Write(regs[i][0], regs[i][1]);
-        while (SCCB_Read(regs[i][0]) != regs[i][1]) {
-            SCCB_Write(regs[i][0], regs[i][1]);
-        }  
         i++;
     }
 
@@ -625,16 +606,7 @@ int ov9650_set_framesize(struct ov9650_handle *ov9650, enum ov9650_framesize fra
     }
 
     SCCB_Write(REG_COM1, com1);
-    while (SCCB_Read(REG_COM1) != com1) {
-        SCCB_Write(REG_COM1, com1);
-    }  
-
     SCCB_Write(REG_COM7, com7);
-    while (SCCB_Read(REG_COM7) != com7) {
-        SCCB_Write(REG_COM7, com7);
-    }  
-//    SCCB_Write(REG_COM1, com1);
-//    SCCB_Write(REG_COM7, com7);
 
     /* realloc frame buffer */
     fb->pixels = realloc(fb->pixels, 
@@ -655,15 +627,14 @@ int ov9650_set_framerate(struct ov9650_handle *ov9650, enum ov9650_framerate fra
 
     /* Write framerate register */
     SCCB_Write(REG_CLKRC, framerate);
-    while (SCCB_Read(REG_CLKRC) != framerate) {
-        SCCB_Write(REG_CLKRC, framerate);
-    }  
     return 0;
 }   
 
-int ov9650_set_brightness(struct ov9650_handle *ov9650, int level)
+int ov9650_set_brightness(struct ov9650_handle *ov9650, uint8_t level)
 {
     int i;
+    int8_t lvl = (int8_t) level;
+
     static uint8_t regs[NUM_BR_LEVELS + 1][3] = {
         { REG_AEW, REG_AEB, REG_VPT },
         { 0x1c, 0x12, 0x50 }, /* -3 */

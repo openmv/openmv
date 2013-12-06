@@ -30,11 +30,13 @@ enum ov9650_command {
     CMD_SNAPSHOT=1,
     CMD_COLOR_TRACK, 
     CMD_MOTION_DETECTION,
+    CMD_FACE_DETECTION,
     CMD_SET_PIXFORMAT,
     CMD_SET_FRAMERATE,
     CMD_SET_FRAMESIZE,
-    CMD_FACE_DETECTION,
+    CMD_SET_BRIGHTNESS,
     CMD_WRITE_REG,
+    CMD_RESET_REG,
 };
 
 enum cmd_result { 
@@ -64,7 +66,7 @@ void ov9650_reset(struct ov9650_handle *ov9650);
 int ov9650_set_pixformat(struct ov9650_handle *ov9650, enum ov9650_pixformat pixformat);
 int ov9650_set_framesize(struct ov9650_handle *ov9650, enum ov9650_framesize framesize);
 int ov9650_set_framerate(struct ov9650_handle *ov9650, enum ov9650_framerate framerate);
-int ov9650_set_brightness(struct ov9650_handle *ov9650, int level);
+int ov9650_set_brightness(struct ov9650_handle *ov9650, uint8_t level);
 int ov9650_set_exposure(struct ov9650_handle *ov9650, uint16_t exposure);
 int ov9650_snapshot(struct ov9650_handle *ov9650);
 void delay(uint32_t ntime);

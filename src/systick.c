@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stm32f4xx.h>
+#include <stm32f4xx_misc.h>
 #include "systick.h"
 static volatile uint32_t sys_ticks; 
 
@@ -10,10 +11,13 @@ void SysTick_Handler(void)
 
 int systick_init()
 {
-    /* configure systick to interrupt every 1ms */
+    /* Configure systick to interrupt every 1ms */
     if (SysTick_Config(SystemCoreClock / 1000)) {
         return -1;
     }
+ 
+    /* Set SysTick IRQ to the highest priority */
+    NVIC_SetPriority(SysTick_IRQn, 0);
     return 0;
 }
 

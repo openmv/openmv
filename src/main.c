@@ -12,13 +12,23 @@
 #include "systick.h"
 #include "usb_generic.h"
 
-#define TEST 0
 #define BREAK() __asm__ volatile ("BKPT");
 
 enum cmd_result run_command(struct ov9650_handle *ov9650, uint8_t *args)
 {
-    enum cmd_result ret=CMD_ACK;
     switch (args[0]) {
+        case CMD_WRITE_REG:
+            SCCB_Write(args[1], args[2]);
+            break;
+
+        case CMD_RESET_REG:
+            ov9650_reset(ov9650);
+            break;
+    
+        case CMD_SET_BRIGHTNESS:
+            ov9650_set_brightness(ov9650, args[1]);
+            break;
+
         case CMD_SET_PIXFORMAT:
             /* Configure image size and format and FPS */
             if (ov9650_set_pixformat(ov9650, args[1]) != 0) {
@@ -57,7 +67,7 @@ enum cmd_result run_command(struct ov9650_handle *ov9650, uint8_t *args)
             hsv.v = usart_recv();
             #else
             /* red */
-            struct color hsv= {.h = 0, .s = 70, .v = 25};
+            struct color hsv= {.h = 340, .s = 50, .v = 50};
             #endif
 
             if (ov9650_snapshot(ov9650) != 0) {
@@ -68,11 +78,12 @@ enum cmd_result run_command(struct ov9650_handle *ov9650, uint8_t *args)
             if (point.x && point.y) {
                 struct rectangle r = {.x=point.x-5, .y=point.y-5, .w=10, .h=10};
                 imlib_draw_rectangle(fb, &r);
+
+                /* Send point coords from 0%..100% */
+                usart_send(point.x*100/fb->width);
+                usart_send(point.y*100/fb->height);
             }
 
-            /* Send point coords from 0%..100% */
-            //usart_send(point.x*100/fb->width);
-            //usart_send(point.y*100/fb->height);
             break;
         }
 
@@ -159,18 +170,30 @@ enum cmd_result run_command(struct ov9650_handle *ov9650, uint8_t *args)
                 .scale_factor = 1.25f,
             };
 
+            if (ov9650->framesize > FRAMESIZE_QQVGA) {
+                goto error;
+            }
+
+ 
             if (ov9650_snapshot(ov9650) != 0) {
                 goto error;
             }
 
             objects = imlib_detect_objects(&cascade, &ov9650->frame_buffer);
 
+            int x_pos=0,y_pos=0;
             int objs = array_length(objects);
             if (objs) {
                 int i;
                 for (i=0; i<objs; i++) {
                     imlib_draw_rectangle(&ov9650->frame_buffer, array_at(objects, i));
                 }
+                struct rectangle *r = array_at(objects, 0);
+                x_pos = r->x+r->w/2;
+                y_pos = r->y+r->h/2;
+                /* Send point coords from 0%..100% */
+                usart_send(x_pos*100/ov9650->frame_buffer.width);
+                usart_send(y_pos*100/ov9650->frame_buffer.height);
             }
             array_free(objects);
             break;
@@ -229,17 +252,39 @@ void usb_data_out(void *buffer, int *length, void *user_data)
     }
 }
 
+/* This function loads the .ccm data into the CMM region 
+   It's here to avoid modifiying the startup code */
+void load_ccm_section () __attribute__ ((section (".init")));
+void load_ccm_section (){
+    extern char _eidata, _sccm, _eccm;
+
+    char *src = &_eidata;
+    char *dst = &_sccm;
+    while (dst < &_eccm) {
+        *dst++ = *src++;
+    }
+}
+
 int main(void)
 {
+    /* OV9650 handle */
     struct ov9650_handle ov9650;
 
+    /* USB callback */
+    struct usb_user_cb usb_cb = {
+        &ov9650,
+        usb_data_in,
+        usb_data_out,
+    };
+
+    /* Init SysTick timer */
     systick_init();
 
     /* init USART */
     usart_init(9600);
 
     /* init RGB LED module */
-    rgb_led_init(LED_GREEN);
+    rgb_led_init(LED_BLUE);
 
     /* init OV9650 module */
     ov9650_init(&ov9650);
@@ -262,33 +307,27 @@ int main(void)
     }
 
     /* Configure framerate */
-    if (ov9650_set_framerate(&ov9650, FRAMERATE_30FPS) != 0) {
+    if (ov9650_set_framerate(&ov9650, FRAMERATE_60FPS) != 0) {
         goto error;
     }
    
     /* Set sensor brightness level -3..+3 */
     ov9650_set_brightness(&ov9650, 3);
   
-    rgb_led_set_color(LED_BLUE);
-    systick_sleep(3000);
-    rgb_led_set_color(LED_GREEN);
-
     /* init usb device */
-    struct usb_user_cb usb_cb = {
-        &ov9650,
-        usb_data_in,
-        usb_data_out,
-    };
-
     usb_dev_init(&usb_cb);
 
-#if TEST
+//    systick_sleep(3000);
+    rgb_led_set_color(LED_GREEN);
+
+#if 0
     /* FPS test */
     while (1) {
-        int fps = 0;
+        volatile int fps = 0;
+        uint8_t args[]= {CMD_FACE_DETECTION};
         uint32_t ticks = systick_current_millis();
         while ((systick_current_millis()-ticks)<1000) {
-            run_command(&ov9650, CMD_COLOR_TRACK);
+            run_command(&ov9650, args);
             fps++;
         }
         BREAK();

@@ -120,7 +120,7 @@ void imlib_color_track(struct frame_buffer *fb, struct color *color, struct poin
         }
     }
 
-    if (pixels < 100) {
+    if (pixels < 10) {
         point->x = 0;
         point->y = 0;
     } else {
@@ -346,7 +346,7 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
         } 
 
         /* If the sum is below the stage threshold, no faces are detected */
-        if (stage_sum < 0.25*stages_thresh_array[i]) {
+        if (stage_sum < 0.4*stages_thresh_array[i]) {
             return -i;
         }
     }

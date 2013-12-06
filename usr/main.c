@@ -26,12 +26,13 @@
             return -1;\
         }\
 
-const char *optstring = "f:r:s:c:h";
+const char *optstring = "f:r:s:c:p:h";
 const char *usage =  "usage: openmv <args>\n"                    \
                      "-f  set pixel format yuv422/rgb565/grayscale\n"\
                      "-r  set frame rate  2/8/15/30/60\n"\
                      "-s  set frame size  QQVGA\n"\
                      "-c  send command to camera SNAPSHOT/COLOR_TRACK\n"\
+                     "-p  probe register, pass reg addr in hex and use -/+ to change value\n"\
                      "-h  print this message and exit\n";
 
 libusb_device_handle *dev = NULL;
@@ -140,6 +141,9 @@ int main (int argc, char **argv)
         .frame_buffer = {160, 120, 2, {0}},
     };
     
+    uint8_t enable_probe=0;
+    uint8_t reg_addr=0;
+    uint8_t reg_val=0; /* register value */   
     struct frame_buffer *fb = &ov9650.frame_buffer;
 
     /*parse command line args*/
@@ -216,6 +220,11 @@ int main (int argc, char **argv)
                 }
                 break;
 
+            case 'p':
+                enable_probe = 1;
+                reg_addr = (uint8_t) strtol(optarg, NULL, 16);
+                break;
+
             case '?':
             case 'h':
                 fprintf(stderr, "%s\n", usage);
@@ -287,6 +296,10 @@ int main (int argc, char **argv)
         exit(1);
     }    
 
+    /* reset all registers to their default values */
+    cmd_buf[0] = CMD_RESET_REG;
+    bulk_xfr(EP_OUT, cmd_buf, 1);
+
     /* set pixelformat */
     cmd_buf[0] = CMD_SET_PIXFORMAT;
     cmd_buf[1] = ov9650.pixformat;
@@ -302,10 +315,18 @@ int main (int argc, char **argv)
     cmd_buf[1] = ov9650.framerate;
     bulk_xfr(EP_OUT, cmd_buf, 2);
 
-    cmd_buf[0] = CMD_WRITE_REG;
-    cmd_buf[1] = REG_COM9;
-    cmd_buf[2] = 0x50;
-    bulk_xfr(EP_OUT, cmd_buf, 3);
+    /* Controlled by AWB */
+    /*Blue/Red Channels amplifiers*/
+//    write_reg(REG_RED,  0x80);
+//    write_reg(REG_BLUE, 0x80);
+
+    /* set gain ceiling */
+    write_reg(REG_COM9, 0x30); 
+
+    /* set brightness */
+    cmd_buf[0] = CMD_SET_BRIGHTNESS;
+    cmd_buf[1] = 3;
+    bulk_xfr(EP_OUT, cmd_buf, 2);
 
     sleep(1);
 
@@ -314,6 +335,8 @@ int main (int argc, char **argv)
 
     /* allocate frame buffer */
     fb->pixels = malloc(fb->width*fb->height*fb->bpp);
+
+    char text_buf[64];
 
     while(1) {
         t_start = get_time_ms();
@@ -361,16 +384,16 @@ int main (int argc, char **argv)
         t_elapsed = get_time_ms() - t_start;
         t_total += t_elapsed;        
 
-        char text_buf[64];
-        static uint8_t v=0;
-        char buf[9]={0};
-        for (i=0; i<8; i++) {
-            buf[i]=(((v<<i)&0x80)>>7)+48;
+        if (enable_probe) {
+            char buf[9]={0};
+            for (i=0; i<8; i++) {
+                buf[i]=(((reg_val<<i)&0x80)>>7)+48;
+            }
+            write_reg(reg_addr, reg_val);
+            sprintf(text_buf, "REG 0x%.2X 0x%.2X %s", reg_addr, reg_val, buf);
+        } else {
+            sprintf(text_buf, "FPS %.2f", 1000/(float)(t_total / frames));
         }
-  //      write_reg(REG_GAIN, v);
-//        sprintf(text_buf, "REG %d %s", v, buf);
-
-        sprintf(text_buf, "FPS %.2f", 1000/(float)(t_total / frames));
    
         SDL_PollEvent(&event);
 
@@ -380,17 +403,23 @@ int main (int argc, char **argv)
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
                     case SDLK_0:
-                        v=0;
+                        reg_val=0;
                         break;
                     case SDLK_KP_PLUS:
-                        v++;
+                        reg_val++;
                         break;
                     case SDLK_KP_MINUS:
-                        v--;
+                        reg_val--;
+                        break;
+                    case SDLK_LEFT:
+                        reg_val = reg_val<<1 | reg_val>>7;
+                        break;
+                    case SDLK_RIGHT:
+                        reg_val = reg_val>>1 | reg_val<<7;
                         break;
                     case SDLK_s:
-                        printf("snapshot...\n");
                         write_image("snapshot.pgm", fb);
+                        printf("snapshot saved...\n");
                         break;
                     case SDLK_ESCAPE:
                         exit(0);     
@@ -409,7 +438,6 @@ int main (int argc, char **argv)
 
         /*flush*/
         SDL_UpdateRect(screen, 0, 0,  fb->width, fb->height);
-
     }
     return 0;
 }
