@@ -12,12 +12,10 @@
 #include "ov9650.h"
 #include "systick.h"
 #include "ov9650_regs.h"
-#define NUM_BR_LEVELS       7
-#define DCMI_DR_ADDRESS     (DCMI_BASE + 0x28)
-#define BREAK() __asm__ volatile ("BKPT")
-static volatile int frame_ready = 0;
 
-static uint8_t ov9650_init_regs[][2] = {
+#define NUM_BR_LEVELS       7
+
+static uint8_t default_regs[][2] = {
     /* See Implementation Guide */
     {REG_COM2,   0x01},  /*  Output drive x2 */
     {REG_COM5,   0x00},  /*  System clock  */
@@ -74,8 +72,8 @@ static uint8_t ov9650_init_regs[][2] = {
     /* Some registers discovered with probing */
     {REG_COM21,  0x00}, /* COM21[3] Digital Zoom */
     {REG_GRCOM,  0x24}, /* Affetcs AWB */
-    {0xaa,  0x00},      /* some edge effect 0x80 */
-    {0xab,  0x00},      /* makes image blurry 0x40 */
+    {0xaa,       0x00}, /* some edge effect 0x80 */
+    {0xab,       0x00}, /* makes image blurry 0x40 */
 
 #if 0
     /* When AEC is not used */
@@ -148,7 +146,7 @@ static uint8_t ov9650_init_regs[][2] = {
     {0x00,  0x00}
 };
 
-static uint8_t ov9650_rgb565_regs[][2] = {
+static uint8_t rgb565_regs[][2] = {
     /* See Implementation Guide */
     {REG_COM3,   0x04},  /*  Vario Pixels */
     {REG_COM4,   0x80},  /*  Vario Pixels */
@@ -172,7 +170,7 @@ static uint8_t ov9650_rgb565_regs[][2] = {
     {0x00,  0x00}
 };
 
-static uint8_t ov9650_yuv422_regs[][2] = {
+static uint8_t yuv422_regs[][2] = {
     /* See Implementation Guide */
     {REG_COM3,   0x04},  /*  Vario Pixels */
     {REG_COM4,   0x80},  /*  Vario Pixels */
@@ -196,370 +194,33 @@ static uint8_t ov9650_yuv422_regs[][2] = {
     {0x00,  0x00}
 };
 
-/* IRQ Handlers */
-void DCMI_IRQHandler(void)
-{
-    if (DCMI_GetITStatus(DCMI_IT_VSYNC)) {
-        DCMI_ClearITPendingBit(DCMI_IT_VSYNC);
-    } else if (DCMI_GetITStatus(DCMI_IT_LINE)) {
-        DCMI_ClearITPendingBit(DCMI_IT_LINE);
-    } else if (DCMI_GetITStatus(DCMI_IT_FRAME)) {
-        DCMI_ClearITPendingBit(DCMI_IT_FRAME);
-        BREAK();
-    } else if (DCMI_GetITStatus(DCMI_IT_OVF)) {
-        DCMI_ClearITPendingBit(DCMI_IT_OVF);
-        BREAK();
-    } else if (DCMI_GetITStatus(DCMI_IT_ERR)) {
-        DCMI_ClearITPendingBit(DCMI_IT_ERR);
-        BREAK();
-    }
-}
-
-void DMA2_Stream1_IRQHandler(void)
-{    
-    /* DMA Transfer Complete Interrupt */
-    if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_TCIF1)) {
-        /* clear DMA TCIF pending interrupt */
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_TCIF1);
-        /* set frame ready flag */
-        frame_ready = 1;
-    } else if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_HTIF1)) {
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_HTIF1);
-    } else if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_TEIF1)) {
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_TEIF1);
-        BREAK();
-    } else if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_DMEIF1)) {
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_DMEIF1);
-        BREAK();
-    } else if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_FEIF1)) {
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_FEIF1);
-        BREAK();
-    }
-}
-
-void delay(uint32_t ntime)
-{
-    volatile uint32_t x;
-    while (ntime) {
-        for (x=0; x<10000; x--);        
-        ntime--;
-    }
-}
-
-/*
-   TIM3 Configuration In this example TIM3 input clock (TIM3CLK) is 
-   set to 2 * APB1 clock (PCLK1), since APB1 prescaler is different from ABP2.
-     TIM3CLK = 2 * PCLK1  (PCLK1 = HCLK / 4)
-     TIM3CLK = 2 * HCLK/4 = HCLK / 2 
-     TIM3CLK = 168MHz / 2 = 84MHz
-         
-   To get TIM3 counter clock at x MHz, the prescaler is computed as follows:
-      Prescaler = (TIM3CLK / TIM3 counter clock) - 1
-      Prescaler = (84 MHz / x MHz) - 1
-                                             
-   To get TIM3 output clock at 30 KHz, the period (ARR)) is computed as follows:
-      ARR = (TIM3 counter clock / TIM3 output clock) - 1
-      ARR = 21 MHz/ 30KHz = 669 
-                 
-   TIM3 Channel1 duty cycle = (TIM3_CCR1/ TIM3_ARR)* 100 = 50%
- */   
-#define PWM_TIMER       TIM3
-#define PWM_TIMER_CHAN  TIM3
-static void extclk_config(int frequency)
-{
-    GPIO_InitTypeDef GPIO_InitStructure;
-    TIM_OCInitTypeDef  TIM_OCInitStructure;
-    TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-
-    /* TIM channel GPIO configuration */
-    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_4;
-    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB, &GPIO_InitStructure); 
-
-    /* Connect TIM pins to AF */  
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource4, GPIO_AF_TIM3);
-
-    /* Calculate the prescaler value */ 
-//    int tclk  = 84000000;
-//    int prescaler =(uint16_t) ((SystemCoreClock/2) / tclk) - 1;
-
-    int tclk  = 168000000;
-    int prescaler =(uint16_t) (SystemCoreClock / tclk) - 1;
-
-    //period must be even
-    int period = (tclk / frequency)-1;
-
-    /* Time base configuration */
-    TIM_TimeBaseStructure.TIM_Period = period;
-    TIM_TimeBaseStructure.TIM_Prescaler = prescaler;
-    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
-    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
-
-    /* PWM1 Mode configuration: Channel2 */
-    TIM_OCInitStructure.TIM_Pulse = period/2;
-    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
-    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OC1Init(TIM3, &TIM_OCInitStructure);
-
-    TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
-    TIM_ARRPreloadConfig(TIM3, ENABLE);
-
-    /* TIM3 enable counter */
-    TIM_Cmd(TIM3, ENABLE);
-    TIM_CtrlPWMOutputs(TIM3, ENABLE);
-}
-
-static int dcmi_config()
-{
-    DCMI_InitTypeDef DCMI_InitStructure;
-    NVIC_InitTypeDef NVIC_InitStructure;
-    GPIO_InitTypeDef GPIO_InitStructure;
-
-    /*** DCMI GPIO configuration ***/ 
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOE |
-                           RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOA, ENABLE);
-    /* Connect DCMI pins to AF13 */
-    /* D0..D7 */
-    GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOC, GPIO_PinSource7, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource0, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource1, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource4, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource5, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource6, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_DCMI);
-
-    /* VSYNC, HSYNC, PCLK */
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource4, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource6, GPIO_AF_DCMI);
-
-    /* DCMI GPIO configuration */
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-    //GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
-
-    /* D0,D1 (PC6/7) */
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
-
-    /* D2,D3,D4,D6,D7 (E0/1/4/5/6) */
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 |
-                                  GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6;
-    GPIO_Init(GPIOE, &GPIO_InitStructure);
-
-    /* D5,VSYNC (PB6/7) */
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-    /* HSYNC,PCLK (PA4/6) */
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_6;
-    GPIO_Init(GPIOA, &GPIO_InitStructure);
-  
-
-    /*** DCMI Configuration ***/ 
-    DCMI_DeInit();
-    DCMI_Cmd(DISABLE);
-
-    /* Enable DCMI clock */
-    RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_DCMI, ENABLE);
-
-    /* Configure capture mode SnapShot/Continuous */
-    DCMI_InitStructure.DCMI_CaptureMode = DCMI_CaptureMode_SnapShot;
-
-    /* Hardware synchronization via VSYNC/HSYNC/PCLK lines */
-    DCMI_InitStructure.DCMI_SynchroMode = DCMI_SynchroMode_Hardware;
-
-    /* Active VS/HS clocks*/
-    DCMI_InitStructure.DCMI_VSPolarity  = DCMI_VSPolarity_High;
-    DCMI_InitStructure.DCMI_HSPolarity  = DCMI_HSPolarity_Low;
-
-    /* Sample data on rising edge of PCK */
-    DCMI_InitStructure.DCMI_PCKPolarity = DCMI_PCKPolarity_Rising; 
-    DCMI_InitStructure.DCMI_CaptureRate = DCMI_CaptureRate_All_Frame;
-
-    /* Capture 8 bits on every pixel clock */
-    DCMI_InitStructure.DCMI_ExtendedDataMode = DCMI_ExtendedDataMode_8b;
-    /* Init DCMI */ 
-    DCMI_Init(&DCMI_InitStructure);
-
-#if 0
-    /* Configure DCMI Interrupts */
-    DCMI_ITConfig(DCMI_IT_OVF, ENABLE);
-    DCMI_ITConfig(DCMI_IT_ERR, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_FRAME, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_LINE, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_VSYNC, ENABLE);
-
-    NVIC_InitStructure.NVIC_IRQChannel = DCMI_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure); 
-#endif
-
-    /* Enable DCMI Perphieral */
-    DCMI_Cmd(ENABLE);
-    return 0;
-}
-
-int dma_config(uint8_t *buffer, uint32_t size)
-{
-    DMA_InitTypeDef  DMA_InitStructure;
-    NVIC_InitTypeDef NVIC_InitStructure;
-
-    /* Enable DMA2 clock */
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
-
-    DMA_DeInit(DMA2_Stream1);
-    DMA_Cmd(DMA2_Stream1, DISABLE);
-
-    /* DMA2 Stream1 Configuration */  
-    DMA_InitStructure.DMA_Channel = DMA_Channel_1; 
-
-    /* DMA direction peripheral to memory */
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-
-    /* Number of data items to be transferred in multiples of (Mburst beat*(Msize)/(Psize))*/
-    DMA_InitStructure.DMA_BufferSize = size/4;
-
-    /* Base memory and peripheral addresses */
-    DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) buffer;
-    DMA_InitStructure.DMA_PeripheralBaseAddr = DCMI_DR_ADDRESS;	
-
-    /* Memory and peripheral address increments */
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-
-    /* Set Msize and Psize to one word */
-    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
-    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
-
-    /* Configure circular mode for DMA buffer */
-    DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
-    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-
-    /* Enable FIFO with threshold of 16 bytes */
-    DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Enable;
-    DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_Full;
-
-    /* Set burst mode, Mburst is 4 beats (16 bytes each) */
-    DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_INC4;
-    DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-
-    DMA_Init(DMA2_Stream1, &DMA_InitStructure);
- 
-    /* Enable DMA interrupts */
-    DMA_ITConfig(DMA2_Stream1, DMA_IT_TC, ENABLE);
-//    DMA_ITConfig(DMA2_Stream1, DMA_IT_HT, ENABLE);
-//    DMA_ITConfig(DMA2_Stream1, DMA_IT_TE, ENABLE);
-//    DMA_ITConfig(DMA2_Stream1, DMA_IT_FE, ENABLE);
-
-    /* DMA Stream enable */
-    DMA_Cmd(DMA2_Stream1, ENABLE);
-
-    int dma_timeout = 10000;
-    while ((DMA_GetCmdStatus(DMA2_Stream1) != ENABLE) && (--dma_timeout > 0));
-
-    if (dma_timeout == 0) {
-        return -1;
-    }
-
-    /* Enable the DMA Stream IRQ Channel */
-    NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream1_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure); 
-
-    return 0;
-}
-
-int ov9650_init(struct ov9650_handle *ov9650) 
-{
-    /* Initialize SCCB interface */
-    SCCB_Init();
-    systick_sleep(10);
-
-    /* Configure the external clock (XCLK) */
-    extclk_config(24000000);
-    systick_sleep(10);
-
-    /* Configure the DCMI interface */
-    dcmi_config();
-    
-    /* Reset Sensor */
-    ov9650_reset(ov9650);
-
-    bzero(ov9650, sizeof(struct ov9650_handle));
-
-    /* read sensor id */
-    ov9650->id.MIDH = SCCB_Read(REG_MIDH);
-    ov9650->id.MIDL = SCCB_Read(REG_MIDL);
-    ov9650->id.PID  = SCCB_Read(REG_PID);
-    ov9650->id.VER  = SCCB_Read(REG_VER);
-    return 0;
-}
-
-void ov9650_reset(struct ov9650_handle *ov9650)
-{
-    int i=0;
-    uint8_t (*regs)[2]=ov9650_init_regs;
-
-    /* Reset registers to default values */
-    SCCB_Write(REG_COM7, 0x80);
-    systick_sleep(10);
-
-    /* Write general sensor registers */
-    while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
-        i++;
-    }
-}
-
-
-int ov9650_set_pixformat(struct ov9650_handle *ov9650, enum ov9650_pixformat pixformat)
+static int set_pixformat(enum sensor_pixformat pixformat)
 {
     int i=0;
     uint8_t (*regs)[2];
-    struct frame_buffer *fb = &ov9650->frame_buffer;
-    uint8_t com7=0x00; /* framesize/RGB */
+    uint8_t com7=0; /* framesize/RGB */
 
-    ov9650->pixformat = pixformat;
+    /* read pixel format reg */
+    com7 = SCCB_Read(REG_COM7);
+
     switch (pixformat) {
         case PIXFORMAT_RGB565:
-            fb->bpp    = 2;
-            regs = ov9650_rgb565_regs;
+            com7 |= REG_COM7_RGB;
+            regs = rgb565_regs;
             break;
         case PIXFORMAT_YUV422:
-            fb->bpp    = 2;
-            regs = ov9650_yuv422_regs;
+            com7 &= (~REG_COM7_RGB);
+            regs = yuv422_regs;
             break;
         case PIXFORMAT_GRAYSCALE:
-            fb->bpp    = 1;
-            regs = ov9650_yuv422_regs;
+            com7 &= (~REG_COM7_RGB);
+            regs = yuv422_regs;
             break;
         default:
             return -1;
     }
-
-    /* set RGB output */
-    com7 = SCCB_Read(REG_COM7);
-    if (ov9650->pixformat == PIXFORMAT_RGB565) {
-        com7 |= REG_COM7_RGB;
-    } else {
-        com7 &= (~REG_COM7_RGB);
-    }
     
+    /* Set pixel format */
     SCCB_Write(REG_COM7, com7);
 
     /* Write pixel format registers */
@@ -571,69 +232,48 @@ int ov9650_set_pixformat(struct ov9650_handle *ov9650, enum ov9650_pixformat pix
     return 0;
 }
 
-int ov9650_set_framesize(struct ov9650_handle *ov9650, enum ov9650_framesize framesize)
+static int set_framesize(enum sensor_framesize framesize)
 {
-    ov9650->framesize = framesize;
-    struct frame_buffer *fb = &ov9650->frame_buffer;
+    uint8_t com7=0; /* framesize/RGB */
+    uint8_t com1=0; /* Skip option */
 
-    uint8_t com7=0x00; /* framesize/RGB */
-    uint8_t com1=0x00; /* Skip option */
+    /* read COM7 RGB bit */
+    com7 = (SCCB_Read(REG_COM7) & REG_COM7_RGB);
 
     switch (framesize) {
         case FRAMESIZE_QQCIF:
-            fb->width  = 88;
-            fb->height = 72;
-            com7 = REG_COM7_QCIF;
-            com1 = REG_COM1_QQCIF|REG_COM1_SKIP2;
+            com7 |= REG_COM7_QCIF;
+            com1 |= REG_COM1_QQCIF|REG_COM1_SKIP2;
             break;
         case FRAMESIZE_QQVGA:
-            fb->width  = 160;
-            fb->height = 120;
-            com7 = REG_COM7_QVGA;
-            com1 = REG_COM1_QQVGA|REG_COM1_SKIP2;
+            com7 |= REG_COM7_QVGA;
+            com1 |= REG_COM1_QQVGA|REG_COM1_SKIP2;
             break;
         case FRAMESIZE_QCIF:
-            fb->width  = 176;
-            fb->height = 144;
-            com7 = REG_COM7_QCIF;
+            com7 |= REG_COM7_QCIF;
             break;
         default:
             return -1;
     }
 
-    if (ov9650->pixformat == PIXFORMAT_RGB565) {
-        com7 |= REG_COM7_RGB;
-    }
-
+    /* write the frame size registers */
     SCCB_Write(REG_COM1, com1);
     SCCB_Write(REG_COM7, com7);
 
-    /* realloc frame buffer */
-    fb->pixels = realloc(fb->pixels, 
-            fb->width * fb->height * 2); /* always use 2 bpp */
-
-    if (fb->pixels == NULL) {
-        return -1;
-    }
-
-    /* Reconfigure the DMA stream */
-    dma_config(fb->pixels, fb->width * fb->height * 2);
     return 0;
 }
 
-int ov9650_set_framerate(struct ov9650_handle *ov9650, enum ov9650_framerate framerate)
+static int set_framerate(enum sensor_framerate framerate)
 {
-    ov9650->framerate=framerate;
-
     /* Write framerate register */
     SCCB_Write(REG_CLKRC, framerate);
     return 0;
 }   
 
-int ov9650_set_brightness(struct ov9650_handle *ov9650, uint8_t level)
+static int set_brightness(uint8_t level)
 {
     int i;
-    int8_t lvl = (int8_t) level;
+//    int8_t lvl = (int8_t) level;
 
     static uint8_t regs[NUM_BR_LEVELS + 1][3] = {
         { REG_AEW, REG_AEB, REG_VPT },
@@ -658,7 +298,7 @@ int ov9650_set_brightness(struct ov9650_handle *ov9650, uint8_t level)
     return 0;
 }
 
-int ov9650_set_exposure(struct ov9650_handle *ov9650, uint16_t exposure)
+static int set_exposure(uint16_t exposure)
 {
    uint8_t val;
    val = SCCB_Read(REG_COM1);
@@ -675,29 +315,34 @@ int ov9650_set_exposure(struct ov9650_handle *ov9650, uint16_t exposure)
    return 0;
 }
 
-int ov9650_snapshot(struct ov9650_handle *ov9650)
+static int reset()
 {
-    /* clear frame_ready flag */
-    frame_ready = 0;
+    int i=0;
+    uint8_t (*regs)[2]=default_regs;
 
-    /* re-enable DCMI interface */
-    DCMI_CaptureCmd(ENABLE);
+    /* Reset all registers */
+    SCCB_Write(REG_COM7, 0x80);
 
-    /* wait for dma transfer to finish */
-    while (!frame_ready);
+    /* delay n ms */
+    systick_sleep(10);
 
-    /* wait for DCMI to be disabled */
-    while (DCMI->CR & DCMI_CR_CAPTURE);
-
-    if (ov9650->pixformat == PIXFORMAT_GRAYSCALE) {
-        int i;
-        struct frame_buffer *fb = &ov9650->frame_buffer;
-        /* extract Y channel */
-        for (i=0; i<(fb->width * fb->height); i++) {
-            fb->pixels[i] = fb->pixels[i*2]; 
-        }
+    /* Write initial regsiters */
+    while (regs[i][0]) {
+        SCCB_Write(regs[i][0], regs[i][1]);
+        i++;
     }
+
     return 0;
 }
 
-
+int ov9650_init(struct sensor_dev *sensor)
+{
+    /* set function pointers */
+    sensor->reset = reset;
+    sensor->set_pixformat = set_pixformat;
+    sensor->set_framesize = set_framesize;
+    sensor->set_framerate = set_framerate;
+    sensor->set_brightness= set_brightness;
+    sensor->set_exposure  = set_exposure;
+    return 0;
+}
