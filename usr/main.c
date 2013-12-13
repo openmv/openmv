@@ -12,8 +12,9 @@
 #include <sys/time.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
-#include "ov9650.h"
+#include "sensor.h"
 #include "ov9650_regs.h"
+
 #define USB_VID        (0x0483) /* vendor id    */
 #define USB_PID        (0x5740) /* product id   */
 #define EP_IN          (0x81)   /* IN endpoint  */
@@ -115,7 +116,7 @@ int write_image(char *path, struct frame_buffer *image)
 void write_reg(reg, val)
 {
     uint8_t cmd_buf[3];
-    cmd_buf[0] = CMD_WRITE_REG;
+    cmd_buf[0] = CMD_WRITE_REGISTER;
     cmd_buf[1] = reg;
     cmd_buf[2] = val;
     bulk_xfr(EP_OUT, cmd_buf, 3);
@@ -132,9 +133,9 @@ int main (int argc, char **argv)
       .sa_flags     = SA_SIGINFO|SA_NOCLDSTOP,
     };
 
-    enum ov9650_command ov9650_cmd = CMD_SNAPSHOT;
+    enum sensor_command sensor_cmd = CMD_SNAPSHOT;
 
-    struct ov9650_handle ov9650 = {
+    struct sensor_dev sensor = {
         .pixformat = PIXFORMAT_RGB565,
         .framesize = FRAMESIZE_QQVGA,
         .framerate = FRAMERATE_30FPS,
@@ -144,18 +145,18 @@ int main (int argc, char **argv)
     uint8_t enable_probe=0;
     uint8_t reg_addr=0;
     uint8_t reg_val=0; /* register value */   
-    struct frame_buffer *fb = &ov9650.frame_buffer;
+    struct frame_buffer *fb = &sensor.frame_buffer;
 
     /*parse command line args*/
     while ((opt = getopt(argc, argv, optstring)) > 0) {
         switch (opt) {
             case 'c':
                 if (strcmp(optarg, "SNAPSHOT")==0) {
-                    ov9650_cmd = CMD_SNAPSHOT;
+                    sensor_cmd = CMD_SNAPSHOT;
                 } else if (strcmp(optarg, "COLOR_TRACK")==0) {
-                    ov9650_cmd = CMD_COLOR_TRACK;
+                    sensor_cmd = CMD_COLOR_TRACK;
                 } else if (strcmp(optarg, "FACE_DETECTION")==0) {
-                    ov9650_cmd = CMD_FACE_DETECTION;
+                    sensor_cmd = CMD_FACE_DETECTION;
                 } else {
                     fprintf(stderr, "unsupported command <%s>\n%s\n", optarg, usage);
                     exit(1);
@@ -165,13 +166,13 @@ int main (int argc, char **argv)
             case 'f':
                 if (strcmp(optarg, "yuv422")==0) {
                     fb->bpp =2;
-                    ov9650.pixformat = PIXFORMAT_YUV422;
+                    sensor.pixformat = PIXFORMAT_YUV422;
                 } else if (strcmp(optarg, "rgb565")==0) {
                     fb->bpp =2;
-                    ov9650.pixformat = PIXFORMAT_RGB565;
+                    sensor.pixformat = PIXFORMAT_RGB565;
                 } else if (strcmp(optarg, "grayscale")==0) {
                     fb->bpp =1;
-                    ov9650.pixformat = PIXFORMAT_GRAYSCALE;
+                    sensor.pixformat = PIXFORMAT_GRAYSCALE;
                 } else {
                     fprintf(stderr, "unsupported pixformat <%s>\n%s\n", optarg, usage);
                     exit(1);
@@ -182,15 +183,15 @@ int main (int argc, char **argv)
                 if (strcmp(optarg, "QQCIF")==0) {
                     fb->width  = 88;
                     fb->height = 72;
-                    ov9650.framesize = FRAMESIZE_QQCIF;
+                    sensor.framesize = FRAMESIZE_QQCIF;
                 } else if (strcmp(optarg, "QQVGA")==0) {
                     fb->width  = 160;
                     fb->height = 120;
-                    ov9650.framesize = FRAMESIZE_QQVGA;
+                    sensor.framesize = FRAMESIZE_QQVGA;
                 } else if (strcmp(optarg, "QCIF")==0) {
                     fb->width  = 176;
                     fb->height = 144;
-                    ov9650.framesize = FRAMESIZE_QCIF;
+                    sensor.framesize = FRAMESIZE_QCIF;
                 } else {
                     fprintf(stderr, "unsupported framesize <%s>\n%s\n", optarg, usage);
                     exit(1);
@@ -200,19 +201,19 @@ int main (int argc, char **argv)
             case 'r':
                 switch (atoi(optarg)) {
                     case 2:
-                        ov9650.framerate=FRAMERATE_2FPS;
+                        sensor.framerate=FRAMERATE_2FPS;
                         break;
                     case 8:
-                        ov9650.framerate=FRAMERATE_8FPS;
+                        sensor.framerate=FRAMERATE_8FPS;
                         break;
                     case 15:
-                        ov9650.framerate=FRAMERATE_15FPS;
+                        sensor.framerate=FRAMERATE_15FPS;
                         break;
                     case 30:
-                        ov9650.framerate=FRAMERATE_30FPS;
+                        sensor.framerate=FRAMERATE_30FPS;
                         break;
                     case 60:
-                        ov9650.framerate=FRAMERATE_60FPS;
+                        sensor.framerate=FRAMERATE_60FPS;
                         break;
                     default:
                         fprintf(stderr, "unsupported framerate <%s>\n%s\n", optarg, usage);
@@ -297,22 +298,22 @@ int main (int argc, char **argv)
     }    
 
     /* reset all registers to their default values */
-    cmd_buf[0] = CMD_RESET_REG;
+    cmd_buf[0] = CMD_RESET_SENSOR;
     bulk_xfr(EP_OUT, cmd_buf, 1);
 
     /* set pixelformat */
     cmd_buf[0] = CMD_SET_PIXFORMAT;
-    cmd_buf[1] = ov9650.pixformat;
+    cmd_buf[1] = sensor.pixformat;
     bulk_xfr(EP_OUT, cmd_buf, 2);
 
     /* set framesize */
     cmd_buf[0] = CMD_SET_FRAMESIZE;
-    cmd_buf[1] = ov9650.framesize;
+    cmd_buf[1] = sensor.framesize;
     bulk_xfr(EP_OUT, cmd_buf, 2);
 
     /* set framerate */
     cmd_buf[0] = CMD_SET_FRAMERATE;
-    cmd_buf[1] = ov9650.framerate;
+    cmd_buf[1] = sensor.framerate;
     bulk_xfr(EP_OUT, cmd_buf, 2);
 
     /* Controlled by AWB */
@@ -342,7 +343,7 @@ int main (int argc, char **argv)
         t_start = get_time_ms();
 
         /* request frame */
-        cmd_buf[0] = ov9650_cmd;
+        cmd_buf[0] = sensor_cmd;
         bulk_xfr(EP_OUT, cmd_buf, 1);
 
         int ret, len = 0;
