@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
+#include <stdarg.h>
 #include "sensor.h"
 #include "ov9650_regs.h"
 
@@ -113,13 +114,24 @@ int write_image(char *path, struct frame_buffer *image)
 	return 0;
 }
 
-void write_reg(reg, val)
+void send_command(enum sensor_command cmd, int n, ...)
 {
-    uint8_t cmd_buf[3];
-    cmd_buf[0] = CMD_WRITE_REGISTER;
-    cmd_buf[1] = reg;
-    cmd_buf[2] = val;
-    bulk_xfr(EP_OUT, cmd_buf, 3);
+    int i;
+    va_list args;
+    uint8_t cmd_buf[64];
+
+    /* first byte is the command */
+    cmd_buf[0] = cmd; 
+
+    /* process var args */
+    va_start(args, n);
+
+    for (i=0; i<n; i++) {
+        cmd_buf[i+1] = (uint8_t) va_arg(args, int);
+    }
+    va_end(args);
+    
+    bulk_xfr(EP_OUT, cmd_buf, n+1);
 }
 
 int main (int argc, char **argv) 
@@ -298,38 +310,29 @@ int main (int argc, char **argv)
     }    
 
     /* reset all registers to their default values */
-    cmd_buf[0] = CMD_RESET_SENSOR;
-    bulk_xfr(EP_OUT, cmd_buf, 1);
+    send_command(CMD_RESET_SENSOR, 0);
 
     /* set pixelformat */
-    cmd_buf[0] = CMD_SET_PIXFORMAT;
-    cmd_buf[1] = sensor.pixformat;
-    bulk_xfr(EP_OUT, cmd_buf, 2);
+    send_command(CMD_SET_PIXFORMAT, 1, sensor.pixformat);
 
     /* set framesize */
-    cmd_buf[0] = CMD_SET_FRAMESIZE;
-    cmd_buf[1] = sensor.framesize;
-    bulk_xfr(EP_OUT, cmd_buf, 2);
+    send_command(CMD_SET_FRAMESIZE, 1, sensor.framesize);
 
     /* set framerate */
-    cmd_buf[0] = CMD_SET_FRAMERATE;
-    cmd_buf[1] = sensor.framerate;
-    bulk_xfr(EP_OUT, cmd_buf, 2);
+    send_command(CMD_SET_FRAMERATE, 1, sensor.framerate);
+
+    /* set gain ceiling */
+    send_command(CMD_SET_GAINCEILING, 1, GAINCEILING_8X);
+
+    /* set brightness */
+    send_command(CMD_SET_BRIGHTNESS, 1, 3);
+
+    sleep(1);
 
     /* Controlled by AWB */
     /*Blue/Red Channels amplifiers*/
 //    write_reg(REG_RED,  0x80);
 //    write_reg(REG_BLUE, 0x80);
-
-    /* set gain ceiling */
-    write_reg(REG_COM9, 0x30); 
-
-    /* set brightness */
-    cmd_buf[0] = CMD_SET_BRIGHTNESS;
-    cmd_buf[1] = 3;
-    bulk_xfr(EP_OUT, cmd_buf, 2);
-
-    sleep(1);
 
     SDL_Event event;
     long t_start, t_elapsed=0, t_total=0, frames=0;
@@ -390,7 +393,7 @@ int main (int argc, char **argv)
             for (i=0; i<8; i++) {
                 buf[i]=(((reg_val<<i)&0x80)>>7)+48;
             }
-            write_reg(reg_addr, reg_val);
+            send_command(CMD_WRITE_REGISTER, 2, reg_addr, reg_val);
             sprintf(text_buf, "REG 0x%.2X 0x%.2X %s", reg_addr, reg_val, buf);
         } else {
             sprintf(text_buf, "FPS %.2f", 1000/(float)(t_total / frames));
