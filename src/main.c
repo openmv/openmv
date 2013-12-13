@@ -54,6 +54,13 @@ enum sensor_result run_command(struct sensor_dev *sensor, uint8_t *args)
             }
             break;
 
+        case CMD_SET_GAINCEILING:           
+            /* Configure framerate */
+            if (sensor_set_gainceiling(sensor, args[1]) != 0) {
+                goto error;
+            }
+            break;
+
         case CMD_SNAPSHOT: {
             if (sensor_snapshot(sensor) != 0) {
                 goto error;

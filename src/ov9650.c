@@ -194,6 +194,26 @@ static uint8_t yuv422_regs[][2] = {
     {0x00,  0x00}
 };
 
+static int reset()
+{
+    int i=0;
+    uint8_t (*regs)[2]=default_regs;
+
+    /* Reset all registers */
+    SCCB_Write(REG_COM7, 0x80);
+
+    /* delay n ms */
+    systick_sleep(10);
+
+    /* Write initial regsiters */
+    while (regs[i][0]) {
+        SCCB_Write(regs[i][0], regs[i][1]);
+        i++;
+    }
+
+    return 0;
+}
+
 static int set_pixformat(enum sensor_pixformat pixformat)
 {
     int i=0;
@@ -315,23 +335,10 @@ static int set_exposure(uint16_t exposure)
    return 0;
 }
 
-static int reset()
+static int set_gainceiling(enum sensor_gainceiling gainceiling)
 {
-    int i=0;
-    uint8_t (*regs)[2]=default_regs;
-
-    /* Reset all registers */
-    SCCB_Write(REG_COM7, 0x80);
-
-    /* delay n ms */
-    systick_sleep(10);
-
-    /* Write initial regsiters */
-    while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
-        i++;
-    }
-
+    /* Write gain ceiling register */
+    SCCB_Write(REG_COM9, (gainceiling<<4));
     return 0;
 }
 
@@ -344,5 +351,6 @@ int ov9650_init(struct sensor_dev *sensor)
     sensor->set_framerate = set_framerate;
     sensor->set_brightness= set_brightness;
     sensor->set_exposure  = set_exposure;
+    sensor->set_gainceiling = set_gainceiling;
     return 0;
 }

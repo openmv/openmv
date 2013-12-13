@@ -10,13 +10,13 @@ struct sensor_id {
 };
 
 enum sensor_pixformat { 
-    PIXFORMAT_RGB565=1,  /* 2BPP/RGB565*/
+    PIXFORMAT_RGB565,    /* 2BPP/RGB565*/
     PIXFORMAT_YUV422,    /* 2BPP/YUV422*/
     PIXFORMAT_GRAYSCALE, /* 1BPP/GRAYSCALE*/
 };
 
 enum sensor_framesize { 
-    FRAMESIZE_QQCIF=1,  /* 88x72     */
+    FRAMESIZE_QQCIF,    /* 88x72     */
     FRAMESIZE_QQVGA,    /* 160x120   */
     FRAMESIZE_QCIF,     /* 176x144   */
     FRAMESIZE_QVGA,     /* 320x240   */
@@ -33,12 +33,23 @@ enum sensor_framerate {
     FRAMERATE_60FPS=0x80,
 };
 
+enum sensor_gainceiling { 
+    GAINCEILING_2X,
+    GAINCEILING_4X,
+    GAINCEILING_8X,
+    GAINCEILING_16X,
+    GAINCEILING_32X,
+    GAINCEILING_64X,
+    GAINCEILING_128X,
+};
+
 enum sensor_command { 
     CMD_RESET_SENSOR=1,
     CMD_SET_PIXFORMAT,
     CMD_SET_FRAMERATE,
     CMD_SET_FRAMESIZE,
     CMD_SET_BRIGHTNESS,
+    CMD_SET_GAINCEILING,
     CMD_WRITE_REGISTER,
     CMD_READ_REGISTER,
     CMD_SNAPSHOT,
@@ -57,6 +68,7 @@ struct sensor_dev {
     enum sensor_pixformat pixformat;
     enum sensor_framesize framesize;
     enum sensor_framerate framerate;
+    enum sensor_gainceiling gainceiling;
     struct frame_buffer frame_buffer;
     /* Sensor function pointers */
     int  (*reset)          ();
@@ -65,6 +77,7 @@ struct sensor_dev {
     int  (*set_framerate)  (enum sensor_framerate framerate);
     int  (*set_brightness) (uint8_t level);
     int  (*set_exposure)   (uint16_t exposure);
+    int  (*set_gainceiling) (enum sensor_gainceiling gainceiling);
 };
 
 /**
@@ -151,4 +164,12 @@ int sensor_set_brightness(struct sensor_dev *sensor, uint8_t level);
  * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
  */
 int sensor_set_exposure(struct sensor_dev *sensor, uint16_t exposure);
+/**
+ * Set the sensor AGC gain ceiling.
+ *
+ * @param sensor A pointer to the sensor device handle.
+ * @param exposure The new exposure level.
+ * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
+ */
+int sensor_set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling);
 #endif /* __SENSOR_H__ */

@@ -339,10 +339,11 @@ int sensor_init(struct sensor_dev *sensor)
 
 int sensor_reset(struct sensor_dev *sensor)
 {
-    /* reset sesnor struct */
-    sensor->pixformat=0;
-    sensor->framesize=0;
-    sensor->framerate=0;
+    /* reset sesnor state */
+    sensor->pixformat=0xFF;
+    sensor->framesize=0xFF;
+    sensor->framerate=0xFF;
+    sensor->gainceiling=0xFF;
 
     /* reset the sensor */
     sensor->reset();
@@ -499,3 +500,20 @@ int sensor_set_exposure(struct sensor_dev *sensor, uint16_t exposure)
     return 0;
 }
 
+int sensor_set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling)
+{
+    if (sensor->gainceiling == gainceiling) {
+        /* no change */
+        return 0;
+    }
+
+    /* call the sensor specific function */
+    if (sensor->set_gainceiling == NULL
+        || sensor->set_gainceiling(gainceiling) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+
+    sensor->gainceiling = gainceiling;
+    return 0;
+}
