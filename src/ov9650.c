@@ -59,7 +59,7 @@ static uint8_t default_regs[][2] = {
     {REG_MBD,    0x1a}, /* MBD[7:0] Manual banding filter LSB */
     {REG_HV,     0x0A}, /* HV[0]    Manual banding filter MSB */
     {REG_COM12,  0x04}, /* HREF options/ UV average  */
-    {REG_COM9,   0x40}, /* Gain ceiling [6:4]/Over-Exposure */
+    {REG_COM9,   0x20}, /* Gain ceiling [6:4]/Over-Exposure */
     {REG_COM16,  0x02}, /* Color matrix coeff double option */
     {REG_COM13,  0x10}, /* Gamma/Colour Matrix/UV delay */
     {REG_COM23,  0x00}, /* Disable Color bar/Analog Color Gain */
