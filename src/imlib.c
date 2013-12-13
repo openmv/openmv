@@ -478,9 +478,6 @@ struct array *imlib_detect_objects(struct cascade *cascade, struct frame_buffer 
     /* scaling factor */
     float factor;
 
-    /* group overlaping windows */
-    const float GROUP_EPS = 0.4f;
-
     struct array *objects;
 
     struct frame_buffer img;
