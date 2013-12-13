@@ -2,6 +2,7 @@
 #include <stm32f4xx_gpio.h>
 #include <stm32f4xx_usart.h>
 #include "usart.h"
+#include "systick.h"
 
 void usart_init(int baudrate)
 {
@@ -29,9 +30,9 @@ void usart_init(int baudrate)
 
     /* Disable USART */
 	USART_Cmd(USART3, DISABLE);
-    delay(1000000);
+    systick_sleep(10);
     USART_DeInit(USART3);
-    delay(1000000);
+    systick_sleep(10);
 
 	USART_InitStructure.USART_BaudRate = baudrate;
 	USART_InitStructure.USART_WordLength = USART_WordLength_8b;
