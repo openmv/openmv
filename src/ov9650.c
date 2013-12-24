@@ -71,7 +71,7 @@ static uint8_t default_regs[][2] = {
 
     /* Some registers discovered with probing */
     {REG_COM21,  0x00}, /* COM21[3] Digital Zoom */
-    {REG_GRCOM,  0x24}, /* Affetcs AWB */
+    {REG_GRCOM,  0x34}, /* Bypass Internal Regulator */
     {0xaa,       0x00}, /* some edge effect 0x80 */
     {0xab,       0x00}, /* makes image blurry 0x40 */
 
