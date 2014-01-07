@@ -88,26 +88,25 @@ static void extclk_config(int frequency)
     TIM_OCInitTypeDef  TIM_OCInitStructure;
     TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
 
     /* TIM channel GPIO configuration */
-    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_4;
+    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_9;
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOB, &GPIO_InitStructure); 
+    GPIO_Init(GPIOE, &GPIO_InitStructure); 
 
     /* Connect TIM pins to AF */  
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource4, GPIO_AF_TIM3);
+    GPIO_PinAFConfig(GPIOE, GPIO_PinSource9, GPIO_AF_TIM1);
 
     /* Calculate the prescaler value */ 
-//    int tclk  = 84000000;
-//    int prescaler =(uint16_t) ((SystemCoreClock/2) / tclk) - 1;
-
     int tclk  = 168000000;
     int prescaler =(uint16_t) (SystemCoreClock / tclk) - 1;
+//    int tclk  = (240/4)*2 *1000000;
+  //  int prescaler =0;
 
     //period must be even
     int period = (tclk / frequency)-1;
@@ -117,21 +116,21 @@ static void extclk_config(int frequency)
     TIM_TimeBaseStructure.TIM_Prescaler = prescaler;
     TIM_TimeBaseStructure.TIM_ClockDivision = 0;
     TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
 
     /* PWM1 Mode configuration: Channel2 */
     TIM_OCInitStructure.TIM_Pulse = period/2;
     TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
     TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
     TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OC1Init(TIM3, &TIM_OCInitStructure);
+    TIM_OC1Init(TIM1, &TIM_OCInitStructure);
 
-    TIM_OC1PreloadConfig(TIM3, TIM_OCPreload_Enable);
-    TIM_ARRPreloadConfig(TIM3, ENABLE);
+    TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Enable);
+    TIM_ARRPreloadConfig(TIM1, ENABLE);
 
     /* TIM3 enable counter */
-    TIM_Cmd(TIM3, ENABLE);
-    TIM_CtrlPWMOutputs(TIM3, ENABLE);
+    TIM_Cmd(TIM1, ENABLE);
+    TIM_CtrlPWMOutputs(TIM1, ENABLE);
 }
 
 static int dcmi_config()
@@ -181,7 +180,6 @@ static int dcmi_config()
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_6;
     GPIO_Init(GPIOA, &GPIO_InitStructure);
   
-
     /*** DCMI Configuration ***/ 
     DCMI_DeInit();
     DCMI_Cmd(DISABLE);
@@ -302,8 +300,46 @@ static int dma_config(uint8_t *buffer, uint32_t size)
     return 0;
 }
 
+void sensor_hard_reset()
+{
+    /* reset sensor */
+    GPIO_SetBits(GPIOA, GPIO_Pin_10);
+    systick_sleep(100);
+
+    GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+    systick_sleep(1000);
+}
+
 int sensor_init(struct sensor_dev *sensor)
 {
+#if 1
+    GPIO_InitTypeDef GPIO_InitStructure;
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+
+    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_8|GPIO_Pin_10;
+    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;
+    GPIO_Init(GPIOA, &GPIO_InitStructure); 
+
+    /* power down */
+    GPIO_SetBits(GPIOA, GPIO_Pin_8);
+    systick_sleep(100);
+
+    /* power up */
+    GPIO_ResetBits(GPIOA, GPIO_Pin_8);
+    systick_sleep(100);
+
+    /* reset sensor */
+    GPIO_SetBits(GPIOA, GPIO_Pin_10);
+    systick_sleep(100);
+
+    GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+    systick_sleep(1000);
+
+#endif
+
     /* Initialize SCCB interface */
     SCCB_Init();
     systick_sleep(10);
@@ -314,6 +350,7 @@ int sensor_init(struct sensor_dev *sensor)
 
     /* Configure the DCMI interface */
     dcmi_config();
+    systick_sleep(10);
 
     /* clear sesnor struct */
     bzero(sensor, sizeof(struct sensor_dev));
@@ -459,7 +496,7 @@ int sensor_set_framesize(struct sensor_dev *sensor, enum sensor_framesize frames
 
     /* realloc frame buffer */
     if ((fb->pixels = realloc(/* always allocate 2 bpp */            
-        fb->pixels, fb->width * fb->height * 2)) == NULL) {; 
+        fb->pixels, fb->width * fb->height * 2)) == NULL) {
         return -1;
     }
 
@@ -516,4 +553,9 @@ int sensor_set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling ga
 
     sensor->gainceiling = gainceiling;
     return 0;
+}
+
+int get_bytes()
+{
+    return DMA_GetCurrDataCounter(DMA2_Stream1);
 }
