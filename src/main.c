@@ -11,6 +11,8 @@
 #include "array.h"
 #include "systick.h"
 #include "usb_generic.h"
+#include "ff.h"
+#include "rcc_ctrl.h"
 
 #define BREAK() __asm__ volatile ("BKPT");
 
@@ -287,6 +289,8 @@ int main(void)
         usb_data_in,
         usb_data_out,
     };
+
+    rcc_ctrl_set_frequency(SYSCLK_168_MHZ);
 
     /* Init SysTick timer */
     systick_init();
