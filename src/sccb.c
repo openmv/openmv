@@ -1,203 +1,203 @@
 #include "sccb.h"
 #include <stm32f4xx_rcc.h>
 #include <stm32f4xx_gpio.h>
+#include <stm32f4xx_syscfg.h>
+#include <stm32f4xx_misc.h>
+#include <stm32f4xx_i2c.h>
 
-#define SCCB_SIOC_PIN       GPIO_Pin_8
-#define SCCB_SIOD_PIN       GPIO_Pin_9
+/* I2C defs */ 
+#define I2Cx               I2C1
+#define I2C_CLOCK          RCC_APB1Periph_I2C1
+#define I2C_FREQ           (30000)
+#define I2C_SLAVE_ADDR     (0x60)
+#define I2C_MAX_TIMEOUT    (10000)
 
-#define SCCB_PORT           GPIOB
-#define SCCB_PORT_CLOCK     RCC_AHB1Periph_GPIOB
-
-#define SCCB_SIOC_H()    	GPIO_SetBits(GPIOB, SCCB_SIOC_PIN)  
-#define SCCB_SIOC_L()       GPIO_ResetBits(GPIOB, SCCB_SIOC_PIN)
-   
-#define SCCB_SIOD_H()    	GPIO_SetBits(GPIOB, SCCB_SIOD_PIN)  
-#define SCCB_SIOD_L()     	GPIO_ResetBits(GPIOB, SCCB_SIOD_PIN)
-
-#define SCCB_SIOD_READ()     GPIO_ReadInputDataBit(GPIOB, SCCB_SIOD_PIN)
-#define SCCB_SIOD_WRITE(bit) GPIO_WriteBit(SCCB_PORT, SCCB_SIOD_PIN, bit);
-
-#define SLAVE_ID_ADDRESS    (0x60)
-#define ACK 0
-#define NACK 1
-
-static void delay(void)
-{
-   volatile uint32_t d = 10;
-   while(d--) {
-   }
-}
+/* I2C GPIO defs */
+#define I2C_GPIO_PORT       GPIOB
+#define I2C_GPIO_CLOCK      RCC_AHB1Periph_GPIOB
+#define I2C_GPIO_AF         GPIO_AF_I2C1
+#define I2C_GPIO_SCL_PIN    GPIO_Pin_8
+#define I2C_GPIO_SDA_PIN    GPIO_Pin_9
+#define I2C_GPIO_SCL_SRC    GPIO_PinSource8
+#define I2C_GPIO_SDA_SRC    GPIO_PinSource9
 
 void SCCB_Init()
 {
-   GPIO_InitTypeDef GPIO_InitStructure;
+    I2C_InitTypeDef  I2C_InitStruct;
+    GPIO_InitTypeDef GPIO_InitStructure;
 
-   /* Enable the software I2C Clock */
-   RCC_AHB1PeriphClockCmd(SCCB_PORT_CLOCK, ENABLE);
+    /* Enable I2C/GPIO clocks */
+    RCC_APB1PeriphClockCmd(I2C_CLOCK, ENABLE);
+    RCC_AHB1PeriphClockCmd(I2C_GPIO_CLOCK, ENABLE); 
 
-   /* Configure the SDA and SCL pins */
-   GPIO_InitStructure.GPIO_Pin = SCCB_SIOC_PIN | SCCB_SIOD_PIN;
-   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-   GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-   GPIO_Init(SCCB_PORT, &GPIO_InitStructure);
+    /* Connect I2C GPIOs to AF4 */
+    GPIO_PinAFConfig(I2C_GPIO_PORT, I2C_GPIO_SCL_SRC, I2C_GPIO_AF);
+    GPIO_PinAFConfig(I2C_GPIO_PORT, I2C_GPIO_SDA_SRC, I2C_GPIO_AF);
 
-   SCCB_SIOC_H();
-   SCCB_SIOD_H();
-   delay();
+    /* Configure I2C GPIOs */  
+    GPIO_InitStructure.GPIO_Pin   = I2C_GPIO_SCL_PIN|I2C_GPIO_SDA_PIN;
+    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+    GPIO_Init(I2C_GPIO_PORT, &GPIO_InitStructure);
+
+    /* Configure I2Cx */
+    I2C_DeInit(I2Cx);
+      
+    /* Set the I2C structure parameters */
+    I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
+    I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;
+    I2C_InitStruct.I2C_OwnAddress1 = 0xFE;
+    I2C_InitStruct.I2C_Ack = I2C_Ack_Enable;
+    I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
+    I2C_InitStruct.I2C_ClockSpeed = 30000;
+
+    /* Initialize the I2C peripheral w/ selected parameters */
+    I2C_Init(I2Cx, &I2C_InitStruct);
+
+    /* Enable the I2C peripheral */
+    I2C_Cmd(I2Cx, ENABLE);
 }
 
-
-void sda_input()
+uint8_t SCCB_Write(uint8_t addr, uint8_t data)
 {
-   GPIO_InitTypeDef GPIO_InitStructure;
-   GPIO_InitStructure.GPIO_Pin = SCCB_SIOD_PIN;
-   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-   GPIO_Init(SCCB_PORT, &GPIO_InitStructure);
+    uint32_t timeout = I2C_MAX_TIMEOUT;
+
+    /* Generate the Start Condition */
+    I2C_GenerateSTART(I2Cx, ENABLE);
+
+    /* Test on I2Cx EV5 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_MODE_SELECT))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    }
+     
+    /* Send DCMI selcted device slave Address for write */
+    I2C_Send7bitAddress(I2Cx, I2C_SLAVE_ADDR, I2C_Direction_Transmitter);
+
+    /* Test on I2Cx EV6 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    }
+
+    /* Send I2Cx location address LSB */
+    I2C_SendData(I2Cx, (uint8_t)(addr));
+
+    /* Test on I2Cx EV8 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_BYTE_TRANSMITTED))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    }
+
+    /* Send Data */
+    I2C_SendData(I2Cx, data);
+
+    /* Test on I2Cx EV8 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_BYTE_TRANSMITTED))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    }  
+
+    /* Send I2Cx STOP Condition */
+    I2C_GenerateSTOP(I2Cx, ENABLE);
+
+    /* If operation is OK, return 0 */
+    return 0;
 }
 
-void sda_output()
+uint8_t SCCB_Read(uint8_t addr)
 {
-   GPIO_InitTypeDef GPIO_InitStructure;
-   GPIO_InitStructure.GPIO_Pin = SCCB_SIOD_PIN;
-   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-   GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
-   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-   GPIO_Init(SCCB_PORT, &GPIO_InitStructure);
+    uint32_t timeout = I2C_MAX_TIMEOUT;
+    uint8_t data = 0;
+
+    /* Generate the Start Condition */
+    I2C_GenerateSTART(I2Cx, ENABLE);
+
+    /* Test on I2Cx EV5 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_MODE_SELECT))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    }
+
+    /* Send DCMI selcted device slave Address for write */
+    I2C_Send7bitAddress(I2Cx, I2C_SLAVE_ADDR, I2C_Direction_Transmitter);
+
+    /* Test on I2Cx EV6 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_TRANSMITTER_MODE_SELECTED))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    }
+
+    /* Send I2Cx location address LSB */
+    I2C_SendData(I2Cx, (uint8_t)(addr));
+
+    /* Test on I2Cx EV8 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_BYTE_TRANSMITTED))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    } 
+
+    /* Prepare Stop after receiving data */
+    I2C_GenerateSTOP(I2Cx, ENABLE);
+
+    /* Clear AF flag if arised */
+    I2Cx->SR1 |= (uint16_t)0x0400;
+
+    /* Generate the Start Condition */
+    I2C_GenerateSTART(I2Cx, ENABLE);
+
+    /* Test on I2Cx EV6 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_MODE_SELECT))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    } 
+
+    /* Send DCMI selcted device slave Address for write */
+    I2C_Send7bitAddress(I2Cx, I2C_SLAVE_ADDR, I2C_Direction_Receiver);
+
+    /* Test on I2Cx EV6 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_RECEIVER_MODE_SELECTED))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    }
+
+    /* Prepare an NACK for the next data received */
+    I2C_AcknowledgeConfig(I2Cx, DISABLE);
+
+    /* Test on I2Cx EV7 and clear it */
+    timeout = I2C_MAX_TIMEOUT; /* Initialize timeout value */
+    while(!I2C_CheckEvent(I2Cx, I2C_EVENT_MASTER_BYTE_RECEIVED))
+    {
+      /* If the timeout delay is exeeded, exit with error code */
+      if ((timeout--) == 0) return 0xFF;
+    }
+
+    /* Prepare Stop after receiving data */
+    I2C_GenerateSTOP(I2Cx, ENABLE);
+
+    /* Receive the Data */
+    data = I2C_ReceiveData(I2Cx);
+
+    /* return the read data */
+    return data;
 }
-
-static void SCCB_Start(void)
-{
-    /* The start of data transmission occurs when
-       SIO_D is driven low while SIO_C is high */
-    SCCB_SIOD_H();
-    delay();
-
-    SCCB_SIOD_L();
-    delay();
-
-    SCCB_SIOC_L();
-    delay();
-}
-
-static void SCCB_Stop(void)
-{
-    /* The stop of data transmission occurs when
-       SIO_D is driven high while SIO_C is high */
-    SCCB_SIOD_L();
-    delay();
-
-    SCCB_SIOC_H();
-    delay();
-
-    SCCB_SIOD_H();
-    delay();
-}
-
-static uint8_t SCCB_ReadByte(char ack)
-{
-   uint8_t data = 0;
-   char i;
-
-   sda_input();
-   for(i = 0; i < 8; i++) {
-      SCCB_SIOC_H();
-      delay();
-
-      data |= SCCB_SIOD_READ()&0x01;
-      if(i != 7)
-         data <<= 1;
-
-      SCCB_SIOC_L();
-      delay();
-   }
-   sda_output();
-
-   // issue the ack
-   SCCB_SIOD_H();
-   delay();
-
-   SCCB_SIOC_H();  
-   delay();
-
-   SCCB_SIOC_L();
-   delay();
-
-   return data;
-}
-
-static char SCCB_WriteByte(uint8_t data)
-{
-    char i;
-    /* shift the 8 data bits */
-    for (i=0; i<8; i++) {
-        if (data & 0x80) {
-            SCCB_SIOD_H();
-        } else {
-            SCCB_SIOD_L();
-        }
-        data <<= 1;
-        delay();
-
-        SCCB_SIOC_H();
-        delay();
-
-        SCCB_SIOC_L();
-        delay();
-   }
-
-   SCCB_SIOD_H();
-   delay();
-
-   SCCB_SIOC_H();
-   delay();
-  
-   sda_input();
-   i = SCCB_SIOD_READ();
-   sda_output();
-
-   SCCB_SIOC_L();
-   delay();
-
-   return i;
-}
-
-// returns ack state, 0 means acknowledged
-uint8_t SCCB_Write(uint8_t reg_address, uint8_t data)
-{
-   uint8_t result = 0;
-
-   /* 3-phase write transmission cycle */
-   SCCB_Start();
-   result |= SCCB_WriteByte(SLAVE_ID_ADDRESS); 
-   result |= SCCB_WriteByte(reg_address);
-   result |= SCCB_WriteByte(data); 
-   SCCB_Stop();
-
-   return result;
-}
-
-uint8_t SCCB_Read(uint8_t reg_addr)
-{
-   uint8_t data;
-
-   /* 2-phase write transmission cycle */
-
-   SCCB_Start();
-   SCCB_WriteByte(SLAVE_ID_ADDRESS);
-   SCCB_WriteByte(reg_addr); // id address
-   SCCB_Stop();
-
-   /* 2-phase read transmission cycle */
-   SCCB_Start();
-   SCCB_WriteByte(SLAVE_ID_ADDRESS | 0x01);
-   data = SCCB_ReadByte(NACK);
-   SCCB_Stop();
-
-   return data;
-}
-
