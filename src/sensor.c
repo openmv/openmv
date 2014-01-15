@@ -66,27 +66,27 @@ void DMA2_Stream1_IRQHandler(void)
 }
 
 /*
-   TIM3 Configuration In this example TIM3 input clock (TIM3CLK) is 
-   set to 2 * APB1 clock (PCLK1), since APB1 prescaler is different from ABP2.
-     TIM3CLK = 2 * PCLK1  (PCLK1 = HCLK / 4)
-     TIM3CLK = 2 * HCLK/4 = HCLK / 2 
-     TIM3CLK = 168MHz / 2 = 84MHz
-         
-   To get TIM3 counter clock at x MHz, the prescaler is computed as follows:
-      Prescaler = (TIM3CLK / TIM3 counter clock) - 1
-      Prescaler = (84 MHz / x MHz) - 1
+   TIM1 input clock (TIM1CLK) is set to 2 * APB2 clock (PCLK2)
+     TIM1CLK = 2 * PCLK2 (PCLK2 = HCLK / 2)
+     TIM1CLK = 2 * HCLK/2 = HCLK
+     TIM1CLK = HCLK (168MHz)
+
+   To get TIM1 counter clock at x MHz, the prescaler is computed as follows:
+      Prescaler = (TIM1CLK / TIM1 counter clock) - 1
+      Prescaler = (168MHz / xMHz) - 1
                                              
-   To get TIM3 output clock at 30 KHz, the period (ARR)) is computed as follows:
-      ARR = (TIM3 counter clock / TIM3 output clock) - 1
+   To get TIM1 output clock at 30 KHz, the period (ARR)) is computed as follows:
+      ARR = (TIM1 counter clock / TIM1 output clock) - 1
       ARR = 21 MHz/ 30KHz = 669 
-                 
-   TIM3 Channel1 duty cycle = (TIM3_CCR1/ TIM3_ARR)* 100 = 50%
+
+   TIM1 Channel1 duty cycle = (TIM1_CCR1/ TIM1_ARR)* 100 = 50%
  */   
 static void extclk_config(int frequency)
 {
-    GPIO_InitTypeDef GPIO_InitStructure;
-    TIM_OCInitTypeDef  TIM_OCInitStructure;
-    TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+    GPIO_InitTypeDef    GPIO_InitStructure;
+    TIM_OCInitTypeDef   TIM_OCInitStructure;
+    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+    RCC_ClocksTypeDef   RCC_Clocks;
 
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
@@ -102,13 +102,16 @@ static void extclk_config(int frequency)
     /* Connect TIM pins to AF */  
     GPIO_PinAFConfig(GPIOE, GPIO_PinSource9, GPIO_AF_TIM1);
 
-    /* Calculate the prescaler value */ 
-    int tclk  = 168000000;
-    int prescaler =(uint16_t) (SystemCoreClock / tclk) - 1;
-//    int tclk  = (240/4)*2 *1000000;
-  //  int prescaler =0;
+    /* Read Core Clocks */
+    RCC_GetClocksFreq(&RCC_Clocks);
 
-    //period must be even
+    /* set TCLK to HCLK (PCLK2 * 2) */
+    int tclk  = RCC_Clocks.PCLK2_Frequency * 2;
+
+    /* No prescalar */
+    int prescaler = (uint16_t) (RCC_Clocks.SYSCLK_Frequency / tclk) - 1;
+
+    /* Period should be even */
     int period = (tclk / frequency)-1;
 
     /* Time base configuration */
@@ -300,19 +303,8 @@ static int dma_config(uint8_t *buffer, uint32_t size)
     return 0;
 }
 
-void sensor_hard_reset()
-{
-    /* reset sensor */
-    GPIO_SetBits(GPIOA, GPIO_Pin_10);
-    systick_sleep(100);
-
-    GPIO_ResetBits(GPIOA, GPIO_Pin_10);
-    systick_sleep(1000);
-}
-
 int sensor_init(struct sensor_dev *sensor)
 {
-#if 1
     GPIO_InitTypeDef GPIO_InitStructure;
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
 
@@ -337,8 +329,6 @@ int sensor_init(struct sensor_dev *sensor)
 
     GPIO_ResetBits(GPIOA, GPIO_Pin_10);
     systick_sleep(1000);
-
-#endif
 
     /* Initialize SCCB interface */
     SCCB_Init();
@@ -385,6 +375,18 @@ int sensor_reset(struct sensor_dev *sensor)
     /* reset the sensor */
     sensor->reset();
     return 0;
+}
+
+void sensor_hard_reset(struct sensor_dev *sensor)
+{
+    /* reset sensor */
+    GPIO_SetBits(GPIOA, GPIO_Pin_10);
+    systick_sleep(100);
+
+    GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+    systick_sleep(1000);
+
+    sensor_reset(sensor);
 }
 
 int sensor_read_reg(struct sensor_dev *sensor, uint8_t reg)
