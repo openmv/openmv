@@ -18,7 +18,7 @@ endif
 #Compiler Flags
 CFLAGS += -Wall -mlittle-endian -mthumb -mthumb-interwork -nostartfiles -mcpu=cortex-m4 
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mfpu=fpv4-sp-d16 -mfloat-abi=hard 
-CFLAGS += -I. -I../include/CMSIS -I../include/StdPeriph -I../include/USB_OTG -DSTM32F40_41xxx -DUSE_USB_OTG_FS -DARM_MATH_CM4 -D__FPU_PRESENT
+CFLAGS += -I. -I../include/CMSIS -I../include/StdPeriph -I../include/USB_OTG -I../include/FatFS -DSTM32F40_41xxx -DUSE_USB_OTG_FS -DARM_MATH_CM4 -D__FPU_PRESENT
 
 #Linker Flags
 LDFLAGS = -mcpu=cortex-m4 -mthumb -mcpu=cortex-m4 -mthumb -mthumb-interwork -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16
@@ -29,7 +29,7 @@ BIN  = "openmv"
 SRCS = $(wildcard *.c) 
 OBJS = $(SRCS:.c=.o) 
 #Libraries
-LIB = -lc -lm -lstdperiph -ldsp -lusbgeneric -lusbdevcore -lusbcore
+LIB = -lc -lm -ldsp -lusbgeneric -lusbdevcore -lusbcore -lfatfs -lstdperiph
 
 all:: $(BIN)
 
