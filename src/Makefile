@@ -22,7 +22,7 @@ CFLAGS += -I. -I../include/CMSIS -I../include/StdPeriph -I../include/USB_OTG -I.
 
 #Linker Flags
 LDFLAGS = -mcpu=cortex-m4 -mthumb -mcpu=cortex-m4 -mthumb -mthumb-interwork -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16
-LDFLAGS += -Wl,-Map=$(BIN).map -T../stm32_flash.ld -L. -L../lib
+LDFLAGS += -Wl,-Map=$(BIN).map -Tstm32f4xx.ld -L. -L../lib
 
 # Sources
 BIN  = "openmv"
