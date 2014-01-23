@@ -1,15 +1,13 @@
-#include "rgb_led.h"
 #include <stm32f4xx_rcc.h>
 #include <stm32f4xx_gpio.h>
 #include <stm32f4xx_misc.h>
 #include <stm32f4xx_tim.h>
+#include "rgb_led.h"
+#include "systick.h"
 static uint16_t led;
 
-void TIM2_IRQHandler(void)
+static void rgb_led_cb()
 {
-    /* Clear TIM2 update interrupt */
-    TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
-
     /* Toggle LED1 */
     GPIO_ToggleBits(GPIOD, led);
 }
@@ -17,10 +15,6 @@ void TIM2_IRQHandler(void)
 void rgb_led_init(enum led_color color)
 {
     GPIO_InitTypeDef  GPIO_InitStructure;
-    NVIC_InitTypeDef  NVIC_InitStructure;
-    TIM_OCInitTypeDef  TIM_OCInitStructure;
-    TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
-
     /* Enable GPIOG clock */
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
 
@@ -37,45 +31,10 @@ void rgb_led_init(enum led_color color)
     GPIO_SetBits(GPIOD, GPIO_Pin_5);
     GPIO_SetBits(GPIOD, GPIO_Pin_6);
 
-    /* Enable TIM2 clock */
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
-
-    /* TIM2 configuration */
-    TIM_TimeBaseStructure.TIM_Period = 0x4AF; 
-    TIM_TimeBaseStructure.TIM_Prescaler = ((SystemCoreClock/1680) - 1);
-    TIM_TimeBaseStructure.TIM_ClockDivision = 0x0;    
-    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;  
-    TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
-    TIM_OCStructInit(&TIM_OCInitStructure);
-
-    /* Output Compare Timing Mode configuration: Channel1 */
-    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_Timing;
-    TIM_OCInitStructure.TIM_Pulse = 0x0;  
-    TIM_OC1Init(TIM2, &TIM_OCInitStructure);
-
-    /* Immediate load of TIM2 Precaler values */
-    TIM_PrescalerConfig(TIM2, ((SystemCoreClock/1680) - 1), TIM_PSCReloadMode_Immediate);
-
-    /* Clear TIM2 update pending flags */
-    TIM_ClearFlag(TIM2, TIM_FLAG_Update);
-
-    /* Configure two bits for preemption priority */
-    NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
-
-    /* Enable the TIM2 Interrupt */
-    NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-
-    /* Enable TIM2 Update interrupts */
-    TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
-
-    /* TIM2 enable counters */
-    TIM_Cmd(TIM2, ENABLE);
-
     led=color;
+
+    /* Call back LED function every 1 second */
+    systick_sched_task(rgb_led_cb, 1000);
 }
 
 
