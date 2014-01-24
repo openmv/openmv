@@ -265,19 +265,6 @@ void usb_data_out(void *buffer, int *length, void *user_data)
     }
 }
 
-/* This function loads the .ccm data into the CMM region 
-   It's here to avoid modifiying the startup code */
-void load_ccm_section () __attribute__ ((section (".init")));
-void load_ccm_section (){
-    extern char _eidata, _sccm, _eccm;
-
-    char *src = &_eidata;
-    char *dst = &_sccm;
-    while (dst < &_eccm) {
-        *dst++ = *src++;
-    }
-}
-
 int main(void)
 {
     /* sensor handle */

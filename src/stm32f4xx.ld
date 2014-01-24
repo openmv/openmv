@@ -1,52 +1,25 @@
-/*
-*****************************************************************************
-**
-**  File        : stm32_flash.ld
-**
-**  Abstract    : Linker script for STM32F407VG Device with
-**                1024KByte FLASH, 192KByte RAM
-**
-**                Set heap size, stack size and stack location according
-**                to application requirements.
-**
-**                Set memory bank area and size if external memory is used.
-**
-**  Target      : STMicroelectronics STM32
-**
-**  Environment : Atollic TrueSTUDIO(R)
-**
-**  Distribution: The file is distributed “as is,” without any warranty
-**                of any kind.
-**
-**  (c)Copyright Atollic AB.
-**  You may use this file as-is or modify it according to the needs of your
-**  project. Distribution of this file (unmodified or modified) is not
-**  permitted. Atollic AB permit registered Atollic TrueSTUDIO(R) users the
-**  rights to distribute the assembled, compiled & linked contents of this
-**  file as part of an application binary file, provided that it is built
-**  using the Atollic TrueSTUDIO(R) toolchain.
-**
-*****************************************************************************
-*/
+/**
+ *  Linker script for STM32F4xx Devices with 1MB FLASH, 192KB RAM (64KB CCM)
+ */
 
 /* Entry Point */
 ENTRY(Reset_Handler)
 
-/* Highest address of the user mode stack */
-_estack = 0x20020000;    /* end of 128K RAM on AHB bus*/
-
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+_Min_Stack_Size = 0x1000; /* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
 {
   FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 512K
   RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
-  MEMORY_B1 (rx)  : ORIGIN = 0x60000000, LENGTH = 0K
   CCM (w!rx)      : ORIGIN = 0x10000000, LENGTH = 64K                   
 }
+
+/* Highest address of the user mode stack */
+_estack     = 0x10010000; /* Stack is allocated on CCM block */
+_heap_start = 0x20000000; /* Heap starts at the main RAM block */
+_heap_end   = 0x20020000; /* Heap is given the whole RAM block */
 
 /* Define output sections */
 SECTIONS
@@ -79,20 +52,20 @@ SECTIONS
     _exit = .;
   } >FLASH
 
+  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
+  .ARM : {
+  __exidx_start = .;
+    *(.ARM.exidx*)
+    __exidx_end = .;
+  } >FLASH
 
-   .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
-    .ARM : {
-    __exidx_start = .;
-      *(.ARM.exidx*)
-      __exidx_end = .;
-    } >FLASH
-
-  .preinit_array     :
+  .preinit_array :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
   } >FLASH
+
   .init_array :
   {
     PROVIDE_HIDDEN (__init_array_start = .);
@@ -100,6 +73,7 @@ SECTIONS
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
   } >FLASH
+
   .fini_array :
   {
     PROVIDE_HIDDEN (__fini_array_start = .);
@@ -122,20 +96,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >RAM
-
-  /* This section will load the .ccm data into FLASH,
-     a C function in .init section copies the .ccm data
-     from FLASH to CCM memory in runtime. */
-  _eidata = (_sidata + SIZEOF(.data) + SIZEOF(.jcr));
-  .ccm : AT ( _sidata + SIZEOF(.data) + SIZEOF(.jcr))
-  {
-    . = ALIGN(4);
-    _sccm = .;
-    *(.ccm)
-    . = ALIGN(4);      
-    _eccm = .;
-  }>CCM
+  } >CCM
 
   /* Uninitialized data section */
   . = ALIGN(4);
@@ -151,28 +112,15 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
-  } >RAM
+  } >CCM
 
-  /* User_heap_stack section, used to check that there is enough RAM left */
+  /* Make sure there is enough RAM left for the stack */
   ._user_heap_stack :
   {
     . = ALIGN(4);
-    PROVIDE ( end = . );
-    PROVIDE ( _end = . );
-    . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
     . = ALIGN(4);
-  } >RAM
-
-  /* MEMORY_bank1 section, code must be located here explicitly            */
-  /* Example: extern int foo(void) __attribute__ ((section (".mb1text"))); */
-  .memory_b1_text :
-  {
-    *(.mb1text)        /* .mb1text sections (code) */
-    *(.mb1text*)       /* .mb1text* sections (code)  */
-    *(.mb1rodata)      /* read-only data (constants) */
-    *(.mb1rodata*)
-  } >MEMORY_B1
+  } >CCM
 
   /* Remove information from the standard libraries */
   /DISCARD/ :
