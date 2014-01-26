@@ -2,17 +2,17 @@
 #include <stm32f4xx_gpio.h>
 #include <stm32f4xx_misc.h>
 #include <stm32f4xx_tim.h>
-#include "rgb_led.h"
+#include "led.h"
 #include "systick.h"
 static uint16_t led;
 
-static void rgb_led_cb()
+static void led_cb()
 {
     /* Toggle LED1 */
     GPIO_ToggleBits(GPIOD, led);
 }
 
-void rgb_led_init(enum led_color color)
+void led_init(enum led_color color)
 {
     GPIO_InitTypeDef  GPIO_InitStructure;
     /* Enable GPIOG clock */
@@ -34,11 +34,11 @@ void rgb_led_init(enum led_color color)
     led=color;
 
     /* Call back LED function every 1 second */
-    systick_sched_task(rgb_led_cb, 1000);
+    systick_sched_task(led_cb, 1000);
 }
 
 
-void rgb_led_set_color(enum led_color color)
+void led_set_color(enum led_color color)
 {
     int old_pin = led;
     led = color;
