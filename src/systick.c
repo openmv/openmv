@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include <stm32f4xx.h>
 #include <stm32f4xx_misc.h>
 #include <stdlib.h>
@@ -61,4 +62,16 @@ void systick_sched_task(task_cb cb, uint32_t period)
     task->cb = cb;
     task->period = period;
     array_push_back(task_list, task);
+}
+
+bool systick_has_passed(uint32_t stc, uint32_t delay_ms) {
+    // stc_wait is the value of sys_ticks that we wait for
+    uint32_t stc_wait = stc + delay_ms;
+    if (stc_wait < stc) {
+        // stc_wait wrapped around
+        return !(stc <= sys_ticks || sys_ticks < stc_wait);
+    } else {
+        // stc_wait did not wrap around
+        return !(stc <= sys_ticks && sys_ticks < stc_wait);
+    }
 }
