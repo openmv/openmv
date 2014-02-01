@@ -34,7 +34,7 @@ void led_init(enum led_color color)
     led=color;
 
     /* Call back LED function every 1 second */
-    systick_sched_task(led_cb, 1000);
+//    systick_sched_task(led_cb, 1000);
 }
 
 
@@ -45,4 +45,15 @@ void led_set_color(enum led_color color)
 
     /* turn off old LED */
     GPIO_SetBits(GPIOD, old_pin);
+}
+
+void led_state(enum led_color id, int state)
+{
+    if (state) {
+        /* turn off old LED */
+        GPIO_ResetBits(GPIOD, id);
+    } else {
+        /* turn off old LED */
+        GPIO_SetBits(GPIOD, id);
+    }
 }
