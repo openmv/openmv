@@ -496,11 +496,16 @@ int sensor_set_framesize(struct sensor_dev *sensor, enum sensor_framesize frames
             return -1;
     }
 
+#if 0
     /* realloc frame buffer */
     if ((fb->pixels = realloc(/* always allocate 2 bpp */            
         fb->pixels, fb->width * fb->height * 2)) == NULL) {
         return -1;
     }
+#else
+    extern char _heap_start;
+    fb->pixels = &_heap_start;
+#endif
 
     /* Reconfigure the DMA stream */
     dma_config(fb->pixels, fb->width * fb->height * 2);

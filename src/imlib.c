@@ -472,7 +472,6 @@ struct array *imlib_merge_detections(struct array *rectangles)
     return objects;  
 }
 
-
 struct array *imlib_detect_objects(struct cascade *cascade, struct frame_buffer *fb)
 {
     /* scaling factor */
@@ -492,7 +491,8 @@ struct array *imlib_detect_objects(struct cascade *cascade, struct frame_buffer 
     /* allocate buffer for integral image */
     sum.width    = fb->width;
     sum.height   = fb->height;
-    sum.data   = malloc(fb->width *fb->height*sizeof(*sum.data));
+    //sum.data   = malloc(fb->width *fb->height*sizeof(*sum.data));
+    sum.data   = (uint32_t*) fb->pixels+(fb->width * fb->height * 2);
 
     /* allocate the detections array */
     array_alloc(&objects, free);
@@ -534,7 +534,7 @@ struct array *imlib_detect_objects(struct cascade *cascade, struct frame_buffer 
         ScaleImageInvoker(cascade, factor, sum.height, sum.width, objects);
     } 
 
-    free(sum.data);
+    //free(sum.data);
 
     objects = imlib_merge_detections(objects);
     return objects;
