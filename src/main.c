@@ -1,324 +1,290 @@
-#include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include <stm32f4xx.h>
 #include <stm32f4xx_rcc.h>
-#include <stm32f4xx_gpio.h>
 #include <stm32f4xx_syscfg.h>
+#include <stm32f4xx_gpio.h>
+#include <stm32f4xx_exti.h>
+#include <stm32f4xx_tim.h>
+#include <stm32f4xx_pwr.h>
+#include <stm32f4xx_rtc.h>
+#include <stm32f4xx_usart.h>
+#include <stm32f4xx_rng.h>
 #include <stm32f4xx_misc.h>
-#include "sensor.h"
-#include "rgb_led.h"
-#include "usart.h"
-#include "imlib.h"
-#include "array.h"
+#include "libmp.h"
 #include "systick.h"
-#include "usb_generic.h"
-#include "ff.h"
 #include "rcc_ctrl.h"
+#include "led_py.h"
 
-#define BREAK() __asm__ volatile ("BKPT");
+int errno;
 
-enum sensor_result run_command(struct sensor_dev *sensor, uint8_t *args)
-{
-    switch (args[0]) {
-        case CMD_RESET_SENSOR:
-            sensor_reset(sensor);
-            break;
- 
-        case CMD_READ_REGISTER:
-            //sensor_read_reg(sensor, args[1]);
-            break;
+static FATFS fatfs0;
 
-        case CMD_WRITE_REGISTER:
-            sensor_write_reg(sensor, args[1], args[2]);
-            break;
-   
-        case CMD_SET_BRIGHTNESS:
-            sensor_set_brightness(sensor, args[1]);
-            break;
-
-        case CMD_SET_PIXFORMAT:
-            /* Configure image size and format and FPS */
-            if (sensor_set_pixformat(sensor, args[1]) != 0) {
-                goto error;
-            }
-            break;
-
-        case CMD_SET_FRAMESIZE:
-            /* Configure image size and format and FPS */
-            if (sensor_set_framesize(sensor, args[1]) != 0) {
-                goto error;
-            }
-            break;
-
-        case CMD_SET_FRAMERATE:           
-            /* Configure framerate */
-            if (sensor_set_framerate(sensor, args[1]) != 0) {
-                goto error;
-            }
-            break;
-
-        case CMD_SET_GAINCEILING:           
-            /* Configure framerate */
-            if (sensor_set_gainceiling(sensor, args[1]) != 0) {
-                goto error;
-            }
-            break;
-
-        case CMD_SNAPSHOT: {
-            if (sensor_snapshot(sensor) != 0) {
-                goto error;
-            }
-            break;
-        }
-
-        case CMD_COLOR_TRACK: {
-            struct point point= {0};
-            struct frame_buffer *fb = &sensor->frame_buffer;
-            #if 0
-            struct color hsv;
-            hsv.h = usart_recv();
-            hsv.s = usart_recv();
-            hsv.v = usart_recv();
-            #else
-            /* red */
-            struct color hsv= {.h = 340, .s = 50, .v = 50};
-            #endif
-
-            if (sensor_snapshot(sensor) != 0) {
-                goto error;
-            }
-
-            imlib_color_track(fb, &hsv, &point, 10);
-            if (point.x && point.y) {
-                struct rectangle r = {.x=point.x-5, .y=point.y-5, .w=10, .h=10};
-                imlib_draw_rectangle(fb, &r);
-
-                /* Send point coords from 0%..100% */
-                usart_send(point.x*100/fb->width);
-                usart_send(point.y*100/fb->height);
-            }
-
-            break;
-        }
-
-        case CMD_MOTION_DETECTION: {
-            int i;
-            int pixels;
-            struct frame_buffer *fb = &sensor->frame_buffer;
-            uint8_t *background = malloc(fb->width * fb->height * 1);//grayscale
-
-            if (background == NULL) {
-                goto error;
-            }
-
-            if (sensor->pixformat != PIXFORMAT_YUV422) {
-                /* Switch sensor to YUV422 to get 
-                   a grayscale image from the Y channel */
-//                    if (sensor_config(&sensor, sensor_QQVGA_YUV422, sensor_30FPS) != 0) {
-//                       goto error;
-//                  }
-            }
-
-            if (sensor_snapshot(sensor) != 0) {
-                goto error;
-            }
-
-            /* Save this frame as background */
-            for (i=0; i<(fb->width*fb->height); i++) {
-                background[i] = fb->pixels[i*2];
-            }
-
-            while (1) {
-                systick_sleep(1000);
-
-                if (sensor_snapshot(sensor) != 0) {
-                    goto error;
-                }
-                
-                for (i=0, pixels=0; i<(fb->width*fb->height); i++) {
-                    uint8_t y = fb->pixels[i*2];
-                    int diff = (y-background[i]) * (y-background[i]);
-
-                    /* consider pixel changed if change more than 25% */
-                    if ((diff*100)/(255*255) > 25) {
-                        pixels++;
-                        /* reuse the frame buffer */
-                        fb->pixels[i] = 0xff;
-                    } else {
-                        fb->pixels[i] = 0x00;
-                    }
-                }
-                    
-                /* send if more than 10% of the image changed  */
-                if ((pixels*100)/(fb->width*fb->height)>5) {
-                    uint8_t kernel[] = {1,1,1,
-                                        1,1,1, 
-                                        1,1,1};
-
-                    /* free background frame */
-                    free(background);
-
-                    /* perform image erosion */
-                    imlib_erosion_filter(fb, kernel, 3);
-
-                    for (i=0; i<(fb->width*fb->height); i++) {
-                        /* send twice because lcd expects RGB565 */
-                        usart_send(fb->pixels[i]);
-                        usart_send(fb->pixels[i]);
-                    }
-                    break;
-                }
-            }
-            break;
-        }             
-
-        case CMD_FACE_DETECTION: {
-            /* detection objects array */
-            struct array *objects;
-
-            /* detection parameters */
-            struct cascade cascade = {
-                .step = 2,
-                .n_stages = 12,
-                .window = {24, 24},
-                .scale_factor = 1.25f,
-            };
-
-            if (sensor->framesize > FRAMESIZE_QQVGA) {
-                goto error;
-            }
-
- 
-            if (sensor_snapshot(sensor) != 0) {
-                goto error;
-            }
-
-            objects = imlib_detect_objects(&cascade, &sensor->frame_buffer);
-
-            int x_pos=0,y_pos=0;
-            int objs = array_length(objects);
-            if (objs) {
-                int i;
-                for (i=0; i<objs; i++) {
-                    imlib_draw_rectangle(&sensor->frame_buffer, array_at(objects, i));
-                }
-                struct rectangle *r = array_at(objects, 0);
-                x_pos = r->x+r->w/2;
-                y_pos = r->y+r->h/2;
-                /* Send point coords from 0%..100% */
-                usart_send(x_pos*100/sensor->frame_buffer.width);
-                usart_send(y_pos*100/sensor->frame_buffer.height);
-            }
-            array_free(objects);
-            break;
-        }
-    }
-
-    return CMD_ACK;
-error:
-    return CMD_NACK;
-}
-
-static int frame_tx_bytes;
-
-void usb_data_in(void *buffer, int *length, void *user_data)
-{
-    int usb_tx_length=64;
-    struct sensor_dev *sensor = user_data;
-    struct frame_buffer *fb = &sensor->frame_buffer;
-    int size = (fb->width*fb->height*fb->bpp);
-    
-    if (frame_tx_bytes < size) {
-        memcpy(buffer, fb->pixels+frame_tx_bytes, *length);
-        *length = usb_tx_length;
-        frame_tx_bytes += usb_tx_length;
-    } else {
-        *length = 0;
+void __fatal_error(const char *msg) {
+    printf("%s\n", msg);
+    while (1) {
+        led_state(LED_RED, 1);
+        systick_sleep(250);
+        led_state(LED_RED, 0);
+        systick_sleep(250);
     }
 }
 
-void usb_data_out(void *buffer, int *length, void *user_data)
-{
-    int usb_tx_length=64;
-    struct sensor_dev *sensor = user_data;   
-    struct frame_buffer *fb = &sensor->frame_buffer;
+// sync all file systems
+mp_obj_t pyb_sync(void) {
+    storage_flush();
+    return mp_const_none;
+}
 
-    enum sensor_result ret;
-    uint8_t *cmd_buf = ((uint8_t*)buffer);
-    ret = run_command(sensor, cmd_buf);
+mp_obj_t pyb_delay(mp_obj_t count) {
+    systick_sleep(mp_obj_get_int(count));
+    return mp_const_none;
+}
 
-    switch (cmd_buf[0]) {
-        case CMD_SNAPSHOT:
-        case CMD_COLOR_TRACK:
-        case CMD_MOTION_DETECTION:
-        case CMD_FACE_DETECTION:
-            /* send back frame */
-            memcpy(buffer, fb->pixels, usb_tx_length);    
-            *length = usb_tx_length;
-            /* reset bytes counter */
-            frame_tx_bytes = usb_tx_length;
-            break;
-        default:
-            /* send back ACK/NACK */
-            //*length = 1;
-            *length =0; //ignore it for now
-            cmd_buf[0] = ret;
+mp_obj_t pyb_vcp_connected() {
+    bool connected = usb_vcp_is_connected();
+    return mp_obj_new_int(connected);
+}
+
+void fatality(void) {
+    led_state(LED_RED, 1);
+    led_state(LED_GREEN, 1);
+    led_state(LED_BLUE, 1);
+    while (1);
+}
+
+static const char fresh_boot_py[] =
+"# boot.py -- run on boot-up\n"
+"# can run arbitrary Python, but best to keep it minimal\n"
+"\n"
+"pyb.source_dir('/src')\n"
+"pyb.main('main.py')\n"
+"#pyb.usb_usr('VCP')\n"
+"#pyb.usb_msd(True, 'dual partition')\n"
+"#pyb.flush_cache(False)\n"
+"#pyb.error_log('error.txt')\n"
+;
+
+static const char fresh_main_py[] =
+"# main.py -- put your code here!\n"
+"led = pyb.Led(32)\n"
+"while(pyb.vcp_connected()==0):\n"
+" led.on()\n"
+" pyb.delay(500)\n"
+" led.off()\n"
+" pyb.delay(500)\n"
+;
+
+static const char *help_text =
+"Welcome to Micro Python!\n\n"
+"This is a *very* early version of Micro Python and has minimal functionality.\n\n"
+"Specific commands for the board:\n"
+"    pyb.info()     -- print some general information\n"
+"    pyb.gc()       -- run the garbage collector\n"
+"    pyb.repl_info(<val>) -- enable/disable printing of info after each command\n"
+"    pyb.delay(<n>) -- wait for n milliseconds\n"
+"    pyb.Led(<n>)   -- create Led object for LED n (n=1,2)\n"
+"                      Led methods: on(), off()\n"
+"    pyb.Servo(<n>) -- create Servo object for servo n (n=1,2,3,4)\n"
+"                      Servo methods: angle(<x>)\n"
+"    pyb.switch()   -- return True/False if switch pressed or not\n"
+"    pyb.accel()    -- get accelerometer values\n"
+"    pyb.rand()     -- get a 16-bit random number\n"
+"    pyb.gpio(<port>)           -- get port value (port='A4' for example)\n"
+"    pyb.gpio(<port>, <val>)    -- set port value, True or False, 1 or 0\n"
+"    pyb.ADC(<port>) -- make an analog port object (port='C0' for example)\n"
+"                       ADC methods: read()\n"
+;
+
+// get some help about available functions
+static mp_obj_t pyb_help(void) {
+    printf("%s", help_text);
+    return mp_const_none;
+}
+
+// get lots of info about the board
+static mp_obj_t pyb_info(void) {
+    // get and print unique id; 96 bits
+    {
+        byte *id = (byte*)0x1fff7a10;
+        printf("ID=%02x%02x%02x%02x:%02x%02x%02x%02x:%02x%02x%02x%02x\n", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11]);
+    }
+
+    // get and print clock speeds
+    // SYSCLK=168MHz, HCLK=168MHz, PCLK1=42MHz, PCLK2=84MHz
+    {
+        RCC_ClocksTypeDef rcc_clocks;
+        RCC_GetClocksFreq(&rcc_clocks);
+        printf("S=%lu\nH=%lu\nP1=%lu\nP2=%lu\n", rcc_clocks.SYSCLK_Frequency, rcc_clocks.HCLK_Frequency, rcc_clocks.PCLK1_Frequency, rcc_clocks.PCLK2_Frequency);
+    }
+
+    // to print info about memory
+    {
+        extern void *_sidata;
+        extern void *_sdata;
+        extern void *_edata;
+        extern void *_sbss;
+        extern void *_ebss;
+        extern void *_estack;
+        extern void *_etext;
+        printf("_etext=%p\n", &_etext);
+        printf("_sidata=%p\n", &_sidata);
+        printf("_sdata=%p\n", &_sdata);
+        printf("_edata=%p\n", &_edata);
+        printf("_sbss=%p\n", &_sbss);
+        printf("_ebss=%p\n", &_ebss);
+        printf("_estack=%p\n", &_estack);
+        printf("_ram_start=%p\n", &_ram_start);
+        printf("_heap_start=%p\n", &_heap_start);
+        printf("_heap_end=%p\n", &_heap_end);
+        printf("_ram_end=%p\n", &_ram_end);
+    }
+
+    // qstr info
+    {
+        uint n_pool, n_qstr, n_str_data_bytes, n_total_bytes;
+        qstr_pool_info(&n_pool, &n_qstr, &n_str_data_bytes, &n_total_bytes);
+        printf("qstr:\n  n_pool=%u\n  n_qstr=%u\n  n_str_data_bytes=%u\n  n_total_bytes=%u\n", n_pool, n_qstr, n_str_data_bytes, n_total_bytes);
+    }
+
+    // GC info
+    {
+        gc_info_t info;
+        gc_info(&info);
+        printf("GC:\n");
+        printf("  %lu total\n", info.total);
+        printf("  %lu : %lu\n", info.used, info.free);
+        printf("  1=%lu 2=%lu m=%lu\n", info.num_1block, info.num_2block, info.max_block);
+    }
+
+    // free space on flash
+    {
+        DWORD nclst;
+        FATFS *fatfs;
+        f_getfree("0:", &nclst, &fatfs);
+        printf("LFS free: %u bytes\n", (uint)(nclst * fatfs->csize * 512));
+    }
+
+    return mp_const_none;
+}
+
+static void SYSCLKConfig_STOP(void) {
+    /* After wake-up from STOP reconfigure the system clock */
+    /* Enable HSE */
+    RCC_HSEConfig(RCC_HSE_ON);
+
+    /* Wait till HSE is ready */
+    while (RCC_GetFlagStatus(RCC_FLAG_HSERDY) == RESET) {
+    }
+
+    /* Enable PLL */
+    RCC_PLLCmd(ENABLE);
+
+    /* Wait till PLL is ready */
+    while (RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET) {
+    }
+
+    /* Select PLL as system clock source */
+    RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
+
+    /* Wait till PLL is used as system clock source */
+    while (RCC_GetSYSCLKSource() != 0x08) {
     }
 }
 
-int main(void)
+static mp_obj_t pyb_stop(void) {
+    PWR_EnterSTANDBYMode();
+    //PWR_FlashPowerDownCmd(ENABLE); don't know what the logic is with this
+
+    /* Enter Stop Mode */
+    PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+
+    /* Configures system clock after wake-up from STOP: enable HSE, PLL and select 
+     *        PLL as system clock source (HSE and PLL are disabled in STOP mode) */
+    SYSCLKConfig_STOP();
+
+    //PWR_FlashPowerDownCmd(DISABLE);
+
+    return mp_const_none;
+}
+
+static mp_obj_t pyb_standby(void) {
+    PWR_EnterSTANDBYMode();
+    return mp_const_none;
+}
+
+mp_obj_t pyb_rng_get(void) {
+    return mp_obj_new_int(RNG_GetRandomNumber() >> 16);
+}
+
+int main(void) 
 {
-    /* sensor handle */
-    struct sensor_dev sensor;
-
-    /* USB callback */
-    struct usb_user_cb usb_cb = {
-        &sensor,
-        usb_data_in,
-        usb_data_out,
-    };
-
     rcc_ctrl_set_frequency(SYSCLK_168_MHZ);
+
+    /* Init MicroPython */
+    libmp_init();
 
     /* Init SysTick timer */
     systick_init();
 
-    /* init USART */
-    usart_init(9600);
-
     /* init RGB LED module */
-    rgb_led_init(LED_BLUE);
+    led_init(LED_BLUE);
 
-    /* init sensor module */
-    if (sensor_init(&sensor) != 0) {
-        goto error;
-    }
-  
-    /* init usb device */
-    usb_dev_init(&usb_cb);
+    // add some functions to the python namespace
+    rt_store_name(MP_QSTR_help, rt_make_function_n(0, pyb_help));
 
-//    systick_sleep(3000);
-    rgb_led_set_color(LED_GREEN);
-
-#if 0
-    /* FPS test */
-    while (1) {
-        volatile int fps = 0;
-        uint8_t args[]= {CMD_FACE_DETECTION};
-        uint32_t ticks = systick_current_millis();
-        while ((systick_current_millis()-ticks)<1000) {
-            run_command(&sensor, args);
-            fps++;
+    mp_obj_t m = mp_obj_new_module(MP_QSTR_pyb);
+    rt_store_attr(m, MP_QSTR_vcp_connected, rt_make_function_n(0, pyb_vcp_connected));
+    rt_store_attr(m, MP_QSTR_info, rt_make_function_n(0, pyb_info));
+    rt_store_attr(m, MP_QSTR_gc, (mp_obj_t)&pyb_gc_obj);
+    rt_store_attr(m, MP_QSTR_Led, (mp_obj_t)&pyb_Led_obj);
+    rt_store_attr(m, MP_QSTR_stop, rt_make_function_n(0, pyb_stop));
+    rt_store_attr(m, MP_QSTR_standby, rt_make_function_n(0, pyb_standby));
+    rt_store_attr(m, MP_QSTR_sync, rt_make_function_n(0, pyb_sync));
+    rt_store_attr(m, MP_QSTR_delay, rt_make_function_n(1, pyb_delay));
+    rt_store_name(MP_QSTR_pyb, m);
+    
+    /* Try to mount the flash fs */
+    bool reset_filesystem = true;
+    FRESULT res = f_mount(&fatfs0, "0:", 1);
+    if (!reset_filesystem && res == FR_OK) {
+        /* Mount sucessful */
+    } else if (reset_filesystem || res == FR_NO_FILESYSTEM) {
+        /* No filesystem, so create a fresh one */
+        res = f_mkfs("0:", 0, 0);
+        if (res != FR_OK) {
+            __fatal_error("could not create LFS");
         }
-        BREAK();
-    }
-#endif    
 
-    while (1) {
+        /* Create main.py */
+        FIL fp;
+        f_open(&fp, "0:/main.py", FA_WRITE | FA_CREATE_ALWAYS);
+        UINT n;
+        f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
+        // TODO check we could write n bytes
+        f_close(&fp);
+    } else {
+        __fatal_error("could not access LFS");
     }
 
-error:
-    rgb_led_set_color(LED_RED);
-    while (1) {
-        /* Do nothing */
+    /* Init USB device */
+    pyb_usb_dev_init();
+
+    /* Try to run user script first */
+    if (!libmp_do_file("0:/user.py")) {
+        /* no user script */
     }
+
+    /* Fall back to main script */
+    if (!libmp_do_file("0:/main.py")) {
+        __fatal_error("failed to run main script");
+    }
+
+    libmp_do_repl();
+
+    printf("PYB: sync filesystems\n");
+    pyb_sync();
+
+    printf("PYB: soft reboot\n");
+    while(1);
 }

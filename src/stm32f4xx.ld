@@ -5,21 +5,24 @@
 /* Entry Point */
 ENTRY(Reset_Handler)
 
-/* Generate a link error if heap and stack don't fit into RAM */
-_Min_Stack_Size = 0x1000; /* required amount of stack */
-
 /* Specify the memory areas */
 MEMORY
 {
-  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 512K
+  FLASH_ISR (rx)  : ORIGIN = 0x08000000, LENGTH = 16K 
+  FLASH_TEXT (rx) : ORIGIN = 0x08020000, LENGTH = 512K
   RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
   CCM (w!rx)      : ORIGIN = 0x10000000, LENGTH = 64K                   
 }
 
 /* Highest address of the user mode stack */
 _estack     = 0x10010000; /* Stack is allocated on CCM block */
-_heap_start = 0x20000000; /* Heap starts at the main RAM block */
-_heap_end   = 0x20020000; /* Heap is given the whole RAM block */
+
+_ram_start = 0x10000000;
+_ram_end   = 0x10010000; /* 64KB CCM */
+
+/* Generate a link error if heap and stack don't fit into RAM */
+_stack_size = 0x1000; /* required amount of stack */
+_heap_size  = 0x4000; /* required amount of heap */
 
 /* Define output sections */
 SECTIONS
@@ -30,7 +33,7 @@ SECTIONS
     . = ALIGN(4);
     KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
-  } >FLASH
+  } >FLASH_ISR
 
   /* The program code and other data goes into FLASH */
   .text :
@@ -50,21 +53,24 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
     _exit = .;
-  } >FLASH
+  } >FLASH_TEXT
 
-  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
+  .ARM.extab   : {
+      *(.ARM.extab* .gnu.linkonce.armextab.*) 
+  } >FLASH_TEXT
+
   .ARM : {
   __exidx_start = .;
     *(.ARM.exidx*)
     __exidx_end = .;
-  } >FLASH
+  } >FLASH_TEXT
 
   .preinit_array :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
     KEEP (*(.preinit_array*))
     PROVIDE_HIDDEN (__preinit_array_end = .);
-  } >FLASH
+  } >FLASH_TEXT
 
   .init_array :
   {
@@ -72,7 +78,7 @@ SECTIONS
     KEEP (*(SORT(.init_array.*)))
     KEEP (*(.init_array*))
     PROVIDE_HIDDEN (__init_array_end = .);
-  } >FLASH
+  } >FLASH_TEXT
 
   .fini_array :
   {
@@ -80,7 +86,7 @@ SECTIONS
     KEEP (*(.fini_array*))
     KEEP (*(SORT(.fini_array.*)))
     PROVIDE_HIDDEN (__fini_array_end = .);
-  } >FLASH
+  } >FLASH_TEXT
 
   /* used by the startup to initialize data */
   _sidata = .;
@@ -114,21 +120,32 @@ SECTIONS
     __bss_end__ = _ebss;
   } >CCM
 
+  ._heap :
+  {
+    . = ALIGN(4);
+    _heap_start = .;
+    . = . + _heap_size;
+    . = ALIGN(4);
+    _heap_end  = .;
+  } >CCM
+
   /* Make sure there is enough RAM left for the stack */
   ._user_heap_stack :
   {
     . = ALIGN(4);
-    . = . + _Min_Stack_Size;
+    . = . + _stack_size;
     . = ALIGN(4);
   } >CCM
 
   /* Remove information from the standard libraries */
+  /*
   /DISCARD/ :
   {
     libc.a ( * )
     libm.a ( * )
     libgcc.a ( * )
   }
+  */
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
