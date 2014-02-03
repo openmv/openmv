@@ -54,7 +54,7 @@ typedef struct _mp_obj_base_t mp_obj_base_t;
 
 #define MP_DECLARE_CONST_FUN_OBJ(obj_name) extern const mp_obj_fun_native_t obj_name
 
-#define MP_DEFINE_CONST_FUN_OBJ_VOID_PTR(obj_name, is_kw, n_args_min, n_args_max, fun_name) const mp_obj_fun_native_t obj_name = {{&fun_native_type}, is_kw, n_args_min, n_args_max, (void *)fun_name}
+#define MP_DEFINE_CONST_FUN_OBJ_VOID_PTR(obj_name, is_kw, n_args_min, n_args_max, fun_name) const mp_obj_fun_native_t obj_name = {{&fun_native_type}, {is_kw, n_args_min}, n_args_max, (void *)fun_name}
 #define MP_DEFINE_CONST_FUN_OBJ_0(obj_name, fun_name) MP_DEFINE_CONST_FUN_OBJ_VOID_PTR(obj_name, false, 0, 0, (mp_fun_0_t)fun_name)
 #define MP_DEFINE_CONST_FUN_OBJ_1(obj_name, fun_name) MP_DEFINE_CONST_FUN_OBJ_VOID_PTR(obj_name, false, 1, 1, (mp_fun_1_t)fun_name)
 #define MP_DEFINE_CONST_FUN_OBJ_2(obj_name, fun_name) MP_DEFINE_CONST_FUN_OBJ_VOID_PTR(obj_name, false, 2, 2, (mp_fun_2_t)fun_name)
@@ -221,7 +221,7 @@ mp_obj_t mp_obj_new_exception_msg_2_args(qstr id, const char *fmt, const char *a
 mp_obj_t mp_obj_new_exception_msg_varg(qstr id, const char *fmt, ...); // counts args by number of % symbols in fmt, excluding %%; can only handle void* sizes (ie no float/double!)
 mp_obj_t mp_obj_new_range(int start, int stop, int step);
 mp_obj_t mp_obj_new_range_iterator(int cur, int stop, int step);
-mp_obj_t mp_obj_new_fun_bc(int n_args, uint n_state, const byte *code);
+mp_obj_t mp_obj_new_fun_bc(int n_args, mp_obj_t def_args, uint n_state, const byte *code);
 mp_obj_t mp_obj_new_fun_asm(uint n_args, void *fun);
 mp_obj_t mp_obj_new_gen_wrap(mp_obj_t fun);
 mp_obj_t mp_obj_new_gen_instance(const byte *bytecode, uint n_state, int n_args, const mp_obj_t *args);
@@ -354,8 +354,10 @@ mp_obj_t mp_obj_new_bytearray_by_ref(uint n, void *items);
 // functions
 typedef struct _mp_obj_fun_native_t { // need this so we can define const objects (to go in ROM)
     mp_obj_base_t base;
-    bool is_kw : 1;
-    machine_uint_t n_args_min : (sizeof(machine_uint_t) - 1); // inclusive
+    struct {
+        bool is_kw : 1;
+        machine_uint_t n_args_min : (8 * sizeof(machine_uint_t) - 1); // inclusive
+    };
     machine_uint_t n_args_max; // inclusive
     void *fun;
     // TODO add mp_map_t *globals
@@ -395,3 +397,6 @@ typedef struct _mp_obj_classmethod_t {
 
 // sequence helpers
 void mp_seq_multiply(const void *items, uint item_sz, uint len, uint times, void *dest);
+bool m_seq_get_fast_slice_indexes(machine_uint_t len, mp_obj_t slice, machine_uint_t *begin, machine_uint_t *end);
+#define m_seq_copy(dest, src, len, item_sz) memcpy(dest, src, len * sizeof(item_sz))
+bool mp_seq_cmp_bytes(int op, const byte *data1, uint len1, const byte *data2, uint len2);

@@ -4,7 +4,7 @@ typedef enum {
     RT_UNARY_OP_POSITIVE,
     RT_UNARY_OP_NEGATIVE,
     RT_UNARY_OP_INVERT,
-    // Used only for CPython-compatible codegeneration
+    // these are not supported by the runtime and must be synthesised by the emitter
     RT_UNARY_OP_NOT,
 } rt_unary_op_t;
 
@@ -34,18 +34,19 @@ typedef enum {
     RT_BINARY_OP_INPLACE_TRUE_DIVIDE,
     RT_BINARY_OP_INPLACE_MODULO,
     RT_BINARY_OP_INPLACE_POWER,
-    // TODO probably should rename these COMPARE->BINARY
-    RT_COMPARE_OP_LESS,
-    RT_COMPARE_OP_MORE,
-    RT_COMPARE_OP_EQUAL,
-    RT_COMPARE_OP_LESS_EQUAL,
-    RT_COMPARE_OP_MORE_EQUAL,
-    RT_COMPARE_OP_NOT_EQUAL,
-    RT_COMPARE_OP_IN,
-    RT_COMPARE_OP_NOT_IN,
-    RT_COMPARE_OP_IS,
-    RT_COMPARE_OP_IS_NOT,
-    RT_COMPARE_OP_EXCEPTION_MATCH,
+    // these should return a bool
+    RT_BINARY_OP_LESS,
+    RT_BINARY_OP_MORE,
+    RT_BINARY_OP_EQUAL,
+    RT_BINARY_OP_LESS_EQUAL,
+    RT_BINARY_OP_MORE_EQUAL,
+    RT_BINARY_OP_NOT_EQUAL,
+    RT_BINARY_OP_IN,
+    RT_BINARY_OP_IS,
+    RT_BINARY_OP_EXCEPTION_MATCH,
+    // these are not supported by the runtime and must be synthesised by the emitter
+    RT_BINARY_OP_NOT_IN,
+    RT_BINARY_OP_IS_NOT,
 } rt_binary_op_t;
 
 typedef enum {
@@ -61,6 +62,7 @@ typedef enum {
     RT_F_STORE_SUBSCR,
     RT_F_IS_TRUE,
     RT_F_UNARY_OP,
+    RT_F_BINARY_OP,
     RT_F_BUILD_TUPLE,
     RT_F_BUILD_LIST,
     RT_F_LIST_APPEND,
@@ -69,9 +71,8 @@ typedef enum {
     RT_F_BUILD_SET,
     RT_F_STORE_SET,
     RT_F_MAKE_FUNCTION_FROM_ID,
-    RT_F_CALL_FUNCTION_N,
-    RT_F_CALL_METHOD_N,
-    RT_F_BINARY_OP,
+    RT_F_CALL_FUNCTION_N_KW_FOR_NATIVE,
+    RT_F_CALL_METHOD_N_KW,
     RT_F_GETITER,
     RT_F_ITERNEXT,
     RT_F_NUMBER_OF,
