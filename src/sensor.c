@@ -503,8 +503,8 @@ int sensor_set_framesize(struct sensor_dev *sensor, enum sensor_framesize frames
         return -1;
     }
 #else
-    extern char _heap_start;
-    fb->pixels = &_heap_start;
+    extern char _main_ram_start;
+    fb->pixels = (uint8_t*) &_main_ram_start;
 #endif
 
     /* Reconfigure the DMA stream */
