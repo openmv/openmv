@@ -10,4 +10,5 @@ enum led_color {
 void led_init(enum led_color color);
 void led_set_color(enum led_color color);
 void led_state(enum led_color color, int state);
-#endif //__RGB_LED_H__
+void led_toggle(enum led_color color);
+#endif //__LED_H__

@@ -57,3 +57,9 @@ void led_state(enum led_color id, int state)
         GPIO_SetBits(GPIOD, id);
     }
 }
+
+void led_toggle(enum led_color id)
+{
+    /* Toggle LED */
+    GPIO_ToggleBits(GPIOD, id);
+}
