@@ -34,7 +34,8 @@ SRCS = $(wildcard *.c) $(wildcard py/*.c)
 OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
 
 # Libraries
-LIB = -lmp -lc -lm -ldsp -lstdperiph -lusbcore -lusbdevcore
+#LIB = -lmp -lc -lm -ldsp -lstdperiph -lusbcore -lusbdevcore
+LIB = -lmp -lc -lm -ldsp -lstdperiph
 
 all:: $(BUILD_DIR) $(BUILD_DIR) $(BUILD_DIR)/$(BIN).bin
 
