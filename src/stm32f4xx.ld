@@ -17,13 +17,14 @@ MEMORY
 /* Highest address of the user mode stack */
 _estack     = 0x10010000; /* Stack is allocated on CCM block */
 
-_ram_start = 0x10000000;
 _ram_end   = 0x10010000; /* 64KB CCM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _stack_size = 0x1000; /* required amount of stack */
-_heap_size  = 0x4000; /* required amount of heap */
+_heap_size  = 0x8000; /* required amount of heap */
+_cache_size = 0x4000; /* required amount of cache */
 
+_main_ram_start = 0x20000000;
 /* Define output sections */
 SECTIONS
 {
@@ -96,7 +97,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
-
+    _ram_start = .;
     *(.data)           /* .data sections */
     *(.data*)          /* .data* sections */
 
@@ -133,6 +134,7 @@ SECTIONS
   ._user_heap_stack :
   {
     . = ALIGN(4);
+    . = . + _cache_size;
     . = . + _stack_size;
     . = ALIGN(4);
   } >CCM
