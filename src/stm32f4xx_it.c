@@ -81,7 +81,8 @@ void DebugMon_Handler(void)
   */
 void PendSV_Handler(void)
 {
-    BREAK();
+    extern void pendsv_isr_handler(void);
+    pendsv_isr_handler();
 }
 
 void OTG_FS_WKUP_IRQHandler(void)
