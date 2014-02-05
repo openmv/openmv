@@ -18,9 +18,10 @@
 
 #define USB_VID        (0x0483) /* vendor id    */
 #define USB_PID        (0x5740) /* product id   */
-#define EP_IN          (0x81)   /* IN endpoint  */
-#define EP_OUT         (0x01)   /* OUT endpoint */
-#define TIMEOUT        (1000)      /* I/O transfer timeout */
+#define EP_IN          (0x83)   /* IN endpoint  */
+#define EP_OUT         (0x03)   /* OUT endpoint */
+#define USB_IFACE      (0x02)   /*  */
+#define TIMEOUT        (2000)      /* I/O transfer timeout */
 #define DEBUG_LEVEL    (1)      /* libusb debug level   */
 #define LOCK_SURFACE(surface) \
         if (SDL_LockSurface(surface) < 0 ) {    \
@@ -28,13 +29,9 @@
             return -1;\
         }\
 
-const char *optstring = "f:r:s:c:p:h";
-const char *usage =  "usage: openmv <args>\n"                    \
-                     "-f  set pixel format yuv422/rgb565/grayscale\n"\
-                     "-r  set frame rate  2/8/15/30/60\n"\
-                     "-s  set frame size  QQVGA\n"\
-                     "-c  send command to camera SNAPSHOT/COLOR_TRACK\n"\
-                     "-p  probe register, pass reg addr in hex and use -/+ to change value\n"\
+const char *optstring = "h";
+const char *usage =  "OpenMV frambuffer viewer\n"\
+                     "usage: openmv <args>\n"\
                      "-h  print this message and exit\n";
 
 libusb_device_handle *dev = NULL;
@@ -82,6 +79,16 @@ int bulk_xfr(int ep, uint8_t *buf, int len)
 {
     int ret;
     if ((ret = libusb_bulk_transfer(dev, ep, buf, len, &len, TIMEOUT)) != 0) {
+        fprintf(stderr, "I/O error: %s (%d) offset: %d\n", err_str(ret), ret, len);
+        return ret;
+    }
+    return len;
+}
+
+int int_xfr(int ep, uint8_t *buf, int len)
+{
+    int ret;
+    if ((ret = libusb_interrupt_transfer(dev, ep, buf, len, &len, TIMEOUT)) != 0) {
         fprintf(stderr, "I/O error: %s offset: %d\n", err_str(ret), len);
         return ret;
     }
@@ -114,38 +121,15 @@ int write_image(char *path, struct frame_buffer *image)
 	return 0;
 }
 
-void send_command(enum sensor_command cmd, int n, ...)
-{
-    int i;
-    va_list args;
-    uint8_t cmd_buf[64];
-
-    /* first byte is the command */
-    cmd_buf[0] = cmd; 
-
-    /* process var args */
-    va_start(args, n);
-
-    for (i=0; i<n; i++) {
-        cmd_buf[i+1] = (uint8_t) va_arg(args, int);
-    }
-    va_end(args);
-    
-    bulk_xfr(EP_OUT, cmd_buf, n+1);
-}
-
 int main (int argc, char **argv) 
 {
     char opt;
-    uint8_t cmd_buf[32];
 
     /*sigaction struct*/
     struct sigaction act = {
       .sa_sigaction = sig_hdlr,
       .sa_flags     = SA_SIGINFO|SA_NOCLDSTOP,
     };
-
-    enum sensor_command sensor_cmd = CMD_SNAPSHOT;
 
     struct sensor_dev sensor = {
         .pixformat = PIXFORMAT_RGB565,
@@ -154,90 +138,11 @@ int main (int argc, char **argv)
         .frame_buffer = {160, 120, 2, {0}},
     };
     
-    uint8_t enable_probe=0;
-    uint8_t reg_addr=0;
-    uint8_t reg_val=0; /* register value */   
     struct frame_buffer *fb = &sensor.frame_buffer;
 
     /*parse command line args*/
     while ((opt = getopt(argc, argv, optstring)) > 0) {
         switch (opt) {
-            case 'c':
-                if (strcmp(optarg, "SNAPSHOT")==0) {
-                    sensor_cmd = CMD_SNAPSHOT;
-                } else if (strcmp(optarg, "COLOR_TRACK")==0) {
-                    sensor_cmd = CMD_COLOR_TRACK;
-                } else if (strcmp(optarg, "FACE_DETECTION")==0) {
-                    sensor_cmd = CMD_FACE_DETECTION;
-                } else {
-                    fprintf(stderr, "unsupported command <%s>\n%s\n", optarg, usage);
-                    exit(1);
-                }
-                break;
-
-            case 'f':
-                if (strcmp(optarg, "yuv422")==0) {
-                    fb->bpp =2;
-                    sensor.pixformat = PIXFORMAT_YUV422;
-                } else if (strcmp(optarg, "rgb565")==0) {
-                    fb->bpp =2;
-                    sensor.pixformat = PIXFORMAT_RGB565;
-                } else if (strcmp(optarg, "grayscale")==0) {
-                    fb->bpp =1;
-                    sensor.pixformat = PIXFORMAT_GRAYSCALE;
-                } else {
-                    fprintf(stderr, "unsupported pixformat <%s>\n%s\n", optarg, usage);
-                    exit(1);
-                }
-                break;
-
-            case 's':
-                if (strcmp(optarg, "QQCIF")==0) {
-                    fb->width  = 88;
-                    fb->height = 72;
-                    sensor.framesize = FRAMESIZE_QQCIF;
-                } else if (strcmp(optarg, "QQVGA")==0) {
-                    fb->width  = 160;
-                    fb->height = 120;
-                    sensor.framesize = FRAMESIZE_QQVGA;
-                } else if (strcmp(optarg, "QCIF")==0) {
-                    fb->width  = 176;
-                    fb->height = 144;
-                    sensor.framesize = FRAMESIZE_QCIF;
-                } else {
-                    fprintf(stderr, "unsupported framesize <%s>\n%s\n", optarg, usage);
-                    exit(1);
-                }
-                break;
-
-            case 'r':
-                switch (atoi(optarg)) {
-                    case 2:
-                        sensor.framerate=FRAMERATE_2FPS;
-                        break;
-                    case 8:
-                        sensor.framerate=FRAMERATE_8FPS;
-                        break;
-                    case 15:
-                        sensor.framerate=FRAMERATE_15FPS;
-                        break;
-                    case 30:
-                        sensor.framerate=FRAMERATE_30FPS;
-                        break;
-                    case 60:
-                        sensor.framerate=FRAMERATE_60FPS;
-                        break;
-                    default:
-                        fprintf(stderr, "unsupported framerate <%s>\n%s\n", optarg, usage);
-                        exit(1);
-                }
-                break;
-
-            case 'p':
-                enable_probe = 1;
-                reg_addr = (uint8_t) strtol(optarg, NULL, 16);
-                break;
-
             case '?':
             case 'h':
                 fprintf(stderr, "%s\n", usage);
@@ -263,11 +168,23 @@ int main (int argc, char **argv)
     }
 
     /* reset device */
-    libusb_reset_device(dev);
+    //libusb_reset_device(dev);
 
-    /* claim interace zero */
-    if (libusb_claim_interface(dev, 0) != 0) {
+    /* detach kernel driver */
+    if (libusb_detach_kernel_driver(dev, USB_IFACE) != 0) {
+        fprintf(stderr, "Failed to detach kernel driver\n");
+//        exit(1);
+    }
+
+    /* claim the framebuffer interace */
+    if (libusb_claim_interface(dev, USB_IFACE) != 0) {
         fprintf(stderr, "Failed to claim interface\n");
+        exit(1);
+    }
+
+    /* set alternate framebuffer interface */
+    if (libusb_set_interface_alt_setting(dev, USB_IFACE, 1) != 0) {
+        fprintf(stderr, "Failed to set alternate interface \n");
         exit(1);
     }
 
@@ -309,31 +226,6 @@ int main (int argc, char **argv)
         exit(1);
     }    
 
-    /* reset all registers to their default values */
-    send_command(CMD_RESET_SENSOR, 0);
-
-    /* set pixelformat */
-    send_command(CMD_SET_PIXFORMAT, 1, sensor.pixformat);
-
-    /* set framesize */
-    send_command(CMD_SET_FRAMESIZE, 1, sensor.framesize);
-
-    /* set framerate */
-    send_command(CMD_SET_FRAMERATE, 1, sensor.framerate);
-
-    /* set gain ceiling */
-    send_command(CMD_SET_GAINCEILING, 1, GAINCEILING_8X);
-
-    /* set brightness */
-    send_command(CMD_SET_BRIGHTNESS, 1, 3);
-
-    sleep(1);
-
-    /* Controlled by AWB */
-    /*Blue/Red Channels amplifiers*/
-//    write_reg(REG_RED,  0x80);
-//    write_reg(REG_BLUE, 0x80);
-
     SDL_Event event;
     long t_start, t_elapsed=0, t_total=0, frames=0;
 
@@ -345,12 +237,19 @@ int main (int argc, char **argv)
     while(1) {
         t_start = get_time_ms();
 
-        /* request frame */
-        cmd_buf[0] = sensor_cmd;
-        bulk_xfr(EP_OUT, cmd_buf, 1);
+        //cmd_buf[0] = sensor_cmd;
+        //int_xfr(EP_OUT, cmd_buf, 1);
 
         int ret, len = 0;
         int frame_size = (fb->width*fb->height*fb->bpp);
+
+        /* request frame */
+        ret = libusb_control_transfer(dev, 0x41, CMD_SNAPSHOT, 0, 2, NULL, 0, TIMEOUT);
+        if (ret !=0) {
+            fprintf(stderr, "I/O error: %s (%d) offset: %d\n", err_str(ret), ret, len);
+            exit(0);
+        }
+
         while (len < frame_size) {
             ret = bulk_xfr(EP_IN, fb->pixels + len, frame_size-len);
             if (stop || ret == LIBUSB_ERROR_PIPE) {
@@ -388,16 +287,8 @@ int main (int argc, char **argv)
         t_elapsed = get_time_ms() - t_start;
         t_total += t_elapsed;        
 
-        if (enable_probe) {
-            char buf[9]={0};
-            for (i=0; i<8; i++) {
-                buf[i]=(((reg_val<<i)&0x80)>>7)+48;
-            }
-            send_command(CMD_WRITE_REGISTER, 2, reg_addr, reg_val);
-            sprintf(text_buf, "REG 0x%.2X 0x%.2X %s", reg_addr, reg_val, buf);
-        } else {
-            sprintf(text_buf, "FPS %.2f", 1000/(float)(t_total / frames));
-        }
+        /* print FPS */
+        sprintf(text_buf, "FPS %.2f", 1000/(float)(t_total / frames));
    
         SDL_PollEvent(&event);
 
@@ -406,21 +297,6 @@ int main (int argc, char **argv)
                 exit(0);     
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
-                    case SDLK_0:
-                        reg_val=0;
-                        break;
-                    case SDLK_KP_PLUS:
-                        reg_val++;
-                        break;
-                    case SDLK_KP_MINUS:
-                        reg_val--;
-                        break;
-                    case SDLK_LEFT:
-                        reg_val = reg_val<<1 | reg_val>>7;
-                        break;
-                    case SDLK_RIGHT:
-                        reg_val = reg_val>>1 | reg_val<<7;
-                        break;
                     case SDLK_s:
                         write_image("snapshot.pgm", fb);
                         printf("snapshot saved...\n");
@@ -445,5 +321,3 @@ int main (int argc, char **argv)
     }
     return 0;
 }
-
-
