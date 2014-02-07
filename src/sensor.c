@@ -131,7 +131,7 @@ static void extclk_config(int frequency)
     TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Enable);
     TIM_ARRPreloadConfig(TIM1, ENABLE);
 
-    /* TIM3 enable counter */
+    /* TIM1 enable counter */
     TIM_Cmd(TIM1, ENABLE);
     TIM_CtrlPWMOutputs(TIM1, ENABLE);
 }
@@ -307,20 +307,27 @@ int sensor_init(struct sensor_dev *sensor)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 
-    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_8|GPIO_Pin_10;
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;
+
+    /* RESET */
+    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_10;
     GPIO_Init(GPIOA, &GPIO_InitStructure); 
 
+    /* PWDN */
+    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_5;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
+
     /* power down */
-    GPIO_SetBits(GPIOA, GPIO_Pin_8);
+    GPIO_SetBits(GPIOB, GPIO_Pin_5);
     systick_sleep(100);
 
     /* power up */
-    GPIO_ResetBits(GPIOA, GPIO_Pin_8);
+    GPIO_ResetBits(GPIOB, GPIO_Pin_5);
     systick_sleep(100);
 
     /* reset sensor */
