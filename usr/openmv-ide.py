@@ -48,9 +48,9 @@ class OMVGtk:
         sourceview.set_buffer(self.buffer)
 
         self.terminal = self.builder.get_object('terminal')
-        fd = os.open("/dev/ttyACM0", os.O_RDWR)
+        self.fd = os.open("/dev/ttyACM0", os.O_RDWR)
         self.terminal.set_size(80,24)
-        self.terminal.set_pty(fd)
+        self.terminal.set_pty(self.fd)
 
         self.framebuffer = self.builder.get_object("framebuffer_image")
 
@@ -61,10 +61,7 @@ class OMVGtk:
 
         # detach kernel driver    
         if self.dev.is_kernel_driver_active(interface):    
-            self.dev.detach_kernel_driver(interface)    
-
-        # claim interface
-        usb.util.claim_interface(self.dev, interface)
+            self.dev.detach_kernel_driver(interface)
 
         # set FB debug alt setting
         self.dev.set_interface_altsetting(interface, altsetting)
@@ -80,19 +77,19 @@ class OMVGtk:
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
+        # interrupt running code 
+        self.terminal.feed_child("\x03")
         for l in buf.splitlines():
-            if (l.strip()):
-                sleep(0.1)
-                self.terminal.feed_child(l+"\r\n")
-        self.terminal.feed_child("\r\n")
+            self.dev.ctrl_transfer(0x41, 10, 0, 2, l+'\n', 5000)
+        self.dev.ctrl_transfer(0x41, 11, 0, 2, None, 5000)
 
     def stop_clicked(self, widget):
-        self.terminal.feed_child("\x03")
+        self.terminal.feed_child("\x03\r\n")
 
     def update_fb(self):
         img_size = 160*120*2
         # request snapshot
-        self.dev.ctrl_transfer(0x41, 8, 0, 2, None, 2000)
+        self.dev.ctrl_transfer(0xC1, 8, 0, 2, None, 2000)
 
         # read framebuffer
         buf = self.dev.read(0x83, img_size, interface, 5000)
@@ -108,6 +105,13 @@ class OMVGtk:
 
 
     def quit(self, widget):
+        os.close(self.fd)
+
+        #reset device
+        self.dev.reset();
+        
+        #reattach kernel driver
+        self.dev.attach_kernel_driver(interface)
         sys.exit(0)
 
 if __name__ == "__main__":
