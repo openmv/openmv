@@ -32,11 +32,19 @@ usb.util.claim_interface(dev, interface)
 # set FB debug alt setting
 dev.set_interface_altsetting(interface, altsetting)
 
+# init pygame
+pygame.init()
+
 # init screen
 screen = pygame.display.set_mode((160, 120), pygame.DOUBLEBUF, 32)
-img_size = 160*120*2
 
-while True:
+running = True
+img_size = 160*120*2
+Clock = pygame.time.Clock()
+font = pygame.font.SysFont("monospace", 15)
+while running:
+    Clock.tick(60)
+
     # request snapshot
     dev.ctrl_transfer(0xC1, 8, 0, 2, None, 2000)
 
@@ -49,7 +57,20 @@ while True:
 
     # convert to RGB888 and blit
     image = rgb_to_surface(buf)
-    screen.blit( image, ( 0, 0 ) )
+
+    # blit stuff 
+    screen.blit(image, (0, 0))
+    screen.blit(font.render("FPS %.2f"%(Clock.get_fps()), 1, (255, 0, 0)), (0, 0))
 
     # update display
     pygame.display.flip()
+
+    event = pygame.event.poll()
+    if event.type == pygame.QUIT:
+         running = False
+    elif event.type == pygame.KEYDOWN:
+        if event.key == pygame.K_ESCAPE:
+            running = False
+
+pygame.quit()
+
