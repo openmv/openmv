@@ -11,10 +11,13 @@
 #include <stm32f4xx_usart.h>
 #include <stm32f4xx_rng.h>
 #include <stm32f4xx_misc.h>
-#include "libmp.h"
+#include <libmp.h>
 #include "systick.h"
 #include "rcc_ctrl.h"
-#include "led_py.h"
+#include "led.h"
+#include "sensor.h"
+#include "py_led.h"
+#include "py_sensor.h"
 
 int errno;
 
@@ -53,26 +56,14 @@ void fatality(void) {
     while (1);
 }
 
-static const char fresh_boot_py[] =
-"# boot.py -- run on boot-up\n"
-"# can run arbitrary Python, but best to keep it minimal\n"
-"\n"
-"pyb.source_dir('/src')\n"
-"pyb.main('main.py')\n"
-"#pyb.usb_usr('VCP')\n"
-"#pyb.usb_msd(True, 'dual partition')\n"
-"#pyb.flush_cache(False)\n"
-"#pyb.error_log('error.txt')\n"
-;
-
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
-"led = pyb.Led(32)\n"
-"while(pyb.vcp_connected()==0):\n"
-" led.on()\n"
-" pyb.delay(500)\n"
-" led.off()\n"
-" pyb.delay(500)\n"
+"from openmv import led\n"
+"while(openmv.vcp_connected()==0):\n"
+" led.on(led.BLUE)\n"
+" openmv.delay(500)\n"
+" led.off(led.BLUE)\n"
+" openmv.delay(500)\n"
 ;
 
 static const char *help_text =
@@ -221,31 +212,38 @@ int main(void)
 {
     rcc_ctrl_set_frequency(SYSCLK_168_MHZ);
 
-    /* Init MicroPython */
-    libmp_init();
-
     /* Init SysTick timer */
     systick_init();
+
+    /* Init MicroPython */
+    libmp_init();
 
     /* init RGB LED module */
     led_init(LED_BLUE);
 
-    // add some functions to the python namespace
+    /* add some functions to the python namespace */
     rt_store_name(MP_QSTR_help, rt_make_function_n(0, pyb_help));
 
-    mp_obj_t m = mp_obj_new_module(MP_QSTR_pyb);
-    rt_store_attr(m, MP_QSTR_vcp_connected, rt_make_function_n(0, pyb_vcp_connected));
+    /* Create main module */
+    mp_obj_t m = mp_obj_new_module(qstr_from_str("openmv"));
+    rt_store_attr(m, qstr_from_str("vcp_connected"), rt_make_function_n(0, pyb_vcp_connected));
     rt_store_attr(m, MP_QSTR_info, rt_make_function_n(0, pyb_info));
     rt_store_attr(m, MP_QSTR_gc, (mp_obj_t)&pyb_gc_obj);
-    rt_store_attr(m, MP_QSTR_Led, (mp_obj_t)&pyb_Led_obj);
     rt_store_attr(m, MP_QSTR_stop, rt_make_function_n(0, pyb_stop));
     rt_store_attr(m, MP_QSTR_standby, rt_make_function_n(0, pyb_standby));
     rt_store_attr(m, MP_QSTR_sync, rt_make_function_n(0, pyb_sync));
     rt_store_attr(m, MP_QSTR_delay, rt_make_function_n(1, pyb_delay));
-    rt_store_name(MP_QSTR_pyb, m);
+
+    mp_obj_t led_module = py_led_init();
+    rt_store_attr(m, qstr_from_str("led"), led_module);
+
+    mp_obj_t sensor_module = py_sensor_init();
+    rt_store_attr(m, qstr_from_str("sensor"), sensor_module);
+
+    rt_store_name(qstr_from_str("openmv"), m);
     
     /* Try to mount the flash fs */
-    bool reset_filesystem = true;
+    bool reset_filesystem = false;
     FRESULT res = f_mount(&fatfs0, "0:", 1);
     if (!reset_filesystem && res == FR_OK) {
         /* Mount sucessful */
@@ -267,7 +265,6 @@ int main(void)
         __fatal_error("could not access LFS");
     }
 
-    /* Init USB device */
     pyb_usb_dev_init();
 
     /* Try to run user script first */
