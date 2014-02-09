@@ -171,9 +171,10 @@ int main (int argc, char **argv)
     //libusb_reset_device(dev);
 
     /* detach kernel driver */
-    if (libusb_detach_kernel_driver(dev, USB_IFACE) != 0) {
+    if (libusb_kernel_driver_active(dev, USB_IFACE) != 0 &&
+        libusb_detach_kernel_driver(dev, USB_IFACE) != 0) {
         fprintf(stderr, "Failed to detach kernel driver\n");
-//        exit(1);
+        exit(1);
     }
 
     /* claim the framebuffer interace */
@@ -244,7 +245,7 @@ int main (int argc, char **argv)
         int frame_size = (fb->width*fb->height*fb->bpp);
 
         /* request frame */
-        ret = libusb_control_transfer(dev, 0x41, CMD_SNAPSHOT, 0, 2, NULL, 0, TIMEOUT);
+        ret = libusb_control_transfer(dev, 0xC1, 8, 0, 2, NULL, 0, TIMEOUT);
         if (ret !=0) {
             fprintf(stderr, "I/O error: %s (%d) offset: %d\n", err_str(ret), ret, len);
             exit(0);
