@@ -117,10 +117,11 @@
    Tip: To avoid modifying this file each time you need to use different HSE, you
         can define the HSE value in your toolchain compiler preprocessor.
   */           
-
 #if !defined  (HSE_VALUE) 
-  #define HSE_VALUE    ((uint32_t)16000000) /*!< Value of the External oscillator in Hz */
-  
+#if !defined  (OSC) 
+  #error "OSC value not defined!"
+#endif
+  #define HSE_VALUE    ((uint32_t)OSC*1000000) /*!< Value of the External oscillator in Hz */
 #endif /* HSE_VALUE */
 
 /**

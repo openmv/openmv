@@ -23,7 +23,7 @@ endif
 CFLAGS += -Wall -mlittle-endian -mthumb -mthumb-interwork -nostartfiles -mcpu=cortex-m4 
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mfpu=fpv4-sp-d16 -mfloat-abi=hard 
 CFLAGS += -I. -I../include/CMSIS -I../include/StdPeriph -I../include/USB_OTG -I../include/FatFS -I../include/MicroPython\
-          -I../include/MicroPython/py -I./py -DSTM32F40_41xxx -DUSE_USB_OTG_FS -DARM_MATH_CM4 -D__FPU_PRESENT -std=gnu99
+          -I../include/MicroPython/py -I./py -DSTM32F40_41xxx -DUSE_USB_OTG_FS -DARM_MATH_CM4 -D__FPU_PRESENT -std=gnu99 -DOSC=12
 
 # Linker Flags
 LDFLAGS = -mcpu=cortex-m4 -mthumb -mcpu=cortex-m4 -mthumb -mthumb-interwork -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16
