@@ -11,9 +11,7 @@ from time import sleep
 import usb.core
 import usb.util
 import numpy as np
-
-interface = 2;
-altsetting= 1;
+import openmv
 
 def image2pixbuf(buff):
     arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
@@ -54,17 +52,8 @@ class OMVGtk:
 
         self.framebuffer = self.builder.get_object("framebuffer_image")
 
-        # find USB device 
-        self.dev = usb.core.find(idVendor=0x0483, idProduct=0x5740)
-        if self.dev is None:
-            raise ValueError('Device not found')
-
-        # detach kernel driver    
-        if self.dev.is_kernel_driver_active(interface):    
-            self.dev.detach_kernel_driver(interface)
-
-        # set FB debug alt setting
-        self.dev.set_interface_altsetting(interface, altsetting)
+        # init openmv
+        openmv.init()      
 
         #connect signals
         signals = { 
@@ -77,22 +66,19 @@ class OMVGtk:
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
-        # interrupt running code 
+        # interrupt any running code 
         self.terminal.feed_child("\x03")
-        for l in buf.splitlines():
-            self.dev.ctrl_transfer(0x41, 10, 0, 2, l+'\n', 5000)
-        self.dev.ctrl_transfer(0x41, 11, 0, 2, None, 5000)
+
+        # exec script
+        openmv.exec_script(buf)
 
     def stop_clicked(self, widget):
         self.terminal.feed_child("\x03\r\n")
 
     def update_fb(self):
         img_size = 160*120*2
-        # request snapshot
-        self.dev.ctrl_transfer(0xC1, 8, 0, 2, None, 2000)
-
         # read framebuffer
-        buf = self.dev.read(0x83, img_size, interface, 5000)
+        buf = openmv.dump_fb()
     
         if len(buf) <img_size:
             print(len(buf))
@@ -107,11 +93,8 @@ class OMVGtk:
     def quit(self, widget):
         os.close(self.fd)
 
-        #reset device
-        self.dev.reset();
-        
-        #reattach kernel driver
-        self.dev.attach_kernel_driver(interface)
+        openmv.release()
+
         sys.exit(0)
 
 if __name__ == "__main__":

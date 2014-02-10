@@ -4,10 +4,8 @@ import usb.core
 import usb.util
 import numpy as np
 import pygame
+import openmv
 from time import sleep
-
-interface = 2;
-altsetting= 1;
 
 def rgb_to_surface(buff):
     arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
@@ -17,23 +15,11 @@ def rgb_to_surface(buff):
     arr = np.column_stack((r,g,b)).flat[0:]
     return pygame.image.frombuffer(arr, (160, 120), 'RGB')
 
-# find USB device 
-dev = usb.core.find(idVendor=0x0483, idProduct=0x5740)
-if dev is None:
-    raise ValueError('Device not found')
-
-# detach kernel driver    
-if dev.is_kernel_driver_active(interface):    
-    dev.detach_kernel_driver(interface)    
-
-# claim interface
-usb.util.claim_interface(dev, interface)
-
-# set FB debug alt setting
-dev.set_interface_altsetting(interface, altsetting)
-
 # init pygame
 pygame.init()
+
+# init openmv
+openmv.init()
 
 # init screen
 screen = pygame.display.set_mode((160, 120), pygame.DOUBLEBUF, 32)
@@ -45,11 +31,8 @@ font = pygame.font.SysFont("monospace", 15)
 while running:
     Clock.tick(60)
 
-    # request snapshot
-    dev.ctrl_transfer(0xC1, 8, 0, 2, None, 2000)
-
     # read framebuffer
-    buf = dev.read(0x83, img_size, interface, 5000)
+    buf = openmv.dump_fb()
     
     if len(buf) <img_size:
         print(len(buf))
@@ -73,4 +56,5 @@ while running:
             running = False
 
 pygame.quit()
+openmv.release()
 
