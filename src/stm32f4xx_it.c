@@ -87,7 +87,6 @@ void PendSV_Handler(void)
 
 void OTG_FS_WKUP_IRQHandler(void)
 {
-    BREAK();
   if(USB_OTG_Core.cfg.low_power)
   {
     *(uint32_t *)(0xE000ED10) &= 0xFFFFFFF9 ;
