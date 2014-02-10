@@ -22,9 +22,13 @@ def image2pixbuf(buff):
     arr = arr.reshape((120, 160, 3))
     return gtk.gdk.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB, 8) 
 
-ex_source = '''from openmv import sensor
+ex_source =\
+'''from openmv import sensor, imlib
 while (True):
-  image = sensor.snapshot()'''
+  sensor.snapshot()
+  r= imlib.detect_color((340, 50, 50), 10)
+  imlib.draw_rectangle(r)
+'''
 
 class OMVGtk:
     def __init__(self):
@@ -68,7 +72,7 @@ class OMVGtk:
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
         # interrupt any running code 
         self.terminal.feed_child("\x03")
-
+        sleep(0.1)
         # exec script
         openmv.exec_script(buf)
 
