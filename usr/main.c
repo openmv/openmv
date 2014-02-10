@@ -245,7 +245,7 @@ int main (int argc, char **argv)
         int frame_size = (fb->width*fb->height*fb->bpp);
 
         /* request frame */
-        ret = libusb_control_transfer(dev, 0xC1, 8, 0, 2, NULL, 0, TIMEOUT);
+        ret = libusb_control_transfer(dev, 0xC1, 1, 0, 2, NULL, 0, TIMEOUT);
         if (ret !=0) {
             fprintf(stderr, "I/O error: %s (%d) offset: %d\n", err_str(ret), ret, len);
             exit(0);
