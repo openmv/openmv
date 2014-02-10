@@ -6,6 +6,7 @@
 *.map
 *.hex
 *.dis
+*.pyc
 
 # Packages #
 ############
