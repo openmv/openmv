@@ -13,15 +13,6 @@ import usb.util
 import numpy as np
 import openmv
 
-def image2pixbuf(buff):
-    arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
-    r = (((arr & 0xF800) >>11)*255.0/31.0).astype(np.uint8)
-    g = (((arr & 0x07E0) >>5) *255.0/63.0).astype(np.uint8)
-    b = (((arr & 0x001F) >>0) *255.0/31.0).astype(np.uint8)
-    arr = np.column_stack((r, g, b))
-    arr = arr.reshape((120, 160, 3))
-    return gtk.gdk.pixbuf_new_from_array(arr, gtk.gdk.COLORSPACE_RGB, 8) 
-
 ex_source =\
 '''from openmv import sensor, imlib
 while (True):
@@ -57,20 +48,20 @@ class OMVGtk:
         self.framebuffer = self.builder.get_object("framebuffer_image")
 
         # init openmv
-        openmv.init()      
+        openmv.init()
 
         #connect signals
-        signals = { 
+        signals = {
             "on_execute_clicked" : self.execute_clicked,
             "on_stop_clicked" : self.stop_clicked,
             "on_top_window_destroy" : self.quit,
-        }        
+        }
         self.builder.connect_signals(signals)
         self.window = self.builder.get_object("top_window")
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
-        # interrupt any running code 
+        # interrupt any running code
         self.terminal.feed_child("\x03")
         sleep(0.1)
         # exec script
@@ -80,19 +71,13 @@ class OMVGtk:
         self.terminal.feed_child("\x03\r\n")
 
     def update_fb(self):
-        img_size = 160*120*2
         # read framebuffer
-        buf = openmv.dump_fb()
-    
-        if len(buf) <img_size:
-            print(len(buf))
-            return
+        fb = openmv.dump_fb()
 
         # convert to RGB888 and blit
-        pixbuf = image2pixbuf(buf)
+        pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
         self.framebuffer.set_from_pixbuf(pixbuf)
         gobject.idle_add(omvgtk.update_fb);
-
 
     def quit(self, widget):
         os.close(self.fd)

@@ -7,14 +7,6 @@ import pygame
 import openmv
 from time import sleep
 
-def rgb_to_surface(buff):
-    arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
-    r = (((arr & 0xF800) >>11)*255.0/31.0).astype(np.uint8)
-    g = (((arr & 0x07E0) >>5) *255.0/63.0).astype(np.uint8)
-    b = (((arr & 0x001F) >>0) *255.0/31.0).astype(np.uint8)
-    arr = np.column_stack((r,g,b)).flat[0:]
-    return pygame.image.frombuffer(arr, (160, 120), 'RGB')
-
 # init pygame
 pygame.init()
 
@@ -32,14 +24,13 @@ while running:
     Clock.tick(60)
 
     # read framebuffer
-    buf = openmv.dump_fb()
-    
-    if len(buf) <img_size:
-        print(len(buf))
+    fb = openmv.dump_fb()
+
+    if fb == None:
         continue
 
-    # convert to RGB888 and blit
-    image = rgb_to_surface(buf)
+    # create image from RGB888
+    image = pygame.image.frombuffer(fb[2].flat[0:], (fb[0], fb[1]), 'RGB')
 
     # blit stuff 
     screen.blit(image, (0, 0))
@@ -54,6 +45,9 @@ while running:
     elif event.type == pygame.KEYDOWN:
         if event.key == pygame.K_ESCAPE:
             running = False
+        if event.key == pygame.K_c:
+            pygame.image.save(image, "capture.jpeg")
+
 
 pygame.quit()
 openmv.release()
