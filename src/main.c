@@ -35,17 +35,21 @@ void __fatal_error(const char *msg) {
 }
 
 // sync all file systems
-mp_obj_t pyb_sync(void) {
+mp_obj_t py_sync(void) {
     storage_flush();
     return mp_const_none;
 }
 
-mp_obj_t pyb_delay(mp_obj_t count) {
+mp_obj_t py_delay(mp_obj_t count) {
     systick_sleep(mp_obj_get_int(count));
     return mp_const_none;
 }
 
-mp_obj_t pyb_vcp_connected() {
+mp_obj_t py_ticks(mp_obj_t count) {
+    return mp_obj_new_int(systick_current_millis());
+}
+
+mp_obj_t py_vcp_connected() {
     bool connected = usb_vcp_is_connected();
     return mp_obj_new_int(connected);
 }
@@ -89,13 +93,13 @@ static const char *help_text =
 ;
 
 // get some help about available functions
-static mp_obj_t pyb_help(void) {
+static mp_obj_t py_help(void) {
     printf("%s", help_text);
     return mp_const_none;
 }
 
 // get lots of info about the board
-static mp_obj_t pyb_info(void) {
+static mp_obj_t py_info(void) {
     // get and print unique id; 96 bits
     {
         byte *id = (byte*)0x1fff7a10;
@@ -184,7 +188,7 @@ static void SYSCLKConfig_STOP(void) {
     }
 }
 
-static mp_obj_t pyb_stop(void) {
+static mp_obj_t py_stop(void) {
     PWR_EnterSTANDBYMode();
     //PWR_FlashPowerDownCmd(ENABLE); don't know what the logic is with this
 
@@ -200,16 +204,16 @@ static mp_obj_t pyb_stop(void) {
     return mp_const_none;
 }
 
-static mp_obj_t pyb_standby(void) {
+static mp_obj_t py_standby(void) {
     PWR_EnterSTANDBYMode();
     return mp_const_none;
 }
 
-mp_obj_t pyb_rng_get(void) {
+mp_obj_t py_rng_get(void) {
     return mp_obj_new_int(RNG_GetRandomNumber() >> 16);
 }
 
-int main(void) 
+int main(void)
 {
     rcc_ctrl_set_frequency(SYSCLK_168_MHZ);
 
@@ -219,21 +223,19 @@ int main(void)
     /* Init MicroPython */
     libmp_init();
 
-    /* init RGB LED module */
-    led_init(LED_BLUE);
-
     /* add some functions to the python namespace */
-    rt_store_name(MP_QSTR_help, rt_make_function_n(0, pyb_help));
-    rt_store_name(MP_QSTR_delay, rt_make_function_n(1, pyb_delay));
+    rt_store_name(MP_QSTR_help, rt_make_function_n(0, py_help));
+    rt_store_name(MP_QSTR_delay, rt_make_function_n(1, py_delay));
+    rt_store_name(qstr_from_str("ticks"), rt_make_function_n(0, py_ticks));
 
     /* Create main module */
     mp_obj_t m = mp_obj_new_module(qstr_from_str("openmv"));
-    rt_store_attr(m, qstr_from_str("vcp_connected"), rt_make_function_n(0, pyb_vcp_connected));
-    rt_store_attr(m, MP_QSTR_info, rt_make_function_n(0, pyb_info));
+    rt_store_attr(m, qstr_from_str("vcp_connected"), rt_make_function_n(0, py_vcp_connected));
+    rt_store_attr(m, MP_QSTR_info, rt_make_function_n(0, py_info));
     rt_store_attr(m, MP_QSTR_gc, (mp_obj_t)&pyb_gc_obj);
-    rt_store_attr(m, MP_QSTR_stop, rt_make_function_n(0, pyb_stop));
-    rt_store_attr(m, MP_QSTR_standby, rt_make_function_n(0, pyb_standby));
-    rt_store_attr(m, MP_QSTR_sync, rt_make_function_n(0, pyb_sync));
+    rt_store_attr(m, MP_QSTR_stop, rt_make_function_n(0, py_stop));
+    rt_store_attr(m, MP_QSTR_standby, rt_make_function_n(0, py_standby));
+    rt_store_attr(m, MP_QSTR_sync, rt_make_function_n(0, py_sync));
     mp_obj_t led_module = py_led_init();
     rt_store_attr(m, qstr_from_str("led"), led_module);
 
@@ -244,7 +246,7 @@ int main(void)
     rt_store_attr(m, qstr_from_str("imlib"), imlib_module);
 
     rt_store_name(qstr_from_str("openmv"), m);
-    
+
     /* Try to mount the flash fs */
     bool reset_filesystem = false;
     FRESULT res = f_mount(&fatfs0, "0:", 1);
@@ -283,7 +285,7 @@ int main(void)
     libmp_do_repl();
 
     printf("PYB: sync filesystems\n");
-    pyb_sync();
+    py_sync();
 
     printf("PYB: soft reboot\n");
     while(1);
