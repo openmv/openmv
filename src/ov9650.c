@@ -28,12 +28,12 @@ static uint8_t default_regs[][2] = {
     {REG_RSVD35, 0x81},  /*  reserved  */
 
     /* Default QQVGA-RGB565 */
-    {REG_COM7,   0x14},  /*  QVGA/RGB565 */    
+    {REG_COM7,   0x14},  /*  QVGA/RGB565 */
     {REG_COM1,   0x24},  /*  QQVGA/Skip Option */
     {REG_COM3,   0x04},  /*  Vario Pixels */
     {REG_COM4,   0x80},  /*  Vario Pixels */
     {REG_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
- 
+
     /* YUV fmt /Special Effects Controls */
     {REG_TSLB,   0x01},  /*  YUVU/DBLC Enable/Bitwise reverse*/
     {REG_MANU,   0x80},  /*  Manual U */
@@ -86,11 +86,11 @@ static uint8_t default_regs[][2] = {
     {REG_HSTART, 0x1d},  /*  Horiz start high bits  */
     {REG_HSTOP,  0xbd},  /*  Horiz stop high bits  */
     {REG_HREF,   0xbf},  /*  HREF pieces  */
-    
+
     {REG_VSTART, 0x00},  /*  Vert start high bits  */
     {REG_VSTOP,  0x80},  /*  Vert stop high bits  */
     {REG_VREF,   0x12},  /*  Pieces of GAIN, VSTART, VSTOP  */
-#endif 
+#endif
 
 #if 1
     /* gamma curve p */
@@ -129,12 +129,12 @@ static uint8_t default_regs[][2] = {
     {0x8a,  0xe6},
 
     /* Reserved Registers, see OV965x App Note */
-    {0x16,  0x07}, 
-    {0x96,  0x04}, 
-    {0x8e,  0x00}, 
+    {0x16,  0x07},
+    {0x96,  0x04},
+    {0x8e,  0x00},
     {0x94,  0x88},
     {0x95,  0x88},
-    {0x5c,  0x96}, 
+    {0x5c,  0x96},
     {0x5d,  0x96},
     {0x5e,  0x10},
     {0x59,  0xeb},
@@ -151,7 +151,7 @@ static uint8_t rgb565_regs[][2] = {
     {REG_COM3,   0x04},  /*  Vario Pixels */
     {REG_COM4,   0x80},  /*  Vario Pixels */
     {REG_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
-      
+
     /* RGB color matrix */
     {REG_MTX1,   0x71},
     {REG_MTX2,   0x3e},
@@ -175,7 +175,7 @@ static uint8_t yuv422_regs[][2] = {
     {REG_COM3,   0x04},  /*  Vario Pixels */
     {REG_COM4,   0x80},  /*  Vario Pixels */
     {REG_COM15,  0xC0},  /*  Output range 0x00-0xFF  */
- 
+
     /* YUV color matrix */
     {REG_MTX1,   0x3a},
     {REG_MTX2,   0x3d},
@@ -239,7 +239,7 @@ static int set_pixformat(enum sensor_pixformat pixformat)
         default:
             return -1;
     }
-    
+
     /* Set pixel format */
     SCCB_Write(REG_COM7, com7);
 
@@ -288,7 +288,7 @@ static int set_framerate(enum sensor_framerate framerate)
     /* Write framerate register */
     SCCB_Write(REG_CLKRC, framerate);
     return 0;
-}   
+}
 
 static int set_brightness(uint8_t level)
 {
@@ -331,7 +331,7 @@ static int set_exposure(uint16_t exposure)
 
    /* exposure [15:10] */
    SCCB_Write(REG_AECHM, ((exposure>>10)&0x3F));
-    
+
    return 0;
 }
 
