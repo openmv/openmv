@@ -1,36 +1,37 @@
 #include <string.h>
 #include "libmp.h"
-#include "sensor.h"
+#include "framebuffer.h"
 #include "usbdbg.h"
 
 #define USB_TX_BUF_SIZE (64)
 static int xfer_bytes;
 static int xfer_length;
-static enum usbdbg_cmd cmd; 
+static enum usbdbg_cmd cmd;
 
-extern struct sensor_dev sensor;
-
-void usb_fb_data_in(void *buffer, int *length)
+void usbdbg_data_in(void *buffer, int *length)
 {
-    struct frame_buffer *fb = &sensor.frame_buffer;
-
     switch (cmd) {
+        case USBDBG_FB_SIZE:  /* dump framebuffer */
+            memcpy(buffer, fb, xfer_length);
+            cmd = USBDBG_NONE;
+            break;
         case USBDBG_DUMP_FB:  /* dump framebuffer */
-            if (xfer_bytes < (fb->width*fb->height*fb->bpp)) {
+            if (xfer_bytes < xfer_length) {
                 memcpy(buffer, fb->pixels+xfer_bytes, *length);
-                *length = USB_TX_BUF_SIZE;
-                xfer_bytes += USB_TX_BUF_SIZE;
+                xfer_bytes += *length;
             } else {
                 *length = 0;
+                cmd = USBDBG_NONE;
             }
             break;
 
         default: /* error */
+            *length = 0;
             break;
     }
 }
 
-void usb_fb_data_out(void *buffer, int length)
+void usbdbg_data_out(void *buffer, int length)
 {
     switch (cmd) {
         case USBDBG_EXEC_SCRIPT: /* execute script */
@@ -47,13 +48,18 @@ void usb_fb_data_out(void *buffer, int length)
     }
 }
 
-void usb_fb_control(uint8_t request, int length)
+void usbdbg_control(uint8_t request, int length)
 {
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
+        case USBDBG_FB_SIZE:     /* read framebuffer size */
+            xfer_bytes = 0;
+            xfer_length = 12;
+            break;
         case USBDBG_DUMP_FB:     /* dump framebuffer */
             /* reset bytes counter */
             xfer_bytes = 0;
+            xfer_length = fb->w*fb->h*fb->bpp;
             break;
 
         case USBDBG_EXEC_SCRIPT: /* execute script */
