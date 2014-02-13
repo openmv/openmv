@@ -27,4 +27,5 @@ int libmp_init();
 void libmp_do_repl(void);
 bool libmp_do_file(const char *filename);
 vstr_t* libmp_get_line();
+void libmp_line_feed();
 #endif /* __LIBMP_H__ */
