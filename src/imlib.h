@@ -7,21 +7,15 @@ struct point {
 };
 
 struct size {
-    int width;
-    int height;
+    int w;
+    int h;
 };
 
 struct rectangle {
     int x;
     int y;
-    union {
-        int width;
-        int w;
-    };
-    union {
-        int h;
-        int height;
-    };
+    int w;
+    int h;
 };
 
 struct color {
@@ -39,19 +33,16 @@ struct color {
     };
 };
 
-struct frame_buffer {
-    int width;
-    int height;
+struct image {
+    int w;
+    int h;
     int bpp;
-    union {
-        uint8_t *data;
-        uint8_t *pixels;
-    };
+    uint8_t *pixels;
 };
 
 struct integral_image {
-    int width;
-    int height;
+    int w;
+    int h;
     uint32_t *data;
 };
 
@@ -86,16 +77,17 @@ struct cascade {
     /* pointer to current integral image */
     struct integral_image sum;
     /* pointer to current scaled image in the pyramid */
-    struct frame_buffer *img;
+    struct image *img;
 };
 
 float imlib_distance(struct color *c0, struct color *c1);
 void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv);
-void imlib_grayscale_to_rgb565(struct frame_buffer *fb);
-void imlib_color_track(struct frame_buffer *fb, struct color *color, struct point *point, int threshold);
-void imlib_erosion_filter(struct frame_buffer *fb, uint8_t *kernel, int k_size);
-void imlib_scale_image(struct frame_buffer *src, struct frame_buffer *dst);
-void imlib_integral_image(struct frame_buffer *src, struct integral_image *sum);
-void imlib_draw_rectangle(struct frame_buffer* image, struct rectangle *r);
-struct array *imlib_detect_objects(struct cascade* cascade, struct frame_buffer* fb);
+void imlib_grayscale_to_rgb565(struct image *image);
+void imlib_detect_color(struct image *image, struct color *color, struct rectangle *rectangle, int threshold);
+void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size);
+void imlib_scale_image(struct image *src, struct image *dst);
+void imlib_integral_image(struct image *src, struct integral_image *sum);
+void imlib_draw_rectangle(struct image *image, struct rectangle *r);
+void imlib_histeq(struct image *src);
+struct array *imlib_detect_objects(struct image *image, struct cascade* cascade);
 #endif //__IMLIB_H__
