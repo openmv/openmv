@@ -29,11 +29,13 @@ alpha2 = xmldoc.getElementsByTagName('right_val')[0:n_features]
 #read rectangles
 feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
+#read cascade size
+size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
 fout = open("cascade.bin", "w")
 
 # write detection window size
-fout.write(struct.pack('i', 24)) #TODO hard coded fix
-fout.write(struct.pack('i', 24))
+fout.write(struct.pack('i', size[0])) #TODO hard coded fix
+fout.write(struct.pack('i', size[1]))
 
 # write num stages
 fout.write(struct.pack('i', len(stages)))
@@ -68,7 +70,7 @@ for f in feature:
     rects = f.getElementsByTagName('_')
     for r in rects:
         l = map(int, r.childNodes[0].nodeValue[:-1].split())
-        fout.write(struct.pack('b', l[4])) #int8_t
+        fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
 
 # write rects
 for f in feature:
