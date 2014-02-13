@@ -80,3 +80,11 @@ def exec_script(buf):
     __dev.ctrl_transfer(0x41, __USBDBG_EXEC_SCRIPT, len(buf), __INTERFACE, None, __TIMEOUT)
     __dev.write(0x03, buf, __INTERFACE, __TIMEOUT)
 
+if __name__ == '__main__':
+    if len(sys.argv)!= 2:
+        print 'usage: openmv.py <script>'
+        sys.exit(1)
+    with open(sys.argv[1], 'r') as fin:
+        buf = fin.read()
+        init()
+        exec_script(buf)
