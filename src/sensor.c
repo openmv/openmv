@@ -11,6 +11,7 @@
 #include "ov9650.h"
 #include "systick.h"
 #include "sensor.h"
+#include "framebuffer.h"
 
 #define REG_PID        0x0A
 #define REG_VER        0x0B
@@ -22,6 +23,7 @@
 #define BREAK()     __asm__ volatile ("BKPT")
 #define DCMI_DR_ADDRESS     (DCMI_BASE + 0x28)
 
+struct sensor_dev sensor;
 static volatile int frame_ready = 0;
 
 /* IRQ Handlers */
@@ -44,7 +46,7 @@ void DCMI_IRQHandler(void)
 }
 
 void DMA2_Stream1_IRQHandler(void)
-{    
+{
     /* DMA Transfer Complete Interrupt */
     if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_TCIF1)) {
         /* clear DMA TCIF pending interrupt */
@@ -74,13 +76,13 @@ void DMA2_Stream1_IRQHandler(void)
    To get TIM1 counter clock at x MHz, the prescaler is computed as follows:
       Prescaler = (TIM1CLK / TIM1 counter clock) - 1
       Prescaler = (168MHz / xMHz) - 1
-                                             
+
    To get TIM1 output clock at 30 KHz, the period (ARR)) is computed as follows:
       ARR = (TIM1 counter clock / TIM1 output clock) - 1
-      ARR = 21 MHz/ 30KHz = 669 
+      ARR = 21 MHz/ 30KHz = 669
 
    TIM1 Channel1 duty cycle = (TIM1_CCR1/ TIM1_ARR)* 100 = 50%
- */   
+ */
 static void extclk_config(int frequency)
 {
     GPIO_InitTypeDef    GPIO_InitStructure;
@@ -97,9 +99,9 @@ static void extclk_config(int frequency)
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOE, &GPIO_InitStructure); 
+    GPIO_Init(GPIOE, &GPIO_InitStructure);
 
-    /* Connect TIM pins to AF */  
+    /* Connect TIM pins to AF */
     GPIO_PinAFConfig(GPIOE, GPIO_PinSource9, GPIO_AF_TIM1);
 
     /* Read Core Clocks */
@@ -141,7 +143,7 @@ static int dcmi_config()
     DCMI_InitTypeDef DCMI_InitStructure;
     GPIO_InitTypeDef GPIO_InitStructure;
 
-    /*** DCMI GPIO configuration ***/ 
+    /*** DCMI GPIO configuration ***/
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOE |
                            RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOA, ENABLE);
     /* Connect DCMI pins to AF13 */
@@ -182,8 +184,8 @@ static int dcmi_config()
     /* HSYNC,PCLK (PA4/6) */
     GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_6;
     GPIO_Init(GPIOA, &GPIO_InitStructure);
-  
-    /*** DCMI Configuration ***/ 
+
+    /*** DCMI Configuration ***/
     DCMI_DeInit();
     DCMI_Cmd(DISABLE);
 
@@ -201,12 +203,12 @@ static int dcmi_config()
     DCMI_InitStructure.DCMI_HSPolarity  = DCMI_HSPolarity_Low;
 
     /* Sample data on rising edge of PCK */
-    DCMI_InitStructure.DCMI_PCKPolarity = DCMI_PCKPolarity_Rising; 
+    DCMI_InitStructure.DCMI_PCKPolarity = DCMI_PCKPolarity_Rising;
     DCMI_InitStructure.DCMI_CaptureRate = DCMI_CaptureRate_All_Frame;
 
     /* Capture 8 bits on every pixel clock */
     DCMI_InitStructure.DCMI_ExtendedDataMode = DCMI_ExtendedDataMode_8b;
-    /* Init DCMI */ 
+    /* Init DCMI */
     DCMI_Init(&DCMI_InitStructure);
 
 #if 0
@@ -223,7 +225,7 @@ static int dcmi_config()
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure); 
+    NVIC_Init(&NVIC_InitStructure);
 #endif
 
     /* Enable DCMI Perphieral */
@@ -242,8 +244,8 @@ static int dma_config(uint8_t *buffer, uint32_t size)
     DMA_DeInit(DMA2_Stream1);
     DMA_Cmd(DMA2_Stream1, DISABLE);
 
-    /* DMA2 Stream1 Configuration */  
-    DMA_InitStructure.DMA_Channel = DMA_Channel_1; 
+    /* DMA2 Stream1 Configuration */
+    DMA_InitStructure.DMA_Channel = DMA_Channel_1;
 
     /* DMA direction peripheral to memory */
     DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
@@ -253,7 +255,7 @@ static int dma_config(uint8_t *buffer, uint32_t size)
 
     /* Base memory and peripheral addresses */
     DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) buffer;
-    DMA_InitStructure.DMA_PeripheralBaseAddr = DCMI_DR_ADDRESS;	
+    DMA_InitStructure.DMA_PeripheralBaseAddr = DCMI_DR_ADDRESS;
 
     /* Memory and peripheral address increments */
     DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
@@ -276,7 +278,7 @@ static int dma_config(uint8_t *buffer, uint32_t size)
     DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
 
     DMA_Init(DMA2_Stream1, &DMA_InitStructure);
- 
+
     /* Enable DMA interrupts */
     DMA_ITConfig(DMA2_Stream1, DMA_IT_TC, ENABLE);
 //    DMA_ITConfig(DMA2_Stream1, DMA_IT_HT, ENABLE);
@@ -298,12 +300,12 @@ static int dma_config(uint8_t *buffer, uint32_t size)
     NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure); 
+    NVIC_Init(&NVIC_InitStructure);
 
     return 0;
 }
 
-int sensor_init(struct sensor_dev *sensor)
+int sensor_init()
 {
     GPIO_InitTypeDef GPIO_InitStructure;
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
@@ -316,7 +318,7 @@ int sensor_init(struct sensor_dev *sensor)
 
     /* RESET */
     GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_10;
-    GPIO_Init(GPIOA, &GPIO_InitStructure); 
+    GPIO_Init(GPIOA, &GPIO_InitStructure);
 
     /* PWDN */
     GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_5;
@@ -350,41 +352,41 @@ int sensor_init(struct sensor_dev *sensor)
     systick_sleep(10);
 
     /* clear sesnor struct */
-    bzero(sensor, sizeof(struct sensor_dev));
+    bzero(&sensor, sizeof(struct sensor_dev));
 
     /* read sensor id */
-    sensor->id.MIDH = SCCB_Read(REG_MIDH);
-    sensor->id.MIDL = SCCB_Read(REG_MIDL);
-    sensor->id.PID  = SCCB_Read(REG_PID);
-    sensor->id.VER  = SCCB_Read(REG_VER);
+    sensor.id.MIDH = SCCB_Read(REG_MIDH);
+    sensor.id.MIDL = SCCB_Read(REG_MIDL);
+    sensor.id.PID  = SCCB_Read(REG_PID);
+    sensor.id.VER  = SCCB_Read(REG_VER);
 
     /* call the sensor init function */
-    switch (sensor->id.PID) {
+    switch (sensor.id.PID) {
         case OV9650_PID:
-            ov9650_init(sensor);
+            ov9650_init(&sensor);
             break;
         default:
             /* sensor not supported */
             return -1;
     }
-  
+
     return 0;
 }
 
-int sensor_reset(struct sensor_dev *sensor)
+int sensor_reset()
 {
     /* reset sesnor state */
-    sensor->pixformat=0xFF;
-    sensor->framesize=0xFF;
-    sensor->framerate=0xFF;
-    sensor->gainceiling=0xFF;
+    sensor.pixformat=0xFF;
+    sensor.framesize=0xFF;
+    sensor.framerate=0xFF;
+    sensor.gainceiling=0xFF;
 
     /* reset the sensor */
-    sensor->reset();
+    sensor.reset();
     return 0;
 }
 
-void sensor_hard_reset(struct sensor_dev *sensor)
+void sensor_hard_reset()
 {
     /* reset sensor */
     GPIO_SetBits(GPIOA, GPIO_Pin_10);
@@ -396,17 +398,17 @@ void sensor_hard_reset(struct sensor_dev *sensor)
     sensor_reset(sensor);
 }
 
-int sensor_read_reg(struct sensor_dev *sensor, uint8_t reg)
+int sensor_read_reg(uint8_t reg)
 {
     return SCCB_Read(reg);
 }
 
-int sensor_write_reg(struct sensor_dev *sensor, uint8_t reg, uint8_t val)
+int sensor_write_reg(uint8_t reg, uint8_t val)
 {
     return SCCB_Write(reg, val);
 }
 
-int sensor_snapshot(struct sensor_dev *sensor)
+int sensor_snapshot(struct image *image)
 {
     /* clear frame_ready flag */
     frame_ready = 0;
@@ -420,35 +422,36 @@ int sensor_snapshot(struct sensor_dev *sensor)
     /* wait for DCMI to be disabled */
     while (DCMI->CR & DCMI_CR_CAPTURE);
 
-    if (sensor->pixformat == PIXFORMAT_GRAYSCALE) {
+    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
         int i;
-        struct frame_buffer *fb = &sensor->frame_buffer;
         /* extract Y channel */
-        for (i=0; i<(fb->width * fb->height); i++) {
-            fb->pixels[i] = fb->pixels[i*2]; 
+        for (i=0; i<(fb->w * fb->h); i++) {
+            fb->pixels[i] = fb->pixels[i*2+(fb->w * fb->h)];
         }
     }
 
+    image->w = fb->w;
+    image->h = fb->h;
+    image->bpp = fb->bpp;
+    image->pixels = fb->pixels;
     return 0;
 }
 
-int sensor_set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixformat)
+int sensor_set_pixformat(enum sensor_pixformat pixformat)
 {
-    struct frame_buffer *fb = &sensor->frame_buffer;
-
-    if (sensor->pixformat == pixformat) {
+    if (sensor.pixformat == pixformat) {
         /* no change */
         return 0;
     }
 
-    if (sensor->set_pixformat == NULL
-        || sensor->set_pixformat(pixformat) != 0) {
+    if (sensor.set_pixformat == NULL
+        || sensor.set_pixformat(pixformat) != 0) {
         /* operation not supported */
         return -1;
     }
 
     /* set pixel format */
-    sensor->pixformat = pixformat;
+    sensor.pixformat = pixformat;
 
     /* set bytes per pixel */
     switch (pixformat) {
@@ -463,109 +466,113 @@ int sensor_set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixfor
             break;
     }
 
+    if (pixformat==PIXFORMAT_GRAYSCALE) {
+        dma_config(fb->pixels+(fb->w * fb->h), fb->w * fb->h * 2);
+    } else {
+        dma_config(fb->pixels, fb->w * fb->h * 2);
+    }
     return 0;
 }
 
-int sensor_set_framesize(struct sensor_dev *sensor, enum sensor_framesize framesize)
+int sensor_set_framesize(enum sensor_framesize framesize)
 {
-    struct frame_buffer *fb = &sensor->frame_buffer;
-
-    if (sensor->framesize == framesize) {
+    if (sensor.framesize == framesize) {
        /* no change */
         return 0;
     }
 
     /* call the sensor specific function */
-    if (sensor->set_framesize == NULL
-        || sensor->set_framesize(framesize) != 0) {
+    if (sensor.set_framesize == NULL
+        || sensor.set_framesize(framesize) != 0) {
         /* operation not supported */
         return -1;
     }
 
     /* set framebuffer size */
-    sensor->framesize = framesize;
+    sensor.framesize = framesize;
 
     /* set framebuffer dimensions */
     switch (framesize) {
         case FRAMESIZE_QQCIF:
-            fb->width  = 88;
-            fb->height = 72;
+            fb->w  = 88;
+            fb->h = 72;
             break;
         case FRAMESIZE_QQVGA:
-            fb->width  = 160;
-            fb->height = 120;
+            fb->w  = 160;
+            fb->h = 120;
             break;
         case FRAMESIZE_QCIF:
-            fb->width  = 176;
-            fb->height = 144;
+            fb->w  = 176;
+            fb->h = 144;
             break;
         default:
             return -1;
     }
 
-#if 0
-    /* realloc frame buffer */
-    if ((fb->pixels = realloc(/* always allocate 2 bpp */            
-        fb->pixels, fb->width * fb->height * 2)) == NULL) {
-        return -1;
-    }
-#else
-    extern char _main_ram_start;
-    fb->pixels = (uint8_t*) &_main_ram_start;
-#endif
-
     /* Reconfigure the DMA stream */
-    dma_config(fb->pixels, fb->width * fb->height * 2);
+    dma_config(fb->pixels, fb->w * fb->h * 2);
 
+#if 0
+    DCMI_CROPCmd(DISABLE);
+    DCMI_CROPInitTypeDef DCMI_CROPInitStructure= {
+        .DCMI_HorizontalOffsetCount = 0,
+        .DCMI_CaptureCount          = fb->w * 2,
+        .DCMI_VerticalStartLine     = 0,
+        .DCMI_VerticalLineCount     = fb->h
+    };
+
+    DCMI_CROPConfig(&DCMI_CROPInitStructure);
+    DCMI_CROPCmd(ENABLE);
+#endif
     return 0;
 }
 
-int sensor_set_framerate(struct sensor_dev *sensor, enum sensor_framerate framerate)
+int sensor_set_framerate(enum sensor_framerate framerate)
 {
-    if (sensor->framerate == framerate) {
+    if (sensor.framerate == framerate) {
        /* no change */
         return 0;
     }
 
     /* call the sensor specific function */
-    if (sensor->set_framerate == NULL
-        || sensor->set_framerate(framerate) != 0) {
+    if (sensor.set_framerate == NULL
+        || sensor.set_framerate(framerate) != 0) {
         /* operation not supported */
         return -1;
     }
 
     /* set the frame rate */
-    sensor->framerate = framerate;
+    sensor.framerate = framerate;
 
     return 0;
 }
 
-int sensor_set_brightness(struct sensor_dev *sensor, uint8_t level)
+int sensor_set_brightness(uint8_t level)
 {
-    sensor->set_brightness(level);
+    sensor.set_brightness(level);
     return 0;
 }
 
-int sensor_set_exposure(struct sensor_dev *sensor, uint16_t exposure)
+int sensor_set_exposure(uint16_t exposure)
 {
     return 0;
 }
 
-int sensor_set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling)
+int sensor_set_gainceiling(enum sensor_gainceiling gainceiling)
 {
-    if (sensor->gainceiling == gainceiling) {
+    if (sensor.gainceiling == gainceiling) {
         /* no change */
         return 0;
     }
 
     /* call the sensor specific function */
-    if (sensor->set_gainceiling == NULL
-        || sensor->set_gainceiling(gainceiling) != 0) {
+    if (sensor.set_gainceiling == NULL
+        || sensor.set_gainceiling(gainceiling) != 0) {
         /* operation not supported */
         return -1;
     }
 
-    sensor->gainceiling = gainceiling;
+    sensor.gainceiling = gainceiling;
     return 0;
 }
 
