@@ -18,6 +18,7 @@
 #include "sensor.h"
 #include "py_led.h"
 #include "py_sensor.h"
+#include "py_imlib.h"
 
 int errno;
 
@@ -61,9 +62,9 @@ static const char fresh_main_py[] =
 "from openmv import led\n"
 "while(openmv.vcp_connected()==0):\n"
 " led.on(led.BLUE)\n"
-" openmv.delay(500)\n"
+" delay(500)\n"
 " led.off(led.BLUE)\n"
-" openmv.delay(500)\n"
+" delay(500)\n"
 ;
 
 static const char *help_text =
@@ -223,6 +224,7 @@ int main(void)
 
     /* add some functions to the python namespace */
     rt_store_name(MP_QSTR_help, rt_make_function_n(0, pyb_help));
+    rt_store_name(MP_QSTR_delay, rt_make_function_n(1, pyb_delay));
 
     /* Create main module */
     mp_obj_t m = mp_obj_new_module(qstr_from_str("openmv"));
@@ -232,13 +234,14 @@ int main(void)
     rt_store_attr(m, MP_QSTR_stop, rt_make_function_n(0, pyb_stop));
     rt_store_attr(m, MP_QSTR_standby, rt_make_function_n(0, pyb_standby));
     rt_store_attr(m, MP_QSTR_sync, rt_make_function_n(0, pyb_sync));
-    rt_store_attr(m, MP_QSTR_delay, rt_make_function_n(1, pyb_delay));
-
     mp_obj_t led_module = py_led_init();
     rt_store_attr(m, qstr_from_str("led"), led_module);
 
     mp_obj_t sensor_module = py_sensor_init();
     rt_store_attr(m, qstr_from_str("sensor"), sensor_module);
+
+    mp_obj_t imlib_module = py_imlib_init();
+    rt_store_attr(m, qstr_from_str("imlib"), imlib_module);
 
     rt_store_name(qstr_from_str("openmv"), m);
     
