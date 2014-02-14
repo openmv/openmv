@@ -21,5 +21,17 @@
                         _b->name));                     \
         }                                               \
     } while(0)
+/* IS_TYPE doesn't work for str objs */
+#define PY_ASSERT_STR(obj)                              \
+    do {                                                \
+        __typeof__ (obj) _a = (obj);                    \
+        if (!MP_OBJ_IS_STR(_a)) {                       \
+            nlr_jump(mp_obj_new_exception_msg_varg(     \
+                        MP_QSTR_TypeError,              \
+                        "can't convert %s to %s",       \
+                        mp_obj_get_type_str(_a),        \
+                        str_type.name));                \
+        }                                               \
+    } while(0)
 
 #endif /* __PY_ASSERT_H__ */
