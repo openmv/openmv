@@ -31,7 +31,7 @@ feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
 #read cascade size
 size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
-fout = open("cascade.bin", "w")
+fout = open(sys.argv[1].split('.')[0]+".bin", "w")
 
 # write detection window size
 fout.write(struct.pack('i', size[0])) #TODO hard coded fix
