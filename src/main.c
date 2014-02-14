@@ -19,6 +19,7 @@
 #include "py_led.h"
 #include "py_sensor.h"
 #include "py_imlib.h"
+#include "py_file.h"
 
 int errno;
 
@@ -223,13 +224,16 @@ int main(void)
     /* Init MicroPython */
     libmp_init();
 
-    /* add some functions to the python namespace */
+    /* add some functions to the global python namespace */
     rt_store_name(MP_QSTR_help, rt_make_function_n(0, py_help));
     rt_store_name(MP_QSTR_delay, rt_make_function_n(1, py_delay));
     rt_store_name(qstr_from_str("ticks"), rt_make_function_n(0, py_ticks));
+    rt_store_name(qstr_from_str("open"), rt_make_function_n(2, py_file_open));
 
-    /* Create main module */
+    /* Create main OpenMV module */
     mp_obj_t m = mp_obj_new_module(qstr_from_str("openmv"));
+
+    /* Add stuff to OpenMV module */
     rt_store_attr(m, qstr_from_str("vcp_connected"), rt_make_function_n(0, py_vcp_connected));
     rt_store_attr(m, MP_QSTR_info, rt_make_function_n(0, py_info));
     rt_store_attr(m, MP_QSTR_gc, (mp_obj_t)&pyb_gc_obj);
