@@ -72,12 +72,25 @@ struct cascade {
     float scale_factor;
     /* number of stages in the cascade */
     int  n_stages;
+    /* number of features in the cascade */
+    int  n_features;
+    /* number of rectangles in the cascade */
+    int  n_rectangles;
     /* size of the window used in the training set */
     struct size window;
-    /* pointer to current integral image */
-    struct integral_image sum;
     /* pointer to current scaled image in the pyramid */
     struct image *img;
+    /* pointer to current integral image */
+    struct integral_image sum;
+    /* haar cascade arrays */
+    uint8_t *stages_array;
+    int16_t *stages_thresh_array;
+    int16_t *tree_thresh_array;
+    int16_t *alpha1_array;
+    int16_t *alpha2_array;
+    int8_t *num_rectangles_array;
+    int8_t *weights_array;
+    int8_t *rectangles_array;
 };
 
 float imlib_distance(struct color *c0, struct color *c1);
@@ -90,4 +103,5 @@ void imlib_integral_image(struct image *src, struct integral_image *sum);
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);
 void imlib_histeq(struct image *src);
 struct array *imlib_detect_objects(struct image *image, struct cascade* cascade);
+int imlib_load_cascade(struct cascade* cascade, const char *path);
 #endif //__IMLIB_H__

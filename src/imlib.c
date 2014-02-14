@@ -5,7 +5,7 @@
 #include <stm32f4xx.h>
 #include "array.h"
 #include "imlib.h"
-#include "cascade.h"
+#include "ff.h"
 
 #define MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -270,47 +270,33 @@ void imlib_histeq(struct image *src)
 /* Viola-Jones face detector implementation
  * Original Author:   Francesco Comaschi (f.comaschi@tue.nl)
  */
-static int evalWeakClassifier(struct integral_image *sum, int std, int p_offset, int tree_index, int w_index, int r_index )
+static int evalWeakClassifier(struct cascade *cascade, int std, int p_offset, int tree_index, int w_index, int r_index )
 {
+    int i, sumw=0;
     struct rectangle tr;
-
+    struct integral_image *sum = &cascade->sum;
     /* the node threshold is multiplied by the standard deviation of the image */
-    int t = tree_thresh_array[tree_index] * std;
+    int t = cascade->tree_thresh_array[tree_index] * std;
 
-    /* this is just a hack will be removed when
-       we add the number of rects to the classifier */
-    tr.x = rectangles_array[r_index + 8];
-    tr.y = rectangles_array[r_index + 9];
-    tr.w = rectangles_array[r_index + 10];
-    tr.h = rectangles_array[r_index + 11];
-
-    int i,k, sumw=0;
-
-    if ((tr.x)&& (tr.y) &&(tr.w) &&(tr.h)) {
-        k = 3;
-    } else {
-        k = 2;
-    }
-
-    for (i=0; i<k; i++) {
-        tr.x = rectangles_array[r_index + i*4 + 0];
-        tr.y = rectangles_array[r_index + i*4 + 1];
-        tr.w = rectangles_array[r_index + i*4 + 2];
-        tr.h = rectangles_array[r_index + i*4 + 3];
+    for (i=0; i<cascade->num_rectangles_array[tree_index]; i++) {
+        tr.x = cascade->rectangles_array[r_index + i*4 + 0];
+        tr.y = cascade->rectangles_array[r_index + i*4 + 1];
+        tr.w = cascade->rectangles_array[r_index + i*4 + 2];
+        tr.h = cascade->rectangles_array[r_index + i*4 + 3];
 
         sumw += (
              *((sum->data + sum->w*(tr.y ) + (tr.x ))               + p_offset)
            - *((sum->data + sum->w*(tr.y ) + (tr.x  + tr.w))        + p_offset)
            - *((sum->data + sum->w*(tr.y  + tr.h) + (tr.x ))        + p_offset)
            + *((sum->data + sum->w*(tr.y  + tr.h) + (tr.x  + tr.w)) + p_offset))
-           * weights_array[w_index + i];
+           * cascade->weights_array[w_index + i]*4096;
     }
 
     if (sumw >= t) {
-        return alpha2_array[tree_index];
+        return cascade->alpha2_array[tree_index];
     }
 
-    return alpha1_array[tree_index];
+    return cascade->alpha1_array[tree_index];
 }
 
 static int runCascadeClassifier(struct cascade* cascade, struct point pt, int start_stage)
@@ -329,8 +315,8 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
     uint32_t sumsq=0;
     vec_t v0, v1;
 
-    for (y=pt.y; y<24; y++) {
-      for (x=pt.x; x<24; x+=2) {
+    for (y=pt.y; y<cascade->window.w; y++) {
+      for (x=pt.x; x<cascade->window.w; x+=2) {
           offset = y*cascade->img->w+x;
           v0.s0 = cascade->img->pixels[offset+0];
           v0.s1 = cascade->img->pixels[offset+1];
@@ -356,13 +342,15 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
 
     for (i=start_stage; i<cascade->n_stages; i++) {
         stage_sum = 0;
-        for (j=0; j<stages_array[i]; j++, tree_index++, w_index+=3, r_index+=12) {
+        for (j=0; j<cascade->stages_array[i]; j++, tree_index++) {
             /* send the shifted window to a haar filter */
-              stage_sum += evalWeakClassifier(&cascade->sum, std, p_offset, tree_index, w_index, r_index);
+              stage_sum += evalWeakClassifier(cascade, std, p_offset, tree_index, w_index, r_index);
+              w_index+=cascade->num_rectangles_array[tree_index];
+              r_index+=4 * cascade->num_rectangles_array[tree_index];
         }
 
         /* If the sum is below the stage threshold, no faces are detected */
-        if (stage_sum < 0.4*stages_thresh_array[i]) {
+        if (stage_sum < 0.4*cascade->stages_thresh_array[i]) {
             return -i;
         }
     }
@@ -549,10 +537,130 @@ struct array *imlib_detect_objects(struct image *image, struct cascade *cascade)
 
         /* process the current scale with the cascaded fitler. */
         ScaleImageInvoker(cascade, factor, sum.h, sum.w, objects);
-    } 
+    }
 
     //free(sum.data);
 
     objects = imlib_merge_detections(objects);
     return objects;
+}
+
+int imlib_load_cascade(struct cascade* cascade, const char *path)
+{
+    int i;
+    UINT n_out;
+
+    FIL fp;
+    FRESULT res=FR_OK;
+
+    res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    /* read detection window size */
+    res = f_read(&fp, &cascade->window, sizeof(cascade->window), &n_out);
+    if (res != FR_OK || n_out != sizeof(cascade->window)) {
+        goto error;
+    }
+
+    /* read num stages */
+    res = f_read(&fp, &cascade->n_stages, sizeof(cascade->n_stages), &n_out);
+    if (res != FR_OK || n_out != sizeof(cascade->n_stages)) {
+        goto error;
+    }
+
+    cascade->stages_array = malloc (sizeof(*cascade->stages_array) * cascade->n_stages);
+    cascade->stages_thresh_array = malloc (sizeof(*cascade->stages_thresh_array) * cascade->n_stages);
+
+    if (cascade->stages_array == NULL ||
+        cascade->stages_thresh_array == NULL) {
+        res = 20;
+        goto error;
+    }
+
+    /* read num features in each stages */
+    res = f_read(&fp, cascade->stages_array, sizeof(uint8_t) * cascade->n_stages, &n_out);
+    if (res != FR_OK || n_out != sizeof(uint8_t) * cascade->n_stages) {
+        goto error;
+    }
+
+    /* sum num of features in each stages*/
+    for (i=0, cascade->n_features=0; i<cascade->n_stages; i++) {
+        cascade->n_features += cascade->stages_array[i];
+    }
+
+    /* alloc features thresh array, alpha1, alpha 2,rects weights and rects*/
+    cascade->tree_thresh_array = malloc (sizeof(*cascade->tree_thresh_array) * cascade->n_features);
+    cascade->alpha1_array = malloc (sizeof(*cascade->alpha1_array) * cascade->n_features);
+    cascade->alpha2_array = malloc (sizeof(*cascade->alpha2_array) * cascade->n_features);
+    cascade->num_rectangles_array = malloc (sizeof(*cascade->num_rectangles_array) * cascade->n_features);
+
+    if (cascade->tree_thresh_array == NULL ||
+        cascade->alpha1_array   == NULL ||
+        cascade->alpha2_array   == NULL ||
+        cascade->num_rectangles_array == NULL) {
+        res = 20;
+        goto error;
+    }
+
+    /* read stages thresholds */
+    res = f_read(&fp, cascade->stages_thresh_array, sizeof(int16_t)*cascade->n_stages, &n_out);
+    if (res != FR_OK || n_out != sizeof(int16_t)*cascade->n_stages) {
+        goto error;
+    }
+
+    /* read features thresholds */
+    res = f_read(&fp, cascade->tree_thresh_array, sizeof(*cascade->tree_thresh_array)*cascade->n_features, &n_out);
+    if (res != FR_OK || n_out != sizeof(*cascade->tree_thresh_array)*cascade->n_features) {
+        goto error;
+    }
+
+    /* read alpha 1 */
+    res = f_read(&fp, cascade->alpha1_array, sizeof(*cascade->alpha1_array)*cascade->n_features, &n_out);
+    if (res != FR_OK || n_out != sizeof(*cascade->alpha1_array)*cascade->n_features) {
+        goto error;
+    }
+
+    /* read alpha 2 */
+    res = f_read(&fp, cascade->alpha2_array, sizeof(*cascade->alpha2_array)*cascade->n_features, &n_out);
+    if (res != FR_OK || n_out != sizeof(*cascade->alpha2_array)*cascade->n_features) {
+        goto error;
+    }
+
+    /* read num rectangles per feature*/
+    res = f_read(&fp, cascade->num_rectangles_array, sizeof(*cascade->num_rectangles_array)*cascade->n_features, &n_out);
+    if (res != FR_OK || n_out != sizeof(*cascade->num_rectangles_array)*cascade->n_features) {
+        goto error;
+    }
+
+    /* sum num of recatngles per feature*/
+    for (i=0, cascade->n_rectangles=0; i<cascade->n_features; i++) {
+        cascade->n_rectangles += cascade->num_rectangles_array[i];
+    }
+
+    cascade->weights_array = malloc (sizeof(*cascade->weights_array) * cascade->n_rectangles);
+    cascade->rectangles_array = malloc (sizeof(*cascade->rectangles_array) * cascade->n_rectangles * 4);
+
+    if (cascade->weights_array  == NULL ||
+        cascade->rectangles_array == NULL) {
+        res = 20;
+        goto error;
+    }
+
+    /* read rectangles weights */
+    res =f_read(&fp, cascade->weights_array, sizeof(*cascade->weights_array)*cascade->n_rectangles, &n_out);
+    if (res != FR_OK || n_out != sizeof(*cascade->weights_array)*cascade->n_rectangles) {
+        goto error;
+    }
+
+    /* read rectangles num rectangles * 4 points */
+    res = f_read(&fp, cascade->rectangles_array, sizeof(*cascade->rectangles_array)*cascade->n_rectangles *4, &n_out);
+    if (res != FR_OK || n_out != sizeof(*cascade->rectangles_array)*cascade->n_rectangles *4) {
+        goto error;
+    }
+
+error:
+    f_close(&fp);
+    return res;
 }

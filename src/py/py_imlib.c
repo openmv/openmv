@@ -5,8 +5,39 @@
 #include "py_image.h"
 #include "py_imlib.h"
 #include "py_assert.h"
+#include "py_file.h"
+
+typedef struct _py_cascade_obj_t {
+    mp_obj_base_t base;
+    struct cascade _cobj;
+} py_cascade_obj_t;
 
 extern struct sensor_dev sensor;
+
+static void py_cascade_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_cascade_obj_t *self = self_in;
+
+    /* print some info */
+    print(env, "width:%d height:%d n_stages:%d n_features:%d n_rectangles:%d\n",
+            self->_cobj.window.w,
+            self->_cobj.window.h,
+            self->_cobj.n_stages,
+            self->_cobj.n_features,
+            self->_cobj.n_rectangles);
+}
+
+static const mp_obj_type_t py_cascade_type = {
+    { &mp_const_type },
+    "Cascade",
+    .print = py_cascade_print,
+};
+
+void *py_cascade_cobj(mp_obj_t cascade)
+{
+    PY_ASSERT_TYPE(cascade, &py_cascade_type);
+    return &((py_cascade_obj_t *)cascade)->_cobj;
+}
 
 mp_obj_t py_imlib_histeq(mp_obj_t image_obj)
 {
@@ -69,49 +100,66 @@ mp_obj_t py_imlib_detect_color(mp_obj_t image_obj, mp_obj_t color_obj, mp_obj_t 
     return rt_build_tuple(4, rec_obj);
 }
 
-mp_obj_t py_imlib_detect_objects(mp_obj_t image_obj)
+mp_obj_t py_imlib_detect_objects(mp_obj_t image_obj, mp_obj_t cascade_obj)
 {
     struct image *image = NULL;
-    struct array *objects=NULL;
-    mp_obj_t mp_objects = mp_const_none;
+    struct cascade *cascade = NULL;
 
-    /* detection parameters */
-    struct cascade cascade = {
-        .step = 2,
-        .n_stages = 12,
-        .window = {24, 24},
-        .scale_factor = 1.25f,
-    };
+    struct array *objects_array=NULL;
+    mp_obj_t objects_list = mp_const_none;
 
     /* sanity checks */
     PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QQVGA);
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
 
-    /* get image pointer */
-    image = (struct image*) py_image_cobj(image_obj);
+    /* get C image pointer */
+    image = py_image_cobj(image_obj);
+    /* get C cascade pointer */
+    cascade = py_cascade_cobj(cascade_obj);
 
-    objects = imlib_detect_objects(image, &cascade);
-
-    int size = array_length(objects);
+    /* detect objects */
+    objects_array = imlib_detect_objects(image, cascade);
+    int size = array_length(objects_array);
     if (size) {
         int i;
+        objects_list = rt_build_list(0, NULL);
         for (i=0; i<size; i++) {
-            imlib_draw_rectangle(image, array_at(objects, i));
+            struct rectangle *r = array_at(objects_array, 0);
+            mp_obj_t rec_obj[4];
+            rec_obj[0] = mp_obj_new_int(r->x);
+            rec_obj[1] = mp_obj_new_int(r->y);
+            rec_obj[2] = mp_obj_new_int(r->w);
+            rec_obj[3] = mp_obj_new_int(r->h);
+            rt_list_append(objects_list, rt_build_tuple(4, rec_obj));
         }
-
-        struct rectangle *r = array_at(objects, 0);
-        mp_obj_t rec_obj[4];
-        rec_obj[0] = mp_obj_new_int(r->x);
-        rec_obj[1] = mp_obj_new_int(r->y);
-        rec_obj[2] = mp_obj_new_int(r->w);
-        rec_obj[3] = mp_obj_new_int(r->h);
-        mp_objects = rt_build_tuple(4, rec_obj);
     }
 
     /* free objects array */
-    array_free(objects);
+    array_free(objects_array);
 
-    return mp_objects;
+    return objects_list;
+}
+
+mp_obj_t py_imlib_load_cascade(mp_obj_t path_obj)
+{
+    py_cascade_obj_t *o =NULL;
+
+    /* detection parameters */
+    struct cascade cascade = {
+        .step = 2,
+        .scale_factor = 1.25f,
+    };
+
+    const char *path = mp_obj_str_get_str(path_obj);
+    int res = imlib_load_cascade(&cascade, path);
+    if (res != FR_OK) {
+        nlr_jump(mp_obj_new_exception_msg(qstr_from_str("Imlib"), ffs_strerror(res)));
+    }
+
+    o = m_new_obj(py_cascade_obj_t);
+    o->base.type = &py_cascade_type;
+    o->_cobj = cascade;
+    return o;
 }
 
 void py_imlib_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
@@ -128,7 +176,8 @@ mp_obj_t py_imlib_init()
     rt_store_attr(m, qstr_from_str("histeq"), rt_make_function_n(1, py_imlib_histeq));
     rt_store_attr(m, qstr_from_str("draw_rectangle"), rt_make_function_n(2, py_imlib_draw_rectangle));
     rt_store_attr(m, qstr_from_str("detect_color"), rt_make_function_n(3, py_imlib_detect_color));
-    rt_store_attr(m, qstr_from_str("detect_objects"), rt_make_function_n(1, py_imlib_detect_objects));
+    rt_store_attr(m, qstr_from_str("detect_objects"), rt_make_function_n(2, py_imlib_detect_objects));
+    rt_store_attr(m, qstr_from_str("load_cascade"), rt_make_function_n(1, py_imlib_load_cascade));
 
     return m;
 }
