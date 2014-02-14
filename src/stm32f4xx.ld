@@ -8,10 +8,10 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-  FLASH_ISR (rx)  : ORIGIN = 0x08000000, LENGTH = 16K 
+  FLASH_ISR (rx)  : ORIGIN = 0x08000000, LENGTH = 16K
   FLASH_TEXT (rx) : ORIGIN = 0x08020000, LENGTH = 512K
   RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
-  CCM (w!rx)      : ORIGIN = 0x10000000, LENGTH = 64K                   
+  CCM (w!rx)      : ORIGIN = 0x10000000, LENGTH = 64K
 }
 
 /* Highest address of the user mode stack */
@@ -46,7 +46,7 @@ SECTIONS
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
     *(.glue_7)         /* glue arm to thumb code */
     *(.glue_7t)        /* glue thumb to arm code */
-	*(.eh_frame)
+    *(.eh_frame)
 
     KEEP (*(.init))
     KEEP (*(.fini))
@@ -57,7 +57,7 @@ SECTIONS
   } >FLASH_TEXT
 
   .ARM.extab   : {
-      *(.ARM.extab* .gnu.linkonce.armextab.*) 
+      *(.ARM.extab* .gnu.linkonce.armextab.*)
   } >FLASH_TEXT
 
   .ARM : {
