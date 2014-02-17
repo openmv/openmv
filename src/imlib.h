@@ -37,7 +37,10 @@ struct image {
     int w;
     int h;
     int bpp;
-    uint8_t *pixels;
+    union {
+        uint8_t *pixels;
+        uint8_t *data;
+    };
 };
 
 struct integral_image {
@@ -104,4 +107,11 @@ void imlib_draw_rectangle(struct image *image, struct rectangle *r);
 void imlib_histeq(struct image *src);
 struct array *imlib_detect_objects(struct image *image, struct cascade* cascade);
 int imlib_load_cascade(struct cascade* cascade, const char *path);
+float imlib_template_match(struct image *image, struct image *template, struct rectangle *r);
+int imlib_save_template(struct image *image, const char *path);
+int imlib_load_template(struct image *image, const char *path);
+uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h);
+int imlib_image_mean(struct image *src);
+void imlib_subimage(struct image *src_img, struct image *dst_img, int x_off, int y_off);
+void imlib_blit(struct image *dst_img, struct image *src_img, int x_off, int y_off);
 #endif //__IMLIB_H__

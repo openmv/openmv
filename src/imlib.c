@@ -166,6 +166,48 @@ void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size)
     free(dst);
 }
 
+int imlib_image_mean(struct image *src)
+{
+    int s=0;
+    int x,y;
+    int n = src->w*src->h;
+
+    for (y=0; y<src->h; y++) {
+        for (x=0; x<src->w; x++) {
+            s += src->data[src->w*y+x];
+        }
+    }
+
+    /* mean */
+    return s/n;
+}
+
+void imlib_subimage(struct image *src_img, struct image *dst_img, int x_off, int y_off)
+{
+    int x, y;
+    typeof(*src_img->data) *src = src_img->data;
+    typeof(*dst_img->data) *dst = dst_img->data;
+
+    for (y=y_off; y<dst_img->h+y_off; y++) {
+        for (x=x_off; x<dst_img->w+x_off; x++) {
+            *dst++ = src[y*src_img->w+x];
+        }
+    }
+}
+
+void imlib_blit(struct image *dst_img, struct image *src_img, int x_off, int y_off)
+{
+    int x, y;
+    typeof(*src_img->data) *src = src_img->data;
+    typeof(*dst_img->data) *dst = dst_img->data;
+
+    for (y=y_off; y<src_img->h+y_off; y++) {
+        for (x=x_off; x<src_img->w+x_off; x++) {
+            dst[y*dst_img->w+x]=*src++;
+        }
+    }
+}
+
 void imlib_integral_image(struct image *src, struct integral_image *sum)
 {
     int x, y, s,t;
@@ -663,4 +705,21 @@ int imlib_load_cascade(struct cascade* cascade, const char *path)
 error:
     f_close(&fp);
     return res;
+}
+
+uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h)
+{
+#define PIXEL_AT(x,y)\
+    (src->data[src->w*(y-1)+(x-1)])
+
+    if (x==0 && y==0) {
+        return PIXEL_AT(w,h);
+    } else if (y==0) {
+        return PIXEL_AT(w+x, h+y) - PIXEL_AT(x, h+y);
+    } else if (x==0) {
+        return PIXEL_AT(w+x, h+y) - PIXEL_AT(w+x, y);
+    } else {
+        return PIXEL_AT(w+x, h+y) + PIXEL_AT(x, y) - PIXEL_AT(w+x, y) - PIXEL_AT(x, h+y);
+    }
+#undef  PIXEL_AT
 }
