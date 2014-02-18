@@ -83,7 +83,7 @@ float imlib_template_match(struct image *f,  struct image *t_orig, struct rectan
 {
     int x,y,u,v;
     float corr =0.0;
-    float factor,scale_factor = 0.75f;
+    float factor,scale_factor = 0.5f;
 
     struct image img;
     struct image *t=&img;
@@ -106,19 +106,21 @@ float imlib_template_match(struct image *f,  struct image *t_orig, struct rectan
     /* get integeral image */
     imlib_integral_image(f, f_imgs);
 
-    int i;
-    int b_den=0;
-    int t_mean = imlib_image_mean(t_orig);
-    /* get normalized template sum of squares */
-    for (i=0; i < (t_orig->w*t_orig->h); i++) {
-        int c = t_orig->data[i];
-        b_den += (c-t_mean)*(c-t_mean);
-    }
-
     for(factor=1.0f; (factor>0.25f); factor*=scale_factor) {
         t->w = (int) t_orig->w*factor;
         t->h = (int) t_orig->h*factor;
         imlib_scale_image(t_orig, t);
+
+        int i;
+        long b_den=0;
+        int t_mean = imlib_image_mean(t);
+
+        /* get normalized template sum of squares */
+        for (i=0; i < (t->w*t->h); i++) {
+            int c = t->data[i]-t_mean;
+            b_den += c*c;
+            t->data[i]=(int8_t)c;
+        }
 
         for (v=0; v < f->h - t->h; v+=3) {
         for (u=0; u < f->w - t->w; u+=3) {
@@ -131,7 +133,7 @@ float imlib_template_match(struct image *f,  struct image *t_orig, struct rectan
             for (y=v; y<t->h+v; y++) {
                 for (x=u; x<t->w+u; x++) {
                     int a = f->data[y*f->w+x]-f_mean;
-                    int b = t->data[(y-v)*t->w+(x-u)]-t_mean;
+                    int b = (int8_t) t->data[(y-v)*t->w+(x-u)];
                     sum_shift += a*b;
                     f_sumsq += f->data[y*f->w+x] * f->data[y*f->w+x];
                 }
