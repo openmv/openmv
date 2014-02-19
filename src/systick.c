@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include "systick.h"
 #include "array.h"
-static volatile uint32_t sys_ticks; 
-static struct array *task_list;
+static volatile uint32_t sys_ticks;
+//static struct array *task_list;
 
 struct systick_task {
     task_cb cb;
@@ -15,29 +15,31 @@ struct systick_task {
 
 void SysTick_Handler(void)
 {
-    int i;
-    struct systick_task *task;
+ //   int i;
+//    struct systick_task *task;
 
-    ++sys_ticks;       
+    ++sys_ticks;
 
+#if 0
     for (i=0; i<array_length(task_list); i++) {
         task = array_at(task_list, i);
         if ((sys_ticks % task->period)==0) {
             task->cb();
         }
     }
+#endif
 }
 
 int systick_init()
 {
     /* Allocate task_list array */
-    array_alloc(&task_list, free);
+    //array_alloc(&task_list, free);
 
     /* Configure systick to interrupt every 1ms */
     if (SysTick_Config(SystemCoreClock / 1000)) {
         return -1;
     }
- 
+
     /* Set SysTick IRQ to the highest priority */
     NVIC_SetPriority(SysTick_IRQn, 0);
     return 0;
@@ -56,12 +58,14 @@ uint32_t systick_current_millis()
 
 void systick_sched_task(task_cb cb, uint32_t period)
 {
+#if 0
     struct systick_task *task;
 
     task = malloc(sizeof(struct systick_task));
     task->cb = cb;
     task->period = period;
     array_push_back(task_list, task);
+#endif
 }
 
 bool systick_has_passed(uint32_t stc, uint32_t delay_ms) {
