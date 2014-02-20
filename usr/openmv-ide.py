@@ -16,10 +16,29 @@ import openmv
 ex_source =\
 '''from openmv import sensor, imlib
 while (True):
-  sensor.snapshot()
-  r= imlib.detect_color((340, 50, 50), 10)
-  imlib.draw_rectangle(r)
+  image = sensor.snapshot()
+  r= imlib.detect_color(image, (340, 50, 50), 10)
+  imlib.draw_rectangle(image, r)
 '''
+def rgb2hsv(r, g, b):
+    r, g, b = r/255.0, g/255.0, b/255.0
+    mx = max(r, g, b)
+    mn = min(r, g, b)
+    df = mx-mn
+    if mx == mn:
+        h = 0
+    elif mx == r:
+        h = (60 * ((g-b)/df) + 360) % 360
+    elif mx == g:
+        h = (60 * ((b-r)/df) + 120) % 360
+    elif mx == b:
+        h = (60 * ((r-g)/df) + 240) % 360
+    if mx == 0:
+        s = 0
+    else:
+        s = df/mx
+    v = mx
+    return int(h), int(s*100), int(v*100)
 
 class OMVGtk:
     def __init__(self):
@@ -46,6 +65,9 @@ class OMVGtk:
         self.terminal.set_pty(self.fd)
 
         self.framebuffer = self.builder.get_object("framebuffer_image")
+        # status bar stuff
+        self.statusbar = self.builder.get_object("statusbar")
+        self.statusbar_ctx = self.statusbar.get_context_id("default")
 
         # init openmv
         openmv.init()
@@ -55,6 +77,8 @@ class OMVGtk:
             "on_execute_clicked" : self.execute_clicked,
             "on_stop_clicked" : self.stop_clicked,
             "on_top_window_destroy" : self.quit,
+            "on_motion_notify": self.motion_notify,
+            "on_button_press": self.button_pressed
         }
         self.builder.connect_signals(signals)
         self.window = self.builder.get_object("top_window")
@@ -69,6 +93,24 @@ class OMVGtk:
 
     def stop_clicked(self, widget):
         self.terminal.feed_child("\x03\r\n")
+
+    def motion_notify(self, widget, event):
+        x = int(event.x)
+        y = int(event.y)
+        pixbuf = self.framebuffer.get_pixbuf()
+        if x < pixbuf.get_width() and y < pixbuf.get_height():
+            pixel = pixbuf.get_pixels_array()[y][x]
+            hsv = "(%d, %d, %d)" %(rgb2hsv(pixel[0], pixel[1], pixel[2]))
+            self.statusbar.pop(self.statusbar_ctx)
+            self.statusbar.push(self.statusbar_ctx, hsv)
+
+    def button_pressed(self, widget, event):
+        x = int(event.x)
+        y = int(event.y)
+        pixbuf = self.framebuffer.get_pixbuf()
+        if x < pixbuf.get_width() and y < pixbuf.get_height():
+            pixel = pixbuf.get_pixels_array()[y][x]
+            print rgb2hsv(pixel[0], pixel[1], pixel[2])
 
     def update_fb(self):
         # read framebuffer
