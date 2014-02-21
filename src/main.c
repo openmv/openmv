@@ -244,7 +244,9 @@ int main(void)
     rt_store_attr(m, qstr_from_str("led"), led_module);
 
     mp_obj_t sensor_module = py_sensor_init();
-    rt_store_attr(m, qstr_from_str("sensor"), sensor_module);
+    if (sensor_module) {
+        rt_store_attr(m, qstr_from_str("sensor"), sensor_module);
+    }
 
     mp_obj_t imlib_module = py_imlib_init();
     rt_store_attr(m, qstr_from_str("imlib"), imlib_module);
