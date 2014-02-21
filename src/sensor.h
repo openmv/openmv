@@ -69,6 +69,9 @@ enum reset_polarity {
     ACTIVE_HIGH
 };
 
+extern const int res_width[];
+extern const int res_height[];
+
 struct sensor_dev {
     struct sensor_id id;
     uint16_t vsync_pol;

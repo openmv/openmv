@@ -9,6 +9,7 @@
 #include <stm32f4xx_dcmi.h>
 #include "sccb.h"
 #include "ov9650.h"
+#include "ov2640.h"
 #include "systick.h"
 #include "sensor.h"
 #include "framebuffer.h"
@@ -20,11 +21,32 @@
 #define REG_MIDL       0x1D
 
 #define OV9650_PID     0x96
+#define OV2640_PID     0x26
 #define BREAK()     __asm__ volatile ("BKPT")
 #define DCMI_DR_ADDRESS     (DCMI_BASE + 0x28)
 
 struct sensor_dev sensor;
 static volatile int frame_ready = 0;
+
+const int res_width[] = {
+    88,     /* QQCIF */
+    160,    /* QQVGA */
+    176,    /* QCIF  */
+    320,    /* QVGA  */
+    352,    /* CIF   */
+    640,    /* VGA   */
+    1280,   /* SXGA  */
+};
+
+const int res_height[]= {
+    72,     /* QQCIF */
+    120,    /* QQVGA */
+    144,    /* QCIF  */
+    240,    /* QVGA  */
+    288,    /* CIF   */
+    480,    /* VGA   */
+    1024,   /* SXGA  */
+};
 
 /* IRQ Handlers */
 void DCMI_IRQHandler(void)
@@ -199,11 +221,11 @@ static int dcmi_config()
     DCMI_InitStructure.DCMI_SynchroMode = DCMI_SynchroMode_Hardware;
 
     /* Active VS/HS clocks*/
-    DCMI_InitStructure.DCMI_VSPolarity  = DCMI_VSPolarity_High;
-    DCMI_InitStructure.DCMI_HSPolarity  = DCMI_HSPolarity_Low;
+    DCMI_InitStructure.DCMI_VSPolarity  = sensor.vsync_pol;
+    DCMI_InitStructure.DCMI_HSPolarity  = sensor.hsync_pol;
 
     /* Sample data on rising edge of PCK */
-    DCMI_InitStructure.DCMI_PCKPolarity = DCMI_PCKPolarity_Rising;
+    DCMI_InitStructure.DCMI_PCKPolarity = sensor.pixck_pol;
     DCMI_InitStructure.DCMI_CaptureRate = DCMI_CaptureRate_All_Frame;
 
     /* Capture 8 bits on every pixel clock */
@@ -311,35 +333,28 @@ int sensor_init()
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
     RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
 
+    /* RESET/PWDN GPIO configuration */
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
     GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;
 
-    /* RESET */
+    /* Configure the RESET GPIO pin */
     GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_10;
     GPIO_Init(GPIOA, &GPIO_InitStructure);
 
-    /* PWDN */
+    /* Configure the PWDN GPIO pin */
     GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_5;
     GPIO_Init(GPIOB, &GPIO_InitStructure);
 
-    /* power down */
+    /* Do a power cycle */
     GPIO_SetBits(GPIOB, GPIO_Pin_5);
     systick_sleep(100);
 
-    /* power up */
     GPIO_ResetBits(GPIOB, GPIO_Pin_5);
     systick_sleep(100);
 
-    /* reset sensor */
-    GPIO_SetBits(GPIOA, GPIO_Pin_10);
-    systick_sleep(100);
-
-    GPIO_ResetBits(GPIOA, GPIO_Pin_10);
-    systick_sleep(1000);
-
-    /* Initialize SCCB interface */
+    /* Initialize the SCCB interface */
     SCCB_Init();
     systick_sleep(10);
 
@@ -347,55 +362,80 @@ int sensor_init()
     extclk_config(24000000);
     systick_sleep(10);
 
-    /* Configure the DCMI interface */
-    dcmi_config();
+    /* Some sensors have different reset polarities, and we can't know which sensor
+       is connected before initializing SCCB and reading the PID register, which in
+       turn requires pulling the sensor out of the reset state. So we try to read a
+       register with both polarities to determine line state. */
+
+    sensor.reset_pol = ACTIVE_LOW;
+    GPIO_SetBits(GPIOA, GPIO_Pin_10);
     systick_sleep(10);
 
-    /* clear sesnor struct */
+    /* Check if we can read PID */
+    if (SCCB_Read(REG_PID) == 255) {
+        /* Sensor is held in reset, so reset is active high */
+        sensor.reset_pol = ACTIVE_HIGH;
+        GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+        systick_sleep(10);
+    }
+
+    /* Reset the sesnor state */
     bzero(&sensor, sizeof(struct sensor_dev));
 
-    /* read sensor id */
+    /* Read the sensor information */
     sensor.id.MIDH = SCCB_Read(REG_MIDH);
     sensor.id.MIDL = SCCB_Read(REG_MIDL);
     sensor.id.PID  = SCCB_Read(REG_PID);
     sensor.id.VER  = SCCB_Read(REG_VER);
 
-    /* call the sensor init function */
+    /* Call the sensor-specific init function */
     switch (sensor.id.PID) {
         case OV9650_PID:
             ov9650_init(&sensor);
+            break;
+        case OV2640_PID:
+            ov2640_init(&sensor);
             break;
         default:
             /* sensor not supported */
             return -1;
     }
 
+    /* Configure the DCMI interface. This should be called
+       after ovxxx_init to set VSYNC/HSYNC/PCLK polarities */
+    dcmi_config();
     return 0;
 }
 
 int sensor_reset()
 {
-    /* reset sesnor state */
+    /* Reset the sesnor state */
     sensor.pixformat=0xFF;
     sensor.framesize=0xFF;
     sensor.framerate=0xFF;
     sensor.gainceiling=0xFF;
 
-    /* reset the sensor */
+    /* Hard reset the sensor */
+    switch (sensor.reset_pol) {
+        case ACTIVE_HIGH:
+            GPIO_SetBits(GPIOA, GPIO_Pin_10);
+            systick_sleep(10);
+
+            GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+            systick_sleep(10);
+           break;
+       case ACTIVE_LOW:
+            GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+            systick_sleep(10);
+
+            GPIO_SetBits(GPIOA, GPIO_Pin_10);
+            systick_sleep(10);
+            break;
+    }
+
+    /* Call sensor-specific reset function */
     sensor.reset();
     return 0;
-}
-
-void sensor_hard_reset()
-{
-    /* reset sensor */
-    GPIO_SetBits(GPIOA, GPIO_Pin_10);
-    systick_sleep(100);
-
-    GPIO_ResetBits(GPIOA, GPIO_Pin_10);
-    systick_sleep(1000);
-
-    sensor_reset(sensor);
 }
 
 int sensor_read_reg(uint8_t reg)
@@ -494,15 +534,15 @@ int sensor_set_framesize(enum sensor_framesize framesize)
     /* set framebuffer dimensions */
     switch (framesize) {
         case FRAMESIZE_QQCIF:
-            fb->w  = 88;
+            fb->w = 88;
             fb->h = 72;
             break;
         case FRAMESIZE_QQVGA:
-            fb->w  = 160;
+            fb->w = 160;
             fb->h = 120;
             break;
         case FRAMESIZE_QCIF:
-            fb->w  = 176;
+            fb->w = 176;
             fb->h = 144;
             break;
         default:
@@ -513,6 +553,7 @@ int sensor_set_framesize(enum sensor_framesize framesize)
     dma_config(fb->pixels, fb->w * fb->h * 2);
 
 #if 0
+    /* This enables croping use it to test bigger frames */
     DCMI_CROPCmd(DISABLE);
     DCMI_CROPInitTypeDef DCMI_CROPInitStructure= {
         .DCMI_HorizontalOffsetCount = 0,

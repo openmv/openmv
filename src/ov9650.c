@@ -15,7 +15,7 @@
 
 #define NUM_BR_LEVELS       7
 
-static uint8_t default_regs[][2] = {
+static const uint8_t default_regs[][2] = {
     /* See Implementation Guide */
     {REG_COM2,   0x01},  /*  Output drive x2 */
     {REG_COM5,   0x00},  /*  System clock  */
@@ -146,7 +146,7 @@ static uint8_t default_regs[][2] = {
     {0x00,  0x00}
 };
 
-static uint8_t rgb565_regs[][2] = {
+static const uint8_t rgb565_regs[][2] = {
     /* See Implementation Guide */
     {REG_COM3,   0x04},  /*  Vario Pixels */
     {REG_COM4,   0x80},  /*  Vario Pixels */
@@ -170,7 +170,7 @@ static uint8_t rgb565_regs[][2] = {
     {0x00,  0x00}
 };
 
-static uint8_t yuv422_regs[][2] = {
+static const uint8_t yuv422_regs[][2] = {
     /* See Implementation Guide */
     {REG_COM3,   0x04},  /*  Vario Pixels */
     {REG_COM4,   0x80},  /*  Vario Pixels */
@@ -197,7 +197,7 @@ static uint8_t yuv422_regs[][2] = {
 static int reset()
 {
     int i=0;
-    uint8_t (*regs)[2]=default_regs;
+    const uint8_t (*regs)[2]=default_regs;
 
     /* Reset all registers */
     SCCB_Write(REG_COM7, 0x80);
@@ -217,7 +217,7 @@ static int reset()
 static int set_pixformat(enum sensor_pixformat pixformat)
 {
     int i=0;
-    uint8_t (*regs)[2];
+    const uint8_t (*regs)[2];
     uint8_t com7=0; /* framesize/RGB */
 
     /* read pixel format reg */
@@ -344,6 +344,11 @@ static int set_gainceiling(enum sensor_gainceiling gainceiling)
 
 int ov9650_init(struct sensor_dev *sensor)
 {
+    /* set HSYNC/VSYNC/PCLK polarity */
+    sensor->vsync_pol = DCMI_VSPolarity_High;
+    sensor->hsync_pol = DCMI_HSPolarity_Low;
+    sensor->pixck_pol = DCMI_PCKPolarity_Rising;
+
     /* set function pointers */
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;
