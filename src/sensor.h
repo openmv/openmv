@@ -13,6 +13,7 @@ enum sensor_pixformat {
     PIXFORMAT_RGB565,    /* 2BPP/RGB565*/
     PIXFORMAT_YUV422,    /* 2BPP/YUV422*/
     PIXFORMAT_GRAYSCALE, /* 1BPP/GRAYSCALE*/
+    PIXFORMAT_JPEG,      /* JPEG/COMPRESSED */
 };
 
 enum sensor_framesize {
@@ -63,8 +64,17 @@ enum sensor_result {
     CMD_NACK =0x02,
 };
 
+enum reset_polarity {
+    ACTIVE_LOW,
+    ACTIVE_HIGH
+};
+
 struct sensor_dev {
     struct sensor_id id;
+    uint16_t vsync_pol;
+    uint16_t hsync_pol;
+    uint16_t pixck_pol;
+    enum reset_polarity reset_pol;
     enum sensor_pixformat pixformat;
     enum sensor_framesize framesize;
     enum sensor_framerate framerate;

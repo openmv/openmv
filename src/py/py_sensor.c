@@ -130,7 +130,11 @@ static void rt_store_constants(mp_obj_t m, struct sym_entry *constants)
 mp_obj_t py_sensor_init()
 {
     /* Init sensor */
-    sensor_init();
+    if (sensor_init() != 0) {
+        return NULL;
+    }
+
+    /* Reset sensor and registers */
     sensor_reset();
 
     /* Use some default settings */
