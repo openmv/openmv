@@ -117,24 +117,24 @@ mp_obj_t py_imlib_detect_objects(mp_obj_t image_obj, mp_obj_t cascade_obj)
     /* get C cascade pointer */
     cascade = py_cascade_cobj(cascade_obj);
 
-    /* detect objects */
+    /* Detect objects */
     objects_array = imlib_detect_objects(image, cascade);
-    int size = array_length(objects_array);
-    if (size) {
-        int i;
-        objects_list = rt_build_list(0, NULL);
-        for (i=0; i<size; i++) {
-            struct rectangle *r = array_at(objects_array, 0);
-            mp_obj_t rec_obj[4];
-            rec_obj[0] = mp_obj_new_int(r->x);
-            rec_obj[1] = mp_obj_new_int(r->y);
-            rec_obj[2] = mp_obj_new_int(r->w);
-            rec_obj[3] = mp_obj_new_int(r->h);
-            rt_list_append(objects_list, rt_build_tuple(4, rec_obj));
-        }
+
+    /* Create empty Python list */
+    objects_list = rt_build_list(0, NULL);
+
+    /* Add detected objects to the list */
+    for (int i=0; i<array_length(objects_array); i++) {
+        struct rectangle *r = array_at(objects_array, 0);
+        mp_obj_t rec_obj[4];
+        rec_obj[0] = mp_obj_new_int(r->x);
+        rec_obj[1] = mp_obj_new_int(r->y);
+        rec_obj[2] = mp_obj_new_int(r->w);
+        rec_obj[3] = mp_obj_new_int(r->h);
+        rt_list_append(objects_list, rt_build_tuple(4, rec_obj));
     }
 
-    /* free objects array */
+    /* Free the objects array */
     array_free(objects_array);
 
     return objects_list;
@@ -234,7 +234,8 @@ mp_obj_t py_imlib_template_match(mp_obj_t image_obj, mp_obj_t template_obj, mp_o
     float t = mp_obj_get_float(threshold);
 
     /* look for object */
-    if (imlib_template_match(image, template, &r)> t) {
+    float corr = imlib_template_match(image, template, &r);
+    if (corr> t) {
         rec_obj[0] = mp_obj_new_int(r.x);
         rec_obj[1] = mp_obj_new_int(r.y);
         rec_obj[2] = mp_obj_new_int(r.w);
