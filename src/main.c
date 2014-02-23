@@ -20,6 +20,7 @@
 #include "py_sensor.h"
 #include "py_imlib.h"
 #include "py_file.h"
+#include "usbdbg.h"
 
 int errno;
 
@@ -224,6 +225,9 @@ int main(void)
     /* Init MicroPython */
     libmp_init();
 
+    /* init USB debug */
+    usbdbg_init();
+
     /* add some functions to the global python namespace */
     rt_store_name(MP_QSTR_help, rt_make_function_n(0, py_help));
     rt_store_name(MP_QSTR_delay, rt_make_function_n(1, py_delay));
@@ -290,9 +294,5 @@ int main(void)
 
     libmp_do_repl();
 
-    printf("PYB: sync filesystems\n");
-    py_sync();
-
-    printf("PYB: soft reboot\n");
     while(1);
 }

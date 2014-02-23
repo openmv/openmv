@@ -86,13 +86,13 @@ class OMVGtk:
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
         # interrupt any running code
-        self.terminal.feed_child("\x03")
+        openmv.stop_script()
         sleep(0.1)
         # exec script
         openmv.exec_script(buf)
 
     def stop_clicked(self, widget):
-        self.terminal.feed_child("\x03\r\n")
+        openmv.stop_script();
 
     def motion_notify(self, widget, event):
         x = int(event.x)

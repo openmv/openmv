@@ -11,6 +11,7 @@ __USBDBG_DUMP_FB=2
 __USBDBG_EXEC_SCRIPT=3
 __USBDBG_READ_SCRIPT=4
 __USBDBG_WRITE_SCRIPT=5
+__USBDBG_STOP_SCRIPT=6
 
 # Debug __INTERFACE
 __INTERFACE = 2;
@@ -79,6 +80,9 @@ def dump_fb():
 def exec_script(buf):
     __dev.ctrl_transfer(0x41, __USBDBG_EXEC_SCRIPT, len(buf), __INTERFACE, None, __TIMEOUT)
     __dev.write(0x03, buf, __INTERFACE, __TIMEOUT)
+
+def stop_script():
+    __dev.ctrl_transfer(0x41, __USBDBG_STOP_SCRIPT, 0, __INTERFACE, None, __TIMEOUT)
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:
