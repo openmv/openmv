@@ -8,11 +8,11 @@ void rcc_ctrl_set_frequency(enum sysclk_freq freq)
     int freqs[]   = {42, 84, 168, 200, 240};
 
     /* USB freqs: 42MHz, 42Mhz, 48MHz, 50MHz, 48MHz */
-    int pll_div[] = {2, 4, 7, 10, 10}; 
+    int pll_div[] = {2, 4, 7, 8, 10};
 
     /* PLL_VCO = (HSE_VALUE / PLL_M) * PLL_N */
     /* SYSCLK = PLL_VCO / PLL_P */
-    /* USB OTG FS, SDIO and RNG Clock =  PLL_VCO / PLLQ */ 
+    /* USB OTG FS, SDIO and RNG Clock =  PLL_VCO / PLLQ */
     uint32_t PLL_P = 2;
     uint32_t PLL_N = freqs[freq] * 2;
     uint32_t PLL_M = (HSE_VALUE/1000000);
@@ -67,7 +67,7 @@ void rcc_ctrl_set_frequency(enum sysclk_freq freq)
             break;
     }
 
-    /* Update SystemCoreClock variable */ 
+    /* Update SystemCoreClock variable */
     SystemCoreClockUpdate();
 }
 
