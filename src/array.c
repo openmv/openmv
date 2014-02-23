@@ -1,9 +1,10 @@
 /**
- * Copyright (c) 2013 Ibrahim Abd Elkader <i.abdalkader@gmail.com> 
+ * Copyright (c) 2013 Ibrahim Abd Elkader <i.abdalkader@gmail.com>
  * See the file COPYING for copying permission.
  */
 #include <stdlib.h>
 #include <string.h>
+#include "xalloc.h"
 #include "array.h"
 #define ARRAY_INIT_SIZE  10
 struct array {
@@ -16,11 +17,11 @@ struct array {
 void array_alloc(struct array **a, array_dtor dtor)
 {
     struct array *array;
-    array = malloc(sizeof(struct array));
+    array = xalloc(sizeof(struct array));
     array->index  = 0;
     array->length = ARRAY_INIT_SIZE;
     array->dtor   = dtor;
-    array->data   = malloc(array->length*sizeof(void*));
+    array->data   = xalloc(array->length*sizeof(void*));
     *a = array;
 }
 
@@ -30,8 +31,8 @@ void array_free(struct array *array)
     for (i=0; i<array->index; i++){
         array->dtor(array->data[i]);
     }
-    free(array->data);
-    free(array);
+    xfree(array->data);
+    xfree(array);
 }
 
 int  array_length(struct array *array)
@@ -43,7 +44,7 @@ void array_push_back(struct array *array, void *element)
 {
     if (array->index == array->length-1) {
         array->length += ARRAY_INIT_SIZE;
-        array->data    = realloc(array->data, array->length * sizeof(void*));
+        array->data    = xrealloc(array->data, array->length * sizeof(void*));
     }
     array->data[array->index++] = element;
 }

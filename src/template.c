@@ -1,6 +1,6 @@
-#include "ff.h"
-#include "imlib.h"
 #include <libmp.h>
+#include "xalloc.h"
+#include "imlib.h"
 #include <math.h>
 #include <arm_math.h>
 
@@ -64,7 +64,7 @@ int imlib_load_template(struct image *image, const char *path)
     }
 
     printf("temp:%d %d \n", image->w, image->h);
-    image->data = malloc(sizeof(*image->data)*image->w*image->h);
+    image->data = xalloc(sizeof(*image->data)*image->w*image->h);
     if (image->data == NULL) {
         goto error;
     }
@@ -95,7 +95,7 @@ float imlib_template_match(struct image *f,  struct image *t_orig, struct rectan
     t->w = t_orig->w;
     t->h = t_orig->h;
     t->bpp = t_orig->bpp;
-    t->data = malloc(sizeof(*t->data)* t_orig->w * t_orig->h);
+    t->data = xalloc(sizeof(*t->data)* t_orig->w * t_orig->h);
 
     /* allocate buffer for integral image */
     f_imgs->w = f->w;
@@ -155,6 +155,6 @@ float imlib_template_match(struct image *f,  struct image *t_orig, struct rectan
         }
     }
 
-    free(t->data);
+    xfree(t->data);
     return corr;
 }

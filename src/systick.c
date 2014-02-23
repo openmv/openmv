@@ -1,8 +1,9 @@
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stm32f4xx.h>
 #include <stm32f4xx_misc.h>
-#include <stdlib.h>
+#include "xalloc.h"
 #include "systick.h"
 #include "array.h"
 static volatile uint32_t sys_ticks;
@@ -33,7 +34,7 @@ void SysTick_Handler(void)
 int systick_init()
 {
     /* Allocate task_list array */
-    //array_alloc(&task_list, free);
+    //array_alloc(&task_list, xfree);
 
     /* Configure systick to interrupt every 1ms */
     if (SysTick_Config(SystemCoreClock / 1000)) {
@@ -61,7 +62,7 @@ void systick_sched_task(task_cb cb, uint32_t period)
 #if 0
     struct systick_task *task;
 
-    task = malloc(sizeof(struct systick_task));
+    task = xalloc(sizeof(struct systick_task));
     task->cb = cb;
     task->period = period;
     array_push_back(task_list, task);

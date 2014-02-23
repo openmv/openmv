@@ -28,7 +28,7 @@ static const mp_method_t py_image_methods[] = {
     { NULL, NULL },
 };
 
-const mp_obj_type_t py_image_type = {
+static const mp_obj_type_t py_image_type = {
     { &mp_type_type },
     .name       = MP_QSTR_Image,
     .print      = py_image_print,

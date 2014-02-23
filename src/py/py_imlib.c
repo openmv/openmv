@@ -1,4 +1,5 @@
 #include <libmp.h>
+#include "xalloc.h"
 #include "imlib.h"
 #include "array.h"
 #include "sensor.h"
@@ -29,7 +30,7 @@ static void py_cascade_print(void (*print)(void *env, const char *fmt, ...), voi
 
 static const mp_obj_type_t py_cascade_type = {
     { &mp_type_type },
-    "Cascade",
+    .name  = MP_QSTR_Cascade,
     .print = py_cascade_print,
 };
 
@@ -201,12 +202,12 @@ mp_obj_t py_imlib_save_template(mp_obj_t image_obj, mp_obj_t rectangle_obj, mp_o
     image = py_image_cobj(image_obj);
     t.w = r.w;
     t.h = r.h;
-    t.data = malloc(sizeof(*t.data)*t.w*t.h);
+    t.data = xalloc(sizeof(*t.data)*t.w*t.h);
 
     imlib_subimage(image, &t, r.x, r.y);
 
     int res = imlib_save_template(&t, path);
-    free(t.data);
+    xfree(t.data);
 
     if (res != FR_OK) {
         nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));

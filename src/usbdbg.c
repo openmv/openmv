@@ -81,6 +81,7 @@ void usbdbg_control(uint8_t request, int length)
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
                 pendsv_nlr_jump(mp_const_ide_interrupt);
             }
+            cmd = USBDBG_NONE;
             break;
 
         default: /* error */

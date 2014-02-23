@@ -6,6 +6,7 @@
 #include "array.h"
 #include "imlib.h"
 #include "ff.h"
+#include "xalloc.h"
 
 #define MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -145,7 +146,7 @@ void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size)
     int w = src->w;
     int h = src->h;
     /* TODO */
-    uint8_t *dst = calloc(w*h, 1);
+    uint8_t *dst = xcalloc(w*h, 1);
 
     for (y=0; y<h-k_size; y++) {
         for (x=0; x<w-k_size; x++) {
@@ -163,7 +164,7 @@ void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size)
         }
     }
     memcpy(src->pixels, dst, w*h);
-    free(dst);
+    xfree(dst);
 }
 
 int imlib_image_mean(struct image *src)
@@ -204,27 +205,6 @@ void imlib_blit(struct image *dst_img, struct image *src_img, int x_off, int y_o
     for (y=y_off; y<src_img->h+y_off; y++) {
         for (x=x_off; x<src_img->w+x_off; x++) {
             dst[y*dst_img->w+x]=*src++;
-        }
-    }
-}
-
-void imlib_integral_image(struct image *src, struct integral_image *sum)
-{
-    int x, y, s,t;
-    unsigned char *data = src->pixels;
-    typeof(*sum->data) *sumData = sum->data;
-
-    for (y=0; y<src->h; y++) {
-        s = 0;
-        /* loop over the number of columns */
-        for (x=0; x<src->w; x++) {
-            /* sum of the current row (integer)*/
-            s += data[y*src->w+x];
-            t = s;
-            if (y != 0) {
-                t += sumData[(y-1)*src->w+x];
-            }
-            sumData[y*src->w+x]=t;
         }
     }
 }
@@ -279,10 +259,10 @@ void imlib_draw_rectangle(struct image *image, struct rectangle *r)
 
     for (i=0; i<h; i++) {
         image->pixels[(y+i)*col + x] = c;
-        image->pixels[(y+i)*col + x + w-2] = c;
+        image->pixels[(y+i)*col + x + w] = c;
         if (image->bpp>1) {
             image->pixels[(y+i)*col + x+1] = c;
-            image->pixels[(y+i)*col + x + w-1] = c;
+            image->pixels[(y+i)*col + x + w+1] = c;
         }
     }
 }
@@ -307,6 +287,29 @@ void imlib_histeq(struct image *src)
     for (i=0; i<a; i++) {
         src->pixels[i] = (uint8_t) ((MAX_GRAY_LEVEL/(float)a) * hist[src->pixels[i]]);
     }
+}
+
+int imlib_image_sumsq(struct image *image, int u, int v, int w, int h)
+{
+    vec_t v0;
+    vec_t v1;
+    int x,y;
+    int sumsq=0;
+    int offset=0;
+
+    for (y=v; y<h+v; y++) {
+        for (x=u; x<w+u; x+=2) {
+          offset = y*image->w+x;
+          v0.s0 = image->data[offset+0];
+          v0.s1 = image->data[offset+1];
+
+          v1.s0 = image->data[offset+0];
+          v1.s1 = image->data[offset+1];
+          sumsq = __SMLAD(v0.i, v1.i, sumsq);
+      }
+    }
+
+    return sumsq;
 }
 
 /* Viola-Jones face detector implementation
@@ -425,7 +428,7 @@ static void ScaleImageInvoker(struct cascade *cascade, float factor, int sum_row
 
             /* If a face is detected, record the coordinates of the filter window */
             if (result > 0) {
-                struct rectangle *r = malloc(sizeof(struct rectangle));
+                struct rectangle *r = xalloc(sizeof(struct rectangle));
                 r->x = roundf(x*factor);
                 r->y = roundf(y*factor);
                 r->w = win_size.w;
@@ -439,7 +442,7 @@ static void ScaleImageInvoker(struct cascade *cascade, float factor, int sum_row
 struct rectangle *rectangle_clone(struct rectangle *rect)
 {
     struct rectangle *rectangle;
-    rectangle = malloc(sizeof(struct rectangle));
+    rectangle = xalloc(sizeof(struct rectangle));
     memcpy(rectangle, rect, sizeof(struct rectangle));
     return rectangle;
 }
@@ -484,8 +487,8 @@ struct array *imlib_merge_detections(struct array *rectangles)
     struct array *overlap;
     struct rectangle *rect1, *rect2;
 
-    array_alloc(&objects, free);
-    array_alloc(&overlap, free);
+    array_alloc(&objects, xfree);
+    array_alloc(&overlap, xfree);
 
     /* merge overlaping detections */
     while (array_length(rectangles)) {
@@ -538,11 +541,11 @@ struct array *imlib_detect_objects(struct image *image, struct cascade *cascade)
     /* allocate buffer for integral image */
     sum.w = image->w;
     sum.h = image->h;
-    //sum.data   = malloc(image->w *image->h*sizeof(*sum.data));
+    //sum.data   = xalloc(image->w *image->h*sizeof(*sum.data));
     sum.data = (uint32_t*) (image->pixels+(image->w * image->h * 2));
 
     /* allocate the detections array */
-    array_alloc(&objects, free);
+    array_alloc(&objects, xfree);
 
     /* set cascade image pointer */
     cascade->img = &img;
@@ -581,13 +584,13 @@ struct array *imlib_detect_objects(struct image *image, struct cascade *cascade)
         ScaleImageInvoker(cascade, factor, sum.h, sum.w, objects);
     }
 
-    //free(sum.data);
+    //xfree(sum.data);
 
     objects = imlib_merge_detections(objects);
     return objects;
 }
 
-int imlib_load_cascade(struct cascade* cascade, const char *path)
+int imlib_load_cascade(struct cascade *cascade, const char *path)
 {
     int i;
     UINT n_out;
@@ -612,8 +615,8 @@ int imlib_load_cascade(struct cascade* cascade, const char *path)
         goto error;
     }
 
-    cascade->stages_array = malloc (sizeof(*cascade->stages_array) * cascade->n_stages);
-    cascade->stages_thresh_array = malloc (sizeof(*cascade->stages_thresh_array) * cascade->n_stages);
+    cascade->stages_array = xalloc (sizeof(*cascade->stages_array) * cascade->n_stages);
+    cascade->stages_thresh_array = xalloc (sizeof(*cascade->stages_thresh_array) * cascade->n_stages);
 
     if (cascade->stages_array == NULL ||
         cascade->stages_thresh_array == NULL) {
@@ -633,10 +636,10 @@ int imlib_load_cascade(struct cascade* cascade, const char *path)
     }
 
     /* alloc features thresh array, alpha1, alpha 2,rects weights and rects*/
-    cascade->tree_thresh_array = malloc (sizeof(*cascade->tree_thresh_array) * cascade->n_features);
-    cascade->alpha1_array = malloc (sizeof(*cascade->alpha1_array) * cascade->n_features);
-    cascade->alpha2_array = malloc (sizeof(*cascade->alpha2_array) * cascade->n_features);
-    cascade->num_rectangles_array = malloc (sizeof(*cascade->num_rectangles_array) * cascade->n_features);
+    cascade->tree_thresh_array = xalloc (sizeof(*cascade->tree_thresh_array) * cascade->n_features);
+    cascade->alpha1_array = xalloc (sizeof(*cascade->alpha1_array) * cascade->n_features);
+    cascade->alpha2_array = xalloc (sizeof(*cascade->alpha2_array) * cascade->n_features);
+    cascade->num_rectangles_array = xalloc (sizeof(*cascade->num_rectangles_array) * cascade->n_features);
 
     if (cascade->tree_thresh_array == NULL ||
         cascade->alpha1_array   == NULL ||
@@ -681,8 +684,8 @@ int imlib_load_cascade(struct cascade* cascade, const char *path)
         cascade->n_rectangles += cascade->num_rectangles_array[i];
     }
 
-    cascade->weights_array = malloc (sizeof(*cascade->weights_array) * cascade->n_rectangles);
-    cascade->rectangles_array = malloc (sizeof(*cascade->rectangles_array) * cascade->n_rectangles * 4);
+    cascade->weights_array = xalloc (sizeof(*cascade->weights_array) * cascade->n_rectangles);
+    cascade->rectangles_array = xalloc (sizeof(*cascade->rectangles_array) * cascade->n_rectangles * 4);
 
     if (cascade->weights_array  == NULL ||
         cascade->rectangles_array == NULL) {
@@ -707,19 +710,4 @@ error:
     return res;
 }
 
-uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h)
-{
-#define PIXEL_AT(x,y)\
-    (src->data[src->w*(y-1)+(x-1)])
 
-    if (x==0 && y==0) {
-        return PIXEL_AT(w,h);
-    } else if (y==0) {
-        return PIXEL_AT(w+x, h+y) - PIXEL_AT(x, h+y);
-    } else if (x==0) {
-        return PIXEL_AT(w+x, h+y) - PIXEL_AT(w+x, y);
-    } else {
-        return PIXEL_AT(w+x, h+y) + PIXEL_AT(x, y) - PIXEL_AT(w+x, y) - PIXEL_AT(x, h+y);
-    }
-#undef  PIXEL_AT
-}
