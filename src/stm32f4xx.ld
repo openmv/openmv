@@ -119,6 +119,7 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
+    _bss_end = _ebss; /* for gccollect */
   } >CCM
 
   ._heap :
