@@ -28,7 +28,7 @@ static void py_cascade_print(void (*print)(void *env, const char *fmt, ...), voi
 }
 
 static const mp_obj_type_t py_cascade_type = {
-    { &mp_const_type },
+    { &mp_type_type },
     "Cascade",
     .print = py_cascade_print,
 };
@@ -153,7 +153,7 @@ mp_obj_t py_imlib_load_cascade(mp_obj_t path_obj)
     const char *path = mp_obj_str_get_str(path_obj);
     int res = imlib_load_cascade(&cascade, path);
     if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(qstr_from_str("Imlib"), ffs_strerror(res)));
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
     o = m_new_obj(py_cascade_obj_t);
@@ -174,7 +174,7 @@ mp_obj_t py_imlib_load_template(mp_obj_t path_obj)
 
     int res = imlib_load_template(image, path);
     if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(qstr_from_str("Imlib"), ffs_strerror(res)));
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
     return image_obj;
@@ -209,7 +209,7 @@ mp_obj_t py_imlib_save_template(mp_obj_t image_obj, mp_obj_t rectangle_obj, mp_o
     free(t.data);
 
     if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(qstr_from_str("Imlib"), ffs_strerror(res)));
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
     return mp_const_true;

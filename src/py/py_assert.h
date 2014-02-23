@@ -4,7 +4,7 @@
     do {                                                \
         if ((cond) ==0){                                \
             nlr_jump(mp_obj_new_exception_msg(          \
-                        MP_QSTR_OSError,                \
+                        &mp_type_OSError,               \
                         "Operation not supported"));    \
         }                                               \
     } while(0)
@@ -15,7 +15,7 @@
         __typeof__ (type) _b = (type);                  \
         if (!MP_OBJ_IS_TYPE(_a, _b)) {                  \
             nlr_jump(mp_obj_new_exception_msg_varg(     \
-                        MP_QSTR_TypeError,              \
+                        &mp_type_TypeError,             \
                         "can't convert %s to %s",       \
                         mp_obj_get_type_str(_a),        \
                         _b->name));                     \
@@ -27,7 +27,7 @@
         __typeof__ (obj) _a = (obj);                    \
         if (!MP_OBJ_IS_STR(_a)) {                       \
             nlr_jump(mp_obj_new_exception_msg_varg(     \
-                        MP_QSTR_TypeError,              \
+                        &mp_type_TypeError,             \
                         "can't convert %s to %s",       \
                         mp_obj_get_type_str(_a),        \
                         str_type.name));                \

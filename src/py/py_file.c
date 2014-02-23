@@ -57,14 +57,14 @@ mp_obj_t py_file_read(py_file_obj_t *file, mp_obj_t n_obj)
 mp_obj_t py_file_write(py_file_obj_t *file, mp_obj_t buf)
 {
     uint len;
-    const byte *str;
+    const char *str;
     FRESULT res;
 
     str = mp_obj_str_get_data(buf, &len);
 
     res = f_write(&file->fp, str, len, &len);
     if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(qstr_from_str("File"), ffs_strerror(res)));
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
     return mp_obj_new_int(len);
@@ -87,8 +87,8 @@ static const mp_method_t py_file_methods[] = {
 };
 
 static const mp_obj_type_t py_file_type = {
-    { &mp_const_type },
-    "File",
+    { &mp_type_type },
+    .name       = MP_QSTR_File,
     .print      = py_file_print,
     .methods    = py_file_methods,
 };
@@ -113,7 +113,7 @@ mp_obj_t py_file_open(mp_obj_t path, mp_obj_t mode_str)
             mode = FA_READ|FA_WRITE|FA_OPEN_EXISTING;
             break;
         default:
-            nlr_jump(mp_obj_new_exception_msg(qstr_from_str("File"), "invalid open mode"));
+            nlr_jump(mp_obj_new_exception_msg(&mp_type_ValueError, "invalid open mode"));
     }
 
     /* Create new python file obj */
@@ -123,7 +123,7 @@ mp_obj_t py_file_open(mp_obj_t path, mp_obj_t mode_str)
     /* Open underlying file handle */
     res = f_open(&o->fp, mp_obj_str_get_str(path), mode);
     if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(qstr_from_str("File"), ffs_strerror(res)));
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
     return o;
 }
