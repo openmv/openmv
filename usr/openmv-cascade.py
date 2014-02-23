@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import sys
+import sys,os
 import struct
 from xml.dom import minidom
 
@@ -31,10 +31,21 @@ feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
 #read cascade size
 size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
-fout = open(sys.argv[1].split('.')[0]+".bin", "w")
+fout = open(os.path.basename(sys.argv[1]).split('.')[0]+".cascade", "w")
+
+n_rectangles = 0
+for f in feature:
+    rects = f.getElementsByTagName('_')
+    n_rectangles = n_rectangles + len(rects)
+
+#print some cascade info
+print "size:%dx%d"%(size[0], size[1])
+print "stages:%d"%len(stages)
+print "features:%d"%n_features
+print "rectangles:%d"%n_rectangles
 
 # write detection window size
-fout.write(struct.pack('i', size[0])) #TODO hard coded fix
+fout.write(struct.pack('i', size[0]))
 fout.write(struct.pack('i', size[1]))
 
 # write num stages
