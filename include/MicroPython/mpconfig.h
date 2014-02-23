@@ -40,6 +40,7 @@
 #endif
 
 // Whether to build functions that print debugging info:
+//   mp_token_show
 //   mp_byte_code_print
 //   mp_parse_node_print
 #ifndef MICROPY_DEBUG_PRINTERS
@@ -101,8 +102,24 @@ typedef long long mp_longint_impl_t;
 #define MICROPY_CPYTHON_COMPAT (1)
 #endif
 
+// Maximum length of a path in the filesystem
+// So we can allocate a buffer on the stack for path manipulation in import
+#ifndef MICROPY_PATH_MAX
+#define MICROPY_PATH_MAX (512)
+#endif
+
+// Additional builtin function definitions - see runtime.c:builtin_table for format.
+#ifndef MICROPY_EXTRA_BUILTINS
+#define MICROPY_EXTRA_BUILTINS
+#endif
 /*****************************************************************************/
 /* Miscellaneous settings                                                    */
+
+// Allow to override static modifier for global objects, e.g. to use with
+// object code analysis tools which don't support static symbols.
+#ifndef STATIC
+#define STATIC static
+#endif
 
 #define BITS_PER_BYTE (8)
 #define BITS_PER_WORD (BITS_PER_BYTE * BYTES_PER_WORD)

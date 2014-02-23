@@ -1,3 +1,5 @@
+void rt_check_nargs(int n_args, machine_uint_t n_args_min, machine_uint_t n_args_max, int n_kw, bool is_kw);
+
 int rt_is_true(mp_obj_t arg);
 
 mp_obj_t rt_load_const_dec(qstr qstr);
@@ -37,8 +39,10 @@ void rt_store_attr(mp_obj_t base, qstr attr, mp_obj_t val);
 void rt_store_subscr(mp_obj_t base, mp_obj_t index, mp_obj_t val);
 mp_obj_t rt_getiter(mp_obj_t o);
 mp_obj_t rt_iternext(mp_obj_t o);
+mp_obj_t rt_make_raise_obj(mp_obj_t o);
 mp_obj_t rt_import_name(qstr name, mp_obj_t fromlist, mp_obj_t level);
 mp_obj_t rt_import_from(mp_obj_t module, qstr name);
+void rt_import_all(mp_obj_t module);
 
 struct _mp_map_t;
 struct _mp_map_t *rt_locals_get(void);
@@ -46,3 +50,4 @@ void rt_locals_set(struct _mp_map_t *m);
 struct _mp_map_t *rt_globals_get(void);
 void rt_globals_set(struct _mp_map_t *m);
 struct _mp_map_t *rt_loaded_modules_get(void);
+extern mp_obj_t sys_path;

@@ -14,7 +14,8 @@ struct _mp_lexer_t;
 // makes sure the top 5 bits of x are all cleared (positive number) or all set (negavite number)
 // these macros can probably go somewhere else because they are used more than just in the parser
 #define MP_UINT_HIGH_5_BITS (~((~((machine_uint_t)0)) >> 5))
-#define MP_FIT_SMALL_INT(x) (((((machine_uint_t)(x)) & MP_UINT_HIGH_5_BITS) == 0) || ((((machine_uint_t)(x)) & MP_UINT_HIGH_5_BITS) == MP_UINT_HIGH_5_BITS))
+// parser's small ints are different from VM small int
+#define MP_PARSE_FITS_SMALL_INT(x) (((((machine_uint_t)(x)) & MP_UINT_HIGH_5_BITS) == 0) || ((((machine_uint_t)(x)) & MP_UINT_HIGH_5_BITS) == MP_UINT_HIGH_5_BITS))
 
 #define MP_PARSE_NODE_NULL      (0)
 #define MP_PARSE_NODE_ID        (0x1)
@@ -63,5 +64,11 @@ typedef enum {
     MP_PARSE_EVAL_INPUT,
 } mp_parse_input_kind_t;
 
-// returns MP_PARSE_NODE_NULL on error, and then exc_id_out and exc_msg_out are valid
-mp_parse_node_t mp_parse(struct _mp_lexer_t *lex, mp_parse_input_kind_t input_kind, qstr *exc_id_out, const char **exc_msg_out);
+typedef enum {
+    MP_PARSE_ERROR_UNEXPECTED_INDENT,
+    MP_PARSE_ERROR_UNMATCHED_UNINDENT,
+    MP_PARSE_ERROR_INVALID_SYNTAX,
+} mp_parse_error_kind_t;
+
+// returns MP_PARSE_NODE_NULL on error, and then parse_error_kind_out is valid
+mp_parse_node_t mp_parse(struct _mp_lexer_t *lex, mp_parse_input_kind_t input_kind, mp_parse_error_kind_t *parse_error_kind_out);

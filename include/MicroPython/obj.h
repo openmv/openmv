@@ -66,11 +66,11 @@ typedef struct _mp_obj_base_t mp_obj_base_t;
 // These macros are used to declare and define constant staticmethond and classmethod objects
 // You can put "static" in front of the definitions to make them local
 
-#define MP_DECLARE_CONST_STATICMETHOD_OBJ(obj_name) extern const mp_obj_staticmethod_t obj_name
-#define MP_DECLARE_CONST_CLASSMETHOD_OBJ(obj_name) extern const mp_obj_classmethod_t obj_name
+#define MP_DECLARE_CONST_STATICMETHOD_OBJ(obj_name) extern const mp_obj_static_class_method_t obj_name
+#define MP_DECLARE_CONST_CLASSMETHOD_OBJ(obj_name) extern const mp_obj_static_class_method_t obj_name
 
-#define MP_DEFINE_CONST_STATICMETHOD_OBJ(obj_name, fun_name) const mp_obj_staticmethod_t obj_name = {{&mp_type_staticmethod}, fun_name}
-#define MP_DEFINE_CONST_CLASSMETHOD_OBJ(obj_name, fun_name) const mp_obj_classmethod_t obj_name = {{&mp_type_classmethod}, fun_name}
+#define MP_DEFINE_CONST_STATICMETHOD_OBJ(obj_name, fun_name) const mp_obj_static_class_method_t obj_name = {{&mp_type_staticmethod}, fun_name}
+#define MP_DEFINE_CONST_CLASSMETHOD_OBJ(obj_name, fun_name) const mp_obj_static_class_method_t obj_name = {{&mp_type_classmethod}, fun_name}
 
 // Need to declare this here so we are not dependent on map.h
 struct _mp_map_t;
@@ -142,13 +142,19 @@ typedef struct _mp_stream_p_t {
 
 struct _mp_obj_type_t {
     mp_obj_base_t base;
-    const char *name;
+    qstr name;
     mp_print_fun_t print;
     mp_make_new_fun_t make_new;     // to make an instance of the type
 
     mp_call_fun_t call;
     mp_unary_op_fun_t unary_op;     // can return NULL if op not supported
     mp_binary_op_fun_t binary_op;   // can return NULL if op not supported
+
+    mp_load_attr_fun_t load_attr;
+    mp_store_attr_fun_t store_attr;
+    // Implements container[index] = val; note that load_item is implemented
+    // by binary_op(RT_BINARY_OP_SUBSCR)
+    mp_store_item_fun_t store_item;
 
     mp_fun_1_t getiter;
     mp_fun_1_t iternext;
@@ -160,12 +166,6 @@ struct _mp_obj_type_t {
     mp_stream_p_t stream_p;
 
     const mp_method_t *methods;
-
-    mp_load_attr_fun_t load_attr;
-    mp_store_attr_fun_t store_attr;
-    // Implements container[index] = val; note that load_item is implemented
-    // by binary_op(RT_BINARY_OP_SUBSCR)
-    mp_store_item_fun_t store_item;
 
     // these are for dynamically created types (classes)
     mp_obj_t bases_tuple;
@@ -180,7 +180,6 @@ struct _mp_obj_type_t {
     abs             float complex
     hash            bool int none str
     equal           int str
-    less            int
     get_array_n     tuple list
 
     unpack seq      list tuple
@@ -189,9 +188,27 @@ struct _mp_obj_type_t {
 
 typedef struct _mp_obj_type_t mp_obj_type_t;
 
+// Constant types, globally accessible
+
+extern const mp_obj_type_t mp_type_type;
+extern const mp_obj_type_t mp_type_BaseException;
+extern const mp_obj_type_t mp_type_AssertionError;
+extern const mp_obj_type_t mp_type_AttributeError;
+extern const mp_obj_type_t mp_type_ImportError;
+extern const mp_obj_type_t mp_type_IndentationError;
+extern const mp_obj_type_t mp_type_IndexError;
+extern const mp_obj_type_t mp_type_KeyError;
+extern const mp_obj_type_t mp_type_NameError;
+extern const mp_obj_type_t mp_type_SyntaxError;
+extern const mp_obj_type_t mp_type_TypeError;
+extern const mp_obj_type_t mp_type_ValueError;
+extern const mp_obj_type_t mp_type_OverflowError;
+extern const mp_obj_type_t mp_type_OSError;
+extern const mp_obj_type_t mp_type_NotImplementedError;
+extern const mp_obj_type_t mp_type_StopIteration;
+
 // Constant objects, globally accessible
 
-extern const mp_obj_type_t mp_const_type;
 extern const mp_obj_t mp_const_none;
 extern const mp_obj_t mp_const_false;
 extern const mp_obj_t mp_const_true;
@@ -201,7 +218,7 @@ extern const mp_obj_t mp_const_stop_iteration; // special object indicating end 
 
 // General API for objects
 
-mp_obj_t mp_obj_new_type(const char *name, mp_obj_t bases_tuple, mp_obj_t locals_dict);
+mp_obj_t mp_obj_new_type(qstr name, mp_obj_t bases_tuple, mp_obj_t locals_dict);
 mp_obj_t mp_obj_new_none(void);
 mp_obj_t mp_obj_new_bool(bool value);
 mp_obj_t mp_obj_new_cell(mp_obj_t obj);
@@ -214,14 +231,12 @@ mp_obj_t mp_obj_new_bytes(const byte* data, uint len);
 mp_obj_t mp_obj_new_float(mp_float_t val);
 mp_obj_t mp_obj_new_complex(mp_float_t real, mp_float_t imag);
 #endif
-mp_obj_t mp_obj_new_exception(qstr id);
-mp_obj_t mp_obj_new_exception_msg(qstr id, const char *msg);
-mp_obj_t mp_obj_new_exception_msg_1_arg(qstr id, const char *fmt, const char *a1);
-mp_obj_t mp_obj_new_exception_msg_2_args(qstr id, const char *fmt, const char *a1, const char *a2);
-mp_obj_t mp_obj_new_exception_msg_varg(qstr id, const char *fmt, ...); // counts args by number of % symbols in fmt, excluding %%; can only handle void* sizes (ie no float/double!)
+mp_obj_t mp_obj_new_exception(const mp_obj_type_t *exc_type);
+mp_obj_t mp_obj_new_exception_msg(const mp_obj_type_t *exc_type, const char *msg);
+mp_obj_t mp_obj_new_exception_msg_varg(const mp_obj_type_t *exc_type, const char *fmt, ...); // counts args by number of % symbols in fmt, excluding %%; can only handle void* sizes (ie no float/double!)
 mp_obj_t mp_obj_new_range(int start, int stop, int step);
 mp_obj_t mp_obj_new_range_iterator(int cur, int stop, int step);
-mp_obj_t mp_obj_new_fun_bc(int n_args, mp_obj_t def_args, uint n_state, const byte *code);
+mp_obj_t mp_obj_new_fun_bc(uint scope_flags, qstr *args, uint n_args, mp_obj_t def_args, uint n_state, const byte *code);
 mp_obj_t mp_obj_new_fun_asm(uint n_args, void *fun);
 mp_obj_t mp_obj_new_gen_wrap(mp_obj_t fun);
 mp_obj_t mp_obj_new_gen_instance(const byte *bytecode, uint n_state, int n_args, const mp_obj_t *args);
@@ -231,12 +246,14 @@ mp_obj_t mp_obj_new_list(uint n, mp_obj_t *items);
 mp_obj_t mp_obj_new_dict(int n_args);
 mp_obj_t mp_obj_new_set(int n_args, mp_obj_t *items);
 mp_obj_t mp_obj_new_slice(mp_obj_t start, mp_obj_t stop, mp_obj_t step);
+mp_obj_t mp_obj_new_super(mp_obj_t type, mp_obj_t obj);
 mp_obj_t mp_obj_new_bound_meth(mp_obj_t meth, mp_obj_t self);
 mp_obj_t mp_obj_new_getitem_iter(mp_obj_t *args);
 mp_obj_t mp_obj_new_module(qstr module_name);
 
 mp_obj_type_t *mp_obj_get_type(mp_obj_t o_in);
 const char *mp_obj_get_type_str(mp_obj_t o_in);
+bool mp_obj_is_subclass(mp_obj_t object, mp_obj_t classinfo);
 
 void mp_obj_print_helper(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t o_in, mp_print_kind_t kind);
 void mp_obj_print(mp_obj_t o, mp_print_kind_t kind);
@@ -276,8 +293,9 @@ machine_int_t mp_obj_int_get(mp_obj_t self_in);
 machine_int_t mp_obj_int_get_checked(mp_obj_t self_in);
 
 // exception
-extern const mp_obj_type_t exception_type;
-qstr mp_obj_exception_get_type(mp_obj_t self_in);
+bool mp_obj_is_exception_type(mp_obj_t self_in);
+bool mp_obj_is_exception_instance(mp_obj_t self_in);
+void mp_obj_exception_clear_traceback(mp_obj_t self_in);
 void mp_obj_exception_add_traceback(mp_obj_t self_in, qstr file, machine_uint_t line, qstr block);
 void mp_obj_exception_get_traceback(mp_obj_t self_in, machine_uint_t *n, machine_uint_t **values);
 
@@ -290,7 +308,7 @@ uint mp_obj_str_get_hash(mp_obj_t self_in);
 uint mp_obj_str_get_len(mp_obj_t self_in);
 qstr mp_obj_str_get_qstr(mp_obj_t self_in); // use this if you will anyway convert the string to a qstr
 const char *mp_obj_str_get_str(mp_obj_t self_in); // use this only if you need the string to be null terminated
-const byte *mp_obj_str_get_data(mp_obj_t self_in, uint *len);
+const char *mp_obj_str_get_data(mp_obj_t self_in, uint *len);
 void mp_str_print_quoted(void (*print)(void *env, const char *fmt, ...), void *env, const byte *str_data, uint str_len);
 
 // bytes
@@ -370,6 +388,10 @@ extern const mp_obj_type_t fun_bc_type;
 void mp_obj_fun_bc_get(mp_obj_t self_in, int *n_args, uint *n_state, const byte **code);
 
 mp_obj_t mp_identity(mp_obj_t self);
+MP_DECLARE_CONST_FUN_OBJ(mp_identity_obj);
+
+// super
+extern const mp_obj_type_t super_type;
 
 // generator
 extern const mp_obj_type_t gen_instance_type;
@@ -385,18 +407,18 @@ struct _mp_map_t *mp_obj_module_get_globals(mp_obj_t self_in);
 extern const mp_obj_type_t mp_type_staticmethod;
 extern const mp_obj_type_t mp_type_classmethod;
 
-typedef struct _mp_obj_staticmethod_t {
+// this structure is used for instances of both staticmethod and classmethod
+typedef struct _mp_obj_static_class_method_t {
     mp_obj_base_t base;
     mp_obj_t fun;
-} mp_obj_staticmethod_t;
-
-typedef struct _mp_obj_classmethod_t {
-    mp_obj_base_t base;
-    mp_obj_t fun;
-} mp_obj_classmethod_t;
+} mp_obj_static_class_method_t;
 
 // sequence helpers
 void mp_seq_multiply(const void *items, uint item_sz, uint len, uint times, void *dest);
 bool m_seq_get_fast_slice_indexes(machine_uint_t len, mp_obj_t slice, machine_uint_t *begin, machine_uint_t *end);
-#define m_seq_copy(dest, src, len, item_sz) memcpy(dest, src, len * sizeof(item_sz))
+#define m_seq_copy(dest, src, len, item_t) memcpy(dest, src, len * sizeof(item_t))
+#define m_seq_cat(dest, src1, len1, src2, len2, item_t) { memcpy(dest, src1, len1 * sizeof(item_t)); memcpy(dest + len1, src2, len2 * sizeof(item_t)); }
 bool mp_seq_cmp_bytes(int op, const byte *data1, uint len1, const byte *data2, uint len2);
+bool mp_seq_cmp_objs(int op, const mp_obj_t *items1, uint len1, const mp_obj_t *items2, uint len2);
+mp_obj_t mp_seq_index_obj(const mp_obj_t *items, uint len, uint n_args, const mp_obj_t *args);
+mp_obj_t mp_seq_count_obj(const mp_obj_t *items, uint len, mp_obj_t value);

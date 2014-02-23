@@ -10,6 +10,15 @@
 typedef unsigned char byte;
 typedef unsigned int uint;
 
+/** generic ops *************************************************/
+
+#ifndef MIN
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#endif
+
 /** memomry allocation ******************************************/
 
 // TODO make a lazy m_renew that can increase by a smaller amount than requested (but by at least 1 more element)
@@ -59,10 +68,17 @@ typedef struct _vstr_t {
     int alloc;
     int len;
     char *buf;
-    bool had_error;
+    struct {
+        bool had_error : 1;
+        bool fixed_buf : 1;
+    };
 } vstr_t;
 
+// convenience macro to declare a vstr with a fixed size buffer on the stack
+#define VSTR_FIXED(vstr, alloc) vstr_t vstr; char vstr##_buf[(alloc)]; vstr_init_fixed_buf(&vstr, (alloc), vstr##_buf);
+
 void vstr_init(vstr_t *vstr, int alloc);
+void vstr_init_fixed_buf(vstr_t *vstr, int alloc, char *buf);
 void vstr_clear(vstr_t *vstr);
 vstr_t *vstr_new(void);
 vstr_t *vstr_new_size(int alloc);
@@ -72,7 +88,7 @@ bool vstr_had_error(vstr_t *vstr);
 char *vstr_str(vstr_t *vstr);
 int vstr_len(vstr_t *vstr);
 void vstr_hint_size(vstr_t *vstr, int size);
-char  *vstr_extend(vstr_t *vstr, int size);
+char *vstr_extend(vstr_t *vstr, int size);
 bool vstr_set_size(vstr_t *vstr, int size);
 bool vstr_shrink(vstr_t *vstr);
 char *vstr_add_len(vstr_t *vstr, int len);
@@ -85,8 +101,23 @@ void vstr_add_strn(vstr_t *vstr, const char *str, int len);
 void vstr_cut_tail(vstr_t *vstr, int len);
 void vstr_printf(vstr_t *vstr, const char *fmt, ...);
 
+/** non-dynamic size-bounded variable buffer/string *************/
+
+#define CHECKBUF(buf, max_size) char buf[max_size + 1]; uint buf##_len = max_size; char *buf##_p = buf;
+#define CHECKBUF_RESET(buf, max_size) buf##_len = max_size; buf##_p = buf;
+#define CHECKBUF_APPEND(buf, src, src_len) \
+        { int l = MIN(src_len, buf##_len); \
+        memcpy(buf##_p, src, l); \
+        buf##_len -= l; \
+        buf##_p += l; }
+#define CHECKBUF_APPEND_0(buf) { *buf##_p = 0; }
+#define CHECKBUF_LEN(buf) (buf##_p - buf)
+
 #ifdef va_start
 void vstr_vprintf(vstr_t *vstr, const char *fmt, va_list ap);
 #endif
+
+// Debugging helpers
+int DEBUG_printf(const char *fmt, ...);
 
 #endif // _INCLUDED_MINILIB_H
