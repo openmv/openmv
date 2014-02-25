@@ -5,6 +5,7 @@
 #ifndef __ARRAY_H__
 #define __ARRAY_H__
 struct array;
+typedef struct array array_t;
 typedef void (*array_dtor)(void*);
 typedef int  (*array_comp)(const void*, const void*);
 void array_alloc(struct array **array, array_dtor dtor);

@@ -27,9 +27,10 @@ void array_alloc(struct array **a, array_dtor dtor)
 
 void array_free(struct array *array)
 {
-    int i=0;
-    for (i=0; i<array->index; i++){
-        array->dtor(array->data[i]);
+    if (array->dtor != NULL) {
+        for (int i=0; i<array->index; i++){
+            array->dtor(array->data[i]);
+        }
     }
     xfree(array->data);
     xfree(array);
