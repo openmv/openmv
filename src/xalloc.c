@@ -15,6 +15,15 @@ void *xalloc(size_t size)
     return gc_alloc(size);
 }
 
+void *xalloc0(size_t size)
+{
+    void *mem = gc_alloc(size);
+    if (mem) {
+        bzero(mem, size);
+    }
+    return mem;
+}
+
 void xfree(void *ptr)
 {
     gc_free(ptr);
