@@ -57,7 +57,9 @@ void *array_at(struct array *array, int idx)
 
 void array_erase(struct array *array, int idx)
 {
-    array->dtor(array->data[idx]);
+    if (array->dtor) {
+        array->dtor(array->data[idx]);
+    }
     memmove(array->data+idx, array->data+idx+1, (array->index-idx-1) * sizeof(void*));
     array->index--;
 }
@@ -65,7 +67,9 @@ void array_erase(struct array *array, int idx)
 void array_resize(struct array *array, int idx)
 {
     while (array->index > idx) {
-        array->dtor(array->data[array->index-1]);
+        if (array->dtor != NULL) {
+            array->dtor(array->data[array->index-1]);
+        }
         array->index--;
     }
 }
