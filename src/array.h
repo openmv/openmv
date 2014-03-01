@@ -9,6 +9,7 @@ typedef struct array array_t;
 typedef void (*array_dtor)(void*);
 typedef int  (*array_comp)(const void*, const void*);
 void array_alloc(struct array **array, array_dtor dtor);
+void array_alloc_init(struct array **array, array_dtor dtor, int size);
 void array_free(struct array *array);
 int array_length(struct array *array);
 void array_push_back(struct array *array, void *value);

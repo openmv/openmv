@@ -25,6 +25,17 @@ void array_alloc(struct array **a, array_dtor dtor)
     *a = array;
 }
 
+void array_alloc_init(struct array **a, array_dtor dtor, int size)
+{
+    struct array *array;
+    array = xalloc(sizeof(struct array));
+    array->index  = 0;
+    array->length = size;
+    array->dtor   = dtor;
+    array->data   = xalloc(array->length*sizeof(void*));
+    *a = array;
+}
+
 void array_free(struct array *array)
 {
     if (array->dtor != NULL) {
