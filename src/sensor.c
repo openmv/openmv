@@ -504,6 +504,8 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
         case PIXFORMAT_GRAYSCALE:
             fb->bpp    = 1;
             break;
+        default:
+            return -1;
     }
 
     if (pixformat==PIXFORMAT_GRAYSCALE) {
