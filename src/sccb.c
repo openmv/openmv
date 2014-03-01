@@ -5,7 +5,7 @@
 #include <stm32f4xx_misc.h>
 #include <stm32f4xx_i2c.h>
 
-/* I2C defs */ 
+/* I2C defs */
 #define I2Cx               I2C1
 #define I2C_CLOCK          RCC_APB1Periph_I2C1
 #define I2C_FREQ           (30000)
@@ -28,13 +28,13 @@ void SCCB_Init()
 
     /* Enable I2C/GPIO clocks */
     RCC_APB1PeriphClockCmd(I2C_CLOCK, ENABLE);
-    RCC_AHB1PeriphClockCmd(I2C_GPIO_CLOCK, ENABLE); 
+    RCC_AHB1PeriphClockCmd(I2C_GPIO_CLOCK, ENABLE);
 
     /* Connect I2C GPIOs to AF4 */
     GPIO_PinAFConfig(I2C_GPIO_PORT, I2C_GPIO_SCL_SRC, I2C_GPIO_AF);
     GPIO_PinAFConfig(I2C_GPIO_PORT, I2C_GPIO_SDA_SRC, I2C_GPIO_AF);
 
-    /* Configure I2C GPIOs */  
+    /* Configure I2C GPIOs */
     GPIO_InitStructure.GPIO_Pin   = I2C_GPIO_SCL_PIN|I2C_GPIO_SDA_PIN;
     GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
@@ -44,7 +44,7 @@ void SCCB_Init()
 
     /* Configure I2Cx */
     I2C_DeInit(I2Cx);
-      
+
     /* Set the I2C structure parameters */
     I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;
     I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;
@@ -62,7 +62,7 @@ void SCCB_Init()
 
 uint8_t SCCB_Write(uint8_t addr, uint8_t data)
 {
-    uint32_t timeout = I2C_MAX_TIMEOUT;
+    volatile uint32_t timeout = I2C_MAX_TIMEOUT;
 
     /* Generate the Start Condition */
     I2C_GenerateSTART(I2Cx, ENABLE);
@@ -74,7 +74,7 @@ uint8_t SCCB_Write(uint8_t addr, uint8_t data)
       /* If the timeout delay is exeeded, exit with error code */
       if ((timeout--) == 0) return 0xFF;
     }
-     
+
     /* Send DCMI selcted device slave Address for write */
     I2C_Send7bitAddress(I2Cx, I2C_SLAVE_ADDR, I2C_Direction_Transmitter);
 
@@ -106,7 +106,7 @@ uint8_t SCCB_Write(uint8_t addr, uint8_t data)
     {
       /* If the timeout delay is exeeded, exit with error code */
       if ((timeout--) == 0) return 0xFF;
-    }  
+    }
 
     /* Send I2Cx STOP Condition */
     I2C_GenerateSTOP(I2Cx, ENABLE);
@@ -117,8 +117,8 @@ uint8_t SCCB_Write(uint8_t addr, uint8_t data)
 
 uint8_t SCCB_Read(uint8_t addr)
 {
-    uint32_t timeout = I2C_MAX_TIMEOUT;
     uint8_t data = 0;
+    volatile uint32_t timeout = I2C_MAX_TIMEOUT;
 
     /* Generate the Start Condition */
     I2C_GenerateSTART(I2Cx, ENABLE);
@@ -151,7 +151,7 @@ uint8_t SCCB_Read(uint8_t addr)
     {
       /* If the timeout delay is exeeded, exit with error code */
       if ((timeout--) == 0) return 0xFF;
-    } 
+    }
 
     /* Prepare Stop after receiving data */
     I2C_GenerateSTOP(I2Cx, ENABLE);
@@ -168,7 +168,7 @@ uint8_t SCCB_Read(uint8_t addr)
     {
       /* If the timeout delay is exeeded, exit with error code */
       if ((timeout--) == 0) return 0xFF;
-    } 
+    }
 
     /* Send DCMI selcted device slave Address for write */
     I2C_Send7bitAddress(I2Cx, I2C_SLAVE_ADDR, I2C_Direction_Receiver);
