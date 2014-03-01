@@ -63,31 +63,51 @@ const uint8_t xyz_table[256]= {
     93.868573, 94.730654, 95.597335, 96.468625, 97.344529, 98.225055, 99.110210, 100.000000,
 };
 
-uint16_t imlib_lab_distance(struct color *c0, struct color *c1)
+float vsqrt(float x)
 {
-    uint16_t sum=0;
+    asm volatile (
+            "vsqrt.f32  %[r], %[x]\n"
+            : [r] "=t" (x)
+            : [x] "t"  (x));
+    return x;
+}
+
+/* This is slightly faster the VSQRT */
+uint32_t fsqrt(float x)
+ {
+   uint32_t i = *(uint32_t*) &x;
+   // adjust bias
+   i  += 127 << 23;
+   // approximation of square root
+   i >>= 1;
+   return (uint32_t) *(float*) &i;
+}
+
+uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
+{
+    uint32_t sum=0;
     sum += (c0->L - c1->L) * (c0->L - c1->L);
     sum += (c0->A - c1->A) * (c0->A - c1->A);
     sum += (c0->B - c1->B) * (c0->B - c1->B);
-    return (uint16_t) sqrtf(sum);
+    return fsqrt(sum);
 }
 
-uint16_t imlib_rgb_distance(struct color *c0, struct color *c1)
+uint32_t imlib_rgb_distance(struct color *c0, struct color *c1)
 {
-    uint16_t sum=0;
+    uint32_t sum=0;
     sum += (c0->r - c1->r) * (c0->r - c1->r);
     sum += (c0->g - c1->g) * (c0->g - c1->g);
     sum += (c0->b - c1->b) * (c0->b - c1->b);
-    return (uint16_t) sqrtf(sum);
+    return fsqrt(sum);
 }
 
-uint16_t imlib_hsv_distance(struct color *c0, struct color *c1)
+uint32_t imlib_hsv_distance(struct color *c0, struct color *c1)
 {
-    uint16_t sum=0;
+    uint32_t sum=0;
     sum += (c0->h - c1->h) * (c0->h - c1->h);
     sum += (c0->s - c1->s) * (c0->s - c1->s);
     sum += (c0->v - c1->v) * (c0->v - c1->v);
-    return (uint16_t) sqrtf(sum);
+    return fsqrt(sum);
 }
 
 void imlib_rgb_to_lab(struct color *rgb, struct color *lab)

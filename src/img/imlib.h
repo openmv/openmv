@@ -152,6 +152,9 @@ typedef struct cascade {
     int8_t *rectangles_array;
 } cascade_t;
 
+float vsqrt(float x);
+uint32_t fsqrt(float x);
+
 /* Point functions */
 point_t *point_alloc(int x, int y);
 int point_equal(point_t *p1, point_t *p2);
@@ -169,9 +172,9 @@ struct array *rectangle_merge(struct array *r);
 array_t *cluster_kmeans(array_t *points, int k);
 
 /* Dela E on RGB/HSV/LAB */
-uint16_t imlib_lab_distance(struct color *c0, struct color *c1);
-uint16_t imlib_rgb_distance(struct color *c0, struct color *c1);
-uint16_t imlib_rgb_distance(struct color *c0, struct color *c1);
+uint32_t imlib_lab_distance(struct color *c0, struct color *c1);
+uint32_t imlib_rgb_distance(struct color *c0, struct color *c1);
+uint32_t imlib_rgb_distance(struct color *c0, struct color *c1);
 
 /* Color space conversion */
 void imlib_rgb_to_lab(struct color *rgb, struct color *lab);
