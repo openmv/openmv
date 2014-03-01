@@ -16,7 +16,7 @@ BUILD_DIR=build
 ifeq ($(DEBUG), 1)
 CFLAGS = -O0 -g -DPENDSV_DEBUG
 else
-CFLAGS = -Os -g
+CFLAGS = -O2 -g
 endif
 
 # Compiler Flags
