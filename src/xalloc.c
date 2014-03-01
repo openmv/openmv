@@ -1,23 +1,19 @@
 #include <libmp.h>
 #include "xalloc.h"
+#define BREAK() __asm__ volatile ("BKPT");
 
-void *xcalloc(size_t nmemb, size_t size)
+void *xalloc(size_t size)
 {
-    void *mem = gc_alloc(nmemb*size);
-    if (mem) {
-        bzero(mem, nmemb*size);
+    void *mem = gc_alloc(size);
+    if (mem == NULL) {
+        BREAK();
     }
     return mem;
 }
 
-void *xalloc(size_t size)
-{
-    return gc_alloc(size);
-}
-
 void *xalloc0(size_t size)
 {
-    void *mem = gc_alloc(size);
+    void *mem = xalloc(size);
     if (mem) {
         bzero(mem, size);
     }
@@ -31,6 +27,10 @@ void xfree(void *ptr)
 
 void *xrealloc(void *ptr, size_t size)
 {
-    return gc_realloc(ptr, size);
+    ptr = gc_realloc(ptr, size);
+    if (ptr == NULL) {
+        BREAK();
+    }
+    return ptr;
 }
 
