@@ -152,11 +152,6 @@ typedef struct cascade {
     int8_t *rectangles_array;
 } cascade_t;
 
-
-/* sqrt functions */
-uint16_t sqrt_q16(uint16_t a);
-uint32_t sqrt_q32(uint32_t a);
-
 /* Point functions */
 point_t *point_alloc(int x, int y);
 int point_equal(point_t *p1, point_t *p2);
