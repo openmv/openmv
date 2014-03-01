@@ -1,7 +1,6 @@
 #include <libmp.h>
 #include "xalloc.h"
 #include "imlib.h"
-#include <math.h>
 #include <arm_math.h>
 
 /* Viola-Jones face detector implementation
