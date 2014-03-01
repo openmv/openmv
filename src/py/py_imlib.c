@@ -53,6 +53,19 @@ mp_obj_t py_imlib_histeq(mp_obj_t image_obj)
     return mp_const_none;
 }
 
+mp_obj_t py_imlib_median(mp_obj_t image_obj, mp_obj_t ksize)
+{
+    struct image *image;
+    /* get image pointer */
+    image = (struct image*) py_image_cobj(image_obj);
+
+    /* sanity checks */
+    //PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+
+    imlib_median_filter(image, mp_obj_get_int(ksize));
+    return mp_const_none;
+}
+
 mp_obj_t py_imlib_draw_rectangle(mp_obj_t image_obj, mp_obj_t rectangle_obj)
 {
     struct rectangle r;
@@ -72,11 +85,10 @@ mp_obj_t py_imlib_draw_rectangle(mp_obj_t image_obj, mp_obj_t rectangle_obj)
     return mp_const_none;
 }
 
-mp_obj_t py_imlib_detect_color(mp_obj_t image_obj, mp_obj_t color_obj, mp_obj_t threshold)
+mp_obj_t py_imlib_threshold(mp_obj_t image_obj, mp_obj_t color_obj, mp_obj_t threshold)
 {
     /* C stuff */
     struct color color;
-    struct rectangle rectangle;
     struct image *image;
 
     /* sanity checks */
@@ -84,21 +96,53 @@ mp_obj_t py_imlib_detect_color(mp_obj_t image_obj, mp_obj_t color_obj, mp_obj_t 
 
     mp_obj_t *col_obj;
     col_obj = mp_obj_get_array_fixed_n(color_obj, 3);
-    color.h = mp_obj_get_int(col_obj[0]);
-    color.s = mp_obj_get_int(col_obj[1]);
-    color.v = mp_obj_get_int(col_obj[2]);
+    color.r = mp_obj_get_int(col_obj[0]);
+    color.g = mp_obj_get_int(col_obj[1]);
+    color.b = mp_obj_get_int(col_obj[2]);
 
      /* get image pointer */
     image = py_image_cobj(image_obj);
 
-    imlib_detect_color(image, &color, &rectangle, mp_obj_get_int(threshold));
+    /* Threshold image using reference color */
+    imlib_threshold(image, &color, mp_obj_get_int(threshold));
 
-    mp_obj_t rec_obj[4];
-    rec_obj[0] = mp_obj_new_int(rectangle.x);
-    rec_obj[1] = mp_obj_new_int(rectangle.y);
-    rec_obj[2] = mp_obj_new_int(rectangle.w);
-    rec_obj[3] = mp_obj_new_int(rectangle.h);
-    return rt_build_tuple(4, rec_obj);
+    return mp_const_none;
+}
+
+mp_obj_t py_imlib_count_blobs(mp_obj_t image_obj)
+{
+    /* C stuff */
+    array_t *blobs;
+    struct image *image;
+
+    /* MP List */
+    mp_obj_t objects_list = mp_const_none;
+
+    /* sanity checks */
+    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_RGB565);
+
+     /* get image pointer */
+    image = py_image_cobj(image_obj);
+
+    /* run color dector */
+    blobs = imlib_count_blobs(image);
+
+    /* Create empty Python list */
+    objects_list = rt_build_list(0, NULL);
+
+    if (array_length(blobs)) {
+        for (int j=0; j<array_length(blobs); j++) {
+             rectangle_t *b = array_at(blobs, j);
+             mp_obj_t r[4];
+             r[0] = mp_obj_new_int(b->x);
+             r[1] = mp_obj_new_int(b->y);
+             r[2] = mp_obj_new_int(b->w);
+             r[3] = mp_obj_new_int(b->h);
+             rt_list_append(objects_list, rt_build_tuple(4, r));
+        }
+    }
+    array_free(blobs);
+    return objects_list;
 }
 
 mp_obj_t py_imlib_detect_objects(mp_obj_t image_obj, mp_obj_t cascade_obj)
@@ -202,7 +246,7 @@ mp_obj_t py_imlib_save_template(mp_obj_t image_obj, mp_obj_t rectangle_obj, mp_o
     image = py_image_cobj(image_obj);
     t.w = r.w;
     t.h = r.h;
-    t.data = xalloc(sizeof(*t.data)*t.w*t.h);
+    t.data = xalloc(sizeof(*t.data)*t.w*t.h); /* TODO this is not really needed */
 
     imlib_subimage(image, &t, r.x, r.y);
 
@@ -263,6 +307,19 @@ mp_obj_t py_imlib_blit(mp_obj_t image_obj, mp_obj_t template_obj)
     return mp_const_true;
 }
 
+mp_obj_t py_imlib_surf(mp_obj_t image_obj)
+{
+    struct image *image;
+    /* get image pointer */
+    image = (struct image*) py_image_cobj(image_obj);
+
+    /* sanity checks */
+    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+
+    test_surf(image);
+    return mp_const_none;
+}
+
 void py_imlib_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
 {
 //print(env, "<image width:%d height:%d bpp:%d>", self->width, self->height, self->bpp);
@@ -280,9 +337,12 @@ mp_obj_t py_imlib_init()
     rt_store_attr(m, qstr_from_str("save_template"), rt_make_function_n(3, py_imlib_save_template));
     rt_store_attr(m, qstr_from_str("template_match"), rt_make_function_n(3, py_imlib_template_match));
     rt_store_attr(m, qstr_from_str("histeq"), rt_make_function_n(1, py_imlib_histeq));
+    rt_store_attr(m, qstr_from_str("median"), rt_make_function_n(2, py_imlib_median));
     rt_store_attr(m, qstr_from_str("draw_rectangle"), rt_make_function_n(2, py_imlib_draw_rectangle));
-    rt_store_attr(m, qstr_from_str("detect_color"), rt_make_function_n(3, py_imlib_detect_color));
+    rt_store_attr(m, qstr_from_str("threshold"), rt_make_function_n(3, py_imlib_threshold));
+    rt_store_attr(m, qstr_from_str("count_blobs"), rt_make_function_n(1, py_imlib_count_blobs));
     rt_store_attr(m, qstr_from_str("detect_objects"), rt_make_function_n(2, py_imlib_detect_objects));
+    rt_store_attr(m, qstr_from_str("surf"), rt_make_function_n(1, py_imlib_surf));
 
     return m;
 }

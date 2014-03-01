@@ -63,7 +63,7 @@ int imlib_load_template(struct image *image, const char *path)
         goto error;
     }
 
-    printf("temp:%d %d \n", image->w, image->h);
+    printf("loading template:%dx%d \n", image->w, image->h);
     image->data = xalloc(sizeof(*image->data)*image->w*image->h);
     if (image->data == NULL) {
         goto error;

@@ -16,14 +16,14 @@ BUILD_DIR=build
 ifeq ($(DEBUG), 1)
 CFLAGS = -O0 -g -DPENDSV_DEBUG
 else
-CFLAGS = -O2 -g
+CFLAGS = -Os -g
 endif
 
 # Compiler Flags
 CFLAGS += -Wall -mlittle-endian -mthumb -nostartfiles -mcpu=cortex-m4 -mabi=aapcs-linux
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mfpu=fpv4-sp-d16 -mfloat-abi=hard -fshort-enums
 CFLAGS += -I. -I../include/CMSIS -I../include/StdPeriph -I../include/USB_OTG -I../include/FatFS -I../include/MicroPython\
-          -I../include/MicroPython/py -I./py -DSTM32F40_41xxx -DUSE_USB_OTG_FS -DARM_MATH_CM4 -D__FPU_PRESENT -std=gnu99 -DOSC=12
+          -I../include/MicroPython/py -I./py -I./img -DSTM32F40_41xxx -DUSE_USB_OTG_FS -DARM_MATH_CM4 -D__FPU_PRESENT -std=gnu99 -DOSC=12
 
 # Linker Flags
 LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16
@@ -32,7 +32,7 @@ LDFLAGS += -Tstm32f4xx.ld -L. -L../lib
 
 
 # Sources
-SRCS = $(wildcard *.c) $(wildcard py/*.c)
+SRCS = $(wildcard *.c) $(wildcard py/*.c) $(wildcard img/*.c)
 OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
 
 # Libraries
@@ -44,6 +44,7 @@ all:: $(BUILD_DIR) $(BUILD_DIR) $(BUILD_DIR)/$(BIN).bin
 $(BUILD_DIR):
 	mkdir $@
 	mkdir $@/py
+	mkdir $@/img
 
 $(BUILD_DIR)/$(BIN).bin: $(BUILD_DIR)/$(BIN).elf
 	$(OBJCOPY) -Obinary $^ $@
