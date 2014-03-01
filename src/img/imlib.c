@@ -63,7 +63,7 @@ const uint8_t xyz_table[256]= {
     93.868573, 94.730654, 95.597335, 96.468625, 97.344529, 98.225055, 99.110210, 100.000000,
 };
 
-uint16_t f_sqrt_q16(uint16_t a)
+uint16_t sqrt_q16(uint16_t a)
 {
     uint16_t op  = a;
     uint16_t res = 0;
@@ -84,7 +84,7 @@ uint16_t f_sqrt_q16(uint16_t a)
     return res;
 }
 
-uint32_t f_sqrt_q32(uint32_t a)
+uint32_t sqrt_q32(uint32_t a)
 {
     uint32_t op  = a;
     uint32_t res = 0;
@@ -111,7 +111,7 @@ uint16_t imlib_lab_distance(struct color *c0, struct color *c1)
     sum += (c0->L - c1->L) * (c0->L - c1->L);
     sum += (c0->A - c1->A) * (c0->A - c1->A);
     sum += (c0->B - c1->B) * (c0->B - c1->B);
-    return f_sqrt_q16(sum);
+    return sqrt_q16(sum);
 }
 
 uint16_t imlib_rgb_distance(struct color *c0, struct color *c1)
@@ -120,7 +120,7 @@ uint16_t imlib_rgb_distance(struct color *c0, struct color *c1)
     sum += (c0->r - c1->r) * (c0->r - c1->r);
     sum += (c0->g - c1->g) * (c0->g - c1->g);
     sum += (c0->b - c1->b) * (c0->b - c1->b);
-    return f_sqrt_q16(sum);
+    return sqrt_q16(sum);
 }
 
 uint16_t imlib_hsv_distance(struct color *c0, struct color *c1)
@@ -129,7 +129,7 @@ uint16_t imlib_hsv_distance(struct color *c0, struct color *c1)
     sum += (c0->h - c1->h) * (c0->h - c1->h);
     sum += (c0->s - c1->s) * (c0->s - c1->s);
     sum += (c0->v - c1->v) * (c0->v - c1->v);
-    return f_sqrt_q16(sum);
+    return sqrt_q16(sum);
 }
 
 void imlib_rgb_to_lab(struct color *rgb, struct color *lab)
