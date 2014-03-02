@@ -52,6 +52,11 @@ int  array_length(struct array *array)
     return array->index;
 }
 
+void *array_at(struct array *array, int idx)
+{
+    return array->data[idx];
+}
+
 void array_push_back(struct array *array, void *element)
 {
     if (array->index == array->length-1) {
@@ -61,9 +66,14 @@ void array_push_back(struct array *array, void *element)
     array->data[array->index++] = element;
 }
 
-void *array_at(struct array *array, int idx)
+void *array_pop_back(struct array *array)
 {
-    return array->data[idx];
+    void *el=NULL;
+    if (array->index) {
+        el = array->data[--array->index];
+
+    }
+    return el;
 }
 
 void array_erase(struct array *array, int idx)
@@ -71,12 +81,16 @@ void array_erase(struct array *array, int idx)
     if (array->dtor) {
         array->dtor(array->data[idx]);
     }
-    memmove(array->data+idx, array->data+idx+1, (array->index-idx-1) * sizeof(void*));
+    if (array->index >1 && idx < array->index){
+        /* Since dst is always < src we can just use memcpy */
+        memcpy(array->data+idx, array->data+idx+1, (array->index-idx-1) * sizeof(void*));
+    }
     array->index--;
 }
 
 void array_resize(struct array *array, int idx)
 {
+    //TODO realloc
     while (array->index > idx) {
         if (array->dtor != NULL) {
             array->dtor(array->data[array->index-1]);
