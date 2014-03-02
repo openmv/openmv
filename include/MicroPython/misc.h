@@ -60,18 +60,14 @@ bool unichar_isxdigit(unichar c);
 #define streq(s1, s2) (strcmp((s1), (s2)) == 0)
 */
 
-long strtonum(const char *restrict s, int base);
-
 /** variable string *********************************************/
 
 typedef struct _vstr_t {
     int alloc;
     int len;
     char *buf;
-    struct {
-        bool had_error : 1;
-        bool fixed_buf : 1;
-    };
+    bool had_error : 1;
+    bool fixed_buf : 1;
 } vstr_t;
 
 // convenience macro to declare a vstr with a fixed size buffer on the stack
