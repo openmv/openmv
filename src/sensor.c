@@ -362,6 +362,9 @@ int sensor_init()
     extclk_config(24000000);
     systick_sleep(10);
 
+    /* Reset the sesnor state */
+    memset(&sensor, 0, sizeof(struct sensor_dev));
+
     /* Some sensors have different reset polarities, and we can't know which sensor
        is connected before initializing SCCB and reading the PID register, which in
        turn requires pulling the sensor out of the reset state. So we try to read a
@@ -378,9 +381,6 @@ int sensor_init()
         GPIO_ResetBits(GPIOA, GPIO_Pin_10);
         systick_sleep(10);
     }
-
-    /* Reset the sesnor state */
-    bzero(&sensor, sizeof(struct sensor_dev));
 
     /* Read the sensor information */
     sensor.id.MIDH = SCCB_Read(REG_MIDH);
