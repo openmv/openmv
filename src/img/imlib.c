@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <arm_math.h>
 #include <stm32f4xx.h>
 #include "array.h"
@@ -63,7 +62,7 @@ const uint8_t xyz_table[256]= {
     93.868573, 94.730654, 95.597335, 96.468625, 97.344529, 98.225055, 99.110210, 100.000000,
 };
 
-float vsqrt(float x)
+float fast_sqrtf(float x)
 {
     asm volatile (
             "vsqrt.f32  %[r], %[x]\n"
@@ -72,8 +71,10 @@ float vsqrt(float x)
     return x;
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 /* This is slightly faster the VSQRT */
-uint32_t fsqrt(float x)
+uint32_t fast_sqrt(float x)
  {
    uint32_t i = *(uint32_t*) &x;
    // adjust bias
@@ -82,6 +83,61 @@ uint32_t fsqrt(float x)
    i >>= 1;
    return (uint32_t) *(float*) &i;
 }
+#pragma GCC diagnostic pop
+
+int fast_floorf(float x)
+{
+    int i;
+    asm volatile (
+            "vcvt.S32.f32  %[r], %[x]\n"
+            : [r] "=t" (i)
+            : [x] "t"  (x));
+    return i;
+}
+
+int fast_roundf(float x)
+{
+    int i;
+    asm volatile (
+            "vcvtr.s32.f32  %[r], %[x]\n"
+            : [r] "=t" (i)
+            : [x] "t"  (x));
+    return i;
+
+//  return (int) floor(x+0.5f);
+}
+
+float fast_atanf(float x)
+{
+    return (0.97239f * x) - (0.19195f * x*x*x);
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+float fast_expf(float x)
+{
+    double d;
+    *((int*)(&d) + 0) = 0;
+    *((int*)(&d) + 1) = (int)(1512775 * x + 1072632447);
+    return (float) d;
+}
+#pragma GCC diagnostic pop
+
+float fast_cbrtf(float f)
+{
+    unsigned int* p = (unsigned int *) &f;
+    *p = *p/3 + 709921077;
+    return f;
+}
+
+float fast_fabsf(float x)
+{
+    asm volatile (
+            "vabs.f32  %[r], %[x]\n"
+            : [r] "=t" (x)
+            : [x] "t"  (x));
+    return x;
+}
 
 uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
 {
@@ -89,7 +145,7 @@ uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
     sum += (c0->L - c1->L) * (c0->L - c1->L);
     sum += (c0->A - c1->A) * (c0->A - c1->A);
     sum += (c0->B - c1->B) * (c0->B - c1->B);
-    return fsqrt(sum);
+    return fast_sqrtf(sum);
 }
 
 uint32_t imlib_rgb_distance(struct color *c0, struct color *c1)
@@ -98,7 +154,7 @@ uint32_t imlib_rgb_distance(struct color *c0, struct color *c1)
     sum += (c0->r - c1->r) * (c0->r - c1->r);
     sum += (c0->g - c1->g) * (c0->g - c1->g);
     sum += (c0->b - c1->b) * (c0->b - c1->b);
-    return fsqrt(sum);
+    return fast_sqrtf(sum);
 }
 
 uint32_t imlib_hsv_distance(struct color *c0, struct color *c1)
@@ -107,7 +163,7 @@ uint32_t imlib_hsv_distance(struct color *c0, struct color *c1)
     sum += (c0->h - c1->h) * (c0->h - c1->h);
     sum += (c0->s - c1->s) * (c0->s - c1->s);
     sum += (c0->v - c1->v) * (c0->v - c1->v);
-    return fsqrt(sum);
+    return fast_sqrtf(sum);
 }
 
 void imlib_rgb_to_lab(struct color *rgb, struct color *lab)
@@ -135,7 +191,7 @@ void imlib_rgb_to_lab(struct color *rgb, struct color *lab)
    for (int i=0; i<3; i++) {
        t = xyz[i];
        if (t > 0.008856f) {
-            t = cbrtf(t);
+            t = fast_cbrtf(t);
        } else {
             t = (7.787f * t) + c1;
        }
@@ -228,13 +284,24 @@ void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size)
     xfree(dst);
 }
 
+#define SWAP(x)\
+   ({ uint16_t _x = (x); \
+    (((_x & 0xff)<<8 |(_x & 0xff00) >> 8));})
+
 void imlib_threshold(image_t *image, struct color *color, int threshold)
 {
     color_t lab1,lab2;
     uint16_t *pixels = (uint16_t*) image->pixels;
 
     /* Convert reference RGB to LAB */
-    imlib_rgb_to_lab(color, &lab1);
+    uint16_t r = color->r*31/255;
+    uint16_t g = color->g*63/255;
+    uint16_t b = color->b*31/255;
+
+    r = SWAP((r << 11) | (g << 5) | b);
+    lab1.L = lab_table[r*3];
+    lab1.A = lab_table[r*3+1];
+    lab1.B = lab_table[r*3+2];
 
     for (int y=0; y<image->h; y++) {
         for (int x=0; x<image->w; x++) {

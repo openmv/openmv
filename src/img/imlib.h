@@ -152,8 +152,15 @@ typedef struct cascade {
     int8_t *rectangles_array;
 } cascade_t;
 
-float vsqrt(float x);
-uint32_t fsqrt(float x);
+/* Basic math functions */
+float fast_sqrtf(float x);
+uint32_t fast_sqrt(float x);
+int fast_floor(float x);
+int fast_roundf(float x);
+float fast_atanf(float x);
+float fast_expf(float x);
+float fast_cbrtf(float d);
+float fast_fabsf(float d);
 
 /* Point functions */
 point_t *point_alloc(int x, int y);
