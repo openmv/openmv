@@ -3,9 +3,6 @@
 #include <stm32f4xx.h>
 #include <stm32f4xx_rcc.h>
 #include <stm32f4xx_syscfg.h>
-#include <stm32f4xx_gpio.h>
-#include <stm32f4xx_exti.h>
-#include <stm32f4xx_tim.h>
 #include <stm32f4xx_pwr.h>
 #include <stm32f4xx_rtc.h>
 #include <stm32f4xx_usart.h>
@@ -15,12 +12,14 @@
 #include "systick.h"
 #include "rcc_ctrl.h"
 #include "led.h"
+#include "rng.h"
 #include "sensor.h"
+#include "usbdbg.h"
 #include "py_led.h"
 #include "py_sensor.h"
 #include "py_imlib.h"
 #include "py_file.h"
-#include "usbdbg.h"
+#include "py_time.h"
 
 int errno;
 
@@ -42,35 +41,19 @@ mp_obj_t py_sync(void) {
     return mp_const_none;
 }
 
-mp_obj_t py_delay(mp_obj_t count) {
-    systick_sleep(mp_obj_get_int(count));
-    return mp_const_none;
-}
-
-mp_obj_t py_ticks(mp_obj_t count) {
-    return mp_obj_new_int(systick_current_millis());
-}
-
 mp_obj_t py_vcp_connected() {
     bool connected = usb_vcp_is_connected();
     return mp_obj_new_int(connected);
 }
 
-void fatality(void) {
-    led_state(LED_RED, 1);
-    led_state(LED_GREEN, 1);
-    led_state(LED_BLUE, 1);
-    while (1);
-}
-
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
-"from openmv import led\n"
-"while(openmv.vcp_connected()==0):\n"
+"import led, time\n"
+"while(vcp_connected()==0):\n"
 " led.on(led.BLUE)\n"
-" delay(500)\n"
+" time.sleep(500)\n"
 " led.off(led.BLUE)\n"
-" delay(500)\n"
+" time.sleep(500)\n"
 ;
 
 static const char *help_text =
@@ -151,7 +134,7 @@ static mp_obj_t py_info(void) {
         gc_info(&info);
         printf("GC:\n");
         printf("  %lu total\n", info.total);
-        printf("  %lu : %lu\n", info.used, info.free);
+        printf("used:  %lu free: %lu\n", info.used, info.free);
         printf("  1=%lu 2=%lu m=%lu\n", info.num_1block, info.num_2block, info.max_block);
     }
 
@@ -164,6 +147,13 @@ static mp_obj_t py_info(void) {
     }
 
     return mp_const_none;
+}
+
+gc_info_t get_gc_info()
+{
+    gc_info_t info;
+    gc_info(&info);
+    return info;
 }
 
 static void SYSCLKConfig_STOP(void) {
@@ -197,7 +187,7 @@ static mp_obj_t py_stop(void) {
     /* Enter Stop Mode */
     PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 
-    /* Configures system clock after wake-up from STOP: enable HSE, PLL and select 
+    /* Configures system clock after wake-up from STOP: enable HSE, PLL and select
      *        PLL as system clock source (HSE and PLL are disabled in STOP mode) */
     SYSCLKConfig_STOP();
 
@@ -211,13 +201,14 @@ static mp_obj_t py_standby(void) {
     return mp_const_none;
 }
 
-mp_obj_t py_rng_get(void) {
-    return mp_obj_new_int(RNG_GetRandomNumber() >> 16);
+void __libc_init_array(void)
+{
+
 }
 
 int main(void)
 {
-    rcc_ctrl_set_frequency(SYSCLK_168_MHZ);
+    rcc_ctrl_set_frequency(SYSCLK_200_MHZ);
 
     /* Init SysTick timer */
     systick_init();
@@ -228,34 +219,34 @@ int main(void)
     /* init USB debug */
     usbdbg_init();
 
-    /* add some functions to the global python namespace */
+    /* init rng */
+    rng_init();
+
+    /* Add functions to the global python namespace */
     rt_store_name(MP_QSTR_help, rt_make_function_n(0, py_help));
-    rt_store_name(MP_QSTR_delay, rt_make_function_n(1, py_delay));
-    rt_store_name(qstr_from_str("ticks"), rt_make_function_n(0, py_ticks));
     rt_store_name(qstr_from_str("open"), rt_make_function_n(2, py_file_open));
+    rt_store_name(qstr_from_str("vcp_connected"), rt_make_function_n(0, py_vcp_connected));
+    rt_store_name(MP_QSTR_info, rt_make_function_n(0, py_info));
+    rt_store_name(MP_QSTR_gc, (mp_obj_t)&pyb_gc_obj);
+    rt_store_name(MP_QSTR_stop, rt_make_function_n(0, py_stop));
+    rt_store_name(MP_QSTR_standby, rt_make_function_n(0, py_standby));
+    rt_store_name(MP_QSTR_sync, rt_make_function_n(0, py_sync));
 
-    /* Create main OpenMV module */
-    mp_obj_t m = mp_obj_new_module(qstr_from_str("openmv"));
+    /* Add modules to the global python namespace */
+    mp_obj_t time_module = py_time_init();
+    rt_store_name(qstr_from_str("time"), time_module);
 
-    /* Add stuff to OpenMV module */
-    rt_store_attr(m, qstr_from_str("vcp_connected"), rt_make_function_n(0, py_vcp_connected));
-    rt_store_attr(m, MP_QSTR_info, rt_make_function_n(0, py_info));
-    rt_store_attr(m, MP_QSTR_gc, (mp_obj_t)&pyb_gc_obj);
-    rt_store_attr(m, MP_QSTR_stop, rt_make_function_n(0, py_stop));
-    rt_store_attr(m, MP_QSTR_standby, rt_make_function_n(0, py_standby));
-    rt_store_attr(m, MP_QSTR_sync, rt_make_function_n(0, py_sync));
     mp_obj_t led_module = py_led_init();
-    rt_store_attr(m, qstr_from_str("led"), led_module);
+    rt_store_name(qstr_from_str("led"), led_module);
 
     mp_obj_t sensor_module = py_sensor_init();
-    if (sensor_module) {
-        rt_store_attr(m, qstr_from_str("sensor"), sensor_module);
+    if (!sensor_module) {
+        __fatal_error("sensor init failed");
     }
+    rt_store_name(qstr_from_str("sensor"), sensor_module);
 
     mp_obj_t imlib_module = py_imlib_init();
-    rt_store_attr(m, qstr_from_str("imlib"), imlib_module);
-
-    rt_store_name(qstr_from_str("openmv"), m);
+    rt_store_name(qstr_from_str("imlib"), imlib_module);
 
     /* Try to mount the flash fs */
     bool reset_filesystem = false;
@@ -280,7 +271,7 @@ int main(void)
         __fatal_error("could not access LFS");
     }
 
-    pyb_usb_dev_init();
+    pyb_usb_dev_init(PYB_USB_DEV_VCP_MSC);
 
     /* Try to run user script first */
     if (!libmp_do_file("0:/user.py")) {
