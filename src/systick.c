@@ -46,9 +46,9 @@ int systick_init()
     return 0;
 }
 
-void systick_sleep(uint32_t ms)
+void systick_sleep(volatile uint32_t ms)
 {
-    uint32_t curr_ticks = sys_ticks;
+    volatile uint32_t curr_ticks = sys_ticks;
     while ((sys_ticks - curr_ticks) < ms);
 }
 
