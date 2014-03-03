@@ -59,7 +59,7 @@ void *array_at(struct array *array, int idx)
 
 void array_push_back(struct array *array, void *element)
 {
-    if (array->index == array->length-1) {
+    if (array->index == array->length) {
         array->length += ARRAY_INIT_SIZE;
         array->data    = xrealloc(array->data, array->length * sizeof(void*));
     }
@@ -71,7 +71,6 @@ void *array_pop_back(struct array *array)
     void *el=NULL;
     if (array->index) {
         el = array->data[--array->index];
-
     }
     return el;
 }

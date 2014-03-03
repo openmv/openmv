@@ -12,8 +12,8 @@ array_t *imlib_count_blobs(struct image *image)
     array_alloc_init(&points, xfree, 500);
     uint16_t *pixels = (uint16_t*) image->pixels;
 
-    for (int y=1; y<image->h-1; y++) {
-        for (int x=1; x<image->w-1; x++) {
+    for (int y=0; y<image->h; y++) {
+        for (int x=0; x<image->w; x++) {
             int i=y*image->w+x;
             if (pixels[i]) {
                 /* new blob */
@@ -21,9 +21,8 @@ array_t *imlib_count_blobs(struct image *image)
                 array_push_back(blobs, blob);
 
                 /* flood fill */
-                array_push_back(points, point_alloc(x, y));
-                point_t *p;
-                while((p = array_pop_back(points))!= NULL) {
+                point_t *p=point_alloc(x, y);
+                while(p != NULL) {
                     /* add point to blob */
                     if (p->x < blob->x) {
                         blob->x = p->x;
@@ -40,12 +39,22 @@ array_t *imlib_count_blobs(struct image *image)
                     }
 
                     if (pixels[p->y*image->w+p->x]) {
-                        pixels[p->y*image->w+p->x]=0x0000;
-                        array_push_back(points, point_alloc(p->x-1, p->y));
-                        array_push_back(points, point_alloc(p->x+1, p->y));
-                        array_push_back(points, point_alloc(p->x, p->y-1));
-                        array_push_back(points, point_alloc(p->x, p->y+1));
+                        pixels[p->y*image->w+p->x]=0;
+                        if ((p->x-1) > 0) {
+                            array_push_back(points, point_alloc(p->x-1, p->y));
+                        }
+                        if ((p->x+1) < image->w) {
+                            array_push_back(points, point_alloc(p->x+1, p->y));
+                        }
+                        if ((p->y-1) > 0) {
+                            array_push_back(points, point_alloc(p->x, p->y-1));
+                        }
+                        if ((p->y+1) < image->h) {
+                            array_push_back(points, point_alloc(p->x, p->y+1));
+                        }
                     }
+                    xfree(p);
+                    p = array_pop_back(points);
                 }
             }
         }
@@ -53,14 +62,14 @@ array_t *imlib_count_blobs(struct image *image)
 
     for (int i=0; i<array_length(blobs); i++) {
         rectangle_t *blob = array_at(blobs, i);
-        if (blob->w < 10) { /* blob too small */
-            //array_erase(blobs, i);
-            i--;
-        } else {
+//        if (blob->w < 10) { /* blob too small */
+            //array_erase(blobs, i); i--;
+  //      } else {
             blob->w = blob->w - blob->x;
             blob->h = blob->h - blob->y;
-        }
+    //    }
     }
-    //array_free(points);
+
+    array_free(points);
     return blobs;
 }
