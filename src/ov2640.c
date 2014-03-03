@@ -12,6 +12,9 @@
 #include "ov2640.h"
 #include "systick.h"
 #include "ov2640_regs.h"
+#define DSP_FRAME_W     (800)
+#define DSP_FRAME_H     (600)
+
 static const uint8_t default_regs[][2] = {
     { BANK_SEL, BANK_SEL_DSP},
     { 0x2c,    0xff },
@@ -19,12 +22,24 @@ static const uint8_t default_regs[][2] = {
 
     { BANK_SEL, BANK_SEL_SENSOR },
     { 0x3c,    0x32 },
-    { CLKRC,   0x01 }, /* Set PCLK divider */
-    { COM2,    COM2_OUT_DRIVE_2x }, /* Output drive x2 */
-    { REG04,   REG04_SET(0x00)}, /* Mirror/VFLIP/AEC[1:0]*/
-    { COM7,    COM7_RES_UXGA | COM7_ZOOM_EN },
+    { CLKRC,   0x00 }, /* Set PCLK divider */
+    { COM2,    COM2_OUT_DRIVE_3x }, /* Output drive x2 */
+    { REG04,   REG04_SET(0x00)}, /* Mirror/VFLIP/AEC[1:0] */
     { COM8,    COM8_SET(COM8_BNDF_EN | COM8_AGC_EN | COM8_AEC_EN) },
     { COM9,    COM9_AGC_SET(COM9_AGC_GAIN_8x)},
+
+    /* DSP input image resoultion and window size control */
+    { COM7,    COM7_RES_SVGA },
+    { COM1,    0x0A }, /* UXGA=0x0F, SVGA=0x0A, CIF=0x06 */
+    { REG32,   0x09 }, /* UXGA=0x36, SVGA/CIF=0x09 */
+
+    { HSTART,  0x11 }, /* UXGA=0x11, SVGA/CIS=0x11 */
+    { HSTOP,   0x43 }, /* UXGA=0x75, SVGA/CIF=0x43 */
+
+    { VSTART,  0x00 }, /* UXGA=0x01, SVGA/CIF=0x00 */
+    { VSTOP,   0x4b }, /* UXGA=0x97, SVGA/CIS=0x4b */
+    { 0x3d,    0x38 }, /* UXGA=0x34, SVGA/CIF=0x38 */
+
     { 0x2c,    0x0c },
     { 0x33,    0x78 },
     { 0x3a,    0x33 },
@@ -33,17 +48,22 @@ static const uint8_t default_regs[][2] = {
     { 0x43,    0x11 },
     { 0x16,    0x10 },
     { 0x39,    0x02 },
-    { 0x35,    0x88 },
-    { 0x22,    0x0a },
-    { 0x37,    0x40 },
+
+#if 1
+    { 0x35,    0xda }, //TODO
+    { 0x22,    0x1a }, //TODO
+    { 0x37,    0xc3 },
     { 0x23,    0x00 },
-    { ARCOM2,  0xa0 },
-    { 0x06,    0x02 },
-    { 0x06,    0x88 },
+    { 0x34,    0xC0 }, //TODO //ZOOM control
+    { 0x36,    0x1a }, //TODO
+    { 0x06,    0x88 }, //TODO
     { 0x07,    0xc0 },
-    { 0x0d,    0xb7 },
-    { 0x0e,    0x01 },
+    { 0x0d,    0x87 }, //TODO
+    { 0x0e,    0x41 }, //TODO
     { 0x4c,    0x00 },
+    { 0x48,    0x00 }, /* COM19 Zoom control */
+    { 0x5B,    0x00 },  //TODO
+    { 0x42,    0x03 },  //TODO
     { 0x4a,    0x81 },
     { 0x21,    0x99 },
     /* AGC/AEC operating region */
@@ -53,8 +73,36 @@ static const uint8_t default_regs[][2] = {
     { VV,      VV_AGC_TH_SET(0x08, 0x02) },
     { 0x5c,    0x00 },
     { 0x63,    0x00 },
-    { FLL,     0x00 }, //TODO
+    { FLL,     0x00 },  //TODO
     { FLH,     0x00 },
+#else
+    //UXGA
+    { 0x35,    0x88 },
+    { 0x22,    0x0a },
+    { 0x37,    0x40 },
+    { 0x23,    0x00 },
+    { 0x34,    0xa0 },
+    { 0x06,    0x02 },
+    { 0x07,    0xc0 },
+    { 0x0d,    0xb7 },
+    { 0x0e,    0x01 },
+    { 0x4c,    0x00 },
+    { 0x48,    0x00 }, /* COM19 Zoom control */
+    //{0x5B, 0x00},
+    { 0x42,    0x20 },
+    { 0x4a,    0x81 },
+    { 0x21,    0x99 },
+    /* AGC/AEC operating region */
+    { AEW,     0x40 },
+    { AEB,     0x38 },
+    /* AGC/AEC fast mode operating region */
+    { VV,      VV_AGC_TH_SET(0x08, 0x02) },
+    { 0x5c,    0x00 },
+    { 0x63,    0x00 },
+    { FLL,     0x00 },
+    { FLH,     0x00 },
+#endif
+
     /* Set banding filter */
     { COM3,    COM3_BAND_SET(COM3_BAND_AUTO) },
     { REG5D,   0x55 },
@@ -72,7 +120,6 @@ static const uint8_t default_regs[][2] = {
     { 0x70,    0x02 },
     { 0x71,    0x94 },
     { 0x73,    0xc1 },
-    { 0x3d,    0x34 },
     { 0x5a,    0x57 },
     { BD50,    0xbb },
     { BD60,    0x9c },
@@ -81,17 +128,16 @@ static const uint8_t default_regs[][2] = {
     { 0xe5,    0x7f },
     { MC_BIST, MC_BIST_RESET | MC_BIST_BOOT_ROM_SEL },
     { 0x41,    0x24 },
-    { RESET,   RESET_JPEG | RESET_DVP },
+    { RESET,   RESET_JPEG | RESET_DVP | RESET_CIF },
     { 0x76,    0xff },
     { 0x33,    0xa0 },
-    { 0x42,    0x20 },
     { 0x43,    0x18 },
     { 0x4c,    0x00 },
     { CTRL3,   CTRL3_BPC_EN | CTRL3_WPC_EN | 0x10 },
     { 0x88,    0x3f },
     { 0xd7,    0x03 },
     { 0xd9,    0x10 },
-    { R_DVP_SP, R_DVP_SP_AUTO_MODE},
+    { R_DVP_SP, R_DVP_SP_AUTO_MODE | 0x00},
     { 0xc8,    0x08 },
     { 0xc9,    0x80 },
     { BPADDR,  0x00 },
@@ -191,25 +237,31 @@ static const uint8_t default_regs[][2] = {
     /* Enable AEC/AEC_SEL/YUV/YUV422/RGB */
     { CTRL0,  CTRL0_YUV422 | CTRL0_YUV_EN | CTRL0_RGB_EN },
 
-    /* Set DSP input image size to 1600x1200 and offset to 0.
+    /* Set DSP input image size and offset.
        The sensor output image can be scaled with OUTW/OUTH */
     { BANK_SEL, BANK_SEL_DSP },
     { RESET,   RESET_DVP },
-    { HSIZE8,  (1600>>3)}, /* Image Horizontal Size HSIZE[10:3] */
-    { VSIZE8,  (1200>>3)}, /* Image Horizontal Size VSIZE[10:3] */
-    { SIZEL,   0x00 },     /* {HSIZE[11], HSIZE[2:0], VSIZE[2:0]} */
+    { HSIZE8,  (DSP_FRAME_W>>3)}, /* Image Horizontal Size HSIZE[10:3] */
+    { VSIZE8,  (DSP_FRAME_H>>3)}, /* Image Vertiacl Size VSIZE[10:3] */
+
+    /* {HSIZE[11], HSIZE[2:0], VSIZE[2:0]} */
+    { SIZEL,   ((DSP_FRAME_W&0x7)<<3) | (DSP_FRAME_H&0x7)},
 
     { XOFFL,   0x00 }, /* OFFSET_X[7:0] */
     { YOFFL,   0x00 }, /* OFFSET_Y[7:0] */
-    { HSIZE,   ((1600>>2)&0xFF) }, /* H_SIZE[7:0] real/4 */
-    { VSIZE,   ((1200>>2)&0xFF) }, /* V_SIZE[7:0] real/4 */
+    { HSIZE,   ((DSP_FRAME_W>>2)&0xFF) }, /* H_SIZE[7:0] real/4 */
+    { VSIZE,   ((DSP_FRAME_H>>2)&0xFF) }, /* V_SIZE[7:0] real/4 */
+
     /* V_SIZE[8]/OFFSET_Y[10:8]/H_SIZE[8]/OFFSET_X[10:8] */
-    { VHYX,    ((1600>>3)&0x80) | ((1200>>7)&0x08) },
+    { VHYX,    ((DSP_FRAME_H>>3)&0x80) | ((DSP_FRAME_W>>7)&0x08) },
     { TEST,    0x00 }, /* H_SIZE[9] */
 
     { CTRL2,   CTRL2_DCW_EN | CTRL2_SDE_EN |
                CTRL2_UV_AVG_EN | CTRL2_CMX_EN | CTRL2_UV_ADJ_EN },
-    { CTRLI,   CTRLI_LP_DP | 0x1B }, /* H_DIVIDER/V_DIVIDER */
+    /* UXGA H_DIVIDER/V_DIVIDER */
+    /* UXGA=0x1B SVGA=0x09 QCIF=0x00 */
+    { CTRLI,   CTRLI_LP_DP | 0x09 },
+
     { R_BYPASS, R_BYPASS_USE_DSP },
     {0x00,  0x00}
 };
@@ -302,7 +354,7 @@ static int set_framesize(enum sensor_framesize framesize)
     /* Write output width */
     ret |= SCCB_Write(ZMOW, (w>>2)&0xFF); /* OUTW[7:0] (real/4) */
     ret |= SCCB_Write(ZMOH, (h>>2)&0xFF); /* OUTH[7:0] (real/4) */
-    ret |= SCCB_Write(ZMHH, ((h>>8)&0x04)|((w>>10)&0x03)); /* OUTW[9:8] */
+    ret |= SCCB_Write(ZMHH, ((h>>8)&0x04)|((w>>10)&0x03)); /* OUTH[8]/OUTW[9:8] */
     return ret;
 }
 
