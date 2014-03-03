@@ -9,7 +9,7 @@ ENTRY(Reset_Handler)
 MEMORY
 {
   FLASH_ISR (rx)  : ORIGIN = 0x08000000, LENGTH = 16K
-  FLASH_TEXT (rx) : ORIGIN = 0x08020000, LENGTH = 512K
+  FLASH_TEXT (rx) : ORIGIN = 0x08020000, LENGTH = 896K
   RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
   CCM (w!rx)      : ORIGIN = 0x10000000, LENGTH = 64K
 }
@@ -21,7 +21,7 @@ _ram_end   = 0x10010000; /* 64KB CCM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _stack_size = 0x1000; /* required amount of stack */
-_heap_size  = 0x8000; /* required amount of heap */
+_heap_size  = 0x8000; /* 0xC800 required amount of heap */
 _cache_size = 0x4000; /* required amount of cache */
 
 _main_ram_start = 0x20000000;
@@ -54,39 +54,6 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
     _exit = .;
-  } >FLASH_TEXT
-
-  .ARM.extab   : {
-      *(.ARM.extab* .gnu.linkonce.armextab.*)
-  } >FLASH_TEXT
-
-  .ARM : {
-  __exidx_start = .;
-    *(.ARM.exidx*)
-    __exidx_end = .;
-  } >FLASH_TEXT
-
-  .preinit_array :
-  {
-    PROVIDE_HIDDEN (__preinit_array_start = .);
-    KEEP (*(.preinit_array*))
-    PROVIDE_HIDDEN (__preinit_array_end = .);
-  } >FLASH_TEXT
-
-  .init_array :
-  {
-    PROVIDE_HIDDEN (__init_array_start = .);
-    KEEP (*(SORT(.init_array.*)))
-    KEEP (*(.init_array*))
-    PROVIDE_HIDDEN (__init_array_end = .);
-  } >FLASH_TEXT
-
-  .fini_array :
-  {
-    PROVIDE_HIDDEN (__fini_array_start = .);
-    KEEP (*(.fini_array*))
-    KEEP (*(SORT(.fini_array.*)))
-    PROVIDE_HIDDEN (__fini_array_end = .);
   } >FLASH_TEXT
 
   /* used by the startup to initialize data */
@@ -139,16 +106,6 @@ SECTIONS
     . = . + _stack_size;
     . = ALIGN(4);
   } >CCM
-
-  /* Remove information from the standard libraries */
-  /*
-  /DISCARD/ :
-  {
-    libc.a ( * )
-    libm.a ( * )
-    libgcc.a ( * )
-  }
-  */
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }

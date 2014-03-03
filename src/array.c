@@ -101,6 +101,6 @@ void array_resize(struct array *array, int idx)
 
 void array_sort(struct array *array, array_comp comp)
 {
-    qsort(array->data, array->index, sizeof(void*), comp);
+    //qsort(array->data, array->index, sizeof(void*), comp);
 }
 

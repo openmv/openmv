@@ -28,7 +28,8 @@ CFLAGS += -I. -I../include/CMSIS -I../include/StdPeriph -I../include/USB_OTG -I.
 # Linker Flags
 LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16
 #LDFLAGS += -Wl,-Map=$(BUILD_DIR)/$(BIN).map -Tstm32f4xx.ld -L. -L../lib
-LDFLAGS += -Tstm32f4xx.ld -L. -L../lib
+#LDFLAGS += -nostdlib -Tstm32f4xx.ld -L. -L../lib
+LDFLAGS += -nostdlib -Tstm32f4xx.ld -L. -L../lib
 
 
 # Sources
@@ -37,9 +38,10 @@ OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
 
 # Libraries
 #LIB = -lmp -lc -lm -ldsp -lstdperiph -lusbcore -lusbdevcore
-LIB = -lmp -lc -lm -ldsp -lstdperiph
+LIB = -lmp -ldsp -lstdperiph
 
 all:: $(BUILD_DIR) $(BUILD_DIR) $(BUILD_DIR)/$(BIN).bin
+	$(SIZE) $(BUILD_DIR)/$(BIN).elf
 
 $(BUILD_DIR):
 	mkdir $@
@@ -53,7 +55,7 @@ $(BUILD_DIR)/$(BIN).elf: $(OBJS)
 	$(CC) $(LDFLAGS) $(OBJS) $(LIB) -o $@
 
 stats: $(BIN).elf
-	$(SIZE) $(BIN).elf
+	$(SIZE) $(BUILD_DIR)/$(BIN).elf
 
 clean:
 	$(RM) -fr $(BUILD_DIR)
