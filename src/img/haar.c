@@ -74,7 +74,7 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
          - cascade->sum.data[cascade->sum.w * win_h + p_offset]
          + cascade->sum.data[cascade->sum.w * win_h + win_w + p_offset];
 
-    std = sqrtf(sumsq * cascade->window.w * cascade->window.h - mean * mean);
+    std = fast_sqrtf(sumsq * cascade->window.w * cascade->window.h - mean * mean);
 
     for (i=start_stage; i<cascade->n_stages; i++) {
         stage_sum = 0;
@@ -102,8 +102,8 @@ static void ScaleImageInvoker(struct cascade *cascade, float factor, int sum_row
     struct point p;
     struct size win_size;
 
-    win_size.w =  roundf(cascade->window.w*factor);
-    win_size.h =  roundf(cascade->window.h*factor);
+    win_size.w =  fast_roundf(cascade->window.w*factor);
+    win_size.h =  fast_roundf(cascade->window.h*factor);
 
     /* When filter window shifts to image boarder, some margin need to be kept */
     y2 = sum_row - win_size.h;
@@ -120,8 +120,8 @@ static void ScaleImageInvoker(struct cascade *cascade, float factor, int sum_row
             /* If a face is detected, record the coordinates of the filter window */
             if (result > 0) {
                 struct rectangle *r = xalloc(sizeof(struct rectangle));
-                r->x = roundf(x*factor);
-                r->y = roundf(y*factor);
+                r->x = fast_roundf(x*factor);
+                r->y = fast_roundf(y*factor);
                 r->w = win_size.w;
                 r->h = win_size.h;
                 array_push_back(vec, r);

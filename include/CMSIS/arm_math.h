@@ -283,7 +283,7 @@
 
 #undef  __CMSIS_GENERIC         /* enable NVIC and Systick functions */
 #include "string.h"
-#include "math.h"
+//#include "math.h"
 #ifdef	__cplusplus
 extern "C"
 {
@@ -5874,9 +5874,9 @@ void arm_rfft_fast_f32(
 
 //      #if __FPU_USED
 #if (__FPU_USED == 1) && defined ( __CC_ARM   )
-      *pOut = __sqrtf(in);
+//      *pOut = __sqrtf(in);
 #else
-      *pOut = sqrtf(in);
+  //    *pOut = sqrtf(in);
 #endif
 
       return (ARM_MATH_SUCCESS);

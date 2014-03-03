@@ -1,6 +1,5 @@
 #include <float.h>
 #include <limits.h>
-#include <math.h>
 #include <arm_math.h>
 #include "imlib.h"
 #include "array.h"

@@ -1,7 +1,6 @@
 #include <libmp.h>
 #include "xalloc.h"
 #include "imlib.h"
-#include <math.h>
 #include <arm_math.h>
 
 int imlib_save_template(struct image *image, const char *path)
@@ -142,7 +141,7 @@ float imlib_template_match(struct image *f,  struct image *t_orig, struct rectan
             int a_den = f_sumsq-(f_sum*(long)f_sum)/(t->w*t->h);
             /* this overflows */
             //corr = sum_shift/sqrtf(a_den*b_den);
-            float c = sum_shift/(sqrtf(a_den)*sqrtf(b_den));
+            float c = sum_shift/(fast_sqrtf(a_den)*fast_sqrtf(b_den));
 
             if (c > corr) {
                 corr = c;

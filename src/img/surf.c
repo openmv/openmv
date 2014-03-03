@@ -11,7 +11,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 #include <float.h>
 #include "array.h"
 #include "xalloc.h"
@@ -60,12 +59,6 @@ void arm_mat_free(arm_matrix_instance_f32 *m)
     xfree(m);
 }
 
-//! Round float to nearest integer
-static inline int fRound(float flt)
-{
-  return (int) floor(flt+0.5f);
-}
-
 /* Computes the sum of pixels within the rectangle
    specified by the top-left start co-ordinate and size. */
 static float box_integral(i_image_t *img, int row, int col, int rows, int cols)
@@ -94,19 +87,19 @@ static float box_integral(i_image_t *img, int row, int col, int rows, int cols)
 //! Calculate the value of the 2d gaussian at x,y
 static inline float gaussian(int x, int y, float sig)
 {
-  return (1.0f/(2.0f*pi*sig*sig)) * expf( -(x*x+y*y)/(2.0f*sig*sig));
+  return (1.0f/(2.0f*pi*sig*sig)) * fast_expf(-(x*x+y*y)/(2.0f*sig*sig));
 }
 
 //! Calculate the value of the 2d gaussian at x,y
 static inline float gaussianf(float x, float y, float sig)
 {
-  return 1.0f/(2.0f*pi*sig*sig) * expf(-(x*x+y*y)/(2.0f*sig*sig));
+  return 1.0f/(2.0f*pi*sig*sig) * fast_expf(-(x*x+y*y)/(2.0f*sig*sig));
 }
 
 //! Calculate Haar wavelet responses in x direction
 static inline float haar_x(surf_t *surf, int row, int column, int s)
 {
-  return box_integral(surf->i_img, row-s/2, column, s, s/2) 
+  return box_integral(surf->i_img, row-s/2, column, s, s/2)
     -1 * box_integral(surf->i_img, row-s/2, column-s/2, s, s/2);
 }
 
@@ -121,16 +114,16 @@ static inline float haar_y(surf_t *surf, int row, int column, int s)
 static float get_angle(float x, float y)
 {
   if(x > 0 && y >= 0)
-    return atan(y/x);
+    return fast_atanf(y/x);
 
   if(x < 0 && y >= 0)
-    return pi - atanf(-y/x);
+    return pi - fast_atanf(-y/x);
 
   if(x < 0 && y < 0)
-    return pi + atanf(y/x);
+    return pi + fast_atanf(y/x);
 
   if(x > 0 && y < 0)
-    return 2*pi - atanf(-y/x);
+    return 2*pi - fast_atanf(-y/x);
 
   return 0;
 }
@@ -139,9 +132,9 @@ static float get_angle(float x, float y)
 static void get_orientation(surf_t *surf, i_point_t *ipt)
 {
   float gauss = 0.f, scale = ipt->scale;
-  const int s = fRound(scale);
-  const int r = fRound(ipt->y);
-  const int c = fRound(ipt->x);
+  const int s = fast_roundf(scale);
+  const int r = fast_roundf(ipt->y);
+  const int c = fast_roundf(ipt->x);
   float resX[109];
   float resY[109];
   float Ang[109];
@@ -212,8 +205,8 @@ static void get_descriptor(surf_t *surf, i_point_t *ipt, bool bUpright)
   float cx = -0.5f, cy = 0.f; //Subregion centers for the 4x4 gaussian weighting
 
   scale = ipt->scale;
-  x = fRound(ipt->x);
-  y = fRound(ipt->y);
+  x = fast_roundf(ipt->x);
+  y = fast_roundf(ipt->y);
   desc = ipt->descriptor;
 
   if (bUpright) {
@@ -243,19 +236,19 @@ static void get_descriptor(surf_t *surf, i_point_t *ipt, bool bUpright)
       ix = i + 5;
       jx = j + 5;
 
-      xs = fRound(x + ( -jx*scale*si + ix*scale*co));
-      ys = fRound(y + ( jx*scale*co + ix*scale*si));
+      xs = fast_roundf(x + ( -jx*scale*si + ix*scale*co));
+      ys = fast_roundf(y + ( jx*scale*co + ix*scale*si));
 
       for (int k = i; k < i + 9; ++k) {
         for (int l = j; l < j + 9; ++l) {
           //Get coords of sample point on the rotated axis
-          sample_x = fRound(x + (-l*scale*si + k*scale*co));
-          sample_y = fRound(y + ( l*scale*co + k*scale*si));
+          sample_x = fast_roundf(x + (-l*scale*si + k*scale*co));
+          sample_y = fast_roundf(y + ( l*scale*co + k*scale*si));
 
           //Get the gaussian weighted x and y responses
           gauss_s1 = gaussian(xs-sample_x,ys-sample_y,2.5f*scale);
-          rx = haar_x(surf, sample_y, sample_x, 2*fRound(scale));
-          ry = haar_y(surf, sample_y, sample_x, 2*fRound(scale));
+          rx = haar_x(surf, sample_y, sample_x, 2*fast_roundf(scale));
+          ry = haar_y(surf, sample_y, sample_x, 2*fast_roundf(scale));
 
           //Get the gaussian weighted x and y responses on rotated axis
           rrx = gauss_s1*(-rx*si + ry*co);
@@ -263,8 +256,8 @@ static void get_descriptor(surf_t *surf, i_point_t *ipt, bool bUpright)
 
           dx += rrx;
           dy += rry;
-          mdx += fabsf(rrx);
-          mdy += fabsf(rry);
+          mdx += fast_fabsf(rrx);
+          mdy += fast_fabsf(rry);
 
         }
       }
@@ -291,7 +284,7 @@ static void get_descriptor(surf_t *surf, i_point_t *ipt, bool bUpright)
 
 done:
   //Convert to Unit Vector
-  len = sqrtf(len);
+  len = fast_sqrtf(len);
   for(int i = 0; i <SURF_DESC_SIZE; ++i)
     desc[i] /= len;
 }
@@ -455,7 +448,7 @@ static void interpolate_extremum(surf_t *surf, int r, int c, response_layer_t *t
   surf_interpolate_step(surf, r, c, t, m, b, &xi, &xr, &xc );
 
   // If point is sufficiently close to the actual extremum
-  if(fabsf( xi ) < 0.5f  &&  fabsf( xr ) < 0.5f  &&  fabsf( xc ) < 0.5f ) {
+  if(fast_fabsf( xi ) < 0.5f  &&  fast_fabsf( xr ) < 0.5f  &&  fast_fabsf( xc ) < 0.5f ) {
     i_point_t *ipt = xalloc(sizeof(*ipt));
     ipt->x = (float)((c + xc) * t->step);
     ipt->y = (float)((r + xr) * t->step);
@@ -577,7 +570,7 @@ float i_point_sub(i_point_t *lhs, i_point_t *rhs) {
     for (int i=0; i<SURF_DESC_SIZE; ++i) {
         sum += (lhs->descriptor[i] - rhs->descriptor[i])*(lhs->descriptor[i] - rhs->descriptor[i]);
     }
-    return sqrtf(sum);
+    return fast_sqrtf(sum);
 };
 
 static array_t *get_matches(array_t *ipts1, array_t *ipts2)

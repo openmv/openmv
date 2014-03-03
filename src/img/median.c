@@ -1,7 +1,6 @@
 #include <libmp.h>
 #include "xalloc.h"
 #include "imlib.h"
-#include <math.h>
 #include <arm_math.h>
 #define R8(p) \
     (uint8_t)((p>>11) * 255/31)

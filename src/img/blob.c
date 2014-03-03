@@ -1,7 +1,6 @@
 #include <libmp.h>
 #include "xalloc.h"
 #include "imlib.h"
-#include <math.h>
 #include <arm_math.h>
 
 array_t *imlib_count_blobs(struct image *image)
@@ -10,7 +9,7 @@ array_t *imlib_count_blobs(struct image *image)
     array_t *points;
 
     array_alloc(&blobs, xfree);
-    array_alloc_init(&points, xfree, 300);
+    array_alloc_init(&points, xfree, 500);
     uint16_t *pixels = (uint16_t*) image->pixels;
 
     for (int y=1; y<image->h-1; y++) {
@@ -23,34 +22,29 @@ array_t *imlib_count_blobs(struct image *image)
 
                 /* flood fill */
                 array_push_back(points, point_alloc(x, y));
-                while(array_length(points)) {
-                    int i = array_length(points)-1;
-                    point_t *p = array_at(points, i);
-                    int px = p->x;
-                    int py = p->y;
-                    array_erase(points, i);
-
+                point_t *p;
+                while((p = array_pop_back(points))!= NULL) {
                     /* add point to blob */
-                    if (px < blob->x) {
-                        blob->x = px;
+                    if (p->x < blob->x) {
+                        blob->x = p->x;
                     }
-                    if (py < blob->y) {
+                    if (p->y < blob->y) {
                         blob->y = y;
                     }
 
-                    if (px > blob->w) {
-                        blob->w = px;
+                    if (p->x > blob->w) {
+                        blob->w = p->x;
                     }
-                    if (py > blob->h) {
-                        blob->h = py;
+                    if (p->y > blob->h) {
+                        blob->h = p->y;
                     }
 
-                    if (pixels[py*image->w+px]) {
-                        pixels[py*image->w+px]=0x0000;
-                        array_push_back(points, point_alloc(px-1, py));
-                        array_push_back(points, point_alloc(px+1, py));
-                        array_push_back(points, point_alloc(px, py-1));
-                        array_push_back(points, point_alloc(px, py+1));
+                    if (pixels[p->y*image->w+p->x]) {
+                        pixels[p->y*image->w+p->x]=0x0000;
+                        array_push_back(points, point_alloc(p->x-1, p->y));
+                        array_push_back(points, point_alloc(p->x+1, p->y));
+                        array_push_back(points, point_alloc(p->x, p->y-1));
+                        array_push_back(points, point_alloc(p->x, p->y+1));
                     }
                 }
             }
@@ -60,12 +54,13 @@ array_t *imlib_count_blobs(struct image *image)
     for (int i=0; i<array_length(blobs); i++) {
         rectangle_t *blob = array_at(blobs, i);
         if (blob->w < 10) { /* blob too small */
-            array_erase(blobs, i);
+            //array_erase(blobs, i);
             i--;
         } else {
             blob->w = blob->w - blob->x;
             blob->h = blob->h - blob->y;
         }
     }
+    //array_free(points);
     return blobs;
 }
