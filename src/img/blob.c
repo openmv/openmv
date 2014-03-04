@@ -38,19 +38,28 @@ array_t *imlib_count_blobs(struct image *image)
                         blob->h = p->y;
                     }
 
-                    if (pixels[p->y*image->w+p->x]) {
-                        pixels[p->y*image->w+p->x]=0;
-                        if ((p->x-1) > 0) {
-                            array_push_back(points, point_alloc(p->x-1, p->y));
+                    /* move west */
+                    for (int n=p->x-1; n>=0 && pixels[p->y*image->w+n]; n--) {
+                        pixels[p->y*image->w+n]=0;
+                        if ((p->y-1) >= 0 && pixels[(p->y-1)*image->w+n]) {
+                            array_push_back(points, point_alloc(n, p->y-1));
+
                         }
-                        if ((p->x+1) < image->w) {
-                            array_push_back(points, point_alloc(p->x+1, p->y));
+                        if ((p->y+1) < image->h && pixels[(p->y+1)*image->w+n]) {
+                            array_push_back(points, point_alloc(n, p->y+1));
+
                         }
-                        if ((p->y-1) > 0) {
-                            array_push_back(points, point_alloc(p->x, p->y-1));
+                    }
+                    /* move east */
+                    for (int n=p->x; n<image->w && pixels[p->y*image->w+n]; n++) {
+                        pixels[p->y*image->w+n]=0;
+                        if ((p->y-1) > 0 && pixels[(p->y-1)*image->w+n]) {
+                            array_push_back(points, point_alloc(n, p->y-1));
+
                         }
-                        if ((p->y+1) < image->h) {
-                            array_push_back(points, point_alloc(p->x, p->y+1));
+                        if ((p->y+1) < image->h && pixels[(p->y+1)*image->w+n]) {
+                            array_push_back(points, point_alloc(n, p->y+1));
+
                         }
                     }
                     xfree(p);
