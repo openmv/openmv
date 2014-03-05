@@ -54,8 +54,8 @@ mp_obj_t py_sensor_sinit() {
     sensor_set_pixformat(PIXFORMAT_RGB565);
     sensor_set_framesize(FRAMESIZE_QQVGA);
     sensor_set_framerate(FRAMERATE_30FPS);
-    sensor_set_gainceiling(GAINCEILING_16X);
-    sensor_set_brightness(3);
+    sensor_set_gainceiling(GAINCEILING_8X);
+    sensor_set_brightness(-2);
     return mp_const_none;
 }
 
@@ -141,8 +141,8 @@ mp_obj_t py_sensor_init()
     sensor_set_pixformat(PIXFORMAT_RGB565);
     sensor_set_framesize(FRAMESIZE_QQVGA);
     sensor_set_framerate(FRAMERATE_30FPS);
-    sensor_set_gainceiling(GAINCEILING_16X);
-    sensor_set_brightness(3);
+    sensor_set_gainceiling(GAINCEILING_8X);
+    sensor_set_brightness(-2);
 
     /* Create module */
     mp_obj_t m = mp_obj_new_module(qstr_from_str("sensor"));
