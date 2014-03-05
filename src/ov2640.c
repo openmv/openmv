@@ -50,46 +50,31 @@ static const uint8_t default_regs[][2] = {
     { 0x39,    0x02 },
 
 #if 1
-    { 0x35,    0xda }, //TODO
-    { 0x22,    0x1a }, //TODO
+    { 0x35,    0xda },
+    { 0x22,    0x1a },
     { 0x37,    0xc3 },
-    { 0x23,    0x00 },
-    { 0x34,    0xC0 }, //TODO //ZOOM control
-    { 0x36,    0x1a }, //TODO
-    { 0x06,    0x88 }, //TODO
-    { 0x07,    0xc0 },
-    { 0x0d,    0x87 }, //TODO
-    { 0x0e,    0x41 }, //TODO
-    { 0x4c,    0x00 },
-    { 0x48,    0x00 }, /* COM19 Zoom control */
-    { 0x5B,    0x00 },  //TODO
-    { 0x42,    0x03 },  //TODO
-    { 0x4a,    0x81 },
-    { 0x21,    0x99 },
-    /* AGC/AEC operating region */
-    { AEW,     0x40 },
-    { AEB,     0x38 },
-    /* AGC/AEC fast mode operating region */
-    { VV,      VV_AGC_TH_SET(0x08, 0x02) },
-    { 0x5c,    0x00 },
-    { 0x63,    0x00 },
-    { FLL,     0x00 },  //TODO
-    { FLH,     0x00 },
+    { 0x34,    0xc0 },
+    { 0x06,    0x88 },
+    { 0x0d,    0x87 },
+    { 0x0e,    0x41 },
+    { 0x42,    0x10 },
 #else
     //UXGA
     { 0x35,    0x88 },
     { 0x22,    0x0a },
     { 0x37,    0x40 },
-    { 0x23,    0x00 },
     { 0x34,    0xa0 },
     { 0x06,    0x02 },
-    { 0x07,    0xc0 },
     { 0x0d,    0xb7 },
     { 0x0e,    0x01 },
+    { 0x42,    0x20 },
+#endif
+
+    { 0x23,    0x00 },
+    { 0x07,    0xc0 },
     { 0x4c,    0x00 },
     { 0x48,    0x00 }, /* COM19 Zoom control */
-    //{0x5B, 0x00},
-    { 0x42,    0x20 },
+    { 0x5B,    0x00 },
     { 0x4a,    0x81 },
     { 0x21,    0x99 },
     /* AGC/AEC operating region */
@@ -101,7 +86,6 @@ static const uint8_t default_regs[][2] = {
     { 0x63,    0x00 },
     { FLL,     0x00 },
     { FLH,     0x00 },
-#endif
 
     /* Set banding filter */
     { COM3,    COM3_BAND_SET(COM3_BAND_AUTO) },
@@ -365,21 +349,25 @@ static int set_framerate(enum sensor_framerate framerate)
 
 static int set_brightness(uint8_t level)
 {
-    int i;
+    int i, ret=0;
 
     level += (NUM_BR_LEVELS / 2 + 1);
     if (level < 0 || level > NUM_BR_LEVELS) {
         return -1;
     }
-
-    /* Switch to DSP register bank */
-    SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
+    /* Disable DSP */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
 
     /* Write brightness registers */
     for (i=0; i<sizeof(br_regs[0])/sizeof(br_regs[0][0]); i++) {
-        SCCB_Write(br_regs[0][i], br_regs[level][i]);
+        ret |= SCCB_Write(br_regs[0][i], br_regs[level][i]);
     }
-    return 0;
+
+    /* Enable DSP */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(R_BYPASS, R_BYPASS_USE_DSP);
+    return ret;
 }
 
 static int set_exposure(uint16_t exposure)
@@ -389,8 +377,21 @@ static int set_exposure(uint16_t exposure)
 
 static int set_gainceiling(enum sensor_gainceiling gainceiling)
 {
+    int ret =0;
+    /* Disable DSP */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
+
+    /* Switch to SENSOR register bank */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
+
     /* Write gain ceiling register */
-    return SCCB_Write(COM9, COM9_AGC_SET(gainceiling));
+    ret |= SCCB_Write(COM9, COM9_AGC_SET(gainceiling));
+
+    /* Enable DSP */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(R_BYPASS, R_BYPASS_USE_DSP);
+    return ret;
 }
 
 int ov2640_init(struct sensor_dev *sensor)
