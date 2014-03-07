@@ -13,32 +13,7 @@ import usb.util
 import numpy as np
 import openmv
 from os.path import expanduser
-
-ex_source =\
-'''import sensor, imlib
-while (True):
-  image = sensor.snapshot()
-'''
-
-def rgb2hsv(r, g, b):
-    r, g, b = r/255.0, g/255.0, b/255.0
-    mx = max(r, g, b)
-    mn = min(r, g, b)
-    df = mx-mn
-    if mx == mn:
-        h = 0
-    elif mx == r:
-        h = (60 * ((g-b)/df) + 360) % 360
-    elif mx == g:
-        h = (60 * ((b-r)/df) + 120) % 360
-    elif mx == b:
-        h = (60 * ((r-g)/df) + 240) % 360
-    if mx == 0:
-        s = 0
-    else:
-        s = df/mx
-    v = mx
-    return int(h), int(s*100), int(v*100)
+config_path = expanduser("~")+"/.openmvide.config"
 
 class OMVGtk:
     def __init__(self):
@@ -46,26 +21,6 @@ class OMVGtk:
         self.builder = gtk.Builder()
         self.builder.add_from_file("openmv-ide.glade")
 
-        sourceview = self.builder.get_object('gtksourceview')
-
-        self.buffer = gtksourceview.Buffer()
-        mgr = gtksourceview.style_scheme_manager_get_default()
-        style_scheme = mgr.get_scheme('classic')
-        if style_scheme:
-            self.buffer.set_style_scheme(style_scheme)
-        lang_manager = gtksourceview.language_manager_get_default()
-        self.buffer.set_highlight_syntax(True)
-        self.buffer.set_language(lang_manager.get_language("python"))
-        self.buffer.set_text(ex_source)
-        self.buffer.connect("changed", self.text_changed)
-        sourceview.set_buffer(self.buffer)
-
-        self.terminal = self.builder.get_object('terminal')
-        self.fd = os.open("/dev/ttyACM0", os.O_RDWR)
-        self.terminal.set_size(80,24)
-        self.terminal.set_pty(self.fd)
-
-        self.framebuffer = self.builder.get_object("framebuffer_image")
         # status bar stuff
         self.statusbar = self.builder.get_object("statusbar")
         self.statusbar_ctx = self.statusbar.get_context_id("default")
@@ -74,6 +29,37 @@ class OMVGtk:
         self.save_button = self.builder.get_object('save_file_toolbutton')
         self.save_button.set_sensitive(False)
 
+        #configure gtksourceview
+        sourceview = self.builder.get_object('gtksourceview')
+        self.buffer = gtksourceview.Buffer()
+        mgr = gtksourceview.style_scheme_manager_get_default()
+        style_scheme = mgr.get_scheme('classic')
+        if style_scheme:
+            self.buffer.set_style_scheme(style_scheme)
+        lang_manager = gtksourceview.language_manager_get_default()
+        self.buffer.set_highlight_syntax(True)
+        self.buffer.set_language(lang_manager.get_language("python"))
+        self.buffer.connect("changed", self.text_changed)
+
+        # open last opened file
+        if os.path.isfile(config_path):
+            with open(config_path, "r") as file:
+                self.file_path = file.read()
+            if os.path.isfile(self.file_path):
+                with open(self.file_path, "r") as file:
+                    self.buffer.set_text(file.read())
+            else:
+                self.file_path = None
+
+        sourceview.set_buffer(self.buffer)
+
+        # open VCP and configure the terminal
+        self.terminal = self.builder.get_object('terminal')
+        self.fd = os.open("/dev/ttyACM0", os.O_RDWR)
+        self.terminal.set_size(80,24)
+        self.terminal.set_pty(self.fd)
+
+        self.framebuffer = self.builder.get_object("framebuffer_image")
 
         #connect signals
         signals = {
@@ -88,10 +74,10 @@ class OMVGtk:
         }
         self.builder.connect_signals(signals)
         self.window = self.builder.get_object("top_window")
-        self.file_path = None
 
         # init openmv
         openmv.init()
+
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
@@ -173,10 +159,17 @@ class OMVGtk:
         self.save_button.set_sensitive(True)
 
     def quit(self, widget):
+        # write last opened file
+        with open(config_path, "w") as file:
+            file.write(self.file_path)
+
+        # stop any running code
+        openmv.stop_script();
+        # close VCP
         os.close(self.fd)
-
+        # release OpenMV
         openmv.release()
-
+        # exit
         sys.exit(0)
 
 if __name__ == "__main__":
