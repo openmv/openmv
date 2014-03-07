@@ -48,6 +48,7 @@
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_open_file" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -58,6 +59,7 @@
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_save_file" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -68,6 +70,7 @@
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate-item" handler="on_save_file_as" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -85,6 +88,7 @@
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="activate" handler="on_top_window_destroy" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -272,7 +276,22 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToolButton" id="toolbutton5">
+              <object class="GtkToolButton" id="save_file_toolbutton">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="use_action_appearance">False</property>
+                <property name="label" translatable="yes">toolbutton5</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-save</property>
+                <signal name="clicked" handler="on_save_file" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="toolbutton6">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="use_action_appearance">False</property>

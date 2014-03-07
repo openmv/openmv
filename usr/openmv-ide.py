@@ -12,14 +12,14 @@ import usb.core
 import usb.util
 import numpy as np
 import openmv
+from os.path import expanduser
 
 ex_source =\
-'''from openmv import sensor, imlib
+'''import sensor, imlib
 while (True):
   image = sensor.snapshot()
-  r= imlib.detect_color(image, (340, 50, 50), 10)
-  imlib.draw_rectangle(image, r)
 '''
+
 def rgb2hsv(r, g, b):
     r, g, b = r/255.0, g/255.0, b/255.0
     mx = max(r, g, b)
@@ -57,6 +57,7 @@ class OMVGtk:
         self.buffer.set_highlight_syntax(True)
         self.buffer.set_language(lang_manager.get_language("python"))
         self.buffer.set_text(ex_source)
+        self.buffer.connect("changed", self.text_changed)
         sourceview.set_buffer(self.buffer)
 
         self.terminal = self.builder.get_object('terminal')
@@ -69,19 +70,28 @@ class OMVGtk:
         self.statusbar = self.builder.get_object("statusbar")
         self.statusbar_ctx = self.statusbar.get_context_id("default")
 
-        # init openmv
-        openmv.init()
+        #save toolbutton
+        self.save_button = self.builder.get_object('save_file_toolbutton')
+        self.save_button.set_sensitive(False)
+
 
         #connect signals
         signals = {
-            "on_execute_clicked" : self.execute_clicked,
-            "on_stop_clicked" : self.stop_clicked,
             "on_top_window_destroy" : self.quit,
-            "on_motion_notify": self.motion_notify,
-            "on_button_press": self.button_pressed
+            "on_execute_clicked"    : self.execute_clicked,
+            "on_stop_clicked"       : self.stop_clicked,
+            "on_motion_notify"      : self.motion_notify,
+            "on_button_press"       : self.button_pressed,
+            "on_open_file"          : self.open_file,
+            "on_save_file"          : self.save_file,
+            "on_save_file_as"       : self.save_file_as,
         }
         self.builder.connect_signals(signals)
         self.window = self.builder.get_object("top_window")
+        self.file_path = None
+
+        # init openmv
+        openmv.init()
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
@@ -100,9 +110,9 @@ class OMVGtk:
         pixbuf = self.framebuffer.get_pixbuf()
         if x < pixbuf.get_width() and y < pixbuf.get_height():
             pixel = pixbuf.get_pixels_array()[y][x]
-            hsv = "(%d, %d, %d)" %(rgb2hsv(pixel[0], pixel[1], pixel[2]))
+            rgb = "(%d, %d, %d)" %(pixel[0], pixel[1], pixel[2])
             self.statusbar.pop(self.statusbar_ctx)
-            self.statusbar.push(self.statusbar_ctx, hsv)
+            self.statusbar.push(self.statusbar_ctx, rgb)
 
     def button_pressed(self, widget, event):
         x = int(event.x)
@@ -110,7 +120,7 @@ class OMVGtk:
         pixbuf = self.framebuffer.get_pixbuf()
         if x < pixbuf.get_width() and y < pixbuf.get_height():
             pixel = pixbuf.get_pixels_array()[y][x]
-            print rgb2hsv(pixel[0], pixel[1], pixel[2])
+            print (pixel[0], pixel[1], pixel[2])
 
     def update_fb(self):
         # read framebuffer
@@ -120,6 +130,47 @@ class OMVGtk:
         pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
         self.framebuffer.set_from_pixbuf(pixbuf)
         gobject.idle_add(omvgtk.update_fb);
+
+    def open_file(self, widget):
+        dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_current_folder("./examples/")
+        filter = gtk.FileFilter()
+        filter.set_name("python")
+        filter.add_pattern("*.py")
+        dialog.add_filter(filter)
+
+        if dialog.run() == gtk.RESPONSE_OK:
+            with open(dialog.get_filename(), "r") as file:
+                self.buffer.set_text(file.read())
+                self.file_path=dialog.get_filename()
+                self.save_button.set_sensitive(False)
+
+        dialog.destroy()
+
+    def save_file(self, widget):
+        with open(self.file_path, "w") as file:
+            file.write(self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter()))
+
+    def save_file_as(self, widget):
+        dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,
+                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_current_folder("./examples/")
+        filter = gtk.FileFilter()
+        filter.set_name("python")
+        filter.add_pattern("*.py")
+        dialog.add_filter(filter)
+
+        if dialog.run() == gtk.RESPONSE_OK:
+            with open(dialog.get_filename(), "w") as file:
+                file.write(self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter()))
+
+        dialog.destroy()
+
+    def text_changed(self, widget):
+        self.save_button.set_sensitive(True)
 
     def quit(self, widget):
         os.close(self.fd)
