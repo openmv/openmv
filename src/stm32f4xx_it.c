@@ -2,7 +2,6 @@
 #include <usbd_core.h>
 #include <stm32f4xx_exti.h>
 /* disable optimization for this file */
-#pragma GCC push_options
 #pragma GCC optimize ("O0")
 #define UNUSED(x) x __attribute__((unused))
 #define BREAK() __asm__ volatile ("BKPT");
@@ -134,4 +133,3 @@ void OTG_FS_IRQHandler(void)
 {
   USBD_OTG_ISR_Handler (&USB_OTG_Core);
 }
-#pragma GCC pop_options
