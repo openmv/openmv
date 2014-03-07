@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <usbd_core.h>
 #include <stm32f4xx_exti.h>
-/* disable optimization for this file */
-#pragma GCC optimize ("O0")
 #define UNUSED(x) x __attribute__((unused))
 #define BREAK() __asm__ volatile ("BKPT");
 extern USB_OTG_CORE_HANDLE USB_OTG_Core;
