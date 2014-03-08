@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.24"/>
-  <!-- interface-requires vte 0.0 -->
   <!-- interface-requires gtksourceview 0.0 -->
+  <!-- interface-requires vte 0.0 -->
   <!-- interface-naming-policy project-wide -->
   <object class="GtkWindow" id="top_window">
     <property name="can_focus">False</property>
@@ -238,6 +238,7 @@
               <object class="GtkToolButton" id="toolbutton3">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Execute Script</property>
                 <property name="use_action_appearance">False</property>
                 <property name="label" translatable="yes">toolbutton3</property>
                 <property name="use_underline">True</property>
@@ -253,6 +254,7 @@
               <object class="GtkToolButton" id="toolbutton4">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Stop Script</property>
                 <property name="use_action_appearance">False</property>
                 <property name="label" translatable="yes">toolbutton4</property>
                 <property name="use_underline">True</property>
@@ -278,7 +280,9 @@
             <child>
               <object class="GtkToolButton" id="save_file_toolbutton">
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Save Script</property>
                 <property name="use_action_appearance">False</property>
                 <property name="label" translatable="yes">toolbutton5</property>
                 <property name="use_underline">True</property>
