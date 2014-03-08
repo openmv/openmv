@@ -21,6 +21,9 @@ class OMVGtk:
         self.builder = gtk.Builder()
         self.builder.add_from_file("openmv-ide.glade")
 
+        # get top window
+        self.window = self.builder.get_object("top_window")
+
         # status bar stuff
         self.statusbar = self.builder.get_object("statusbar")
         self.statusbar_ctx = self.statusbar.get_context_id("default")
@@ -48,6 +51,7 @@ class OMVGtk:
             if os.path.isfile(self.file_path):
                 with open(self.file_path, "r") as file:
                     self.buffer.set_text(file.read())
+                    self.window.set_title(os.path.basename(self.file_path))
             else:
                 self.file_path = None
 
@@ -73,7 +77,6 @@ class OMVGtk:
             "on_save_file_as"       : self.save_file_as,
         }
         self.builder.connect_signals(signals)
-        self.window = self.builder.get_object("top_window")
 
         # init openmv
         openmv.init()

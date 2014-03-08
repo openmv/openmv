@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.24"/>
-  <!-- interface-requires gtksourceview 0.0 -->
   <!-- interface-requires vte 0.0 -->
+  <!-- interface-requires gtksourceview 0.0 -->
   <!-- interface-naming-policy project-wide -->
   <object class="GtkWindow" id="top_window">
     <property name="can_focus">False</property>
@@ -70,7 +70,7 @@
                         <property name="use_action_appearance">False</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
-                        <signal name="activate-item" handler="on_save_file_as" swapped="no"/>
+                        <signal name="activate" handler="on_save_file_as" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -321,20 +321,28 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <child>
-                  <object class="GtkSourceView" id="gtksourceview">
+                  <object class="GtkScrolledWindow" id="scrolledwindow1">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="left_margin">2</property>
-                    <property name="right_margin">2</property>
-                    <property name="show_line_numbers">True</property>
-                    <property name="tab_width">4</property>
-                    <property name="auto_indent">True</property>
-                    <property name="insert_spaces_instead_of_tabs">True</property>
-                    <property name="highlight_current_line">True</property>
+                    <property name="hscrollbar_policy">automatic</property>
+                    <property name="vscrollbar_policy">automatic</property>
+                    <child>
+                      <object class="GtkSourceView" id="gtksourceview">
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="left_margin">2</property>
+                        <property name="right_margin">2</property>
+                        <property name="show_line_numbers">True</property>
+                        <property name="tab_width">4</property>
+                        <property name="auto_indent">True</property>
+                        <property name="insert_spaces_instead_of_tabs">True</property>
+                        <property name="highlight_current_line">True</property>
+                      </object>
+                    </child>
                   </object>
                   <packing>
                     <property name="resize">True</property>
-                    <property name="shrink">True</property>
+                    <property name="shrink">False</property>
                   </packing>
                 </child>
                 <child>
@@ -376,7 +384,7 @@
                     </child>
                   </object>
                   <packing>
-                    <property name="resize">True</property>
+                    <property name="resize">False</property>
                     <property name="shrink">True</property>
                   </packing>
                 </child>
@@ -387,18 +395,24 @@
               </packing>
             </child>
             <child>
-              <object class="VteTerminal" id="terminal">
+              <object class="GtkScrolledWindow" id="scrolledwindow2">
                 <property name="visible">True</property>
-                <property name="app_paintable">True</property>
                 <property name="can_focus">True</property>
-                <property name="background_tint_color">#00000fa0ffff</property>
-                <property name="encoding">UTF-8</property>
-                <property name="scroll_on_keystroke">True</property>
-                <property name="scroll_on_output">False</property>
+                <child>
+                  <object class="VteTerminal" id="terminal">
+                    <property name="visible">True</property>
+                    <property name="app_paintable">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="background_tint_color">#ffff0fa0ffff</property>
+                    <property name="encoding">UTF-8</property>
+                    <property name="scroll_on_keystroke">True</property>
+                    <property name="scroll_on_output">False</property>
+                  </object>
+                </child>
               </object>
               <packing>
-                <property name="resize">True</property>
-                <property name="shrink">True</property>
+                <property name="resize">False</property>
+                <property name="shrink">False</property>
               </packing>
             </child>
           </object>
