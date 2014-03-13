@@ -14,7 +14,7 @@ BUILD_DIR=build
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
-CFLAGS = -O0 -g -DPENDSV_DEBUG
+CFLAGS = -O0 -g
 else
 CFLAGS = -O2 -g
 endif
@@ -22,7 +22,7 @@ endif
 # Compiler Flags
 CFLAGS += -Wall -mlittle-endian -mthumb -nostartfiles -mcpu=cortex-m4 -mabi=aapcs-linux
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mfpu=fpv4-sp-d16 -mfloat-abi=hard -fshort-enums
-CFLAGS += -I. -I../include/CMSIS -I../include/StdPeriph -I../include/USB_OTG -I../include/FatFS -I../include/MicroPython\
+CFLAGS += -I. -I../include/CMSIS -I../include/StdPeriph -I../include/USB_OTG -I../include/FatFS -I../include/CC3K -I../include/MicroPython\
           -I../include/MicroPython/py -I./py -I./img -DSTM32F40_41xxx -DUSE_USB_OTG_FS -DARM_MATH_CM4 -D__FPU_PRESENT -std=gnu99 -DOSC=12
 
 # Linker Flags
@@ -38,7 +38,7 @@ OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
 
 # Libraries
 #LIB = -lmp -lc -lm -ldsp -lstdperiph -lusbcore -lusbdevcore
-LIB = -lmp -ldsp -lstdperiph
+LIB = -lmp -ldsp -lcc3k -lstdperiph
 
 all:: $(BUILD_DIR) $(BUILD_DIR) $(BUILD_DIR)/$(BIN).bin
 	$(SIZE) $(BUILD_DIR)/$(BIN).elf
