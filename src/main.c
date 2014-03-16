@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <string.h>
 #include <stm32f4xx.h>
 #include <stm32f4xx_rcc.h>
 #include <stm32f4xx_syscfg.h>
@@ -20,6 +18,9 @@
 #include "py_imlib.h"
 #include "py_file.h"
 #include "py_time.h"
+#include "py_spi.h"
+#include "py_gpio.h"
+#include "libcc3k.h"
 
 int errno;
 
@@ -149,11 +150,9 @@ static mp_obj_t py_info(void) {
     return mp_const_none;
 }
 
-gc_info_t get_gc_info()
-{
-    gc_info_t info;
-    gc_info(&info);
-    return info;
+static mp_obj_t py_gc_collect(void) {
+    gc_collect();
+    return mp_const_none;
 }
 
 static void SYSCLKConfig_STOP(void) {
@@ -206,9 +205,32 @@ void __libc_init_array(void)
 
 }
 
+/* call from gdb */
+gc_info_t get_gc_info()
+{
+    gc_info_t info;
+    gc_info(&info);
+    return info;
+}
+
+typedef struct {
+    const char *name;
+    mp_obj_t (*init)(void);
+} module_t;
+
+static module_t exported_modules[] ={
+    {"led",     py_led_init},
+    {"sensor",  py_sensor_init},
+    {"imlib",   py_imlib_init},
+    {"time",    py_time_init},
+    {"spi",     py_spi_init},
+    {"gpio",    py_gpio_init},
+    {NULL, NULL}
+};
+
 int main(void)
 {
-    rcc_ctrl_set_frequency(SYSCLK_200_MHZ);
+    rcc_ctrl_set_frequency(SYSCLK_168_MHZ);
 
     /* Init SysTick timer */
     systick_init();
@@ -223,30 +245,21 @@ int main(void)
     rng_init();
 
     /* Add functions to the global python namespace */
-    rt_store_name(MP_QSTR_help, rt_make_function_n(0, py_help));
+    rt_store_name(qstr_from_str("help"), rt_make_function_n(0, py_help));
     rt_store_name(qstr_from_str("open"), rt_make_function_n(2, py_file_open));
     rt_store_name(qstr_from_str("vcp_connected"), rt_make_function_n(0, py_vcp_connected));
-    rt_store_name(MP_QSTR_info, rt_make_function_n(0, py_info));
-    rt_store_name(MP_QSTR_gc, (mp_obj_t)&pyb_gc_obj);
-    rt_store_name(MP_QSTR_stop, rt_make_function_n(0, py_stop));
-    rt_store_name(MP_QSTR_standby, rt_make_function_n(0, py_standby));
-    rt_store_name(MP_QSTR_sync, rt_make_function_n(0, py_sync));
+    rt_store_name(qstr_from_str("info"), rt_make_function_n(0, py_info));
+    rt_store_name(qstr_from_str("gc_collect"), rt_make_function_n(0, py_gc_collect));
 
-    /* Add modules to the global python namespace */
-    mp_obj_t time_module = py_time_init();
-    rt_store_name(qstr_from_str("time"), time_module);
-
-    mp_obj_t led_module = py_led_init();
-    rt_store_name(qstr_from_str("led"), led_module);
-
-    mp_obj_t sensor_module = py_sensor_init();
-    if (!sensor_module) {
-        __fatal_error("sensor init failed");
+    /* Export Python modules to the global python namespace */
+    for (module_t *p = exported_modules; p->name != NULL; p++) {
+        mp_obj_t module = p->init();
+        if (module == NULL) {
+            __fatal_error("failed to init module");
+        } else {
+            rt_store_name(qstr_from_str(p->name), module);
+        }
     }
-    rt_store_name(qstr_from_str("sensor"), sensor_module);
-
-    mp_obj_t imlib_module = py_imlib_init();
-    rt_store_name(qstr_from_str("imlib"), imlib_module);
 
     /* Try to mount the flash fs */
     bool reset_filesystem = false;
@@ -273,17 +286,18 @@ int main(void)
 
     pyb_usb_dev_init(PYB_USB_DEV_VCP_MSC);
 
-    /* Try to run user script first */
-    if (!libmp_do_file("0:/user.py")) {
-        /* no user script */
-    }
-
-    /* Fall back to main script */
+#if 1
+    /* run main script */
     if (!libmp_do_file("0:/main.py")) {
         __fatal_error("failed to run main script");
     }
 
     libmp_do_repl();
+#else
+//  led_init(LED_BLUE);
 
+    systick_sleep(100);
+    wlan_test();
+#endif
     while(1);
 }
