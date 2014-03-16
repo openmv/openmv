@@ -9,8 +9,8 @@ array_t *imlib_count_blobs(struct image *image)
     array_t *points;
 
     array_alloc(&blobs, xfree);
-    array_alloc_init(&points, xfree, 500);
-    uint16_t *pixels = (uint16_t*) image->pixels;
+    array_alloc_init(&points, xfree, 100);
+    uint8_t *pixels = (uint8_t*) image->pixels;
 
     for (int y=0; y<image->h; y++) {
         for (int x=0; x<image->w; x++) {
