@@ -16,3 +16,6 @@ char *strstr(const char *haystack, const char *needle);
 
 int printf(const char *fmt, ...);
 int snprintf(char *str, size_t size, const char *fmt, ...);
+#ifndef NULL
+#define NULL (0)
+#endif

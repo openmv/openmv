@@ -1,7 +1,5 @@
 #ifndef __LIBMP_H__
 #define __LIBMP_H__
-#include <stdio.h>
-#include <string.h>
 #include "misc.h"
 #include "mpconfig.h"
 #include "qstr.h"
