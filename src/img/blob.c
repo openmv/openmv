@@ -27,13 +27,15 @@ array_t *imlib_count_blobs(struct image *image)
                     if (p->x < blob->x) {
                         blob->x = p->x;
                     }
+
                     if (p->y < blob->y) {
-                        blob->y = y;
+                        blob->y = p->y;
                     }
 
                     if (p->x > blob->w) {
                         blob->w = p->x;
                     }
+
                     if (p->y > blob->h) {
                         blob->h = p->y;
                     }
