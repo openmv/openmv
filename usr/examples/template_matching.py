@@ -1,15 +1,11 @@
-from openmv import sensor, imlib
+import sensor, imlib, time
 sensor.set_pixformat(sensor.GRAYSCALE)
-template = imlib.load_template("0:/temp")
-total_frames = 0
-total_ticks = 0
-t_start = ticks()
+template = imlib.load_template("0:/minion.template")
+clock = time.clock()
 while (True):
-  image = sensor.snapshot()
-  t_start = ticks()
-  obj = imlib.template_match(image, template, 0.7)
-  total_ticks = total_ticks + (ticks()-t_start)
-  total_frames = total_frames + 1
-  print (total_ticks/total_frames)
-  if obj:
+    clock.tick()
+    image = sensor.snapshot()
+    obj = imlib.template_match(image, template, 0.7)
+    if obj:
     imlib.draw_rectangle(image, obj)
+    print (clock.fps())

@@ -1,4 +1,4 @@
-from openmv import sensor, imlib
+import sensor, imlib
 sensor.set_pixformat(sensor.RGB565)
 while (True):
   image = sensor.snapshot()
