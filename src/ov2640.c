@@ -335,10 +335,18 @@ static int set_framesize(enum sensor_framesize framesize)
     uint16_t w=res_width[framesize];
     uint16_t h=res_height[framesize];
 
+    /* Disable DSP */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
+
     /* Write output width */
     ret |= SCCB_Write(ZMOW, (w>>2)&0xFF); /* OUTW[7:0] (real/4) */
     ret |= SCCB_Write(ZMOH, (h>>2)&0xFF); /* OUTH[7:0] (real/4) */
     ret |= SCCB_Write(ZMHH, ((h>>8)&0x04)|((w>>10)&0x03)); /* OUTH[8]/OUTW[9:8] */
+
+    /* Enable DSP */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(R_BYPASS, R_BYPASS_USE_DSP);
     return ret;
 }
 
