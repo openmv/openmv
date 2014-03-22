@@ -155,6 +155,7 @@ static mp_obj_t py_gc_collect(void) {
     return mp_const_none;
 }
 
+#if 0
 static void SYSCLKConfig_STOP(void) {
     /* After wake-up from STOP reconfigure the system clock */
     /* Enable HSE */
@@ -199,6 +200,7 @@ static mp_obj_t py_standby(void) {
     PWR_EnterSTANDBYMode();
     return mp_const_none;
 }
+#endif
 
 void __libc_init_array(void)
 {
