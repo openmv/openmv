@@ -16,17 +16,21 @@
 #include "xalloc.h"
 #include "imlib.h"
 #include "arm_math.h"
+#include "mdefs.h"
 #define OCTAVES     5
 #define INTERVALS   4
-#define MIN(a,b) \
+#define min(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
-#define MAX(a,b) \
+#define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
+
+#define MIN(a,b) (a < b ? a : b)
+#define MAX(a,b) (a > b ? a : b)
 
 static const float pi = 3.14159f;
 
@@ -61,57 +65,60 @@ void arm_mat_free(arm_matrix_instance_f32 *m)
 
 /* Computes the sum of pixels within the rectangle
    specified by the top-left start co-ordinate and size. */
-static float box_integral(i_image_t *img, int row, int col, int rows, int cols)
+static ALWAYS_INLINE float box_integral(i_image_t *img, int row, int col, int rows, int cols)
 {
-  int step = img->w;
-  uint32_t *data = img->data;
+    int step = img->w;
+    uint32_t *data = img->data;
 
-  // The subtraction by one for row/col is because row/col is inclusive.
-  int r1 = MIN(row,          img->h) - 1;
-  int c1 = MIN(col,          img->w) - 1;
-  int r2 = MIN(row + rows,   img->h) - 1;
-  int c2 = MIN(col + cols,   img->w) - 1;
+    // The subtraction by one for row/col is because row/col is inclusive.
+    int r1 = MIN(row,   img->h) - 1;
+    row += rows;
+    int r2 = MIN(row,   img->h) - 1;
 
-  float A=0.0f;
-  float B=0.0f;
-  float C=0.0f;
-  float D=0.0f;
-  if (r1 >= 0 && c1 >= 0) A = data[r1 * step + c1]/255.0f;
-  if (r1 >= 0 && c2 >= 0) B = data[r1 * step + c2]/255.0f;
-  if (r2 >= 0 && c1 >= 0) C = data[r2 * step + c1]/255.0f;
-  if (r2 >= 0 && c2 >= 0) D = data[r2 * step + c2]/255.0f;
+    if (r1 >= 0 || r2 >= 0) {
+        int A=0;
+        int B=0;
+        int C=0;
+        int D=0;
+        int c1 = MIN(col,   img->w) - 1;
+        col += cols;
+        int c2 = MIN(col,   img->w) - 1;
+        if (r1 >=0) {
+            if (c1 >= 0) A = data[r1 * step + c1];
+            if (c2 >= 0) B = data[r1 * step + c2];
+        }
 
-  return MAX(0, (A - B - C + D));
+        if (r2 >= 0) {
+            if (c1 >= 0) C = data[r2 * step + c1];
+            if (c2 >= 0) D = data[r2 * step + c2];
+        }
+        return MAX(0.0f, (A - B - C + D))/255.0f;
+    }
+    return 0.0f;
 }
 
 //! Calculate the value of the 2d gaussian at x,y
-static inline float gaussian(int x, int y, float sig)
+static ALWAYS_INLINE float gaussian(int x, int y, float sig)
 {
   return (1.0f/(2.0f*pi*sig*sig)) * fast_expf(-(x*x+y*y)/(2.0f*sig*sig));
 }
 
-//! Calculate the value of the 2d gaussian at x,y
-static inline float gaussianf(float x, float y, float sig)
-{
-  return 1.0f/(2.0f*pi*sig*sig) * fast_expf(-(x*x+y*y)/(2.0f*sig*sig));
-}
-
 //! Calculate Haar wavelet responses in x direction
-static inline float haar_x(surf_t *surf, int row, int column, int s)
+static ALWAYS_INLINE float haar_x(surf_t *surf, int row, int column, int s)
 {
-  return box_integral(surf->i_img, row-s/2, column, s, s/2)
-    -1 * box_integral(surf->i_img, row-s/2, column-s/2, s, s/2);
+  return    box_integral(surf->i_img, row-s/2, column, s, s/2)
+    -1.0f * box_integral(surf->i_img, row-s/2, column-s/2, s, s/2);
 }
 
 //! Calculate Haar wavelet responses in y direction
-static inline float haar_y(surf_t *surf, int row, int column, int s)
+static ALWAYS_INLINE float haar_y(surf_t *surf, int row, int column, int s)
 {
-  return box_integral(surf->i_img, row, column-s/2, s/2, s)
-    -1 * box_integral(surf->i_img, row-s/2, column-s/2, s/2, s);
+  return    box_integral(surf->i_img, row, column-s/2, s/2, s)
+    -1.0f * box_integral(surf->i_img, row-s/2, column-s/2, s/2, s);
 }
 
 //! Get the angle from the +ve x-axis of the vector given by (X Y)
-static float get_angle(float x, float y)
+static ALWAYS_INLINE float get_angle(float x, float y)
 {
   if(x > 0 && y >= 0)
     return fast_atanf(y/x);
@@ -195,98 +202,98 @@ static void get_orientation(surf_t *surf, i_point_t *ipt)
 
 //! Get the modified descriptor. See Agrawal ECCV 08
 //! Modified descriptor contributed by Pablo Fernandez
-static void get_descriptor(surf_t *surf, i_point_t *ipt, bool bUpright)
+static void get_descriptor(surf_t *surf, i_point_t *ipt, bool upright)
 {
-  int y, x, sample_x, sample_y, count=0;
-  int i = 0, ix = 0, j = 0, jx = 0, xs = 0, ys = 0;
-  float scale, *desc, dx, dy, mdx, mdy, co, si;
-  float gauss_s1 = 0.f, gauss_s2 = 0.f;
-  float rx = 0.f, ry = 0.f, rrx = 0.f, rry = 0.f, len = 0.f;
-  float cx = -0.5f, cy = 0.f; //Subregion centers for the 4x4 gaussian weighting
+    int y, x, count=0;
+    int sample_x, sample_y;
+    float scale, dx, dy, mdx, mdy;
+    float co = 1.0f, si = 0.0f;
+    float gauss_s1 = 0.0f, gauss_s2 = 0.0f, xs = 0.0f, ys = 0.0f;
+    float rx = 0.0f, ry = 0.0f, rrx = 0.0f, rry = 0.0f, len = 0.0f;
+    int i = 0, ix = 0, j = 0, jx = 0;
 
-  scale = ipt->scale;
-  x = fast_roundf(ipt->x);
-  y = fast_roundf(ipt->y);
-  desc = ipt->descriptor;
+    float *desc = ipt->descriptor;
+    float cx = -0.5f, cy = 0.0f; //Subregion centers for the 4x4 gaussian weighting
 
-  if (bUpright) {
-    co = 1.0f;
-    si = 0.0f;
-  } else {
-    co = arm_cos_f32(ipt->orientation);
-    si = arm_sin_f32(ipt->orientation);
-  }
-
-  i = -8;
-
-  //Calculate descriptor for this interest point
-  while (i < 12) {
-    j = -8;
-    i = i-4;
-
-    cx += 1.f;
-    cy = -0.5f;
-
-    while (j < 12) {
-      dx=dy=mdx=mdy=0.f;
-      cy += 1.f;
-
-      j = j - 4;
-
-      ix = i + 5;
-      jx = j + 5;
-
-      xs = fast_roundf(x + ( -jx*scale*si + ix*scale*co));
-      ys = fast_roundf(y + ( jx*scale*co + ix*scale*si));
-
-      for (int k = i; k < i + 9; ++k) {
-        for (int l = j; l < j + 9; ++l) {
-          //Get coords of sample point on the rotated axis
-          sample_x = fast_roundf(x + (-l*scale*si + k*scale*co));
-          sample_y = fast_roundf(y + ( l*scale*co + k*scale*si));
-
-          //Get the gaussian weighted x and y responses
-          gauss_s1 = gaussian(xs-sample_x,ys-sample_y,2.5f*scale);
-          rx = haar_x(surf, sample_y, sample_x, 2*fast_roundf(scale));
-          ry = haar_y(surf, sample_y, sample_x, 2*fast_roundf(scale));
-
-          //Get the gaussian weighted x and y responses on rotated axis
-          rrx = gauss_s1*(-rx*si + ry*co);
-          rry = gauss_s1*(rx*co + ry*si);
-
-          dx += rrx;
-          dy += rry;
-          mdx += fast_fabsf(rrx);
-          mdy += fast_fabsf(rry);
-
-        }
-      }
-
-      //Add the values to the descriptor vector
-      gauss_s2 = gaussian(cx-2.0f,cy-2.0f,1.5f);
-
-      desc[count++] = dx*gauss_s2;
-      desc[count++] = dy*gauss_s2;
-      desc[count++] = mdx*gauss_s2;
-      desc[count++] = mdy*gauss_s2;
-
-      len += (dx*dx + dy*dy + mdx*mdx + mdy*mdy) * gauss_s2*gauss_s2;
-
-      j += 9;
-
-      if (count == SURF_DESC_SIZE) {
-          goto done;
-      }
-
+    scale = ipt->scale;
+    x = fast_roundf(ipt->x);
+    y = fast_roundf(ipt->y);
+    if (!upright) {
+        co = arm_cos_f32(ipt->orientation);
+        si = arm_sin_f32(ipt->orientation);
     }
-    i += 9;
-  }
+    i = -8;
+    //Calculate descriptor for this interest point
+    //Area of size 24 s x 24 s
+    //***********************************************
+    while ( i < 12 ){
+        j = -8;
+        i = i - 4;
+
+        cx += 1.0f;
+        cy = -0.5f;
+
+        while ( j < 12 ){
+            dx=dy=mdx=mdy=0.0f;
+            cy += 1.0f;
+
+            j = j - 4;
+
+            ix = i + 5;
+            jx = j + 5;
+
+            xs = fast_roundf(x + ( -jx*scale*si + ix*scale*co));
+            ys = fast_roundf(y + ( jx*scale*co + ix*scale*si));
+
+            for (int k = i; k < i + 9; ++k){
+                for (int l = j; l < j + 9; ++l){
+                    //Get coords of sample point on the rotated axis
+                    sample_x = fast_roundf(x + (-1.0 * l * scale * si + k * scale * co));
+                    sample_y = fast_roundf(y + (       l * scale * co + k * scale * si));
+
+                    //Get the gaussian weighted x and y responses
+                    gauss_s1 = gaussian(xs-sample_x,ys-sample_y,2.5f*scale);
+
+                    rx = haar_x(surf, sample_y, sample_x, (2*fast_roundf(scale)));
+                    ry = haar_y(surf, sample_y, sample_x, (2*fast_roundf(scale)));
+
+                    //Get the gaussian weighted x and y responses on rotated axis
+                    rrx = gauss_s1 * (-rx*si + ry*co);
+                    rry = gauss_s1 * (rx*co + ry*si);
+
+                    dx += rrx;
+                    dy += rry;
+
+                    mdx += fast_fabsf(rrx);
+                    mdy += fast_fabsf(rry);
+                }
+            }
+
+            //Add the values to the descriptor vector
+            gauss_s2 = gaussian(cx-2.0f,cy-2.0f,1.5f);
+
+            //Casting from a double to a float, might be a terrible idea
+            //but doubles are expensive
+            desc[count++] = dx*gauss_s2;
+            desc[count++] = dy*gauss_s2;
+
+            desc[count++] = mdx*gauss_s2;
+            desc[count++] = mdy*gauss_s2;
+
+            //Accumulate length for vector normalisation
+            len += (dx*dx + dy*dy + mdx*mdx + mdy*mdy) * (gauss_s2 * gauss_s2);
+            j += 9;
+            if (count == SURF_DESC_SIZE) {
+              goto done;
+            }
+        }
+        i += 9;
+    }
 
 done:
-  //Convert to Unit Vector
-  len = fast_sqrtf(len);
-  for(int i = 0; i <SURF_DESC_SIZE; ++i)
-    desc[i] /= len;
+    len = fast_sqrtf(len);
+    for(i = 0; i < SURF_DESC_SIZE; i++)
+        desc[i] /= len;
 }
 
 static response_layer_t *response_layer_new(int width, int height, int step, int filter)
@@ -349,9 +356,9 @@ float surf_get_response(surf_t *surf, response_layer_t *rl, response_layer_t *sr
 
   // Compute response components
   Dxx = box_integral(surf->i_img, r - l + 1, c - b, 2*l - 1, w)
-      - box_integral(surf->i_img, r - l + 1, c - l / 2, 2*l - 1, l)*3;
+      - box_integral(surf->i_img, r - l + 1, c - l / 2, 2*l - 1, l)*3.0f;
   Dyy = box_integral(surf->i_img, r - b, c - l + 1, w, 2*l - 1)
-      - box_integral(surf->i_img, r - l / 2, c - l + 1, l, 2*l - 1)*3;
+      - box_integral(surf->i_img, r - l / 2, c - l + 1, l, 2*l - 1)*3.0f;
   Dxy = + box_integral(surf->i_img, r - l, c + 1, l, l)
         + box_integral(surf->i_img, r + 1, c - l, l, l)
         - box_integral(surf->i_img, r - l, c - l, l, l)
@@ -501,6 +508,7 @@ static void build_response_map(surf_t *surf)
 
   // Calculate approximated determinant of hessian values
   if (surf->octaves >= 1) {
+//    array_push_back(surf->rmap, response_layer_new(w,   h,   s,   3));
     array_push_back(surf->rmap, response_layer_new(w,   h,   s,   9));
     array_push_back(surf->rmap, response_layer_new(w,   h,   s,   15));
     array_push_back(surf->rmap, response_layer_new(w,   h,   s,   21));
@@ -565,7 +573,7 @@ static void get_ipoints(surf_t *surf)
     }
 }
 
-float i_point_sub(i_point_t *lhs, i_point_t *rhs) {
+static ALWAYS_INLINE float i_point_sub(i_point_t *lhs, i_point_t *rhs) {
     float sum=0.0f;
     for (int i=0; i<SURF_DESC_SIZE; ++i) {
         sum += (lhs->descriptor[i] - rhs->descriptor[i])*(lhs->descriptor[i] - rhs->descriptor[i]);
@@ -573,54 +581,83 @@ float i_point_sub(i_point_t *lhs, i_point_t *rhs) {
     return fast_sqrtf(sum);
 };
 
-static array_t *get_matches(array_t *ipts1, array_t *ipts2)
+void DISABLE_OPT surf_dump_ipts(array_t *ipts)
 {
-  float d1;
-  float d2;
-  float dist;
-
-  i_point_t *match;
-  array_t *matches;
-
-  /* Allocate interest points array */
-  array_alloc(&matches, NULL); /* elements won't be free'd */
-
-  for (int i=0; i< array_length(ipts1); i++) {
-    d1 = d2 = FLT_MAX;
-    i_point_t *pt1 = (i_point_t *) array_at(ipts1, i);
-    for (int j=0; j<array_length(ipts2); j++) {
-      i_point_t *pt2 = (i_point_t *) array_at(ipts2, j);
-      dist = i_point_sub(pt1, pt2);
-
-      if(dist<d1) { /* if this feature matches better than current best */
-        d2 = d1;
-        d1 = dist;
-        match = pt2;
-      } else if(dist<d2) { /* this feature matches better than second best */
-        d2 = dist;
-      }
+    int size=array_length(ipts);
+    for (int i=0; i<size; i++) {
+        i_point_t *pt = array_at(ipts, i);
+        printf("idx:%d x:%f y:%f scale:%f orientation:%f laplacian:%d  dx:%f dy:%f\n",
+                i, (double)pt->x, (double)pt->y, (double) pt->scale,
+                (double) pt->orientation, pt->laplacian, (double) pt->dx, (double) pt->dy);
+        //systick_sleep(10);
     }
-
-    // If match has a d1:d2 ratio < 0.65 ipoints are a match
-    if(d1/d2 < 0.65) {
-      // Store the change in position
-      pt1->dx = match->x - pt1->x;
-      pt1->dy = match->y - pt1->y;
-      array_push_back(matches, match);
-    }
-  }
-  return matches;
 }
 
-void surf_detector(surf_t *surf)
+#if 1
+void surf_draw_ipts(image_t *img, array_t *ipts)
 {
+    int size = array_length(ipts);
+    for (int i=0; i<size; i++) {
+        i_point_t *pt = array_at(ipts, i);
+        int x = fast_roundf(pt->x);
+        int y = fast_roundf(pt->y);
+        int w = fast_roundf(pt->scale*2.5f);
+        rectangle_t r ={x-w/2, y-w/2, w, w};
+        imlib_draw_rectangle(img, &r);
+    }
+}
+#else
+void surf_draw_ipts(image_t *image, array_t *ipts)
+{
+    rectangle_t *r = rectangle_alloc(image->w, image->h, 0, 0);
+    int size = array_length(ipts);
+    for (int i=0; i<size; i++) {
+        i_point_t *pt = array_at(ipts, i);
+        int px = fast_roundf(pt->x);
+        int py = fast_roundf(pt->y);
+        /* add point to r */
+        if (px < r->x) {
+            r->x = px;
+        }
+        if (py < r->y) {
+            r->y = py;
+        }
+
+        if (px > r->w) {
+            r->w = px;
+        }
+        if (py > r->h) {
+            r->h = py;
+        }
+    }
+    r->w = r->w - r->x;
+    r->h = r->h - r->y;
+    imlib_draw_rectangle(image, r);
+    xfree(r);
+}
+#endif
+
+void surf_detector(image_t *img, surf_t *surf)
+{
+    /* Allocate interest points array */
+    array_alloc(&surf->ipts, xfree);
+
+    /* Allocate response map array */
+    array_alloc(&surf->rmap, xfree);
+
+    // Create integral-image representation of the image
+    i_image_t *i_img = surf->i_img = xalloc(sizeof(*surf->i_img));
+    i_img->w = img->w;
+    i_img->h = img->h;
+    i_img->data= (uint32_t*) (img->data+ img->w * img->h);
+    imlib_integral_image(img, surf->i_img);
+
     // Extract interest points and store in vector ipts
     get_ipoints(surf);
 
     // Get the size of the vector for fixed loop bounds
     int ipts_size = array_length(surf->ipts);
 
-//    printf("points %d\n", ipts_size);
     // Extract the descriptors for the ipts
     if (surf->upright) {
         // U-SURF loop just gets descriptors
@@ -637,112 +674,49 @@ void surf_detector(surf_t *surf)
         }
     }
 
+//  array_free(surf->ipts);
+    array_free(surf->rmap);
 }
 
-void test_surf(image_t *img)
+array_t *surf_match(surf_t *surf1, surf_t *surf2)
 {
-    surf_t surf = {
-        .upright=true,
-        .octaves=5,
-        .intervals=4,
-        .init_sample=2,
-//        .thresh=0.0004f,
-        .thresh=0.004f,
+    float d1;
+    float d2;
+    float dist;
 
-    };
+    i_point_t *match;
+    array_t *matches;
+
+    array_t *ipts1 = surf1->ipts;
+    array_t *ipts2 = surf2->ipts;
 
     /* Allocate interest points array */
-    array_alloc(&surf.ipts, xfree);
+    array_alloc(&matches, NULL); /* elements won't be free'd */
 
-    /* Allocate response map array */
-    array_alloc(&surf.rmap, xfree);
+    for (int i=0; i< array_length(ipts1); i++) {
+        match = NULL;
+        d1 = d2 = FLT_MAX;
+        i_point_t *pt1 = (i_point_t *) array_at(ipts1, i);
+        for (int j=0; j<array_length(ipts2); j++) {
+            i_point_t *pt2 = (i_point_t *) array_at(ipts2, j);
+            dist = i_point_sub(pt1, pt2);
 
-    // Create integral-image representation of the image
-    i_image_t *i_img = surf.i_img = xalloc(sizeof(*surf.i_img));
-    i_img->w = img->w;
-    i_img->h = img->h;
-    i_img->data= (uint32_t*) (img->data+(img->w * img->h)*2);
+            if(dist<d1) { /* if this feature matches better than current best */
+                d2 = d1;
+                d1 = dist;
+                match = pt2;
+            } else if(dist<d2) { /* this feature matches better than second best */
+                d2 = dist;
+            }
+        }
 
-
-    imlib_integral_image(img, surf.i_img);
-    surf_detector(&surf);
-
-    for (int i=0; i<array_length(surf.ipts); i++) {
-        i_point_t *pt = array_at(surf.ipts, i);
-        int w = 4*(int)pt->scale;
-        rectangle_t r ={pt->x-w/2, pt->y-w/2, w, w};
-        imlib_draw_rectangle(img, &r);
+        // If match has a d1:d2 ratio < 0.65 ipoints are a match
+        if(match && (d1/d2 < 0.85f)) {
+            // Store the change in position
+            pt1->dx = match->x - pt1->x;
+            pt1->dy = match->y - pt1->y;
+            array_push_back(matches, match);
+        }
     }
-    array_free(surf.ipts);
-    xfree(surf.i_img);
+    return matches;
 }
-
-#if 0
-void test_surf_match(image_t *t, image_t *f)
-{
-    i_image_t *i_img;
-
-    surf_t surf = {
-        .upright=true, /* run in rotation invariant mode */
-        .octaves=1,    /* number of octaves */
-        .intervals=4,
-        .init_sample=2,
-        .thresh=0.0004f,
-    };
-
-    /* Allocate interest points array */
-    array_alloc(&surf.ipts, xfree);
-
-    /* Allocate response map array */
-    array_alloc(&surf.rmap, xfree);
-
-    /* compute integral from template */
-    i_img = surf.i_img = xalloc(sizeof(*surf.i_img));
-    i_img->w = t->w;
-    i_img->h = t->h;
-    i_img->data=xalloc(sizeof(*i_img->data)*i_img->w*i_img->h);
-    imlib_integral_image(t, surf.i_img);
-
-    /* run SURF detector */
-    surf_detector(&surf);
-
-    /* free some stuff */
-    free(surf.i_img);
-    array_free(surf.rmap);
-//    array_free(surf.ipts);
-    /* keep ipts */
-    array_t *ipts1=surf.ipts;
-
-    /* Allocate second interest points array */
-    array_alloc(&surf.ipts, xfree);
-
-    /* Allocate second response map array */
-    array_alloc(&surf.rmap, xfree);
-
-    /* compute integral from image */
-    i_img = surf.i_img = xalloc(sizeof(*surf.i_img));
-    i_img->w = f->w;
-    i_img->h = f->h;
-    i_img->data=xalloc(sizeof(*i_img->data)*i_img->w*i_img->h);
-    imlib_integral_image(f, surf.i_img);
-
-    /* run SURF detector */
-    surf_detector(&surf);
-
-    /* get second ipts array */
-    array_t *ipts2=surf.ipts;
-
-    /* match ipts  */
-    array_t *match = get_matches(ipts1, ipts2);
-
-    printf ("t ipts: %d\n", array_length(ipts1));
-    printf ("f ipts: %d\n", array_length(ipts2));
-    printf ("matches: %d\n", array_length(match));
-    for (int i=0; i<array_length(match); i++) {
-        i_point_t *pt = array_at(match, i);
-        int w = 6*(int)pt->scale;
-        imlib_draw_rectangle(pt->x-w/2, pt->y-w/2, w , f->w, 0x00, f->data);
-    }
-    imlib_write_image(f->data, f->w, f->h, "test.tga");
-}
-#endif

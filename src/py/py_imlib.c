@@ -8,12 +8,17 @@
 #include "py_assert.h"
 #include "py_file.h"
 
+extern struct sensor_dev sensor;
+
 typedef struct _py_cascade_obj_t {
     mp_obj_base_t base;
     struct cascade _cobj;
 } py_cascade_obj_t;
 
-extern struct sensor_dev sensor;
+typedef struct _py_surf_obj_t {
+    mp_obj_base_t base;
+    struct surf _cobj;
+} py_surf_obj_t;
 
 static void py_cascade_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
 {
@@ -34,10 +39,23 @@ static const mp_obj_type_t py_cascade_type = {
     .print = py_cascade_print,
 };
 
+static const mp_obj_type_t py_surf_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_Cascade,
+//    .print = py_cascade_print,
+    .print = NULL,
+};
+
 void *py_cascade_cobj(mp_obj_t cascade)
 {
     PY_ASSERT_TYPE(cascade, &py_cascade_type);
     return &((py_cascade_obj_t *)cascade)->_cobj;
+}
+
+void *py_surf_cobj(mp_obj_t surf)
+{
+    PY_ASSERT_TYPE(surf, &py_surf_type);
+    return &((py_surf_obj_t *)surf)->_cobj;
 }
 
 mp_obj_t py_imlib_histeq(mp_obj_t image_obj)
@@ -307,16 +325,75 @@ mp_obj_t py_imlib_blit(mp_obj_t image_obj, mp_obj_t template_obj)
     return mp_const_true;
 }
 
-mp_obj_t py_imlib_surf(mp_obj_t image_obj)
+mp_obj_t py_imlib_surf_detector(mp_obj_t image_obj, mp_obj_t upright, mp_obj_t thresh)
 {
     struct image *image;
+    py_surf_obj_t *o =NULL;
+
+    surf_t surf = {
+        .upright=mp_obj_get_int(upright),
+        .octaves=1,
+        .init_sample=2,
+        .thresh=mp_obj_get_float(thresh),
+    };
+
     /* get image pointer */
     image = (struct image*) py_image_cobj(image_obj);
 
     /* sanity checks */
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
 
-    test_surf(image);
+    /* run SURF detector */
+    surf_detector(image, &surf);
+
+    o = m_new_obj(py_surf_obj_t);
+    o->base.type = &py_surf_type;
+    o->_cobj = surf;
+    return o;
+}
+
+mp_obj_t py_imlib_surf_match(mp_obj_t image_obj, mp_obj_t surf1_obj, mp_obj_t surf2_obj)
+{
+    surf_t *surf1 = NULL;
+    surf_t *surf2 = NULL;
+    image_t *image = NULL;
+
+    /* get C image pointer */
+    image = py_image_cobj(image_obj);
+    /* get C cascade pointer */
+    surf1 = py_surf_cobj(surf1_obj);
+    surf2 = py_surf_cobj(surf2_obj);
+
+    /* Detect objects */
+    array_t *match = surf_match(surf1, surf2);
+    surf_draw_ipts(image, match);
+    array_free(match); //TODO
+    array_free(surf2->ipts); //TODO
+    return mp_const_none;
+}
+
+mp_obj_t py_imlib_surf_dump_ipts(mp_obj_t surf_obj)
+{
+    surf_t *surf = NULL;
+    /* get C cascade pointer */
+    surf = py_surf_cobj(surf_obj);
+
+    surf_dump_ipts(surf->ipts);
+    return mp_const_none;
+}
+
+mp_obj_t py_imlib_surf_draw_ipts(mp_obj_t image_obj, mp_obj_t surf_obj)
+{
+    surf_t *surf = NULL;
+    image_t *image = NULL;
+
+    /* get C image pointer */
+    image = py_image_cobj(image_obj);
+
+    /* get C cascade pointer */
+    surf = py_surf_cobj(surf_obj);
+
+    surf_draw_ipts(image, surf->ipts);
     return mp_const_none;
 }
 
@@ -342,8 +419,10 @@ mp_obj_t py_imlib_init()
     rt_store_attr(m, qstr_from_str("threshold"), rt_make_function_n(3, py_imlib_threshold));
     rt_store_attr(m, qstr_from_str("count_blobs"), rt_make_function_n(1, py_imlib_count_blobs));
     rt_store_attr(m, qstr_from_str("detect_objects"), rt_make_function_n(2, py_imlib_detect_objects));
-    rt_store_attr(m, qstr_from_str("surf"), rt_make_function_n(1, py_imlib_surf));
-
+    rt_store_attr(m, qstr_from_str("surf_detector"), rt_make_function_n(3, py_imlib_surf_detector));
+    rt_store_attr(m, qstr_from_str("surf_match"), rt_make_function_n(3, py_imlib_surf_match));
+    rt_store_attr(m, qstr_from_str("surf_draw_ipts"), rt_make_function_n(2, py_imlib_surf_draw_ipts));
+    rt_store_attr(m, qstr_from_str("surf_dump_ipts"), rt_make_function_n(1, py_imlib_surf_dump_ipts));
     return m;
 }
 

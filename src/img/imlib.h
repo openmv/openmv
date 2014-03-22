@@ -208,6 +208,12 @@ float imlib_template_match(struct image *image, struct image *template, struct r
 int imlib_load_cascade(struct cascade* cascade, const char *path);
 struct array *imlib_detect_objects(struct image *image, struct cascade* cascade);
 
+/* SURF detector */
+void surf_detector(image_t *image, surf_t *surf);
+array_t *surf_match(surf_t *surf1, surf_t *surf2);
+void surf_draw_ipts(image_t *image, array_t *ipts);
+void surf_dump_ipts(array_t *ipts);
+
 void imlib_scale_image(struct image *src, struct image *dst);
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);
 int imlib_image_mean(struct image *src);
