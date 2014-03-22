@@ -135,6 +135,7 @@ class OMVGtk:
                 self.buffer.set_text(file.read())
                 self.file_path=dialog.get_filename()
                 self.save_button.set_sensitive(False)
+                self.window.set_title(os.path.basename(self.file_path))
 
         dialog.destroy()
 
