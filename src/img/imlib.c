@@ -6,7 +6,7 @@
 #include "imlib.h"
 #include "ff.h"
 #include "xalloc.h"
-
+#include "mdefs.h"
 #define MIN(a,b) \
    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
@@ -61,83 +61,6 @@ const uint8_t xyz_table[256]= {
     87.136712, 87.962240, 88.792312, 89.626935, 90.466117, 91.309865, 92.158186, 93.011086,
     93.868573, 94.730654, 95.597335, 96.468625, 97.344529, 98.225055, 99.110210, 100.000000,
 };
-
-float fast_sqrtf(float x)
-{
-    asm volatile (
-            "vsqrt.f32  %[r], %[x]\n"
-            : [r] "=t" (x)
-            : [x] "t"  (x));
-    return x;
-}
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-/* This is slightly faster the VSQRT */
-uint32_t fast_sqrt(float x)
- {
-   uint32_t i = *(uint32_t*) &x;
-   // adjust bias
-   i  += 127 << 23;
-   // approximation of square root
-   i >>= 1;
-   return (uint32_t) *(float*) &i;
-}
-#pragma GCC diagnostic pop
-
-int fast_floorf(float x)
-{
-    int i;
-    asm volatile (
-            "vcvt.S32.f32  %[r], %[x]\n"
-            : [r] "=t" (i)
-            : [x] "t"  (x));
-    return i;
-}
-
-int fast_roundf(float x)
-{
-    int i;
-    asm volatile (
-            "vcvtr.s32.f32  %[r], %[x]\n"
-            : [r] "=t" (i)
-            : [x] "t"  (x));
-    return i;
-
-//  return (int) floor(x+0.5f);
-}
-
-float fast_atanf(float x)
-{
-    return (0.97239f * x) - (0.19195f * x*x*x);
-}
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wstrict-aliasing"
-float fast_expf(float x)
-{
-    double d;
-    *((int*)(&d) + 0) = 0;
-    *((int*)(&d) + 1) = (int)(1512775 * x + 1072632447);
-    return (float) d;
-}
-#pragma GCC diagnostic pop
-
-float fast_cbrtf(float f)
-{
-    unsigned int* p = (unsigned int *) &f;
-    *p = *p/3 + 709921077;
-    return f;
-}
-
-float fast_fabsf(float x)
-{
-    asm volatile (
-            "vabs.f32  %[r], %[x]\n"
-            : [r] "=t" (x)
-            : [x] "t"  (x));
-    return x;
-}
 
 uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
 {
@@ -311,12 +234,13 @@ void imlib_threshold(image_t *image, struct color *color, int threshold)
             lab2.B = lab_table[pixels[i]*3+2];
             /* add pixel if within threshold */
             if (imlib_lab_distance(&lab1, &lab2)<threshold) {
-                pixels[i] = 0xFFFF;
+                image->pixels[i] = 0x01;
             } else {
-                pixels[i] = 0x0000;
+                image->pixels[i] = 0x00;
             }
         }
     }
+    image->bpp = 1;
 }
 
 int imlib_image_mean(struct image *src)
@@ -395,10 +319,10 @@ void imlib_draw_rectangle(struct image *image, struct rectangle *r)
 {
     int i;
     uint8_t c=0xFF;
-    int x = MIN(MAX(r->x, 1), image->w)-1;
-    int y = MIN(MAX(r->y, 1), image->h)-1;
-    int w = (x+r->w) >= image->w ? (image->w-x):r->w;
-    int h = (y+r->h) >= image->h ? (image->h-y):r->h;
+    int x = MIN(MAX(r->x, 0), image->w-1);
+    int y = MIN(MAX(r->y, 0), image->h-1);
+    int w = (x+r->w) >= image->w ? (image->w-x-1):r->w;
+    int h = (y+r->h) >= image->h ? (image->h-y-1):r->h;
 
     x *= image->bpp;
     w *= image->bpp;
@@ -417,6 +341,14 @@ void imlib_draw_rectangle(struct image *image, struct rectangle *r)
             image->pixels[(y+i)*col + x + w+1] = c;
         }
     }
+
+    if (image->bpp>1) {
+        for (i=0; i<h; i++) {
+            image->pixels[(y+i)*col + x+1] = c;
+            image->pixels[(y+i)*col + x + w+1] = c;
+        }
+    }
+
 }
 
 void imlib_histeq(struct image *src)
