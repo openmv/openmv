@@ -16,13 +16,18 @@ array_t *imlib_count_blobs(struct image *image)
         for (int x=0; x<image->w; x++) {
             int i=y*image->w+x;
             if (pixels[i]) {
-                /* new blob */
+               /* new blob */
                 rectangle_t *blob = rectangle_alloc(image->w, image->h, 0, 0);
                 array_push_back(blobs, blob);
 
                 /* flood fill */
                 point_t *p=point_alloc(x, y);
                 while(p != NULL) {
+                    if (array_length(points) > 500) {
+                        xfree(p);
+                        goto done;
+                    }
+
                     /* add point to blob */
                     if (p->x < blob->x) {
                         blob->x = p->x;
@@ -71,6 +76,7 @@ array_t *imlib_count_blobs(struct image *image)
         }
     }
 
+done:
     for (int i=0; i<array_length(blobs); i++) {
         rectangle_t *blob = array_at(blobs, i);
 //        if (blob->w < 10) { /* blob too small */
