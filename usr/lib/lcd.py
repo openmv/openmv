@@ -17,11 +17,10 @@ def write_command(c):
     spi.write(c)
     cs.high()
 
-def write_data(data):
+def write_data(c):
     cs.low()
     rs.high()
-    for b in data:
-        spi.write(b)
+    spi.write(c)
     cs.high()
 
 def clear(c=0x00):
