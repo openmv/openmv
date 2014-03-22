@@ -46,7 +46,7 @@ while running:
         if event.key == pygame.K_ESCAPE:
             running = False
         if event.key == pygame.K_c:
-            pygame.image.save(image, "capture.jpeg")
+            pygame.image.save(image, "capture.png")
 
 
 pygame.quit()
