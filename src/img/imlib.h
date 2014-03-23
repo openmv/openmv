@@ -207,6 +207,7 @@ void surf_dump_ipts(array_t *ipts);
 
 void imlib_scale_image(struct image *src, struct image *dst);
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);
+void imlib_draw_circle(struct image *image, int cx, int cy, int r);
 int imlib_image_mean(struct image *src);
 void imlib_subimage(struct image *src_img, struct image *dst_img, int x_off, int y_off);
 void imlib_blit(struct image *dst_img, struct image *src_img, int x_off, int y_off);

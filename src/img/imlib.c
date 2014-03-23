@@ -22,6 +22,11 @@
        __typeof__ (y) _y = (y); \
      src->data[_y*src->w+_x]; })
 
+#define SET_PIXEL(src, x, y, c) \
+   ({ __typeof__ (x) _x = (x);  \
+      __typeof__ (y) _y = (y);  \
+     src->data[_y*src->w+_x]=c; })
+
 #define MAX_GRAY_LEVEL (255)
 
 /* RGB565->LAB lookup */
@@ -349,6 +354,35 @@ void imlib_draw_rectangle(struct image *image, struct rectangle *r)
         }
     }
 
+}
+
+void imlib_draw_circle(struct image *image, int cx, int cy, int r)
+{
+    int x = r, y = 0;
+    uint8_t c = 0xff;
+    int radiusError = 1-x;
+    if (cx+r >= image->w || cx-r < 0 ||
+        cy+r >= image->h || cy-r < 0) {
+        return;
+    }
+
+    while(x >= y) {
+        SET_PIXEL(image,  x + cx,  y + cy, c);
+        SET_PIXEL(image,  y + cx,  x + cy, c);
+        SET_PIXEL(image, -x + cx,  y + cy, c);
+        SET_PIXEL(image, -y + cx,  x + cy, c);
+        SET_PIXEL(image, -x + cx, -y + cy, c);
+        SET_PIXEL(image, -y + cx, -x + cy, c);
+        SET_PIXEL(image,  x + cx, -y + cy, c);
+        SET_PIXEL(image,  y + cx, -x + cy, c);
+        y++;
+        if (radiusError<0) {
+            radiusError += 2 * y + 1;
+        } else {
+            x--;
+            radiusError+= 2 * (y - x + 1);
+        }
+    }
 }
 
 void imlib_histeq(struct image *src)

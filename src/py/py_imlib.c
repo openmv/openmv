@@ -103,6 +103,25 @@ mp_obj_t py_imlib_draw_rectangle(mp_obj_t image_obj, mp_obj_t rectangle_obj)
     return mp_const_none;
 }
 
+mp_obj_t py_imlib_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_t r_obj)
+{
+    int cx, cy, r;
+    mp_obj_t *array;
+    struct image *image;
+
+    /* get image pointer */
+    image = py_image_cobj(image_obj);
+
+    /* center */
+    array = mp_obj_get_array_fixed_n(c_obj, 2);
+    cx = mp_obj_get_int(array[0]);
+    cy = mp_obj_get_int(array[1]);
+
+    /* radius */
+    r = mp_obj_get_int(r_obj);
+    imlib_draw_circle(image, cx, cy, r);
+    return mp_const_none;
+}
 mp_obj_t py_imlib_threshold(mp_obj_t image_obj, mp_obj_t color_obj, mp_obj_t threshold)
 {
     /* C stuff */
@@ -332,7 +351,7 @@ mp_obj_t py_imlib_surf_detector(mp_obj_t image_obj, mp_obj_t upright, mp_obj_t t
 
     surf_t surf = {
         .upright=mp_obj_get_int(upright),
-        .octaves=1,
+        .octaves=5,
         .init_sample=2,
         .thresh=mp_obj_get_float(thresh),
     };
@@ -416,13 +435,13 @@ mp_obj_t py_imlib_init()
     rt_store_attr(m, qstr_from_str("histeq"), rt_make_function_n(1, py_imlib_histeq));
     rt_store_attr(m, qstr_from_str("median"), rt_make_function_n(2, py_imlib_median));
     rt_store_attr(m, qstr_from_str("draw_rectangle"), rt_make_function_n(2, py_imlib_draw_rectangle));
+    rt_store_attr(m, qstr_from_str("draw_circle"), rt_make_function_n(3, py_imlib_draw_circle));
     rt_store_attr(m, qstr_from_str("threshold"), rt_make_function_n(3, py_imlib_threshold));
     rt_store_attr(m, qstr_from_str("count_blobs"), rt_make_function_n(1, py_imlib_count_blobs));
     rt_store_attr(m, qstr_from_str("detect_objects"), rt_make_function_n(2, py_imlib_detect_objects));
     rt_store_attr(m, qstr_from_str("surf_detector"), rt_make_function_n(3, py_imlib_surf_detector));
     rt_store_attr(m, qstr_from_str("surf_match"), rt_make_function_n(3, py_imlib_surf_match));
     rt_store_attr(m, qstr_from_str("surf_draw_ipts"), rt_make_function_n(2, py_imlib_surf_draw_ipts));
-    rt_store_attr(m, qstr_from_str("surf_dump_ipts"), rt_make_function_n(1, py_imlib_surf_dump_ipts));
     return m;
 }
 
