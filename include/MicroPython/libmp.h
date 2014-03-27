@@ -4,6 +4,7 @@
 #include "mpconfig.h"
 #include "qstr.h"
 #include "obj.h"
+#include "objmodule.h"
 #include "std.h"
 #include "nlr.h"
 #include "misc.h"
@@ -22,6 +23,7 @@
 #include "pyexec.h"
 #include "pendsv.h"
 #include "ff.h"
+#include "map.h"
 
 int libmp_init();
 void libmp_do_repl(void);

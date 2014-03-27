@@ -90,7 +90,7 @@ mp_obj_t py_imlib_draw_rectangle(mp_obj_t image_obj, mp_obj_t rectangle_obj)
     struct image *image;
     mp_obj_t *array;
 
-    array = mp_obj_get_array_fixed_n(rectangle_obj, 4);
+    mp_obj_get_array_fixed_n(rectangle_obj, 4, &array);
     r.x = mp_obj_get_int(array[0]);
     r.y = mp_obj_get_int(array[1]);
     r.w = mp_obj_get_int(array[2]);
@@ -113,7 +113,7 @@ mp_obj_t py_imlib_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_t r_obj
     image = py_image_cobj(image_obj);
 
     /* center */
-    array = mp_obj_get_array_fixed_n(c_obj, 2);
+    mp_obj_get_array_fixed_n(c_obj, 2, &array);
     cx = mp_obj_get_int(array[0]);
     cy = mp_obj_get_int(array[1]);
 
@@ -132,7 +132,7 @@ mp_obj_t py_imlib_threshold(mp_obj_t image_obj, mp_obj_t color_obj, mp_obj_t thr
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_RGB565);
 
     mp_obj_t *col_obj;
-    col_obj = mp_obj_get_array_fixed_n(color_obj, 3);
+    mp_obj_get_array_fixed_n(color_obj, 3, &col_obj);
     color.r = mp_obj_get_int(col_obj[0]);
     color.g = mp_obj_get_int(col_obj[1]);
     color.b = mp_obj_get_int(col_obj[2]);
@@ -272,7 +272,7 @@ mp_obj_t py_imlib_save_template(mp_obj_t image_obj, mp_obj_t rectangle_obj, mp_o
 
     const char *path = mp_obj_str_get_str(path_obj);
 
-    array = mp_obj_get_array_fixed_n(rectangle_obj, 4);
+    mp_obj_get_array_fixed_n(rectangle_obj, 4, &array);
     r.x = mp_obj_get_int(array[0]);
     r.y = mp_obj_get_int(array[1]);
     r.w = mp_obj_get_int(array[2]);

@@ -175,7 +175,6 @@ struct _mp_obj_type_t {
     abs             float complex
     hash            bool int none str
     equal           int str
-    get_array_n     tuple list
 
     unpack seq      list tuple
     */
@@ -184,26 +183,39 @@ struct _mp_obj_type_t {
 typedef struct _mp_obj_type_t mp_obj_type_t;
 
 // Constant types, globally accessible
-
 extern const mp_obj_type_t mp_type_type;
+
+// Exceptions
 extern const mp_obj_type_t mp_type_BaseException;
+extern const mp_obj_type_t mp_type_ArithmeticError;
 extern const mp_obj_type_t mp_type_AssertionError;
 extern const mp_obj_type_t mp_type_AttributeError;
+extern const mp_obj_type_t mp_type_BufferError;
+extern const mp_obj_type_t mp_type_EOFError;
+extern const mp_obj_type_t mp_type_Exception;
+extern const mp_obj_type_t mp_type_FloatingPointError;
+extern const mp_obj_type_t mp_type_GeneratorExit;
+extern const mp_obj_type_t mp_type_IOError;
 extern const mp_obj_type_t mp_type_ImportError;
 extern const mp_obj_type_t mp_type_IndentationError;
 extern const mp_obj_type_t mp_type_IndexError;
 extern const mp_obj_type_t mp_type_KeyError;
+extern const mp_obj_type_t mp_type_LookupError;
+extern const mp_obj_type_t mp_type_MemoryError;
 extern const mp_obj_type_t mp_type_NameError;
-extern const mp_obj_type_t mp_type_SyntaxError;
-extern const mp_obj_type_t mp_type_TypeError;
-extern const mp_obj_type_t mp_type_ValueError;
-extern const mp_obj_type_t mp_type_OverflowError;
-extern const mp_obj_type_t mp_type_OSError;
 extern const mp_obj_type_t mp_type_NotImplementedError;
+extern const mp_obj_type_t mp_type_OSError;
+extern const mp_obj_type_t mp_type_OverflowError;
+extern const mp_obj_type_t mp_type_RuntimeError;
 extern const mp_obj_type_t mp_type_StopIteration;
+extern const mp_obj_type_t mp_type_SyntaxError;
+extern const mp_obj_type_t mp_type_SystemError;
+extern const mp_obj_type_t mp_type_TypeError;
+extern const mp_obj_type_t mp_type_UnboundLocalError;
+extern const mp_obj_type_t mp_type_ValueError;
+extern const mp_obj_type_t mp_type_ZeroDivisionError;
 
 // Constant objects, globally accessible
-
 extern const mp_obj_t mp_const_none;
 extern const mp_obj_t mp_const_false;
 extern const mp_obj_t mp_const_true;
@@ -266,9 +278,13 @@ mp_float_t mp_obj_get_float(mp_obj_t self_in);
 void mp_obj_get_complex(mp_obj_t self_in, mp_float_t *real, mp_float_t *imag);
 #endif
 //qstr mp_obj_get_qstr(mp_obj_t arg);
-mp_obj_t *mp_obj_get_array_fixed_n(mp_obj_t o, machine_int_t n);
+void mp_obj_get_array(mp_obj_t o, uint *len, mp_obj_t **items);
+void mp_obj_get_array_fixed_n(mp_obj_t o, uint len, mp_obj_t **items);
 uint mp_get_index(const mp_obj_type_t *type, machine_uint_t len, mp_obj_t index, bool is_slice);
 mp_obj_t mp_obj_len_maybe(mp_obj_t o_in); /* may return NULL */
+
+// object
+extern const mp_obj_type_t mp_type_object;
 
 // none
 extern const mp_obj_type_t none_type;
@@ -285,6 +301,9 @@ void mp_obj_cell_set(mp_obj_t self_in, mp_obj_t obj);
 extern const mp_obj_type_t int_type;
 // For long int, returns value truncated to machine_int_t
 machine_int_t mp_obj_int_get(mp_obj_t self_in);
+#if MICROPY_ENABLE_FLOAT
+mp_float_t mp_obj_int_as_float(mp_obj_t self_in);
+#endif
 // Will rains exception if value doesn't fit into machine_int_t
 machine_int_t mp_obj_int_get_checked(mp_obj_t self_in);
 
@@ -366,7 +385,7 @@ void mp_obj_slice_get(mp_obj_t self_in, machine_int_t *start, machine_int_t *sto
 extern const mp_obj_type_t zip_type;
 
 // array
-extern const mp_obj_type_t array_type;
+extern const mp_obj_type_t mp_type_array;
 uint mp_obj_array_len(mp_obj_t self_in);
 mp_obj_t mp_obj_new_bytearray_by_ref(uint n, void *items);
 
@@ -403,8 +422,6 @@ typedef struct _mp_obj_module_t {
     struct _mp_map_t *globals;
 } mp_obj_module_t;
 extern const mp_obj_type_t mp_type_module;
-mp_obj_t mp_obj_new_module(qstr module_name);
-mp_obj_t mp_obj_module_get(qstr module_name);
 struct _mp_map_t *mp_obj_module_get_globals(mp_obj_t self_in);
 
 // staticmethod and classmethod types; defined here so we can make const versions
