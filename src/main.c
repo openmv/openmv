@@ -15,7 +15,6 @@
 #include "usbdbg.h"
 #include "py_led.h"
 #include "py_sensor.h"
-#include "py_imlib.h"
 #include "py_file.h"
 #include "py_time.h"
 #include "py_spi.h"
@@ -216,17 +215,16 @@ gc_info_t get_gc_info()
 }
 
 typedef struct {
-    const char *name;
-    mp_obj_t (*init)(void);
+    qstr name;
+    const mp_obj_module_t *(*init)(void);
 } module_t;
 
 static module_t exported_modules[] ={
-    {"led",     py_led_init},
-    {"sensor",  py_sensor_init},
-    {"imlib",   py_imlib_init},
-    {"time",    py_time_init},
-    {"spi",     py_spi_init},
-    {"gpio",    py_gpio_init},
+    {MP_QSTR_led,   py_led_init},
+    {MP_QSTR_time,  py_time_init},
+    {MP_QSTR_sensor,py_sensor_init},
+    {MP_QSTR_gpio,  py_gpio_init},
+    {MP_QSTR_spi,   py_spi_init},
     {NULL, NULL}
 };
 
@@ -255,11 +253,11 @@ int main(void)
 
     /* Export Python modules to the global python namespace */
     for (module_t *p = exported_modules; p->name != NULL; p++) {
-        mp_obj_t module = p->init();
+        const mp_obj_module_t *module = p->init();
         if (module == NULL) {
             __fatal_error("failed to init module");
         } else {
-            rt_store_name(qstr_from_str(p->name), module);
+            mp_module_register(p->name, (mp_obj_t)module);
         }
     }
 
@@ -291,7 +289,7 @@ int main(void)
 #if 1
     /* run main script */
     if (!libmp_do_file("0:/main.py")) {
-        __fatal_error("failed to run main script");
+        printf("failed to run main script\n");
     }
 
     libmp_do_repl();

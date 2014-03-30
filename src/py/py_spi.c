@@ -5,18 +5,18 @@
 #include "imlib.h"
 #include "py_image.h"
 
-mp_obj_t py_spi_read()
+static mp_obj_t py_spi_read()
 {
     return mp_obj_new_int(spi_read());
 }
 
-mp_obj_t py_spi_write(mp_obj_t c)
+static mp_obj_t py_spi_write(mp_obj_t c)
 {
     spi_write(mp_obj_get_int(c));
     return mp_const_true;
 }
 
-mp_obj_t py_spi_write_image(mp_obj_t image_obj)
+static mp_obj_t py_spi_write_image(mp_obj_t image_obj)
 {
     struct image *image;
     /* get image pointer */
@@ -33,16 +33,34 @@ mp_obj_t py_spi_write_image(mp_obj_t image_obj)
     return mp_const_none;
 }
 
-mp_obj_t py_spi_init()
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_spi_read_obj,   py_spi_read);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_spi_write_obj,  py_spi_write);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_spi_write_image_obj, py_spi_write_image);
+
+STATIC const mp_map_elem_t module_globals_table[] = {
+    { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_spi) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read),      (mp_obj_t)&py_spi_read_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_write),     (mp_obj_t)&py_spi_write_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_write_image), (mp_obj_t)&py_spi_write_image_obj },
+};
+
+STATIC const mp_map_t module_globals = {
+    .all_keys_are_qstrs = 1,
+    .table_is_fixed_array = 1,
+    .used  = sizeof(module_globals_table) / sizeof(mp_map_elem_t),
+    .alloc = sizeof(module_globals_table) / sizeof(mp_map_elem_t),
+    .table = (mp_map_elem_t*)module_globals_table,
+};
+
+static const mp_obj_module_t py_spi_module = {
+    .base = { &mp_type_module },
+    .name = MP_QSTR_spi,
+    .globals = (mp_map_t*)&module_globals,
+};
+
+const mp_obj_module_t *py_spi_init()
 {
+    /* Init spi */
     spi_init();
-
-    /* Create module */
-    mp_obj_t m = mp_obj_new_module(qstr_from_str("spi"));
-
-    /* Export functions */
-    rt_store_attr(m, qstr_from_str("read"), rt_make_function_n(0, py_spi_read));
-    rt_store_attr(m, qstr_from_str("write"), rt_make_function_n(1, py_spi_write));
-    rt_store_attr(m, qstr_from_str("write_image"), rt_make_function_n(1, py_spi_write_image));
-    return m;
+    return &py_spi_module;
 }
