@@ -74,6 +74,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,           py_sensor_reset)
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_obj,        py_sensor_snapshot);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,   py_sensor_set_pixformat);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,   py_sensor_set_framerate);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,   py_sensor_set_framesize);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj, py_sensor_set_gainceiling);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,  py_sensor_set_brightness);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,       py_sensor_write_reg);
@@ -100,7 +101,9 @@ STATIC const mp_map_elem_t module_globals_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_snapshot),        (mp_obj_t)&py_sensor_snapshot_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_pixformat),   (mp_obj_t)&py_sensor_set_pixformat_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framerate),   (mp_obj_t)&py_sensor_set_framerate_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_framesize),   (mp_obj_t)&py_sensor_set_framesize_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_gainceiling), (mp_obj_t)&py_sensor_set_gainceiling_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_brightness),  (mp_obj_t)&py_sensor_set_brightness_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),     (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),      (mp_obj_t)&py_sensor_read_reg_obj },
 };
