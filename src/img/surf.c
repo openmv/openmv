@@ -602,8 +602,7 @@ void surf_draw_ipts(image_t *img, array_t *ipts)
         int x = fast_roundf(pt->x);
         int y = fast_roundf(pt->y);
         int w = fast_roundf(pt->scale*2.5f);
-        rectangle_t r ={x-w/2, y-w/2, w, w};
-        imlib_draw_rectangle(img, &r);
+        imlib_draw_circle(img, x, y, w);
     }
 }
 #else
@@ -699,19 +698,21 @@ array_t *surf_match(surf_t *surf1, surf_t *surf2)
         i_point_t *pt1 = (i_point_t *) array_at(ipts1, i);
         for (int j=0; j<array_length(ipts2); j++) {
             i_point_t *pt2 = (i_point_t *) array_at(ipts2, j);
-            dist = i_point_sub(pt1, pt2);
+            if(pt1->laplacian == pt2->laplacian) {
+                dist = i_point_sub(pt1, pt2);
 
-            if(dist<d1) { /* if this feature matches better than current best */
-                d2 = d1;
-                d1 = dist;
-                match = pt2;
-            } else if(dist<d2) { /* this feature matches better than second best */
-                d2 = dist;
+                if(dist<d1) { /* if this feature matches better than current best */
+                    d2 = d1;
+                    d1 = dist;
+                    match = pt2;
+                } else if(dist<d2) { /* this feature matches better than second best */
+                    d2 = dist;
+                }
             }
         }
 
         // If match has a d1:d2 ratio < 0.65 ipoints are a match
-        if(match && (d1/d2 < 0.85f)) {
+        if(match && (d1/d2 < 0.65f)) {
             // Store the change in position
             pt1->dx = match->x - pt1->x;
             pt1->dy = match->y - pt1->y;
