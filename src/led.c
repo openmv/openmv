@@ -6,11 +6,13 @@
 #include "systick.h"
 static uint16_t led;
 
+#if 0
 static void led_cb()
 {
     /* Toggle LED1 */
     GPIO_ToggleBits(GPIOD, led);
 }
+#endif
 
 void led_init(enum led_color color)
 {
