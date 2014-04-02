@@ -1,4 +1,4 @@
-import sensor, imlib, time
+import sensor, time
 sensor.set_pixformat(sensor.RGB565)
 clock = time.clock()
 while (True):
@@ -7,14 +7,13 @@ while (True):
     image = sensor.snapshot()
 
     # detect blobs
-    imlib.threshold(image, (255, 127, 127),  40)
-    imlib.median(image, 3)
-    blobs = imlib.count_blobs(image)
+    image.threshold((255, 127, 127),  40)
+    image.median(3)
+    blobs = image.count_blobs()
     
     # draw rectangles around detected blobs
     image = sensor.snapshot()    
     for r in blobs:
-        imlib.draw_rectangle(image, r)        
+        image.draw_rectangle(r)        
         
     print(clock.fps())
-    break

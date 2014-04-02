@@ -406,3 +406,14 @@ void imlib_histeq(struct image *src)
         src->pixels[i] = (uint8_t) ((MAX_GRAY_LEVEL/(float)a) * hist[src->pixels[i]]);
     }
 }
+
+/* those just call ppm for now */
+int imlib_load_image(image_t *image, const char *path)
+{
+    return ppm_read(image, path);
+}
+
+int imlib_save_image(image_t *image, const char *path, rectangle_t *subimage)
+{
+    return ppm_write(image, path);
+}

@@ -191,8 +191,6 @@ void imlib_integral_image_sq(struct image *src, struct integral_image *sum);
 uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h);
 
 /* Template matching */
-int imlib_save_template(struct image *image, const char *path);
-int imlib_load_template(struct image *image, const char *path);
 float imlib_template_match(struct image *image, struct image *template, struct rectangle *r);
 
 /* Haar/VJ */
@@ -211,4 +209,10 @@ void imlib_draw_circle(struct image *image, int cx, int cy, int r);
 int imlib_image_mean(struct image *src);
 void imlib_subimage(struct image *src_img, struct image *dst_img, int x_off, int y_off);
 void imlib_blit(struct image *dst_img, struct image *src_img, int x_off, int y_off);
+
+/* Image file functions */
+int ppm_read(image_t *img, const char *path);
+int ppm_write(image_t *img, const char *path);
+int imlib_load_image(image_t *image, const char *path);
+int imlib_save_image(image_t *image, const char *path, rectangle_t *subimage);
 #endif //__IMLIB_H__
