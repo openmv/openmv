@@ -8,8 +8,9 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
+  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 1024K
   FLASH_ISR (rx)  : ORIGIN = 0x08000000, LENGTH = 16K
-  FLASH_TEXT (rx) : ORIGIN = 0x08020000, LENGTH = 896K
+  FLASH_TEXT (rx) : ORIGIN = 0x08010000, LENGTH = 512K
   RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
   CCM (w!rx)      : ORIGIN = 0x10000000, LENGTH = 64K
 }
@@ -20,9 +21,9 @@ _estack     = 0x10010000; /* Stack is allocated on CCM block */
 _ram_end   = 0x10010000; /* 64KB CCM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
-_stack_size = 0x1000; /* required amount of stack */
+_stack_size = 0x1300; /* required amount of stack */
 _heap_size  = 0x8000; /* 0xC800 required amount of heap */
-_cache_size = 0x4000; /* required amount of cache */
+_cache_size = 0x4000; /* 0x4000 required amount of cache */
 
 _main_ram_start = 0x20000000;
 /* Define output sections */
@@ -44,20 +45,13 @@ SECTIONS
     *(.text*)          /* .text* sections (code) */
     *(.rodata)         /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
-    *(.glue_7)         /* glue arm to thumb code */
-    *(.glue_7t)        /* glue thumb to arm code */
-    *(.eh_frame)
-
-    KEEP (*(.init))
-    KEEP (*(.fini))
-
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
     _exit = .;
   } >FLASH_TEXT
 
-  /* used by the startup to initialize data */
-  _sidata = .;
+   /* used by the startup to initialize data */
+   _sidata = .;
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
   .data : AT ( _sidata )
