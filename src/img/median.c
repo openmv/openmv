@@ -74,9 +74,11 @@ void add_pixels(image_t * im, int row, int col, int size, histo_t *h)
 
 void init_histo(image_t *im, int row, int size, histo_t *h)
 {
-    //memset(h, 0, sizeof(histo_t));
-    h->n = 0;
-    h->h[0] = h->h[1]=0;
+    if (im->bpp==1) {
+        h->n = h->h[0] = h->h[1] = 0;
+    } else {
+        memset(h, 0, sizeof(histo_t));
+    }
     for (int j = 0; j < size && j < im->w; j++) {
         add_pixels(im, row, j, size, h);
     }
@@ -93,7 +95,8 @@ uint16_t median(const int *x, int n)
 void median_filter_rgb(image_t *in, int size)
 {
     uint16_t r,g,b;
-    int k_rows = size+1;
+    //int k_rows = size+1;
+    int k_rows = (2*size+1)*2;
     histo_t *h = xalloc(sizeof(*h));
     uint16_t *data = xalloc(in->w * k_rows * sizeof(*data));
 
