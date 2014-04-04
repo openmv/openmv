@@ -245,11 +245,13 @@ int main(void)
     rng_init();
 
     /* Add functions to the global python namespace */
-    rt_store_name(qstr_from_str("help"), rt_make_function_n(0, py_help));
-    rt_store_name(qstr_from_str("open"), rt_make_function_n(2, py_file_open));
-    rt_store_name(qstr_from_str("vcp_connected"), rt_make_function_n(0, py_vcp_connected));
-    rt_store_name(qstr_from_str("info"), rt_make_function_n(0, py_info));
-    rt_store_name(qstr_from_str("gc_collect"), rt_make_function_n(0, py_gc_collect));
+    rt_store_global(qstr_from_str("help"), rt_make_function_n(0, py_help));
+    rt_store_global(qstr_from_str("open"), rt_make_function_n(2, py_file_open));
+    rt_store_global(qstr_from_str("vcp_connected"), rt_make_function_n(0, py_vcp_connected));
+    rt_store_global(qstr_from_str("info"), rt_make_function_n(0, py_info));
+    rt_store_global(qstr_from_str("gc_collect"), rt_make_function_n(0, py_gc_collect));
+
+    py_image_init();
 
     /* Export Python modules to the global python namespace */
     for (module_t *p = exported_modules; p->name != NULL; p++) {
@@ -260,6 +262,7 @@ int main(void)
             mp_module_register(p->name, (mp_obj_t)module);
         }
     }
+
 
     /* Try to mount the flash fs */
     bool reset_filesystem = false;

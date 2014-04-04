@@ -83,6 +83,60 @@ static void py_image_print(void (*print)(void *env, const char *fmt, ...), void 
     print(env, "<image width:%d height:%d bpp:%d>", self->_cobj.w, self->_cobj.h, self->_cobj.bpp);
 }
 
+static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    rectangle_t r;
+    image_t *image = py_image_cobj(args[0]);
+    const char *path = mp_obj_str_get_str(args[1]);
+
+    mp_map_elem_t *kw_subimage = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("subimage")), MP_MAP_LOOKUP);
+    if (kw_subimage != NULL) {
+        mp_obj_t *array;
+        mp_obj_get_array_fixed_n(kw_subimage->value, 4, &array);
+        r.x = mp_obj_get_int(array[0]);
+        r.y = mp_obj_get_int(array[1]);
+        r.w = mp_obj_get_int(array[2]);
+        r.h = mp_obj_get_int(array[3]);
+    }
+
+    int res;
+    if ((res=imlib_save_image(image, path, &r)) != FR_OK) {
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+
+    return mp_const_true;
+}
+
+static mp_obj_t py_image_blit(mp_obj_t dst_image_obj, mp_obj_t offset_obj, mp_obj_t src_image_obj)
+{
+    int x,y;
+    image_t *src_image = NULL;
+    image_t *dst_image = NULL;
+
+    /* sanity checks */
+    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QQVGA);
+    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+
+    /* get C image pointer */
+    src_image = py_image_cobj(src_image_obj);
+    dst_image = py_image_cobj(dst_image_obj);
+
+    /* get x,y */
+    mp_obj_t *array;
+    mp_obj_get_array_fixed_n(offset_obj, 2, &array);
+    x = mp_obj_get_int(array[0]);
+    y = mp_obj_get_int(array[1]);
+
+    if ((src_image->w+x)>dst_image->w ||
+        (src_image->h+y)>dst_image->h) {
+        printf("src image > dst image\n");
+        return mp_const_none;
+    }
+
+    imlib_blit(dst_image, src_image, x, y);
+    return mp_const_true;
+}
+
 static mp_obj_t py_image_histeq(mp_obj_t image_obj)
 {
     struct image *image;
@@ -90,61 +144,24 @@ static mp_obj_t py_image_histeq(mp_obj_t image_obj)
     image = (struct image*) py_image_cobj(image_obj);
 
     /* sanity checks */
-    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+    PY_ASSERT_TRUE(image->bpp == 1);
 
     imlib_histeq(image);
     return mp_const_none;
 }
 
-static mp_obj_t py_image_median(mp_obj_t image_obj, mp_obj_t ksize)
+static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    struct image *image;
+    int ksize = 1;
     /* get image pointer */
-    image = (struct image*) py_image_cobj(image_obj);
+    image_t *image = py_image_cobj(args[0]);
 
-    /* sanity checks */
-    //PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+    mp_map_elem_t *kw_ksize = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("size")), MP_MAP_LOOKUP);
+    if (kw_ksize != NULL) {
+        ksize = mp_obj_get_int(kw_ksize->value);
+    }
 
-    imlib_median_filter(image, mp_obj_get_int(ksize));
-    return mp_const_none;
-}
-
-static mp_obj_t py_image_draw_rectangle(mp_obj_t image_obj, mp_obj_t rectangle_obj)
-{
-    struct rectangle r;
-    struct image *image;
-    mp_obj_t *array;
-
-    mp_obj_get_array_fixed_n(rectangle_obj, 4, &array);
-    r.x = mp_obj_get_int(array[0]);
-    r.y = mp_obj_get_int(array[1]);
-    r.w = mp_obj_get_int(array[2]);
-    r.h = mp_obj_get_int(array[3]);
-
-    /* get image pointer */
-    image = py_image_cobj(image_obj);
-
-    imlib_draw_rectangle(image, &r);
-    return mp_const_none;
-}
-
-static mp_obj_t py_image_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_t r_obj)
-{
-    int cx, cy, r;
-    mp_obj_t *array;
-    struct image *image;
-
-    /* get image pointer */
-    image = py_image_cobj(image_obj);
-
-    /* center */
-    mp_obj_get_array_fixed_n(c_obj, 2, &array);
-    cx = mp_obj_get_int(array[0]);
-    cy = mp_obj_get_int(array[1]);
-
-    /* radius */
-    r = mp_obj_get_int(r_obj);
-    imlib_draw_circle(image, cx, cy, r);
+    imlib_median_filter(image, ksize);
     return mp_const_none;
 }
 
@@ -172,7 +189,61 @@ static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_obj, mp_ob
     return mp_const_none;
 }
 
-static mp_obj_t py_image_count_blobs(mp_obj_t image_obj)
+static mp_obj_t py_image_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_t r_obj)
+{
+    int cx, cy, r;
+    mp_obj_t *array;
+    struct image *image;
+
+    /* get image pointer */
+    image = py_image_cobj(image_obj);
+
+    /* center */
+    mp_obj_get_array_fixed_n(c_obj, 2, &array);
+    cx = mp_obj_get_int(array[0]);
+    cy = mp_obj_get_int(array[1]);
+
+    /* radius */
+    r = mp_obj_get_int(r_obj);
+    imlib_draw_circle(image, cx, cy, r);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_draw_rectangle(mp_obj_t image_obj, mp_obj_t rectangle_obj)
+{
+    struct rectangle r;
+    struct image *image;
+    mp_obj_t *array;
+
+    mp_obj_get_array_fixed_n(rectangle_obj, 4, &array);
+    r.x = mp_obj_get_int(array[0]);
+    r.y = mp_obj_get_int(array[1]);
+    r.w = mp_obj_get_int(array[2]);
+    r.h = mp_obj_get_int(array[3]);
+
+    /* get image pointer */
+    image = py_image_cobj(image_obj);
+
+    imlib_draw_rectangle(image, &r);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_draw_keypoints(mp_obj_t image_obj, mp_obj_t surf_obj)
+{
+    surf_t *surf = NULL;
+    image_t *image = NULL;
+
+    /* get C image pointer */
+    image = py_image_cobj(image_obj);
+
+    /* get C cascade pointer */
+    surf = py_surf_cobj(surf_obj);
+
+    surf_draw_ipts(image, surf->ipts);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
 {
     /* C stuff */
     array_t *blobs;
@@ -208,7 +279,7 @@ static mp_obj_t py_image_count_blobs(mp_obj_t image_obj)
     return objects_list;
 }
 
-static mp_obj_t py_image_detect_objects(mp_obj_t image_obj, mp_obj_t cascade_obj)
+static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj)
 {
     struct image *image = NULL;
     struct cascade *cascade = NULL;
@@ -248,82 +319,7 @@ static mp_obj_t py_image_detect_objects(mp_obj_t image_obj, mp_obj_t cascade_obj
     return objects_list;
 }
 
-static mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
-{
-    py_cascade_obj_t *o =NULL;
-
-    /* detection parameters */
-    struct cascade cascade = {
-        .step = 2,
-        .scale_factor = 1.25f,
-    };
-
-    const char *path = mp_obj_str_get_str(path_obj);
-    int res = imlib_load_cascade(&cascade, path);
-    if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-
-    o = m_new_obj(py_cascade_obj_t);
-    o->base.type = &py_cascade_type;
-    o->_cobj = cascade;
-    return o;
-}
-
-static mp_obj_t py_image_load_template(mp_obj_t path_obj)
-{
-    mp_obj_t image_obj =NULL;
-    struct image *image;
-    const char *path = mp_obj_str_get_str(path_obj);
-    image_obj = py_image(0, 0, 0, 0);
-
-    /* get image pointer */
-    image = py_image_cobj(image_obj);
-
-    int res = imlib_load_template(image, path);
-    if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-
-    return image_obj;
-}
-
-static mp_obj_t py_image_save_template(mp_obj_t image_obj, mp_obj_t rectangle_obj, mp_obj_t path_obj)
-{
-    struct image t;
-    struct image *image = NULL;
-
-    struct rectangle r;
-    mp_obj_t *array;
-
-    const char *path = mp_obj_str_get_str(path_obj);
-
-    mp_obj_get_array_fixed_n(rectangle_obj, 4, &array);
-    r.x = mp_obj_get_int(array[0]);
-    r.y = mp_obj_get_int(array[1]);
-    r.w = mp_obj_get_int(array[2]);
-    r.h = mp_obj_get_int(array[3]);
-
-
-    /* get C image pointer */
-    image = py_image_cobj(image_obj);
-    t.w = r.w;
-    t.h = r.h;
-    t.data = xalloc(sizeof(*t.data)*t.w*t.h); /* TODO this is not really needed */
-
-    imlib_subimage(image, &t, r.x, r.y);
-
-    int res = imlib_save_template(&t, path);
-    xfree(t.data);
-
-    if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-
-    return mp_const_true;
-}
-
-static mp_obj_t py_image_template_match(mp_obj_t image_obj, mp_obj_t template_obj, mp_obj_t threshold)
+static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj, mp_obj_t threshold)
 {
     struct rectangle r;
     struct image *image = NULL;
@@ -353,40 +349,38 @@ static mp_obj_t py_image_template_match(mp_obj_t image_obj, mp_obj_t template_ob
     return obj;
 }
 
-static mp_obj_t py_image_blit(mp_obj_t image_obj, mp_obj_t template_obj)
+static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    struct image *image = NULL;
-    struct image *template = NULL;
-
-    /* sanity checks */
-    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QQVGA);
-    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
-
-    /* get C image pointer */
-    image = py_image_cobj(image_obj);
-    template= py_image_cobj(template_obj);
-    imlib_blit(image, template, 0, 0);
-
-    return mp_const_true;
-}
-
-static mp_obj_t py_image_surf_detector(mp_obj_t image_obj, mp_obj_t upright, mp_obj_t thresh)
-{
-    struct image *image;
     py_surf_obj_t *o =NULL;
 
     surf_t surf = {
-        .upright=mp_obj_get_int(upright),
-        .octaves=5,
+        .upright=false,
+        .octaves=2,
         .init_sample=2,
-        .thresh=mp_obj_get_float(thresh),
+        .thresh=0.0004f,
     };
 
     /* get image pointer */
-    image = (struct image*) py_image_cobj(image_obj);
+    image_t *image = py_image_cobj(args[0]);
 
     /* sanity checks */
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+
+    /* read KW args */
+    mp_map_elem_t *kw_upright = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("upright")), MP_MAP_LOOKUP);
+    if (kw_upright != NULL) {
+        surf.upright = mp_obj_get_int(kw_upright->value);
+    }
+
+    mp_map_elem_t *kw_octaves = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("octaves")), MP_MAP_LOOKUP);
+    if (kw_octaves != NULL) {
+        surf.octaves = mp_obj_get_int(kw_octaves->value);
+    }
+
+    mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("thresh")), MP_MAP_LOOKUP);
+    if (kw_thresh != NULL) {
+        surf.thresh = mp_obj_get_float(kw_thresh->value);
+    }
 
     /* run SURF detector */
     surf_detector(image, &surf);
@@ -397,73 +391,111 @@ static mp_obj_t py_image_surf_detector(mp_obj_t image_obj, mp_obj_t upright, mp_
     return o;
 }
 
-static mp_obj_t py_image_surf_match(mp_obj_t image_obj, mp_obj_t surf1_obj, mp_obj_t surf2_obj)
+static mp_obj_t py_image_find_keypoints_match(mp_obj_t image_obj, mp_obj_t surf1_obj)
 {
-    surf_t *surf1 = NULL;
-    surf_t *surf2 = NULL;
+    surf_t *surf1 = NULL, surf2;
     image_t *image = NULL;
 
     /* get C image pointer */
     image = py_image_cobj(image_obj);
+
     /* get C cascade pointer */
     surf1 = py_surf_cobj(surf1_obj);
-    surf2 = py_surf_cobj(surf2_obj);
+    surf2 = *surf1; //use same parameters
+
+    /* run SURF detector */
+    surf_detector(image, &surf2);
 
     /* Detect objects */
-    array_t *match = surf_match(surf1, surf2);
+    array_t *match = surf_match(surf1, &surf2);
+
+    // TODO return matching kpts
     surf_draw_ipts(image, match);
-    array_free(match); //TODO
-    array_free(surf2->ipts); //TODO
+    array_free(match);
+    array_free(surf2.ipts);
+
     return mp_const_none;
 }
 
-static mp_obj_t py_image_surf_draw_ipts(mp_obj_t image_obj, mp_obj_t surf_obj)
+static mp_obj_t py_image_load_image(mp_obj_t path_obj)
 {
-    surf_t *surf = NULL;
-    image_t *image = NULL;
+    mp_obj_t image_obj =NULL;
+    struct image *image;
+    const char *path = mp_obj_str_get_str(path_obj);
+    image_obj = py_image(0, 0, 0, 0);
 
-    /* get C image pointer */
+    /* get image pointer */
     image = py_image_cobj(image_obj);
 
-    /* get C cascade pointer */
-    surf = py_surf_cobj(surf_obj);
+    int res = imlib_load_image(image, path);
+    if (res != FR_OK) {
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
 
-    surf_draw_ipts(image, surf->ipts);
-    return mp_const_none;
+    return image_obj;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_blit_obj,              py_image_blit);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_cascade_obj,      py_image_load_cascade);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_template_obj,     py_image_load_template);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_save_template_obj,     py_image_save_template);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_template_match_obj,    py_image_template_match);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj,            py_image_histeq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_median_obj,            py_image_median);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_rectangle_obj,    py_image_draw_rectangle);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_circle_obj,       py_image_draw_circle);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj,         py_image_threshold);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_count_blobs_obj,       py_image_count_blobs);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_detect_objects_obj,    py_image_detect_objects);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_surf_detector_obj,     py_image_surf_detector);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_surf_match_obj,        py_image_surf_match);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_surf_draw_ipts_obj,    py_image_surf_draw_ipts);
+static mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
+{
+    py_cascade_obj_t *o =NULL;
+
+    /* detection parameters */
+    struct cascade cascade = {
+        .step = 2,
+        .scale_factor = 1.25f,
+    };
+
+    const char *path = mp_obj_str_get_str(path_obj);
+    int res = imlib_load_cascade(&cascade, path);
+    if (res != FR_OK) {
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+
+    o = m_new_obj(py_cascade_obj_t);
+    o->base.type = &py_cascade_type;
+    o->_cobj = cascade;
+    return o;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj,         py_image_blit);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj,       py_image_histeq);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 1,   py_image_median);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj,    py_image_threshold);
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_circle_obj,      py_image_draw_circle);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_rectangle_obj,   py_image_draw_rectangle);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_keypoints_obj,   py_image_draw_keypoints);
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj,       py_image_find_blobs);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj,    py_image_find_template);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_features_obj,    py_image_find_features);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_keypoints_match_obj, py_image_find_keypoints_match);
+
+//STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_cascade_obj,         py_image_load_cascade);
+//STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj,           py_image_load_image);
 
 static const mp_method_t py_image_methods[] = {
-    {"blit",              &py_image_blit_obj},
-    {"load_cascade",      &py_image_load_cascade_obj},
-    {"load_template",     &py_image_load_template_obj},
-    {"save_template",     &py_image_save_template_obj},
-    {"template_match",    &py_image_template_match_obj},
-    {"histeq",            &py_image_histeq_obj},
-    {"median",            &py_image_median_obj},
-    {"draw_rectangle",    &py_image_draw_rectangle_obj},
-    {"draw_circle",       &py_image_draw_circle_obj},
-    {"threshold",         &py_image_threshold_obj},
-    {"count_blobs",       &py_image_count_blobs_obj},
-    {"detect_objects",    &py_image_detect_objects_obj},
-    {"surf_detector",     &py_image_surf_detector_obj},
-    {"surf_match",        &py_image_surf_match_obj},
-    {"surf_draw_ipts",    &py_image_surf_draw_ipts_obj},
+    /* basic image functions */
+    {"save",                &py_image_save_obj},
+    {"blit",                &py_image_blit_obj},
+    {"histeq",              &py_image_histeq_obj},
+    {"median",              &py_image_median_obj},
+    {"threshold",           &py_image_threshold_obj},
+
+    /* drawing functions */
+    {"draw_circle",         &py_image_draw_circle_obj},
+    {"draw_rectangle",      &py_image_draw_rectangle_obj},
+    {"draw_keypoints",      &py_image_draw_keypoints_obj},
+
+    /* objects/feature detection */
+    {"find_blobs",          &py_image_find_blobs_obj},
+    {"find_template",       &py_image_find_template_obj},
+    {"find_features",       &py_image_find_features_obj},
+    {"find_keypoints",      &py_image_find_keypoints_obj},
+    {"find_keypoints_match",&py_image_find_keypoints_match_obj},
+
     { NULL, NULL },
 };
 
@@ -484,6 +516,12 @@ mp_obj_t py_image(int w, int h, int bpp, void *pixels)
     o->_cobj.bpp =bpp;
     o->_cobj.pixels =pixels;
     return o;
+}
+
+void py_image_init()
+{
+    rt_store_global(qstr_from_str("Image"), rt_make_function_n(1, py_image_load_image));
+    rt_store_global(qstr_from_str("HaarCascade"), rt_make_function_n(1, py_image_load_cascade));
 }
 
 #if 0
