@@ -28,7 +28,29 @@ static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {
 }
 
 static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
-    if (sensor_set_framerate(mp_obj_get_int(framerate)) != 0) {
+    enum sensor_framerate fr;
+    switch (mp_obj_get_int(framerate)) {
+        case 2:
+            fr = FRAMERATE_2FPS;
+            break;
+        case 8:
+            fr = FRAMERATE_8FPS;
+            break;
+        case 15:
+            fr = FRAMERATE_15FPS;
+            break;
+        case 30:
+            fr = FRAMERATE_30FPS;
+            break;
+        case 60:
+            fr = FRAMERATE_60FPS;
+            break;
+        default:
+            nlr_jump(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid framerate"));
+            break;
+    }
+
+    if (sensor_set_framerate(fr) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -42,7 +64,35 @@ static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
 }
 
 static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling) {
-    if (sensor_set_gainceiling(mp_obj_get_int(gainceiling)) != 0) {
+    enum sensor_gainceiling gain;
+    switch (mp_obj_get_int(gainceiling)) {
+        case 2:
+            gain = GAINCEILING_2X;
+            break;
+        case 4:
+            gain = GAINCEILING_4X;
+            break;
+        case 8:
+            gain = GAINCEILING_8X;
+            break;
+        case 16:
+            gain = GAINCEILING_16X;
+            break;
+        case 32:
+            gain = GAINCEILING_32X;
+            break;
+        case 64:
+            gain = GAINCEILING_64X;
+            break;
+        case 128:
+            gain = GAINCEILING_128X;
+            break;
+        default:
+            nlr_jump(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid gainceiling"));
+            break;
+    }
+
+    if (sensor_set_gainceiling(gain) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -64,11 +114,13 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
     return mp_obj_new_int(SCCB_Read(mp_obj_get_int(addr)));
 }
 
+#if 0
 static void py_sensor_print(void (*print)(void *env, const char *fmt, ...),
                             void *env, mp_obj_t self_in, mp_print_kind_t kind) {
 //        printf(env, "<Sensor MID:0x%.2X%.2X PID:0x%.2X VER:0x%.2X>",
   //          sensor.id.MIDH, sensor.id.MIDL, sensor.id.PID, sensor.id.VER);
 }
+#endif
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,           py_sensor_reset);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_obj,        py_sensor_snapshot);
