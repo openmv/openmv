@@ -9,7 +9,7 @@ while (True):
     # detect blobs
     image.threshold((255, 127, 127),  40)
     image.median(3)
-    blobs = image.count_blobs()
+    blobs = image.find_blobs()
     
     # draw rectangles around detected blobs
     image = sensor.snapshot()    

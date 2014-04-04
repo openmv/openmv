@@ -1,15 +1,19 @@
-import sensor, imlib, time
-clock = time.clock()
+import sensor, time
+# Set sensor gainceiling
+sensor.set_gainceiling(16)
+# Set sensor brightness
+sensor.set_brightness(-2)
 # Set sensor to grayscale
 sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_brightness(-2)
+
 image = sensor.snapshot()
-surf1 =  imlib.surf_detector(image, False, 0.0004)
-imlib.surf_draw_ipts(image, surf1)
+kp =  image.find_keypoints(upright=False, thresh=0.0004, octaves=2)
+image.draw_keypoints(kp)
 time.sleep(2000)
+
+clock = time.clock()
 while (True):
     image = sensor.snapshot()
     clock.tick()
-    surf2 = imlib.surf_detector(image, False, 0.0004)
-    imlib.surf_match(image, surf1,  surf2)
+    ipts2 = image.find_keypoints_match(kp)
     print (clock.avg())
