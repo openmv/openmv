@@ -60,6 +60,18 @@ void SCCB_Init()
     I2C_Cmd(I2Cx, ENABLE);
 }
 
+void SCCB_DeInit()
+{
+    /* Disable the I2C peripheral */
+    I2C_Cmd(I2Cx, DISABLE);
+
+    /* DeInit I2C registers */
+    I2C_DeInit(I2Cx);
+
+    /* Disable I2C clock */
+    RCC_APB1PeriphClockCmd(I2C_CLOCK, ENABLE);
+}
+
 uint8_t SCCB_Write(uint8_t addr, uint8_t data)
 {
     volatile uint32_t timeout = I2C_MAX_TIMEOUT;
