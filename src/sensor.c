@@ -369,16 +369,23 @@ int sensor_init()
        is connected before initializing SCCB and reading the PID register, which in
        turn requires pulling the sensor out of the reset state. So we try to read a
        register with both polarities to determine line state. */
+    sensor.reset_pol = ACTIVE_HIGH;
 
-    sensor.reset_pol = ACTIVE_LOW;
     GPIO_SetBits(GPIOA, GPIO_Pin_10);
+    systick_sleep(10);
+
+    GPIO_ResetBits(GPIOA, GPIO_Pin_10);
     systick_sleep(10);
 
     /* Check if we can read PID */
     if (SCCB_Read(REG_PID) == 255) {
         /* Sensor is held in reset, so reset is active high */
-        sensor.reset_pol = ACTIVE_HIGH;
+        sensor.reset_pol = ACTIVE_LOW;
+
         GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+        systick_sleep(10);
+
+        GPIO_SetBits(GPIOA, GPIO_Pin_10);
         systick_sleep(10);
     }
 
