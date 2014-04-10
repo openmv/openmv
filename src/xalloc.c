@@ -4,7 +4,7 @@
 
 void *xalloc(uint32_t size)
 {
-    void *mem = gc_alloc(size);
+    void *mem = gc_alloc(size, false);
     if (mem == NULL) {
         BREAK();
     }
@@ -13,7 +13,7 @@ void *xalloc(uint32_t size)
 
 void *xalloc0(uint32_t size)
 {
-    void *mem = gc_alloc(size);
+    void *mem = gc_alloc(size, false);
     if (mem == NULL) {
         BREAK();
     }
