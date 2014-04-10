@@ -19,6 +19,7 @@
 #include "py_time.h"
 #include "py_spi.h"
 #include "py_gpio.h"
+#include "py_image.h"
 #include "libcc3k.h"
 
 int errno;
@@ -219,15 +220,16 @@ typedef struct {
     const mp_obj_module_t *(*init)(void);
 } module_t;
 
-static module_t exported_modules[] ={
+static const module_t exported_modules[] ={
+    {MP_QSTR_sensor,py_sensor_init},
     {MP_QSTR_led,   py_led_init},
     {MP_QSTR_time,  py_time_init},
-    {MP_QSTR_sensor,py_sensor_init},
     {MP_QSTR_gpio,  py_gpio_init},
     {MP_QSTR_spi,   py_spi_init},
     {NULL, NULL}
 };
 
+#include "mdefs.h"
 int main(void)
 {
     rcc_ctrl_set_frequency(SYSCLK_168_MHZ);
@@ -245,16 +247,16 @@ int main(void)
     rng_init();
 
     /* Add functions to the global python namespace */
-    rt_store_global(qstr_from_str("help"), rt_make_function_n(0, py_help));
-    rt_store_global(qstr_from_str("open"), rt_make_function_n(2, py_file_open));
-    rt_store_global(qstr_from_str("vcp_connected"), rt_make_function_n(0, py_vcp_connected));
-    rt_store_global(qstr_from_str("info"), rt_make_function_n(0, py_info));
-    rt_store_global(qstr_from_str("gc_collect"), rt_make_function_n(0, py_gc_collect));
-
-    py_image_init();
+    mp_store_global(qstr_from_str("help"), mp_make_function_n(0, py_help));
+    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
+    mp_store_global(qstr_from_str("vcp_connected"), mp_make_function_n(0, py_vcp_connected));
+    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
+    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
+    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
+    mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
 
     /* Export Python modules to the global python namespace */
-    for (module_t *p = exported_modules; p->name != NULL; p++) {
+    for (const module_t *p = exported_modules; p->name != NULL; p++) {
         const mp_obj_module_t *module = p->init();
         if (module == NULL) {
             __fatal_error("failed to init module");
@@ -262,7 +264,6 @@ int main(void)
             mp_module_register(p->name, (mp_obj_t)module);
         }
     }
-
 
     /* Try to mount the flash fs */
     bool reset_filesystem = false;

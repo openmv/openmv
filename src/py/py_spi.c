@@ -37,25 +37,19 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_spi_read_obj,   py_spi_read);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_spi_write_obj,  py_spi_write);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_spi_write_image_obj, py_spi_write_image);
 
-STATIC const mp_map_elem_t module_globals_table[] = {
+static const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_spi) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_read),      (mp_obj_t)&py_spi_read_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_write),     (mp_obj_t)&py_spi_write_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_write_image), (mp_obj_t)&py_spi_write_image_obj },
 };
 
-STATIC const mp_map_t module_globals = {
-    .all_keys_are_qstrs = 1,
-    .table_is_fixed_array = 1,
-    .used  = sizeof(module_globals_table) / sizeof(mp_map_elem_t),
-    .alloc = sizeof(module_globals_table) / sizeof(mp_map_elem_t),
-    .table = (mp_map_elem_t*)module_globals_table,
-};
+STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 static const mp_obj_module_t py_spi_module = {
     .base = { &mp_type_module },
     .name = MP_QSTR_spi,
-    .globals = (mp_map_t*)&module_globals,
+    .globals = (mp_obj_t)&globals_dict,
 };
 
 const mp_obj_module_t *py_spi_init()

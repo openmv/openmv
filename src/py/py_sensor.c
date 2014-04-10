@@ -132,7 +132,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,  py_sensor_set_br
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,       py_sensor_write_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,        py_sensor_read_reg);
 
-STATIC const mp_map_elem_t module_globals_table[] = {
+STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_sensor) },
     /* Pixel format */
     { MP_OBJ_NEW_QSTR(MP_QSTR_RGB565),      MP_OBJ_NEW_SMALL_INT(PIXFORMAT_RGB565)},   /* 2BPP/RGB565*/
@@ -160,18 +160,12 @@ STATIC const mp_map_elem_t module_globals_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),      (mp_obj_t)&py_sensor_read_reg_obj },
 };
 
-STATIC const mp_map_t module_globals = {
-    .all_keys_are_qstrs = 1,
-    .table_is_fixed_array = 1,
-    .used  = sizeof(module_globals_table) / sizeof(mp_map_elem_t),
-    .alloc = sizeof(module_globals_table) / sizeof(mp_map_elem_t),
-    .table = (mp_map_elem_t*)module_globals_table,
-};
+STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 static const mp_obj_module_t py_sensor_module = {
     .base = { &mp_type_module },
     .name = MP_QSTR_sensor,
-    .globals = (mp_map_t*)&module_globals,
+    .globals = (mp_obj_t)&globals_dict,
 };
 
 const mp_obj_module_t *py_sensor_init()

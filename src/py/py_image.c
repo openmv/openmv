@@ -262,17 +262,15 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
     blobs = imlib_count_blobs(image);
 
     /* Create empty Python list */
-    objects_list = rt_build_list(0, NULL);
+    objects_list = mp_obj_new_list(0, NULL);
 
     if (array_length(blobs)) {
         for (int j=0; j<array_length(blobs); j++) {
              rectangle_t *b = array_at(blobs, j);
-             mp_obj_t r[4];
-             r[0] = mp_obj_new_int(b->x);
-             r[1] = mp_obj_new_int(b->y);
-             r[2] = mp_obj_new_int(b->w);
-             r[3] = mp_obj_new_int(b->h);
-             rt_list_append(objects_list, rt_build_tuple(4, r));
+             mp_obj_list_append(objects_list, mp_obj_new_int(b->x));
+             mp_obj_list_append(objects_list, mp_obj_new_int(b->y));
+             mp_obj_list_append(objects_list, mp_obj_new_int(b->w));
+             mp_obj_list_append(objects_list, mp_obj_new_int(b->h));
         }
     }
     array_free(blobs);
@@ -300,7 +298,7 @@ static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj)
     objects_array = imlib_detect_objects(image, cascade);
 
     /* Create empty Python list */
-    objects_list = rt_build_list(0, NULL);
+    objects_list = mp_obj_new_list(0, NULL);
 
     /* Add detected objects to the list */
     for (int i=0; i<array_length(objects_array); i++) {
@@ -310,7 +308,7 @@ static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj)
         rec_obj[1] = mp_obj_new_int(r->y);
         rec_obj[2] = mp_obj_new_int(r->w);
         rec_obj[3] = mp_obj_new_int(r->h);
-        rt_list_append(objects_list, rt_build_tuple(4, rec_obj));
+        mp_obj_list_append(objects_list, mp_obj_new_tuple(4, rec_obj));
     }
 
     /* Free the objects array */
@@ -344,7 +342,7 @@ static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj
         rec_obj[1] = mp_obj_new_int(r.y);
         rec_obj[2] = mp_obj_new_int(r.w);
         rec_obj[3] = mp_obj_new_int(r.h);
-        obj=rt_build_tuple(4, rec_obj);
+        obj = mp_obj_new_tuple(4, rec_obj);
     }
     return obj;
 }
@@ -417,7 +415,7 @@ static mp_obj_t py_image_find_keypoints_match(mp_obj_t image_obj, mp_obj_t surf1
     return mp_const_none;
 }
 
-static mp_obj_t py_image_load_image(mp_obj_t path_obj)
+mp_obj_t py_image_load_image(mp_obj_t path_obj)
 {
     mp_obj_t image_obj =NULL;
     struct image *image;
@@ -435,7 +433,7 @@ static mp_obj_t py_image_load_image(mp_obj_t path_obj)
     return image_obj;
 }
 
-static mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
+mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
 {
     py_cascade_obj_t *o =NULL;
 
@@ -458,52 +456,51 @@ static mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj,         py_image_blit);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj,       py_image_histeq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 1,   py_image_median);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj,    py_image_threshold);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj, py_image_blit);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 1, py_image_median);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj, py_image_threshold);
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_circle_obj,      py_image_draw_circle);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_rectangle_obj,   py_image_draw_rectangle);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_keypoints_obj,   py_image_draw_keypoints);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_circle_obj, py_image_draw_circle);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_rectangle_obj, py_image_draw_rectangle);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_keypoints_obj, py_image_draw_keypoints);
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj,       py_image_find_blobs);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj,    py_image_find_template);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_features_obj,    py_image_find_features);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_features_obj, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_keypoints_match_obj, py_image_find_keypoints_match);
 
-//STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_cascade_obj,         py_image_load_cascade);
-//STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj,           py_image_load_image);
-
-static const mp_method_t py_image_methods[] = {
+static const mp_map_elem_t locals_dict_table[] = {
     /* basic image functions */
-    {"save",                &py_image_save_obj},
-    {"blit",                &py_image_blit_obj},
-    {"histeq",              &py_image_histeq_obj},
-    {"median",              &py_image_median_obj},
-    {"threshold",           &py_image_threshold_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_blit),                (mp_obj_t)&py_image_blit_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_threshold),           (mp_obj_t)&py_image_threshold_obj},
 
     /* drawing functions */
-    {"draw_circle",         &py_image_draw_circle_obj},
-    {"draw_rectangle",      &py_image_draw_rectangle_obj},
-    {"draw_keypoints",      &py_image_draw_keypoints_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_draw_circle),         (mp_obj_t)&py_image_draw_circle_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_draw_rectangle),      (mp_obj_t)&py_image_draw_rectangle_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_draw_keypoints),      (mp_obj_t)&py_image_draw_keypoints_obj},
 
     /* objects/feature detection */
-    {"find_blobs",          &py_image_find_blobs_obj},
-    {"find_template",       &py_image_find_template_obj},
-    {"find_features",       &py_image_find_features_obj},
-    {"find_keypoints",      &py_image_find_keypoints_obj},
-    {"find_keypoints_match",&py_image_find_keypoints_match_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_features),       (mp_obj_t)&py_image_find_features_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints_match),(mp_obj_t)&py_image_find_keypoints_match_obj},
 
     { NULL, NULL },
 };
 
+STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
+
 static const mp_obj_type_t py_image_type = {
     { &mp_type_type },
-    .name       = MP_QSTR_Image,
-    .print      = py_image_print,
-    .methods    = py_image_methods,
+    .name  = MP_QSTR_image,
+    .print = py_image_print,
+    .locals_dict = (mp_obj_t)&locals_dict,
 };
 
 mp_obj_t py_image(int w, int h, int bpp, void *pixels)
@@ -516,12 +513,6 @@ mp_obj_t py_image(int w, int h, int bpp, void *pixels)
     o->_cobj.bpp =bpp;
     o->_cobj.pixels =pixels;
     return o;
-}
-
-void py_image_init()
-{
-    rt_store_global(qstr_from_str("Image"), rt_make_function_n(1, py_image_load_image));
-    rt_store_global(qstr_from_str("HaarCascade"), rt_make_function_n(1, py_image_load_cascade));
 }
 
 #if 0

@@ -56,17 +56,19 @@ static void py_gpio_print(void (*print)(void *env, const char *fmt, ...), void *
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gpio_low_obj,  py_gpio_low);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gpio_high_obj, py_gpio_high);
 
-static const mp_method_t py_gpio_methods[] = {
-    { "low",   &py_gpio_low_obj},
-    { "high",  &py_gpio_high_obj},
-    { NULL, NULL },
+static const mp_map_elem_t locals_dict_table[] = {
+    {MP_OBJ_NEW_QSTR(MP_QSTR_low),   (mp_obj_t)&py_gpio_low_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_high),  (mp_obj_t)&py_gpio_high_obj},
+    {NULL, NULL },
 };
+
+STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
 
 static const mp_obj_type_t py_gpio_type = {
     { &mp_type_type },
-    .name       = MP_QSTR_gpio,
-    .print      = py_gpio_print,
-    .methods    = py_gpio_methods,
+    .name  = MP_QSTR_gpio,
+    .print = py_gpio_print,
+    .locals_dict = (mp_obj_t)&locals_dict,
 };
 
 static void gpio_init(const gpio_t *gpio)
@@ -96,7 +98,8 @@ mp_obj_t py_gpio_new(mp_obj_t id_obj)
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gpio_new_obj,   py_gpio_new);
-STATIC const mp_map_elem_t module_globals_table[] = {
+
+static const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_gpio) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_P1),      MP_OBJ_NEW_SMALL_INT(GPIO_PC10)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_P2),      MP_OBJ_NEW_SMALL_INT(GPIO_PC11)},
@@ -107,18 +110,12 @@ STATIC const mp_map_elem_t module_globals_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_GPIO),    (mp_obj_t)&py_gpio_new_obj },
 };
 
-STATIC const mp_map_t module_globals = {
-    .all_keys_are_qstrs = 1,
-    .table_is_fixed_array = 1,
-    .used  = sizeof(module_globals_table) / sizeof(mp_map_elem_t),
-    .alloc = sizeof(module_globals_table) / sizeof(mp_map_elem_t),
-    .table = (mp_map_elem_t*)module_globals_table,
-};
+STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
-static const mp_obj_module_t py_gpio_module = {
+const mp_obj_module_t py_gpio_module = {
     .base = { &mp_type_module },
     .name = MP_QSTR_gpio,
-    .globals = (mp_map_t*)&module_globals,
+    .globals = (mp_obj_t)&globals_dict,
 };
 
 const mp_obj_module_t *py_gpio_init()

@@ -53,19 +53,21 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_clock_fps_obj,   py_clock_fps);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_clock_avg_obj,   py_clock_avg);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_clock_reset_obj, py_clock_reset);
 
-static const mp_method_t py_clock_methods[] = {
-    { "tick",   &py_clock_tick_obj},
-    { "fps",    &py_clock_fps_obj},
-    { "avg",    &py_clock_avg_obj},
-    { "reset",    &py_clock_reset_obj},
+static const mp_map_elem_t locals_dict_table[] = {
+    { MP_OBJ_NEW_QSTR(MP_QSTR_tick),   (mp_obj_t)&py_clock_tick_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fps),    (mp_obj_t)&py_clock_fps_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_avg),    (mp_obj_t)&py_clock_avg_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_reset),  (mp_obj_t)&py_clock_reset_obj},
     { NULL, NULL },
 };
+
+STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
 
 static const mp_obj_type_t py_clock_type = {
     { &mp_type_type },
     .name  = MP_QSTR_Clock,
     .print = py_clock_print,
-    .methods = py_clock_methods,
+    .locals_dict = (mp_obj_t)&locals_dict,
 };
 
 mp_obj_t py_clock()

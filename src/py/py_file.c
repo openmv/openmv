@@ -79,18 +79,20 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_file_close_obj, py_file_close);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_file_read_obj, py_file_read);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_file_write_obj, py_file_write);
 
-static const mp_method_t py_file_methods[] = {
-    { "close",  &py_file_close_obj},
-    { "read",   &py_file_read_obj},
-    { "write",  &py_file_write_obj},
+static const mp_map_elem_t locals_dict_table[] = {
+    { MP_OBJ_NEW_QSTR(MP_QSTR_close),  (mp_obj_t)&py_file_close_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read),   (mp_obj_t)&py_file_read_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_write),  (mp_obj_t)&py_file_write_obj},
     { NULL, NULL },
 };
 
+STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
+
 static const mp_obj_type_t py_file_type = {
     { &mp_type_type },
-    .name       = MP_QSTR_File,
-    .print      = py_file_print,
-    .methods    = py_file_methods,
+    .name  = MP_QSTR_file,
+    .print = py_file_print,
+    .locals_dict = (mp_obj_t)&locals_dict,
 };
 
 mp_obj_t py_file_open(mp_obj_t path, mp_obj_t mode_str)
