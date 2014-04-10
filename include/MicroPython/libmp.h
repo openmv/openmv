@@ -23,7 +23,6 @@
 #include "pyexec.h"
 #include "pendsv.h"
 #include "ff.h"
-#include "map.h"
 
 int libmp_init();
 void libmp_do_repl(void);
