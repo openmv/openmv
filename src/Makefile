@@ -38,8 +38,7 @@ OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
 
 # Libraries
 #LIB = -lmp -lc -lm -ldsp -lstdperiph -lusbcore -lusbdevcore
-#LIB = -lmp -ldsp -lcc3k -lstdperiph
-LIB = -lmp -ldsp -lstdperiph
+LIB = -lmp -ldsp -lcc3k -lstdperiph
 
 all:: $(BUILD_DIR) $(BUILD_DIR) $(BUILD_DIR)/$(BIN).bin
 	$(SIZE) $(BUILD_DIR)/$(BIN).elf
