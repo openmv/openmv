@@ -2,6 +2,15 @@
 #include "xalloc.h"
 #include "imlib.h"
 #include "mdefs.h"
+#define R8(p) \
+    (uint8_t)((p>>11) * 255/31)
+#define G8(p) \
+    (uint8_t)(((p>>5)&0x3F)* 255/63)
+#define B8(p) \
+    (uint8_t)((p&0x1F) * 255/31)
+#define SWAP(x)\
+   ({ uint16_t _x = (x); \
+    (((_x & 0xff)<<8 |(_x & 0xff00) >> 8));})
 static int isspace(int c)
 {
     return (c=='\n'||c=='\r'||c=='\t'||c==' ');
@@ -58,9 +67,22 @@ int ppm_write(image_t *img, const char *path)
         goto error;
     }
 
-    res = f_write(&fp, img->data, img->w*img->h*img->bpp, &bytes);
-    if (res != FR_OK || bytes < (img->w*img->h*img->bpp)) {
-        goto error;
+    if (img->bpp == 1) {
+        res = f_write(&fp, img->data, img->w*img->h, &bytes);
+    } else {
+        uint8_t rgb[3];
+        uint16_t *pixels = (uint16_t*)img->data;
+        for (int j=0; j<img->h; j++) {
+            for (int i=0; i<img->w; i++) {
+                uint16_t c = SWAP(pixels[j*img->w+i]);
+                rgb[0] = R8(c); rgb[1] = G8(c); rgb[2] = B8(c);
+                res = f_write(&fp, rgb, 3, &bytes);
+                if (res != FR_OK || bytes != 3) {
+                    goto error;
+                }
+            }
+        }
+
     }
 
 error:
