@@ -24,7 +24,7 @@
 
 int errno;
 
-static FATFS fatfs0;
+static FATFS fatfs0, fatfs1;
 
 void __fatal_error(const char *msg) {
     printf("%s\n", msg);
@@ -264,6 +264,9 @@ int main(void)
             mp_module_register(p->name, (mp_obj_t)module);
         }
     }
+
+    /* prepare workarea for sdcard fs */
+    f_mount(&fatfs1, "1:", 0);
 
     /* Try to mount the flash fs */
     bool reset_filesystem = false;
