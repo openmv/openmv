@@ -5564,7 +5564,7 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <part name="R11" library="sfe" deviceset="RESISTOR" device="0402-RES" value="33R"/>
 <part name="U$6" library="mux" deviceset="VBUS" device=""/>
 <part name="LOGO1" library="iofault" deviceset="OSHW_LOGO_FILL" device="X0150-NT"/>
-<part name="C16" library="sfe" deviceset="CAP" device="0402-CAP" value="1uF"/>
+<part name="C16" library="sfe" deviceset="CAP" device="0805" value="10uF"/>
 <part name="GND11" library="SparkFun" deviceset="GND" device=""/>
 <part name="C20" library="sfe" deviceset="CAP" device="0402-CAP" value="1uF"/>
 <part name="GND22" library="SparkFun" deviceset="GND" device=""/>
@@ -6065,7 +6065,7 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 </segment>
 <segment>
 <pinref part="JP2" gate="A" pin="6"/>
-<wire x1="205.74" y1="134.62" x2="187.96" y2="134.62" width="0.1524" layer="91"/>
+<wire x1="205.74" y1="134.62" x2="190.5" y2="134.62" width="0.1524" layer="91"/>
 <label x="200.66" y="134.62" size="1.778" layer="95" rot="MR0"/>
 </segment>
 <segment>
@@ -6414,7 +6414,7 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 </segment>
 <segment>
 <pinref part="JP2" gate="A" pin="2"/>
-<wire x1="205.74" y1="139.7" x2="187.96" y2="139.7" width="0.1524" layer="91"/>
+<wire x1="205.74" y1="139.7" x2="190.5" y2="139.7" width="0.1524" layer="91"/>
 <label x="200.66" y="139.7" size="1.778" layer="95" rot="MR0"/>
 </segment>
 </net>
@@ -6977,6 +6977,18 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <pinref part="JP2" gate="A" pin="4"/>
 <pinref part="D3" gate="G$1" pin="A"/>
 <wire x1="205.74" y1="137.16" x2="198.12" y2="137.16" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$12" class="0">
+<segment>
+<pinref part="U4" gate="G$1" pin="PB14/SPI2_MISO/TIM1_CH2N/TIM12_CH1/OTG_HS_DMUSART3_/53/RTS/TIM8_CH2N"/>
+<wire x1="-48.26" y1="-25.4" x2="-60.96" y2="-25.4" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$13" class="0">
+<segment>
+<pinref part="U4" gate="G$1" pin="PB15/SPI2_MOSI/I2S2_SD/TIM1_CH3N/TIM8_CH3N/TIM12_CH2/OTG_HS_DP"/>
+<wire x1="-48.26" y1="-27.94" x2="-60.96" y2="-27.94" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
