@@ -22,8 +22,8 @@ _ram_end   = 0x10010000; /* 64KB CCM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _stack_size = 0x1300; /* required amount of stack */
-_heap_size  = 0x8000; /* 0xC800 required amount of heap */
-_cache_size = 0x4000; /* 0x4000 required amount of cache */
+_heap_size  = 0x8000; /* required amount of heap */
+_cache_size = 0x4000; /* required amount of cache */
 
 _main_ram_start = 0x20000000;
 /* Define output sections */
