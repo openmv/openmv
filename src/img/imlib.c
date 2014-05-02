@@ -216,10 +216,10 @@ void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size)
    ({ uint16_t _x = (x); \
     (((_x & 0xff)<<8 |(_x & 0xff00) >> 8));})
 
-void imlib_threshold(image_t *image, struct color *color, int threshold)
+void imlib_threshold(image_t *src, image_t *dst, struct color *color, int threshold)
 {
     color_t lab1,lab2;
-    uint16_t *pixels = (uint16_t*) image->pixels;
+    uint16_t *pixels = (uint16_t*) src->pixels;
 
     /* Convert reference RGB to LAB */
     uint16_t r = color->r*31/255;
@@ -231,21 +231,20 @@ void imlib_threshold(image_t *image, struct color *color, int threshold)
     lab1.A = lab_table[r*3+1];
     lab1.B = lab_table[r*3+2];
 
-    for (int y=0; y<image->h; y++) {
-        for (int x=0; x<image->w; x++) {
-            int i=y*image->w+x;
+    for (int y=0; y<src->h; y++) {
+        for (int x=0; x<src->w; x++) {
+            int i=y*src->w+x;
             lab2.L = lab_table[pixels[i]*3];
             lab2.A = lab_table[pixels[i]*3+1];
             lab2.B = lab_table[pixels[i]*3+2];
             /* add pixel if within threshold */
             if (imlib_lab_distance(&lab1, &lab2)<threshold) {
-                image->pixels[i] = 0x01;
+                dst->pixels[i] = 1;
             } else {
-                image->pixels[i] = 0x00;
+                dst->pixels[i] = 0;
             }
         }
     }
-    image->bpp = 1;
 }
 
 int imlib_image_mean(struct image *src)

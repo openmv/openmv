@@ -170,9 +170,11 @@ static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_obj, mp_ob
     /* C stuff */
     struct color color;
     struct image *image;
+    mp_obj_t bimage_obj;
 
     /* sanity checks */
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_RGB565);
+    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QQVGA);
 
     mp_obj_t *col_obj;
     mp_obj_get_array_fixed_n(color_obj, 3, &col_obj);
@@ -183,10 +185,13 @@ static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_obj, mp_ob
      /* get image pointer */
     image = py_image_cobj(image_obj);
 
-    /* Threshold image using reference color */
-    imlib_threshold(image, &color, mp_obj_get_int(threshold));
+    /* returned image */
+    bimage_obj = py_image(image->w, image->h, 1, image->data+(image->w*image->h*image->bpp));
 
-    return mp_const_none;
+    /* Threshold image using reference color */
+    imlib_threshold(image, py_image_cobj(bimage_obj), &color, mp_obj_get_int(threshold));
+
+    return bimage_obj;
 }
 
 static mp_obj_t py_image_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_t r_obj)
