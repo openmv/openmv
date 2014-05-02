@@ -117,7 +117,7 @@ class OMVGtk:
 
         # convert to RGB888 and blit
         pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
-        pixbuf = pixbuf.scale_simple(fb[0]*2, fb[1]*2, gtk.gdk.INTERP_NEAREST)
+        pixbuf = pixbuf.scale_simple(fb[0]*2, fb[1]*2, gtk.gdk.INTERP_BILINEAR)
         self.framebuffer.set_from_pixbuf(pixbuf)
         gobject.idle_add(omvgtk.update_fb);
 
