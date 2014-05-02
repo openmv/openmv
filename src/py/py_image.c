@@ -248,6 +248,7 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
     /* C stuff */
     array_t *blobs;
     struct image *image;
+    mp_obj_t rec_obj[4];
 
     /* MP List */
     mp_obj_t objects_list = mp_const_none;
@@ -266,11 +267,12 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
 
     if (array_length(blobs)) {
         for (int j=0; j<array_length(blobs); j++) {
-             rectangle_t *b = array_at(blobs, j);
-             mp_obj_list_append(objects_list, mp_obj_new_int(b->x));
-             mp_obj_list_append(objects_list, mp_obj_new_int(b->y));
-             mp_obj_list_append(objects_list, mp_obj_new_int(b->w));
-             mp_obj_list_append(objects_list, mp_obj_new_int(b->h));
+             rectangle_t *r = array_at(blobs, j);
+             rec_obj[0] = mp_obj_new_int(r->x);
+             rec_obj[1] = mp_obj_new_int(r->y);
+             rec_obj[2] = mp_obj_new_int(r->w);
+             rec_obj[3] = mp_obj_new_int(r->h);
+             mp_obj_list_append(objects_list, mp_obj_new_tuple(4, rec_obj));
         }
     }
     array_free(blobs);
