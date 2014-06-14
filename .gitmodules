@@ -1,0 +1,3 @@
+[submodule "src/micropython"]
+	path = src/micropython
+	url = git@github.com:iabdalkader/micropython.git
