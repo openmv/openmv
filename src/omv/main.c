@@ -1,219 +1,137 @@
-#include <stm32f4xx.h>
-#include <stm32f4xx_rcc.h>
-#include <stm32f4xx_syscfg.h>
-#include <stm32f4xx_pwr.h>
-#include <stm32f4xx_rtc.h>
-#include <stm32f4xx_usart.h>
-#include <stm32f4xx_rng.h>
-#include <stm32f4xx_misc.h>
-#include <libmp.h>
+#include <stdio.h>
+#include <string.h>
+#include <stm32f4xx_hal.h>
+#include "misc.h"
 #include "systick.h"
-#include "rcc_ctrl.h"
+#include "pendsv.h"
+#include "mpconfig.h"
+#include "qstr.h"
+#include "misc.h"
+#include "nlr.h"
+#include "lexer.h"
+#include "parse.h"
+#include "obj.h"
+#include "objmodule.h"
+#include "runtime.h"
+#include "gc.h"
+#include "gccollect.h"
+#include "pybstdio.h"
+#include "readline.h"
+#include "pyexec.h"
+#include "uart.h"
+#include "timer.h"
+#include "pin.h"
+#include "extint.h"
+#include "usrsw.h"
+#include "usb.h"
+#include "rtc.h"
+#include "storage.h"
+#include "sdcard.h"
+#include "ff.h"
+#include "lcd.h"
+
 #include "led.h"
-#include "rng.h"
-#include "sensor.h"
-#include "usbdbg.h"
 #include "py_led.h"
-#include "py_sensor.h"
-#include "py_file.h"
-#include "py_time.h"
-#include "py_spi.h"
-#include "py_gpio.h"
-#include "py_image.h"
-#include "libcc3k.h"
 
 int errno;
+static FATFS fatfs0;
+//static FATFS fatfs1;
 
-static FATFS fatfs0, fatfs1;
+void SystemClock_Config(void);
+
+void flash_error(int n) {
+    for (int i = 0; i < n; i++) {
+        led_state(LED_RED, 0);
+        HAL_Delay(250);
+        led_state(LED_RED, 1);
+        HAL_Delay(250);
+    }
+    led_state(LED_RED, 0);
+}
 
 void __fatal_error(const char *msg) {
-    printf("%s\n", msg);
-    while (1) {
-        led_state(LED_RED, 1);
-        systick_sleep(250);
-        led_state(LED_RED, 0);
-        systick_sleep(250);
+    stdout_tx_strn("\nFATAL ERROR:\n", 14);
+    stdout_tx_strn(msg, strlen(msg));
+    for (uint i = 0;;) {
+        led_toggle(((i++) & 3) + 1);
+        for (volatile uint delay = 0; delay < 10000000; delay++) {
+        }
+        if (i >= 16) {
+            // to conserve power
+            __WFI();
+        }
     }
 }
 
-// sync all file systems
-mp_obj_t py_sync(void) {
-    storage_flush();
-    return mp_const_none;
+void nlr_jump_fail(void *val) {
+    printf("FATAL: uncaught exception %p\n", val);
+    __fatal_error("");
 }
 
-mp_obj_t py_vcp_connected() {
-    bool connected = usb_vcp_is_connected();
-    return mp_obj_new_int(connected);
-}
-
-static const char fresh_main_py[] =
-"# main.py -- put your code here!\n"
-"import led, time\n"
-"while(vcp_connected()==0):\n"
-" led.on(led.BLUE)\n"
-" time.sleep(500)\n"
-" led.off(led.BLUE)\n"
-" time.sleep(500)\n"
-;
-
-static const char *help_text =
-"Welcome to Micro Python!\n\n"
-"This is a *very* early version of Micro Python and has minimal functionality.\n\n"
-"Specific commands for the board:\n"
-"    pyb.info()     -- print some general information\n"
-"    pyb.gc()       -- run the garbage collector\n"
-"    pyb.repl_info(<val>) -- enable/disable printing of info after each command\n"
-"    pyb.delay(<n>) -- wait for n milliseconds\n"
-"    pyb.Led(<n>)   -- create Led object for LED n (n=1,2)\n"
-"                      Led methods: on(), off()\n"
-"    pyb.Servo(<n>) -- create Servo object for servo n (n=1,2,3,4)\n"
-"                      Servo methods: angle(<x>)\n"
-"    pyb.switch()   -- return True/False if switch pressed or not\n"
-"    pyb.accel()    -- get accelerometer values\n"
-"    pyb.rand()     -- get a 16-bit random number\n"
-"    pyb.gpio(<port>)           -- get port value (port='A4' for example)\n"
-"    pyb.gpio(<port>, <val>)    -- set port value, True or False, 1 or 0\n"
-"    pyb.ADC(<port>) -- make an analog port object (port='C0' for example)\n"
-"                       ADC methods: read()\n"
-;
-
-// get some help about available functions
-static mp_obj_t py_help(void) {
-    printf("%s", help_text);
-    return mp_const_none;
-}
-
-// get lots of info about the board
-static mp_obj_t py_info(void) {
-    // get and print unique id; 96 bits
-    {
-        byte *id = (byte*)0x1fff7a10;
-        printf("ID=%02x%02x%02x%02x:%02x%02x%02x%02x:%02x%02x%02x%02x\n", id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11]);
-    }
-
-    // get and print clock speeds
-    // SYSCLK=168MHz, HCLK=168MHz, PCLK1=42MHz, PCLK2=84MHz
-    {
-        RCC_ClocksTypeDef rcc_clocks;
-        RCC_GetClocksFreq(&rcc_clocks);
-        printf("S=%lu\nH=%lu\nP1=%lu\nP2=%lu\n", rcc_clocks.SYSCLK_Frequency, rcc_clocks.HCLK_Frequency, rcc_clocks.PCLK1_Frequency, rcc_clocks.PCLK2_Frequency);
-    }
-
-    // to print info about memory
-    {
-        extern void *_sidata;
-        extern void *_sdata;
-        extern void *_edata;
-        extern void *_sbss;
-        extern void *_ebss;
-        extern void *_estack;
-        extern void *_etext;
-        printf("_etext=%p\n", &_etext);
-        printf("_sidata=%p\n", &_sidata);
-        printf("_sdata=%p\n", &_sdata);
-        printf("_edata=%p\n", &_edata);
-        printf("_sbss=%p\n", &_sbss);
-        printf("_ebss=%p\n", &_ebss);
-        printf("_estack=%p\n", &_estack);
-        printf("_ram_start=%p\n", &_ram_start);
-        printf("_heap_start=%p\n", &_heap_start);
-        printf("_heap_end=%p\n", &_heap_end);
-        printf("_ram_end=%p\n", &_ram_end);
-    }
-
-    // qstr info
-    {
-        uint n_pool, n_qstr, n_str_data_bytes, n_total_bytes;
-        qstr_pool_info(&n_pool, &n_qstr, &n_str_data_bytes, &n_total_bytes);
-        printf("qstr:\n  n_pool=%u\n  n_qstr=%u\n  n_str_data_bytes=%u\n  n_total_bytes=%u\n", n_pool, n_qstr, n_str_data_bytes, n_total_bytes);
-    }
-
-    // GC info
-    {
-        gc_info_t info;
-        gc_info(&info);
-        printf("GC:\n");
-        printf("  %lu total\n", info.total);
-        printf("used:  %lu free: %lu\n", info.used, info.free);
-        printf("  1=%lu 2=%lu m=%lu\n", info.num_1block, info.num_2block, info.max_block);
-    }
-
-    // free space on flash
-    {
-        DWORD nclst;
-        FATFS *fatfs;
-        f_getfree("0:", &nclst, &fatfs);
-        printf("LFS free: %u bytes\n", (uint)(nclst * fatfs->csize * 512));
-    }
-
-    return mp_const_none;
-}
-
-static mp_obj_t py_gc_collect(void) {
-    gc_collect();
-    return mp_const_none;
-}
-
-#if 0
-static void SYSCLKConfig_STOP(void) {
-    /* After wake-up from STOP reconfigure the system clock */
-    /* Enable HSE */
-    RCC_HSEConfig(RCC_HSE_ON);
-
-    /* Wait till HSE is ready */
-    while (RCC_GetFlagStatus(RCC_FLAG_HSERDY) == RESET) {
-    }
-
-    /* Enable PLL */
-    RCC_PLLCmd(ENABLE);
-
-    /* Wait till PLL is ready */
-    while (RCC_GetFlagStatus(RCC_FLAG_PLLRDY) == RESET) {
-    }
-
-    /* Select PLL as system clock source */
-    RCC_SYSCLKConfig(RCC_SYSCLKSource_PLLCLK);
-
-    /* Wait till PLL is used as system clock source */
-    while (RCC_GetSYSCLKSource() != 0x08) {
-    }
-}
-
-static mp_obj_t py_stop(void) {
-    PWR_EnterSTANDBYMode();
-    //PWR_FlashPowerDownCmd(ENABLE); don't know what the logic is with this
-
-    /* Enter Stop Mode */
-    PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
-
-    /* Configures system clock after wake-up from STOP: enable HSE, PLL and select
-     *        PLL as system clock source (HSE and PLL are disabled in STOP mode) */
-    SYSCLKConfig_STOP();
-
-    //PWR_FlashPowerDownCmd(DISABLE);
-
-    return mp_const_none;
-}
-
-static mp_obj_t py_standby(void) {
-    PWR_EnterSTANDBYMode();
-    return mp_const_none;
+#ifndef NDEBUG
+void __attribute__((weak))
+    __assert_func(const char *file, int line, const char *func, const char *expr) {
+    (void)func;
+    printf("Assertion '%s' failed, at file %s:%d\n", expr, file, line);
+    __fatal_error("");
 }
 #endif
 
-void __libc_init_array(void)
-{
+STATIC mp_obj_t pyb_config_source_dir = MP_OBJ_NULL;
+STATIC mp_obj_t pyb_config_main = MP_OBJ_NULL;
+STATIC mp_obj_t pyb_config_usb_mode = MP_OBJ_NULL;
 
+STATIC mp_obj_t pyb_source_dir(mp_obj_t source_dir) {
+    if (MP_OBJ_IS_STR(source_dir)) {
+        pyb_config_source_dir = source_dir;
+    }
+    return mp_const_none;
 }
 
-/* call from gdb */
-gc_info_t get_gc_info()
-{
-    gc_info_t info;
-    gc_info(&info);
-    return info;
+MP_DEFINE_CONST_FUN_OBJ_1(pyb_source_dir_obj, pyb_source_dir);
+
+STATIC mp_obj_t pyb_main(mp_obj_t main) {
+    if (MP_OBJ_IS_STR(main)) {
+        pyb_config_main = main;
+    }
+    return mp_const_none;
 }
+
+MP_DEFINE_CONST_FUN_OBJ_1(pyb_main_obj, pyb_main);
+
+STATIC mp_obj_t pyb_usb_mode(mp_obj_t usb_mode) {
+    if (MP_OBJ_IS_STR(usb_mode)) {
+        pyb_config_usb_mode = usb_mode;
+    }
+    return mp_const_none;
+}
+
+MP_DEFINE_CONST_FUN_OBJ_1(pyb_usb_mode_obj, pyb_usb_mode);
+
+static const char fresh_main_py[] =
+"# main.py -- put your code here!\n"
+"import led\n"
+"led.on(led.BLUE)\n"
+;
+
+static const char fresh_pybcdc_inf[] =
+#include "genhdr/pybcdc_inf.h"
+;
+
+static const char fresh_readme_txt[] =
+"This is a Micro Python board\r\n"
+"\r\n"
+"You can get started right away by writing your Python code in 'main.py'.\r\n"
+"\r\n"
+"For a serial prompt:\r\n"
+" - Windows: you need to go to 'Device manager', right click on the unknown device,\r\n"
+"   then update the driver software, using the 'pybcdc.inf' file found on this drive.\r\n"
+"   Then use a terminal program like Hyperterminal or putty.\r\n"
+" - Mac OS X: use the command: screen /dev/tty.usbmodem*\r\n"
+" - Linux: use the command: screen /dev/ttyACM0\r\n"
+"\r\n"
+"Please visit http://micropython.org/help/ for further help.\r\n"
+;
 
 typedef struct {
     qstr name;
@@ -221,42 +139,104 @@ typedef struct {
 } module_t;
 
 static const module_t exported_modules[] ={
-    {MP_QSTR_sensor,py_sensor_init},
+    //{MP_QSTR_sensor,py_sensor_init},
     {MP_QSTR_led,   py_led_init},
-    {MP_QSTR_time,  py_time_init},
-    {MP_QSTR_gpio,  py_gpio_init},
-    {MP_QSTR_spi,   py_spi_init},
-    {NULL, NULL}
+//    {MP_QSTR_time,  py_time_init},
+//    {MP_QSTR_gpio,  py_gpio_init},
+//    {MP_QSTR_spi,   py_spi_init},
+    {0, NULL}
 };
 
-#include "mdefs.h"
-int main(void)
-{
-    rcc_ctrl_set_frequency(SYSCLK_168_MHZ);
+int main(void) {
+    /* STM32F4xx HAL library initialization:
+         - Configure the Flash prefetch, instruction and Data caches
+         - Configure the Systick to generate an interrupt each 1 msec
+         - Set NVIC Group Priority to 4
+         - Global MSP (MCU Support Package) initialization
+       */
+    HAL_Init();
 
-    /* Init SysTick timer */
-    systick_init();
+    // set the system clock to be HSE
+    SystemClock_Config();
 
-    /* Init MicroPython */
-    libmp_init();
+    // enable GPIO clocks
+    __GPIOA_CLK_ENABLE();
+    __GPIOB_CLK_ENABLE();
+    __GPIOC_CLK_ENABLE();
+    __GPIOD_CLK_ENABLE();
 
-    /* init USB debug */
-    usbdbg_init();
+    // enable the CCM RAM
+    __CCMDATARAMEN_CLK_ENABLE();
 
-    /* init rng */
-    rng_init();
+    // basic sub-system init
+    pendsv_init();
+    timer_tim3_init();
+    int first_soft_reset = true;
+
+soft_reset:
+    // check if user switch held to select the reset mode
+    led_state(LED_RED, 1);
+    led_state(LED_GREEN, 1);
+    led_state(LED_BLUE, 1);
+    uint reset_mode = 1;
+
+#if MICROPY_HW_ENABLE_RTC
+    if (first_soft_reset) {
+        rtc_init();
+    }
+#endif
+
+    // more sub-system init
+#if MICROPY_HW_HAS_SDCARD
+    if (first_soft_reset) {
+        sdcard_init();
+    }
+#endif
+
+    if (first_soft_reset) {
+        storage_init();
+    }
+
+    // GC init
+    gc_init(&_heap_start, &_heap_end);
+
+#if 0
+    // Change #if 0 to #if 1 if you want REPL on UART_6 (or another uart)
+    // as well as on USB VCP
+    mp_obj_t args[2] = {
+        MP_OBJ_NEW_SMALL_INT(PYB_UART_6),
+        MP_OBJ_NEW_SMALL_INT(115200),
+    };
+    pyb_uart_global_debug = pyb_uart_type.make_new((mp_obj_t)&pyb_uart_type,
+                                                   ARRAY_SIZE(args),
+                                                   0, args);
+#else
+    pyb_uart_global_debug = NULL;
+#endif
+
+    // Micro Python init
+    qstr_init();
+    mp_init();
+    mp_obj_list_init(mp_sys_path, 0);
+    mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_));
+    mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_lib));
+    mp_obj_list_init(mp_sys_argv, 0);
+
+    readline_init();
+
+    pin_init();
+    extint_init();
 
     /* Add functions to the global python namespace */
-    mp_store_global(qstr_from_str("help"), mp_make_function_n(0, py_help));
-    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
-    mp_store_global(qstr_from_str("vcp_connected"), mp_make_function_n(0, py_vcp_connected));
-    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
-    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
-    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
-    mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
+//    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
+//    mp_store_global(qstr_from_str("vcp_connected"), mp_make_function_n(0, py_vcp_connected));
+//    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
+//    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
+//    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
+//    mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
 
     /* Export Python modules to the global python namespace */
-    for (const module_t *p = exported_modules; p->name != NULL; p++) {
+    for (const module_t *p = exported_modules; p->name; p++) {
         const mp_obj_module_t *module = p->init();
         if (module == NULL) {
             __fatal_error("failed to init module");
@@ -265,46 +245,156 @@ int main(void)
         }
     }
 
-    /* prepare workarea for sdcard fs */
-    f_mount(&fatfs1, "1:", 0);
-
-    /* Try to mount the flash fs */
-    bool reset_filesystem = false;
+    // local filesystem init
+    // try to mount the flash
     FRESULT res = f_mount(&fatfs0, "0:", 1);
-    if (!reset_filesystem && res == FR_OK) {
-        /* Mount sucessful */
-    } else if (reset_filesystem || res == FR_NO_FILESYSTEM) {
-        /* No filesystem, so create a fresh one */
+    if (reset_mode == 3 || res == FR_NO_FILESYSTEM) {
+        // no filesystem, or asked to reset it, so create a fresh one
+
+        // LED on to indicate creation of LFS
+        led_state(LED_RED, 1);
+
         res = f_mkfs("0:", 0, 0);
-        if (res != FR_OK) {
+        if (res == FR_OK) {
+            // success creating fresh LFS
+        } else {
             __fatal_error("could not create LFS");
         }
 
-        /* Create main.py */
+        // create empty main.py
         FIL fp;
         f_open(&fp, "0:/main.py", FA_WRITE | FA_CREATE_ALWAYS);
         UINT n;
         f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
         // TODO check we could write n bytes
         f_close(&fp);
+
+        // create .inf driver file
+        f_open(&fp, "0:/pybcdc.inf", FA_WRITE | FA_CREATE_ALWAYS);
+        f_write(&fp, fresh_pybcdc_inf, sizeof(fresh_pybcdc_inf) - 1 /* don't count null terminator */, &n);
+        f_close(&fp);
+
+        // create readme file
+        f_open(&fp, "0:/README.txt", FA_WRITE | FA_CREATE_ALWAYS);
+        f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
+        f_close(&fp);
+
+        // keep LED on for at least 200ms
+        led_state(LED_RED, 0);
+    } else if (res == FR_OK) {
+        // mount sucessful
     } else {
         __fatal_error("could not access LFS");
     }
 
-    pyb_usb_dev_init(PYB_USB_DEV_VCP_MSC);
+    // root device defaults to internal flash filesystem
+    uint root_device = 0;
 
-#if 1
-    /* run main script */
-    if (!libmp_do_file("0:/main.py")) {
-        printf("failed to run main script\n");
+#if defined(USE_DEVICE_MODE)
+    usb_storage_medium_t usb_medium = USB_STORAGE_MEDIUM_FLASH;
+#endif
+
+#if MICROPY_HW_HAS_SDCARD
+    /* prepare workarea for sdcard fs */
+    //f_mount(&fatfs1, "1:", 0);
+
+    // if an SD card is present then mount it on 1:/
+    if (reset_mode == 1 && sdcard_is_present()) {
+        FRESULT res = f_mount(&fatfs1, "1:", 1);
+        if (res != FR_OK) {
+            printf("[SD] could not mount SD card\n");
+        } else {
+            // use SD card as root device
+            root_device = 1;
+
+            if (first_soft_reset) {
+                // use SD card as medium for the USB MSD
+#if defined(USE_DEVICE_MODE)
+                usb_medium = USB_STORAGE_MEDIUM_SDCARD;
+#endif
+            }
+        }
+    }
+#else
+    // Get rid of compiler warning if no SDCARD is configured.
+    (void)first_soft_reset;
+#endif
+
+    // turn boot-up LEDs off
+    led_state(LED_RED, 0);
+    led_state(LED_GREEN, 0);
+    led_state(LED_BLUE, 0);
+
+#if defined(USE_HOST_MODE)
+    // USB host
+    pyb_usb_host_init();
+#elif defined(USE_DEVICE_MODE)
+    // USB device
+    if (reset_mode == 1) {
+        usb_device_mode_t usb_mode = USB_DEVICE_MODE_CDC_MSC;
+        if (pyb_config_usb_mode != MP_OBJ_NULL) {
+            if (strcmp(mp_obj_str_get_str(pyb_config_usb_mode), "CDC+HID") == 0) {
+                usb_mode = USB_DEVICE_MODE_CDC_HID;
+            }
+        }
+        pyb_usb_dev_init(usb_mode, usb_medium);
+    } else {
+        pyb_usb_dev_init(USB_DEVICE_MODE_CDC_MSC, usb_medium);
+    }
+#endif
+
+    timer_init0();
+
+#if MICROPY_HW_ENABLE_RNG
+    //rng_init0();
+#endif
+
+    // now that everything is initialised, run main script
+    if (reset_mode == 1 && pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
+        vstr_t *vstr = vstr_new();
+        vstr_printf(vstr, "%d:/", root_device);
+        if (pyb_config_main == MP_OBJ_NULL) {
+            vstr_add_str(vstr, "main.py");
+        } else {
+            vstr_add_str(vstr, mp_obj_str_get_str(pyb_config_main));
+        }
+        FRESULT res = f_stat(vstr_str(vstr), NULL);
+        if (res == FR_OK) {
+            if (!pyexec_file(vstr_str(vstr))) {
+                flash_error(3);
+            }
+        }
+        vstr_free(vstr);
     }
 
-    libmp_do_repl();
-#else
-//  led_init(LED_BLUE);
+    // enter REPL
+    // REPL mode can change, or it can request a soft reset
+    for (;;) {
+        if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
+            if (pyexec_raw_repl() != 0) {
+                break;
+            }
+        } else {
+            if (pyexec_friendly_repl() != 0) {
+                break;
+            }
+        }
+    }
 
-    systick_sleep(100);
-    wlan_test();
-#endif
-    while(1);
+    printf("PYB: sync filesystems\n");
+    storage_flush();
+
+    printf("PYB: soft reboot\n");
+
+    first_soft_reset = false;
+    goto soft_reset;
 }
+
+static NORETURN mp_obj_t mp_sys_exit(uint n_args, const mp_obj_t *args) {
+    int rc = 0;
+    if (n_args > 0) {
+        rc = mp_obj_get_int(args[0]);
+    }
+    nlr_raise(mp_obj_new_exception_arg1(&mp_type_SystemExit, mp_obj_new_int(rc)));
+}
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_sys_exit_obj, 0, 1, mp_sys_exit);
