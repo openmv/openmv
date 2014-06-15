@@ -1,0 +1,32 @@
+#ifndef __MP_H__
+#define __MP_H__
+#include <stdio.h>
+#include <string.h>
+#include <stm32f4xx_hal.h>
+
+#include "misc.h"
+#include "systick.h"
+#include "pendsv.h"
+#include "mpconfig.h"
+#include "qstr.h"
+#include "misc.h"
+#include "nlr.h"
+#include "lexer.h"
+#include "parse.h"
+#include "obj.h"
+#include "runtime.h"
+#include "gc.h"
+#include "gccollect.h"
+#include "pybstdio.h"
+#include "readline.h"
+#include "pyexec.h"
+#include "uart.h"
+#include "timer.h"
+#include "pin.h"
+#include "extint.h"
+#include "usrsw.h"
+#include "usb.h"
+#include "rtc.h"
+#include "storage.h"
+#include "sdcard.h"
+#endif /* __MP_H__ */
