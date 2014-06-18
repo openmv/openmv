@@ -1,5 +1,36 @@
 # Sources
-SRCS = $(wildcard src/*.c)
+#SRCS = $(wildcard src/*.c)
+SRCS = $(addprefix src/,\
+stm32f4xx_hal_adc.c\
+stm32f4xx_hal_adc_ex.c\
+stm32f4xx_hal.c\
+stm32f4xx_hal_cortex.c\
+stm32f4xx_hal_dcmi.c\
+stm32f4xx_hal_dma.c\
+stm32f4xx_hal_dma_ex.c\
+stm32f4xx_hal_flash.c\
+stm32f4xx_hal_flash_ex.c\
+stm32f4xx_hal_gpio.c\
+stm32f4xx_hal_hcd.c\
+stm32f4xx_hal_i2c.c\
+stm32f4xx_hal_i2c_ex.c\
+stm32f4xx_hal_pcd.c\
+stm32f4xx_hal_pwr.c\
+stm32f4xx_hal_pwr_ex.c\
+stm32f4xx_hal_rcc.c\
+stm32f4xx_hal_rcc_ex.c\
+stm32f4xx_hal_rng.c\
+stm32f4xx_hal_rtc.c\
+stm32f4xx_hal_rtc_ex.c\
+stm32f4xx_hal_spi.c\
+stm32f4xx_hal_tim.c\
+stm32f4xx_hal_tim_ex.c\
+stm32f4xx_hal_uart.c\
+stm32f4xx_hal_usart.c\
+stm32f4xx_ll_usb.c\
+syscalls.c\
+)
+
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
 
