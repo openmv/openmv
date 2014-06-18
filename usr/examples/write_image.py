@@ -1,3 +1,4 @@
 import sensor, time
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.snapshot().save("0:/test.ppm", subimage=(0, 0, 10,10))
+sensor.set_framesize(sensor.QCIF)
+sensor.set_pixformat(sensor.RGB565)
+sensor.snapshot().save("1:/test.ppm")
