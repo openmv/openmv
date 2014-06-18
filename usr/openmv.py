@@ -5,6 +5,19 @@ import usb.util
 import struct
 import numpy as np
 
+__dev = None
+# VID/PID
+__VID=0xf055
+__PID=0x9800
+
+# Debug __INTERFACE
+__INTERFACE = 0
+__ALTSETTING= 1
+__IN_EP     =0x81
+__OUT_EP    =0x01
+__TIMEOUT   =1000
+
+
 # USB Debug commands
 __USBDBG_FB_SIZE=1
 __USBDBG_DUMP_FB=2
@@ -13,18 +26,10 @@ __USBDBG_READ_SCRIPT=4
 __USBDBG_WRITE_SCRIPT=5
 __USBDBG_STOP_SCRIPT=6
 
-# Debug __INTERFACE
-__INTERFACE = 2;
-__ALTSETTING= 1;
-
-__dev = None
-
-__TIMEOUT  = 1000
-
 def init():
     global __dev
     # find USB __device
-    __dev = usb.core.find(idVendor=0x0483, idProduct=0x5740)
+    __dev = usb.core.find(idVendor=__VID, idProduct=__PID)
     if __dev is None:
         raise ValueError('__device not found')
 
@@ -62,8 +67,8 @@ def fb_to_arr(buff, bpp):
 def fb_size():
     global __dev
     # read fb header
-    __dev.ctrl_transfer(0xC1, __USBDBG_FB_SIZE, 0, __INTERFACE, None, __TIMEOUT)
-    size = struct.unpack("III", __dev.read(0x83, 64, __INTERFACE, __TIMEOUT)[0:12])
+    __dev.ctrl_transfer(0xC1, __USBDBG_FB_SIZE, 12, __INTERFACE, 0, __TIMEOUT)
+    size = struct.unpack("III", __dev.read(__IN_EP, 12, __INTERFACE, __TIMEOUT)[0:12])
     return size
 
 def dump_fb():
@@ -72,14 +77,14 @@ def dump_fb():
     num_bytes = size[0]*size[1]*size[2]
 
     # read fb data
-    __dev.ctrl_transfer(0xC1, __USBDBG_DUMP_FB, 0, __INTERFACE, None, __TIMEOUT)
-    buff = __dev.read(0x83, num_bytes, __INTERFACE, __TIMEOUT)
+    __dev.ctrl_transfer(0xC1, __USBDBG_DUMP_FB, num_bytes, __INTERFACE, 0, __TIMEOUT)
+    buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
 
     return (size[0], size[1], fb_to_arr(buff, size[2]))
 
 def exec_script(buf):
     __dev.ctrl_transfer(0x41, __USBDBG_EXEC_SCRIPT, len(buf), __INTERFACE, None, __TIMEOUT)
-    __dev.write(0x03, buf, __INTERFACE, __TIMEOUT)
+    __dev.write(__OUT_EP, buf, __INTERFACE, __TIMEOUT)
 
 def stop_script():
     __dev.ctrl_transfer(0x41, __USBDBG_STOP_SCRIPT, 0, __INTERFACE, None, __TIMEOUT)
