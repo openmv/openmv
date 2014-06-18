@@ -54,10 +54,11 @@ CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/boards/$(TARGET)/
 
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
+CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 
 # Linker Flags
 
-LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib -Wl,-Tstm32f407.ld
+LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib -Wl,-T$(OMV_DIR)/stm32f407.ld
 
 # Sources
 #SRC_C = $(addprefix $(CMSIS_DIR)/src/st/,\
@@ -79,7 +80,6 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usbd_desc_cdc_msc.o \
 	usbd_cdc_interface.o \
 	usbd_msc_storage.o \
-	systick.o  \
 	pendsv.o \
 	bufhelper.o \
 	usb.o \
@@ -128,11 +128,18 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/,\
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,\
 	main.o \
+	systick.o\
+	usbdbg.o\
+	sccb.o\
+	ov9650.o\
+	ov2640.o\
+	sensor.o\
 	led.o \
 	)
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/,\
 	py_led.o \
+	py_sensor.o \
 	)
 
 ###################################################

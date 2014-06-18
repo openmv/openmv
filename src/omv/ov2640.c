@@ -1,17 +1,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stm32f4xx_tim.h>
-#include <stm32f4xx_i2c.h>
-#include <stm32f4xx_gpio.h>
-#include <stm32f4xx_rcc.h>
-#include <stm32f4xx_dma.h>
-#include <stm32f4xx_misc.h>
-#include <stm32f4xx_dcmi.h>
+#include "stm32f4xx_hal.h"
 #include "sccb.h"
 #include "ov2640.h"
 #include "systick.h"
 #include "ov2640_regs.h"
+
 #define DSP_FRAME_W     (800)
 #define DSP_FRAME_H     (600)
 
@@ -405,9 +400,9 @@ static int set_gainceiling(enum sensor_gainceiling gainceiling)
 int ov2640_init(struct sensor_dev *sensor)
 {
     /* set HSYNC/VSYNC/PCLK polarity */
-    sensor->vsync_pol = DCMI_VSPolarity_Low;
-    sensor->hsync_pol = DCMI_HSPolarity_Low;
-    sensor->pixck_pol = DCMI_PCKPolarity_Rising;
+    sensor->vsync_pol = DCMI_VSPOLARITY_LOW;
+    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
+    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
 
     /* set function pointers */
     sensor->reset = reset;

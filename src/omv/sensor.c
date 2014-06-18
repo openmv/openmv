@@ -1,17 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
-#include <stm32f4xx_tim.h>
-#include <stm32f4xx_i2c.h>
-#include <stm32f4xx_gpio.h>
-#include <stm32f4xx_rcc.h>
-#include <stm32f4xx_dma.h>
-#include <stm32f4xx_misc.h>
-#include <stm32f4xx_dcmi.h>
 #include "sccb.h"
 #include "ov9650.h"
 #include "ov2640.h"
 #include "systick.h"
 #include "sensor.h"
+#include "pincfg.h"
 #include "framebuffer.h"
 
 #define REG_PID        0x0A
@@ -22,11 +16,34 @@
 
 #define OV9650_PID     0x96
 #define OV2640_PID     0x26
-#define BREAK()     __asm__ volatile ("BKPT")
-#define DCMI_DR_ADDRESS     (DCMI_BASE + 0x28)
+#define BREAK()         __asm__ volatile ("BKPT")
 
 struct sensor_dev sensor;
-static volatile int frame_ready = 0;
+TIM_HandleTypeDef  TIMHandle;
+DMA_HandleTypeDef  DMAHandle;
+DCMI_HandleTypeDef DCMIHandle;
+
+/* DCMI GPIOs */
+static const gpio_t dcmi_pins[] = {
+    {DCMI_D0_PORT, DCMI_D0_PIN},
+    {DCMI_D1_PORT, DCMI_D1_PIN},
+    {DCMI_D2_PORT, DCMI_D2_PIN},
+    {DCMI_D3_PORT, DCMI_D3_PIN},
+    {DCMI_D4_PORT, DCMI_D4_PIN},
+    {DCMI_D5_PORT, DCMI_D5_PIN},
+    {DCMI_D6_PORT, DCMI_D6_PIN},
+    {DCMI_D7_PORT, DCMI_D7_PIN},
+    {DCMI_HSYNC_PORT, DCMI_HSYNC_PIN},
+    {DCMI_VSYNC_PORT, DCMI_VSYNC_PIN},
+    {DCMI_PXCLK_PORT, DCMI_PXCLK_PIN},
+};
+
+#define NUM_PINS        (sizeof(dcmi_pins)/sizeof(dcmi_pins[0]))
+#define RESET_LOW()     HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_RESET)
+#define RESET_HIGH()    HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_SET)
+
+#define PWDN_LOW()      HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
+#define PWDN_HIGH()     HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
 
 const int res_width[] = {
     88,     /* QQCIF */
@@ -48,47 +65,6 @@ const int res_height[]= {
     1024,   /* SXGA  */
 };
 
-/* IRQ Handlers */
-void DCMI_IRQHandler(void)
-{
-    if (DCMI_GetITStatus(DCMI_IT_VSYNC)) {
-        DCMI_ClearITPendingBit(DCMI_IT_VSYNC);
-    } else if (DCMI_GetITStatus(DCMI_IT_LINE)) {
-        DCMI_ClearITPendingBit(DCMI_IT_LINE);
-    } else if (DCMI_GetITStatus(DCMI_IT_FRAME)) {
-        DCMI_ClearITPendingBit(DCMI_IT_FRAME);
-        BREAK();
-    } else if (DCMI_GetITStatus(DCMI_IT_OVF)) {
-        DCMI_ClearITPendingBit(DCMI_IT_OVF);
-        BREAK();
-    } else if (DCMI_GetITStatus(DCMI_IT_ERR)) {
-        DCMI_ClearITPendingBit(DCMI_IT_ERR);
-        BREAK();
-    }
-}
-
-void DMA2_Stream1_IRQHandler(void)
-{
-    /* DMA Transfer Complete Interrupt */
-    if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_TCIF1)) {
-        /* clear DMA TCIF pending interrupt */
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_TCIF1);
-        /* set frame ready flag */
-        frame_ready = 1;
-    } else if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_HTIF1)) {
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_HTIF1);
-    } else if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_TEIF1)) {
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_TEIF1);
-        BREAK();
-    } else if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_DMEIF1)) {
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_DMEIF1);
-        BREAK();
-    } else if (DMA_GetITStatus(DMA2_Stream1, DMA_IT_FEIF1)) {
-        DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_FEIF1);
-        BREAK();
-    }
-}
-
 /*
    TIM1 input clock (TIM1CLK) is set to 2 * APB2 clock (PCLK2)
      TIM1CLK = 2 * PCLK2 (PCLK2 = HCLK / 2)
@@ -107,251 +83,157 @@ void DMA2_Stream1_IRQHandler(void)
  */
 static void extclk_config(int frequency)
 {
-    GPIO_InitTypeDef    GPIO_InitStructure;
-    TIM_OCInitTypeDef   TIM_OCInitStructure;
-    TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
-    RCC_ClocksTypeDef   RCC_Clocks;
+    /* TCLK (PCLK2 * 2) */
+    int tclk  = HAL_RCC_GetPCLK2Freq() * 2;
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOE, ENABLE);
-
-    /* TIM channel GPIO configuration */
-    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_9;
-    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AF;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-    GPIO_Init(GPIOE, &GPIO_InitStructure);
-
-    /* Connect TIM pins to AF */
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource9, GPIO_AF_TIM1);
-
-    /* Read Core Clocks */
-    RCC_GetClocksFreq(&RCC_Clocks);
-
-    /* set TCLK to HCLK (PCLK2 * 2) */
-    int tclk  = RCC_Clocks.PCLK2_Frequency * 2;
-
-    /* No prescalar */
-    int prescaler = (uint16_t) (RCC_Clocks.SYSCLK_Frequency / tclk) - 1;
+    /* SYSCLK/TCLK = No prescaler */
+    int prescaler = (uint16_t) (HAL_RCC_GetSysClockFreq()/ tclk) - 1;
 
     /* Period should be even */
     int period = (tclk / frequency)-1;
 
-    /* Time base configuration */
-    TIM_TimeBaseStructure.TIM_Period = period;
-    TIM_TimeBaseStructure.TIM_Prescaler = prescaler;
-    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
-    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+    //TODO move to MSP
+    /* Timer GPIO configuration */
+    GPIO_InitTypeDef  GPIO_InitStructure;
+    GPIO_InitStructure.Pin       = DCMI_TIM_PIN;
+    GPIO_InitStructure.Pull      = GPIO_NOPULL;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+    GPIO_InitStructure.Alternate = DCMI_TIM_AF;
+    HAL_GPIO_Init(DCMI_TIM_PORT, &GPIO_InitStructure);
 
-    /* PWM1 Mode configuration: Channel2 */
-    TIM_OCInitStructure.TIM_Pulse = period/2;
-    TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;
-    TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;
-    TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
-    TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+    /* Enable DCMI timer clock */
+    DCMI_TIM_CLK_ENABLE();
 
-    TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Enable);
-    TIM_ARRPreloadConfig(TIM1, ENABLE);
+    /* Timer base configuration */
+    TIMHandle.Instance          = DCMI_TIM;
+    TIMHandle.Init.Period       = period;
+    TIMHandle.Init.Prescaler    = prescaler;
+    TIMHandle.Init.ClockDivision = 0;
+    TIMHandle.Init.CounterMode   = TIM_COUNTERMODE_UP;
 
-    /* TIM1 enable counter */
-    TIM_Cmd(TIM1, ENABLE);
-    TIM_CtrlPWMOutputs(TIM1, ENABLE);
+    /* Timer channel configuration */
+    TIM_OC_InitTypeDef TIMOCHandle;
+    TIMOCHandle.Pulse       = period/2;
+    TIMOCHandle.OCMode      = TIM_OCMODE_PWM1;
+    TIMOCHandle.OCPolarity  = TIM_OCPOLARITY_HIGH;
+    TIMOCHandle.OCFastMode  = TIM_OCFAST_DISABLE;
+    TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
+    if (HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK) {
+        /* Initialization Error */
+        BREAK();
+    }
+
+    if (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK) {
+        BREAK();
+    }
+    if (HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK) {
+        BREAK();
+    }
 }
 
 static int dcmi_config()
 {
-    DCMI_InitTypeDef DCMI_InitStructure;
-    GPIO_InitTypeDef GPIO_InitStructure;
+    /* DCMI clock enable */
+    __DCMI_CLK_ENABLE();
 
-    /*** DCMI GPIO configuration ***/
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC | RCC_AHB1Periph_GPIOE |
-                           RCC_AHB1Periph_GPIOB | RCC_AHB1Periph_GPIOA, ENABLE);
-    /* Connect DCMI pins to AF13 */
-    /* D0..D7 */
-    GPIO_PinAFConfig(GPIOC, GPIO_PinSource6, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOC, GPIO_PinSource7, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource0, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource1, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource4, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource5, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOE, GPIO_PinSource6, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_DCMI);
+    /* DCMI GPIOs configuration */
+    GPIO_InitTypeDef  GPIO_InitStructure;
+    GPIO_InitStructure.Pull      = GPIO_PULLDOWN;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+    GPIO_InitStructure.Alternate = GPIO_AF13_DCMI;
 
-    /* VSYNC, HSYNC, PCLK */
-    GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource4, GPIO_AF_DCMI);
-    GPIO_PinAFConfig(GPIOA, GPIO_PinSource6, GPIO_AF_DCMI);
+    for (int i=0; i<NUM_PINS; i++) {
+        GPIO_InitStructure.Pin = dcmi_pins[i].pin;
+        HAL_GPIO_Init(dcmi_pins[i].port, &GPIO_InitStructure);
+    }
 
-    /* DCMI GPIO configuration */
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-    //GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+    /* DCMI configuration */
+    DCMIHandle.Instance         = DCMI;
+    DCMIHandle.Init.VSPolarity  = sensor.vsync_pol;         /* VSYNC clock polarity                 */
+    DCMIHandle.Init.HSPolarity  = sensor.hsync_pol;         /* HSYNC clock polarity                 */
+    DCMIHandle.Init.PCKPolarity = sensor.pixck_pol;         /* PXCLK clock polarity                 */
+    DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    /* Enable Hardware synchronization      */
+    DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        /* Capture rate all frames              */
+    DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; /* Capture 8 bits on every pixel clock  */
+    DCMIHandle.Init.JPEGMode = DCMI_JPEG_DISABLE;           /* Disable JPEG Mode                    */
 
-    /* D0,D1 (PC6/7) */
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
-    GPIO_Init(GPIOC, &GPIO_InitStructure);
+    /* Associate the DMA handle to the DCMI handle */
+    __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
 
-    /* D2,D3,D4,D6,D7 (E0/1/4/5/6) */
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 |
-                                  GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_6;
-    GPIO_Init(GPIOE, &GPIO_InitStructure);
+    /* Configure and enable DCMI IRQ Channel */
+    HAL_NVIC_SetPriority(DCMI_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DCMI_IRQn);
 
-    /* D5,VSYNC (PB6/7) */
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-    /* HSYNC,PCLK (PA4/6) */
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_6;
-    GPIO_Init(GPIOA, &GPIO_InitStructure);
-
-    /*** DCMI Configuration ***/
-    DCMI_DeInit();
-    DCMI_Cmd(DISABLE);
-
-    /* Enable DCMI clock */
-    RCC_AHB2PeriphClockCmd(RCC_AHB2Periph_DCMI, ENABLE);
-
-    /* Configure capture mode SnapShot/Continuous */
-    DCMI_InitStructure.DCMI_CaptureMode = DCMI_CaptureMode_SnapShot;
-
-    /* Hardware synchronization via VSYNC/HSYNC/PCLK lines */
-    DCMI_InitStructure.DCMI_SynchroMode = DCMI_SynchroMode_Hardware;
-
-    /* Active VS/HS clocks*/
-    DCMI_InitStructure.DCMI_VSPolarity  = sensor.vsync_pol;
-    DCMI_InitStructure.DCMI_HSPolarity  = sensor.hsync_pol;
-
-    /* Sample data on rising edge of PCK */
-    DCMI_InitStructure.DCMI_PCKPolarity = sensor.pixck_pol;
-    DCMI_InitStructure.DCMI_CaptureRate = DCMI_CaptureRate_All_Frame;
-
-    /* Capture 8 bits on every pixel clock */
-    DCMI_InitStructure.DCMI_ExtendedDataMode = DCMI_ExtendedDataMode_8b;
     /* Init DCMI */
-    DCMI_Init(&DCMI_InitStructure);
-
-#if 0
-    NVIC_InitTypeDef NVIC_InitStructure;
-
-    /* Configure DCMI Interrupts */
-    DCMI_ITConfig(DCMI_IT_OVF, ENABLE);
-    DCMI_ITConfig(DCMI_IT_ERR, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_FRAME, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_LINE, ENABLE);
-    //DCMI_ITConfig(DCMI_IT_VSYNC, ENABLE);
-
-    NVIC_InitStructure.NVIC_IRQChannel = DCMI_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-#endif
-
-    /* Enable DCMI Perphieral */
-    DCMI_Cmd(ENABLE);
-    return 0;
-}
-
-static int dma_config(uint8_t *buffer, uint32_t size)
-{
-    DMA_InitTypeDef  DMA_InitStructure;
-    NVIC_InitTypeDef NVIC_InitStructure;
-
-    /* Enable DMA2 clock */
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_DMA2, ENABLE);
-
-    DMA_DeInit(DMA2_Stream1);
-    DMA_Cmd(DMA2_Stream1, DISABLE);
-
-    /* DMA2 Stream1 Configuration */
-    DMA_InitStructure.DMA_Channel = DMA_Channel_1;
-
-    /* DMA direction peripheral to memory */
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralToMemory;
-
-    /* Number of data items to be transferred in multiples of (Mburst beat*(Msize)/(Psize))*/
-    DMA_InitStructure.DMA_BufferSize = size/4;
-
-    /* Base memory and peripheral addresses */
-    DMA_InitStructure.DMA_Memory0BaseAddr = (uint32_t) buffer;
-    DMA_InitStructure.DMA_PeripheralBaseAddr = DCMI_DR_ADDRESS;
-
-    /* Memory and peripheral address increments */
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-    DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-
-    /* Set Msize and Psize to one word */
-    DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;
-    DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;
-
-    /* Configure circular mode for DMA buffer */
-    DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
-    DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-
-    /* Enable FIFO with threshold of 16 bytes */
-    DMA_InitStructure.DMA_FIFOMode = DMA_FIFOMode_Enable;
-    DMA_InitStructure.DMA_FIFOThreshold = DMA_FIFOThreshold_Full;
-
-    /* Set burst mode, Mburst is 4 beats (16 bytes each) */
-    DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_INC4;
-    DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
-
-    DMA_Init(DMA2_Stream1, &DMA_InitStructure);
-
-    /* Enable DMA interrupts */
-    DMA_ITConfig(DMA2_Stream1, DMA_IT_TC, ENABLE);
-//    DMA_ITConfig(DMA2_Stream1, DMA_IT_HT, ENABLE);
-//    DMA_ITConfig(DMA2_Stream1, DMA_IT_TE, ENABLE);
-//    DMA_ITConfig(DMA2_Stream1, DMA_IT_FE, ENABLE);
-
-    /* DMA Stream enable */
-    DMA_Cmd(DMA2_Stream1, ENABLE);
-
-    int dma_timeout = 10000;
-    while ((DMA_GetCmdStatus(DMA2_Stream1) != ENABLE) && (--dma_timeout > 0));
-
-    if (dma_timeout == 0) {
+    if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
+        /* Initialization Error */
         return -1;
     }
 
-    /* Enable the DMA Stream IRQ Channel */
-    NVIC_InitStructure.NVIC_IRQChannel = DMA2_Stream1_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
+    __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_LINE);
+    __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_VSYNC);
+    __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_ERR);
+    __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_OVF);
+
+    return 0;
+}
+
+static int dma_config()
+{
+    /* Enable DMA2 clock */
+    __DMA2_CLK_ENABLE();
+
+    /* DMA Stream configuration */
+    DMAHandle.Instance          = DMA2_Stream1;                 /* Select the DMA instance          */
+    DMAHandle.Init.Channel      = DMA_CHANNEL_1;                /* DMA Channel                      */
+    DMAHandle.Init.Direction    = DMA_PERIPH_TO_MEMORY;         /* Peripheral to memory transfer    */
+    DMAHandle.Init.MemInc       = DMA_MINC_ENABLE;              /* Memory increment mode Enable     */
+    DMAHandle.Init.PeriphInc    = DMA_PINC_DISABLE;             /* Peripheral increment mode Enable */
+    DMAHandle.Init.PeriphDataAlignment  = DMA_PDATAALIGN_WORD;  /* Peripheral data alignment : Word */
+    DMAHandle.Init.MemDataAlignment     = DMA_MDATAALIGN_WORD;  /* Memory data alignment : Word     */
+    DMAHandle.Init.Mode          = DMA_CIRCULAR;                /* Circular DMA mode                */
+    DMAHandle.Init.Priority      = DMA_PRIORITY_HIGH;           /* Priority level : high            */
+    DMAHandle.Init.FIFOMode      = DMA_FIFOMODE_DISABLE;        /* FIFO mode enabled                */
+    DMAHandle.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;     /* FIFO threshold full              */
+    DMAHandle.Init.MemBurst      = DMA_MBURST_SINGLE;           /* Memory burst                     */
+    DMAHandle.Init.PeriphBurst   = DMA_PBURST_SINGLE;           /* Peripheral burst                 */
+
+    /* Configure and enable DMA IRQ Channel */
+    HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+
+    /* Initialize the DMA stream */
+    if (HAL_DMA_Init(&DMAHandle) != HAL_OK) {
+        /* Initialization Error */
+        return 1;
+    }
 
     return 0;
 }
 
 int sensor_init()
 {
-    GPIO_InitTypeDef GPIO_InitStructure;
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOA, ENABLE);
-    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
-
     /* RESET/PWDN GPIO configuration */
-    GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_DOWN;
+    GPIO_InitTypeDef  GPIO_InitStructure;
+    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
+    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
 
-    /* Configure the RESET GPIO pin */
-    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_10;
-    GPIO_Init(GPIOA, &GPIO_InitStructure);
+    /* RESET */
+    GPIO_InitStructure.Pin = DCMI_RESET_PIN;
+    HAL_GPIO_Init(DCMI_RESET_PORT, &GPIO_InitStructure);
 
-    /* Configure the PWDN GPIO pin */
-    GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_5;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
+    /* PWDN */
+    GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
+    HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
 
     /* Do a power cycle */
-    GPIO_SetBits(GPIOB, GPIO_Pin_5);
-    systick_sleep(100);
+    PWDN_HIGH();
+    systick_sleep(10);
 
-    GPIO_ResetBits(GPIOB, GPIO_Pin_5);
+    PWDN_LOW();
     systick_sleep(100);
 
     /* Initialize the SCCB interface */
@@ -371,10 +253,10 @@ int sensor_init()
        register with both polarities to determine line state. */
     sensor.reset_pol = ACTIVE_HIGH;
 
-    GPIO_SetBits(GPIOA, GPIO_Pin_10);
+    RESET_HIGH();
     systick_sleep(10);
 
-    GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+    RESET_LOW();
     systick_sleep(10);
 
     /* Check if we can read PID */
@@ -382,10 +264,10 @@ int sensor_init()
         /* Sensor is held in reset, so reset is active high */
         sensor.reset_pol = ACTIVE_LOW;
 
-        GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+        RESET_LOW();
         systick_sleep(10);
 
-        GPIO_SetBits(GPIOA, GPIO_Pin_10);
+        RESET_HIGH();
         systick_sleep(10);
     }
 
@@ -408,9 +290,16 @@ int sensor_init()
             return -1;
     }
 
+    /* Configure the DCMI DMA Stream */
+    if (dma_config() != 0) {
+        return -1;
+    }
+
     /* Configure the DCMI interface. This should be called
        after ovxxx_init to set VSYNC/HSYNC/PCLK polarities */
-    dcmi_config();
+    if (dcmi_config() != 0){
+        return -1;
+    }
     return 0;
 }
 
@@ -425,17 +314,17 @@ int sensor_reset()
     /* Hard reset the sensor */
     switch (sensor.reset_pol) {
         case ACTIVE_HIGH:
-            GPIO_SetBits(GPIOA, GPIO_Pin_10);
+            RESET_HIGH();
             systick_sleep(10);
 
-            GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+            RESET_LOW();
             systick_sleep(10);
            break;
        case ACTIVE_LOW:
-            GPIO_ResetBits(GPIOA, GPIO_Pin_10);
+            RESET_LOW();
             systick_sleep(10);
 
-            GPIO_SetBits(GPIOA, GPIO_Pin_10);
+            RESET_HIGH();
             systick_sleep(10);
             break;
     }
@@ -457,30 +346,25 @@ int sensor_write_reg(uint8_t reg, uint8_t val)
 
 int sensor_snapshot(struct image *image)
 {
-    /* clear frame_ready flag */
-    frame_ready = 0;
+    /* Enable the Frame capture complete interrupt */
+    __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
 
-    /* re-enable DCMI interface */
-    DCMI_CaptureCmd(ENABLE);
+    HAL_DCMI_Start_DMA(&DCMIHandle, DCMI_MODE_SNAPSHOT, (uint32_t) fb->pixels,  (fb->w * fb->h * 2)/4);
 
-    /* wait for dma transfer to finish */
-    while (!frame_ready);
-
-    /* wait for DCMI to be disabled */
-    while (DCMI->CR & DCMI_CR_CAPTURE);
+    /* Wait for frame */
+    while (HAL_DCMI_GetState(&DCMIHandle) == HAL_DCMI_STATE_BUSY);
 
     if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
-        int i;
-        /* extract Y channel */
-        for (i=0; i<(fb->w * fb->h); i++) {
-            fb->pixels[i] = fb->pixels[i*2+(fb->w * fb->h)];
+        /* Extract Y channel from YUYV */
+        for (int i=0; i<(fb->w * fb->h); i++) {
+            fb->pixels[i] = fb->pixels[i*2];
         }
     }
 
-    image->w = fb->w;
-    image->h = fb->h;
-    image->bpp = fb->bpp;
-    image->pixels = fb->pixels;
+//    image->w = fb->w;
+//    image->h = fb->h;
+//    image->bpp = fb->bpp;
+//    image->pixels = fb->pixels;
     return 0;
 }
 
@@ -513,12 +397,6 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
             break;
         default:
             return -1;
-    }
-
-    if (pixformat==PIXFORMAT_GRAYSCALE) {
-        dma_config(fb->pixels+(fb->w * fb->h), fb->w * fb->h * 2);
-    } else {
-        dma_config(fb->pixels, fb->w * fb->h * 2);
     }
     return 0;
 }
@@ -557,9 +435,6 @@ int sensor_set_framesize(enum sensor_framesize framesize)
         default:
             return -1;
     }
-
-    /* Reconfigure the DMA stream */
-    dma_config(fb->pixels, fb->w * fb->h * 2);
 
 #if 0
     /* This enables croping use it to test bigger frames */
@@ -628,5 +503,6 @@ int sensor_set_gainceiling(enum sensor_gainceiling gainceiling)
 
 int get_bytes()
 {
-    return DMA_GetCurrDataCounter(DMA2_Stream1);
+//    return DMA_GetCurrDataCounter(DMA2_Stream1);
+    return 0;
 }

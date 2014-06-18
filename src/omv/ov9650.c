@@ -1,13 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stm32f4xx_tim.h>
-#include <stm32f4xx_i2c.h>
-#include <stm32f4xx_gpio.h>
-#include <stm32f4xx_rcc.h>
-#include <stm32f4xx_dma.h>
-#include <stm32f4xx_misc.h>
-#include <stm32f4xx_dcmi.h>
+#include "stm32f4xx_hal.h"
 #include "sccb.h"
 #include "ov9650.h"
 #include "systick.h"
@@ -35,7 +29,7 @@ static const uint8_t default_regs[][2] = {
     {REG_COM15,  0xD0},  /*  Output range 0x00-0xFF/RGB565*/
 
     /* YUV fmt /Special Effects Controls */
-    {REG_TSLB,   0x01},  /*  YUVU/DBLC Enable/Bitwise reverse*/
+    {REG_TSLB,   0x01},  /*  YUYV/DBLC Enable/Bitwise reverse*/
     {REG_MANU,   0x80},  /*  Manual U */
     {REG_MANV,   0x80},  /*  Manual V */
 
@@ -345,9 +339,9 @@ static int set_gainceiling(enum sensor_gainceiling gainceiling)
 int ov9650_init(struct sensor_dev *sensor)
 {
     /* set HSYNC/VSYNC/PCLK polarity */
-    sensor->vsync_pol = DCMI_VSPolarity_High;
-    sensor->hsync_pol = DCMI_HSPolarity_Low;
-    sensor->pixck_pol = DCMI_PCKPolarity_Rising;
+    sensor->vsync_pol = DCMI_VSPOLARITY_HIGH;
+    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
+    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
 
     /* set function pointers */
     sensor->reset = reset;

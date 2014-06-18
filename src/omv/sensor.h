@@ -74,9 +74,9 @@ extern const int res_height[];
 
 struct sensor_dev {
     struct sensor_id id;
-    uint16_t vsync_pol;
-    uint16_t hsync_pol;
-    uint16_t pixck_pol;
+    uint32_t vsync_pol;
+    uint32_t hsync_pol;
+    uint32_t pixck_pol;
     enum reset_polarity reset_pol;
     enum sensor_pixformat pixformat;
     enum sensor_framesize framesize;

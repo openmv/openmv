@@ -1,11 +1,21 @@
 # Sources
-SRCS += $(addprefix ./,\
+SRCS += $(addprefix ,\
 	main.c\
+	systick.c\
+	usbdbg.c\
+	sccb.c\
+	ov9650.c\
+	ov2640.c\
+	sensor.c\
 	led.c\
    )
 
-SRCS += $(addprefix ./py/,\
+SRCS += $(addprefix img/,\
+   )
+
+SRCS += $(addprefix py/,\
 	py_led.c\
+	py_sensor.c\
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))

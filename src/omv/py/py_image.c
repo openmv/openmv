@@ -1,11 +1,9 @@
-#include <libmp.h>
-#include "xalloc.h"
+#include "mp.h"
 #include "imlib.h"
 #include "array.h"
 #include "sensor.h"
-#include "py_image.h"
 #include "py_assert.h"
-#include "py_file.h"
+#include "py_image.h"
 
 extern struct sensor_dev sensor;
 static const mp_obj_type_t py_cascade_type;

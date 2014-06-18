@@ -29,9 +29,15 @@
 #include "sdcard.h"
 #include "ff.h"
 #include "lcd.h"
+#include "mdefs.h"
+
+#include "usbdbg.h"
 
 #include "led.h"
 #include "py_led.h"
+
+#include "sensor.h"
+#include "py_sensor.h"
 
 int errno;
 static FATFS fatfs0;
@@ -53,12 +59,8 @@ void __fatal_error(const char *msg) {
     stdout_tx_strn("\nFATAL ERROR:\n", 14);
     stdout_tx_strn(msg, strlen(msg));
     for (uint i = 0;;) {
-        led_toggle(((i++) & 3) + 1);
-        for (volatile uint delay = 0; delay < 10000000; delay++) {
-        }
-        if (i >= 16) {
-            // to conserve power
-            __WFI();
+        led_toggle(((i++) & 3));
+        for (volatile uint delay = 0; delay < 500000; delay++) {
         }
     }
 }
@@ -110,8 +112,11 @@ MP_DEFINE_CONST_FUN_OBJ_1(pyb_usb_mode_obj, pyb_usb_mode);
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
-"import led\n"
+"import led, sensor\n"
 "led.on(led.BLUE)\n"
+"sensor.set_pixformat(sensor.RGB565)\n"
+"while (True):\n"
+"  image = sensor.snapshot()\n"
 ;
 
 static const char fresh_pybcdc_inf[] =
@@ -139,7 +144,7 @@ typedef struct {
 } module_t;
 
 static const module_t exported_modules[] ={
-    //{MP_QSTR_sensor,py_sensor_init},
+    {MP_QSTR_sensor,py_sensor_init},
     {MP_QSTR_led,   py_led_init},
 //    {MP_QSTR_time,  py_time_init},
 //    {MP_QSTR_gpio,  py_gpio_init},
@@ -164,6 +169,7 @@ int main(void) {
     __GPIOB_CLK_ENABLE();
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
+    __GPIOE_CLK_ENABLE();
 
     // enable the CCM RAM
     __CCMDATARAMEN_CLK_ENABLE();
@@ -226,24 +232,6 @@ soft_reset:
 
     pin_init();
     extint_init();
-
-    /* Add functions to the global python namespace */
-//    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
-//    mp_store_global(qstr_from_str("vcp_connected"), mp_make_function_n(0, py_vcp_connected));
-//    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
-//    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
-//    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
-//    mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
-
-    /* Export Python modules to the global python namespace */
-    for (const module_t *p = exported_modules; p->name; p++) {
-        const mp_obj_module_t *module = p->init();
-        if (module == NULL) {
-            __fatal_error("failed to init module");
-        } else {
-            mp_module_register(p->name, (mp_obj_t)module);
-        }
-    }
 
     // local filesystem init
     // try to mount the flash
@@ -345,9 +333,30 @@ soft_reset:
 
     timer_init0();
 
+    usbdbg_init();
+
 #if MICROPY_HW_ENABLE_RNG
     //rng_init0();
 #endif
+
+    /* Add functions to the global python namespace */
+//    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
+//    mp_store_global(qstr_from_str("vcp_connected"), mp_make_function_n(0, py_vcp_connected));
+//    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
+//    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
+//    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
+//    mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
+
+    /* Export Python modules to the global python namespace */
+    for (const module_t *p = exported_modules; p->name; p++) {
+        const mp_obj_module_t *module = p->init();
+        if (module == NULL) {
+            __fatal_error("failed to init module");
+        } else {
+            mp_module_register(p->name, (mp_obj_t)module);
+        }
+    }
+
 
     // now that everything is initialised, run main script
     if (reset_mode == 1 && pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
@@ -367,17 +376,21 @@ soft_reset:
         vstr_free(vstr);
     }
 
-    // enter REPL
+    // Enter REPL
     // REPL mode can change, or it can request a soft reset
+    nlr_buf_t nlr;
     for (;;) {
-        if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
-            if (pyexec_raw_repl() != 0) {
-                break;
+        if (nlr_push(&nlr) == 0) {
+            if (usbdbg_script_ready()) {
+                pyexec_push_scope();
+                pyexec_str(usbdbg_get_script());
+                pyexec_pop_scope();
             }
-        } else {
-            if (pyexec_friendly_repl() != 0) {
-                break;
-            }
+            usbdbg_clr_script();
+
+            // no script run repl
+            pyexec_friendly_repl();
+            nlr_pop();
         }
     }
 
