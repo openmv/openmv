@@ -1,4 +1,4 @@
-#include <libmp.h>
+#include <mp.h>
 #include "mdefs.h"
 #include "xalloc.h"
 

@@ -33,9 +33,9 @@ CFLAGS += -O2 -ggdb3 -DNDEBUG
 endif
 
 # Compiler Flags
-CFLAGS += -std=gnu99 -Wall -mlittle-endian -mthumb -nostartfiles -mabi=aapcs-linux
+CFLAGS += -std=gnu99 -Wall -mlittle-endian -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DSTM32F407xx -DHSE_VALUE=12000000
+CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_PRESENT -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DSTM32F407xx -DHSE_VALUE=12000000
 
 CFLAGS += -I. -Iinclude
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
@@ -58,7 +58,7 @@ CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 
 # Linker Flags
 
-LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib -Wl,-T$(OMV_DIR)/stm32f407.ld
+LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib -Wl,-T$(OMV_DIR)/stm32f407.ld -Wl,--gc-sections
 
 # Sources
 #SRC_C = $(addprefix $(CMSIS_DIR)/src/st/,\
@@ -67,6 +67,16 @@ LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=
 
 
 OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
+OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
+#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ComplexMathFunctions/*.o)
+#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ControllerFunctions/*.o)
+OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
+#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FilteringFunctions/*.o)
+OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
+#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/StatisticsFunctions/*.o)
+#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
+#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/TransformFunctions/*.o)
+
 OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
@@ -101,16 +111,12 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	math.o \
 	mathsincos.o \
 	rtc.o \
-	rng.o \
 	pin.o \
 	pin_named_pins.o \
 	timer.o \
-	i2c.o \
-	spi.o \
 	servo.o\
 	extint.o \
 	adc.o \
-	modos.o \
 	modstm.o \
 	modtime.o \
 	pins_$(TARGET).o \
@@ -126,20 +132,43 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/,\
 	class/cdc_msc_hid/src/usbd_msc_data.o \
 	)
 
-OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,\
-	main.o \
-	systick.o\
-	usbdbg.o\
-	sccb.o\
-	ov9650.o\
-	ov2640.o\
-	sensor.o\
-	led.o \
+OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
+	main.o                                  \
+	xalloc.o                                \
+	array.o                                 \
+	usbdbg.o                                \
+	systick.o                               \
+	sccb.o                                  \
+	ov9650.o                                \
+	ov2640.o                                \
+	sensor.o                                \
+	led.o                                   \
+	rng.o                                   \
 	)
 
-OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/,\
-	py_led.o \
-	py_sensor.o \
+OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
+	blob.o                                  \
+	fmath.o                                 \
+	haar.o                                  \
+	imlib.o                                 \
+	integral.o                              \
+	kmeans.o                                \
+	lab.o                                   \
+	median.o                                \
+	point.o                                 \
+	ppm.o                                   \
+	rectangle.o                             \
+	surf.o                                  \
+	template.o                              \
+   )
+
+OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
+	py_led.o                                \
+	py_sensor.o                             \
+	py_image.o                              \
+	py_file.o                               \
+	py_time.o                               \
+	py_clock.o                              \
 	)
 
 ###################################################

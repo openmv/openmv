@@ -15,11 +15,9 @@ static mp_obj_t py_sensor_reset() {
 }
 
 static mp_obj_t py_sensor_snapshot() {
-//    mp_obj_t image = py_image(0, 0, 0, 0);
-//    sensor_snapshot((struct image*) py_image_cobj(image));
-//    return image;
-    sensor_snapshot(0);
-    return mp_const_none;
+    mp_obj_t image = py_image(0, 0, 0, 0);
+    sensor_snapshot((struct image*) py_image_cobj(image));
+    return image;
 }
 
 static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {

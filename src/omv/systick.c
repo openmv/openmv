@@ -23,4 +23,5 @@ uint32_t systick_current_millis()
 bool sys_tick_has_passed(uint32_t stc, uint32_t delay_ms)
 {
     systick_sleep(delay_ms);
+    return true;
 }

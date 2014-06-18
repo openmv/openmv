@@ -1,4 +1,5 @@
-#include <libmp.h>
+#include <ff.h>
+#include <stdio.h>
 #include "xalloc.h"
 #include "imlib.h"
 #include "mdefs.h"

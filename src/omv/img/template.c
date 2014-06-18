@@ -1,4 +1,3 @@
-#include <libmp.h>
 #include "xalloc.h"
 #include "imlib.h"
 #include <arm_math.h>

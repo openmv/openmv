@@ -1,21 +1,41 @@
 # Sources
-SRCS += $(addprefix ,\
-	main.c\
-	systick.c\
-	usbdbg.c\
-	sccb.c\
-	ov9650.c\
-	ov2640.c\
-	sensor.c\
-	led.c\
+SRCS += $(addprefix ,   \
+	main.c              \
+	xalloc.c            \
+	array.c             \
+	usbdbg.c            \
+	systick.c           \
+	sccb.c              \
+	ov9650.c            \
+	ov2640.c            \
+	sensor.c            \
+	led.c               \
+	rng.c               \
    )
 
-SRCS += $(addprefix img/,\
+SRCS += $(addprefix img/,   \
+	blob.c                  \
+	fmath.c                 \
+	haar.c                  \
+	imlib.c                 \
+	integral.c              \
+	kmeans.c                \
+	lab.c                   \
+	median.c                \
+	point.c                 \
+	ppm.c                   \
+	rectangle.c             \
+	surf.c                  \
+	template.c              \
    )
 
-SRCS += $(addprefix py/,\
-	py_led.c\
-	py_sensor.c\
+SRCS += $(addprefix py/,    \
+	py_led.c                \
+	py_sensor.c             \
+	py_image.c              \
+	py_file.c               \
+	py_time.c               \
+	py_clock.c              \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))

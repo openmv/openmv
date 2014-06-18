@@ -349,11 +349,16 @@ int sensor_snapshot(struct image *image)
     /* Enable the Frame capture complete interrupt */
     __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
 
-    HAL_DCMI_Start_DMA(&DCMIHandle, DCMI_MODE_SNAPSHOT, (uint32_t) fb->pixels,  (fb->w * fb->h * 2)/4);
+    if (sensor.pixformat==PIXFORMAT_GRAYSCALE) {
+        HAL_DCMI_Start_DMA(&DCMIHandle, DCMI_MODE_SNAPSHOT, (uint32_t) fb->pixels+(fb->w * fb->h),  (fb->w * fb->h * 2)/4);
+    } else {
+        HAL_DCMI_Start_DMA(&DCMIHandle, DCMI_MODE_SNAPSHOT, (uint32_t) fb->pixels,  (fb->w * fb->h * 2)/4);
+    }
 
     /* Wait for frame */
     while (HAL_DCMI_GetState(&DCMIHandle) == HAL_DCMI_STATE_BUSY);
 
+#if 0
     if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
         /* Extract Y channel from YUYV */
         for (int i=0; i<(fb->w * fb->h); i++) {
@@ -361,10 +366,22 @@ int sensor_snapshot(struct image *image)
         }
     }
 
-//    image->w = fb->w;
-//    image->h = fb->h;
-//    image->bpp = fb->bpp;
-//    image->pixels = fb->pixels;
+#endif
+
+    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
+        int i;
+        /* extract Y channel */
+        for (i=0; i<(fb->w * fb->h); i++) {
+            fb->pixels[i] = fb->pixels[i*2+(fb->w * fb->h)];
+        }
+    }
+
+    if (image != NULL) {
+        image->w = fb->w;
+        image->h = fb->h;
+        image->bpp = fb->bpp;
+        image->pixels = fb->pixels;
+    }
     return 0;
 }
 

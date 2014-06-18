@@ -22,21 +22,20 @@
 #include "timer.h"
 #include "pin.h"
 #include "extint.h"
-#include "usrsw.h"
 #include "usb.h"
 #include "rtc.h"
 #include "storage.h"
 #include "sdcard.h"
 #include "ff.h"
-#include "lcd.h"
 #include "mdefs.h"
 
+#include "led.h"
+#include "rng.h"
+#include "sensor.h"
 #include "usbdbg.h"
 
-#include "led.h"
 #include "py_led.h"
-
-#include "sensor.h"
+#include "py_time.h"
 #include "py_sensor.h"
 
 int errno;
@@ -110,12 +109,17 @@ STATIC mp_obj_t pyb_usb_mode(mp_obj_t usb_mode) {
 
 MP_DEFINE_CONST_FUN_OBJ_1(pyb_usb_mode_obj, pyb_usb_mode);
 
+STATIC mp_obj_t py_vcp_is_connected(void ) {
+    return MP_BOOL(usb_vcp_is_connected());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_vcp_is_connected_obj, py_vcp_is_connected);
+
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
 "import led, sensor\n"
 "led.on(led.BLUE)\n"
 "sensor.set_pixformat(sensor.RGB565)\n"
-"while (True):\n"
+"while (vcp_is_connected()==False):\n"
 "  image = sensor.snapshot()\n"
 ;
 
@@ -146,7 +150,7 @@ typedef struct {
 static const module_t exported_modules[] ={
     {MP_QSTR_sensor,py_sensor_init},
     {MP_QSTR_led,   py_led_init},
-//    {MP_QSTR_time,  py_time_init},
+    {MP_QSTR_time,  py_time_init},
 //    {MP_QSTR_gpio,  py_gpio_init},
 //    {MP_QSTR_spi,   py_spi_init},
     {0, NULL}
@@ -333,15 +337,12 @@ soft_reset:
 
     timer_init0();
 
+    rng_init();
     usbdbg_init();
-
-#if MICROPY_HW_ENABLE_RNG
-    //rng_init0();
-#endif
 
     /* Add functions to the global python namespace */
 //    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
-//    mp_store_global(qstr_from_str("vcp_connected"), mp_make_function_n(0, py_vcp_connected));
+    mp_store_global(qstr_from_str("vcp_is_connected"), mp_make_function_n(0, py_vcp_is_connected));
 //    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
 //    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
 //    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));

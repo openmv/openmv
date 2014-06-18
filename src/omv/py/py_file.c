@@ -1,4 +1,4 @@
-#include <libmp.h>
+#include <mp.h>
 #include "py_assert.h"
 #include "py_file.h"
 typedef struct _py_file_obj_t {

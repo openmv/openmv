@@ -1,16 +1,17 @@
 # Sources
-SRCS   = src/st/startup_stm32f407xx.s
-#SRCS += $(wildcard src/CommonTables/*.c)
-#SRCS += $(wildcard src/ComplexMathFunctions/*.c)
-#SRCS += $(wildcard src/ControllerFunctions/*.c)
-#SRCS += $(wildcard src/FastMathFunctions/*.c)
-#SRCS += $(wildcard src/FilteringFunctions/*.c)
-#SRCS += $(wildcard src/MatrixFunctions/*.c)
-#SRCS += $(wildcard src/StatisticsFunctions/*.c)
-#SRCS += $(wildcard src/SupportFunctions/*.c)
-#SRCS += $(wildcard src/TransformFunctions/*.c)
+SRC_S   = src/st/startup_stm32f407xx.s
+SRC_C  += $(wildcard src/dsp/CommonTables/*.c)
+#SRC_C  += $(wildcard src/dsp/ComplexMathFunctions/*.c)
+#SRC_C  += $(wildcard src/dsp/ControllerFunctions/*.c)
+SRC_C  += $(wildcard src/dsp/FastMathFunctions/*.c)
+#SRC_C  += $(wildcard src/dsp/FilteringFunctions/*.c)
+SRC_C  += $(wildcard src/dsp/MatrixFunctions/*.c)
+#SRC_C  += $(wildcard src/dsp/StatisticsFunctions/*.c)
+#SRC_C  += $(wildcard src/dsp/SupportFunctions/*.c)
+#SRC_C  += $(wildcard src/dsp/TransformFunctions/*.c)
 
-OBJS  = $(addprefix $(BUILD)/, $(SRCS:.s=.o))
+OBJS  = $(addprefix $(BUILD)/, $(SRC_S:.s=.o))
+OBJS += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
 
 all: | $(OBJ_DIRS) $(OBJS)

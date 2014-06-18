@@ -4,6 +4,7 @@
 #include "sensor.h"
 #include "py_assert.h"
 #include "py_image.h"
+#include "ff.h"
 
 extern struct sensor_dev sensor;
 static const mp_obj_type_t py_cascade_type;
