@@ -15,7 +15,7 @@ __INTERFACE = 0
 __ALTSETTING= 1
 __IN_EP     =0x81
 __OUT_EP    =0x01
-__TIMEOUT   =1000
+__TIMEOUT   =5000
 
 
 # USB Debug commands
@@ -25,6 +25,7 @@ __USBDBG_EXEC_SCRIPT=3
 __USBDBG_READ_SCRIPT=4
 __USBDBG_WRITE_SCRIPT=5
 __USBDBG_STOP_SCRIPT=6
+__USBDBG_SAVE_TEMPLATE=7
 
 def init():
     global __dev
@@ -88,6 +89,11 @@ def exec_script(buf):
 
 def stop_script():
     __dev.ctrl_transfer(0x41, __USBDBG_STOP_SCRIPT, 0, __INTERFACE, None, __TIMEOUT)
+
+def save_template(x, y, w, h, name):
+    buf = struct.pack("IIII", x, y, w, h)
+    __dev.ctrl_transfer(0x41, __USBDBG_SAVE_TEMPLATE, len(buf), __INTERFACE, None, __TIMEOUT)
+    __dev.write(__OUT_EP, buf, __INTERFACE, __TIMEOUT)
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:

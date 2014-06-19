@@ -63,7 +63,19 @@ class OMVGtk:
         self.terminal.set_size(80,24)
         self.terminal.set_pty(self.fd)
 
-        self.framebuffer = self.builder.get_object("framebuffer_image")
+        # get drawingarea
+        self.pixbuf = None
+        self.drawingarea = self.builder.get_object("drawingarea")
+        self.da_menu = self.builder.get_object("da_menu")
+
+        # selection coords
+        self.x1 =0
+        self.y1 =0
+        self.x2 =0
+        self.y2 =0
+        self.selection_started=False
+        self.sel_ended=False
+
 
         #connect signals
         signals = {
@@ -72,9 +84,11 @@ class OMVGtk:
             "on_stop_clicked"       : self.stop_clicked,
             "on_motion_notify"      : self.motion_notify,
             "on_button_press"       : self.button_pressed,
+            "on_button_release"     : self.button_released,
             "on_open_file"          : self.open_file,
             "on_save_file"          : self.save_file,
             "on_save_file_as"       : self.save_file_as,
+            "on_save_template_activate" : self.save_template,
         }
         self.builder.connect_signals(signals)
 
@@ -93,43 +107,60 @@ class OMVGtk:
     def stop_clicked(self, widget):
         openmv.stop_script();
 
+    def button_pressed(self, widget, event):
+        self.x1 = int(event.x)
+        self.y1 = int(event.y)
+        self.x2 = int(event.x)
+        self.y2 = int(event.y)
+        self.selection_started = True
+
+    def button_released(self, widget, event):
+        self.x2 = int(event.x)
+        self.y2 = int(event.y)
+        self.selection_started = False
+        self.da_menu.popup(None, None, None, event.button, event.time, None)
+        self.da_menu.show_all()
+
     def motion_notify(self, widget, event):
         x = int(event.x)
         y = int(event.y)
-        pixbuf = self.framebuffer.get_pixbuf()
-        if x < pixbuf.get_width() and y < pixbuf.get_height():
-            pixel = pixbuf.get_pixels_array()[y][x]
-            rgb = "(%d, %d, %d)" %(pixel[0], pixel[1], pixel[2])
-            self.statusbar.pop(self.statusbar_ctx)
-            self.statusbar.push(self.statusbar_ctx, rgb)
+        self.x2 = int(event.x)
+        self.y2 = int(event.y)
+#        if x < self.pixbuf.get_width() and y < self.pixbuf.get_height():
+#            pixel = self.pixbuf.get_pixels_array()[y][x]
+#            rgb = "(%d, %d, %d)" %(pixel[0], pixel[1], pixel[2])
+#            self.statusbar.pop(self.statusbar_ctx)
+#            self.statusbar.push(self.statusbar_ctx, rgb)
 
-    def button_pressed(self, widget, event):
-        x = int(event.x)
-        y = int(event.y)
-        pixbuf = self.framebuffer.get_pixbuf()
-        if x < pixbuf.get_width() and y < pixbuf.get_height():
-            pixel = pixbuf.get_pixels_array()[y][x]
-            print (pixel[0], pixel[1], pixel[2])
-
-    def update_fb(self):
-        # read framebuffer
+    def update_drawing(self):
+        # read drawingarea
         fb = openmv.dump_fb()
 
         # convert to RGB888 and blit
-        pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
-        pixbuf = pixbuf.scale_simple(fb[0]*2, fb[1]*2, gtk.gdk.INTERP_BILINEAR)
-        self.framebuffer.set_from_pixbuf(pixbuf)
-        gobject.idle_add(omvgtk.update_fb);
+        self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
+        self.pixbuf = self.pixbuf.scale_simple(fb[0]*2, fb[1]*2, gtk.gdk.INTERP_BILINEAR)
+
+        self.drawingarea.realize();
+        cm = self.drawingarea.window.get_colormap()
+        gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF',True,False))
+
+        self.drawingarea.set_size_request(fb[0]*2, fb[1]*2)
+        self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
+        if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
+            self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
+
+        # reschedule callback
+        gobject.idle_add(omvgtk.update_drawing);
 
     def open_file(self, widget):
         dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         dialog.set_default_response(gtk.RESPONSE_OK)
         dialog.set_current_folder("./examples/")
-        filter = gtk.FileFilter()
-        filter.set_name("python")
-        filter.add_pattern("*.py")
-        dialog.add_filter(filter)
+        ff = gtk.FileFilter()
+        ff.set_name("python")
+        ff.add_pattern("*.py")
+        dialog.add_filter(ff)
 
         if dialog.run() == gtk.RESPONSE_OK:
             with open(dialog.get_filename(), "r") as file:
@@ -140,6 +171,24 @@ class OMVGtk:
 
         dialog.destroy()
 
+    def save_template(self, widget):
+        self.da_menu.hide()
+        x = self.x1
+        y = self.y1
+        w = self.x2-self.x1
+        h = self.y2-self.y1
+
+        entry = self.builder.get_object("template_entry")
+        template = self.builder.get_object("template")
+        dialog = self.builder.get_object("save_template_dialog")
+        dialog.set_transient_for(self.window);
+
+        template.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        if dialog.run() == gtk.RESPONSE_OK:
+            openmv.save_template(x/2, y/2, w/2, h/2, entry.get_text()) #Use Scale
+        dialog.hide()
+
     def save_file(self, widget):
         with open(self.file_path, "w") as file:
             file.write(self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter()))
@@ -149,10 +198,10 @@ class OMVGtk:
                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         dialog.set_default_response(gtk.RESPONSE_OK)
         dialog.set_current_folder("./examples/")
-        filter = gtk.FileFilter()
-        filter.set_name("python")
-        filter.add_pattern("*.py")
-        dialog.add_filter(filter)
+        ff = gtk.FileFilter()
+        ff.set_name("python")
+        ff.add_pattern("*.py")
+        dialog.add_filter(ff)
 
         if dialog.run() == gtk.RESPONSE_OK:
             with open(dialog.get_filename(), "w") as file:
@@ -180,5 +229,5 @@ class OMVGtk:
 if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
-    gobject.idle_add(omvgtk.update_fb);
+    gobject.idle_add(omvgtk.update_drawing);
     gtk.main()
