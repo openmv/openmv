@@ -284,10 +284,9 @@ static int set_framerate(enum sensor_framerate framerate)
     return 0;
 }
 
-static int set_brightness(uint8_t level)
+static int set_brightness(int level)
 {
     int i;
-//    int8_t lvl = (int8_t) level;
 
     static uint8_t regs[NUM_BR_LEVELS + 1][3] = {
         { REG_AEW, REG_AEB, REG_VPT },
@@ -312,7 +311,7 @@ static int set_brightness(uint8_t level)
     return 0;
 }
 
-static int set_exposure(uint16_t exposure)
+static int set_exposure(int exposure)
 {
    uint8_t val;
    val = SCCB_Read(REG_COM1);

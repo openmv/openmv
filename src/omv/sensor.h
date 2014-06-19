@@ -87,8 +87,9 @@ struct sensor_dev {
     int  (*set_pixformat)  (enum sensor_pixformat pixformat);
     int  (*set_framesize)  (enum sensor_framesize framesize);
     int  (*set_framerate)  (enum sensor_framerate framerate);
-    int  (*set_brightness) (uint8_t level);
-    int  (*set_exposure)   (uint16_t exposure);
+    int  (*set_brightness) (int level);
+    int  (*set_contrast) (int level);
+    int  (*set_exposure)   (int exposure);
     int  (*set_gainceiling) (enum sensor_gainceiling gainceiling);
 };
 
@@ -166,7 +167,15 @@ int sensor_set_framerate(enum sensor_framerate framerate);
  * @param level The new brightness level allowed values from -3 to +3.
  * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
  */
-int sensor_set_brightness(uint8_t level);
+int sensor_set_brightness(int level);
+/**
+ * Set the sensor contrast level.
+ *
+ * @param sensor A pointer to the sensor device handle.
+ * @param level The new contrast level allowed values from -3 to +3.
+ * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
+ */
+int sensor_set_contrast(int level);
 /**
  * Set the sensor exposure level. This function has no
  * effect when AEC (Automatic Exposure Control) is enabled.
@@ -175,7 +184,7 @@ int sensor_set_brightness(uint8_t level);
  * @param exposure The new exposure level.
  * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
  */
-int sensor_set_exposure(uint16_t exposure);
+int sensor_set_exposure(int exposure);
 /**
  * Set the sensor AGC gain ceiling.
  *

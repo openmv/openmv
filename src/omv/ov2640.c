@@ -272,6 +272,16 @@ static const uint8_t br_regs[NUM_BR_LEVELS + 1][5] = {
     { 0x00, 0x04, 0x09, 0x40, 0x00 }, /* +2 */
 };
 
+#define NUM_CONT_LEVELS (5)
+static const uint8_t cont_regs[NUM_BR_LEVELS + 1][7] = {
+    { BPADDR, BPDATA, BPADDR, BPDATA, BPDATA, BPDATA, BPDATA },
+    { 0x00, 0x04, 0x07, 0x20, 0x28, 0x0c, 0x06 }, /* -2 */
+    { 0x00, 0x04, 0x07, 0x20, 0x24, 0x16, 0x06 }, /* -1 */
+    { 0x00, 0x04, 0x07, 0x20, 0x20, 0x20, 0x06 }, /*  0 */
+    { 0x00, 0x04, 0x07, 0x20, 0x1c, 0x2a, 0x06 }, /* +1 */
+    { 0x00, 0x04, 0x07, 0x20, 0x18, 0x34, 0x06 }, /* +2 */
+};
+
 static int reset()
 {
     int i=0;
@@ -350,9 +360,9 @@ static int set_framerate(enum sensor_framerate framerate)
     return 0;
 }
 
-static int set_brightness(uint8_t level)
+static int set_brightness(int level)
 {
-    int i, ret=0;
+    int ret=0;
 
     level += (NUM_BR_LEVELS / 2 + 1);
     if (level < 0 || level > NUM_BR_LEVELS) {
@@ -363,7 +373,7 @@ static int set_brightness(uint8_t level)
     ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
 
     /* Write brightness registers */
-    for (i=0; i<sizeof(br_regs[0])/sizeof(br_regs[0][0]); i++) {
+    for (int i=0; i<sizeof(br_regs[0])/sizeof(br_regs[0][0]); i++) {
         ret |= SCCB_Write(br_regs[0][i], br_regs[level][i]);
     }
 
@@ -373,7 +383,30 @@ static int set_brightness(uint8_t level)
     return ret;
 }
 
-static int set_exposure(uint16_t exposure)
+static int set_contrast(int level)
+{
+    int ret=0;
+
+    level += (NUM_CONT_LEVELS / 2 + 1);
+    if (level < 0 || level > NUM_CONT_LEVELS) {
+        return -1;
+    }
+    /* Disable DSP */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
+
+    /* Write contrast registers */
+    for (int i=0; i<sizeof(cont_regs[0])/sizeof(cont_regs[0][0]); i++) {
+        ret |= SCCB_Write(cont_regs[0][i], cont_regs[level][i]);
+    }
+
+    /* Enable DSP */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(R_BYPASS, R_BYPASS_USE_DSP);
+    return ret;
+}
+
+static int set_exposure(int exposure)
 {
    return 0;
 }
@@ -409,6 +442,7 @@ int ov2640_init(struct sensor_dev *sensor)
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
     sensor->set_framerate = set_framerate;
+    sensor->set_contrast  = set_contrast;
     sensor->set_brightness= set_brightness;
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
