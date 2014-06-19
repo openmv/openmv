@@ -213,6 +213,7 @@ void imlib_blit(struct image *dst_img, struct image *src_img, int x_off, int y_o
 /* Image file functions */
 int ppm_read(image_t *img, const char *path);
 int ppm_write(image_t *img, const char *path);
+int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
 int imlib_load_image(image_t *image, const char *path);
-int imlib_save_image(image_t *image, const char *path, rectangle_t *subimage);
+int imlib_save_image(image_t *image, const char *path, rectangle_t *r);
 #endif //__IMLIB_H__

@@ -17,9 +17,9 @@ static int isspace(int c)
     return (c=='\n'||c=='\r'||c=='\t'||c==' ');
 }
 
-static int f_getc(FIL *fp)
+static char f_getc(FIL *fp)
 {
-    int c;
+    char c;
     UINT bytes;
     FRESULT res = f_read(fp, &c, 1, &bytes);
     if (res != FR_OK || bytes != 1) {
@@ -102,19 +102,30 @@ int ppm_read(image_t *img, const char *path)
         return res;
     }
 
-    int type;
     /* read image header */
-    if (f_getc(&fp) != 'P' ||
-       ((type = f_getc(&fp)) != '5' && type != '6')
-       || !isspace(f_getc(&fp))) {
+    if (f_getc(&fp) != 'P') {
         printf("ppm:image format not supported\n");
         res = -1;
         goto error;
     }
 
-    if ((img->w = read_num(&fp)) == -1 || /* read image width */
-        (img->h = read_num(&fp)) == -1 || /* read image height */
-         read_num(&fp) != 255) {          /* read image max gray */
+    int type = f_getc(&fp);
+    if (type != '5' && type != '6') {
+        printf("ppm:image format not supported\n");
+        res = -1;
+        goto error;
+    }
+
+    if (!isspace(f_getc(&fp))) {
+        printf("ppm:image format not supported\n");
+        res = -1;
+        goto error;
+    }
+
+    img->w = read_num(&fp); /* read image width */
+    img->h = read_num(&fp); /* read image height */
+    int max_gray = read_num(&fp); /* read image max gray */
+    if (img->w == -1 || img->h == -1 || max_gray != 255) {
         printf("ppm:image format not supported\n");
         res = -1;
         goto error;
@@ -135,6 +146,59 @@ int ppm_read(image_t *img, const char *path)
     res = f_read(&fp, img->data, size, &bytes);
     if (res != FR_OK || bytes != size) {
         goto error;
+    }
+
+error:
+    f_close(&fp);
+    return res;
+}
+
+int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
+{
+    FIL fp;
+    UINT bytes;
+    FRESULT res=FR_OK;
+
+    res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    if (img->bpp == 1) {
+        bytes = f_printf(&fp, "P5\n%d %d\n255\n", r->w, r->h);
+    } else {
+        bytes = f_printf(&fp, "P6\n%d %d\n255\n", r->w, r->h);
+    }
+
+    if (bytes == -1) {
+        res = FR_DENIED;
+        goto error;
+    }
+
+    if (img->bpp == 1) {
+        for (int j=r->y; j<r->y+r->h; j++) {
+            for (int i=r->x; i<r->x+r->w; i++) {
+                uint8_t c = img->pixels[j*img->w+i];
+                res = f_write(&fp, &c, 1, &bytes);
+                if (res != FR_OK || bytes != 1) {
+                    goto error;
+                }
+            }
+        }
+    } else {
+        uint8_t rgb[3];
+        uint16_t *pixels = (uint16_t*)img->data;
+        for (int j=r->y; j<r->y+r->h; j++) {
+            for (int i=r->x; i<r->x+r->w; i++) {
+                uint16_t c = SWAP(pixels[j*img->w+i]);
+                rgb[0] = R8(c); rgb[1] = G8(c); rgb[2] = B8(c);
+                res = f_write(&fp, rgb, 3, &bytes);
+                if (res != FR_OK || bytes != 3) {
+                    goto error;
+                }
+            }
+        }
+
     }
 
 error:

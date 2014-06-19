@@ -412,7 +412,11 @@ int imlib_load_image(image_t *image, const char *path)
     return ppm_read(image, path);
 }
 
-int imlib_save_image(image_t *image, const char *path, rectangle_t *subimage)
+int imlib_save_image(image_t *image, const char *path, rectangle_t *r)
 {
-    return ppm_write(image, path);
+    if (r == NULL) {
+        return ppm_write(image, path);
+    } else {
+        return ppm_write_subimg(image, path, r);
+    }
 }
