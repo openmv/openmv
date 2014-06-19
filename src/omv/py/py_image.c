@@ -4,7 +4,7 @@
 #include "sensor.h"
 #include "py_assert.h"
 #include "py_image.h"
-#include "ff.h"
+#include "py_file.h"
 
 extern struct sensor_dev sensor;
 static const mp_obj_type_t py_cascade_type;
@@ -100,7 +100,7 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 
     int res;
     if ((res=imlib_save_image(image, path, &r)) != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
     return mp_const_true;
@@ -343,7 +343,8 @@ static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj
 
     /* look for object */
     float corr = imlib_template_match(image, template, &r);
-    if (corr> t) {
+    //printf("t:%f coor:%f\n", (double)t, (double)corr);
+    if (corr > t) {
         rec_obj[0] = mp_obj_new_int(r.x);
         rec_obj[1] = mp_obj_new_int(r.y);
         rec_obj[2] = mp_obj_new_int(r.w);
@@ -433,7 +434,7 @@ mp_obj_t py_image_load_image(mp_obj_t path_obj)
 
     int res = imlib_load_image(image, path);
     if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
     return image_obj;
@@ -452,7 +453,7 @@ mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
     const char *path = mp_obj_str_get_str(path_obj);
     int res = imlib_load_cascade(&cascade, path);
     if (res != FR_OK) {
-        nlr_jump(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
     o = m_new_obj(py_cascade_obj_t);
