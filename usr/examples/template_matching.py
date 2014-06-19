@@ -1,11 +1,18 @@
-import sensor, imlib, time
+import sensor, time
+# Set sensor contrast
+sensor.set_contrast(1)
+# Set sensor brightness
+sensor.set_brightness(-2)
+# Set sensor to pixel format
 sensor.set_pixformat(sensor.GRAYSCALE)
-template = imlib.load_template("0:/minion.template")
-clock = time.clock()
+
+# Load template
+template = Image("0:/template.pgm")
+
+# Run template matching
 while (True):
-    clock.tick()
     image = sensor.snapshot()
-    obj = imlib.template_match(image, template, 0.7)
-    if obj:
-    imlib.draw_rectangle(image, obj)
-    print (clock.fps())
+    r = image.find_template(template, 0.75)
+    if r:    
+        image.draw_rectangle(r)
+        time.sleep(50)
