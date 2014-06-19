@@ -62,7 +62,6 @@ uint8_t SCCB_Write(uint8_t addr, uint8_t data)
 uint8_t SCCB_Read(uint8_t addr)
 {
     uint8_t data=0;
-    HAL_StatusTypeDef st;
 
     while (HAL_I2C_GetState(&I2CHandle) != HAL_I2C_STATE_READY);
     if (HAL_I2C_Master_Transmit(&I2CHandle, SLAVE_ADDR, &addr, 1, TIMEOUT) != HAL_OK) {
