@@ -37,6 +37,7 @@
 #include "py_led.h"
 #include "py_time.h"
 #include "py_sensor.h"
+#include "py_image.h"
 
 int errno;
 static FATFS fatfs0;
@@ -345,8 +346,8 @@ soft_reset:
     mp_store_global(qstr_from_str("vcp_is_connected"), mp_make_function_n(0, py_vcp_is_connected));
 //    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
 //    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
-//    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
-//    mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
+    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
+    mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
 
     /* Export Python modules to the global python namespace */
     for (const module_t *p = exported_modules; p->name; p++) {
