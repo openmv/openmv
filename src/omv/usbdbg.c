@@ -1,6 +1,9 @@
 #include "mp.h"
 #include <string.h>
 #include "usbdbg.h"
+#include "ff.h"
+#include "py/py_file.h"
+#include "imlib.h"
 #include "framebuffer.h"
 
 #define USB_TX_BUF_SIZE (64)
@@ -69,6 +72,18 @@ void usbdbg_data_out(void *buffer, int length)
             }
             break;
 
+        case USBDBG_SAVE_TEMPLATE: { /* execute script */
+            int res;
+            image_t image;
+            image.w = fb->w; image.h = fb->h; image.bpp = fb->bpp; image.pixels = fb->pixels;
+            if ((res=imlib_save_image(&image, "0:/template.pgm", (rectangle_t*)buffer)) != FR_OK) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+            }
+            // raise a flash IRQ to flush image
+            NVIC->STIR = FLASH_IRQn;
+            break;
+        }
+
         default: /* error */
             break;
     }
@@ -102,6 +117,12 @@ void usbdbg_control(uint8_t request, int length)
             mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
             pendsv_nlr_jump(mp_const_ide_interrupt);
             cmd = USBDBG_NONE;
+            break;
+
+        case USBDBG_SAVE_TEMPLATE: /* save template */
+            /* reset bytes counter */
+            xfer_bytes = 0;
+            xfer_length =length;
             break;
 
         default: /* error */
