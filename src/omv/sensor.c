@@ -193,7 +193,7 @@ static int dma_config()
     DMAHandle.Init.PeriphInc        = DMA_PINC_DISABLE;         /* Peripheral increment mode Enable */
     DMAHandle.Init.PeriphDataAlignment  = DMA_PDATAALIGN_WORD;  /* Peripheral data alignment : Word */
     DMAHandle.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;      /* Memory data alignment : Word     */
-    DMAHandle.Init.Mode             = DMA_CIRCULAR;             /* Circular DMA mode                */
+    DMAHandle.Init.Mode             = DMA_NORMAL;               /* Normal DMA mode                  */
     DMAHandle.Init.Priority         = DMA_PRIORITY_HIGH;        /* Priority level : high            */
     DMAHandle.Init.FIFOMode         = DMA_FIFOMODE_ENABLE;      /* FIFO mode enabled                */
     DMAHandle.Init.FIFOThreshold    = DMA_FIFO_THRESHOLD_FULL;  /* FIFO threshold full              */
@@ -346,32 +346,25 @@ int sensor_write_reg(uint8_t reg, uint8_t val)
 
 int sensor_snapshot(struct image *image)
 {
-    /* Enable the Frame capture complete interrupt */
-    __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
-
+    uint32_t addr;
     if (sensor.pixformat==PIXFORMAT_GRAYSCALE) {
-        HAL_DCMI_Start_DMA(&DCMIHandle, DCMI_MODE_SNAPSHOT, (uint32_t) fb->pixels+(fb->w * fb->h),  (fb->w * fb->h * 2)/4);
+        addr = (uint32_t) fb->pixels+(fb->w * fb->h);
     } else {
-        HAL_DCMI_Start_DMA(&DCMIHandle, DCMI_MODE_SNAPSHOT, (uint32_t) fb->pixels,  (fb->w * fb->h * 2)/4);
+        addr = (uint32_t) fb->pixels;
     }
 
-    /* Wait for frame */
-    while (HAL_DCMI_GetState(&DCMIHandle) == HAL_DCMI_STATE_BUSY);
+    /* Start the DCMI */
+    HAL_DCMI_Start_DMA(&DCMIHandle,
+            DCMI_MODE_SNAPSHOT, addr, (fb->w * fb->h * 2)/4);
 
-#if 0
+    /* Wait for frame */
+    while (HAL_DCMI_GetState(&DCMIHandle) == HAL_DCMI_STATE_BUSY) {
+
+    }
+
     if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
         /* Extract Y channel from YUYV */
         for (int i=0; i<(fb->w * fb->h); i++) {
-            fb->pixels[i] = fb->pixels[i*2];
-        }
-    }
-
-#endif
-
-    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
-        int i;
-        /* extract Y channel */
-        for (i=0; i<(fb->w * fb->h); i++) {
             fb->pixels[i] = fb->pixels[i*2+(fb->w * fb->h)];
         }
     }
@@ -382,6 +375,7 @@ int sensor_snapshot(struct image *image)
         image->bpp = fb->bpp;
         image->pixels = fb->pixels;
     }
+
     return 0;
 }
 
