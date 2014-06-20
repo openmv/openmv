@@ -13,13 +13,14 @@ import usb.util
 import numpy as np
 import openmv
 from os.path import expanduser
+ui_path =os.path.dirname(os.path.realpath(__file__))+"/openmv-ide.glade"
 config_path = expanduser("~")+"/.openmvide.config"
 
 class OMVGtk:
     def __init__(self):
         #Set the Glade file
         self.builder = gtk.Builder()
-        self.builder.add_from_file("openmv-ide.glade")
+        self.builder.add_from_file(ui_path)
 
         # get top window
         self.window = self.builder.get_object("top_window")
