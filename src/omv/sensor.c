@@ -186,19 +186,19 @@ static int dma_config()
     __DMA2_CLK_ENABLE();
 
     /* DMA Stream configuration */
-    DMAHandle.Instance          = DMA2_Stream1;                 /* Select the DMA instance          */
-    DMAHandle.Init.Channel      = DMA_CHANNEL_1;                /* DMA Channel                      */
-    DMAHandle.Init.Direction    = DMA_PERIPH_TO_MEMORY;         /* Peripheral to memory transfer    */
-    DMAHandle.Init.MemInc       = DMA_MINC_ENABLE;              /* Memory increment mode Enable     */
-    DMAHandle.Init.PeriphInc    = DMA_PINC_DISABLE;             /* Peripheral increment mode Enable */
+    DMAHandle.Instance              = DMA2_Stream1;             /* Select the DMA instance          */
+    DMAHandle.Init.Channel          = DMA_CHANNEL_1;            /* DMA Channel                      */
+    DMAHandle.Init.Direction        = DMA_PERIPH_TO_MEMORY;     /* Peripheral to memory transfer    */
+    DMAHandle.Init.MemInc           = DMA_MINC_ENABLE;          /* Memory increment mode Enable     */
+    DMAHandle.Init.PeriphInc        = DMA_PINC_DISABLE;         /* Peripheral increment mode Enable */
     DMAHandle.Init.PeriphDataAlignment  = DMA_PDATAALIGN_WORD;  /* Peripheral data alignment : Word */
-    DMAHandle.Init.MemDataAlignment     = DMA_MDATAALIGN_WORD;  /* Memory data alignment : Word     */
-    DMAHandle.Init.Mode          = DMA_CIRCULAR;                /* Circular DMA mode                */
-    DMAHandle.Init.Priority      = DMA_PRIORITY_HIGH;           /* Priority level : high            */
-    DMAHandle.Init.FIFOMode      = DMA_FIFOMODE_DISABLE;        /* FIFO mode enabled                */
-    DMAHandle.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;     /* FIFO threshold full              */
-    DMAHandle.Init.MemBurst      = DMA_MBURST_SINGLE;           /* Memory burst                     */
-    DMAHandle.Init.PeriphBurst   = DMA_PBURST_SINGLE;           /* Peripheral burst                 */
+    DMAHandle.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;      /* Memory data alignment : Word     */
+    DMAHandle.Init.Mode             = DMA_CIRCULAR;             /* Circular DMA mode                */
+    DMAHandle.Init.Priority         = DMA_PRIORITY_HIGH;        /* Priority level : high            */
+    DMAHandle.Init.FIFOMode         = DMA_FIFOMODE_ENABLE;      /* FIFO mode enabled                */
+    DMAHandle.Init.FIFOThreshold    = DMA_FIFO_THRESHOLD_FULL;  /* FIFO threshold full              */
+    DMAHandle.Init.MemBurst         = DMA_MBURST_INC4;          /* Memory burst                     */
+    DMAHandle.Init.PeriphBurst      = DMA_PBURST_SINGLE;        /* Peripheral burst                 */
 
     /* Configure and enable DMA IRQ Channel */
     HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
