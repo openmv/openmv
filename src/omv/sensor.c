@@ -483,6 +483,14 @@ int sensor_set_framerate(enum sensor_framerate framerate)
     return 0;
 }
 
+int sensor_set_contrast(int level)
+{
+    if (sensor.set_contrast != NULL) {
+        return sensor.set_contrast(level);
+    }
+    return -1;
+}
+
 int sensor_set_brightness(int level)
 {
     if (sensor.set_brightness != NULL) {
@@ -491,10 +499,10 @@ int sensor_set_brightness(int level)
     return -1;
 }
 
-int sensor_set_contrast(int level)
+int sensor_set_saturation(int level)
 {
-    if (sensor.set_contrast != NULL) {
-        return sensor.set_contrast(level);
+    if (sensor.set_saturation != NULL) {
+        return sensor.set_saturation(level);
     }
     return -1;
 }

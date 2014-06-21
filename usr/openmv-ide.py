@@ -77,6 +77,11 @@ class OMVGtk:
         self.selection_started=False
         self.sel_ended=False
 
+        # set control scales attributes
+        self.builder.get_object("contrast_adjust").attr=    openmv.ATTR_CONTRAST
+        self.builder.get_object("brightness_adjust").attr=  openmv.ATTR_BRIGHTNESS
+        self.builder.get_object("saturation_adjust").attr=  openmv.ATTR_SATURATION
+        self.builder.get_object("gainceiling_adjust").attr= openmv.ATTR_GAINCEILING
 
         #connect signals
         signals = {
@@ -90,6 +95,7 @@ class OMVGtk:
             "on_save_file"          : self.save_file,
             "on_save_file_as"       : self.save_file_as,
             "on_save_template_activate" : self.save_template,
+            "on_ctrl_scale_value_changed" : self.on_ctrl_scale_value_changed,
         }
         self.builder.connect_signals(signals)
 
@@ -152,6 +158,10 @@ class OMVGtk:
 
         # reschedule callback
         gobject.idle_add(omvgtk.update_drawing);
+
+
+    def on_ctrl_scale_value_changed(self, adjust):
+        openmv.set_attr(adjust.attr, int(adjust.value))
 
     def open_file(self, widget):
         dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,

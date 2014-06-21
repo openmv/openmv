@@ -26,6 +26,13 @@ __USBDBG_READ_SCRIPT=4
 __USBDBG_WRITE_SCRIPT=5
 __USBDBG_STOP_SCRIPT=6
 __USBDBG_SAVE_TEMPLATE=7
+__USBDBG_SET_ATTR=8
+__USBDBG_GET_ATTR=9
+
+ATTR_CONTRAST=0
+ATTR_BRIGHTNESS=1
+ATTR_SATURATION=2
+ATTR_GAINCEILING=3
 
 def init():
     global __dev
@@ -94,6 +101,13 @@ def save_template(x, y, w, h, name):
     buf = struct.pack("IIII", x, y, w, h)
     __dev.ctrl_transfer(0x41, __USBDBG_SAVE_TEMPLATE, len(buf), __INTERFACE, None, __TIMEOUT)
     __dev.write(__OUT_EP, buf, __INTERFACE, __TIMEOUT)
+
+def set_attr(attr, value):
+    buf = struct.unpack(">H", struct.pack("bb", attr, value))[0]
+    __dev.ctrl_transfer(0x41, __USBDBG_SET_ATTR, buf, __INTERFACE, None, __TIMEOUT)
+
+def get_attr(attr):
+    return 0
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:

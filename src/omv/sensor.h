@@ -44,24 +44,11 @@ enum sensor_gainceiling {
     GAINCEILING_128X,
 };
 
-enum sensor_command {
-    CMD_RESET_SENSOR=1,
-    CMD_SET_PIXFORMAT,
-    CMD_SET_FRAMERATE,
-    CMD_SET_FRAMESIZE,
-    CMD_SET_BRIGHTNESS,
-    CMD_SET_GAINCEILING,
-    CMD_WRITE_REGISTER,
-    CMD_READ_REGISTER,
-    CMD_SNAPSHOT,
-    CMD_COLOR_TRACK,
-    CMD_MOTION_DETECTION,
-    CMD_FACE_DETECTION,
-};
-
-enum sensor_result {
-    CMD_ACK  =0x01,
-    CMD_NACK =0x02,
+enum sensor_attr {
+    ATTR_CONTRAST=0,
+    ATTR_BRIGHTNESS,
+    ATTR_SATURATION,
+    ATTR_GAINCEILING,
 };
 
 enum reset_polarity {
@@ -87,8 +74,9 @@ struct sensor_dev {
     int  (*set_pixformat)  (enum sensor_pixformat pixformat);
     int  (*set_framesize)  (enum sensor_framesize framesize);
     int  (*set_framerate)  (enum sensor_framerate framerate);
+    int  (*set_contrast)   (int level);
     int  (*set_brightness) (int level);
-    int  (*set_contrast) (int level);
+    int  (*set_saturation) (int level);
     int  (*set_exposure)   (int exposure);
     int  (*set_gainceiling) (enum sensor_gainceiling gainceiling);
 };
@@ -161,6 +149,14 @@ int sensor_set_framesize(enum sensor_framesize framesize);
  */
 int sensor_set_framerate(enum sensor_framerate framerate);
 /**
+ * Set the sensor contrast level.
+ *
+ * @param sensor A pointer to the sensor device handle.
+ * @param level The new contrast level allowed values from -3 to +3.
+ * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
+ */
+int sensor_set_contrast(int level);
+/**
  * Set the sensor brightness level.
  *
  * @param sensor A pointer to the sensor device handle.
@@ -169,13 +165,13 @@ int sensor_set_framerate(enum sensor_framerate framerate);
  */
 int sensor_set_brightness(int level);
 /**
- * Set the sensor contrast level.
+ * Set the sensor saturation level.
  *
  * @param sensor A pointer to the sensor device handle.
- * @param level The new contrast level allowed values from -3 to +3.
+ * @param level The new saturation level allowed values from -3 to +3.
  * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
  */
-int sensor_set_contrast(int level);
+int sensor_set_saturation(int level);
 /**
  * Set the sensor exposure level. This function has no
  * effect when AEC (Automatic Exposure Control) is enabled.
