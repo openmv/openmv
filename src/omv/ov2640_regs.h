@@ -190,7 +190,4 @@
 #define REG32_UXGA          0x36
 #define REG32_SVGA          0x09
 #define REG32_CIF           0x00
-
-/* Misc */
-#define NUM_BR_LEVELS   5
 #endif //__REG_REGS_H__

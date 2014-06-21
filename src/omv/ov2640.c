@@ -24,7 +24,7 @@ static const uint8_t default_regs[][2] = {
     { COM9,    COM9_AGC_SET(COM9_AGC_GAIN_8x)},
 
     /* DSP input image resoultion and window size control */
-    { COM7,    COM7_RES_SVGA },
+    { COM7,    COM7_RES_SVGA},
     { COM1,    0x0A }, /* UXGA=0x0F, SVGA=0x0A, CIF=0x06 */
     { REG32,   0x09 }, /* UXGA=0x36, SVGA/CIF=0x09 */
 
@@ -68,7 +68,8 @@ static const uint8_t default_regs[][2] = {
     { 0x23,    0x00 },
     { 0x07,    0xc0 },
     { 0x4c,    0x00 },
-    { 0x48,    0x00 }, /* COM19 Zoom control */
+    { COM19,   0x00 }, /* Zoom control 2 MSBs */
+    { ZOOMS,   0x00 }, /* Zoom control 8 MSBs */
     { 0x5B,    0x00 },
     { 0x4a,    0x81 },
     { 0x21,    0x99 },
@@ -263,7 +264,8 @@ static const uint8_t rgb565_regs[][2] = {
         {0, 0},
 };
 
-static const uint8_t br_regs[NUM_BR_LEVELS + 1][5] = {
+#define NUM_BRIGHTNESS_LEVELS (5)
+static const uint8_t brightness_regs[NUM_BRIGHTNESS_LEVELS + 1][5] = {
     { BPADDR, BPDATA, BPADDR, BPDATA, BPDATA },
     { 0x00, 0x04, 0x09, 0x00, 0x00 }, /* -2 */
     { 0x00, 0x04, 0x09, 0x10, 0x00 }, /* -1 */
@@ -272,14 +274,24 @@ static const uint8_t br_regs[NUM_BR_LEVELS + 1][5] = {
     { 0x00, 0x04, 0x09, 0x40, 0x00 }, /* +2 */
 };
 
-#define NUM_CONT_LEVELS (5)
-static const uint8_t cont_regs[NUM_BR_LEVELS + 1][7] = {
+#define NUM_CONTRAST_LEVELS (5)
+static const uint8_t contrast_regs[NUM_CONTRAST_LEVELS + 1][7] = {
     { BPADDR, BPDATA, BPADDR, BPDATA, BPDATA, BPDATA, BPDATA },
-    { 0x00, 0x04, 0x07, 0x20, 0x28, 0x0c, 0x06 }, /* -2 */
-    { 0x00, 0x04, 0x07, 0x20, 0x24, 0x16, 0x06 }, /* -1 */
+    { 0x00, 0x04, 0x07, 0x20, 0x18, 0x34, 0x06 }, /* -2 */
+    { 0x00, 0x04, 0x07, 0x20, 0x1c, 0x2a, 0x06 }, /* -1 */
     { 0x00, 0x04, 0x07, 0x20, 0x20, 0x20, 0x06 }, /*  0 */
-    { 0x00, 0x04, 0x07, 0x20, 0x1c, 0x2a, 0x06 }, /* +1 */
-    { 0x00, 0x04, 0x07, 0x20, 0x18, 0x34, 0x06 }, /* +2 */
+    { 0x00, 0x04, 0x07, 0x20, 0x24, 0x16, 0x06 }, /* +1 */
+    { 0x00, 0x04, 0x07, 0x20, 0x28, 0x0c, 0x06 }, /* +2 */
+};
+
+#define NUM_SATURATION_LEVELS (5)
+static const uint8_t saturation_regs[NUM_SATURATION_LEVELS + 1][5] = {
+    { BPADDR, BPDATA, BPADDR, BPDATA, BPDATA },
+    { 0x00, 0x02, 0x03, 0x28, 0x28 }, /* -2 */
+    { 0x00, 0x02, 0x03, 0x38, 0x38 }, /* -1 */
+    { 0x00, 0x02, 0x03, 0x48, 0x48 }, /*  0 */
+    { 0x00, 0x02, 0x03, 0x58, 0x58 }, /* +1 */
+    { 0x00, 0x02, 0x03, 0x58, 0x58 }, /* +2 */
 };
 
 static int reset()
@@ -360,49 +372,63 @@ static int set_framerate(enum sensor_framerate framerate)
     return 0;
 }
 
-static int set_brightness(int level)
-{
-    int ret=0;
-
-    level += (NUM_BR_LEVELS / 2 + 1);
-    if (level < 0 || level > NUM_BR_LEVELS) {
-        return -1;
-    }
-    /* Disable DSP */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
-    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
-
-    /* Write brightness registers */
-    for (int i=0; i<sizeof(br_regs[0])/sizeof(br_regs[0][0]); i++) {
-        ret |= SCCB_Write(br_regs[0][i], br_regs[level][i]);
-    }
-
-    /* Enable DSP */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
-    ret |= SCCB_Write(R_BYPASS, R_BYPASS_USE_DSP);
-    return ret;
-}
-
 static int set_contrast(int level)
 {
     int ret=0;
 
-    level += (NUM_CONT_LEVELS / 2 + 1);
-    if (level < 0 || level > NUM_CONT_LEVELS) {
+    level += (NUM_CONTRAST_LEVELS / 2 + 1);
+    if (level < 0 || level > NUM_CONTRAST_LEVELS) {
         return -1;
     }
-    /* Disable DSP */
+
+    /* Switch to DSP register bank */
     ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
-    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
 
     /* Write contrast registers */
-    for (int i=0; i<sizeof(cont_regs[0])/sizeof(cont_regs[0][0]); i++) {
-        ret |= SCCB_Write(cont_regs[0][i], cont_regs[level][i]);
+    for (int i=0; i<sizeof(contrast_regs[0])/sizeof(contrast_regs[0][0]); i++) {
+        ret |= SCCB_Write(contrast_regs[0][i], contrast_regs[level][i]);
     }
 
-    /* Enable DSP */
+    return ret;
+}
+
+static int set_brightness(int level)
+{
+    int ret=0;
+
+    level += (NUM_BRIGHTNESS_LEVELS / 2 + 1);
+    if (level < 0 || level > NUM_BRIGHTNESS_LEVELS) {
+        return -1;
+    }
+
+    /* Switch to DSP register bank */
     ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
-    ret |= SCCB_Write(R_BYPASS, R_BYPASS_USE_DSP);
+
+    /* Write brightness registers */
+    for (int i=0; i<sizeof(brightness_regs[0])/sizeof(brightness_regs[0][0]); i++) {
+        ret |= SCCB_Write(brightness_regs[0][i], brightness_regs[level][i]);
+    }
+
+    return ret;
+}
+
+static int set_saturation(int level)
+{
+    int ret=0;
+
+    level += (NUM_SATURATION_LEVELS / 2 + 1);
+    if (level < 0 || level > NUM_SATURATION_LEVELS) {
+        return -1;
+    }
+
+    /* Switch to DSP register bank */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+
+    /* Write contrast registers */
+    for (int i=0; i<sizeof(saturation_regs[0])/sizeof(saturation_regs[0][0]); i++) {
+        ret |= SCCB_Write(saturation_regs[0][i], saturation_regs[level][i]);
+    }
+
     return ret;
 }
 
@@ -414,9 +440,6 @@ static int set_exposure(int exposure)
 static int set_gainceiling(enum sensor_gainceiling gainceiling)
 {
     int ret =0;
-    /* Disable DSP */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
-    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
 
     /* Switch to SENSOR register bank */
     ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
@@ -424,9 +447,6 @@ static int set_gainceiling(enum sensor_gainceiling gainceiling)
     /* Write gain ceiling register */
     ret |= SCCB_Write(COM9, COM9_AGC_SET(gainceiling));
 
-    /* Enable DSP */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
-    ret |= SCCB_Write(R_BYPASS, R_BYPASS_USE_DSP);
     return ret;
 }
 
@@ -444,6 +464,7 @@ int ov2640_init(struct sensor_dev *sensor)
     sensor->set_framerate = set_framerate;
     sensor->set_contrast  = set_contrast;
     sensor->set_brightness= set_brightness;
+    sensor->set_saturation= set_saturation;
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
     return 0;
