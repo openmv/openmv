@@ -1,10 +1,10 @@
 #include "mp.h"
-#include <string.h>
-#include "usbdbg.h"
-#include "ff.h"
-#include "py/py_file.h"
+#include "sensor.h"
 #include "imlib.h"
 #include "framebuffer.h"
+#include "ff.h"
+#include "py/py_file.h"
+#include "usbdbg.h"
 
 #define USB_TX_BUF_SIZE (64)
 static int xfer_bytes;
@@ -89,7 +89,7 @@ void usbdbg_data_out(void *buffer, int length)
     }
 }
 
-void usbdbg_control(uint8_t request, int length)
+void usbdbg_control(uint8_t request, uint16_t length)
 {
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
@@ -125,9 +125,31 @@ void usbdbg_control(uint8_t request, int length)
             xfer_length =length;
             break;
 
+        case USBDBG_SET_ATTR: {    /* set sensor attribute */
+            int val = (int8_t)(length&0xff);
+            int attr= length>>8;
+            switch (attr) {
+                case ATTR_CONTRAST:
+                    sensor_set_contrast(val);
+                    break;
+                case ATTR_BRIGHTNESS:
+                    sensor_set_brightness(val);
+                    break;
+                case ATTR_SATURATION:
+                    sensor_set_saturation(val);
+                    break;
+                case ATTR_GAINCEILING:
+                    sensor_set_gainceiling(val);
+                    break;
+                default:
+                    break;
+            }
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         default: /* error */
             cmd = USBDBG_NONE;
             break;
     }
 }
-

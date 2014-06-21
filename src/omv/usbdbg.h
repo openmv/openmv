@@ -9,6 +9,8 @@ enum usbdbg_cmd {
     USBDBG_WRITE_SCRIPT,
     USBDBG_STOP_SCRIPT,
     USBDBG_SAVE_TEMPLATE,
+    USBDBG_SET_ATTR,
+    USBDBG_GET_ATTR,
 };
 void usbdbg_init();
 int usbdbg_script_ready();
