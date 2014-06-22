@@ -35,7 +35,7 @@ endif
 # Compiler Flags
 CFLAGS += -std=gnu99 -Wall -mlittle-endian -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_PRESENT -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DSTM32F407xx -DHSE_VALUE=12000000
+CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DSTM32F407xx -DHSE_VALUE=12000000
 
 CFLAGS += -I. -Iinclude
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
@@ -58,7 +58,8 @@ CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 
 # Linker Flags
 
-LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib -Wl,-T$(OMV_DIR)/stm32f407.ld -Wl,--gc-sections
+LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard \
+          -mfpu=fpv4-sp-d16 -nostdlib -Wl,-T$(OMV_DIR)/stm32f407.ld -Wl,--gc-sections
 
 # Sources
 #SRC_C = $(addprefix $(CMSIS_DIR)/src/st/,\
@@ -122,14 +123,14 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pins_$(TARGET).o \
     )
 
-OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/,\
-	core/src/usbd_core.o \
-	core/src/usbd_ctlreq.o \
-	core/src/usbd_ioreq.o \
-	class/cdc_msc_hid/src/usbd_cdc_msc_hid.o \
-	class/cdc_msc_hid/src/usbd_msc_bot.o \
-	class/cdc_msc_hid/src/usbd_msc_scsi.o \
-	class/cdc_msc_hid/src/usbd_msc_data.o \
+OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
+	core/src/usbd_core.o                            \
+	core/src/usbd_ctlreq.o                          \
+	core/src/usbd_ioreq.o                           \
+	class/cdc_msc_hid/src/usbd_cdc_msc_hid.o        \
+	class/cdc_msc_hid/src/usbd_msc_bot.o            \
+	class/cdc_msc_hid/src/usbd_msc_scsi.o           \
+	class/cdc_msc_hid/src/usbd_msc_data.o           \
 	)
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
