@@ -2,7 +2,7 @@
 #define __REG_REGS_H__
 /* OV2640 Registers definition */
 /* DSP register bank FF=0x00*/
-#define Q                   0x44
+#define QS                  0x44
 #define HSIZE               0x51
 #define VSIZE               0x52
 #define XOFFL               0x53
@@ -58,7 +58,6 @@
 #define R_BYPASS                0x05
 #define R_BYPASS_DSP_EN         0x00
 #define R_BYPASS_DSP_BYPAS      0x01
-#define R_BYPASS_USE_DSP        0x00
 
 #define IMAGE_MODE              0xDA
 #define IMAGE_MODE_Y8_DVP_EN    0x40
@@ -101,7 +100,6 @@
 #define AEC                 0x10
 #define CLKRC               0x11
 #define COM10               0x15
-#define ARCOM2              0x34
 #define HSTART              0x17
 #define HSTOP               0x18
 #define VSTART              0x19
