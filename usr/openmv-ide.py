@@ -16,6 +16,8 @@ from os.path import expanduser
 ui_path =os.path.dirname(os.path.realpath(__file__))+"/openmv-ide.glade"
 config_path = expanduser("~")+"/.openmvide.config"
 
+SCALE =1
+
 class OMVGtk:
     def __init__(self):
         #Set the Glade file
@@ -102,6 +104,9 @@ class OMVGtk:
         # init openmv
         openmv.init()
 
+        # interrupt any running code
+        openmv.stop_script()
+        sleep(0.1)
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
@@ -133,31 +138,35 @@ class OMVGtk:
         y = int(event.y)
         self.x2 = int(event.x)
         self.y2 = int(event.y)
-#        if x < self.pixbuf.get_width() and y < self.pixbuf.get_height():
-#            pixel = self.pixbuf.get_pixels_array()[y][x]
-#            rgb = "(%d, %d, %d)" %(pixel[0], pixel[1], pixel[2])
-#            self.statusbar.pop(self.statusbar_ctx)
-#            self.statusbar.push(self.statusbar_ctx, rgb)
+        if self.pixbuf and x < self.pixbuf.get_width() and y < self.pixbuf.get_height():
+            pixel = self.pixbuf.get_pixels_array()[y][x]
+            rgb = "(%d, %d, %d)" %(pixel[0], pixel[1], pixel[2])
+            self.statusbar.pop(self.statusbar_ctx)
+            self.statusbar.push(self.statusbar_ctx, rgb)
 
     def update_drawing(self):
         # read drawingarea
-        fb = openmv.dump_fb()
+        fb = openmv.fb_dump()
+
+        # reschedule callback
+        gobject.idle_add(omvgtk.update_drawing);
+
+        if fb == None:
+            return
 
         # convert to RGB888 and blit
         self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
-        self.pixbuf = self.pixbuf.scale_simple(fb[0]*2, fb[1]*2, gtk.gdk.INTERP_BILINEAR)
+        self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
 
         self.drawingarea.realize();
         cm = self.drawingarea.window.get_colormap()
         gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF',True,False))
 
-        self.drawingarea.set_size_request(fb[0]*2, fb[1]*2)
+        self.drawingarea.set_size_request(fb[0]*SCALE, fb[1]*SCALE)
         self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
         if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
             self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
 
-        # reschedule callback
-        gobject.idle_add(omvgtk.update_drawing);
 
 
     def on_ctrl_scale_value_changed(self, adjust):
@@ -197,7 +206,7 @@ class OMVGtk:
         template.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
         dialog.set_default_response(gtk.RESPONSE_OK)
         if dialog.run() == gtk.RESPONSE_OK:
-            openmv.save_template(x/2, y/2, w/2, h/2, entry.get_text()) #Use Scale
+            openmv.save_template(x/SCALE, y/SCALE, w/SCALE, h/SCALE, entry.get_text()) #Use Scale
         dialog.hide()
 
     def save_file(self, widget):
