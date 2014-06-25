@@ -1,6 +1,6 @@
 #include "mp.h"
-#include "sensor.h"
 #include "sccb.h"
+#include "sensor.h"
 #include "py_image.h"
 #include "py_sensor.h"
 
@@ -147,7 +147,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_RGB565),      MP_OBJ_NEW_SMALL_INT(PIXFORMAT_RGB565)},   /* 2BPP/RGB565*/
     { MP_OBJ_NEW_QSTR(MP_QSTR_YUV422),      MP_OBJ_NEW_SMALL_INT(PIXFORMAT_YUV422)},   /* 2BPP/YUV422*/
     { MP_OBJ_NEW_QSTR(MP_QSTR_GRAYSCALE),   MP_OBJ_NEW_SMALL_INT(PIXFORMAT_GRAYSCALE)},/* 1BPP/GRAYSCALE*/
-//  { MP_OBJ_NEW_QSTR(MP_QSTR_JPEG),        MP_OBJ_NEW_SMALL_INT(PIXFORMAT_JPEG)},     /* JPEG/COMPRESSED*/
+    { MP_OBJ_NEW_QSTR(MP_QSTR_JPEG),        MP_OBJ_NEW_SMALL_INT(PIXFORMAT_JPEG)},     /* JPEG/COMPRESSED*/
     /* Frame size */
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQCIF),       MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQCIF)},    /* 88x72     */
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQVGA),       MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQVGA)},    /* 160x120   */
@@ -155,6 +155,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_QVGA),        MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QVGA)},     /* 320x240   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_CIF),         MP_OBJ_NEW_SMALL_INT(FRAMESIZE_CIF)},      /* 352x288   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_VGA),         MP_OBJ_NEW_SMALL_INT(FRAMESIZE_VGA)},      /* 640x480   */
+    { MP_OBJ_NEW_QSTR(MP_QSTR_SVGA),        MP_OBJ_NEW_SMALL_INT(FRAMESIZE_SVGA)},     /* 800x600   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_SXGA),        MP_OBJ_NEW_SMALL_INT(FRAMESIZE_SXGA)},     /* 1280x1024 */
 
     /* Sensor functions */
