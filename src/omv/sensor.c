@@ -3,8 +3,8 @@
 #include "sccb.h"
 #include "ov9650.h"
 #include "ov2640.h"
-#include "systick.h"
 #include "sensor.h"
+#include "systick.h"
 #include "pincfg.h"
 #include "framebuffer.h"
 
@@ -16,12 +16,14 @@
 
 #define OV9650_PID     0x96
 #define OV2640_PID     0x26
+#define XCLK_FREQ      (12*1000000)
 #define BREAK()         __asm__ volatile ("BKPT")
 
 struct sensor_dev sensor;
 TIM_HandleTypeDef  TIMHandle;
 DMA_HandleTypeDef  DMAHandle;
 DCMI_HandleTypeDef DCMIHandle;
+int usbdbg_is_connected();
 
 /* DCMI GPIOs */
 static const gpio_t dcmi_pins[] = {
@@ -52,6 +54,7 @@ const int res_width[] = {
     320,    /* QVGA  */
     352,    /* CIF   */
     640,    /* VGA   */
+    800,    /* SVGA  */
     1280,   /* SXGA  */
 };
 
@@ -62,6 +65,7 @@ const int res_height[]= {
     240,    /* QVGA  */
     288,    /* CIF   */
     480,    /* VGA   */
+    600,    /* SVGA   */
     1024,   /* SXGA  */
 };
 
@@ -97,7 +101,7 @@ static void extclk_config(int frequency)
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pin       = DCMI_TIM_PIN;
     GPIO_InitStructure.Pull      = GPIO_NOPULL;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
     GPIO_InitStructure.Alternate = DCMI_TIM_AF;
     HAL_GPIO_Init(DCMI_TIM_PORT, &GPIO_InitStructure);
@@ -140,7 +144,7 @@ static int dcmi_config()
     /* DCMI GPIOs configuration */
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull      = GPIO_PULLDOWN;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
     GPIO_InitStructure.Alternate = GPIO_AF13_DCMI;
 
@@ -241,7 +245,7 @@ int sensor_init()
     systick_sleep(10);
 
     /* Configure the external clock (XCLK) */
-    extclk_config(24000000);
+    extclk_config(XCLK_FREQ);
     systick_sleep(10);
 
     /* Reset the sesnor state */
@@ -306,6 +310,7 @@ int sensor_init()
 int sensor_reset()
 {
     /* Reset the sesnor state */
+    sensor.frame_ready = 0;
     sensor.pixformat=0xFF;
     sensor.framesize=0xFF;
     sensor.framerate=0xFF;
@@ -344,29 +349,43 @@ int sensor_write_reg(uint8_t reg, uint8_t val)
     return SCCB_Write(reg, val);
 }
 
+#define MAX_XFER_SIZE (0xFFFC)
+
 int sensor_snapshot(struct image *image)
 {
-    uint32_t addr;
-    if (sensor.pixformat==PIXFORMAT_GRAYSCALE) {
-        addr = (uint32_t) fb->pixels+(fb->w * fb->h);
+    volatile uint32_t addr;
+    volatile uint16_t length;
+
+    addr = (uint32_t) fb->pixels;
+
+    if (sensor.pixformat==PIXFORMAT_JPEG) {
+        length = MAX_XFER_SIZE;
     } else {
-        addr = (uint32_t) fb->pixels;
+        length =(fb->w * fb->h * 2)/4;
     }
 
     /* Start the DCMI */
     HAL_DCMI_Start_DMA(&DCMIHandle,
-            DCMI_MODE_SNAPSHOT, addr, (fb->w * fb->h * 2)/4);
+            DCMI_MODE_SNAPSHOT, addr, length);
 
     /* Wait for frame */
-    while (HAL_DCMI_GetState(&DCMIHandle) == HAL_DCMI_STATE_BUSY) {
+    while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
 
     }
 
     if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
-        /* Extract Y channel from YUYV */
+        /* If GRAYSCALE extract Y channel from YUYV */
         for (int i=0; i<(fb->w * fb->h); i++) {
-            fb->pixels[i] = fb->pixels[i*2+(fb->w * fb->h)];
+            fb->pixels[i] = fb->pixels[i*2];
         }
+    } else if (sensor.pixformat == PIXFORMAT_JPEG) {
+        /* The frame is finished, but DMA still waiting
+           for data because we set max frame size
+           so we need to abort the DMA transfer here */
+        HAL_DMA_Abort(&DMAHandle);
+
+        /* Read the number of data items transferred */
+        fb->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
     }
 
     if (image != NULL) {
@@ -376,6 +395,13 @@ int sensor_snapshot(struct image *image)
         image->pixels = fb->pixels;
     }
 
+    sensor.frame_ready = 1;
+
+    /* Wait for usbdbg to read the frame, this is necessary to avoid race conditions,
+       The other option is to lock the framebuffer, which complicates things */
+    while ( usbdbg_is_connected() &&
+            sensor.frame_ready == 1) {
+    }
     return 0;
 }
 
@@ -397,18 +423,32 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
 
     /* set bytes per pixel */
     switch (pixformat) {
-        case PIXFORMAT_RGB565:
-            fb->bpp    = 2;
+        case PIXFORMAT_GRAYSCALE:
+            fb->bpp    = 1;
             break;
+        case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             fb->bpp    = 2;
             break;
-        case PIXFORMAT_GRAYSCALE:
-            fb->bpp    = 1;
+        case PIXFORMAT_JPEG:
+            fb->bpp    = 0;
             break;
         default:
             return -1;
     }
+
+    if (pixformat == PIXFORMAT_JPEG) {
+        DCMIHandle.Init.JPEGMode = DCMI_JPEG_ENABLE;
+    } else {
+        DCMIHandle.Init.JPEGMode = DCMI_JPEG_DISABLE;
+    }
+
+    /* Init DCMI */
+    if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
+        /* Initialization Error */
+        return -1;
+    }
+
     return 0;
 }
 
@@ -432,34 +472,19 @@ int sensor_set_framesize(enum sensor_framesize framesize)
     /* set framebuffer dimensions */
     switch (framesize) {
         case FRAMESIZE_QQCIF:
-            fb->w = 88;
-            fb->h = 72;
-            break;
         case FRAMESIZE_QQVGA:
-            fb->w = 160;
-            fb->h = 120;
-            break;
         case FRAMESIZE_QCIF:
-            fb->w = 176;
-            fb->h = 144;
+        case FRAMESIZE_QVGA:
+        case FRAMESIZE_CIF:
+        case FRAMESIZE_VGA:
+        case FRAMESIZE_SVGA:
+            fb->w =res_width[framesize];
+            fb->h =res_height[framesize];
             break;
         default:
             return -1;
     }
 
-#if 0
-    /* This enables croping use it to test bigger frames */
-    DCMI_CROPCmd(DISABLE);
-    DCMI_CROPInitTypeDef DCMI_CROPInitStructure= {
-        .DCMI_HorizontalOffsetCount = 0,
-        .DCMI_CaptureCount          = fb->w * 2,
-        .DCMI_VerticalStartLine     = 0,
-        .DCMI_VerticalLineCount     = fb->h
-    };
-
-    DCMI_CROPConfig(&DCMI_CROPInitStructure);
-    DCMI_CROPCmd(ENABLE);
-#endif
     return 0;
 }
 
@@ -527,11 +552,5 @@ int sensor_set_gainceiling(enum sensor_gainceiling gainceiling)
     }
 
     sensor.gainceiling = gainceiling;
-    return 0;
-}
-
-int get_bytes()
-{
-//    return DMA_GetCurrDataCounter(DMA2_Stream1);
     return 0;
 }

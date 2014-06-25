@@ -23,6 +23,7 @@ enum sensor_framesize {
     FRAMESIZE_QVGA,     /* 320x240   */
     FRAMESIZE_CIF,      /* 352x288   */
     FRAMESIZE_VGA,      /* 640x480   */
+    FRAMESIZE_SVGA,     /* 800x600   */
     FRAMESIZE_SXGA,     /* 1280x1024 */
 };
 
@@ -64,6 +65,7 @@ struct sensor_dev {
     uint32_t vsync_pol;
     uint32_t hsync_pol;
     uint32_t pixck_pol;
+    uint32_t frame_ready;
     enum reset_polarity reset_pol;
     enum sensor_pixformat pixformat;
     enum sensor_framesize framesize;
