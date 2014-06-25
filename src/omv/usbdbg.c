@@ -1,6 +1,6 @@
 #include "mp.h"
-#include "sensor.h"
 #include "imlib.h"
+#include "sensor.h"
 #include "framebuffer.h"
 #include "ff.h"
 #include "py/py_file.h"
@@ -14,6 +14,9 @@ static enum usbdbg_cmd cmd;
 static vstr_t script;
 static int script_ready=0;
 mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
+
+static int usbdbg_connected =0;
+extern struct sensor_dev sensor;
 
 void usbdbg_init()
 {
@@ -37,19 +40,26 @@ void usbdbg_clr_script()
     vstr_reset(&script);
 }
 
+int usbdbg_is_connected()
+{
+    return usbdbg_connected;
+}
+
 void usbdbg_data_in(void *buffer, int length)
 {
     switch (cmd) {
-        case USBDBG_FB_SIZE:  /* dump framebuffer */
+        case USBDBG_FRAME_SIZE:
             memcpy(buffer, fb, length);
             cmd = USBDBG_NONE;
             break;
-        case USBDBG_DUMP_FB:  /* dump framebuffer */
+        case USBDBG_FRAME_DUMP:
             if (xfer_bytes < xfer_length) {
                 memcpy(buffer, fb->pixels+xfer_bytes, length);
                 xfer_bytes += length;
-            } else {
-                cmd = USBDBG_NONE;
+                if (xfer_bytes == xfer_length) {
+                    sensor.frame_ready =0;
+                    cmd = USBDBG_NONE;
+                }
             }
             break;
 
@@ -61,7 +71,7 @@ void usbdbg_data_in(void *buffer, int length)
 void usbdbg_data_out(void *buffer, int length)
 {
     switch (cmd) {
-        case USBDBG_EXEC_SCRIPT: /* execute script */
+        case USBDBG_SCRIPT_EXEC:
             vstr_add_strn(&script, buffer, length);
             xfer_bytes += length;
             if (xfer_bytes == xfer_length) {
@@ -72,7 +82,7 @@ void usbdbg_data_out(void *buffer, int length)
             }
             break;
 
-        case USBDBG_SAVE_TEMPLATE: { /* execute script */
+        case USBDBG_TEMPLATE_SAVE: {
             int res;
             image_t image;
             image.w = fb->w; image.h = fb->h; image.bpp = fb->bpp; image.pixels = fb->pixels;
@@ -89,43 +99,51 @@ void usbdbg_data_out(void *buffer, int length)
     }
 }
 
-void usbdbg_control(uint8_t request, uint16_t length)
+void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
 {
+    usbdbg_connected = 1;
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
-        case USBDBG_FB_SIZE:     /* read framebuffer size */
+        case USBDBG_FRAME_SIZE:
+            memcpy(buffer, fb, length);
+            break;
+
+        case USBDBG_FRAME_DUMP:
             xfer_bytes = 0;
             xfer_length = length;
             break;
 
-        case USBDBG_DUMP_FB:     /* dump framebuffer */
-            /* reset bytes counter */
-            xfer_bytes = 0;
-            xfer_length = length;
+        case USBDBG_FRAME_READY:
+            /* return framebuffer status */
+            ((uint8_t*)buffer)[0] = sensor.frame_ready;
             break;
 
-        case USBDBG_EXEC_SCRIPT: /* execute script */
-            /* reset bytes counter */
+        case USBDBG_SCRIPT_EXEC:
             xfer_bytes = 0;
             xfer_length =length;
             script_ready = 0;
             vstr_reset(&script);
             break;
 
-        case USBDBG_STOP_SCRIPT:
-            /* Stop any running code by raising an exception */
+        case USBDBG_SCRIPT_STOP:
+            /* interrupt running code by raising an exception */
             mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
             pendsv_nlr_jump(mp_const_ide_interrupt);
             cmd = USBDBG_NONE;
             break;
 
-        case USBDBG_SAVE_TEMPLATE: /* save template */
-            /* reset bytes counter */
+        case USBDBG_SCRIPT_SAVE:
+            /* save running script */
+            break;
+
+        case USBDBG_TEMPLATE_SAVE:
+            /* save template */
             xfer_bytes = 0;
             xfer_length =length;
             break;
 
-        case USBDBG_SET_ATTR: {    /* set sensor attribute */
+        case USBDBG_ATTR_WRITE: {
+            /* write sensor attribute */
             int val = (int8_t)(length&0xff);
             int attr= length>>8;
             switch (attr) {
