@@ -49,7 +49,7 @@ mp_obj_t py_file_read(py_file_obj_t *file, mp_obj_t n_obj)
     UINT n_out;
     UINT n =  mp_obj_get_int(n_obj);
 
-    byte *buf = m_new(byte, n);
+    char *buf = m_new(char, n);
     f_read(&file->fp, buf, n, &n_out);
     return mp_obj_new_str(buf, n_out, false);
 }
