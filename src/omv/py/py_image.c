@@ -416,10 +416,11 @@ static mp_obj_t py_image_find_keypoints_match(mp_obj_t image_obj, mp_obj_t surf1
 
     // TODO return matching kpts
     surf_draw_ipts(image, match);
+    int n = array_length(match);
     array_free(match);
     array_free(surf2.ipts);
 
-    return mp_const_none;
+    return mp_obj_new_int(n);
 }
 
 mp_obj_t py_image_load_image(mp_obj_t path_obj)
