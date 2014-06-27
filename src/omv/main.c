@@ -38,6 +38,7 @@
 #include "py_time.h"
 #include "py_sensor.h"
 #include "py_image.h"
+#include "py_file.h"
 
 int errno;
 static FATFS fatfs0;
@@ -327,7 +328,7 @@ soft_reset:
     usbdbg_init();
 
     /* Add functions to the global python namespace */
-//    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
+    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
     mp_store_global(qstr_from_str("vcp_is_connected"), mp_make_function_n(0, py_vcp_is_connected));
 //    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
 //    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
