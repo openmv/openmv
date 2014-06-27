@@ -25,28 +25,6 @@ DMA_HandleTypeDef  DMAHandle;
 DCMI_HandleTypeDef DCMIHandle;
 int usbdbg_is_connected();
 
-/* DCMI GPIOs */
-static const gpio_t dcmi_pins[] = {
-    {DCMI_D0_PORT, DCMI_D0_PIN},
-    {DCMI_D1_PORT, DCMI_D1_PIN},
-    {DCMI_D2_PORT, DCMI_D2_PIN},
-    {DCMI_D3_PORT, DCMI_D3_PIN},
-    {DCMI_D4_PORT, DCMI_D4_PIN},
-    {DCMI_D5_PORT, DCMI_D5_PIN},
-    {DCMI_D6_PORT, DCMI_D6_PIN},
-    {DCMI_D7_PORT, DCMI_D7_PIN},
-    {DCMI_HSYNC_PORT, DCMI_HSYNC_PIN},
-    {DCMI_VSYNC_PORT, DCMI_VSYNC_PIN},
-    {DCMI_PXCLK_PORT, DCMI_PXCLK_PIN},
-};
-
-#define NUM_PINS        (sizeof(dcmi_pins)/sizeof(dcmi_pins[0]))
-#define RESET_LOW()     HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_RESET)
-#define RESET_HIGH()    HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_SET)
-
-#define PWDN_LOW()      HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
-#define PWDN_HIGH()     HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
-
 const int res_width[] = {
     88,     /* QQCIF */
     160,    /* QQVGA */
@@ -69,22 +47,6 @@ const int res_height[]= {
     1024,   /* SXGA  */
 };
 
-/*
-   TIM1 input clock (TIM1CLK) is set to 2 * APB2 clock (PCLK2)
-     TIM1CLK = 2 * PCLK2 (PCLK2 = HCLK / 2)
-     TIM1CLK = 2 * HCLK/2 = HCLK
-     TIM1CLK = HCLK (168MHz)
-
-   To get TIM1 counter clock at x MHz, the prescaler is computed as follows:
-      Prescaler = (TIM1CLK / TIM1 counter clock) - 1
-      Prescaler = (168MHz / xMHz) - 1
-
-   To get TIM1 output clock at 30 KHz, the period (ARR)) is computed as follows:
-      ARR = (TIM1 counter clock / TIM1 output clock) - 1
-      ARR = 21 MHz/ 30KHz = 669
-
-   TIM1 Channel1 duty cycle = (TIM1_CCR1/ TIM1_ARR)* 100 = 50%
- */
 static void extclk_config(int frequency)
 {
     /* TCLK (PCLK2 * 2) */
@@ -95,19 +57,6 @@ static void extclk_config(int frequency)
 
     /* Period should be even */
     int period = (tclk / frequency)-1;
-
-    //TODO move to MSP
-    /* Timer GPIO configuration */
-    GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Pin       = DCMI_TIM_PIN;
-    GPIO_InitStructure.Pull      = GPIO_NOPULL;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
-    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
-    GPIO_InitStructure.Alternate = DCMI_TIM_AF;
-    HAL_GPIO_Init(DCMI_TIM_PORT, &GPIO_InitStructure);
-
-    /* Enable DCMI timer clock */
-    DCMI_TIM_CLK_ENABLE();
 
     /* Timer base configuration */
     TIMHandle.Instance          = DCMI_TIM;
@@ -131,6 +80,7 @@ static void extclk_config(int frequency)
     if (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK) {
         BREAK();
     }
+
     if (HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK) {
         BREAK();
     }
@@ -138,21 +88,6 @@ static void extclk_config(int frequency)
 
 static int dcmi_config()
 {
-    /* DCMI clock enable */
-    __DCMI_CLK_ENABLE();
-
-    /* DCMI GPIOs configuration */
-    GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Pull      = GPIO_PULLDOWN;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
-    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
-    GPIO_InitStructure.Alternate = GPIO_AF13_DCMI;
-
-    for (int i=0; i<NUM_PINS; i++) {
-        GPIO_InitStructure.Pin = dcmi_pins[i].pin;
-        HAL_GPIO_Init(dcmi_pins[i].port, &GPIO_InitStructure);
-    }
-
     /* DCMI configuration */
     DCMIHandle.Instance         = DCMI;
     DCMIHandle.Init.VSPolarity  = sensor.vsync_pol;         /* VSYNC clock polarity                 */
@@ -186,9 +121,6 @@ static int dcmi_config()
 
 static int dma_config()
 {
-    /* Enable DMA2 clock */
-    __DMA2_CLK_ENABLE();
-
     /* DMA Stream configuration */
     DMAHandle.Instance              = DMA2_Stream1;             /* Select the DMA instance          */
     DMAHandle.Init.Channel          = DMA_CHANNEL_1;            /* DMA Channel                      */
@@ -219,25 +151,11 @@ static int dma_config()
 
 int sensor_init()
 {
-    /* RESET/PWDN GPIO configuration */
-    GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
-    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
-
-    /* RESET */
-    GPIO_InitStructure.Pin = DCMI_RESET_PIN;
-    HAL_GPIO_Init(DCMI_RESET_PORT, &GPIO_InitStructure);
-
-    /* PWDN */
-    GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
-    HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
-
     /* Do a power cycle */
-    PWDN_HIGH();
+    DCMI_PWDN_HIGH();
     systick_sleep(10);
 
-    PWDN_LOW();
+    DCMI_PWDN_LOW();
     systick_sleep(100);
 
     /* Initialize the SCCB interface */
@@ -257,10 +175,10 @@ int sensor_init()
        register with both polarities to determine line state. */
     sensor.reset_pol = ACTIVE_HIGH;
 
-    RESET_HIGH();
+    DCMI_RESET_HIGH();
     systick_sleep(10);
 
-    RESET_LOW();
+    DCMI_RESET_LOW();
     systick_sleep(10);
 
     /* Check if we can read PID */
@@ -268,10 +186,10 @@ int sensor_init()
         /* Sensor is held in reset, so reset is active high */
         sensor.reset_pol = ACTIVE_LOW;
 
-        RESET_LOW();
+        DCMI_RESET_LOW();
         systick_sleep(10);
 
-        RESET_HIGH();
+        DCMI_RESET_HIGH();
         systick_sleep(10);
     }
 
@@ -319,17 +237,17 @@ int sensor_reset()
     /* Hard reset the sensor */
     switch (sensor.reset_pol) {
         case ACTIVE_HIGH:
-            RESET_HIGH();
+            DCMI_RESET_HIGH();
             systick_sleep(10);
 
-            RESET_LOW();
+            DCMI_RESET_LOW();
             systick_sleep(10);
            break;
        case ACTIVE_LOW:
-            RESET_LOW();
+            DCMI_RESET_LOW();
             systick_sleep(10);
 
-            RESET_HIGH();
+            DCMI_RESET_HIGH();
             systick_sleep(10);
             break;
     }

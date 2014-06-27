@@ -6,7 +6,7 @@ enum led_id {
     LED_BLUE,
 };
 
-void led_init();
-void led_state(enum led_id color, int state);
+void led_init(enum led_id color);
 void led_toggle(enum led_id color);
+void led_state(enum led_id color, int state);
 #endif //__LED_H__

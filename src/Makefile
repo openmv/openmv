@@ -84,43 +84,43 @@ OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
 
 OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
-	stm32f4xx_it.o \
-	system_stm32f4xx.o \
-	string0.o \
-	usbd_conf.o \
-	usbd_desc_cdc_msc.o \
-	usbd_cdc_interface.o \
-	usbd_msc_storage.o \
-	pendsv.o \
-	bufhelper.o \
-	usb.o \
-	printf.o \
-	gchelper.o \
-	gccollect.o \
-	pybstdio.o \
-	readline.o \
-	pyexec.o \
-	help.o \
-	input.o \
-	uart.o \
-	import.o \
-	lexerfatfs.o \
-	flash.o \
-	diskio.o \
-	storage.o \
-	file.o \
-	math.o \
-	mathsincos.o \
-	rtc.o \
-	pin.o \
-	pin_named_pins.o \
-	timer.o \
-	servo.o\
-	extint.o \
-	adc.o \
-	modstm.o \
-	modtime.o \
-	pins_$(TARGET).o \
+	stm32f4xx_it.o          \
+	system_stm32f4xx.o      \
+	string0.o               \
+	usbd_conf.o             \
+	usbd_desc_cdc_msc.o     \
+	usbd_cdc_interface.o    \
+	usbd_msc_storage.o      \
+	pendsv.o                \
+	bufhelper.o             \
+	usb.o                   \
+	printf.o                \
+	gchelper.o              \
+	gccollect.o             \
+	pybstdio.o              \
+	readline.o              \
+	pyexec.o                \
+	help.o                  \
+	input.o                 \
+	uart.o                  \
+	import.o                \
+	lexerfatfs.o            \
+	flash.o                 \
+	diskio.o                \
+	storage.o               \
+	file.o                  \
+	math.o                  \
+	mathsincos.o            \
+	rtc.o                   \
+	pin.o                   \
+	pin_named_pins.o        \
+	timer.o                 \
+	servo.o                 \
+	extint.o                \
+	adc.o                   \
+	modstm.o                \
+	modtime.o               \
+	pins_$(TARGET).o        \
     )
 
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
@@ -145,6 +145,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	sensor.o                                \
 	led.o                                   \
 	rng.o                                   \
+	stm32f407_hal_msp.o                     \
 	)
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\

@@ -43,8 +43,6 @@ int errno;
 static FATFS fatfs0;
 //static FATFS fatfs1;
 
-void SystemClock_Config(void);
-
 void flash_error(int n) {
     for (int i = 0; i < n; i++) {
         led_state(LED_RED, 0);
@@ -165,19 +163,6 @@ int main(void) {
          - Global MSP (MCU Support Package) initialization
        */
     HAL_Init();
-
-    // set the system clock to be HSE
-    SystemClock_Config();
-
-    // enable GPIO clocks
-    __GPIOA_CLK_ENABLE();
-    __GPIOB_CLK_ENABLE();
-    __GPIOC_CLK_ENABLE();
-    __GPIOD_CLK_ENABLE();
-    __GPIOE_CLK_ENABLE();
-
-    // enable the CCM RAM
-    __CCMDATARAMEN_CLK_ENABLE();
 
     // basic sub-system init
     pendsv_init();

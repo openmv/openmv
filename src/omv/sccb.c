@@ -1,3 +1,4 @@
+#include <stm32f4xx_hal.h>
 #include "sccb.h"
 #include "pincfg.h"
 #include "mdefs.h"
@@ -10,24 +11,8 @@ static I2C_HandleTypeDef I2CHandle;
 
 void SCCB_Init()
 {
-    /* Enable I2C clock */
-    PINCFG_SCCB_CLK_ENABLE();
-
-    /* Configure SCCB GPIOs */
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Pull      = GPIO_NOPULL;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
-    GPIO_InitStructure.Mode      = GPIO_MODE_AF_OD;
-    GPIO_InitStructure.Alternate = PINCFG_SCCB_AF;
-
-    GPIO_InitStructure.Pin = PINCFG_SCCB_SCL_PIN;
-    HAL_GPIO_Init(PINCFG_SCCB_PORT, &GPIO_InitStructure);
-
-    GPIO_InitStructure.Pin = PINCFG_SCCB_SDA_PIN;
-    HAL_GPIO_Init(PINCFG_SCCB_PORT, &GPIO_InitStructure);
-
     /* Configure I2C */
-    I2CHandle.Instance             = PINCFG_SCCB_I2C;
+    I2CHandle.Instance             = SCCB_I2C;
     I2CHandle.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
     I2CHandle.Init.ClockSpeed      = SCCB_FREQ;
     I2CHandle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
@@ -41,12 +26,6 @@ void SCCB_Init()
         /* Initialization Error */
         BREAK();
     }
-}
-
-void SCCB_DeInit()
-{
-    HAL_I2C_DeInit(&I2CHandle);
-    PINCFG_SCCB_CLK_DISABLE();
 }
 
 uint8_t SCCB_Write(uint8_t addr, uint8_t data)
