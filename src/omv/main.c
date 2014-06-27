@@ -42,7 +42,7 @@
 
 int errno;
 static FATFS fatfs0;
-//static FATFS fatfs1;
+static FATFS fatfs1;
 
 void flash_error(int n) {
     for (int i = 0; i < n; i++) {
@@ -273,10 +273,6 @@ soft_reset:
     usb_storage_medium_t usb_medium = USB_STORAGE_MEDIUM_FLASH;
 #endif
 
-#if MICROPY_HW_HAS_SDCARD
-    /* prepare workarea for sdcard fs */
-    //f_mount(&fatfs1, "1:", 0);
-
     // if an SD card is present then mount it on 1:/
     if (reset_mode == 1 && sdcard_is_present()) {
         FRESULT res = f_mount(&fatfs1, "1:", 1);
@@ -288,16 +284,10 @@ soft_reset:
 
             if (first_soft_reset) {
                 // use SD card as medium for the USB MSD
-#if defined(USE_DEVICE_MODE)
                 usb_medium = USB_STORAGE_MEDIUM_SDCARD;
-#endif
             }
         }
     }
-#else
-    // Get rid of compiler warning if no SDCARD is configured.
-    (void)first_soft_reset;
-#endif
 
     // turn boot-up LEDs off
     led_state(LED_RED, 0);

@@ -73,4 +73,25 @@ extern const gpio_t led_pins[];
 #define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
 #define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
 
+/* uSD */
+#define SD_SPI              (SPI2)
+#define SD_SPI_AF           (GPIO_AF5_SPI2)
+#define SD_CD_PIN           (GPIO_PIN_0)
+#define SD_CS_PIN           (GPIO_PIN_1)
+#define SD_SCLK_PIN         (GPIO_PIN_13)
+#define SD_MISO_PIN         (GPIO_PIN_2)
+#define SD_MOSI_PIN         (GPIO_PIN_3)
+
+#define SD_CD_PORT          (GPIOC)
+#define SD_CS_PORT          (GPIOC)
+#define SD_SCLK_PORT        (GPIOB)
+#define SD_MISO_PORT        (GPIOC)
+#define SD_MOSI_PORT        (GPIOC)
+
+#define SD_SPI_CLK_ENABLE()    __SPI2_CLK_ENABLE()
+#define SD_SPI_CLK_DISABLE()   __SPI2_CLK_DISABLE()
+
+#define SD_SELECT()        HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_RESET)
+#define SD_DESELECT()      HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_SET)
+
 #endif //__PINCFG_H__

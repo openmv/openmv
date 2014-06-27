@@ -145,6 +145,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	sensor.o                                \
 	led.o                                   \
 	rng.o                                   \
+	sdcard.o                                \
 	stm32f407_hal_msp.o                     \
 	)
 

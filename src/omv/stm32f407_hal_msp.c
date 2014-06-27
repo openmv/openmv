@@ -46,19 +46,22 @@ void HAL_MspInit(void)
     /* Enable the CCM RAM */
     __CCMDATARAMEN_CLK_ENABLE();
 
-    /* DCMI RESET/PWDN GPIO configuration */
+    /* Conigure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
+    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
 
     GPIO_InitStructure.Pin = DCMI_RESET_PIN;
     HAL_GPIO_Init(DCMI_RESET_PORT, &GPIO_InitStructure);
+
     GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
     HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
 
-    /* LED GPIO config */
+    /* Configure LED GPIO */
     GPIO_InitStructure.Pull  = GPIO_NOPULL;
+    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
+    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
     for (int i=0; i<NUM_LED_PINS; i++) {
         HAL_GPIO_WritePin(led_pins[i].port,
                 led_pins[i].pin, GPIO_PIN_SET);
@@ -66,6 +69,22 @@ void HAL_MspInit(void)
         GPIO_InitStructure.Pin = led_pins[i].pin;
         HAL_GPIO_Init(led_pins[i].port, &GPIO_InitStructure);
     }
+
+    /* Configure SD GPIO */
+    GPIO_InitStructure.Pin   = SD_CS_PIN;
+    GPIO_InitStructure.Pull  = GPIO_NOPULL;
+    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
+    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
+    HAL_GPIO_Init(SD_CS_PORT, &GPIO_InitStructure);
+
+    GPIO_InitStructure.Pin   = SD_CD_PIN;
+    GPIO_InitStructure.Pull  = GPIO_NOPULL;
+    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
+    GPIO_InitStructure.Mode  = GPIO_MODE_INPUT;
+    HAL_GPIO_Init(SD_CD_PORT, &GPIO_InitStructure);
+
+    /* De-select the Card: Chip Select high */
+    SD_DESELECT();
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
@@ -86,6 +105,14 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
 
         GPIO_InitStructure.Pin = SCCB_SDA_PIN;
         HAL_GPIO_Init(SCCB_PORT, &GPIO_InitStructure);
+    }
+}
+
+void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
+{
+    if (hi2c->Instance == SCCB_I2C) {
+        HAL_I2C_DeInit(hi2c);
+        SCCB_CLK_DISABLE();
     }
 }
 
@@ -124,11 +151,27 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
     }
 }
 
-void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
+void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 {
-    if (hi2c->Instance == SCCB_I2C) {
-        HAL_I2C_DeInit(hi2c);
-        SCCB_CLK_DISABLE();
+    if (hspi->Instance == SD_SPI) {
+        /* Enable clock */
+        SD_SPI_CLK_ENABLE();
+
+        /* Configure SPI GPIOs */
+        GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.Pull      = GPIO_NOPULL;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+        GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+        GPIO_InitStructure.Alternate = SD_SPI_AF;
+
+        GPIO_InitStructure.Pin = SD_MOSI_PIN;
+        HAL_GPIO_Init(SD_MOSI_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Pin = SD_MISO_PIN;
+        HAL_GPIO_Init(SD_MISO_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Pin = SD_SCLK_PIN;
+        HAL_GPIO_Init(SD_SCLK_PORT, &GPIO_InitStructure);
     }
 }
 

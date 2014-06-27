@@ -11,6 +11,7 @@ SRCS += $(addprefix ,   \
 	sensor.c            \
 	led.c               \
 	rng.c               \
+	sdcard.c            \
 	stm32f407_hal_msp.c \
    )
 
