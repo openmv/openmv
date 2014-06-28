@@ -107,8 +107,8 @@ def fb_dump():
     if (size[2] > 2):
         try:
             #img = Image.frombytes("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "")
-            __write_img(buff, "swap.jpeg")
-            img = Image.open("swap.jpeg")
+            __write_img(buff, "/tmp/swap.jpeg")
+            img = Image.open("/tmp/swap.jpeg")
             buff = np.fromstring(img.tobytes(), dtype=np.uint8)
         except Exception, e:
             print "JPEG decode error (%s)"%e
