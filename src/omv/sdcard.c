@@ -40,17 +40,6 @@
 #include "systick.h"
 #include "sdcard.h"
 
-#ifdef STM32_SD_USE_DMA
-// #warning "Information only: using DMA"
-#pragma message "*** Using DMA ***"
-#endif
-
-#define DMA_Channel_SPIx_RX     DMA1_Channel4
-#define DMA_Channel_SPIx_TX     DMA1_Channel5
-#define DMA_FLAG_SPIx_TC_RX     DMA1_FLAG_TC4
-#define DMA_FLAG_SPIx_TC_TX     DMA1_FLAG_TC5
-#define SPI_BaudRatePrescaler_SPIx  SPI_BAUDRATEPRESCALER_2
-
 /* Definitions for MMC/SDC command */
 #define CMD0    (0x40+0)    /* GO_IDLE_STATE */
 #define CMD1    (0x40+1)    /* SEND_OP_COND (MMC) */
@@ -92,33 +81,33 @@ bool sdcard_is_present(void)
 /*-----------------------------------------------------------------------*/
 /* Transmit/Receive a byte to MMC via SPI  (Platform dependent)          */
 /*-----------------------------------------------------------------------*/
-static BYTE stm32_spi_rw(BYTE out)
+static BYTE spi_send(BYTE out)
 {
-    volatile HAL_StatusTypeDef st;
-    st = HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SD_TIMEOUT);
-    if (st != HAL_OK) {
+    if (HAL_SPI_Transmit(&SPIHandle, &out, 1, SD_TIMEOUT) != HAL_OK) {
         BREAK();
     }
     return out;
 }
 
-/*-----------------------------------------------------------------------*/
-/* Transmit a byte to MMC via SPI  (Platform dependent)                  */
-/*-----------------------------------------------------------------------*/
-
-#define xmit_spi(dat)  stm32_spi_rw(dat)
-
-/*-----------------------------------------------------------------------*/
-/* Receive a byte from MMC via SPI  (Platform dependent)                 */
-/*-----------------------------------------------------------------------*/
-
-static BYTE rcvr_spi (void)
+static bool spi_send_buff(const BYTE *buff, uint32_t size)
 {
-    return stm32_spi_rw(0xff);
+    return HAL_SPI_Transmit(&SPIHandle, (void*)buff, size , SD_TIMEOUT)== HAL_OK;
 }
 
-/* Alternative macro to receive data fast */
-#define rcvr_spi_m(dst)  *(dst)=stm32_spi_rw(0xff)
+static BYTE spi_recv()
+{
+    BYTE out=0xFF;
+    HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SD_TIMEOUT);
+    return out;
+}
+
+static bool spi_recv_buff(BYTE *buff, uint32_t size)
+{
+    do {
+        *buff++ = spi_recv();
+    } while (--size);
+    return true;
+}
 
 /*-----------------------------------------------------------------------*/
 /* Wait for card ready                                                   */
@@ -128,9 +117,9 @@ static BYTE wait_ready (void)
     BYTE res;
     volatile int timeout = SD_TIMEOUT;
 
-    rcvr_spi();
+    spi_recv();
     do
-        res = rcvr_spi();
+        res = spi_recv();
     while ((res != 0xFF) && timeout--);
 
     return res;
@@ -142,7 +131,7 @@ static BYTE wait_ready (void)
 static void release_spi (void)
 {
     SD_DESELECT();
-    rcvr_spi();
+    spi_recv();
 }
 
 /*-----------------------------------------------------------------------*/
@@ -157,25 +146,19 @@ static bool rcvr_datablock (
     BYTE token;
     volatile int timeout = SD_TIMEOUT;
     do {                            /* Wait for data packet in timeout of 100ms */
-        token = rcvr_spi();
+        token = spi_recv();
     } while ((token == 0xFF) && timeout--);
-    if(token != 0xFE) return false;    /* If not valid data token, return with error */
 
-#ifdef STM32_SD_USE_DMA
-    stm32_dma_transfer( true, buff, btr );
-#else
-    do {                            /* Receive the data block into buffer */
-        rcvr_spi_m(buff++);
-        rcvr_spi_m(buff++);
-        rcvr_spi_m(buff++);
-        rcvr_spi_m(buff++);
-    } while (btr -= 4);
-#endif /* STM32_SD_USE_DMA */
+    if(token != 0xFE) {
+        return false;    /* If not valid data token, return with error */
+    }
 
-    rcvr_spi();                        /* Discard CRC */
-    rcvr_spi();
+    spi_recv_buff(buff, btr);
 
-    return true;                    /* Return with success */
+    /* Discard CRC */
+    spi_recv();
+    spi_recv();
+    return true;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -188,29 +171,26 @@ bool xmit_datablock (
         )
 {
     BYTE resp;
-#ifndef STM32_SD_USE_DMA
-    BYTE wc;
-#endif
 
-    if (wait_ready() != 0xFF) return false;
+    if (wait_ready() != 0xFF) {
+        return false;
+    }
 
-    xmit_spi(token);                    /* transmit data token */
-    if (token != 0xFD) {    /* Is data token */
+    /* transmit data token */
+    spi_send(token);
 
-#ifdef STM32_SD_USE_DMA
-        stm32_dma_transfer( false, buff, SDCARD_BLOCK_SIZE);
-#else
-        wc = 0;
-        do {                            /* transmit the data block to MMC */
-            xmit_spi(*buff++);
-            xmit_spi(*buff++);
-        } while (--wc);
-#endif /* STM32_SD_USE_DMA */
+    if (token != 0xFD) { /* Is data token */
+        spi_send_buff(buff, SDCARD_BLOCK_SIZE);
 
-        xmit_spi(0xFF);                    /* CRC (Dummy) */
-        xmit_spi(0xFF);
-        resp = rcvr_spi();                /* Receive data response */
-        if ((resp & 0x1F) != 0x05)        /* If not accepted, return with error */
+        /* CRC (Dummy) */
+        spi_send(0xFF);
+        spi_send(0xFF);
+
+        /* Receive data response */
+        resp = spi_recv();
+
+        /* If not accepted, return with error */
+        if ((resp & 0x1F) != 0x05)
             return false;
     }
 
@@ -238,22 +218,22 @@ static BYTE send_cmd (
     }
 
     /* Send command packet */
-    xmit_spi(cmd);                      /* Start + Command index */
-    xmit_spi((BYTE)(arg >> 24));        /* Argument[31..24] */
-    xmit_spi((BYTE)(arg >> 16));        /* Argument[23..16] */
-    xmit_spi((BYTE)(arg >> 8));         /* Argument[15..8] */
-    xmit_spi((BYTE)arg);                /* Argument[7..0] */
+    spi_send(cmd);                      /* Start + Command index */
+    spi_send((BYTE)(arg >> 24));        /* Argument[31..24] */
+    spi_send((BYTE)(arg >> 16));        /* Argument[23..16] */
+    spi_send((BYTE)(arg >> 8));         /* Argument[15..8] */
+    spi_send((BYTE)arg);                /* Argument[7..0] */
     n = 0x01;                           /* Dummy CRC + Stop */
     if (cmd == CMD0) n = 0x95;          /* Valid CRC for CMD0(0) */
     if (cmd == CMD8) n = 0x87;          /* Valid CRC for CMD8(0x1AA) */
-    xmit_spi(n);
+    spi_send(n);
 
     /* Receive command response */
-    if (cmd == CMD12) rcvr_spi();       /* Skip a stuff byte when stop reading */
+    if (cmd == CMD12) spi_recv();       /* Skip a stuff byte when stop reading */
 
     n = 10;                             /* Wait for a valid response in timeout of 10 attempts */
     do
-        res = rcvr_spi();
+        res = spi_recv();
     while ((res & 0x80) && --n);
 
     return res;            /* Return with the response value */
@@ -292,25 +272,25 @@ void sdcard_init(void)
     volatile int timeout = SD_TIMEOUT;
 
     /* init HW */
+    systick_sleep(250);
     sdcard_hw_init(SPI_BAUDRATEPRESCALER_256);
-    systick_sleep(1000);
 
     for (n = 10; n; n--) {
         /* 80 dummy clocks */
-        rcvr_spi();
+        spi_recv();
     }
 
     ty = 0;
     if (send_cmd(CMD0, 0) == 1) {            /* Enter Idle state */
         if (send_cmd(CMD8, 0x1AA) == 1) {    /* SDHC */
             for (n = 0; n < 4; n++) {
-                ocr[n] = rcvr_spi();            /* Get trailing return value of R7 response */
+                ocr[n] = spi_recv();            /* Get trailing return value of R7 response */
             }
             if (ocr[2] == 0x01 && ocr[3] == 0xAA) {                 /* The card can work at VDD range of 2.7-3.6V */
                 while (--timeout && send_cmd(ACMD41, 1UL << 30));   /* Wait for leaving idle state (ACMD41 with HCS bit) */
                 if (timeout && send_cmd(CMD58, 0) == 0) {           /* Check CCS bit in the OCR */
                     for (n = 0; n < 4; n++) {
-                        ocr[n] = rcvr_spi();
+                        ocr[n] = spi_recv();
                     }
                     ty = (ocr[0] & 0x40) ? CT_SD2 | CT_BLOCK : CT_SD2;
                 }
@@ -470,9 +450,9 @@ DRESULT sdcard_ioctl (
         case GET_BLOCK_SIZE :    /* Get erase block size in unit of sector (DWORD) */
             if (CardType & CT_SD2) {    /* SDC version 2.00 */
                 if (send_cmd(ACMD13, 0) == 0) {    /* Read SD status */
-                    rcvr_spi();
+                    spi_recv();
                     if (rcvr_datablock(csd, 16)) {                /* Read partial block */
-                        for (n = 64 - 16; n; n--) rcvr_spi();    /* Purge trailing data */
+                        for (n = 64 - 16; n; n--) spi_recv();    /* Purge trailing data */
                         *(DWORD*)buff = 16UL << (csd[10] >> 4);
                         res = RES_OK;
                     }
@@ -508,14 +488,14 @@ DRESULT sdcard_ioctl (
 
         case MMC_GET_OCR :        /* Receive OCR as an R3 resp (4 bytes) */
             if (send_cmd(CMD58, 0) == 0) {    /* READ_OCR */
-                for (n = 4; n; n--) *ptr++ = rcvr_spi();
+                for (n = 4; n; n--) *ptr++ = spi_recv();
                 res = RES_OK;
             }
             break;
 
         case MMC_GET_SDSTAT :    /* Receive SD status as a data block (64 bytes) */
             if (send_cmd(ACMD13, 0) == 0) {    /* SD_STATUS */
-                rcvr_spi();
+                spi_recv();
                 if (rcvr_datablock(ptr, 64))
                     res = RES_OK;
             }
