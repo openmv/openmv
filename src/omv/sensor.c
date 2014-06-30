@@ -282,6 +282,13 @@ int sensor_snapshot(struct image *image)
         length =(fb->w * fb->h * 2)/4;
     }
 
+    /* Wait for usbdbg to read the frame, this is necessary to
+       avoid race conditions. The other option is to lock the
+       framebuffer, which complicates things */
+    while ( usbdbg_is_connected() &&
+            sensor.frame_ready == 1) {
+    }
+
     /* Start the DCMI */
     HAL_DCMI_Start_DMA(&DCMIHandle,
             DCMI_MODE_SNAPSHOT, addr, length);
@@ -315,11 +322,6 @@ int sensor_snapshot(struct image *image)
 
     sensor.frame_ready = 1;
 
-    /* Wait for usbdbg to read the frame, this is necessary to avoid race conditions,
-       The other option is to lock the framebuffer, which complicates things */
-    while ( usbdbg_is_connected() &&
-            sensor.frame_ready == 1) {
-    }
     return 0;
 }
 
