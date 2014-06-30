@@ -40,7 +40,7 @@ void HAL_MspInit(void)
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
 
-    /* Enable DMA2 clock */
+    /* Enable DMA clocks */
     __DMA2_CLK_ENABLE();
 
     /* Enable the CCM RAM */
@@ -96,7 +96,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
         /* Configure SCCB GPIOs */
         GPIO_InitTypeDef GPIO_InitStructure;
         GPIO_InitStructure.Pull      = GPIO_NOPULL;
-        GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
         GPIO_InitStructure.Mode      = GPIO_MODE_AF_OD;
         GPIO_InitStructure.Alternate = SCCB_AF;
 

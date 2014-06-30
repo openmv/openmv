@@ -62,9 +62,7 @@
 #define SD_TIMEOUT      (1000000)
 
 /*--------------------------------------------------------------------------
-
   Module Private Functions and Variables
-
   ---------------------------------------------------------------------------*/
 static BYTE CardType;            /* Card type flags */
 static const DWORD socket_state_mask_cp = (1 << 0);
@@ -112,7 +110,7 @@ static bool spi_recv_buff(BYTE *buff, uint32_t size)
 /*-----------------------------------------------------------------------*/
 /* Wait for card ready                                                   */
 /*-----------------------------------------------------------------------*/
-static BYTE wait_ready (void)
+static BYTE wait_ready(void)
 {
     BYTE res;
     volatile int timeout = SD_TIMEOUT;
@@ -128,7 +126,7 @@ static BYTE wait_ready (void)
 /*-----------------------------------------------------------------------*/
 /* SD_DESELECT the card and release SPI bus                                 */
 /*-----------------------------------------------------------------------*/
-static void release_spi (void)
+static void release_spi(void)
 {
     SD_DESELECT();
     spi_recv();
@@ -137,11 +135,7 @@ static void release_spi (void)
 /*-----------------------------------------------------------------------*/
 /* Receive a data packet from MMC                                        */
 /*-----------------------------------------------------------------------*/
-
-static bool rcvr_datablock (
-        BYTE *buff,            /* Data buffer to store received data */
-        UINT btr            /* Byte count (must be multiple of 4) */
-        )
+static bool rcvr_datablock(BYTE *buff, UINT btr)
 {
     BYTE token;
     volatile int timeout = SD_TIMEOUT;
@@ -164,11 +158,7 @@ static bool rcvr_datablock (
 /*-----------------------------------------------------------------------*/
 /* Send a data packet to MMC                                             */
 /*-----------------------------------------------------------------------*/
-    static
-bool xmit_datablock (
-        const BYTE *buff,     /* data block to be transmitted */
-        BYTE token            /* Data/Stop token */
-        )
+static bool xmit_datablock(const BYTE *buff, BYTE token)
 {
     BYTE resp;
 
@@ -197,10 +187,7 @@ bool xmit_datablock (
     return true;
 }
 
-static BYTE send_cmd (
-        BYTE cmd,        /* Command byte */
-        DWORD arg        /* Argument */
-        )
+static BYTE send_cmd(BYTE cmd, DWORD arg)
 {
     BYTE n, res;
 
@@ -256,13 +243,13 @@ void sdcard_hw_init(uint32_t baudrate)
     SPIHandle.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLED;
     SPIHandle.Init.CRCPolynomial     = 7;
 
-    if (HAL_SPI_Init(&SPIHandle) == HAL_OK) {
-        /* dummy read */
+    /* Initialize the SPI */
+    if (HAL_SPI_Init(&SPIHandle) != HAL_OK) {
+        /* Initialization Error */
+        BREAK();
+    } else {
         uint8_t buf[1];
         HAL_SPI_Receive(&SPIHandle, buf, sizeof(buf), SD_TIMEOUT);
-    } else {
-        /* error */
-        BREAK();
     }
 }
 
@@ -310,8 +297,9 @@ void sdcard_init(void)
     CardType = ty;
     release_spi();
 
-    if (ty) {            /* Initialization succeeded */
-        Stat &= ~STA_NOINIT;        /* Clear STA_NOINIT */
+    if (ty) {
+        /* Initialization succeeded */
+        Stat &= ~STA_NOINIT; /* Clear STA_NOINIT */
         sdcard_hw_init(SPI_BAUDRATEPRESCALER_2);
     } else {
         /* Initialization failed */

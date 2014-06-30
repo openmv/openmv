@@ -185,7 +185,7 @@ soft_reset:
 
     // more sub-system init
 #if MICROPY_HW_HAS_SDCARD
-    if (first_soft_reset) {
+    if (sdcard_is_present() && first_soft_reset) {
         sdcard_init();
     }
 #endif
@@ -260,9 +260,7 @@ soft_reset:
 
         // keep LED on for at least 200ms
         led_state(LED_RED, 0);
-    } else if (res == FR_OK) {
-        // mount sucessful
-    } else {
+    } else if (res != FR_OK) {
         __fatal_error("could not access LFS");
     }
 
@@ -286,6 +284,9 @@ soft_reset:
                 // use SD card as medium for the USB MSD
                 usb_medium = USB_STORAGE_MEDIUM_SDCARD;
             }
+            // add sdcard to sys path
+            mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_1_colon__slash_));
+            mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_1_colon__slash_lib));
         }
     }
 
@@ -318,12 +319,11 @@ soft_reset:
     usbdbg_init();
 
     /* Add functions to the global python namespace */
-    mp_store_global(qstr_from_str("open"), mp_make_function_n(2, py_file_open));
     mp_store_global(qstr_from_str("vcp_is_connected"), mp_make_function_n(0, py_vcp_is_connected));
-//    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
-//    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
     mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
     mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
+//    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
+//    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
 
     /* Export Python modules to the global python namespace */
     for (const module_t *p = exported_modules; p->name; p++) {

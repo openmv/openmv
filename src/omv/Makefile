@@ -35,7 +35,6 @@ SRCS += $(addprefix py/,    \
 	py_led.c                \
 	py_sensor.c             \
 	py_image.c              \
-	py_file.c               \
 	py_time.c               \
 	py_clock.c              \
    )
