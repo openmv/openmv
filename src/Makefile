@@ -169,7 +169,6 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_led.o                                \
 	py_sensor.o                             \
 	py_image.o                              \
-	py_file.o                               \
 	py_time.o                               \
 	py_clock.o                              \
 	)
