@@ -82,6 +82,39 @@ static void py_image_print(void (*print)(void *env, const char *fmt, ...), void 
     print(env, "<image width:%d height:%d bpp:%d>", self->_cobj.w, self->_cobj.h, self->_cobj.bpp);
 }
 
+static machine_int_t str_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, int flags) {
+    image_t *image = py_image_cobj(self_in);
+
+    if (flags == MP_BUFFER_READ) {
+        bufinfo->buf = (void*)image->pixels;
+        if (image->bpp > 2) { //JPEG
+            bufinfo->len = image->bpp;
+        } else {
+            bufinfo->len = image->w*image->h*image->bpp;
+        }
+        bufinfo->typecode = 'b';
+        return 0;
+    } else {
+        // disable write for now
+        bufinfo->buf = NULL;
+        bufinfo->len = 0;
+        bufinfo->typecode = -1;
+        return 1;
+    }
+}
+
+static mp_obj_t py_image_size(mp_obj_t self_in)
+{
+    uint32_t len;
+    image_t *image = py_image_cobj(self_in);
+    if (image->bpp > 2) { //JPEG
+        len = image->bpp;
+    } else {
+        len = image->w*image->h*image->bpp;
+    }
+    return mp_obj_new_int(len);
+}
+
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     rectangle_t r;
@@ -463,6 +496,7 @@ mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
     return o;
 }
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj, py_image_blit);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
@@ -480,6 +514,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_keypoints_match_obj, py_image_find_keypoints_match);
 
 static const mp_map_elem_t locals_dict_table[] = {
+    {MP_OBJ_NEW_QSTR(MP_QSTR_size),                (mp_obj_t)&py_image_size_obj},
+
     /* basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blit),                (mp_obj_t)&py_image_blit_obj},
@@ -508,6 +544,7 @@ static const mp_obj_type_t py_image_type = {
     { &mp_type_type },
     .name  = MP_QSTR_image,
     .print = py_image_print,
+    .buffer_p = { .get_buffer = str_get_buffer },
     .locals_dict = (mp_obj_t)&locals_dict,
 };
 
