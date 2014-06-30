@@ -1,4 +1,9 @@
 import sensor, time
-sensor.set_framesize(sensor.QCIF)
-sensor.set_pixformat(sensor.RGB565)
-sensor.snapshot().save("1:/test.ppm")
+
+sensor.set_pixformat(sensor.JPEG)
+sensor.set_framesize(sensor.QVGA)
+
+image = sensor.snapshot()
+f = open("1:/test.jpeg", "wb")
+f.write(image)
+f.close()
