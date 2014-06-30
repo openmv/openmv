@@ -38,6 +38,8 @@ void usbdbg_clr_script()
 {
     script_ready =0;
     vstr_reset(&script);
+
+    usbdbg_connected=0;
 }
 
 int usbdbg_is_connected()
