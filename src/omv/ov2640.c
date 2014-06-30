@@ -337,7 +337,7 @@ static const uint8_t jpeg_regs[][2] = {
         { IMAGE_MODE, IMAGE_MODE_JPEG_EN|IMAGE_MODE_RGB565 },
         { 0xD7,     0x03 },
         { 0xE1,     0x77 },
-        { QS,       0x05 },
+        { QS,       0x0C },
         { RESET,    0x00 },
         {0, 0},
 };
