@@ -148,25 +148,20 @@ class OMVGtk:
         # read drawingarea
         fb = openmv.fb_dump()
 
-        # reschedule callback
-        gobject.idle_add(omvgtk.update_drawing);
+        if fb:
+            # convert to RGB888 and blit
+            self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
+            self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
 
-        if fb == None:
-            return
+            self.drawingarea.realize();
+            cm = self.drawingarea.window.get_colormap()
+            gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF',True,False))
 
-        # convert to RGB888 and blit
-        self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
-        self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
-
-        self.drawingarea.realize();
-        cm = self.drawingarea.window.get_colormap()
-        gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF',True,False))
-
-        self.drawingarea.set_size_request(fb[0]*SCALE, fb[1]*SCALE)
-        self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
-        if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
-            self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
-
+            self.drawingarea.set_size_request(fb[0]*SCALE, fb[1]*SCALE)
+            self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
+            if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
+                self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
+        return True
 
 
     def on_ctrl_scale_value_changed(self, adjust):
@@ -249,5 +244,5 @@ class OMVGtk:
 if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
-    gobject.idle_add(omvgtk.update_drawing);
+    gobject.gobject.timeout_add(10, omvgtk.update_drawing);
     gtk.main()
