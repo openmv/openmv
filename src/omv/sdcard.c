@@ -59,7 +59,8 @@
 #define CMD55   (0x40+55)   /* APP_CMD */
 #define CMD58   (0x40+58)   /* READ_OCR */
 
-#define SD_TIMEOUT      (1000000)
+#define SD_TIMEOUT          (100000)
+#define SPI_TIMEOUT         (100)  /* in ms */
 
 /*--------------------------------------------------------------------------
   Module Private Functions and Variables
@@ -68,7 +69,7 @@ static BYTE CardType;            /* Card type flags */
 static const DWORD socket_state_mask_cp = (1 << 0);
 static volatile DSTATUS Stat = STA_NOINIT;    /* Disk status */
 
-SPI_HandleTypeDef SPIHandle;
+static SPI_HandleTypeDef SPIHandle;
 DRESULT sdcard_ioctl(BYTE drv, BYTE ctrl, void *buff);
 
 bool sdcard_is_present(void)
@@ -81,7 +82,7 @@ bool sdcard_is_present(void)
 /*-----------------------------------------------------------------------*/
 static BYTE spi_send(BYTE out)
 {
-    if (HAL_SPI_Transmit(&SPIHandle, &out, 1, SD_TIMEOUT) != HAL_OK) {
+    if (HAL_SPI_Transmit(&SPIHandle, &out, 1, SPI_TIMEOUT) != HAL_OK) {
         BREAK();
     }
     return out;
@@ -89,13 +90,13 @@ static BYTE spi_send(BYTE out)
 
 static bool spi_send_buff(const BYTE *buff, uint32_t size)
 {
-    return HAL_SPI_Transmit(&SPIHandle, (void*)buff, size , SD_TIMEOUT)== HAL_OK;
+    return HAL_SPI_Transmit(&SPIHandle, (void*)buff, size , SPI_TIMEOUT)== HAL_OK;
 }
 
 static BYTE spi_recv()
 {
     BYTE out=0xFF;
-    HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SD_TIMEOUT);
+    HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SPI_TIMEOUT);
     return out;
 }
 
@@ -248,7 +249,9 @@ void sdcard_hw_init(uint32_t baudrate)
         /* Initialization Error */
         BREAK();
     } else {
+        // TODO is this needed ?
         uint8_t buf[1];
+        // TODO use while ?
         HAL_SPI_Receive(&SPIHandle, buf, sizeof(buf), SD_TIMEOUT);
     }
 }
@@ -258,9 +261,8 @@ void sdcard_init(void)
     BYTE n, cmd, ty, ocr[4];
     volatile int timeout = SD_TIMEOUT;
 
-    /* init HW */
-    systick_sleep(250);
     sdcard_hw_init(SPI_BAUDRATEPRESCALER_256);
+    systick_sleep(250);
 
     for (n = 10; n; n--) {
         /* 80 dummy clocks */
