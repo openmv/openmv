@@ -70,21 +70,12 @@ void HAL_MspInit(void)
         HAL_GPIO_Init(led_pins[i].port, &GPIO_InitStructure);
     }
 
-    /* Configure SD GPIO */
-    GPIO_InitStructure.Pin   = SD_CS_PIN;
-    GPIO_InitStructure.Pull  = GPIO_NOPULL;
-    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
-    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
-    HAL_GPIO_Init(SD_CS_PORT, &GPIO_InitStructure);
-
-    GPIO_InitStructure.Pin   = SD_CD_PIN;
-    GPIO_InitStructure.Pull  = GPIO_NOPULL;
-    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
-    GPIO_InitStructure.Mode  = GPIO_MODE_INPUT;
+    /* Configure SD CD PIN */
+    GPIO_InitStructure.Pin      = SD_CD_PIN;
+    GPIO_InitStructure.Pull     = GPIO_NOPULL;
+    GPIO_InitStructure.Speed    = GPIO_SPEED_LOW;
+    GPIO_InitStructure.Mode     = GPIO_MODE_INPUT;
     HAL_GPIO_Init(SD_CD_PORT, &GPIO_InitStructure);
-
-    /* De-select the Card: Chip Select high */
-    SD_DESELECT();
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
@@ -153,25 +144,75 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
 
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 {
+    GPIO_InitTypeDef GPIO_InitStructure;
     if (hspi->Instance == SD_SPI) {
-        /* Enable clock */
-        SD_SPI_CLK_ENABLE();
+            /* Enable clock */
+            SD_SPI_CLK_ENABLE();
 
-        /* Configure SPI GPIOs */
-        GPIO_InitTypeDef GPIO_InitStructure;
-        GPIO_InitStructure.Pull      = GPIO_NOPULL;
-        GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
-        GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
-        GPIO_InitStructure.Alternate = SD_SPI_AF;
+            /* Configure SPI GPIOs */
+            GPIO_InitStructure.Pull      = GPIO_NOPULL;
+            GPIO_InitStructure.Speed     = GPIO_SPEED_MEDIUM;
+            GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+            GPIO_InitStructure.Alternate = SD_SPI_AF;
 
-        GPIO_InitStructure.Pin = SD_MOSI_PIN;
-        HAL_GPIO_Init(SD_MOSI_PORT, &GPIO_InitStructure);
+            GPIO_InitStructure.Pin = SD_MOSI_PIN;
+            HAL_GPIO_Init(SD_MOSI_PORT, &GPIO_InitStructure);
 
-        GPIO_InitStructure.Pin = SD_MISO_PIN;
-        HAL_GPIO_Init(SD_MISO_PORT, &GPIO_InitStructure);
+            GPIO_InitStructure.Pin = SD_MISO_PIN;
+            HAL_GPIO_Init(SD_MISO_PORT, &GPIO_InitStructure);
 
-        GPIO_InitStructure.Pin = SD_SCLK_PIN;
-        HAL_GPIO_Init(SD_SCLK_PORT, &GPIO_InitStructure);
+            GPIO_InitStructure.Pin = SD_SCLK_PIN;
+            HAL_GPIO_Init(SD_SCLK_PORT, &GPIO_InitStructure);
+
+            GPIO_InitStructure.Pin = SD_CS_PIN;
+            GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
+            HAL_GPIO_Init(SD_CS_PORT, &GPIO_InitStructure);
+
+            /* De-select the Card: Chip Select high */
+            SD_DESELECT();
+
+    } else if (hspi->Instance == WLAN_SPI) {
+            /* Enable clock */
+            WLAN_SPI_CLK_ENABLE();
+
+            /* Configure WLAN EN */
+            GPIO_InitStructure.Pin      = WLAN_EN_PIN;
+            GPIO_InitStructure.Pull     = GPIO_PULLDOWN;
+            GPIO_InitStructure.Speed    = GPIO_SPEED_LOW;
+            GPIO_InitStructure.Mode     = GPIO_MODE_OUTPUT_PP;
+            HAL_GPIO_Init(WLAN_EN_PORT, &GPIO_InitStructure);
+
+            /* Disable wlan */
+            __WLAN_DISABLE();
+
+            /* Configure WLAN IRQ */
+            GPIO_InitStructure.Pin      = WLAN_IRQ_PIN;
+            GPIO_InitStructure.Pull     = GPIO_PULLUP;
+            GPIO_InitStructure.Speed    = GPIO_SPEED_MEDIUM;
+            GPIO_InitStructure.Mode     = GPIO_MODE_IT_FALLING;
+            HAL_GPIO_Init(WLAN_IRQ_PORT, &GPIO_InitStructure);
+
+            /* Configure WLAN SPI GPIOs */
+            GPIO_InitStructure.Pull      = GPIO_PULLUP;
+            GPIO_InitStructure.Speed     = GPIO_SPEED_MEDIUM;
+            GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+            GPIO_InitStructure.Alternate = WLAN_SPI_AF;
+
+            GPIO_InitStructure.Pin = WLAN_MOSI_PIN;
+            HAL_GPIO_Init(WLAN_MOSI_PORT, &GPIO_InitStructure);
+
+            GPIO_InitStructure.Pin = WLAN_MISO_PIN;
+            HAL_GPIO_Init(WLAN_MISO_PORT, &GPIO_InitStructure);
+
+            GPIO_InitStructure.Pin = WLAN_SCLK_PIN;
+            HAL_GPIO_Init(WLAN_SCLK_PORT, &GPIO_InitStructure);
+
+            GPIO_InitStructure.Pin  = WLAN_CS_PIN;
+            GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
+            HAL_GPIO_Init(WLAN_CS_PORT, &GPIO_InitStructure);
+
+            /* Deselect the CC3K CS */
+            WLAN_DESELECT();
     }
 }
 

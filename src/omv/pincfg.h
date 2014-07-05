@@ -94,4 +94,33 @@ extern const gpio_t led_pins[];
 #define SD_SELECT()        HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_RESET)
 #define SD_DESELECT()      HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_SET)
 
+/* Wlan */
+#define WLAN_SPI                SPI3
+#define WLAN_SPI_AF             (GPIO_AF6_SPI3)
+#define WLAN_IRQn               (EXTI15_10_IRQn)
+#define WLAN_IRQHandler         (EXTI15_10_IRQHandler)
+#define WLAN_EXTI_LINE          (1<<11)
+
+#define WLAN_CS_PIN             (GPIO_PIN_15)
+#define WLAN_EN_PIN             (GPIO_PIN_10)
+#define WLAN_IRQ_PIN            (GPIO_PIN_11)
+#define WLAN_SCLK_PIN           (GPIO_PIN_10)
+#define WLAN_MISO_PIN           (GPIO_PIN_11)
+#define WLAN_MOSI_PIN           (GPIO_PIN_12)
+
+#define WLAN_CS_PORT            (GPIOA)
+#define WLAN_EN_PORT            (GPIOB)
+#define WLAN_IRQ_PORT           (GPIOB)
+#define WLAN_SCLK_PORT          (GPIOC)
+#define WLAN_MISO_PORT          (GPIOC)
+#define WLAN_MOSI_PORT          (GPIOC)
+
+#define WLAN_SPI_CLK_ENABLE()   __SPI3_CLK_ENABLE()
+#define WLAN_SPI_CLK_DISABLE()  __SPI3_CLK_DISABLE()
+
+#define WLAN_SELECT()           HAL_GPIO_WritePin(WLAN_CS_PORT, WLAN_CS_PIN, GPIO_PIN_RESET)
+#define WLAN_DESELECT()         HAL_GPIO_WritePin(WLAN_CS_PORT, WLAN_CS_PIN, GPIO_PIN_SET)
+
+#define __WLAN_DISABLE()        HAL_GPIO_WritePin(WLAN_EN_PORT, WLAN_EN_PIN, GPIO_PIN_RESET)
+
 #endif //__PINCFG_H__

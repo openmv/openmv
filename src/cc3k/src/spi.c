@@ -34,19 +34,16 @@
 #include "hci.h"
 #include "spi.h"
 #include "evnt_handler.h"
-#include <stdlib.h>
-#include <stm32f4xx_misc.h>
-#include <stm32f4xx_spi.h>
-#include <stm32f4xx_rcc.h>
-#include <stm32f4xx_gpio.h>
-#include <stm32f4xx_exti.h>
-#include <stm32f4xx_syscfg.h>
+#include <pincfg.h>
+#include <stm32f4xx_hal.h>
+#include <mdefs.h>
 
 #define READ                3
 #define WRITE               1
 #define HI(value)           (((value) & 0xFF00) >> 8)
 #define LO(value)           ((value) & 0x00FF)
 #define HEADERS_SIZE_EVNT   (SPI_HEADER_SIZE + 5)
+#define SPI_TIMEOUT         (1000)
 
 /* SPI bus states */
 #define eSPI_STATE_POWERUP                  (0)
@@ -58,43 +55,6 @@
 #define eSPI_STATE_READ_IRQ                 (6)
 #define eSPI_STATE_READ_FIRST_PORTION       (7)
 #define eSPI_STATE_READ_EOT                 (8)
-
-#define CC3K_SPI                SPI3
-#define CC3K_SPI_CLK            RCC_APB1Periph_SPI3
-#define CC3K_SPI_CLK_INIT       RCC_APB1PeriphClockCmd
-
-#define CC3K_SPI_SCK_PIN        GPIO_Pin_10
-#define CC3K_SPI_SCK_GPIO_PORT  GPIOC
-#define CC3K_SPI_SCK_GPIO_CLK   RCC_AHB1Periph_GPIOC
-#define CC3K_SPI_SCK_SOURCE     GPIO_PinSource10
-#define CC3K_SPI_SCK_AF         GPIO_AF_SPI3
-
-#define CC3K_SPI_MISO_PIN       GPIO_Pin_11
-#define CC3K_SPI_MISO_GPIO_PORT GPIOC
-#define CC3K_SPI_MISO_GPIO_CLK  RCC_AHB1Periph_GPIOC
-#define CC3K_SPI_MISO_SOURCE    GPIO_PinSource11
-#define CC3K_SPI_MISO_AF        GPIO_AF_SPI3
-
-#define CC3K_SPI_MOSI_PIN       GPIO_Pin_12
-#define CC3K_SPI_MOSI_GPIO_PORT GPIOC
-#define CC3K_SPI_MOSI_GPIO_CLK  RCC_AHB1Periph_GPIOC
-#define CC3K_SPI_MOSI_SOURCE    GPIO_PinSource12
-#define CC3K_SPI_MOSI_AF        GPIO_AF_SPI3
-
-#define CC3K_CS_PIN             GPIO_Pin_15
-#define CC3K_CS_GPIO_PORT       GPIOA
-#define CC3K_CS_GPIO_CLK        RCC_AHB1Periph_GPIOA
-
-#define CC3K_EN_PIN             GPIO_Pin_10
-#define CC3K_EN_GPIO_PORT       GPIOB
-#define CC3K_EN_GPIO_CLK        RCC_AHB1Periph_GPIOB
-
-#define CC3K_IRQ_PIN            GPIO_Pin_11
-#define CC3K_IRQ_GPIO_PORT      GPIOB
-#define CC3K_IRQ_GPIO_CLK       RCC_AHB1Periph_GPIOB
-
-#define ASSERT_CS()             GPIO_ResetBits(CC3K_CS_GPIO_PORT, CC3K_CS_PIN);
-#define DEASSERT_CS()           GPIO_SetBits(CC3K_CS_GPIO_PORT, CC3K_CS_PIN);
 
 typedef struct {
     gcSpiHandleRx  SPIRxHandler;
@@ -115,17 +75,24 @@ tSpiInformation sSpiInformation;
 char spi_buffer[CC3000_RX_BUFFER_SIZE];
 unsigned char wlan_tx_buffer[CC3000_TX_BUFFER_SIZE];
 
+static SPI_HandleTypeDef SPIHandle;
+
 void SpiWriteDataSynchronous(unsigned char *data, unsigned short size);
 void SpiReadDataSynchronous(unsigned char *data, unsigned short size);
 
+void SpiClose(void)
+{
+    if (sSpiInformation.pRxPacket) {
+        sSpiInformation.pRxPacket = 0;
+    }
+
+    tSLInformation.WlanInterruptDisable();
+
+    //HAL_SPI_DeInit(&SPIHandle);
+}
+
 void SpiOpen(gcSpiHandleRx pfRxHandler)
 {
-    /* init structs */
-    SPI_InitTypeDef  SPI_InitStructure;
-    GPIO_InitTypeDef GPIO_InitStructure;
-    NVIC_InitTypeDef NVIC_InitStructure;
-    EXTI_InitTypeDef EXTI_InitStructure;
-
     /* initialize SPI state */
     sSpiInformation.ulSpiState = eSPI_STATE_POWERUP;
     sSpiInformation.SPIRxHandler = pfRxHandler;
@@ -136,144 +103,59 @@ void SpiOpen(gcSpiHandleRx pfRxHandler)
     spi_buffer[CC3000_RX_BUFFER_SIZE - 1] = CC3000_BUFFER_MAGIC_NUMBER;
     wlan_tx_buffer[CC3000_TX_BUFFER_SIZE - 1] = CC3000_BUFFER_MAGIC_NUMBER;
 
-    /* Enable SPI clock */
-    CC3K_SPI_CLK_INIT(CC3K_SPI_CLK, ENABLE);
-
-    /* Enable GPIO clocks */
-    RCC_AHB1PeriphClockCmd(CC3K_SPI_SCK_GPIO_CLK | CC3K_SPI_MISO_GPIO_CLK |
-            CC3K_SPI_MOSI_GPIO_CLK | CC3K_CS_GPIO_CLK | CC3K_EN_GPIO_CLK, ENABLE);
-
-    /* Connect SPI pins to AF */
-    GPIO_PinAFConfig(CC3K_SPI_SCK_GPIO_PORT, CC3K_SPI_SCK_SOURCE, CC3K_SPI_SCK_AF);
-    GPIO_PinAFConfig(CC3K_SPI_MISO_GPIO_PORT, CC3K_SPI_MISO_SOURCE, CC3K_SPI_MISO_AF);
-    GPIO_PinAFConfig(CC3K_SPI_MOSI_GPIO_PORT, CC3K_SPI_MOSI_SOURCE, CC3K_SPI_MOSI_AF);
-
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-    GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-    GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_UP;
-
-    /* SPI SCK pin configuration */
-    GPIO_InitStructure.GPIO_Pin = CC3K_SPI_SCK_PIN;
-    GPIO_Init(CC3K_SPI_SCK_GPIO_PORT, &GPIO_InitStructure);
-
-    /* SPI MOSI pin configuration */
-    GPIO_InitStructure.GPIO_Pin =  CC3K_SPI_MOSI_PIN;
-    GPIO_Init(CC3K_SPI_MOSI_GPIO_PORT, &GPIO_InitStructure);
-
-    /* SPI MISO pin configuration */
-    GPIO_InitStructure.GPIO_Pin =  CC3K_SPI_MISO_PIN;
-    GPIO_Init(CC3K_SPI_MISO_GPIO_PORT, &GPIO_InitStructure);
-
-    /* CS pin configuration */
-    GPIO_InitStructure.GPIO_Pin  = CC3K_CS_PIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(CC3K_CS_GPIO_PORT, &GPIO_InitStructure);
-
-    /* Configure WLAN enable pin */
-    GPIO_InitStructure.GPIO_Pin  = CC3K_EN_PIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
-    GPIO_Init(CC3K_EN_GPIO_PORT, &GPIO_InitStructure);
-    GPIO_ResetBits(CC3K_EN_GPIO_PORT, CC3K_EN_PIN);
-
-    /* Deselect the CC3K CS */
-    DEASSERT_CS();
-
     /* SPI configuration */
-    SPI_I2S_DeInit(CC3K_SPI);
-    SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
-    SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
-    SPI_InitStructure.SPI_CPOL  = SPI_CPOL_Low;
-    SPI_InitStructure.SPI_CPHA  = SPI_CPHA_2Edge;
-    SPI_InitStructure.SPI_NSS   = SPI_NSS_Soft;
-    SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-    SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
-    SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
-    SPI_InitStructure.SPI_CRCPolynomial = 7;
-    SPI_Init(CC3K_SPI, &SPI_InitStructure);
+    SPIHandle.Instance               = WLAN_SPI;
+    SPIHandle.Init.Mode              = SPI_MODE_MASTER;
+    SPIHandle.Init.Direction         = SPI_DIRECTION_2LINES;
+    SPIHandle.Init.DataSize          = SPI_DATASIZE_8BIT;
+    SPIHandle.Init.CLKPolarity       = SPI_POLARITY_LOW;
+    SPIHandle.Init.CLKPhase          = SPI_PHASE_2EDGE;
+    SPIHandle.Init.NSS               = SPI_NSS_SOFT;
+    SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+    SPIHandle.Init.FirstBit          = SPI_FIRSTBIT_MSB;
+    SPIHandle.Init.TIMode            = SPI_TIMODE_DISABLED;
+    SPIHandle.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLED;
+    SPIHandle.Init.CRCPolynomial     = 7;
 
-    /* Enable the CC3K_SPI  */
-    SPI_Cmd(CC3K_SPI, ENABLE);
-
-    /* Enable SYSCFG clock */
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
-
-    /* Configure IRQ pin */
-    GPIO_InitStructure.GPIO_Pin  = CC3K_IRQ_PIN;
-    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
-    GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-    GPIO_Init(CC3K_IRQ_GPIO_PORT, &GPIO_InitStructure);
-
-    /* Connect EXTI */
-    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource11);
-
-    /* Configure EXTI Line0 */
-    EXTI_InitStructure.EXTI_Line = EXTI_Line11;
-    EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-    EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
-    EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-    EXTI_Init(&EXTI_InitStructure);
-
-    /* Enable and set EXTI Line0 Interrupt to the lowest priority */
-    NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-}
-
-void SpiClose(void)
-{
-    if (sSpiInformation.pRxPacket) {
-        sSpiInformation.pRxPacket = 0;
+    /* Initialize the WLAN SPI */
+    if (HAL_SPI_Init(&SPIHandle) != HAL_OK) {
+        /* Initialization Error */
+        BREAK();
     }
 
-    tSLInformation.WlanInterruptDisable();
+    uint8_t buf[1];
+    HAL_SPI_Receive(&SPIHandle, buf, sizeof(buf), SPI_TIMEOUT);
+
+    /* Configure and enable IRQ Channel */
+    HAL_NVIC_SetPriority(WLAN_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(WLAN_IRQn);
+    HAL_Delay(500);
 }
+
 
 void SpiPauseSpi(void)
 {
-    NVIC_InitTypeDef NVIC_InitStructure;
-    NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = DISABLE;
-    NVIC_Init(&NVIC_InitStructure);
+    HAL_NVIC_DisableIRQ(WLAN_IRQn);
 }
 
 void SpiResumeSpi(void)
 {
-    NVIC_InitTypeDef NVIC_InitStructure;
-    NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-    NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStructure);
-}
-
-long TXBufferIsEmpty(void)
-{
-    return (SPI_I2S_GetFlagStatus(CC3K_SPI, SPI_I2S_FLAG_TXE) == SET);
-}
-
-long RXBufferIsEmpty(void)
-{
-    return (SPI_I2S_GetFlagStatus(CC3K_SPI, SPI_I2S_FLAG_RXNE) == RESET);
+    HAL_NVIC_EnableIRQ(WLAN_IRQn);
 }
 
 long ReadWlanInterruptPin(void)
 {
-    return GPIO_ReadInputDataBit(CC3K_IRQ_GPIO_PORT, CC3K_IRQ_PIN);
+    return HAL_GPIO_ReadPin(WLAN_IRQ_PORT, WLAN_IRQ_PIN);
 }
 
 void WriteWlanPin(unsigned char val)
 {
     if (val == WLAN_ENABLE) {
         /* Set WLAN EN high */
-        GPIO_SetBits(CC3K_EN_GPIO_PORT, CC3K_EN_PIN);
+        HAL_GPIO_WritePin(WLAN_EN_PORT, WLAN_EN_PIN, GPIO_PIN_SET);
     } else {
         /* Set WLAN EN LOW */
-        GPIO_ResetBits(CC3K_EN_GPIO_PORT, CC3K_EN_PIN);
+        HAL_GPIO_WritePin(WLAN_EN_PORT, WLAN_EN_PIN, GPIO_PIN_RESET);
     }
 }
 
@@ -284,7 +166,7 @@ void __delay_cycles(volatile int x)
 
 long SpiFirstWrite(unsigned char *ucBuf, unsigned short usLength)
 {
-    ASSERT_CS();
+    WLAN_SELECT();
 
     // Assuming we are running on 24 MHz ~50 micro delay is 1200 cycles;
     __delay_cycles(1200);
@@ -299,7 +181,7 @@ long SpiFirstWrite(unsigned char *ucBuf, unsigned short usLength)
     // From this point on - operate in a regular way
     sSpiInformation.ulSpiState = eSPI_STATE_IDLE;
 
-    DEASSERT_CS();
+    WLAN_DESELECT();
 
     return(0);
 }
@@ -345,7 +227,7 @@ long SpiWrite(unsigned char *pUserBuffer, unsigned short usLength)
         sSpiInformation.usTxPacketLength = usLength;
 
         // Assert the CS line and wait till SSI IRQ line is active and then initialize write operation
-        ASSERT_CS();
+        WLAN_SELECT();
 
         // Re-enable IRQ - if it was not disabled - this is not a problem...
         tSLInformation.WlanInterruptEnable();
@@ -356,7 +238,7 @@ long SpiWrite(unsigned char *pUserBuffer, unsigned short usLength)
 
             sSpiInformation.ulSpiState = eSPI_STATE_IDLE;
 
-            DEASSERT_CS();
+            WLAN_DESELECT();
         }
     }
 
@@ -369,33 +251,23 @@ long SpiWrite(unsigned char *pUserBuffer, unsigned short usLength)
 
 void SpiWriteDataSynchronous(unsigned char *data, unsigned short size)
 {
-    while (size) {
-        while (!TXBufferIsEmpty());
-        /* Send byte through the SPI peripheral */
-        SPI_I2S_SendData(CC3K_SPI, *data);
-
-        /* wait to receive the byte from slave */
-        while (RXBufferIsEmpty());
-
-        /* Read byte from the SPI peripheral */
-        SPI_I2S_ReceiveData(CC3K_SPI);
-        size --;
+//    HAL_SPI_Transmit(&SPIHandle, data, size, SPI_TIMEOUT);
+    for (int i = 0; i<size; i++) {
+        if (HAL_SPI_TransmitReceive(&SPIHandle, data, data, 1, SPI_TIMEOUT) != HAL_OK) {
+            BREAK();
+        }
         data++;
     }
+
 }
 
 void SpiReadDataSynchronous(unsigned char *data, unsigned short size)
 {
-    int i = 0;
     unsigned char data_to_send = READ;
-    for (i = 0; i<size; i++) {
-        while (!TXBufferIsEmpty());
-        /* Send byte through the SPI peripheral */
-        SPI_I2S_SendData(CC3K_SPI, data_to_send);
-        /* wait to receive the byte from slave */
-        while (RXBufferIsEmpty());
-        /* Read byte from the SPI peripheral */
-        data[i] = SPI_I2S_ReceiveData(CC3K_SPI);
+    for (int i = 0; i<size; i++) {
+        if (HAL_SPI_TransmitReceive(&SPIHandle, &data_to_send, data++, 1, SPI_TIMEOUT) != HAL_OK) {
+            BREAK();
+        }
     }
 }
 
@@ -423,7 +295,7 @@ void SpiReadHeader(void)
 void SpiTriggerRxProcessing(void)
 {
     SpiPauseSpi();
-    DEASSERT_CS();
+    WLAN_DESELECT();
 
     // The magic number that resides at the end of the TX/RX buffer (1 byte after the allocated size)
     // for the purpose of detection of the overrun. If the magic number is overriten - buffer overrun
@@ -493,9 +365,12 @@ void SSIContReadOperation(void)
     }
 }
 
-void EXTI15_10_IRQHandler(void)
+void WLAN_IRQHandler(void)
 {
-    if (EXTI_GetITStatus(EXTI_Line11) != RESET) {
+    if (__HAL_GPIO_EXTI_GET_FLAG(WLAN_EXTI_LINE)) {
+        /* Clear the EXTI pending bit */
+        __HAL_GPIO_EXTI_CLEAR_FLAG(WLAN_EXTI_LINE);
+
         switch (sSpiInformation.ulSpiState) {
             case eSPI_STATE_POWERUP:
                 /* This means IRQ line was low call a callback of HCI Layer to inform on event */
@@ -505,7 +380,7 @@ void EXTI15_10_IRQHandler(void)
                 sSpiInformation.ulSpiState = eSPI_STATE_READ_IRQ;
 
                 /* IRQ line goes down - we are start reception */
-                ASSERT_CS();
+                WLAN_SELECT();
 
                 // Wait for TX/RX Compete which will come as DMA interrupt
                 SpiReadHeader();
@@ -519,11 +394,8 @@ void EXTI15_10_IRQHandler(void)
 
                 sSpiInformation.ulSpiState = eSPI_STATE_IDLE;
 
-                DEASSERT_CS();
+                WLAN_DESELECT();
                 break;
         }
-
-        /* Clear the EXTI line 0 pending bit */
-        EXTI_ClearITPendingBit(EXTI_Line11);
     }
 }
