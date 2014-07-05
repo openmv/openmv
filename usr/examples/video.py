@@ -1,27 +1,25 @@
 import sensor, avi, time
 
-def test():
-  sensor.reset()
-  # Set sensor parameters
-  sensor.set_brightness(-2)
-  sensor.set_contrast(1)
+REC_LENGTH = 15 # recording length in seconds
 
-  sensor.set_framesize(sensor.QVGA)
-  sensor.set_pixformat(sensor.JPEG)
+# Set sensor parameters
+sensor.reset()
+sensor.set_brightness(-2)
+sensor.set_contrast(1)
 
-  vid = avi.AVI("1:/test1.avi", 320, 240, 15)
+sensor.set_framesize(sensor.QVGA)
+sensor.set_pixformat(sensor.JPEG)
 
-  start = time.ticks()
-  clock = time.clock()
+vid = avi.AVI("1:/test.avi", 320, 240, 15)
 
-  while (True):
+start = time.ticks()
+clock = time.clock()
+
+while ((time.ticks()-start) < (REC_LENGTH*1000)):
     clock.tick()
     # capture and store frame
     image = sensor.snapshot()
     vid.add_frame(image)
-    # record 15 seconds
-    if (time.ticks()-start) > 15000:
-      break
     print(clock.fps())
 
-  vid.flush()
+vid.flush()
