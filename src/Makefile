@@ -79,6 +79,7 @@ OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/TransformFunctions/*.o)
 
 OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
+OBJ += $(wildcard $(BUILD)/$(CC3K_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
 
@@ -171,6 +172,8 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_image.o                              \
 	py_time.o                               \
 	py_clock.o                              \
+	py_wlan.o                               \
+	py_socket.o                             \
 	)
 
 ###################################################
@@ -193,7 +196,7 @@ all: | $(BUILD)
 	$(MAKE) -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR)
 	$(MAKE) -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)
 	$(MAKE) -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
-#	$(MAKE) -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
+	$(MAKE) -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
 	$(MAKE) -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET) V=1
 	$(MAKE) -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
 	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(BUILD)/$(BIN).elf

@@ -37,6 +37,8 @@ SRCS += $(addprefix py/,    \
 	py_image.c              \
 	py_time.c               \
 	py_clock.c              \
+	py_wlan.c               \
+	py_socket.c             \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))

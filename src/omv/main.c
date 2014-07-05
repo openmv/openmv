@@ -39,6 +39,8 @@
 #include "py_sensor.h"
 #include "py_image.h"
 #include "py_file.h"
+#include "py_wlan.h"
+#include "py_socket.h"
 
 int errno;
 static FATFS fatfs0;
@@ -148,11 +150,12 @@ typedef struct {
 } module_t;
 
 static const module_t exported_modules[] ={
-    {MP_QSTR_sensor,py_sensor_init},
-    {MP_QSTR_led,   py_led_init},
-    {MP_QSTR_time,  py_time_init},
-//    {MP_QSTR_gpio,  py_gpio_init},
-//    {MP_QSTR_spi,   py_spi_init},
+    {MP_QSTR_sensor,    py_sensor_init},
+    {MP_QSTR_led,       py_led_init},
+    {MP_QSTR_time,      py_time_init},
+    {MP_QSTR_wlan,      py_wlan_init},
+    {MP_QSTR_socket,    py_socket_init},
+//  {MP_QSTR_spi,   py_spi_init},
     {0, NULL}
 };
 
