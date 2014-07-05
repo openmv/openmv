@@ -251,12 +251,13 @@ void SpiReceiveHandler(void *pvBuffer)
 //!
 //
 //*****************************************************************************
-
-void
+#define TIMEOUT (500000)
+int
 wlan_start(unsigned short usPatchesAvailableAtHost)
 {
 	
 	unsigned long ulSpiIRQState;
+	unsigned long volatile timeout;
 	
 	tSLInformation.NumberOfSentPackets = 0;
 	tSLInformation.NumberOfReleasedPackets = 0;
@@ -281,30 +282,41 @@ wlan_start(unsigned short usPatchesAvailableAtHost)
 	// ASIC 1273 chip enable: toggle WLAN EN line
 	tSLInformation.WriteWlanPin( WLAN_ENABLE );
 	
+    timeout = TIMEOUT;
 	if (ulSpiIRQState)
 	{
 		// wait till the IRQ line goes low
-		while(tSLInformation.ReadWlanInterruptPin() != 0)
+		while(tSLInformation.ReadWlanInterruptPin() != 0 && --timeout)
 		{
 		}
 	}
 	else
 	{
 		// wait till the IRQ line goes high and than low
-		while(tSLInformation.ReadWlanInterruptPin() == 0)
+		while(tSLInformation.ReadWlanInterruptPin() == 0 && --timeout)
 		{
 		}
-		
-		while(tSLInformation.ReadWlanInterruptPin() != 0)
+
+        if (timeout == 0) {
+            return -1;
+        }
+
+		timeout = TIMEOUT;
+		while(tSLInformation.ReadWlanInterruptPin() != 0 && --timeout)
 		{
 		}
 	}
-	
+
+    if (timeout ==0) {
+        return -1;
+    }
+
 	SimpleLink_Init_Start(usPatchesAvailableAtHost);
 	
 	// Read Buffer's size and finish
 	hci_command_send(HCI_CMND_READ_BUFFER_SIZE, tSLInformation.pucTxCommandBuffer, 0);
 	SimpleLinkWaitEvent(HCI_CMND_READ_BUFFER_SIZE, 0);
+    return 0;
 }
 
 
