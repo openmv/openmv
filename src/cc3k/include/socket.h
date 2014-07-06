@@ -94,9 +94,6 @@ extern "C" {
 #define  SOCK_ON                0			// socket non-blocking mode	is enabled		
 #define  SOCK_OFF               1			// socket blocking mode is enabled
 
-#define  TCP_NODELAY            0x0001
-#define  TCP_BSDURGENT          0x7000
-
 #define  MAX_PACKET_SIZE        1500
 #define  MAX_LISTEN_QUEUE       4
 
@@ -113,27 +110,27 @@ extern "C" {
 	
 typedef struct _in_addr_t
 {
-    unsigned long s_addr;                   // load with inet_aton()
+    UINT32 s_addr;                   // load with inet_aton()
 } in_addr;
 
 typedef struct _sockaddr_t
 {
-    unsigned short int    sa_family;
-    unsigned char     sa_data[14];
+    UINT16   sa_family;
+    UINT8     sa_data[14];
 } sockaddr;
 
 typedef struct _sockaddr_in_t
 {
-    short            sin_family;            // e.g. AF_INET
-    unsigned short   sin_port;              // e.g. htons(3490)
+    INT16            sin_family;            // e.g. AF_INET
+    UINT16   sin_port;              // e.g. htons(3490)
     in_addr          sin_addr;              // see struct in_addr, below
-    char             sin_zero[8];           // zero this if you want to
+    CHAR             sin_zero[8];           // zero this if you want to
 } sockaddr_in;
 
-typedef unsigned long socklen_t;
+typedef UINT32 socklen_t;
 
-// The fd_set member is required to be an array of longs.
-typedef long int __fd_mask;
+// The fd_set member is required to be an array of INT32s.
+typedef INT32 __fd_mask;
 
 // It's easier to assume 8-bit bytes than to get CHAR_BIT.
 #define __NFDBITS               (8 * sizeof (__fd_mask))
@@ -151,7 +148,7 @@ typedef struct
 //   the array isn't too big.
 #define __FD_ZERO(set)                               \
   do {                                                \
-    unsigned int __i;                                 \
+    UINT16 __i;                                 \
     fd_set *__arr = (set);                            \
     for (__i = 0; __i < sizeof (fd_set) / sizeof (__fd_mask); ++__i) \
       __FDS_BITS (__arr)[__i] = 0;                    \
@@ -168,16 +165,16 @@ typedef struct
 
 //Use in case of Big Endian only
   
-#define htonl(A)    ((((unsigned long)(A) & 0xff000000) >> 24) | \
-                     (((unsigned long)(A) & 0x00ff0000) >> 8) | \
-                     (((unsigned long)(A) & 0x0000ff00) << 8) | \
-                     (((unsigned long)(A) & 0x000000ff) << 24))
+#define htonl(A)    ((((UINT32)(A) & 0xff000000) >> 24) | \
+                     (((UINT32)(A) & 0x00ff0000) >> 8) | \
+                     (((UINT32)(A) & 0x0000ff00) << 8) | \
+                     (((UINT32)(A) & 0x000000ff) << 24))
 
 #define ntohl                   htonl
 
 //Use in case of Big Endian only
-#define htons(A)     ((((unsigned long)(A) & 0xff00) >> 8) | \
-                      (((unsigned long)(A) & 0x00ff) << 8))
+#define htons(A)     ((((UINT32)(A) & 0xff00) >> 8) | \
+                      (((UINT32)(A) & 0x00ff) << 8))
 
 
 #define ntohs                   htons
@@ -218,7 +215,7 @@ typedef struct
 //!          application layer to obtain a socket handle.
 //
 //*****************************************************************************
-extern int socket(long domain, long type, long protocol);
+extern INT16 socket(INT32 domain, INT32 type, INT32 protocol);
 
 //*****************************************************************************
 //
@@ -231,7 +228,7 @@ extern int socket(long domain, long type, long protocol);
 //!  @brief  The socket function closes a created socket.
 //
 //*****************************************************************************
-extern long closesocket(long sd);
+extern INT32 closesocket(INT32 sd);
 
 //*****************************************************************************
 //
@@ -277,7 +274,7 @@ extern long closesocket(long sd);
 //! @sa     socket ; bind ; listen
 //
 //*****************************************************************************
-extern long accept(long sd, sockaddr *addr, socklen_t *addrlen);
+extern INT32 accept(INT32 sd, sockaddr *addr, socklen_t *addrlen);
 
 //*****************************************************************************
 //
@@ -301,7 +298,7 @@ extern long accept(long sd, sockaddr *addr, socklen_t *addrlen);
 //! @sa     socket ; accept ; listen
 //
 //*****************************************************************************
-extern long bind(long sd, const sockaddr *addr, long addrlen);
+extern INT32 bind(INT32 sd, const sockaddr *addr, INT32 addrlen);
 
 //*****************************************************************************
 //
@@ -325,7 +322,7 @@ extern long bind(long sd, const sockaddr *addr, long addrlen);
 //! @note   On this version, backlog is not supported
 //
 //*****************************************************************************
-extern long listen(long sd, long backlog);
+extern INT32 listen(INT32 sd, INT32 backlog);
 
 //*****************************************************************************
 //
@@ -346,7 +343,7 @@ extern long listen(long sd, long backlog);
 //
 //*****************************************************************************
 #ifndef CC3000_TINY_DRIVER 
-extern int gethostbyname(char * hostname, unsigned short usNameLen, unsigned long* out_ip_addr);
+extern INT16 gethostbyname(CHAR * hostname, UINT16 usNameLen, UINT32* out_ip_addr);
 #endif
 
 
@@ -378,7 +375,7 @@ extern int gethostbyname(char * hostname, unsigned short usNameLen, unsigned lon
 //!  @sa socket
 //
 //*****************************************************************************
-extern long connect(long sd, const sockaddr *addr, long addrlen);
+extern INT32 connect(INT32 sd, const sockaddr *addr, INT32 addrlen);
 
 //*****************************************************************************
 //
@@ -417,7 +414,7 @@ extern long connect(long sd, const sockaddr *addr, long addrlen);
 //!  @sa socket
 //
 //*****************************************************************************
-extern int select(long nfds, fd_set *readsds, fd_set *writesds,
+extern INT16 select(INT32 nfds, fd_set *readsds, fd_set *writesds,
                   fd_set *exceptsds, struct timeval *timeout);
 
 //*****************************************************************************
@@ -458,7 +455,7 @@ extern int select(long nfds, fd_set *readsds, fd_set *writesds,
 //!		       1. SOCKOPT_RECV_TIMEOUT (optname)
 //!			      SOCKOPT_RECV_TIMEOUT configures recv and recvfrom timeout 
 //!           in milliseconds.
-//!		        In that case optval should be pointer to unsigned long.
+//!		        In that case optval should be pointer to UINT32.
 //!		       2. SOCKOPT_NONBLOCK (optname). sets the socket non-blocking mode on 
 //!           or off.
 //!		        In that case optval should be SOCK_ON or SOCK_OFF (optval).
@@ -467,7 +464,7 @@ extern int select(long nfds, fd_set *readsds, fd_set *writesds,
 //
 //*****************************************************************************
 #ifndef CC3000_TINY_DRIVER 
-extern int setsockopt(long sd, long level, long optname, const void *optval,
+extern INT16 setsockopt(INT32 sd, INT32 level, INT32 optname, const void *optval,
                       socklen_t optlen);
 #endif
 //*****************************************************************************
@@ -508,7 +505,7 @@ extern int setsockopt(long sd, long level, long optname, const void *optval,
 //!		       1. SOCKOPT_RECV_TIMEOUT (optname)
 //!			      SOCKOPT_RECV_TIMEOUT configures recv and recvfrom timeout 
 //!           in milliseconds.
-//!		        In that case optval should be pointer to unsigned long.
+//!		        In that case optval should be pointer to UINT32.
 //!		       2. SOCKOPT_NONBLOCK (optname). sets the socket non-blocking mode on 
 //!           or off.
 //!		        In that case optval should be SOCK_ON or SOCK_OFF (optval).
@@ -516,7 +513,7 @@ extern int setsockopt(long sd, long level, long optname, const void *optval,
 //!  @sa setsockopt
 //
 //*****************************************************************************
-extern int getsockopt(long sd, long level, long optname, void *optval,
+extern INT16 getsockopt(INT32 sd, INT32 level, INT32 optname, void *optval,
                       socklen_t *optlen);
 
 //*****************************************************************************
@@ -540,7 +537,7 @@ extern int getsockopt(long sd, long level, long optname, void *optval,
 //!  @Note On this version, only blocking mode is supported.
 //
 //*****************************************************************************
-extern int recv(long sd, void *buf, long len, long flags);
+extern INT16 recv(INT32 sd, void *buf, INT32 len, INT32 flags);
 
 //*****************************************************************************
 //
@@ -570,7 +567,7 @@ extern int recv(long sd, void *buf, long len, long flags);
 //!  @Note On this version, only blocking mode is supported.
 //
 //*****************************************************************************
-extern int recvfrom(long sd, void *buf, long len, long flags, sockaddr *from, 
+extern INT16 recvfrom(INT32 sd, void *buf, INT32 len, INT32 flags, sockaddr *from, 
                     socklen_t *fromlen);
 
 //*****************************************************************************
@@ -595,7 +592,7 @@ extern int recvfrom(long sd, void *buf, long len, long flags, sockaddr *from,
 //
 //*****************************************************************************
 
-extern int send(long sd, const void *buf, long len, long flags);
+extern INT16 send(INT32 sd, const void *buf, INT32 len, INT32 flags);
 
 //*****************************************************************************
 //
@@ -623,7 +620,7 @@ extern int send(long sd, const void *buf, long len, long flags);
 //
 //*****************************************************************************
 
-extern int sendto(long sd, const void *buf, long len, long flags, 
+extern INT16 sendto(INT32 sd, const void *buf, INT32 len, INT32 flags, 
                   const sockaddr *to, socklen_t tolen);
 
 //*****************************************************************************
@@ -633,7 +630,7 @@ extern int sendto(long sd, const void *buf, long len, long flags,
 //!  @param[in] mdnsEnabled         flag to enable/disable the mDNS feature
 //!  @param[in] deviceServiceName   Service name as part of the published
 //!                                 canonical domain name
-//!  @param[in] deviceServiceNameLength   Length of the service name
+//!  @param[in] deviceServiceNameLength   Length of the service name - up to 32 chars
 //!  
 //!
 //!  @return   On success, zero is returned, return SOC_ERROR if socket was not 
@@ -642,7 +639,21 @@ extern int sendto(long sd, const void *buf, long len, long flags,
 //!  @brief    Set CC3000 in mDNS advertiser mode in order to advertise itself.
 //
 //*****************************************************************************
-extern int mdnsAdvertiser(unsigned short mdnsEnabled, char * deviceServiceName, unsigned short deviceServiceNameLength);
+extern INT16 mdnsAdvertiser(UINT16 mdnsEnabled, CHAR * deviceServiceName, UINT16 deviceServiceNameLength);
+
+
+//*****************************************************************************
+//
+//!  getmssvalue
+//!
+//!  @param[in] sd         socket descriptor
+//!
+//!  @return   On success, returns the MSS value of a TCP connection
+//!
+//!  @brief    Returns the MSS value of a TCP connection according to the socket descriptor
+//
+//*****************************************************************************
+extern UINT16 getmssvalue (INT32 sd);
 
 //*****************************************************************************
 //

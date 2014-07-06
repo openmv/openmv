@@ -40,10 +40,12 @@
 
 #define READ                3
 #define WRITE               1
+
 #define HI(value)           (((value) & 0xFF00) >> 8)
 #define LO(value)           ((value) & 0x00FF)
-#define HEADERS_SIZE_EVNT   (SPI_HEADER_SIZE + 5)
+
 #define SPI_TIMEOUT         (1000)
+#define HEADERS_SIZE_EVNT   (SPI_HEADER_SIZE + 5)
 
 /* SPI bus states */
 #define eSPI_STATE_POWERUP                  (0)
@@ -63,7 +65,7 @@ typedef struct {
     unsigned long  ulSpiState;
     unsigned char *pTxPacket;
     unsigned char *pRxPacket;
-}tSpiInformation;
+} tSpiInformation;
 tSpiInformation sSpiInformation;
 
 // The magic number that resides at the end of the TX/RX buffer (1 byte after the allocated size)
@@ -130,6 +132,8 @@ void SpiOpen(gcSpiHandleRx pfRxHandler)
     HAL_NVIC_SetPriority(WLAN_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(WLAN_IRQn);
     HAL_Delay(500);
+
+    tSLInformation.WlanInterruptEnable();
 }
 
 
@@ -251,7 +255,6 @@ long SpiWrite(unsigned char *pUserBuffer, unsigned short usLength)
 
 void SpiWriteDataSynchronous(unsigned char *data, unsigned short size)
 {
-//    HAL_SPI_Transmit(&SPIHandle, data, size, SPI_TIMEOUT);
     for (int i = 0; i<size; i++) {
         if (HAL_SPI_TransmitReceive(&SPIHandle, data, data, 1, SPI_TIMEOUT) != HAL_OK) {
             BREAK();

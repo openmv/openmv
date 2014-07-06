@@ -69,7 +69,7 @@ extern "C" {
 //!	 
 //!
 //*****************************************************************************
-extern void aes_encrypt(unsigned char *state, unsigned char *key);
+extern void aes_encrypt(UINT8 *state, UINT8 *key);
 
 //*****************************************************************************
 //
@@ -87,7 +87,7 @@ extern void aes_encrypt(unsigned char *state, unsigned char *key);
 //!	 
 //!
 //*****************************************************************************
-extern void aes_decrypt(unsigned char *state, unsigned char *key);
+extern void aes_decrypt(UINT8 *state, UINT8 *key);
 
 
 //*****************************************************************************
@@ -104,7 +104,7 @@ extern void aes_decrypt(unsigned char *state, unsigned char *key);
 //!	 
 //!
 //*****************************************************************************
-extern signed long aes_read_key(unsigned char *key);
+extern INT32 aes_read_key(UINT8 *key);
 
 //*****************************************************************************
 //
@@ -119,8 +119,12 @@ extern signed long aes_read_key(unsigned char *key);
 //!	 
 //!
 //*****************************************************************************
-extern signed long aes_write_key(unsigned char *key);
+extern INT32 aes_write_key(UINT8 *key);
 
 #endif //CC3000_UNENCRYPTED_SMART_CONFIG
+
+#ifdef  __cplusplus
+}
+#endif // __cplusplus
 
 #endif

@@ -102,6 +102,7 @@ extern "C" {
 #define  HCI_CMND_RECVFROM      0x100D
 #define  HCI_CMND_GETHOSTNAME   0x1010
 #define  HCI_CMND_MDNS_ADVERTISE	   0x1011
+#define  HCI_CMND_GETMSSVALUE		0x1012
 
 
 #define HCI_DATA_BASE								0x80
@@ -167,7 +168,8 @@ extern "C" {
 #define  HCI_EVNT_GETSOCKOPT          HCI_CMND_GETSOCKOPT
 #define  HCI_EVNT_BSD_GETHOSTBYNAME   HCI_CMND_GETHOSTNAME
 #define  HCI_EVNT_MDNS_ADVERTISE   HCI_CMND_MDNS_ADVERTISE
- 
+#define  HCI_EVNT_GETMSSVALUE		HCI_CMND_GETMSSVALUE	
+
 #define  HCI_EVNT_SEND          0x1003
 #define  HCI_EVNT_WRITE         0x100E
 #define  HCI_EVNT_SENDTO        0x100F
@@ -253,9 +255,9 @@ extern "C" {
 //!  @brief               Initiate an HCI command.
 //
 //*****************************************************************************
-extern unsigned short hci_command_send(unsigned short usOpcode, 
-                                   unsigned char *ucArgs,
-                                   unsigned char ucArgsLength);
+extern UINT16 hci_command_send(UINT16 usOpcode, 
+                                   UINT8 *ucArgs,
+                                   UINT8 ucArgsLength);
  
 
 //*****************************************************************************
@@ -273,12 +275,12 @@ extern unsigned short hci_command_send(unsigned short usOpcode,
 //!  @brief              Initiate an HCI data write operation
 //
 //*****************************************************************************
-extern long hci_data_send(unsigned char ucOpcode,
-                                      unsigned char *ucArgs,
-                                      unsigned short usArgsLength,
-                                      unsigned short usDataLength,
-                                      const unsigned char *ucTail,
-                                      unsigned short usTailLength);
+extern INT32 hci_data_send(UINT8 ucOpcode,
+                                      UINT8 *ucArgs,
+                                      UINT16 usArgsLength,
+                                      UINT16 usDataLength,
+                                      const UINT8 *ucTail,
+                                      UINT16 usTailLength);
 
 
 //*****************************************************************************
@@ -295,8 +297,8 @@ extern long hci_data_send(unsigned char ucOpcode,
 //!  @brief              Prepare HCI header and initiate an HCI data write operation
 //
 //*****************************************************************************
-extern void hci_data_command_send(unsigned short usOpcode, unsigned char *pucBuff,
-                     unsigned char ucArgsLength, unsigned short ucDataLength);
+extern void hci_data_command_send(UINT16 usOpcode, UINT8 *pucBuff,
+                     UINT8 ucArgsLength, UINT16 ucDataLength);
 
 //*****************************************************************************
 //
@@ -312,7 +314,7 @@ extern void hci_data_command_send(unsigned short usOpcode, unsigned char *pucBuf
 //!  @brief               Prepare HCI header and initiate an HCI patch write operation
 //
 //*****************************************************************************
-extern void hci_patch_send(unsigned char ucOpcode, unsigned char *pucBuff, char *patch, unsigned short usDataLength);
+extern void hci_patch_send(UINT8 ucOpcode, UINT8 *pucBuff, CHAR *patch, UINT16 usDataLength);
 
 
 

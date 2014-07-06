@@ -6,6 +6,7 @@
 #include "socket.h"
 #include "nvmem.h"
 #include "netapp.h"
+#include "patch_prog.h"
 #endif //__CC3K_H__
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-*  host_driver_version.h  - CC3000 Host Driver Implementation.
+*  data_types.h  - CC3000 Host Driver Implementation.
 *  Copyright (C) 2011 Texas Instruments Incorporated - http://www.ti.com/
 *
 *  Redistribution and use in source and binary forms, with or without
@@ -32,24 +32,76 @@
 *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *
 *****************************************************************************/
-#ifndef __HOST_DRIVER_VERSION_H__
-#define __HOST_DRIVER_VERSION_H__
+#ifndef __DATA_TYPES__
+#define __DATA_TYPES__
 
-#define DRIVER_VERSION_NUMBER   15
-
-
-
-#endif // __VERSION_H__
-
-
-
-
-
-
+//*****************************************************************************
+//
+// If building with a C++ compiler, make all of the definitions in this header
+// have a C binding.
+//
+//*****************************************************************************
+#ifdef	__cplusplus
+extern "C" {
+#endif
 
 
+#ifndef NULL
+#define NULL        		(0)
+#endif
 
+#ifndef FALSE
+#define FALSE       		(0)
+#endif
 
+#ifndef TRUE
+#define TRUE        		(!FALSE)
+#endif
 
+#ifndef OK
+#define OK          		(0)
+#endif
 
+#ifndef _INT8
+#define _INT8
+typedef signed char   		INT8;
+#endif
 
+#ifndef _UINT8
+#define _UINT8
+typedef unsigned char   	UINT8;
+#endif
+
+#ifndef _INT16
+#define _INT16
+typedef signed short  		INT16;
+#endif
+
+#ifndef _UINT16
+#define _UINT16
+typedef unsigned short   	UINT16;
+#endif
+
+#ifndef _BOOLEAN
+#define _BOOLEAN
+typedef unsigned char   	BOOLEAN;
+#endif
+
+#ifndef _INT32
+#define _INT32
+typedef signed long   		INT32;
+#endif
+
+#ifndef _UINT32
+#define _UINT32
+typedef unsigned long   	UINT32;
+#endif
+
+typedef int             	INT;
+typedef char            	CHAR;
+
+#ifdef	__cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* __DATA_TYPE__ */

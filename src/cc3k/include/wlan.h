@@ -141,7 +141,7 @@ extern void wlan_init(		tWlanCB	 	sWlanCB,
 //!
 //
 //*****************************************************************************
-extern int wlan_start(unsigned short usPatchesAvailableAtHost);
+extern int wlan_start(UINT16 usPatchesAvailableAtHost);
 
 //*****************************************************************************
 //
@@ -169,7 +169,7 @@ extern void wlan_stop(void);
 //!  @param    ssid       up to 32 bytes and is ASCII SSID of the AP
 //!  @param    ssid_len   length of the SSID
 //!  @param    bssid      6 bytes specified the AP bssid
-//!  @param    key        up to 16 bytes specified the AP security key
+//!  @param    key        up to 32 bytes specified the AP security key
 //!  @param    key_len    key length 
 //!
 //!  @return     On success, zero is returned. On error, negative is returned. 
@@ -189,10 +189,10 @@ extern void wlan_stop(void);
 //
 //*****************************************************************************
 #ifndef CC3000_TINY_DRIVER
-extern long wlan_connect(unsigned long ulSecType, char *ssid, long ssid_len,
-                        unsigned char *bssid, unsigned char *key, long key_len);
+extern INT32 wlan_connect(UINT32 ulSecType, CHAR *ssid, INT32 ssid_len,
+                        UINT8 *bssid, UINT8 *key, INT32 key_len);
 #else
-extern long wlan_connect(char *ssid, long ssid_len);
+extern INT32 wlan_connect(CHAR *ssid, INT32 ssid_len);
 
 #endif
 
@@ -208,7 +208,7 @@ extern long wlan_connect(char *ssid, long ssid_len);
 //
 //*****************************************************************************
 
-extern long wlan_disconnect(void);
+extern INT32 wlan_disconnect(void);
 
 //*****************************************************************************
 //
@@ -225,7 +225,8 @@ extern long wlan_disconnect(void);
 //!  @param    ucPf_OrKey       security key
 //!  @param    ulPassPhraseLen  security key length for WPA\WPA2
 //!
-//!  @return    On success, zero is returned. On error, -1 is returned        
+//!  @return    On success, index (1-7) of the stored profile is returned.         
+//!				On error, -1 is returned.        
 //!
 //!  @brief     When auto start is enabled, the device connects to
 //!             station from the profiles table. Up to 7 profiles are supported. 
@@ -238,15 +239,15 @@ extern long wlan_disconnect(void);
 //
 //*****************************************************************************
 
-extern long wlan_add_profile(unsigned long ulSecType, unsigned char* ucSsid,
-										 unsigned long ulSsidLen, 
-										 unsigned char *ucBssid,
-                                         unsigned long ulPriority,
-                                         unsigned long ulPairwiseCipher_Or_Key,
-                                         unsigned long ulGroupCipher_TxKeyLen,
-                                         unsigned long ulKeyMgmt,
-                                         unsigned char* ucPf_OrKey,
-                                         unsigned long ulPassPhraseLen);
+extern INT32 wlan_add_profile(UINT32 ulSecType, UINT8* ucSsid,
+										 UINT32 ulSsidLen, 
+										 UINT8 *ucBssid,
+                                         UINT32 ulPriority,
+                                         UINT32 ulPairwiseCipher_Or_Key,
+                                         UINT32 ulGroupCipher_TxKeyLen,
+                                         UINT32 ulKeyMgmt,
+                                         UINT8* ucPf_OrKey,
+                                         UINT32 ulPassPhraseLen);
 
 
 
@@ -265,7 +266,7 @@ extern long wlan_add_profile(unsigned long ulSecType, unsigned char* ucSsid,
 //!  @sa        wlan_add_profile 
 //
 //*****************************************************************************
-extern long wlan_ioctl_del_profile(unsigned long ulIndex);
+extern INT32 wlan_ioctl_del_profile(UINT32 ulIndex);
 
 //*****************************************************************************
 //
@@ -288,7 +289,7 @@ extern long wlan_ioctl_del_profile(unsigned long ulIndex);
 //!            masked (1), the device will not send the masked event to host. 
 //
 //*****************************************************************************
-extern long wlan_set_event_mask(unsigned long ulMask);
+extern INT32 wlan_set_event_mask(UINT32 ulMask);
 
 //*****************************************************************************
 //
@@ -302,7 +303,7 @@ extern long wlan_set_event_mask(unsigned long ulMask);
 //!  @brief    get wlan status: disconnected, scanning, connecting or connected
 //
 //*****************************************************************************
-extern long wlan_ioctl_statusget(void);
+extern INT32 wlan_ioctl_statusget(void);
 
 
 //*****************************************************************************
@@ -336,10 +337,10 @@ extern long wlan_ioctl_statusget(void);
 //!  @sa         wlan_add_profile , wlan_ioctl_del_profile 
 //
 //*****************************************************************************
-extern long wlan_ioctl_set_connection_policy(
-                                        unsigned long should_connect_to_open_ap,
-                                        unsigned long should_use_fast_connect,
-                                        unsigned long ulUseProfiles);
+extern INT32 wlan_ioctl_set_connection_policy(
+                                        UINT32 should_connect_to_open_ap,
+                                        UINT32 should_use_fast_connect,
+                                        UINT32 ulUseProfiles);
 
 //*****************************************************************************
 //
@@ -376,8 +377,8 @@ extern long wlan_ioctl_set_connection_policy(
 //*****************************************************************************
 
 
-extern long wlan_ioctl_get_scan_results(unsigned long ulScanTimeout,
-                                       unsigned char *ucResults);
+extern INT32 wlan_ioctl_get_scan_results(UINT32 ulScanTimeout,
+                                       UINT8 *ucResults);
 
 //*****************************************************************************
 //
@@ -403,7 +404,7 @@ extern long wlan_ioctl_get_scan_results(unsigned long ulScanTimeout,
 //!  @param   uiSNRThreshold    NSR threshold. Saved: yes (Default: 0)
 //!  @param   uiDefaultTxPower  probe Tx power. Saved: yes (Default: 205)
 //!  @param   aiIntervalList    pointer to array with 16 entries (16 channels) 
-//!           each entry (unsigned long) holds timeout between periodic scan 
+//!           each entry (UINT32) holds timeout between periodic scan 
 //!           (connection scan) - in milliseconds. Saved: yes. Default 2000ms.
 //!
 //!  @return    On success, zero is returned. On error, -1 is returned        
@@ -415,13 +416,13 @@ extern long wlan_ioctl_get_scan_results(unsigned long ulScanTimeout,
 //!  @sa        wlan_ioctl_get_scan_results 
 //
 //*****************************************************************************
-extern long wlan_ioctl_set_scan_params(unsigned long uiEnable, unsigned long 
-											 uiMinDwellTime,unsigned long uiMaxDwellTime,
-										   unsigned long uiNumOfProbeRequests,
-											 unsigned long uiChannelMask,
-										   long iRSSIThreshold,unsigned long uiSNRThreshold,
-										   unsigned long uiDefaultTxPower, 
-											 unsigned long *aiIntervalList);
+extern INT32 wlan_ioctl_set_scan_params(UINT32 uiEnable, UINT32 
+											 uiMinDwellTime,UINT32 uiMaxDwellTime,
+										   UINT32 uiNumOfProbeRequests,
+											 UINT32 uiChannelMask,
+										   INT32 iRSSIThreshold,UINT32 uiSNRThreshold,
+										   UINT32 uiDefaultTxPower, 
+											 UINT32 *aiIntervalList);
 
                                            
 //*****************************************************************************
@@ -444,7 +445,7 @@ extern long wlan_ioctl_set_scan_params(unsigned long uiEnable, unsigned long
 //!  @sa      wlan_smart_config_set_prefix , wlan_smart_config_stop
 //
 //*****************************************************************************                                        
-extern long wlan_smart_config_start(unsigned long algoEncryptedFlag);
+extern INT32 wlan_smart_config_start(UINT32 algoEncryptedFlag);
 
 
 //*****************************************************************************
@@ -460,7 +461,7 @@ extern long wlan_smart_config_start(unsigned long algoEncryptedFlag);
 //!  @sa      wlan_smart_config_start , wlan_smart_config_set_prefix
 //
 //*****************************************************************************
-extern long wlan_smart_config_stop(void);
+extern INT32 wlan_smart_config_stop(void);
 
 //*****************************************************************************
 //
@@ -478,7 +479,7 @@ extern long wlan_smart_config_stop(void);
 //!  @sa      wlan_smart_config_start , wlan_smart_config_stop
 //
 //*****************************************************************************
-extern long wlan_smart_config_set_prefix(char* cNewPrefix);
+extern INT32 wlan_smart_config_set_prefix(CHAR* cNewPrefix);
 
 //*****************************************************************************
 //
@@ -494,7 +495,7 @@ extern long wlan_smart_config_set_prefix(char* cNewPrefix);
 //!           behavior is as defined by connection policy.
 //
 //*****************************************************************************
-extern long wlan_smart_config_process(void);
+extern INT32 wlan_smart_config_process(void);
 
 //*****************************************************************************
 //
