@@ -192,7 +192,13 @@ long SpiFirstWrite(unsigned char *ucBuf, unsigned short usLength)
 
 long SpiWrite(unsigned char *pUserBuffer, unsigned short usLength)
 {
-    unsigned char ucPad = !(usLength & 0x0001);
+    unsigned char ucPad = 0;
+
+    // Figure out the total length of the packet in order to figure out if there 
+    // is padding or not
+    if(!(usLength & 0x0001)) {
+        ucPad++;
+    }
 
     pUserBuffer[0] = WRITE;
     pUserBuffer[1] = HI(usLength + ucPad);
