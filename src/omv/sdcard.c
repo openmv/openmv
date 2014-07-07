@@ -82,23 +82,19 @@ bool sdcard_is_present(void)
 /*-----------------------------------------------------------------------*/
 static BYTE spi_send(BYTE out)
 {
-    if (HAL_SPI_Transmit(&SPIHandle, &out, 1, SPI_TIMEOUT) != HAL_OK) {
+    if (HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SPI_TIMEOUT) != HAL_OK) {
         BREAK();
     }
+
     return out;
 }
 
 static bool spi_send_buff(const BYTE *buff, uint32_t size)
 {
-    return HAL_SPI_Transmit(&SPIHandle, (void*)buff, size , SPI_TIMEOUT)== HAL_OK;
+    return HAL_SPI_TransmitReceive(&SPIHandle, (void*)buff, (void*)buff, size , SPI_TIMEOUT)== HAL_OK;
 }
 
-static BYTE spi_recv()
-{
-    BYTE out=0xFF;
-    HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SPI_TIMEOUT);
-    return out;
-}
+#define spi_recv() spi_send(0xFF)
 
 static bool spi_recv_buff(BYTE *buff, uint32_t size)
 {
@@ -302,7 +298,7 @@ void sdcard_init(void)
     if (ty) {
         /* Initialization succeeded */
         Stat &= ~STA_NOINIT; /* Clear STA_NOINIT */
-        sdcard_hw_init(SPI_BAUDRATEPRESCALER_2);
+        sdcard_hw_init(SPI_BAUDRATEPRESCALER_4);
     } else {
         /* Initialization failed */
         BREAK();
