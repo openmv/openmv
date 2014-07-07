@@ -3,8 +3,9 @@
 #include <socket.h>
 #include <inet_pton.h>
 #include <inet_ntop.h>
-#define MAX_ADDRSTRLEN    (128)
-#define MAX_PACKET_LENGTH (1024)
+#define MAX_ADDRSTRLEN      (128)
+#define MAX_RX_PACKET       (CC3000_RX_BUFFER_SIZE-CC3000_MINIMAL_RX_SIZE-1)
+#define MAX_TX_PACKET       (CC3000_TX_BUFFER_SIZE-CC3000_MINIMAL_TX_SIZE-1)
 
 typedef struct {
     mp_obj_base_t base;
@@ -22,9 +23,9 @@ static machine_int_t socket_send(mp_obj_t self_in, const void *buf, machine_uint
     int bytes = 0;
     socket_t *self = self_in;
 
-    /* send packets to client */
+    /* send packets */
     while (bytes < size) {
-        int n = MIN((size-bytes), MAX_PACKET_LENGTH);
+        int n = MIN((size-bytes), MAX_TX_PACKET);
         if (send(self->fd, buf+bytes, n, 0) < 0) {
             *errcode = errno;
             break;
@@ -40,9 +41,9 @@ static machine_int_t socket_recv(mp_obj_t self_in, void *buf, machine_uint_t siz
     int bytes = 0;
     socket_t *self = self_in;
 
-    /* send packets to client */
+    /* recv packets */
     while (bytes < size) {
-        int n = MIN((size-bytes), MAX_PACKET_LENGTH);
+        int n = MIN((size-bytes), MAX_RX_PACKET);
         if (recv(self->fd, buf+bytes, n, 0) < 0) {
             *errcode = errno;
             break;
