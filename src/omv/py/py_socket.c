@@ -37,11 +37,19 @@ static machine_int_t socket_send(mp_obj_t self_in, const void *buf, machine_uint
 
 static machine_int_t socket_recv(mp_obj_t self_in, void *buf, machine_uint_t size, int *errcode)
 {
+    int bytes = 0;
     socket_t *self = self_in;
-    int bytes = recv(self->fd, buf, size, 0);
-    if (bytes < 0) {
-        *errcode = errno;
+
+    /* send packets to client */
+    while (bytes < size) {
+        int n = MIN((size-bytes), MAX_PACKET_LENGTH);
+        if (recv(self->fd, buf+bytes, n, 0) < 0) {
+            *errcode = errno;
+            break;
+        }
+        bytes += n;
     }
+
     return bytes;
 }
 

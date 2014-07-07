@@ -1,10 +1,12 @@
 #ifndef __MP_H__
 #define __MP_H__
-#include "std.h"
+#include <std.h>
+#include <string.h>
+#include <stm32f4xx_hal.h>
+#include "mpconfig.h"
 #include "misc.h"
 #include "systick.h"
 #include "pendsv.h"
-#include "mpconfig.h"
 #include "qstr.h"
 #include "misc.h"
 #include "nlr.h"
@@ -19,7 +21,6 @@
 #include "pybstdio.h"
 #include "readline.h"
 #include "pyexec.h"
-#include "uart.h"
 #include "extint.h"
 #include "usb.h"
 #include "storage.h"
