@@ -135,20 +135,41 @@ static mp_obj_t mod_wlan_connected()
     return mp_const_false;
 }
 
+static mp_obj_t mod_wlan_patch_version()
+{
+    uint8_t pver[2];
+    mp_obj_tuple_t *t_pver = mp_obj_new_tuple(2, NULL);
+
+    nvmem_read_sp_version(pver);
+    t_pver->items[0] = mp_obj_new_int(pver[0]);
+    t_pver->items[1] = mp_obj_new_int(pver[1]);
+    return t_pver;
+}
+
+static mp_obj_t mod_wlan_patch_program()
+{
+    patch_prog_start();
+    return mp_const_none;
+}
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_0 (py_wlan_init_obj,         mod_wlan_init);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0 (py_wlan_ifconfig_obj,     mod_wlan_ifconfig);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_wlan_connect_obj, 1,   mod_wlan_connect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0 (py_wlan_connected_obj,    mod_wlan_connected);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0 (py_wlan_patch_version_obj,mod_wlan_patch_version);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0 (py_wlan_patch_program_obj,mod_wlan_patch_program);
 
 static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_wlan) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_WEP),         MP_OBJ_NEW_SMALL_INT(WLAN_SEC_WEP)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_WPA),         MP_OBJ_NEW_SMALL_INT(WLAN_SEC_WPA)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_WPA2),        MP_OBJ_NEW_SMALL_INT(WLAN_SEC_WPA2)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init),        (mp_obj_t)&py_wlan_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_ifconfig),    (mp_obj_t)&py_wlan_ifconfig_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_connect),     (mp_obj_t)&py_wlan_connect_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_connected),   (mp_obj_t)&py_wlan_connected_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_wlan) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_WEP),             MP_OBJ_NEW_SMALL_INT(WLAN_SEC_WEP)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_WPA),             MP_OBJ_NEW_SMALL_INT(WLAN_SEC_WPA)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_WPA2),            MP_OBJ_NEW_SMALL_INT(WLAN_SEC_WPA2)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_init),            (mp_obj_t)&py_wlan_init_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_ifconfig),        (mp_obj_t)&py_wlan_ifconfig_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_connect),         (mp_obj_t)&py_wlan_connect_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_connected),       (mp_obj_t)&py_wlan_connected_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_patch_version),   (mp_obj_t)&py_wlan_patch_version_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_patch_program),   (mp_obj_t)&py_wlan_patch_program_obj },
 };
 
 static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
