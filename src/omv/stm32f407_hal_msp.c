@@ -188,7 +188,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
             /* Configure WLAN IRQ */
             GPIO_InitStructure.Pin      = WLAN_IRQ_PIN;
             GPIO_InitStructure.Pull     = GPIO_PULLUP;
-            GPIO_InitStructure.Speed    = GPIO_SPEED_MEDIUM;
+            GPIO_InitStructure.Speed    = GPIO_SPEED_LOW;
             GPIO_InitStructure.Mode     = GPIO_MODE_IT_FALLING;
             HAL_GPIO_Init(WLAN_IRQ_PORT, &GPIO_InitStructure);
 

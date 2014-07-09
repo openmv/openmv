@@ -298,7 +298,7 @@ void sdcard_init(void)
     if (ty) {
         /* Initialization succeeded */
         Stat &= ~STA_NOINIT; /* Clear STA_NOINIT */
-        sdcard_hw_init(SPI_BAUDRATEPRESCALER_4);
+        sdcard_hw_init(SPI_BAUDRATEPRESCALER_2);
     } else {
         /* Initialization failed */
         BREAK();
@@ -325,6 +325,8 @@ bool sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
         sector *= SDCARD_BLOCK_SIZE;    /* Convert to byte address if needed */
     }
 
+    __disable_irq();
+
     if (count == 1) {    /* Single block read */
         if (send_cmd(CMD17, sector) == 0)    { /* READ_SINGLE_BLOCK */
             if (rcvr_datablock(buff, SDCARD_BLOCK_SIZE)) {
@@ -344,6 +346,8 @@ bool sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
     }
     release_spi();
 
+    __enable_irq();
+
     return count ? false: true;
 }
 
@@ -356,6 +360,8 @@ bool sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t count)
     if (!(CardType & CT_BLOCK)) {
         sector *= SDCARD_BLOCK_SIZE;    /* Convert to byte address if needed */
     }
+
+    __disable_irq();
 
     if (count == 1) {    /* Single block write */
         if ((send_cmd(CMD24, sector) == 0)    /* WRITE_BLOCK */
@@ -377,6 +383,7 @@ bool sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t count)
     }
     release_spi();
 
+    __enable_irq();
     return count ? false: true;
 }
 

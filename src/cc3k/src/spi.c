@@ -31,12 +31,13 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <string.h>
+#include <mdefs.h>
+#include <pincfg.h>
+#include <stm32f4xx_hal.h>
 #include "hci.h"
 #include "spi.h"
 #include "evnt_handler.h"
-#include <pincfg.h>
-#include <stm32f4xx_hal.h>
-#include <mdefs.h>
 
 #define READ                3
 #define WRITE               1
@@ -113,7 +114,7 @@ void SpiOpen(gcSpiHandleRx pfRxHandler)
     SPIHandle.Init.CLKPolarity       = SPI_POLARITY_LOW;
     SPIHandle.Init.CLKPhase          = SPI_PHASE_2EDGE;
     SPIHandle.Init.NSS               = SPI_NSS_SOFT;
-    SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+    SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
     SPIHandle.Init.FirstBit          = SPI_FIRSTBIT_MSB;
     SPIHandle.Init.TIMode            = SPI_TIMODE_DISABLED;
     SPIHandle.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLED;
@@ -261,23 +262,21 @@ long SpiWrite(unsigned char *pUserBuffer, unsigned short usLength)
 
 void SpiWriteDataSynchronous(unsigned char *data, unsigned short size)
 {
-    for (int i = 0; i<size; i++) {
-        if (HAL_SPI_TransmitReceive(&SPIHandle, data, data, 1, SPI_TIMEOUT) != HAL_OK) {
-            BREAK();
-        }
-        data++;
+    __disable_irq();
+    if (HAL_SPI_TransmitReceive(&SPIHandle, data, data, size, SPI_TIMEOUT) != HAL_OK) {
+        BREAK();
     }
-
+    __enable_irq();
 }
 
 void SpiReadDataSynchronous(unsigned char *data, unsigned short size)
 {
-    unsigned char data_to_send = READ;
-    for (int i = 0; i<size; i++) {
-        if (HAL_SPI_TransmitReceive(&SPIHandle, &data_to_send, data++, 1, SPI_TIMEOUT) != HAL_OK) {
-            BREAK();
-        }
+    memset(data, READ, size);
+    __disable_irq();
+    if (HAL_SPI_TransmitReceive(&SPIHandle, data, data, size, SPI_TIMEOUT) != HAL_OK) {
+        BREAK();
     }
+    __enable_irq();
 }
 
 void SpiReadPacket(void)
