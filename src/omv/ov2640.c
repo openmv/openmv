@@ -545,6 +545,19 @@ static int set_gainceiling(enum sensor_gainceiling gainceiling)
     return ret;
 }
 
+static int set_quality(int qs)
+{
+    int ret=0;
+
+    /* Switch to DSP register bank */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+
+    /* Write QS register */
+    ret |= SCCB_Write(QS, qs);
+
+    return ret;
+}
+
 int ov2640_init(struct sensor_dev *sensor)
 {
     /* set HSYNC/VSYNC/PCLK polarity */
@@ -562,5 +575,6 @@ int ov2640_init(struct sensor_dev *sensor)
     sensor->set_saturation= set_saturation;
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
+    sensor->set_quality = set_quality;
     return 0;
 }

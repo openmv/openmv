@@ -72,15 +72,16 @@ struct sensor_dev {
     enum sensor_framerate framerate;
     enum sensor_gainceiling gainceiling;
     /* Sensor function pointers */
-    int  (*reset)          ();
-    int  (*set_pixformat)  (enum sensor_pixformat pixformat);
-    int  (*set_framesize)  (enum sensor_framesize framesize);
-    int  (*set_framerate)  (enum sensor_framerate framerate);
-    int  (*set_contrast)   (int level);
-    int  (*set_brightness) (int level);
-    int  (*set_saturation) (int level);
-    int  (*set_exposure)   (int exposure);
+    int  (*reset)           ();
+    int  (*set_pixformat)   (enum sensor_pixformat pixformat);
+    int  (*set_framesize)   (enum sensor_framesize framesize);
+    int  (*set_framerate)   (enum sensor_framerate framerate);
+    int  (*set_contrast)    (int level);
+    int  (*set_brightness)  (int level);
+    int  (*set_saturation)  (int level);
+    int  (*set_exposure)    (int exposure);
     int  (*set_gainceiling) (enum sensor_gainceiling gainceiling);
+    int  (*set_quality)     (int quality);
 };
 
 /**
@@ -191,4 +192,12 @@ int sensor_set_exposure(int exposure);
  * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
  */
 int sensor_set_gainceiling(enum sensor_gainceiling gainceiling);
+/**
+ * Set the quantization scale factor, controls JPEG quality.
+ *
+ * @param sensor A pointer to the sensor device handle.
+ * @param quality 0-255.
+ * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
+ */
+int sensor_set_quality(int qs);
 #endif /* __SENSOR_H__ */

@@ -10,6 +10,7 @@ sensor.set_contrast(1)
 # Set sensor pixel format
 sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.JPEG)
+sensor.set_quality(98)
 
 clock = time.clock()
 

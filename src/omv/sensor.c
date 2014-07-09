@@ -474,3 +474,14 @@ int sensor_set_gainceiling(enum sensor_gainceiling gainceiling)
     sensor.gainceiling = gainceiling;
     return 0;
 }
+
+int sensor_set_quality(int qs)
+{
+    /* call the sensor specific function */
+    if (sensor.set_quality == NULL
+        || sensor.set_quality(qs) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
