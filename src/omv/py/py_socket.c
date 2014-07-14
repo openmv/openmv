@@ -1,18 +1,28 @@
 #include <mp.h>
 #include <cc3000_common.h>
+#include <evnt_handler.h>
 #include <socket.h>
 #include <inet_pton.h>
 #include <inet_ntop.h>
+#include <py_wlan.h>
+#include <py_socket.h>
+#include <py_assert.h>
+#define MAX_FD              (8)
 #define MAX_ADDRSTRLEN      (128)
 #define MAX_RX_PACKET       (CC3000_RX_BUFFER_SIZE-CC3000_MINIMAL_RX_SIZE-1)
 #define MAX_TX_PACKET       (CC3000_TX_BUFFER_SIZE-CC3000_MINIMAL_TX_SIZE-1)
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
 
-typedef struct {
-    mp_obj_base_t base;
-    int fd;
-} socket_t;
+#define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
 
-static const mp_obj_type_t socket_type;
+const mp_obj_type_t socket_type;
+
 void socket_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
 {
     printf("<%s %p>", mp_obj_get_type_str(self_in), self_in);
@@ -23,10 +33,18 @@ static machine_int_t socket_send(mp_obj_t self_in, const void *buf, machine_uint
     int bytes = 0;
     socket_t *self = self_in;
 
+    if (wlan_get_fd_state(self->fd)) {
+        closesocket(self->fd);
+        *errcode = 32;
+        return 0;
+    }
+
     /* send packets */
     while (bytes < size) {
-        int n = MIN((size-bytes), MAX_TX_PACKET);
-        if (send(self->fd, buf+bytes, n, 0) < 0) {
+        int n = min((size-bytes), MAX_TX_PACKET);
+        n = send(self->fd, buf+bytes, n, 0);
+        if (n <= 0) {
+            bytes = n;
             *errcode = errno;
             break;
         }
@@ -41,10 +59,20 @@ static machine_int_t socket_recv(mp_obj_t self_in, void *buf, machine_uint_t siz
     int bytes = 0;
     socket_t *self = self_in;
 
+    if (wlan_get_fd_state(self->fd)) {
+        closesocket(self->fd);
+        *errcode = 0;
+        return 0;
+    }
+
     /* recv packets */
     while (bytes < size) {
-        int n = MIN((size-bytes), MAX_RX_PACKET);
-        if (recv(self->fd, buf+bytes, n, 0) < 0) {
+        int n = min((size-bytes), MAX_RX_PACKET);
+        n = recv(self->fd, buf+bytes, n, 0);
+        if (n == 0) {
+            break;
+        } else if (n < 0) {
+            bytes = n;
             *errcode = errno;
             break;
         }
@@ -94,20 +122,25 @@ static mp_obj_t socket_listen(mp_obj_t self_in, mp_obj_t backlog)
 
 static mp_obj_t socket_accept(mp_obj_t self_in)
 {
+    int fd;
+    socket_t *self = self_in;
+
     sockaddr addr;
     socklen_t addr_len = sizeof(sockaddr);
 
-    /* Accept incoming connection */
-    socket_t *self = self_in;
-    int fd = accept(self->fd, &addr, &addr_len);
-    if (fd < 0) {
+    // accept incoming connection
+    if ((fd = accept(self->fd, &addr, &addr_len)) < 0) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "accept failed"));
     }
 
-    /* Create new socket for client */
+    // clear socket state
+    wlan_clear_fd_state(fd);
+
+    // create new socket object
     socket_t *socket_obj = m_new_obj_with_finaliser(socket_t);
     socket_obj->base.type = (mp_obj_t)&socket_type;
     socket_obj->fd  = fd;
+
 
     char buf[MAX_ADDRSTRLEN]={0};
     if (inet_ntop(addr.sa_family,
@@ -151,8 +184,8 @@ static mp_obj_t socket_setblocking(mp_obj_t self_in, mp_obj_t blocking)
         optval = SOCK_ON;
     }
 
-    if (setsockopt(self->fd, SOL_SOCKET, SOCKOPT_ACCEPT_NONBLOCK, &optval, optlen) != 0
-        || setsockopt(self->fd, SOL_SOCKET, SOCKOPT_RECV_NONBLOCK, &optval, optlen) != 0 ) {
+    if (setsockopt(self->fd, SOL_SOCKET, SOCKOPT_RECV_NONBLOCK, &optval, optlen) != 0 ||
+        setsockopt(self->fd, SOL_SOCKET, SOCKOPT_ACCEPT_NONBLOCK, &optval, optlen) != 0 ) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "setsockopt failed"));
     }
 
@@ -176,6 +209,9 @@ static mp_obj_t socket_new(mp_obj_t domain, mp_obj_t type, mp_obj_t protocol)
         m_del_obj(socket_t, socket_obj);
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "socket failed"));
     }
+
+    // clear socket state
+    wlan_clear_fd_state(socket_obj->fd);
     return socket_obj;
 }
 
@@ -188,15 +224,15 @@ static MP_DEFINE_CONST_FUN_OBJ_1(socket_close_obj,      socket_close);
 static MP_DEFINE_CONST_FUN_OBJ_3(socket_new_obj,        socket_new);
 
 static const mp_map_elem_t socket_locals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR_send),    (mp_obj_t)&mp_stream_write_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_recv),    (mp_obj_t)&mp_stream_read_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_bind),    (mp_obj_t)&socket_bind_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_listen),  (mp_obj_t)&socket_listen_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_accept),  (mp_obj_t)&socket_accept_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_send),        (mp_obj_t)&mp_stream_write_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_recv),        (mp_obj_t)&mp_stream_read_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_bind),        (mp_obj_t)&socket_bind_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_listen),      (mp_obj_t)&socket_listen_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_accept),      (mp_obj_t)&socket_accept_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_settimeout),  (mp_obj_t)&socket_settimeout_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_setblocking), (mp_obj_t)&socket_setblocking_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_close),   (mp_obj_t)&socket_close_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR___del__), (mp_obj_t)&socket_close_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_close),       (mp_obj_t)&socket_close_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR___del__),     (mp_obj_t)&socket_close_obj },
 };
 
 static MP_DEFINE_CONST_DICT(socket_locals_dict, socket_locals_dict_table);
@@ -206,7 +242,7 @@ static const mp_stream_p_t socket_stream_p = {
     .write = socket_send,
 };
 
-static const mp_obj_type_t socket_type = {
+const mp_obj_type_t socket_type = {
     { &mp_type_type },
     .name = MP_QSTR_socket,
     .print = socket_print,

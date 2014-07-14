@@ -2,19 +2,28 @@
 #include <cc3k.h>
 #include <stm32f4xx_hal.h>
 #include "led.h"
-
 #define IS_WLAN_SEC(sec) \
     (sec>WLAN_SEC_UNSEC && sec<=WLAN_SEC_WPA2)
 #define MAX_PACKET_LENGTH (1024)
-int __errno;
+
+static volatile int fd_state=0;
 static volatile int ip_obtained = 0;
 static volatile int wlan_connected = 0;
+
+int wlan_get_fd_state(int fd)
+{
+    return (fd_state & (1<<fd));
+}
+
+void wlan_clear_fd_state(int fd)
+{
+    // reset socket state
+    fd_state &= ~(1<<fd);
+}
 
 void sWlanCallback(long lEventType, char * data, unsigned char length)
 {
     switch (lEventType) {
-        case HCI_EVNT_WLAN_ASYNC_SIMPLE_CONFIG_DONE:
-            break;
         case HCI_EVNT_WLAN_UNSOL_CONNECT:
             wlan_connected = 1;
             break;
@@ -23,10 +32,12 @@ void sWlanCallback(long lEventType, char * data, unsigned char length)
             wlan_connected = 0;
             led_state(LED_RED, 1);
             break;
-        case HCI_EVENT_CC3000_CAN_SHUT_DOWN:
-            break;
         case HCI_EVNT_WLAN_UNSOL_DHCP:
             ip_obtained = 1;
+            break;
+        case HCI_EVNT_BSD_TCP_CLOSE_WAIT:
+            // mark socket for closure
+            fd_state |= (1<<((uint8_t)data[0]));
             break;
     }
 }
@@ -44,10 +55,13 @@ static mp_obj_t mod_wlan_init()
     }
 
     /* Set connection policy */
-//  wlan_ioctl_set_connection_policy(0, 0, 0);
+    // wlan_ioctl_set_connection_policy(0, 0, 0);
 
     /* Mask out all non-required events from the CC3000 */
-    wlan_set_event_mask(HCI_EVNT_WLAN_KEEPALIVE|HCI_EVNT_WLAN_UNSOL_INIT|HCI_EVNT_WLAN_ASYNC_PING_REPORT);
+    wlan_set_event_mask(HCI_EVNT_WLAN_KEEPALIVE|
+                        HCI_EVNT_WLAN_UNSOL_INIT|
+                        HCI_EVNT_WLAN_ASYNC_PING_REPORT|
+                        HCI_EVNT_WLAN_ASYNC_SIMPLE_CONFIG_DONE);
 
     return mp_const_none;
 }
