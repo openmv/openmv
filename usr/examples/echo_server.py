@@ -1,13 +1,15 @@
 '''
-    Simple Echo server
+    Simple echo server
 '''
-import led,time
-import wlan, socket
+import wlan
+import socket
+import select
+import led, time
 
-SSID=''         # Network SSID
-KEY=''          # Network key
-HOST = ''       # Use first available interface
-PORT = 8000     # Arbitrary non-privileged port
+SSID=''     # Network SSID
+KEY=''      # Network key
+HOST = ''   # Use first available interface
+PORT = 8000 # Arbitrary non-privileged port
 
 led.off(led.RED)
 led.off(led.BLUE)
@@ -41,11 +43,28 @@ s.setblocking(True)
 s.bind((HOST, PORT))
 s.listen(5)
 
-print ('Waiting for connections..')
-client, addr = s.accept()
-print ('Connected to ' + addr[0] + ':' + str(addr[1]))
+while(True):
+    print ('Waiting for connections..')
+    client, addr = s.accept()
+    print ('Connected to ' + addr[0] + ':' + str(addr[1]))
 
-while True:
-    buf = client.recv(128)
-    print ('client: '+buff)
-    s.send(buf)
+    # Set client socket non-blocking
+    client.setblocking(False)
+
+    while (True):
+        rfds, wfds, xfds = select.select([client], [], [client], 1.0)
+        if xfds:
+            print("socket exception")
+            break
+        elif rfds:
+            buf = client.recv(1024)
+            if len(buf) == 0: # peer has shutdown
+                print("socket closed")
+                client.close()
+                break
+            print ("recv:"+buf)
+            client.send(buf)
+        elif wfds:
+            print ("wfds")
+        else:
+            print ("timeout")
