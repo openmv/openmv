@@ -41,6 +41,7 @@
 #include "py_file.h"
 #include "py_wlan.h"
 #include "py_socket.h"
+#include "py_select.h"
 
 int errno;
 static FATFS fatfs0;
@@ -118,11 +119,16 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_vcp_is_connected_obj, py_vcp_is_connected);
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
-"import led, sensor\n"
-"led.on(led.BLUE)\n"
-"sensor.set_pixformat(sensor.RGB565)\n"
+"import led, time\n"
 "while (vcp_is_connected()==False):\n"
-"  image = sensor.snapshot()\n"
+"   led.on(led.BLUE)\n"
+"   time.sleep(150)\n"
+"   led.off(led.BLUE)\n"
+"   time.sleep(100)\n"
+"   led.on(led.BLUE)\n"
+"   time.sleep(150)\n"
+"   led.off(led.BLUE)\n"
+"   time.sleep(600)\n"
 ;
 
 static const char fresh_pybcdc_inf[] =
@@ -155,6 +161,7 @@ static const module_t exported_modules[] ={
     {MP_QSTR_time,      py_time_init},
     {MP_QSTR_wlan,      py_wlan_init},
     {MP_QSTR_socket,    py_socket_init},
+    {MP_QSTR_select,    py_select_init},
 //  {MP_QSTR_spi,   py_spi_init},
     {0, NULL}
 };
