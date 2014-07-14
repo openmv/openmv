@@ -174,6 +174,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_clock.o                              \
 	py_wlan.o                               \
 	py_socket.o                             \
+	py_select.o                             \
 	)
 
 ###################################################
