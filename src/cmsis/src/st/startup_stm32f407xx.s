@@ -76,7 +76,15 @@ defined in linker script */
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
-Reset_Handler:  
+Reset_Handler:
+
+EnableCCM:
+  /* enable ccm clock */
+  ldr r0,=0x40023830
+  ldr r3,[r0]
+  orr r3, r3, #1048576 /* 0x100000 */
+  str r3,[r0]
+
   ldr   sp, =_estack     /* set stack pointer */
 
 /* Copy the data segment initializers from flash to SRAM */  

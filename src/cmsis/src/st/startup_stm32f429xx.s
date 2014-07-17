@@ -76,7 +76,15 @@ defined in linker script */
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
-Reset_Handler: 
+Reset_Handler:
+
+EnableCCM:
+  /* Enable CCM Clock */
+  LDR R0,=0x40023830
+  LDR R3,[R0]
+  ORR R3, R3, #1048576 /* 0x100000 */
+  STR R3,[R0]
+
   ldr   sp, =_estack       /* set stack pointer */
  
 /* Copy the data segment initializers from flash to SRAM */  
@@ -110,7 +118,7 @@ LoopFillZerobss:
 /* Call the clock system intitialization function.*/
   bl  SystemInit   
 /* Call static constructors */
-    bl __libc_init_array
+/*   bl __libc_init_array */
 /* Call the application's entry point.*/
   bl  main
   bx  lr    
