@@ -159,9 +159,8 @@
 void SystemInit(void)
 {
   /* FPU settings ------------------------------------------------------------*/
-  #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
-    SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
-  #endif
+  SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
+
   /* Reset the RCC clock configuration to the default reset state ------------*/
   /* Set HSION bit */
   RCC->CR |= (uint32_t)0x00000001;
@@ -182,7 +181,7 @@ void SystemInit(void)
   RCC->CIR = 0x00000000;
 
 #if defined (DATA_IN_ExtSRAM) || defined (DATA_IN_ExtSDRAM)
-  SystemInit_ExtMemCtl(); 
+  SystemInit_ExtMemCtl();
 #endif /* DATA_IN_ExtSRAM || DATA_IN_ExtSDRAM */
 
   /* Configure the Vector Table location add offset address ------------------*/
@@ -428,65 +427,65 @@ void SystemInit_ExtMemCtl(void)
 /*-- GPIOs Configuration -----------------------------------------------------*/
    /* Enable GPIOD, GPIOE, GPIOF and GPIOG interface clock */
   RCC->AHB1ENR   |= 0x00000078;
-  
+
   /* Connect PDx pins to FMC Alternate function */
   GPIOD->AFR[0]  = 0x00CCC0CC;
   GPIOD->AFR[1]  = 0xCCCCCCCC;
-  /* Configure PDx pins in Alternate function mode */  
+  /* Configure PDx pins in Alternate function mode */
   GPIOD->MODER   = 0xAAAA0A8A;
-  /* Configure PDx pins speed to 100 MHz */  
+  /* Configure PDx pins speed to 100 MHz */
   GPIOD->OSPEEDR = 0xFFFF0FCF;
-  /* Configure PDx pins Output type to push-pull */  
+  /* Configure PDx pins Output type to push-pull */
   GPIOD->OTYPER  = 0x00000000;
-  /* No pull-up, pull-down for PDx pins */ 
+  /* No pull-up, pull-down for PDx pins */
   GPIOD->PUPDR   = 0x00000000;
 
   /* Connect PEx pins to FMC Alternate function */
   GPIOE->AFR[0]  = 0xC00CC0CC;
   GPIOE->AFR[1]  = 0xCCCCCCCC;
-  /* Configure PEx pins in Alternate function mode */ 
+  /* Configure PEx pins in Alternate function mode */
   GPIOE->MODER   = 0xAAAA828A;
-  /* Configure PEx pins speed to 100 MHz */ 
+  /* Configure PEx pins speed to 100 MHz */
   GPIOE->OSPEEDR = 0xFFFFC3CF;
-  /* Configure PEx pins Output type to push-pull */  
+  /* Configure PEx pins Output type to push-pull */
   GPIOE->OTYPER  = 0x00000000;
-  /* No pull-up, pull-down for PEx pins */ 
+  /* No pull-up, pull-down for PEx pins */
   GPIOE->PUPDR   = 0x00000000;
 
   /* Connect PFx pins to FMC Alternate function */
   GPIOF->AFR[0]  = 0x00CCCCCC;
   GPIOF->AFR[1]  = 0xCCCC0000;
-  /* Configure PFx pins in Alternate function mode */   
+  /* Configure PFx pins in Alternate function mode */
   GPIOF->MODER   = 0xAA000AAA;
-  /* Configure PFx pins speed to 100 MHz */ 
+  /* Configure PFx pins speed to 100 MHz */
   GPIOF->OSPEEDR = 0xFF000FFF;
-  /* Configure PFx pins Output type to push-pull */  
+  /* Configure PFx pins Output type to push-pull */
   GPIOF->OTYPER  = 0x00000000;
-  /* No pull-up, pull-down for PFx pins */ 
+  /* No pull-up, pull-down for PFx pins */
   GPIOF->PUPDR   = 0x00000000;
 
   /* Connect PGx pins to FMC Alternate function */
   GPIOG->AFR[0]  = 0x00CCCCCC;
   GPIOG->AFR[1]  = 0x000000C0;
-  /* Configure PGx pins in Alternate function mode */ 
+  /* Configure PGx pins in Alternate function mode */
   GPIOG->MODER   = 0x00085AAA;
-  /* Configure PGx pins speed to 100 MHz */ 
+  /* Configure PGx pins speed to 100 MHz */
   GPIOG->OSPEEDR = 0x000CAFFF;
-  /* Configure PGx pins Output type to push-pull */  
+  /* Configure PGx pins Output type to push-pull */
   GPIOG->OTYPER  = 0x00000000;
-  /* No pull-up, pull-down for PGx pins */ 
+  /* No pull-up, pull-down for PGx pins */
   GPIOG->PUPDR   = 0x00000000;
-  
-/*-- FMC/FSMC Configuration --------------------------------------------------*/                                                                               
+
+/*-- FMC/FSMC Configuration --------------------------------------------------*/
   /* Enable the FMC/FSMC interface clock */
   RCC->AHB3ENR         |= 0x00000001;
-  
-#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx)|| defined(STM32F439xx) 
+
+#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx)|| defined(STM32F439xx)
   /* Configure and enable Bank1_SRAM2 */
   FMC_Bank1->BTCR[2]  = 0x00001011;
   FMC_Bank1->BTCR[3]  = 0x00000201;
   FMC_Bank1E->BWTR[2] = 0x0fffffff;
-#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx */ 
+#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx */
 
 #if defined(STM32F405xx) || defined(STM32F415xx) || defined(STM32F407xx)|| defined(STM32F417xx)
   /* Configure and enable Bank1_SRAM2 */
@@ -496,18 +495,86 @@ void SystemInit_ExtMemCtl(void)
 #endif /* STM32F405xx || STM32F415xx || STM32F407xx || STM32F417xx */
 
 #endif /* DATA_IN_ExtSRAM */
-#endif /* STM32F405xx || STM32F415xx || STM32F407xx || STM32F417xx || STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx */ 
+#endif /* STM32F405xx || STM32F415xx || STM32F407xx || STM32F417xx || STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx */
 }
 #endif /* DATA_IN_ExtSRAM || DATA_IN_ExtSDRAM */
-/**
-  * @}
-  */
 
 /**
-  * @}
+  * @brief  System Clock Configuration
+  *         The system Clock is configured as follow :
+  *            System Clock source            = PLL (HSE)
+  *            SYSCLK(Hz)                     = 180000000
+  *            HCLK(Hz)                       = 180000000
+  *            AHB Prescaler                  = 1
+  *            APB1 Prescaler                 = 4
+  *            APB2 Prescaler                 = 2
+  *            HSE Frequency(Hz)              = 8000000
+  *            PLL_M                          = 8
+  *            PLL_N                          = 360
+  *            PLL_P                          = 2
+  *            PLL_Q                          = 7
+  *            VDD(V)                         = 3.3
+  *            Main regulator output voltage  = Scale1 mode
+  *            Flash Latency(WS)              = 5
+  * @param  None
+  * @retval None
   */
-  
-/**
-  * @}
-  */    
+void __fatal_error(const char *msg);
+#define Error_Handler() __fatal_error("SystemClock_Config")
+
+void SystemClock_Config(void)
+{
+  RCC_ClkInitTypeDef RCC_ClkInitStruct;
+  RCC_OscInitTypeDef RCC_OscInitStruct;
+
+  /* Enable Power Control clock */
+  __PWR_CLK_ENABLE();
+
+  /* The voltage scaling allows optimizing the power consumption when the device is
+     clocked below the maximum system frequency, to update the voltage scaling value
+     regarding system frequency refer to product datasheet.  */
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
+  /* Enable HSE Oscillator and activate PLL with HSE as source */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = HSE_VALUE/1000000;
+#ifdef STM32F429xx
+  RCC_OscInitStruct.PLL.PLLN = 336;
+#else
+  RCC_OscInitStruct.PLL.PLLN = 336;
+#endif
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 7;
+  if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    /* Initialization Error */
+    Error_Handler();
+  }
+
+#ifdef STM32F429xx
+  if(HAL_PWREx_ActivateOverDrive() != HAL_OK)
+  {
+    /* Initialization Error */
+    Error_Handler();
+  }
+#endif
+  /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
+     clocks dividers */
+  RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  {
+    /* Initialization Error */
+    Error_Handler();
+  }
+
+  SystemCoreClockUpdate();
+}
+#undef Error_Handler
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

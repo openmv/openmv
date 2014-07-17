@@ -35,7 +35,12 @@ endif
 # Compiler Flags
 CFLAGS += -std=gnu99 -Wall -Werror -mlittle-endian -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DSTM32F407xx -DHSE_VALUE=12000000
+CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000 -D$(TARGET)
+ifeq ($(TARGET), OPENMV1)
+    CFLAGS += -DSTM32F407xx
+else
+    CFLAGS += -DSTM32F429xx
+endif
 
 CFLAGS += -I. -Iinclude
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
@@ -58,22 +63,22 @@ CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 
 # Linker Flags
 
-LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard \
-          -mfpu=fpv4-sp-d16 -nostdlib -Wl,-T$(OMV_DIR)/stm32f407.ld -Wl,--gc-sections
+LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian \
+          -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections
 
-# Sources
-#SRC_C = $(addprefix $(CMSIS_DIR)/src/st/,\
-#	system_stm32f4xx.c \
-#	)
+ifeq ($(TARGET), OPENMV1)
+    LDFLAGS += -Wl,-T$(OMV_DIR)/stm32f407.ld
+else
+    LDFLAGS += -Wl,-T$(OMV_DIR)/stm32f429.ld
+endif
 
-
-OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
+#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
 OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
+OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
+OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ComplexMathFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ControllerFunctions/*.o)
-OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FilteringFunctions/*.o)
-OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/StatisticsFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/TransformFunctions/*.o)
@@ -86,7 +91,6 @@ OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
 OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	stm32f4xx_it.o          \
-	system_stm32f4xx.o      \
 	string0.o               \
 	usbd_conf.o             \
 	usbd_desc_cdc_msc.o     \
@@ -177,6 +181,18 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_select.o                             \
 	)
 
+ifeq ($(TARGET), OPENMV1)
+OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+	system_stm32f4xx.o                          \
+	startup_stm32f407xx.o                       \
+	)
+else
+OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+	system_stm32f4xx.o                          \
+	startup_stm32f429xx.o                       \
+	)
+endif
+
 ###################################################
 #Export Variables
 export CC
@@ -191,6 +207,7 @@ export CFLAGS
 export LDFLAGS
 export TOP_DIR
 export BUILD
+export TARGET
 ###################################################
 
 all: | $(BUILD)

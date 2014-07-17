@@ -33,18 +33,21 @@ void HAL_MspInit(void)
     /* Set the system clock */
     SystemClock_Config();
 
+    /* Config Systick */
+    HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
+
     /* Enable GPIO clocks */
     __GPIOA_CLK_ENABLE();
     __GPIOB_CLK_ENABLE();
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
+#ifdef OPENMV2
+    __GPIOG_CLK_ENABLE();
+#endif
 
     /* Enable DMA clocks */
     __DMA2_CLK_ENABLE();
-
-    /* Enable the CCM RAM */
-    __CCMDATARAMEN_CLK_ENABLE();
 
     /* Conigure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;

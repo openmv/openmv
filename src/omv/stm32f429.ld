@@ -1,5 +1,6 @@
 /**
- *  Linker script for STM32F4xx Devices with 1MB FLASH, 192KB RAM (64KB CCM)
+ *  Linker script for STM32F429
+ *  2 MB FLASH, 192KB RAM 64KB CCM
  */
 
 /* Entry Point */
@@ -8,15 +9,15 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 512K
+  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 2048K
   FLASH_ISR (rx)  : ORIGIN = 0x08000000, LENGTH = 16K
-  FLASH_TEXT (rx) : ORIGIN = 0x08010000, LENGTH = 448K
-  RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
+  FLASH_TEXT (rx) : ORIGIN = 0x08010000, LENGTH = 1984K
+  RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 192K
   CCM (xrw)       : ORIGIN = 0x10000000, LENGTH = 64K
 }
 
 /* Highest address of the user mode stack */
-_estack     = 0x10010000; /* Stack is allocated on CCM block */
+_estack    = 0x10010000; /* Stack is allocated on CCM block */
 
 _ram_end   = 0x10010000; /* 64KB CCM */
 

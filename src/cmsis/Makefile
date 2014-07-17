@@ -1,11 +1,17 @@
 # Sources
-SRC_S   = src/st/startup_stm32f407xx.s
+ifeq ($(TARGET), OPENMV1)
+SRC_S = src/st/startup_stm32f407xx.s
+else
+SRC_S = src/st/startup_stm32f429xx.s
+endif
+
+SRC_C   = src/st/system_stm32f4xx.c
 SRC_C  += $(wildcard src/dsp/CommonTables/*.c)
+SRC_C  += $(wildcard src/dsp/FastMathFunctions/*.c)
+SRC_C  += $(wildcard src/dsp/MatrixFunctions/*.c)
 #SRC_C  += $(wildcard src/dsp/ComplexMathFunctions/*.c)
 #SRC_C  += $(wildcard src/dsp/ControllerFunctions/*.c)
-SRC_C  += $(wildcard src/dsp/FastMathFunctions/*.c)
 #SRC_C  += $(wildcard src/dsp/FilteringFunctions/*.c)
-SRC_C  += $(wildcard src/dsp/MatrixFunctions/*.c)
 #SRC_C  += $(wildcard src/dsp/StatisticsFunctions/*.c)
 #SRC_C  += $(wildcard src/dsp/SupportFunctions/*.c)
 #SRC_C  += $(wildcard src/dsp/TransformFunctions/*.c)
