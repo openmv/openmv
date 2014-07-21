@@ -25,6 +25,7 @@ static const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_RED),     MP_OBJ_NEW_SMALL_INT(LED_RED)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_GREEN),   MP_OBJ_NEW_SMALL_INT(LED_GREEN)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_BLUE),    MP_OBJ_NEW_SMALL_INT(LED_BLUE)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IR),      MP_OBJ_NEW_SMALL_INT(LED_IR)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_on),      (mp_obj_t)&py_led_on_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_off),     (mp_obj_t)&py_led_off_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_toggle),  (mp_obj_t)&py_led_toggle_obj },

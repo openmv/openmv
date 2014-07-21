@@ -6,6 +6,9 @@ const gpio_t led_pins[] = {
     {LED_PORT, LED_RED_PIN},
     {LED_PORT, LED_GREEN_PIN},
     {LED_PORT, LED_BLUE_PIN},
+#ifdef OPENMV2
+    {LED_PORT, LED_IR_PIN},
+#endif
 };
 
 /* DCMI GPIOs */
@@ -68,7 +71,12 @@ void HAL_MspInit(void)
     for (int i=0; i<NUM_LED_PINS; i++) {
         HAL_GPIO_WritePin(led_pins[i].port,
                 led_pins[i].pin, GPIO_PIN_SET);
-
+        #ifdef OPENMV2
+        if (led_pins[i].pin==LED_IR_PIN) { //IR LED is inverted
+            HAL_GPIO_WritePin(led_pins[i].port,
+                    led_pins[i].pin, GPIO_PIN_RESET);
+        }
+        #endif
         GPIO_InitStructure.Pin = led_pins[i].pin;
         HAL_GPIO_Init(led_pins[i].port, &GPIO_InitStructure);
     }
