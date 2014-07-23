@@ -11,9 +11,19 @@ SRCS += $(addprefix ,   \
 	sensor.c            \
 	led.c               \
 	rng.c               \
-	sdcard.c            \
 	stm32f407_hal_msp.c \
    )
+
+ifeq ($(TARGET), OPENMV1)
+SRCS += $(addprefix ,   \
+	sdcard_spi.c        \
+   )
+else
+SRCS += $(addprefix ,   \
+	sdram.c             \
+	sdcard_sdio.c       \
+   )
+endif
 
 SRCS += $(addprefix img/,   \
 	blob.c                  \

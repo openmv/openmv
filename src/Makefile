@@ -150,9 +150,19 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	sensor.o                                \
 	led.o                                   \
 	rng.o                                   \
-	sdcard.o                                \
 	stm32f407_hal_msp.o                     \
 	)
+
+ifeq ($(TARGET), OPENMV1)
+OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
+	sdcard_spi.o                            \
+	)
+else
+OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
+	sdram.o                                 \
+	sdcard_sdio.o                           \
+	)
+endif
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	blob.o                                  \
