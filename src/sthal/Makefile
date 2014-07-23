@@ -22,12 +22,16 @@ stm32f4xx_hal_rcc_ex.c\
 stm32f4xx_hal_rng.c\
 stm32f4xx_hal_rtc.c\
 stm32f4xx_hal_rtc_ex.c\
+stm32f4xx_hal_sd.c\
+stm32f4xx_hal_sdram.c\
 stm32f4xx_hal_spi.c\
 stm32f4xx_hal_tim.c\
 stm32f4xx_hal_tim_ex.c\
 stm32f4xx_hal_uart.c\
 stm32f4xx_hal_usart.c\
 stm32f4xx_ll_usb.c\
+stm32f4xx_ll_sdmmc.c\
+stm32f4xx_ll_fmc.c\
 syscalls.c\
 )
 

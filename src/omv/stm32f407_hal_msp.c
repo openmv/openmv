@@ -87,6 +87,8 @@ void HAL_MspInit(void)
     GPIO_InitStructure.Speed    = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode     = GPIO_MODE_INPUT;
     HAL_GPIO_Init(SD_CD_PORT, &GPIO_InitStructure);
+
+
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
@@ -225,6 +227,88 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
             /* Deselect the CC3K CS */
             WLAN_DESELECT();
     }
+}
+
+void HAL_SD_MspInit(SD_HandleTypeDef *hsd)
+{
+    /* Enable SDIO clock */
+    __SDIO_CLK_ENABLE();
+
+    /* SDIO GPIOs configuration */
+    GPIO_InitTypeDef  GPIO_InitStructure;
+    GPIO_InitStructure.Pull      = GPIO_NOPULL;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_MEDIUM;
+    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+    GPIO_InitStructure.Alternate = GPIO_AF12_SDIO;
+
+    GPIO_InitStructure.Pin       = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
+
+    GPIO_InitStructure.Pin       = GPIO_PIN_2;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStructure);
+}
+
+void HAL_SD_MspDeInit(SD_HandleTypeDef *hsd)
+{
+    __SDIO_CLK_DISABLE();
+}
+
+void HAL_SDRAM_MspInit(SDRAM_HandleTypeDef *hsdram)
+{
+    /* Enable FMC clock */
+    __FMC_CLK_ENABLE();
+
+    /* Enable GPIO clocks */
+    __GPIOC_CLK_ENABLE();
+    __GPIOD_CLK_ENABLE();
+    __GPIOE_CLK_ENABLE();
+    __GPIOF_CLK_ENABLE();
+    __GPIOG_CLK_ENABLE();
+
+    /* SDRAM pins assignment
+      +-------------------+--------------------+--------------------+
+      | FMC_D0 <-> PD14    | FMC_A0  <-> PF0   | FMC_CLK  <-> PG8  |
+      | FMC_D1 <-> PD15    | FMC_A1  <-> PF1   | FMC_CLKE <-> PC3  |
+      | FMC_D2 <-> PD0     | FMC_A2  <-> PF2   | FMC_WE   <-> PC0  |
+      | FMC_D3 <-> PD1     | FMC_A3  <-> PF3   | FMC_CS   <-> PC2  |
+      | FMC_D4 <-> PE7     | FMC_A4  <-> PF4   | FMC_DQM  <-> PE0  |
+      | FMC_D5 <-> PE8     | FMC_A5  <-> PF5   | FMC_BA0  <-> PG4  |
+      | FMC_D6 <-> PE9     | FMC_A6  <-> PF12  | FMC_BA1  <-> PG5  |
+      | FMC_D7 <-> PE10    | FMC_A7  <-> PF13  | FMC_RAS  <-> PF11 |
+      |                    | FMC_A8  <-> PF14  | FMC_CAS  <-> PG15 |
+      |                    | FMC_A9  <-> PF15  |                   |
+      |                    | FMC_A10 <-> PG0   |                   |
+      |                    | FMC_A11 <-> PG1   |                   |
+      +-------------------+--------------------+--------------------+ */
+    /* SDRAM GPIO configuration */
+    GPIO_InitTypeDef  GPIO_Init_Structure;
+    GPIO_Init_Structure.Pull        = GPIO_NOPULL;
+    GPIO_Init_Structure.Mode        = GPIO_MODE_AF_PP;
+    GPIO_Init_Structure.Speed       = GPIO_SPEED_FAST;
+    GPIO_Init_Structure.Alternate   = GPIO_AF12_FMC;
+
+    /* GPIOC configuration */
+    GPIO_Init_Structure.Pin = GPIO_PIN_0 | GPIO_PIN_2 | GPIO_PIN_3;
+    HAL_GPIO_Init(GPIOC, &GPIO_Init_Structure);
+
+    /* GPIOD configuration */
+    GPIO_Init_Structure.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_14 | GPIO_PIN_15;
+    HAL_GPIO_Init(GPIOD, &GPIO_Init_Structure);
+
+    /* GPIOE configuration */
+    GPIO_Init_Structure.Pin = GPIO_PIN_0 | GPIO_PIN_7 | GPIO_PIN_8  | GPIO_PIN_9 | GPIO_PIN_10;
+    HAL_GPIO_Init(GPIOE, &GPIO_Init_Structure);
+
+    /* GPIOF configuration */
+    GPIO_Init_Structure.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2  | GPIO_PIN_3  |
+                              GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_11 | GPIO_PIN_12 |
+                              GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+    HAL_GPIO_Init(GPIOF, &GPIO_Init_Structure);
+
+    /* GPIOG configuration */
+    GPIO_Init_Structure.Pin = GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_4 | GPIO_PIN_5 |
+                              GPIO_PIN_8 | GPIO_PIN_15;
+    HAL_GPIO_Init(GPIOG, &GPIO_Init_Structure);
 }
 
 void HAL_MspDeInit(void)
