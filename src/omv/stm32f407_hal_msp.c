@@ -254,6 +254,7 @@ void HAL_SD_MspDeInit(SD_HandleTypeDef *hsd)
     __SDIO_CLK_DISABLE();
 }
 
+#ifdef OPENMV2
 void HAL_SDRAM_MspInit(SDRAM_HandleTypeDef *hsdram)
 {
     /* Enable FMC clock */
@@ -311,6 +312,7 @@ void HAL_SDRAM_MspInit(SDRAM_HandleTypeDef *hsdram)
                               GPIO_PIN_8 | GPIO_PIN_15;
     HAL_GPIO_Init(GPIOG, &GPIO_Init_Structure);
 }
+#endif
 
 void HAL_MspDeInit(void)
 {
