@@ -3,6 +3,7 @@ AS      = arm-none-eabi-as
 LD      = arm-none-eabi-ld
 AR      = arm-none-eabi-ar
 RM      = rm
+CCP     = arm-none-eabi-cpp
 SIZE    = arm-none-eabi-size
 STRIP   = arm-none-eabi-strip -s
 OBJCOPY = arm-none-eabi-objcopy
@@ -63,14 +64,8 @@ CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 
 # Linker Flags
 
-LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian \
-          -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections
-
-ifeq ($(TARGET), OPENMV1)
-    LDFLAGS += -Wl,-T$(OMV_DIR)/stm32f407.ld
-else
-    LDFLAGS += -Wl,-T$(OMV_DIR)/stm32f429.ld
-endif
+LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard\
+          -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/stm32f4xx.lds
 
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
 OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
@@ -227,6 +222,7 @@ all: | $(BUILD)
 	$(MAKE) -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
 	$(MAKE) -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET) V=1
 	$(MAKE) -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
+	$(CCP) -P -E $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
 	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(BUILD)/$(BIN).elf
 	$(OBJCOPY) -Obinary $(BUILD)/$(BIN).elf $(BUILD)/$(BIN).bin
 	$(SIZE) $(BUILD)/$(BIN).elf

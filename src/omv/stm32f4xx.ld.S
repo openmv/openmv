@@ -4,15 +4,51 @@
 
 /* Entry Point */
 ENTRY(Reset_Handler)
+#ifdef OPENMV1
+#define FLASH_ORIGIN    0x08000000
+#define FLASH_LENGTH    512K
+
+#define ISR_ORIGIN      0x08000000
+#define ISR_LENGTH      16K
+
+#define TEXT_ORIGIN     0x08010000
+#define TEXT_LENGTH     448K
+
+#define RAM_ORIGIN      0x20000000
+#define RAM_LENGTH      128K
+
+#define CCM_ORIGIN      0x10000000
+#define CCM_LENGTH      64K
+
+#else
+
+#define FLASH_ORIGIN    0x08000000
+#define FLASH_LENGTH    2048K
+
+#define ISR_ORIGIN      0x08000000
+#define ISR_LENGTH      16K
+
+#define TEXT_ORIGIN     0x08010000
+#define TEXT_LENGTH     1984K
+
+#define RAM_ORIGIN      0x20000000
+#define RAM_LENGTH      192K
+
+#define CCM_ORIGIN      0x10000000
+#define CCM_LENGTH      64K
+
+#define SDRAM_ORIGIN    0xC0000000
+#define SDRAM_LENGTH    16M
+#endif //OPENMV1
 
 /* Specify the memory areas */
 MEMORY
 {
-  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 512K
-  FLASH_ISR (rx)  : ORIGIN = 0x08000000, LENGTH = 16K
-  FLASH_TEXT (rx) : ORIGIN = 0x08010000, LENGTH = 448K
-  RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 128K
-  CCM (xrw)       : ORIGIN = 0x10000000, LENGTH = 64K
+  FLASH (rx)      : ORIGIN = FLASH_ORIGIN,  LENGTH = FLASH_LENGTH
+  FLASH_ISR (rx)  : ORIGIN = ISR_ORIGIN,    LENGTH = ISR_LENGTH
+  FLASH_TEXT (rx) : ORIGIN = TEXT_ORIGIN,   LENGTH = TEXT_LENGTH
+  RAM (xrw)       : ORIGIN = RAM_ORIGIN,    LENGTH = RAM_LENGTH
+  CCM (xrw)       : ORIGIN = CCM_ORIGIN,    LENGTH = CCM_LENGTH
 }
 
 /* Highest address of the user mode stack */
