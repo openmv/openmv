@@ -46,6 +46,7 @@ void HAL_MspInit(void)
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
 #ifdef OPENMV2
+    __GPIOF_CLK_ENABLE();
     __GPIOG_CLK_ENABLE();
 #endif
 
