@@ -144,7 +144,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	ov2640.o                                \
 	sensor.o                                \
 	rng.o                                   \
-	stm32f407_hal_msp.o                     \
+	stm32f4xx_hal_msp.o                     \
 	)
 
 ifeq ($(TARGET), OPENMV1)

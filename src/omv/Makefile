@@ -10,7 +10,7 @@ SRCS += $(addprefix ,   \
 	ov2640.c            \
 	sensor.c            \
 	rng.c               \
-	stm32f407_hal_msp.c \
+	stm32f4xx_hal_msp.c \
    )
 
 ifeq ($(TARGET), OPENMV1)
