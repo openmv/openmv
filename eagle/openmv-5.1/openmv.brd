@@ -1400,15 +1400,15 @@ design rules under a new name.</description>
 <attribute name="NAME" x="14.27" y="30.38" size="0.4064" layer="26" font="vector" ratio="20" rot="MR180"/>
 <attribute name="VALUE" x="12.807" y="34.13" size="0.4064" layer="26" rot="MR180"/>
 </element>
-<element name="C17" library="sfe" package="0402-CAP" value="22pF" x="15.875" y="32.004" smashed="yes" rot="MR90">
+<element name="C17" library="sfe" package="0402-CAP" value="12pF" x="15.875" y="32.004" smashed="yes" rot="MR90">
 <attribute name="NAME" x="16.7005" y="30.988" size="0.4064" layer="26" font="vector" ratio="20" rot="MR90"/>
 <attribute name="VALUE" x="14.732" y="30.9245" size="0.4064" layer="28" rot="MR90"/>
 </element>
-<element name="C18" library="sfe" package="0402-CAP" value="22pF" x="10.795" y="32.004" smashed="yes" rot="MR270">
+<element name="C18" library="sfe" package="0402-CAP" value="12pF" x="10.795" y="32.004" smashed="yes" rot="MR270">
 <attribute name="NAME" x="9.9695" y="33.274" size="0.4064" layer="26" font="vector" ratio="20" rot="MR270"/>
 <attribute name="VALUE" x="11.938" y="33.0835" size="0.4064" layer="28" rot="MR270"/>
 </element>
-<element name="C9" library="sfe" package="0402-CAP" value="1uF" x="19.177" y="30.607" rot="MR0"/>
+<element name="C9" library="sfe" package="0402-CAP" value="0.1uF" x="19.177" y="30.607" rot="MR0"/>
 <element name="SJ1" library="sfe" package="SJ_2S-TRACE" value="SOLDERJUMPERTRACE" x="8.636" y="29.337" smashed="yes" rot="MR0">
 <attribute name="NAME" x="9.906" y="29.2735" size="0.4064" layer="26" font="vector" ratio="20" rot="MR90"/>
 <attribute name="VALUE" x="9.5885" y="27.686" size="0.4064" layer="28" rot="MR0"/>

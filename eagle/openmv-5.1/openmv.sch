@@ -4919,9 +4919,9 @@ Source: Panasonic</description>
 <part name="GND19" library="SparkFun" deviceset="GND" device=""/>
 <part name="P+13" library="SparkFun" deviceset="VCC" device=""/>
 <part name="Y1" library="mux" deviceset="CRYSTAL" device="2.5X2.0"/>
-<part name="C17" library="sfe" deviceset="CAP" device="0402-CAP" value="22pF"/>
-<part name="C18" library="sfe" deviceset="CAP" device="0402-CAP" value="22pF"/>
-<part name="C9" library="sfe" deviceset="CAP" device="0402-CAP" value="1uF"/>
+<part name="C17" library="sfe" deviceset="CAP" device="0402-CAP" value="12pF"/>
+<part name="C18" library="sfe" deviceset="CAP" device="0402-CAP" value="12pF"/>
+<part name="C9" library="sfe" deviceset="CAP" device="0402-CAP" value="0.1uF"/>
 <part name="SJ1" library="sfe" deviceset="SOLDERJUMPER" device="TRACE"/>
 <part name="JP3" library="mux" deviceset="PINHD-1X2" device=""/>
 <part name="GND10" library="sfe" deviceset="GND" device=""/>
