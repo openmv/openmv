@@ -143,7 +143,6 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	ov9650.o                                \
 	ov2640.o                                \
 	sensor.o                                \
-	led.o                                   \
 	rng.o                                   \
 	stm32f407_hal_msp.o                     \
 	)
@@ -184,6 +183,8 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_wlan.o                               \
 	py_socket.o                             \
 	py_select.o                             \
+	py_gpio.o                               \
+	py_spi.o                                \
 	)
 
 ifeq ($(TARGET), OPENMV1)

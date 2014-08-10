@@ -1,4 +1,4 @@
-import sensor, imlib, lcd
+import lcd, sensor
 lcd.init()
 lcd.clear(0xFF)
 while (True):

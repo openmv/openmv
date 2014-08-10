@@ -1,6 +1,32 @@
 #include "mp.h"
-#include "led.h"
+#include "pincfg.h"
 #include "py_led.h"
+void led_init(enum led_id id)
+{
+    led_state(id, 1);
+}
+
+void led_toggle(enum led_id id)
+{
+    if (id >= 0 && id < LED_MAX) {
+        /* Invert LED state */
+        HAL_GPIO_TogglePin(led_pins[id].port, led_pins[id].pin);
+    }
+}
+
+void led_state(enum led_id id, int state)
+{
+    if (id >= 0 && id < LED_MAX) {
+        #ifdef OPENMV2
+        if (id == LED_IR) { //IR LED is inverted
+            state = !state;
+        }
+        #endif
+        HAL_GPIO_WritePin(led_pins[id].port,
+                led_pins[id].pin, (state)? GPIO_PIN_RESET:GPIO_PIN_SET);
+    }
+}
+
 static mp_obj_t py_led_on(mp_obj_t led_id) {
     led_state(mp_obj_get_int(led_id), 1);
     return mp_const_none;

@@ -1,9 +1,9 @@
 import spi, gpio
 from time import sleep
 
-rst = gpio.GPIO(gpio.PA8)
-rs  = gpio.GPIO(gpio.PC9)
-cs  = gpio.GPIO(gpio.PA15)
+rst = gpio.GPIO(gpio.PA1)
+rs  = gpio.GPIO(gpio.PA2)
+cs  = gpio.GPIO(gpio.PA7)
 
 def reset():
     rst.low()
@@ -33,7 +33,7 @@ def write_image(image):
     write_command(0x2C)
     cs.low()
     rs.high()
-    spi.write_image(image)
+    spi.write(image)
     cs.high()
 
 def init():

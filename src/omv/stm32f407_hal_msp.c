@@ -11,6 +11,35 @@ const gpio_t led_pins[] = {
 #endif
 };
 
+/* GPIOs */
+#ifdef OPENMV1
+const gpio_t gpio_pins[] = {
+    {GPIOA, GPIO_PIN_8 },
+    {GPIOA, GPIO_PIN_15},
+    {GPIOC, GPIO_PIN_9 },
+    {GPIOC, GPIO_PIN_10},
+    {GPIOC, GPIO_PIN_11},
+    {GPIOC, GPIO_PIN_12},
+    {NULL, 0}
+};
+#else
+const gpio_t gpio_pins[] = {
+    {GPIOA, GPIO_PIN_2 },
+    {GPIOA, GPIO_PIN_3 },
+    {GPIOC, GPIO_PIN_4 },
+    {GPIOC, GPIO_PIN_5 },
+    {GPIOD, GPIO_PIN_8 },
+    {GPIOD, GPIO_PIN_9 },
+    {GPIOD, GPIO_PIN_12},
+    {GPIOD, GPIO_PIN_13},
+    {GPIOE, GPIO_PIN_2 },
+    {GPIOE, GPIO_PIN_3 },
+    {GPIOE, GPIO_PIN_5 },
+    {GPIOE, GPIO_PIN_6 },
+    {NULL, 0}
+};
+#endif
+
 /* DCMI GPIOs */
 static const gpio_t dcmi_pins[] = {
     {DCMI_D0_PORT, DCMI_D0_PIN},
@@ -88,8 +117,6 @@ void HAL_MspInit(void)
     GPIO_InitStructure.Speed    = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode     = GPIO_MODE_INPUT;
     HAL_GPIO_Init(SD_CD_PORT, &GPIO_InitStructure);
-
-
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
@@ -159,6 +186,7 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 {
     GPIO_InitTypeDef GPIO_InitStructure;
+#ifdef OPENMV1
     if (hspi->Instance == SD_SPI) {
             /* Enable clock */
             SD_SPI_CLK_ENABLE();
@@ -185,7 +213,9 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
             /* De-select the Card: Chip Select high */
             SD_DESELECT();
 
-    } else if (hspi->Instance == WLAN_SPI) {
+    } else
+#endif
+    if (hspi->Instance == WLAN_SPI) {
             /* Enable clock */
             WLAN_SPI_CLK_ENABLE();
 
@@ -227,6 +257,24 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 
             /* Deselect the CC3K CS */
             WLAN_DESELECT();
+    } else if (hspi->Instance == USR_SPI) {
+            /* Enable clock */
+            USR_SPI_CLK_ENABLE();
+
+            /* Configure SPI GPIOs */
+            GPIO_InitStructure.Pull      = GPIO_NOPULL;
+            GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+            GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+            GPIO_InitStructure.Alternate = USR_SPI_AF;
+
+            GPIO_InitStructure.Pin = USR_SCLK_PIN;
+            HAL_GPIO_Init(USR_SCLK_PORT, &GPIO_InitStructure);
+
+            GPIO_InitStructure.Pin = USR_MOSI_PIN;
+            HAL_GPIO_Init(USR_MOSI_PORT, &GPIO_InitStructure);
+
+            GPIO_InitStructure.Pin = USR_MISO_PIN;
+            HAL_GPIO_Init(USR_MISO_PORT, &GPIO_InitStructure);
     }
 }
 

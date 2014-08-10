@@ -29,10 +29,10 @@
 #include "ff.h"
 #include "mdefs.h"
 
-#include "led.h"
 #include "rng.h"
 #include "sensor.h"
 #include "usbdbg.h"
+#include "sdram.h"
 
 #include "py_led.h"
 #include "py_time.h"
@@ -42,6 +42,8 @@
 #include "py_wlan.h"
 #include "py_socket.h"
 #include "py_select.h"
+#include "py_gpio.h"
+#include "py_spi.h"
 
 int errno;
 static FATFS fatfs0;
@@ -117,6 +119,12 @@ STATIC mp_obj_t py_vcp_is_connected(void ) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_vcp_is_connected_obj, py_vcp_is_connected);
 
+extern uint32_t SystemCoreClock;
+STATIC mp_obj_t py_cpu_freq(void ) {
+    return mp_obj_new_int(SystemCoreClock);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_cpu_freq_obj, py_cpu_freq);
+
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
 "import led, time\n"
@@ -159,10 +167,11 @@ static const module_t exported_modules[] ={
     {MP_QSTR_sensor,    py_sensor_init},
     {MP_QSTR_led,       py_led_init},
     {MP_QSTR_time,      py_time_init},
-    {MP_QSTR_wlan,      py_wlan_init},
-    {MP_QSTR_socket,    py_socket_init},
-    {MP_QSTR_select,    py_select_init},
-//  {MP_QSTR_spi,   py_spi_init},
+//    {MP_QSTR_wlan,      py_wlan_init},
+//    {MP_QSTR_socket,    py_socket_init},
+//    {MP_QSTR_select,    py_select_init},
+    {MP_QSTR_spi,       py_spi_init},
+    {MP_QSTR_gpio,      py_gpio_init},
     {0, NULL}
 };
 
@@ -174,7 +183,16 @@ int main(void) {
          - Global MSP (MCU Support Package) initialization
        */
     HAL_Init();
-
+#ifdef OPENMV2
+    if (sdram_init() == false) {
+        __fatal_error("could not init sdram");
+    }
+#if 0   //SDRAM test
+    if (sdram_test() == false) {
+        __fatal_error("sdram test1 failed");
+    }
+#endif
+#endif
     // basic sub-system init
     pendsv_init();
     timer_tim3_init();
@@ -332,6 +350,7 @@ soft_reset:
     mp_store_global(qstr_from_str("vcp_is_connected"), mp_make_function_n(0, py_vcp_is_connected));
     mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
     mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
+    mp_store_global(qstr_from_str("cpu_freq"), mp_make_function_n(0, py_cpu_freq));
 //    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
 //    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
 

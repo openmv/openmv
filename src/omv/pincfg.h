@@ -8,8 +8,8 @@ typedef struct {
 } gpio_t;
 
 extern const gpio_t led_pins[];
+extern const gpio_t gpio_pins[];
 #ifdef OPENMV1
-
 /* LEDs */
 #define LED_PORT                (GPIOD)
 #define LED_RED_PIN             (GPIO_PIN_4)
@@ -17,6 +17,25 @@ extern const gpio_t led_pins[];
 #define LED_BLUE_PIN            (GPIO_PIN_5)
 #define LED_ON(gpio)            (gpio.port->BSRRH = gpio.pin)
 #define LED_OFF(gpio)           (gpio.port->BSRRL = gpio.pin)
+
+/* GPIOs */
+typedef enum {
+    GPIO_PA8,
+    GPIO_PA15,
+    GPIO_PC9,
+    GPIO_PC10,
+    GPIO_PC11,
+    GPIO_PC12,
+    GPIO_ID_MAX,
+} gpio_id_t;
+
+#define GPIO_PINS_QSTR\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_P1),      MP_OBJ_NEW_SMALL_INT(GPIO_PC10)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_P2),      MP_OBJ_NEW_SMALL_INT(GPIO_PC11)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_P3),      MP_OBJ_NEW_SMALL_INT(GPIO_PC12)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_P4),      MP_OBJ_NEW_SMALL_INT(GPIO_PA15)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_P5),      MP_OBJ_NEW_SMALL_INT(GPIO_PC9 )},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_P6),      MP_OBJ_NEW_SMALL_INT(GPIO_PA8 )}
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
@@ -26,6 +45,21 @@ extern const gpio_t led_pins[];
 #define SCCB_PORT               (GPIOB)
 #define SCCB_SCL_PIN            (GPIO_PIN_8)
 #define SCCB_SDA_PIN            (GPIO_PIN_9)
+
+/* SPI */
+//TODO fix wlan init first
+//#define USR_SPI                 (SPI3)
+//#define USR_SPI_AF              (GPIO_AF6_SPI3)
+//#define USR_SCLK_PIN            (GPIO_PIN_10)
+//#define USR_MISO_PIN            (GPIO_PIN_11)
+//#define USR_MOSI_PIN            (GPIO_PIN_12)
+//
+//#define USR_SCLK_PORT           (GPIOC)
+//#define USR_MISO_PORT           (GPIOC)
+//#define USR_MOSI_PORT           (GPIOC)
+//
+//#define USR_SPI_CLK_ENABLE()    __SPI3_CLK_ENABLE()
+//#define USR_SPI_CLK_DISABLE()   __SPI3_CLK_DISABLE()
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
@@ -134,6 +168,37 @@ extern const gpio_t led_pins[];
 #define LED_ON(gpio)            (gpio.port->BSRRH = gpio.pin)
 #define LED_OFF(gpio)           (gpio.port->BSRRL = gpio.pin)
 
+/* GPIOs */
+typedef enum {
+    GPIO_PA2,
+    GPIO_PA3,
+    GPIO_PC4,
+    GPIO_PC5,
+    GPIO_PD8,
+    GPIO_PD9,
+    GPIO_PD12,
+    GPIO_PD13,
+    GPIO_PE2,
+    GPIO_PE3,
+    GPIO_PE5,
+    GPIO_PE6,
+    GPIO_ID_MAX,
+} gpio_id_t;
+
+#define GPIO_PINS_QSTR\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PA1),      MP_OBJ_NEW_SMALL_INT(GPIO_PC4)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PA2),      MP_OBJ_NEW_SMALL_INT(GPIO_PC5)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PA3),      MP_OBJ_NEW_SMALL_INT(GPIO_PA3)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PA4),      MP_OBJ_NEW_SMALL_INT(GPIO_PA2)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PA5),      MP_OBJ_NEW_SMALL_INT(GPIO_PE6)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PA6),      MP_OBJ_NEW_SMALL_INT(GPIO_PE5)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PA7),      MP_OBJ_NEW_SMALL_INT(GPIO_PE3)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PA8),      MP_OBJ_NEW_SMALL_INT(GPIO_PE2)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PB1),      MP_OBJ_NEW_SMALL_INT(GPIO_PD8)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PB2),      MP_OBJ_NEW_SMALL_INT(GPIO_PD9)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PB3),      MP_OBJ_NEW_SMALL_INT(GPIO_PD12)},\
+    { MP_OBJ_NEW_QSTR(MP_QSTR_PB4),      MP_OBJ_NEW_SMALL_INT(GPIO_PD13)}
+
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C2)
 #define SCCB_AF                 (GPIO_AF4_I2C2)
@@ -142,6 +207,20 @@ extern const gpio_t led_pins[];
 #define SCCB_PORT               (GPIOB)
 #define SCCB_SCL_PIN            (GPIO_PIN_10)
 #define SCCB_SDA_PIN            (GPIO_PIN_11)
+
+/* SPI */
+#define USR_SPI              (SPI4)
+#define USR_SPI_AF           (GPIO_AF5_SPI4)
+#define USR_SCLK_PIN         (GPIO_PIN_2)
+#define USR_MISO_PIN         (GPIO_PIN_5)
+#define USR_MOSI_PIN         (GPIO_PIN_6)
+
+#define USR_SCLK_PORT        (GPIOE)
+#define USR_MISO_PORT        (GPIOE)
+#define USR_MOSI_PORT        (GPIOE)
+
+#define USR_SPI_CLK_ENABLE()    __SPI4_CLK_ENABLE()
+#define USR_SPI_CLK_DISABLE()   __SPI4_CLK_DISABLE()
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
@@ -190,27 +269,6 @@ extern const gpio_t led_pins[];
 #define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
 #define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
 
-/* uSD */
-#define SD_SPI              (SPI2)
-#define SD_SPI_AF           (GPIO_AF5_SPI2)
-#define SD_CD_PIN           (GPIO_PIN_1)
-#define SD_CS_PIN           (GPIO_PIN_1)
-#define SD_SCLK_PIN         (GPIO_PIN_13)
-#define SD_MISO_PIN         (GPIO_PIN_2)
-#define SD_MOSI_PIN         (GPIO_PIN_3)
-
-#define SD_CD_PORT          (GPIOC)
-#define SD_CS_PORT          (GPIOC)
-#define SD_SCLK_PORT        (GPIOB)
-#define SD_MISO_PORT        (GPIOC)
-#define SD_MOSI_PORT        (GPIOC)
-
-#define SD_SPI_CLK_ENABLE()    __SPI2_CLK_ENABLE()
-#define SD_SPI_CLK_DISABLE()   __SPI2_CLK_DISABLE()
-
-#define SD_SELECT()        HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_RESET)
-#define SD_DESELECT()      HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_SET)
-
 /* Wlan */
 #define WLAN_SPI                SPI3
 #define WLAN_SPI_AF             (GPIO_AF6_SPI3)
@@ -239,6 +297,9 @@ extern const gpio_t led_pins[];
 #define WLAN_DESELECT()         HAL_GPIO_WritePin(WLAN_CS_PORT, WLAN_CS_PIN, GPIO_PIN_SET)
 
 #define __WLAN_DISABLE()        HAL_GPIO_WritePin(WLAN_EN_PORT, WLAN_EN_PIN, GPIO_PIN_RESET)
+
+#define SD_CD_PIN           (GPIO_PIN_4)
+#define SD_CD_PORT          (GPIOD)
 
 #endif //OPENMV1
 #endif //__PINCFG_H__

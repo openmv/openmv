@@ -9,7 +9,6 @@ SRCS += $(addprefix ,   \
 	ov9650.c            \
 	ov2640.c            \
 	sensor.c            \
-	led.c               \
 	rng.c               \
 	stm32f407_hal_msp.c \
    )
@@ -50,6 +49,8 @@ SRCS += $(addprefix py/,    \
 	py_wlan.c               \
 	py_socket.c             \
 	py_select.c             \
+	py_gpio.c               \
+	py_spi.c                \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
