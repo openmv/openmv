@@ -11,6 +11,7 @@ SRCS += $(addprefix ,   \
 	sensor.c            \
 	rng.c               \
 	stm32f4xx_hal_msp.c \
+	soft_i2c.c          \
    )
 
 ifeq ($(TARGET), OPENMV1)

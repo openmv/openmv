@@ -145,6 +145,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	sensor.o                                \
 	rng.o                                   \
 	stm32f4xx_hal_msp.o                     \
+	soft_i2c.o                              \
 	)
 
 ifeq ($(TARGET), OPENMV1)
