@@ -182,7 +182,7 @@ struct array *imlib_detect_objects(struct image *image, struct cascade *cascade)
         sum.h = sz.h;
 
         /* downsample using nearest neighbor */
-        imlib_scale_image(image, &img);
+        imlib_scale(image, &img, INTERP_NEAREST);
 
         /* compute a new integral image */
         imlib_integral_image(&img, &sum);
