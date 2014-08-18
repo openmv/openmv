@@ -4,7 +4,9 @@
 
 /* Entry Point */
 ENTRY(Reset_Handler)
+
 #ifdef OPENMV1
+#define HEAP_MEMORY     CCM
 #define FLASH_ORIGIN    0x08000000
 #define FLASH_LENGTH    512K
 
@@ -21,7 +23,7 @@ ENTRY(Reset_Handler)
 #define CCM_LENGTH      64K
 
 #else
-
+#define HEAP_MEMORY     SDRAM
 #define FLASH_ORIGIN    0x08000000
 #define FLASH_LENGTH    2048K
 
@@ -38,7 +40,7 @@ ENTRY(Reset_Handler)
 #define CCM_LENGTH      64K
 
 #define SDRAM_ORIGIN    0xC0000000
-#define SDRAM_LENGTH    16M
+#define SDRAM_LENGTH    15M
 #endif //OPENMV1
 
 /* Specify the memory areas */
@@ -49,19 +51,34 @@ MEMORY
   FLASH_TEXT (rx) : ORIGIN = TEXT_ORIGIN,   LENGTH = TEXT_LENGTH
   RAM (xrw)       : ORIGIN = RAM_ORIGIN,    LENGTH = RAM_LENGTH
   CCM (xrw)       : ORIGIN = CCM_ORIGIN,    LENGTH = CCM_LENGTH
+#ifdef OPENMV2
+  SDRAM (xrw)     : ORIGIN = SDRAM_ORIGIN,  LENGTH = SDRAM_LENGTH
+#endif
 }
 
-/* Highest address of the user mode stack */
+#ifdef OPENMV1
 _estack     = 0x10010000; /* Stack is allocated on CCM block */
-
-_ram_end   = 0x10010000; /* 64KB CCM */
+_ram_end    = 0x10010000; /* 64KB CCM */
+_fb_base    = 0x20000000;
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _stack_size = 0x1300; /* required amount of stack */
-_heap_size  = 0x7800; /* required amount of heap */
+_heap_size  = 0x7300; /* required amount of heap */
 _cache_size = 0x4000; /* required amount of cache */
 
-_main_ram_start = 0x20000000;
+#else
+_estack     = 0x10010000; /* Stack is allocated on CCM block */
+_ram_end    = 0xC0F00000;
+_fb_base    = 0x20000000;
+/*_fb_base    = 0xC0F00000;*/
+
+/* Generate a link error if heap and stack don't fit into RAM */
+_stack_size = 0x4000;       /* required amount of stack */
+_heap_size  = 0x00F00000;   /* required amount of heap */
+_cache_size = 0x4000;       /* required amount of cache */
+
+#endif
+
 /* Define output sections */
 SECTIONS
 {
@@ -126,14 +143,16 @@ SECTIONS
     . = . + _heap_size;
     . = ALIGN(4);
     _heap_end  = .;
-  } >CCM
+  } >HEAP_MEMORY
 
-  /* Make sure there is enough RAM left for the stack */
+  /* Make sure there is enough RAM the stack and FS cache */
   ._user_heap_stack :
   {
     . = ALIGN(4);
-    . = . + _cache_size;
     . = . + _stack_size;
+#ifdef OPENMV1
+    . = . + _cache_size;
+#endif
     . = ALIGN(4);
   } >CCM
 
