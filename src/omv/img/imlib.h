@@ -153,6 +153,12 @@ typedef struct cascade {
     int8_t *rectangles_array;
 } cascade_t;
 
+typedef enum interp {
+    INTERP_NEAREST,
+    INTERP_BILINEAR,
+    INTERP_BICUBIC
+} interp_t;
+
 /* Point functions */
 point_t *point_alloc(int x, int y);
 int point_equal(point_t *p1, point_t *p2);
@@ -179,6 +185,7 @@ void imlib_rgb_to_lab(struct color *rgb, struct color *lab);
 void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv);
 
 /* Image filtering functions */
+int  imlib_image_mean(struct image *src);
 void imlib_histeq(struct image *src);
 void imlib_median_filter(image_t *src, int r);
 void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size);
@@ -204,12 +211,15 @@ array_t *surf_match(surf_t *surf1, surf_t *surf2);
 void surf_draw_ipts(image_t *image, array_t *ipts);
 void surf_dump_ipts(array_t *ipts);
 
-void imlib_scale_image(struct image *src, struct image *dst);
+/* Drawing functions */
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);
 void imlib_draw_circle(struct image *image, int cx, int cy, int r);
-int imlib_image_mean(struct image *src);
-void imlib_subimage(struct image *src_img, struct image *dst_img, int x_off, int y_off);
-void imlib_blit(struct image *dst_img, struct image *src_img, int x_off, int y_off);
+
+/* Misc */
+void imlib_scale(struct image *src, struct image *dst, interp_t interp);
+void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off);
+void imlib_blend(struct image *src, struct image *dst, int x_off, int y_off, uint8_t alpha);
+void imlib_subimage(struct image *src, struct image *dst, int x_off, int y_off);
 
 /* Image file functions */
 int ppm_read(image_t *img, const char *path);
