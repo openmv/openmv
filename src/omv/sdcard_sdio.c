@@ -18,6 +18,8 @@ bool sdcard_is_present(void)
 
 void sdcard_init(void)
 {
+    volatile int retry=10;
+
     /* SDIO initial configuration */
     SDHandle.Instance                 = SDIO;
     SDHandle.Init.ClockEdge           = SDIO_CLOCK_EDGE_RISING;
@@ -32,7 +34,11 @@ void sdcard_init(void)
 
     /* Init the SD interface */
     HAL_SD_CardInfoTypedef cardinfo;
-    if (HAL_SD_Init(&SDHandle, &cardinfo) != SD_OK) {
+    while(HAL_SD_Init(&SDHandle, &cardinfo) != SD_OK && --retry) {
+        systick_sleep(100);
+    }
+
+    if (retry == 0) {
         BREAK();
     }
 
