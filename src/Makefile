@@ -223,7 +223,7 @@ all: | $(BUILD)
 	$(MAKE) -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
 	$(MAKE) -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET) V=1
 	$(MAKE) -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
-	$(CCP) -P -E $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
+	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
 	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(BUILD)/$(BIN).elf
 	$(OBJCOPY) -Obinary $(BUILD)/$(BIN).elf $(BUILD)/$(BIN).bin
 	$(SIZE) $(BUILD)/$(BIN).elf
