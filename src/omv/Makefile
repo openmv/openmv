@@ -52,6 +52,7 @@ SRCS += $(addprefix py/,    \
 	py_select.c             \
 	py_gpio.c               \
 	py_spi.c                \
+	mlx90620.c              \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))

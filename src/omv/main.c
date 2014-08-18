@@ -45,6 +45,8 @@
 #include "py_gpio.h"
 #include "py_spi.h"
 
+#include "mlx90620.h"
+
 int errno;
 static FATFS fatfs0;
 static FATFS fatfs1;
@@ -172,6 +174,7 @@ static const module_t exported_modules[] ={
 //    {MP_QSTR_select,    py_select_init},
     {MP_QSTR_spi,       py_spi_init},
     {MP_QSTR_gpio,      py_gpio_init},
+    {MP_QSTR_mlx,       py_mlx90620_init},
     {0, NULL}
 };
 
@@ -183,6 +186,7 @@ int main(void) {
          - Global MSP (MCU Support Package) initialization
        */
     HAL_Init();
+
 #ifdef OPENMV2
     if (sdram_init() == false) {
         __fatal_error("could not init sdram");
@@ -351,7 +355,7 @@ soft_reset:
     mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
     mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
     mp_store_global(qstr_from_str("cpu_freq"), mp_make_function_n(0, py_cpu_freq));
-//    mp_store_global(qstr_from_str("info"), mp_make_function_n(0, py_info));
+    //mp_store_global(qstr_from_str("info"), mp_make_function_var(0, py_info));
 //    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
 
     /* Export Python modules to the global python namespace */

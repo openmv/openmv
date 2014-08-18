@@ -186,6 +186,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_select.o                             \
 	py_gpio.o                               \
 	py_spi.o                                \
+	mlx90620.o                              \
 	)
 
 ifeq ($(TARGET), OPENMV1)
