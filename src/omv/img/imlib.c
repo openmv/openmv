@@ -31,6 +31,8 @@
 
 /* RGB565->LAB lookup */
 extern const int8_t lab_table[65536];
+/* Grayscale [0..255] to rainbox lookup */
+extern const uint16_t rainbow_table[256];
 
 const uint8_t xyz_table[256]= {
     0.083381, 0.098368, 0.114819, 0.132772, 0.152264, 0.173331, 0.196007, 0.220325,
@@ -244,6 +246,16 @@ void imlib_threshold(image_t *src, image_t *dst, struct color *color, int thresh
                 dst->pixels[i] = 0;
             }
         }
+    }
+}
+
+void imlib_rainbow(image_t *src, image_t *dst)
+{
+    uint8_t  *srcp = src->pixels;
+    uint16_t *dstp = (uint16_t*)dst->pixels;
+
+    for (int i=0; i<(src->w*src->h); i++) {
+        dstp[i] = rainbow_table[srcp[i]];
     }
 }
 

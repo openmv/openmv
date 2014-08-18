@@ -33,6 +33,7 @@ SRCS += $(addprefix img/,   \
 	integral.c              \
 	kmeans.c                \
 	lab.c                   \
+	rainbow_tab.c           \
 	median.c                \
 	point.c                 \
 	ppm.c                   \

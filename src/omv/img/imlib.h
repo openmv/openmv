@@ -183,6 +183,7 @@ void imlib_histeq(struct image *src);
 void imlib_median_filter(image_t *src, int r);
 void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size);
 void imlib_threshold(struct image *src, struct image *dst, struct color *color, int threshold);
+void imlib_rainbow(struct image *src, struct image *dst);
 array_t *imlib_count_blobs(struct image *image);
 
 /* Integral image functions */
