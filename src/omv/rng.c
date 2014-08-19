@@ -6,9 +6,8 @@ static RNG_HandleTypeDef RNGHandle;
 void rng_init()
 {
     __RNG_CLK_ENABLE();
-
     RNGHandle.Instance = RNG;
-    __HAL_RNG_ENABLE(&RNGHandle);
+    HAL_RNG_Init(&RNGHandle);
 }
 
 uint32_t rng_randint(uint32_t min, uint32_t max)
