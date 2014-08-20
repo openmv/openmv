@@ -147,7 +147,6 @@ class OMVGtk:
     def update_drawing(self):
         # read drawingarea
         fb = openmv.fb_dump()
-
         if fb:
             # convert to RGB888 and blit
             self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
@@ -161,6 +160,7 @@ class OMVGtk:
             self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
             if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
                 self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
+
         return True
 
 
@@ -244,5 +244,5 @@ class OMVGtk:
 if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
-    gobject.gobject.timeout_add(10, omvgtk.update_drawing);
+    gobject.gobject.idle_add(omvgtk.update_drawing);
     gtk.main()
