@@ -103,7 +103,6 @@ def fb_dump():
     __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes, __INTERFACE, 0, __TIMEOUT)
     buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
 
-    #print size, num_bytes
     if (size[2] > 2):
         try:
             #img = Image.frombytes("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "")
@@ -113,6 +112,10 @@ def fb_dump():
         except Exception, e:
             print "JPEG decode error (%s)"%e
             sys.exit(0)
+
+        if (buff.size != (size[0]*size[1]*3)):
+            return None
+
         return (size[0], size[1], buff)
     else:
         return (size[0], size[1], fb_to_arr(buff, size[2]))
