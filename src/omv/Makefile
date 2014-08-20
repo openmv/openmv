@@ -12,6 +12,7 @@ SRCS += $(addprefix ,   \
 	rng.c               \
 	stm32f4xx_hal_msp.c \
 	soft_i2c.c          \
+	mutex.c             \
    )
 
 ifeq ($(TARGET), OPENMV1)
