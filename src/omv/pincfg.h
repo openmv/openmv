@@ -47,19 +47,18 @@ typedef enum {
 #define SCCB_SDA_PIN            (GPIO_PIN_9)
 
 /* SPI */
-//TODO fix wlan init first
-//#define USR_SPI                 (SPI3)
-//#define USR_SPI_AF              (GPIO_AF6_SPI3)
-//#define USR_SCLK_PIN            (GPIO_PIN_10)
-//#define USR_MISO_PIN            (GPIO_PIN_11)
-//#define USR_MOSI_PIN            (GPIO_PIN_12)
-//
-//#define USR_SCLK_PORT           (GPIOC)
-//#define USR_MISO_PORT           (GPIOC)
-//#define USR_MOSI_PORT           (GPIOC)
-//
-//#define USR_SPI_CLK_ENABLE()    __SPI3_CLK_ENABLE()
-//#define USR_SPI_CLK_DISABLE()   __SPI3_CLK_DISABLE()
+#define USR_SPI                 (SPI3)
+#define USR_SPI_AF              (GPIO_AF6_SPI3)
+#define USR_SCLK_PIN            (GPIO_PIN_10)
+#define USR_MISO_PIN            (GPIO_PIN_11)
+#define USR_MOSI_PIN            (GPIO_PIN_12)
+
+#define USR_SCLK_PORT           (GPIOC)
+#define USR_MISO_PORT           (GPIOC)
+#define USR_MOSI_PORT           (GPIOC)
+
+#define USR_SPI_CLK_ENABLE()    __SPI3_CLK_ENABLE()
+#define USR_SPI_CLK_DISABLE()   __SPI3_CLK_DISABLE()
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
