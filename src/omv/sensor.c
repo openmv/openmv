@@ -222,17 +222,23 @@ int sensor_init()
     if (dcmi_config() != 0){
         return -1;
     }
+
+    /* init/re-init mutex */
+    mutex_init(&fb->lock);
     return 0;
 }
 
 int sensor_reset()
 {
     /* Reset the sesnor state */
-    sensor.frame_ready = 0;
     sensor.pixformat=0xFF;
     sensor.framesize=0xFF;
     sensor.framerate=0xFF;
     sensor.gainceiling=0xFF;
+
+    mutex_lock(&fb->lock);
+    fb->ready=0;
+    mutex_unlock(&fb->lock);
 
     /* Hard reset the sensor */
     switch (sensor.reset_pol) {
@@ -282,12 +288,8 @@ int sensor_snapshot(struct image *image)
         length =(fb->w * fb->h * 2)/4;
     }
 
-    /* Wait for usbdbg to read the frame, this is necessary to
-       avoid race conditions. The other option is to lock the
-       framebuffer, which complicates things */
-    while ( usbdbg_is_connected() &&
-            sensor.frame_ready == 1) {
-    }
+    /* Lock framebuffer mutex */
+    mutex_lock(&fb->lock);
 
     /* Start the DCMI */
     HAL_DCMI_Start_DMA(&DCMIHandle,
@@ -320,8 +322,10 @@ int sensor_snapshot(struct image *image)
         image->pixels = fb->pixels;
     }
 
-    sensor.frame_ready = 1;
+    fb->ready = 1;
 
+    /* unlock framebuffer mutex */
+    mutex_unlock(&fb->lock);
     return 0;
 }
 
@@ -331,6 +335,10 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
         /* no change */
         return 0;
     }
+
+    mutex_lock(&fb->lock);
+    fb->ready = 0;
+    mutex_unlock(&fb->lock);
 
     if (sensor.set_pixformat == NULL
         || sensor.set_pixformat(pixformat) != 0) {
@@ -368,7 +376,6 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
         /* Initialization Error */
         return -1;
     }
-
     return 0;
 }
 
@@ -378,6 +385,10 @@ int sensor_set_framesize(enum sensor_framesize framesize)
        /* no change */
         return 0;
     }
+
+    mutex_lock(&fb->lock);
+    fb->ready = 0;
+    mutex_unlock(&fb->lock);
 
     /* call the sensor specific function */
     if (sensor.set_framesize == NULL

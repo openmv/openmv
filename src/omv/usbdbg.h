@@ -16,5 +16,4 @@ void usbdbg_init();
 int usbdbg_script_ready();
 vstr_t *usbdbg_get_script();
 void usbdbg_clr_script();
-int usbdbg_is_connected();
 #endif /* __USBDBG_H__ */

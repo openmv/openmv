@@ -15,9 +15,6 @@ static vstr_t script;
 static int script_ready=0;
 mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
 
-static int usbdbg_connected =0;
-extern struct sensor_dev sensor;
-
 void usbdbg_init()
 {
     vstr_init(&script, 64);
@@ -38,13 +35,7 @@ void usbdbg_clr_script()
 {
     script_ready =0;
     vstr_reset(&script);
-
-    usbdbg_connected=0;
-}
-
-int usbdbg_is_connected()
-{
-    return usbdbg_connected;
+    mutex_unlock(&fb->lock);
 }
 
 void usbdbg_data_in(void *buffer, int length)
@@ -59,7 +50,7 @@ void usbdbg_data_in(void *buffer, int length)
                 memcpy(buffer, fb->pixels+xfer_bytes, length);
                 xfer_bytes += length;
                 if (xfer_bytes == xfer_length) {
-                    sensor.frame_ready =0;
+                    mutex_unlock(&fb->lock);
                     cmd = USBDBG_NONE;
                 }
             }
@@ -103,7 +94,6 @@ void usbdbg_data_out(void *buffer, int length)
 
 void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
 {
-    usbdbg_connected = 1;
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
         case USBDBG_FRAME_SIZE:
@@ -117,7 +107,12 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
 
         case USBDBG_FRAME_READY:
             /* return framebuffer status */
-            ((uint8_t*)buffer)[0] = sensor.frame_ready;
+            if (fb->ready == 0) {
+                // no valid frame
+                ((uint8_t*)buffer)[0] = 0;
+            } else {
+                ((uint8_t*)buffer)[0] = mutex_try_lock(&fb->lock);
+            }
             break;
 
         case USBDBG_SCRIPT_EXEC:
