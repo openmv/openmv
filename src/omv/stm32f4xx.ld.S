@@ -56,9 +56,11 @@ MEMORY
 #endif
 }
 
-#ifdef OPENMV1
-_estack     = 0x10010000; /* Stack is allocated on CCM block */
+_estack     = 0x10010000-1; /* Stack is allocated on CCM block */
 _ram_end    = 0x10010000; /* 64KB CCM */
+
+#ifdef OPENMV1
+
 _fb_base    = 0x20000000;
 
 /* Generate a link error if heap and stack don't fit into RAM */
@@ -67,8 +69,7 @@ _heap_size  = 0x7300; /* required amount of heap */
 _cache_size = 0x4000; /* required amount of cache */
 
 #else
-_estack     = 0x10010000; /* Stack is allocated on CCM block */
-_ram_end    = 0xC0F00000;
+
 _fb_base    = 0x20000000;
 /*_fb_base    = 0xC0F00000;*/
 
