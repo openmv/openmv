@@ -136,6 +136,10 @@ static int dma_config()
     DMAHandle.Init.MemBurst         = DMA_MBURST_INC4;          /* Memory burst                     */
     DMAHandle.Init.PeriphBurst      = DMA_PBURST_SINGLE;        /* Peripheral burst                 */
 
+    /* This clears any pending flags, for soft-resets */
+    DMAHandle.State = HAL_DMA_STATE_RESET;
+    HAL_DMA_DeInit(&DMAHandle);
+
     /* Configure and enable DMA IRQ Channel */
     HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
