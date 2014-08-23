@@ -70,8 +70,7 @@ _cache_size = 0x4000; /* required amount of cache */
 
 #else
 
-_fb_base    = 0x20000000;
-/*_fb_base    = 0xC0F00000;*/
+_fb_base    = 0xC0F04000;  /*sdram_start + head_end + cache */
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _stack_size = 0x4000;       /* required amount of stack */
