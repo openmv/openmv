@@ -139,6 +139,8 @@ mp_obj_t mlx90620_read()
         }
     }
 
+    max_temp += 1.0f;
+
     for (int i=0; i<64; i++) {
         img.pixels[i] = (uint8_t)(((temp[i]-min_temp)/(max_temp-min_temp))*255.0f);
     }
