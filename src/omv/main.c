@@ -121,6 +121,17 @@ STATIC mp_obj_t py_vcp_is_connected(void ) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_vcp_is_connected_obj, py_vcp_is_connected);
 
+STATIC mp_obj_t py_random(mp_obj_t min, mp_obj_t max) {
+    return mp_obj_new_int(rng_randint(mp_obj_get_int(min), mp_obj_get_int(max)));
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_random_obj, py_random);
+
+STATIC mp_obj_t py_gc_collect() {
+    gc_collect();
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_gc_collect_obj, py_gc_collect);
+
 extern uint32_t SystemCoreClock;
 STATIC mp_obj_t py_cpu_freq(void ) {
     return mp_obj_new_int(SystemCoreClock);
@@ -174,7 +185,9 @@ static const module_t exported_modules[] ={
 //    {MP_QSTR_select,    py_select_init},
     {MP_QSTR_spi,       py_spi_init},
     {MP_QSTR_gpio,      py_gpio_init},
+#ifdef OPENMV2
     {MP_QSTR_mlx,       py_mlx90620_init},
+#endif
     {0, NULL}
 };
 
@@ -355,8 +368,9 @@ soft_reset:
     mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
     mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
     mp_store_global(qstr_from_str("cpu_freq"), mp_make_function_n(0, py_cpu_freq));
+    mp_store_global(qstr_from_str("random"), mp_make_function_n(2, py_random));
+    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
     //mp_store_global(qstr_from_str("info"), mp_make_function_var(0, py_info));
-//    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
 
     /* Export Python modules to the global python namespace */
     for (const module_t *p = exported_modules; p->name; p++) {
