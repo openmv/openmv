@@ -11,7 +11,7 @@ void systick_sleep(volatile uint32_t ms)
 {
     volatile uint32_t curr_ticks = HAL_GetTick();
     while ((HAL_GetTick() - curr_ticks) < ms) {
-        //__WFI();
+        __WFI();
     }
 }
 
