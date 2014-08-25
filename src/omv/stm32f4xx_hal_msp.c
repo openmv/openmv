@@ -263,7 +263,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 
             /* Configure SPI GPIOs */
             GPIO_InitStructure.Pull      = GPIO_NOPULL;
-            GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+            GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
             GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
             GPIO_InitStructure.Alternate = USR_SPI_AF;
 
