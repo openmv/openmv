@@ -167,6 +167,33 @@ static mp_obj_t py_image_scale(mp_obj_t image_obj, mp_obj_t size_obj)
     return image_obj;
 }
 
+static mp_obj_t py_image_scaled(mp_obj_t image_obj, mp_obj_t size_obj)
+{
+    int w,h;
+    mp_obj_t *array;
+    image_t *src_image = NULL;
+
+    /* get C image pointer */
+    src_image = py_image_cobj(image_obj);
+
+    /* get x,y */
+    mp_obj_get_array_fixed_n(size_obj, 2, &array);
+    w = mp_obj_get_int(array[0]);
+    h = mp_obj_get_int(array[1]);
+
+    image_t dst_image = {
+        .w=w,
+        .h=h,
+        .bpp=src_image->bpp,
+        .pixels=xalloc(w*h*src_image->bpp)
+    };
+
+    imlib_scale(src_image, &dst_image, INTERP_NEAREST);
+
+    return py_image_from_struct(&dst_image);
+}
+
+
 static mp_obj_t py_image_blit(mp_obj_t dst_image_obj, mp_obj_t src_image_obj, mp_obj_t offset_obj)
 {
     int x,y;
@@ -190,7 +217,7 @@ static mp_obj_t py_image_blit(mp_obj_t dst_image_obj, mp_obj_t src_image_obj, mp
     }
 
     imlib_blit(src_image, dst_image, x, y);
-    return mp_const_true;
+    return mp_const_none;
 }
 
 static mp_obj_t py_image_blend(mp_obj_t dst_image_obj,
@@ -218,8 +245,8 @@ static mp_obj_t py_image_blend(mp_obj_t dst_image_obj,
         return mp_const_none;
     }
 
-    imlib_blend(src_image, dst_image, x, y, (uint8_t)(alpha*100.0f));
-    return mp_const_true;
+    imlib_blend(src_image, dst_image, x, y, (uint8_t)(alpha*256));
+    return mp_const_none;
 }
 
 static mp_obj_t py_image_histeq(mp_obj_t image_obj)
@@ -573,6 +600,7 @@ mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scaled_obj, py_image_scaled);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj, py_image_blit);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blend_obj, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
@@ -596,6 +624,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),               (mp_obj_t)&py_image_scaled_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blit),                (mp_obj_t)&py_image_blit_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
