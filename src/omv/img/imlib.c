@@ -28,16 +28,16 @@
      src->data[_y*src->w+_x]=c; })
 
 #define R565(p) \
-    (uint8_t)((p>>3)&0x1F)
+    (uint32_t)((p>>3)&0x1F)
 
 #define G565(p) \
-    (uint8_t)(((p&0x07)<<3)|(p>>13))
+    (uint32_t)(((p&0x07)<<3)|(p>>13))
 
 #define B565(p) \
-    (uint8_t)((p>>8)&0x1F)
+    (uint32_t)((p>>8)&0x1F)
 
 #define RGB565(r, g, b)\
-    (uint16_t)(((r&0x1F)<<3)|((g&0x3F)>>3)|(g<<13)|((b&0x1F)<<8))
+    (uint32_t)(((r&0x1F)<<3)|((g&0x3F)>>3)|(g<<13)|((b&0x1F)<<8))
 
 #define SWAP(x)\
    ({ uint16_t _x = (x); \
@@ -316,18 +316,25 @@ void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off)
 void imlib_blend(struct image *src, struct image *dst, int x_off, int y_off, uint8_t alpha)
 {
     uint16_t i,r, g, b;
+
     uint16_t spix, dpix;
     uint16_t *srcp = (uint16_t *)src->pixels;
     uint16_t *dstp = (uint16_t *)dst->pixels;
+
+    uint32_t v0, vr, vg, vb;
+    v0 = (((uint32_t)alpha)<<16)|(256-alpha);
 
     for (int y=y_off; y<src->h+y_off; y++) {
         i=y*dst->w;
         for (int x=x_off; x<src->w+x_off; x++) {
             spix = *srcp++;
             dpix = dstp[i+x];
-            r=(alpha*R565(spix)+(100-alpha)*R565(dpix))/100;
-            g=(alpha*G565(spix)+(100-alpha)*G565(dpix))/100;
-            b=(alpha*B565(spix)+(100-alpha)*B565(dpix))/100;
+            vr = __SASX(R565(dpix), R565(spix));
+            vg = __SASX(G565(dpix), G565(spix));
+            vb = __SASX(B565(dpix), B565(spix));
+            r = __SMUAD(v0, vr)>>8;
+            g = __SMUAD(v0, vg)>>8;
+            b = __SMUAD(v0, vb)>>8;
             dstp[i+x]= RGB565(r, g, b);
         }
     }
