@@ -33,6 +33,7 @@
 #include "sensor.h"
 #include "usbdbg.h"
 #include "sdram.h"
+#include "xalloc.h"
 
 #include "py_led.h"
 #include "py_time.h"
@@ -193,11 +194,11 @@ static const module_t exported_modules[] ={
 
 int main(void) {
     /* STM32F4xx HAL library initialization:
-         - Configure the Flash prefetch, instruction and Data caches
-         - Configure the Systick to generate an interrupt each 1 msec
-         - Set NVIC Group Priority to 4
-         - Global MSP (MCU Support Package) initialization
-       */
+       - Configure the Flash prefetch, instruction and Data caches
+       - Configure the Systick to generate an interrupt each 1 msec
+       - Set NVIC Group Priority to 4
+       - Global MSP (MCU Support Package) initialization
+    */
     HAL_Init();
 
 #ifdef OPENMV2
@@ -241,6 +242,7 @@ soft_reset:
 
     // GC init
     gc_init(&_heap_start, &_heap_end);
+    xalloc_init();
 
 #if 0
     // Change #if 0 to #if 1 if you want REPL on UART_6 (or another uart)
