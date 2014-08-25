@@ -5,16 +5,20 @@
 #include "py_assert.h"
 #include "py_image.h"
 #include "imlib.h"
-#define SPI_TIMEOUT         (500)  /* in ms */
-static SPI_HandleTypeDef SPIHandle;
 
-static inline uint8_t spi_xfer(uint8_t out)
-{
-    if (HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SPI_TIMEOUT) != HAL_OK) {
-        //BREAK();
-    }
-    return out;
-}
+#define SPI_TIMEOUT         (500)  /* in ms */
+
+#define SPIx_DMA_RX_IRQn    DMA2_Stream3_IRQn
+#define SPIx_RX_DMA_STREAM  DMA2_Stream3
+#define SPIx_RX_DMA_CHANNEL DMA_CHANNEL_5
+
+#define SPIx_DMA_TX_IRQn    DMA2_Stream4_IRQn
+#define SPIx_TX_DMA_STREAM  DMA2_Stream4
+#define SPIx_TX_DMA_CHANNEL DMA_CHANNEL_5
+
+SPI_HandleTypeDef SPIHandle;
+static DMA_HandleTypeDef hdma_tx;
+static DMA_HandleTypeDef hdma_rx;
 
 static machine_int_t py_spi_read(mp_obj_t obj)
 {
@@ -28,9 +32,14 @@ static machine_int_t py_spi_read(mp_obj_t obj)
         mp_get_buffer_raise(obj, &bufinfo, MP_BUFFER_WRITE);
     }
 
-    if (HAL_SPI_Receive(&SPIHandle, bufinfo.buf, bufinfo.len, SPI_TIMEOUT) != HAL_OK) {
+    if (HAL_SPI_Receive_DMA(&SPIHandle, bufinfo.buf, bufinfo.len) != HAL_OK) {
         return -1;
     }
+
+    // wait for transfer to finish
+    while (HAL_SPI_GetState(&SPIHandle) != HAL_SPI_STATE_READY) {
+    }
+
     return bufinfo.len;
 }
 
@@ -48,8 +57,19 @@ static machine_int_t py_spi_write(mp_obj_t obj)
         mp_get_buffer_raise(obj, &bufinfo, MP_BUFFER_READ);
     }
 
-    if (HAL_SPI_Transmit(&SPIHandle, bufinfo.buf, bufinfo.len, SPI_TIMEOUT) != HAL_OK) {
-        return -1;
+    if (bufinfo.len > 1) {
+        // start DMA transfer
+        if (HAL_SPI_Transmit_DMA(&SPIHandle, bufinfo.buf, bufinfo.len) != HAL_OK) {
+            return -1;
+        }
+        // wait for transfer to finish
+        while (HAL_SPI_GetState(&SPIHandle) != HAL_SPI_STATE_READY) {
+        }
+    } else {
+        // don't use DMA for small buffers
+        if (HAL_SPI_Transmit(&SPIHandle, bufinfo.buf, bufinfo.len, SPI_TIMEOUT) != HAL_OK) {
+            return -1;
+        }
     }
     return bufinfo.len;
 }
@@ -71,6 +91,31 @@ static const mp_obj_module_t py_spi_module = {
     .globals = (mp_obj_t)&globals_dict,
 };
 
+static void config_dma_stream(SPI_HandleTypeDef *hspi,
+        DMA_HandleTypeDef *hdma, DMA_Stream_TypeDef *instance, uint32_t channel)
+{
+    hdma->Instance                 = instance;
+    hdma->Init.Channel             = channel;
+    hdma->Init.Direction           = DMA_MEMORY_TO_PERIPH;
+    hdma->Init.PeriphInc           = DMA_PINC_DISABLE;
+    hdma->Init.MemInc              = DMA_MINC_ENABLE;
+    hdma->Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
+    hdma->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma->Init.Mode                = DMA_NORMAL;
+    hdma->Init.Priority            = DMA_PRIORITY_LOW; //SET to HIGH for rx
+    hdma->Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
+    hdma->Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_1QUARTERFULL;
+    hdma->Init.MemBurst            = DMA_MBURST_SINGLE;
+    hdma->Init.PeriphBurst         = DMA_PBURST_SINGLE;
+
+    /* This clears any pending flags, for soft-resets */
+    hdma->State = HAL_DMA_STATE_RESET;
+    HAL_DMA_DeInit(hdma);
+
+    /* Init and associate DMA stream handle */
+    HAL_DMA_Init(hdma);
+}
+
 const mp_obj_module_t *py_spi_init()
 {
     /* SPI configuration */
@@ -81,11 +126,27 @@ const mp_obj_module_t *py_spi_init()
     SPIHandle.Init.CLKPolarity       = SPI_POLARITY_LOW;
     SPIHandle.Init.CLKPhase          = SPI_PHASE_1EDGE;
     SPIHandle.Init.NSS               = SPI_NSS_SOFT;
-    SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+    SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
     SPIHandle.Init.FirstBit          = SPI_FIRSTBIT_MSB;
     SPIHandle.Init.TIMode            = SPI_TIMODE_DISABLED;
     SPIHandle.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLED;
     SPIHandle.Init.CRCPolynomial     = 7;
+
+    /* Configure TX DMA stream */
+    config_dma_stream(&SPIHandle, &hdma_tx, SPIx_TX_DMA_STREAM, SPIx_TX_DMA_CHANNEL);
+    __HAL_LINKDMA(&SPIHandle, hdmatx, hdma_tx);
+
+    /* Configure RX DMA stream */
+    config_dma_stream(&SPIHandle, &hdma_rx, SPIx_RX_DMA_STREAM, SPIx_RX_DMA_CHANNEL);
+    __HAL_LINKDMA(&SPIHandle, hdmarx, hdma_rx);
+
+    /* Configure TX DMA stream IRQ */
+    HAL_NVIC_SetPriority(SPIx_DMA_TX_IRQn, 1, 1);
+    HAL_NVIC_EnableIRQ(SPIx_DMA_TX_IRQn);
+
+    /* Configure RX DMA stream IRQ */
+    HAL_NVIC_SetPriority(SPIx_DMA_RX_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(SPIx_DMA_RX_IRQn);
 
     /* Initialize the user SPI */
     if (HAL_SPI_Init(&SPIHandle) != HAL_OK) {
