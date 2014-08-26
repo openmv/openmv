@@ -30,7 +30,7 @@ ENTRY(Reset_Handler)
 #define ISR_ORIGIN      0x08000000
 #define ISR_LENGTH      16K
 
-#define TEXT_ORIGIN     0x08010000
+#define TEXT_ORIGIN     0x08040000
 #define TEXT_LENGTH     1984K
 
 #define RAM_ORIGIN      0x20000000
@@ -56,26 +56,23 @@ MEMORY
 #endif
 }
 
-_estack     = 0x10010000-1; /* Stack is allocated on CCM block */
-_ram_end    = 0x10010000; /* 64KB CCM */
+_estack     = 0x10010000;   /* Stack is allocated on CCM block */
+_ram_end    = 0x10010000;   /* 64KB CCM */
 
 #ifdef OPENMV1
 
 _fb_base    = 0x20000000;
-
-/* Generate a link error if heap and stack don't fit into RAM */
-_stack_size = 0x1300; /* required amount of stack */
-_heap_size  = 0x7300; /* required amount of heap */
-_cache_size = 0x4000; /* required amount of cache */
+_stack_size = 0x1300;       /* required amount of stack */
+_heap_size  = 0x7300;       /* required amount of heap */
+_cache_size = 0x4000;       /* required amount of cache */
 
 #else
 
-_fb_base    = 0xC0F04000;  /*sdram_start + head_end + cache */
-
-/* Generate a link error if heap and stack don't fit into RAM */
+_fb_base    = 0xC0F04000;   /* sdram_start + head_end + cache */
 _stack_size = 0x4000;       /* required amount of stack */
 _heap_size  = 0x00F00000;   /* required amount of heap */
 _cache_size = 0x4000;       /* required amount of cache */
+_heap_end   = ORIGIN(SDRAM) + _heap_size;
 
 #endif
 
@@ -103,8 +100,8 @@ SECTIONS
     _exit = .;
   } >FLASH_TEXT
 
-   /* used by the startup to initialize data */
-   _sidata = .;
+  /* used by the startup to initialize data */
+  _sidata = .;
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
   .data : AT ( _sidata )
@@ -140,9 +137,11 @@ SECTIONS
   {
     . = ALIGN(4);
     _heap_start = .;
+#ifdef OPENMV1
     . = . + _heap_size;
     . = ALIGN(4);
     _heap_end  = .;
+#endif
   } >HEAP_MEMORY
 
   /* Make sure there is enough RAM the stack and FS cache */
