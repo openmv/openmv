@@ -61,7 +61,7 @@ static const mp_map_elem_t globals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
-static const mp_obj_module_t py_led_module = {
+const mp_obj_module_t led_module = {
     .base = { &mp_type_module },
     .name = MP_QSTR_led,
     .globals = (mp_obj_t)&globals_dict,
@@ -71,5 +71,5 @@ const mp_obj_module_t *py_led_init()
 {
     /* Init LED */
     led_init(LED_BLUE);
-    return &py_led_module;
+    return &led_module;
 }

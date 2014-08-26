@@ -28,7 +28,7 @@ void socket_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_
     printf("<%s %p>", mp_obj_get_type_str(self_in), self_in);
 }
 
-static machine_int_t socket_send(mp_obj_t self_in, const void *buf, machine_uint_t size, int *errcode)
+static mp_uint_t socket_send(mp_obj_t self_in, const void *buf, mp_uint_t size, int *errcode)
 {
     int bytes = 0;
     socket_t *self = self_in;
@@ -54,7 +54,7 @@ static machine_int_t socket_send(mp_obj_t self_in, const void *buf, machine_uint
     return bytes;
 }
 
-static machine_int_t socket_recv(mp_obj_t self_in, void *buf, machine_uint_t size, int *errcode)
+static mp_uint_t socket_recv(mp_obj_t self_in, void *buf, mp_uint_t size, int *errcode)
 {
     int bytes = 0;
     socket_t *self = self_in;

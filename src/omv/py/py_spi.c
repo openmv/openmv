@@ -20,7 +20,7 @@ SPI_HandleTypeDef SPIHandle;
 static DMA_HandleTypeDef hdma_tx;
 static DMA_HandleTypeDef hdma_rx;
 
-static machine_int_t py_spi_read(mp_obj_t obj)
+static mp_int_t py_spi_read(mp_obj_t obj)
 {
     mp_buffer_info_t bufinfo;
 
@@ -43,7 +43,7 @@ static machine_int_t py_spi_read(mp_obj_t obj)
     return bufinfo.len;
 }
 
-static machine_int_t py_spi_write(mp_obj_t obj)
+static mp_int_t py_spi_write(mp_obj_t obj)
 {
     byte buf[1];
     mp_buffer_info_t bufinfo;
@@ -85,7 +85,7 @@ static const mp_map_elem_t globals_dict_table[] = {
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
-static const mp_obj_module_t py_spi_module = {
+const mp_obj_module_t spi_module = {
     .base = { &mp_type_module },
     .name = MP_QSTR_spi,
     .globals = (mp_obj_t)&globals_dict,
@@ -152,5 +152,5 @@ const mp_obj_module_t *py_spi_init()
     /* dummy read */
     HAL_SPI_Receive(&SPIHandle, buf, sizeof(buf), SPI_TIMEOUT);
 
-    return &py_spi_module;
+    return &spi_module;
 }

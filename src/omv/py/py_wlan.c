@@ -188,7 +188,7 @@ static const mp_map_elem_t globals_dict_table[] = {
 
 static MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
-static const mp_obj_module_t wlan_module = {
+const mp_obj_module_t wlan_module = {
     .base = { &mp_type_module },
     .name = MP_QSTR_wlan,
     .globals = (mp_obj_t)&globals_dict,

@@ -131,7 +131,8 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	point.o                                 \
 	ppm.o                                   \
 	rectangle.o                             \
-	surf.o                                  \
+	fast.o                                  \
+	freak.o                                 \
 	template.o                              \
    )
 
@@ -230,8 +231,20 @@ export TOP_DIR
 export BUILD
 export TARGET
 ###################################################
+all: $(BUILD)/$(BIN).elf
 
-all: | $(BUILD)
+$(BUILD):
+	$(MKDIR) -p $@
+
+objs: | $(BUILD)
+	$(MAKE)  -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR)
+	$(MAKE)  -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)
+	$(MAKE)  -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
+	$(MAKE)  -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
+	$(MAKE)  -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET)
+	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
+
+$(BUILD)/$(BIN).elf: objs
 	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
 	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(BUILD)/$(BIN).elf
 	$(OBJCOPY) -Obinary $(BUILD)/$(BIN).elf $(BUILD)/$(BIN).bin
@@ -239,15 +252,6 @@ all: | $(BUILD)
 
 size:
 	$(SIZE) $(BUILD)/$(BIN).elf
-
-$(BUILD):
-	$(MKDIR) -p $@
-	$(MAKE)  -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR)
-	$(MAKE)  -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)
-	$(MAKE)  -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
-	$(MAKE)  -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
-	$(MAKE)  -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET)
-	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
 
 clean:
 	$(RM) -fr $(BUILD)

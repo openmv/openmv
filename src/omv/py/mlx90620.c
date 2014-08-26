@@ -233,7 +233,7 @@ static const mp_map_elem_t globals_dict_table[] = {
 };
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
-static const mp_obj_module_t mlx_module = {
+const mp_obj_module_t mlx_module = {
     .base = { &mp_type_module },
     .name = MP_QSTR_mlx,
     .globals = (mp_obj_t)&globals_dict,

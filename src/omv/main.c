@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stm32f4xx_hal.h>
+#include "mpconfig.h"
 #include "misc.h"
 #include "systick.h"
 #include "pendsv.h"
-#include "mpconfig.h"
 #include "qstr.h"
 #include "misc.h"
 #include "nlr.h"
@@ -14,11 +14,12 @@
 #include "objmodule.h"
 #include "runtime.h"
 #include "gc.h"
+#include "stackctrl.h"
 #include "gccollect.h"
+#include "uart.h"
 #include "pybstdio.h"
 #include "readline.h"
 #include "pyexec.h"
-#include "uart.h"
 #include "timer.h"
 #include "pin.h"
 #include "extint.h"
@@ -51,6 +52,7 @@
 int errno;
 static FATFS fatfs0;
 static FATFS fatfs1;
+extern char _stack_size;
 
 void flash_error(int n) {
     for (int i = 0; i < n; i++) {
@@ -127,17 +129,20 @@ STATIC mp_obj_t py_random(mp_obj_t min, mp_obj_t max) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_random_obj, py_random);
 
-STATIC mp_obj_t py_gc_collect() {
-    gc_collect();
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_gc_collect_obj, py_gc_collect);
-
 extern uint32_t SystemCoreClock;
 STATIC mp_obj_t py_cpu_freq(void ) {
     return mp_obj_new_int(SystemCoreClock);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_cpu_freq_obj, py_cpu_freq);
+
+static NORETURN mp_obj_t mp_sys_exit(uint n_args, const mp_obj_t *args) {
+    int rc = 0;
+    if (n_args > 0) {
+        rc = mp_obj_get_int(args[0]);
+    }
+    nlr_raise(mp_obj_new_exception_arg1(&mp_type_SystemExit, mp_obj_new_int(rc)));
+}
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_sys_exit_obj, 0, 1, mp_sys_exit);
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
@@ -173,26 +178,30 @@ static const char fresh_readme_txt[] =
 ;
 
 typedef struct {
-    qstr name;
     const mp_obj_module_t *(*init)(void);
 } module_t;
 
-static const module_t exported_modules[] ={
-    {MP_QSTR_sensor,    py_sensor_init},
-    {MP_QSTR_led,       py_led_init},
-    {MP_QSTR_time,      py_time_init},
-//    {MP_QSTR_wlan,      py_wlan_init},
-//    {MP_QSTR_socket,    py_socket_init},
-//    {MP_QSTR_select,    py_select_init},
-    {MP_QSTR_spi,       py_spi_init},
-    {MP_QSTR_gpio,      py_gpio_init},
+static const module_t init_modules[] ={
+    {py_sensor_init},
+    {py_led_init},
+    {py_time_init},
+//  {py_wlan_init},
+//  {py_socket_init},
+//  {py_select_init},
+    {py_spi_init},
+    {py_gpio_init},
 #ifdef OPENMV2
-    {MP_QSTR_mlx,       py_mlx90620_init},
+    {py_mlx90620_init},
 #endif
-    {0, NULL}
+    {NULL}
 };
 
-int main(void) {
+int main(void)
+{
+    // Stack limit should be less than real stack size, so we
+    // had chance to recover from limit hit.
+    mp_stack_set_limit((mp_uint_t) (&_stack_size - 512));
+
     /* STM32F4xx HAL library initialization:
        - Configure the Flash prefetch, instruction and Data caches
        - Configure the Systick to generate an interrupt each 1 msec
@@ -211,6 +220,7 @@ int main(void) {
     }
 #endif
 #endif
+
     // basic sub-system init
     pendsv_init();
     timer_tim3_init();
@@ -242,81 +252,77 @@ soft_reset:
 
     // GC init
     gc_init(&_heap_start, &_heap_end);
-    xalloc_init();
-
-#if 0
-    // Change #if 0 to #if 1 if you want REPL on UART_6 (or another uart)
-    // as well as on USB VCP
-    mp_obj_t args[2] = {
-        MP_OBJ_NEW_SMALL_INT(PYB_UART_6),
-        MP_OBJ_NEW_SMALL_INT(115200),
-    };
-    pyb_uart_global_debug = pyb_uart_type.make_new((mp_obj_t)&pyb_uart_type,
-                                                   ARRAY_SIZE(args),
-                                                   0, args);
-#else
-    pyb_uart_global_debug = NULL;
-#endif
 
     // Micro Python init
-    qstr_init();
     mp_init();
     mp_obj_list_init(mp_sys_path, 0);
+    mp_obj_list_init(mp_sys_argv, 0);
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_));
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_lib));
-    mp_obj_list_init(mp_sys_argv, 0);
 
-    readline_init();
+    readline_init0();
+    pin_init0();
+    extint_init0();
+    timer_init0();
+    pyb_usb_init0();
 
-    pin_init();
-    extint_init();
+    xalloc_init();
+    rng_init();
+    usbdbg_init();
 
-    // local filesystem init
+    /* init built-in modules */
+    for (const module_t *p = init_modules; p->init; p++) {
+        const mp_obj_module_t *module = p->init();
+        if (module == NULL) {
+            __fatal_error("failed to init module");
+        }
+    }
+
+    /* Export functions to the global python namespace */
+    mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
+    mp_store_global(qstr_from_str("Image"),             (mp_obj_t)&py_image_load_image);
+    mp_store_global(qstr_from_str("HaarCascade"),       (mp_obj_t)&py_image_load_cascade);
+    mp_store_global(qstr_from_str("cpu_freq"),          (mp_obj_t)&py_cpu_freq);
+    mp_store_global(qstr_from_str("random"),            (mp_obj_t)&py_random);
+
+    pyb_stdio_uart = NULL;
+
     // try to mount the flash
     FRESULT res = f_mount(&fatfs0, "0:", 1);
     if (reset_mode == 3 || res == FR_NO_FILESYSTEM) {
         // no filesystem, or asked to reset it, so create a fresh one
-
         // LED on to indicate creation of LFS
         led_state(LED_RED, 1);
 
-        res = f_mkfs("0:", 0, 0);
-        if (res == FR_OK) {
-            // success creating fresh LFS
-        } else {
+        if (f_mkfs("0:", 0, 0) != FR_OK) {
             __fatal_error("could not create LFS");
         }
 
         // create empty main.py
         FIL fp;
-        f_open(&fp, "0:/main.py", FA_WRITE | FA_CREATE_ALWAYS);
         UINT n;
+        f_open(&fp, "main.py", FA_WRITE | FA_CREATE_ALWAYS);
         f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
-        // TODO check we could write n bytes
         f_close(&fp);
 
         // create .inf driver file
-        f_open(&fp, "0:/pybcdc.inf", FA_WRITE | FA_CREATE_ALWAYS);
+        f_open(&fp, "pybcdc.inf", FA_WRITE | FA_CREATE_ALWAYS);
         f_write(&fp, fresh_pybcdc_inf, sizeof(fresh_pybcdc_inf) - 1 /* don't count null terminator */, &n);
         f_close(&fp);
 
         // create readme file
-        f_open(&fp, "0:/README.txt", FA_WRITE | FA_CREATE_ALWAYS);
+        f_open(&fp, "README.txt", FA_WRITE | FA_CREATE_ALWAYS);
         f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
         f_close(&fp);
 
-        // keep LED on for at least 200ms
         led_state(LED_RED, 0);
     } else if (res != FR_OK) {
         __fatal_error("could not access LFS");
     }
 
-    // root device defaults to internal flash filesystem
-    uint root_device = 0;
-
-#if defined(USE_DEVICE_MODE)
+    // Set CWD and USB medium to flash
+    f_chdrive("0:");
     usb_storage_medium_t usb_medium = USB_STORAGE_MEDIUM_FLASH;
-#endif
 
     // if an SD card is present then mount it on 1:/
     if (reset_mode == 1 && sdcard_is_present()) {
@@ -325,7 +331,7 @@ soft_reset:
             printf("[SD] could not mount SD card\n");
         } else {
             // use SD card as root device
-            root_device = 1;
+            f_chdrive("1:");
 
             if (first_soft_reset) {
                 // use SD card as medium for the USB MSD
@@ -360,51 +366,17 @@ soft_reset:
     }
 #endif
 
-    timer_init0();
-
-    rng_init();
-    usbdbg_init();
-
-    /* Add functions to the global python namespace */
-    mp_store_global(qstr_from_str("vcp_is_connected"), mp_make_function_n(0, py_vcp_is_connected));
-    mp_store_global(qstr_from_str("Image"), mp_make_function_n(1, py_image_load_image));
-    mp_store_global(qstr_from_str("HaarCascade"), mp_make_function_n(1, py_image_load_cascade));
-    mp_store_global(qstr_from_str("cpu_freq"), mp_make_function_n(0, py_cpu_freq));
-    mp_store_global(qstr_from_str("random"), mp_make_function_n(2, py_random));
-    mp_store_global(qstr_from_str("gc_collect"), mp_make_function_n(0, py_gc_collect));
-    //mp_store_global(qstr_from_str("info"), mp_make_function_var(0, py_info));
-
-    /* Export Python modules to the global python namespace */
-    for (const module_t *p = exported_modules; p->name; p++) {
-        const mp_obj_module_t *module = p->init();
-        if (module == NULL) {
-            __fatal_error("failed to init module");
-        } else {
-            mp_module_register(p->name, (mp_obj_t)module);
-        }
-    }
-
-
-    // now that everything is initialised, run main script
+    // Run the main script from the current directory.
     if (reset_mode == 1 && pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
-        vstr_t *vstr = vstr_new();
-        vstr_printf(vstr, "%d:/", root_device);
-        if (pyb_config_main == MP_OBJ_NULL) {
-            vstr_add_str(vstr, "main.py");
-        } else {
-            vstr_add_str(vstr, mp_obj_str_get_str(pyb_config_main));
-        }
-        FRESULT res = f_stat(vstr_str(vstr), NULL);
+        FRESULT res = f_stat("main.py", NULL);
         if (res == FR_OK) {
-            if (!pyexec_file(vstr_str(vstr))) {
+            if (!pyexec_file("main.py")) {
                 flash_error(3);
             }
         }
-        vstr_free(vstr);
     }
 
     // Enter REPL
-    // REPL mode can change, or it can request a soft reset
     nlr_buf_t nlr;
     for (;;) {
         if (nlr_push(&nlr) == 0) {
@@ -429,12 +401,3 @@ soft_reset:
     first_soft_reset = false;
     goto soft_reset;
 }
-
-static NORETURN mp_obj_t mp_sys_exit(uint n_args, const mp_obj_t *args) {
-    int rc = 0;
-    if (n_args > 0) {
-        rc = mp_obj_get_int(args[0]);
-    }
-    nlr_raise(mp_obj_new_exception_arg1(&mp_type_SystemExit, mp_obj_new_int(rc)));
-}
-MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_sys_exit_obj, 0, 1, mp_sys_exit);
