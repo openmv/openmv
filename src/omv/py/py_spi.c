@@ -107,12 +107,6 @@ static void config_dma_stream(SPI_HandleTypeDef *hspi,
     hdma->Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_1QUARTERFULL;
     hdma->Init.MemBurst            = DMA_MBURST_SINGLE;
     hdma->Init.PeriphBurst         = DMA_PBURST_SINGLE;
-
-    /* This clears any pending flags, for soft-resets */
-    hdma->State = HAL_DMA_STATE_RESET;
-    HAL_DMA_DeInit(hdma);
-
-    /* Init and associate DMA stream handle */
     HAL_DMA_Init(hdma);
 }
 

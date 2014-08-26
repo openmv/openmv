@@ -1,5 +1,7 @@
 #include "mdefs.h"
 #include "fmath.h"
+
+#define M_PI    3.14159265f
 #define M_PI_2  1.57079632f
 #define M_PI_4  0.78539816f
 
@@ -38,14 +40,6 @@ int ALWAYS_INLINE fast_roundf(float x)
             : [x] "t"  (x));
     return i;
 }
-
-#if 0
-float ALWAYS_INLINE fast_atanf(float x)
-{
-    //return (0.97239f * x) - (0.19195f * x*x*x);
-   return M_PI_4*x - x*(fast_fabsf(x) - 1.0f)*(0.2447f + 0.0663f*fast_fabsf(x));
-}
-#endif
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
@@ -110,7 +104,7 @@ float fast_atanf(float x)
     b = 2.0 - xinv.f * ax.f;
     xinv.f = xinv.f * b;
 
-    //if |x| > 1.0 -> ax = -1/ax, r = pi/2
+    //if |x| > 1.0 -> ax = -1/ax, r = PI/2
     xinv.f = xinv.f + ax.f;
     a = (ax.f > 1.0f);
     ax.f = ax.f - a * xinv.f;
@@ -130,4 +124,38 @@ float fast_atanf(float x)
     r = r - a * b;
 
     return r;
+}
+
+float fast_atan2f(float x, float y)
+{
+  if(x > 0 && y >= 0)
+    return fast_atanf(y/x);
+
+  if(x < 0 && y >= 0)
+    return M_PI - fast_atanf(-y/x);
+
+  if(x < 0 && y < 0)
+    return M_PI + fast_atanf(y/x);
+
+  if(x > 0 && y < 0)
+    return 2*M_PI - fast_atanf(-y/x);
+
+  return 0;
+}
+
+
+float fast_log2(float x)
+{
+  union { float f; uint32_t i; } vx = { x };
+  union { uint32_t i; float f; } mx = { (vx.i & 0x007FFFFF) | 0x3f000000 };
+  float y = vx.i;
+  y *= 1.1920928955078125e-7f;
+
+  return y - 124.22551499f - 1.498030302f * mx.f
+           - 1.72587999f / (0.3520887068f + mx.f);
+}
+
+float fast_log(float x)
+{
+  return 0.69314718f * fast_log2 (x);
 }
