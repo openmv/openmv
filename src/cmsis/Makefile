@@ -25,7 +25,9 @@ $(OBJ_DIRS):
 	$(MKDIR) -p $@
 
 $(BUILD)/%.o : %.c
+	$(ECHO) "CC $<"
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD)/%.o : %.s
+	$(ECHO) "AS $<"
 	$(AS) $(AFLAGS) $< -o $@

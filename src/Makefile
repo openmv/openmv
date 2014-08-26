@@ -1,16 +1,16 @@
-CC      = arm-none-eabi-gcc
-AS      = arm-none-eabi-as
-LD      = arm-none-eabi-ld
-AR      = arm-none-eabi-ar
-RM      = rm
-CCP     = arm-none-eabi-cpp
+BIN     = openmv
+CC      = $(Q)arm-none-eabi-gcc
+AS      = $(Q)arm-none-eabi-as
+LD      = $(Q)arm-none-eabi-ld
+AR      = $(Q)arm-none-eabi-ar
+RM      = $(Q)rm
+CCP     = $(Q)arm-none-eabi-cpp
 SIZE    = arm-none-eabi-size
-STRIP   = arm-none-eabi-strip -s
-OBJCOPY = arm-none-eabi-objcopy
-OBJDUMP = arm-none-eabi-objdump
+STRIP   = $(Q)arm-none-eabi-strip -s
+OBJCOPY = $(Q)arm-none-eabi-objcopy
+OBJDUMP = $(Q)arm-none-eabi-objdump
 MKDIR   = mkdir
-
-BIN=openmv
+ECHO    = @echo
 
 # Directories
 TOP_DIR=$(shell pwd)
@@ -31,6 +31,13 @@ ifeq ($(DEBUG), 1)
 CFLAGS += -O0 -ggdb3
 else
 CFLAGS += -O2 -ggdb3 -DNDEBUG
+endif
+
+# Verbose
+ifeq ($(V), 1)
+Q =
+else
+Q = @
 endif
 
 # Compiler Flags
@@ -67,6 +74,7 @@ CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard\
           -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/stm32f4xx.lds
 
+#------------- Libraries ----------------#
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
 OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
 OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
@@ -77,62 +85,12 @@ OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/StatisticsFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/TransformFunctions/*.o)
-
 OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(CC3K_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
 
-OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
-OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
-	stm32f4xx_it.o          \
-	string0.o               \
-	usbd_conf.o             \
-	usbd_desc_cdc_msc.o     \
-	usbd_cdc_interface.o    \
-	usbd_msc_storage.o      \
-	pendsv.o                \
-	bufhelper.o             \
-	usb.o                   \
-	printf.o                \
-	gchelper.o              \
-	gccollect.o             \
-	pybstdio.o              \
-	readline.o              \
-	pyexec.o                \
-	help.o                  \
-	input.o                 \
-	uart.o                  \
-	import.o                \
-	lexerfatfs.o            \
-	flash.o                 \
-	diskio.o                \
-	storage.o               \
-	file.o                  \
-	math.o                  \
-	mathsincos.o            \
-	rtc.o                   \
-	pin.o                   \
-	pin_named_pins.o        \
-	timer.o                 \
-	servo.o                 \
-	extint.o                \
-	adc.o                   \
-	modstm.o                \
-	modtime.o               \
-	pins_$(TARGET).o        \
-    )
-
-OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
-	core/src/usbd_core.o                            \
-	core/src/usbd_ctlreq.o                          \
-	core/src/usbd_ioreq.o                           \
-	class/cdc_msc_hid/src/usbd_cdc_msc_hid.o        \
-	class/cdc_msc_hid/src/usbd_msc_bot.o            \
-	class/cdc_msc_hid/src/usbd_msc_scsi.o           \
-	class/cdc_msc_hid/src/usbd_msc_data.o           \
-	)
-
+#------------- OpenMV Objects ----------------#
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	main.o                                  \
 	xalloc.o                                \
@@ -203,6 +161,58 @@ OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 	)
 endif
 
+#------------- MicroPy Core -------------------#
+OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
+
+#------------- MicroPy Objects ----------------#
+OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
+	stm32f4xx_it.o          \
+	string0.o               \
+	usbd_conf.o             \
+	usbd_desc_cdc_msc.o     \
+	usbd_cdc_interface.o    \
+	usbd_msc_storage.o      \
+	pendsv.o                \
+	bufhelper.o             \
+	usb.o                   \
+	printf.o                \
+	gchelper.o              \
+	gccollect.o             \
+	pybstdio.o              \
+	readline.o              \
+	pyexec.o                \
+	help.o                  \
+	input.o                 \
+	uart.o                  \
+	import.o                \
+	lexerfatfs.o            \
+	flash.o                 \
+	diskio.o                \
+	storage.o               \
+	file.o                  \
+	math.o                  \
+	mathsincos.o            \
+	rtc.o                   \
+	pin.o                   \
+	pin_named_pins.o        \
+	timer.o                 \
+	servo.o                 \
+	extint.o                \
+	adc.o                   \
+	modstm.o                \
+	pins_$(TARGET).o        \
+    )
+
+OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
+	core/src/usbd_core.o                            \
+	core/src/usbd_ctlreq.o                          \
+	core/src/usbd_ioreq.o                           \
+	class/cdc_msc_hid/src/usbd_cdc_msc_hid.o        \
+	class/cdc_msc_hid/src/usbd_msc_bot.o            \
+	class/cdc_msc_hid/src/usbd_msc_scsi.o           \
+	class/cdc_msc_hid/src/usbd_msc_data.o           \
+	)
+
 ###################################################
 #Export Variables
 export CC
@@ -213,6 +223,7 @@ export SIZE
 export OBJCOPY
 export OBJDUMP
 export MKDIR
+export ECHO
 export CFLAGS
 export LDFLAGS
 export TOP_DIR
@@ -221,12 +232,6 @@ export TARGET
 ###################################################
 
 all: | $(BUILD)
-	$(MAKE) -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR)
-	$(MAKE) -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)
-	$(MAKE) -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
-	$(MAKE) -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
-	$(MAKE) -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET) V=1
-	$(MAKE) -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
 	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
 	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(BUILD)/$(BIN).elf
 	$(OBJCOPY) -Obinary $(BUILD)/$(BIN).elf $(BUILD)/$(BIN).bin
@@ -234,8 +239,15 @@ all: | $(BUILD)
 
 size:
 	$(SIZE) $(BUILD)/$(BIN).elf
+
 $(BUILD):
 	$(MKDIR) -p $@
+	$(MAKE)  -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR)
+	$(MAKE)  -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)
+	$(MAKE)  -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
+	$(MAKE)  -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
+	$(MAKE)  -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET)
+	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
 
 clean:
 	$(RM) -fr $(BUILD)
