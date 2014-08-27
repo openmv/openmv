@@ -39,7 +39,8 @@ SRCS += $(addprefix img/,   \
 	point.c                 \
 	ppm.c                   \
 	rectangle.c             \
-	surf.c                  \
+	fast.c                  \
+	freak.c                 \
 	template.c              \
    )
 

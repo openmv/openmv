@@ -560,6 +560,21 @@ void imlib_draw_circle(struct image *image, int cx, int cy, int r)
     }
 }
 
+void imlib_draw_line(image_t *src, int x0, int y0, int x1, int y1)
+{
+    int dx = abs(x1-x0), sx = x0<x1 ? 1 : -1;
+    int dy = abs(y1-y0), sy = y0<y1 ? 1 : -1;
+    int err = (dx>dy ? dx : -dy)/2, e2;
+
+    for(;;){
+        src->data[src->w*y0+x0]=0xFF;
+        if (x0==x1 && y0==y1) break;
+        e2 = err;
+        if (e2 >-dx) { err -= dy; x0 += sx; }
+        if (e2 < dy) { err += dx; y0 += sy; }
+    }
+}
+
 void imlib_histeq(struct image *src)
 {
     int i, sum;

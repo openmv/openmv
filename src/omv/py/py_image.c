@@ -9,7 +9,6 @@
 
 extern struct sensor_dev sensor;
 static const mp_obj_type_t py_cascade_type;
-static const mp_obj_type_t py_surf_type;
 static const mp_obj_type_t py_image_type;
 
 /* Haar Cascade */
@@ -38,31 +37,25 @@ static const mp_obj_type_t py_cascade_type = {
     .print = py_cascade_print,
 };
 
-/* SURF Detector */
-typedef struct _py_surf_obj_t {
+/* Keypoints object */
+typedef struct _py_kp_obj_t {
     mp_obj_base_t base;
-    struct surf _cobj;
-} py_surf_obj_t;
+    int size;
+    kp_t *kpts;
+    int threshold;
+    bool normalized;
+} py_kp_obj_t;
 
-void *py_surf_cobj(mp_obj_t surf)
+static void py_kp_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
 {
-    PY_ASSERT_TYPE(surf, &py_surf_type);
-    return &((py_surf_obj_t *)surf)->_cobj;
+    py_kp_obj_t *self = self_in;
+    print(env, "size:%d threshold:%d normalized:%d\n", self->size, self->threshold, self->normalized);
 }
 
-static void py_surf_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
-{
-    py_surf_obj_t *self = self_in;
-    /* print some info */
-    print(env, "upright:%d octaves:%d intervals:%d init_sample:%d thresh:%f\n",
-          self->_cobj.upright, self->_cobj.octaves, self->_cobj.intervals, (double) self->_cobj.thresh);
-}
-
-static const mp_obj_type_t py_surf_type = {
+static const mp_obj_type_t py_kp_type = {
     { &mp_type_type },
-    .name  = MP_QSTR_Surf,
-    .print = py_surf_print,
-    .print = NULL,
+    .name  = MP_QSTR_kp_desc,
+    .print = py_kp_print,
 };
 
 /* Image */
@@ -83,7 +76,7 @@ static void py_image_print(void (*print)(void *env, const char *fmt, ...), void 
     print(env, "<image width:%d height:%d bpp:%d>", self->_cobj.w, self->_cobj.h, self->_cobj.bpp);
 }
 
-static machine_int_t str_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, int flags) {
+static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, int flags) {
     image_t *image = py_image_cobj(self_in);
 
     if (flags == MP_BUFFER_READ) {
@@ -366,18 +359,28 @@ static mp_obj_t py_image_draw_rectangle(mp_obj_t image_obj, mp_obj_t rectangle_o
     return mp_const_none;
 }
 
-static mp_obj_t py_image_draw_keypoints(mp_obj_t image_obj, mp_obj_t surf_obj)
+static mp_obj_t py_image_draw_keypoints(mp_obj_t image_obj, mp_obj_t kp_obj)
 {
-    surf_t *surf = NULL;
-    image_t *image = NULL;
+//    int r = 2;
+//    for (int i=0; i<kpts_size; i++) {
+//        kp_t *kp = &kpts[i];
+//        if (kp->x&&kp->y) {
+//            if (((kp->x+r) < image->w) && ((kp->y+r) < image->h)) {
+//                imlib_draw_circle(image, kp->x, kp->y, r);
+//            }
+//        }
+//    }
 
-    /* get C image pointer */
-    image = py_image_cobj(image_obj);
-
-    /* get C cascade pointer */
-    surf = py_surf_cobj(surf_obj);
-
-    surf_draw_ipts(image, surf->ipts);
+//    kp_t *kp = NULL;
+//    image_t *image = NULL;
+//
+//    /* get C image pointer */
+//    image = py_image_cobj(image_obj);
+//
+//    /* get C cascade pointer */
+//    kp = py_kp_cobj(kp_obj);
+//
+//    kp_draw_ipts(image, kp->ipts);
     return mp_const_none;
 }
 
@@ -490,71 +493,91 @@ static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj
 
 static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    py_surf_obj_t *o =NULL;
+    int threshold = 20;
+    bool normalized = false;
+    py_kp_obj_t *kp_obj =NULL;
 
-    surf_t surf = {
-        .upright=false,
-        .octaves=2,
-        .init_sample=2,
-        .thresh=0.0004f,
-    };
-
-    /* get image pointer */
+    /* make sure image is grayscale */
     image_t *image = py_image_cobj(args[0]);
+    PY_ASSERT_TRUE(image->bpp == 1);
 
-    /* sanity checks */
-    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
-
-    /* read KW args */
-    mp_map_elem_t *kw_upright = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("upright")), MP_MAP_LOOKUP);
-    if (kw_upright != NULL) {
-        surf.upright = mp_obj_get_int(kw_upright->value);
-    }
-
-    mp_map_elem_t *kw_octaves = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("octaves")), MP_MAP_LOOKUP);
-    if (kw_octaves != NULL) {
-        surf.octaves = mp_obj_get_int(kw_octaves->value);
-    }
-
-    mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("thresh")), MP_MAP_LOOKUP);
+    /* read var args */ //TODO
+    mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("threshold")), MP_MAP_LOOKUP);
     if (kw_thresh != NULL) {
-        surf.thresh = mp_obj_get_float(kw_thresh->value);
+        threshold = mp_obj_get_int(kw_thresh->value);
+    }
+    mp_map_elem_t *kw_norm = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), MP_MAP_LOOKUP);
+    if (kw_norm != NULL) {
+        normalized = mp_obj_get_int(kw_norm->value);
     }
 
-    /* run SURF detector */
-    surf_detector(image, &surf);
+    /* run keypoint extractor */
+    int kpts_size = 0;
+    kp_t *kpts = fast_detect(image, threshold, &kpts_size);
+    freak_find_keypoints(image, kpts, kpts_size, normalized, normalized);
 
-    o = m_new_obj(py_surf_obj_t);
-    o->base.type = &py_surf_type;
-    o->_cobj = surf;
-    return o;
+    /* return keypoints MP object */
+    kp_obj = m_new_obj(py_kp_obj_t);
+    kp_obj->base.type = &py_kp_type;
+    kp_obj->kpts = kpts;
+    kp_obj->size = kpts_size;
+    kp_obj->threshold = threshold;
+    kp_obj->normalized = normalized;
+    return kp_obj;
 }
 
-static mp_obj_t py_image_find_keypoints_match(mp_obj_t image_obj, mp_obj_t surf1_obj)
+static mp_obj_t py_image_match_keypoints(mp_obj_t image_obj, mp_obj_t kpts_obj, mp_obj_t threshold_obj)
 {
-    surf_t *surf1 = NULL, surf2;
-    image_t *image = NULL;
+    kp_t *kpts1;
+    kp_t *kpts2;
 
-    /* get C image pointer */
+    int kpts1_size = 0;
+    int kpts2_size = 0;
+
+    int d_thresh; // detection threshold
+    int m_thresh; // matching threshold
+    bool normalized;
+
+    // get image obj
+    image_t *image = NULL;
     image = py_image_cobj(image_obj);
 
-    /* get C cascade pointer */
-    surf1 = py_surf_cobj(surf1_obj);
-    surf2 = *surf1; //use same parameters
+    // sanity checks
+    PY_ASSERT_TRUE(image->bpp == 1);
+    PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
 
-    /* run SURF detector */
-    surf_detector(image, &surf2);
+    // get kpts info
+    kpts1       = ((py_kp_obj_t*)kpts_obj)->kpts;
+    kpts1_size  = ((py_kp_obj_t*)kpts_obj)->size;
+    normalized  = ((py_kp_obj_t*)kpts_obj)->normalized;
+    d_thresh    = ((py_kp_obj_t*)kpts_obj)->threshold;
+    m_thresh    = mp_obj_get_int(threshold_obj);
 
-    /* Detect objects */
-    array_t *match = surf_match(surf1, &surf2);
+    // run keypoint extractor using the same params
+    kpts2 = fast_detect(image, d_thresh, &kpts2_size);
+    freak_find_keypoints(image, kpts2, kpts2_size, normalized, normalized);
 
-    // TODO return matching kpts
-    surf_draw_ipts(image, match);
-    int n = array_length(match);
-    array_free(match);
-    array_free(surf2.ipts);
+    if (kpts1_size == 0 || kpts2_size == 0) {
+        return mp_const_none;
+    }
 
-    return mp_obj_new_int(n);
+    // match the keypoint sets
+    int16_t *kpts_match = freak_match_keypoints(kpts1, kpts1_size, kpts2, kpts2_size, m_thresh);
+
+    // do something with the match
+    for (int i=0; i<kpts1_size; i++) {
+        if (kpts_match[i] != -1) {
+            kp_t *kp1 = &kpts1[i];
+            kp_t *kp2 = &kpts2[kpts_match[i]];
+            imlib_draw_line(image, kp1->x, kp1->y, kp2->x, kp2->y);
+            //int r = 4;
+            //                if (((kp->x+r) < image->w) && ((kp->y+r) < image->h)) {
+            //                    imlib_draw_circle(image, kp->x, kp->y, r);
+            //                }
+        }
+    }
+
+    return mp_const_none;
 }
 
 mp_obj_t py_image_load_image(mp_obj_t path_obj)
@@ -616,7 +639,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_features_obj, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_keypoints_match_obj, py_image_find_keypoints_match);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_match_keypoints_obj, py_image_match_keypoints);
 
 static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_size),                (mp_obj_t)&py_image_size_obj},
@@ -642,7 +665,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_features),       (mp_obj_t)&py_image_find_features_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints_match),(mp_obj_t)&py_image_find_keypoints_match_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_match_keypoints),     (mp_obj_t)&py_image_match_keypoints_obj},
 
     { NULL, NULL },
 };
@@ -653,7 +676,7 @@ static const mp_obj_type_t py_image_type = {
     { &mp_type_type },
     .name  = MP_QSTR_image,
     .print = py_image_print,
-    .buffer_p = { .get_buffer = str_get_buffer },
+    .buffer_p = { .get_buffer = py_image_get_buffer },
     .locals_dict = (mp_obj_t)&locals_dict,
 };
 
@@ -676,36 +699,3 @@ mp_obj_t py_image_from_struct(image_t *image)
     o->_cobj =*image;
     return o;
 }
-
-#if 0
-typedef struct _mp_obj_array_it_t {
-    mp_obj_base_t base;
-    mp_obj_array_t *array;
-    machine_uint_t cur;
-} mp_obj_array_it_t;
-
-mp_obj_t array_it_iternext(mp_obj_t self_in) {
-    mp_obj_array_it_t *self = self_in;
-    if (self->cur < self->array->len) {
-        machine_int_t val = array_get_el(self->array, self->cur++);
-        return mp_obj_new_int(val);
-    } else {
-        return mp_const_stop_iteration;
-    }
-}
-
-static const mp_obj_type_t array_it_type = {
-    { &mp_const_type },
-    "array_iterator",
-    .iternext = array_it_iternext,
-};
-
-mp_obj_t array_iterator_new(mp_obj_t array_in) {
-    mp_obj_array_t *array = array_in;
-    mp_obj_array_it_t *o = m_new_obj(mp_obj_array_it_t);
-    o->base.type = &array_it_type;
-    o->array = array;
-    o->cur = 0;
-    return o;
-}
-#endif

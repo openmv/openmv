@@ -87,42 +87,13 @@ typedef struct cluster {
     point_t centroid;
 } cluster_t;
 
-#define SURF_DESC_SIZE  (32)
-typedef struct ipoint {
-  /* Coordinates of the detected interest point */
-  float x, y;
-  /* Detected scale */
-  float scale;
-  /* Orientation measured anti-clockwise from +ve x-axis */
-  float orientation;
-  /* Sign of laplacian for fast matching purposes */
-  int laplacian;
-  /* Vector of descriptor components */
-  float descriptor[SURF_DESC_SIZE];
-  /* Placeholds for point motion */
-  float dx, dy;
-  /* Used to store cluster index */
-  int clusterIndex;
-} i_point_t;
-
-typedef struct response_layer {
-  int width;
-  int height;
-  int step;
-  int filter;
-} response_layer_t;
-
-typedef struct surf {
-    image_t *img;       /* Image to find Ipoints in */
-    i_image_t *i_img;    /* Integral image */
-    array_t *ipts;      /* Reference to vector of Ipoints */
-    array_t *rmap;      /* Response map */
-    bool upright;       /* Run in rotation invariant mode? */
-    int octaves;        /* Number of octaves to calculate */
-    int intervals;      /* Number of intervals per octave */
-    int init_sample;    /* Initial sampling step */
-    float thresh;        /* Blob response threshold */
-} surf_t;
+/* FAST/FREAK Keypoint */
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+    float angle;
+    uint8_t desc[64];
+} kp_t;
 
 /* Haar cascade struct */
 typedef struct cascade {
@@ -205,15 +176,15 @@ float imlib_template_match(struct image *image, struct image *template, struct r
 int imlib_load_cascade(struct cascade* cascade, const char *path);
 struct array *imlib_detect_objects(struct image *image, struct cascade* cascade);
 
-/* SURF detector */
-void surf_detector(image_t *image, surf_t *surf);
-array_t *surf_match(surf_t *surf1, surf_t *surf2);
-void surf_draw_ipts(image_t *image, array_t *ipts);
-void surf_dump_ipts(array_t *ipts);
+/* FAST/FREAK Feature Extractor */
+kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners);
+void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient_normalized, bool scale_normalized);
+int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpts2_size, int threshold);
 
 /* Drawing functions */
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);
 void imlib_draw_circle(struct image *image, int cx, int cy, int r);
+void imlib_draw_line(image_t *src, int x0, int y0, int x1, int y1);
 
 /* Misc */
 void imlib_scale(struct image *src, struct image *dst, interp_t interp);
@@ -227,4 +198,5 @@ int ppm_write(image_t *img, const char *path);
 int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
 int imlib_load_image(image_t *image, const char *path);
 int imlib_save_image(image_t *image, const char *path, rectangle_t *r);
+void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off);
 #endif //__IMLIB_H__
