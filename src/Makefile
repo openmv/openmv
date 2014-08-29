@@ -195,13 +195,10 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	mathsincos.o            \
 	rtc.o                   \
 	pin.o                   \
-	pin_named_pins.o        \
 	timer.o                 \
 	servo.o                 \
-	extint.o                \
 	adc.o                   \
 	modstm.o                \
-	pins_$(TARGET).o        \
     )
 
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
