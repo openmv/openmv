@@ -22,7 +22,6 @@
 #include "pyexec.h"
 #include "timer.h"
 #include "pin.h"
-#include "extint.h"
 #include "usb.h"
 #include "rtc.h"
 #include "storage.h"
@@ -134,15 +133,6 @@ STATIC mp_obj_t py_cpu_freq(void ) {
     return mp_obj_new_int(SystemCoreClock);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_cpu_freq_obj, py_cpu_freq);
-
-static NORETURN mp_obj_t mp_sys_exit(uint n_args, const mp_obj_t *args) {
-    int rc = 0;
-    if (n_args > 0) {
-        rc = mp_obj_get_int(args[0]);
-    }
-    nlr_raise(mp_obj_new_exception_arg1(&mp_type_SystemExit, mp_obj_new_int(rc)));
-}
-MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_sys_exit_obj, 0, 1, mp_sys_exit);
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
@@ -262,7 +252,6 @@ soft_reset:
 
     readline_init0();
     pin_init0();
-    extint_init0();
     timer_init0();
     pyb_usb_init0();
 
@@ -279,11 +268,11 @@ soft_reset:
     }
 
     /* Export functions to the global python namespace */
-    mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
+    mp_store_global(qstr_from_str("random"),            (mp_obj_t)&py_random);
+    mp_store_global(qstr_from_str("cpu_freq"),          (mp_obj_t)&py_cpu_freq);
     mp_store_global(qstr_from_str("Image"),             (mp_obj_t)&py_image_load_image);
     mp_store_global(qstr_from_str("HaarCascade"),       (mp_obj_t)&py_image_load_cascade);
-    mp_store_global(qstr_from_str("cpu_freq"),          (mp_obj_t)&py_cpu_freq);
-    mp_store_global(qstr_from_str("random"),            (mp_obj_t)&py_random);
+    mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
 
     pyb_stdio_uart = NULL;
 
