@@ -13,8 +13,8 @@ ENTRY(Reset_Handler)
 #define ISR_ORIGIN      0x08000000
 #define ISR_LENGTH      16K
 
-#define TEXT_ORIGIN     0x08010000
-#define TEXT_LENGTH     448K
+#define TEXT_ORIGIN     0x0800C000
+#define TEXT_LENGTH     464K
 
 #define RAM_ORIGIN      0x20000000
 #define RAM_LENGTH      128K
@@ -84,6 +84,9 @@ SECTIONS
   {
     . = ALIGN(4);
     KEEP(*(.isr_vector)) /* Startup code */
+    . = ALIGN(4);
+    */ff.o(.text*)
+    */stm32f4xx_hal_sd.o(.text*)
     . = ALIGN(4);
   } >FLASH_ISR
 
