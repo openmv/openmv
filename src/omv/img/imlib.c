@@ -232,31 +232,31 @@ void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size)
 
 void imlib_threshold(image_t *src, image_t *dst, struct color *color, int threshold)
 {
-    color_t lab1,lab2;
-    uint16_t *pixels = (uint16_t*) src->pixels;
-
-    /* Convert reference RGB to LAB */
+    /* Extract reference RGB */
     uint16_t r = color->r*31/255;
     uint16_t g = color->g*63/255;
     uint16_t b = color->b*31/255;
+    uint32_t rgb = SWAP((r << 11) | (g << 5) | b) * 3;
 
-    r = SWAP((r << 11) | (g << 5) | b);
-    lab1.L = lab_table[r*3];
-    lab1.A = lab_table[r*3+1];
-    lab1.B = lab_table[r*3+2];
+    /* Convert reference RGB to LAB */
+    uint32_t L = lab_table[rgb];
+    uint32_t A = lab_table[rgb+1];
+    uint32_t B = lab_table[rgb+2];
+
+    /* Square threshold */
+    threshold *= threshold;
+
+    uint16_t *pixels = (uint16_t*) src->pixels;
 
     for (int y=0; y<src->h; y++) {
+        int i=y*src->w;
         for (int x=0; x<src->w; x++) {
-            int i=y*src->w+x;
-            lab2.L = lab_table[pixels[i]*3];
-            lab2.A = lab_table[pixels[i]*3+1];
-            lab2.B = lab_table[pixels[i]*3+2];
+            rgb = pixels[i+x]*3;
+            uint32_t sum =(L-lab_table[rgb])   * (L-lab_table[rgb])   +
+                          (A-lab_table[rgb+1]) * (A-lab_table[rgb+1]) +
+                          (B-lab_table[rgb+2]) * (B-lab_table[rgb+2]);
             /* add pixel if within threshold */
-            if (imlib_lab_distance(&lab1, &lab2)<threshold) {
-                dst->pixels[i] = 1;
-            } else {
-                dst->pixels[i] = 0;
-            }
+            dst->pixels[i+x] = (sum<threshold);
         }
     }
 }
