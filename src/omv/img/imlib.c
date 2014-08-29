@@ -322,16 +322,15 @@ void imlib_blend(struct image *src, struct image *dst, int x_off, int y_off, uin
     uint16_t *dstp = (uint16_t *)dst->pixels;
 
     uint32_t v0, vr, vg, vb;
-    v0 = (((uint32_t)alpha)<<16)|(256-alpha);
-
+    v0 = __PKHBT((256-alpha), alpha, 16);
     for (int y=y_off; y<src->h+y_off; y++) {
         i=y*dst->w;
         for (int x=x_off; x<src->w+x_off; x++) {
             spix = *srcp++;
             dpix = dstp[i+x];
-            vr = __SASX(R565(dpix), R565(spix));
-            vg = __SASX(G565(dpix), G565(spix));
-            vb = __SASX(B565(dpix), B565(spix));
+            vr = __PKHBT(R565(dpix), R565(spix), 16);
+            vg = __PKHBT(G565(dpix), G565(spix), 16);
+            vb = __PKHBT(B565(dpix), B565(spix), 16);
             r = __SMUAD(v0, vr)>>8;
             g = __SMUAD(v0, vg)>>8;
             b = __SMUAD(v0, vb)>>8;
