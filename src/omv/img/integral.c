@@ -5,21 +5,22 @@
 
 void imlib_integral_image(struct image *src, struct integral_image *sum)
 {
-    int x, y, s,t;
-    unsigned char *data = src->pixels;
+    typeof(*src->data) *data = src->data;
     typeof(*sum->data) *sumData = sum->data;
 
-    for (y=0; y<src->h; y++) {
-        s = 0;
+    // Compute first column to avoid branching
+    for (int s=0, x=0; x<src->w; x++) {
+        /* sum of the current row (integer) */
+        s += data[src->w+x];
+        sumData[src->w+x] = s;
+    }
+
+    for (int y=1; y<src->h; y++) {
         /* loop over the number of columns */
-        for (x=0; x<src->w; x++) {
-            /* sum of the current row (integer)*/
+        for (int s=0, x=0; x<src->w; x++) {
+            /* sum of the current row (integer) */
             s += data[y*src->w+x];
-            t = s;
-            if (y != 0) {
-                t += sumData[(y-1)*src->w+x];
-            }
-            sumData[y*src->w+x]=t;
+            sumData[y*src->w+x] = s+sumData[(y-1)*src->w+x];
         }
     }
 }
