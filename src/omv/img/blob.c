@@ -5,29 +5,34 @@
 array_t *imlib_count_blobs(struct image *image)
 {
     array_t *blobs;
-    array_t *points;
-
     array_alloc(&blobs, xfree);
-    array_alloc_init(&points, xfree, 100);
     uint8_t *pixels = (uint8_t*) image->pixels;
+
+    // points array
+    int p_size = 100;
+    point_t *points = xalloc(p_size*sizeof*points);
 
     for (int y=0; y<image->h; y++) {
         for (int x=0; x<image->w; x++) {
             int i=y*image->w+x;
             if (pixels[i]) {
-               /* new blob */
+
+                // set initial point
+                points[0].x=x;
+                points[0].y=y;
+
+                // add new blob
                 rectangle_t *blob = rectangle_alloc(image->w, image->h, 0, 0);
                 array_push_back(blobs, blob);
 
-                /* flood fill */
-                point_t *p=point_alloc(x, y);
-                while(p != NULL) {
-                    if (array_length(points) > 500) {
-                        xfree(p);
-                        goto done;
-                    }
+                int p_idx =0;
+                int p_max = 1;
 
-                    /* add point to blob */
+                /* flood fill */
+                while(p_idx<p_max) {
+                    point_t *p=&points[p_idx++];
+
+                    /* expand blob */
                     if (p->x < blob->x) {
                         blob->x = p->x;
                     }
@@ -44,38 +49,46 @@ array_t *imlib_count_blobs(struct image *image)
                         blob->h = p->y;
                     }
 
+                    int w,e;
                     /* move west */
-                    for (int n=p->x-1; n>=0 && pixels[p->y*image->w+n]; n--) {
-                        pixels[p->y*image->w+n]=0;
-                        if ((p->y-1) >= 0 && pixels[(p->y-1)*image->w+n]) {
-                            array_push_back(points, point_alloc(n, p->y-1));
+                    for (w=p->x-1; w>=0 && pixels[p->y*image->w+w]; w--) {
 
-                        }
-                        if ((p->y+1) < image->h && pixels[(p->y+1)*image->w+n]) {
-                            array_push_back(points, point_alloc(n, p->y+1));
-
-                        }
                     }
                     /* move east */
-                    for (int n=p->x; n<image->w && pixels[p->y*image->w+n]; n++) {
-                        pixels[p->y*image->w+n]=0;
-                        if ((p->y-1) > 0 && pixels[(p->y-1)*image->w+n]) {
-                            array_push_back(points, point_alloc(n, p->y-1));
+                    for (e=p->x; e<image->w && pixels[p->y*image->w+e]; e++) {
 
-                        }
-                        if ((p->y+1) < image->h && pixels[(p->y+1)*image->w+n]) {
-                            array_push_back(points, point_alloc(n, p->y+1));
-
-                        }
                     }
-                    xfree(p);
-                    p = array_pop_back(points);
+                    /* add points on north or south */
+                    for (int i=w; i<e; i++) {
+                        pixels[p->y*image->w+i]=0;
+                        if ((p->y-1) > 0 && pixels[(p->y-1)*image->w+i]) {
+                            points[p_max].x = i;
+                            points[p_max].y = p->y-1;
+
+                            if (++p_max == p_size) {
+                                p_size +=100;
+                                points = xrealloc(points, p_size*sizeof*points);
+                            }
+
+                        }
+
+                        if ((p->y+1) < image->h && pixels[(p->y+1)*image->w+i]) {
+                            points[p_max].x = i;
+                            points[p_max].y = p->y+1;
+
+                            if (++p_max == p_size) {
+                                p_size +=100;
+                                points = xrealloc(points, p_size*sizeof*points);
+                            }
+
+                        }
+
+                    }
                 }
             }
         }
     }
 
-done:
     for (int i=0; i<array_length(blobs); i++) {
         rectangle_t *blob = array_at(blobs, i);
 //        if (blob->w < 10) { /* blob too small */
@@ -86,6 +99,6 @@ done:
     //    }
     }
 
-    array_free(points);
+    xfree(points);
     return blobs;
 }
