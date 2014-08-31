@@ -171,20 +171,21 @@ static const char fresh_readme_txt[] =
 ;
 
 typedef struct {
+    const char *name;
     const mp_obj_module_t *(*init)(void);
 } module_t;
 
 static const module_t init_modules[] ={
-    {py_sensor_init},
-    {py_led_init},
-    {py_time_init},
-//  {py_wlan_init},
-//  {py_socket_init},
-//  {py_select_init},
-    {py_spi_init},
-    {py_gpio_init},
+    {"sensor",  py_sensor_init},
+    {"led",     py_led_init},
+    {"time",    py_time_init},
+//  {"wlan",    py_wlan_init},
+//  {"socket",  py_socket_init},
+//  {"select",  py_select_init},
+    {"spi",     py_spi_init},
+    {"gpio",    py_gpio_init},
 #ifdef OPENMV2
-    {py_mlx90620_init},
+    {"mlx90620", py_mlx90620_init},
 #endif
     {NULL}
 };
@@ -266,7 +267,9 @@ soft_reset:
     for (const module_t *p = init_modules; p->init; p++) {
         const mp_obj_module_t *module = p->init();
         if (module == NULL) {
-            __fatal_error("failed to init module");
+            char buf[256];
+            snprintf(buf, sizeof(buf), "failed to init %s module", p->name);
+            __fatal_error(buf);
         }
     }
 
