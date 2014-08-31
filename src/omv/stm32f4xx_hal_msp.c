@@ -143,7 +143,6 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
 void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
 {
     if (hi2c->Instance == SCCB_I2C) {
-        HAL_I2C_DeInit(hi2c);
         SCCB_CLK_DISABLE();
     }
 }
