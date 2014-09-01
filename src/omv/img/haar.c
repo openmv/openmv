@@ -16,17 +16,17 @@ static int evalWeakClassifier(struct cascade *cascade, int std, int p_offset, in
     int t = cascade->tree_thresh_array[tree_index] * std;
 
     for (i=0; i<cascade->num_rectangles_array[tree_index]; i++) {
-        tr.x = cascade->rectangles_array[r_index + i*4 + 0];
-        tr.y = cascade->rectangles_array[r_index + i*4 + 1];
-        tr.w = cascade->rectangles_array[r_index + i*4 + 2];
-        tr.h = cascade->rectangles_array[r_index + i*4 + 3];
+        tr.x = cascade->rectangles_array[r_index + (i<<2) + 0];
+        tr.y = cascade->rectangles_array[r_index + (i<<2) + 1];
+        tr.w = cascade->rectangles_array[r_index + (i<<2) + 2];
+        tr.h = cascade->rectangles_array[r_index + (i<<2) + 3];
 
         sumw += (
              *((sum->data + sum->w*(tr.y ) + (tr.x ))               + p_offset)
            - *((sum->data + sum->w*(tr.y ) + (tr.x  + tr.w))        + p_offset)
            - *((sum->data + sum->w*(tr.y  + tr.h) + (tr.x ))        + p_offset)
            + *((sum->data + sum->w*(tr.y  + tr.h) + (tr.x  + tr.w)) + p_offset))
-           * cascade->weights_array[w_index + i]*4096;
+           * cascade->weights_array[w_index + i]<<12;
     }
 
     if (sumw >= t) {
@@ -50,17 +50,14 @@ static int runCascadeClassifier(struct cascade* cascade, struct point pt, int st
 
     int x,y,offset;
     uint32_t sumsq=0;
-    vec_t v0, v1;
+    uint32_t v0;
 
-    for (y=pt.y; y<cascade->window.w; y++) {
+    for (y=pt.y; y<cascade->window.h; y++) {
+          offset = y*cascade->img->w;
       for (x=pt.x; x<cascade->window.w; x+=2) {
-          offset = y*cascade->img->w+x;
-          v0.s0 = cascade->img->pixels[offset+0];
-          v0.s1 = cascade->img->pixels[offset+1];
-
-          v1.s0 = cascade->img->pixels[offset+0];
-          v1.s1 = cascade->img->pixels[offset+1];
-          sumsq = __SMLAD(v0.i, v1.i, sumsq);
+          v0 = __PKHBT(cascade->img->pixels[offset+x+0],
+                       cascade->img->pixels[offset+x+1], 16);
+          sumsq = __SMLAD(v0, v0, sumsq);
       }
     }
 
