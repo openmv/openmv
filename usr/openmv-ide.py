@@ -244,5 +244,6 @@ class OMVGtk:
 if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
-    gobject.gobject.idle_add(omvgtk.update_drawing);
+    #gobject.gobject.idle_add(omvgtk.update_drawing);
+    gobject.gobject.timeout_add(80, omvgtk.update_drawing);
     gtk.main()
