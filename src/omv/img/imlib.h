@@ -21,6 +21,15 @@ typedef struct rectangle {
     int h;
 } rectangle_t;
 
+typedef struct blob {
+    int x;
+    int y;
+    int w;
+    int h;
+    int c;
+    int id;
+} blob_t;
+
 typedef struct color {
     union {
         uint8_t vec[3];
@@ -159,9 +168,11 @@ void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv);
 int  imlib_image_mean(struct image *src);
 void imlib_histeq(struct image *src);
 void imlib_median_filter(image_t *src, int r);
-void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size);
-void imlib_threshold(struct image *src, struct image *dst, struct color *color, int threshold);
-void imlib_rainbow(struct image *src, struct image *dst);
+void imlib_erode(image_t *src, int ksize);
+void imlib_dilate(image_t *src, int ksize);
+void imlib_morph(image_t *src, uint8_t *kernel, int k_size);
+void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold);
+void imlib_rainbow(image_t *src, struct image *dst);
 array_t *imlib_count_blobs(struct image *image);
 
 /* Integral image functions */
@@ -198,5 +209,4 @@ int ppm_write(image_t *img, const char *path);
 int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
 int imlib_load_image(image_t *image, const char *path);
 int imlib_save_image(image_t *image, const char *path, rectangle_t *r);
-void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off);
 #endif //__IMLIB_H__

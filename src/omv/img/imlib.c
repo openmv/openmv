@@ -203,46 +203,89 @@ void imlib_grayscale_to_rgb565(struct image *image)
 #endif
 }
 
-void imlib_erosion_filter(struct image *src, uint8_t *kernel, int k_size)
+void imlib_erode(image_t *src, int ksize)
 {
-    int x, y, j, k;
-    int w = src->w;
-    int h = src->h;
-    /* TODO */
-    uint8_t *dst = xalloc0(w*h);
+    int c = ksize/2;// center pixel
+    int k_rows = (ksize+1)*2;
+    uint8_t *dst = xalloc0(src->w * k_rows);
 
-    for (y=0; y<h-k_size; y++) {
-        for (x=0; x<w-k_size; x++) {
-            dst[w*(y+1)+x+1] = 255;
-            for (j=0; j<k_size; j++) {
-                for (k=0; k<k_size; k++) {
-                  /* (y*w+x)+(j*w+k) */
-                  if (src->pixels[w*(y+j)+x+k] != (kernel[j*k_size+k]*255)) {
-                    dst[w*(y+1)+x+1] = 0;
-                    j=k_size;
-                    break;
-                  }
+    for (int y=1; y<src->h-ksize; y++) {
+        for (int x=1; x<src->w-ksize; x++) {
+            int i = y*src->w+x;
+            int di = (y%k_rows)*src->w+x;
+            if ((dst[di] = src->pixels[i])==0) {
+                continue;
+            }
+
+            for (int j=-c; j<c; j++) {
+                for (int k=-c; k<c; k++) {
+                    if (src->pixels[(y+j)*src->w+x+k]==0) {
+                        dst[di]=0;
+                        goto done;
+                    }
                 }
             }
+            done:;
+        }
+
+        if ((y+1)%k_rows==0) {
+            memcpy(src->pixels+((y/k_rows)*k_rows*src->w), dst, src->w*k_rows);
         }
     }
-    memcpy(src->pixels, dst, w*h);
     xfree(dst);
 }
 
-void imlib_threshold(image_t *src, image_t *dst, struct color *color, int threshold)
+void imlib_dilate(image_t *src, int ksize)
 {
-    /* Extract reference RGB */
-    uint16_t r = color->r*31/255;
-    uint16_t g = color->g*63/255;
-    uint16_t b = color->b*31/255;
-    uint32_t rgb = SWAP((r << 11) | (g << 5) | b) * 3;
+    int c = ksize/2;// center pixel
+    int k_rows = (ksize+1)*2;
+    uint8_t *dst = xalloc0(src->w * k_rows);
 
-    /* Convert reference RGB to LAB */
-    uint32_t L = lab_table[rgb];
-    uint32_t A = lab_table[rgb+1];
-    uint32_t B = lab_table[rgb+2];
+    for (int y=1; y<src->h-ksize; y++) {
+        for (int x=1; x<src->w-ksize; x++) {
+            int i = y*src->w+x;
+            int di = (y%k_rows)*src->w+x;
+            if ((dst[di] = src->pixels[i])) {
+                continue;
+            }
 
+            for (int j=-c; j<c; j++) {
+                for (int k=-c; k<c; k++) {
+                    if (src->pixels[(y+j)*src->w+x+k]) {
+                        dst[di]=src->pixels[(y+j)*src->w+x+k];
+                        goto done;
+                    }
+                }
+            }
+            done:;
+        }
+
+        if ((y+1)%k_rows==0) {
+            memcpy(src->pixels+((y/k_rows)*k_rows*src->w), dst, src->w*k_rows);
+        }
+    }
+    xfree(dst);
+}
+
+void imlib_morph(struct image *src, uint8_t *kernel, int ksize)
+{
+
+}
+
+
+void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
+{
+//    /* Extract reference RGB */
+//    uint16_t r = color->r*31/255;
+//    uint16_t g = color->g*63/255;
+//    uint16_t b = color->b*31/255;
+//    uint32_t rgb = SWAP((r << 11) | (g << 5) | b) * 3;
+//
+//    /* Convert reference RGB to LAB */
+//    uint32_t L = lab_table[rgb];
+//    uint32_t A = lab_table[rgb+1];
+//    uint32_t B = lab_table[rgb+2];
+//
     /* Square threshold */
     threshold *= threshold;
 
@@ -251,12 +294,19 @@ void imlib_threshold(image_t *src, image_t *dst, struct color *color, int thresh
     for (int y=0; y<src->h; y++) {
         int i=y*src->w;
         for (int x=0; x<src->w; x++) {
-            rgb = pixels[i+x]*3;
-            uint32_t sum =(L-lab_table[rgb])   * (L-lab_table[rgb])   +
-                          (A-lab_table[rgb+1]) * (A-lab_table[rgb+1]) +
-                          (B-lab_table[rgb+2]) * (B-lab_table[rgb+2]);
-            /* add pixel if within threshold */
-            dst->pixels[i+x] = (sum<threshold);
+            uint32_t rgb = pixels[i+x]*3;
+            dst->pixels[i+x] = 0;
+            for (int c=0; c<color_size; c++) {
+                // TODO
+                uint32_t sum =(color[c].L-lab_table[rgb])   * (color[c].L-lab_table[rgb])   +
+                              (color[c].A-lab_table[rgb+1]) * (color[c].A-lab_table[rgb+1]) +
+                              (color[c].B-lab_table[rgb+2]) * (color[c].B-lab_table[rgb+2]);
+                if (sum<threshold) {
+                    /* set pixel if within threshold */
+                    dst->pixels[i+x] = c+1; //sets color label c+1
+                    break;
+                }
+            }
         }
     }
 }
@@ -300,16 +350,39 @@ void imlib_subimage(struct image *src_img, struct image *dst_img, int x_off, int
     }
 }
 
-void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off)
+void imlib_blit_gs(struct image *src, struct image *dst, int x_off, int y_off)
 {
     int x, y;
-    typeof(*src->data) *srcp = src->data;
+    uint8_t  *srcp = src->data;
+    uint16_t *dstp = (uint16_t*) dst->data;
+
+    for (y=y_off; y<src->h+y_off; y++) {
+        for (x=x_off; x<src->w+x_off; x++) {
+            uint8_t p =*srcp++;
+            dstp[y*dst->w+x]= ((uint16_t)p<<8)|p;
+        }
+    }
+}
+
+void imlib_blit_rgb(struct image *src, struct image *dst, int x_off, int y_off)
+{
+    int x, y;
+    typeof(*src->data) *srcp = src->data; //TODO
     typeof(*dst->data) *dstp = dst->data;
 
     for (y=y_off; y<src->h+y_off; y++) {
         for (x=x_off; x<src->w+x_off; x++) {
             dstp[y*dst->w+x]=*srcp++;
         }
+    }
+}
+
+void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off)
+{
+    if (src->bpp == 1) {
+        imlib_blit_gs(src, dst, x_off, y_off);
+    } else {
+        imlib_blit_rgb(src, dst, x_off, y_off);
     }
 }
 

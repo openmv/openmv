@@ -270,33 +270,46 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     return mp_const_none;
 }
 
-static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_obj, mp_obj_t threshold)
+static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, mp_obj_t threshold)
 {
-    /* C stuff */
-    struct color color;
-    struct image *image;
-    mp_obj_t bimage_obj;
+    color_t *color;
+    image_t *image;
 
     /* sanity checks */
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_RGB565);
     PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QQVGA);
 
-    mp_obj_t *col_obj;
-    mp_obj_get_array_fixed_n(color_obj, 3, &col_obj);
-    color.r = mp_obj_get_int(col_obj[0]);
-    color.g = mp_obj_get_int(col_obj[1]);
-    color.b = mp_obj_get_int(col_obj[2]);
-
-     /* get image pointer */
+    /* read arguments */
     image = py_image_cobj(image_obj);
+    int thresh = mp_obj_get_int(threshold);
 
     /* returned image */
-    bimage_obj = py_image(image->w, image->h, 1, image->data+(image->w*image->h*image->bpp));
+    image_t bimage = {
+        .w=image->w,
+        .h=image->h,
+        .bpp=1,
+        .pixels=image->data+(image->w*image->h*image->bpp)
+    };
+
+    /* copy color list */
+    uint len;
+    mp_obj_t *color_arr;
+    mp_obj_get_array(color_list_obj, &len, &color_arr);
+
+    color = xalloc(len*sizeof*color);
+
+    for (int i=0; i<len; i++) {
+        mp_obj_t *color_obj;
+        mp_obj_get_array_fixed_n(color_arr[i], 3, &color_obj);
+        color[i].L = mp_obj_get_int(color_obj[0]);
+        color[i].A = mp_obj_get_int(color_obj[1]);
+        color[i].B = mp_obj_get_int(color_obj[2]);
+    }
 
     /* Threshold image using reference color */
-    imlib_threshold(image, py_image_cobj(bimage_obj), &color, mp_obj_get_int(threshold));
+    imlib_threshold(image, &bimage, color, len, thresh);
 
-    return bimage_obj;
+    return py_image_from_struct(&bimage);
 }
 
 static mp_obj_t py_image_rainbow(mp_obj_t src_image_obj)
@@ -337,6 +350,43 @@ static mp_obj_t py_image_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_
     /* radius */
     r = mp_obj_get_int(r_obj);
     imlib_draw_circle(image, cx, cy, r);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_erode(mp_obj_t image_obj, mp_obj_t ksize_obj)
+{
+    image_t *image = NULL;
+    image = py_image_cobj(image_obj);
+
+    /* sanity checks */
+    PY_ASSERT_TRUE(image->bpp==1);
+
+    imlib_erode(image, mp_obj_get_int(ksize_obj));
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_dilate(mp_obj_t image_obj, mp_obj_t ksize_obj)
+{
+    image_t *image = NULL;
+    image = py_image_cobj(image_obj);
+
+    /* sanity checks */
+    PY_ASSERT_TRUE(image->bpp==1);
+
+    imlib_dilate(image, mp_obj_get_int(ksize_obj));
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_morph(mp_obj_t image_obj, mp_obj_t ksize_obj)
+{
+    image_t *image = NULL;
+    image = py_image_cobj(image_obj);
+
+    /* sanity checks */
+    PY_ASSERT_TRUE(image->bpp==1);
+
+    imlib_morph(image, NULL, mp_obj_get_int(ksize_obj));
+
     return mp_const_none;
 }
 
@@ -389,7 +439,7 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
     /* C stuff */
     array_t *blobs;
     struct image *image;
-    mp_obj_t rec_obj[4];
+    mp_obj_t blob_obj[6];
 
     /* MP List */
     mp_obj_t objects_list = mp_const_none;
@@ -408,12 +458,14 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
 
     if (array_length(blobs)) {
         for (int j=0; j<array_length(blobs); j++) {
-             rectangle_t *r = array_at(blobs, j);
-             rec_obj[0] = mp_obj_new_int(r->x);
-             rec_obj[1] = mp_obj_new_int(r->y);
-             rec_obj[2] = mp_obj_new_int(r->w);
-             rec_obj[3] = mp_obj_new_int(r->h);
-             mp_obj_list_append(objects_list, mp_obj_new_tuple(4, rec_obj));
+             blob_t *r = array_at(blobs, j);
+             blob_obj[0] = mp_obj_new_int(r->x);
+             blob_obj[1] = mp_obj_new_int(r->y);
+             blob_obj[2] = mp_obj_new_int(r->w);
+             blob_obj[3] = mp_obj_new_int(r->h);
+             blob_obj[4] = mp_obj_new_int(r->c);
+             blob_obj[5] = mp_obj_new_int(r->id);
+             mp_obj_list_append(objects_list, mp_obj_new_tuple(6, blob_obj));
         }
     }
     array_free(blobs);
@@ -490,6 +542,10 @@ static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj
     }
     return obj;
 }
+//#define get_kw_arg(kw_map, kw_val, kw_def)
+//   ({ mp_map_elem_t *kw_arg = mp_map_lookup(kw_map,
+//         MP_OBJ_NEW_QSTR(qstr_from_str(kw_val)), MP_MAP_LOOKUP);
+//     _a < _b ? _a : _b; })
 
 static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -564,19 +620,39 @@ static mp_obj_t py_image_match_keypoints(mp_obj_t image_obj, mp_obj_t kpts_obj, 
     // match the keypoint sets
     int16_t *kpts_match = freak_match_keypoints(kpts1, kpts1_size, kpts2, kpts2_size, m_thresh);
 
+//    // do something with the match
+//    for (int i=0; i<kpts1_size; i++) {
+//        if (kpts_match[i] != -1) {
+//            kp_t *kp1 = &kpts1[i];
+//            kp_t *kp2 = &kpts2[kpts_match[i]];
+//            imlib_draw_line(image, kp1->x, kp1->y, kp2->x, kp2->y);
+//            //int r = 4;
+//            //                if (((kp->x+r) < image->w) && ((kp->y+r) < image->h)) {
+//            //                    imlib_draw_circle(image, kp->x, kp->y, r);
+//            //                }
+//        }
+//    }
+
     // do something with the match
+    int cx=0, cy=0, match=0;
     for (int i=0; i<kpts1_size; i++) {
         if (kpts_match[i] != -1) {
-            kp_t *kp1 = &kpts1[i];
             kp_t *kp2 = &kpts2[kpts_match[i]];
-            imlib_draw_line(image, kp1->x, kp1->y, kp2->x, kp2->y);
-            //int r = 4;
-            //                if (((kp->x+r) < image->w) && ((kp->y+r) < image->h)) {
-            //                    imlib_draw_circle(image, kp->x, kp->y, r);
-            //                }
+            cx += kp2->x;
+            cy += kp2->y;
+            match ++;
         }
     }
-
+    if (match ==0) {
+        match++;
+    }
+    cx /= match;
+    cy /= match;
+    int r = 5;
+    if (((cx+r) < image->w) && ((cy+r) < image->h)) {
+        imlib_draw_line(image, image->w/2, image->h/2, cx, cy);
+        imlib_draw_circle(image, cx, cy, r);
+    }
     return mp_const_none;
 }
 
@@ -630,6 +706,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 1, py_image_median);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj, py_image_threshold);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rainbow_obj, py_image_rainbow);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_erode_obj, py_image_erode);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_dilate_obj, py_image_dilate);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_morph_obj, py_image_morph);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_circle_obj, py_image_draw_circle);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_rectangle_obj, py_image_draw_rectangle);
@@ -647,13 +726,16 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),               (mp_obj_t)&py_image_scaled_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),              (mp_obj_t)&py_image_scaled_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blit),                (mp_obj_t)&py_image_blit_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_threshold),           (mp_obj_t)&py_image_threshold_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_rainbow),             (mp_obj_t)&py_image_rainbow_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_erode),               (mp_obj_t)&py_image_erode_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_dilate),              (mp_obj_t)&py_image_dilate_obj},
+//    {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
 
     /* drawing functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_circle),         (mp_obj_t)&py_image_draw_circle_obj},
@@ -686,7 +768,7 @@ mp_obj_t py_image(int w, int h, int bpp, void *pixels)
     o->base.type = &py_image_type;
 
     o->_cobj.w =w;
-    o->_cobj.h =w;
+    o->_cobj.h =h;
     o->_cobj.bpp =bpp;
     o->_cobj.pixels =pixels;
     return o;
