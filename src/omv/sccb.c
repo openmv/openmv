@@ -22,8 +22,6 @@ void SCCB_Init()
     I2CHandle.Init.OwnAddress1     = 0xFE;
     I2CHandle.Init.OwnAddress2     = 0xFE;
 
-    HAL_I2C_DeInit(&I2CHandle);
-
     if (HAL_I2C_Init(&I2CHandle) != HAL_OK) {
         /* Initialization Error */
         BREAK();
