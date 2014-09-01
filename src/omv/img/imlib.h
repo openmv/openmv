@@ -196,6 +196,7 @@ int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpt
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);
 void imlib_draw_circle(struct image *image, int cx, int cy, int r);
 void imlib_draw_line(image_t *src, int x0, int y0, int x1, int y1);
+void imlib_draw_string(image_t *src, int x, int y, const char *str);
 
 /* Misc */
 void imlib_scale(struct image *src, struct image *dst, interp_t interp);

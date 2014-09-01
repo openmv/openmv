@@ -353,6 +353,27 @@ static mp_obj_t py_image_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_
     return mp_const_none;
 }
 
+static mp_obj_t py_image_draw_string(mp_obj_t image_obj, mp_obj_t offset_obj, mp_obj_t str_obj)
+{
+    int x,y;
+    image_t *image = NULL;
+
+    // get image pointer
+    image = py_image_cobj(image_obj);
+
+    // get x,y offset
+    mp_obj_t *array;
+    mp_obj_get_array_fixed_n(offset_obj, 2, &array);
+    x = mp_obj_get_int(array[0]);
+    y = mp_obj_get_int(array[1]);
+
+    // get string to draw
+    const char *str = mp_obj_str_get_str(str_obj);
+    imlib_draw_string(image, x, y, str);
+    return mp_const_none;
+}
+
+
 static mp_obj_t py_image_erode(mp_obj_t image_obj, mp_obj_t ksize_obj)
 {
     image_t *image = NULL;
@@ -713,6 +734,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_morph_obj, py_image_morph);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_circle_obj, py_image_draw_circle);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_rectangle_obj, py_image_draw_rectangle);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_keypoints_obj, py_image_draw_keypoints);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_string_obj, py_image_draw_string);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
@@ -741,6 +763,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_circle),         (mp_obj_t)&py_image_draw_circle_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_rectangle),      (mp_obj_t)&py_image_draw_rectangle_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_keypoints),      (mp_obj_t)&py_image_draw_keypoints_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_draw_string),         (mp_obj_t)&py_image_draw_string_obj},
 
     /* objects/feature detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
