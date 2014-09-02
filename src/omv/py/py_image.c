@@ -186,6 +186,33 @@ static mp_obj_t py_image_scaled(mp_obj_t image_obj, mp_obj_t size_obj)
     return py_image_from_struct(&dst_image);
 }
 
+static mp_obj_t py_image_subimg(mp_obj_t image_obj, mp_obj_t subimg_obj)
+{
+    rectangle_t r;
+    image_t *image;
+    mp_obj_t *array;
+
+    /* image pointer */
+    image = py_image_cobj(image_obj);
+
+    /* sub image */
+    mp_obj_get_array_fixed_n(subimg_obj, 4, &array);
+    r.x = mp_obj_get_int(array[0]);
+    r.y = mp_obj_get_int(array[1]);
+    r.w = mp_obj_get_int(array[2]);
+    r.h = mp_obj_get_int(array[3]);
+
+    image_t subimg = {
+        .w=r.w,
+        .h=r.h,
+        .bpp=image->bpp,
+        .pixels=xalloc(r.w*r.h*image->bpp)
+    };
+
+    imlib_subimage(image, &subimg, r.x, r.y);
+
+    return py_image_from_struct(&subimg);
+}
 
 static mp_obj_t py_image_blit(mp_obj_t dst_image_obj, mp_obj_t src_image_obj, mp_obj_t offset_obj)
 {
@@ -277,7 +304,7 @@ static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, 
 
     /* sanity checks */
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_RGB565);
-    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QQVGA);
+    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QCIF);
 
     /* read arguments */
     image = py_image_cobj(image_obj);
@@ -721,6 +748,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scaled_obj, py_image_scaled);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_subimg_obj, py_image_subimg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj, py_image_blit);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blend_obj, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
@@ -749,6 +777,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),              (mp_obj_t)&py_image_scaled_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_subimg),              (mp_obj_t)&py_image_subimg_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blit),                (mp_obj_t)&py_image_blit_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
