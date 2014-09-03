@@ -649,10 +649,12 @@ void imlib_draw_line(image_t *src, int x0, int y0, int x1, int y1)
 }
 
 // TODO check image bounds
-void imlib_draw_string(image_t *image, int x_off, int y_off, const char *str)
+void imlib_draw_string(image_t *image, int x_off, int y_off, const char *str, color_t *c)
 {
     const glyph_t *g;
     uint16_t *data = (uint16_t*)image->pixels;
+    uint16_t color = RGB565(c->r, c->g, c->b);
+
     for(char c; (c=*str); str++) {
         if (c < ' ' || c > '~') {
             continue;
@@ -661,7 +663,7 @@ void imlib_draw_string(image_t *image, int x_off, int y_off, const char *str)
         for (int y=0; y<g->h; y++) {
             for (int x=0; x<g->w; x++) {
                 if (g->data[y] & (0x80>>x)){
-                    data[(y_off+y)*image->w+x_off+x]=0xFFFF;
+                    data[(y_off+y)*image->w+x_off+x]=color;
                 }
             }
         }
