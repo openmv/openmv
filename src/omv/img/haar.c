@@ -11,7 +11,8 @@ static int evalWeakClassifier(struct cascade *cascade, int std, int p_offset, in
 {
     int i, sumw=0;
     struct rectangle tr;
-    struct integral_image *sum = &cascade->sum;
+    struct integral_image *sum = cascade->sum;
+
     /* the node threshold is multiplied by the standard deviation of the image */
     int t = cascade->tree_thresh_array[tree_index] * std;
 
@@ -21,12 +22,11 @@ static int evalWeakClassifier(struct cascade *cascade, int std, int p_offset, in
         tr.w = cascade->rectangles_array[r_index + (i<<2) + 2];
         tr.h = cascade->rectangles_array[r_index + (i<<2) + 3];
 
-        sumw += (
-             *((sum->data + sum->w*(tr.y ) + (tr.x ))               + p_offset)
-           - *((sum->data + sum->w*(tr.y ) + (tr.x  + tr.w))        + p_offset)
-           - *((sum->data + sum->w*(tr.y  + tr.h) + (tr.x ))        + p_offset)
-           + *((sum->data + sum->w*(tr.y  + tr.h) + (tr.x  + tr.w)) + p_offset))
-           * cascade->weights_array[w_index + i]<<12;
+        sumw += ( sum->data[sum->w*tr.y + tr.x + p_offset]
+                - sum->data[sum->w*tr.y + tr.x + tr.w + p_offset]
+                - sum->data[sum->w*(tr.y  + tr.h) + tr.x + p_offset]
+                + sum->data[sum->w*(tr.y  + tr.h) + tr.x  + tr.w + p_offset])
+                * (cascade->weights_array[w_index + i]<<12);
     }
 
     if (sumw >= t) {
@@ -38,45 +38,38 @@ static int evalWeakClassifier(struct cascade *cascade, int std, int p_offset, in
 
 static int runCascadeClassifier(struct cascade* cascade, struct point pt, int start_stage)
 {
-    int i, j;
-    int p_offset;
-    int32_t mean;
-    int32_t std;
-
     int w_index = 0;
     int r_index = 0;
-    int stage_sum;
     int tree_index = 0;
 
-    int x,y,offset;
-    uint32_t sumsq=0;
-    uint32_t v0;
+    uint32_t sumsq = 0;
+    int32_t std, mean;
 
-    for (y=pt.y; y<cascade->window.h; y++) {
-          offset = y*cascade->img->w;
-      for (x=pt.x; x<cascade->window.w; x+=2) {
-          v0 = __PKHBT(cascade->img->pixels[offset+x+0],
-                       cascade->img->pixels[offset+x+1], 16);
+    for (int y=pt.y; y<cascade->window.h; y++) {
+          int offset = y*cascade->img->w;
+      for (int x=pt.x; x<cascade->window.w; x+=2) {
+          uint32_t v0 = __PKHBT(cascade->img->pixels[offset+x+0],
+                                cascade->img->pixels[offset+x+1], 16);
           sumsq = __SMLAD(v0, v0, sumsq);
       }
     }
 
     /* Image normalization */
+    i_image_t *sum = cascade->sum;
     int win_w = cascade->window.w - 1;
     int win_h = cascade->window.h - 1;
+    int p_offset = pt.y * (sum->w) + pt.x;
 
-    p_offset = pt.y * (cascade->sum.w) + pt.x;
-
-    mean = cascade->sum.data[p_offset]
-         - cascade->sum.data[win_w + p_offset]
-         - cascade->sum.data[cascade->sum.w * win_h + p_offset]
-         + cascade->sum.data[cascade->sum.w * win_h + win_w + p_offset];
+    mean = sum->data[p_offset]
+         - sum->data[win_w + p_offset]
+         - sum->data[sum->w * win_h + p_offset]
+         + sum->data[sum->w * win_h + win_w + p_offset];
 
     std = fast_sqrtf(sumsq * cascade->window.w * cascade->window.h - mean * mean);
 
-    for (i=start_stage; i<cascade->n_stages; i++) {
-        stage_sum = 0;
-        for (j=0; j<cascade->stages_array[i]; j++, tree_index++) {
+    for (int i=start_stage; i<cascade->n_stages; i++) {
+        int stage_sum = 0;
+        for (int j=0; j<cascade->stages_array[i]; j++, tree_index++) {
             /* send the shifted window to a haar filter */
               stage_sum += evalWeakClassifier(cascade, std, p_offset, tree_index, w_index, r_index);
               w_index+=cascade->num_rectangles_array[tree_index];
@@ -128,6 +121,7 @@ static void ScaleImageInvoker(struct cascade *cascade, float factor, int sum_row
     }
 }
 
+#include "framebuffer.h"
 struct array *imlib_detect_objects(struct image *image, struct cascade *cascade)
 {
     /* scaling factor */
@@ -142,14 +136,15 @@ struct array *imlib_detect_objects(struct image *image, struct cascade *cascade)
     img.w = image->w;
     img.h = image->h;
     img.bpp = image->bpp;
+    //sum.data   = xalloc(image->w *image->h*sizeof(*sum.data));
     /* use the second half of the framebuffer */
-    img.pixels = image->pixels+(image->w * image->h);
+    img.pixels = fb->pixels+(fb->w * fb->h);
 
     /* allocate buffer for integral image */
     sum.w = image->w;
     sum.h = image->h;
     //sum.data   = xalloc(image->w *image->h*sizeof(*sum.data));
-    sum.data = (uint32_t*) (image->pixels+(image->w * image->h * 2));
+    sum.data = (uint32_t*) (fb->pixels+(fb->w * fb->h * 2));
 
     /* allocate the detections array */
     array_alloc(&objects, xfree);
@@ -157,12 +152,15 @@ struct array *imlib_detect_objects(struct image *image, struct cascade *cascade)
     /* set cascade image pointer */
     cascade->img = &img;
 
+    /* sets cascade integral image */
+    cascade->sum = &sum;
+
     /* iterate over the image pyramid */
     for(factor=1.0f; ; factor*=cascade->scale_factor) {
         /* size of the scaled image */
         struct size sz = {
-            (image->w/factor),
-            (image->h/factor)
+            (image->w*factor),
+            (image->h*factor)
         };
 
         /* if scaled image is smaller than the original detection window, break */
@@ -183,9 +181,6 @@ struct array *imlib_detect_objects(struct image *image, struct cascade *cascade)
 
         /* compute a new integral image */
         imlib_integral_image(&img, &sum);
-
-        /* sets images for haar classifier cascade */
-        cascade->sum = sum;
 
         /* process the current scale with the cascaded fitler. */
         ScaleImageInvoker(cascade, factor, sum.h, sum.w, objects);

@@ -549,6 +549,7 @@ void imlib_scale_bilinear_gray(struct image *src, struct image *dst)
         }
     }
 }
+
 void imlib_scale(struct image *src, struct image *dst, interp_t interp)
 {
     switch (interp) {

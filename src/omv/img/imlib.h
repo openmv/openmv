@@ -121,7 +121,7 @@ typedef struct cascade {
     /* pointer to current scaled image in the pyramid */
     struct image *img;
     /* pointer to current integral image */
-    struct integral_image sum;
+    struct integral_image *sum;
     /* haar cascade arrays */
     uint8_t *stages_array;
     int16_t *stages_thresh_array;

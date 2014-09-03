@@ -729,7 +729,7 @@ mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
     /* detection parameters */
     struct cascade cascade = {
         .step = 2,
-        .scale_factor = 1.25f,
+        .scale_factor = 0.25f,
     };
 
     const char *path = mp_obj_str_get_str(path_obj);
