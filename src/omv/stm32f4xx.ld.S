@@ -87,7 +87,6 @@ SECTIONS
     . = ALIGN(4);
     */ff.o(.text*)
     */ccsbcs.o(.text*)
-    */stm32f4xx_hal_sd.o(.text*)
     */stm32f4xx_hal_i2c.o(.text*)
     */stm32f4xx_hal_tim.o(.text*)
     */stm32f4xx_hal_adc.o(.text*)
