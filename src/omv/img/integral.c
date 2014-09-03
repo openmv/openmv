@@ -5,45 +5,76 @@
 
 void imlib_integral_image(struct image *src, struct integral_image *sum)
 {
-    typeof(*src->data) *data = src->data;
-    typeof(*sum->data) *sumData = sum->data;
+    typeof(*src->data) *img_data = src->data;
+    typeof(*sum->data) *sum_data = sum->data;
 
     // Compute first column to avoid branching
     for (int s=0, x=0; x<src->w; x++) {
         /* sum of the current row (integer) */
-        s += data[src->w+x];
-        sumData[src->w+x] = s;
+        s += img_data[src->w+x];
+        sum_data[src->w+x] = s;
     }
 
     for (int y=1; y<src->h; y++) {
         /* loop over the number of columns */
         for (int s=0, x=0; x<src->w; x++) {
             /* sum of the current row (integer) */
-            s += data[y*src->w+x];
-            sumData[y*src->w+x] = s+sumData[(y-1)*src->w+x];
+            s += img_data[y*src->w+x];
+            sum_data[y*src->w+x] = s+sum_data[(y-1)*src->w+x];
+        }
+    }
+}
+
+void imlib_integral_image_scaled(struct image *src, struct integral_image *sum)
+{
+    typeof(*src->data) *img_data = src->data;
+    typeof(*sum->data) *sum_data = sum->data;
+
+    int x_ratio = (int)((src->w<<16)/sum->w) +1;
+    int y_ratio = (int)((src->h<<16)/sum->h) +1;
+
+    // Compute first column to avoid branching
+    for (int s=0, x=0; x<sum->w; x++) {
+        int sx = (x*x_ratio)>>16;
+        /* sum of the current row (integer) */
+        s += img_data[src->w+sx];
+        sum_data[sum->w+x] = s;
+    }
+
+    for (int y=1; y<sum->h; y++) {
+        int sy = (y*y_ratio)>>16;
+        /* loop over the number of columns */
+        for (int s=0, x=0; x<sum->w; x++) {
+            int sx = (x*x_ratio)>>16;
+
+            /* sum of the current row (integer) */
+            s += img_data[sy*src->w+sx];
+            sum_data[y*sum->w+x] = s+sum_data[(y-1)*src->w+x];
         }
     }
 }
 
 void imlib_integral_image_sq(struct image *src, struct integral_image *sum)
 {
-    int x, y, s,t;
-    typeof(*src->data) *data = src->data;
-    typeof(*sum->data) *sumData = sum->data;
+    typeof(*src->data) *img_data = src->data;
+    typeof(*sum->data) *sum_data = sum->data;
 
-    for (y=0; y<src->h; y++) {
-        s = 0;
+    // Compute first column to avoid branching
+    for (int s=0, x=0; x<src->w; x++) {
+        /* sum of the current row (integer) */
+        s += img_data[src->w+x] * img_data[src->w+x];
+        sum_data[src->w+x] = s;
+    }
+
+    for (int y=1; y<src->h; y++) {
         /* loop over the number of columns */
-        for (x=0; x<src->w; x++) {
-            /* sum of the current row (integer)*/
-            s += (data[y*src->w+x])*(data[y*src->w+x]);
-            t = s;
-            if (y != 0) {
-                t += sumData[(y-1)*src->w+x];
-            }
-            sumData[y*src->w+x]=t;
+        for (int s=0, x=0; x<src->w; x++) {
+            /* sum of the current row (integer) */
+            s += img_data[y*src->w+x] * img_data[y*src->w+x];
+            sum_data[y*src->w+x] = s+sum_data[(y-1)*src->w+x];
         }
     }
+
 }
 
 uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h)
