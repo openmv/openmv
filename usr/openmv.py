@@ -18,13 +18,13 @@ __INTERFACE     = 0
 __ALTSETTING    = 1
 __IN_EP         =0x81
 __OUT_EP        =0x01
-__TIMEOUT       =1000
+__TIMEOUT       =3000
 __FB_HDR_SIZE   =12
 
 # USB Debug commands
 __USBDBG_FRAME_SIZE=1
 __USBDBG_FRAME_DUMP=2
-__USBDBG_FRAME_READY=3
+__USBDBG_FRAME_LOCK=3
 __USBDBG_SCRIPT_EXEC=4
 __USBDBG_SCRIPT_STOP=5
 __USBDBG_SCRIPT_SAVE=6
@@ -82,15 +82,15 @@ def fb_size():
     size = struct.unpack("III", buf)
     return size
 
-def fb_ready():
+def fb_lock():
     global __dev
-    buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_READY, 0, __INTERFACE, 1, __TIMEOUT)
+    buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_LOCK, 0, __INTERFACE, 1, __TIMEOUT)
     return struct.unpack("B", buf)[0]
 
 def fb_dump():
     global __dev
 
-    if (fb_ready() == 0):
+    if (fb_lock() == 0):
         return None
 
     size = fb_size()
@@ -100,7 +100,7 @@ def fb_dump():
         num_bytes = size[0]*size[1]*size[2]
 
     # read fb data
-    __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes, __INTERFACE, 0, __TIMEOUT)
+    __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
     buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
 
     if (size[2] > 2):

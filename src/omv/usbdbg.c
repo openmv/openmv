@@ -102,15 +102,15 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
 
         case USBDBG_FRAME_DUMP:
             xfer_bytes = 0;
-            xfer_length = length;
+            xfer_length =((uint32_t)length)<<2;
             break;
 
-        case USBDBG_FRAME_READY:
-            /* return framebuffer status */
+        case USBDBG_FRAME_LOCK:
             if (fb->ready == 0) {
                 // no valid frame
                 ((uint8_t*)buffer)[0] = 0;
             } else {
+                // try to lock FB, return 1 if locked
                 ((uint8_t*)buffer)[0] = mutex_try_lock(&fb->lock);
             }
             break;
