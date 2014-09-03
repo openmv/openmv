@@ -21,7 +21,11 @@ static const uint8_t default_regs[][2] = {
     { 0x3c,     0x32 },
     { CLKRC,    0x80 }, /* Set PCLK divider */
     { COM2,     COM2_OUT_DRIVE_3x }, /* Output drive x2 */
-    { REG04,    REG04_SET(REG04_HREF_EN)}, /* Mirror/VFLIP/AEC[1:0] */
+#ifdef OPENMV2
+    { REG04,    0xF8}, /* Mirror/VFLIP/AEC[1:0] */
+#else
+    { REG04_SET(REG04_HREF_EN)},
+#endif
     { COM8,     COM8_SET(COM8_BNDF_EN | COM8_AGC_EN | COM8_AEC_EN) },
     { COM9,     COM9_AGC_SET(COM9_AGC_GAIN_8x)},
     { 0x2c,     0x0c },

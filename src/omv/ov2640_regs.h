@@ -133,7 +133,7 @@
 #define HISTO_HIGH          0x62
 
 #define REG04               0x04
-#define REG04_DEFAULT       0x20
+#define REG04_DEFAULT       0x28
 #define REG04_HFLIP_IMG     0x80
 #define REG04_VFLIP_IMG     0x40
 #define REG04_VREF_EN       0x10
