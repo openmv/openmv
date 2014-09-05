@@ -361,6 +361,39 @@ void HAL_SDRAM_MspInit(SDRAM_HandleTypeDef *hsdram)
 }
 #endif
 
+void HAL_UART_MspInit(UART_HandleTypeDef *huart)
+{
+    // Enable UART clock
+    UARTx_CLK_ENABLE();
+
+    GPIO_InitTypeDef  GPIO_InitStruct;
+    GPIO_InitStruct.Pull      = GPIO_NOPULL;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Alternate = UARTx_TX_AF;
+
+    /* UART TX GPIO pin configuration  */
+    GPIO_InitStruct.Pin       = UARTx_TX_PIN;
+    HAL_GPIO_Init(UARTx_TX_PORT, &GPIO_InitStruct);
+
+    /* UART RX GPIO pin configuration  */
+    GPIO_InitStruct.Pin = UARTx_RX_PIN;
+    GPIO_InitStruct.Alternate = UARTx_RX_AF;
+    HAL_GPIO_Init(UARTx_RX_PORT, &GPIO_InitStruct);
+}
+
+void HAL_UART_MspDeInit(UART_HandleTypeDef *huart)
+{
+//    UARTx_FORCE_RESET();
+//    UARTx_RELEASE_RESET();
+//
+//    /* Disable peripherals and GPIO Clocks */
+//    /* Configure UART Tx as alternate function  */
+//    HAL_GPIO_DeInit(UARTx_TX_GPIO_PORT, UARTx_TX_PIN);
+//    /* Configure UART Rx as alternate function  */
+//    HAL_GPIO_DeInit(UARTx_RX_GPIO_PORT, UARTx_RX_PIN);
+}
+
 void HAL_MspDeInit(void)
 {
 

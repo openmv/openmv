@@ -18,8 +18,6 @@
 #include "stream.h"
 #include "gc.h"
 #include "gccollect.h"
-#include "uart.h"
-#include "pybstdio.h"
 #include "readline.h"
 #include "pyexec.h"
 #include "extint.h"

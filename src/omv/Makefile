@@ -56,6 +56,7 @@ SRCS += $(addprefix py/,    \
 	py_select.c             \
 	py_gpio.c               \
 	py_spi.c                \
+	uart.c                  \
 	mlx90620.c              \
    )
 

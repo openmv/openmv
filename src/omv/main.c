@@ -16,8 +16,6 @@
 #include "gc.h"
 #include "stackctrl.h"
 #include "gccollect.h"
-#include "uart.h"
-#include "pybstdio.h"
 #include "readline.h"
 #include "pyexec.h"
 #include "timer.h"
@@ -45,6 +43,7 @@
 #include "py_select.h"
 #include "py_gpio.h"
 #include "py_spi.h"
+#include "py/uart.h"
 
 #include "mlx90620.h"
 
@@ -64,8 +63,8 @@ void flash_error(int n) {
 }
 
 void __fatal_error(const char *msg) {
-    stdout_tx_strn("\nFATAL ERROR:\n", 14);
-    stdout_tx_strn(msg, strlen(msg));
+    printf("\nFATAL ERROR:\n");
+    printf(msg);
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
         for (volatile uint delay = 0; delay < 500000; delay++) {
@@ -184,6 +183,7 @@ static const module_t init_modules[] ={
 //  {"select",  py_select_init},
     {"spi",     py_spi_init},
     {"gpio",    py_gpio_init},
+    {"uart",    py_uart_init},
 #ifdef OPENMV2
     {"mlx90620", py_mlx90620_init},
 #endif
@@ -279,8 +279,6 @@ soft_reset:
     mp_store_global(qstr_from_str("Image"),             (mp_obj_t)&py_image_load_image_obj);
     mp_store_global(qstr_from_str("HaarCascade"),       (mp_obj_t)&py_image_load_cascade_obj);
     mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
-
-    pyb_stdio_uart = NULL;
 
     // try to mount the flash
     FRESULT res = f_mount(&fatfs0, "0:", 1);
