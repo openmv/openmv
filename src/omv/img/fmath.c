@@ -137,7 +137,7 @@ float fast_atanf(float x)
     return r;
 }
 
-float fast_atan2f(float x, float y)
+float fast_atan2f(float y, float x)
 {
   if(x > 0 && y >= 0)
     return fast_atanf(y/x);
