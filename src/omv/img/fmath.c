@@ -31,6 +31,17 @@ int ALWAYS_INLINE fast_floorf(float x)
     return i;
 }
 
+int ALWAYS_INLINE fast_ceilf(float x)
+{
+    int i;
+    x += 0.9999f;
+    asm volatile (
+            "vcvt.S32.f32  %[r], %[x]\n"
+            : [r] "=t" (i)
+            : [x] "t"  (x));
+    return i;
+}
+
 int ALWAYS_INLINE fast_roundf(float x)
 {
     int i;
