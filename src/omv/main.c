@@ -135,6 +135,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_cpu_freq_obj, py_cpu_freq);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_cascade_obj, py_image_load_cascade);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_descriptor_obj, py_image_load_descriptor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_save_descriptor_obj, py_image_save_descriptor);
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
@@ -278,6 +280,8 @@ soft_reset:
     mp_store_global(qstr_from_str("cpu_freq"),          (mp_obj_t)&py_cpu_freq_obj);
     mp_store_global(qstr_from_str("Image"),             (mp_obj_t)&py_image_load_image_obj);
     mp_store_global(qstr_from_str("HaarCascade"),       (mp_obj_t)&py_image_load_cascade_obj);
+    mp_store_global(qstr_from_str("FreakDesc"),         (mp_obj_t)&py_image_load_descriptor_obj);
+    mp_store_global(qstr_from_str("FreakDescSave"),     (mp_obj_t)&py_image_save_descriptor_obj);
     mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
 
     // try to mount the flash

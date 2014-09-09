@@ -191,10 +191,12 @@ struct array *imlib_detect_objects(struct image *image, struct cascade* cascade)
 kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners);
 void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient_normalized, bool scale_normalized);
 int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpts2_size, int threshold);
+int freak_save_descriptor(kp_t *kpts, int kpts_size, const char *path);
+int freak_load_descriptor(kp_t **kpts_out, int *kpts_size_out, const char *path);
 
 /* Drawing functions */
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);
-void imlib_draw_circle(struct image *image, int cx, int cy, int r);
+void imlib_draw_circle(struct image *image, int cx, int cy, int r, color_t *c);
 void imlib_draw_line(image_t *src, int x0, int y0, int x1, int y1);
 void imlib_draw_string(image_t *src, int x, int y, const char *str, color_t *c);
 

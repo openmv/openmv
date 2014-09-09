@@ -6,6 +6,7 @@
 #include "py_assert.h"
 #include "py_image.h"
 #include "py_file.h"
+#include "arm_math.h"
 
 extern struct sensor_dev sensor;
 static const mp_obj_type_t py_cascade_type;
@@ -111,7 +112,7 @@ static mp_obj_t py_image_size(mp_obj_t self_in)
 
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    rectangle_t r;
+    int res;
     image_t *image = py_image_cobj(args[0]);
     const char *path = mp_obj_str_get_str(args[1]);
 
@@ -119,14 +120,20 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     if (kw_subimage != NULL) {
         mp_obj_t *array;
         mp_obj_get_array_fixed_n(kw_subimage->value, 4, &array);
-        r.x = mp_obj_get_int(array[0]);
-        r.y = mp_obj_get_int(array[1]);
-        r.w = mp_obj_get_int(array[2]);
-        r.h = mp_obj_get_int(array[3]);
+
+        rectangle_t r = {
+            mp_obj_get_int(array[0]),
+            mp_obj_get_int(array[1]),
+            mp_obj_get_int(array[2]),
+            mp_obj_get_int(array[3]),
+        };
+
+        res = imlib_save_image(image, path, &r);
+    } else {
+        res = imlib_save_image(image, path, NULL);
     }
 
-    int res;
-    if ((res=imlib_save_image(image, path, &r)) != FR_OK) {
+    if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
@@ -364,7 +371,9 @@ static mp_obj_t py_image_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_
 {
     int cx, cy, r;
     mp_obj_t *array;
+
     struct image *image;
+    color_t c = {.r=0xFF, .g=0xFF, .b=0xFF};
 
     /* get image pointer */
     image = py_image_cobj(image_obj);
@@ -376,7 +385,7 @@ static mp_obj_t py_image_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_
 
     /* radius */
     r = mp_obj_get_int(r_obj);
-    imlib_draw_circle(image, cx, cy, r);
+    imlib_draw_circle(image, cx, cy, r, &c);
     return mp_const_none;
 }
 
@@ -457,28 +466,24 @@ static mp_obj_t py_image_draw_rectangle(mp_obj_t image_obj, mp_obj_t rectangle_o
     return mp_const_none;
 }
 
-static mp_obj_t py_image_draw_keypoints(mp_obj_t image_obj, mp_obj_t kp_obj)
+static mp_obj_t py_image_draw_keypoints(mp_obj_t image_obj, mp_obj_t kpts_obj)
 {
-//    int r = 2;
-//    for (int i=0; i<kpts_size; i++) {
-//        kp_t *kp = &kpts[i];
-//        if (kp->x&&kp->y) {
-//            if (((kp->x+r) < image->w) && ((kp->y+r) < image->h)) {
-//                imlib_draw_circle(image, kp->x, kp->y, r);
-//            }
-//        }
-//    }
+    image_t *image = NULL;
+    py_kp_obj_t *kpts=NULL;
 
-//    kp_t *kp = NULL;
-//    image_t *image = NULL;
-//
-//    /* get C image pointer */
-//    image = py_image_cobj(image_obj);
-//
-//    /* get C cascade pointer */
-//    kp = py_kp_cobj(kp_obj);
-//
-//    kp_draw_ipts(image, kp->ipts);
+    /* get pointer */
+    image = py_image_cobj(image_obj);
+    kpts = (py_kp_obj_t*)kpts_obj;
+    color_t cl = {.r=0xFF, .g=0xFF, .b=0xFF};
+
+    for (int i=0; i<kpts->size; i++) {
+        kp_t *kp = &kpts->kpts[i];
+        float co = arm_cos_f32(kp->angle);
+        float si = arm_sin_f32(kp->angle);
+        imlib_draw_line(image, kp->x, kp->y, kp->x+(co*10), kp->y+(si*10));
+        imlib_draw_circle(image, kp->x, kp->y, 4, &cl);
+    }
+
     return mp_const_none;
 }
 
@@ -590,10 +595,6 @@ static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj
     }
     return obj;
 }
-//#define get_kw_arg(kw_map, kw_val, kw_def)
-//   ({ mp_map_elem_t *kw_arg = mp_map_lookup(kw_map,
-//         MP_OBJ_NEW_QSTR(qstr_from_str(kw_val)), MP_MAP_LOOKUP);
-//     _a < _b ? _a : _b; })
 
 static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -668,39 +669,41 @@ static mp_obj_t py_image_match_keypoints(mp_obj_t image_obj, mp_obj_t kpts_obj, 
     // match the keypoint sets
     int16_t *kpts_match = freak_match_keypoints(kpts1, kpts1_size, kpts2, kpts2_size, m_thresh);
 
-//    // do something with the match
-//    for (int i=0; i<kpts1_size; i++) {
-//        if (kpts_match[i] != -1) {
-//            kp_t *kp1 = &kpts1[i];
-//            kp_t *kp2 = &kpts2[kpts_match[i]];
-//            imlib_draw_line(image, kp1->x, kp1->y, kp2->x, kp2->y);
-//            //int r = 4;
-//            //                if (((kp->x+r) < image->w) && ((kp->y+r) < image->h)) {
-//            //                    imlib_draw_circle(image, kp->x, kp->y, r);
-//            //                }
-//        }
-//    }
-
-    // do something with the match
-    int cx=0, cy=0, match=0;
+#if 1
+    // do something with the matches
     for (int i=0; i<kpts1_size; i++) {
         if (kpts_match[i] != -1) {
             kp_t *kp2 = &kpts2[kpts_match[i]];
-            cx += kp2->x;
-            cy += kp2->y;
+            imlib_draw_line(image, image->w/2, image->h/2, kp2->x, kp2->y);
+        }
+    }
+#else
+    int match=0;
+    rectangle_t r = {image->w-1, image->h-1, 0, 0};
+    for (int i=0; i<kpts1_size; i++) {
+        if (kpts_match[i] != -1) {
+            kp_t *kp2 = &kpts2[kpts_match[i]];
+            if (kp2->x < r.x) {
+                r.x = kp2->x;
+            }
+            if (kp2->y < r.y) {
+                r.y = kp2->y;
+            }
+            if (kp2->x > r.w) {
+                r.w = kp2->x;
+            }
+            if (kp2->y > r.h) {
+                r.h = kp2->y;
+            }
             match ++;
         }
     }
-    if (match ==0) {
-        match++;
+    if (match>=(kpts1_size/4)) {
+        r.w = r.w - r.x;
+        r.h = r.h - r.y;
+        imlib_draw_rectangle(image, &r);
     }
-    cx /= match;
-    cy /= match;
-    int r = 5;
-    if (((cx+r) < image->w) && ((cy+r) < image->h)) {
-        imlib_draw_line(image, image->w/2, image->h/2, cx, cy);
-        imlib_draw_circle(image, cx, cy, r);
-    }
+#endif
     return mp_const_none;
 }
 
@@ -742,6 +745,40 @@ mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
     o->base.type = &py_cascade_type;
     o->_cobj = cascade;
     return o;
+}
+
+mp_obj_t py_image_load_descriptor(mp_obj_t path_obj)
+{
+    kp_t *kpts=NULL;
+    int kpts_size =0;
+
+    py_kp_obj_t *kp_obj =NULL;
+    const char *path = mp_obj_str_get_str(path_obj);
+
+    int res = freak_load_descriptor(&kpts, &kpts_size, path);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    /* return keypoints MP object */
+    kp_obj = m_new_obj(py_kp_obj_t);
+    kp_obj->base.type = &py_kp_type;
+    kp_obj->kpts = kpts;
+    kp_obj->size = kpts_size;
+    kp_obj->threshold = 60;
+    kp_obj->normalized = false;
+    return kp_obj;
+}
+
+mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
+{
+    py_kp_obj_t *kpts = ((py_kp_obj_t*)kpts_obj);
+    const char *path = mp_obj_str_get_str(path_obj);
+
+    int res = freak_save_descriptor(kpts->kpts, kpts->size, path);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    return mp_const_true;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);

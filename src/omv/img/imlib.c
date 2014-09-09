@@ -351,7 +351,20 @@ void imlib_subimage(struct image *src_img, struct image *dst_img, int x_off, int
     }
 }
 
-void imlib_blit_gs(struct image *src, struct image *dst, int x_off, int y_off)
+void imlib_blit_bytes(struct image *src, struct image *dst, int x_off, int y_off)
+{
+    int x, y;
+    typeof(*src->data) *srcp = src->data;
+    typeof(*dst->data) *dstp = dst->data;
+
+    for (y=y_off; y<src->h+y_off; y++) {
+        for (x=x_off; x<src->w+x_off; x++) {
+            dstp[y*dst->w+x]=*srcp++;
+        }
+    }
+}
+
+void imlib_blit_gs_to_rgb(struct image *src, struct image *dst, int x_off, int y_off)
 {
     int x, y;
     uint8_t  *srcp = src->data;
@@ -365,25 +378,14 @@ void imlib_blit_gs(struct image *src, struct image *dst, int x_off, int y_off)
     }
 }
 
-void imlib_blit_rgb(struct image *src, struct image *dst, int x_off, int y_off)
-{
-    int x, y;
-    typeof(*src->data) *srcp = src->data; //TODO
-    typeof(*dst->data) *dstp = dst->data;
-
-    for (y=y_off; y<src->h+y_off; y++) {
-        for (x=x_off; x<src->w+x_off; x++) {
-            dstp[y*dst->w+x]=*srcp++;
-        }
-    }
-}
-
 void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off)
 {
-    if (src->bpp == 1) {
-        imlib_blit_gs(src, dst, x_off, y_off);
-    } else {
-        imlib_blit_rgb(src, dst, x_off, y_off);
+    if (src->bpp == dst->bpp) {
+        imlib_blit_bytes(src, dst, x_off, y_off);
+    } else if (src->bpp == 1 && dst->bpp == 2) {
+        imlib_blit_gs_to_rgb(src, dst, x_off, y_off);
+    } else if (src->bpp == 2 && dst->bpp == 1) {
+        //imlib_blit_rgb_to_gs(src, dst, x_off, y_off);
     }
 }
 
@@ -604,11 +606,11 @@ void imlib_draw_rectangle(struct image *image, struct rectangle *r)
     }
 }
 
-void imlib_draw_circle(struct image *image, int cx, int cy, int r)
+void imlib_draw_circle(struct image *image, int cx, int cy, int r, color_t *color)
 {
     int x = r, y = 0;
-    uint8_t c = 0xff;
     int radiusError = 1-x;
+    uint16_t c = RGB565(color->r, color->g, color->b);
     if (cx+r >= image->w || cx-r < 0 ||
         cy+r >= image->h || cy-r < 0) {
         return;

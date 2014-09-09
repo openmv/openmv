@@ -3,6 +3,8 @@
 #include "imlib.h"
 mp_obj_t py_image_load_image(mp_obj_t path_obj);
 mp_obj_t py_image_load_cascade(mp_obj_t path_obj);
+mp_obj_t py_image_load_descriptor(mp_obj_t path_obj);
+mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj);
 mp_obj_t py_image(int width, int height, int bpp, void *pixels);
 mp_obj_t py_image_from_struct(image_t *image);
 void *py_image_cobj(mp_obj_t image);

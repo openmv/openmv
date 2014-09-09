@@ -32,8 +32,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "fmath.h"
 #include "arm_math.h"
+#include "ff.h"
 #include "imlib.h"
 #include "xalloc.h"
 
@@ -47,9 +47,10 @@
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
-#define kSQRT2              (1.4142135623731f)
-#define kINV_SQRT2          (1.0f / 1.4142135623731f)
-#define kLOG2               (0.693147180559945f)
+#define PI                  (3.141592f)
+#define kSQRT2              (1.414213f)
+#define kINV_SQRT2          (1.0f / 1.414213f)
+#define kLOG2               (0.693147f)
 #define kNB_SCALES          (64)
 #define kNB_ORIENTATION     (256)
 #define kNB_POINTS          (43)
@@ -63,8 +64,8 @@
 
 #define SCALE_IDX           (0)
 #define KP_SIZE             (23)
-#define SCALE_STEP          (1.044273782f)          // 2 ^ ( (nbOctaves-1) /nbScales)
-#define SCALE_FACTOR        (1.0f)                  // SCALE_STEP ^ SCALE_IDX
+#define SCALE_STEP          (1.044273f)                 // 2 ^ ( (nbOctaves-1) /nbScales)
+#define SCALE_FACTOR        (1.0f)                      // SCALE_STEP ^ SCALE_IDX
 #define SIZE_CST            (kNB_SCALES/(kLOG2* NUM_OCTAVES))
 #define PATTERN_SCALE       (22.0f)
 
@@ -92,7 +93,7 @@ const static float sigma[8] = {
         (BIG_R-18*UNIT_SPACE)/2.0f,
         (BIG_R-20*UNIT_SPACE)/2.0f,
         (SMALL_R)/2.0f,
-        0.0f
+        (SMALL_R)/2.0f
 };
 
 const static int ORIENTATION_PAIRS[45][4] = {
@@ -191,7 +192,7 @@ const static uint8_t DESCRIPTION_PAIRS[512][2] = {
 
 // simply take average on a square patch, not even gaussian approx
 static uint8_t mean_intensity(image_t *image, i_image_t *i_image,
-    float kp_x, float kp_y, float scale_factor, uint32_t rot, uint32_t point)
+    int kp_x, int kp_y, float scale_factor, uint32_t rot, uint32_t point)
 {
     int pidx = (point/6)%8;
     float alpha, beta, theta = 0;
@@ -255,7 +256,12 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
     i_image = xalloc(sizeof(*i_image));
     i_image->w = image->w;
     i_image->h = image->h;
+#ifdef OPENMV2
     i_image->data = xalloc(image->w*image->h*sizeof(*i_image->data));
+#else
+#include "framebuffer.h"
+    i_image->data = (uint32_t*) (fb->pixels+(fb->w * fb->h));
+#endif
     imlib_integral_image(image, i_image);
 
     uint8_t *desc;
@@ -288,9 +294,7 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
 
             if (thetaIdx < 0) {
                 thetaIdx += kNB_ORIENTATION;
-            }
-
-            if (thetaIdx >= kNB_ORIENTATION) {
+            } else if (thetaIdx >= kNB_ORIENTATION) {
                 thetaIdx -= kNB_ORIENTATION;
             }
         }
@@ -305,7 +309,9 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
         }
     }
 
+#ifdef OPENMV2
     xfree(i_image->data);
+#endif
     xfree(i_image);
 }
 
@@ -322,13 +328,28 @@ int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpt
             kp_t *kp2 = &kpts2[y];
             int dist = 0;
 
-            for (int m=0; m<16; m++) {
+            for (int m=0; m<4; m++) { //128 bits
                 uint32_t v = ((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m];
                 while (v) {
                     dist++;
                     v &= v - 1;
                 }
             }
+
+            // FREAK descriptor works like a cascade, the first 128 bits are more
+            // important, if the distance is bigger than a threshold, discard descriptor.
+            if (dist > 32) {
+                continue;
+            }
+
+            for (int m=4; m<16; m++) {
+                uint32_t v = ((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m];
+                while (v) {
+                    dist++;
+                    v &= v - 1;
+                }
+            }
+
 
             if (dist < min_dist) {
                 min_idx = y;
@@ -344,4 +365,81 @@ int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpt
         }
     }
     return kpts_match;
+}
+
+int freak_save_descriptor(kp_t *kpts, int kpts_size, const char *path)
+{
+    FIL fp;
+    UINT bytes;
+    FRESULT res=FR_OK;
+
+    res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    /* write number of keypoints */
+    res = f_write(&fp, &kpts_size, sizeof(kpts_size), &bytes);
+    if (res != FR_OK || bytes != sizeof(kpts_size)) {
+        goto error;
+    }
+
+    /* write keypoints */
+    for (int i=0; i<kpts_size; i++) {
+        kp_t *kp = &kpts[i];
+
+        /* write angle */
+        res = f_write(&fp, &kp->angle, sizeof(kp->angle), &bytes);
+        if (res != FR_OK || bytes != sizeof(kp->angle)) {
+            goto error;
+        }
+
+        /* write descriptor */
+        res = f_write(&fp, kp->desc, kNB_PAIRS/8, &bytes);
+        if (res != FR_OK || bytes != kNB_PAIRS/8) {
+            goto error;
+        }
+    }
+
+error:
+    f_close(&fp);
+    return res;
+}
+
+int freak_load_descriptor(kp_t **kpts_out, int *kpts_size_out, const char *path)
+{
+    FIL fp;
+    UINT bytes;
+    FRESULT res=FR_OK;
+
+    int kpts_size=0;
+    kp_t *kpts = NULL;
+
+    res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    /* read number of keypoints */
+    res = f_read(&fp, &kpts_size, sizeof(kpts_size), &bytes);
+    if (res != FR_OK || bytes != sizeof(kpts_size)) {
+        goto error;
+    }
+
+    kpts = xalloc(kpts_size*sizeof(*kpts));
+
+    /* read keypoints */
+    for (int i=0; i<kpts_size; i++) {
+        kp_t *kp = &kpts[i];
+        res = f_read(&fp, kp->desc, kNB_PAIRS/8, &bytes);
+        if (res != FR_OK || bytes != kNB_PAIRS/8) {
+            goto error;
+        }
+    }
+
+    *kpts_out = kpts;
+    *kpts_size_out = kpts_size;
+error:
+    f_close(&fp);
+    return res;
 }
