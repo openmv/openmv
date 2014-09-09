@@ -60,7 +60,6 @@ typedef enum {
 #define USR_SPI_CLK_ENABLE()    __SPI3_CLK_ENABLE()
 #define USR_SPI_CLK_DISABLE()   __SPI3_CLK_DISABLE()
 
-
 /* UART */
 #define UARTx                   (USART3)
 #define UARTx_TX_AF             (GPIO_AF7_USART3)
@@ -233,6 +232,18 @@ typedef enum {
 
 #define USR_SPI_CLK_ENABLE()    __SPI4_CLK_ENABLE()
 #define USR_SPI_CLK_DISABLE()   __SPI4_CLK_DISABLE()
+
+/* UART */
+#define UARTx                   (USART3)
+#define UARTx_TX_AF             (GPIO_AF7_USART3)
+#define UARTx_RX_AF             (GPIO_AF7_USART3)
+#define UARTx_CLK_ENABLE()      __USART3_CLK_ENABLE()
+
+#define UARTx_TX_PIN            (GPIO_PIN_8)
+#define UARTx_TX_PORT           (GPIOD)
+
+#define UARTx_RX_PIN            (GPIO_PIN_9)
+#define UARTx_RX_PORT           (GPIOD)
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
