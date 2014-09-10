@@ -193,8 +193,6 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	diskio.o                \
 	storage.o               \
 	file.o                  \
-	math.o                  \
-	mathsincos.o            \
 	rtc.o                   \
 	pin.o                   \
 	timer.o                 \
@@ -202,6 +200,14 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	adc.o                   \
 	modstm.o                \
     )
+
+OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
+	atanf.o                 \
+	atan2f.o                 \
+	math.o                  \
+	mathsincos.o            \
+    )
+
 
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	core/src/usbd_core.o                            \

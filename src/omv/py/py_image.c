@@ -77,7 +77,7 @@ static void py_image_print(void (*print)(void *env, const char *fmt, ...), void 
     print(env, "<image width:%d height:%d bpp:%d>", self->_cobj.w, self->_cobj.h, self->_cobj.bpp);
 }
 
-static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, int flags) {
+static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
     image_t *image = py_image_cobj(self_in);
 
     if (flags == MP_BUFFER_READ) {
@@ -839,7 +839,7 @@ int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *
     int kpts_size = 0;
     kp_t *kpts = NULL;
 
-    int threshold = 2;
+    int threshold = 10;
     bool normalized = false;
 
     kpts = fast_detect(image, threshold, &kpts_size, roi);
