@@ -48,7 +48,6 @@
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
-#define PI                  (3.141592f)
 #define kSQRT2              (1.414213f)
 #define kINV_SQRT2          (1.0f / 1.414213f)
 #define kLOG2               (0.693147f)
@@ -68,7 +67,7 @@
 #define SCALE_STEP          (1.044273f)                 // 2 ^ ( (nbOctaves-1) /nbScales)
 #define SCALE_FACTOR        (1.0f)                      // SCALE_STEP ^ SCALE_IDX
 #define SIZE_CST            (kNB_SCALES/(kLOG2* NUM_OCTAVES))
-#define PATTERN_SCALE       (22.0f)
+#define PATTERN_SCALE       (22)
 
 // number of points on each concentric circle (from outer to inner)
 const static int n[8] = {6,6,6,6,6,6,6,1};
@@ -432,6 +431,14 @@ int freak_load_descriptor(kp_t **kpts_out, int *kpts_size_out, const char *path)
     /* read keypoints */
     for (int i=0; i<kpts_size; i++) {
         kp_t *kp = &kpts[i];
+
+        /* read angle */
+        res = f_read(&fp, &kp->angle, sizeof(kp->angle), &bytes);
+        if (res != FR_OK || bytes != sizeof(kp->angle)) {
+            goto error;
+        }
+
+        /* read descriptor */
         res = f_read(&fp, kp->desc, kNB_PAIRS/8, &bytes);
         if (res != FR_OK || bytes != kNB_PAIRS/8) {
             goto error;
