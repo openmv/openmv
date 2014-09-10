@@ -87,17 +87,18 @@ class OMVGtk:
 
         #connect signals
         signals = {
-            "on_top_window_destroy" : self.quit,
-            "on_execute_clicked"    : self.execute_clicked,
-            "on_stop_clicked"       : self.stop_clicked,
-            "on_motion_notify"      : self.motion_notify,
-            "on_button_press"       : self.button_pressed,
-            "on_button_release"     : self.button_released,
-            "on_open_file"          : self.open_file,
-            "on_save_file"          : self.save_file,
-            "on_save_file_as"       : self.save_file_as,
-            "on_save_template_activate" : self.save_template,
-            "on_ctrl_scale_value_changed" : self.on_ctrl_scale_value_changed,
+            "on_top_window_destroy"         : self.quit,
+            "on_execute_clicked"            : self.execute_clicked,
+            "on_stop_clicked"               : self.stop_clicked,
+            "on_motion_notify"              : self.motion_notify,
+            "on_button_press"               : self.button_pressed,
+            "on_button_release"             : self.button_released,
+            "on_open_file"                  : self.open_file,
+            "on_save_file"                  : self.save_file,
+            "on_save_file_as"               : self.save_file_as,
+            "on_save_template_activate"     : self.save_template,
+            "on_save_descriptor_activate"   : self.save_descriptor,
+            "on_ctrl_scale_value_changed"   : self.on_ctrl_scale_value_changed,
         }
         self.builder.connect_signals(signals)
 
@@ -194,14 +195,35 @@ class OMVGtk:
         h = self.y2-self.y1
 
         entry = self.builder.get_object("template_entry")
-        template = self.builder.get_object("template")
+        image = self.builder.get_object("template_image")
+        image.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
+
         dialog = self.builder.get_object("save_template_dialog")
         dialog.set_transient_for(self.window);
+        #dialog.set_default_response(gtk.RESPONSE_OK)
 
-        template.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
-        dialog.set_default_response(gtk.RESPONSE_OK)
         if dialog.run() == gtk.RESPONSE_OK:
             openmv.save_template(x/SCALE, y/SCALE, w/SCALE, h/SCALE, entry.get_text()) #Use Scale
+        dialog.hide()
+
+    def save_descriptor(self, widget):
+        self.da_menu.hide()
+        x = self.x1
+        y = self.y1
+        w = self.x2-self.x1
+        h = self.y2-self.y1
+
+        entry = self.builder.get_object("desc_entry")
+        image = self.builder.get_object("desc_image")
+        image.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
+
+        dialog = self.builder.get_object("save_descriptor_dialog")
+        dialog.set_transient_for(self.window);
+        #dialog.set_default_response(gtk.RESPONSE_OK)
+
+        if dialog.run() == gtk.RESPONSE_OK:
+            #if not entry.get_text():
+            openmv.save_descriptor(x/SCALE, y/SCALE, w/SCALE, h/SCALE, entry.get_text()) #Use Scale
         dialog.hide()
 
     def save_file(self, widget):

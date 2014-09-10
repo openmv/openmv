@@ -29,8 +29,9 @@ __USBDBG_SCRIPT_EXEC=4
 __USBDBG_SCRIPT_STOP=5
 __USBDBG_SCRIPT_SAVE=6
 __USBDBG_TEMPLATE_SAVE=7
-__USBDBG_ATTR_READ=8
-__USBDBG_ATTR_WRITE=9
+__USBDBG_DESCRIPTOR_SAVE=8
+__USBDBG_ATTR_READ=9
+__USBDBG_ATTR_WRITE=10
 
 ATTR_CONTRAST=0
 ATTR_BRIGHTNESS=1
@@ -127,9 +128,14 @@ def exec_script(buf):
 def stop_script():
     __dev.ctrl_transfer(0x41, __USBDBG_SCRIPT_STOP, 0, __INTERFACE, None, __TIMEOUT)
 
-def save_template(x, y, w, h, name):
-    buf = struct.pack("IIII", x, y, w, h)
-    __dev.ctrl_transfer(0x41, __USBDBG_TEMPL_SAVE, len(buf), __INTERFACE, None, __TIMEOUT)
+def save_template(x, y, w, h, path):
+    buf = struct.pack("IIII", x, y, w, h) + path
+    __dev.ctrl_transfer(0x41, __USBDBG_TEMPLATE_SAVE, len(buf), __INTERFACE, None, __TIMEOUT)
+    __dev.write(__OUT_EP, buf, __INTERFACE, __TIMEOUT)
+
+def save_descriptor(x, y, w, h, path):
+    buf = struct.pack("IIII", x, y, w, h) + path
+    __dev.ctrl_transfer(0x41, __USBDBG_DESCRIPTOR_SAVE, len(buf), __INTERFACE, None, __TIMEOUT)
     __dev.write(__OUT_EP, buf, __INTERFACE, __TIMEOUT)
 
 def set_attr(attr, value):

@@ -4,11 +4,11 @@
 #define INIT_ALLOC  (50)
 #define Compare(X, Y) ((X)>=(Y))
 
-static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners);
+static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners, rectangle_t *roi);
 static int* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_corners, int b);
 static kp_t* nonmax_suppression(const kp_t* corners, const int* scores, int num_corners, int* ret_num_nonmax);
 
-kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners)
+kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners, rectangle_t *roi)
 {
     int* scores;
     kp_t* nonmax;
@@ -16,7 +16,7 @@ kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners)
     int num_corners;
     kp_t* corners;
 
-    corners = fast9_detect(image->data, image->w, image->h, image->w, threshold, &num_corners);
+    corners = fast9_detect(image->data, image->w, image->h, image->w, threshold, &num_corners, roi);
     scores = fast9_score(image->data, image->w, corners, num_corners, threshold);
     nonmax = nonmax_suppression(corners, scores, num_corners, ret_num_corners);
 
@@ -3103,7 +3103,7 @@ static int* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_cor
 	return scores;
 }
 
-static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners)
+static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners, rectangle_t *roi)
 {
 	int num_corners=0;
 	kp_t* ret_corners;
@@ -6034,6 +6034,13 @@ static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, i
                 continue;
             }
 
+            // check if kp inside ROI
+            if (roi) {
+                if (x <= (roi->x+KP_SIZE) || x >= ((roi->x+roi->w)-KP_SIZE) ||
+                    y <= (roi->y+KP_SIZE) || y >= ((roi->y+roi->h)-KP_SIZE)) {
+                    continue;
+                }
+            }
 			ret_corners[num_corners].x = x;
 			ret_corners[num_corners].y = y;
 			num_corners++;

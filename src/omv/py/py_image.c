@@ -618,7 +618,7 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
 
     /* run keypoint extractor */
     int kpts_size = 0;
-    kp_t *kpts = fast_detect(image, threshold, &kpts_size);
+    kp_t *kpts = fast_detect(image, threshold, &kpts_size, NULL);
     freak_find_keypoints(image, kpts, kpts_size, normalized, normalized);
 
     /* return keypoints MP object */
@@ -631,79 +631,42 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     return kp_obj;
 }
 
-static mp_obj_t py_image_match_keypoints(mp_obj_t image_obj, mp_obj_t kpts_obj, mp_obj_t threshold_obj)
+static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
 {
-    kp_t *kpts1;
-    kp_t *kpts2;
-
-    int kpts1_size = 0;
-    int kpts2_size = 0;
-
-    int d_thresh; // detection threshold
-    int m_thresh; // matching threshold
-    bool normalized;
-
-    // get image obj
-    image_t *image = NULL;
-    image = py_image_cobj(image_obj);
+    image_t *image = py_image_cobj(args[0]);
+    py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
+    py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
+    int threshold = mp_obj_get_int(args[3]);
 
     // sanity checks
     PY_ASSERT_TRUE(image->bpp == 1);
-    PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
+    PY_ASSERT_TYPE(kpts1, &py_kp_type);
+    PY_ASSERT_TYPE(kpts2, &py_kp_type);
 
-    // get kpts info
-    kpts1       = ((py_kp_obj_t*)kpts_obj)->kpts;
-    kpts1_size  = ((py_kp_obj_t*)kpts_obj)->size;
-    normalized  = ((py_kp_obj_t*)kpts_obj)->normalized;
-    d_thresh    = ((py_kp_obj_t*)kpts_obj)->threshold;
-    m_thresh    = mp_obj_get_int(threshold_obj);
-
-    // run keypoint extractor using the same params
-    kpts2 = fast_detect(image, d_thresh, &kpts2_size);
-    freak_find_keypoints(image, kpts2, kpts2_size, normalized, normalized);
-
-    if (kpts1_size == 0 || kpts2_size == 0) {
+    if (kpts1->size == 0 || kpts2->size == 0) {
         return mp_const_none;
     }
 
     // match the keypoint sets
-    int16_t *kpts_match = freak_match_keypoints(kpts1, kpts1_size, kpts2, kpts2_size, m_thresh);
+    int16_t *kpts_match = freak_match_keypoints(kpts1->kpts, kpts1->size, kpts2->kpts, kpts2->size, threshold);
 
-#if 1
-    // do something with the matches
-    for (int i=0; i<kpts1_size; i++) {
+    int match=0, cx=0, cy=0;
+    //color_t cl = {.r=0xFF, .g=0xFF, .b=0xFF};
+    for (int i=0; i<kpts1->size; i++) {
         if (kpts_match[i] != -1) {
-            kp_t *kp2 = &kpts2[kpts_match[i]];
-            imlib_draw_line(image, image->w/2, image->h/2, kp2->x, kp2->y);
+            kp_t *kp = &kpts2->kpts[kpts_match[i]];
+            cx += kp->x; cy += kp->y;
+            match++;
         }
     }
-#else
-    int match=0;
-    rectangle_t r = {image->w-1, image->h-1, 0, 0};
-    for (int i=0; i<kpts1_size; i++) {
-        if (kpts_match[i] != -1) {
-            kp_t *kp2 = &kpts2[kpts_match[i]];
-            if (kp2->x < r.x) {
-                r.x = kp2->x;
-            }
-            if (kp2->y < r.y) {
-                r.y = kp2->y;
-            }
-            if (kp2->x > r.w) {
-                r.w = kp2->x;
-            }
-            if (kp2->y > r.h) {
-                r.h = kp2->y;
-            }
-            match ++;
-        }
+
+    if (match>=(kpts1->size/16)) {
+        mp_obj_t rec_obj[2] = {
+            mp_obj_new_int(cx/match),
+            mp_obj_new_int(cy/match),
+        };
+        return mp_obj_new_tuple(2, rec_obj);
     }
-    if (match>=(kpts1_size/4)) {
-        r.w = r.w - r.x;
-        r.h = r.h - r.y;
-        imlib_draw_rectangle(image, &r);
-    }
-#endif
     return mp_const_none;
 }
 
@@ -764,7 +727,7 @@ mp_obj_t py_image_load_descriptor(mp_obj_t path_obj)
     kp_obj->base.type = &py_kp_type;
     kp_obj->kpts = kpts;
     kp_obj->size = kpts_size;
-    kp_obj->threshold = 60;
+    kp_obj->threshold = 10;
     kp_obj->normalized = false;
     return kp_obj;
 }
@@ -805,7 +768,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_features_obj, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_match_keypoints_obj, py_image_match_keypoints);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
 
 static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_size),                (mp_obj_t)&py_image_size_obj},
@@ -869,4 +832,29 @@ mp_obj_t py_image_from_struct(image_t *image)
     o->base.type = &py_image_type;
     o->_cobj =*image;
     return o;
+}
+
+int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *roi)
+{
+    int kpts_size = 0;
+    kp_t *kpts = NULL;
+
+    int threshold = 2;
+    bool normalized = false;
+
+    kpts = fast_detect(image, threshold, &kpts_size, roi);
+    freak_find_keypoints(image, kpts, kpts_size, normalized, normalized);
+
+    printf("Save Descriptor: KPTS(%d)\n", kpts_size);
+    printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
+
+    if (kpts_size ==0) {
+        return 0;
+    }
+
+    int res = freak_save_descriptor(kpts, kpts_size, path);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    return 0;
 }

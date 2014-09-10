@@ -61,6 +61,8 @@ void usbdbg_data_in(void *buffer, int length)
     }
 }
 
+extern int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *roi);
+
 void usbdbg_data_out(void *buffer, int length)
 {
     switch (cmd) {
@@ -79,14 +81,20 @@ void usbdbg_data_out(void *buffer, int length)
             int res;
             image_t image;
             image.w = fb->w; image.h = fb->h; image.bpp = fb->bpp; image.pixels = fb->pixels;
-            if ((res=imlib_save_image(&image, "0:/template.pgm", (rectangle_t*)buffer)) != FR_OK) {
+            if ((res=imlib_save_image(&image, "1:/template.pgm", (rectangle_t*)buffer)) != FR_OK) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
             }
             // raise a flash IRQ to flush image
-            NVIC->STIR = FLASH_IRQn;
+            //NVIC->STIR = FLASH_IRQn;
             break;
         }
 
+        case USBDBG_DESCRIPTOR_SAVE: {
+            image_t image;
+            image.w = fb->w; image.h = fb->h; image.bpp = fb->bpp; image.pixels = fb->pixels;
+            py_image_descriptor_from_roi(&image, "1:/freak.desc", (rectangle_t*)buffer);
+            break;
+        }
         default: /* error */
             break;
     }
@@ -134,6 +142,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
             break;
 
         case USBDBG_TEMPLATE_SAVE:
+        case USBDBG_DESCRIPTOR_SAVE:
             /* save template */
             xfer_bytes = 0;
             xfer_length =length;
