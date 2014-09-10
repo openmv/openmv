@@ -40,6 +40,16 @@
         <signal name="activate" handler="on_save_template_activate" swapped="no"/>
       </object>
     </child>
+    <child>
+      <object class="GtkMenuItem" id="da_menu_save_descriptor">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="use_action_appearance">False</property>
+        <property name="label" translatable="yes">Save Descriptor</property>
+        <property name="use_underline">True</property>
+        <signal name="activate" handler="on_save_descriptor_activate" swapped="no"/>
+      </object>
+    </child>
   </object>
   <object class="GtkAdjustment" id="gainceiling_adjust">
     <property name="upper">6</property>
@@ -52,6 +62,98 @@
     <property name="step_increment">1</property>
     <property name="page_increment">1</property>
     <signal name="value-changed" handler="on_ctrl_scale_value_changed" swapped="no"/>
+  </object>
+  <object class="GtkDialog" id="save_descriptor_dialog">
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Save Descriptor</property>
+    <property name="window_position">center-on-parent</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="type_hint">dialog</property>
+    <child internal-child="vbox">
+      <object class="GtkVBox" id="dialog-vbox3">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="spacing">1</property>
+        <child internal-child="action_area">
+          <object class="GtkHButtonBox" id="dialog-action_area3">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="button3">
+                <property name="label">gtk-ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_action_appearance">False</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="button4">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_action_appearance">False</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage" id="desc_image">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="stock">gtk-missing-image</property>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkEntry" id="desc_entry">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="invisible_char">•</property>
+            <property name="text" translatable="yes">desc.freak</property>
+            <property name="invisible_char_set">True</property>
+            <property name="primary_icon_activatable">False</property>
+            <property name="secondary_icon_activatable">False</property>
+            <property name="primary_icon_sensitive">True</property>
+            <property name="secondary_icon_sensitive">True</property>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="-5">button3</action-widget>
+      <action-widget response="-6">button4</action-widget>
+    </action-widgets>
   </object>
   <object class="GtkDialog" id="save_template_dialog">
     <property name="can_focus">False</property>
@@ -109,7 +211,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkImage" id="template">
+          <object class="GtkImage" id="template_image">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="stock">gtk-missing-image</property>
