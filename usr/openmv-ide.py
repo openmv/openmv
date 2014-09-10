@@ -101,7 +101,8 @@ class OMVGtk:
             "on_ctrl_scale_value_changed"   : self.on_ctrl_scale_value_changed,
             "on_zoomin_clicked"             : self.zoomin_clicked,
             "on_zoomout_clicked"            : self.zoomout_clicked,
-
+            "on_bestfit_clicked"            : self.bestfit_clicked,
+            "on_updatefb_clicked"           : self.updatefb_clicked,
         }
         self.builder.connect_signals(signals)
 
@@ -122,14 +123,22 @@ class OMVGtk:
 
     def stop_clicked(self, widget):
         openmv.stop_script();
+
     def zoomin_clicked(self, widget):
         global SCALE
         SCALE+=1
 
     def zoomout_clicked(self, widget):
         global SCALE
-        if SCALE:
+        if SCALE>1:
             SCALE-=1
+
+    def bestfit_clicked(self, widget):
+        global SCALE
+        SCALE=1
+
+    def updatefb_clicked(self, widget):
+        openmv.fb_update()
 
     def button_pressed(self, widget, event):
         self.x1 = int(event.x)

@@ -92,7 +92,7 @@ void usbdbg_data_out(void *buffer, int length)
         case USBDBG_DESCRIPTOR_SAVE: {
             image_t image;
             image.w = fb->w; image.h = fb->h; image.bpp = fb->bpp; image.pixels = fb->pixels;
-            py_image_descriptor_from_roi(&image, "1:/freak.desc", (rectangle_t*)buffer);
+            py_image_descriptor_from_roi(&image, "1:/desc.freak", (rectangle_t*)buffer);
             break;
         }
         default: /* error */
@@ -121,6 +121,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
                 // try to lock FB, return 1 if locked
                 ((uint8_t*)buffer)[0] = mutex_try_lock(&fb->lock);
             }
+            break;
+
+        case USBDBG_FRAME_UPDATE:
+            sensor_snapshot(NULL);
+            cmd = USBDBG_NONE;
             break;
 
         case USBDBG_SCRIPT_EXEC:
