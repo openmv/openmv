@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.24"/>
-  <!-- interface-requires gtksourceview 0.0 -->
   <!-- interface-requires vte 0.0 -->
+  <!-- interface-requires gtksourceview 0.0 -->
   <!-- interface-naming-policy project-wide -->
   <object class="GtkAdjustment" id="brightness_adjust">
     <property name="lower">-2</property>
@@ -544,6 +544,47 @@
                 <property name="label" translatable="yes">toolbutton5</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-apply</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkSeparatorToolItem" id="separator3">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="use_action_appearance">False</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="toolbutton5">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="use_action_appearance">False</property>
+                <property name="label" translatable="yes">toolbutton5</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-zoom-out</property>
+                <signal name="clicked" handler="on_zoomout_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="toolbutton7">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="use_action_appearance">False</property>
+                <property name="label" translatable="yes">toolbutton7</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-zoom-in</property>
+                <signal name="clicked" handler="on_zoomin_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>

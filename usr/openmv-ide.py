@@ -99,6 +99,9 @@ class OMVGtk:
             "on_save_template_activate"     : self.save_template,
             "on_save_descriptor_activate"   : self.save_descriptor,
             "on_ctrl_scale_value_changed"   : self.on_ctrl_scale_value_changed,
+            "on_zoomin_clicked"             : self.zoomin_clicked,
+            "on_zoomout_clicked"            : self.zoomout_clicked,
+
         }
         self.builder.connect_signals(signals)
 
@@ -119,6 +122,14 @@ class OMVGtk:
 
     def stop_clicked(self, widget):
         openmv.stop_script();
+    def zoomin_clicked(self, widget):
+        global SCALE
+        SCALE+=1
+
+    def zoomout_clicked(self, widget):
+        global SCALE
+        if SCALE:
+            SCALE-=1
 
     def button_pressed(self, widget, event):
         self.x1 = int(event.x)
