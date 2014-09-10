@@ -22,7 +22,7 @@
 typedef struct {
     int n;
     union {
-        int h[2];
+        int h[255];
         struct {
             int r[32];
             int g[64];
@@ -73,11 +73,7 @@ void add_pixels(image_t * im, int row, int col, int size, histo_t *h)
 
 void init_histo(image_t *im, int row, int size, histo_t *h)
 {
-    if (im->bpp==1) {
-        h->n = h->h[0] = h->h[1] = 0;
-    } else {
-        memset(h, 0, sizeof(histo_t));
-    }
+    memset(h, 0, sizeof(histo_t));
     for (int j = 0; j < size && j < im->w; j++) {
         add_pixels(im, row, j, size, h);
     }
