@@ -22,7 +22,7 @@
 typedef struct {
     int n;
     union {
-        int h[255];
+        int h[256];
         struct {
             int r[32];
             int g[64];
@@ -117,11 +117,12 @@ void median_filter_rgb(image_t *in, int size)
     xfree(data);
 }
 
-#if 0
+#ifdef OPENMV2
 void median_filter_gs(image_t *in, int size)
 {
-    histo_t *h = xalloc(sizeof(*h));
-    uint8_t *data = (uint8_t*) (in->data+(in->w * in->h*2));
+    histo_t hist;
+    histo_t *h = &hist;
+    uint8_t *data = xalloc(in->w * in->h * sizeof(*data));
 
     for (int row = 0; row<in->h; row ++) {
         for (int col = 0; col<in->w; col++) {
@@ -135,13 +136,13 @@ void median_filter_gs(image_t *in, int size)
         }
     }
     memcpy(in->data, data, (in->w*in->h));
-
 }
 #else
 void median_filter_gs(image_t *in, int size)
 {
+    histo_t hist;
+    histo_t *h = &hist;
     int k_rows = (2*size+1)*2;
-    histo_t *h = xalloc(sizeof(*h));
     uint8_t *data = xalloc(in->w * k_rows * sizeof(*data));
 
     for (int row = 0; row<in->h; row ++) {
@@ -158,7 +159,6 @@ void median_filter_gs(image_t *in, int size)
             memcpy(in->data+((row/k_rows)*k_rows*in->w), data, (k_rows*in->w*sizeof(*data)));
         }
     }
-
     xfree(h);
     xfree(data);
 }
