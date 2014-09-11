@@ -91,50 +91,50 @@ float ALWAYS_INLINE fast_fabsf(float x)
     return x;
 }
 
-float fast_atanf(float x)
+inline float fast_atanf(float xx)
 {
+    float x, y, z;
+    int sign;
 
-    float a, b, r, xx;
-    int m;
+    x = xx;
 
-    union {
-        float f;
-        int i;
-    } xinv, ax;
+    /* make argument positive and save the sign */
+    if( xx < 0.0f )
+    {
+        sign = -1;
+        x = -xx;
+    }
+    else
+    {
+        sign = 1;
+        x = xx;
+    }
+    /* range reduction */
+    if( x > 2.414213562373095f )  /* tan 3pi/8 */
+    {
+        y = M_PI_2;
+        x = -( 1.0f/x );
+    }
 
-    ax.f = fast_fabsf(x);
+    else if( x > 0.4142135623730950f ) /* tan pi/8 */
+    {
+        y = M_PI_4;
+        x = (x-1.0f)/(x+1.0f);
+    }
+    else
+        y = 0.0f;
 
-    //fast inverse approximation (2x newton)
-    xinv.f = ax.f;
-    m = 0x3F800000 - (xinv.i & 0x7F800000);
-    xinv.i = xinv.i + m;
-    xinv.f = 1.41176471f - 0.47058824f * xinv.f;
-    xinv.i = xinv.i + m;
-    b = 2.0 - xinv.f * ax.f;
-    xinv.f = xinv.f * b;
-    b = 2.0 - xinv.f * ax.f;
-    xinv.f = xinv.f * b;
+    z = x * x;
+    y +=
+        ((( 8.05374449538e-2f  * z
+          - 1.38776856032E-1f) * z
+          + 1.99777106478E-1f) * z
+          - 3.33329491539E-1f) * z * x + x;
 
-    //if |x| > 1.0 -> ax = -1/ax, r = PI/2
-    xinv.f = xinv.f + ax.f;
-    a = (ax.f > 1.0f);
-    ax.f = ax.f - a * xinv.f;
-    r = a * M_PI_2;
+    if( sign < 0 )
+        y = -y;
 
-    //polynomial evaluation
-    xx = ax.f * ax.f;
-    a = (__atanf_lut[0] * ax.f) * xx + (__atanf_lut[2] * ax.f);
-    b = (__atanf_lut[1] * ax.f) * xx + (__atanf_lut[3] * ax.f);
-    xx = xx * xx;
-    b = b + a * xx;
-    r = r + b;
-
-    //if x < 0 -> r = -r
-    a = 2 * r;
-    b = (x < 0.0f);
-    r = r - a * b;
-
-    return r;
+    return( y );
 }
 
 float fast_atan2f(float y, float x)
