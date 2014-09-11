@@ -48,9 +48,9 @@
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
-#define kSQRT2              (1.4142135623731f)
-#define kINV_SQRT2          (1.0f / 1.414213f)
-#define kLOG2               (0.693147180559945f)
+#undef PI
+#define PI    (3.14159265f)
+
 #define kNB_SCALES          (64)
 #define kNB_ORIENTATION     (256)
 #define kNB_POINTS          (43)
@@ -64,9 +64,8 @@
 
 #define SCALE_IDX           (0)
 #define KP_SIZE             (23)
-#define SCALE_STEP          (1.044273f)                 // 2 ^ ( (nbOctaves-1) /nbScales)
+#define SCALE_STEP          (1.0330248790212284f)       // 2 ^ ( (nbOctaves-1) /nbScales)
 #define SCALE_FACTOR        (1.0f)                      // SCALE_STEP ^ SCALE_IDX
-#define SIZE_CST            (kNB_SCALES/(kLOG2* NUM_OCTAVES))
 #define PATTERN_SCALE       (22)
 
 // number of points on each concentric circle (from outer to inner)
