@@ -101,7 +101,7 @@ typedef struct {
     uint16_t x;
     uint16_t y;
     float angle;
-    uint8_t desc[64];
+    uint8_t *desc;
 } kp_t;
 
 /* Haar cascade struct */
@@ -179,6 +179,7 @@ array_t *imlib_count_blobs(struct image *image);
 void imlib_integral_image(struct image *src, struct integral_image *sum);
 void imlib_integral_image_sq(struct image *src, struct integral_image *sum);
 uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h);
+void imlib_integral_image_alloc(struct integral_image *i_img, int w, int h);
 
 /* Template matching */
 float imlib_template_match(struct image *image, struct image *template, struct rectangle *r);
