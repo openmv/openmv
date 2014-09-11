@@ -637,11 +637,19 @@ void imlib_draw_circle(struct image *image, int cx, int cy, int r, color_t *colo
 
 void imlib_draw_line(image_t *src, int x0, int y0, int x1, int y1)
 {
-    int dx = abs(x1-x0), sx = x0<x1 ? 1 : -1;
-    int dy = abs(y1-y0), sy = y0<y1 ? 1 : -1;
-    int err = (dx>dy ? dx : -dy)/2, e2;
+    int dx, dy, sx, sy, err, e2;
 
-    for(;;){
+    if (x0<0||y0<0||x1>src->w||y1>src->h) {
+        return;
+    }
+
+    dx = abs(x1-x0);
+    dy = abs(y1-y0);
+    sx = x0<x1 ? 1 : -1;
+    sy = y0<y1 ? 1 : -1;
+    err = (dx>dy ? dx : -dy)/2;
+
+    for (;;) {
         src->data[src->w*y0+x0]=0xFF;
         if (x0==x1 && y0==y1) break;
         e2 = err;
