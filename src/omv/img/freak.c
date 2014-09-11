@@ -48,9 +48,9 @@
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
-#define kSQRT2              (1.414213f)
+#define kSQRT2              (1.4142135623731f)
 #define kINV_SQRT2          (1.0f / 1.414213f)
-#define kLOG2               (0.693147f)
+#define kLOG2               (0.693147180559945f)
 #define kNB_SCALES          (64)
 #define kNB_ORIENTATION     (256)
 #define kNB_POINTS          (43)
@@ -249,25 +249,16 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
     int direction0;
     int direction1;
 
+    uint8_t *desc;
     uint8_t pointsValue[kNB_POINTS];
 
-    i_image_t *i_image;
+    i_image_t i_image;
     // compute integral image
-    i_image = xalloc(sizeof(*i_image));
-    i_image->w = image->w;
-    i_image->h = image->h;
-#ifdef OPENMV2
-    i_image->data = xalloc(image->w*image->h*sizeof(*i_image->data));
-#else
-#include "framebuffer.h"
-    i_image->data = (uint32_t*) (fb->pixels+(fb->w * fb->h));
-#endif
-    imlib_integral_image(image, i_image);
+    imlib_integral_image_alloc(&i_image, image->w, image->h);
+    imlib_integral_image(image, &i_image);
 
-    uint8_t *desc;
     for (size_t k=kpts_size; k--;) {
-        desc = kpts[k].desc;
-        bzero(desc, 64);
+        kpts[k].desc=desc=xalloc0(64);
 
         // estimate orientation (gradient)
         if (orient_normalized) {
@@ -276,7 +267,7 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
         } else {
             // get the points intensity value in the un-rotated pattern
             for (int i=kNB_POINTS; i--;) {
-                pointsValue[i] = mean_intensity(image, i_image, kpts[k].x, kpts[k].y, SCALE_FACTOR, 0, i);
+                pointsValue[i] = mean_intensity(image, &i_image, kpts[k].x, kpts[k].y, SCALE_FACTOR, 0, i);
             }
 
             direction0 = 0;
@@ -301,18 +292,13 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
 
         // extract descriptor at the computed orientation
         for (int i=kNB_POINTS; i--;) {
-            pointsValue[i] = mean_intensity(image, i_image, kpts[k].x, kpts[k].y, SCALE_FACTOR, thetaIdx, i);
+            pointsValue[i] = mean_intensity(image, &i_image, kpts[k].x, kpts[k].y, SCALE_FACTOR, thetaIdx, i);
         }
 
         for (int m=kNB_PAIRS; m--;) {
             desc[m/8] |= (pointsValue[DESCRIPTION_PAIRS[m][0]]> pointsValue[DESCRIPTION_PAIRS[m][1]]) << (m%8);
         }
     }
-
-#ifdef OPENMV2
-    xfree(i_image->data);
-#endif
-    xfree(i_image);
 }
 
 int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpts2_size, int t)
