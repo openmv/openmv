@@ -367,6 +367,23 @@ static mp_obj_t py_image_rainbow(mp_obj_t src_image_obj)
     return src_image_obj;
 }
 
+static mp_obj_t py_image_draw_line(mp_obj_t image_obj, mp_obj_t line_obj)
+{
+    /* get image pointer */
+    struct image *image;
+    image = py_image_cobj(image_obj);
+
+    mp_obj_t *array;
+    mp_obj_get_array_fixed_n(line_obj, 4, &array);
+    int x0 = mp_obj_get_int(array[0]);
+    int y0 = mp_obj_get_int(array[1]);
+    int x1 = mp_obj_get_int(array[2]);
+    int y1 = mp_obj_get_int(array[3]);
+
+    imlib_draw_line(image, x0, y0, x1, y1);
+    return mp_const_none;
+}
+
 static mp_obj_t py_image_draw_circle(mp_obj_t image_obj, mp_obj_t c_obj, mp_obj_t r_obj)
 {
     int cx, cy, r;
@@ -759,6 +776,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_erode_obj, py_image_erode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_dilate_obj, py_image_dilate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_morph_obj, py_image_morph);
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_line_obj, py_image_draw_line);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_circle_obj, py_image_draw_circle);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_rectangle_obj, py_image_draw_rectangle);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_keypoints_obj, py_image_draw_keypoints);
@@ -789,6 +807,7 @@ static const mp_map_elem_t locals_dict_table[] = {
 //    {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
 
     /* drawing functions */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_draw_line),           (mp_obj_t)&py_image_draw_line_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_circle),         (mp_obj_t)&py_image_draw_circle_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_rectangle),      (mp_obj_t)&py_image_draw_rectangle_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_keypoints),      (mp_obj_t)&py_image_draw_keypoints_obj},
