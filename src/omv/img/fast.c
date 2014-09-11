@@ -5,12 +5,12 @@
 #define Compare(X, Y) ((X)>=(Y))
 
 static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners, rectangle_t *roi);
-static int* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_corners, int b);
-static kp_t* nonmax_suppression(const kp_t* corners, const int* scores, int num_corners, int* ret_num_nonmax);
+static uint8_t* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_corners, int b);
+static kp_t* nonmax_suppression(const kp_t* corners, const uint8_t* scores, int num_corners, int* ret_num_nonmax);
 
 kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners, rectangle_t *roi)
 {
-    int* scores;
+    uint8_t* scores;
     kp_t* nonmax;
 
     int num_corners;
@@ -26,7 +26,7 @@ kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners, rectangle
     return nonmax;
 }
 
-static kp_t* nonmax_suppression(const kp_t* corners, const int* scores, int num_corners, int* ret_num_nonmax)
+static kp_t* nonmax_suppression(const kp_t* corners, const uint8_t* scores, int num_corners, int* ret_num_nonmax)
 {
 	int num_nonmax=0;
 	int last_row;
@@ -72,7 +72,7 @@ static kp_t* nonmax_suppression(const kp_t* corners, const int* scores, int num_
 	
 	for(i=0; i < sz; i++)
 	{
-		int score = scores[i];
+		uint8_t score = scores[i];
 		kp_t pos = corners[i];
 			
 		/*Check left */
@@ -138,7 +138,7 @@ static kp_t* nonmax_suppression(const kp_t* corners, const int* scores, int num_
 }
 
 /* Auto-generated code*/
-static int fast9_corner_score(const uint8_t* p, const int pixel[], int bstart)
+static uint8_t fast9_corner_score(const uint8_t* p, const int pixel[], int bstart)
 {    
     int bmin = bstart;
     int bmax = 255;
@@ -3089,10 +3089,10 @@ static void make_offsets(int pixel[], int row_stride)
         pixel[15] = -1 + row_stride * 3;
 }
 
-static int* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_corners, int b)
+static uint8_t* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_corners, int b)
 {	
-	int* scores = (int*)xalloc(sizeof(int)* num_corners);
 	int n;
+	uint8_t* scores = (uint8_t*)xalloc(sizeof(uint8_t)* num_corners);
 
 	int pixel[16];
 	make_offsets(pixel, stride);
