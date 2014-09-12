@@ -50,6 +50,7 @@
 
 #undef PI
 #define PI    (3.14159265f)
+#define PI_2  (3.14159265f*2.0f)
 
 #define kNB_SCALES          (64)
 #define kNB_ORIENTATION     (256)
@@ -190,19 +191,20 @@ const static uint8_t DESCRIPTION_PAIRS[512][2] = {
 
 
 // simply take average on a square patch, not even gaussian approx
-static uint8_t mean_intensity(image_t *image, i_image_t *i_image,
-    int kp_x, int kp_y, float scale_factor, uint32_t rot, uint32_t point)
+static uint8_t mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int kp_y, uint32_t rot, uint32_t point)
 {
     int pidx = (point/6)%8;
     float alpha, beta, theta = 0;
 
-    theta = (float)rot*2.0f*PI/(float)kNB_ORIENTATION; // orientation of the pattern
+    if (rot) {
+        theta = rot*PI_2/(float)kNB_ORIENTATION; // orientation of the pattern
+    }
     beta = PI/n[pidx]*(pidx%2); // orientation offset so that groups of points on each circles are staggered
-    alpha = (float)(point%n[pidx])*2.0f*PI/(float)n[pidx]+beta+theta;
+    alpha = (float)(point%n[pidx])*PI_2/(float)n[pidx]+beta+theta;
 
-    float px = radius[pidx] * arm_cos_f32(alpha) * scale_factor * PATTERN_SCALE;
-    float py = radius[pidx] * arm_sin_f32(alpha) * scale_factor * PATTERN_SCALE;
-    float psigma = sigma[pidx] * scale_factor * PATTERN_SCALE;
+    float px = radius[pidx] * PATTERN_SCALE * arm_cos_f32(alpha);
+    float py = radius[pidx] * PATTERN_SCALE * arm_sin_f32(alpha);
+    float psigma = sigma[pidx] * PATTERN_SCALE;
 
     // get point position in image
     float xf = px+kp_x;
@@ -266,7 +268,7 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
         } else {
             // get the points intensity value in the un-rotated pattern
             for (int i=kNB_POINTS; i--;) {
-                pointsValue[i] = mean_intensity(image, &i_image, kpts[k].x, kpts[k].y, SCALE_FACTOR, 0, i);
+                pointsValue[i] = mean_intensity(image, &i_image, kpts[k].x, kpts[k].y, 0, i);
             }
 
             direction0 = 0;
@@ -291,7 +293,7 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
 
         // extract descriptor at the computed orientation
         for (int i=kNB_POINTS; i--;) {
-            pointsValue[i] = mean_intensity(image, &i_image, kpts[k].x, kpts[k].y, SCALE_FACTOR, thetaIdx, i);
+            pointsValue[i] = mean_intensity(image, &i_image, kpts[k].x, kpts[k].y, thetaIdx, i);
         }
 
         for (int m=kNB_PAIRS; m--;) {
@@ -334,7 +336,6 @@ int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpt
                     v &= v - 1;
                 }
             }
-
 
             if (dist < min_dist) {
                 min_idx = y;
