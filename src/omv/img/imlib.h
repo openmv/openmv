@@ -108,21 +108,25 @@ typedef struct {
 typedef struct cascade {
     /* Step size of filter window shifting */
     int step;
-    /* scaling step size */
+    /* Scaling step size */
     float scale_factor;
-    /* number of stages in the cascade */
-    int  n_stages;
-    /* number of features in the cascade */
-    int  n_features;
-    /* number of rectangles in the cascade */
-    int  n_rectangles;
-    /* size of the window used in the training set */
+    /* Number of stages in the cascade */
+    int n_stages;
+    /* Number of features in the cascade */
+    int n_features;
+    /* Number of rectangles in the cascade */
+    int n_rectangles;
+    /* Current x scale ratio */
+    int x_ratio;
+    /* Current y scale ratio */
+    int y_ratio;
+    /* Detection window size */
     struct size window;
-    /* pointer to current scaled image in the pyramid */
+    /* Grayscale image */
     struct image *img;
-    /* pointer to current integral image */
+    /* Integral image */
     struct integral_image *sum;
-    /* haar cascade arrays */
+    /* Haar cascade arrays */
     uint8_t *stages_array;
     int16_t *stages_thresh_array;
     int16_t *tree_thresh_array;
@@ -176,10 +180,11 @@ void imlib_rainbow(image_t *src, struct image *dst);
 array_t *imlib_count_blobs(struct image *image);
 
 /* Integral image functions */
+void imlib_integral_image_alloc(struct integral_image *i_img, int w, int h);
 void imlib_integral_image(struct image *src, struct integral_image *sum);
 void imlib_integral_image_sq(struct image *src, struct integral_image *sum);
+void imlib_integral_image_scaled(struct image *src, struct integral_image *sum);
 uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h);
-void imlib_integral_image_alloc(struct integral_image *i_img, int w, int h);
 
 /* Template matching */
 float imlib_template_match(struct image *image, struct image *template, struct rectangle *r);
