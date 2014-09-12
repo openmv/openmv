@@ -50,8 +50,8 @@ void imlib_integral_image_scaled(struct image *src, struct integral_image *sum)
     for (int s=0, x=0; x<sum->w; x++) {
         int sx = (x*x_ratio)>>16;
         /* sum of the current row (integer) */
-        s += img_data[src->w+sx];
-        sum_data[sum->w+x] = s;
+        s += img_data[sx];
+        sum_data[x] = s;
     }
 
     for (int y=1; y<sum->h; y++) {
@@ -62,7 +62,7 @@ void imlib_integral_image_scaled(struct image *src, struct integral_image *sum)
 
             /* sum of the current row (integer) */
             s += img_data[sy*src->w+sx];
-            sum_data[y*sum->w+x] = s+sum_data[(y-1)*src->w+x];
+            sum_data[y*sum->w+x] = s+sum_data[(y-1)*sum->w+x];
         }
     }
 }
