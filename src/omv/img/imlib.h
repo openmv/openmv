@@ -110,6 +110,8 @@ typedef struct cascade {
     int step;
     /* Scaling step size */
     float scale_factor;
+    /* Detection threshold */
+    float threshold;
     /* Number of stages in the cascade */
     int n_stages;
     /* Number of features in the cascade */

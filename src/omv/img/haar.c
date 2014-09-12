@@ -79,11 +79,11 @@ static int runCascadeClassifier(cascade_t* cascade, struct point pt, int start_s
             /* send the shifted window to a haar filter */
               stage_sum += evalWeakClassifier(cascade, std, p_offset, tree_index, w_index, r_index);
               w_index+=cascade->num_rectangles_array[tree_index];
-              r_index+=4 * cascade->num_rectangles_array[tree_index];
+              r_index+=4*cascade->num_rectangles_array[tree_index];
         }
 
         /* If the sum is below the stage threshold, no faces are detected */
-        if (stage_sum < 0.45*cascade->stages_thresh_array[i]) {
+        if (stage_sum < cascade->threshold*cascade->stages_thresh_array[i]) {
             return -i;
         }
     }

@@ -545,7 +545,7 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
     return objects_list;
 }
 
-static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj)
+static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj, mp_obj_t threshold_obj)
 {
     struct image *image = NULL;
     struct cascade *cascade = NULL;
@@ -561,6 +561,7 @@ static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj)
     image = py_image_cobj(image_obj);
     /* get C cascade pointer */
     cascade = py_cascade_cobj(cascade_obj);
+    cascade->threshold = mp_obj_get_float(threshold_obj);
 
     /* Detect objects */
     objects_array = imlib_detect_objects(image, cascade);
@@ -807,7 +808,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_draw_string_obj, 4, 5, py_im
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_features_obj, py_image_find_features);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_features_obj, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
 
