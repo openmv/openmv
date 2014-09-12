@@ -545,7 +545,7 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
     return objects_list;
 }
 
-static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj, mp_obj_t threshold_obj)
+static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     struct image *image = NULL;
     struct cascade *cascade = NULL;
@@ -557,11 +557,24 @@ static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj,
     PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QCIF);
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
 
-    /* get C image pointer */
-    image = py_image_cobj(image_obj);
-    /* get C cascade pointer */
-    cascade = py_cascade_cobj(cascade_obj);
-    cascade->threshold = mp_obj_get_float(threshold_obj);
+    /* read arguments */
+    image = py_image_cobj(args[0]);
+    cascade = py_cascade_cobj(args[1]);
+
+    /* set some defaults */
+    cascade->threshold = 0.65f;
+    cascade->scale_factor = 1.65f;
+
+    /* read kw args */
+    mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("threshold")), MP_MAP_LOOKUP);
+    if (kw_thresh != NULL) {
+        cascade->threshold = mp_obj_get_float(kw_thresh->value);
+    }
+
+    mp_map_elem_t *kw_scalef = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("scale")), MP_MAP_LOOKUP);
+    if (kw_scalef != NULL) {
+        cascade->scale_factor = mp_obj_get_float(kw_scalef->value);
+    }
 
     /* Detect objects */
     objects_array = imlib_detect_objects(image, cascade);
@@ -736,7 +749,6 @@ mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
     /* detection parameters */
     struct cascade cascade = {
         .step = 2,
-        .scale_factor = 0.5f,
     };
 
     const char *path = mp_obj_str_get_str(path_obj);
@@ -808,7 +820,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_draw_string_obj, 4, 5, py_im
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_features_obj, py_image_find_features);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
 
