@@ -16,9 +16,9 @@
         if (!MP_OBJ_IS_TYPE(_a, _b)) {                  \
             nlr_jump(mp_obj_new_exception_msg_varg(     \
                         &mp_type_TypeError,             \
-                        "can't convert %s to %s",       \
+                        "Can't convert %s to %s",       \
                         mp_obj_get_type_str(_a),        \
-                        _b->name));                     \
+                        mp_obj_get_type_str(_b)));      \
         }                                               \
     } while(0)
 /* IS_TYPE doesn't work for str objs */
@@ -28,7 +28,7 @@
         if (!MP_OBJ_IS_STR(_a)) {                       \
             nlr_jump(mp_obj_new_exception_msg_varg(     \
                         &mp_type_TypeError,             \
-                        "can't convert %s to %s",       \
+                        "Can't convert %s to %s",       \
                         mp_obj_get_type_str(_a),        \
                         str_type.name));                \
         }                                               \
