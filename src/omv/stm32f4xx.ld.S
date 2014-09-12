@@ -30,7 +30,7 @@ ENTRY(Reset_Handler)
 #define ISR_ORIGIN      0x08000000
 #define ISR_LENGTH      16K
 
-#define TEXT_ORIGIN     0x08040000
+#define TEXT_ORIGIN     0x0800C000
 #define TEXT_LENGTH     1984K
 
 #define RAM_ORIGIN      0x20000000
@@ -62,8 +62,8 @@ _ram_end    = 0x10010000;   /* 64KB CCM */
 #ifdef OPENMV1
 
 _fb_base    = 0x20000000;
-_stack_size = 0x1300;       /* required amount of stack */
-_heap_size  = 0x7300;       /* required amount of heap */
+_stack_size = 0x1000;       /* required amount of stack */
+_heap_size  = 0x7600;       /* required amount of heap */
 _cache_size = 0x4000;       /* required amount of cache */
 
 #else
