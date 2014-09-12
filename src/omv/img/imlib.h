@@ -108,20 +108,18 @@ typedef struct {
 typedef struct cascade {
     /* Step size of filter window shifting */
     int step;
-    /* Scaling step size */
-    float scale_factor;
+    /* Image standard deviation */
+    int std;
     /* Detection threshold */
     float threshold;
+    /* Scaling step size */
+    float scale_factor;
     /* Number of stages in the cascade */
     int n_stages;
     /* Number of features in the cascade */
     int n_features;
     /* Number of rectangles in the cascade */
     int n_rectangles;
-    /* Current x scale ratio */
-    int x_ratio;
-    /* Current y scale ratio */
-    int y_ratio;
     /* Detection window size */
     struct size window;
     /* Grayscale image */
