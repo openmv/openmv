@@ -491,8 +491,11 @@ static mp_obj_t py_image_draw_keypoints(mp_obj_t image_obj, mp_obj_t kpts_obj)
     /* get pointer */
     image = py_image_cobj(image_obj);
     kpts = (py_kp_obj_t*)kpts_obj;
-    color_t cl = {.r=0xFF, .g=0xFF, .b=0xFF};
 
+    PY_ASSERT_TRUE(image->bpp == 1);
+    PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
+
+    color_t cl = {.r=0xFF, .g=0xFF, .b=0xFF};
     for (int i=0; i<kpts->size; i++) {
         kp_t *kp = &kpts->kpts[i];
         float co = arm_cos_f32(kp->angle);
@@ -551,7 +554,7 @@ static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj)
     mp_obj_t objects_list = mp_const_none;
 
     /* sanity checks */
-    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QQVGA);
+    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QCIF);
     PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
 
     /* get C image pointer */
@@ -568,11 +571,12 @@ static mp_obj_t py_image_find_features(mp_obj_t image_obj, mp_obj_t cascade_obj)
     /* Add detected objects to the list */
     for (int i=0; i<array_length(objects_array); i++) {
         struct rectangle *r = array_at(objects_array, 0);
-        mp_obj_t rec_obj[4];
-        rec_obj[0] = mp_obj_new_int(r->x);
-        rec_obj[1] = mp_obj_new_int(r->y);
-        rec_obj[2] = mp_obj_new_int(r->w);
-        rec_obj[3] = mp_obj_new_int(r->h);
+        mp_obj_t rec_obj[4] = {
+            mp_obj_new_int(r->x),
+            mp_obj_new_int(r->y),
+            mp_obj_new_int(r->w),
+            mp_obj_new_int(r->h),
+        };
         mp_obj_list_append(objects_list, mp_obj_new_tuple(4, rec_obj));
     }
 
@@ -617,35 +621,54 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
 {
     int threshold = 20;
     bool normalized = false;
+
+    int kpts_size = 0;
+    kp_t *kpts = NULL;
     py_kp_obj_t *kp_obj =NULL;
 
     /* make sure image is grayscale */
     image_t *image = py_image_cobj(args[0]);
+    rectangle_t roi={0, 0, image->w, image->h};
     PY_ASSERT_TRUE(image->bpp == 1);
 
-    /* read var args */ //TODO
+    /* read var args */
     mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("threshold")), MP_MAP_LOOKUP);
     if (kw_thresh != NULL) {
         threshold = mp_obj_get_int(kw_thresh->value);
     }
+
     mp_map_elem_t *kw_norm = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), MP_MAP_LOOKUP);
     if (kw_norm != NULL) {
         normalized = mp_obj_get_int(kw_norm->value);
     }
 
-    /* run keypoint extractor */
-    int kpts_size = 0;
-    kp_t *kpts = fast_detect(image, threshold, &kpts_size, NULL);
-    freak_find_keypoints(image, kpts, kpts_size, normalized, normalized);
+    mp_map_elem_t *kw_roi = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("roi")), MP_MAP_LOOKUP);
+    if (kw_roi != NULL) {
+        mp_obj_t *array;
+        mp_obj_get_array_fixed_n(kw_roi->value, 4, &array);
+        roi.x=mp_obj_get_int(array[0]);
+        roi.y=mp_obj_get_int(array[1]);
+        roi.w=mp_obj_get_int(array[2]);
+        roi.h=mp_obj_get_int(array[3]);
+    }
 
-    /* return keypoints MP object */
-    kp_obj = m_new_obj(py_kp_obj_t);
-    kp_obj->base.type = &py_kp_type;
-    kp_obj->kpts = kpts;
-    kp_obj->size = kpts_size;
-    kp_obj->threshold = threshold;
-    kp_obj->normalized = normalized;
-    return kp_obj;
+    /* run keypoint extractor on ROI */
+    kpts = fast_detect(image, threshold, &kpts_size, &roi);
+
+    if (kpts_size) {
+        /* run keypoint descriptor */
+        freak_find_keypoints(image, kpts, kpts_size, normalized, normalized);
+
+        /* return keypoints MP object */
+        kp_obj = m_new_obj(py_kp_obj_t);
+        kp_obj->base.type = &py_kp_type;
+        kp_obj->kpts = kpts;
+        kp_obj->size = kpts_size;
+        kp_obj->threshold = threshold;
+        kp_obj->normalized = normalized;
+        return kp_obj;
+    }
+    return mp_const_none;
 }
 
 static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
@@ -712,7 +735,7 @@ mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
     /* detection parameters */
     struct cascade cascade = {
         .step = 2,
-        .scale_factor = 0.35f,
+        .scale_factor = 0.5f,
     };
 
     const char *path = mp_obj_str_get_str(path_obj);
