@@ -1,10 +1,9 @@
 import struct
 
 class AVI:
-    def __init__(self, path, w, h, fps, codec="MJPG"):
+    def __init__(self, path, w, h, codec="MJPG"):
         self.w = w
         self.h = h
-        self.fps = fps
         self.codec = codec
         self.size   = 0
         self.frames = 0
@@ -22,8 +21,8 @@ class AVI:
         hdr += struct.pack("I", 0)          # Minimum playback buffer size
         hdr += struct.pack("I", self.w)     # Width of video frame in pixels
         hdr += struct.pack("I", self.h)     # Height of video frame in pixels
-        hdr += struct.pack("I", self.fps)   # Time scale
-        hdr += struct.pack("I", 0)          # Data rate of playback
+        hdr += struct.pack("I", 1)          # Time scale
+        hdr += struct.pack("I", self.fps)   # Data rate of playback
         hdr += struct.pack("I", 0)          # Starting time of AVI data
         hdr += struct.pack("I", 0)          # Size of AVI data chunk
         return hdr;
@@ -34,8 +33,8 @@ class AVI:
         hdr += struct.pack("I", 0)        # Flags
         hdr += struct.pack("I", 0)        # Priority
         hdr += struct.pack("I", 0)        # Number of first frame
-        hdr += struct.pack("I", self.fps) # Time scale
-        hdr += struct.pack("I", self.frames) # Data rate of playback
+        hdr += struct.pack("I", 1)        # Time scale
+        hdr += struct.pack("I", self.fps) # Data rate of playback
         hdr += struct.pack("I", 0)        # Starting time of AVI data
         hdr += struct.pack("I", 0)        # Data length
         hdr += struct.pack("I", 0)        # Buffer size
@@ -76,7 +75,8 @@ class AVI:
         self.fp.write(struct.pack("4sI", "00dc", img.size()))
         self.fp.write(img)
 
-    def flush(self):
+    def flush(self, fps):
+        self.fps = fps
         self.fp.seek(0)
         self.fp.write(
             self.new_list(b"RIFF", b"AVI ", self.size,
