@@ -135,6 +135,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	freak.o                                 \
 	template.o                              \
 	font.o                                  \
+	jpeg.o                                  \
    )
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \

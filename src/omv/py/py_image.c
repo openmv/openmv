@@ -367,6 +367,21 @@ static mp_obj_t py_image_rainbow(mp_obj_t src_image_obj)
     return src_image_obj;
 }
 
+static mp_obj_t py_image_compress(mp_obj_t image_obj, mp_obj_t quality)
+{
+    image_t *image = py_image_cobj(image_obj);
+
+    image_t cimage = {
+        .w=image->w,
+        .h=image->h,
+        .bpp=0,
+        .pixels= NULL
+    };
+
+    jpeg_compress(image, &cimage, mp_obj_get_int(quality));
+    return py_image_from_struct(&cimage);
+}
+
 static mp_obj_t py_image_draw_line(mp_obj_t image_obj, mp_obj_t line_obj)
 {
     /* get image pointer */
@@ -811,6 +826,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rainbow_obj, py_image_rainbow);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_erode_obj, py_image_erode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_dilate_obj, py_image_dilate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_morph_obj, py_image_morph);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_compress_obj, py_image_compress);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_draw_line_obj, py_image_draw_line);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_draw_circle_obj, py_image_draw_circle);
@@ -841,6 +857,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_erode),               (mp_obj_t)&py_image_erode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_dilate),              (mp_obj_t)&py_image_dilate_obj},
 //    {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
 
     /* drawing functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_line),           (mp_obj_t)&py_image_draw_line_obj},

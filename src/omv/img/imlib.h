@@ -211,6 +211,7 @@ void imlib_scale(struct image *src, struct image *dst, interp_t interp);
 void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off);
 void imlib_blend(struct image *src, struct image *dst, int x_off, int y_off, uint8_t alpha);
 void imlib_subimage(struct image *src, struct image *dst, int x_off, int y_off);
+void jpeg_compress(image_t *src, image_t *dst, int quality);
 
 /* Image file functions */
 int ppm_read(image_t *img, const char *path);
