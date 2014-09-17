@@ -1,8 +1,3 @@
-#include <ff.h>
-#include <stdio.h>
-#include "xalloc.h"
-#include "imlib.h"
-#include <arm_math.h>
 /*
  * This file is part of the OpenMV project.
  * Copyright (c) 2013 Ibrahim Abd Elkader <i.abdalkader@gmail.com>
@@ -13,6 +8,12 @@
  * Original Author: Francesco Comaschi (f.comaschi@tue.nl)
  *
  */
+#include <ff.h>
+#include <stdio.h>
+#include "xalloc.h"
+#include "imlib.h"
+#include <arm_math.h>
+
 static int imlib_std(image_t *image)
 {
     int w=image->w;
