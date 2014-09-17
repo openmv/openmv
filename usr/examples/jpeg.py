@@ -16,4 +16,3 @@ print(clock.avg())
 f = open("/test.jpeg", "w")
 f.write(img)
 f.close()
-break
