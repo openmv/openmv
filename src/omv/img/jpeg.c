@@ -395,6 +395,26 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
         .buf = xalloc(4096)
     };
 
+    quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
+
+    // If quality changed, update quantization matrix
+    if (q != quality) {
+        q = quality;
+        for(int i = 0; i < 64; ++i) {
+            int yti = (YQT[i]*quality+50)/100;
+            YTable[s_jo_ZigZag[i]] = yti < 1 ? 1 : yti > 255 ? 255 : yti;
+            int uvti  = (UVQT[i]*quality+50)/100;
+            UVTable[s_jo_ZigZag[i]] = uvti < 1 ? 1 : uvti > 255 ? 255 : uvti;
+        }
+
+        for(int r = 0, k = 0; r < 8; ++r) {
+            for(int c = 0; c < 8; ++c, ++k) {
+                fdtbl_Y[k]  = 1 / (YTable [s_jo_ZigZag[k]] * aasf[r] * aasf[c]);
+                fdtbl_UV[k] = 1 / (UVTable[s_jo_ZigZag[k]] * aasf[r] * aasf[c]);
+            }
+        }
+    }
+
     // Write Headers
     jpeg_put_bytes(&jpeg_buf, head0, sizeof(head0));
     jpeg_put_bytes(&jpeg_buf, YTable, sizeof(YTable));
@@ -417,26 +437,6 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     jpeg_put_bytes(&jpeg_buf, std_ac_chrominance_nrcodes+1, sizeof(std_ac_chrominance_nrcodes)-1);
     jpeg_put_bytes(&jpeg_buf, std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
     jpeg_put_bytes(&jpeg_buf, head2, sizeof(head2));
-
-    quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
-
-    // If quality changed, update quantization matrix
-    if (q != quality) {
-        q = quality;
-        for(int i = 0; i < 64; ++i) {
-            int yti = (YQT[i]*quality+50)/100;
-            YTable[s_jo_ZigZag[i]] = yti < 1 ? 1 : yti > 255 ? 255 : yti;
-            int uvti  = (UVQT[i]*quality+50)/100;
-            UVTable[s_jo_ZigZag[i]] = uvti < 1 ? 1 : uvti > 255 ? 255 : uvti;
-        }
-
-        for(int r = 0, k = 0; r < 8; ++r) {
-            for(int c = 0; c < 8; ++c, ++k) {
-                fdtbl_Y[k]  = 1 / (YTable [s_jo_ZigZag[k]] * aasf[r] * aasf[c]);
-                fdtbl_UV[k] = 1 / (UVTable[s_jo_ZigZag[k]] * aasf[r] * aasf[c]);
-            }
-        }
-    }
 
     // Encode 8x8 macroblocks
     int bitBuf=0, bitCnt=0;
