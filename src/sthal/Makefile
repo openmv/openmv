@@ -32,7 +32,6 @@ stm32f4xx_hal_usart.c\
 stm32f4xx_ll_usb.c\
 stm32f4xx_ll_sdmmc.c\
 stm32f4xx_ll_fmc.c\
-syscalls.c\
 )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
