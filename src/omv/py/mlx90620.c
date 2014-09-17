@@ -9,6 +9,8 @@
 #include "py_image.h"
 #include "mlx90620.h"
 
+#ifdef OPENMV2
+
 #define MLX_SLAVE_ADDR      (0xC0)
 #define MLX_EEPROM_ADDR     (0xA0)
 #define OSC_TRIM_OFFSET     (0xF7)
@@ -238,8 +240,15 @@ const mp_obj_module_t mlx_module = {
     .name = MP_QSTR_mlx,
     .globals = (mp_obj_t)&globals_dict,
 };
+#else
+const mp_obj_module_t mlx_module = {
+    .base = { &mp_type_module },
+    .name = MP_QSTR_mlx,
+};
 
 const mp_obj_module_t *py_mlx90620_init()
 {
     return &mlx_module;
 }
+
+#endif
