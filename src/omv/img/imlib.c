@@ -47,11 +47,11 @@
 #define MAX_GRAY_LEVEL (255)
 
 /* RGB565->LAB lookup */
-extern const int8_t lab_table[65536];
+extern const int8_t lab_table[196608];
 /* Grayscale [0..255] to rainbox lookup */
 extern const uint16_t rainbow_table[256];
 
-const uint8_t xyz_table[256]= {
+const float xyz_table[256]= {
     0.083381, 0.098368, 0.114819, 0.132772, 0.152264, 0.173331, 0.196007, 0.220325,
     0.246318, 0.274017, 0.303452, 0.334654, 0.367651, 0.402472, 0.439144, 0.477695,
     0.518152, 0.560539, 0.604883, 0.651209, 0.699541, 0.749903, 0.802319, 0.856813,
