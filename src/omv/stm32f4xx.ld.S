@@ -60,12 +60,9 @@ _estack     = 0x10010000;   /* Stack is allocated on CCM block */
 _ram_end    = 0x10010000;   /* 64KB CCM */
 
 #ifdef OPENMV1
-
 _fb_base    = 0x20000000;
 _stack_size = 0x1000;       /* required amount of stack */
-_heap_size  = 0x7600;       /* required amount of heap */
-_cache_size = 0x4000;       /* required amount of cache */
-
+_heap_size  = 0XB400;       /* required amount of heap */
 #else
 
 _fb_base    = 0xC0F04000;   /* sdram_start + head_end + cache */
@@ -157,9 +154,6 @@ SECTIONS
   {
     . = ALIGN(4);
     . = . + _stack_size;
-#ifdef OPENMV1
-    . = . + _cache_size;
-#endif
     . = ALIGN(4);
   } >CCM
 
