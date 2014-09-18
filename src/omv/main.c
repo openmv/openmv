@@ -48,16 +48,69 @@
 #include "mlx90620.h"
 
 int errno;
-static FATFS fatfs0;
-static FATFS fatfs1;
+static FATFS fatfs;
 extern char _stack_size;
+
+static const char fresh_main_py[] =
+"# main.py -- put your code here!\n"
+"import led, time\n"
+"while (vcp_is_connected()==False):\n"
+"   led.on(led.BLUE)\n"
+"   time.sleep(150)\n"
+"   led.off(led.BLUE)\n"
+"   time.sleep(100)\n"
+"   led.on(led.BLUE)\n"
+"   time.sleep(150)\n"
+"   led.off(led.BLUE)\n"
+"   time.sleep(600)\n"
+;
+
+static const char fresh_pybcdc_inf[] =
+#include "genhdr/pybcdc_inf.h"
+;
+
+static const char fresh_readme_txt[] =
+"This is a Micro Python board\r\n"
+"\r\n"
+"You can get started right away by writing your Python code in 'main.py'.\r\n"
+"\r\n"
+"For a serial prompt:\r\n"
+" - Windows: you need to go to 'Device manager', right click on the unknown device,\r\n"
+"   then update the driver software, using the 'pybcdc.inf' file found on this drive.\r\n"
+"   Then use a terminal program like Hyperterminal or putty.\r\n"
+" - Mac OS X: use the command: screen /dev/tty.usbmodem*\r\n"
+" - Linux: use the command: screen /dev/ttyACM0\r\n"
+"\r\n"
+"Please visit http://micropython.org/help/ for further help.\r\n"
+;
+
+typedef struct {
+    const char *name;
+    const mp_obj_module_t *(*init)(void);
+} module_t;
+
+static const module_t init_modules[] ={
+    {"sensor",  py_sensor_init},
+    {"led",     py_led_init},
+    {"time",    py_time_init},
+//  {"wlan",    py_wlan_init},
+//  {"socket",  py_socket_init},
+//  {"select",  py_select_init},
+    {"spi",     py_spi_init},
+    {"gpio",    py_gpio_init},
+    {"uart",    py_uart_init},
+#ifdef OPENMV2
+    {"mlx90620", py_mlx90620_init},
+#endif
+    {NULL}
+};
 
 void flash_error(int n) {
     for (int i = 0; i < n; i++) {
         led_state(LED_RED, 0);
-        HAL_Delay(250);
+        HAL_Delay(100);
         led_state(LED_RED, 1);
-        HAL_Delay(250);
+        HAL_Delay(100);
     }
     led_state(LED_RED, 0);
 }
@@ -138,59 +191,34 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_cascade_obj, py_image_load_cascad
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_descriptor_obj, py_image_load_descriptor);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_save_descriptor_obj, py_image_save_descriptor);
 
-static const char fresh_main_py[] =
-"# main.py -- put your code here!\n"
-"import led, time\n"
-"while (vcp_is_connected()==False):\n"
-"   led.on(led.BLUE)\n"
-"   time.sleep(150)\n"
-"   led.off(led.BLUE)\n"
-"   time.sleep(100)\n"
-"   led.on(led.BLUE)\n"
-"   time.sleep(150)\n"
-"   led.off(led.BLUE)\n"
-"   time.sleep(600)\n"
-;
+static void make_flash_fs()
+{
+    FIL fp;
+    UINT n;
 
-static const char fresh_pybcdc_inf[] =
-#include "genhdr/pybcdc_inf.h"
-;
+    led_state(LED_RED, 1);
 
-static const char fresh_readme_txt[] =
-"This is a Micro Python board\r\n"
-"\r\n"
-"You can get started right away by writing your Python code in 'main.py'.\r\n"
-"\r\n"
-"For a serial prompt:\r\n"
-" - Windows: you need to go to 'Device manager', right click on the unknown device,\r\n"
-"   then update the driver software, using the 'pybcdc.inf' file found on this drive.\r\n"
-"   Then use a terminal program like Hyperterminal or putty.\r\n"
-" - Mac OS X: use the command: screen /dev/tty.usbmodem*\r\n"
-" - Linux: use the command: screen /dev/ttyACM0\r\n"
-"\r\n"
-"Please visit http://micropython.org/help/ for further help.\r\n"
-;
+    if (f_mkfs("0:", 0, 0) != FR_OK) {
+        __fatal_error("could not create LFS");
+    }
 
-typedef struct {
-    const char *name;
-    const mp_obj_module_t *(*init)(void);
-} module_t;
+    // create default main.py
+    f_open(&fp, "main.py", FA_WRITE | FA_CREATE_ALWAYS);
+    f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
+    f_close(&fp);
 
-static const module_t init_modules[] ={
-    {"sensor",  py_sensor_init},
-    {"led",     py_led_init},
-    {"time",    py_time_init},
-//  {"wlan",    py_wlan_init},
-//  {"socket",  py_socket_init},
-//  {"select",  py_select_init},
-    {"spi",     py_spi_init},
-    {"gpio",    py_gpio_init},
-    {"uart",    py_uart_init},
-#ifdef OPENMV2
-    {"mlx90620", py_mlx90620_init},
-#endif
-    {NULL}
-};
+    // create .inf driver file
+    f_open(&fp, "pybcdc.inf", FA_WRITE | FA_CREATE_ALWAYS);
+    f_write(&fp, fresh_pybcdc_inf, sizeof(fresh_pybcdc_inf) - 1 /* don't count null terminator */, &n);
+    f_close(&fp);
+
+    // create readme file
+    f_open(&fp, "README.txt", FA_WRITE | FA_CREATE_ALWAYS);
+    f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
+    f_close(&fp);
+
+    led_state(LED_RED, 0);
+}
 
 int main(void)
 {
@@ -220,7 +248,6 @@ int main(void)
     // basic sub-system init
     pendsv_init();
     timer_tim3_init();
-    int first_soft_reset = true;
 
 soft_reset:
     // check if user switch held to select the reset mode
@@ -230,21 +257,8 @@ soft_reset:
     uint reset_mode = 1;
 
 #if MICROPY_HW_ENABLE_RTC
-    if (first_soft_reset) {
-        rtc_init();
-    }
+    rtc_init();
 #endif
-
-    // more sub-system init
-#if MICROPY_HW_HAS_SDCARD
-    if (sdcard_is_present() && first_soft_reset) {
-        sdcard_init();
-    }
-#endif
-
-    if (first_soft_reset) {
-        storage_init();
-    }
 
     // GC init
     gc_init(&_heap_start, &_heap_end);
@@ -253,8 +267,6 @@ soft_reset:
     mp_init();
     mp_obj_list_init(mp_sys_path, 0);
     mp_obj_list_init(mp_sys_argv, 0);
-    mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_));
-    mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_lib));
 
     readline_init0();
     pin_init0();
@@ -284,60 +296,39 @@ soft_reset:
     mp_store_global(qstr_from_str("FreakDescSave"),     (mp_obj_t)&py_image_save_descriptor_obj);
     mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
 
-    // try to mount the flash
-    FRESULT res = f_mount(&fatfs0, "0:", 1);
-    if (reset_mode == 3 || res == FR_NO_FILESYSTEM) {
-        // no filesystem, or asked to reset it, so create a fresh one
-        // LED on to indicate creation of LFS
-        led_state(LED_RED, 1);
+    usb_storage_medium_t usb_medium;
 
-        if (f_mkfs("0:", 0, 0) != FR_OK) {
-            __fatal_error("could not create LFS");
-        }
-
-        // create empty main.py
-        FIL fp;
-        UINT n;
-        f_open(&fp, "main.py", FA_WRITE | FA_CREATE_ALWAYS);
-        f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
-        f_close(&fp);
-
-        // create .inf driver file
-        f_open(&fp, "pybcdc.inf", FA_WRITE | FA_CREATE_ALWAYS);
-        f_write(&fp, fresh_pybcdc_inf, sizeof(fresh_pybcdc_inf) - 1 /* don't count null terminator */, &n);
-        f_close(&fp);
-
-        // create readme file
-        f_open(&fp, "README.txt", FA_WRITE | FA_CREATE_ALWAYS);
-        f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
-        f_close(&fp);
-
-        led_state(LED_RED, 0);
-    } else if (res != FR_OK) {
-        __fatal_error("could not access LFS");
-    }
-
-    // Set CWD and USB medium to flash
-    f_chdrive("0:");
-    usb_storage_medium_t usb_medium = USB_STORAGE_MEDIUM_FLASH;
-
-    // if an SD card is present then mount it on 1:/
-    if (reset_mode == 1 && sdcard_is_present()) {
-        FRESULT res = f_mount(&fatfs1, "1:", 1);
+    if (sdcard_is_present()) {
+        sdcard_init();
+        FRESULT res = f_mount(&fatfs, "1:", 1);
         if (res != FR_OK) {
-            printf("[SD] could not mount SD card\n");
-        } else {
-            // use SD card as root device
-            f_chdrive("1:");
-
-            if (first_soft_reset) {
-                // use SD card as medium for the USB MSD
-                usb_medium = USB_STORAGE_MEDIUM_SDCARD;
-            }
-            // add sdcard to sys path
-            mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_1_colon__slash_));
-            mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_1_colon__slash_lib));
+            __fatal_error("could not mount SD\n");
         }
+        // Set CWD and USB medium to SD
+        f_chdrive("1:");
+        usb_medium = USB_STORAGE_MEDIUM_SDCARD;
+
+        // add sdcard to sys path
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_1_colon__slash_));
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_1_colon__slash_lib));
+    } else {
+        storage_init();
+        // try to mount the flash
+        FRESULT res = f_mount(&fatfs, "0:", 1);
+        if (reset_mode == 3 || res == FR_NO_FILESYSTEM) {
+            // create a fresh fs
+            make_flash_fs();
+        } else if (res != FR_OK) {
+            __fatal_error("could not access LFS\n");
+        }
+
+        // Set CWD and USB medium to flash
+        f_chdrive("0:");
+        usb_medium = USB_STORAGE_MEDIUM_FLASH;
+
+        // add sdcard to sys path
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_));
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_lib));
     }
 
     // turn boot-up LEDs off
@@ -345,10 +336,6 @@ soft_reset:
     led_state(LED_GREEN, 0);
     led_state(LED_BLUE, 0);
 
-#if defined(USE_HOST_MODE)
-    // USB host
-    pyb_usb_host_init();
-#elif defined(USE_DEVICE_MODE)
     // USB device
     if (reset_mode == 1) {
         usb_device_mode_t usb_mode = USB_DEVICE_MODE_CDC_MSC;
@@ -361,14 +348,17 @@ soft_reset:
     } else {
         pyb_usb_dev_init(USB_DEVICE_MODE_CDC_MSC, usb_medium);
     }
-#endif
 
     // Run the main script from the current directory.
     if (reset_mode == 1 && pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
         FRESULT res = f_stat("main.py", NULL);
         if (res == FR_OK) {
             if (!pyexec_file("main.py")) {
-                flash_error(3);
+                nlr_buf_t nlr;
+                if (nlr_push(&nlr) == 0) {
+                    flash_error(3);
+                    nlr_pop();
+                }
             }
         }
     }
@@ -395,6 +385,5 @@ soft_reset:
 
     printf("PYB: soft reboot\n");
 
-    first_soft_reset = false;
     goto soft_reset;
 }
