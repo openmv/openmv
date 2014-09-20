@@ -13,6 +13,5 @@ clock.tick()
 img = image.compress(30)
 print(clock.avg())
 
-f = open("/test.jpeg", "w")
-f.write(img)
-f.close()
+with open("/test.jpeg", "w") as f:
+    f.write(img)

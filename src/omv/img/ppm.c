@@ -11,15 +11,34 @@
 #include "xalloc.h"
 #include "imlib.h"
 #include "mdefs.h"
+
+#define BUF_LEN   (1024*3)
+
 #define R8(p) \
-    (uint8_t)((p>>11) * 255/31)
+    rb_tbl[((p>>3)&0x1F)]
+
 #define G8(p) \
-    (uint8_t)(((p>>5)&0x3F)* 255/63)
+    g_tbl[((p&0x07)<<3)|(p>>13)]
+
 #define B8(p) \
-    (uint8_t)((p&0x1F) * 255/31)
-#define SWAP(x)\
-   ({ uint16_t _x = (x); \
-    (((_x & 0xff)<<8 |(_x & 0xff00) >> 8));})
+    rb_tbl[((p>>8)&0x1F)]
+
+static uint8_t rb_tbl []= {
+    0, 8, 16, 24, 32, 41, 49, 57, 65, 74,
+    82, 90, 98, 106, 115, 123, 131, 139,
+    148, 156, 164, 172, 180, 189, 197, 205,
+    213, 222, 230, 238, 246, 255
+};
+
+static uint8_t g_tbl []= {
+    0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44,
+    48, 52, 56, 60, 64, 68, 72, 76, 80, 85, 89,
+    93, 97, 101, 105, 109, 113, 117, 121, 125, 129,
+    133, 137, 141, 145, 149, 153, 157, 161, 165, 170,
+    174, 178, 182, 186, 190, 194, 198, 202, 206, 210,
+    214, 218, 222, 226, 230, 234, 238, 242, 246, 250, 255
+};
+
 static int isspace(int c)
 {
     return (c=='\n'||c=='\r'||c=='\t'||c==' ');
@@ -60,6 +79,9 @@ int ppm_write(image_t *img, const char *path)
     UINT bytes;
     FRESULT res=FR_OK;
 
+    int idx=0;
+    uint8_t buf[BUF_LEN];
+
     res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
     if (res != FR_OK) {
         return res;
@@ -79,19 +101,24 @@ int ppm_write(image_t *img, const char *path)
     if (img->bpp == 1) {
         res = f_write(&fp, img->data, img->w*img->h, &bytes);
     } else {
-        uint8_t rgb[3];
         uint16_t *pixels = (uint16_t*)img->data;
-        for (int j=0; j<img->h; j++) {
-            for (int i=0; i<img->w; i++) {
-                uint16_t c = SWAP(pixels[j*img->w+i]);
-                rgb[0] = R8(c); rgb[1] = G8(c); rgb[2] = B8(c);
-                res = f_write(&fp, rgb, 3, &bytes);
-                if (res != FR_OK || bytes != 3) {
+        for (int i=0; i<img->w*img->h; i++) {
+            uint16_t p = pixels[i];
+            buf[idx++]=R8(p); buf[idx++]=G8(p); buf[idx++]=B8(p); //RGB565->RGB888
+            if (idx == BUF_LEN) {
+                idx = 0;
+                res = f_write(&fp, buf, BUF_LEN, &bytes);
+                if (res != FR_OK || bytes != BUF_LEN) {
                     goto error;
                 }
             }
         }
-
+        if (idx) {
+            res = f_write(&fp, buf, idx, &bytes);
+            if (res != FR_OK || bytes != idx) {
+                goto error;
+            }
+        }
     }
 
 error:
@@ -167,6 +194,9 @@ int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
     UINT bytes;
     FRESULT res=FR_OK;
 
+    int idx=0;
+    uint8_t buf[BUF_LEN];
+
     res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
     if (res != FR_OK) {
         return res;
@@ -194,19 +224,27 @@ int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
             }
         }
     } else {
-        uint8_t rgb[3];
         uint16_t *pixels = (uint16_t*)img->data;
         for (int j=r->y; j<r->y+r->h; j++) {
             for (int i=r->x; i<r->x+r->w; i++) {
-                uint16_t c = SWAP(pixels[j*img->w+i]);
-                rgb[0] = R8(c); rgb[1] = G8(c); rgb[2] = B8(c);
-                res = f_write(&fp, rgb, 3, &bytes);
-                if (res != FR_OK || bytes != 3) {
-                    goto error;
+                uint16_t p = pixels[j*img->w+i];
+                buf[idx++]=R8(p); buf[idx++]=G8(p); buf[idx++]=B8(p); //RGB565->RGB888
+                if (idx == BUF_LEN) {
+                    idx = 0;
+                    res = f_write(&fp, buf, BUF_LEN, &bytes);
+                    if (res != FR_OK || bytes != BUF_LEN) {
+                        goto error;
+                    }
                 }
             }
         }
 
+        if (idx) {
+            res = f_write(&fp, buf, idx, &bytes);
+            if (res != FR_OK || bytes != idx) {
+                goto error;
+            }
+        }
     }
 
 error:

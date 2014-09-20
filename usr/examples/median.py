@@ -1,3 +1,9 @@
 import sensor, time
+sensor.set_framesize(sensor.QCIF)
 sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.snapshot().median(size=3)
+clock = time.clock()
+while (True):
+    image = sensor.snapshot()
+    clock.tick()
+    image.median(size = 3)
+    print(clock.fps())
