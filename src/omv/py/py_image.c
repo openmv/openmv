@@ -59,6 +59,23 @@ static const mp_obj_type_t py_kp_type = {
     .print = py_kp_print,
 };
 
+/* LBP descriptor */
+typedef struct _py_lbp_obj_t {
+    mp_obj_base_t base;
+    uint8_t *hist;
+} py_lbp_obj_t;
+
+static void py_lbp_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    print(env, "<lbp descriptor>");
+}
+
+static const mp_obj_type_t py_lbp_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_lbp_desc,
+    .print = py_lbp_print,
+};
+
 /* Image */
 typedef struct _py_image_obj_t {
     mp_obj_base_t base;
@@ -700,6 +717,20 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     return mp_const_none;
 }
 
+static mp_obj_t py_image_find_lbp(mp_obj_t image_obj)
+{
+    image_t *image;
+    py_lbp_obj_t *lbp_obj;
+
+    image = py_image_cobj(image_obj);
+    PY_ASSERT_TRUE(image->bpp == 1);
+
+    lbp_obj = m_new_obj(py_lbp_obj_t);
+    lbp_obj->base.type = &py_lbp_type;
+    lbp_obj->hist = imlib_lbp_desc(image);
+    return lbp_obj;
+}
+
 static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
 {
     image_t *image = py_image_cobj(args[0]);
@@ -737,6 +768,15 @@ static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
         return mp_obj_new_tuple(2, rec_obj);
     }
     return mp_const_none;
+}
+
+static mp_obj_t py_image_match_lbp(mp_obj_t image_obj, mp_obj_t d0_obj, mp_obj_t d1_obj)
+{
+   // image_t *image;
+   // image = py_image_cobj(image_obj);
+    py_lbp_obj_t *d0 = ((py_lbp_obj_t*)d0_obj);
+    py_lbp_obj_t *d1 = ((py_lbp_obj_t*)d1_obj);
+    return mp_obj_new_int(imlib_lbp_desc_distance(d0->hist, d1->hist));
 }
 
 mp_obj_t py_image_load_image(mp_obj_t path_obj)
@@ -838,7 +878,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_match_lbp_obj, py_image_match_lbp);
 
 static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_size),                (mp_obj_t)&py_image_size_obj},
@@ -871,7 +913,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_features),       (mp_obj_t)&py_image_find_features_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_lbp),            (mp_obj_t)&py_image_find_lbp_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_match_keypoints),     (mp_obj_t)&py_image_match_keypoints_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_match_lbp),           (mp_obj_t)&py_image_match_lbp_obj},
 
     { NULL, NULL },
 };

@@ -136,6 +136,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	template.o                              \
 	font.o                                  \
 	jpeg.o                                  \
+	lbp.o                                   \
    )
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
@@ -187,7 +188,6 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pyexec.o                \
 	help.o                  \
 	input.o                 \
-	uart.o                  \
 	import.o                \
 	lexerfatfs.o            \
 	flash.o                 \
@@ -198,13 +198,11 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pin.o                   \
 	timer.o                 \
 	servo.o                 \
-	adc.o                   \
-	modstm.o                \
     )
 
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	atanf.o                 \
-	atan2f.o                 \
+	atan2f.o                \
 	math.o                  \
 	mathsincos.o            \
     )
