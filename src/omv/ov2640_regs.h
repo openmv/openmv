@@ -1,6 +1,12 @@
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * OV2640 register definitions.
+ */
 #ifndef __REG_REGS_H__
 #define __REG_REGS_H__
-/* OV2640 Registers definition */
 /* DSP register bank FF=0x00*/
 #define QS                  0x44
 #define HSIZE               0x51

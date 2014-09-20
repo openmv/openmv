@@ -1,11 +1,4 @@
-/*-----------------------------------------------------------------------*/
-/* MMC/SDSC/SDHC (in SPI mode) control module for STM32 Version 1.1.6    */
-/* (C) Martin Thomas, 2010 - based on the AVR MMC module (C)ChaN, 2007   */
-/*-----------------------------------------------------------------------*/
-
-/* Copyright (c) 2010, Martin Thomas, ChaN
-   All rights reserved.
-
+/* Copyright (c) 2010, Martin Thomas, ChaN All rights reserved.
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
 

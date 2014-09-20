@@ -1,3 +1,11 @@
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Software I2C implementation.
+ *
+ */
 #include <stdbool.h>
 #include <stm32f4xx_hal.h>
 #include "soft_i2c.h"

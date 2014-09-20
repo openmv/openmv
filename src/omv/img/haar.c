@@ -1,8 +1,7 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013 Ibrahim Abd Elkader <i.abdalkader@gmail.com>
- * This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License.
- * To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Viola-Jones face detector implementation.
  * Original Author: Francesco Comaschi (f.comaschi@tue.nl)

@@ -1,6 +1,12 @@
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * OV9650 register definitions.
+ */
 #ifndef __REG_REGS_H__
 #define __REG_REGS_H__
-/* OV9650 Registers definition */
 #define REG_GAIN       0x00
 #define REG_BLUE       0x01
 #define REG_RED        0x02

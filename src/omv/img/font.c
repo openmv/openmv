@@ -1,25 +1,29 @@
-/*******************************************************************************
-* name: Font
-* family: Ubuntu
-* size: 8
-* style: Normal
-* included characters:  !"#$%&'()*+,-./0123456789:;<=>?\x0040ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
-* antialiasing: yes
-* type: monospaced
-* encoding: ASMO-708
-* unicode bom: no
-*
-* preset name: Monochrome
-* data block size: 8 bit(s), uint8_t
-* RLE compression enabled: no
-* conversion type: Monochrome, Diffuse Dither 128
-* bits per pixel: 1
-*
-* preprocess:
-*  main scan direction: top_to_bottom
-*  line scan direction: forward
-*  inverse: yes
-*******************************************************************************/
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Font data.
+ *
+ * Size: 8 Style: Normal
+ * Included characters:
+ *  !"#$%&'()*+,-./0123456789:;<=>?\x0040ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~
+ * Antialiasing: yes
+ * Type: monospaced
+ * Encoding: ASMO-708
+ * Unicode bom: no
+ *
+ * Preset name: Monochrome
+ * Data block size: 8 bit(s), uint8_t
+ * RLE compression enabled: no
+ * Conversion type: Monochrome, Diffuse Dither 128
+ * Bits per pixel: 1
+ *
+ * Preprocess:
+ *  main scan direction: top_to_bottom
+ *  line scan direction: forward
+ *  inverse: yes
+ */
 #include <stdint.h>
 #include "font.h"
 

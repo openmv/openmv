@@ -1,3 +1,11 @@
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Socket Python module.
+ *
+ */
 #include <mp.h>
 #include <cc3000_common.h>
 #include <evnt_handler.h>
@@ -7,6 +15,7 @@
 #include <py_wlan.h>
 #include <py_socket.h>
 #include <py_assert.h>
+
 #define MAX_FD              (8)
 #define MAX_ADDRSTRLEN      (128)
 #define MAX_RX_PACKET       (CC3000_RX_BUFFER_SIZE-CC3000_MINIMAL_RX_SIZE-1)

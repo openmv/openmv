@@ -1,3 +1,11 @@
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Global framebuffer pointer.
+ *
+ */
 #ifndef __FRAMEBUFFER_H__
 #define __FRAMEBUFFER_H__
 #include "mutex.h"
@@ -9,5 +17,6 @@ static struct framebuffer {
     int ready;
     mutex_t lock;
     uint8_t pixels[];
+// Note all instances of fb point to the same memory address.
 }*fb = (struct framebuffer *) &_fb_base;
 #endif /* __FRAMEBUFFER_H__ */

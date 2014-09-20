@@ -1,3 +1,11 @@
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * MicroPython header.
+ *
+ */
 #ifndef __MP_H__
 #define __MP_H__
 #include <std.h>
@@ -24,4 +32,4 @@
 #include "usb.h"
 #include "storage.h"
 #include "sdcard.h"
-#endif /* __MP_H__ */
+#endif // __MP_H__

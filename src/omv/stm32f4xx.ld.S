@@ -1,5 +1,10 @@
-/**
- *  Linker script for STM32F4xx Devices with 1MB FLASH, 192KB RAM (64KB CCM)
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Linker script for STM32F4xx Devices.
+ *
  */
 
 /* Entry Point */

@@ -1,6 +1,10 @@
-/**
- * Copyright (c) 2013 Ibrahim Abd Elkader <i.abdalkader@gmail.com>
- * See the file COPYING for copying permission.
+/*
+ * This file is part of the OpenMV project.
+ * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Dynamic array.
+ *
  */
 #include <stdlib.h>
 #include <string.h>
