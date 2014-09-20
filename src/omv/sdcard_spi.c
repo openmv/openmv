@@ -95,7 +95,7 @@ static BYTE spi_send(BYTE out)
 
 static bool spi_send_buff(const BYTE *buff, uint32_t size)
 {
-    return HAL_SPI_TransmitReceive(&SPIHandle, (void*)buff, (void*)buff, size , SPI_TIMEOUT)== HAL_OK;
+    return HAL_SPI_Transmit(&SPIHandle, (void*)buff, size, SPI_TIMEOUT)== HAL_OK;
 }
 
 #define spi_recv() spi_send(0xFF)
