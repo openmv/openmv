@@ -47,6 +47,11 @@ class OMVGtk:
         self.buffer.set_language(lang_manager.get_language("python"))
         self.buffer.connect("changed", self.text_changed)
 
+        #configure the terminal
+        self.fd = -1
+        self.terminal = self.builder.get_object('terminal')
+        self.terminal.set_size(80,24)
+
         # open last opened file
         if os.path.isfile(config_path):
             with open(config_path, "r") as file:
@@ -59,12 +64,6 @@ class OMVGtk:
                 self.file_path = None
 
         sourceview.set_buffer(self.buffer)
-
-        # open VCP and configure the terminal
-        self.terminal = self.builder.get_object('terminal')
-        self.fd = os.open("/dev/ttyACM0", os.O_RDWR)
-        self.terminal.set_size(80,24)
-        self.terminal.set_pty(self.fd)
 
         # get drawingarea
         self.pixbuf = None
@@ -88,6 +87,7 @@ class OMVGtk:
         #connect signals
         signals = {
             "on_top_window_destroy"         : self.quit,
+            "on_connect_clicked"            : self.connect_clicked,
             "on_execute_clicked"            : self.execute_clicked,
             "on_stop_clicked"               : self.stop_clicked,
             "on_motion_notify"              : self.motion_notify,
@@ -106,12 +106,86 @@ class OMVGtk:
         }
         self.builder.connect_signals(signals)
 
-        # init openmv
-        openmv.init()
+        self.connected = False
+        self.builder.get_object('connect_button').set_sensitive(True)
+        self.builder.get_object('exec_button').set_sensitive(False)
+        self.builder.get_object('stop_button').set_sensitive(False)
+        self.builder.get_object('zoomin_button').set_sensitive(False)
+        self.builder.get_object('zoomout_button').set_sensitive(False)
+        self.builder.get_object('bestfit_button').set_sensitive(False)
+        self.builder.get_object('refresh_button').set_sensitive(False)
 
-        # interrupt any running code
-        openmv.stop_script()
-        sleep(0.1)
+
+    def show_message_dialog(self, msg_type, msg):
+        message = gtk.MessageDialog(parent=self.window, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
+                                    type=msg_type, buttons=gtk.BUTTONS_OK, message_format=msg)
+        message.run()
+        message.destroy()
+
+    def connect(self):
+        self.terminal = self.builder.get_object('terminal')
+        try:
+            # open VCP and configure the terminal
+            self.fd = os.open("/dev/ttyACM0", os.O_RDWR)
+            self.terminal.reset(True, True)
+            self.terminal.set_size(80,24)
+            self.terminal.set_pty(self.fd)
+        except Exception, e:
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Faild to connect to OpenMV\n%s"%e)
+            return
+
+        try:
+            # init openmv
+            openmv.init()
+
+            # interrupt any running code
+            openmv.stop_script()
+            sleep(0.1)
+        except Exception, e:
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Faild to connect to OpenMV\n%s"%e)
+            return
+
+        self.connected = True
+        self.builder.get_object('connect_button').set_sensitive(False)
+        self.builder.get_object('exec_button').set_sensitive(True)
+        self.builder.get_object('stop_button').set_sensitive(True)
+        self.builder.get_object('zoomin_button').set_sensitive(True)
+        self.builder.get_object('zoomout_button').set_sensitive(True)
+        self.builder.get_object('bestfit_button').set_sensitive(True)
+        self.builder.get_object('refresh_button').set_sensitive(True)
+
+    def disconnect(self):
+        try:
+            # close VCP
+            os.close(self.fd)
+        except OSError:
+            pass
+
+        #reset terminal
+        self.terminal.set_pty(-1)
+        self.terminal.reset(True, True)
+
+        try:
+            # stop running code
+            openmv.stop_script();
+        except:
+            pass
+
+        # release OpenMV
+        openmv.release()
+
+        self.connected = False
+        self.builder.get_object('connect_button').set_sensitive(True)
+        self.builder.get_object('exec_button').set_sensitive(False)
+        self.builder.get_object('stop_button').set_sensitive(False)
+        self.builder.get_object('zoomin_button').set_sensitive(False)
+        self.builder.get_object('zoomout_button').set_sensitive(False)
+        self.builder.get_object('bestfit_button').set_sensitive(False)
+        self.builder.get_object('refresh_button').set_sensitive(False)
+
+
+    def connect_clicked(self, widget):
+        self.connect()
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
@@ -166,21 +240,29 @@ class OMVGtk:
             self.statusbar.push(self.statusbar_ctx, rgb)
 
     def update_drawing(self):
-        # read drawingarea
-        fb = openmv.fb_dump()
-        if fb:
-            # convert to RGB888 and blit
-            self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
-            self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
+        if (not self.connected):
+            return True
 
-            self.drawingarea.realize();
-            cm = self.drawingarea.window.get_colormap()
-            gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF',True,False))
+        try:
+            # read drawingarea
+            fb = openmv.fb_dump()
+            if fb:
+                # convert to RGB888 and blit
+                self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
+                self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
 
-            self.drawingarea.set_size_request(fb[0]*SCALE, fb[1]*SCALE)
-            self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
-            if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
-                self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
+                self.drawingarea.realize();
+                cm = self.drawingarea.window.get_colormap()
+                gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF',True,False))
+
+                self.drawingarea.set_size_request(fb[0]*SCALE, fb[1]*SCALE)
+                self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
+                if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
+                    self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
+        except Exception, e:
+            self.disconnect()
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Faild to update FB\n%s"%e)
+            return True
 
         return True
 
@@ -270,16 +352,13 @@ class OMVGtk:
         self.save_button.set_sensitive(True)
 
     def quit(self, widget):
+        # disconnect
+        self.disconnect()
+
         # write last opened file
         with open(config_path, "w") as file:
             file.write(self.file_path)
 
-        # stop any running code
-        openmv.stop_script();
-        # close VCP
-        os.close(self.fd)
-        # release OpenMV
-        openmv.release()
         # exit
         sys.exit(0)
 
