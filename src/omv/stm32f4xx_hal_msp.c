@@ -22,12 +22,12 @@ const gpio_t led_pins[] = {
 /* GPIOs */
 #ifdef OPENMV1
 const gpio_t gpio_pins[] = {
-    {GPIOA, GPIO_PIN_8 },
-    {GPIOA, GPIO_PIN_15},
-    {GPIOC, GPIO_PIN_9 },
-    {GPIOC, GPIO_PIN_10},
-    {GPIOC, GPIO_PIN_11},
     {GPIOC, GPIO_PIN_12},
+    {GPIOB, GPIO_PIN_11},
+    {GPIOC, GPIO_PIN_11},
+    {GPIOB, GPIO_PIN_10},
+    {GPIOC, GPIO_PIN_10},
+    {GPIOA, GPIO_PIN_15},
     {NULL, 0}
 };
 #else

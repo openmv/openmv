@@ -373,11 +373,12 @@ void SSIContReadOperation(void)
     }
 }
 
-void WLAN_IRQHandler(void)
+//void WLAN_IRQHandler(void)
+void wlan_irqhandler(void)
 {
     if (__HAL_GPIO_EXTI_GET_FLAG(WLAN_EXTI_LINE)) {
         /* Clear the EXTI pending bit */
-        __HAL_GPIO_EXTI_CLEAR_FLAG(WLAN_EXTI_LINE);
+        __HAL_GPIO_EXTI_CLEAR_FLAG(WLAN_EXTI_LINE); //FIX EXTI_LINE
 
         switch (sSpiInformation.ulSpiState) {
             case eSPI_STATE_POWERUP:

@@ -28,12 +28,12 @@ extern const gpio_t gpio_pins[];
 
 /* GPIOs */
 typedef enum {
-    GPIO_PA8,
-    GPIO_PA15,
-    GPIO_PC9,
-    GPIO_PC10,
-    GPIO_PC11,
-    GPIO_PC12,
+    GPIO_PC12,  //P1
+    GPIO_PB11,  //P2
+    GPIO_PC11,  //P3
+    GPIO_PB10,  //P4
+    GPIO_PC10,  //P5
+    GPIO_PA15,  //P6 (P7 in schematic)
     GPIO_ID_MAX,
 } gpio_id_t;
 
