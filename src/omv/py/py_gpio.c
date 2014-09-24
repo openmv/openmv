@@ -48,7 +48,7 @@ static void gpio_init(const gpio_t *gpio)
     HAL_GPIO_Init(gpio->port, &GPIO_InitStructure);
 }
 
-static void gpio_init_exti(const gpio_t *gpio, mp_obj_t cb)
+void gpio_init_exti(const gpio_t *gpio, mp_obj_t cb, uint32_t priority, uint32_t sub_priority)
 {
     /* Configure the GPIO pin */
     GPIO_InitTypeDef  GPIO_InitStructure;
@@ -64,7 +64,7 @@ static void gpio_init_exti(const gpio_t *gpio, mp_obj_t cb)
     extint_vector[line] = cb;
 
     /* Enable and set NVIC Interrupt to the lowest priority */
-    HAL_NVIC_SetPriority(nvic_irq_channel[line], 0x0F, 0x0F);
+    HAL_NVIC_SetPriority(nvic_irq_channel[line], priority, sub_priority);
     HAL_NVIC_EnableIRQ(nvic_irq_channel[line]);
 }
 
@@ -129,7 +129,7 @@ mp_obj_t py_gpio_exti(mp_obj_t id_obj, mp_obj_t cb_obj)
 {
     gpio_id_t id = mp_obj_get_int(id_obj);
     if (id < GPIO_ID_MAX) {
-        gpio_init_exti(&gpio_pins[id], cb_obj);
+        gpio_init_exti(&gpio_pins[id], cb_obj, 0x0F, 0x0F);
     }
     return mp_const_none;
 }
