@@ -39,6 +39,12 @@
 #include "spi.h"
 #include "evnt_handler.h"
 
+#include "mpconfig.h"
+#include "misc.h"
+typedef mp_uint_t qstr;
+#include "obj.h"
+#include "runtime.h"
+
 #define READ                3
 #define WRITE               1
 
@@ -82,6 +88,12 @@ static SPI_HandleTypeDef SPIHandle;
 
 void SpiWriteDataSynchronous(unsigned char *data, unsigned short size);
 void SpiReadDataSynchronous(unsigned char *data, unsigned short size);
+
+//WLAN IRQ callback object
+static mp_obj_t wlan_irq_callback(mp_obj_t line);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(wlan_irq_callback_obj, wlan_irq_callback);
+
+extern void gpio_init_exti(const gpio_t *gpio, mp_obj_t cb, uint32_t preempt_priority, uint32_t sub_priority);
 
 void SpiClose(void)
 {
@@ -129,11 +141,8 @@ void SpiOpen(gcSpiHandleRx pfRxHandler)
     uint8_t buf[1];
     HAL_SPI_Receive(&SPIHandle, buf, sizeof(buf), SPI_TIMEOUT);
 
-    /* Configure and enable IRQ Channel */
-    HAL_NVIC_SetPriority(WLAN_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(WLAN_IRQn);
+    gpio_init_exti(&gpio_pins[GPIO_PB11], (mp_obj_t)&wlan_irq_callback_obj, 5, 0);
     HAL_Delay(500);
-
     tSLInformation.WlanInterruptEnable();
 }
 
@@ -373,38 +382,34 @@ void SSIContReadOperation(void)
     }
 }
 
-//void WLAN_IRQHandler(void)
-void wlan_irqhandler(void)
+static mp_obj_t wlan_irq_callback(mp_obj_t line)
 {
-    if (__HAL_GPIO_EXTI_GET_FLAG(WLAN_EXTI_LINE)) {
-        /* Clear the EXTI pending bit */
-        __HAL_GPIO_EXTI_CLEAR_FLAG(WLAN_EXTI_LINE); //FIX EXTI_LINE
+    switch (sSpiInformation.ulSpiState) {
+        case eSPI_STATE_POWERUP:
+            /* This means IRQ line was low call a callback of HCI Layer to inform on event */
+            sSpiInformation.ulSpiState = eSPI_STATE_INITIALIZED;
+            break;
+        case eSPI_STATE_IDLE:
+            sSpiInformation.ulSpiState = eSPI_STATE_READ_IRQ;
 
-        switch (sSpiInformation.ulSpiState) {
-            case eSPI_STATE_POWERUP:
-                /* This means IRQ line was low call a callback of HCI Layer to inform on event */
-                sSpiInformation.ulSpiState = eSPI_STATE_INITIALIZED;
-                break;
-            case eSPI_STATE_IDLE:
-                sSpiInformation.ulSpiState = eSPI_STATE_READ_IRQ;
+            /* IRQ line goes down - we are start reception */
+            WLAN_SELECT();
 
-                /* IRQ line goes down - we are start reception */
-                WLAN_SELECT();
+            // Wait for TX/RX Compete which will come as DMA interrupt
+            SpiReadHeader();
 
-                // Wait for TX/RX Compete which will come as DMA interrupt
-                SpiReadHeader();
+            sSpiInformation.ulSpiState = eSPI_STATE_READ_EOT;
 
-                sSpiInformation.ulSpiState = eSPI_STATE_READ_EOT;
+            SSIContReadOperation();
+            break;
+        case eSPI_STATE_WRITE_IRQ:
+            SpiWriteDataSynchronous(sSpiInformation.pTxPacket, sSpiInformation.usTxPacketLength);
 
-                SSIContReadOperation();
-                break;
-            case eSPI_STATE_WRITE_IRQ:
-                SpiWriteDataSynchronous(sSpiInformation.pTxPacket, sSpiInformation.usTxPacketLength);
+            sSpiInformation.ulSpiState = eSPI_STATE_IDLE;
 
-                sSpiInformation.ulSpiState = eSPI_STATE_IDLE;
-
-                WLAN_DESELECT();
-                break;
-        }
+            WLAN_DESELECT();
+            break;
     }
+
+    return mp_const_none;
 }
