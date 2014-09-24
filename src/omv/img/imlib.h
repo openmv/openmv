@@ -211,6 +211,7 @@ int freak_load_descriptor(kp_t **kpts_out, int *kpts_size_out, const char *path)
 /* LBP Operator */
 uint8_t *imlib_lbp_desc(image_t *image);
 int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1);
+int imlib_lbp_desc_load(const char *path, uint8_t **desc);
 
 /* Drawing functions */
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);

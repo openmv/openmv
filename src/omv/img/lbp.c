@@ -8,6 +8,7 @@
 */
 #include "imlib.h"
 #include "xalloc.h"
+#include "ff.h"
 
 #define min(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -90,4 +91,32 @@ int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1)
         sum += (((d0[i] - d1[i]) * (d0[i] - d1[i]))/max((d0[i] + d1[i]),1));
     }
     return sum;
+}
+
+int imlib_lbp_desc_load(const char *path, uint8_t **desc)
+{
+    FIL fp;
+    UINT bytes;
+    FRESULT res=FR_OK;
+
+    *desc = NULL;
+    uint8_t *hist = xalloc0(LBP_DESC_SIZE);
+
+    /* open LBP desc file */
+    res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    /* read descriptor */
+    res = f_read(&fp, hist, LBP_DESC_SIZE, &bytes);
+    if (res != FR_OK || bytes != LBP_DESC_SIZE) {
+        *desc = NULL;
+        xfree(hist);
+    } else {
+        *desc = hist;
+    }
+
+    f_close(&fp);
+    return res;
 }

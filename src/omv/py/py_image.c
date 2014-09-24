@@ -848,6 +848,18 @@ mp_obj_t py_image_load_descriptor(mp_obj_t path_obj)
     return kp_obj;
 }
 
+mp_obj_t py_image_load_lbp(mp_obj_t path_obj)
+{
+    py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
+    lbp->base.type = &py_lbp_type;
+
+    int res = imlib_lbp_desc_load(mp_obj_str_get_str(path_obj), &lbp->hist);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    return lbp;
+}
+
 mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
 {
     py_kp_obj_t *kpts = ((py_kp_obj_t*)kpts_obj);
