@@ -5,7 +5,7 @@
 #define Compare(X, Y) ((X)>=(Y))
 
 static int pixel[16];
-static kp_t* fast9_detect(const uint8_t* im, int stride, int b, int* ret_num_corners, rectangle_t *roi);
+static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners, rectangle_t *roi);
 static uint8_t* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_corners, int b);
 static kp_t* nonmax_suppression(const kp_t* corners, const uint8_t* scores, int num_corners, int* ret_num_nonmax);
 
@@ -39,7 +39,7 @@ kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners, rectangle
 
     make_offsets(pixel, image->w);
 
-    corners = fast9_detect(image->data, image->w, threshold, &num_corners, roi);
+    corners = fast9_detect(image->data, image->w, image->h, image->w, threshold, &num_corners, roi);
     if (num_corners) {
         scores = fast9_score(image->data, image->w, corners, num_corners, threshold);
         nonmax = nonmax_suppression(corners, scores, num_corners, ret_num_corners);
@@ -3104,7 +3104,7 @@ static uint8_t* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num
 	return scores;
 }
 
-static kp_t* fast9_detect(const uint8_t* im, int stride, int b, int* ret_num_corners, rectangle_t *roi)
+static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners, rectangle_t *roi)
 {
 	int num_corners=0;
 	kp_t* ret_corners;
@@ -3112,11 +3112,12 @@ static kp_t* fast9_detect(const uint8_t* im, int stride, int b, int* ret_num_cor
 
 	ret_corners = (kp_t*)xalloc(sizeof(kp_t)*rsize);
 
-	for(int y=roi->y+3; y < roi->h+roi->y-3; y++) {
-        const uint8_t* p = im + y*stride;
-		for(int x=roi->x+3; x < roi->w+roi->x-3; x++, p++) {
-        int cb = *p + b;
-        int c_b= *p - b;
+    for(int y=3; y < ysize - 3; y++) {
+            const uint8_t *r = im + y*stride;
+        for(int x=3; x < xsize - 3; x++) {
+            const uint8_t *p = r + x;
+            int cb = *p + b;
+            int c_b= *p - b;
         if(p[pixel[0]] > cb)
          if(p[pixel[1]] > cb)
           if(p[pixel[2]] > cb)
@@ -6024,10 +6025,18 @@ static kp_t* fast9_detect(const uint8_t* im, int stride, int b, int* ret_num_cor
 				ret_corners = (kp_t*)xrealloc(ret_corners, sizeof(kp_t)*rsize);
 			}
 
-            //check if the description at this position/scale fits inside the image
-            if (x <= (roi->x+KP_SIZE) || x >= ((roi->x+roi->w)-KP_SIZE) ||
-                y <= (roi->y+KP_SIZE) || y >= ((roi->y+roi->h)-KP_SIZE)) {
+            // check if x,y fits smallest KP.
+            if (x <= KP_SIZE || x >= (xsize-KP_SIZE) ||
+                y <= KP_SIZE || y >= (ysize-KP_SIZE)) {
                 continue;
+            }
+
+            // check if kp inside ROI
+            if (roi) {
+                if (x <= (roi->x) || x >= (roi->x+roi->w) ||
+                    y <= (roi->y) || y >= (roi->y+roi->h)) {
+                    continue;
+                }
             }
 
 			ret_corners[num_corners].x = x;
