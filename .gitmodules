@@ -1,4 +1,4 @@
 [submodule "src/micropython"]
 	path = src/micropython
-	url = https://github.com/iabdalkader/micropython.git
+	url = git@github.com:iabdalkader/micropython.git
 	branch = openmv
