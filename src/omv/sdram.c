@@ -45,15 +45,15 @@ bool sdram_init()
     /* TXSR: min=70ns (6x11.90ns) */
     SDRAM_Timing.ExitSelfRefreshDelay = 7;
     /* TRAS: min=45ns (4x11.90ns) max=120k (ns) */
-    SDRAM_Timing.SelfRefreshTime      = 4;
+    SDRAM_Timing.SelfRefreshTime      = 7;
     /* TRC:  min=67ns (6x11.90ns) */
-    SDRAM_Timing.RowCycleDelay        = 7;
+    SDRAM_Timing.RowCycleDelay        = 10;
     /* TWR:  2 Clock cycles */
     SDRAM_Timing.WriteRecoveryTime    = 2;
     /* TRP:  20ns => 2x11.90ns */
-    SDRAM_Timing.RPDelay              = 2;
+    SDRAM_Timing.RPDelay              = 3;
     /* TRCD: 20ns => 2x11.90ns */
-    SDRAM_Timing.RCDDelay             = 2;
+    SDRAM_Timing.RCDDelay             = 3;
 
     hsdram.Init.SDBank             = FMC_SDRAM_BANK1;
     hsdram.Init.RowBitsNumber      = FMC_SDRAM_ROW_BITS_NUM_12;
