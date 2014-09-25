@@ -126,7 +126,7 @@ class OMVGtk:
         self.terminal = self.builder.get_object('terminal')
         try:
             # open VCP and configure the terminal
-            self.fd = os.open("/dev/ttyACM0", os.O_RDWR)
+            self.fd = os.open("/dev/openmvcam", os.O_RDWR)
             self.terminal.reset(True, True)
             self.terminal.set_size(80,24)
             self.terminal.set_pty(self.fd)
