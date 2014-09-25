@@ -32,9 +32,25 @@ class OMVGtk:
         self.statusbar = self.builder.get_object("statusbar")
         self.statusbar_ctx = self.statusbar.get_context_id("default")
 
-        #save toolbutton
+        # set buttons
         self.save_button = self.builder.get_object('save_file_toolbutton')
+        self.connect_button = self.builder.get_object('connect_button')
+
         self.save_button.set_sensitive(False)
+        self.connect_button.set_sensitive(True)
+
+        # set control buttons
+        self.controls = [
+            self.builder.get_object('reset_button'),
+            self.builder.get_object('exec_button'),
+            self.builder.get_object('stop_button'),
+            self.builder.get_object('zoomin_button'),
+            self.builder.get_object('zoomout_button'),
+            self.builder.get_object('bestfit_button'),
+            self.builder.get_object('refresh_button')]
+
+        self.connected = False
+        map(lambda x:x.set_sensitive(False), self.controls)
 
         #configure gtksourceview
         sourceview = self.builder.get_object('gtksourceview')
@@ -60,12 +76,9 @@ class OMVGtk:
         self.da_menu = self.builder.get_object("da_menu")
 
         # selection coords
-        self.x1 =0
-        self.y1 =0
-        self.x2 =0
-        self.y2 =0
-        self.selection_started=False
         self.sel_ended=False
+        self.selection_started=False
+        self.x1 = self.y1 = self.x2 = self.y2 =0
 
         # set control scales attributes
         self.builder.get_object("contrast_adjust").attr=    openmv.ATTR_CONTRAST
@@ -96,16 +109,6 @@ class OMVGtk:
             "on_updatefb_clicked"           : self.updatefb_clicked,
         }
         self.builder.connect_signals(signals)
-
-        self.connected = False
-        self.builder.get_object('connect_button').set_sensitive(True)
-        self.builder.get_object('reset_button').set_sensitive(False)
-        self.builder.get_object('exec_button').set_sensitive(False)
-        self.builder.get_object('stop_button').set_sensitive(False)
-        self.builder.get_object('zoomin_button').set_sensitive(False)
-        self.builder.get_object('zoomout_button').set_sensitive(False)
-        self.builder.get_object('bestfit_button').set_sensitive(False)
-        self.builder.get_object('refresh_button').set_sensitive(False)
 
         # open last opened file
         self.file_path= None
@@ -158,14 +161,8 @@ class OMVGtk:
             return
 
         self.connected = True
-        self.builder.get_object('connect_button').set_sensitive(False)
-        self.builder.get_object('reset_button').set_sensitive(True)
-        self.builder.get_object('exec_button').set_sensitive(True)
-        self.builder.get_object('stop_button').set_sensitive(True)
-        self.builder.get_object('zoomin_button').set_sensitive(True)
-        self.builder.get_object('zoomout_button').set_sensitive(True)
-        self.builder.get_object('bestfit_button').set_sensitive(True)
-        self.builder.get_object('refresh_button').set_sensitive(True)
+        self.connect_button.set_sensitive(False)
+        map(lambda x:x.set_sensitive(True), self.controls)
 
     def disconnect(self):
         try:
@@ -188,15 +185,8 @@ class OMVGtk:
         openmv.release()
 
         self.connected = False
-        self.builder.get_object('connect_button').set_sensitive(True)
-        self.builder.get_object('reset_button').set_sensitive(False)
-        self.builder.get_object('exec_button').set_sensitive(False)
-        self.builder.get_object('stop_button').set_sensitive(False)
-        self.builder.get_object('zoomin_button').set_sensitive(False)
-        self.builder.get_object('zoomout_button').set_sensitive(False)
-        self.builder.get_object('bestfit_button').set_sensitive(False)
-        self.builder.get_object('refresh_button').set_sensitive(False)
-
+        self.connect_button.set_sensitive(True)
+        map(lambda x:x.set_sensitive(False), self.controls)
 
     def connect_clicked(self, widget):
         self.connect()
