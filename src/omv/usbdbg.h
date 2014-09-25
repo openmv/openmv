@@ -21,6 +21,7 @@ enum usbdbg_cmd {
     USBDBG_DESCRIPTOR_SAVE,
     USBDBG_ATTR_READ,
     USBDBG_ATTR_WRITE,
+    USBDBG_SYS_RESET,
 };
 void usbdbg_init();
 int usbdbg_script_ready();

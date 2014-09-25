@@ -33,6 +33,7 @@ __USBDBG_TEMPLATE_SAVE=8
 __USBDBG_DESCRIPTOR_SAVE=9
 __USBDBG_ATTR_READ=10
 __USBDBG_ATTR_WRITE=11
+__USBDBG_SYS_RESET=12
 
 ATTR_CONTRAST=0
 ATTR_BRIGHTNESS=1
@@ -151,6 +152,13 @@ def set_attr(attr, value):
 
 def get_attr(attr):
     return 0
+
+def reset():
+    try:
+        # This will timeout.
+        __dev.ctrl_transfer(0x41, __USBDBG_SYS_RESET, 0, __INTERFACE, None, __TIMEOUT)
+    except:
+        pass
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:

@@ -88,6 +88,7 @@ class OMVGtk:
         signals = {
             "on_top_window_destroy"         : self.quit,
             "on_connect_clicked"            : self.connect_clicked,
+            "on_reset_clicked"              : self.reset_clicked,
             "on_execute_clicked"            : self.execute_clicked,
             "on_stop_clicked"               : self.stop_clicked,
             "on_motion_notify"              : self.motion_notify,
@@ -108,6 +109,7 @@ class OMVGtk:
 
         self.connected = False
         self.builder.get_object('connect_button').set_sensitive(True)
+        self.builder.get_object('reset_button').set_sensitive(False)
         self.builder.get_object('exec_button').set_sensitive(False)
         self.builder.get_object('stop_button').set_sensitive(False)
         self.builder.get_object('zoomin_button').set_sensitive(False)
@@ -147,6 +149,7 @@ class OMVGtk:
 
         self.connected = True
         self.builder.get_object('connect_button').set_sensitive(False)
+        self.builder.get_object('reset_button').set_sensitive(True)
         self.builder.get_object('exec_button').set_sensitive(True)
         self.builder.get_object('stop_button').set_sensitive(True)
         self.builder.get_object('zoomin_button').set_sensitive(True)
@@ -176,6 +179,7 @@ class OMVGtk:
 
         self.connected = False
         self.builder.get_object('connect_button').set_sensitive(True)
+        self.builder.get_object('reset_button').set_sensitive(False)
         self.builder.get_object('exec_button').set_sensitive(False)
         self.builder.get_object('stop_button').set_sensitive(False)
         self.builder.get_object('zoomin_button').set_sensitive(False)
@@ -186,6 +190,10 @@ class OMVGtk:
 
     def connect_clicked(self, widget):
         self.connect()
+
+    def reset_clicked(self, widget):
+        if (self.connected):
+            openmv.reset()
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())

@@ -12,6 +12,7 @@
 #include "framebuffer.h"
 #include "ff.h"
 #include "py/py_file.h"
+#include "core_cm4.h"
 #include "usbdbg.h"
 
 #define USB_TX_BUF_SIZE (64)
@@ -184,6 +185,10 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
             cmd = USBDBG_NONE;
             break;
         }
+
+        case USBDBG_SYS_RESET:
+            NVIC_SystemReset();
+            break;
 
         default: /* error */
             cmd = USBDBG_NONE;
