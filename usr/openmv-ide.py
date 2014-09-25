@@ -147,7 +147,7 @@ class OMVGtk:
             self.terminal.set_size(80,24)
             self.terminal.set_pty(self.fd)
         except Exception, e:
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Faild to connect to OpenMV\n%s"%e)
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
             return
 
         try:
@@ -158,10 +158,11 @@ class OMVGtk:
             openmv.stop_script()
             sleep(0.1)
         except Exception, e:
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Faild to connect to OpenMV\n%s"%e)
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
             return
 
         self.connected = True
+        self._update_title()
         self.connect_button.set_sensitive(False)
         map(lambda x:x.set_sensitive(True), self.controls)
 
@@ -186,6 +187,7 @@ class OMVGtk:
         openmv.release()
 
         self.connected = False
+        self._update_title()
         self.connect_button.set_sensitive(True)
         map(lambda x:x.set_sensitive(False), self.controls)
 
@@ -257,7 +259,7 @@ class OMVGtk:
             fb = openmv.fb_dump()
         except Exception, e:
             self.disconnect()
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to update FB\n%s"%e)
+            self._update_title()
             return True
 
         if fb:
@@ -280,17 +282,26 @@ class OMVGtk:
     def on_ctrl_scale_value_changed(self, adjust):
         openmv.set_attr(adjust.attr, int(adjust.value))
 
+    def _update_title(self):
+        if (self.file_path==None):
+            title = "Untitled"
+        else:
+            title = os.path.basename(self.file_path)
+
+        title += " [Connected]" if self.connected else " [Disconnected]"
+        self.window.set_title(title)
+
+
     def _load_file(self, path):
         self.file_path = path
         if path == None: # New file
             self.save_button.set_sensitive(True)
             self.buffer.set_text("")
-            self.window.set_title("Untitled")
         else:
             self.save_button.set_sensitive(False)
-            self.window.set_title(os.path.basename(self.file_path))
             with open(path, "r") as file:
                 self.buffer.set_text(file.read())
+        self._update_title()
 
     def _save_file(self, new_file):
         if new_file:
@@ -306,7 +317,7 @@ class OMVGtk:
             if dialog.run() == gtk.RESPONSE_OK:
                 self.file_path = dialog.get_filename()
                 self.save_button.set_sensitive(False)
-                self.window.set_title(os.path.basename(dialog.get_filename()))
+                self._update_title()
                 with open(dialog.get_filename(), "w") as file:
                     file.write(self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter()))
 
