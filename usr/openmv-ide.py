@@ -16,6 +16,7 @@ from os.path import expanduser
 UI_PATH =os.path.dirname(os.path.realpath(__file__))+"/openmv-ide.glade"
 CONFIG_PATH = expanduser("~")+"/.openmvide.config"
 EXAMPLE_PATH = os.path.dirname(os.path.realpath(__file__))+"/examples"
+SCRIPTS_PATH = os.path.dirname(os.path.realpath(__file__))+"/scripts"
 
 SCALE =1
 
@@ -256,7 +257,7 @@ class OMVGtk:
             fb = openmv.fb_dump()
         except Exception, e:
             self.disconnect()
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Faild to update FB\n%s"%e)
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to update FB\n%s"%e)
             return True
 
         if fb:
@@ -296,7 +297,7 @@ class OMVGtk:
             dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,
                     buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
             dialog.set_default_response(gtk.RESPONSE_OK)
-            dialog.set_current_folder(EXAMPLE_PATH)
+            dialog.set_current_folder(SCRIPTS_PATH)
             ff = gtk.FileFilter()
             ff.set_name("python")
             ff.add_pattern("*.py")
@@ -367,7 +368,7 @@ class OMVGtk:
         dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         dialog.set_default_response(gtk.RESPONSE_OK)
-        dialog.set_current_folder(EXAMPLE_PATH)
+        dialog.set_current_folder(SCRIPTS_PATH)
         ff = gtk.FileFilter()
         ff.set_name("python")
         ff.add_pattern("*.py")
