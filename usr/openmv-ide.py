@@ -357,6 +357,7 @@ class OMVGtk:
         dialog.hide()
 
     def save_file(self, widget):
+        self.save_button.set_sensitive(False)
         with open(self.file_path, "w") as file:
             file.write(self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter()))
 
