@@ -13,8 +13,9 @@ import usb.util
 import numpy as np
 import openmv
 from os.path import expanduser
-ui_path =os.path.dirname(os.path.realpath(__file__))+"/openmv-ide.glade"
-config_path = expanduser("~")+"/.openmvide.config"
+UI_PATH =os.path.dirname(os.path.realpath(__file__))+"/openmv-ide.glade"
+CONFIG_PATH = expanduser("~")+"/.openmvide.config"
+EXAMPLE_PATH = os.path.dirname(os.path.realpath(__file__))+"/examples"
 
 SCALE =1
 
@@ -22,7 +23,7 @@ class OMVGtk:
     def __init__(self):
         #Set the Glade file
         self.builder = gtk.Builder()
-        self.builder.add_from_file(ui_path)
+        self.builder.add_from_file(UI_PATH)
 
         # get top window
         self.window = self.builder.get_object("top_window")
@@ -46,24 +47,12 @@ class OMVGtk:
         self.buffer.set_highlight_syntax(True)
         self.buffer.set_language(lang_manager.get_language("python"))
         self.buffer.connect("changed", self.text_changed)
+        sourceview.set_buffer(self.buffer)
 
         #configure the terminal
         self.fd = -1
         self.terminal = self.builder.get_object('terminal')
         self.terminal.set_size(80,24)
-
-        # open last opened file
-        if os.path.isfile(config_path):
-            with open(config_path, "r") as file:
-                self.file_path = file.read()
-            if os.path.isfile(self.file_path):
-                with open(self.file_path, "r") as file:
-                    self.buffer.set_text(file.read())
-                    self.window.set_title(os.path.basename(self.file_path))
-            else:
-                self.file_path = None
-
-        sourceview.set_buffer(self.buffer)
 
         # get drawingarea
         self.pixbuf = None
@@ -117,6 +106,29 @@ class OMVGtk:
         self.builder.get_object('bestfit_button').set_sensitive(False)
         self.builder.get_object('refresh_button').set_sensitive(False)
 
+        # open last opened file
+        if os.path.isfile(CONFIG_PATH):
+            with open(CONFIG_PATH, "r") as file:
+                self.file_path = file.read()
+            if os.path.isfile(self.file_path):
+                with open(self.file_path, "r") as file:
+                    self.buffer.set_text(file.read())
+                    self.window.set_title(os.path.basename(self.file_path))
+            else:
+                self.file_path = None
+
+        # build examples menu
+        if os.path.isdir(EXAMPLE_PATH):
+            exmenu = gtk.Menu()
+            example_menu = self.builder.get_object('example_menu')
+            for f in os.listdir(EXAMPLE_PATH):
+                if f.endswith(".py"):
+                    label = os.path.basename(f)
+                    mitem =gtk.MenuItem(label)
+                    mitem.connect("activate", self.open_example)
+                    exmenu.append(mitem)
+
+            example_menu.set_submenu(exmenu)
 
     def show_message_dialog(self, msg_type, msg):
         message = gtk.MessageDialog(parent=self.window, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -298,6 +310,13 @@ class OMVGtk:
 
         dialog.destroy()
 
+    def open_example(self, widget):
+        self.file_path = os.path.join(EXAMPLE_PATH, widget.get_label())
+        with open(self.file_path, "r") as file:
+            self.buffer.set_text(file.read())
+            self.window.set_title(os.path.basename(self.file_path))
+
+
     def save_template(self, widget):
         self.da_menu.hide()
         x = self.x1
@@ -365,7 +384,7 @@ class OMVGtk:
         self.disconnect()
 
         # write last opened file
-        with open(config_path, "w") as file:
+        with open(CONFIG_PATH, "w") as file:
             file.write(self.file_path)
 
         # exit
