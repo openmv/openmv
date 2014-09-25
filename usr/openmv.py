@@ -111,7 +111,7 @@ def fb_dump():
             #print(size[0], size[1], size[2])
             #__write_img(buff, "/tmp/swap.jpeg")
             img = Image.frombuffer("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "")
-            buff = np.fromstring(img.tobytes(), dtype=np.uint8)
+            buff = np.fromstring(img.tostring(), dtype=np.uint8)
         except Exception, e:
             print "JPEG decode error (%s)"%e
             sys.exit(0)
