@@ -58,12 +58,14 @@ def init():
 
 def release():
     global __dev
-    if (__dev):
+    try:
         # release __INTERFACE
         usb.util.release_interface(__dev, __INTERFACE)
 
         # reattach kernel driver
         #__dev.attach_kernel_driver(__INTERFACE)
+    except:
+        pass
 
 def fb_to_arr(buff, bpp):
     if bpp == 1:
