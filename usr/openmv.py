@@ -34,6 +34,7 @@ __USBDBG_DESCRIPTOR_SAVE=9
 __USBDBG_ATTR_READ=10
 __USBDBG_ATTR_WRITE=11
 __USBDBG_SYS_RESET=12
+__USBDBG_SYS_BOOT=13
 
 ATTR_CONTRAST=0
 ATTR_BRIGHTNESS=1
@@ -152,6 +153,13 @@ def set_attr(attr, value):
 
 def get_attr(attr):
     return 0
+
+def bootloader():
+	try:
+        # This will timeout.
+		__dev.ctrl_transfer(0x41, __USBDBG_SYS_BOOT, 0, __INTERFACE, None, __TIMEOUT)
+	except:
+		pass
 
 def reset():
     try:
