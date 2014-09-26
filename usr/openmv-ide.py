@@ -42,6 +42,7 @@ class OMVGtk:
 
         # set control buttons
         self.controls = [
+			self.builder.get_object('bootloader_button'),
             self.builder.get_object('reset_button'),
             self.builder.get_object('exec_button'),
             self.builder.get_object('stop_button'),
@@ -92,6 +93,7 @@ class OMVGtk:
             "on_top_window_destroy"         : self.quit,
             "on_connect_clicked"            : self.connect_clicked,
             "on_reset_clicked"              : self.reset_clicked,
+            "on_bootloader_clicked"			: self.bootloader_clicked,
             "on_execute_clicked"            : self.execute_clicked,
             "on_stop_clicked"               : self.stop_clicked,
             "on_motion_notify"              : self.motion_notify,
@@ -193,6 +195,10 @@ class OMVGtk:
 
     def connect_clicked(self, widget):
         self.connect()
+        
+    def bootloader_clicked(self, widget):
+        if (self.connected):
+			openmv.bootloader()
 
     def reset_clicked(self, widget):
         if (self.connected):
