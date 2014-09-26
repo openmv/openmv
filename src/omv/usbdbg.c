@@ -14,6 +14,7 @@
 #include "py/py_file.h"
 #include "core_cm4.h"
 #include "usbdbg.h"
+#include "rcc_ctrl.h"
 
 #define USB_TX_BUF_SIZE (64)
 static int xfer_bytes;
@@ -189,6 +190,30 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
         case USBDBG_SYS_RESET:
             NVIC_SystemReset();
             break;
+
+		case USBDBG_BOOT:
+			/*
+			rcc_ctrl_hsi();			// run off the HSI clock, no PLL
+			SysTick->CTRL = 0;		// reset the SysTick timer
+			SysTick->LOAD = 0;
+			SysTick->VAL = 0;
+			__set_PRIMASK(1); 		// disable interrupts			
+			__set_MSP(0x20001000);	// set main SP to its default
+			*/
+			asm volatile(
+				"ldr r0, =0x40023844\n\t"	// RCC_APB2ENR
+				"ldr r1, =0x00004000\n\t"	// enable SYSCFG clock
+				"str r1, [r0, #0]\n\t"
+				"ldr r0, =0x40013800\n\t"	// SYSCFG_MEMRMP
+				"ldr r1, =0x00000001\n\t"	// remap ROM at zero
+				"str r1, [r0, #0]\n\t"
+				"ldr r0, =0x1fff000\n\t" // load ROM base
+				"ldr sp,[r0, #0]\n\t"	// assign main stack pointer
+				"ldr r0,[r0, #4]\n\t"	// load bootloader address
+				"bx r0\n\t"
+			);
+			while (1);
+			break;
 
         default: /* error */
             cmd = USBDBG_NONE;
