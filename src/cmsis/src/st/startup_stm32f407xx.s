@@ -76,7 +76,20 @@ defined in linker script */
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
+
 Reset_Handler:
+  ldr r0,=0x20002000	/* load magic number location */
+  ldr r2,[r0, #0]
+  str r0,[r0, #0]		/* invalidate */
+  ldr r1,=0xDEADBEEF	/* if magic number found */
+  cmp r2,r1
+  bne EnableCCM			/* run the bootloader, else... */
+
+Reboot_Loader:
+  ldr r0,=0x1FFF0000
+  ldr sp,[r0, #0]
+  ldr r0,[r0, #4]
+  bx r0
 
 EnableCCM:
   /* enable ccm clock */
@@ -122,6 +135,7 @@ LoopFillZerobss:
 /* Call the application's entry point.*/
   bl  main
   bx  lr    
+
 .size  Reset_Handler, .-Reset_Handler
 
 /**
