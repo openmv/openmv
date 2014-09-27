@@ -14,7 +14,6 @@
 #include "py/py_file.h"
 #include "core_cm4.h"
 #include "usbdbg.h"
-#include "stm32f4xx_hal_rcc.h"
 
 #define USB_TX_BUF_SIZE (64)
 static int xfer_bytes;
@@ -191,39 +190,10 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
             NVIC_SystemReset();
             break;
 
-		case USBDBG_BOOT:
-			/* http://goo.gl/VcKqst
-			 *  disable IRQ, reset USART1 and RCC before setting MSP/PC.
-			 *  Disable all peripheral clocks
-			 *  Disable used PLL
-			 *  Disable interrupts
-			 *  Clear pending interrupts
-			 */
-			/*
-			__set_PRIMASK(1); 				// disable interrupts
-			HAL_RCC_DeInit();				// reset RCC
-			HAL_USART_DeInit(  );			// reset USART1
-			SysTick->CTRL = 0;				// reset the SysTick timer
-			SysTick->LOAD = 0;
-			SysTick->VAL = 0;
-			//__set_MSP(0x20001000);		// set main SP to its default
-			asm volatile(
-				"ldr r0, =0x40013800\n\t"	// SYSCFG_MEMRMP
-				"ldr r1, =0x00000001\n\t"	// remap ROM at zero
-				"str r1, [r0, #0]\n\t"
-				"ldr r0, =0x1fff000\n\t" 	// load ROM base
-				"ldr sp,[r0, #0]\n\t"		// assign main stack pointer
-				"ldr r0,[r0, #4]\n\t"		// load bootloader address
-				"bx r0\n\t"
-			);
-			// STM32F40xxx e.g., 405, 407 : 0x1FFF77DE
-			// STM32F429xx : 0x1FFF76DE
-			 */
-			// set magic flag => reset handler will jump into boot loader
-			*((uint32_t *)0x20002000) = 0xDEADBEEF;
-			NVIC_SystemReset();
-			while (1);
-			break;
+        case USBDBG_BOOT:
+            *((uint32_t *)0x20002000) = 0xDEADBEEF;
+            NVIC_SystemReset();
+            break;
 
         default: /* error */
             cmd = USBDBG_NONE;
