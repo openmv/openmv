@@ -14,6 +14,7 @@
 #include "py/py_file.h"
 #include "core_cm4.h"
 #include "usbdbg.h"
+#include "dfu.h"
 
 #define USB_TX_BUF_SIZE (64)
 static int xfer_bytes;
@@ -190,8 +191,17 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
             NVIC_SystemReset();
             break;
 
+		case USBDBG_BOOT:
+			/* Reset the board into DFU by setting the magic number
+			 * which the Reset_Handler will read to jump to the bootloader
+			 */
+		    reset_to_dfu();
+			break;
+
         default: /* error */
             cmd = USBDBG_NONE;
             break;
     }
 }
+
+
