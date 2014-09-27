@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <requires lib="gtk+" version="2.24"/>
-  <!-- interface-requires vte 0.0 -->
+  <!-- interface-requires gtk+ 3.0 -->
   <!-- interface-requires gtksourceview 0.0 -->
-  <!-- interface-naming-policy project-wide -->
+  <!-- interface-requires vte 0.0 -->
+  <!-- interface-naming-policy toplevel-contextual -->
   <object class="GtkAdjustment" id="brightness_adjust">
     <property name="lower">-2</property>
     <property name="upper">2</property>
@@ -50,6 +50,121 @@
         <signal name="activate" handler="on_save_descriptor_activate" swapped="no"/>
       </object>
     </child>
+  </object>
+  <object class="GtkDialog" id="fw_dialog">
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">Update Firmware</property>
+    <property name="window_position">center-on-parent</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="type_hint">dialog</property>
+    <child internal-child="vbox">
+      <object class="GtkVBox" id="dialog-vbox4">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="spacing">1</property>
+        <child internal-child="action_area">
+          <object class="GtkHButtonBox" id="dialog-action_area4">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkButton" id="fw_ok_button">
+                <property name="label">gtk-ok</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_action_appearance">False</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="fw_cancel_button">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_action_appearance">False</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="pack_type">end</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSpinner" id="fw_spinner">
+            <property name="can_focus">False</property>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkHBox" id="hbox21">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <child>
+              <object class="GtkEntry" id="fw_entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="invisible_char">•</property>
+                <property name="invisible_char_set">True</property>
+                <property name="primary_icon_activatable">False</property>
+                <property name="secondary_icon_activatable">False</property>
+                <property name="primary_icon_sensitive">True</property>
+                <property name="secondary_icon_sensitive">True</property>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="fw_button">
+                <property name="label" translatable="yes">...</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_action_appearance">False</property>
+                <signal name="clicked" handler="on_fwpath_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="-5">fw_ok_button</action-widget>
+      <action-widget response="-6">fw_cancel_button</action-widget>
+    </action-widgets>
   </object>
   <object class="GtkAdjustment" id="gainceiling_adjust">
     <property name="upper">6</property>
@@ -485,6 +600,22 @@
               </packing>
             </child>
             <child>
+              <object class="GtkToolButton" id="bootloader_button">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Enter bootloader</property>
+                <property name="use_action_appearance">False</property>
+                <property name="label" translatable="yes">toolbutton7</property>
+                <property name="use_underline">True</property>
+                <property name="stock_id">gtk-go-up</property>
+                <signal name="clicked" handler="on_fwupdate_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">True</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkSeparatorToolItem" id="separator1">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
@@ -646,8 +777,6 @@
                   <object class="GtkScrolledWindow" id="scrolledwindow1">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="hscrollbar_policy">automatic</property>
-                    <property name="vscrollbar_policy">automatic</property>
                     <child>
                       <object class="GtkSourceView" id="gtksourceview">
                         <property name="visible">True</property>
@@ -777,7 +906,6 @@
                                   <object class="GtkHScale" id="hscale1">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
-                                    <property name="update_policy">delayed</property>
                                     <property name="adjustment">contrast_adjust</property>
                                     <property name="show_fill_level">True</property>
                                     <property name="round_digits">0</property>
@@ -793,7 +921,6 @@
                                   <object class="GtkHScale" id="hscale2">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
-                                    <property name="update_policy">delayed</property>
                                     <property name="adjustment">brightness_adjust</property>
                                     <property name="round_digits">0</property>
                                     <property name="digits">0</property>
@@ -810,7 +937,6 @@
                                   <object class="GtkHScale" id="hscale3">
                                     <property name="visible">True</property>
                                     <property name="can_focus">True</property>
-                                    <property name="update_policy">delayed</property>
                                     <property name="adjustment">saturation_adjust</property>
                                     <property name="lower_stepper_sensitivity">off</property>
                                     <property name="upper_stepper_sensitivity">off</property>
@@ -847,7 +973,6 @@
                                       <object class="GtkHScale" id="hscale5">
                                         <property name="visible">True</property>
                                         <property name="can_focus">True</property>
-                                        <property name="update_policy">delayed</property>
                                         <property name="adjustment">gainceiling_adjust</property>
                                         <property name="lower_stepper_sensitivity">off</property>
                                         <property name="upper_stepper_sensitivity">off</property>

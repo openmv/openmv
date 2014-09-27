@@ -34,6 +34,7 @@ __USBDBG_DESCRIPTOR_SAVE=9
 __USBDBG_ATTR_READ=10
 __USBDBG_ATTR_WRITE=11
 __USBDBG_SYS_RESET=12
+__USBDBG_SYS_BOOT=13
 
 ATTR_CONTRAST=0
 ATTR_BRIGHTNESS=1
@@ -60,8 +61,8 @@ def init():
 def release():
     global __dev
     try:
-        # release __INTERFACE
-        usb.util.release_interface(__dev, __INTERFACE)
+        # Release device
+        usb.util.dispose_resources(dev)
 
         # reattach kernel driver
         #__dev.attach_kernel_driver(__INTERFACE)
@@ -152,6 +153,29 @@ def set_attr(attr, value):
 
 def get_attr(attr):
     return 0
+
+def enter_dfu():
+    try:
+        # This will timeout.
+        __dev.ctrl_transfer(0x41, __USBDBG_SYS_BOOT, 0, __INTERFACE, None, __TIMEOUT)
+    except:
+        pass
+
+#See app note AN3156
+def exit_dfu():
+    timeout = 1000
+    dev = usb.core.find(idVendor=0x0483, idProduct=0xdf11)
+
+    # Claim DFU interface
+    usb.util.claim_interface(dev, 0)
+
+    # Send DNLOAD with 0 length to exit DFU
+    dev.ctrl_transfer(0x21, 0x01, 0, 0, None, timeout)
+    # Execute last command
+    dev.ctrl_transfer(0xA1, 0x03, 0, 0, 6, timeout)
+
+    # Release device
+    usb.util.dispose_resources(dev)
 
 def reset():
     try:

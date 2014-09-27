@@ -190,8 +190,15 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
             NVIC_SystemReset();
             break;
 
+        case USBDBG_BOOT:
+            *((uint32_t *)0x20002000) = 0xDEADBEEF;
+            NVIC_SystemReset();
+            break;
+
         default: /* error */
             cmd = USBDBG_NONE;
             break;
     }
 }
+
+
