@@ -13,10 +13,14 @@ import usb.util
 import numpy as np
 import openmv
 from os.path import expanduser
+import subprocess
+
 UI_PATH =os.path.dirname(os.path.realpath(__file__))+"/openmv-ide.glade"
 CONFIG_PATH = expanduser("~")+"/.openmvide.config"
 EXAMPLE_PATH = os.path.dirname(os.path.realpath(__file__))+"/examples"
 SCRIPTS_PATH = os.path.dirname(os.path.realpath(__file__))+"/scripts"
+FWBIN_PATH = ""
+DFU_CMD = "dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D %s"
 
 SCALE =1
 
@@ -42,8 +46,8 @@ class OMVGtk:
 
         # set control buttons
         self.controls = [
-			self.builder.get_object('bootloader_button'),
             self.builder.get_object('reset_button'),
+            self.builder.get_object('bootloader_button'),
             self.builder.get_object('exec_button'),
             self.builder.get_object('stop_button'),
             self.builder.get_object('zoomin_button'),
@@ -93,7 +97,8 @@ class OMVGtk:
             "on_top_window_destroy"         : self.quit,
             "on_connect_clicked"            : self.connect_clicked,
             "on_reset_clicked"              : self.reset_clicked,
-            "on_bootloader_clicked"			: self.bootloader_clicked,
+            "on_fwupdate_clicked"           : self.fwupdate_clicked,
+            "on_fwpath_clicked"             : self.fwpath_clicked,
             "on_execute_clicked"            : self.execute_clicked,
             "on_stop_clicked"               : self.stop_clicked,
             "on_motion_notify"              : self.motion_notify,
@@ -195,10 +200,61 @@ class OMVGtk:
 
     def connect_clicked(self, widget):
         self.connect()
-        
-    def bootloader_clicked(self, widget):
+
+    def fwpath_clicked(self, widget):
+        fw_entry = self.builder.get_object("fw_entry")
+        dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_current_folder(SCRIPTS_PATH)
+        ff = gtk.FileFilter()
+        ff.set_name("dfu")
+        ff.add_pattern("*.bin") #TODO change to DFU
+        dialog.add_filter(ff)
+
+        if dialog.run() == gtk.RESPONSE_OK:
+            fw_entry.set_text(dialog.get_filename())
+
+        dialog.destroy()
+
+    def fwupdate_clicked(self, widget):
         if (self.connected):
-			openmv.bootloader()
+            dialog = self.builder.get_object("fw_dialog")
+            fw_entry = self.builder.get_object("fw_entry")
+            spinner = self.builder.get_object("fw_spinner")
+            ok_button = self.builder.get_object("fw_ok_button")
+            cancel_button = self.builder.get_object("fw_cancel_button")
+
+            spinner.stop()
+            spinner.set_visible(False)
+            ok_button.set_sensitive(True)
+            cancel_button.set_sensitive(True)
+            dialog.set_transient_for(self.window);
+
+            # default FW bin path
+            fw_entry.set_text(FWBIN_PATH)
+
+            if dialog.run() == gtk.RESPONSE_OK:
+                ok_button.set_sensitive(False)
+                cancel_button.set_sensitive(False)
+                spinner.set_visible(True)
+                spinner.start()
+
+                # call dfu-util
+                openmv.enter_dfu()
+                sleep(1.0)
+
+                dfu_util = subprocess.Popen(DFU_CMD%fw_entry.get_text(), shell=True, stdout=subprocess.PIPE)
+
+                while dfu_util.poll() == None and gtk.events_pending():
+                    gtk.main_iteration()
+
+                if (dfu_util.returncode):
+                    self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to update firmware\n")
+
+                openmv.exit_dfu()
+
+            dialog.hide()
 
     def reset_clicked(self, widget):
         if (self.connected):

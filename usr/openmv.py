@@ -61,8 +61,8 @@ def init():
 def release():
     global __dev
     try:
-        # release __INTERFACE
-        usb.util.release_interface(__dev, __INTERFACE)
+        # Release device
+        usb.util.dispose_resources(dev)
 
         # reattach kernel driver
         #__dev.attach_kernel_driver(__INTERFACE)
@@ -165,16 +165,17 @@ def enter_dfu():
 def exit_dfu():
     timeout = 1000
     dev = usb.core.find(idVendor=0x0483, idProduct=0xdf11)
-    usb.util.claim_interface(dev, 0)
 
-    # Clear status
-    dev.ctrl_transfer(0x21, 0x04, 0, 0, None, timeout)
+    # Claim DFU interface
+    usb.util.claim_interface(dev, 0)
 
     # Send DNLOAD with 0 length to exit DFU
     dev.ctrl_transfer(0x21, 0x01, 0, 0, None, timeout)
-
     # Execute last command
     dev.ctrl_transfer(0xA1, 0x03, 0, 0, 6, timeout)
+
+    # Release device
+    usb.util.dispose_resources(dev)
 
 def reset():
     try:
