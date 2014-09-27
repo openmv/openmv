@@ -154,12 +154,27 @@ def set_attr(attr, value):
 def get_attr(attr):
     return 0
 
-def bootloader():
-	try:
+def enter_dfu():
+    try:
         # This will timeout.
-		__dev.ctrl_transfer(0x41, __USBDBG_SYS_BOOT, 0, __INTERFACE, None, __TIMEOUT)
-	except:
-		pass
+        __dev.ctrl_transfer(0x41, __USBDBG_SYS_BOOT, 0, __INTERFACE, None, __TIMEOUT)
+    except:
+        pass
+
+#See app note AN3156
+def exit_dfu():
+    timeout = 1000
+    dev = usb.core.find(idVendor=0x0483, idProduct=0xdf11)
+    usb.util.claim_interface(dev, 0)
+
+    # Clear status
+    dev.ctrl_transfer(0x21, 0x04, 0, 0, None, timeout)
+
+    # Send DNLOAD with 0 length to exit DFU
+    dev.ctrl_transfer(0x21, 0x01, 0, 0, None, timeout)
+
+    # Execute last command
+    dev.ctrl_transfer(0xA1, 0x03, 0, 0, 6, timeout)
 
 def reset():
     try:
