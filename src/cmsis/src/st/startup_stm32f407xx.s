@@ -78,14 +78,17 @@ defined in linker script */
   .type  Reset_Handler, %function
 
 Reset_Handler:
+
+  /* TODO: include the constants from one place */
   ldr r0,=0x20002000	/* load magic number location */
   ldr r2,[r0, #0]
-  str r0,[r0, #0]		/* invalidate */
+  ldr r1,=0
+  str r1,[r0, #0]		/* invalidate */
   ldr r1,=0xDEADBEEF	/* if magic number found */
   cmp r2,r1
   bne EnableCCM			/* run the bootloader, else... */
 
-Reboot_Loader:
+Run_Bootloader:
   ldr r0,=0x1FFF0000
   ldr sp,[r0, #0]
   ldr r0,[r0, #4]

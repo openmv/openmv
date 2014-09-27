@@ -1,28 +1,29 @@
 # Sources
 SRCS += $(addprefix ,   \
-	main.c              \
-	xalloc.c            \
-	array.c             \
-	usbdbg.c            \
-	systick.c           \
-	sccb.c              \
-	ov9650.c            \
-	ov2640.c            \
-	sensor.c            \
-	rng.c               \
-	stm32f4xx_hal_msp.c \
-	soft_i2c.c          \
-	mutex.c             \
+	main.c              	\
+	xalloc.c            	\
+	array.c             	\
+	usbdbg.c            	\
+	systick.c           	\
+	sccb.c              	\
+	ov9650.c            	\
+	ov2640.c            	\
+	sensor.c            	\
+	rng.c               	\
+	stm32f4xx_hal_msp.c 	\
+	soft_i2c.c          	\
+	mutex.c             	\
+	dfu.c					\
    )
 
 ifeq ($(TARGET), OPENMV1)
 SRCS += $(addprefix ,   \
-	sdcard_spi.c        \
+	sdcard_spi.c        	\
    )
 else
 SRCS += $(addprefix ,   \
-	sdram.c             \
-	sdcard_sdio.c       \
+	sdram.c             	\
+	sdcard_sdio.c       	\
    )
 endif
 
@@ -61,7 +62,7 @@ SRCS += $(addprefix py/,    \
 	uart.c                  \
 	mlx90620.c              \
    )
-
+   
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
 
