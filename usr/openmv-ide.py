@@ -123,7 +123,8 @@ class OMVGtk:
         if os.path.isdir(EXAMPLE_PATH):
             exmenu = gtk.Menu()
             example_menu = self.builder.get_object('example_menu')
-            for f in os.listdir(EXAMPLE_PATH):
+            examples = sorted(os.listdir(EXAMPLE_PATH))
+            for f in examples:
                 if f.endswith(".py"):
                     label = os.path.basename(f)
                     mitem =gtk.MenuItem(label)
