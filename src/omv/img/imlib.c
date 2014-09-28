@@ -54,12 +54,12 @@
 
 #define MAX_GRAY_LEVEL (255)
 
+/* XYZ lookup table */
+extern const float xyz_table[256];
 /* RGB565->LAB lookup */
 extern const int8_t lab_table[196608];
 /* Grayscale [0..255] to rainbox lookup */
 extern const uint16_t rainbow_table[256];
-/* XYZ lookup table */
-extern const float xyz_table[256];
 
 uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
 {
@@ -95,16 +95,9 @@ void imlib_rgb_to_lab(struct color *rgb, struct color *lab)
     float xyz[3];
     const float c1 = 16.0f/ 116.0f;
 
-    for (int i=0; i<3; i++) {
-        t = rgb->vec[i]/255.0f;
-       if (t > 0.04045f) {
-           t = xyz_table[rgb->vec[i]];
-       } else {
-           t/= 1292.0f;
-       }
-       v[i]=t;
-    }
-
+    v[0] = xyz_table[rgb->vec[0]];
+    v[1] = xyz_table[rgb->vec[1]];
+    v[2] = xyz_table[rgb->vec[2]];
 
     xyz[0] = (v[0] * 0.4124f + v[1] * 0.3576f + v[2] * 0.1805f) / 95.047f  ;
     xyz[1] = (v[0] * 0.2126f + v[1] * 0.7152f + v[2] * 0.0722f) / 100.0f   ;
