@@ -90,32 +90,25 @@ uint32_t imlib_hsv_distance(struct color *c0, struct color *c1)
 
 void imlib_rgb_to_lab(struct color *rgb, struct color *lab)
 {
-    float t;
     float v[3];
-    float xyz[3];
-    const float c1 = 16.0f/ 116.0f;
+    float x,y,z;
+    const float c = 16.0f/ 116.0f;
 
     v[0] = xyz_table[rgb->vec[0]];
     v[1] = xyz_table[rgb->vec[1]];
     v[2] = xyz_table[rgb->vec[2]];
 
-    xyz[0] = (v[0] * 0.4124f + v[1] * 0.3576f + v[2] * 0.1805f) / 95.047f  ;
-    xyz[1] = (v[0] * 0.2126f + v[1] * 0.7152f + v[2] * 0.0722f) / 100.0f   ;
-    xyz[2] = (v[0] * 0.0193f + v[1] * 0.1192f + v[2] * 0.9505f) / 108.883f ;
+    x = (v[0] * 0.4124f + v[1] * 0.3576f + v[2] * 0.1805f) / 95.047f  ;
+    y = (v[0] * 0.2126f + v[1] * 0.7152f + v[2] * 0.0722f) / 100.0f   ;
+    z = (v[0] * 0.0193f + v[1] * 0.1192f + v[2] * 0.9505f) / 108.883f ;
 
-   for (int i=0; i<3; i++) {
-       t = xyz[i];
-       if (t > 0.008856f) {
-            t = fast_cbrtf(t);
-       } else {
-            t = (7.787f * t) + c1;
-       }
-       xyz[i]=t;
-    }
+    x = (x>0.008856f)? fast_cbrtf(x) : (x * 7.787f) + c;
+    y = (y>0.008856f)? fast_cbrtf(y) : (y * 7.787f) + c;
+    z = (z>0.008856f)? fast_cbrtf(z) : (z * 7.787f) + c;
 
-   lab->L = (int8_t) (116.0f * xyz[1]-16.0f);
-   lab->A = (int8_t) (500.0f * (xyz[0]-xyz[1]));
-   lab->B = (int8_t) (200.0f * (xyz[1]-xyz[2]));
+    lab->L = (int8_t) (116.0f * y-16.0f);
+    lab->A = (int8_t) (500.0f * (x-y));
+    lab->B = (int8_t) (200.0f * (y-z));
 }
 
 void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv)
@@ -244,19 +237,20 @@ void imlib_morph(struct image *src, uint8_t *kernel, int ksize)
 
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
 {
-//    /* Extract reference RGB */
-//    uint16_t r = color->r*31/255;
-//    uint16_t g = color->g*63/255;
-//    uint16_t b = color->b*31/255;
-//    uint32_t rgb = SWAP((r << 11) | (g << 5) | b) * 3;
-//
-//    /* Convert reference RGB to LAB */
-//    uint32_t L = lab_table[rgb];
-//    uint32_t A = lab_table[rgb+1];
-//    uint32_t B = lab_table[rgb+2];
-//
     /* Square threshold */
     threshold *= threshold;
+
+    /* Convert reference RGB888 to LAB */
+    for (int c=0; c<color_size; c++) {
+        uint16_t r = color[c].r*31/255;
+        uint16_t g = color[c].g*63/255;
+        uint16_t b = color[c].b*31/255;
+        uint32_t rgb = SWAP((r << 11) | (g << 5) | b) * 3;
+
+        color[c].L = lab_table[rgb];
+        color[c].A = lab_table[rgb+1];
+        color[c].B = lab_table[rgb+2];
+    }
 
     uint16_t *pixels = (uint16_t*) src->pixels;
 

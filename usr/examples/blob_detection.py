@@ -1,7 +1,7 @@
 import sensor, time, led
 #sensor.reset()
 sensor.set_contrast(2)
-sensor.set_framesize(sensor.QQVGA)
+sensor.set_framesize(sensor.QCIF)
 sensor.set_pixformat(sensor.RGB565)
 
 clock = time.clock()
@@ -11,9 +11,9 @@ while (True):
     image = sensor.snapshot()
 
     # Threshold image with RGB
-    binary  = image.threshold([(80, 100, 0),
-                               (80, -80,  30),
-                               (60, 0, -100)], 65)
+    binary  = image.threshold([(255, 0, 0),
+                               (0, 255,  0),
+                               (0, 0, 255)], 80)
 
     # Image closing
     binary.dilate(3)

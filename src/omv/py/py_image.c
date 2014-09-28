@@ -360,9 +360,9 @@ static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, 
     for (int i=0; i<len; i++) {
         mp_obj_t *color_obj;
         mp_obj_get_array_fixed_n(color_arr[i], 3, &color_obj);
-        color[i].L = mp_obj_get_int(color_obj[0]);
-        color[i].A = mp_obj_get_int(color_obj[1]);
-        color[i].B = mp_obj_get_int(color_obj[2]);
+        color[i].r = mp_obj_get_int(color_obj[0]);
+        color[i].g = mp_obj_get_int(color_obj[1]);
+        color[i].b = mp_obj_get_int(color_obj[2]);
     }
 
     /* Threshold image using reference color */
