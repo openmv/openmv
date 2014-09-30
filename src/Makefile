@@ -205,6 +205,7 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	atan2f.o                \
 	math.o                  \
 	mathsincos.o            \
+	fmodf.o                 \
     )
 
 

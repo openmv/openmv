@@ -24,6 +24,7 @@
  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  POSSIBILITY OF SUCH DAMAGE. */
 
+#include "mp.h"
 #include <stdbool.h>
 #include <stm32f4xx_hal.h>
 #include "mdefs.h"
@@ -312,7 +313,7 @@ void sdcard_power_off(void)
 
 }
 
-bool sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
+mp_uint_t sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
 {
     if (Stat & STA_NOINIT) {
         return false;
@@ -345,10 +346,10 @@ bool sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
 
     __enable_irq();
 
-    return count ? false: true;
+    return count ? true: false;
 }
 
-bool sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t count)
+mp_uint_t sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t count)
 {
     if (Stat & STA_NOINIT) {
         return false;
@@ -381,7 +382,7 @@ bool sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t count)
     release_spi();
 
     __enable_irq();
-    return count ? false: true;
+    return count ? true: false;
 }
 
 /*-----------------------------------------------------------------------*/

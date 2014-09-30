@@ -6,6 +6,7 @@
  * SD card SDIO driver.
  *
  */
+#include "mp.h"
 #include <stdbool.h>
 #include <stm32f4xx_hal.h>
 #include "mdefs.h"
@@ -66,24 +67,24 @@ void sdcard_power_off(void)
 
 }
 
-bool sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
+mp_uint_t sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
 {
     __disable_irq();
     HAL_SD_ErrorTypedef err;
     err = HAL_SD_ReadBlocks(&SDHandle, (uint32_t*)buff,
             sector * SDCARD_BLOCK_SIZE, SDCARD_BLOCK_SIZE, count);
     __enable_irq();
-    return (err == SD_OK);
+    return (err != SD_OK);
 }
 
-bool sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t count)
+mp_uint_t sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t count)
 {
     __disable_irq();
     HAL_SD_ErrorTypedef err;
     err = HAL_SD_WriteBlocks(&SDHandle, (uint32_t*)buff,
             sector * SDCARD_BLOCK_SIZE, SDCARD_BLOCK_SIZE, count);
     __enable_irq();
-    return (err == SD_OK);
+    return (err != SD_OK);
 }
 
 uint64_t sdcard_get_capacity_in_bytes(void)
