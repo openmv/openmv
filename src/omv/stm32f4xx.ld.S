@@ -91,7 +91,6 @@ SECTIONS
     */ccsbcs.o(.text*)
     */stm32f4xx_hal.o(.text*)
     */stm32f4xx_hal_msp.o(.text*)
-    */stm32f4xx_hal_rng.o(.text*)
     */stm32f4xx_hal_spi.o(.text*)
     */stm32f4xx_ll_usb.o(.text*)
     . = ALIGN(4);
