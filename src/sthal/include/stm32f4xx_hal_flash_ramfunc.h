@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
-  * @file    stm32f4xx_hal_i2s_ex.h
+  * @file    stm32f4xx_hal_flash_ramfunc.h
   * @author  MCD Application Team
   * @version V1.1.0
   * @date    19-June-2014
-  * @brief   Header file of I2S HAL module.
+  * @brief   Header file of FLASH RAMFUNC driver.
   ******************************************************************************
   * @attention
   *
@@ -36,38 +36,36 @@
   */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32F4xx_HAL_I2S_EX_H
-#define __STM32F4xx_HAL_I2S_EX_H
+#ifndef __STM32F4xx_FLASH_RAMFUNC_H
+#define __STM32F4xx_FLASH_RAMFUNC_H
 
 #ifdef __cplusplus
  extern "C" {
 #endif
 
+#if defined(STM32F411xE)
+
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal_def.h"  
+#include "stm32f4xx_hal_def.h"
 
 /** @addtogroup STM32F4xx_HAL_Driver
   * @{
   */
 
-/** @addtogroup I2SEx
+/** @addtogroup FLASH_RAMFUNC
   * @{
   */ 
 
-/* Exported types ------------------------------------------------------------*/ 
-/* Exported constants --------------------------------------------------------*/  
+/* Exported types ------------------------------------------------------------*/   
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions --------------------------------------------------------*/
+__RAM_FUNC HAL_FLASHEx_StopFlashInterfaceClk(void);
+__RAM_FUNC HAL_FLASHEx_StartFlashInterfaceClk(void);
+__RAM_FUNC HAL_FLASHEx_EnableFlashSleepMode(void);
+__RAM_FUNC HAL_FLASHEx_DisableFlashSleepMode(void);
 
-/* Extended features functions **************************************************/
- /* Blocking mode: Polling */
-HAL_StatusTypeDef HAL_I2SEx_TransmitReceive(I2S_HandleTypeDef *hi2s, uint16_t *pTxData, uint16_t *pRxData, uint16_t Size, uint32_t Timeout);
- /* Non-Blocking mode: Interrupt */
-HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_IT(I2S_HandleTypeDef *hi2s, uint16_t *pTxData, uint16_t *pRxData, uint16_t Size);
-/* Non-Blocking mode: DMA */
-HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_DMA(I2S_HandleTypeDef *hi2s, uint16_t *pTxData, uint16_t *pRxData, uint16_t Size);
+#endif /* STM32F411xE */
 
-HAL_StatusTypeDef I2SEx_TransmitReceive_IT(I2S_HandleTypeDef *hi2s);
 /**
   * @}
   */ 
@@ -75,12 +73,12 @@ HAL_StatusTypeDef I2SEx_TransmitReceive_IT(I2S_HandleTypeDef *hi2s);
 /**
   * @}
   */
-
+  
 #ifdef __cplusplus
 }
 #endif
 
 
-#endif /* __STM32F4xx_HAL_I2S_EX_H */
+#endif /* __STM32F4xx_FLASH_RAMFUNC_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

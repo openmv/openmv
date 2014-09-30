@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
-  * @file    stm32f4xx_hal_i2s_ex.h
+  * @file    stm32f4xx_hal_pcd_ex.h
   * @author  MCD Application Team
   * @version V1.1.0
   * @date    19-June-2014
-  * @brief   Header file of I2S HAL module.
+  * @brief   Header file of PCD HAL module.
   ******************************************************************************
   * @attention
   *
@@ -36,51 +36,43 @@
   */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32F4xx_HAL_I2S_EX_H
-#define __STM32F4xx_HAL_I2S_EX_H
+#ifndef __STM32F4xx_HAL_PCD_EX_H
+#define __STM32F4xx_HAL_PCD_EX_H
 
 #ifdef __cplusplus
  extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f4xx_hal_def.h"  
-
+#include "stm32f4xx_hal_def.h"
+   
 /** @addtogroup STM32F4xx_HAL_Driver
   * @{
   */
 
-/** @addtogroup I2SEx
+/** @addtogroup PCDEx
   * @{
-  */ 
+  */
 
-/* Exported types ------------------------------------------------------------*/ 
-/* Exported constants --------------------------------------------------------*/  
-/* Exported macro ------------------------------------------------------------*/
 /* Exported functions --------------------------------------------------------*/
 
-/* Extended features functions **************************************************/
- /* Blocking mode: Polling */
-HAL_StatusTypeDef HAL_I2SEx_TransmitReceive(I2S_HandleTypeDef *hi2s, uint16_t *pTxData, uint16_t *pRxData, uint16_t Size, uint32_t Timeout);
- /* Non-Blocking mode: Interrupt */
-HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_IT(I2S_HandleTypeDef *hi2s, uint16_t *pTxData, uint16_t *pRxData, uint16_t Size);
-/* Non-Blocking mode: DMA */
-HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_DMA(I2S_HandleTypeDef *hi2s, uint16_t *pTxData, uint16_t *pRxData, uint16_t Size);
+/* Peripheral Extended functions  *********************************************/
+HAL_StatusTypeDef HAL_PCDEx_SetTxFiFo(PCD_HandleTypeDef *hpcd, uint8_t fifo, uint16_t size);
+HAL_StatusTypeDef HAL_PCDEx_SetRxFiFo(PCD_HandleTypeDef *hpcd, uint16_t size);
 
-HAL_StatusTypeDef I2SEx_TransmitReceive_IT(I2S_HandleTypeDef *hi2s);
 /**
   * @}
   */ 
 
 /**
   * @}
-  */
+  */ 
 
 #ifdef __cplusplus
 }
 #endif
 
 
-#endif /* __STM32F4xx_HAL_I2S_EX_H */
+#endif /* __STM32F4xx_HAL_PCD_EX_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
