@@ -170,7 +170,7 @@ static mp_obj_t mod_wlan_patch_version()
 
 static mp_obj_t mod_wlan_patch_program()
 {
-    patch_prog_start();
+    //patch_prog_start();
     return mp_const_none;
 }
 
