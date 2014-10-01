@@ -271,21 +271,21 @@ long SpiWrite(unsigned char *pUserBuffer, unsigned short usLength)
 
 void SpiWriteDataSynchronous(unsigned char *data, unsigned short size)
 {
-    __disable_irq();
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     if (HAL_SPI_TransmitReceive(&SPIHandle, data, data, size, SPI_TIMEOUT) != HAL_OK) {
         BREAK();
     }
-    __enable_irq();
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
 }
 
 void SpiReadDataSynchronous(unsigned char *data, unsigned short size)
 {
     memset(data, READ, size);
-    __disable_irq();
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     if (HAL_SPI_TransmitReceive(&SPIHandle, data, data, size, SPI_TIMEOUT) != HAL_OK) {
         BREAK();
     }
-    __enable_irq();
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
 }
 
 void SpiReadPacket(void)

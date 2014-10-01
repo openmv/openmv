@@ -83,22 +83,26 @@ static BYTE spi_send(BYTE out)
     if (HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SPI_TIMEOUT) != HAL_OK) {
         BREAK();
     }
-
     return out;
 }
 
 static bool spi_send_buff(const BYTE *buff, uint32_t size)
 {
-    return HAL_SPI_Transmit(&SPIHandle, (void*)buff, size, SPI_TIMEOUT)== HAL_OK;
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
+    bool res = (HAL_SPI_Transmit(&SPIHandle, (void*)buff, size, SPI_TIMEOUT) == HAL_OK);
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
+    return res;
 }
 
 #define spi_recv() spi_send(0xFF)
 
 static bool spi_recv_buff(BYTE *buff, uint32_t size)
 {
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     do {
         *buff++ = spi_recv();
     } while (--size);
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
     return true;
 }
 
@@ -323,8 +327,6 @@ mp_uint_t sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
         sector *= SDCARD_BLOCK_SIZE;    /* Convert to byte address if needed */
     }
 
-    __disable_irq();
-
     if (count == 1) {    /* Single block read */
         if (send_cmd(CMD17, sector) == 0)    { /* READ_SINGLE_BLOCK */
             if (rcvr_datablock(buff, SDCARD_BLOCK_SIZE)) {
@@ -343,9 +345,6 @@ mp_uint_t sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
         }
     }
     release_spi();
-
-    __enable_irq();
-
     return count ? true: false;
 }
 
@@ -358,8 +357,6 @@ mp_uint_t sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t cou
     if (!(CardType & CT_BLOCK)) {
         sector *= SDCARD_BLOCK_SIZE;    /* Convert to byte address if needed */
     }
-
-    __disable_irq();
 
     if (count == 1) {    /* Single block write */
         if ((send_cmd(CMD24, sector) == 0)    /* WRITE_BLOCK */
@@ -380,8 +377,6 @@ mp_uint_t sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t cou
         }
     }
     release_spi();
-
-    __enable_irq();
     return count ? true: false;
 }
 

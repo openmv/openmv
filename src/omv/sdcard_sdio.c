@@ -69,21 +69,21 @@ void sdcard_power_off(void)
 
 mp_uint_t sdcard_read_blocks(uint8_t *buff, uint32_t sector, uint32_t count)
 {
-    __disable_irq();
     HAL_SD_ErrorTypedef err;
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     err = HAL_SD_ReadBlocks(&SDHandle, (uint32_t*)buff,
             sector * SDCARD_BLOCK_SIZE, SDCARD_BLOCK_SIZE, count);
-    __enable_irq();
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
     return (err != SD_OK);
 }
 
 mp_uint_t sdcard_write_blocks(const uint8_t *buff, uint32_t sector, uint32_t count)
 {
-    __disable_irq();
     HAL_SD_ErrorTypedef err;
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     err = HAL_SD_WriteBlocks(&SDHandle, (uint32_t*)buff,
             sector * SDCARD_BLOCK_SIZE, SDCARD_BLOCK_SIZE, count);
-    __enable_irq();
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
     return (err != SD_OK);
 }
 

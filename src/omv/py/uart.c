@@ -24,11 +24,11 @@ static mp_int_t py_uart_read(mp_obj_t obj)
         mp_get_buffer_raise(obj, &bufinfo, MP_BUFFER_WRITE);
     }
 
-    __disable_irq();
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     if (HAL_UART_Receive(&UARTHandle, bufinfo.buf, bufinfo.len, UART_TIMEOUT) != HAL_OK) {
         return -1;
     }
-    __enable_irq();
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
 
     return bufinfo.len;
 }
@@ -47,9 +47,11 @@ static mp_int_t py_uart_write(mp_obj_t obj)
         mp_get_buffer_raise(obj, &bufinfo, MP_BUFFER_READ);
     }
 
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     if (HAL_UART_Transmit(&UARTHandle, bufinfo.buf, bufinfo.len, UART_TIMEOUT) != HAL_OK) {
         return -1;
     }
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
 
     return bufinfo.len;
 }

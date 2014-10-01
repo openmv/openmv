@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stm32f4xx_hal.h>
 #include "soft_i2c.h"
+#include "mp.h"
 
 #define I2C_PORT            GPIOA
 #define I2C_SIOC_PIN        GPIO_PIN_2
@@ -128,7 +129,7 @@ int soft_i2c_read_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
 {
     int ret = 0;
 
-    __disable_irq();
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     i2c_start();
     ret |= i2c_write_byte(slv_addr | 0x01);
     for (int i=0; i<len; i++) {
@@ -137,7 +138,7 @@ int soft_i2c_read_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
     if (stop) {
         i2c_stop();
     }
-    __enable_irq();
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
     return ret;
 }
 
@@ -145,7 +146,7 @@ int soft_i2c_write_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
 {
     uint8_t ret = 0;
 
-    __disable_irq();
+    mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     i2c_start();
     ret |= i2c_write_byte(slv_addr);
     for (int i=0; i<len; i++) {
@@ -155,7 +156,7 @@ int soft_i2c_write_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
     if (stop) {
         i2c_stop();
     }
-    __enable_irq();
+    MICROPY_END_ATOMIC_SECTION(atomic_state);
     return ret;
 }
 
