@@ -38,6 +38,8 @@ while (True):
         kpts2 = image.find_keypoints(threshold=32)
     except:
         continue
+    if (kpts2==None):
+        continue
     c=image.match_keypoints(kpts1, kpts2, 70)
     if (c):
         l=10
