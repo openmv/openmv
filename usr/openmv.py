@@ -1,14 +1,20 @@
 #!/usr/bin/env python
-import sys
+# This file is part of the OpenMV project.
+# Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+# Openmv module.
+
+import struct
+import sys,time
 import usb.core
 import usb.util
-import struct
+import pydfu
 import numpy as np
 from PIL import Image
-import time
-import StringIO
 
 __dev = None
+
 # VID/PID
 __VID=0xf055
 __PID=0x9800
@@ -59,7 +65,6 @@ def init():
     __dev.set_interface_altsetting(__INTERFACE, __ALTSETTING)
 
 def release():
-    global __dev
     try:
         # Release device
         usb.util.dispose_resources(dev)
@@ -83,20 +88,16 @@ def fb_to_arr(buff, bpp):
         return np.column_stack((r,g,b))
 
 def fb_size():
-    global __dev
     # read fb header
     buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_SIZE, 0, __INTERFACE, __FB_HDR_SIZE, __TIMEOUT)
     size = struct.unpack("III", buf)
     return size
 
 def fb_lock():
-    global __dev
     buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_LOCK, 0, __INTERFACE, 1, __TIMEOUT)
     return struct.unpack("B", buf)[0]
 
 def fb_dump():
-    global __dev
-
     if (fb_lock() == 0):
         return None
 
@@ -160,22 +161,6 @@ def enter_dfu():
         __dev.ctrl_transfer(0x41, __USBDBG_SYS_BOOT, 0, __INTERFACE, None, __TIMEOUT)
     except:
         pass
-
-#See app note AN3156
-def exit_dfu():
-    timeout = 1000
-    dev = usb.core.find(idVendor=0x0483, idProduct=0xdf11)
-
-    # Claim DFU interface
-    usb.util.claim_interface(dev, 0)
-
-    # Send DNLOAD with 0 length to exit DFU
-    dev.ctrl_transfer(0x21, 0x01, 0, 0, None, timeout)
-    # Execute last command
-    dev.ctrl_transfer(0xA1, 0x03, 0, 0, 6, timeout)
-
-    # Release device
-    usb.util.dispose_resources(dev)
 
 def reset():
     try:

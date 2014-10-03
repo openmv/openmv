@@ -1,28 +1,30 @@
 #!/usr/bin/env python
+import pydfu
+import openmv
 import sys, os, os.path
-import gtk
-import gtksourceview2 as gtksourceview
+from time import sleep
+import gtk, gtksourceview2 as gtksourceview
 import gio
-import pango
 import gobject
 import vte
 import serial
-from time import sleep
 import usb.core
 import usb.util
 import numpy as np
-import openmv
 from os.path import expanduser
-import subprocess
+
 
 UI_PATH =os.path.dirname(os.path.realpath(__file__))+"/openmv-ide.glade"
 CONFIG_PATH = expanduser("~")+"/.openmvide.config"
 EXAMPLE_PATH = os.path.dirname(os.path.realpath(__file__))+"/examples"
 SCRIPTS_PATH = os.path.dirname(os.path.realpath(__file__))+"/scripts"
-FWBIN_PATH = ""
+FWBIN_PATH = "/home/mux/src/c/stm32f4/openmv/src/build/openmv.bin"
 DFU_CMD = "dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D %s"
 
 SCALE =1
+flash_offsets= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
+                0x08010000, 0x08020000, 0x08040000, 0x08060000,
+                0x08080000, 0x080A0000, 0x080C0000, 0x080E0000]
 
 class OMVGtk:
     def __init__(self):
@@ -146,6 +148,11 @@ class OMVGtk:
         message.run()
         message.destroy()
 
+    def refresh_gui(self, delay=0.0001, wait=0.0001):
+        sleep(delay)
+        gtk.main_iteration_do(block=False)
+        sleep(wait)
+
     def connect(self):
         self.terminal = self.builder.get_object('terminal')
         try:
@@ -218,16 +225,54 @@ class OMVGtk:
 
         dialog.destroy()
 
+    # Fake multitasking :P
+    def fwupdate_task(self, state):
+        if (state["init"]):
+            pydfu.init()
+            state["init"]=False
+            state["erase"]=True
+            state["bar"].set_text("Erasing...")
+            return True
+        elif (state["erase"]):
+            page = state["page"]
+            total = len(flash_offsets)
+            pydfu.page_erase(flash_offsets[page])
+            page +=1
+            state["bar"].set_fraction(page/float(total))
+            if (page == total):
+                state["erase"] = False
+                state["write"] = True
+                state["bar"].set_text("Uploading...")
+            state["page"] = page
+            return True
+        elif (state["write"]):
+            buf = state["buf"]
+            xfer_bytes = state["xfer_bytes"]
+            xfer_total = state["xfer_total"]
+
+            # Send chunk
+            chunk = min (64, xfer_total-xfer_bytes)
+            pydfu.write_page(buf[xfer_bytes:xfer_bytes+chunk], xfer_bytes)
+
+            xfer_bytes += chunk
+            state["xfer_bytes"] = xfer_bytes
+            state["bar"].set_fraction(xfer_bytes/float(xfer_total))
+
+            if (xfer_bytes == xfer_total):
+                pydfu.exit_dfu()
+                state["dialog"].hide()
+                return False
+
+            return True
+
     def fwupdate_clicked(self, widget):
         if (self.connected):
             dialog = self.builder.get_object("fw_dialog")
             fw_entry = self.builder.get_object("fw_entry")
-            spinner = self.builder.get_object("fw_spinner")
+            fw_progress = self.builder.get_object("fw_progressbar")
             ok_button = self.builder.get_object("fw_ok_button")
             cancel_button = self.builder.get_object("fw_cancel_button")
 
-            spinner.stop()
-            spinner.set_visible(False)
             ok_button.set_sensitive(True)
             cancel_button.set_sensitive(True)
             dialog.set_transient_for(self.window);
@@ -238,24 +283,24 @@ class OMVGtk:
             if dialog.run() == gtk.RESPONSE_OK:
                 ok_button.set_sensitive(False)
                 cancel_button.set_sensitive(False)
-                spinner.set_visible(True)
-                spinner.start()
+                fw_progress.set_text("")
+                fw_progress.set_fraction(0.0)
+
+                with open(fw_entry.get_text(), 'r') as f:
+                    buf= f.read()
+
+                state={"init":True, "erase":False, "write":False,
+                    "page":0, "buf":buf, "bar":fw_progress, "dialog":dialog,
+                    "xfer_bytes":0, "xfer_total":len(buf)}
 
                 # call dfu-util
                 openmv.enter_dfu()
                 sleep(1.0)
+                gobject.gobject.idle_add(self.fwupdate_task, state);
 
-                dfu_util = subprocess.Popen(DFU_CMD%fw_entry.get_text(), shell=True, stdout=subprocess.PIPE)
-
-                while dfu_util.poll() == None and gtk.events_pending():
-                    gtk.main_iteration()
-
-                if (dfu_util.returncode):
-                    self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to update firmware\n")
-
-                openmv.exit_dfu()
-
-            dialog.hide()
+#                try:
+#                except Exception as e:
+#                    self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to update firmware%s"%(e))
 
     def reset_clicked(self, widget):
         if (self.connected):

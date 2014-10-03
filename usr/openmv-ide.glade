@@ -55,6 +55,7 @@
     <property name="can_focus">False</property>
     <property name="border_width">5</property>
     <property name="title" translatable="yes">Update Firmware</property>
+    <property name="modal">True</property>
     <property name="window_position">center-on-parent</property>
     <property name="destroy_with_parent">True</property>
     <property name="type_hint">dialog</property>
@@ -107,12 +108,15 @@
           </packing>
         </child>
         <child>
-          <object class="GtkSpinner" id="fw_spinner">
+          <object class="GtkProgressBar" id="fw_progressbar">
+            <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="show_text">True</property>
+            <property name="text" translatable="yes"> </property>
           </object>
           <packing>
             <property name="expand">True</property>
-            <property name="fill">True</property>
+            <property name="fill">False</property>
             <property name="position">1</property>
           </packing>
         </child>
