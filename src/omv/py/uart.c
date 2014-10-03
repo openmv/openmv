@@ -12,7 +12,7 @@
 #define UART_TIMEOUT   (1000)
 UART_HandleTypeDef UARTHandle;
 
-static mp_int_t py_uart_read(mp_obj_t obj)
+static mp_obj_t py_uart_read(mp_obj_t obj)
 {
     mp_buffer_info_t bufinfo;
 
@@ -26,14 +26,14 @@ static mp_int_t py_uart_read(mp_obj_t obj)
 
     mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     if (HAL_UART_Receive(&UARTHandle, bufinfo.buf, bufinfo.len, UART_TIMEOUT) != HAL_OK) {
-        return -1;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_Exception, "HAL_UART_Receive failed"));
     }
     MICROPY_END_ATOMIC_SECTION(atomic_state);
 
-    return bufinfo.len;
+    return mp_obj_new_int(bufinfo.len);
 }
 
-static mp_int_t py_uart_write(mp_obj_t obj)
+static mp_obj_t py_uart_write(mp_obj_t obj)
 {
     byte buf[1];
     mp_buffer_info_t bufinfo;
@@ -49,11 +49,11 @@ static mp_int_t py_uart_write(mp_obj_t obj)
 
     mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     if (HAL_UART_Transmit(&UARTHandle, bufinfo.buf, bufinfo.len, UART_TIMEOUT) != HAL_OK) {
-        return -1;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_Exception, "HAL_UART_Transmit failed"));
     }
     MICROPY_END_ATOMIC_SECTION(atomic_state);
 
-    return bufinfo.len;
+    return mp_obj_new_int(bufinfo.len);
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_uart_read_obj,   py_uart_read);
