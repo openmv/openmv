@@ -160,11 +160,16 @@ def write_page(buf, xfer_offset):
         print ("Write: 0x%x "%(xfer_base+xfer_offset))
 
 def exit_dfu():
+    # set jump address
+    set_address(0x08000000)
+
     # Send DNLOAD with 0 length to exit DFU
     __dev.ctrl_transfer(0x21, __DFU_DNLOAD, 0, __DFU_INTERFACE, None, __TIMEOUT)
 
     # Execute last command
-    get_status()
+    if (get_status() != __DFU_STATE_DFU_MANIFEST):
+        print("Failed to reset device")
+        pass # ignore
 
     # Release device
     usb.util.dispose_resources(__dev)
