@@ -28,7 +28,7 @@ SPI_HandleTypeDef SPIHandle;
 static DMA_HandleTypeDef hdma_tx;
 static DMA_HandleTypeDef hdma_rx;
 
-static mp_int_t py_spi_read(mp_obj_t obj)
+static mp_obj_t py_spi_read(mp_obj_t obj)
 {
     mp_buffer_info_t bufinfo;
 
@@ -41,17 +41,17 @@ static mp_int_t py_spi_read(mp_obj_t obj)
     }
 
     if (HAL_SPI_Receive_DMA(&SPIHandle, bufinfo.buf, bufinfo.len) != HAL_OK) {
-        return -1;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_Exception, "HAL_SPI_Receive failed"));
     }
 
     // wait for transfer to finish
     while (HAL_SPI_GetState(&SPIHandle) != HAL_SPI_STATE_READY) {
     }
 
-    return bufinfo.len;
+    return mp_obj_new_int(bufinfo.len);
 }
 
-static mp_int_t py_spi_write(mp_obj_t obj)
+static mp_obj_t py_spi_write(mp_obj_t obj)
 {
     byte buf[1];
     mp_buffer_info_t bufinfo;
@@ -68,7 +68,7 @@ static mp_int_t py_spi_write(mp_obj_t obj)
     if (bufinfo.len > 1) {
         // start DMA transfer
         if (HAL_SPI_Transmit_DMA(&SPIHandle, bufinfo.buf, bufinfo.len) != HAL_OK) {
-            return -1;
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_Exception, "HAL_SPI_Transmit failed"));
         }
         // wait for transfer to finish
         while (HAL_SPI_GetState(&SPIHandle) != HAL_SPI_STATE_READY) {
@@ -76,10 +76,11 @@ static mp_int_t py_spi_write(mp_obj_t obj)
     } else {
         // don't use DMA for small buffers
         if (HAL_SPI_Transmit(&SPIHandle, bufinfo.buf, bufinfo.len, SPI_TIMEOUT) != HAL_OK) {
-            return -1;
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_Exception, "HAL_SPI_Transmit failed"));
         }
     }
-    return bufinfo.len;
+
+    return mp_obj_new_int(bufinfo.len);
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_spi_read_obj,   py_spi_read);
