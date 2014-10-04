@@ -117,8 +117,8 @@ def fb_dump():
             #__write_img(buff, "/tmp/swap.jpeg")
             img = Image.frombuffer("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "")
             buff = np.fromstring(img.tostring(), dtype=np.uint8)
-        except Exception, e:
-            print "JPEG decode error (%s)"%e
+        except Exception as e:
+            print ("JPEG decode error (%s)"%(e))
             sys.exit(0)
 
         if (buff.size != (size[0]*size[1]*3)):
@@ -171,7 +171,7 @@ def reset():
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:
-        print 'usage: openmv.py <script>'
+        print ('usage: openmv.py <script>')
         sys.exit(1)
     with open(sys.argv[1], 'r') as fin:
         buf = fin.read()
