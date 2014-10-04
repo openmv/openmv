@@ -12,14 +12,20 @@ import usb.core
 import usb.util
 import numpy as np
 from os.path import expanduser
+try:
+    # 3.x name
+    import configparser
+except ImportError:
+    # 2.x name
+    configparser = __import__("ConfigParser")
 
-
-UI_PATH =os.path.dirname(os.path.realpath(__file__))+"/openmv-ide.glade"
-CONFIG_PATH = expanduser("~")+"/.openmvide.config"
-EXAMPLE_PATH = os.path.dirname(os.path.realpath(__file__))+"/examples"
-SCRIPTS_PATH = os.path.dirname(os.path.realpath(__file__))+"/scripts"
-FWBIN_PATH = "/home/mux/src/c/stm32f4/openmv/src/build/openmv.bin"
-DFU_CMD = "dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D %s"
+IDE_PATH     = os.path.dirname(os.path.realpath(__file__))
+GLADE_PATH   = IDE_PATH+"/openmv-ide.glade"
+CONFIG_PATH  = IDE_PATH+"/openmv.config"
+EXAMPLE_PATH = IDE_PATH+"/examples"
+SCRIPTS_PATH = IDE_PATH+"/scripts"
+FWBIN_PATH   = "/home/mux/src/c/stm32f4/openmv/src/build/openmv.bin"
+DFU_CMD      = "dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D %s"
 
 SCALE =1
 flash_offsets= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
@@ -30,7 +36,7 @@ class OMVGtk:
     def __init__(self):
         #Set the Glade file
         self.builder = gtk.Builder()
-        self.builder.add_from_file(UI_PATH)
+        self.builder.add_from_file(GLADE_PATH)
 
         # get top window
         self.window = self.builder.get_object("top_window")
@@ -120,13 +126,18 @@ class OMVGtk:
         }
         self.builder.connect_signals(signals)
 
-        # open last opened file
+        # load config
+        self.config = configparser.ConfigParser()
+        try:
+            self.config.read(CONFIG_PATH)
+        except Exception as e:
+            print ("Failed to open config file %s"%(e))
+
+        # current file path
         self.file_path= None
-        if os.path.isfile(CONFIG_PATH):
-            with open(CONFIG_PATH, "r") as file:
-                path = file.read()
-            if os.path.isfile(path):
-                self._load_file(path)
+#        path = self.config.get("main", "last_opened_file")
+#        if os.path.isfile(path):
+#            self._load_file(path)
 
         # build examples menu
         if os.path.isdir(EXAMPLE_PATH):
@@ -157,11 +168,11 @@ class OMVGtk:
         self.terminal = self.builder.get_object('terminal')
         try:
             # open VCP and configure the terminal
-            self.fd = os.open("/dev/openmvcam", os.O_RDWR)
+            self.fd = os.open(self.config.get("main", "serial_port"), os.O_RDWR)
             self.terminal.reset(True, True)
             self.terminal.set_size(80,24)
             self.terminal.set_pty(self.fd)
-        except Exception, e:
+        except Exception as e:
             self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
             return
 
@@ -172,7 +183,7 @@ class OMVGtk:
             # interrupt any running code
             openmv.stop_script()
             sleep(0.1)
-        except Exception, e:
+        except Exception as e:
             self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
             return
 
@@ -365,7 +376,7 @@ class OMVGtk:
         try:
             # read drawingarea
             fb = openmv.fb_dump()
-        except Exception, e:
+        except Exception as e:
             self.disconnect()
             self._update_title()
             return True
@@ -389,6 +400,12 @@ class OMVGtk:
 
     def on_ctrl_scale_value_changed(self, adjust):
         openmv.set_attr(adjust.attr, int(adjust.value))
+
+    def save_config(self):
+        # TODO set config items from GUI
+        #self.config.set("section", "key", value)
+        with open(CONFIG_PATH, "w") as file:
+           self.config.write(file)
 
     def _update_title(self):
         if (self.file_path==None):
@@ -508,10 +525,7 @@ class OMVGtk:
         # disconnect
         self.disconnect()
 
-        if (self.file_path):
-            # write last opened file
-            with open(CONFIG_PATH, "w") as file:
-               file.write(self.file_path)
+        self.save_config()
 
         # exit
         sys.exit(0)
