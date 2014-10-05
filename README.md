@@ -3,7 +3,7 @@
 OpenMV is an open-source tiny machine vision module based on an STM32F4xx ARM Cortex-M4 MCU and an OV9650 sensor, it's currently capable of doing face detection at 25FPS, color tracking at 30FPS+ and has USART interfae and USB-OTG support for debugging and firmware update. This repo contains the hardware resources, drivers, image processing and userspace code.
 
 <p align="center">
-<img src="http://2.bp.blogspot.com/-x1Ua3wLs21Y/UjYvUB0oLJI/AAAAAAAAATE/zDqQFY_Pkp8/s400/DSC03631.JPG" width="240" height="180" border="10">
+<img src="https://raw.githubusercontent.com/iabdalkader/openmv/master/eagle/openmv1/openmv.jpeg" width="240" height="180" border="10">
 </p>
 **This is a video of the color tracking:**
 <p align="center">
