@@ -24,7 +24,6 @@ GLADE_PATH   = IDE_PATH+"/openmv-ide.glade"
 CONFIG_PATH  = IDE_PATH+"/openmv.config"
 EXAMPLE_PATH = IDE_PATH+"/examples"
 SCRIPTS_PATH = IDE_PATH+"/scripts"
-FWBIN_PATH   = ""
 
 SCALE =1
 RECENT_FILES_LIMIT=5
@@ -135,6 +134,7 @@ class OMVGtk:
 
         # current file path
         self.file_path= None
+        self.fw_file_path=""
 #        path = self.config.get("main", "last_opened_file")
 #        if os.path.isfile(path):
 #            self._load_file(path)
@@ -297,7 +297,7 @@ class OMVGtk:
             dialog.set_transient_for(self.window);
 
             # default FW bin path
-            fw_entry.set_text(FWBIN_PATH)
+            fw_entry.set_text(self.fw_file_path)
             fw_progress.set_text("")
             fw_progress.set_fraction(0.0)
 
@@ -305,8 +305,11 @@ class OMVGtk:
                 ok_button.set_sensitive(False)
                 cancel_button.set_sensitive(False)
 
-                with open(fw_entry.get_text(), 'r') as f:
+                fw_path = fw_entry.get_text()
+                with open(fw_path, 'r') as f:
                     buf= f.read()
+
+                self.fw_file_path = fw_path
 
                 state={"init":True, "erase":False, "write":False,
                     "page":0, "buf":buf, "bar":fw_progress, "dialog":dialog,
