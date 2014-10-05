@@ -1,6 +1,10 @@
 ###OpenMV (Open Machine Vision Module)
 
-OpenMV is an open-source tiny machine vision module based on an STM32F4xx ARM Cortex-M4 MCU and an OV9650 sensor, it's currently capable of doing face detection at 25FPS, color tracking at 30FPS+ and has USART interfae and USB-OTG support for debugging and firmware update. This repo contains the hardware resources, drivers, image processing and userspace code.
+OpenMV is an open-source tiny machine vision module based on the STM32F4xx ARM Cortex-M4 MCU and the OV2640 JPEG sensor.
+
+OpenMV is programmable in Python3 (MicroPython) and capable of doing face detection and tracking, keypoint extraction, color tracking and more..The board has USB, a uSD connector and an expansion header (USART/SPI/I2C).
+
+A Python IDE with syntax highlighting is available for the camera, it can run/upload scripts to the camera, view the framebuffer and update the firmware.
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/iabdalkader/openmv/master/eagle/openmv1/openmv.jpeg" width="240" height="180" border="10">
