@@ -289,12 +289,12 @@ class OMVGtk:
 
             # default FW bin path
             fw_entry.set_text(FWBIN_PATH)
+            fw_progress.set_text("")
+            fw_progress.set_fraction(0.0)
 
             if dialog.run() == gtk.RESPONSE_OK:
                 ok_button.set_sensitive(False)
                 cancel_button.set_sensitive(False)
-                fw_progress.set_text("")
-                fw_progress.set_fraction(0.0)
 
                 with open(fw_entry.get_text(), 'r') as f:
                     buf= f.read()
