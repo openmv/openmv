@@ -311,6 +311,8 @@ class OMVGtk:
 #                try:
 #                except Exception as e:
 #                    self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to update firmware%s"%(e))
+            else:
+                dialog.hide()
 
     def reset_clicked(self, widget):
         if (self.connected):
