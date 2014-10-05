@@ -24,8 +24,7 @@ GLADE_PATH   = IDE_PATH+"/openmv-ide.glade"
 CONFIG_PATH  = IDE_PATH+"/openmv.config"
 EXAMPLE_PATH = IDE_PATH+"/examples"
 SCRIPTS_PATH = IDE_PATH+"/scripts"
-FWBIN_PATH   = "/home/mux/src/c/stm32f4/openmv/src/build/openmv.bin"
-DFU_CMD      = "dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D %s"
+FWBIN_PATH   = ""
 
 SCALE =1
 flash_offsets= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
