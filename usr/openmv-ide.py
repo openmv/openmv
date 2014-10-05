@@ -27,7 +27,8 @@ SCRIPTS_PATH = IDE_PATH+"/scripts"
 FWBIN_PATH   = ""
 
 SCALE =1
-flash_offsets= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
+RECENT_FILES_LIMIT=5
+FLASH_OFFSETS= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
                 0x08010000, 0x08020000, 0x08040000, 0x08060000,
                 0x08080000, 0x080A0000, 0x080C0000, 0x080E0000]
 
@@ -138,19 +139,27 @@ class OMVGtk:
 #        if os.path.isfile(path):
 #            self._load_file(path)
 
-        # build examples menu
+        # built-in examples menu
         if os.path.isdir(EXAMPLE_PATH):
-            exmenu = gtk.Menu()
-            example_menu = self.builder.get_object('example_menu')
-            examples = sorted(os.listdir(EXAMPLE_PATH))
-            for f in examples:
+            submenu = gtk.Menu()
+            menu = self.builder.get_object('example_menu')
+            files = sorted(os.listdir(EXAMPLE_PATH))
+            for f in files:
                 if f.endswith(".py"):
                     label = os.path.basename(f)
-                    mitem =gtk.MenuItem(label)
-                    mitem.connect("activate", self.open_example)
-                    exmenu.append(mitem)
+                    mitem = gtk.MenuItem(label)
+                    mitem.connect("activate", self.open_example, EXAMPLE_PATH)
+                    submenu.append(mitem)
 
-            example_menu.set_submenu(exmenu)
+            menu.set_submenu(submenu)
+
+        # recent files menu
+        self.files = []
+        files =self.config.get("main", "recent")
+        if files:
+            self.files = files.split(',')
+            self.update_recent_files()
+
 
     def show_message_dialog(self, msg_type, msg):
         message = gtk.MessageDialog(parent=self.window, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -245,8 +254,8 @@ class OMVGtk:
             return True
         elif (state["erase"]):
             page = state["page"]
-            total = len(flash_offsets)
-            pydfu.page_erase(flash_offsets[page])
+            total = len(FLASH_OFFSETS)
+            pydfu.page_erase(FLASH_OFFSETS[page])
             page +=1
             state["bar"].set_fraction(page/float(total))
             if (page == total):
@@ -405,6 +414,7 @@ class OMVGtk:
     def save_config(self):
         # TODO set config items from GUI
         #self.config.set("section", "key", value)
+        self.config.set("main", "recent", ','.join(self.files))
         with open(CONFIG_PATH, "w") as file:
            self.config.write(file)
 
@@ -418,6 +428,24 @@ class OMVGtk:
         self.window.set_title(title)
 
 
+    def update_recent_files(self):
+        if (self.file_path and self.file_path not in self.files ):
+            self.files.insert(0, self.file_path)
+
+        if len(self.files)>RECENT_FILES_LIMIT:
+            self.files.pop()
+
+        submenu = gtk.Menu()
+        menu = self.builder.get_object('recent_menu')
+        for f in self.files:
+            if f.endswith(".py"):
+                mitem =gtk.MenuItem(f)
+                mitem.connect("activate", self.open_example, "")
+                submenu.append(mitem)
+
+        menu.set_submenu(submenu)
+        menu.show_all()
+
     def _load_file(self, path):
         self.file_path = path
         if path == None: # New file
@@ -427,6 +455,7 @@ class OMVGtk:
             self.save_button.set_sensitive(False)
             with open(path, "r") as file:
                 self.buffer.set_text(file.read())
+            self.update_recent_files()
         self._update_title()
 
     def _save_file(self, new_file):
@@ -444,6 +473,7 @@ class OMVGtk:
                 self.file_path = dialog.get_filename()
                 self.save_button.set_sensitive(False)
                 self._update_title()
+                self.update_recent_files()
                 with open(dialog.get_filename(), "w") as file:
                     file.write(self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter()))
 
@@ -516,8 +546,9 @@ class OMVGtk:
 
         dialog.destroy()
 
-    def open_example(self, widget):
-        self._load_file(os.path.join(EXAMPLE_PATH, widget.get_label()))
+    def open_example(self, widget, basedir):
+        self.file_path = os.path.join(basedir, widget.get_label())
+        self._load_file(self.file_path)
 
     def text_changed(self, widget):
         self.save_button.set_sensitive(True)
