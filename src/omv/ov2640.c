@@ -299,7 +299,7 @@ static const uint8_t uxga_regs[][2] = {
         { VSIZE8,  (UXGA_VSIZE>>3)}, /* Image Vertiacl Size VSIZE[10:3] */
 
         /* {HSIZE[11], HSIZE[2:0], VSIZE[2:0]} */
-        { SIZEL,   ((SVGA_HSIZE>>6)&0x40) | ((UXGA_HSIZE&0x7)<<3) | (UXGA_VSIZE&0x7)},
+        { SIZEL,   ((UXGA_HSIZE>>6)&0x40) | ((UXGA_HSIZE&0x7)<<3) | (UXGA_VSIZE&0x7)},
 
         { XOFFL,   0x00 }, /* OFFSET_X[7:0] */
         { YOFFL,   0x00 }, /* OFFSET_Y[7:0] */
@@ -447,12 +447,19 @@ static int set_pixformat(enum sensor_pixformat pixformat)
 static int set_framesize(enum sensor_framesize framesize)
 {
     int ret=0;
-    uint8_t clkrc = 0x80;
+    uint8_t clkrc;
     uint16_t w=res_width[framesize];
     uint16_t h=res_height[framesize];
 
-    if (framesize > FRAMESIZE_QVGA) {
+    int i=0;
+    const uint8_t (*regs)[2];
+
+    if (framesize <= FRAMESIZE_SVGA) {
+        clkrc =0x80;
+        regs = svga_regs;
+    } else {
         clkrc =0x81;
+        regs = uxga_regs;
     }
 
     /* Disable DSP */
@@ -468,9 +475,16 @@ static int set_framesize(enum sensor_framesize framesize)
     ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
     ret |= SCCB_Write(CLKRC, clkrc);
 
+    /* Write DSP input regsiters */
+    while (regs[i][0]) {
+        SCCB_Write(regs[i][0], regs[i][1]);
+        i++;
+    }
+
     /* Enable DSP */
     ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
     ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_EN);
+
     return ret;
 }
 

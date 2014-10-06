@@ -42,6 +42,7 @@ const int res_width[] = {
     640,    /* VGA   */
     800,    /* SVGA  */
     1280,   /* SXGA  */
+    1600,   /* UXGA  */
 };
 
 const int res_height[]= {
@@ -53,6 +54,7 @@ const int res_height[]= {
     480,    /* VGA   */
     600,    /* SVGA   */
     1024,   /* SXGA  */
+    1200,   /* UXGA  */
 };
 
 static void extclk_config(int frequency)
@@ -417,6 +419,8 @@ int sensor_set_framesize(enum sensor_framesize framesize)
         case FRAMESIZE_CIF:
         case FRAMESIZE_VGA:
         case FRAMESIZE_SVGA:
+        case FRAMESIZE_SXGA:
+        case FRAMESIZE_UXGA:
             fb->w =res_width[framesize];
             fb->h =res_height[framesize];
             break;
