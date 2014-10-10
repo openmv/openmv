@@ -62,7 +62,7 @@ while(True):
                 print("socket closed")
                 client.close()
                 break
-            print ("recv:"+buf)
+            print ("recv:"+str(buf))
             client.send(buf)
         elif wfds:
             print ("wfds")
