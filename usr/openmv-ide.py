@@ -306,8 +306,13 @@ class OMVGtk:
                 cancel_button.set_sensitive(False)
 
                 fw_path = fw_entry.get_text()
-                with open(fw_path, 'r') as f:
-                    buf= f.read()
+                try:
+                    with open(fw_path, 'r') as f:
+                        buf= f.read()
+                except Exception as e:
+                    dialog.hide()
+                    self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open file %s"%str(e))
+                    return
 
                 self.fw_file_path = fw_path
 
@@ -319,10 +324,6 @@ class OMVGtk:
                 openmv.enter_dfu()
                 sleep(1.0)
                 gobject.gobject.idle_add(self.fwupdate_task, state);
-
-#                try:
-#                except Exception as e:
-#                    self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to update firmware%s"%(e))
             else:
                 dialog.hide()
 
