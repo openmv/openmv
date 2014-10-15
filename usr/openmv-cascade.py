@@ -14,8 +14,13 @@ n_stages = int(sys.argv[2])
 #parse xml file
 xmldoc = minidom.parse(sys.argv[1])
 
+trees = xmldoc.getElementsByTagName('trees')
+max_stages = len(trees)
+if n_stages > max_stages:
+    raise Exception("The max number of stages is: %d"%(max_stages))
+
 # read stages
-stages = [len(t.childNodes)/2 for t in xmldoc.getElementsByTagName('trees')][0:n_stages]
+stages = [len(t.childNodes)/2 for t in trees][0:n_stages]
 stage_threshold = xmldoc.getElementsByTagName('stage_threshold')[0:n_stages]
 
 # total number of features
