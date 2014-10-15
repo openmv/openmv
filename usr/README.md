@@ -3,7 +3,7 @@
 ## Install libusb
 
 ### For Linux 
-```$ sudo apt-get install libusb-1.0-0```
+```$ sudo apt-get install libusb-1.0-0 python-vte```
 
 ### For Everything else
 Download and install: http://www.libusb.org/
