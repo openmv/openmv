@@ -31,6 +31,13 @@ FLASH_OFFSETS= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
                 0x08010000, 0x08020000, 0x08040000, 0x08060000,
                 0x08080000, 0x080A0000, 0x080C0000, 0x080E0000]
 
+DEFAULT_CONFIG='''\
+[main]
+board = openmv1
+serial_port = /dev/openmvcam
+recent =
+'''
+
 class OMVGtk:
     def __init__(self):
         #Set the Glade file
@@ -125,12 +132,22 @@ class OMVGtk:
         }
         self.builder.connect_signals(signals)
 
+        # create fresh config if needed
+        if not os.path.isfile(CONFIG_PATH):
+            try:
+                with open(CONFIG_PATH, "w") as f:
+                    f.write(DEFAULT_CONFIG)
+            except Exception as e:
+                print ("Failed to create config file %s"%(e))
+                sys.exit(1)
+
         # load config
         self.config = configparser.ConfigParser()
         try:
             self.config.read(CONFIG_PATH)
         except Exception as e:
             print ("Failed to open config file %s"%(e))
+            sys.exit(1)
 
         # current file path
         self.file_path= None

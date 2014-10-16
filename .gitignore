@@ -22,3 +22,8 @@
 # Build dir #
 ######################
 src/build
+
+# IDE config file #
+######################
+usr/openmv.config
+
