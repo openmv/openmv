@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE eagle SYSTEM "eagle.dtd">
+<eagle version="6.1">
+<drawing>
+<settings>
+<setting alwaysvectorfont="no"/>
+<setting verticaltext="up"/>
+</settings>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+<layers>
+<layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
+<layer number="2" name="Route2" color="1" fill="3" visible="no" active="yes"/>
+<layer number="3" name="Route3" color="4" fill="3" visible="no" active="yes"/>
+<layer number="4" name="Route4" color="1" fill="4" visible="no" active="yes"/>
+<layer number="5" name="Route5" color="4" fill="4" visible="no" active="yes"/>
+<layer number="6" name="Route6" color="1" fill="8" visible="no" active="yes"/>
+<layer number="7" name="Route7" color="4" fill="8" visible="no" active="yes"/>
+<layer number="8" name="Route8" color="1" fill="2" visible="no" active="yes"/>
+<layer number="9" name="Route9" color="4" fill="2" visible="no" active="yes"/>
+<layer number="10" name="Route10" color="1" fill="7" visible="no" active="yes"/>
+<layer number="11" name="Route11" color="4" fill="7" visible="no" active="yes"/>
+<layer number="12" name="Route12" color="1" fill="5" visible="no" active="yes"/>
+<layer number="13" name="Route13" color="4" fill="5" visible="no" active="yes"/>
+<layer number="14" name="Route14" color="1" fill="6" visible="no" active="yes"/>
+<layer number="15" name="Route15" color="4" fill="6" visible="no" active="yes"/>
+<layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="yes"/>
+<layer number="17" name="Pads" color="2" fill="1" visible="yes" active="yes"/>
+<layer number="18" name="Vias" color="2" fill="1" visible="yes" active="yes"/>
+<layer number="19" name="Unrouted" color="6" fill="1" visible="yes" active="yes"/>
+<layer number="20" name="Dimension" color="15" fill="1" visible="yes" active="yes"/>
+<layer number="21" name="tPlace" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="22" name="bPlace" color="7" fill="1" visible="no" active="yes"/>
+<layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="yes"/>
+<layer number="24" name="bOrigins" color="15" fill="1" visible="no" active="yes"/>
+<layer number="25" name="tNames" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="26" name="bNames" color="7" fill="1" visible="no" active="yes"/>
+<layer number="27" name="tValues" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="28" name="bValues" color="7" fill="1" visible="no" active="yes"/>
+<layer number="29" name="tStop" color="7" fill="3" visible="yes" active="yes"/>
+<layer number="30" name="bStop" color="7" fill="6" visible="no" active="yes"/>
+<layer number="31" name="tCream" color="7" fill="4" visible="yes" active="yes"/>
+<layer number="32" name="bCream" color="7" fill="5" visible="no" active="yes"/>
+<layer number="33" name="tFinish" color="6" fill="3" visible="no" active="yes"/>
+<layer number="34" name="bFinish" color="6" fill="6" visible="no" active="yes"/>
+<layer number="35" name="tGlue" color="7" fill="4" visible="no" active="yes"/>
+<layer number="36" name="bGlue" color="7" fill="5" visible="no" active="yes"/>
+<layer number="37" name="tTest" color="7" fill="1" visible="no" active="yes"/>
+<layer number="38" name="bTest" color="7" fill="1" visible="no" active="yes"/>
+<layer number="39" name="tKeepout" color="4" fill="11" visible="no" active="yes"/>
+<layer number="40" name="bKeepout" color="1" fill="11" visible="no" active="yes"/>
+<layer number="41" name="tRestrict" color="4" fill="10" visible="no" active="yes"/>
+<layer number="42" name="bRestrict" color="1" fill="10" visible="no" active="yes"/>
+<layer number="43" name="vRestrict" color="2" fill="10" visible="no" active="yes"/>
+<layer number="44" name="Drills" color="7" fill="1" visible="no" active="yes"/>
+<layer number="45" name="Holes" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="46" name="Milling" color="3" fill="1" visible="no" active="yes"/>
+<layer number="47" name="Measures" color="7" fill="1" visible="no" active="yes"/>
+<layer number="48" name="Document" color="7" fill="1" visible="no" active="yes"/>
+<layer number="49" name="Reference" color="7" fill="1" visible="no" active="yes"/>
+<layer number="51" name="tDocu" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="52" name="bDocu" color="7" fill="1" visible="no" active="yes"/>
+<layer number="91" name="Nets" color="2" fill="1" visible="yes" active="yes"/>
+<layer number="92" name="Busses" color="1" fill="1" visible="yes" active="yes"/>
+<layer number="93" name="Pins" color="2" fill="1" visible="yes" active="yes"/>
+<layer number="94" name="Symbols" color="4" fill="1" visible="yes" active="yes"/>
+<layer number="95" name="Names" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="96" name="Values" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="97" name="Info" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="98" name="Guide" color="6" fill="1" visible="yes" active="yes"/>
+</layers>
+<library>
+<description>&lt;b&gt;OmniVision Technologies, Inc.&lt;/b&gt;&lt;p&gt;
+www.ovt.com&lt;br&gt;
+&lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
+<packages>
+<package name="OV6920">
+<description>&lt;b&gt;CMOS Analaog NTSC CAMERACHIP (TM) Sensor with OmniPixel(R) Technology&lt;/b&gt;&lt;p&gt;
+Source: http://www.ovt.com .. OV6920_DS+(1.1).pdf</description>
+<wire x1="-1.025" y1="1.075" x2="1.025" y2="1.075" width="0.1016" layer="21"/>
+<wire x1="1.025" y1="1.075" x2="1.025" y2="-1.075" width="0.1016" layer="21"/>
+<wire x1="1.025" y1="-1.075" x2="-1.025" y2="-1.075" width="0.1016" layer="21"/>
+<wire x1="-1.025" y1="-1.075" x2="-1.025" y2="1.075" width="0.1016" layer="21"/>
+<circle x="-0.86" y="0.915" radius="0.0657" width="0" layer="21"/>
+<circle x="-0.6" y="0.54" radius="0.175" width="0" layer="29"/>
+<circle x="0" y="0.54" radius="0.175" width="0" layer="29"/>
+<circle x="0.6" y="0.54" radius="0.175" width="0" layer="29"/>
+<circle x="-0.63" y="-0.09" radius="0.175" width="0" layer="29"/>
+<circle x="-0.6" y="-0.66" radius="0.175" width="0" layer="29"/>
+<circle x="-0.03" y="-0.09" radius="0.175" width="0" layer="29"/>
+<circle x="0.57" y="-0.09" radius="0.175" width="0" layer="29"/>
+<circle x="0" y="-0.66" radius="0.175" width="0" layer="29"/>
+<circle x="0.6" y="-0.66" radius="0.175" width="0" layer="29"/>
+<smd name="A1" x="-0.6" y="0.54" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<smd name="A2" x="0" y="0.54" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<smd name="A3" x="0.6" y="0.54" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<smd name="B1" x="-0.63" y="-0.09" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<smd name="B2" x="-0.03" y="-0.09" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<smd name="B3" x="0.57" y="-0.09" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<smd name="C1" x="-0.6" y="-0.66" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<smd name="C2" x="0" y="-0.66" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<smd name="C3" x="0.6" y="-0.66" dx="0.3" dy="0.3" layer="1" roundness="100" stop="no" cream="no"/>
+<text x="-1.27" y="1.27" size="1.27" layer="25">&gt;NAME</text>
+<text x="-1.27" y="-2.54" size="1.27" layer="27">&gt;VALUE</text>
+<rectangle x1="-0.255" y1="-0.095" x2="0.565" y2="0.53" layer="51"/>
+</package>
+<package name="LENSMOUNT">
+<hole x="-10" y="0" drill="2"/>
+<hole x="10" y="0" drill="2"/>
+<wire x1="-8" y1="-8" x2="-8" y2="8" width="0.127" layer="21"/>
+<wire x1="-8" y1="8" x2="8" y2="8" width="0.127" layer="21"/>
+<wire x1="8" y1="8" x2="8" y2="-8" width="0.127" layer="21"/>
+<wire x1="8" y1="-8" x2="-8" y2="-8" width="0.127" layer="21"/>
+<circle x="0" y="0" radius="14.25" width="0.127" layer="21"/>
+</package>
+</packages>
+<symbols>
+<symbol name="OV6920">
+<wire x1="-10.16" y1="12.7" x2="10.16" y2="12.7" width="0.254" layer="94"/>
+<wire x1="10.16" y1="12.7" x2="10.16" y2="-10.16" width="0.254" layer="94"/>
+<wire x1="10.16" y1="-10.16" x2="-10.16" y2="-10.16" width="0.254" layer="94"/>
+<wire x1="-10.16" y1="-10.16" x2="-10.16" y2="12.7" width="0.254" layer="94"/>
+<text x="-10.16" y="13.97" size="1.778" layer="95">&gt;NAME</text>
+<text x="-10.16" y="-12.7" size="1.778" layer="96">&gt;VALUE</text>
+<pin name="XCLK1" x="-12.7" y="5.08" length="short" direction="in"/>
+<pin name="XCLK2" x="-12.7" y="2.54" length="short" direction="out"/>
+<pin name="SIO_C" x="-12.7" y="-2.54" length="short" direction="in"/>
+<pin name="SIO_D" x="-12.7" y="-5.08" length="short"/>
+<pin name="VTO" x="12.7" y="0" length="short" direction="out" rot="R180"/>
+<pin name="AVDD" x="12.7" y="10.16" length="short" direction="in" rot="R180"/>
+<pin name="DVDD" x="-12.7" y="10.16" length="short" direction="in"/>
+<pin name="DGND/AGND" x="12.7" y="-7.62" length="short" direction="in" rot="R180"/>
+<pin name="VREF2" x="12.7" y="5.08" length="short" direction="in" rot="R180"/>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="OV6920" prefix="IC">
+<description>&lt;b&gt;CMOS Analaog NTSC CAMERACHIP (TM) Sensor with OmniPixel(R) Technology&lt;/b&gt;&lt;p&gt;
+Source: http://www.ovt.com .. OV6920_DS+(1.1).pdf</description>
+<gates>
+<gate name="G$1" symbol="OV6920" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="OV6920">
+<connects>
+<connect gate="G$1" pin="AVDD" pad="A1"/>
+<connect gate="G$1" pin="DGND/AGND" pad="B1"/>
+<connect gate="G$1" pin="DVDD" pad="C2"/>
+<connect gate="G$1" pin="SIO_C" pad="B2"/>
+<connect gate="G$1" pin="SIO_D" pad="A3"/>
+<connect gate="G$1" pin="VREF2" pad="A2"/>
+<connect gate="G$1" pin="VTO" pad="C1"/>
+<connect gate="G$1" pin="XCLK1" pad="C3"/>
+<connect gate="G$1" pin="XCLK2" pad="B3"/>
+</connects>
+<technologies>
+<technology name="">
+<attribute name="MF" value="" constant="no"/>
+<attribute name="MPN" value="" constant="no"/>
+<attribute name="OC_FARNELL" value="unknown" constant="no"/>
+<attribute name="OC_NEWARK" value="unknown" constant="no"/>
+</technology>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="LENSMOUNT">
+<gates>
+</gates>
+<devices>
+<device name="" package="LENSMOUNT">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
+</drawing>
+</eagle>
