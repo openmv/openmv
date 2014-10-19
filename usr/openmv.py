@@ -76,10 +76,8 @@ def release():
 
 def fb_to_arr(buff, bpp):
     if bpp == 1:
-        r = np.fromstring(buff, dtype=np.uint8)
-        g = np.fromstring(buff, dtype=np.uint8)
-        b = np.fromstring(buff, dtype=np.uint8)
-        return np.column_stack((r,g,b))
+        y = np.fromstring(buff, dtype=np.uint8)
+        return np.column_stack((y, y, y))
     else:
         arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
         r = (((arr & 0xF800) >>11)*255.0/31.0).astype(np.uint8)
@@ -111,7 +109,7 @@ def fb_dump():
     __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
     buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
 
-    if (size[2] > 2):
+    if (size[2] > 2): # JPEG
         try:
             #print(size[0], size[1], size[2])
             #__write_img(buff, "/tmp/swap.jpeg")
@@ -123,10 +121,10 @@ def fb_dump():
 
         if (buff.size != (size[0]*size[1]*3)):
             return None
+    else:  # GS/RGB565
+        buff = fb_to_arr(buff, size[2])
 
-        return (size[0], size[1], buff)
-    else:
-        return (size[0], size[1], fb_to_arr(buff, size[2]))
+    return (size[0], size[1], buff.reshape((size[1], size[0], 3)))
 
 def fb_update():
     __dev.ctrl_transfer(0x41, __USBDBG_FRAME_UPDATE, 0, __INTERFACE, None, __TIMEOUT)

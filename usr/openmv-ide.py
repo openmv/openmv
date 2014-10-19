@@ -10,7 +10,6 @@ import vte
 import serial
 import usb.core
 import usb.util
-import numpy as np
 from os.path import expanduser
 try:
     # 3.x name
@@ -410,11 +409,12 @@ class OMVGtk:
         except Exception as e:
             self.disconnect()
             self._update_title()
+            print("%s"%(e))
             return True
 
         if fb:
-            # convert to RGB888 and blit
-            self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2].reshape((fb[1], fb[0], 3)), gtk.gdk.COLORSPACE_RGB, 8)
+            # create pixbuf from np array
+            self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2], gtk.gdk.COLORSPACE_RGB, 8)
             self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
 
             self.drawingarea.realize();
