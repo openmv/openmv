@@ -216,11 +216,11 @@ static const uint8_t svga_regs[][2] = {
         { COM1,    0x0A }, /* UXGA=0x0F, SVGA=0x0A, CIF=0x06 */
         { REG32,   0x09 }, /* UXGA=0x36, SVGA/CIF=0x09 */
 
-        { HSTART,  0x11 }, /* UXGA=0x11, SVGA/CIS=0x11 */
+        { HSTART,  0x11 }, /* UXGA=0x11, SVGA/CIF=0x11 */
         { HSTOP,   0x43 }, /* UXGA=0x75, SVGA/CIF=0x43 */
 
         { VSTART,  0x00 }, /* UXGA=0x01, SVGA/CIF=0x00 */
-        { VSTOP,   0x4b }, /* UXGA=0x97, SVGA/CIS=0x4b */
+        { VSTOP,   0x4b }, /* UXGA=0x97, SVGA/CIF=0x4b */
         { 0x3d,    0x38 }, /* UXGA=0x34, SVGA/CIF=0x38 */
 
         { 0x35,    0xda },
@@ -273,11 +273,11 @@ static const uint8_t uxga_regs[][2] = {
         { COM1,    0x0F }, /* UXGA=0x0F, SVGA=0x0A, CIF=0x06 */
         { REG32,   0x36 }, /* UXGA=0x36, SVGA/CIF=0x09 */
 
-        { HSTART,  0x11 }, /* UXGA=0x11, SVGA/CIS=0x11 */
+        { HSTART,  0x11 }, /* UXGA=0x11, SVGA/CIF=0x11 */
         { HSTOP,   0x75 }, /* UXGA=0x75, SVGA/CIF=0x43 */
 
         { VSTART,  0x01 }, /* UXGA=0x01, SVGA/CIF=0x00 */
-        { VSTOP,   0x97 }, /* UXGA=0x97, SVGA/CIS=0x4b */
+        { VSTOP,   0x97 }, /* UXGA=0x97, SVGA/CIF=0x4b */
         { 0x3d,    0x34 }, /* UXGA=0x34, SVGA/CIF=0x38 */
 
         { 0x35,    0x88 },
