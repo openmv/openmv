@@ -211,7 +211,8 @@ int freak_save_descriptor(kp_t *kpts, int kpts_size, const char *path);
 int freak_load_descriptor(kp_t **kpts_out, int *kpts_size_out, const char *path);
 
 /* LBP Operator */
-uint8_t *imlib_lbp_desc(image_t *image);
+void imlib_lbp_desc(image_t *image, int div, uint8_t *desc, rectangle_t *roi);
+uint8_t *imlib_lbp_cascade(image_t *image, rectangle_t *roi);
 int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1);
 int imlib_lbp_desc_load(const char *path, uint8_t **desc);
 

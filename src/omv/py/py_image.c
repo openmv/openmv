@@ -359,6 +359,7 @@ static mp_obj_t py_image_binary(mp_obj_t image_obj, mp_obj_t threshold)
 
     return mp_const_none;
 }
+
 static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, mp_obj_t threshold)
 {
     color_t *color;
@@ -587,9 +588,6 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
     /* MP List */
     mp_obj_t objects_list = mp_const_none;
 
-    /* sanity checks */
-    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_RGB565);
-
      /* get image pointer */
     image = py_image_cobj(image_obj);
 
@@ -755,7 +753,7 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     return mp_const_none;
 }
 
-static mp_obj_t py_image_find_lbp(mp_obj_t image_obj)
+static mp_obj_t py_image_find_lbp(mp_obj_t image_obj, mp_obj_t roi_obj)
 {
     image_t *image;
     py_lbp_obj_t *lbp_obj;
@@ -763,9 +761,19 @@ static mp_obj_t py_image_find_lbp(mp_obj_t image_obj)
     image = py_image_cobj(image_obj);
     PY_ASSERT_TRUE(image->bpp == 1);
 
+    mp_obj_t *array;
+    mp_obj_get_array_fixed_n(roi_obj, 4, &array);
+
+    rectangle_t roi = {
+        mp_obj_get_int(array[0]),
+        mp_obj_get_int(array[1]),
+        mp_obj_get_int(array[2]),
+        mp_obj_get_int(array[3]),
+    };
+
     lbp_obj = m_new_obj(py_lbp_obj_t);
     lbp_obj->base.type = &py_lbp_type;
-    lbp_obj->hist = imlib_lbp_desc(image);
+    lbp_obj->hist = imlib_lbp_cascade(image, &roi);
     return lbp_obj;
 }
 
@@ -930,7 +938,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_lbp_obj, py_image_find_lbp);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_match_lbp_obj, py_image_match_lbp);
 
