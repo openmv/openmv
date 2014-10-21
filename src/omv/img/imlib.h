@@ -183,6 +183,8 @@ void imlib_median_filter(image_t *src, int r);
 void imlib_erode(image_t *src, int ksize);
 void imlib_dilate(image_t *src, int ksize);
 void imlib_morph(image_t *src, uint8_t *kernel, int k_size);
+void imlib_invert(image_t *src);
+void imlib_binary(image_t *src, int threshold);
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold);
 void imlib_rainbow(image_t *src, struct image *dst);
 array_t *imlib_count_blobs(struct image *image);

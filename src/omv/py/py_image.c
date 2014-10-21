@@ -329,6 +329,36 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     return mp_const_none;
 }
 
+static mp_obj_t py_image_invert(mp_obj_t image_obj)
+{
+    image_t *image;
+    image = py_image_cobj(image_obj);
+
+    /* Sanity checks */
+    PY_ASSERT_TRUE(image->bpp == 1);
+
+    /* Threshold image */
+    imlib_invert(image);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_binary(mp_obj_t image_obj, mp_obj_t threshold)
+{
+    image_t *image;
+
+    /* sanity checks */
+    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QCIF);
+    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+
+    /* read arguments */
+    image = py_image_cobj(image_obj);
+    int thresh = mp_obj_get_int(threshold);
+
+    /* Threshold image */
+    imlib_binary(image, thresh);
+
+    return mp_const_none;
+}
 static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, mp_obj_t threshold)
 {
     color_t *color;
@@ -881,6 +911,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj, py_image_blit);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blend_obj, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 1, py_image_median);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_invert_obj, py_image_invert);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_binary_obj, py_image_binary);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj, py_image_threshold);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rainbow_obj, py_image_rainbow);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_erode_obj, py_image_erode);
@@ -914,6 +946,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invert),              (mp_obj_t)&py_image_invert_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_binary),              (mp_obj_t)&py_image_binary_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_threshold),           (mp_obj_t)&py_image_threshold_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_rainbow),             (mp_obj_t)&py_image_rainbow_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_erode),               (mp_obj_t)&py_image_erode_obj},

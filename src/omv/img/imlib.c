@@ -234,6 +234,21 @@ void imlib_morph(struct image *src, uint8_t *kernel, int ksize)
 
 }
 
+void imlib_invert(image_t *src)
+{
+    int size = src->w*src->h;
+    for (int i=0; i<size; i++) {
+        src->pixels[i] = ~src->pixels[i];
+    }
+}
+
+void imlib_binary(image_t *src, int threshold)
+{
+    int size = src->w*src->h;
+    for (int i=0; i<size; i++) {
+        src->pixels[i] = (src->pixels[i]>threshold? 255:0);
+    }
+}
 
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
 {
