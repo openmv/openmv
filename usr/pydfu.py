@@ -239,7 +239,7 @@ def consume(fmt, data, names):
 
 def cstring(string):
     """Extracts a null-terminated string from a byte array."""
-    return string.split('\0', 1)[0]
+    return string.decode('utf-8').split('\0', 1)[0]
 
 
 def compute_crc(data):
