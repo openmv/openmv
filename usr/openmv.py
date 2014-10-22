@@ -10,7 +10,7 @@ import sys,time
 import usb.core
 import usb.util
 import pydfu
-import numpy as np
+from array import array
 from PIL import Image
 
 __dev = None
@@ -74,16 +74,8 @@ def release():
     except:
         pass
 
-def fb_to_arr(buff, bpp):
-    if bpp == 1:
-        y = np.fromstring(buff, dtype=np.uint8)
-        return np.column_stack((y, y, y))
-    else:
-        arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
-        r = (((arr & 0xF800) >>11)*255.0/31.0).astype(np.uint8)
-        g = (((arr & 0x07E0) >>5) *255.0/63.0).astype(np.uint8)
-        b = (((arr & 0x001F) >>0) *255.0/31.0).astype(np.uint8)
-        return np.column_stack((r,g,b))
+def _rgb(rgb):
+    return struct.pack("BBB", ((rgb & 0xF800)>>11)*255/31, ((rgb & 0x07E0)>>5)*255/63, (rgb & 0x001F)*255/31)
 
 def fb_size():
     # read fb header
@@ -109,22 +101,26 @@ def fb_dump():
     __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
     buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
 
-    if (size[2] > 2): # JPEG
+    if size[2] == 1:  # Grayscale
+        s = buff.tostring()
+        buff = ''.join([y for yyy in zip(s, s, s) for y in yyy])
+    elif size[2] == 2: #RGB565
+        arr = array('H', buff.tostring())
+        arr.byteswap()
+        buff = ''.join(map(_rgb, arr))
+    else: # JPEG
         try:
             #print(size[0], size[1], size[2])
             #__write_img(buff, "/tmp/swap.jpeg")
-            img = Image.frombuffer("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "")
-            buff = np.fromstring(img.tostring(), dtype=np.uint8)
+            buff = Image.frombuffer("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "").tostring()
         except Exception as e:
             print ("JPEG decode error (%s)"%(e))
             sys.exit(0)
 
-        if (buff.size != (size[0]*size[1]*3)):
+        if (len(buff) != (size[0]*size[1]*3)):
             return None
-    else:  # GS/RGB565
-        buff = fb_to_arr(buff, size[2])
 
-    return (size[0], size[1], buff.reshape((size[1], size[0], 3)))
+    return (size[0], size[1], buff)
 
 def fb_update():
     __dev.ctrl_transfer(0x41, __USBDBG_FRAME_UPDATE, 0, __INTERFACE, None, __TIMEOUT)
