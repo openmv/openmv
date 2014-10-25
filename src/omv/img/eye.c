@@ -1,0 +1,146 @@
+/*
+* This file is part of the OpenMV project.
+* Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+* This work is licensed under the MIT license, see the file LICENSE for details.
+*
+* Pupil localization using image gradients.
+* See Fabian Timm's paper.
+*
+*/
+#include "imlib.h"
+#include "xalloc.h"
+#include "fmath.h"
+
+static void imlib_find_gradients(image_t *src, array_t *gradients, int x_off, int y_off, int box_w, int box_h)
+{
+    for (int y=y_off; y<y_off+box_h-3; y++) {
+        for (int x=x_off; x<x_off+box_w-3; x++) {
+            int vx=0, vy=0, w=src->w;
+            // sobel_kernel
+            vx  = src->data[(y+0)*w+x+0]
+                - src->data[(y+0)*w+x+2]
+                + (src->data[(y+1)*w+x+0]<<1)
+                - (src->data[(y+1)*w+x+2]<<1)
+                + src->data[(y+2)*w+x+0]
+                - src->data[(y+2)*w+x+2];
+
+            // sobel_kernel
+            vy  = src->data[(y+0)*w+x+0]
+                + (src->data[(y+0)*w+x+1]<<1)
+                + src->data[(y+0)*w+x+2]
+                - src->data[(y+2)*w+x+0]
+                - (src->data[(y+2)*w+x+1]<<1)
+                - src->data[(y+2)*w+x+2];
+
+            float m = fast_sqrtf(vx*vx+vy*vy);
+            if (m>200) {
+                vec_t *v = xalloc(sizeof(vec_t));
+                v->m = m;
+                v->x = vx/m;
+                v->y = vy/m;
+                v->cx = x+1;
+                v->cy = y+1;
+                array_push_back(gradients, v);
+            }
+        }
+    }
+}
+
+static void imlib_find_pupil(image_t *src, array_t *gradients, int x_off, int y_off, int box_w, int box_h, point_t *e)
+{
+    int max_x=0;
+    int max_y=0;
+    float max_dot = 0.0f;
+
+//    rectangle_t r = {x_off, y_off, box_w, box_h};
+//    imlib_draw_rectangle(src, &r);
+
+    for (int y=y_off; y<y_off+box_h; y++) {
+        for (int x=x_off; x<x_off+box_w; x++) {
+            float sum_dot=0.0f;
+            for (int i=0; i<array_length(gradients); i++) {
+                // get gradient vector  g
+                vec_t *v = (vec_t *) array_at(gradients, i);
+
+                // get vector from gradient to centor d
+                vec_t d ={x-v->cx, y-v->cy};
+
+                // normalize d vector
+                float m = fast_sqrtf(d.x*d.x+d.y*d.y);
+                d.x = d.x/m;
+                d.y = d.y/m;
+
+                // compute the dot product d.g
+                float t = (d.x*v->x)+(d.y*v->y);
+
+                // d,g should point the same direction
+                if (t>0.0) {
+                    // dark centres are more likely to be pupils than
+                    // bright centres, so we use the grayscale value as weight.
+                    sum_dot += t*t*(255-src->data[y*src->w+x]);
+                }
+            }
+            sum_dot=sum_dot/array_length(gradients);
+
+            if (sum_dot > max_dot) {
+                max_dot = sum_dot;
+                max_x = x;
+                max_y = y;
+            }
+        }
+    }
+
+    e->x = max_x;
+    e->y = max_y;
+}
+
+// TODO use the gradients median not average
+static void imlib_filter_gradients(array_t *gradients)
+{
+    float total_m=0.0f;
+    for (int i=0; i<array_length(gradients); i++) {
+        vec_t *v = (vec_t *) array_at(gradients, i);
+        total_m += v->m;
+    }
+
+    float avg_m = total_m/array_length(gradients);
+
+    for (int i=0; i<array_length(gradients); i++) {
+        vec_t *v = (vec_t *) array_at(gradients, i);
+        float diff =(v->m-avg_m) * (v->m-avg_m);
+        if (fast_sqrtf(diff)>100) {
+            array_erase(gradients, i);
+        }
+    }
+}
+
+void imlib_find_eyes(image_t *src, point_t *left, point_t *right, rectangle_t *roi)
+{
+    array_t *left_gradients, *right_gradients;
+    array_alloc(&left_gradients, xfree);
+    array_alloc(&right_gradients, xfree);
+
+    int box_w = roi->w/3;
+    int box_h = roi->h/4;
+
+    int l_x_off = roi->x+((int)(0.15f*roi->w));
+    int l_y_off = roi->y+((int)(0.30f*roi->h));
+
+    int r_x_off = roi->x+((int)(0.55f*roi->w));
+    int r_y_off = roi->y+((int)(0.30f*roi->h));
+
+    // find gradients with strong magnitudes
+    imlib_find_gradients(src, left_gradients,  l_x_off, l_y_off, box_w, box_h);
+    imlib_find_gradients(src, right_gradients, r_x_off, r_y_off, box_w, box_h);
+
+    // filter gradients
+    imlib_filter_gradients(left_gradients);
+    imlib_filter_gradients(right_gradients);
+
+    // search for pupils
+    imlib_find_pupil(src, left_gradients,  l_x_off, l_y_off, box_w, box_h, left);
+    imlib_find_pupil(src, right_gradients, r_x_off, r_y_off, box_w, box_h, right);
+
+    array_free(left_gradients);
+    array_free(right_gradients);
+}

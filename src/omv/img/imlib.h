@@ -80,24 +80,12 @@ typedef struct integral_image {
     uint32_t *data;
 } i_image_t;
 
-typedef struct {
-    union {
-        struct {
-            uint8_t c0;
-            uint8_t c1;
-            uint8_t c2;
-            uint8_t c3;
-        };
-
-        struct {
-            uint16_t s0;
-            uint16_t s1;
-        };
-        struct {
-            uint32_t i;
-        };
-    };
-}vec_t;
+typedef struct _vector {
+    float x;
+    float y;
+    float m;
+    uint16_t cx,cy;
+} vec_t;
 
 typedef struct cluster {
     array_t *points;
@@ -215,6 +203,9 @@ void imlib_lbp_desc(image_t *image, int div, uint8_t *desc, rectangle_t *roi);
 uint8_t *imlib_lbp_cascade(image_t *image, rectangle_t *roi);
 int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1);
 int imlib_lbp_desc_load(const char *path, uint8_t **desc);
+
+/* Eye detector */
+void imlib_find_eyes(image_t *src, point_t *left, point_t *right, rectangle_t *roi);
 
 /* Drawing functions */
 void imlib_draw_rectangle(struct image *image, struct rectangle *r);

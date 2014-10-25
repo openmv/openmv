@@ -46,6 +46,7 @@ SRCS += $(addprefix img/,   \
 	font.c                  \
 	jpeg.c                  \
 	lbp.c                   \
+	eye.c                   \
    )
 
 SRCS += $(addprefix py/,    \

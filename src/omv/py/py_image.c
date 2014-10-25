@@ -777,6 +777,36 @@ static mp_obj_t py_image_find_lbp(mp_obj_t image_obj, mp_obj_t roi_obj)
     return lbp_obj;
 }
 
+static mp_obj_t py_image_find_eyes(mp_obj_t image_obj, mp_obj_t roi_obj)
+{
+    image_t *image;
+
+    image = py_image_cobj(image_obj);
+    PY_ASSERT_TRUE(image->bpp == 1);
+
+    mp_obj_t *array;
+    mp_obj_get_array_fixed_n(roi_obj, 4, &array);
+
+    rectangle_t roi = {
+        mp_obj_get_int(array[0]),
+        mp_obj_get_int(array[1]),
+        mp_obj_get_int(array[2]),
+        mp_obj_get_int(array[3]),
+    };
+
+    point_t l={0}, r={0};
+    imlib_find_eyes(image, &l, &r, &roi);
+
+    mp_obj_t eyes_obj[4] = {
+        mp_obj_new_int(l.x),
+        mp_obj_new_int(l.y),
+        mp_obj_new_int(r.x),
+        mp_obj_new_int(r.y),
+    };
+
+    return mp_obj_new_tuple(4, eyes_obj);
+}
+
 static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
 {
     image_t *image = py_image_cobj(args[0]);
@@ -939,6 +969,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_templ
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eyes_obj, py_image_find_eyes);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_match_lbp_obj, py_image_match_lbp);
 
@@ -976,6 +1007,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_features),       (mp_obj_t)&py_image_find_features_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lbp),            (mp_obj_t)&py_image_find_lbp_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_eyes),           (mp_obj_t)&py_image_find_eyes_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_match_keypoints),     (mp_obj_t)&py_image_match_keypoints_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_match_lbp),           (mp_obj_t)&py_image_match_lbp_obj},
 
