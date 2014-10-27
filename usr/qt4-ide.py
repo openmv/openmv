@@ -179,29 +179,6 @@ class OpenMVIDE(QMainWindow):
         # Frame buffer
         self.image = None
 
-        # Menu Bar
-        menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu('&File')
-        file_menu.addAction(self.new_action)
-        file_menu.addAction(self.open_action)
-        file_menu.addAction(self.save_action)
-        file_menu.addAction(self.save_as_action)
-        file_menu.addSeparator()
-        self.example_menu = QMenu('Examples')
-        self.recent_menu = QMenu('Recent')
-        file_menu.addMenu(self.example_menu)
-        file_menu.addMenu(self.recent_menu)
-        file_menu.addSeparator()
-        file_menu.addAction(self.exit_action)
-
-        # Dynamically update dyanmic menus
-        file_menu.aboutToShow.connect(self.update_example_menu)
-        file_menu.aboutToShow.connect(self.update_recent_menu)
-
-        # Connect dynamic menu items with correct handlers
-        self.example_menu.triggered.connect(self.do_open_example)
-        self.recent_menu.triggered.connect(self.do_open_recent)
-
         self.default_height = 600
         self.default_width = 800
 
@@ -243,6 +220,48 @@ class OpenMVIDE(QMainWindow):
         w = QWidget()
         w.setLayout(vbox)
         self.setCentralWidget(w)
+
+        ############################################################################################################
+        # Menus
+        menu_bar = self.menuBar()
+        file_menu = menu_bar.addMenu('&File')
+        file_menu.addAction(self.new_action)
+        file_menu.addAction(self.open_action)
+        file_menu.addAction(self.save_action)
+        file_menu.addAction(self.save_as_action)
+        file_menu.addSeparator()
+        self.example_menu = QMenu('Examples')
+        self.recent_menu = QMenu('Recent')
+        file_menu.addMenu(self.example_menu)
+        file_menu.addMenu(self.recent_menu)
+        file_menu.addSeparator()
+        file_menu.addAction(self.exit_action)
+
+        edit_menu = menu_bar.addMenu('&Edit')
+        self.cut_action = QAction(QIcon(self.icon_dir+'Cut.png'), 'Cut', self)
+        self.cut_action.triggered.connect(self.editor.cut)
+        self.cut_action.setShortcut(QKeySequence.Cut)
+        edit_menu.addAction(self.cut_action)
+
+        self.copy_action = QAction(QIcon(self.icon_dir+'Copy.png'), 'Copy', self)
+        self.copy_action.triggered.connect(self.editor.copy)
+        self.copy_action.setShortcut(QKeySequence.Copy)
+        edit_menu.addAction(self.copy_action)
+
+        self.paste_action = QAction(QIcon(self.icon_dir+'Paste.png'), 'Paste', self)
+        self.paste_action.triggered.connect(self.editor.paste)
+        self.paste_action.setShortcut(QKeySequence.Paste)
+        edit_menu.addAction(self.paste_action)
+
+        help_menu = menu_bar.addMenu('&Help')
+
+        # Dynamically update dyanmic menus
+        file_menu.aboutToShow.connect(self.update_example_menu)
+        file_menu.aboutToShow.connect(self.update_recent_menu)
+
+        # Connect dynamic menu items with correct handlers
+        self.example_menu.triggered.connect(self.do_open_example)
+        self.recent_menu.triggered.connect(self.do_open_recent)
 
         # UI Statuses
         self.update_ui()
@@ -435,11 +454,12 @@ class OpenMVIDE(QMainWindow):
         self.running = False
         self.update_ui()
 
-    def check_modified(self, event):
+    def check_modified(self):
         result = True
         if self.editor.document().isModified():
             msg = QMessageBox(self)
             msg.setText('The document has been modified.')
+            msg.setIcon(QMessageBox.Warning)
             msg.setInformativeText('Do you want to save your changes?')
             msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
             msg.setDefaultButton(QMessageBox.Save)
@@ -456,14 +476,14 @@ class OpenMVIDE(QMainWindow):
                 print('%s' % ret)
         return result
 
-    def do_new(self, event):
-        if self.check_modified(event):
+    def do_new(self):
+        if self.check_modified():
             self.editor.setPlainText('')
             self.filename = ''
             self.update_ui()
 
-    def do_open(self, event):
-        if self.check_modified(event):
+    def do_open(self):
+        if self.check_modified():
             if os.path.exists(self.script_dir):
                 my_dir = self.script_dir
             else:
@@ -526,7 +546,6 @@ class OpenMVIDE(QMainWindow):
                     #label = os.path.basename(f)
 
     def update_recent_menu(self):
-        print('recent')
         self.recent_menu.clear()
         for f in self.recent:
             print(f)
@@ -534,18 +553,21 @@ class OpenMVIDE(QMainWindow):
 
     def do_open_example(self, action):
         assert isinstance(action, QAction)
-        self.open_file(self.example_dir + action.text())
+        if self.check_modified():
+            self.open_file(self.example_dir + action.text())
 
     def do_open_recent(self, action):
         assert isinstance(action, QAction)
-        self.open_file(action.text())
+        if self.check_modified():
+            self.open_file(action.text())
 
     def do_quit(self):
         # TODO: check for file save status
-        if self.connected:
-            self.do_disconnect()
-        self.framebuffer.quit()
-        QApplication.quit()
+        if self.check_modified():
+            if self.connected:
+                self.do_disconnect()
+            self.framebuffer.quit()
+            QApplication.quit()
 
     def do_zoom_in(self):
         self.framebuffer.increase_scale(0.5)
