@@ -184,8 +184,14 @@ class OpenMVIDE(QMainWindow):
         file_menu.addMenu(self.recent_menu)
         file_menu.addSeparator()
         file_menu.addAction(self.exit_action)
+
+        # Dynamically update dyanmic menus
         file_menu.aboutToShow.connect(self.update_example_menu)
         file_menu.aboutToShow.connect(self.update_recent_menu)
+
+        # Connect dynamic menu items with correct handlers
+        self.example_menu.triggered.connect(self.do_open_example)
+        self.recent_menu.triggered.connect(self.do_open_recent)
 
         self.default_height = 600
         self.default_width = 800
@@ -433,7 +439,9 @@ class OpenMVIDE(QMainWindow):
             files = sorted(os.listdir(self.example_dir))
             for f in files:
                 if f.endswith(".py"):
-                    self.example_menu.addAction(QAction(f, self))
+                    action = QAction(f, self)
+                    self.example_menu.addAction(action)
+
                     #label = os.path.basename(f)
 
     def update_recent_menu(self):
@@ -442,6 +450,14 @@ class OpenMVIDE(QMainWindow):
         for f in self.recent:
             print(f)
             self.recent_menu.addAction(QAction(f, self))
+
+    def do_open_example(self, action):
+        assert isinstance(action, QAction)
+        self.open_file(self.example_dir + action.text())
+
+    def do_open_recent(self, action):
+        assert isinstance(action, QAction)
+        self.open_file(action.text())
 
     def do_open(self):
         # TODO: Check for save-as first
@@ -454,6 +470,9 @@ class OpenMVIDE(QMainWindow):
                                                caption=self.tr('Open Micro Python Script'),
                                                directory=my_dir,
                                                filter=self.tr("Python scripts (*.py)"))
+        self.open_file(filename)
+
+    def open_file(self, filename):
         if filename:
             try:
                 infile = open(filename, 'r')
