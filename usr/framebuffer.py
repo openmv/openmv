@@ -3,11 +3,12 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import numpy
 import openmv
+from usb.core import USBError
 
 
 class FrameBuffer(QLabel):
 
-    error = pyqtSignal()
+    error = pyqtSignal(int)
 
     error_detected = False
 
@@ -42,7 +43,7 @@ class FrameBuffer(QLabel):
             self.thread.quit()
             self.thread.wait(500)
         except QErrorMessage as e:
-            print('error quitting ImageUpdater %s' % e.message)
+            print('FrameBuffer error quitting %s' % e.message)
 
     def start_updater(self):
         #print 'start_updater %s' % QThread.currentThreadId()
@@ -54,11 +55,12 @@ class FrameBuffer(QLabel):
         self.timer.stop()
 
     def do_error(self, error):
+        assert isinstance(Exception)
         if not self.error_detected:
             self.error_detected = True
             self.stop_updater()
-            self.error.emit()
-            print('IOError dumping frame buffer: %s' % error)
+            self.error.emit(error)
+            print('FrameBuffer IOError dumping frame buffer: %s' % error)
 
     def do_update(self, image):
         #print 'do_update %s' % QThread.currentThreadId()
@@ -90,6 +92,7 @@ class ImageUpdater(QObject):
     update = pyqtSignal(QImage)
     stop = pyqtSignal()
     error = pyqtSignal(str)
+    jpeg_error = pyqtSignal()
 
     def __init__(self):
         QObject.__init__(self)
@@ -98,7 +101,10 @@ class ImageUpdater(QObject):
     def do_process(self):
         try:
             b = openmv.fb_get()
-
+        except (IOError, USBError) as e:
+            print 'ImageUpdater IOError %s' % e
+            self.error.emit(e.errno)
+        else:
             if b:
                 fmt = b[0]
                 w = b[1]
@@ -109,15 +115,12 @@ class ImageUpdater(QObject):
 
                 if fmt == openmv.FORMAT_JPEG:
                     ## JPEG decoding required
-                    try:
-                        img = QImage(w, h, QImage.Format_ARGB32)
-                        buff = string.join(map(lambda z: '%c' % z, buff), '')
-                        if not img.loadFromData(buff, 'JPG'):
-                            print('JPEG decode error')
-                    except ValueError as e:
-                        pass
-                        img = None
-                        print('JPEG decode error: %s' % e.message)
+                    img = QImage(w, h, QImage.Format_ARGB32)
+                    buff = string.join(map(lambda z: '%c' % z, buff), '')
+                    if not img.loadFromData(buff, 'JPG'):
+                        print('ImageUpdater JPEG decode error')
+                        self.jpeg_error.emit()
+
                 elif fmt == openmv.FORMAT_GRAY:
                     ## We've got a grayscale image
                     img = QImage(w, h, QImage.Format_ARGB32)
@@ -134,12 +137,9 @@ class ImageUpdater(QObject):
                     buff = numpy.frombuffer(buff, dtype=numpy.uint16).byteswap()
                     img = QImage(buff, w, h, QImage.Format_RGB16)
                 else:
-                    print('unknown image format')
+                    print('ImageUpdater unknown image format')
 
                 if img:
                     self.image = img
                     self.update.emit(self.image)
 
-        except IOError as e:
-            pass
-            self.error.emit(e.message)
