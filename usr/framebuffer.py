@@ -24,7 +24,7 @@ class FrameBuffer(QLabel):
         # update image whenever the updater tells us to
         self.updater.update.connect(self.do_update)
         # handle errors sent from the updater
-        self.updater.error.connect(self.do_error)
+        self.updater.error.connect(self.handle_error)
         # move updater into its own thread
         self.updater.moveToThread(self.thread)
         # start the thread
@@ -54,12 +54,12 @@ class FrameBuffer(QLabel):
         #print 'stop_updater %s' % QThread.currentThreadId()
         self.timer.stop()
 
-    def do_error(self, error):
-        assert isinstance(Exception)
+    def handle_error(self, error):
+        assert isinstance(error, Exception)
         if not self.error_detected:
             self.error_detected = True
             self.stop_updater()
-            self.error.emit(error)
+            self.error.emit(error.errno)
             print('FrameBuffer IOError dumping frame buffer: %s' % error)
 
     def do_update(self, image):
@@ -91,7 +91,7 @@ class FrameBuffer(QLabel):
 class ImageUpdater(QObject):
     update = pyqtSignal(QImage)
     stop = pyqtSignal()
-    error = pyqtSignal(str)
+    error = pyqtSignal(Exception)
     jpeg_error = pyqtSignal()
 
     def __init__(self):
@@ -103,7 +103,7 @@ class ImageUpdater(QObject):
             b = openmv.fb_get()
         except (IOError, USBError) as e:
             print 'ImageUpdater IOError %s' % e
-            self.error.emit(e.errno)
+            self.error.emit(e)
         else:
             if b:
                 fmt = b[0]
