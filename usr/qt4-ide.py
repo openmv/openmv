@@ -41,15 +41,19 @@ class OpenMVIDE(QMainWindow):
     def __init__(self):
         super(OpenMVIDE, self).__init__()
 
+        ############################################################################################################
+        ## Connector detector
+
         # Connector detects camera connect/disconnect
         self.connector = OpenMVConnector()
         self.connector.start()
+
         # Catch connect / disconnect notifications
         self.connector.found.connect(self.do_connect)
         self.connector.not_found.connect(self.do_disconnect)
 
         ############################################################################################################
-        # State variables
+        ## State variables
 
         # Connect status
         self.connected = False
@@ -88,8 +92,29 @@ class OpenMVIDE(QMainWindow):
         # default auto flash behavior
         self.auto_flash = True
 
+        # Frame buffer
+        self.image = None
+
+        # Geometry
+        self.default_height = 600
+        self.default_width = 800
+
         ############################################################################################################
-        # Actions
+        ## Components
+
+        # Editor
+        self.editor = PyEditor(self)
+        self.editor.setMinimumWidth(300)
+        self.editor.setMinimumHeight(200)
+        self.editor.document().contentsChanged.connect(self.update_ui)
+
+        # FrameBuffer
+        self.framebuffer = FrameBuffer()
+        self.framebuffer.show()
+        self.framebuffer.error.connect(self.do_disconnect)
+
+        ############################################################################################################
+        ## Actions
 
         self.exit_action = QAction(QIcon(self.icon_dir + 'Exit.png'), 'Exit', self)
         self.exit_action.setStatusTip('Exit application')
@@ -154,6 +179,21 @@ class OpenMVIDE(QMainWindow):
         self.auto_connect_action.setStatusTip('Automatically connect to OpenMV when detected')
         self.auto_connect_action.triggered.connect(self.do_auto_connect)
 
+        self.cut_action = QAction(QIcon(self.icon_dir+'Cut.png'), 'Cut', self)
+        self.cut_action.triggered.connect(self.editor.cut)
+        self.cut_action.setShortcut(QKeySequence.Cut)
+
+        self.paste_action = QAction(QIcon(self.icon_dir+'Paste.png'), 'Paste', self)
+        self.paste_action.triggered.connect(self.editor.paste)
+        self.paste_action.setShortcut(QKeySequence.Paste)
+
+        self.copy_action = QAction(QIcon(self.icon_dir+'Copy.png'), 'Copy', self)
+        self.copy_action.triggered.connect(self.editor.copy)
+        self.copy_action.setShortcut(QKeySequence.Copy)
+
+        self.about_action = QAction(QIcon(self.icon_dir+'About.png'), 'About', self)
+        self.about_action.triggered.connect(self.do_about)
+
         ############################################################################################################
         ## Toolbars
 
@@ -170,31 +210,56 @@ class OpenMVIDE(QMainWindow):
         self.toolbar2.addAction(self.save_action)
 
         self.toolbar3 = self.addToolBar('toolbar3')
-        self.toolbar3.addAction(self.zoom_in_action)
         self.toolbar3.addAction(self.zoom_reset_action)
         self.toolbar3.addAction(self.zoom_out_action)
+        self.toolbar3.addAction(self.zoom_in_action)
 
+        ############################################################################################################
+        ## Menus
+        menu_bar = self.menuBar()
+
+        file_menu = menu_bar.addMenu('&File')
+        file_menu.addAction(self.new_action)
+        file_menu.addAction(self.open_action)
+        file_menu.addAction(self.save_action)
+        file_menu.addAction(self.save_as_action)
+        file_menu.addSeparator()
+        self.example_menu = QMenu('Examples')
+        self.recent_menu = QMenu('Recent')
+        file_menu.addMenu(self.example_menu)
+        file_menu.addMenu(self.recent_menu)
+        file_menu.addSeparator()
+        file_menu.addAction(self.exit_action)
+
+        edit_menu = menu_bar.addMenu('&Edit')
+        edit_menu.addAction(self.cut_action)
+        edit_menu.addAction(self.copy_action)
+        edit_menu.addAction(self.paste_action)
+
+        view_menu = menu_bar.addMenu('&View')
+        view_menu.addAction(self.zoom_in_action)
+        view_menu.addAction(self.zoom_out_action)
+        view_menu.addAction(self.zoom_reset_action)
+
+        help_menu = menu_bar.addMenu('&Help')
+        help_menu.addAction(self.about_action)
+
+        # Dynamically update dyanmic menus
+        file_menu.aboutToShow.connect(self.update_example_menu)
+        file_menu.aboutToShow.connect(self.update_recent_menu)
+
+        # Connect dynamic menu items with correct handlers
+        self.example_menu.triggered.connect(self.do_open_example)
+        self.recent_menu.triggered.connect(self.do_open_recent)
+
+        ############################################################################################################
+        ## Main Window
+
+        # Status bar
         self.statusBar()
-
-        # Frame buffer
-        self.image = None
-
-        self.default_height = 600
-        self.default_width = 800
 
         # Geometry
         self.setGeometry(50, 50, self.default_width, self.default_height)
-
-        # Editor
-        self.editor = PyEditor(self)
-        self.editor.setMinimumWidth(300)
-        self.editor.setMinimumHeight(200)
-        self.editor.document().contentsChanged.connect(self.update_ui)
-
-        # FrameBuffer
-        self.framebuffer = FrameBuffer()
-        self.framebuffer.show()
-        self.framebuffer.error.connect(self.do_disconnect)
 
         # Vertical box for framebuffer
         pvbox = QVBoxLayout()
@@ -220,48 +285,6 @@ class OpenMVIDE(QMainWindow):
         w = QWidget()
         w.setLayout(vbox)
         self.setCentralWidget(w)
-
-        ############################################################################################################
-        # Menus
-        menu_bar = self.menuBar()
-        file_menu = menu_bar.addMenu('&File')
-        file_menu.addAction(self.new_action)
-        file_menu.addAction(self.open_action)
-        file_menu.addAction(self.save_action)
-        file_menu.addAction(self.save_as_action)
-        file_menu.addSeparator()
-        self.example_menu = QMenu('Examples')
-        self.recent_menu = QMenu('Recent')
-        file_menu.addMenu(self.example_menu)
-        file_menu.addMenu(self.recent_menu)
-        file_menu.addSeparator()
-        file_menu.addAction(self.exit_action)
-
-        edit_menu = menu_bar.addMenu('&Edit')
-        self.cut_action = QAction(QIcon(self.icon_dir+'Cut.png'), 'Cut', self)
-        self.cut_action.triggered.connect(self.editor.cut)
-        self.cut_action.setShortcut(QKeySequence.Cut)
-        edit_menu.addAction(self.cut_action)
-
-        self.copy_action = QAction(QIcon(self.icon_dir+'Copy.png'), 'Copy', self)
-        self.copy_action.triggered.connect(self.editor.copy)
-        self.copy_action.setShortcut(QKeySequence.Copy)
-        edit_menu.addAction(self.copy_action)
-
-        self.paste_action = QAction(QIcon(self.icon_dir+'Paste.png'), 'Paste', self)
-        self.paste_action.triggered.connect(self.editor.paste)
-        self.paste_action.setShortcut(QKeySequence.Paste)
-        edit_menu.addAction(self.paste_action)
-
-        help_menu = menu_bar.addMenu('&Help')
-
-        # Dynamically update dyanmic menus
-        file_menu.aboutToShow.connect(self.update_example_menu)
-        file_menu.aboutToShow.connect(self.update_recent_menu)
-
-        # Connect dynamic menu items with correct handlers
-        self.example_menu.triggered.connect(self.do_open_example)
-        self.recent_menu.triggered.connect(self.do_open_recent)
 
         # UI Statuses
         self.update_ui()
@@ -580,6 +603,22 @@ class OpenMVIDE(QMainWindow):
 
     def interrupt_handler(self, signum, frame):
         print('CTRL-C caught')
+
+    def do_about(self):
+        msg = QMessageBox(self)
+        msg.setText('OpenMV IDE (PyQt)')
+        msg.setIcon(QMessageBox.Question)
+        msg.setInformativeText('Michael Shimniok')
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setDefaultButton(QMessageBox.Ok)
+        msg.exec_()
+
+    def closeEvent(self, event):
+        result = QMessageBox.question(self, "Confirm Exit...", "Are you sure you want to exit ?", QMessageBox.Yes, QMessageBox.No)
+        event.ignore()
+
+        if result == QMessageBox.Yes:
+            self.do_quit()
 
 
 def main():
