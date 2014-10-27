@@ -150,56 +150,6 @@ def fb_get():
     return fmt, w, h, buff
 
 
-# def fb_dump():
-#     if fb_lock() == 0:
-#         return None
-#
-#     size = fb_size()
-#     if size[2] > 2:
-#         # JPEG
-#         num_bytes = size[2]
-#         fmt = FORMAT_JPEG
-#     else:
-#         # RGB565 / Grayscale
-#         num_bytes = size[0]*size[1]*size[2]
-#         if size[2] == 1:
-#             fmt = FORMAT_GRAY
-#         elif size[2] == 2:
-#             fmt = FORMAT_RGB565
-#
-#     # read fb data
-#     __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
-#     buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
-#
-#     return num_bytes, size[0], size[1], buff
-#
-    # if size[2] == 1:
-    #     # Grayscale
-    #     s = buff.tostring()
-    #     buff = ''.join([y for yyy in zip(s, s, s) for y in yyy])
-    # elif size[2] == 2:
-    #     # RGB565
-    #     arr = array('H', buff.tostring())
-    #     arr.byteswap()
-    #     buff = ''.join(map(_rgb, arr))
-    # else:
-    #     # JPEG
-    #     try:
-    #         #print(size[0], size[1], size[2])
-    #         #__write_img(buff, "/tmp/swap.jpeg")
-    #         # TODO: FIX THIS
-    #         buff = Image.frombuffer("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "").tostring()
-    #         print('fix JPEG return')
-    #     except Exception as e:
-    #         print('JPEG decode error (%s)' % e)
-    #         sys.exit(0)
-    #
-    #     if len(buff) != (size[0]*size[1]*3):
-    #         return None
-    #
-    # return size[0], size[1], buff
-
-
 def fb_update():
     __dev.ctrl_transfer(0x41, __USBDBG_FRAME_UPDATE, 0, __INTERFACE, None, __TIMEOUT)
 
