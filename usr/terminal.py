@@ -2,9 +2,13 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *
 from serial import *
+from usb.core import USBError
 
 
 class SerialTerminal(QPlainTextEdit):
+
+    error = pyqtSignal()
+
     def __init__(self, obj):
         QPlainTextEdit.__init__(self, obj)
 
@@ -34,6 +38,7 @@ class SerialTerminal(QPlainTextEdit):
             self.timer.start(50)
 
     def stop(self):
+        ser = None
         self.timer.stop()
 
     def reset(self):
@@ -45,7 +50,7 @@ class SerialTerminal(QPlainTextEdit):
             self.thread.quit()
             self.thread.wait(1000)
         except QErrorMessage as e:
-            print('error quitting reader %s' % e.message)
+            print('SerialTerminal error while quitting %s' % e)
 
     def mousePressEvent(self, mouse_event):
         ## TODO: enable select, but disable click to change cursor position
@@ -53,9 +58,11 @@ class SerialTerminal(QPlainTextEdit):
         if mouse_event.button() != Qt.LeftButton:
             super(SerialTerminal, self).mousePressEvent(mouse_event)
 
-    def handle_error(self, e):
+    def handle_error(self):
         if not self.error_detected:
+            self.stop()
             self.error_detected = True
+            self.error.emit()
 
     def handle_data(self, x):
         cursor = self.textCursor()
@@ -69,11 +76,10 @@ class SerialReader(QObject):
 
     serial = pyqtSignal(Serial)
     data_ready = pyqtSignal(str)
-    error = pyqtSignal(str)
+    error = pyqtSignal()
 
     def __init__(self):
         QThread.__init__(self)
-        print('init serial reader')
         self.ser = None
 
     def set_serial(self, ser):
@@ -86,6 +92,7 @@ class SerialReader(QObject):
                 while self.ser.inWaiting() > 0:
                     x += self.ser.read()
                 self.data_ready.emit(x)
-            except IOError as e:
-                print('serial error: %s' % e)
-                self.error.emit(e.message)
+            except (IOError, USBError, SerialException) as e:
+                self.error.emit()
+                if e.errno != 5:
+                    print('SerialTerminal error: %s' % e)
