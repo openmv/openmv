@@ -53,6 +53,7 @@ FORMAT_GRAY = 3
 def init():
     global __dev
     # find USB __device
+    print('OpenMV Cam init()')
     try:
         __dev = usb.core.find(idVendor=__VID, idProduct=__PID)
 
@@ -68,9 +69,9 @@ def init():
 
         # set FB debug alt setting
         __dev.set_interface_altsetting(__INTERFACE, __ALTSETTING)
-    except USBError as e:
+    except Exception as e:
         pass
-        print('USB error while searching for OpenMV Cam: %s' % e.message)
+        print('Error while searching for OpenMV Cam: %s' % e.message)
 
 
 def find():
@@ -78,11 +79,10 @@ def find():
     try:
         dev = usb.core.find(idVendor=__VID, idProduct=__PID)
     except USBError:
-        print('OpenMV Cam NOT found')
         pass
+        found = False
     else:
         if dev:
-            print('OpenMV Cam found')
             found = True
     finally:
         return found
@@ -90,12 +90,13 @@ def find():
 
 def release():
     try:
-        # Release device
+        # Release device resources, interface, etc.
         usb.util.dispose_resources(__dev)
 
         # reattach kernel driver
         #__dev.attach_kernel_driver(__INTERFACE)
-    except USBError:
+    except USBError as e:
+        print('error disposing resources %s' % e)
         pass
 
 
@@ -109,45 +110,56 @@ def fb_size():
 def fb_lock():
     try:
         buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_LOCK, 0, __INTERFACE, 1, __TIMEOUT)
-        return struct.unpack("B", buf)[0]
     except USBError:
+        pass
         return 0
+    else:
+        return struct.unpack("B", buf)[0]
 
 
 def fb_get():
     if fb_lock() == 0:
         return None
 
-    buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_SIZE, 0, __INTERFACE, __FB_HDR_SIZE, __TIMEOUT)
-    size = struct.unpack("III", buf)
-
-    w = size[0]
-    h = size[1]
-    bpp = size[2]
-
-    if bpp > 2:
-        # bpp is actually image size and data is in JPEG format
-        num_bytes = bpp
-        fmt = FORMAT_JPEG
+    try:
+        buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_SIZE, 0, __INTERFACE, __FB_HDR_SIZE, __TIMEOUT)
+    except USBError as e:
+        pass
+        return None
     else:
-        num_bytes = w * h * bpp
-        if bpp == 1:
-            fmt = FORMAT_GRAY
-        elif bpp == 2:
-            fmt = FORMAT_RGB565
+        size = struct.unpack("III", buf)
+
+        w = size[0]
+        h = size[1]
+        bpp = size[2]
+
+        if bpp > 2:
+            # bpp is actually image size and data is in JPEG format
+            num_bytes = bpp
+            fmt = FORMAT_JPEG
         else:
-            fmt = None
-            w = None
-            h = None
+            num_bytes = w * h * bpp
+            if bpp == 1:
+                fmt = FORMAT_GRAY
+            elif bpp == 2:
+                fmt = FORMAT_RGB565
+            else:
+                fmt = None
+                w = None
+                h = None
 
-    if fmt:
-        # read fb data
-        __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
-        buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
-    else:
-        buff = None
+        if fmt:
+            # read fb data
+            try:
+                __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
+            except USBError:
+                pass
+            else:
+                buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
+        else:
+            buff = None
 
-    return fmt, w, h, buff
+        return fmt, w, h, buff
 
 
 def fb_update():

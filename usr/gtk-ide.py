@@ -232,17 +232,16 @@ class OMVGtk:
 
         try:
             # stop running code
-            openmv.stop_script();
-        except:
+            openmv.stop_script()
+            # release OpenMV
+            openmv.release()
+        except IOError:
             pass
-
-        # release OpenMV
-        openmv.release()
-
-        self.connected = False
-        self._update_title()
-        self.connect_button.set_sensitive(True)
-        map(lambda x:x.set_sensitive(False), self.controls)
+        finally:
+            self.connected = False
+            self._update_title()
+            self.connect_button.set_sensitive(True)
+            map(lambda x:x.set_sensitive(False), self.controls)
 
     def connect_clicked(self, widget):
         self.connect()
@@ -403,7 +402,7 @@ class OMVGtk:
             self.statusbar.pop(self.statusbar_ctx)
             self.statusbar.push(self.statusbar_ctx, rgb)
 
-    def _rgb(rgb):
+    def _rgb(self, rgb):
         return struct.pack("BBB", ((rgb & 0xF800) >> 11)*255/31, ((rgb & 0x07E0)>>5)*255/63, (rgb & 0x001F)*255/31)
 
     def update_drawing(self):
@@ -437,11 +436,11 @@ class OMVGtk:
                     # JPEG
                     try:
                         buff = Image.frombuffer("RGB", (w, h), buf, "jpeg", "RGB", "").tostring()
-                        print('fix JPEG return')
                     except Exception as e:
                         print('JPEG decode error (%s)' % e)
                         buff = None
                     else:
+                        print len(buff), w, h, w*h*3
                         if len(buff) != w*h*3:
                             print('JPEG buff len != w*h*bpp')
                             buff = None
@@ -454,8 +453,9 @@ class OMVGtk:
 
                 if buff:
                     # create pixbuf from np array
-                    self.pixbuf = gtk.gdk.pixbuf_new_from_data(buff, gtk.gdk.COLORSPACE_RGB, False, 8, w, h, w*h*2)
+                    self.pixbuf = gtk.gdk.pixbuf_new_from_data(buff, gtk.gdk.COLORSPACE_RGB, False, 8, w, h, w*3)
                     self.pixbuf = self.pixbuf.scale_simple(w*SCALE, h*SCALE, gtk.gdk.INTERP_BILINEAR)
+
                     self.drawingarea.realize()
                     cm = self.drawingarea.window.get_colormap()
                     gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF', True, False))
