@@ -17,6 +17,7 @@ import openmv
 
 class OpenMVConnector(QObject):
     found = pyqtSignal()
+    not_found = pyqtSignal()
 
     def __init__(self):
         QObject.__init__(self)
@@ -31,32 +32,22 @@ class OpenMVConnector(QObject):
 
     def auto_detect(self):
         if openmv.find():
+            print('OpenMV Cam found')
             self.found.emit()
-
-
-class OpenMVNotifier(QObject):
-    # Signal for disconnected device
-    disconnected = pyqtSignal()
-
-    # USB Errors
-    USB_NO_SUCH_DEV = 19
-
-    def __init__(self):
-        QObject.__init__(self)
-
-    def notify(self, errno):
-        if errno == self.USB_NO_SUCH_DEV:
-            print('OpenMV Cam disconnected')
-            self.disconnected.emit()
+        else:
+            self.not_found.emit()
 
 
 class OpenMVIDE(QMainWindow):
     def __init__(self):
         super(OpenMVIDE, self).__init__()
 
-        # Objects
-        self.notifier = OpenMVNotifier()
+        # Connector detects camera connect/disconnect
         self.connector = OpenMVConnector()
+        self.connector.start()
+        # Catch connect / disconnect notifications
+        self.connector.found.connect(self.do_connect)
+        self.connector.not_found.connect(self.do_disconnect)
 
         self.scale = 1
 
@@ -216,6 +207,7 @@ class OpenMVIDE(QMainWindow):
         self.terminal.setMaximumHeight(200)
         self.terminal.show()
         self.serial = Serial()
+        self.terminal.error.connect(self.do_disconnect)
 
         # Vertical box for hbox + terminal
         vbox = QVBoxLayout()
@@ -224,11 +216,6 @@ class OpenMVIDE(QMainWindow):
         w = QWidget()
         w.setLayout(vbox)
         self.setCentralWidget(w)
-
-        # Catch connect / disconnect notifications
-        self.notifier.disconnected.connect(self.do_disconnect)
-        self.connector.found.connect(self.do_connect)
-        self.connector.start()
 
         # UI Statuses
         self.update_ui()
@@ -274,38 +261,38 @@ class OpenMVIDE(QMainWindow):
                 self.serial = Serial('/dev/openmvcam', 115200, timeout=1)
                 self.terminal.start(self.serial)
             except Exception as e:
-                print('error connecting OpenMV Cam: %s' % e.message)
+                print('error connecting OpenMV Cam: %s' % e)
                 self.connected = False
             else:
-                self.connector.stop()
                 self.update_ui()
-                self.statusBar().showMessage('Camera connected.')
+                self.statusBar().showMessage('OpenMV Cam connected.')
                 self.framebuffer.start_updater()
 
     def do_disconnect(self):
         if self.connected:
             self.connected = False
+            self.update_ui()
+            self.framebuffer.stop_updater()
+
+            openmv.stop_script()
+            sleep(0.2)
+            # release OpenMV
+            openmv.release()
+            sleep(0.2)
+            openmv.reset()
+            sleep(0.2)
+
+            self.connector.start()
+            self.statusBar().showMessage('Camera disconnected.')
 
             try:
-                openmv.stop_script()
-                sleep(0.2)
-                # release OpenMV
-                openmv.release()
-                sleep(0.2)
-                openmv.reset()
-                sleep(0.2)
-
                 if self.serial and self.serial.isOpen():
+                    print('Disconnecting terminal')
                     self.serial.close()
                     self.terminal.reset()
-            except Exception as e:
-                print('error disconnecting OpenMV Cam: %s' % e.message)
-                self.connected = True
-            else:
-                self.connector.start()
-                self.update_ui()
-                self.statusBar().showMessage('Camera disconnected.')
-                self.framebuffer.stop_updater()
+            except IOError as e:
+                print('error disconnecting OpenMV Serial: %s' % e)
+
 
     def do_auto_flash(self):
         self.auto_flash = not self.auto_flash
@@ -448,7 +435,7 @@ class OpenMVIDE(QMainWindow):
                 self.filename = str(filename)
                 self.update_ui()
             except (IOError, OSError) as e:
-                QErrorMessage(self).showMessage('Error opening file: ' + e.message)
+                QErrorMessage(self).showMessage('Error opening file: ' + e)
 
     def do_save_as(self):
         self.do_save(True)
@@ -473,7 +460,7 @@ class OpenMVIDE(QMainWindow):
                 self.filename = str(filename)
                 self.update_ui()
             except (IOError, OSError) as e:
-                QErrorMessage(self).showMessage('Error saving file: ' + e.message)
+                QErrorMessage(self).showMessage('Error saving file: ' + e)
 
     def do_quit(self):
         # TODO: check for file save status
