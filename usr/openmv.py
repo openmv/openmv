@@ -121,45 +121,41 @@ def fb_get():
     if fb_lock() == 0:
         return None
 
-    try:
-        buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_SIZE, 0, __INTERFACE, __FB_HDR_SIZE, __TIMEOUT)
-    except USBError as e:
-        pass
-        return None
+    buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_SIZE, 0, __INTERFACE, __FB_HDR_SIZE, __TIMEOUT)
+
+    size = struct.unpack("III", buf)
+
+    w = size[0]
+    h = size[1]
+    bpp = size[2]
+
+    if bpp > 2:
+        # bpp is actually image size and data is in JPEG format
+        num_bytes = bpp
+        fmt = FORMAT_JPEG
     else:
-        size = struct.unpack("III", buf)
-
-        w = size[0]
-        h = size[1]
-        bpp = size[2]
-
-        if bpp > 2:
-            # bpp is actually image size and data is in JPEG format
-            num_bytes = bpp
-            fmt = FORMAT_JPEG
+        num_bytes = w * h * bpp
+        if bpp == 1:
+            fmt = FORMAT_GRAY
+        elif bpp == 2:
+            fmt = FORMAT_RGB565
         else:
-            num_bytes = w * h * bpp
-            if bpp == 1:
-                fmt = FORMAT_GRAY
-            elif bpp == 2:
-                fmt = FORMAT_RGB565
-            else:
-                fmt = None
-                w = None
-                h = None
+            fmt = None
+            w = None
+            h = None
 
-        if fmt:
-            # read fb data
-            try:
-                __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
-            except USBError:
-                pass
-            else:
-                buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
+    if fmt:
+        # read fb data
+        try:
+            __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
+        except USBError:
+            pass
         else:
-            buff = None
+            buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
+    else:
+        buff = None
 
-        return fmt, w, h, buff
+    return fmt, w, h, buff
 
 
 def fb_update():
@@ -172,8 +168,10 @@ def exec_script(buf):
 
 
 def stop_script():
-    __dev.ctrl_transfer(0x41, __USBDBG_SCRIPT_STOP, 0, __INTERFACE, None, __TIMEOUT)
-
+    try:
+        __dev.ctrl_transfer(0x41, __USBDBG_SCRIPT_STOP, 0, __INTERFACE, None, __TIMEOUT)
+    except USBError:
+        pass
 
 def save_template(x, y, w, h, path):
     buf = struct.pack("IIII", x, y, w, h) + path
@@ -208,7 +206,7 @@ def reset():
     try:
         # This will timeout.
         __dev.ctrl_transfer(0x41, __USBDBG_SYS_RESET, 0, __INTERFACE, None, __TIMEOUT)
-    except USBError as e:
+    except USBError:
         pass
 
 

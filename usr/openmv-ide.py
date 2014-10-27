@@ -346,8 +346,9 @@ class OMVGtk:
                 dialog.hide()
 
     def reset_clicked(self, widget):
-        if (self.connected):
+        if self.connected:
             openmv.reset()
+            self.disconnect()
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
