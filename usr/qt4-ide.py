@@ -70,6 +70,9 @@ class OpenMVIDE(QMainWindow):
         # script filename
         self.filename = ''
 
+        # recent files
+        self.recent = set()
+
         # default auto connect behavior
         self.auto_connect = True
 
@@ -174,7 +177,15 @@ class OpenMVIDE(QMainWindow):
         file_menu.addAction(self.open_action)
         file_menu.addAction(self.save_action)
         file_menu.addAction(self.save_as_action)
+        file_menu.addSeparator()
+        self.example_menu = QMenu('Examples')
+        self.recent_menu = QMenu('Recent')
+        file_menu.addMenu(self.example_menu)
+        file_menu.addMenu(self.recent_menu)
+        file_menu.addSeparator()
         file_menu.addAction(self.exit_action)
+        file_menu.aboutToShow.connect(self.update_example_menu)
+        file_menu.aboutToShow.connect(self.update_recent_menu)
 
         self.default_height = 600
         self.default_width = 800
@@ -416,6 +427,22 @@ class OpenMVIDE(QMainWindow):
         self.filename = ''
         self.update_ui()
 
+    def update_example_menu(self):
+        if os.path.isdir(self.example_dir):
+            self.example_menu.clear()
+            files = sorted(os.listdir(self.example_dir))
+            for f in files:
+                if f.endswith(".py"):
+                    self.example_menu.addAction(QAction(f, self))
+                    #label = os.path.basename(f)
+
+    def update_recent_menu(self):
+        print('recent')
+        self.recent_menu.clear()
+        for f in self.recent:
+            print(f)
+            self.recent_menu.addAction(QAction(f, self))
+
     def do_open(self):
         # TODO: Check for save-as first
         if os.path.exists(self.script_dir):
@@ -430,12 +457,14 @@ class OpenMVIDE(QMainWindow):
         if filename:
             try:
                 infile = open(filename, 'r')
+            except (IOError, OSError) as e:
+                QErrorMessage(self).showMessage('Error opening file: ' + e)
+            else:
                 self.editor.setPlainText(infile.read())
                 # store new filename
                 self.filename = str(filename)
                 self.update_ui()
-            except (IOError, OSError) as e:
-                QErrorMessage(self).showMessage('Error opening file: ' + e)
+                self.recent.add(self.filename)
 
     def do_save_as(self):
         self.do_save(True)
