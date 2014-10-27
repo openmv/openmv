@@ -32,7 +32,6 @@ class OpenMVConnector(QObject):
 
     def auto_detect(self):
         if openmv.find():
-            print('OpenMV Cam found')
             self.found.emit()
         else:
             self.not_found.emit()
@@ -49,6 +48,16 @@ class OpenMVIDE(QMainWindow):
         self.connector.found.connect(self.do_connect)
         self.connector.not_found.connect(self.do_disconnect)
 
+        ############################################################################################################
+        # State variables
+
+        # Connect status
+        self.connected = False
+
+        # Script run status
+        self.running = False
+
+        # Image scaling
         self.scale = 1
 
         # default working directory
@@ -79,6 +88,7 @@ class OpenMVIDE(QMainWindow):
         # default auto flash behavior
         self.auto_flash = True
 
+        ############################################################################################################
         # Actions
 
         self.exit_action = QAction(QIcon(self.icon_dir + 'Exit.png'), 'Exit', self)
@@ -144,6 +154,9 @@ class OpenMVIDE(QMainWindow):
         self.auto_connect_action.setStatusTip('Automatically connect to OpenMV when detected')
         self.auto_connect_action.triggered.connect(self.do_auto_connect)
 
+        ############################################################################################################
+        ## Toolbars
+
         self.toolbar1 = self.addToolBar('toolbar1')
         self.toolbar1.addAction(self.connect_action)
         self.toolbar1.addAction(self.reset_action)
@@ -160,10 +173,6 @@ class OpenMVIDE(QMainWindow):
         self.toolbar3.addAction(self.zoom_in_action)
         self.toolbar3.addAction(self.zoom_reset_action)
         self.toolbar3.addAction(self.zoom_out_action)
-
-        # Enable/disable icons
-        self.connected = False
-        self.running = False
 
         self.statusBar()
 
@@ -203,6 +212,7 @@ class OpenMVIDE(QMainWindow):
         self.editor = PyEditor(self)
         self.editor.setMinimumWidth(300)
         self.editor.setMinimumHeight(200)
+        self.editor.document().contentsChanged.connect(self.update_ui)
 
         # FrameBuffer
         self.framebuffer = FrameBuffer()
@@ -240,14 +250,12 @@ class OpenMVIDE(QMainWindow):
         self.show()
 
     def update_ui(self):
-
-        ## TODO: enable/disable save icon when file is changed
-
         self.run_action.setEnabled(self.connected)
         self.stop_action.setEnabled(self.connected and self.running)
         self.connect_action.setEnabled(not self.connected)
         self.reset_action.setEnabled(self.connected)
         self.flash_action.setEnabled(self.connected)
+        self.save_action.setEnabled(self.editor.document().isModified())
         self.zoom_in_action.setEnabled(self.connected)
         self.zoom_out_action.setEnabled(self.connected)
         self.zoom_reset_action.setEnabled(self.connected)
@@ -427,50 +435,45 @@ class OpenMVIDE(QMainWindow):
         self.running = False
         self.update_ui()
 
-    def do_new(self):
-        # TODO: Check for save-as first
-        self.editor.setPlainText('')
-        self.filename = ''
-        self.update_ui()
+    def check_modified(self, event):
+        result = True
+        if self.editor.document().isModified():
+            msg = QMessageBox(self)
+            msg.setText('The document has been modified.')
+            msg.setInformativeText('Do you want to save your changes?')
+            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msg.setDefaultButton(QMessageBox.Save)
+            msg.exec_()
+            ret = msg.result()
+            if ret == QMessageBox.Save:
+                self.do_save()
+                result = True
+            elif ret == QMessageBox.Discard:
+                result = True
+            elif ret == QMessageBox.Cancel:
+                result = False
+            else:
+                print('%s' % ret)
+        return result
 
-    def update_example_menu(self):
-        if os.path.isdir(self.example_dir):
-            self.example_menu.clear()
-            files = sorted(os.listdir(self.example_dir))
-            for f in files:
-                if f.endswith(".py"):
-                    action = QAction(f, self)
-                    self.example_menu.addAction(action)
+    def do_new(self, event):
+        if self.check_modified(event):
+            self.editor.setPlainText('')
+            self.filename = ''
+            self.update_ui()
 
-                    #label = os.path.basename(f)
+    def do_open(self, event):
+        if self.check_modified(event):
+            if os.path.exists(self.script_dir):
+                my_dir = self.script_dir
+            else:
+                my_dir = self.example_dir
 
-    def update_recent_menu(self):
-        print('recent')
-        self.recent_menu.clear()
-        for f in self.recent:
-            print(f)
-            self.recent_menu.addAction(QAction(f, self))
-
-    def do_open_example(self, action):
-        assert isinstance(action, QAction)
-        self.open_file(self.example_dir + action.text())
-
-    def do_open_recent(self, action):
-        assert isinstance(action, QAction)
-        self.open_file(action.text())
-
-    def do_open(self):
-        # TODO: Check for save-as first
-        if os.path.exists(self.script_dir):
-            my_dir = self.script_dir
-        else:
-            my_dir = self.example_dir
-
-        filename = QFileDialog.getOpenFileName(parent=self,
-                                               caption=self.tr('Open Micro Python Script'),
-                                               directory=my_dir,
-                                               filter=self.tr("Python scripts (*.py)"))
-        self.open_file(filename)
+            filename = QFileDialog.getOpenFileName(parent=self,
+                                                   caption=self.tr('Open Micro Python Script'),
+                                                   directory=my_dir,
+                                                   filter=self.tr("Python scripts (*.py)"))
+            self.open_file(filename)
 
     def open_file(self, filename):
         if filename:
@@ -506,9 +509,36 @@ class OpenMVIDE(QMainWindow):
                 outfile.write(self.editor.toPlainText())
                 # store new filename
                 self.filename = str(filename)
+                self.editor.document().setModified(False)
                 self.update_ui()
             except (IOError, OSError) as e:
                 QErrorMessage(self).showMessage('Error saving file: ' + e)
+
+    def update_example_menu(self):
+        if os.path.isdir(self.example_dir):
+            self.example_menu.clear()
+            files = sorted(os.listdir(self.example_dir))
+            for f in files:
+                if f.endswith(".py"):
+                    action = QAction(f, self)
+                    self.example_menu.addAction(action)
+
+                    #label = os.path.basename(f)
+
+    def update_recent_menu(self):
+        print('recent')
+        self.recent_menu.clear()
+        for f in self.recent:
+            print(f)
+            self.recent_menu.addAction(QAction(f, self))
+
+    def do_open_example(self, action):
+        assert isinstance(action, QAction)
+        self.open_file(self.example_dir + action.text())
+
+    def do_open_recent(self, action):
+        assert isinstance(action, QAction)
+        self.open_file(action.text())
 
     def do_quit(self):
         # TODO: check for file save status
