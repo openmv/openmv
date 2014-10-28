@@ -462,7 +462,6 @@ class OpenMVIDE(QMainWindow):
         for offset in flash_offsets:
             progress.setValue(pg)
             pydfu.page_erase(flash_offsets[pg])
-            print(pg)
             pg += 1
 
         offset = 0
@@ -480,8 +479,8 @@ class OpenMVIDE(QMainWindow):
             offset += pg_size
 
         progress.hide()
-        # this isn't working...
-        openmv.reset()
+
+        pydfu.exit_dfu()
 
     def do_run(self):
         buf = str(self.editor.toPlainText())
