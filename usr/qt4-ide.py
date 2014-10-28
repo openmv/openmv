@@ -23,6 +23,7 @@ class OpenMVConnector(QObject):
         QObject.__init__(self)
         self.timer = QTimer()
         self.timer.timeout.connect(self.auto_detect)
+        self.auto_connect = False
 
     def start(self):
         self.timer.start(500)
@@ -30,9 +31,13 @@ class OpenMVConnector(QObject):
     def stop(self):
         self.timer.stop()
 
+    def set_auto_connect(self, auto):
+        self.auto_connect = auto
+
     def auto_detect(self):
         if openmv.find():
-            self.found.emit()
+            if self.auto_connect:
+                self.found.emit()
         else:
             self.not_found.emit()
 
@@ -88,6 +93,7 @@ class OpenMVIDE(QMainWindow):
 
         # default auto connect behavior
         self.auto_connect = True
+        self.connector.set_auto_connect(self.auto_connect)
 
         # default auto flash behavior
         self.auto_flash = True
@@ -171,14 +177,6 @@ class OpenMVIDE(QMainWindow):
         self.zoom_reset_action.setStatusTip('Reset frame buffer preview size')
         self.zoom_reset_action.triggered.connect(self.do_zoom_reset)
 
-        self.auto_flash_action = QAction('Auto-flash', self)
-        self.auto_flash_action.setStatusTip('Automatically detect DFU mode and flash firmware')
-        self.auto_flash_action.triggered.connect(self.do_auto_flash)
-
-        self.auto_connect_action = QAction('Auto-connect', self)
-        self.auto_connect_action.setStatusTip('Automatically connect to OpenMV when detected')
-        self.auto_connect_action.triggered.connect(self.do_auto_connect)
-
         self.cut_action = QAction(QIcon(self.icon_dir+'Cut.png'), 'Cut', self)
         self.cut_action.triggered.connect(self.editor.cut)
         self.cut_action.setShortcut(QKeySequence.Cut)
@@ -190,6 +188,17 @@ class OpenMVIDE(QMainWindow):
         self.copy_action = QAction(QIcon(self.icon_dir+'Copy.png'), 'Copy', self)
         self.copy_action.triggered.connect(self.editor.copy)
         self.copy_action.setShortcut(QKeySequence.Copy)
+
+        self.auto_flash_action = QAction('Auto-flash', self)
+        self.auto_flash_action.setStatusTip('Automatically detect DFU mode and flash firmware')
+        self.auto_flash_action.triggered.connect(self.do_auto_flash)
+        self.auto_flash_action.setCheckable(True)
+        self.auto_flash_action.setDisabled(True)
+
+        self.auto_connect_action = QAction('Auto-connect', self)
+        self.auto_connect_action.setStatusTip('Automatically connect to OpenMV when detected')
+        self.auto_connect_action.triggered.connect(self.do_auto_connect)
+        self.auto_connect_action.setCheckable(True)
 
         self.about_action = QAction(QIcon(self.icon_dir+'About.png'), 'About', self)
         self.about_action.triggered.connect(self.do_about)
@@ -235,6 +244,13 @@ class OpenMVIDE(QMainWindow):
         edit_menu.addAction(self.cut_action)
         edit_menu.addAction(self.copy_action)
         edit_menu.addAction(self.paste_action)
+
+        openmv_menu = menu_bar.addMenu('&Tools')
+        openmv_menu.addAction(self.connect_action)
+        openmv_menu.addAction(self.reset_action)
+        openmv_menu.addAction(self.flash_action)
+        openmv_menu.addAction(self.auto_connect_action)
+        openmv_menu.addAction(self.auto_flash_action)
 
         view_menu = menu_bar.addMenu('&View')
         view_menu.addAction(self.zoom_in_action)
@@ -301,6 +317,8 @@ class OpenMVIDE(QMainWindow):
         self.zoom_in_action.setEnabled(self.connected)
         self.zoom_out_action.setEnabled(self.connected)
         self.zoom_reset_action.setEnabled(self.connected)
+        self.auto_connect_action.setChecked(self.auto_connect)
+        self.auto_flash_action.setChecked(self.auto_flash)
         if self.connected:
             con = '[connected]'
         else:
@@ -313,6 +331,8 @@ class OpenMVIDE(QMainWindow):
 
     def do_auto_connect(self):
         self.auto_connect = not self.auto_connect
+        self.connector.set_auto_connect(self.auto_connect)
+        self.update_ui()
 
     def do_connect(self):
         if not self.connected:
@@ -363,6 +383,7 @@ class OpenMVIDE(QMainWindow):
 
     def do_auto_flash(self):
         self.auto_flash = not self.auto_flash
+        self.update_ui()
 
     def do_flash(self):
         self.update_ui()
@@ -585,7 +606,6 @@ class OpenMVIDE(QMainWindow):
             self.open_file(action.text())
 
     def do_quit(self):
-        # TODO: check for file save status
         if self.check_modified():
             if self.connected:
                 self.do_disconnect()
