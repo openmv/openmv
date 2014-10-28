@@ -74,8 +74,7 @@ class OpenMVIDE(QMainWindow):
         self.script_dir = self.dir + 'scripts/'
 
         # Location for binary firmware
-        self.flash_dir = self.dir + 'bin/'
-        self.flash_file = ''
+        self.flash_dir = self.dir + '../bin/'
 
         # Location for config file
         self.config_file = 'openmv.config'
@@ -89,6 +88,7 @@ class OpenMVIDE(QMainWindow):
         default = {'board': 'openmv1',
                    'filename': '',
                    'recent': '',
+                   'bin': '',
                    'auto_flash': 'False',
                    'auto_connect': 'True',
                    'width': '800',
@@ -111,12 +111,15 @@ class OpenMVIDE(QMainWindow):
         # Frame buffer
         self.image = None
 
-        # recent files
+        # Recent scripts
         self.recent = set()
         files = config.get('main', 'recent')
         for f in files.split(','):
             if f:
                 self.recent.add(f)
+
+        # Recent binary
+        self.flash_file = config.get('main', 'bin')
 
         # Serial port
         self.serial_port = config.get('main', 'serial_port')
@@ -355,6 +358,7 @@ class OpenMVIDE(QMainWindow):
         config.set('main', 'width', self.width())
         config.set('main', 'scale', self.framebuffer.scale)
         config.set('main', 'recent', ','.join(self.recent))
+        config.set('main', 'bin', self.flash_file)
         try:
             with open(self.config_file, 'w') as f:
                 config.write(f)
@@ -461,7 +465,9 @@ class OpenMVIDE(QMainWindow):
         if self.connected:
             dialog = QDialog(self)
             filename = QLineEdit()
+            filename = QLineEdit()
             chooser = QFileDialog()
+            filename.setText(self.flash_file)
             chooser.setDirectory(self.flash_dir)
             browse = QPushButton('&...')
             browse.pressed.connect(chooser.exec_)
@@ -492,11 +498,16 @@ class OpenMVIDE(QMainWindow):
             if dialog.result() == QDialog.Accepted:
                 print('Accepted')
 
-                self.flash_file = filename.text()
-                with open(self.flash_file, 'r') as f:
-                    buf = f.read()
-
-                self.flash_update(buf)
+                file = filename.text()
+                try:
+                    with open(file, 'r') as f:
+                        buf = f.read()
+                except (IOError, OSError) as e:
+                    QErrorMessage(self).showMessage('Error opening binary file:\n%s' % e)
+                    print('Error opening binary file: %s' % e)
+                else:
+                    self.flash_file = file
+                    self.flash_update(buf)
 
             else:
                 print('Rejected')
@@ -512,11 +523,10 @@ class OpenMVIDE(QMainWindow):
         progress = QProgressDialog(self)
         progress.setRange(0, total)
         progress.setValue(0)
-        progress.setWindowTitle('Initialize...')
-        print('Initialize...')
-        progress.setAutoReset(False)
         progress.setModal(True)
         progress.show()
+        progress.setAutoReset(False)
+        progress.setLabelText('Initializing')
 
         # call dfu-util
         openmv.enter_dfu()
@@ -525,8 +535,7 @@ class OpenMVIDE(QMainWindow):
         # Initialize
         pydfu.init()
 
-        progress.setWindowTitle('Erasing...')
-        print('Erasing...')
+        progress.setLabelText('Erasing')
         progress.setValue(0)
 
         pg = 0
@@ -538,8 +547,7 @@ class OpenMVIDE(QMainWindow):
         offset = 0
         size = len(buf)
         progress.setRange(0, size)
-        progress.setWindowTitle('Downloading...')
-        print('Downloading...')
+        progress.setLabelText('Downloading')
 
         while offset < size:
             progress.setValue(offset)
@@ -612,7 +620,7 @@ class OpenMVIDE(QMainWindow):
             try:
                 infile = open(filename, 'r')
             except (IOError, OSError) as e:
-                QErrorMessage(self).showMessage('Error opening file: ' + e)
+                QErrorMessage(self).showMessage('Error opening file:\n%s' % e)
             else:
                 self.editor.setPlainText(infile.read())
                 # store new filename
@@ -646,7 +654,7 @@ class OpenMVIDE(QMainWindow):
                 self.editor.document().setModified(False)
                 self.update_ui()
             except (IOError, OSError) as e:
-                QErrorMessage(self).showMessage('Error saving file: ' + e)
+                QErrorMessage(self).showMessage('Error saving file:\n%s' % e)
 
     def do_open_example(self, action):
         assert isinstance(action, QAction)
