@@ -76,16 +76,18 @@ class FrameBuffer(QLabel):
         self.setMinimumWidth(pixmap.width())
         self.setMinimumHeight(pixmap.height())
 
+    def set_scale(self, scale):
+        if 0 < scale < 4.0:
+            self.scale = scale
+
     def increase_scale(self, scale):
-        if self.scale < 4.0:
-            self.scale += 0.5
+        self.set_scale(self.scale + 0.5)
 
     def decrease_scale(self, scale):
-        if self.scale > 0.5:
-            self.scale -= 0.5
+        self.set_scale(self.scale - 0.5)
 
     def reset_scale(self):
-        self.scale = 1.0
+        self.set_scale(1.0)
 
 
 class ImageUpdater(QObject):
