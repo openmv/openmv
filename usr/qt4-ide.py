@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import print_function, division
 
 from framebuffer import FrameBuffer
 from editor import *
@@ -13,6 +13,7 @@ import sys
 import os
 import signal
 import openmv
+from ConfigParser import ConfigParser
 
 
 class OpenMVConnector(QObject):
@@ -58,16 +59,7 @@ class OpenMVIDE(QMainWindow):
         self.connector.not_found.connect(self.do_disconnect)
 
         ############################################################################################################
-        ## State variables
-
-        # Connect status
-        self.connected = False
-
-        # Script run status
-        self.running = False
-
-        # Image scaling
-        self.scale = 1
+        ## Paths
 
         # default working directory
         self.dir = os.path.dirname(os.path.realpath(__file__)) + '/'
@@ -85,25 +77,59 @@ class OpenMVIDE(QMainWindow):
         self.flash_dir = self.dir + 'bin/'
         self.flash_file = ''
 
+        # Location for config file
+        self.config_file = 'openmv.config'
+
         # script filename
         self.filename = ''
 
-        # recent files
-        self.recent = set()
+        ############################################################################################################
+        ## Configuration
 
-        # default auto connect behavior
-        self.auto_connect = True
-        self.connector.set_auto_connect(self.auto_connect)
+        default = {'board': 'openmv1',
+                   'filename': '',
+                   'recent': '',
+                   'auto_flash': 'False',
+                   'auto_connect': 'True',
+                   'width': '800',
+                   'height': '600',
+                   'scale': '1',
+                   'serial_port': '/dev/openmvcam'}
 
-        # default auto flash behavior
-        self.auto_flash = True
+        # load config
+        config = self.load_config(default)
+
+        ############################################################################################################
+        ## State variables
+
+        # Connect status
+        self.connected = False
+
+        # Script run status
+        self.running = False
 
         # Frame buffer
         self.image = None
 
-        # Geometry
-        self.default_height = 600
-        self.default_width = 800
+        # recent files
+        self.recent = set()
+        files = config.get('main', 'recent')
+        for f in files.split(','):
+            if f:
+                self.recent.add(f)
+
+        # Serial port
+        self.serial_port = config.get('main', 'serial_port')
+
+        # Board version
+        self.board = config.get('main', 'board')
+
+        # default auto connect behavior
+        self.auto_connect = config.getboolean('main', 'auto_connect')
+        self.connector.set_auto_connect(self.auto_connect)
+
+        # default auto flash behavior
+        self.auto_flash = config.getboolean('main', 'auto_flash')
 
         ############################################################################################################
         ## Components
@@ -116,6 +142,7 @@ class OpenMVIDE(QMainWindow):
 
         # FrameBuffer
         self.framebuffer = FrameBuffer()
+        self.framebuffer.set_scale(config.getfloat('main', 'scale'))
         self.framebuffer.show()
         self.framebuffer.error.connect(self.do_disconnect)
 
@@ -275,7 +302,7 @@ class OpenMVIDE(QMainWindow):
         self.statusBar()
 
         # Geometry
-        self.setGeometry(50, 50, self.default_width, self.default_height)
+        self.setGeometry(50, 50, config.getint('main', 'width'), config.getint('main', 'height'))
 
         # Vertical box for framebuffer
         pvbox = QVBoxLayout()
@@ -307,6 +334,33 @@ class OpenMVIDE(QMainWindow):
 
         self.show()
 
+    def load_config(self, default):
+        config = ConfigParser(default)
+        config.add_section('main')
+        try:
+            config.read(self.config_file)
+        except (IOError, OSError, ConfigParser.Error) as e:
+            pass
+            print("Failed to open config file: %s" % e)
+        finally:
+            return config
+
+    def save_config(self):
+        config = ConfigParser()
+        config.add_section('main')
+        config.set('main', 'serial_port', self.serial_port)
+        config.set('main', 'auto_connect', self.auto_connect)
+        config.set('main', 'auto_flash', self.auto_flash)
+        config.set('main', 'height', self.height())
+        config.set('main', 'width', self.width())
+        config.set('main', 'scale', self.framebuffer.scale)
+        config.set('main', 'recent', ','.join(self.recent))
+        try:
+            with open(self.config_file, 'w') as f:
+                config.write(f)
+        except (IOError, OSError) as e:
+            print('Failed to save config file %s' % e)
+
     def update_ui(self):
         self.run_action.setEnabled(self.connected)
         self.stop_action.setEnabled(self.connected and self.running)
@@ -329,6 +383,22 @@ class OpenMVIDE(QMainWindow):
             fn = 'untitled.py'
         self.setWindowTitle('OpenMV IDE (' + fn + ') - ' + con)
 
+    def update_example_menu(self):
+        if os.path.isdir(self.example_dir):
+            self.example_menu.clear()
+            files = sorted(os.listdir(self.example_dir))
+            self.example_menu.setEnabled(len(files) > 0)
+            for f in files:
+                if f.endswith(".py"):
+                    action = QAction(f, self)
+                    self.example_menu.addAction(action)
+
+    def update_recent_menu(self):
+        self.recent_menu.clear()
+        self.recent_menu.setEnabled(len(self.recent) > 0)
+        for f in self.recent:
+            self.recent_menu.addAction(QAction(f, self))
+
     def do_auto_connect(self):
         self.auto_connect = not self.auto_connect
         self.connector.set_auto_connect(self.auto_connect)
@@ -345,7 +415,7 @@ class OpenMVIDE(QMainWindow):
                 openmv.stop_script()
                 sleep(0.2)
                 ## TODO: device config
-                self.serial = Serial('/dev/openmvcam', 115200, timeout=1)
+                self.serial = Serial(self.serial_port, 115200, timeout=1)
                 self.terminal.start(self.serial)
             except Exception as e:
                 print('error connecting OpenMV Cam: %s' % e)
@@ -445,6 +515,7 @@ class OpenMVIDE(QMainWindow):
         progress.setWindowTitle('Initialize...')
         print('Initialize...')
         progress.setAutoReset(False)
+        progress.setModal(True)
         progress.show()
 
         # call dfu-util
@@ -474,12 +545,10 @@ class OpenMVIDE(QMainWindow):
             progress.setValue(offset)
             pg_size = min(64, size - offset)
             page = buf[offset:offset + pg_size]
-            #print pg_size, offset, offset + pg_size, size - offset, size
             pydfu.write_page(page, offset)
             offset += pg_size
 
         progress.hide()
-
         pydfu.exit_dfu()
 
     def do_run(self):
@@ -560,6 +629,8 @@ class OpenMVIDE(QMainWindow):
         else:
             filename = self.filename
 
+        ## TODO: Address file-exists-replace? scenario
+
         # filename will be empty if we haven't saved the document yet
         if not filename:
             filename = QFileDialog.getSaveFileName(parent=self,
@@ -577,23 +648,6 @@ class OpenMVIDE(QMainWindow):
             except (IOError, OSError) as e:
                 QErrorMessage(self).showMessage('Error saving file: ' + e)
 
-    def update_example_menu(self):
-        if os.path.isdir(self.example_dir):
-            self.example_menu.clear()
-            files = sorted(os.listdir(self.example_dir))
-            for f in files:
-                if f.endswith(".py"):
-                    action = QAction(f, self)
-                    self.example_menu.addAction(action)
-
-                    #label = os.path.basename(f)
-
-    def update_recent_menu(self):
-        self.recent_menu.clear()
-        for f in self.recent:
-            print(f)
-            self.recent_menu.addAction(QAction(f, self))
-
     def do_open_example(self, action):
         assert isinstance(action, QAction)
         if self.check_modified():
@@ -608,6 +662,7 @@ class OpenMVIDE(QMainWindow):
         if self.check_modified():
             if self.connected:
                 self.do_disconnect()
+            self.save_config()
             self.framebuffer.quit()
             QApplication.quit()
 
