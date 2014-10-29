@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-from array import array
-import struct
-from PIL import Image
 import pydfu
 import openmv
 import sys, os, os.path
@@ -139,7 +136,7 @@ class OMVGtk:
             try:
                 with open(CONFIG_PATH, "w") as f:
                     f.write(DEFAULT_CONFIG)
-            except (IOError, OSError) as e:
+            except Exception as e:
                 print ("Failed to create config file %s"%(e))
                 sys.exit(1)
 
@@ -147,7 +144,7 @@ class OMVGtk:
         self.config = configparser.ConfigParser()
         try:
             self.config.read(CONFIG_PATH)
-        except (IOError, OSError) as e:
+        except Exception as e:
             print ("Failed to open config file %s"%(e))
             sys.exit(1)
 
@@ -199,7 +196,7 @@ class OMVGtk:
             self.terminal.reset(True, True)
             self.terminal.set_size(80,24)
             self.terminal.set_pty(self.fd)
-        except IOError as e:
+        except Exception as e:
             self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
             return
 
@@ -210,7 +207,7 @@ class OMVGtk:
             # interrupt any running code
             openmv.stop_script()
             sleep(0.1)
-        except IOError as e:
+        except Exception as e:
             self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
             return
 
@@ -232,16 +229,17 @@ class OMVGtk:
 
         try:
             # stop running code
-            openmv.stop_script()
-            # release OpenMV
-            openmv.release()
-        except IOError:
+            openmv.stop_script();
+        except:
             pass
-        finally:
-            self.connected = False
-            self._update_title()
-            self.connect_button.set_sensitive(True)
-            map(lambda x:x.set_sensitive(False), self.controls)
+
+        # release OpenMV
+        openmv.release()
+
+        self.connected = False
+        self._update_title()
+        self.connect_button.set_sensitive(True)
+        map(lambda x:x.set_sensitive(False), self.controls)
 
     def connect_clicked(self, widget):
         self.connect()
@@ -327,7 +325,7 @@ class OMVGtk:
                 try:
                     with open(fw_path, 'r') as f:
                         buf= f.read()
-                except (IOError, OSError) as e:
+                except Exception as e:
                     dialog.hide()
                     self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open file %s"%str(e))
                     return
@@ -346,9 +344,8 @@ class OMVGtk:
                 dialog.hide()
 
     def reset_clicked(self, widget):
-        if self.connected:
+        if (self.connected):
             openmv.reset()
-            self.disconnect()
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
@@ -391,7 +388,6 @@ class OMVGtk:
         self.da_menu.popup(None, None, None, event.button, event.time, None)
         self.da_menu.show_all()
 
-
     def motion_notify(self, widget, event):
         x = int(event.x)
         y = int(event.y)
@@ -403,70 +399,35 @@ class OMVGtk:
             self.statusbar.pop(self.statusbar_ctx)
             self.statusbar.push(self.statusbar_ctx, rgb)
 
-    def _rgb(self, rgb):
-        return struct.pack("BBB", ((rgb & 0xF800) >> 11)*255/31, ((rgb & 0x07E0)>>5)*255/63, (rgb & 0x001F)*255/31)
-
     def update_drawing(self):
         if (not self.connected):
             return True
 
         try:
             # read drawingarea
-            b = openmv.fb_get()
-            #fb = openmv.fb_dump()
-        except IOError as e:
+            fb = openmv.fb_dump()
+        except Exception as e:
             self.disconnect()
             self._update_title()
             print("%s"%(e))
             return True
-        else:
-            if b:
-                fmt = b[0]
-                w = b[1]
-                h = b[2]
-                buf = b[3]
 
-                if fmt == openmv.FORMAT_GRAY:
-                    s = buf.tostring()
-                    buff = ''.join([y for yyy in zip(s, s, s) for y in yyy])
-                elif fmt == openmv.FORMAT_RGB565:
-                    arr = array('H', buf.tostring())
-                    arr.byteswap()
-                    buff = ''.join(map(self._rgb, arr))
-                elif fmt == openmv.FORMAT_JPEG:
-                    # JPEG
-                    try:
-                        buff = Image.frombuffer("RGB", (w, h), buf, "jpeg", "RGB", "").tostring()
-                    except Exception as e:
-                        print('JPEG decode error (%s)' % e)
-                        buff = None
-                    else:
-                        print len(buff), w, h, w*h*3
-                        if len(buff) != w*h*3:
-                            print('JPEG buff len != w*h*bpp')
-                            buff = None
-                elif buf:
-                    print('Unknown format %d' % fmt)
-                    buff = None
-                else:
-                    print('empty image data returned')
-                    buff = None
+        if fb:
+            # create pixbuf from np array
+            self.pixbuf =gtk.gdk.pixbuf_new_from_data(fb[2], gtk.gdk.COLORSPACE_RGB, False, 8, fb[0], fb[1], fb[0]*3)
+            self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
 
-                if buff:
-                    # create pixbuf from np array
-                    self.pixbuf = gtk.gdk.pixbuf_new_from_data(buff, gtk.gdk.COLORSPACE_RGB, False, 8, w, h, w*3)
-                    self.pixbuf = self.pixbuf.scale_simple(w*SCALE, h*SCALE, gtk.gdk.INTERP_BILINEAR)
+            self.drawingarea.realize();
+            cm = self.drawingarea.window.get_colormap()
+            gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF',True,False))
 
-                    self.drawingarea.realize()
-                    cm = self.drawingarea.window.get_colormap()
-                    gc = self.drawingarea.window.new_gc(foreground=cm.alloc_color('#FFFFFF', True, False))
+            self.drawingarea.set_size_request(fb[0]*SCALE, fb[1]*SCALE)
+            self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
+            if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
+                self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
 
-                    self.drawingarea.set_size_request(w*SCALE, h*SCALE)
-                    self.drawingarea.window.draw_pixbuf(gc, self.pixbuf, 0, 0, 0, 0)
-                    if self.selection_started or self.da_menu.flags() & gtk.MAPPED:
-                        self.drawingarea.window.draw_rectangle(gc, False, self.x1, self.y1, self.x2-self.x1, self.y2-self.y1)
+        return True
 
-            return True
 
     def on_ctrl_scale_value_changed(self, adjust):
         openmv.set_attr(adjust.attr, int(adjust.value))
@@ -625,5 +586,5 @@ class OMVGtk:
 if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
-    gobject.gobject.idle_add(omvgtk.update_drawing)
+    gobject.gobject.idle_add(omvgtk.update_drawing);
     gtk.main()
