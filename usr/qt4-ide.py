@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function, division
+import serial
 
 from framebuffer import FrameBuffer
 from editor import *
@@ -8,6 +9,7 @@ import pydfu
 from terminal import *
 from PyQt4.QtGui import *
 from serial import *
+from serial.tools import list_ports
 from time import sleep
 import sys
 import os
@@ -27,7 +29,8 @@ class OpenMVConnector(QObject):
         self.auto_connect = False
 
     def start(self):
-        self.timer.start(500)
+        #self.timer.start(500)
+        print('need to add openmv.find() before this can work...')
 
     def stop(self):
         self.timer.stop()
@@ -418,10 +421,22 @@ class OpenMVIDE(QMainWindow):
                 # interrupt any running code
                 openmv.stop_script()
                 sleep(0.2)
-                ## TODO: device config
+                # first, check to see if self.serial_port is in the list of enumerated ports
+                # then try to open it. If that fails, or if the port isn't in the enumerated
+                # list, then prompt the user for a port
+                ports = []
+                for p in list_ports.comports():
+                    name = p[0]
+                    try:
+                        ser = Serial(name, 115200, timeout=1)
+                        ser.close()
+                        ports.append(p)
+                    except (IOError, OSError):
+                        pass
+                print(ports)
                 self.serial = Serial(self.serial_port, 115200, timeout=1)
                 self.terminal.start(self.serial)
-            except Exception as e:
+            except IOError as e:
                 print('error connecting OpenMV Cam: %s' % e)
                 self.connected = False
             else:
