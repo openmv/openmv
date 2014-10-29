@@ -95,53 +95,25 @@ class ImageUpdater(QObject):
     stop = pyqtSignal()
     error = pyqtSignal(Exception)
     jpeg_error = pyqtSignal()
+    buff = ''
 
     def __init__(self):
         QObject.__init__(self)
-        self.image = QImage()
+        self.img = QImage()
 
     def do_process(self):
         try:
-            b = openmv.fb_get()
+            b = openmv.fb_dump()
         except (IOError, USBError) as e:
-            print 'ImageUpdater IOError %s' % e
+            print 'ImageUpdater error: %s' % e
             self.error.emit(e)
         else:
             if b:
-                fmt = b[0]
-                w = b[1]
-                h = b[2]
-                buff = b[3]
+                w = b[0]
+                h = b[1]
+                self.buff = b[2]
+                stride = w * 3
 
-                img = None
-
-                if fmt == openmv.FORMAT_JPEG:
-                    ## JPEG decoding required
-                    img = QImage(w, h, QImage.Format_ARGB32)
-                    buff = string.join(map(lambda z: '%c' % z, buff), '')
-                    if not img.loadFromData(buff, 'JPG'):
-                        print('ImageUpdater JPEG decode error')
-                        self.jpeg_error.emit()
-
-                elif fmt == openmv.FORMAT_GRAY:
-                    ## We've got a grayscale image
-                    img = QImage(w, h, QImage.Format_ARGB32)
-                    x = 0
-                    y = 0
-                    for c in buff:
-                        img.setPixel(x, y, qRgb(c, c, c))
-                        x += 1
-                        if x >= w:
-                            y += 1
-                            x = 0
-                elif fmt == openmv.FORMAT_RGB565:
-                    ## We've got RGB565 format
-                    buff = numpy.frombuffer(buff, dtype=numpy.uint16).byteswap()
-                    img = QImage(buff, w, h, QImage.Format_RGB16)
-                else:
-                    print('ImageUpdater unknown image format')
-
-                if img:
-                    self.image = img
-                    self.update.emit(self.image)
+                self.img = QImage(self.buff, w, h, stride, QImage.Format_RGB888)
+                self.update.emit(self.img)
 
