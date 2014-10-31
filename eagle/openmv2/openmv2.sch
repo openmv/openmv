@@ -6655,7 +6655,7 @@ DIN A3, landscape with extra doc field</description>
 <part name="C13" library="sfe" deviceset="CAP" device="0402-CAP" value="0.1uF"/>
 <part name="C14" library="sfe" deviceset="CAP" device="0402-CAP" value="0.1uF"/>
 <part name="GND3" library="sfe" deviceset="GND" device=""/>
-<part name="U10" library="mux" deviceset="IS42S16800E" device=""/>
+<part name="U10" library="mux" deviceset="IS42S16800E" device="" value="IS42S81600E-7TL"/>
 <part name="U9" library="omnivision" deviceset="OV2640" device=""/>
 <part name="C16" library="sfe" deviceset="CAP" device="0402-CAP" value="0.1uF"/>
 <part name="C17" library="sfe" deviceset="CAP" device="0402-CAP" value="0.1uF"/>
