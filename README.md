@@ -7,7 +7,7 @@ OpenMV is programmable in Python3 (MicroPython) and capable of doing face detect
 A Python IDE with syntax highlighting is available for the camera, it can run/upload scripts to the camera, view the framebuffer and update the firmware.
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/iabdalkader/openmv/master/eagle/openmv1/openmv.jpeg" width="240" height="180" border="10">
+<img src="https://raw.githubusercontent.com/iabdalkader/openmv/master/imgs/openmv1.jpeg" width="240" height="180" border="10">
 </p>
 **This is a video of the color tracking:**
 <p align="center">
