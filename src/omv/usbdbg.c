@@ -44,6 +44,7 @@ void usbdbg_clr_script()
 {
     script_ready =0;
     vstr_reset(&script);
+    fb->lock_tried=0;
     mutex_unlock(&fb->lock);
 }
 
@@ -128,7 +129,9 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
                 ((uint8_t*)buffer)[0] = 0;
             } else {
                 // try to lock FB, return 1 if locked
-                ((uint8_t*)buffer)[0] = mutex_try_lock(&fb->lock);
+                int locked = mutex_try_lock(&fb->lock);
+                fb->lock_tried = !locked;
+                ((uint8_t*)buffer)[0] = locked;
             }
             break;
 

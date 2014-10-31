@@ -11,11 +11,11 @@
 #include "mutex.h"
 extern char _fb_base;
 static struct framebuffer {
-    int w;
-    int h;
+    int w,h;
     int bpp;
     int ready;
     mutex_t lock;
+    int lock_tried;
     uint8_t pixels[];
 // Note all instances of fb point to the same memory address.
 }*fb = (struct framebuffer *) &_fb_base;
