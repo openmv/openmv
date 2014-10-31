@@ -99,7 +99,7 @@ def fb_dump():
 
     # read fb data
     __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_DUMP, num_bytes/4, __INTERFACE, 0, __TIMEOUT)
-    buff = __dev.read(__IN_EP, num_bytes, __INTERFACE, __TIMEOUT)
+    buff = __dev.read(__IN_EP, num_bytes, __TIMEOUT)
 
     if size[2] == 1:  # Grayscale
         s = buff.tostring()
@@ -127,7 +127,7 @@ def fb_update():
 
 def exec_script(buf):
     __dev.ctrl_transfer(0x41, __USBDBG_SCRIPT_EXEC, len(buf), __INTERFACE, None, __TIMEOUT)
-    __dev.write(__OUT_EP, buf, __INTERFACE, __TIMEOUT)
+    __dev.write(__OUT_EP, buf, __TIMEOUT)
 
 def stop_script():
     __dev.ctrl_transfer(0x41, __USBDBG_SCRIPT_STOP, 0, __INTERFACE, None, __TIMEOUT)
@@ -135,12 +135,12 @@ def stop_script():
 def save_template(x, y, w, h, path):
     buf = struct.pack("IIII", x, y, w, h) + path
     __dev.ctrl_transfer(0x41, __USBDBG_TEMPLATE_SAVE, len(buf), __INTERFACE, None, __TIMEOUT)
-    __dev.write(__OUT_EP, buf, __INTERFACE, __TIMEOUT)
+    __dev.write(__OUT_EP, buf, __TIMEOUT)
 
 def save_descriptor(x, y, w, h, path):
     buf = struct.pack("IIII", x, y, w, h) + path
     __dev.ctrl_transfer(0x41, __USBDBG_DESCRIPTOR_SAVE, len(buf), __INTERFACE, None, __TIMEOUT)
-    __dev.write(__OUT_EP, buf, __INTERFACE, __TIMEOUT)
+    __dev.write(__OUT_EP, buf, __TIMEOUT)
 
 def set_attr(attr, value):
     buf = struct.unpack(">H", struct.pack("bb", attr, value))[0]
