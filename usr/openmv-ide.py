@@ -2,8 +2,8 @@
 import pydfu
 import openmv
 import gtk
-import vte
 import gobject
+import pango
 import serial
 import usb.core
 import usb.util
@@ -79,12 +79,17 @@ class OMVGtk:
         # Configure source viewer
         self.buffer = CodeBuffer(lang=SyntaxLoader("python"))
         self.buffer.connect("changed", self.text_changed)
-        self.builder.get_object("src_scrolledwindow").add(gtk.TextView(self.buffer))
+        tabs = pango.TabArray(1, True)
+        tabs.set_tab(0, pango.TAB_LEFT, 8*4) #seems right
+        txtview = gtk.TextView(self.buffer)
+        txtview.set_tabs(tabs)
+        self.builder.get_object("src_scrolledwindow").add(txtview)
 
-        #configure the terminal
-        self.fd = -1
-        self.terminal = self.builder.get_object('terminal')
-        self.terminal.set_size(80,24)
+        # Configure terminal window
+        self.terminal_scroll = self.builder.get_object('vte_scrolledwindow')
+        self.terminal = self.builder.get_object('vte_textview')
+        self.terminal.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
+        self.terminal.modify_text(gtk.STATE_NORMAL, gtk.gdk.color_parse('green'))
 
         # get drawingarea
         self.pixbuf = None
@@ -125,6 +130,7 @@ class OMVGtk:
             "on_zoomout_clicked"            : self.zoomout_clicked,
             "on_bestfit_clicked"            : self.bestfit_clicked,
             "on_updatefb_clicked"           : self.updatefb_clicked,
+            "on_vte_size_allocate"          : self.scroll_terminal,
         }
         self.builder.connect_signals(signals)
 
@@ -186,13 +192,10 @@ class OMVGtk:
         sleep(wait)
 
     def connect(self):
-        self.terminal = self.builder.get_object('terminal')
         try:
             # open VCP and configure the terminal
-            self.fd = os.open(self.config.get("main", "serial_port"), os.O_RDWR)
-            self.terminal.reset(True, True)
-            self.terminal.set_size(80,24)
-            self.terminal.set_pty(self.fd)
+            self.serial = serial.Serial(self.config.get("main", "serial_port"), 115200, timeout=0.001)
+            gobject.gobject.idle_add(omvgtk.update_terminal)
         except Exception as e:
             self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
             return
@@ -214,15 +217,9 @@ class OMVGtk:
         map(lambda x:x.set_sensitive(True), self.controls)
 
     def disconnect(self):
-        try:
-            # close VCP
-            os.close(self.fd)
-        except OSError:
-            pass
-
         #reset terminal
-        self.terminal.set_pty(-1)
-        self.terminal.reset(True, True)
+        #self.terminal.set_pty(-1)
+        #self.terminal.reset(True, True)
 
         try:
             # stop running code
@@ -336,7 +333,7 @@ class OMVGtk:
                 # call dfu-util
                 openmv.enter_dfu()
                 sleep(1.0)
-                gobject.gobject.idle_add(self.fwupdate_task, state);
+                gobject.gobject.idle_add(self.fwupdate_task, state)
             else:
                 dialog.hide()
 
@@ -396,6 +393,16 @@ class OMVGtk:
             self.statusbar.pop(self.statusbar_ctx)
             self.statusbar.push(self.statusbar_ctx, rgb)
 
+    def scroll_terminal(self, widget, event):
+        adj = self.terminal_scroll.get_vadjustment()
+        adj.set_value(adj.upper - adj.page_size)
+
+    def update_terminal(self):
+        if (self.serial.readable()):
+            buffer = self.terminal.get_buffer()
+            buffer.insert(buffer.get_end_iter(), self.serial.readline())
+        return True
+
     def update_drawing(self):
         if (not self.connected):
             return True
@@ -410,7 +417,7 @@ class OMVGtk:
             return True
 
         if fb:
-            # create pixbuf from np array
+            # create pixbuf from RGB888
             self.pixbuf =gtk.gdk.pixbuf_new_from_data(fb[2], gtk.gdk.COLORSPACE_RGB, False, 8, fb[0], fb[1], fb[0]*3)
             self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
 
@@ -583,5 +590,5 @@ class OMVGtk:
 if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
-    gobject.gobject.idle_add(omvgtk.update_drawing);
+    gobject.gobject.idle_add(omvgtk.update_drawing)
     gtk.main()

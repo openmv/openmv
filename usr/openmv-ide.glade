@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <!-- interface-requires gtk+ 3.0 -->
-  <!-- interface-requires vte 0.0 -->
   <!-- interface-naming-policy toplevel-contextual -->
   <object class="GtkAdjustment" id="brightness_adjust">
     <property name="lower">-2</property>
@@ -1157,15 +1156,13 @@
               <object class="GtkScrolledWindow" id="vte_scrolledwindow">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <signal name="size-allocate" handler="on_vte_size_allocate" swapped="no"/>
                 <child>
-                  <object class="VteTerminal" id="terminal">
+                  <object class="GtkTextView" id="vte_textview">
                     <property name="visible">True</property>
-                    <property name="app_paintable">True</property>
                     <property name="can_focus">True</property>
-                    <property name="background_tint_color">#ffff0fa0ffff</property>
-                    <property name="encoding">UTF-8</property>
-                    <property name="scroll_on_keystroke">True</property>
-                    <property name="scroll_on_output">False</property>
+                    <property name="editable">False</property>
+                    <property name="wrap_mode">word</property>
                   </object>
                 </child>
               </object>
