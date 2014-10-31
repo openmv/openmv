@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 import pydfu
 import openmv
-import sys, os, os.path
-from time import sleep
-import gtk, gtksourceview2 as gtksourceview
-import gio
-import gobject
+import gtk
 import vte
+import gobject
 import serial
 import usb.core
 import usb.util
+import sys, os, os.path
+from time import sleep
 from os.path import expanduser
+import gtkcodebuffer
+from gtkcodebuffer import CodeBuffer, SyntaxLoader
+
 try:
     # 3.x name
     import configparser
@@ -71,18 +73,13 @@ class OMVGtk:
         self.connected = False
         map(lambda x:x.set_sensitive(False), self.controls)
 
-        #configure gtksourceview
-        sourceview = self.builder.get_object('gtksourceview')
-        self.buffer = gtksourceview.Buffer()
-        mgr = gtksourceview.style_scheme_manager_get_default()
-        style_scheme = mgr.get_scheme('classic')
-        if style_scheme:
-            self.buffer.set_style_scheme(style_scheme)
-        lang_manager = gtksourceview.language_manager_get_default()
-        self.buffer.set_highlight_syntax(True)
-        self.buffer.set_language(lang_manager.get_language("python"))
+        # workaround bug in gtkcodebuffer
+        gtkcodebuffer.SYNTAX_PATH.append(os.path.join(sys.prefix,"local", "share","pygtkcodebuffer","syntax"))
+
+        # Configure source viewer
+        self.buffer = CodeBuffer(lang=SyntaxLoader("python"))
         self.buffer.connect("changed", self.text_changed)
-        sourceview.set_buffer(self.buffer)
+        self.builder.get_object("src_scrolledwindow").add(gtk.TextView(self.buffer))
 
         #configure the terminal
         self.fd = -1
