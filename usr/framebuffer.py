@@ -35,7 +35,9 @@ class FrameBuffer(QLabel):
         # connect timeout to updater do_process
         self.timer.timeout.connect(self.updater.do_process)
 
-        self.do_update(QImage(chr(0) * (321 * 241 * 3), 320, 240, QImage.Format_RGB888))
+        self.pixmap = QPixmap()
+
+        #self.do_update(QImage(chr(0) * (321 * 241 * 3), 320, 240, QImage.Format_RGB888))
 
     def quit(self):
         try:
@@ -47,8 +49,8 @@ class FrameBuffer(QLabel):
 
     def start_updater(self):
         #print 'start_updater %s' % QThread.currentThreadId()
-        error_detected = False
-        self.timer.start(17)
+        self.error_detected = False
+        self.timer.start(1)
 
     def stop_updater(self):
         #print 'stop_updater %s' % QThread.currentThreadId()
@@ -62,19 +64,17 @@ class FrameBuffer(QLabel):
             self.error.emit(error.errno)
             print('FrameBuffer IOError dumping frame buffer: %s' % error)
 
-    def do_update(self, image):
+    def do_update(self):
         #print 'do_update %s' % QThread.currentThreadId()
-        pixmap = QPixmap()
-        assert isinstance(image, QImage)
 
-        w = image.width()*self.scale
-        h = image.height()*self.scale
+        w = self.updater.img.width()*self.scale
+        h = self.updater.img.height()*self.scale
 
-        pixmap.convertFromImage(image.scaled(w, h, transformMode=Qt.SmoothTransformation), Qt.DiffuseDither)
-        self.setPixmap(pixmap)
+        self.pixmap.convertFromImage(self.updater.img.scaled(w, h, transformMode=Qt.FastTransformation), Qt.DiffuseDither)
+        self.setPixmap(self.pixmap)
         # auto-adjust sizing on the pixmap frame
-        self.setMinimumWidth(pixmap.width())
-        self.setMinimumHeight(pixmap.height())
+        self.setMinimumWidth(self.pixmap.width())
+        self.setMinimumHeight(self.pixmap.height())
 
     def set_scale(self, scale):
         if 0 < scale < 4.0:
@@ -91,7 +91,7 @@ class FrameBuffer(QLabel):
 
 
 class ImageUpdater(QObject):
-    update = pyqtSignal(QImage)
+    update = pyqtSignal()
     stop = pyqtSignal()
     error = pyqtSignal(Exception)
     jpeg_error = pyqtSignal()
@@ -105,15 +105,15 @@ class ImageUpdater(QObject):
         try:
             b = openmv.fb_dump()
         except (IOError, USBError) as e:
-            print 'ImageUpdater error: %s' % e
+            #print 'ImageUpdater error: %s' % e
             self.error.emit(e)
         else:
-            if b:
+            if not b is None:
                 w = b[0]
                 h = b[1]
                 self.buff = b[2]
                 stride = w * 3
 
                 self.img = QImage(self.buff, w, h, stride, QImage.Format_RGB888)
-                self.update.emit(self.img)
+                self.update.emit()
 
