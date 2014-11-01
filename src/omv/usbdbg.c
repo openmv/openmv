@@ -55,6 +55,7 @@ void usbdbg_data_in(void *buffer, int length)
             memcpy(buffer, fb, length);
             cmd = USBDBG_NONE;
             break;
+
         case USBDBG_FRAME_DUMP:
             if (xfer_bytes < xfer_length) {
                 memcpy(buffer, fb->pixels+xfer_bytes, length);
@@ -124,14 +125,14 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
             break;
 
         case USBDBG_FRAME_LOCK:
-            if (fb->ready == 0) {
-                // no valid frame
-                ((uint8_t*)buffer)[0] = 0;
+            // try to lock FB, return fb hdr if locked
+            if (fb->ready && mutex_try_lock(&fb->lock)) {
+                fb->lock_tried = 0;
+                memcpy(buffer, fb, length);
             } else {
-                // try to lock FB, return 1 if locked
-                int locked = mutex_try_lock(&fb->lock);
-                fb->lock_tried = !locked;
-                ((uint8_t*)buffer)[0] = locked;
+                // no valid frame or failed to lock, return 0
+                fb->lock_tried = 1;
+                ((uint32_t*)buffer)[0] = 0;
             }
             break;
 

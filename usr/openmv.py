@@ -83,15 +83,15 @@ def fb_size():
     size = struct.unpack("III", buf)
     return size
 
-def fb_lock():
-    buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_LOCK, 0, __INTERFACE, 1, __TIMEOUT)
-    return struct.unpack("B", buf)[0]
+def fb_state():
+    buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_LOCK, 0, __INTERFACE, __FB_HDR_SIZE, __TIMEOUT)
+    return struct.unpack("III", buf)
 
 def fb_dump():
-    if (fb_lock() == 0):
+    size = fb_state()
+    if (not size[0]): # frame not ready
         return None
 
-    size = fb_size()
     if (size[2] > 2): #JPEG
         num_bytes = size[2]
     else:
