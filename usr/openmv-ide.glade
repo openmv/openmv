@@ -584,8 +584,8 @@
               <object class="GtkToolButton" id="connect_button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Connect</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton1</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-connect</property>
                 <signal name="clicked" handler="on_connect_clicked" swapped="no"/>
@@ -599,8 +599,8 @@
               <object class="GtkToolButton" id="reset_button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Reset</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton5</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-quit</property>
                 <signal name="clicked" handler="on_reset_clicked" swapped="no"/>
@@ -614,9 +614,8 @@
               <object class="GtkToolButton" id="bootloader_button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="tooltip_text" translatable="yes">Enter bootloader</property>
+                <property name="tooltip_text" translatable="yes">Update Firmware</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton7</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-go-up</property>
                 <signal name="clicked" handler="on_fwupdate_clicked" swapped="no"/>
@@ -643,7 +642,6 @@
                 <property name="can_focus">False</property>
                 <property name="tooltip_text" translatable="yes">Execute Script</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton3</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-execute</property>
                 <signal name="clicked" handler="on_execute_clicked" swapped="no"/>
@@ -659,7 +657,6 @@
                 <property name="can_focus">False</property>
                 <property name="tooltip_text" translatable="yes">Stop Script</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton4</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-stop</property>
                 <signal name="clicked" handler="on_stop_clicked" swapped="no"/>
@@ -687,7 +684,6 @@
                 <property name="can_focus">False</property>
                 <property name="tooltip_text" translatable="yes">Save Script</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton5</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-save</property>
                 <signal name="clicked" handler="on_save_file" swapped="no"/>
@@ -712,8 +708,8 @@
               <object class="GtkToolButton" id="zoomout_button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Zoom Out</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton5</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-zoom-out</property>
                 <signal name="clicked" handler="on_zoomout_clicked" swapped="no"/>
@@ -727,8 +723,8 @@
               <object class="GtkToolButton" id="bestfit_button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes"> Best Fit</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton8</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-zoom-fit</property>
                 <signal name="clicked" handler="on_bestfit_clicked" swapped="no"/>
@@ -742,8 +738,8 @@
               <object class="GtkToolButton" id="zoomin_button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Zoom In</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton7</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-zoom-in</property>
                 <signal name="clicked" handler="on_zoomin_clicked" swapped="no"/>
@@ -757,8 +753,8 @@
               <object class="GtkToolButton" id="refresh_button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="tooltip_text" translatable="yes">Capature</property>
                 <property name="use_action_appearance">False</property>
-                <property name="label" translatable="yes">toolbutton9</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-refresh</property>
                 <signal name="clicked" handler="on_updatefb_clicked" swapped="no"/>
