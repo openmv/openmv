@@ -10,6 +10,7 @@ import sys,time
 import usb.core
 import usb.util
 import pydfu
+import platform
 from array import array
 from PIL import Image
 
@@ -54,9 +55,11 @@ def init():
     if __dev is None:
         raise ValueError('__device not found')
 
-    # detach kernel driver
-    if __dev.is_kernel_driver_active(__INTERFACE):
-        __dev.detach_kernel_driver(__INTERFACE)
+    # Windows backend doesn't support this
+    if (platform.system() !='Windows'):
+        # detach kernel driver
+        if __dev.is_kernel_driver_active(__INTERFACE):
+            __dev.detach_kernel_driver(__INTERFACE)
 
     # claim __INTERFACE
     usb.util.claim_interface(__dev, __INTERFACE)
