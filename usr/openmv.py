@@ -110,8 +110,6 @@ def fb_dump():
         buff = ''.join(map(_rgb, arr))
     else: # JPEG
         try:
-            #print(size[0], size[1], size[2])
-            #__write_img(buff, "/tmp/swap.jpeg")
             buff = Image.frombuffer("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "").tostring()
         except Exception as e:
             print ("JPEG decode error (%s)"%(e))
