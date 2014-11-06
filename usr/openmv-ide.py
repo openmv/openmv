@@ -400,7 +400,10 @@ class OMVGtk:
     def update_terminal(self):
         if (self.serial.readable()):
             buffer = self.terminal.get_buffer()
-            buffer.insert(buffer.get_end_iter(), self.serial.readline())
+            try:
+                buffer.insert(buffer.get_end_iter(), self.serial.readline())
+            except:
+                return False
         return True
 
     def update_drawing(self):
@@ -413,7 +416,6 @@ class OMVGtk:
         except Exception as e:
             self.disconnect()
             self._update_title()
-            print("%s"%(e))
             return True
 
         if fb:
