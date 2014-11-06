@@ -21,31 +21,30 @@ __VID=0xf055
 __PID=0x9800
 
 # Debug __INTERFACE
-__INTERFACE     = 0
-__ALTSETTING    = 1
-__IN_EP         =0x81
-__OUT_EP        =0x01
+__INTERFACE     =3
+__IN_EP         =0x82
+__OUT_EP        =0x02
 __TIMEOUT       =3000
 __FB_HDR_SIZE   =12
 
 # USB Debug commands
-__USBDBG_FRAME_SIZE=1
-__USBDBG_FRAME_DUMP=2
-__USBDBG_FRAME_LOCK=3
-__USBDBG_FRAME_UPDATE=4
-__USBDBG_SCRIPT_EXEC=5
-__USBDBG_SCRIPT_STOP=6
-__USBDBG_SCRIPT_SAVE=7
-__USBDBG_TEMPLATE_SAVE=8
+__USBDBG_FRAME_SIZE     =1
+__USBDBG_FRAME_DUMP     =2
+__USBDBG_FRAME_LOCK     =3
+__USBDBG_FRAME_UPDATE   =4
+__USBDBG_SCRIPT_EXEC    =5
+__USBDBG_SCRIPT_STOP    =6
+__USBDBG_SCRIPT_SAVE    =7
+__USBDBG_TEMPLATE_SAVE  =8
 __USBDBG_DESCRIPTOR_SAVE=9
-__USBDBG_ATTR_READ=10
-__USBDBG_ATTR_WRITE=11
-__USBDBG_SYS_RESET=12
-__USBDBG_SYS_BOOT=13
+__USBDBG_ATTR_READ      =10
+__USBDBG_ATTR_WRITE     =11
+__USBDBG_SYS_RESET      =12
+__USBDBG_SYS_BOOT       =13
 
-ATTR_CONTRAST=0
-ATTR_BRIGHTNESS=1
-ATTR_SATURATION=2
+ATTR_CONTRAST   =0
+ATTR_BRIGHTNESS =1
+ATTR_SATURATION =2
 ATTR_GAINCEILING=3
 
 def init():
@@ -55,25 +54,16 @@ def init():
     if __dev is None:
         raise ValueError('__device not found')
 
-    # Windows backend doesn't support this
-    if (platform.system() !='Windows'):
-        # detach kernel driver
-        if __dev.is_kernel_driver_active(__INTERFACE):
-            __dev.detach_kernel_driver(__INTERFACE)
-
-    # claim __INTERFACE
+    # claim the debug interface
     usb.util.claim_interface(__dev, __INTERFACE)
-
-    # set FB debug alt setting
-    __dev.set_interface_altsetting(__INTERFACE, __ALTSETTING)
 
 def release():
     try:
-        # Release device
-        usb.util.dispose_resources(dev)
+        # release the debug interface
+        usb.util.release_interface(__dev, __INTERFACE)
 
-        # reattach kernel driver
-        #__dev.attach_kernel_driver(__INTERFACE)
+        # release device
+        usb.util.dispose_resources(__dev)
     except:
         pass
 
@@ -82,17 +72,21 @@ def _rgb(rgb):
 
 def fb_size():
     # read fb header
-    buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_SIZE, 0, __INTERFACE, __FB_HDR_SIZE, __TIMEOUT)
-    size = struct.unpack("III", buf)
+    __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_SIZE, __FB_HDR_SIZE, __INTERFACE, 0, __TIMEOUT)
+    buff = __dev.read(__IN_EP, __FB_HDR_SIZE, __TIMEOUT)
+    size = struct.unpack("III", buff)
     return size
 
-def fb_state():
-    buf = __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_LOCK, 0, __INTERFACE, __FB_HDR_SIZE, __TIMEOUT)
-    return struct.unpack("III", buf)
+def fb_lock():
+    __dev.ctrl_transfer(0xC1, __USBDBG_FRAME_LOCK, __FB_HDR_SIZE, __INTERFACE, 0, __TIMEOUT)
+    buff = __dev.read(__IN_EP, __FB_HDR_SIZE, __TIMEOUT)
+    return struct.unpack("III", buff)
 
 def fb_dump():
-    size = fb_state()
-    if (not size[0]): # frame not ready
+    size = fb_lock()
+
+    if (not size[0]):
+        # frame not ready
         return None
 
     if (size[2] > 2): #JPEG
@@ -115,8 +109,8 @@ def fb_dump():
         try:
             buff = Image.frombuffer("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "").tostring()
         except Exception as e:
-            print ("JPEG decode error (%s)"%(e))
-            sys.exit(0)
+            #print ("JPEG decode error (%s)"%(e))
+            return None
 
         if (len(buff) != (size[0]*size[1]*3)):
             return None

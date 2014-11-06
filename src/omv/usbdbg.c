@@ -56,6 +56,19 @@ void usbdbg_data_in(void *buffer, int length)
             cmd = USBDBG_NONE;
             break;
 
+        case USBDBG_FRAME_LOCK:
+            // try to lock FB, return fb hdr if locked
+            if (fb->ready && mutex_try_lock(&fb->lock)) {
+                fb->lock_tried = 0;
+                memcpy(buffer, fb, length);
+            } else {
+                // no valid frame or failed to lock, return 0
+                fb->lock_tried = 1;
+                ((uint32_t*)buffer)[0] = 0;
+            }
+            cmd = USBDBG_NONE;
+            break;
+
         case USBDBG_FRAME_DUMP:
             if (xfer_bytes < xfer_length) {
                 memcpy(buffer, fb->pixels+xfer_bytes, length);
@@ -116,7 +129,8 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
         case USBDBG_FRAME_SIZE:
-            memcpy(buffer, fb, length);
+            xfer_bytes = 0;
+            xfer_length = length;
             break;
 
         case USBDBG_FRAME_DUMP:
@@ -125,15 +139,8 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
             break;
 
         case USBDBG_FRAME_LOCK:
-            // try to lock FB, return fb hdr if locked
-            if (fb->ready && mutex_try_lock(&fb->lock)) {
-                fb->lock_tried = 0;
-                memcpy(buffer, fb, length);
-            } else {
-                // no valid frame or failed to lock, return 0
-                fb->lock_tried = 1;
-                ((uint32_t*)buffer)[0] = 0;
-            }
+            xfer_bytes = 0;
+            xfer_length = length;
             break;
 
         case USBDBG_FRAME_UPDATE:
