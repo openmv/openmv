@@ -7,6 +7,7 @@ import pango
 import serial
 import usb.core
 import usb.util
+import appdirs
 import sys, os, os.path
 from time import sleep
 from os.path import expanduser
@@ -20,11 +21,12 @@ except ImportError:
     # 2.x name
     configparser = __import__("ConfigParser")
 
-IDE_PATH     = os.path.dirname(os.path.realpath(__file__))
-GLADE_PATH   = IDE_PATH+"/openmv-ide.glade"
-CONFIG_PATH  = IDE_PATH+"/openmv.config"
-EXAMPLE_PATH = IDE_PATH+"/examples"
-SCRIPTS_PATH = IDE_PATH+"/scripts"
+IDE_DIR      = os.path.dirname(os.path.realpath(__file__))
+CFG_DIR      = appdirs.user_config_dir(appname="OpenMV")
+GLADE_PATH   = os.path.join(IDE_DIR, "openmv-ide.glade")
+CONFIG_PATH  = os.path.join(CFG_DIR, "openmv.config")
+EXAMPLE_PATH = os.path.join(IDE_DIR, "examples")
+SCRIPTS_PATH = os.path.join(IDE_DIR, "scripts")
 
 SCALE =1
 RECENT_FILES_LIMIT=5
@@ -135,6 +137,9 @@ class OMVGtk:
         self.builder.connect_signals(signals)
 
         # create fresh config if needed
+        if not os.path.isdir(CFG_DIR):
+            os.makedirs(CFG_DIR)
+
         if not os.path.isfile(CONFIG_PATH):
             try:
                 with open(CONFIG_PATH, "w") as f:
