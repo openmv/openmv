@@ -8,6 +8,7 @@ import serial
 import usb.core
 import usb.util
 import appdirs
+import platform
 import sys, os, os.path
 from time import sleep
 from os.path import expanduser
@@ -36,7 +37,7 @@ FLASH_OFFSETS= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
 
 DEFAULT_CONFIG='''\
 [main]
-board = openmv1
+board = OpenMV-Tiny
 serial_port = /dev/openmvcam
 recent =
 '''
@@ -131,6 +132,7 @@ class OMVGtk:
             "on_zoomin_clicked"             : self.zoomin_clicked,
             "on_zoomout_clicked"            : self.zoomout_clicked,
             "on_bestfit_clicked"            : self.bestfit_clicked,
+            "on_preferences_clicked"        : self.preferences_clicked,
             "on_updatefb_clicked"           : self.updatefb_clicked,
             "on_vte_size_allocate"          : self.scroll_terminal,
         }
@@ -217,7 +219,7 @@ class OMVGtk:
             self.serial = serial.Serial(self.config.get("main", "serial_port"), 115200, timeout=0.001)
             gobject.gobject.idle_add(omvgtk.update_terminal)
         except Exception as e:
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open serial port (check prefernces)\n%s"%e)
             return
 
         self.connected = True
@@ -374,6 +376,28 @@ class OMVGtk:
         global SCALE
         SCALE=1
 
+    def preferences_clicked(self, widget):
+        board_combo = self.builder.get_object("board_combo")
+        sport_combo = self.builder.get_object("sport_combo")
+        dialog = self.builder.get_object("preferences_dialog")
+
+        # Fill serial ports combo
+        sport_combo.get_model().clear()
+        serial_ports = self.list_serial_ports()
+        for i in serial_ports:
+            sport_combo.append_text(i)
+
+        if len(serial_ports):
+            sport_combo.set_active(0)
+
+        # Save config
+        if dialog.run() == gtk.RESPONSE_OK:
+            self.config.set("main", "board", board_combo.get_active_text())
+            self.config.set("main", "serial_port", sport_combo.get_active_text())
+            self.save_config()
+
+        dialog.hide()
+
     def updatefb_clicked(self, widget):
         openmv.fb_update()
 
@@ -448,8 +472,7 @@ class OMVGtk:
         openmv.set_attr(adjust.attr, int(adjust.value))
 
     def save_config(self):
-        # TODO set config items from GUI
-        #self.config.set("section", "key", value)
+        # config.set("section", "key", value)
         self.config.set("main", "recent", ','.join(self.files))
         with open(CONFIG_PATH, "w") as file:
            self.config.write(file)
@@ -588,6 +611,24 @@ class OMVGtk:
 
     def text_changed(self, widget):
         self.save_button.set_sensitive(True)
+
+    def list_serial_ports(self):
+        serial_ports = []
+        system_name = platform.system()
+
+        if system_name == "Windows":
+            for i in range(256):
+                try:
+                    s = serial.Serial(i)
+                    serial_ports.append(i)
+                    s.close()
+                except serial.SerialException:
+                    pass
+        else:
+            # Linux/Mac
+            serial_ports.append("/dev/openmvcam")
+
+        return serial_ports
 
     def quit(self, widget):
         try:
