@@ -7,7 +7,6 @@ import pango
 import serial
 import usb.core
 import usb.util
-import appdirs
 import platform
 import sys, os, os.path
 from time import sleep
@@ -23,11 +22,11 @@ except ImportError:
     configparser = __import__("ConfigParser")
 
 IDE_DIR      = os.path.dirname(os.path.realpath(__file__))
-CFG_DIR      = appdirs.user_config_dir(appname="OpenMV")
+DATA_DIR     = os.path.join(os.path.expanduser("~"), "openmv") #use home dir
+SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
+EXAMPLES_DIR = os.path.join(IDE_DIR, "examples")
 GLADE_PATH   = os.path.join(IDE_DIR, "openmv-ide.glade")
-CONFIG_PATH  = os.path.join(CFG_DIR, "openmv.config")
-EXAMPLE_PATH = os.path.join(IDE_DIR, "examples")
-SCRIPTS_PATH = os.path.join(IDE_DIR, "scripts")
+CONFIG_PATH  = os.path.join(DATA_DIR, "openmv.config")
 
 SCALE =1
 RECENT_FILES_LIMIT=5
@@ -138,10 +137,15 @@ class OMVGtk:
         }
         self.builder.connect_signals(signals)
 
-        # create fresh config if needed
-        if not os.path.isdir(CFG_DIR):
-            os.makedirs(CFG_DIR)
+        # create data directory
+        if not os.path.isdir(DATA_DIR):
+            os.makedirs(DATA_DIR)
 
+        # create user scripts directory
+        if not os.path.isdir(SCRIPTS_DIR):
+            os.makedirs(SCRIPTS_DIR)
+
+        # create fresh config if needed
         if not os.path.isfile(CONFIG_PATH):
             try:
                 with open(CONFIG_PATH, "w") as f:
@@ -166,18 +170,17 @@ class OMVGtk:
 #            self._load_file(path)
 
         # built-in examples menu
-        if os.path.isdir(EXAMPLE_PATH):
-            submenu = gtk.Menu()
-            menu = self.builder.get_object('example_menu')
-            files = sorted(os.listdir(EXAMPLE_PATH))
-            for f in files:
-                if f.endswith(".py"):
-                    label = os.path.basename(f)
-                    mitem = gtk.MenuItem(label)
-                    mitem.connect("activate", self.open_example, EXAMPLE_PATH)
-                    submenu.append(mitem)
+        submenu = gtk.Menu()
+        menu = self.builder.get_object('example_menu')
+        files = sorted(os.listdir(EXAMPLES_DIR))
+        for f in files:
+            if f.endswith(".py"):
+                label = os.path.basename(f)
+                mitem = gtk.MenuItem(label)
+                mitem.connect("activate", self.open_example, EXAMPLES_DIR)
+                submenu.append(mitem)
 
-            menu.set_submenu(submenu)
+        menu.set_submenu(submenu)
 
         # recent files menu
         self.files = []
@@ -254,7 +257,7 @@ class OMVGtk:
         dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         dialog.set_default_response(gtk.RESPONSE_OK)
-        dialog.set_current_folder(SCRIPTS_PATH)
+        dialog.set_current_folder(SCRIPTS_DIR)
         ff = gtk.FileFilter()
         ff.set_name("dfu")
         ff.add_pattern("*.bin") #TODO change to DFU
@@ -522,7 +525,7 @@ class OMVGtk:
             dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,
                     buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
             dialog.set_default_response(gtk.RESPONSE_OK)
-            dialog.set_current_folder(SCRIPTS_PATH)
+            dialog.set_current_folder(SCRIPTS_DIR)
             ff = gtk.FileFilter()
             ff.set_name("python")
             ff.add_pattern("*.py")
@@ -594,7 +597,7 @@ class OMVGtk:
         dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
                 buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         dialog.set_default_response(gtk.RESPONSE_OK)
-        dialog.set_current_folder(SCRIPTS_PATH)
+        dialog.set_current_folder(SCRIPTS_DIR)
         ff = gtk.FileFilter()
         ff.set_name("python")
         ff.add_pattern("*.py")
