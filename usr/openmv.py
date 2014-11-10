@@ -22,8 +22,8 @@ __PID=0x9800
 
 # Debug __INTERFACE
 __INTERFACE     =3
-__IN_EP         =0x82
-__OUT_EP        =0x02
+__IN_EP         =0x81
+__OUT_EP        =0x01
 __TIMEOUT       =3000
 __FB_HDR_SIZE   =12
 
@@ -49,23 +49,42 @@ ATTR_GAINCEILING=3
 
 def init():
     global __dev
-    # find USB __device
+    # find USB device
     __dev = usb.core.find(idVendor=__VID, idProduct=__PID)
     if __dev is None:
-        raise ValueError('__device not found')
+        return False
 
-    # claim the debug interface
-    usb.util.claim_interface(__dev, __INTERFACE)
+    try:
+        # This will soft-disconnect the device.
+        __dev.ctrl_transfer(0x41, 0xFF, 2, __INTERFACE, None, __TIMEOUT)
+    except:
+        pass
+    finally:
+        # release device
+        usb.util.dispose_resources(__dev)
+
+    __dev = usb.core.find(idVendor=__VID, idProduct=__PID)
+    if __dev is None:
+        return False
+
+    try:
+        # claim the debug interface
+        usb.util.claim_interface(__dev, __INTERFACE)
+    except:
+        return False
 
 def release():
     try:
         # release the debug interface
         usb.util.release_interface(__dev, __INTERFACE)
 
-        # release device
-        usb.util.dispose_resources(__dev)
+        # This will soft-disconnect the device.
+        __dev.ctrl_transfer(0x41, 0xFF, 1, __INTERFACE, None, __TIMEOUT)
     except:
         pass
+    finally:
+        # release device
+        usb.util.dispose_resources(__dev)
 
 def _rgb(rgb):
     return struct.pack("BBB", ((rgb & 0xF800)>>11)*255/31, ((rgb & 0x07E0)>>5)*255/63, (rgb & 0x001F)*255/31)

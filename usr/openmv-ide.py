@@ -197,16 +197,20 @@ class OMVGtk:
         sleep(wait)
 
     def connect(self):
-        try:
+        init = False
+        for i in range(0, 5):
             # init openmv
-            openmv.init()
+            init = openmv.init()
+            if init:
+                break
+            sleep(0.200)
 
-            # interrupt any running code
-            openmv.stop_script()
-            sleep(0.1)
-        except Exception as e:
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV\n%s"%e)
+        if init == False:
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV")
             return
+
+        # interrupt any running code
+        openmv.stop_script()
 
         try:
             # open VCP and configure the terminal
@@ -586,8 +590,11 @@ class OMVGtk:
         self.save_button.set_sensitive(True)
 
     def quit(self, widget):
-        # disconnect
-        self.disconnect()
+        try:
+            # disconnect
+            self.disconnect()
+        except:
+            pass
 
         self.save_config()
 
