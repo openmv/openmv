@@ -622,8 +622,9 @@ class OMVGtk:
         if system_name == "Windows":
             for i in range(256):
                 try:
-                    s = serial.Serial(i)
-                    serial_ports.append(i)
+                    port = "COM%d"%i
+                    s = serial.Serial(port)
+                    serial_ports.append(port)
                     s.close()
                 except serial.SerialException:
                     pass
