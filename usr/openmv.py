@@ -59,9 +59,6 @@ def init():
         __dev.ctrl_transfer(0x41, 0xFF, 2, __INTERFACE, None, __TIMEOUT)
     except:
         pass
-    finally:
-        # release device
-        usb.util.dispose_resources(__dev)
 
     __dev = usb.core.find(idVendor=__VID, idProduct=__PID)
     if __dev is None:
