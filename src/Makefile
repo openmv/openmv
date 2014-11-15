@@ -266,4 +266,4 @@ clean:
 	$(RM) -fr $(BUILD)
 
 flash::
-	dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000 -D $(BUILD)/$(BIN).bin
+	dfu-util -d 0483:df11 -c 1 -i 0 -a 0 -D $(BUILD)/$(BIN).dfu
