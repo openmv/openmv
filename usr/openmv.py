@@ -77,11 +77,11 @@ def release():
 
         # This will soft-disconnect the device.
         __dev.ctrl_transfer(0x41, 0xFF, 1, __INTERFACE, None, __TIMEOUT)
-    except:
-        pass
-    finally:
+
         # release device
         usb.util.dispose_resources(__dev)
+    except:
+        pass
 
 def _rgb(rgb):
     return struct.pack("BBB", ((rgb & 0xF800)>>11)*255/31, ((rgb & 0x07E0)>>5)*255/63, (rgb & 0x001F)*255/31)
