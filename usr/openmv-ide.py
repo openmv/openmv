@@ -21,7 +21,11 @@ except ImportError:
     # 2.x name
     configparser = __import__("ConfigParser")
 
-IDE_DIR      = os.path.dirname(os.path.realpath(__file__))
+if hasattr(sys,"frozen") and sys.frozen in ("windows_exe", "console_exe"):
+    IDE_DIR=os.path.dirname(sys.executable)
+else:
+    IDE_DIR=os.path.dirname(os.path.realpath(__file__))
+
 DATA_DIR     = os.path.join(os.path.expanduser("~"), "openmv") #use home dir
 SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 EXAMPLES_DIR = os.path.join(IDE_DIR, "examples")
