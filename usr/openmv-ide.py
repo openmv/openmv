@@ -206,28 +206,17 @@ class OMVGtk:
         sleep(wait)
 
     def connect(self):
-        init = False
-        for i in range(0, 5):
-            # init openmv
-            init = openmv.init()
-            if init:
-                break
-            sleep(0.200)
-
-        if init == False:
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to connect to OpenMV")
-            return
-
-        # interrupt any running code
-        openmv.stop_script()
-
         try:
             # open VCP and configure the terminal
-            self.serial = serial.Serial(self.config.get("main", "serial_port"), 115200, timeout=0.001)
+            self.serial = serial.Serial(self.config.get("main", "serial_port"), 115200, timeout=0.1)
             gobject.gobject.idle_add(omvgtk.update_terminal)
         except Exception as e:
             self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open serial port (check prefernces)\n%s"%e)
             return
+
+        openmv.init(self.serial)
+        # interrupt any running code
+        openmv.stop_script()
 
         self.connected = True
         self._update_title()
@@ -235,19 +224,13 @@ class OMVGtk:
         map(lambda x:x.set_sensitive(True), self.controls)
 
     def disconnect(self):
-        #reset terminal
-        #self.terminal.set_pty(-1)
-        #self.terminal.reset(True, True)
-
         try:
             # stop running code
             openmv.stop_script();
         except:
             pass
 
-        # release OpenMV
-        openmv.release()
-
+        self.serial.close()
         self.connected = False
         self._update_title()
         self.connect_button.set_sensitive(True)
@@ -438,12 +421,14 @@ class OMVGtk:
         adj.set_value(adj.upper - adj.page_size)
 
     def update_terminal(self):
-        if (self.serial.readable()):
-            buffer = self.terminal.get_buffer()
-            try:
-                buffer.insert(buffer.get_end_iter(), self.serial.readline())
-            except:
-                return False
+        buf_len = openmv.tx_buf_len()
+        buf = openmv.tx_buf(buf_len)
+        buffer = self.terminal.get_buffer()
+        try:
+            buffer.insert(buffer.get_end_iter(), buf)
+        except:
+            return False
+
         return True
 
     def update_drawing(self):

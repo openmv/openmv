@@ -24,6 +24,10 @@ static vstr_t script;
 static int script_ready=0;
 mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
 
+extern void usbd_cdc_tx_buf_flush();
+extern uint32_t usbd_cdc_tx_buf_len();
+extern uint8_t *usbd_cdc_tx_buf(uint32_t bytes);
+
 void usbdbg_init()
 {
     vstr_init(&script, 64);
@@ -51,6 +55,22 @@ void usbdbg_clr_script()
 void usbdbg_data_in(void *buffer, int length)
 {
     switch (cmd) {
+        case USBDBG_TX_BUF_LEN: {
+            uint32_t tx_buf_len = usbd_cdc_tx_buf_len();
+            memcpy(buffer, &tx_buf_len, length);
+            cmd = USBDBG_NONE;
+            break;
+        }
+
+        case USBDBG_TX_BUF: {
+            uint8_t *tx_buf = usbd_cdc_tx_buf(length);
+            memcpy(buffer, tx_buf, length);
+            if (xfer_bytes == xfer_length) {
+                cmd = USBDBG_NONE;
+            }
+            break;
+        }
+
         case USBDBG_FRAME_SIZE:
             memcpy(buffer, fb, length);
             cmd = USBDBG_NONE;
@@ -102,10 +122,22 @@ void usbdbg_data_out(void *buffer, int length)
             break;
 
         case USBDBG_TEMPLATE_SAVE: {
-            int res;
-            image_t image;
-            image.w = fb->w; image.h = fb->h; image.bpp = fb->bpp; image.pixels = fb->pixels;
-            if ((res=imlib_save_image(&image, "1:/template.pgm", (rectangle_t*)buffer)) != FR_OK) {
+            image_t image ={
+                .w = fb->w,
+                .h = fb->h,
+                .bpp = fb->bpp,
+                .pixels = fb->pixels
+            };
+
+            // null terminate the path
+            length = (length == 64) ? 63:length; 
+            ((char*)buffer)[length] = 0;
+
+            rectangle_t *roi = (rectangle_t*)buffer;
+            char *path = (char*)buffer+sizeof(rectangle_t);
+
+            int res=imlib_save_image(&image, path, roi);
+            if (res != FR_OK) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
             }
             // raise a flash IRQ to flush image
@@ -114,9 +146,21 @@ void usbdbg_data_out(void *buffer, int length)
         }
 
         case USBDBG_DESCRIPTOR_SAVE: {
-            image_t image;
-            image.w = fb->w; image.h = fb->h; image.bpp = fb->bpp; image.pixels = fb->pixels;
-            py_image_descriptor_from_roi(&image, "1:/desc.freak", (rectangle_t*)buffer);
+            image_t image ={
+                .w = fb->w,
+                .h = fb->h,
+                .bpp = fb->bpp,
+                .pixels = fb->pixels
+            };
+
+            // null terminate the path
+            length = (length == 64) ? 63:length; 
+            ((char*)buffer)[length] = 0;
+
+            rectangle_t *roi = (rectangle_t*)buffer;
+            char *path = (char*)buffer+sizeof(rectangle_t);
+
+            py_image_descriptor_from_roi(&image, path, roi);
             break;
         }
         default: /* error */
@@ -124,7 +168,7 @@ void usbdbg_data_out(void *buffer, int length)
     }
 }
 
-void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
+void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 {
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
@@ -135,7 +179,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
 
         case USBDBG_FRAME_DUMP:
             xfer_bytes = 0;
-            xfer_length =((uint32_t)length)<<2;
+            xfer_length = length;
             break;
 
         case USBDBG_FRAME_LOCK:
@@ -175,8 +219,8 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
 
         case USBDBG_ATTR_WRITE: {
             /* write sensor attribute */
-            int val = (int8_t)(length&0xff);
-            int attr= length>>8;
+            int16_t attr= *((int16_t*)buffer);
+            int16_t val = *((int16_t*)buffer+1);
             switch (attr) {
                 case ATTR_CONTRAST:
                     sensor_set_contrast(val);
@@ -204,6 +248,12 @@ void usbdbg_control(void *buffer, uint8_t request, uint16_t length)
         case USBDBG_BOOT:
             *((uint32_t *)0x20002000) = 0xDEADBEEF;
             NVIC_SystemReset();
+            break;
+
+        case USBDBG_TX_BUF:
+        case USBDBG_TX_BUF_LEN:
+            xfer_bytes = 0;
+            xfer_length = length;
             break;
 
         default: /* error */

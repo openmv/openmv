@@ -412,7 +412,7 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="invisible_char">•</property>
-            <property name="text" translatable="yes">desc.freak</property>
+            <property name="text" translatable="yes">/desc.freak</property>
             <property name="invisible_char_set">True</property>
             <property name="primary_icon_activatable">False</property>
             <property name="secondary_icon_activatable">False</property>
@@ -504,7 +504,7 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="invisible_char">•</property>
-            <property name="text" translatable="yes">template.pgm</property>
+            <property name="text" translatable="yes">/template.pgm</property>
             <property name="primary_icon_activatable">False</property>
             <property name="secondary_icon_activatable">False</property>
             <property name="primary_icon_sensitive">True</property>
