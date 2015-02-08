@@ -849,7 +849,7 @@
               <object class="GtkToolButton" id="refresh_button">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="tooltip_text" translatable="yes">Capature</property>
+                <property name="tooltip_text" translatable="yes">Refresh</property>
                 <property name="use_action_appearance">False</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-refresh</property>
