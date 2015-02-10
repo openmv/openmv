@@ -208,7 +208,7 @@ class OMVGtk:
     def connect(self):
         try:
             # open VCP and configure the terminal
-            self.serial = serial.Serial(self.config.get("main", "serial_port"), 115200, timeout=0.1)
+            self.serial = serial.Serial(self.config.get("main", "serial_port"), 12000000, timeout=0.1)
             gobject.gobject.idle_add(omvgtk.update_terminal)
         except Exception as e:
             self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open serial port (check prefernces)\n%s"%e)

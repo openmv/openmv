@@ -18,7 +18,7 @@ __serial = None
 __FB_HDR_SIZE   =12
 
 # USB Debug commands
-__USBDBG_CMD = 48 
+__USBDBG_CMD            = 48 
 __USBDBG_FRAME_SIZE     = 0x81
 __USBDBG_FRAME_DUMP     = 0x82
 __USBDBG_FRAME_LOCK     = 0x83
@@ -43,7 +43,6 @@ ATTR_GAINCEILING=3
 def init(serial):
     global __serial
     __serial = serial
-    __serial.baudrate =12000000 
 
 def _rgb(rgb):
     return struct.pack("BBB", ((rgb & 0xF800)>>11)*255/31, ((rgb & 0x07E0)>>5)*255/63, (rgb & 0x001F)*255/31)
@@ -140,7 +139,7 @@ if __name__ == '__main__':
     with open(sys.argv[1], 'r') as fin:
         buf = fin.read()
 
-    s = serial.Serial("/dev/openmvcam", 115200, timeout=1)
+    s = serial.Serial("/dev/openmvcam", 12000000, timeout=0.1)
     init(s)
     exec_script(buf)
     tx_len = tx_buf_len()
