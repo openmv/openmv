@@ -31,4 +31,3 @@ typedef unsigned long	DWORD;
 #endif
 
 #endif
-

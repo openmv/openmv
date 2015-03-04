@@ -53,6 +53,13 @@
 #define CMD55   (0x40+55)   /* APP_CMD */
 #define CMD58   (0x40+58)   /* READ_OCR */
 
+/* MMC card type flags (MMC_GET_TYPE) */
+#define CT_MMC		0x01		/* MMC ver 3 */
+#define CT_SD1		0x02		/* SD ver 1 */
+#define CT_SD2		0x04		/* SD ver 2 */
+#define CT_SDC		(CT_SD1|CT_SD2)	/* SD */
+#define CT_BLOCK	0x08		/* Block addressing */
+
 #define SD_TIMEOUT          (100000)
 #define SPI_TIMEOUT         (100)  /* in ms */
 
@@ -68,11 +75,7 @@ DRESULT sdcard_ioctl(BYTE drv, BYTE ctrl, void *buff);
 
 bool sdcard_is_present(void)
 {
-#ifdef OPENMV1
-    return (HAL_GPIO_ReadPin(SD_CD_PORT, SD_CD_PIN)==GPIO_PIN_RESET);
-#else
-    return 0;
-#endif
+    return 1;
 }
 
 /*-----------------------------------------------------------------------*/
