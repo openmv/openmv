@@ -380,7 +380,7 @@ def get_memory_layout(device):
     """
     cfg = device[0]
     intf = cfg[(0, 0)]
-    mem_layout_str = usb.util.get_string(device, 255, intf.iInterface)
+    mem_layout_str = usb.util.get_string(device, intf.iInterface)
     mem_layout = mem_layout_str.split('/')
     addr = int(mem_layout[1], 0)
     segments = mem_layout[2].split(',')
