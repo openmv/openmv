@@ -12,7 +12,8 @@
 #include "imlib.h"
 #include "array.h"
 #include "xalloc.h"
-#include "rng.h"
+
+extern uint32_t rng_randint(uint32_t min, uint32_t max);
 
 static cluster_t *cluster_alloc(int cx, int cy)
 {

@@ -11,6 +11,7 @@
 #include "xalloc.h"
 #include "imlib.h"
 #include "mdefs.h"
+#include <arm_math.h>
 
 #define R8(p) \
     rb_tbl[((p>>3)&0x1F)]

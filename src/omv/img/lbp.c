@@ -6,10 +6,12 @@
 * LBPu2⁄8,2 Operator.
 *
 */
+
 #include "imlib.h"
 #include "xalloc.h"
 #include "ff.h"
 #include "std.h"
+#include <stdlib.h>
 
 #define min(a,b) \
    ({ __typeof__ (a) _a = (a); \
