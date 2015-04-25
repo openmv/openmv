@@ -10,9 +10,9 @@
 #include "sccb.h"
 #include "pincfg.h"
 #include "mdefs.h"
-#define SCCB_FREQ       (30000)
+#define SCCB_FREQ       (100000)
 #define SLAVE_ADDR      (0x60)
-#define TIMEOUT         (100000)
+#define TIMEOUT         (10000)
 static I2C_HandleTypeDef I2CHandle;
 
 void SCCB_Init()
@@ -36,26 +36,30 @@ void SCCB_Init()
 
 uint8_t SCCB_Write(uint8_t addr, uint8_t data)
 {
+    uint8_t ret=0;
     uint8_t buf[] = {addr, data};
-    while (HAL_I2C_GetState(&I2CHandle) != HAL_I2C_STATE_READY);
+
+    __disable_irq();
     if (HAL_I2C_Master_Transmit(&I2CHandle, SLAVE_ADDR, buf, 2, TIMEOUT) != HAL_OK) {
-        return 0xFF;
+        ret=0xFF;
     }
-    return 0;
+    __enable_irq();
+    return ret;
 }
 
 uint8_t SCCB_Read(uint8_t addr)
 {
     uint8_t data=0;
 
-    while (HAL_I2C_GetState(&I2CHandle) != HAL_I2C_STATE_READY);
+    __disable_irq();
     if (HAL_I2C_Master_Transmit(&I2CHandle, SLAVE_ADDR, &addr, 1, TIMEOUT) != HAL_OK) {
-        return 0xFF;
+        data = 0xFF;
+        goto error_w;
     }
-
-    while (HAL_I2C_GetState(&I2CHandle) != HAL_I2C_STATE_READY);
     if (HAL_I2C_Master_Receive(&I2CHandle, SLAVE_ADDR, &data, 1, TIMEOUT) != HAL_OK) {
-        return 0xFF;
+        data = 0xFF;
     }
+error_w:
+    __enable_irq();
     return data;
 }
