@@ -10,15 +10,17 @@
 #include "imlib.h"
 #include "array.h"
 #include "sensor.h"
+#include "ff.h"
 #include "xalloc.h"
 #include "py_assert.h"
 #include "py_image.h"
-#include "py_file.h"
 #include "arm_math.h"
 
 extern struct sensor_dev sensor;
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
+
+extern const char *ffs_strerror(FRESULT res);
 
 /* Haar Cascade */
 typedef struct _py_cascade_obj_t {
