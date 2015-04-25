@@ -11,26 +11,32 @@
 #include "sensor.h"
 #include "framebuffer.h"
 #include "ff.h"
-#include "py/py_file.h"
 #include "core_cm4.h"
 #include "usbdbg.h"
+#include "nlr.h"
+#include "lexer.h"
+#include "parse.h"
+#include "compile.h"
+#include "runtime.h"
 
 #define USB_TX_BUF_SIZE (64)
 static int xfer_bytes;
 static int xfer_length;
 static enum usbdbg_cmd cmd;
 
-static vstr_t script;
+static vstr_t script_buf;
+static mp_obj_t script;
 static int script_ready=0;
 mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
 
 extern void usbd_cdc_tx_buf_flush();
 extern uint32_t usbd_cdc_tx_buf_len();
 extern uint8_t *usbd_cdc_tx_buf(uint32_t bytes);
+extern const char *ffs_strerror(FRESULT res);
 
 void usbdbg_init()
 {
-    vstr_init(&script, 64);
+    vstr_init(&script_buf, 64);
     mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_OSError, "IDEInterrupt");
 }
 
@@ -39,15 +45,14 @@ int usbdbg_script_ready()
     return script_ready;
 }
 
-vstr_t *usbdbg_get_script()
+mp_obj_t usbdbg_get_script()
 {
-    return &script;
+    return script;
 }
 
 void usbdbg_clr_script()
 {
     script_ready =0;
-    vstr_reset(&script);
     fb->lock_tried=0;
     mutex_unlock(&fb->lock);
 }
@@ -111,11 +116,19 @@ void usbdbg_data_out(void *buffer, int length)
 {
     switch (cmd) {
         case USBDBG_SCRIPT_EXEC:
-            vstr_add_strn(&script, buffer, length);
+            vstr_add_strn(&script_buf, buffer, length);
             xfer_bytes += length;
             if (xfer_bytes == xfer_length) {
+                // set script ready flag
                 script_ready = 1;
-                /* Interrupt REPL */
+
+                // parse and compile script
+                mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_,
+                        vstr_str(&script_buf), vstr_len(&script_buf), 0);
+                mp_parse_node_t pn = mp_parse(lex, MP_PARSE_FILE_INPUT);
+                script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, 0);
+
+                // interrupt running script/REPL
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
                 pendsv_nlr_jump(mp_const_ide_interrupt);
             }
@@ -195,8 +208,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
         case USBDBG_SCRIPT_EXEC:
             xfer_bytes = 0;
             xfer_length =length;
-            script_ready = 0;
-            vstr_reset(&script);
+            vstr_reset(&script_buf);
             break;
 
         case USBDBG_SCRIPT_STOP:
