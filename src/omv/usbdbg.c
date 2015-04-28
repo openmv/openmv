@@ -126,11 +126,11 @@ void usbdbg_data_out(void *buffer, int length)
                 mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_,
                         vstr_str(&script_buf), vstr_len(&script_buf), 0);
                 mp_parse_node_t pn = mp_parse(lex, MP_PARSE_FILE_INPUT);
-                script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, 0);
+                script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, false);
 
                 // interrupt running script/REPL
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-                pendsv_nlr_jump(mp_const_ide_interrupt);
+                pendsv_nlr_jump_hard(mp_const_ide_interrupt);
             }
             break;
 
@@ -214,7 +214,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
         case USBDBG_SCRIPT_STOP:
             /* interrupt running code by raising an exception */
             mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-            pendsv_nlr_jump(mp_const_ide_interrupt);
+            pendsv_nlr_jump_hard(mp_const_ide_interrupt);
             cmd = USBDBG_NONE;
             break;
 
