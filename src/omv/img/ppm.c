@@ -14,6 +14,11 @@
 
 #define BUF_LEN   (1024*3)
 
+/*
+ * The following macros and lookup tables extract and convert
+ * packed RGB565 to RGB888, this saves 1 mult and 1 div later.
+ * Note the packed RGB565 pixel is accessed LSB first in memory.
+ */
 #define R8(p) \
     rb_tbl[((p>>3)&0x1F)]
 
