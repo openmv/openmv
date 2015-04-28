@@ -216,12 +216,15 @@ def exit_dfu():
     __dev.ctrl_transfer(0x21, __DFU_DNLOAD, 0, __DFU_INTERFACE,
                         None, __TIMEOUT)
 
-    # Execute last command
-    if get_status() != __DFU_STATE_DFU_MANIFEST:
-        print("Failed to reset device")
+    try:
+        # Execute last command
+        if get_status() != __DFU_STATE_DFU_MANIFEST:
+            print("Failed to reset device")
 
-    # Release device
-    usb.util.dispose_resources(__dev)
+        # Release device
+        usb.util.dispose_resources(__dev)
+    except:
+        pass
 
 
 def named(values, names):
