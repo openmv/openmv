@@ -4,12 +4,10 @@ SRCS += $(addprefix ,   \
 	xalloc.c            \
 	array.c             \
 	usbdbg.c            \
-	systick.c           \
 	sccb.c              \
 	ov9650.c            \
 	ov2640.c            \
 	sensor.c            \
-	rng.c               \
 	stm32f4xx_hal_msp.c \
 	soft_i2c.c          \
 	mutex.c             \
@@ -50,17 +48,9 @@ SRCS += $(addprefix img/,   \
    )
 
 SRCS += $(addprefix py/,    \
-	py_led.c                \
 	py_sensor.c             \
 	py_image.c              \
 	py_time.c               \
-	py_clock.c              \
-	py_wlan.c               \
-	py_socket.c             \
-	py_select.c             \
-	py_gpio.c               \
-	py_spi.c                \
-	uart.c                  \
 	mlx90620.c              \
    )
 
