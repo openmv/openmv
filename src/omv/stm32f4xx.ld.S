@@ -92,7 +92,6 @@ SECTIONS
     */stm32f4xx_hal.o(.text*)
     */stm32f4xx_hal_msp.o(.text*)
     */stm32f4xx_hal_spi.o(.text*)
-    */stm32f4xx_ll_usb.o(.text*)
     . = ALIGN(4);
   } >FLASH_ISR
 
