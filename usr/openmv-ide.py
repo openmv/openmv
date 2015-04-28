@@ -344,9 +344,6 @@ class OMVGtk:
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
-        # interrupt any running code
-        openmv.stop_script()
-        sleep(0.1)
         # exec script
         openmv.exec_script(buf)
 
