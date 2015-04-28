@@ -418,13 +418,14 @@ class OMVGtk:
         adj.set_value(adj.upper - adj.page_size)
 
     def update_terminal(self):
-        buf_len = openmv.tx_buf_len()
-        buf = openmv.tx_buf(buf_len)
-        buffer = self.terminal.get_buffer()
         try:
-            buffer.insert(buffer.get_end_iter(), buf)
+            buf_len = openmv.tx_buf_len()
+            if (buf_len):
+                buf = openmv.tx_buf(buf_len)
+                buffer = self.terminal.get_buffer()
+                buffer.insert(buffer.get_end_iter(), buf)
         except:
-            return False
+            pass
 
         return True
 
