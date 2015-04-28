@@ -43,6 +43,7 @@ DEFAULT_CONFIG='''\
 board = OpenMV-Tiny
 serial_port = /dev/openmvcam
 recent =
+last_fw_path =
 '''
 
 class OMVGtk:
@@ -169,9 +170,9 @@ class OMVGtk:
         # current file path
         self.file_path= None
         self.fw_file_path=""
-#        path = self.config.get("main", "last_opened_file")
-#        if os.path.isfile(path):
-#            self._load_file(path)
+        path = self.config.get("main", "last_fw_path")
+        if os.path.isfile(path):
+            self.fw_file_path = path
 
         # built-in examples menu
         submenu = gtk.Menu()
@@ -326,6 +327,7 @@ class OMVGtk:
                     return
 
                 self.fw_file_path = fw_path
+                self.config.set("main", "last_fw_path", fw_path)
 
                 state={"init":True, "erase":False, "write":False,
                     "page":0, "buf":buf, "bar":fw_progress, "dialog":dialog,
