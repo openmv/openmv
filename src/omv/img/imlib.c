@@ -250,6 +250,47 @@ void imlib_binary(image_t *src, int threshold)
     }
 }
 
+#ifdef OPENMV1 
+void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
+{
+    struct color rgb, lab;
+    /* Square threshold */
+    threshold *= threshold;
+
+    /* Convert reference RGB888 to LAB */
+    for (int c=0; c<color_size; c++) {
+        rgb.r = color[c].r;
+        rgb.g = color[c].g;
+        rgb.b = color[c].b;
+        imlib_rgb_to_lab(&rgb, &color[c]);
+    }
+
+    uint16_t *pixels = (uint16_t*) src->pixels;
+
+    for (int y=0; y<src->h; y++) {
+        int i=y*src->w;
+        for (int x=0; x<src->w; x++) {
+            uint32_t p = pixels[i+x];
+            rgb.r = ((p>>3)&0x1F)*255/31;
+            rgb.g = ((p&0x07)<<3)|(p>>13)*255/63;
+            rgb.b = ((p>>8)&0x1F)*255/31;
+            imlib_rgb_to_lab(&rgb, &lab);
+            
+            dst->pixels[i+x] = 0;
+            for (int c=0; c<color_size; c++) {
+                uint32_t sum =(color[c].L-lab.L) * (color[c].L-lab.L) +
+                              (color[c].A-lab.A) * (color[c].A-lab.A) +
+                              (color[c].B-lab.B) * (color[c].B-lab.B);
+                if (sum<threshold) {
+                    /* set pixel if within threshold */
+                    dst->pixels[i+x] = c+1; //sets color label c+1
+                    break;
+                }
+            }
+        }
+    }
+}
+#else
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
 {
     /* Square threshold */
@@ -272,6 +313,7 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
     for (int y=0; y<src->h; y++) {
         int i=y*src->w;
         for (int x=0; x<src->w; x++) {
+            // mult by 3 for lab_table lookup
             uint32_t rgb = pixels[i+x]*3;
             dst->pixels[i+x] = 0;
             for (int c=0; c<color_size; c++) {
@@ -288,6 +330,7 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
         }
     }
 }
+#endif
 
 void imlib_rainbow(image_t *src, image_t *dst)
 {
