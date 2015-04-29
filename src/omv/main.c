@@ -7,20 +7,21 @@
  *
  */
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <stm32f4xx_hal.h>
 #include "mpconfig.h"
-#include "misc.h"
 #include "systick.h"
 #include "pendsv.h"
 #include "qstr.h"
-#include "misc.h"
 #include "nlr.h"
 #include "lexer.h"
 #include "parse.h"
+#include "compile.h"
+#include "runtime.h"
+#include "pfenv.h"
 #include "obj.h"
 #include "objmodule.h"
-#include "runtime.h"
 #include "gc.h"
 #include "stackctrl.h"
 #include "gccollect.h"
@@ -36,23 +37,25 @@
 #include "mdefs.h"
 
 #include "rng.h"
+#include "led.h"
+#include "spi.h"
+#include "i2c.h"
+#include "uart.h"
+#include "extint.h"
+
 #include "sensor.h"
 #include "usbdbg.h"
 #include "sdram.h"
 #include "xalloc.h"
 
-#include "py_led.h"
-#include "py_time.h"
+#include "usbd_core.h"
+#include "usbd_desc.h"
+#include "usbd_cdc_msc_hid.h"
+#include "usbd_cdc_interface.h"
+#include "usbd_msc_storage.h"
+
 #include "py_sensor.h"
 #include "py_image.h"
-#include "py_file.h"
-#include "py_wlan.h"
-#include "py_socket.h"
-#include "py_select.h"
-#include "py_gpio.h"
-#include "py_spi.h"
-#include "py/uart.h"
-
 #include "mlx90620.h"
 
 int errno;
@@ -99,14 +102,6 @@ typedef struct {
 
 static const module_t init_modules[] ={
     {"sensor",  py_sensor_init},
-    {"led",     py_led_init},
-    {"time",    py_time_init},
-//  {"wlan",    py_wlan_init},
-//  {"socket",  py_socket_init},
-//  {"select",  py_select_init},
-    {"spi",     py_spi_init},
-    {"gpio",    py_gpio_init},
-    {"uart",    py_uart_init},
 #ifdef OPENMV2
     {"mlx90620", py_mlx90620_init},
 #endif
@@ -149,7 +144,6 @@ void __attribute__((weak))
 
 STATIC mp_obj_t pyb_config_source_dir = MP_OBJ_NULL;
 STATIC mp_obj_t pyb_config_main = MP_OBJ_NULL;
-STATIC mp_obj_t pyb_config_usb_mode = MP_OBJ_NULL;
 
 STATIC mp_obj_t pyb_source_dir(mp_obj_t source_dir) {
     if (MP_OBJ_IS_STR(source_dir)) {
@@ -169,24 +163,15 @@ STATIC mp_obj_t pyb_main(mp_obj_t main) {
 
 MP_DEFINE_CONST_FUN_OBJ_1(pyb_main_obj, pyb_main);
 
-STATIC mp_obj_t pyb_usb_mode(mp_obj_t usb_mode) {
-    if (MP_OBJ_IS_STR(usb_mode)) {
-        pyb_config_usb_mode = usb_mode;
-    }
-    return mp_const_none;
-}
-
-MP_DEFINE_CONST_FUN_OBJ_1(pyb_usb_mode_obj, pyb_usb_mode);
-
 STATIC mp_obj_t py_vcp_is_connected(void ) {
-    return MP_BOOL(usb_vcp_is_connected());
+    return MP_BOOL(USBD_CDC_IsConnected());
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_vcp_is_connected_obj, py_vcp_is_connected);
 
-STATIC mp_obj_t py_random(mp_obj_t min, mp_obj_t max) {
+STATIC mp_obj_t py_randint(mp_obj_t min, mp_obj_t max) {
     return mp_obj_new_int(rng_randint(mp_obj_get_int(min), mp_obj_get_int(max)));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_random_obj, py_random);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_randint_obj, py_randint);
 
 extern uint32_t SystemCoreClock;
 STATIC mp_obj_t py_cpu_freq(void ) {
@@ -243,20 +228,10 @@ int main(void)
     */
     HAL_Init();
 
-#ifdef OPENMV2
-    if (sdram_init() == false) {
-        __fatal_error("could not init sdram");
-    }
-#if 0   //SDRAM test
-    if (sdram_test() == false) {
-        __fatal_error("sdram test1 failed");
-    }
-#endif
-#endif
-
     // basic sub-system init
     pendsv_init();
     timer_tim3_init();
+    led_init();
 
 soft_reset:
     // check if user switch held to select the reset mode
@@ -279,11 +254,15 @@ soft_reset:
 
     readline_init0();
     pin_init0();
+    extint_init0();
     timer_init0();
+    rng_init0();
+    i2c_init0();
+    spi_init0();
+    uart_init0();
     pyb_usb_init0();
 
     xalloc_init();
-    rng_init();
     usbdbg_init();
 
     /* init built-in modules */
@@ -297,7 +276,7 @@ soft_reset:
     }
 
     /* Export functions to the global python namespace */
-    mp_store_global(qstr_from_str("random"),            (mp_obj_t)&py_random_obj);
+    mp_store_global(qstr_from_str("randint"),           (mp_obj_t)&py_randint_obj);
     mp_store_global(qstr_from_str("cpu_freq"),          (mp_obj_t)&py_cpu_freq_obj);
     mp_store_global(qstr_from_str("Image"),             (mp_obj_t)&py_image_load_image_obj);
     mp_store_global(qstr_from_str("HaarCascade"),       (mp_obj_t)&py_image_load_cascade_obj);
@@ -305,8 +284,6 @@ soft_reset:
     mp_store_global(qstr_from_str("FreakDescSave"),     (mp_obj_t)&py_image_save_descriptor_obj);
     mp_store_global(qstr_from_str("LBPDesc"),           (mp_obj_t)&py_image_load_lbp_obj);
     mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
-
-    usb_storage_medium_t usb_medium;
 
     if (sdcard_is_present()) {
         sdcard_init();
@@ -316,11 +293,11 @@ soft_reset:
         }
         // Set CWD and USB medium to SD
         f_chdrive("1:");
-        usb_medium = USB_STORAGE_MEDIUM_SDCARD;
+        pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
 
         // add sdcard to sys path
-        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_1_colon__slash_));
-        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_1_colon__slash_lib));
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd));
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd_slash_lib));
     } else {
         storage_init();
         // try to mount the flash
@@ -334,11 +311,11 @@ soft_reset:
 
         // Set CWD and USB medium to flash
         f_chdrive("0:");
-        usb_medium = USB_STORAGE_MEDIUM_FLASH;
+        pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_FLASH;
 
         // add sdcard to sys path
-        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_));
-        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_0_colon__slash_lib));
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_flash));
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_flash_slash_lib));
     }
 
     // turn boot-up LEDs off
@@ -346,17 +323,9 @@ soft_reset:
     led_state(LED_GREEN, 0);
     led_state(LED_BLUE, 0);
 
-    // USB device
-    if (reset_mode == 1) {
-        usb_device_mode_t usb_mode = USB_DEVICE_MODE_CDC_MSC;
-        if (pyb_config_usb_mode != MP_OBJ_NULL) {
-            if (strcmp(mp_obj_str_get_str(pyb_config_usb_mode), "CDC+HID") == 0) {
-                usb_mode = USB_DEVICE_MODE_CDC_HID;
-            }
-        }
-        pyb_usb_dev_init(usb_mode, usb_medium);
-    } else {
-        pyb_usb_dev_init(USB_DEVICE_MODE_CDC_MSC, usb_medium);
+    // init USB device to default setting if it was not already configured
+    if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
+        pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
     }
 
     // Run the main script from the current directory.
@@ -377,15 +346,30 @@ soft_reset:
     nlr_buf_t nlr;
     for (;;) {
         if (nlr_push(&nlr) == 0) {
-            if (usbdbg_script_ready()) {
-                pyexec_push_scope();
-                pyexec_str(usbdbg_get_script());
+            while (usbdbg_script_ready()) {
+                nlr_buf_t nlr;
+                mp_obj_t script= usbdbg_get_script();
+
+                // clear script flag
+                usbdbg_clr_script();
+
+                // execute the script
+                if (nlr_push(&nlr) == 0) {
+                    pyexec_push_scope();
+                    mp_call_function_0(script);
+                    nlr_pop();
+                } else {
+                    mp_obj_print_exception(printf_wrapper, NULL, (mp_obj_t)nlr.ret_val);
+                }
                 pyexec_pop_scope();
             }
+
+            // clear script flag
             usbdbg_clr_script();
 
-            // no script run repl
+            // no script run REPL
             pyexec_friendly_repl();
+
             nlr_pop();
         }
     }
