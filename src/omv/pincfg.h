@@ -15,16 +15,8 @@ typedef struct {
     uint16_t pin;
 } gpio_t;
 
-extern const gpio_t led_pins[];
 extern const gpio_t gpio_pins[];
 #ifdef OPENMV1
-/* LEDs */
-#define LED_PORT                (GPIOD)
-#define LED_RED_PIN             (GPIO_PIN_4)
-#define LED_GREEN_PIN           (GPIO_PIN_6)
-#define LED_BLUE_PIN            (GPIO_PIN_5)
-#define LED_ON(gpio)            (gpio.port->BSRRH = gpio.pin)
-#define LED_OFF(gpio)           (gpio.port->BSRRL = gpio.pin)
 
 /* GPIOs */
 typedef enum {
@@ -178,14 +170,6 @@ typedef enum {
 #define __WLAN_DISABLE()        HAL_GPIO_WritePin(WLAN_EN_PORT, WLAN_EN_PIN, GPIO_PIN_RESET)
 
 #else //OPENMV2
-/* LEDs */
-#define LED_PORT                (GPIOB)
-#define LED_IR_PIN              (GPIO_PIN_3)
-#define LED_RED_PIN             (GPIO_PIN_4)
-#define LED_GREEN_PIN           (GPIO_PIN_6)
-#define LED_BLUE_PIN            (GPIO_PIN_5)
-#define LED_ON(gpio)            (gpio.port->BSRRH = gpio.pin)
-#define LED_OFF(gpio)           (gpio.port->BSRRL = gpio.pin)
 
 /* GPIOs */
 typedef enum {
