@@ -123,7 +123,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	imlib.o                                 \
 	integral.o                              \
 	kmeans.o                                \
-	lab.o                                   \
+	lab_tab.o                               \
 	xyz_tab.o                               \
 	rainbow_tab.o                           \
 	median.o                                \

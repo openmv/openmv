@@ -31,7 +31,7 @@ SRCS += $(addprefix img/,   \
 	imlib.c                 \
 	integral.c              \
 	kmeans.c                \
-	lab.c                   \
+	lab_tab.c               \
 	xyz_tab.c               \
 	rainbow_tab.c           \
 	median.c                \
