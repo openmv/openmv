@@ -83,11 +83,22 @@ float fast_expf(float x)
 }
 #pragma GCC diagnostic pop
 
-float fast_cbrtf(float f)
+/* 
+ * From Hackers Delight:
+ * This is a very approximate but very fast version of acbrt. It is just eight
+ * integer instructions (shift rights and adds), plus instructions to load the constant.
+ * 1/3 is approximated as 1/4 + 1/16 + 1/64 + 1/256 + ... + 1/65536.
+ * The constant 0x2a511cd0 balances the relative error at +-0.0321.
+ */
+float fast_cbrtf(float x)
 {
-    unsigned int* p = (unsigned int *) &f;
-    *p = *p/3 + 709921077;
-    return f;
+   union {int ix; float x;} v;
+   v.x = x;                // x can be viewed as int.
+   v.ix = v.ix/4 + v.ix/16; // Approximate divide by 3.
+   v.ix = v.ix + v.ix/16;
+   v.ix = v.ix + v.ix/256;
+   v.ix = 0x2a511cd0 + v.ix;  // Initial guess.
+   return v.x;
 }
 
 float ALWAYS_INLINE fast_fabsf(float x)
