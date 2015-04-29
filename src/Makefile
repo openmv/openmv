@@ -22,7 +22,6 @@ STHAL_DIR=sthal
 STUSB_DIR=stusb
 FATFS_DIR=fatfs
 MICROPY_DIR=micropython
-CC3K_DIR=cc3k
 OMV_DIR=omv
 
 # Target
@@ -57,14 +56,14 @@ CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/st
 CFLAGS += -I$(TOP_DIR)/$(STHAL_DIR)/include/
 CFLAGS += -I$(TOP_DIR)/$(FATFS_DIR)/include/
-CFLAGS += -I$(TOP_DIR)/$(CC3K_DIR)/include/
 
 CFLAGS += -I$(BUILD)/$(MICROPY_DIR)/
+CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/py/
+CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/mp-readline
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/
-CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/core/inc/
-CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/class/cdc_msc_hid/inc/
+CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/class/inc/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/boards/$(TARGET)/
 
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
@@ -88,7 +87,6 @@ OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/TransformFunctions/*.o)
 OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
-OBJ += $(wildcard $(BUILD)/$(CC3K_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
 
@@ -98,12 +96,10 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	xalloc.o                                \
 	array.o                                 \
 	usbdbg.o                                \
-	systick.o                               \
 	sccb.o                                  \
 	ov9650.o                                \
 	ov2640.o                                \
 	sensor.o                                \
-	rng.o                                   \
 	stm32f4xx_hal_msp.o                     \
 	soft_i2c.o                              \
 	mutex.o                                 \
@@ -128,6 +124,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	integral.o                              \
 	kmeans.o                                \
 	lab.o                                   \
+	xyz_tab.o                               \
 	rainbow_tab.o                           \
 	median.o                                \
 	point.o                                 \
@@ -143,17 +140,9 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
    )
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
-	py_led.o                                \
 	py_sensor.o                             \
 	py_image.o                              \
 	py_time.o                               \
-	py_clock.o                              \
-	py_wlan.o                               \
-	py_socket.o                             \
-	py_select.o                             \
-	py_gpio.o                               \
-	py_spi.o                                \
-	uart.o                                  \
 	mlx90620.o                              \
 	)
 
@@ -177,7 +166,7 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	stm32f4xx_it.o          \
 	string0.o               \
 	usbd_conf.o             \
-	usbd_desc_cdc_msc.o     \
+	usbd_desc.o             \
 	usbd_cdc_interface.o    \
 	usbd_msc_storage.o      \
 	pendsv.o                \
@@ -187,7 +176,6 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	gchelper.o              \
 	gccollect.o             \
 	pybstdio.o              \
-	readline.o              \
 	pyexec.o                \
 	help.o                  \
 	input.o                 \
@@ -195,20 +183,65 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	lexerfatfs.o            \
 	flash.o                 \
 	diskio.o                \
+    fsusermount.o           \
 	storage.o               \
 	file.o                  \
 	rtc.o                   \
+	irq.o                   \
+	adc.o                   \
+	uart.o                  \
+	systick.o               \
+	i2c.o                   \
+	spi.o                   \
 	pin.o                   \
+	pin_defs_stmhal.o       \
+	pin_named_pins.o        \
+	pins_$(TARGET).o        \
 	timer.o                 \
 	servo.o                 \
+	rng.o                   \
+	led.o                   \
+	mphal.o                 \
+	extint.o                \
+	modpyb.o                \
+	modstm.o                \
+	moduos.o                \
+	modutime.o              \
+	moduselect.o            \
+	modusocket.o            \
+	modnetwork.o            \
     )
 
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
-	atanf.o                 \
-	atan2f.o                \
-	math.o                  \
-	mathsincos.o            \
-	fmodf.o                 \
+	math.o          \
+	asinfacosf.o    \
+	atanf.o         \
+	atan2f.o        \
+	fmodf.o         \
+	roundf.o        \
+	log1pf.o        \
+	acoshf.o        \
+	asinhf.o        \
+	atanhf.o        \
+	kf_rem_pio2.o   \
+	kf_sin.o        \
+	kf_cos.o        \
+	kf_tan.o        \
+	ef_rem_pio2.o   \
+	erf_lgamma.o    \
+	sf_sin.o        \
+	sf_cos.o        \
+	sf_tan.o        \
+	sf_frexp.o      \
+	sf_modf.o       \
+	sf_ldexp.o      \
+	sf_erf.o        \
+	wf_lgamma.o     \
+	wf_tgamma.o     \
+    )
+
+OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
+	readline.o               \
     )
 
 
@@ -216,10 +249,10 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	core/src/usbd_core.o                            \
 	core/src/usbd_ctlreq.o                          \
 	core/src/usbd_ioreq.o                           \
-	class/cdc_msc_hid/src/usbd_cdc_msc_hid.o        \
-	class/cdc_msc_hid/src/usbd_msc_bot.o            \
-	class/cdc_msc_hid/src/usbd_msc_scsi.o           \
-	class/cdc_msc_hid/src/usbd_msc_data.o           \
+	class/src/usbd_cdc_msc_hid.o        \
+	class/src/usbd_msc_bot.o            \
+	class/src/usbd_msc_scsi.o           \
+	class/src/usbd_msc_data.o           \
 	)
 
 ###################################################
@@ -248,7 +281,6 @@ objs: | $(BUILD)
 	$(MAKE)  -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR)
 	$(MAKE)  -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)
 	$(MAKE)  -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
-	$(MAKE)  -C $(CC3K_DIR)           BUILD=$(BUILD)/$(CC3K_DIR)
 	$(MAKE)  -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET)
 	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
 
