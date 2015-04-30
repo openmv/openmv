@@ -11,8 +11,7 @@ import platform
 import sys, os, os.path
 from time import sleep
 from os.path import expanduser
-import gtkcodebuffer
-from gtkcodebuffer import CodeBuffer, SyntaxLoader
+import gtksourceview2 as gtksourceview
 
 try:
     # 3.x name
@@ -80,17 +79,24 @@ class OMVGtk:
         self.connected = False
         map(lambda x:x.set_sensitive(False), self.controls)
 
-        # workaround bug in gtkcodebuffer
-        gtkcodebuffer.SYNTAX_PATH.append(os.path.join(sys.prefix,"local", "share","pygtkcodebuffer","syntax"))
+        # configure gtksourceview widget
+        sourceview = gtksourceview.View()
+        sourceview.set_show_line_numbers(True)
+        sourceview.set_tab_width(4)
+        sourceview.set_indent_on_tab(True)
+        sourceview.set_insert_spaces_instead_of_tabs(True)
+        sourceview.set_auto_indent(True)
+        sourceview.set_highlight_current_line(True)
 
-        # Configure source viewer
-        self.buffer = CodeBuffer(lang=SyntaxLoader("python"))
+        # configure gtksourceview buffer
+        self.buffer = gtksourceview.Buffer()
+        self.buffer.set_highlight_syntax(True)
+        lang_manager = gtksourceview.language_manager_get_default()
+        self.buffer.set_language(lang_manager.get_language("python"))
         self.buffer.connect("changed", self.text_changed)
-        tabs = pango.TabArray(1, True)
-        tabs.set_tab(0, pango.TAB_LEFT, 8*4) #seems right
-        txtview = gtk.TextView(self.buffer)
-        txtview.set_tabs(tabs)
-        self.builder.get_object("src_scrolledwindow").add(txtview)
+
+        sourceview.set_buffer(self.buffer)
+        self.builder.get_object("src_scrolledwindow").add(sourceview)
 
         # Configure terminal window
         self.terminal_scroll = self.builder.get_object('vte_scrolledwindow')
