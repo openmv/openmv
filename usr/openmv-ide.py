@@ -407,8 +407,9 @@ class OMVGtk:
         self.x2 = int(event.x)
         self.y2 = int(event.y)
         self.selection_started = False
-        self.da_menu.popup(None, None, None, event.button, event.time, None)
-        self.da_menu.show_all()
+        if (self.connected):
+            self.da_menu.popup(None, None, None, event.button, event.time, None)
+            self.da_menu.show_all()
 
     def motion_notify(self, widget, event):
         x = int(event.x)
