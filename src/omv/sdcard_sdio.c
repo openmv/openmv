@@ -21,8 +21,7 @@ static SD_HandleTypeDef SDHandle;
 
 bool sdcard_is_present(void)
 {
-    // CD is not connected on R1
-    return true;
+    return (HAL_GPIO_ReadPin(SD_CD_PORT, SD_CD_PIN)==GPIO_PIN_RESET);
 }
 
 void sdcard_init(void)
