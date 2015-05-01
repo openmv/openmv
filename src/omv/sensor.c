@@ -24,7 +24,7 @@
 
 #define OV9650_PID     0x96
 #define OV2640_PID     0x26
-#define XCLK_FREQ      (12*1000000)
+#define XCLK_FREQ      (12000000)
 #define BREAK()         __asm__ volatile ("BKPT")
 
 struct sensor_dev sensor;
@@ -173,8 +173,12 @@ int sensor_init()
     systick_sleep(10);
 
     /* Configure the external clock (XCLK) */
+    #ifdef OPENMV1
     extclk_config(XCLK_FREQ);
-    systick_sleep(10);
+    #else
+    (void) extclk_config;
+    HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSI, RCC_MCODIV_1);
+    #endif
 
     /* Reset the sesnor state */
     memset(&sensor, 0, sizeof(struct sensor_dev));
