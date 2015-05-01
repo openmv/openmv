@@ -248,15 +248,17 @@ const mp_obj_module_t mlx_module = {
     .name = MP_QSTR_mlx,
     .globals = (mp_obj_t)&globals_dict,
 };
+
 #else
 const mp_obj_module_t mlx_module = {
     .base = { &mp_type_module },
     .name = MP_QSTR_mlx,
 };
 
+#endif //OPENMV2
+
 const mp_obj_module_t *py_mlx90620_init()
 {
     return &mlx_module;
 }
 
-#endif

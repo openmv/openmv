@@ -64,15 +64,16 @@ extern char _stack_size;
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
-"import led, time\n"
+"import pyb, time\n"
+"led = pyb.LED(3)\n"
 "while (vcp_is_connected()==False):\n"
-"   led.on(led.BLUE)\n"
+"   led.on()\n"
 "   time.sleep(150)\n"
-"   led.off(led.BLUE)\n"
+"   led.off()\n"
 "   time.sleep(100)\n"
-"   led.on(led.BLUE)\n"
+"   led.on()\n"
 "   time.sleep(150)\n"
-"   led.off(led.BLUE)\n"
+"   led.off()\n"
 "   time.sleep(600)\n"
 ;
 
@@ -102,9 +103,7 @@ typedef struct {
 
 static const module_t init_modules[] ={
     {"sensor",  py_sensor_init},
-#ifdef OPENMV2
     {"mlx90620", py_mlx90620_init},
-#endif
     {NULL}
 };
 
