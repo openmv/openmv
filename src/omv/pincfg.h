@@ -140,35 +140,6 @@ typedef enum {
 #define SD_SELECT()        HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_RESET)
 #define SD_DESELECT()      HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_SET)
 
-/* Wlan */
-#define WLAN_SPI                SPI3
-#define WLAN_SPI_AF             (GPIO_AF6_SPI3)
-#define WLAN_IRQn               (EXTI15_10_IRQn)
-#define WLAN_IRQHandler         (EXTI15_10_IRQHandler)
-#define WLAN_EXTI_LINE          (1<<11)
-
-#define WLAN_CS_PIN             (GPIO_PIN_15)
-#define WLAN_EN_PIN             (GPIO_PIN_10)
-#define WLAN_IRQ_PIN            (GPIO_PIN_11)
-#define WLAN_SCLK_PIN           (GPIO_PIN_10)
-#define WLAN_MISO_PIN           (GPIO_PIN_11)
-#define WLAN_MOSI_PIN           (GPIO_PIN_12)
-
-#define WLAN_CS_PORT            (GPIOA)
-#define WLAN_EN_PORT            (GPIOB)
-#define WLAN_IRQ_PORT           (GPIOB)
-#define WLAN_SCLK_PORT          (GPIOC)
-#define WLAN_MISO_PORT          (GPIOC)
-#define WLAN_MOSI_PORT          (GPIOC)
-
-#define WLAN_SPI_CLK_ENABLE()   __SPI3_CLK_ENABLE()
-#define WLAN_SPI_CLK_DISABLE()  __SPI3_CLK_DISABLE()
-
-#define WLAN_SELECT()           HAL_GPIO_WritePin(WLAN_CS_PORT, WLAN_CS_PIN, GPIO_PIN_RESET)
-#define WLAN_DESELECT()         HAL_GPIO_WritePin(WLAN_CS_PORT, WLAN_CS_PIN, GPIO_PIN_SET)
-
-#define __WLAN_DISABLE()        HAL_GPIO_WritePin(WLAN_EN_PORT, WLAN_EN_PIN, GPIO_PIN_RESET)
-
 #else //OPENMV2
 
 /* GPIOs */
@@ -203,13 +174,13 @@ typedef enum {
     { MP_OBJ_NEW_QSTR(MP_QSTR_PB4),      MP_OBJ_NEW_SMALL_INT(GPIO_PD13)}
 
 /* SCCB/I2C */
-#define SCCB_I2C                (I2C2)
-#define SCCB_AF                 (GPIO_AF4_I2C2)
-#define SCCB_CLK_ENABLE()       __I2C2_CLK_ENABLE()
-#define SCCB_CLK_DISABLE()      __I2C2_CLK_DISABLE()
+#define SCCB_I2C                (I2C1)
+#define SCCB_AF                 (GPIO_AF4_I2C1)
+#define SCCB_CLK_ENABLE()       __I2C1_CLK_ENABLE()
+#define SCCB_CLK_DISABLE()      __I2C1_CLK_DISABLE()
 #define SCCB_PORT               (GPIOB)
-#define SCCB_SCL_PIN            (GPIO_PIN_10)
-#define SCCB_SDA_PIN            (GPIO_PIN_11)
+#define SCCB_SCL_PIN            (GPIO_PIN_8)
+#define SCCB_SDA_PIN            (GPIO_PIN_9)
 
 /* SPI */
 #define USR_SPI              (SPI4)
@@ -246,29 +217,35 @@ typedef enum {
 #define DCMI_TIM_CLK_ENABLE()   __TIM1_CLK_ENABLE()
 #define DCMI_TIM_CLK_DISABLE()  __TIM1_CLK_DISABLE()
 
-#define DCMI_RESET_PIN          (GPIO_PIN_15)
+#define DCMI_RESET_PIN          (GPIO_PIN_10)
 #define DCMI_RESET_PORT         (GPIOA)
 
-#define DCMI_PWDN_PIN           (GPIO_PIN_10)
-#define DCMI_PWDN_PORT          (GPIOA)
+#define DCMI_PWDN_PIN           (GPIO_PIN_5)
+#define DCMI_PWDN_PORT          (GPIOB)
+
+#define DCMI_FREX_PIN           (GPIO_PIN_9)
+#define DCMI_FREX_PORT          (GPIOD)
+
+#define DCMI_EXPST_PIN          (GPIO_PIN_8)
+#define DCMI_EXPST_PORT         (GPIOD)
 
 #define DCMI_D0_PIN             (GPIO_PIN_6)
 #define DCMI_D1_PIN             (GPIO_PIN_7)
-#define DCMI_D2_PIN             (GPIO_PIN_10)
-#define DCMI_D3_PIN             (GPIO_PIN_11)
+#define DCMI_D2_PIN             (GPIO_PIN_0)
+#define DCMI_D3_PIN             (GPIO_PIN_1)
 #define DCMI_D4_PIN             (GPIO_PIN_4)
-#define DCMI_D5_PIN             (GPIO_PIN_3)
-#define DCMI_D6_PIN             (GPIO_PIN_8)
-#define DCMI_D7_PIN             (GPIO_PIN_9)
+#define DCMI_D5_PIN             (GPIO_PIN_6)
+#define DCMI_D6_PIN             (GPIO_PIN_5)
+#define DCMI_D7_PIN             (GPIO_PIN_6)
 
 #define DCMI_D0_PORT            (GPIOC)
 #define DCMI_D1_PORT            (GPIOC)
-#define DCMI_D2_PORT            (GPIOG)
-#define DCMI_D3_PORT            (GPIOG)
+#define DCMI_D2_PORT            (GPIOE)
+#define DCMI_D3_PORT            (GPIOE)
 #define DCMI_D4_PORT            (GPIOE)
-#define DCMI_D5_PORT            (GPIOD)
-#define DCMI_D6_PORT            (GPIOB)
-#define DCMI_D7_PORT            (GPIOB)
+#define DCMI_D5_PORT            (GPIOB)
+#define DCMI_D6_PORT            (GPIOE)
+#define DCMI_D7_PORT            (GPIOE)
 
 #define DCMI_HSYNC_PIN          (GPIO_PIN_4)
 #define DCMI_VSYNC_PIN          (GPIO_PIN_7)
@@ -284,37 +261,14 @@ typedef enum {
 #define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
 #define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
 
-/* Wlan */
-#define WLAN_SPI                SPI3
-#define WLAN_SPI_AF             (GPIO_AF6_SPI3)
-#define WLAN_IRQn               (EXTI15_10_IRQn)
-#define WLAN_IRQHandler         (EXTI15_10_IRQHandler)
-#define WLAN_EXTI_LINE          (1<<11)
+#define DCMI_FREX_LOW()         HAL_GPIO_WritePin(DCMI_FREX_PORT, DCMI_FREX_PIN, GPIO_PIN_RESET)
+#define DCMI_FREX_HIGH()        HAL_GPIO_WritePin(DCMI_FREX_PORT, DCMI_FREX_PIN, GPIO_PIN_SET)
 
-#define WLAN_CS_PIN             (GPIO_PIN_15)
-#define WLAN_EN_PIN             (GPIO_PIN_10)
-#define WLAN_IRQ_PIN            (GPIO_PIN_11)
-#define WLAN_SCLK_PIN           (GPIO_PIN_10)
-#define WLAN_MISO_PIN           (GPIO_PIN_11)
-#define WLAN_MOSI_PIN           (GPIO_PIN_12)
+#define DCMI_EXPST_LOW()        HAL_GPIO_WritePin(DCMI_EXPST_PORT, DCMI_EXPST_PIN, GPIO_PIN_RESET)
+#define DCMI_EXPST_HIGH()       HAL_GPIO_WritePin(DCMI_EXPST_PORT, DCMI_EXPST_PIN, GPIO_PIN_SET)
 
-#define WLAN_CS_PORT            (GPIOA)
-#define WLAN_EN_PORT            (GPIOB)
-#define WLAN_IRQ_PORT           (GPIOB)
-#define WLAN_SCLK_PORT          (GPIOC)
-#define WLAN_MISO_PORT          (GPIOC)
-#define WLAN_MOSI_PORT          (GPIOC)
-
-#define WLAN_SPI_CLK_ENABLE()   __SPI3_CLK_ENABLE()
-#define WLAN_SPI_CLK_DISABLE()  __SPI3_CLK_DISABLE()
-
-#define WLAN_SELECT()           HAL_GPIO_WritePin(WLAN_CS_PORT, WLAN_CS_PIN, GPIO_PIN_RESET)
-#define WLAN_DESELECT()         HAL_GPIO_WritePin(WLAN_CS_PORT, WLAN_CS_PIN, GPIO_PIN_SET)
-
-#define __WLAN_DISABLE()        HAL_GPIO_WritePin(WLAN_EN_PORT, WLAN_EN_PIN, GPIO_PIN_RESET)
-
-#define SD_CD_PIN           (GPIO_PIN_4)
-#define SD_CD_PORT          (GPIOD)
+#define SD_CD_PIN               (GPIO_PIN_15)
+#define SD_CD_PORT              (GPIOA)
 
 #endif //OPENMV1
 #endif //__PINCFG_H__

@@ -25,7 +25,7 @@ MICROPY_DIR=micropython
 OMV_DIR=omv
 
 # Target
-TARGET ?= OPENMV1
+TARGET ?= OPENMV2
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -48,7 +48,7 @@ CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEV
 ifeq ($(TARGET), OPENMV1)
     CFLAGS += -DSTM32F407xx
 else
-    CFLAGS += -DSTM32F429xx
+    CFLAGS += -DSTM32F427xx
 endif
 
 CFLAGS += -I. -Iinclude
@@ -111,7 +111,6 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	)
 else
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
-	sdram.o                                 \
 	sdcard_sdio.o                           \
 	)
 endif
@@ -154,7 +153,7 @@ OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 else
 OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 	system_stm32f4xx.o                          \
-	startup_stm32f429xx.o                       \
+	startup_stm32f427xx.o                       \
 	)
 endif
 
@@ -189,6 +188,7 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	rtc.o                   \
 	irq.o                   \
 	adc.o                   \
+	dac.o                   \
 	uart.o                  \
 	systick.o               \
 	i2c.o                   \

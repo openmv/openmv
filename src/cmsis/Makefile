@@ -2,7 +2,7 @@
 ifeq ($(TARGET), OPENMV1)
 SRC_S = src/st/startup_stm32f407xx.s
 else
-SRC_S = src/st/startup_stm32f429xx.s
+SRC_S = src/st/startup_stm32f427xx.s
 endif
 
 SRC_C   = src/st/system_stm32f4xx.c

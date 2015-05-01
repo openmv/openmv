@@ -3,6 +3,8 @@
 SRCS = $(addprefix src/,\
 stm32f4xx_hal_adc.c\
 stm32f4xx_hal_adc_ex.c\
+stm32f4xx_hal_dac.c\
+stm32f4xx_hal_dac_ex.c\
 stm32f4xx_hal.c\
 stm32f4xx_hal_cortex.c\
 stm32f4xx_hal_dcmi.c\

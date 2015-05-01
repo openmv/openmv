@@ -556,7 +556,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-#ifdef STM32F429xx
+#if defined(STM32F427xx) || defined(STM32F429xx)
   if(HAL_PWREx_ActivateOverDrive() != HAL_OK) {
     /* Initialization Error */
     Error_Handler();

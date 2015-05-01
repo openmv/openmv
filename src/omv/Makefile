@@ -19,7 +19,6 @@ SRCS += $(addprefix ,   \
    )
 else
 SRCS += $(addprefix ,   \
-	sdram.c             \
 	sdcard_sdio.c       \
    )
 endif

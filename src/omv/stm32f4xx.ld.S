@@ -28,9 +28,9 @@ ENTRY(Reset_Handler)
 #define CCM_LENGTH      64K
 
 #else
-#define HEAP_MEMORY     SDRAM
+#define HEAP_MEMORY     CCM
 #define FLASH_ORIGIN    0x08000000
-#define FLASH_LENGTH    2048K
+#define FLASH_LENGTH    1024K
 
 #define ISR_ORIGIN      0x08000000
 #define ISR_LENGTH      16K
@@ -43,9 +43,6 @@ ENTRY(Reset_Handler)
 
 #define CCM_ORIGIN      0x10000000
 #define CCM_LENGTH      64K
-
-#define SDRAM_ORIGIN    0xC0000000
-#define SDRAM_LENGTH    15M
 #endif //OPENMV1
 
 /* Specify the memory areas */
@@ -56,27 +53,14 @@ MEMORY
   FLASH_TEXT (rx) : ORIGIN = TEXT_ORIGIN,   LENGTH = TEXT_LENGTH
   RAM (xrw)       : ORIGIN = RAM_ORIGIN,    LENGTH = RAM_LENGTH
   CCM (xrw)       : ORIGIN = CCM_ORIGIN,    LENGTH = CCM_LENGTH
-#ifdef OPENMV2
-  SDRAM (xrw)     : ORIGIN = SDRAM_ORIGIN,  LENGTH = SDRAM_LENGTH
-#endif
 }
 
 _estack     = 0x10010000;   /* Stack is allocated on CCM block */
 _ram_end    = 0x10010000;   /* 64KB CCM */
 
-#ifdef OPENMV1
 _fb_base    = 0x20000000;
 _stack_size = 0x1000;       /* required amount of stack */
 _heap_size  = 0XB400;       /* required amount of heap */
-#else
-
-_fb_base    = 0xC0F04000;   /* sdram_start + head_end + cache */
-_stack_size = 0x4000;       /* required amount of stack */
-_heap_size  = 0x00F00000;   /* required amount of heap */
-_cache_size = 0x4000;       /* required amount of cache */
-_heap_end   = ORIGIN(SDRAM) + _heap_size;
-
-#endif
 
 /* Define output sections */
 SECTIONS
@@ -145,11 +129,9 @@ SECTIONS
   {
     . = ALIGN(4);
     _heap_start = .;
-#ifdef OPENMV1
     . = . + _heap_size;
     . = ALIGN(4);
     _heap_end  = .;
-#endif
   } >HEAP_MEMORY
 
   /* Make sure there is enough RAM the stack and FS cache */

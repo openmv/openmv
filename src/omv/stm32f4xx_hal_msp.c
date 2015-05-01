@@ -209,9 +209,11 @@ void HAL_SD_MspInit(SD_HandleTypeDef *hsd)
     GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
     GPIO_InitStructure.Alternate = GPIO_AF12_SDIO;
 
+    /* SDIO_D0..D3, SDIO_CLK */
     GPIO_InitStructure.Pin       = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
 
+    /* SDIO_CMD */
     GPIO_InitStructure.Pin       = GPIO_PIN_2;
     HAL_GPIO_Init(GPIOD, &GPIO_InitStructure);
 }
