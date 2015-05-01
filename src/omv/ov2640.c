@@ -213,7 +213,7 @@ static const uint8_t svga_regs[][2] = {
         { BANK_SEL, BANK_SEL_SENSOR },
         /* DSP input image resoultion and window size control */
         { COM7,    COM7_RES_SVGA},
-        { COM1,    0x0A }, /* UXGA=0x0F, SVGA=0x0A, CIF=0x06 */
+        { COM1,    0x0F }, /* UXGA=0x0F, SVGA=0x0A, CIF=0x06 */
         { REG32,   0x09 }, /* UXGA=0x36, SVGA/CIF=0x09 */
 
         { HSTART,  0x11 }, /* UXGA=0x11, SVGA/CIF=0x11 */
