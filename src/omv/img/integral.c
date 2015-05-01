@@ -11,17 +11,13 @@
 #include <arm_math.h>
 #include "imlib.h"
 #include "xalloc.h"
+#include "framebuffer.h"
 
 void imlib_integral_image_alloc(struct integral_image *i_img, int w, int h)
 {
     i_img->w = w;
     i_img->h = h;
-#ifdef OPENMV2
-    i_img->data = xalloc(w*h*sizeof(*i_img->data));
-#else
-    #include "framebuffer.h"
     i_img->data = (uint32_t*) (fb->pixels+(fb->w * fb->h));
-#endif
 }
 
 void imlib_integral_image(struct image *src, struct integral_image *sum)
