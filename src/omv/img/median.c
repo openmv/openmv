@@ -125,27 +125,6 @@ void median_filter_rgb(image_t *in, int size)
     xfree(data);
 }
 
-#ifdef OPENMV2
-void median_filter_gs(image_t *in, int size)
-{
-    histo_t hist;
-    histo_t *h = &hist;
-    uint8_t *data = xalloc(in->w * in->h * sizeof(*data));
-
-    for (int row = 0; row<in->h; row ++) {
-        for (int col = 0; col<in->w; col++) {
-            if (!col) {
-                init_histo(in, row, size, h);
-            } else {
-                del_pixels(in, row, col - size, size, h);
-                add_pixels(in, row, col + size, size, h);
-            }
-            data[row*in->w+col]=(uint8_t)median(h->h, h->n);
-        }
-    }
-    memcpy(in->data, data, (in->w*in->h));
-}
-#else
 void median_filter_gs(image_t *in, int size)
 {
     histo_t hist;
@@ -170,7 +149,6 @@ void median_filter_gs(image_t *in, int size)
     xfree(h);
     xfree(data);
 }
-#endif
 
 void imlib_median_filter(image_t *in, int size)
 {
