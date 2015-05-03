@@ -239,6 +239,9 @@ int sensor_init()
 
     /* init/re-init mutex */
     mutex_init(&fb->lock);
+
+    // blocks usbdbg until the sensor is configured
+    fb->ready=0;
     return 0;
 }
 
