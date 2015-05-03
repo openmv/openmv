@@ -96,17 +96,6 @@ static const char fresh_readme_txt[] =
 "Please visit http://micropython.org/help/ for further help.\r\n"
 ;
 
-typedef struct {
-    const char *name;
-    const mp_obj_module_t *(*init)(void);
-} module_t;
-
-static const module_t init_modules[] ={
-    {"sensor",  py_sensor_init},
-    {"mlx90620", py_mlx90620_init},
-    {NULL}
-};
-
 void flash_error(int n) {
     for (int i = 0; i < n; i++) {
         led_state(LED_RED, 0);
@@ -264,14 +253,8 @@ soft_reset:
     xalloc_init();
     usbdbg_init();
 
-    /* init built-in modules */
-    for (const module_t *p = init_modules; p->init; p++) {
-        const mp_obj_module_t *module = p->init();
-        if (module == NULL) {
-            char buf[256];
-            snprintf(buf, sizeof(buf), "failed to init %s module", p->name);
-            __fatal_error(buf);
-        }
+    if (sensor_init() != 0) {
+        __fatal_error("Failed to init sensor");
     }
 
     /* Export functions to the global python namespace */

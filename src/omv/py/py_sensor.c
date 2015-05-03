@@ -202,24 +202,3 @@ const mp_obj_module_t sensor_module = {
     .name = MP_QSTR_sensor,
     .globals = (mp_obj_t)&globals_dict,
 };
-
-const mp_obj_module_t *py_sensor_init()
-{
-    /* Init sensor */
-    if (sensor_init() != 0) {
-        return NULL;
-    }
-
-    /* Reset sensor and registers */
-    sensor_reset();
-
-    /* Use some default settings */
-    sensor_set_pixformat(PIXFORMAT_RGB565);
-    sensor_set_framesize(FRAMESIZE_QQVGA);
-    sensor_set_framerate(FRAMERATE_30FPS);
-    sensor_set_gainceiling(GAINCEILING_8X);
-    sensor_set_contrast(0);
-    sensor_set_brightness(0);
-
-    return &sensor_module;
-}
