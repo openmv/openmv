@@ -276,10 +276,6 @@ soft_reset:
         // Set CWD and USB medium to SD
         f_chdrive("1:");
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
-
-        // add sdcard to sys path
-        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd));
-        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_sd_slash_lib));
     } else {
         storage_init();
         // try to mount the flash
@@ -294,10 +290,6 @@ soft_reset:
         // Set CWD and USB medium to flash
         f_chdrive("0:");
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_FLASH;
-
-        // add sdcard to sys path
-        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_flash));
-        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_flash_slash_lib));
     }
 
     // turn boot-up LEDs off
