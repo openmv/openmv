@@ -27,6 +27,7 @@ enum sensor_pixformat {
 enum sensor_framesize {
     FRAMESIZE_QQCIF,    /* 88x72     */
     FRAMESIZE_QQVGA,    /* 160x120   */
+    FRAMESIZE_QQVGA2,   /* 128x160   */
     FRAMESIZE_QCIF,     /* 176x144   */
     FRAMESIZE_QVGA,     /* 320x240   */
     FRAMESIZE_CIF,      /* 352x288   */

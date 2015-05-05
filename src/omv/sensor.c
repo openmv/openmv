@@ -36,6 +36,7 @@ int usbdbg_is_connected();
 const int res_width[] = {
     88,     /* QQCIF */
     160,    /* QQVGA */
+    128,    /* QQVGA2*/
     176,    /* QCIF  */
     320,    /* QVGA  */
     352,    /* CIF   */
@@ -48,6 +49,7 @@ const int res_width[] = {
 const int res_height[]= {
     72,     /* QQCIF */
     120,    /* QQVGA */
+    160,    /* QQVGA2*/
     144,    /* QCIF  */
     240,    /* QVGA  */
     288,    /* CIF   */
@@ -425,6 +427,7 @@ int sensor_set_framesize(enum sensor_framesize framesize)
     switch (framesize) {
         case FRAMESIZE_QQCIF:
         case FRAMESIZE_QQVGA:
+        case FRAMESIZE_QQVGA2:
         case FRAMESIZE_QCIF:
         case FRAMESIZE_QVGA:
         case FRAMESIZE_CIF:
