@@ -1,10 +1,13 @@
-import led, time
+import pyb, time
+
+led = pyb.LED(3)
+
 while (vcp_is_connected()==False):
-   led.on(led.BLUE)
+   led.on()
    time.sleep(150)
-   led.off(led.BLUE)
+   led.off()
    time.sleep(100)
-   led.on(led.BLUE)
+   led.on()
    time.sleep(150)
-   led.off(led.BLUE)
+   led.off()
    time.sleep(600)
