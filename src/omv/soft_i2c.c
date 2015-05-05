@@ -11,9 +11,9 @@
 #include "soft_i2c.h"
 #include "mp.h"
 
-#define I2C_PORT            GPIOA
-#define I2C_SIOC_PIN        GPIO_PIN_2
-#define I2C_SIOD_PIN        GPIO_PIN_3
+#define I2C_PORT            GPIOB
+#define I2C_SIOC_PIN        GPIO_PIN_10
+#define I2C_SIOD_PIN        GPIO_PIN_11
 
 #define I2C_SIOC_H()        HAL_GPIO_WritePin(I2C_PORT, I2C_SIOC_PIN, GPIO_PIN_SET)
 #define I2C_SIOC_L()        HAL_GPIO_WritePin(I2C_PORT, I2C_SIOC_PIN, GPIO_PIN_RESET)
