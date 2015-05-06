@@ -186,22 +186,22 @@
 <text x="38.7477" y="24.765" size="0.8128" layer="48">1 oz copper</text>
 <text x="38.7477" y="23.495" size="0.8128" layer="48">er is 3.66</text>
 <text x="38.7477" y="33.655" size="0.8128" layer="48">Stackup:</text>
-<text x="4.445" y="3.175" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">DAC</text>
-<text x="4.445" y="8.255" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SCL</text>
-<text x="4.445" y="5.715" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SDA</text>
-<text x="4.445" y="10.795" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SEL</text>
-<text x="4.445" y="13.208" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SCK</text>
-<text x="4.445" y="15.494" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">MISO</text>
-<text x="31.877" y="15.875" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SWD</text>
-<text x="31.877" y="18.415" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SWC</text>
-<text x="31.877" y="13.081" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">BOOT</text>
-<text x="31.877" y="10.922" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">RST</text>
-<text x="31.877" y="5.461" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">PWM1</text>
-<text x="31.877" y="0.635" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">GND</text>
-<text x="4.445" y="0.508" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">3.3v</text>
-<text x="31.877" y="3.175" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">VCC</text>
-<text x="31.877" y="8.128" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">PWM2</text>
-<text x="4.445" y="18.034" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">MOSI</text>
+<text x="4.191" y="3.175" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">DAC</text>
+<text x="4.191" y="8.255" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SCL</text>
+<text x="4.191" y="5.715" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SDA</text>
+<text x="4.191" y="10.795" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SEL</text>
+<text x="4.191" y="13.208" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SCK</text>
+<text x="4.191" y="15.494" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">MISO</text>
+<text x="32.131" y="15.875" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SWD</text>
+<text x="32.131" y="18.415" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">SWC</text>
+<text x="32.131" y="13.081" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">BOOT</text>
+<text x="32.131" y="10.922" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">RST</text>
+<text x="32.131" y="5.461" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">PWM1</text>
+<text x="32.131" y="0.635" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">GND</text>
+<text x="4.191" y="0.508" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">3.3v</text>
+<text x="32.131" y="3.175" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">VCC</text>
+<text x="32.131" y="8.128" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">PWM2</text>
+<text x="4.191" y="18.034" size="0.7112" layer="21" font="vector" ratio="20" rot="R90">MOSI</text>
 <text x="1.778" y="20.955" size="1.016" layer="21" font="vector" ratio="22" rot="R90">OpenMV</text>
 <wire x1="13.208" y1="19.304" x2="8.128" y2="19.304" width="2.032" layer="29"/>
 <wire x1="13.208" y1="16.764" x2="8.128" y2="16.764" width="2.032" layer="29"/>
@@ -711,8 +711,8 @@ Please make sure your boards conform to these design rules.</description>
 <wire x1="8.128" y1="1.524" x2="10.668" y2="1.524" width="2.032" layer="1"/>
 <wire x1="10.668" y1="1.524" x2="13.208" y2="1.524" width="2.032" layer="1"/>
 <wire x1="13.208" y1="1.524" x2="15.748" y2="1.524" width="2.032" layer="1"/>
-<wire x1="15.748" y1="1.524" x2="5.588" y2="1.524" width="2.032" layer="16"/>
 <via x="15.748" y="4.064" extent="1-16" drill="0.9" shape="octagon"/>
+<wire x1="15.748" y1="1.524" x2="5.588" y2="1.524" width="2.032" layer="16"/>
 </signal>
 <signal name="N$1">
 </signal>

@@ -1659,17 +1659,17 @@ DIN A3, landscape with extra doc field</description>
 <part name="GND1" library="SparkFun" deviceset="GND" device=""/>
 <part name="GND9" library="SparkFun" deviceset="GND" device=""/>
 <part name="GND10" library="SparkFun" deviceset="GND" device=""/>
-<part name="C3" library="sfe" deviceset="CAP" device="0805" value="10uF"/>
-<part name="C5" library="sfe" deviceset="CAP" device="0805" value="10uF"/>
+<part name="C3" library="sfe" deviceset="CAP" device="0603-CAP" value="4.7uF"/>
+<part name="C5" library="sfe" deviceset="CAP" device="0603-CAP" value="4.7uF"/>
 <part name="P+5" library="sfe" deviceset="VCC" device=""/>
 <part name="GND4" library="supply1" deviceset="GND" device=""/>
-<part name="R2" library="sfe" deviceset="RESISTOR" device="0603-RES" value="10R"/>
+<part name="R2" library="sfe" deviceset="RESISTOR" device="0603-RES" value="10K"/>
 <part name="U1" library="MLX90620" deviceset="MLX90620" device=""/>
 <part name="C1" library="sfe" deviceset="CAP" device="0603-CAP" value="0.1uF"/>
 <part name="C2" library="sfe" deviceset="CAP" device="0603-CAP" value="0.01uF"/>
 <part name="P+3" library="sfe" deviceset="VCC" device=""/>
 <part name="GND2" library="SparkFun" deviceset="GND" device=""/>
-<part name="R1" library="sfe" deviceset="RESISTOR" device="0603-RES" value="10R"/>
+<part name="R1" library="sfe" deviceset="RESISTOR" device="0603-RES" value="10K"/>
 <part name="U$2" library="openmv" deviceset="OPENMV3" device=""/>
 <part name="P+4" library="sfe" deviceset="3.3V" device=""/>
 <part name="P+1" library="sfe" deviceset="3.3V" device=""/>

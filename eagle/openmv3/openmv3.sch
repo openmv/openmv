@@ -6148,12 +6148,12 @@ DIN A3, landscape with extra doc field</description>
 <part name="C20" library="sfe" deviceset="CAP" device="0603-CAP" value="0.1uF"/>
 <part name="GND21" library="SparkFun" deviceset="GND" device=""/>
 <part name="U$10" library="sfe" deviceset="2.8V" device=""/>
-<part name="C23" library="sfe" deviceset="CAP" device="0603-CAP" value="1uF"/>
+<part name="C23" library="sfe" deviceset="CAP" device="0603-CAP" value="4.7uF"/>
 <part name="GND27" library="SparkFun" deviceset="GND" device=""/>
-<part name="C24" library="sfe" deviceset="CAP" device="0603-CAP" value="1uF"/>
+<part name="C24" library="sfe" deviceset="CAP" device="0603-CAP" value="4.7uF"/>
 <part name="GND28" library="SparkFun" deviceset="GND" device=""/>
 <part name="U$12" library="sfe" deviceset="2.8V" device=""/>
-<part name="U8" library="sfe" deviceset="V_REG_LDO" device="SMD" value="VREG_25"/>
+<part name="U8" library="sfe" deviceset="V_REG_LDO" device="SMD" value="VREG_28"/>
 <part name="GND29" library="SparkFun" deviceset="GND" device=""/>
 <part name="P+9" library="iofault" deviceset="VIN" device=""/>
 <part name="P+10" library="mux" deviceset="VCC" device=""/>
@@ -6230,7 +6230,7 @@ DIN A3, landscape with extra doc field</description>
 <part name="P+2" library="supply1" deviceset="VCC" device=""/>
 <part name="R1" library="sfe" deviceset="RESISTOR" device="0603-RES" value="10ohm"/>
 <part name="P+6" library="mux" deviceset="VCC" device=""/>
-<part name="C2" library="sfe" deviceset="CAP" device="0603-CAP" value="4.7"/>
+<part name="C2" library="sfe" deviceset="CAP" device="0603-CAP" value="4.7uF"/>
 <part name="C3" library="sfe" deviceset="CAP" device="1206" value="47uF"/>
 <part name="C11" library="sfe" deviceset="CAP" device="0805" value="22uF"/>
 <part name="U4" library="mux" deviceset="TPS768" device=""/>
@@ -6313,18 +6313,18 @@ DIN A3, landscape with extra doc field</description>
 <instance part="GND15" gate="1" x="325.12" y="30.48"/>
 <instance part="C18" gate="G$1" x="304.8" y="45.72" smashed="yes">
 <attribute name="NAME" x="302.641" y="44.196" size="1.778" layer="95" rot="R270"/>
-<attribute name="VALUE" x="305.181" y="54.356" size="1.778" layer="96" rot="R270"/>
+<attribute name="VALUE" x="305.181" y="54.356" size="1.4224" layer="96" rot="R270"/>
 </instance>
 <instance part="GND17" gate="1" x="304.8" y="30.48"/>
 <instance part="GND19" gate="1" x="294.64" y="30.48"/>
 <instance part="U6" gate="G$1" x="304.8" y="104.14" rot="R180"/>
 <instance part="C19" gate="G$1" x="294.64" y="45.72" smashed="yes">
 <attribute name="NAME" x="292.481" y="44.196" size="1.778" layer="95" rot="R270"/>
-<attribute name="VALUE" x="295.021" y="54.356" size="1.778" layer="96" rot="R270"/>
+<attribute name="VALUE" x="295.021" y="54.356" size="1.4224" layer="96" rot="R270"/>
 </instance>
 <instance part="C20" gate="G$1" x="299.72" y="45.72" smashed="yes">
 <attribute name="NAME" x="297.561" y="44.196" size="1.778" layer="95" rot="R270"/>
-<attribute name="VALUE" x="300.101" y="54.356" size="1.778" layer="96" rot="R270"/>
+<attribute name="VALUE" x="300.101" y="54.356" size="1.4224" layer="96" rot="R270"/>
 </instance>
 <instance part="GND21" gate="1" x="299.72" y="30.48"/>
 <instance part="U$10" gate="G$1" x="294.64" y="116.84"/>
@@ -6389,7 +6389,7 @@ DIN A3, landscape with extra doc field</description>
 <instance part="P+8" gate="VCC" x="58.42" y="223.52"/>
 <instance part="C15" gate="G$1" x="309.88" y="45.72" smashed="yes">
 <attribute name="NAME" x="307.721" y="44.196" size="1.778" layer="95" rot="R270"/>
-<attribute name="VALUE" x="310.261" y="54.356" size="1.778" layer="96" rot="R270"/>
+<attribute name="VALUE" x="310.261" y="54.356" size="1.4224" layer="96" rot="R270"/>
 </instance>
 <instance part="GND12" gate="1" x="309.88" y="30.48"/>
 <instance part="J3" gate="J" x="429.26" y="251.46"/>
