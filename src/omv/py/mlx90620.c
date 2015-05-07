@@ -54,6 +54,17 @@
 #define MAP(OldValue, OldMin, OldMax, NewMin, NewMax)\
     (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
 
+#define TIMEOUT             (10000)
+
+
+enum image_type {
+    RAINBOW,
+    GRAYSCALE,
+};
+
+/* Grayscale [0..255] to rainbox lookup */
+extern const uint16_t rainbow_table[256];
+
 static const float alpha_ij[64] = {
   1.60499E-8f, 1.87856E-8f, 1.93677E-8f, 1.87856E-8f, 1.83782E-8f, 2.11139E-8f, 2.21035E-8f, 2.07647E-8f,
   2.01826E-8f, 2.30930E-8f, 2.38497E-8f, 2.23363E-8f, 2.19288E-8f, 2.52467E-8f, 2.58287E-8f, 2.46646E-8f,
@@ -80,7 +91,7 @@ static float calculate_TA(void)
     return (-k_t1 + fast_sqrtf(k_t1_sq - (4 * k_t2 * (v_th - ptat)))) / (2 * k_t2) + 25;
 }
 
-static void mlx90620_read_to(float *t)
+static void mlx90620_read_to(float *t, float Ta)
 {
     float v_ir_comp;
     float v_ir_off_comp;
@@ -90,12 +101,8 @@ static void mlx90620_read_to(float *t)
     uint8_t cmd_buf[4];
     int16_t ir_data[64];
 
-//    static int count=0;
-//    if (count++ %16 ==0) {
-    float Ta = calculate_TA();
     // (T+273.15f)^4
     float Ta4 = (Ta + 273.15f) * (Ta + 273.15f) * (Ta + 273.15f) * (Ta + 273.15f);
-  //  }
 
     // Read IR data
     memcpy(cmd_buf, (uint8_t [4]){MLX_READ_REG, 0x00, 0x01, 0x40}, sizeof(cmd_buf)); //read 64*2 bytes
@@ -123,25 +130,54 @@ static void mlx90620_read_to(float *t)
 
         t[i] = fast_sqrtf(fast_sqrtf(v_ir_comp/alpha_ij[i] + Ta4)) - 273.15f;
     }
+
 }
 
-mp_obj_t mlx90620_read()
+mp_obj_t mlx90620_read(mp_obj_t type_obj)
 {
     float temp[64];
+    float temp_flip[64];
     float max_temp = FLT_MIN;
     float min_temp = FLT_MAX;
-    image_t img  = {
-        .w=4,
-        .h=16,
-        .bpp=1,
-        .pixels=xalloc(16*4)
-    };
+
+    image_t *img;
+    enum image_type img_type;
+
+    //alloc image
+    img = xalloc(sizeof(*img));
+    img->w = 16;
+    img->h = 4;
+
+    // read image type
+    img_type = mp_obj_get_int(type_obj);
+
+    switch (img_type) {
+        case GRAYSCALE:
+            img->bpp = 1;
+            img->pixels = xalloc(img->w*img->h*1);
+            break;
+        case RAINBOW:
+            img->bpp = 2;
+            img->pixels = xalloc(img->w*img->h*2);
+            break;
+    }
 
     // get raw temperatures
-    mlx90620_read_to(temp);
+    float ta = calculate_TA();
+    mlx90620_read_to(temp, ta);
+
+    // flip IR data, sensor memory read is column wise
+    float *temp_p = temp_flip;
+    memcpy(temp_p, temp, sizeof(temp));
+    for (int x=15; x>=0; x--) {
+        for (int y=0; y<4; y++) {
+            temp[x+y*16] = *temp_p++;
+        }
+    }
 
     // normalize temp readings
     for (int i=0; i<64; i++) {
+        temp[i] = temp[i]-ta;
         if (temp[i] > max_temp) {
             max_temp = temp[i];
         } else if (temp[i] < min_temp) {
@@ -149,13 +185,22 @@ mp_obj_t mlx90620_read()
         }
     }
 
-    max_temp += 1.0f;
-
+    // map temps to rainbow or grayscale
     for (int i=0; i<64; i++) {
-        img.pixels[i] = (uint8_t)(((temp[i]-min_temp)/(max_temp-min_temp))*255.0f);
+        uint16_t p = (uint16_t) MAP(temp[i], min_temp, max_temp, 0, 255);
+        //uint16_t p = (((temp[i]-min_temp)/(max_temp-min_temp))*255.0f);
+
+        switch (img_type) {
+            case GRAYSCALE:
+                img->pixels[i] = p;
+                break;
+            case RAINBOW:
+                ((uint16_t*)img->pixels)[i] = rainbow_table[(uint8_t)p];
+                break;
+        }
     }
 
-    return py_image_from_struct(&img);
+    return py_image_from_struct(img);
 }
 
 mp_obj_t mlx90620_read_raw()
@@ -164,7 +209,8 @@ mp_obj_t mlx90620_read_raw()
     mp_obj_t t_list = mp_obj_new_list(0, NULL);
 
     // get raw temperatures
-    mlx90620_read_to(t);
+    float ta = calculate_TA();
+    mlx90620_read_to(t, ta);
 
     // normalize temp readings
     for (int i=0; i<64; i++) {
@@ -193,7 +239,7 @@ mp_obj_t mlx90620_init()
     soft_i2c_write_bytes(MLX_SLAVE_ADDR, cmd_buf, sizeof(cmd_buf), true);
 
     // Write configuration register
-    uint8_t lsb = 0x0A; //0x09==16Hz
+    uint8_t lsb = 0x09; //32Hz
     uint8_t msb = 0x74;
     memcpy(cmd_buf, (uint8_t [5]){SET_CONFIG_DATA, (uint8_t)(lsb-0x55), lsb, (uint8_t)(msb-0x55), msb}, 5);
     soft_i2c_write_bytes(MLX_SLAVE_ADDR, cmd_buf, sizeof(cmd_buf), true);
@@ -228,7 +274,7 @@ mp_obj_t mlx90620_init()
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mlx90620_init_obj,     mlx90620_init);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(mlx90620_read_obj,     mlx90620_read);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mlx90620_read_obj,     mlx90620_read);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mlx90620_read_raw_obj, mlx90620_read_raw);
 
 static const mp_map_elem_t globals_dict_table[] = {
@@ -237,6 +283,9 @@ static const mp_map_elem_t globals_dict_table[] = {
     //{ MP_OBJ_NEW_QSTR(MP_QSTR_HZ_16),     MP_OBJ_NEW_SMALL_INT(MLX_HZ_16)},
     //{ MP_OBJ_NEW_QSTR(MP_QSTR_HZ_32),     MP_OBJ_NEW_SMALL_INT(MLX_HZ_32)},
     //{ MP_OBJ_NEW_QSTR(MP_QSTR_HZ_64),     MP_OBJ_NEW_SMALL_INT(MLX_HZ_64)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_RAINBOW),     MP_OBJ_NEW_SMALL_INT(RAINBOW)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_GRAYSCALE),   MP_OBJ_NEW_SMALL_INT(GRAYSCALE)},
+
     { MP_OBJ_NEW_QSTR(MP_QSTR_init),        (mp_obj_t)&mlx90620_init_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_read),        (mp_obj_t)&mlx90620_read_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_read_raw),    (mp_obj_t)&mlx90620_read_raw_obj },
@@ -256,9 +305,3 @@ const mp_obj_module_t mlx_module = {
 };
 
 #endif //OPENMV2
-
-const mp_obj_module_t *py_mlx90620_init()
-{
-    return &mlx_module;
-}
-
