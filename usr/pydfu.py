@@ -61,6 +61,16 @@ __verbose = None
 # USB DFU interface
 __DFU_INTERFACE = 0
 
+import inspect
+if 'length' in inspect.getargspec(usb.util.get_string).args:
+    # PyUSB 1.0.0.b1 has the length argument
+    def get_string(dev, index):
+        return usb.util.get_string(dev, 255, index)
+else:
+    # PyUSB 1.0.0.b2 dropped the length argument
+    def get_string(dev, index):
+        return usb.util.get_string(dev, index)
+
 
 def init():
     """Initializes the found DFU device so that we can program it."""
@@ -383,7 +393,7 @@ def get_memory_layout(device):
     """
     cfg = device[0]
     intf = cfg[(0, 0)]
-    mem_layout_str = usb.util.get_string(device, intf.iInterface)
+    mem_layout_str = get_string(device, intf.iInterface)
     mem_layout = mem_layout_str.split('/')
     addr = int(mem_layout[1], 0)
     segments = mem_layout[2].split(',')
