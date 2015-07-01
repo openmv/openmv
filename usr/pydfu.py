@@ -373,13 +373,9 @@ def get_dfu_devices(*args, **kwargs):
     Additional filters (like idProduct and idVendor) can be passed in to
     refine the search.
     """
-    l = []
-    devices = usb.core.find(*args, find_all=True,
-                         custom_match=FilterDFU(), **kwargs)
     # convert to list for compatibility with newer pyusb
-    for d in devices:
-        l.append(d)
-    return l
+    return list(usb.core.find(*args, find_all=True,
+                              custom_match=FilterDFU(), **kwargs))
 
 
 def get_memory_layout(device):
