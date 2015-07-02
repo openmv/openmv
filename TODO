@@ -1,0 +1,11 @@
+Done:
+* Rollback to gtksourceview
+* Use MP perph 
+* Fix push/pop scope
+
+Todo:
+* Add API version and check it in the IDE
+* Add pinout image to IDE
+* Development VM ?
+* Use HW I2C for MLX
+
