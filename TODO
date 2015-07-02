@@ -8,4 +8,5 @@ Todo:
 * Add pinout image to IDE
 * Development VM ?
 * Use HW I2C for MLX
+* Write colorbar test
 
