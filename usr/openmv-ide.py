@@ -1,5 +1,4 @@
 #!/usr/bin/env python2.7
-import pydfu
 import openmv
 import gtk
 import gobject
@@ -10,6 +9,10 @@ import sys, os, os.path
 from time import sleep
 from os.path import expanduser
 import gtksourceview2 as gtksourceview
+
+#import pydfu on Linux
+if platform.system() == "Linux":
+    import pydfu
 
 try:
     # 3.x name
