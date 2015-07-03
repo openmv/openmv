@@ -8,10 +8,13 @@
 import struct
 import sys,time
 import serial
-import pydfu
 import platform
 from array import array
 from PIL import Image
+
+#import pydfu on Linux
+if platform.system() == "Linux":
+    import pydfu
 
 __serial = None
 
