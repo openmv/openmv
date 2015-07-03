@@ -5,8 +5,6 @@ import gtk
 import gobject
 import pango
 import serial
-import usb.core
-import usb.util
 import platform
 import sys, os, os.path
 from time import sleep
