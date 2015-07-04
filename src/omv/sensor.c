@@ -24,7 +24,7 @@
 
 #define OV9650_PID     0x96
 #define OV2640_PID     0x26
-#define XCLK_FREQ      (12000000)
+#define XCLK_FREQ      (13000000)
 #define BREAK()         __asm__ volatile ("BKPT")
 
 struct sensor_dev sensor;
@@ -174,13 +174,18 @@ int sensor_init()
     SCCB_Init();
     systick_sleep(10);
 
-    /* Configure the external clock (XCLK) */
-    #ifdef OPENMV1
+    /* Configure the sensor external clock (XCLK) to XCLK_FREQ (13MHz).
+       Note: The sensor's internal PLL (when CLKRC=0x80) doubles the XCLK_FREQ
+             (XCLK=XCLK_FREQ*2), and the unscaled PIXCLK output is XCLK_FREQ*4 */
     extclk_config(XCLK_FREQ);
-    #else
-    (void) extclk_config;
-    HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSI, RCC_MCODIV_1);
-    #endif
+
+    /* Uncomment this to pass through the MCO1 clock (HSI=16MHz) this results in a
+       64MHz PIXCLK output from the sensor.
+       Note: The maximum pixel clock input on the STM32F4xx is 54MHz,
+             the STM32F7 can probably handle higher input pixel clock.
+       */
+    //(void) extclk_config;
+    //HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSI, RCC_MCODIV_1);
 
     /* Reset the sesnor state */
     memset(&sensor, 0, sizeof(struct sensor_dev));
