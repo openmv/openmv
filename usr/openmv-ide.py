@@ -26,6 +26,10 @@ if hasattr(sys,"frozen") and sys.frozen in ("windows_exe", "console_exe"):
 else:
     IDE_DIR=os.path.dirname(os.path.realpath(__file__))
 
+FIRMWARE_VERSION_MAJOR  = 1
+FIRMWARE_VERSION_MINOR  = 1
+FIRMWARE_VERSION_PATCH  = 0
+
 DATA_DIR     = os.path.join(os.path.expanduser("~"), "openmv") #use home dir
 SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 EXAMPLES_DIR = os.path.join(IDE_DIR, "examples")
@@ -223,6 +227,14 @@ class OMVGtk:
             return
 
         openmv.init(self.serial)
+
+        # check firmware version
+        fw_ver = openmv.fw_version()
+        print("fw_version:" + str(fw_ver))
+        if (fw_ver[0] != FIRMWARE_VERSION_MAJOR):
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Firmware version mismatch! Please upgrade the firmware")
+            return
+
         # interrupt any running code
         openmv.stop_script()
 

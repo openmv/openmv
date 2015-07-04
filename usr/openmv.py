@@ -22,6 +22,7 @@ __FB_HDR_SIZE   =12
 
 # USB Debug commands
 __USBDBG_CMD            = 48 
+__USBDBG_FW_VERSION     = 0x80
 __USBDBG_FRAME_SIZE     = 0x81
 __USBDBG_FRAME_DUMP     = 0x82
 __USBDBG_FRAME_LOCK     = 0x83
@@ -134,6 +135,10 @@ def tx_buf_len():
 def tx_buf(bytes):
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_TX_BUF, bytes))
     return __serial.read(bytes)
+
+def fw_version():
+    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FW_VERSION, 12))
+    return struct.unpack("III", __serial.read(12))
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:

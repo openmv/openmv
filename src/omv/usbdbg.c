@@ -60,6 +60,15 @@ void usbdbg_clr_script()
 void usbdbg_data_in(void *buffer, int length)
 {
     switch (cmd) {
+        case USBDBG_FW_VERSION: {
+            uint32_t *ver_buf = buffer;
+            ver_buf[0] = FIRMWARE_VERSION_MAJOR;
+            ver_buf[1] = FIRMWARE_VERSION_MINOR;
+            ver_buf[2] = FIRMWARE_VERSION_PATCH;
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         case USBDBG_TX_BUF_LEN: {
             uint32_t tx_buf_len = usbd_cdc_tx_buf_len();
             memcpy(buffer, &tx_buf_len, length);
@@ -185,6 +194,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 {
     cmd = (enum usbdbg_cmd) request;
     switch (cmd) {
+        case USBDBG_FW_VERSION:
+            xfer_bytes = 0;
+            xfer_length = length;
+            break;
+
         case USBDBG_FRAME_SIZE:
             xfer_bytes = 0;
             xfer_length = length;

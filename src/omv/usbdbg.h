@@ -8,8 +8,30 @@
  */
 #ifndef __USBDBG_H__
 #define __USBDBG_H__
+/**
+  * Firmware major, minor and patch versions.
+  * Increment the major version if the ABI has changed.
+  * Increment the minor version when a new command is added.
+  * Increment the patch version for fixes that don't affect the ABI.
+  *
+  * Note: incrementing the major version will require a fw upgrade,
+  * the IDE will Not connect if the major version number is different.
+  */
+#define FIRMWARE_VERSION_MAJOR      (1)
+#define FIRMWARE_VERSION_MINOR      (1)
+#define FIRMWARE_VERSION_PATCH      (0)
+
+/**
+  * To add a new debugging command, increment the last command value used.
+  * Set the MSB of the value if the request has a device-to-host data phase.
+  * Add the command to usr/openmv.py using the same value.
+  * Handle the command control and data in/out (if any) phases in usbdbg.c.
+  *
+  * See usbdbg.c for examples.
+  */
 enum usbdbg_cmd {
-    USBDBG_NONE=0,
+    USBDBG_NONE             =0x00,
+    USBDBG_FW_VERSION       =0x80,
     USBDBG_FRAME_SIZE       =0x81,
     USBDBG_FRAME_DUMP       =0x82,
     USBDBG_FRAME_LOCK       =0x83,
