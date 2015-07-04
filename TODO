@@ -2,11 +2,11 @@ Done:
 * Rollback to gtksourceview
 * Use MP perph 
 * Fix push/pop scope
+* Add ABI version and check it in the IDE
 
 Todo:
-* Add API version and check it in the IDE
 * Add pinout image to IDE
 * Development VM ?
 * Use HW I2C for MLX
 * Write colorbar test
-
+* Add common cascades to the flash
