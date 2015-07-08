@@ -37,7 +37,7 @@ extern const char *ffs_strerror(FRESULT res);
 void usbdbg_init()
 {
     vstr_init(&script_buf, 64);
-    mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_OSError, "IDEInterrupt");
+    mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, "IDE interrupt");
 }
 
 int usbdbg_script_ready()
