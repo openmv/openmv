@@ -44,10 +44,11 @@ FLASH_OFFSETS= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
 
 DEFAULT_CONFIG='''\
 [main]
-board = OpenMV-Tiny
+board = OpenMV2
 serial_port = /dev/openmvcam
 recent =
 last_fw_path =
+baudrate = 921600
 '''
 
 class OMVGtk:
@@ -205,6 +206,8 @@ class OMVGtk:
             self.files = files.split(',')
             self.update_recent_files()
 
+        self.baudrate = int(self.config.get("main", "baudrate"))
+
 
     def show_message_dialog(self, msg_type, msg):
         message = gtk.MessageDialog(parent=self.window, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -220,7 +223,7 @@ class OMVGtk:
     def connect(self):
         try:
             # open VCP and configure the terminal
-            self.serial = serial.Serial(self.config.get("main", "serial_port"), 12000000, timeout=0.1)
+            self.serial = serial.Serial(self.config.get("main", "serial_port"), self.baudrate, timeout=0.1)
             gobject.gobject.idle_add(omvgtk.update_terminal)
         except Exception as e:
             self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open serial port (check prefernces)\n%s"%e)
@@ -387,6 +390,7 @@ class OMVGtk:
     def preferences_clicked(self, widget):
         board_combo = self.builder.get_object("board_combo")
         sport_combo = self.builder.get_object("sport_combo")
+        baud_combo = self.builder.get_object("baud_combo")
         dialog = self.builder.get_object("preferences_dialog")
 
         # Fill serial ports combo
@@ -402,6 +406,7 @@ class OMVGtk:
         if dialog.run() == gtk.RESPONSE_OK:
             self.config.set("main", "board", board_combo.get_active_text())
             self.config.set("main", "serial_port", sport_combo.get_active_text())
+            self.config.set("main", "baudrate", baud_combo.get_active_text())
             self.save_config()
 
         dialog.hide()
