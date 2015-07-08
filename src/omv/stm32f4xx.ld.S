@@ -36,7 +36,7 @@ ENTRY(Reset_Handler)
 #define ISR_LENGTH      16K
 
 #define TEXT_ORIGIN     0x0800C000
-#define TEXT_LENGTH     1984K
+#define TEXT_LENGTH     960K
 
 #define RAM_ORIGIN      0x20000000
 #define RAM_LENGTH      192K
