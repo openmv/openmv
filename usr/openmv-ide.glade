@@ -188,7 +188,10 @@
     </columns>
     <data>
       <row>
-        <col id="0" translatable="yes">OpenMV-Tiny</col>
+        <col id="0" translatable="yes">OpenMV1</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">OpenMV2</col>
       </row>
     </data>
   </object>
