@@ -292,6 +292,8 @@ error:
 
 int imlib_load_cascade_from_flash(cascade_t *cascade, const char *path)
 {
+    FRESULT res=FR_OK;
+
     if (strcmp(path, "frontalface") == 0) {
         cascade->window.w            = frontalface_window_w;
         cascade->window.h            = frontalface_window_h;
@@ -316,8 +318,11 @@ int imlib_load_cascade_from_flash(cascade_t *cascade, const char *path)
         cascade->num_rectangles_array= (int8_t  *)eye_num_rectangles_array;
         cascade->weights_array       = (int8_t  *)eye_weights_array;
         cascade->rectangles_array    = (int8_t  *)eye_rectangles_array;
+    } else {
+        res = FR_NO_FILE;
     }
-    return 0;
+
+    return res;
 }
 
 int imlib_load_cascade(cascade_t *cascade, const char *path)

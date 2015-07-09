@@ -1,24 +1,30 @@
 import sensor, time
+
+# Reset sensor
 sensor.reset()
-# Set sensor brightness
+
+# Sensor settings
 sensor.set_contrast(1)
-# Set sensor gainceiling
 sensor.set_gainceiling(16)
-# Set framesize
-sensor.set_framesize(sensor.QCIF)
-# Set sensor to grayscale
+sensor.set_framesize(sensor.QQVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load Haar Cascade
-face_cascade = HaarCascade("/frontalface.cascade")
+face_cascade = HaarCascade("frontalface")
 print(face_cascade)
+
+# FPS clock
 clock = time.clock()
 while (True):
     clock.tick()
+    # Capture snapshot
     image = sensor.snapshot()
-    objects = image.find_features(face_cascade, threshold=0.65, scale=1.65)
+    # Find objects
+    objects = image.find_features(face_cascade, threshold=0.65, scale=1.85)
+    # Draw objects
     for r in objects:
         image.draw_rectangle(r)
-    #Add delay to see drawing on FB        
-    time.sleep(10)
+        #Add delay to see drawing on FB
+        time.sleep(100)
+
     print (clock.fps())

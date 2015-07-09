@@ -1,18 +1,17 @@
 import sensor, time
-#sensor.reset()
-# Set framesize
-sensor.set_framesize(sensor.QQVGA)
-# Set sensor to grayscale
-sensor.set_pixformat(sensor.GRAYSCALE)
-# Set sensor contrast
+# Reset sensor
+sensor.reset()
+
+# Sensor settings
 sensor.set_contrast(1)
-# Set sensor gainceiling
 sensor.set_gainceiling(16)
+sensor.set_framesize(sensor.QQVGA)
+sensor.set_pixformat(sensor.GRAYSCALE)
 
 def find_face():
     global sensor, time
     # Load Haar Cascade
-    face_cascade = HaarCascade("/frontalface.cascade")
+    face_cascade = HaarCascade("frontalface")
     while (True):
         image = sensor.snapshot()
         objects = image.find_features(face_cascade, threshold=0.65, scale=1.85)
