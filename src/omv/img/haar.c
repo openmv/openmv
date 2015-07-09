@@ -12,6 +12,8 @@
 #include "xalloc.h"
 #include "imlib.h"
 #include <arm_math.h>
+// built-in cascades
+#include "cascade.h"
 
 static int imlib_std(image_t *image)
 {
@@ -168,7 +170,7 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
     return objects;
 }
 
-int imlib_load_cascade(cascade_t *cascade, const char *path)
+int imlib_load_cascade_from_file(cascade_t *cascade, const char *path)
 {
     int i;
     UINT n_out;
@@ -288,4 +290,43 @@ error:
     return res;
 }
 
+int imlib_load_cascade_from_flash(cascade_t *cascade, const char *path)
+{
+    if (strcmp(path, "frontalface") == 0) {
+        cascade->window.w            = frontalface_window_w;
+        cascade->window.h            = frontalface_window_h;
+        cascade->n_stages            = frontalface_n_stages;
+        cascade->stages_array        = (uint8_t *)frontalface_stages_array;
+        cascade->stages_thresh_array = (int16_t *)frontalface_stages_thresh_array;
+        cascade->tree_thresh_array   = (int16_t *)frontalface_tree_thresh_array;
+        cascade->alpha1_array        = (int16_t *)frontalface_alpha1_array;
+        cascade->alpha2_array        = (int16_t *)frontalface_alpha2_array;
+        cascade->num_rectangles_array= (int8_t  *)frontalface_num_rectangles_array;
+        cascade->weights_array       = (int8_t  *)frontalface_weights_array;
+        cascade->rectangles_array    = (int8_t  *)frontalface_rectangles_array;
+    } else if (strcmp(path, "eye") == 0) {
+        cascade->window.w            = eye_window_w;
+        cascade->window.h            = eye_window_h;
+        cascade->n_stages            = eye_n_stages;
+        cascade->stages_array        = (uint8_t *)eye_stages_array;
+        cascade->stages_thresh_array = (int16_t *)eye_stages_thresh_array;
+        cascade->tree_thresh_array   = (int16_t *)eye_tree_thresh_array;
+        cascade->alpha1_array        = (int16_t *)eye_alpha1_array;
+        cascade->alpha2_array        = (int16_t *)eye_alpha2_array;
+        cascade->num_rectangles_array= (int8_t  *)eye_num_rectangles_array;
+        cascade->weights_array       = (int8_t  *)eye_weights_array;
+        cascade->rectangles_array    = (int8_t  *)eye_rectangles_array;
+    }
+    return 0;
+}
 
+int imlib_load_cascade(cascade_t *cascade, const char *path)
+{
+    if (path[0] != '/') {
+        // built-in cascade
+        return imlib_load_cascade_from_flash(cascade, path);
+    } else {
+        // xml cascade
+        return imlib_load_cascade_from_file(cascade, path);
+    }
+}
