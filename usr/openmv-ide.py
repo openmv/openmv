@@ -550,7 +550,14 @@ class OMVGtk:
                 self.save_button.set_sensitive(False)
                 self._update_title()
                 self.update_recent_files()
-                with open(dialog.get_filename(), "w") as file:
+
+                # append .py
+                filename = dialog.get_filename()
+                if not filename.endswith(".py"):
+                    filename += ".py"
+
+                # save file
+                with open(filename, "w") as file:
                     file.write(self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter()))
 
             dialog.destroy()
