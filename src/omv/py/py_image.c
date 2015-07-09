@@ -654,7 +654,7 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
 
     /* Add detected objects to the list */
     for (int i=0; i<array_length(objects_array); i++) {
-        struct rectangle *r = array_at(objects_array, 0);
+        struct rectangle *r = array_at(objects_array, i);
         mp_obj_t rec_obj[4] = {
             mp_obj_new_int(r->x),
             mp_obj_new_int(r->y),
