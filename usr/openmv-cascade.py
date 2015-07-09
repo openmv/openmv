@@ -180,14 +180,14 @@ def cascade_header(path, n_stages, name):
         n_rectangles = n_rectangles + len(rects)
 
     # write detection window size
-    fout.write("const int %s_window_x=%d;\n" %( name, size[0]))
-    fout.write("const int %s_window_y=%d;\n" %(name, size[1]))
+    fout.write("const int %s_window_w=%d;\n" %( name, size[0]))
+    fout.write("const int %s_window_h=%d;\n" %(name, size[1]))
 
     # write num stages
     fout.write("const int %s_n_stages=%d;\n" %(name, len(stages)))
 
     # write num feat in stages
-    fout.write("const int8_t %s_stages_array[]={%s};\n"
+    fout.write("const uint8_t %s_stages_array[]={%s};\n"
             %(name, ", ".join(str(x) for x in stages)))
 
     # write stages thresholds
@@ -217,7 +217,7 @@ def cascade_header(path, n_stages, name):
 
 
     # write rects
-    rect = lambda rects:", ".join(", ".join(r.childNodes[0].nodeValue[:-1].split()) for r in rects)
+    rect = lambda rects:", ".join(", ".join(r.childNodes[0].nodeValue.split()[:-1]) for r in rects)
     fout.write("const int8_t %s_rectangles_array[]={%s};\n"
             %(name, ", ".join(rect(f.getElementsByTagName('_')) for f in feature)))
 
