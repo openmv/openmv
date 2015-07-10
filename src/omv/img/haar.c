@@ -322,6 +322,19 @@ int imlib_load_cascade_from_flash(cascade_t *cascade, const char *path)
         res = FR_NO_FILE;
     }
 
+    if (res == FR_OK) {
+        int i;
+        // sum the number of features in all stages
+        for (i=0, cascade->n_features=0; i<cascade->n_stages; i++) {
+            cascade->n_features += cascade->stages_array[i];
+        }
+
+        // sum the number of recatngles in all features
+        for (i=0, cascade->n_rectangles=0; i<cascade->n_features; i++) {
+            cascade->n_rectangles += cascade->num_rectangles_array[i];
+        }
+    }
+
     return res;
 }
 
