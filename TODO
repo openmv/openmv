@@ -3,10 +3,17 @@ Done:
 * Use MP perph 
 * Fix push/pop scope
 * Add ABI version and check it in the IDE
+* Add common cascades to the flash
 
 Todo:
-* Add pinout image to IDE
-* Development VM ?
-* Use HW I2C for MLX
+* Fix silkscreen
+* Fix USB PID:VID
 * Write colorbar test
-* Add common cascades to the flash
+* Update the MLX driver
+* Fix LBP face recognizer
+* Use HW I2C for MLX
+* Add reference papers
+* Add pinout image to IDE
+* Edge detection or geneirc kernel function
+* Development VM ?
+* Grep for TODOs
