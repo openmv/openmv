@@ -875,21 +875,30 @@ mp_obj_t py_image_load_image(mp_obj_t path_obj)
     return image_obj;
 }
 
-mp_obj_t py_image_load_cascade(mp_obj_t path_obj)
+mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    py_cascade_obj_t *o =NULL;
+    py_cascade_obj_t *o = NULL;
+    mp_map_elem_t *kw_stages = NULL;
 
-    /* detection parameters */
+    // detection parameters
     struct cascade cascade = {
         .step = 2,
     };
 
-    const char *path = mp_obj_str_get_str(path_obj);
+    // Load cascade from file or flash
+    const char *path = mp_obj_str_get_str(args[0]);
     int res = imlib_load_cascade(&cascade, path);
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
+    // Limit the number of stages if specified
+    kw_stages = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), MP_MAP_LOOKUP);
+    if (kw_stages != NULL) {
+        cascade.n_stages = mp_obj_get_float(kw_stages->value);
+    }
+
+    // Return micropython cascade object
     o = m_new_obj(py_cascade_obj_t);
     o->base.type = &py_cascade_type;
     o->_cobj = cascade;
