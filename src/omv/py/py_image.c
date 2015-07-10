@@ -895,7 +895,10 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     // Limit the number of stages if specified
     kw_stages = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), MP_MAP_LOOKUP);
     if (kw_stages != NULL) {
-        cascade.n_stages = mp_obj_get_float(kw_stages->value);
+        int stages = mp_obj_get_int(kw_stages->value);
+        if (stages > 0 && stages <= cascade.n_stages) {
+            cascade.n_stages = stages;
+        }
     }
 
     // Return micropython cascade object
