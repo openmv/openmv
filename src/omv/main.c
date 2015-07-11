@@ -46,7 +46,6 @@
 #include "sensor.h"
 #include "usbdbg.h"
 #include "sdram.h"
-#include "xalloc.h"
 
 #include "usbd_core.h"
 #include "usbd_desc.h"
@@ -250,7 +249,6 @@ soft_reset:
     uart_init0();
     pyb_usb_init0();
 
-    xalloc_init();
     usbdbg_init();
 
     if (sensor_init() != 0) {
