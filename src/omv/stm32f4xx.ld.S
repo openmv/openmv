@@ -60,7 +60,7 @@ _ram_end    = 0x10010000;   /* 64KB CCM */
 
 _fb_base    = 0x20000000;
 _stack_size = 0x1000;       /* minimum amount of stack */
-_heap_size  = 0XC000;       /* required amount of heap */
+_heap_size  = 0XC800;       /* required amount of heap */
 
 /* Define output sections */
 SECTIONS
