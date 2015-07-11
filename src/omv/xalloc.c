@@ -20,8 +20,7 @@ void *xalloc(uint32_t size)
 {
     void *mem = gc_alloc(size, false);
     if (mem == NULL) {
-        mp_obj_exception_clear_traceback(oom_interrupt);
-        pendsv_nlr_jump(oom_interrupt);
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Out of Memory!!"));
     }
     return mem;
 }
@@ -30,8 +29,7 @@ void *xalloc0(uint32_t size)
 {
     void *mem = gc_alloc(size, false);
     if (mem == NULL) {
-        mp_obj_exception_clear_traceback(oom_interrupt);
-        pendsv_nlr_jump(oom_interrupt);
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Out of Memory!!"));
     }
     memset(mem, 0, size);
     return mem;
@@ -46,8 +44,7 @@ void *xrealloc(void *ptr, uint32_t size)
 {
     ptr = gc_realloc(ptr, size);
     if (ptr == NULL) {
-        mp_obj_exception_clear_traceback(oom_interrupt);
-        pendsv_nlr_jump(oom_interrupt);
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Out of Memory!!"));
     }
     return ptr;
 }
