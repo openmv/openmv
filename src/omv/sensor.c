@@ -108,7 +108,7 @@ static int dcmi_config(uint32_t jpeg_mode)
     DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    /* Enable Hardware synchronization      */
     DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        /* Capture rate all frames              */
     DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; /* Capture 8 bits on every pixel clock  */
-    DCMIHandle.Init.JPEGMode = jpeg_mode;                   /* Disable JPEG Mode                    */
+    DCMIHandle.Init.JPEGMode = jpeg_mode;                   /* Set JPEG Mode                        */
 
     /* Associate the DMA handle to the DCMI handle */
     __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
@@ -263,24 +263,6 @@ int sensor_reset()
     mutex_lock(&fb->lock);
     fb->ready=0;
     mutex_unlock(&fb->lock);
-
-    /* Hard reset the sensor */
-    switch (sensor.reset_pol) {
-        case ACTIVE_HIGH:
-            DCMI_RESET_HIGH();
-            systick_sleep(10);
-
-            DCMI_RESET_LOW();
-            systick_sleep(10);
-           break;
-       case ACTIVE_LOW:
-            DCMI_RESET_LOW();
-            systick_sleep(10);
-
-            DCMI_RESET_HIGH();
-            systick_sleep(10);
-            break;
-    }
 
     /* Call sensor-specific reset function */
     sensor.reset();
