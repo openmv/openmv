@@ -261,6 +261,9 @@ int sensor_reset()
 
     /* Call sensor-specific reset function */
     sensor.reset();
+
+    // just in case there's a running DMA request.
+    HAL_DMA_Abort(&DMAHandle);
     return 0;
 }
 
