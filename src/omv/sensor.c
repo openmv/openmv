@@ -98,7 +98,7 @@ static void extclk_config(int frequency)
     }
 }
 
-static int dcmi_config()
+static int dcmi_config(uint32_t jpeg_mode)
 {
     /* DCMI configuration */
     DCMIHandle.Instance         = DCMI;
@@ -108,7 +108,7 @@ static int dcmi_config()
     DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    /* Enable Hardware synchronization      */
     DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        /* Capture rate all frames              */
     DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; /* Capture 8 bits on every pixel clock  */
-    DCMIHandle.Init.JPEGMode = DCMI_JPEG_DISABLE;           /* Disable JPEG Mode                    */
+    DCMIHandle.Init.JPEGMode = jpeg_mode;                   /* Disable JPEG Mode                    */
 
     /* Associate the DMA handle to the DCMI handle */
     __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
@@ -240,7 +240,7 @@ int sensor_init()
 
     /* Configure the DCMI interface. This should be called
        after ovxxx_init to set VSYNC/HSYNC/PCLK polarities */
-    if (dcmi_config() != 0){
+    if (dcmi_config(DCMI_JPEG_DISABLE) != 0){
         return -1;
     }
 
@@ -359,6 +359,8 @@ int sensor_snapshot(struct image *image)
 
 int sensor_set_pixformat(enum sensor_pixformat pixformat)
 {
+    uint32_t jpeg_mode = DCMI_JPEG_DISABLE;
+
     if (sensor.pixformat == pixformat) {
         /* no change */
         return 0;
@@ -395,16 +397,9 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
 
     if (pixformat == PIXFORMAT_JPEG) {
         DCMIHandle.Init.JPEGMode = DCMI_JPEG_ENABLE;
-    } else {
-        DCMIHandle.Init.JPEGMode = DCMI_JPEG_DISABLE;
     }
 
-    /* Init DCMI */
-    if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
-        /* Initialization Error */
-        return -1;
-    }
-    return 0;
+    return dcmi_config(jpeg_mode);
 }
 
 int sensor_set_framesize(enum sensor_framesize framesize)
