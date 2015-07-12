@@ -123,11 +123,6 @@ static int dcmi_config(uint32_t jpeg_mode)
         return -1;
     }
 
-    __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_LINE);
-    __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_VSYNC);
-    __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_ERR);
-    __HAL_DCMI_DISABLE_IT(&DCMIHandle, DCMI_IT_OVF);
-
     return 0;
 }
 
