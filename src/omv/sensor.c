@@ -396,7 +396,7 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
     }
 
     if (pixformat == PIXFORMAT_JPEG) {
-        DCMIHandle.Init.JPEGMode = DCMI_JPEG_ENABLE;
+        jpeg_mode = DCMI_JPEG_ENABLE;
     }
 
     return dcmi_config(jpeg_mode);
