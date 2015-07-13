@@ -25,7 +25,6 @@ static int xfer_length;
 static enum usbdbg_cmd cmd;
 
 static vstr_t script_buf;
-static mp_obj_t script;
 static int script_ready=0;
 mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
 
@@ -45,9 +44,11 @@ int usbdbg_script_ready()
     return script_ready;
 }
 
-mp_obj_t usbdbg_get_script()
+vstr_t *usbdbg_get_script()
 {
-    return script;
+    vstr_t *scr = vstr_new();
+    vstr_add_strn(scr, vstr_str(&script_buf),  vstr_len(&script_buf));
+    return scr;
 }
 
 void usbdbg_clr_script()
@@ -130,12 +131,6 @@ void usbdbg_data_out(void *buffer, int length)
             if (xfer_bytes == xfer_length) {
                 // set script ready flag
                 script_ready = 1;
-
-                // parse and compile script
-                mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_,
-                        vstr_str(&script_buf), vstr_len(&script_buf), 0);
-                mp_parse_node_t pn = mp_parse(lex, MP_PARSE_FILE_INPUT);
-                script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, false);
 
                 // interrupt running script/REPL
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);

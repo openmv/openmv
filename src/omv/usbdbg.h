@@ -50,6 +50,6 @@ enum usbdbg_cmd {
 };
 void usbdbg_init();
 int usbdbg_script_ready();
-mp_obj_t usbdbg_get_script();
+vstr_t *usbdbg_get_script();
 void usbdbg_clr_script();
 #endif /* __USBDBG_H__ */
