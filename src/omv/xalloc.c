@@ -10,11 +10,17 @@
 #include "mdefs.h"
 #include "xalloc.h"
 
+void *xalloc_fail()
+{
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Out of Memory!!"));
+    return NULL;
+}
+
 void *xalloc(uint32_t size)
 {
     void *mem = gc_alloc(size, false);
     if (mem == NULL) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Out of Memory!!"));
+        return xalloc_fail();
     }
     return mem;
 }
@@ -23,7 +29,7 @@ void *xalloc0(uint32_t size)
 {
     void *mem = gc_alloc(size, false);
     if (mem == NULL) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Out of Memory!!"));
+        return xalloc_fail();
     }
     memset(mem, 0, size);
     return mem;
@@ -38,7 +44,7 @@ void *xrealloc(void *ptr, uint32_t size)
 {
     ptr = gc_realloc(ptr, size);
     if (ptr == NULL) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Out of Memory!!"));
+        return xalloc_fail();
     }
     return ptr;
 }
