@@ -35,17 +35,17 @@ void *xalloc0(uint32_t size)
     return mem;
 }
 
-void xfree(void *ptr)
+void xfree(void *mem)
 {
-    gc_free(ptr);
+    gc_free(mem);
 }
 
-void *xrealloc(void *ptr, uint32_t size)
+void *xrealloc(void *mem, uint32_t size)
 {
-    ptr = gc_realloc(ptr, size);
-    if (ptr == NULL) {
+    mem = gc_realloc(mem, size);
+    if (mem == NULL) {
         return xalloc_fail();
     }
-    return ptr;
+    return mem;
 }
 
