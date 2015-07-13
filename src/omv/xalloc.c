@@ -12,7 +12,7 @@
 
 void *xalloc_fail()
 {
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Out of Memory!!"));
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!"));
     return NULL;
 }
 
