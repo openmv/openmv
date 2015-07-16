@@ -226,7 +226,8 @@ class OMVGtk:
             self.serial = serial.Serial(self.config.get("main", "serial_port"), self.baudrate, timeout=0.1)
             gobject.gobject.idle_add(omvgtk.update_terminal)
         except Exception as e:
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open serial port (check preferences)\n%s"%e)
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open serial port.\n"
+                    "Please check the preferences Dialog and make sure udev rules are installed.\n%s"%e)
             return
 
         openmv.init(self.serial)
