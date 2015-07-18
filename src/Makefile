@@ -163,7 +163,6 @@ OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
 #------------- MicroPy Objects ----------------#
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	stm32f4xx_it.o          \
-	string0.o               \
 	usbd_conf.o             \
 	usbd_desc.o             \
 	usbd_cdc_interface.o    \
@@ -189,6 +188,7 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	irq.o                   \
 	adc.o                   \
 	dac.o                   \
+	dma.o                   \
 	uart.o                  \
 	systick.o               \
 	i2c.o                   \
@@ -210,6 +210,13 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	moduselect.o            \
 	modusocket.o            \
 	modnetwork.o            \
+    )
+
+#------------- MicroPy Objects ----------------#
+OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
+	libc/string0.o          \
+	netutils/netutils.o     \
+	timeutils/timeutils.o   \
     )
 
 OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
