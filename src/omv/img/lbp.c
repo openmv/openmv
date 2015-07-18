@@ -7,11 +7,13 @@
 *
 */
 
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
 #include "imlib.h"
 #include "xalloc.h"
 #include "ff.h"
-#include "std.h"
-#include <stdlib.h>
 
 #define min(a,b) \
    ({ __typeof__ (a) _a = (a); \
