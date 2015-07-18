@@ -35,6 +35,7 @@ SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 EXAMPLES_DIR = os.path.join(IDE_DIR, "examples")
 GLADE_PATH   = os.path.join(IDE_DIR, "openmv-ide.glade")
 CONFIG_PATH  = os.path.join(DATA_DIR, "openmv.config")
+UDEV_PATH    = "/etc/udev/rules.d/50-openmv.rules"
 
 SCALE =1
 RECENT_FILES_LIMIT=5
@@ -226,8 +227,18 @@ class OMVGtk:
             self.serial = serial.Serial(self.config.get("main", "serial_port"), self.baudrate, timeout=0.1)
             gobject.gobject.idle_add(omvgtk.update_terminal)
         except Exception as e:
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open serial port.\n"
-                    "Please check the preferences Dialog and make sure udev rules are installed.\n%s"%e)
+            # create fresh config if needed
+            if platform.system() == "Linux" and not os.path.isfile(UDEV_PATH):
+                error_msg = ("Failed to open serial port.\n"
+                             "Please install OpenMV's udev rules first:\n\n"
+                             "sudo cp openmv/udev/50-openmv.rules /etc/udev/rules.d/\n"
+                             "sudo udevadm control --reload-rules\n\n")
+            else:
+                error_msg = ("Failed to open serial port.\n"
+                             "Please check the preferences Dialog.\n")
+
+            self.show_message_dialog(gtk.MESSAGE_ERROR,"%s%s"%(error_msg, e))
+
             return
 
         openmv.init(self.serial)
