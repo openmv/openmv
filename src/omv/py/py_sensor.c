@@ -151,13 +151,10 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
     return mp_obj_new_int(SCCB_Read(mp_obj_get_int(addr)));
 }
 
-#if 0
-static void py_sensor_print(void (*print)(void *env, const char *fmt, ...),
-                            void *env, mp_obj_t self_in, mp_print_kind_t kind) {
-//        printf(env, "<Sensor MID:0x%.2X%.2X PID:0x%.2X VER:0x%.2X>",
-  //          sensor.id.MIDH, sensor.id.MIDL, sensor.id.PID, sensor.id.VER);
-}
-#endif
+//static void py_sensor_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
+//    mp_printf(print, "<Sensor MID:0x%.2X%.2X PID:0x%.2X VER:0x%.2X>",
+//            sensor.id.MIDH, sensor.id.MIDL, sensor.id.PID, sensor.id.VER);
+//}
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,           py_sensor_reset);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_obj,        py_sensor_snapshot);

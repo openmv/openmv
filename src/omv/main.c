@@ -19,7 +19,6 @@
 #include "parse.h"
 #include "compile.h"
 #include "runtime.h"
-#include "pfenv.h"
 #include "obj.h"
 #include "objmodule.h"
 #include "gc.h"
@@ -336,7 +335,7 @@ soft_reset:
                     mp_call_function_0(script);
                     nlr_pop();
                 } else {
-                    mp_obj_print_exception(printf_wrapper, NULL, (mp_obj_t)nlr.ret_val);
+                    mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
                 }
                 pyexec_pop_scope();
             }

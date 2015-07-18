@@ -46,13 +46,12 @@ mp_obj_t py_clock_reset(py_clock_obj_t *clock)
     return mp_const_none;
 }
 
-static void py_clock_print(void (*print)(void *env, const char *fmt, ...),
-                           void *env, mp_obj_t self_in, mp_print_kind_t kind)
+static void py_clock_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_clock_obj_t *self = self_in;
 
     /* print some info */
-    print(env, "t_start:%d t_ticks:%d t_frame:%d\n",
+    mp_printf(print, "t_start:%d t_ticks:%d t_frame:%d\n",
             self->t_start, self->t_ticks, self->t_frame);
 }
 

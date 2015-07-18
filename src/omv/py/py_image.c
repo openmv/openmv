@@ -34,11 +34,11 @@ void *py_cascade_cobj(mp_obj_t cascade)
     return &((py_cascade_obj_t *)cascade)->_cobj;
 }
 
-static void py_cascade_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
+static void py_cascade_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_cascade_obj_t *self = self_in;
     /* print some info */
-    print(env, "width:%d height:%d n_stages:%d n_features:%d n_rectangles:%d\n", self->_cobj.window.w,
+    mp_printf(print, "width:%d height:%d n_stages:%d n_features:%d n_rectangles:%d\n", self->_cobj.window.w,
           self->_cobj.window.h, self->_cobj.n_stages, self->_cobj.n_features, self->_cobj.n_rectangles);
 }
 
@@ -57,10 +57,10 @@ typedef struct _py_kp_obj_t {
     bool normalized;
 } py_kp_obj_t;
 
-static void py_kp_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
+static void py_kp_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_kp_obj_t *self = self_in;
-    print(env, "size:%d threshold:%d normalized:%d\n", self->size, self->threshold, self->normalized);
+    mp_printf(print, "size:%d threshold:%d normalized:%d\n", self->size, self->threshold, self->normalized);
 }
 
 static const mp_obj_type_t py_kp_type = {
@@ -75,9 +75,9 @@ typedef struct _py_lbp_obj_t {
     uint8_t *hist;
 } py_lbp_obj_t;
 
-static void py_lbp_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
+static void py_lbp_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
-    print(env, "<lbp descriptor>");
+    mp_printf(print, "<lbp descriptor>");
 }
 
 static const mp_obj_type_t py_lbp_type = {
@@ -98,10 +98,10 @@ void *py_image_cobj(mp_obj_t image)
     return &((py_image_obj_t *)image)->_cobj;
 }
 
-static void py_image_print(void (*print)(void *env, const char *fmt, ...), void *env, mp_obj_t self_in, mp_print_kind_t kind)
+static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_image_obj_t *self = self_in;
-    print(env, "<image width:%d height:%d bpp:%d>", self->_cobj.w, self->_cobj.h, self->_cobj.bpp);
+    mp_printf(print, "<image width:%d height:%d bpp:%d>", self->_cobj.w, self->_cobj.h, self->_cobj.bpp);
 }
 
 static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
