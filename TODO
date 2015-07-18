@@ -8,6 +8,7 @@ Done:
 * gc/xalloc race bug
 * Fix sensor clock
 * Update to MP 1.4.4
+* Add udev rules help and check for udev file
 
 Todo:
 * Fix silkscreen
@@ -23,5 +24,4 @@ Todo:
 * Fix cache issues
 * Fix push/pop scope (pop_scope() might not be called ?)
 * Rename Eagle files
-* Add udev rules help, first time check or check for udev file
 * Grep for TODOs
