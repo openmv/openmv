@@ -1,19 +1,27 @@
 Done:
 * Rollback to gtksourceview
-* Use MP perph 
-* Fix push/pop scope
+* Use MP peripherals
 * Add ABI version and check it in the IDE
 * Add common cascades to the flash
+* Fix changing pixformat bug
+* Fix sensor reset
+* gc/xalloc race bug
+* Fix sensor clock
+* Update to MP 1.4.4
 
 Todo:
 * Fix silkscreen
 * Fix USB PID:VID
 * Write colorbar test
-* Update the MLX driver
-* Fix LBP face recognizer
+* Update MLX driver
 * Use HW I2C for MLX
+* Fix LBP face recognizer
 * Add reference papers
 * Add pinout image to IDE
 * Edge detection or geneirc kernel function
 * Development VM ?
+* Fix cache issues
+* Fix push/pop scope (pop_scope() might not be called ?)
+* Rename Eagle files
+* Add udev rules help, first time check or check for udev file
 * Grep for TODOs
