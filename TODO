@@ -9,10 +9,10 @@ Done:
 * Fix sensor clock
 * Update to MP 1.4.4
 * Add udev rules help and check for udev file
+* Update USB PID:VID
 
 Todo:
 * Fix silkscreen
-* Fix USB PID:VID
 * Write colorbar test
 * Update MLX driver
 * Use HW I2C for MLX
