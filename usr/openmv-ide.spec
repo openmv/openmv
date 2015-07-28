@@ -47,7 +47,7 @@ data_tree =  Tree('lib', prefix='lib')
 data_tree += Tree('util', prefix='util')
 data_tree += Tree('examples', prefix='examples')
 data_tree += Tree('../udev', prefix='udev')
-data_tree += Tree('../src/build/', prefix='firmware',
+data_tree += Tree('../firmware', prefix='firmware',
 excludes=['cmsis', 'fatfs', 'micropython', 'omv', 'sthal', '*.lds'])
 
 coll = COLLECT(exe,
