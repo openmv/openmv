@@ -21,10 +21,12 @@ except ImportError:
     # 2.x name
     configparser = __import__("ConfigParser")
 
-if hasattr(sys,"frozen") and sys.frozen in ("windows_exe", "console_exe"):
+if hasattr(sys,"frozen"):
     IDE_DIR=os.path.dirname(sys.executable)
+    BUNDLE_DIR = sys._MEIPASS
 else:
     IDE_DIR=os.path.dirname(os.path.realpath(__file__))
+    BUNDLE_DIR = IDE_DIR
 
 FIRMWARE_VERSION_MAJOR  = 1
 FIRMWARE_VERSION_MINOR  = 1
@@ -33,7 +35,7 @@ FIRMWARE_VERSION_PATCH  = 0
 DATA_DIR     = os.path.join(os.path.expanduser("~"), "openmv") #use home dir
 SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 EXAMPLES_DIR = os.path.join(IDE_DIR, "examples")
-GLADE_PATH   = os.path.join(IDE_DIR, "openmv-ide.glade")
+GLADE_PATH   = os.path.join(BUNDLE_DIR, "openmv-ide.glade")
 CONFIG_PATH  = os.path.join(DATA_DIR, "openmv.config")
 UDEV_PATH    = "/etc/udev/rules.d/50-openmv.rules"
 
