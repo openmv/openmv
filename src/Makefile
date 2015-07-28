@@ -23,6 +23,7 @@ STUSB_DIR=stusb
 FATFS_DIR=fatfs
 MICROPY_DIR=micropython
 OMV_DIR=omv
+FW_DIR=$(TOP_DIR)/../firmware
 
 # Target
 TARGET ?= OPENMV2
@@ -293,16 +294,16 @@ objs: | $(BUILD)
 
 $(BUILD)/$(BIN).elf: objs
 	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
-	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(BUILD)/$(BIN).elf
-	$(OBJCOPY) -Obinary $(BUILD)/$(BIN).elf $(BUILD)/$(BIN).bin
-	$(PYTHON) $(DFU) -b 0x08000000:$(BUILD)/$(BIN).bin $(BUILD)/$(BIN).dfu
-	$(SIZE) $(BUILD)/$(BIN).elf
+	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(FW_DIR)/$(BIN).elf
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(BIN).elf $(FW_DIR)/$(BIN).bin
+	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/$(BIN).dfu
+	$(SIZE) $(FW_DIR)/$(BIN).elf
 
 size:
-	$(SIZE) $(BUILD)/$(BIN).elf
+	$(SIZE) $(FW_DIR)/$(BIN).elf
 
 clean:
 	$(RM) -fr $(BUILD)
 
 flash::
-	../usr/pydfu.py -u $(BUILD)/$(BIN).dfu
+	../usr/pydfu.py -u $(FW_DIR)/$(BIN).dfu
