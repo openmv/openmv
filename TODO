@@ -10,9 +10,12 @@ Done:
 * Update to MP 1.4.4
 * Add udev rules help and check for udev file
 * Update USB PID:VID
+* Update inf file
+* Generate Linux/Windows packages
 
 Todo:
 * Fix silkscreen
+* Rename Eagle files
 * Write colorbar test
 * Update MLX driver
 * Use HW I2C for MLX
@@ -23,5 +26,7 @@ Todo:
 * Development VM ?
 * Fix cache issues
 * Fix push/pop scope (pop_scope() might not be called ?)
-* Rename Eagle files
+* define aliaes for pins
+* remove obselete #define from mpconfigboard.h
+* Document OMV's MP API.
 * Grep for TODOs
