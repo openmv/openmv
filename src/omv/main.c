@@ -320,18 +320,20 @@ soft_reset:
             while (usbdbg_script_ready()) {
                 nlr_buf_t nlr;
                 vstr_t *script_buf = usbdbg_get_script();
-                // parse and compile script
-                mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_,
-                        vstr_str(script_buf), vstr_len(script_buf), 0);
-                mp_parse_node_t pn = mp_parse(lex, MP_PARSE_FILE_INPUT);
-                mp_obj_t script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, false);
-
                 // clear script flag
                 usbdbg_clr_script();
 
                 // execute the script
                 if (nlr_push(&nlr) == 0) {
                     pyexec_push_scope();
+
+                    // parse and compile script
+                    mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_,
+                            vstr_str(script_buf), vstr_len(script_buf), 0);
+                    mp_parse_node_t pn = mp_parse(lex, MP_PARSE_FILE_INPUT);
+                    mp_obj_t script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, false);
+
+                    // execute the script
                     mp_call_function_0(script);
                     nlr_pop();
                 } else {
@@ -348,6 +350,7 @@ soft_reset:
 
             nlr_pop();
         }
+
     }
 
     printf("PYB: sync filesystems\n");
