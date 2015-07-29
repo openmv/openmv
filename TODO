@@ -12,6 +12,7 @@ Done:
 * Update USB PID:VID
 * Update inf file
 * Generate Linux/Windows packages
+* Catch and print syntax errors
 
 Todo:
 * Fix silkscreen
@@ -29,4 +30,5 @@ Todo:
 * define aliaes for pins
 * remove obselete #define from mpconfigboard.h
 * Document OMV's MP API.
+* Fix slow raw QVGA preview
 * Grep for TODOs
