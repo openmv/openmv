@@ -91,6 +91,7 @@ struct sensor_dev {
     int  (*set_exposure)    (int exposure);
     int  (*set_gainceiling) (enum sensor_gainceiling gainceiling);
     int  (*set_quality)     (int quality);
+    int  (*set_colorbar)    (int enable);
 };
 
 /**
@@ -209,4 +210,12 @@ int sensor_set_gainceiling(enum sensor_gainceiling gainceiling);
  * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
  */
 int sensor_set_quality(int qs);
+/**
+ * Set the colorbar mode.
+ *
+ * @param sensor A pointer to the sensor device handle.
+ * @param Enable enable or disable colorbar mode.
+ * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
+ */
+int sensor_set_colorbar(int enable);
 #endif /* __SENSOR_H__ */

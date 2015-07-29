@@ -584,6 +584,27 @@ static int set_quality(int qs)
     return ret;
 }
 
+static int set_colorbar(int enable)
+{
+    int ret=0;
+    uint8_t reg;
+
+    /* Switch to SENSOR register bank */
+    ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
+
+    /* Update COM7 */
+    reg = SCCB_Read(COM7);
+
+    if (enable) {
+        reg |= COM7_COLOR_BAR;
+    } else {
+        reg &= ~COM7_COLOR_BAR;
+    }
+
+    ret |= SCCB_Write(COM7, reg);
+    return ret;
+}
+
 int ov2640_init(struct sensor_dev *sensor)
 {
     /* set HSYNC/VSYNC/PCLK polarity */
@@ -602,5 +623,6 @@ int ov2640_init(struct sensor_dev *sensor)
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_quality = set_quality;
+    sensor->set_colorbar = set_colorbar;
     return 0;
 }

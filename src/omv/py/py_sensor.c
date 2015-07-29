@@ -142,6 +142,13 @@ static mp_obj_t py_sensor_set_quality(mp_obj_t qs) {
     return mp_const_true;
 }
 
+static mp_obj_t py_sensor_set_colorbar(mp_obj_t enable) {
+    if (sensor_set_colorbar(mp_obj_is_true(enable)) != 0) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+
 static mp_obj_t py_sensor_write_reg(mp_obj_t addr, mp_obj_t val) {
     SCCB_Write(mp_obj_get_int(addr), mp_obj_get_int(val));
     return mp_const_none;
@@ -164,8 +171,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,   py_sensor_set_fr
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj, py_sensor_set_gainceiling);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj,    py_sensor_set_contrast);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,  py_sensor_set_brightness);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_saturation_obj,    py_sensor_set_saturation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_saturation_obj,  py_sensor_set_saturation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_quality_obj,     py_sensor_set_quality);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_colorbar_obj,    py_sensor_set_colorbar);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,       py_sensor_write_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,        py_sensor_read_reg);
 
@@ -199,6 +207,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_brightness),  (mp_obj_t)&py_sensor_set_brightness_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_saturation),  (mp_obj_t)&py_sensor_set_saturation_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_quality),     (mp_obj_t)&py_sensor_set_quality_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_colorbar),    (mp_obj_t)&py_sensor_set_colorbar_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),     (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),      (mp_obj_t)&py_sensor_read_reg_obj },
 };

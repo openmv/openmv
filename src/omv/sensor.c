@@ -502,3 +502,14 @@ int sensor_set_quality(int qs)
     }
     return 0;
 }
+
+int sensor_set_colorbar(int enable)
+{
+    /* call the sensor specific function */
+    if (sensor.set_colorbar == NULL
+        || sensor.set_colorbar(enable) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
