@@ -54,6 +54,7 @@ vstr_t *usbdbg_get_script()
 void usbdbg_clr_script()
 {
     script_ready =0;
+    fb->ready=0;
     fb->lock_tried=0;
     mutex_unlock(&fb->lock);
 }
