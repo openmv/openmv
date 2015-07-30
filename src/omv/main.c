@@ -299,15 +299,13 @@ soft_reset:
     }
 
     // Run the main script from the current directory.
-    if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
-        FRESULT res = f_stat("main.py", NULL);
-        if (res == FR_OK) {
-            if (!pyexec_file("main.py")) {
-                nlr_buf_t nlr;
-                if (nlr_push(&nlr) == 0) {
-                    flash_error(3);
-                    nlr_pop();
-                }
+    FRESULT res = f_stat("main.py", NULL);
+    if (res == FR_OK) {
+        if (!pyexec_file("main.py")) {
+            nlr_buf_t nlr;
+            if (nlr_push(&nlr) == 0) {
+                flash_error(3);
+                nlr_pop();
             }
         }
     }
