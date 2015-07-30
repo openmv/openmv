@@ -224,7 +224,6 @@ soft_reset:
     led_state(LED_RED, 1);
     led_state(LED_GREEN, 1);
     led_state(LED_BLUE, 1);
-    uint reset_mode = 1;
 
 #if MICROPY_HW_ENABLE_RTC
     rtc_init();
@@ -277,7 +276,7 @@ soft_reset:
         storage_init();
         // try to mount the flash
         FRESULT res = f_mount(&fatfs, "0:", 1);
-        if (reset_mode == 3 || res == FR_NO_FILESYSTEM) {
+        if (res == FR_NO_FILESYSTEM) {
             // create a fresh fs
             make_flash_fs();
         } else if (res != FR_OK) {
@@ -300,7 +299,7 @@ soft_reset:
     }
 
     // Run the main script from the current directory.
-    if (reset_mode == 1 && pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
+    if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
         FRESULT res = f_stat("main.py", NULL);
         if (res == FR_OK) {
             if (!pyexec_file("main.py")) {
