@@ -143,7 +143,6 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t va
             case 2:
                 pixel = image->pixels[index*2]<<8 | image->pixels[index*2+1];
                 break;
-            case 0:
             default:
                 return MP_OBJ_NULL; // op not supported
         }
@@ -983,6 +982,48 @@ mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
     return mp_const_true;
 }
 
+static mp_obj_t py_image_get_pixel(mp_obj_t image_obj, mp_obj_t x_obj, mp_obj_t y_obj)
+{
+    mp_obj_t ret_obj;
+    mp_obj_t rgb_obj[3];
+
+    // read args
+    int x = mp_obj_get_int(x_obj);
+    int y = mp_obj_get_int(y_obj);
+    image_t *image = py_image_cobj(image_obj);
+
+    // check x, y
+    PY_ASSERT_TRUE_MSG(x>=0 && x<image->w, "image index out of range");
+    PY_ASSERT_TRUE_MSG(y>=0 && y<image->h, "image index out of range");
+    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "Operation not supported on JPEG");
+
+    switch (image->bpp) {
+        case 1:
+            ret_obj = mp_obj_new_int(image->pixels[y*image->w+x]);
+            break;
+        case 2: {
+            uint32_t p = ((uint16_t*)image->pixels)[y*image->w+x];
+            rgb_obj[0] = mp_obj_new_int(((p>>3)&0x1F)*255/31);
+            rgb_obj[1] = mp_obj_new_int((((p&0x07)<<3)|(p>>13))*255/63);
+            rgb_obj[2] = mp_obj_new_int(((p>>8)&0x1F)*255/31);
+            ret_obj = mp_obj_new_tuple(3, rgb_obj);
+            break;
+        }
+        default:
+            // shouldn't happen
+            ret_obj=mp_const_none;
+            break;
+    }
+
+    return ret_obj;
+}
+
+static mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args)
+{
+    //TODO implement
+    return mp_const_none;
+}
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
@@ -1015,6 +1056,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eyes_obj, py_image_find_eyes);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_match_lbp_obj, py_image_match_lbp);
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_get_pixel_obj, py_image_get_pixel);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_set_pixel_obj, 4, 4, py_image_set_pixel);
 
 static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_size),                (mp_obj_t)&py_image_size_obj},
@@ -1053,6 +1097,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_eyes),           (mp_obj_t)&py_image_find_eyes_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_match_keypoints),     (mp_obj_t)&py_image_match_keypoints_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_match_lbp),           (mp_obj_t)&py_image_match_lbp_obj},
+
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_pixel),           (mp_obj_t)&py_image_get_pixel_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_set_pixel),           (mp_obj_t)&py_image_set_pixel_obj},
 
     { NULL, NULL },
 };
