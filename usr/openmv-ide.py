@@ -483,8 +483,8 @@ class OMVGtk:
             return True
 
         if fb:
-            # create pixbuf from RGB888
-            self.pixbuf =gtk.gdk.pixbuf_new_from_data(fb[2], gtk.gdk.COLORSPACE_RGB, False, 8, fb[0], fb[1], fb[0]*3)
+            # create pixbuf from np array
+            self.pixbuf = gtk.gdk.pixbuf_new_from_array(fb[2], gtk.gdk.COLORSPACE_RGB, 8)
             self.pixbuf = self.pixbuf.scale_simple(fb[0]*SCALE, fb[1]*SCALE, gtk.gdk.INTERP_BILINEAR)
 
             self.drawingarea.realize();
@@ -677,7 +677,6 @@ class OMVGtk:
             pass
 
         self.save_config()
-
         # exit
         sys.exit(0)
 

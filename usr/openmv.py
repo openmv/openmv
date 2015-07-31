@@ -9,7 +9,7 @@ import struct
 import sys,time
 import serial
 import platform
-from array import array
+import numpy as np
 from PIL import Image
 
 #import pydfu on Linux
@@ -48,9 +48,6 @@ def init(serial):
     global __serial
     __serial = serial
 
-def _rgb(rgb):
-    return struct.pack("BBB", ((rgb & 0xF800)>>11)*255/31, ((rgb & 0x07E0)>>5)*255/63, (rgb & 0x001F)*255/31)
-
 def fb_size():
     # read fb header
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_SIZE, __FB_HDR_SIZE))
@@ -77,23 +74,25 @@ def fb_dump():
     buff = __serial.read(num_bytes)
 
     if size[2] == 1:  # Grayscale
-        s = buff 
-        buff = ''.join([y for yyy in zip(s, s, s) for y in yyy])
-    elif size[2] == 2: #RGB565
-        arr = array('H', buff)
-        arr.byteswap()
-        buff = ''.join(map(_rgb, arr))
+        y = np.fromstring(buff, dtype=np.uint8)
+        buff = np.column_stack((y, y, y))
+    elif size[2] == 2: # RGB565
+        arr = np.fromstring(buff, dtype=np.uint16).newbyteorder('S')
+        r = (((arr & 0xF800) >>11)*255.0/31.0).astype(np.uint8)
+        g = (((arr & 0x07E0) >>5) *255.0/63.0).astype(np.uint8)
+        b = (((arr & 0x001F) >>0) *255.0/31.0).astype(np.uint8)
+        buff = np.column_stack((r,g,b))
     else: # JPEG
         try:
-            buff = Image.frombuffer("RGB", (size[0], size[1]), buff, "jpeg", "RGB", "").tostring()
+            buff = np.asarray(Image.frombuffer("RGB", size[0:2], buff, "jpeg", "RGB", ""))
         except Exception as e:
-            #print ("JPEG decode error (%s)"%(e))
+            print ("JPEG decode error (%s)"%(e))
             return None
 
-        if (len(buff) != (size[0]*size[1]*3)):
-            return None
+    if (buff.size != (size[0]*size[1]*3)):
+        return None
 
-    return (size[0], size[1], buff)
+    return (size[0], size[1], buff.reshape((size[1], size[0], 3)))
 
 def fb_update():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_UPDATE, 0))
