@@ -17,6 +17,14 @@
         }                                               \
     } while(0)
 
+#define PY_ASSERT_TRUE_MSG(cond, msg)                   \
+    do {                                                \
+        if ((cond) ==0){                                \
+            nlr_jump(mp_obj_new_exception_msg(          \
+                        &mp_type_OSError, msg));        \
+        }                                               \
+    } while(0)
+
 #define PY_ASSERT_TYPE(obj, type)                       \
     do {                                                \
         __typeof__ (obj) _a = (obj);                    \
