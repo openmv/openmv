@@ -678,7 +678,7 @@ class OMVGtk:
 
         self.save_config()
         # exit
-        sys.exit(0)
+        gtk.main_quit()
 
 if __name__ == "__main__":
     omvgtk = OMVGtk()
