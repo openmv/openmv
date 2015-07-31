@@ -125,6 +125,35 @@ static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo,
     }
 }
 
+static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t value) {
+    py_image_obj_t *o = self_in;
+    image_t *image = py_image_cobj(self_in);
+
+    if (value == MP_OBJ_NULL) {
+        // delete
+        return MP_OBJ_NULL; // op not supported
+    } else if (value == MP_OBJ_SENTINEL) {
+        // load
+        mp_uint_t pixel;
+        mp_uint_t index = mp_get_index(o->base.type, image->w*image->h, index_in, false);
+        switch (image->bpp) {
+            case 1:
+                pixel = image->pixels[index];
+                break;
+            case 2:
+                pixel = image->pixels[index*2]<<8 | image->pixels[index*2+1];
+                break;
+            case 0:
+            default:
+                return MP_OBJ_NULL; // op not supported
+        }
+        return mp_obj_new_int(pixel);
+    } else {
+        // store
+        return mp_const_none;
+    }
+}
+
 static mp_obj_t py_image_size(mp_obj_t self_in)
 {
     uint32_t len;
@@ -1035,6 +1064,7 @@ static const mp_obj_type_t py_image_type = {
     .name  = MP_QSTR_image,
     .print = py_image_print,
     .buffer_p = { .get_buffer = py_image_get_buffer },
+    .subscr = py_image_subscr,
     .locals_dict = (mp_obj_t)&locals_dict,
 };
 
