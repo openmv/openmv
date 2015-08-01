@@ -13,6 +13,9 @@ Done:
 * Update inf file
 * Generate Linux/Windows packages
 * Catch and print syntax errors
+* Add colorbar mode function
+* Optimize the IDE (revert to numpy, use timeout_add etc..)
+* remove obselete #define from mpconfigboard.h
 
 Todo:
 * Fix silkscreen
@@ -28,7 +31,10 @@ Todo:
 * Fix cache issues
 * Fix push/pop scope (pop_scope() might not be called ?)
 * define aliaes for pins
-* remove obselete #define from mpconfigboard.h
-* Document OMV's MP API.
-* Fix slow raw QVGA preview
+* Document OMV's MP API. 
+* Delay sensor init
+* Implement get/set pixel
+* Use R, G, B macros in imlib.c
+* Use R, G, B lookups in imlib.c
+* Move misc functions to image module
 * Grep for TODOs
