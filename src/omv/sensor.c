@@ -24,7 +24,11 @@
 
 #define OV9650_PID     0x96
 #define OV2640_PID     0x26
+#ifdef OPENMV1
+#define XCLK_FREQ      (12000000)
+#else
 #define XCLK_FREQ      (13000000)
+#endif
 #define BREAK()         __asm__ volatile ("BKPT")
 
 struct sensor_dev sensor;

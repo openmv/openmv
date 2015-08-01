@@ -75,7 +75,7 @@ DRESULT sdcard_ioctl(BYTE drv, BYTE ctrl, void *buff);
 
 bool sdcard_is_present(void)
 {
-    return 1;
+    return (HAL_GPIO_ReadPin(SD_CD_PORT, SD_CD_PIN)==GPIO_PIN_RESET);
 }
 
 /*-----------------------------------------------------------------------*/
