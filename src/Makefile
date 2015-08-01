@@ -23,10 +23,10 @@ STUSB_DIR=stusb
 FATFS_DIR=fatfs
 MICROPY_DIR=micropython
 OMV_DIR=omv
-FW_DIR=$(TOP_DIR)/../firmware
 
 # Target
 TARGET ?= OPENMV2
+FW_DIR=$(TOP_DIR)/../firmware/$(TARGET)/
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
