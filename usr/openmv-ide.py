@@ -227,7 +227,7 @@ class OMVGtk:
         try:
             # open VCP and configure the terminal
             self.serial = serial.Serial(self.config.get("main", "serial_port"), self.baudrate, timeout=0.1)
-            gobject.gobject.idle_add(omvgtk.update_terminal)
+            gobject.gobject.timeout_add(10, omvgtk.update_terminal)
         except Exception as e:
             # create fresh config if needed
             if platform.system() == "Linux" and not os.path.isfile(UDEV_PATH):
@@ -683,5 +683,5 @@ class OMVGtk:
 if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
-    gobject.gobject.idle_add(omvgtk.update_drawing)
+    gobject.gobject.timeout_add(30, omvgtk.update_drawing)
     gtk.main()
