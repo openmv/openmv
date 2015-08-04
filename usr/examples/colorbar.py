@@ -1,6 +1,7 @@
 import sensor, time
 
 sensor.reset()
+# Set sensor settings 
 sensor.set_brightness(0)
 sensor.set_saturation(0)
 sensor.set_gainceiling(8)
@@ -9,9 +10,10 @@ sensor.set_contrast(2)
 # Set sensor pixel format
 sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.RGB565)
+# Enable colorbar test mode
 sensor.set_colorbar(True)
 
-# Skip a few frames to allow the sensor to be stable
+# Skip a few frames to allow the sensor settle down 
 for i in range(0, 10):
     image = sensor.snapshot()
 
