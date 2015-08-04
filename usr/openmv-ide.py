@@ -226,7 +226,7 @@ class OMVGtk:
     def connect(self):
         try:
             # open VCP and configure the terminal
-            self.serial = serial.Serial(self.config.get("main", "serial_port"), self.baudrate, timeout=0.1)
+            self.serial = serial.Serial(self.config.get("main", "serial_port"), self.baudrate, timeout=0.3)
             gobject.gobject.timeout_add(10, omvgtk.update_terminal)
         except Exception as e:
             # create fresh config if needed
