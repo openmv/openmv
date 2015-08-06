@@ -10,11 +10,12 @@ sensor.set_contrast(2)
 # Set sensor pixel format
 sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.RGB565)
+
 # Enable colorbar test mode
 sensor.set_colorbar(True)
 
 # Skip a few frames to allow the sensor settle down 
-for i in range(0, 10):
+for i in range(0, 30):
     image = sensor.snapshot()
 
 #color bars thresholds
@@ -38,6 +39,7 @@ for i in range(0, 8):
         avg = tuple(map(sum, zip(avg, rgb)))
 
     if not t[i](avg[0]/10, avg[1]/10, avg[2]/10):
-        raise Exception("COLOR BARS TEST FAILED")
+        raise Exception("COLOR BARS TEST FAILED. "
+        "BAR#(%d): RGB(%d,%d,%d)"%(i+1, avg[0]/10, avg[1]/10, avg[2]/10))
 
-print("\nCOLOR BARS TEST PASSED...")
+print("COLOR BARS TEST PASSED...")
