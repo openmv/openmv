@@ -10,7 +10,7 @@ def test_int_adc():
         
     # Test VREF
     vref = adc.read_core_vref()
-    vref_diff = abs(vref-0.5)
+    vref_diff = abs(vref-1.2)
     if (vref_diff > 0.1):
         raise Exception("INTERNAL ADC TEST FAILED VREF=%fv"%vref)
     adc = None
