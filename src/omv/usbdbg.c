@@ -51,7 +51,7 @@ vstr_t *usbdbg_get_script()
     return scr;
 }
 
-void usbdbg_clr_script()
+void usbdbg_clear_flags()
 {
     script_ready =0;
     fb->ready=0;

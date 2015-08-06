@@ -51,5 +51,5 @@ enum usbdbg_cmd {
 void usbdbg_init();
 int usbdbg_script_ready();
 vstr_t *usbdbg_get_script();
-void usbdbg_clr_script();
+void usbdbg_clear_flags();
 #endif /* __USBDBG_H__ */

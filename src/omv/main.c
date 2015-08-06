@@ -317,8 +317,8 @@ soft_reset:
             while (usbdbg_script_ready()) {
                 nlr_buf_t nlr;
                 vstr_t *script_buf = usbdbg_get_script();
-                // clear script flag
-                usbdbg_clr_script();
+                // clear debugging flags
+                usbdbg_clear_flags();
 
                 // execute the script
                 if (nlr_push(&nlr) == 0) {
@@ -339,8 +339,8 @@ soft_reset:
                 pyexec_pop_scope();
             }
 
-            // clear script flag
-            usbdbg_clr_script();
+            // clear debugging flags
+            usbdbg_clear_flags();
 
             // no script run REPL
             pyexec_friendly_repl();
