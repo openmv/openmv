@@ -105,8 +105,14 @@ void flash_error(int n) {
 }
 
 void __fatal_error(const char *msg) {
-    printf("\nFATAL ERROR:\n");
-    printf(msg);
+    FIL fp;
+    if (f_open(&fp, "ERROR.LOG",
+               FA_WRITE|FA_CREATE_ALWAYS) == FR_OK) {
+        f_printf(&fp, "\nFATAL ERROR:\n%s\n", msg);
+    }
+    f_close(&fp);
+    storage_flush();
+
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
         for (volatile uint delay = 0; delay < 500000; delay++) {
