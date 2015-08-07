@@ -246,12 +246,7 @@ soft_reset:
     spi_init0();
     uart_init0();
     pyb_usb_init0();
-
     usbdbg_init();
-
-    if (sensor_init() != 0) {
-        __fatal_error("Failed to init sensor");
-    }
 
     /* Export functions to the global python namespace */
     mp_store_global(qstr_from_str("randint"),           (mp_obj_t)&py_randint_obj);
@@ -296,6 +291,10 @@ soft_reset:
     // init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
         pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
+    }
+
+    if (sensor_init() != 0) {
+        __fatal_error("Failed to init sensor");
     }
 
     // Run the main script from the current directory.
