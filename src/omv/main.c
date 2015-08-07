@@ -302,7 +302,7 @@ soft_reset:
     }
 
     // check sensor init result
-    if (sensor_init_ret!= 0) {
+    if (sensor_init_ret != 0) {
         char buf[512];
         snprintf(buf, sizeof(buf), "Failed to init sensor, error:%d", sensor_init_ret);
         __fatal_error(buf);
