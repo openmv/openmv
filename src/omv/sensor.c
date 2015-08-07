@@ -234,13 +234,13 @@ int sensor_init()
 
     /* Configure the DCMI DMA Stream */
     if (dma_config() != 0) {
-        return -1;
+        return -2;
     }
 
     /* Configure the DCMI interface. This should be called
        after ovxxx_init to set VSYNC/HSYNC/PCLK polarities */
     if (dcmi_config(DCMI_JPEG_DISABLE) != 0){
-        return -1;
+        return -3;
     }
 
     /* init/re-init mutex */
