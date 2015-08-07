@@ -335,7 +335,7 @@ int sensor_snapshot(struct image *image)
     /* unlock framebuffer mutex */
     mutex_unlock(&fb->lock);
 
-    if (fb->lock_tried) {
+    while (fb->lock_tried) {
         systick_sleep(2);
     }
     return 0;
