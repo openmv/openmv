@@ -248,6 +248,8 @@ soft_reset:
     pyb_usb_init0();
     usbdbg_init();
 
+    int sensor_init_ret = sensor_init();
+
     /* Export functions to the global python namespace */
     mp_store_global(qstr_from_str("randint"),           (mp_obj_t)&py_randint_obj);
     mp_store_global(qstr_from_str("cpu_freq"),          (mp_obj_t)&py_cpu_freq_obj);
@@ -293,8 +295,11 @@ soft_reset:
         pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
     }
 
-    if (sensor_init() != 0) {
-        __fatal_error("Failed to init sensor");
+    // check sensor init result
+    if (sensor_init_ret!= 0) {
+        char buf[512];
+        snprintf(buf, sizeof(buf), "Failed to init sensor, error:%d", sensor_init_ret);
+        __fatal_error(buf);
     }
 
     // Run the main script from the current directory.
