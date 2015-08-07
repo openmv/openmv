@@ -15,12 +15,12 @@ Done:
 * Catch and print syntax errors
 * Add colorbar mode function
 * Optimize the IDE (revert to numpy, use timeout_add etc..)
-* remove obselete #define from mpconfigboard.h
-
-Todo:
+* Remove obselete #define from mpconfigboard.h
+* Write colorbar test
 * Fix silkscreen
 * Rename Eagle files
-* Write colorbar test
+
+Todo:
 * Update MLX driver
 * Use HW I2C for MLX
 * Fix LBP face recognizer
@@ -37,4 +37,6 @@ Todo:
 * Use R, G, B macros in imlib.c
 * Use R, G, B lookups in imlib.c
 * Move misc functions to image module
+* Setting contrast after brightness
+* Send PRs for ADC bugs
 * Grep for TODOs
