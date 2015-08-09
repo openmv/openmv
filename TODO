@@ -19,6 +19,9 @@ Done:
 * Write colorbar test
 * Fix silkscreen
 * Rename Eagle files
+* Move misc image functions to image module
+* Delay sensor init after USB storage to log errors to file
+* Implement get/set pixel
 
 Todo:
 * Update MLX driver
@@ -32,11 +35,8 @@ Todo:
 * Fix push/pop scope (pop_scope() might not be called ?)
 * define aliaes for pins
 * Document OMV's MP API. 
-* Delay sensor init
-* Implement get/set pixel
 * Use R, G, B macros in imlib.c
 * Use R, G, B lookups in imlib.c
-* Move misc functions to image module
 * Setting contrast after brightness
 * Send PRs for ADC bugs
 * Grep for TODOs
