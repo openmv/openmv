@@ -885,103 +885,6 @@ static mp_obj_t py_image_match_lbp(mp_obj_t image_obj, mp_obj_t d0_obj, mp_obj_t
     return mp_obj_new_int(imlib_lbp_desc_distance(d0->hist, d1->hist));
 }
 
-mp_obj_t py_image_load_image(mp_obj_t path_obj)
-{
-    mp_obj_t image_obj =NULL;
-    struct image *image;
-    const char *path = mp_obj_str_get_str(path_obj);
-    image_obj = py_image(0, 0, 0, 0);
-
-    /* get image pointer */
-    image = py_image_cobj(image_obj);
-
-    int res = imlib_load_image(image, path);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-
-    return image_obj;
-}
-
-mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    py_cascade_obj_t *o = NULL;
-    mp_map_elem_t *kw_stages = NULL;
-
-    // detection parameters
-    struct cascade cascade = {
-        .step = 2,
-    };
-
-    // Load cascade from file or flash
-    const char *path = mp_obj_str_get_str(args[0]);
-    int res = imlib_load_cascade(&cascade, path);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-
-    // Limit the number of stages if specified
-    kw_stages = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), MP_MAP_LOOKUP);
-    if (kw_stages != NULL) {
-        int stages = mp_obj_get_int(kw_stages->value);
-        if (stages > 0 && stages <= cascade.n_stages) {
-            cascade.n_stages = stages;
-        }
-    }
-
-    // Return micropython cascade object
-    o = m_new_obj(py_cascade_obj_t);
-    o->base.type = &py_cascade_type;
-    o->_cobj = cascade;
-    return o;
-}
-
-mp_obj_t py_image_load_descriptor(mp_obj_t path_obj)
-{
-    kp_t *kpts=NULL;
-    int kpts_size =0;
-
-    py_kp_obj_t *kp_obj =NULL;
-    const char *path = mp_obj_str_get_str(path_obj);
-
-    int res = freak_load_descriptor(&kpts, &kpts_size, path);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-    /* return keypoints MP object */
-    kp_obj = m_new_obj(py_kp_obj_t);
-    kp_obj->base.type = &py_kp_type;
-    kp_obj->kpts = kpts;
-    kp_obj->size = kpts_size;
-    kp_obj->threshold = 10;
-    kp_obj->normalized = false;
-    return kp_obj;
-}
-
-mp_obj_t py_image_load_lbp(mp_obj_t path_obj)
-{
-    py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
-    lbp->base.type = &py_lbp_type;
-
-    int res = imlib_lbp_desc_load(mp_obj_str_get_str(path_obj), &lbp->hist);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-    return lbp;
-}
-
-mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
-{
-    py_kp_obj_t *kpts = ((py_kp_obj_t*)kpts_obj);
-    const char *path = mp_obj_str_get_str(path_obj);
-
-    int res = freak_save_descriptor(kpts->kpts, kpts->size, path);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-    return mp_const_true;
-}
-
 static mp_obj_t py_image_get_pixel(mp_obj_t image_obj, mp_obj_t x_obj, mp_obj_t y_obj)
 {
     mp_obj_t ret_obj;
@@ -1159,3 +1062,124 @@ int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *
     }
     return 0;
 }
+
+
+// image module
+mp_obj_t py_image_load_image(mp_obj_t path_obj)
+{
+    mp_obj_t image_obj =NULL;
+    struct image *image;
+    const char *path = mp_obj_str_get_str(path_obj);
+    image_obj = py_image(0, 0, 0, 0);
+
+    /* get image pointer */
+    image = py_image_cobj(image_obj);
+
+    int res = imlib_load_image(image, path);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+
+    return image_obj;
+}
+
+mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    py_cascade_obj_t *o = NULL;
+    mp_map_elem_t *kw_stages = NULL;
+
+    // detection parameters
+    struct cascade cascade = {
+        .step = 2,
+    };
+
+    // Load cascade from file or flash
+    const char *path = mp_obj_str_get_str(args[0]);
+    int res = imlib_load_cascade(&cascade, path);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+
+    // Limit the number of stages if specified
+    kw_stages = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), MP_MAP_LOOKUP);
+    if (kw_stages != NULL) {
+        int stages = mp_obj_get_int(kw_stages->value);
+        if (stages > 0 && stages <= cascade.n_stages) {
+            cascade.n_stages = stages;
+        }
+    }
+
+    // Return micropython cascade object
+    o = m_new_obj(py_cascade_obj_t);
+    o->base.type = &py_cascade_type;
+    o->_cobj = cascade;
+    return o;
+}
+
+mp_obj_t py_image_load_descriptor(mp_obj_t path_obj)
+{
+    kp_t *kpts=NULL;
+    int kpts_size =0;
+
+    py_kp_obj_t *kp_obj =NULL;
+    const char *path = mp_obj_str_get_str(path_obj);
+
+    int res = freak_load_descriptor(&kpts, &kpts_size, path);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    /* return keypoints MP object */
+    kp_obj = m_new_obj(py_kp_obj_t);
+    kp_obj->base.type = &py_kp_type;
+    kp_obj->kpts = kpts;
+    kp_obj->size = kpts_size;
+    kp_obj->threshold = 10;
+    kp_obj->normalized = false;
+    return kp_obj;
+}
+
+mp_obj_t py_image_load_lbp(mp_obj_t path_obj)
+{
+    py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
+    lbp->base.type = &py_lbp_type;
+
+    int res = imlib_lbp_desc_load(mp_obj_str_get_str(path_obj), &lbp->hist);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    return lbp;
+}
+
+mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
+{
+    py_kp_obj_t *kpts = ((py_kp_obj_t*)kpts_obj);
+    const char *path = mp_obj_str_get_str(path_obj);
+
+    int res = freak_save_descriptor(kpts->kpts, kpts->size, path);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    return mp_const_true;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_descriptor_obj, py_image_load_descriptor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_lbp_obj, py_image_load_lbp);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_save_descriptor_obj, py_image_save_descriptor);
+
+static const mp_map_elem_t globals_dict_table[] = {
+    { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_image) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_Image),           (mp_obj_t)&py_image_load_image_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_HaarCascade),     (mp_obj_t)&py_image_load_cascade_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDesc),       (mp_obj_t)&py_image_load_descriptor_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDescSave),   (mp_obj_t)&py_image_load_lbp_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_LBPDesc),         (mp_obj_t)&py_image_save_descriptor_obj },
+};
+STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+
+const mp_obj_module_t image_module = {
+    .base = { &mp_type_module },
+    .name = MP_QSTR_image,
+    .globals = (mp_obj_t)&globals_dict,
+};
