@@ -21,6 +21,7 @@
 #include "runtime.h"
 #include "obj.h"
 #include "objmodule.h"
+#include "objstr.h"
 #include "gc.h"
 #include "stackctrl.h"
 #include "gccollect.h"
@@ -94,6 +95,74 @@ static const char fresh_readme_txt[] =
 "Please visit http://micropython.org/help/ for further help.\r\n"
 ;
 
+static const char fresh_selftest_py[] =
+"import sensor, time, pyb\n"
+"\n"
+"def test_int_adc():\n"
+"    adc  = pyb.ADCAll(12)\n"
+"    # Test VBAT\n"
+"    vbat = adc.read_core_vbat()\n"
+"    vbat_diff = abs(vbat-3.3)\n"
+"    if (vbat_diff > 0.1):\n"
+"        raise Exception('INTERNAL ADC TEST FAILED VBAT=%fv'%vbat)\n"
+"\n"
+"    # Test VREF\n"
+"    vref = adc.read_core_vref()\n"
+"    vref_diff = abs(vref-1.2)\n"
+"    if (vref_diff > 0.1):\n"
+"        raise Exception('INTERNAL ADC TEST FAILED VREF=%fv'%vref)\n"
+"    adc = None\n"
+"    print('INTERNAL ADC TEST PASSED...')\n"
+"\n"
+"def test_color_bars():\n"
+"    sensor.reset()\n"
+"    # Set sensor settings\n"
+"    sensor.set_brightness(0)\n"
+"    sensor.set_saturation(0)\n"
+"    sensor.set_gainceiling(8)\n"
+"    sensor.set_contrast(2)\n"
+"\n"
+"    # Set sensor pixel format\n"
+"    sensor.set_framesize(sensor.QVGA)\n"
+"    sensor.set_pixformat(sensor.RGB565)\n"
+"\n"
+"    # Enable colorbar test mode\n"
+"    sensor.set_colorbar(True)\n"
+"\n"
+"    # Skip a few frames to allow the sensor settle down\n"
+"    for i in range(0, 100):\n"
+"        image = sensor.snapshot()\n"
+"\n"
+"    #color bars thresholds\n"
+"    t = [lambda r, g, b: r < 50  and g < 50  and b < 50,   # Black\n"
+"         lambda r, g, b: r < 50  and g < 50  and b > 200,  # Blue\n"
+"         lambda r, g, b: r > 200 and g < 50  and b < 50,   # Red\n"
+"         lambda r, g, b: r > 200 and g < 50  and b > 200,  # Purple\n"
+"         lambda r, g, b: r < 50  and g > 200 and b < 50,   # Green\n"
+"         lambda r, g, b: r < 50  and g > 200 and b > 200,  # Aqua\n"
+"         lambda r, g, b: r > 200 and g > 200 and b < 50,   # Yellow\n"
+"         lambda r, g, b: r > 200 and g > 200 and b > 200]  # White\n"
+"\n"
+"    #320x240 image with 8 color bars each one is approx 40 pixels.\n"
+"    #we start from the center of the frame buffer, and average the\n"
+"    #values of 10 sample pixels from the center of each color bar.\n"
+"    for i in range(0, 8):\n"
+"        avg = (0, 0, 0)\n"
+"        idx = 40*i+20 #center of colorbars\n"
+"        for off in range(0, 10): #avg 10 pixels\n"
+"            rgb = image.get_pixel(idx+off, 120)\n"
+"            avg = tuple(map(sum, zip(avg, rgb)))\n"
+"\n"
+"        if not t[i](avg[0]/10, avg[1]/10, avg[2]/10):\n"
+"            raise Exception('COLOR BARS TEST FAILED.'\n"
+"            'BAR#(%d): RGB(%d,%d,%d)'%(i+1, avg[0]/10, avg[1]/10, avg[2]/10))\n"
+"\n"
+"    print('COLOR BARS TEST PASSED...')\n"
+"\n"
+"print('')\n"
+"test_int_adc()\n"
+"test_color_bars()\n"
+;
 void flash_error(int n) {
     for (int i = 0; i < n; i++) {
         led_state(LED_RED, 0);
@@ -197,11 +266,19 @@ static void make_flash_fs()
     f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
     f_close(&fp);
 
+    // create default selftest.py
+    f_open(&fp, "selftest.py", FA_WRITE | FA_CREATE_ALWAYS);
+    f_write(&fp, fresh_selftest_py, sizeof(fresh_selftest_py) - 1 /* don't count null terminator */, &n);
+    f_close(&fp);
+
     led_state(LED_RED, 0);
 }
 
 int main(void)
 {
+    FRESULT f_res;
+    int sensor_init_ret;
+
     // Stack limit should be less than real stack size, so we
     // had chance to recover from limit hit.
     mp_stack_set_limit((char*)&_ram_end - (char*)&_heap_end - 1024);
@@ -248,7 +325,7 @@ soft_reset:
     pyb_usb_init0();
     usbdbg_init();
 
-    int sensor_init_ret = sensor_init();
+    sensor_init_ret = sensor_init();
 
     /* Export functions to the global python namespace */
     mp_store_global(qstr_from_str("randint"),           (mp_obj_t)&py_randint_obj);
@@ -297,9 +374,33 @@ soft_reset:
         __fatal_error(buf);
     }
 
+    // Run self tests the first time only
+    f_res = f_stat("selftest.py", NULL);
+    if (f_res == FR_OK) {
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            // Parse, compile and execute the self-tests script.
+            // Note: we're not using exec_file/str to catch exceptions here.
+            mp_lexer_t *lex = mp_lexer_new_from_file("selftest.py");
+            mp_parse_node_t pn = mp_parse(lex, MP_PARSE_FILE_INPUT);
+            mp_obj_t script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, false);
+            mp_call_function_0(script);
+            nlr_pop();
+        } else {
+            // Get the exception message. TODO: might be a hack.
+            mp_obj_str_t *str = mp_obj_exception_get_value((mp_obj_t)nlr.ret_val);
+            // If any of the self-tests fail log the exception message
+            // and loop forever. Note: IDE exceptions will not be caught.
+            __fatal_error((const char*) str->data);
+        }
+        // Success: remove self tests script and flush cache
+        f_unlink("selftest.py");
+        storage_flush();
+    }
+
     // Run the main script from the current directory.
-    FRESULT res = f_stat("main.py", NULL);
-    if (res == FR_OK) {
+    f_res = f_stat("main.py", NULL);
+    if (f_res == FR_OK) {
         if (!pyexec_file("main.py")) {
             nlr_buf_t nlr;
             if (nlr_push(&nlr) == 0) {
