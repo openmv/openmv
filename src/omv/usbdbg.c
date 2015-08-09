@@ -37,6 +37,7 @@ void usbdbg_init()
 {
     vstr_init(&script_buf, 64);
     mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, "IDE interrupt");
+    usbdbg_clear_flags();
 }
 
 int usbdbg_script_ready()
