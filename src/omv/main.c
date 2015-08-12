@@ -380,11 +380,7 @@ soft_reset:
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
             // Parse, compile and execute the self-tests script.
-            // Note: we're not using exec_file/str to catch exceptions here.
-            mp_lexer_t *lex = mp_lexer_new_from_file("selftest.py");
-            mp_parse_node_t pn = mp_parse(lex, MP_PARSE_FILE_INPUT);
-            mp_obj_t script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, false);
-            mp_call_function_0(script);
+            pyexec_file("selftest.py");
             nlr_pop();
         } else {
             // Get the exception message. TODO: might be a hack.
@@ -401,12 +397,17 @@ soft_reset:
     // Run the main script from the current directory.
     f_res = f_stat("main.py", NULL);
     if (f_res == FR_OK) {
-        if (!pyexec_file("main.py")) {
-            nlr_buf_t nlr;
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            // Parse, compile and execute the main script.
+            pyexec_file("main.py");
+            nlr_pop();
+        } else {
+            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
             if (nlr_push(&nlr) == 0) {
                 flash_error(3);
                 nlr_pop();
-            }
+            }// if this gets interrupted again ignore it.
         }
     }
 
@@ -417,30 +418,32 @@ soft_reset:
             while (usbdbg_script_ready()) {
                 nlr_buf_t nlr;
                 vstr_t *script_buf = usbdbg_get_script();
+
                 // clear debugging flags
                 usbdbg_clear_flags();
 
+                // re-init MP
+                mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
+                mp_init();
+                MICROPY_END_ATOMIC_SECTION(atomic_state);
+
                 // execute the script
                 if (nlr_push(&nlr) == 0) {
-                    pyexec_push_scope();
-
-                    // parse and compile script
-                    mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_,
-                            vstr_str(script_buf), vstr_len(script_buf), 0);
-                    mp_parse_node_t pn = mp_parse(lex, MP_PARSE_FILE_INPUT);
-                    mp_obj_t script = mp_compile(pn, lex->source_name, MP_EMIT_OPT_NONE, false);
-
-                    // execute the script
-                    mp_call_function_0(script);
+                    // parse, compile and execute script
+                    pyexec_str(script_buf);
                     nlr_pop();
                 } else {
                     mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
                 }
-                pyexec_pop_scope();
             }
 
             // clear debugging flags
             usbdbg_clear_flags();
+
+            // re-init MP
+            mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
+            mp_init();
+            MICROPY_END_ATOMIC_SECTION(atomic_state);
 
             // no script run REPL
             pyexec_friendly_repl();
