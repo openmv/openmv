@@ -22,6 +22,7 @@ Done:
 * Move misc image functions to image module
 * Delay sensor init after USB storage to log errors to file
 * Implement get/set pixel
+* Fix push/pop scope (re-init mp before running scripts)
 
 Todo:
 * Update MLX driver
@@ -32,7 +33,6 @@ Todo:
 * Edge detection or geneirc kernel function
 * Development VM ?
 * Fix cache issues
-* Fix push/pop scope (pop_scope() might not be called ?)
 * define aliaes for pins
 * Document OMV's MP API. 
 * Use R, G, B macros in imlib.c
