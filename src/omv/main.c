@@ -225,22 +225,6 @@ STATIC mp_obj_t pyb_main(mp_obj_t main) {
 
 MP_DEFINE_CONST_FUN_OBJ_1(pyb_main_obj, pyb_main);
 
-STATIC mp_obj_t py_vcp_is_connected(void ) {
-    return MP_BOOL(USBD_CDC_IsConnected());
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_vcp_is_connected_obj, py_vcp_is_connected);
-
-STATIC mp_obj_t py_randint(mp_obj_t min, mp_obj_t max) {
-    return mp_obj_new_int(rng_randint(mp_obj_get_int(min), mp_obj_get_int(max)));
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_randint_obj, py_randint);
-
-extern uint32_t SystemCoreClock;
-STATIC mp_obj_t py_cpu_freq(void ) {
-    return mp_obj_new_int(SystemCoreClock);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_cpu_freq_obj, py_cpu_freq);
-
 static void make_flash_fs()
 {
     FIL fp;
@@ -325,13 +309,7 @@ soft_reset:
     uart_init0();
     pyb_usb_init0();
     usbdbg_init();
-
     sensor_init_ret = sensor_init();
-
-    /* Export functions to the global python namespace */
-    mp_store_global(qstr_from_str("randint"),           (mp_obj_t)&py_randint_obj);
-    mp_store_global(qstr_from_str("cpu_freq"),          (mp_obj_t)&py_cpu_freq_obj);
-    mp_store_global(qstr_from_str("vcp_is_connected"),  (mp_obj_t)&py_vcp_is_connected_obj);
 
     if (sdcard_is_present()) {
         sdcard_init();
