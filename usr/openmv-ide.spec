@@ -43,8 +43,7 @@ os.mkdir(util_dir)
 shutil.copy('pydfu.py', util_dir)
 shutil.copy('openmv-cascade.py', util_dir)
 
-data_tree =  Tree('lib', prefix='lib')
-data_tree += Tree('util', prefix='util')
+data_tree  = Tree('util', prefix='util')
 data_tree += Tree('examples', prefix='examples')
 data_tree += Tree('../udev', prefix='udev')
 data_tree += Tree('../firmware', prefix='firmware',
