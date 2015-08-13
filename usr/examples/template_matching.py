@@ -1,18 +1,23 @@
-import sensor, time
-# Set sensor contrast
-sensor.set_contrast(1)
-# Set sensor brightness
-sensor.set_brightness(-2)
-# Set sensor to pixel format
+import time, sensor, image
+
+# Reset sensor
+sensor.reset()
+
+# Set sensor settings
+sensor.set_brightness(0)
+sensor.set_saturation(0)
+sensor.set_gainceiling(16)
+sensor.set_contrast(2)
+sensor.set_framesize(sensor.QQVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load template
-template = Image("0:/template.pgm")
+template = image.Image("/template.pgm")
 
 # Run template matching
 while (True):
-    image = sensor.snapshot()
-    r = image.find_template(template, 0.75)
+    img = sensor.snapshot()
+    r = img.find_template(template, 0.75)
     if r:    
-        image.draw_rectangle(r)
+        img.draw_rectangle(r)
         time.sleep(50)

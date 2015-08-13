@@ -31,7 +31,8 @@ def test_color_bars():
     # Enable colorbar test mode
     sensor.set_colorbar(True)
 
-    # Skip a few frames to allow the sensor settle down 
+    # Skip a few frames to allow the sensor settle down
+    # Note: This takes more time when exec from the IDE.
     for i in range(0, 10):
         image = sensor.snapshot()
         
@@ -60,6 +61,8 @@ def test_color_bars():
             "BAR#(%d): RGB(%d,%d,%d)"%(i+1, avg[0]/10, avg[1]/10, avg[2]/10))
     
     print("COLOR BARS TEST PASSED...")
-    
-test_int_adc()
-test_color_bars()
+
+if __name__ == "__main__":
+    print("")
+    test_int_adc()
+    test_color_bars()

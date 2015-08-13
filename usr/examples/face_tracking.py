@@ -1,4 +1,5 @@
-import sensor, time
+import sensor, time, image
+
 # Reset sensor
 sensor.reset()
 
@@ -8,22 +9,26 @@ sensor.set_gainceiling(16)
 sensor.set_framesize(sensor.QQVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
+# Load Haar Cascade
+# By default this will use all stages, lower satges is faster but less accurate.
+face_cascade = image.HaarCascade("frontalface", stages=16)
+print(face_cascade)
+
 def find_face():
-    global sensor, time
-    # Load Haar Cascade
-    face_cascade = HaarCascade("frontalface")
+    for i in range(0, 100):
+        img = sensor.snapshot()
     while (True):
-        image = sensor.snapshot()
-        objects = image.find_features(face_cascade, threshold=0.65, scale=1.85)
+        img = sensor.snapshot()
+        objects = img.find_features(face_cascade, threshold=0.65, scale=1.65)
         if objects:
             print (objects[0])
-            image.draw_rectangle(objects[0])
+            img.draw_rectangle(objects[0])
             try:
-                kpts1 = image.find_keypoints(threshold=32, normalized=False, roi=objects[0])
+                kpts1 = img.find_keypoints(threshold=32, normalized=False, roi=objects[0])
             except:
                 continue
             if kpts1:
-                image.draw_keypoints(kpts1)
+                img.draw_keypoints(kpts1)
                 time.sleep(1000)
                 return kpts1
 
@@ -32,17 +37,19 @@ kpts1 = find_face()
 clock = time.clock()
 while (True):
     clock.tick()
-    image = sensor.snapshot()
+    img = sensor.snapshot()
     try:
-        kpts2 = image.find_keypoints(threshold=32)
+        kpts2 = img.find_keypoints(threshold=32, normalized=False)
     except:
         continue
+
     if (kpts2==None):
         continue
-    c=image.match_keypoints(kpts1, kpts2, 70)
+
+    c=img.match_keypoints(kpts1, kpts2, 70)
     if (c):
         l=10
-        image.draw_line((c[0]-l,  c[1],  c[0]+l, c[1]))
-        image.draw_line((c[0],  c[1]-l,  c[0], c[1]+l))
+        img.draw_line((c[0]-l,  c[1],  c[0]+l, c[1]))
+        img.draw_line((c[0],  c[1]-l,  c[0], c[1]+l))
         time.sleep(10)
     print (clock.fps())

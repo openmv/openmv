@@ -1,36 +1,48 @@
-import sensor, time
-#sensor.reset()
-# Set framesize
-sensor.set_framesize(sensor.QCIF)
-# Set sensor to grayscale
-sensor.set_pixformat(sensor.GRAYSCALE)
-# Set sensor contrast
+import sensor, time, image
+
+# Reset sensor
+sensor.reset()
+
+# Sensor settings
 sensor.set_contrast(1)
-# Set sensor gainceiling
 sensor.set_gainceiling(16)
+sensor.set_framesize(sensor.QCIF)
+sensor.set_pixformat(sensor.GRAYSCALE)
 
-face_cascade = HaarCascade("/frontalface.cascade")
+# Load Haar Cascade
+# By default this will use all stages, lower satges is faster but less accurate.
+face_cascade = image.HaarCascade("frontalface", stages=16)
+print(face_cascade)
 
+def draw_cross(img, x, y, l):
+    img.draw_line((x-l, y,   x+l, y))
+    img.draw_line((x,   y-l, x,   y+l))
+
+# FPS clock
+clock = time.clock()
 while (True):
-    image = sensor.snapshot()
-    objects = image.find_features(face_cascade, threshold=0.45, scale=1.25)
+    clock.tick()
 
-    if (len(objects)==0):
-        continue
+    # Capture snapshot
+    img = sensor.snapshot()
 
-    roi = objects[0]
-    image.draw_rectangle(roi)
+    # Find objects.
+    # Note: Lower scale factor scales-down the img more and detects smaller objects.
+    # Higher threshold results in a higher detection rate, with more false positives.
+    objects = img.find_features(face_cascade, threshold=0.65, scale=1.65)
 
-    image.histeq()
-    eyes = image.find_eyes(roi)
+    # Draw objects
+    for roi in objects:
+        #img.histeq()
+        eyes = img.find_eyes(roi)
+        draw_cross(img, eyes[0], eyes[1], 5)
+        draw_cross(img, eyes[2], eyes[3], 5)
+        img.draw_rectangle(roi)
 
-    l = 5
-    c = (eyes[0], eyes[1])
-    image.draw_line((c[0]-l,  c[1],  c[0]+l, c[1]))
-    image.draw_line((c[0],  c[1]-l,  c[0], c[1]+l))
+    if (len(objects)):
+        # Add a small delay to see the drawing on the FB
+        time.sleep(100)
 
-    c = (eyes[2], eyes[3])
-    image.draw_line((c[0]-l,  c[1],  c[0]+l, c[1]))
-    image.draw_line((c[0],  c[1]-l,  c[0], c[1]+l))
-
-    time.sleep(500)
+    # Print FPS.
+    # Note: Actual FPS is higher, streaming the FB makes it slower.
+    print(clock.fps())

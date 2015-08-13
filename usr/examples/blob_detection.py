@@ -1,4 +1,9 @@
-import sensor, time, led
+import sensor, time, pyb
+
+led_r = pyb.LED(1)
+led_g = pyb.LED(2)
+led_b = pyb.LED(3)
+
 #sensor.reset()
 sensor.set_contrast(2)
 sensor.set_framesize(sensor.QCIF)
@@ -22,18 +27,19 @@ while (True):
     # Detect blobs in image
     blobs = binary.find_blobs()
 
-    led.off(led.RED)
-    led.off(led.GREEN)
-    led.off(led.BLUE)
+    led_r.off()
+    led_g.off()
+    led_b.off()
 
     # Draw rectangles around detected blobs
     for r in blobs:
         if r[5]==1:
-            led.on(led.RED)
+            led_r.on()
         if r[5]==2:
-            led.on(led.GREEN)
+            led_g.on()
         if r[5]==3:
-            led.on(led.BLUE)
+            led_b.on()
         image.draw_rectangle(r[0:4])
+        time.sleep(50)
 
     print(clock.fps())

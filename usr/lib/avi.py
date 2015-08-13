@@ -1,4 +1,4 @@
-import struct
+import ustruct as struct
 
 class AVI:
     def __init__(self, path, w, h, codec="MJPG"):

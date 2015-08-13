@@ -1,8 +1,9 @@
-import pyb, time
+import time, pyb
 
 led = pyb.LED(3)
+usb = pyb.USB_VCP()
 
-while (vcp_is_connected()==False):
+while (usb.isconnected()==False):
    led.on()
    time.sleep(150)
    led.off()
