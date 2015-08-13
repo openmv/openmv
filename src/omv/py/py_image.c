@@ -515,6 +515,11 @@ static mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args)
     const char *str = mp_obj_str_get_str(args[3]);
     color_t c = {.r=0xFF, .g=0xFF, .b=0xFF};
 
+    // check x, y
+    PY_ASSERT_TRUE_MSG(x>=0 && x<image->w, "image index out of range");
+    PY_ASSERT_TRUE_MSG(y>=0 && y<image->h, "image index out of range");
+    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "Operation not supported on JPEG");
+
     if (n_args == 5) {
         // get color
         mp_obj_t *array;
