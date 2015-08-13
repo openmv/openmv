@@ -211,6 +211,8 @@ class OMVGtk:
 
         self.baudrate = int(self.config.get("main", "baudrate"))
 
+        # load helloworld.py
+        self._load_file(os.path.join(EXAMPLES_DIR, "helloworld.py"))
 
     def show_message_dialog(self, msg_type, msg):
         message = gtk.MessageDialog(parent=self.window, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
