@@ -23,6 +23,10 @@ Done:
 * Delay sensor init after USB storage to log errors to file
 * Implement get/set pixel
 * Fix push/pop scope (re-init mp before running scripts)
+* Update examples
+* Fix main script FS template in main.c
+* Remove global misc functions
+* Remove lib folder
 
 Todo:
 * Update MLX driver
@@ -33,10 +37,13 @@ Todo:
 * Edge detection or geneirc kernel function
 * Development VM ?
 * Fix cache issues
+* Implement save script
 * define aliaes for pins
 * Document OMV's MP API. 
 * Use R, G, B macros in imlib.c
 * Use R, G, B lookups in imlib.c
 * Setting contrast after brightness
 * Send PRs for ADC bugs
+* image.draw_line((x, y, int(50*sin(45))+x, int(50*cos(45))y))
+* Fix draw_string
 * Grep for TODOs
