@@ -27,6 +27,7 @@ Done:
 * Fix main script FS template in main.c
 * Remove global misc functions
 * Remove lib folder
+* Fix draw_string
 
 Todo:
 * Update MLX driver
@@ -44,6 +45,4 @@ Todo:
 * Use R, G, B lookups in imlib.c
 * Setting contrast after brightness
 * Send PRs for ADC bugs
-* image.draw_line((x, y, int(50*sin(45))+x, int(50*cos(45))y))
-* Fix draw_string
 * Grep for TODOs
