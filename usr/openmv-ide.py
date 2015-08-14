@@ -88,6 +88,10 @@ class OMVGtk:
         self.connected = False
         map(lambda x:x.set_sensitive(False), self.controls)
 
+        # Disable dfu button on Windows
+        if platform.system() == "Windows":
+            self.controls.pop(1)
+
         # configure gtksourceview widget
         sourceview = gtksourceview.View()
         sourceview.set_show_line_numbers(True)
