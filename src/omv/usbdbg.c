@@ -19,7 +19,6 @@
 #include "compile.h"
 #include "runtime.h"
 
-#define USB_TX_BUF_SIZE (64)
 static int xfer_bytes;
 static int xfer_length;
 static enum usbdbg_cmd cmd;
