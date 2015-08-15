@@ -41,7 +41,11 @@ const int res_width[] = {
     88,     /* QQCIF */
     160,    /* QQVGA */
     128,    /* QQVGA2*/
+    #ifdef OPENMV2
+    192,    /* QCIF  */
+    #else
     176,    /* QCIF  */
+    #endif
     320,    /* QVGA  */
     352,    /* CIF   */
     640,    /* VGA   */
