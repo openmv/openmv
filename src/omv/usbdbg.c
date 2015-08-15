@@ -49,6 +49,7 @@ vstr_t *usbdbg_get_script()
 {
     vstr_t *scr = vstr_new();
     vstr_add_strn(scr, vstr_str(&script_buf),  vstr_len(&script_buf));
+    vstr_reset(&script_buf);
     return scr;
 }
 
