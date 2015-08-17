@@ -396,33 +396,33 @@ soft_reset:
         if (nlr_push(&nlr) == 0) {
             while (usbdbg_script_ready()) {
                 nlr_buf_t nlr;
-                vstr_t *script_buf = usbdbg_get_script();
+
+                // re-init MP state
+                mp_deinit();
+                mp_init();
 
                 // clear debugging flags
                 usbdbg_clear_flags();
 
-                // re-init MP
-                mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
-                mp_init();
-                MICROPY_END_ATOMIC_SECTION(atomic_state);
-
                 // execute the script
                 if (nlr_push(&nlr) == 0) {
                     // parse, compile and execute script
-                    pyexec_str(script_buf);
+                    pyexec_str(usbdbg_get_script());
                     nlr_pop();
                 } else {
                     mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
                 }
             }
 
+            // re-init MP state
+            mp_deinit();
+            mp_init();
+
             // clear debugging flags
             usbdbg_clear_flags();
 
-            // re-init MP
-            mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
-            mp_init();
-            MICROPY_END_ATOMIC_SECTION(atomic_state);
+            // enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
 
             // no script run REPL
             pyexec_friendly_repl();

@@ -23,8 +23,9 @@ static int xfer_bytes;
 static int xfer_length;
 static enum usbdbg_cmd cmd;
 
+static int script_ready;
+static volatile bool irq_enabled;
 static vstr_t script_buf;
-static int script_ready=0;
 mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
 
 extern void usbd_cdc_tx_buf_flush();
@@ -34,7 +35,8 @@ extern const char *ffs_strerror(FRESULT res);
 
 void usbdbg_init()
 {
-    vstr_init(&script_buf, 64);
+    irq_enabled=false;
+    vstr_init(&script_buf, 32);
     mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, "IDE interrupt");
     usbdbg_clear_flags();
 }
@@ -54,10 +56,20 @@ vstr_t *usbdbg_get_script()
 
 void usbdbg_clear_flags()
 {
-    script_ready =0;
+    script_ready=0;
     fb->ready=0;
     fb->lock_tried=0;
     mutex_unlock(&fb->lock);
+}
+
+inline bool usbdbg_get_irq_enabled()
+{
+    return irq_enabled;
+}
+
+inline void usbdbg_set_irq_enabled(bool enabled)
+{
+    irq_enabled=enabled;
 }
 
 void usbdbg_data_in(void *buffer, int length)
@@ -128,15 +140,21 @@ void usbdbg_data_out(void *buffer, int length)
 {
     switch (cmd) {
         case USBDBG_SCRIPT_EXEC:
-            vstr_add_strn(&script_buf, buffer, length);
-            xfer_bytes += length;
-            if (xfer_bytes == xfer_length) {
-                // set script ready flag
-                script_ready = 1;
-
-                // interrupt running script/REPL
-                mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-                pendsv_nlr_jump_hard(mp_const_ide_interrupt);
+            // check if GC is locked before allocating memory for vstr. If GC was locked
+            // at least once before the script is fully uploaded xfer_bytes will be less
+            // than the total length (xfer_length) and the script will Not be executed.
+            if (usbdbg_get_irq_enabled() && !gc_is_locked()) {
+                vstr_add_strn(&script_buf, buffer, length);
+                xfer_bytes += length;
+                if (xfer_bytes == xfer_length) {
+                    // Set script ready flag
+                    script_ready = 1;
+                    // Disable IDE IRQ (re-enabled by pyexec or main).
+                    usbdbg_set_irq_enabled(false);
+                    // interrupt running script/REPL
+                    mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
+                    pendsv_nlr_jump_hard(mp_const_ide_interrupt);
+                }
             }
             break;
 
@@ -223,9 +241,13 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             break;
 
         case USBDBG_SCRIPT_STOP:
-            /* interrupt running code by raising an exception */
-            mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-            pendsv_nlr_jump_hard(mp_const_ide_interrupt);
+            if (usbdbg_get_irq_enabled()) {
+                // Disable IDE IRQ (re-enabled by pyexec or main).
+                usbdbg_set_irq_enabled(false);
+                // interrupt running code by raising an exception
+                mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
+                pendsv_nlr_jump_hard(mp_const_ide_interrupt);
+            }
             cmd = USBDBG_NONE;
             break;
 
