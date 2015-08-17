@@ -48,10 +48,7 @@ int usbdbg_script_ready()
 
 vstr_t *usbdbg_get_script()
 {
-    vstr_t *scr = vstr_new();
-    vstr_add_strn(scr, vstr_str(&script_buf),  vstr_len(&script_buf));
-    vstr_reset(&script_buf);
-    return scr;
+    return &script_buf;
 }
 
 void usbdbg_clear_flags()
