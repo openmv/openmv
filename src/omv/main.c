@@ -96,6 +96,9 @@ static const char fresh_readme_txt[] =
 "Please visit http://micropython.org/help/ for further help.\r\n"
 ;
 
+#ifdef OPENMV1
+static const char fresh_selftest_py[] ="";
+#else
 static const char fresh_selftest_py[] =
 "import sensor, time, pyb\n"
 "\n"
@@ -164,6 +167,8 @@ static const char fresh_selftest_py[] =
 "test_int_adc()\n"
 "test_color_bars()\n"
 ;
+#endif
+
 void flash_error(int n) {
     for (int i = 0; i < n; i++) {
         led_state(LED_RED, 0);
