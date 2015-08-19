@@ -46,8 +46,15 @@ shutil.copy('openmv-cascade.py', util_dir)
 data_tree  = Tree('util', prefix='util')
 data_tree += Tree('examples', prefix='examples')
 data_tree += Tree('../udev', prefix='udev')
-data_tree += Tree('../firmware', prefix='firmware',
-excludes=['cmsis', 'fatfs', 'micropython', 'omv', 'sthal', '*.lds'])
+data_tree += Tree('../firmware', prefix='firmware')
+
+# bundle gtksourceview style/lang files
+if platform.system() == "Linux":
+    data_tree += Tree('/usr/share/gtksourceview-2.0/', prefix='share/gtksourceview-2.0')
+else:
+    data_tree += Tree('C:/Python27/Lib/site-packages/gtk-2.0/runtime/share/gtksourceview-2.0', prefix='share/gtksourceview-2.0')
+
+
 
 coll = COLLECT(exe,
                data_tree,
