@@ -31,7 +31,7 @@ exe = EXE(pyz,
           upx=True,
           console=False )
 
-import shutil
+import sys, shutil
 
 # remove util dir if it exists
 util_dir = 'util'
@@ -54,13 +54,11 @@ if platform.system() == "Linux":
 else:
     data_tree += Tree('C:/Python27/Lib/site-packages/gtk-2.0/runtime/share/gtksourceview-2.0', prefix='share/gtksourceview-2.0')
 
-
-
 coll = COLLECT(exe,
                data_tree,
                strip=None,
                upx=True,
-               name='openmv')
+               name=sys.argv[2])
 # cleanup
 if os.path.exists(util_dir):
     shutil.rmtree(util_dir)
