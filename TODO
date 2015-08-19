@@ -28,6 +28,7 @@ Done:
 * Remove global misc functions
 * Remove lib folder
 * Fix draw_string
+* Disable built-in DFU on Windows
 
 Todo:
 * Update MLX driver
