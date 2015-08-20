@@ -926,9 +926,38 @@ static mp_obj_t py_image_get_pixel(mp_obj_t image_obj, mp_obj_t x_obj, mp_obj_t 
     return ret_obj;
 }
 
+#define RGB565(r, g, b)\
+    (uint32_t)(((r&0x1F)<<3)|((g&0x3F)>>3)|(g<<13)|((b&0x1F)<<8))
+
 static mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args)
 {
-    //TODO implement
+    // read args
+    int x = mp_obj_get_int(args[1]);
+    int y = mp_obj_get_int(args[2]);
+    image_t *image = py_image_cobj(args[0]);
+
+    // check x, y, format
+    PY_ASSERT_TRUE_MSG(x>=0 && x<image->w, "image index out of range");
+    PY_ASSERT_TRUE_MSG(y>=0 && y<image->h, "image index out of range");
+    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "Operation not supported on JPEG");
+
+    switch (image->bpp) {
+        case 1:
+            image->pixels[y*image->w+x] = mp_obj_get_int(args[3]);
+            break;
+        case 2: {
+            mp_obj_t *color_obj;
+            uint16_t *pixels = (uint16_t*)image->pixels;
+            mp_obj_get_array_fixed_n(args[3], 3, &color_obj);
+            pixels[y*image->w+x] = RGB565(mp_obj_get_int(color_obj[0]),
+                                          mp_obj_get_int(color_obj[1]),
+                                          mp_obj_get_int(color_obj[2]));
+            break;
+        }
+        default:
+            // shouldn't happen
+            break;
+    }
     return mp_const_none;
 }
 
