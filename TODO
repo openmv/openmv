@@ -45,4 +45,5 @@ Todo:
 * Use R, G, B lookups in imlib.c
 * Setting contrast after brightness
 * Send PRs for ADC bugs
+* Remove pincfg.h and use mpconfigboard.h
 * Grep for TODOs
