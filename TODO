@@ -39,7 +39,6 @@ Todo:
 * Edge detection or geneirc kernel function
 * Development VM ?
 * Fix cache issues
-* Implement save script
 * define aliaes for pins
 * Document OMV's MP API. 
 * Use R, G, B macros in imlib.c
