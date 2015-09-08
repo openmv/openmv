@@ -57,11 +57,17 @@ elif platform.system() == "Darwin":
 elif platform.system() == "Windows":
     data_tree += Tree('C:/Python27/Lib/site-packages/gtk-2.0/runtime/share/gtksourceview-2.0', prefix='share/gtksourceview-2.0')
 
-coll = COLLECT(exe,
-               data_tree,
-               strip=None,
-               upx=True,
-               name=sys.argv[2])
+if sysname in ["Linux", "Windows"]:
+    col = COLLECT(exe,
+                  data_tree,
+                  upx=True,
+                  strip=None,
+                  name=sys.argv[2])
+else:
+    app = BUNDLE(exe,
+                 data_tree,
+                 name=sys.argv[2])
+
 # cleanup
 if os.path.exists(util_dir):
     shutil.rmtree(util_dir)

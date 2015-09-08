@@ -4,6 +4,9 @@
 DIST_DIR=dist
 BUILD_DIR=build
 OPENMV_DIR=openmv_$1
+if [ "$(uname)" == "Darwin" ]; then
+    OPENMV_DIR=openmv_$1.app
+fi
 PACKAGE=$(python -c "import sys,platform; print('openmv_'+sys.platform+'_'+platform.machine()+'_$1.zip'.lower())")
 SPEC_FILE=openmv-ide.spec
 
