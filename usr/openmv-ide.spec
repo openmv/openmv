@@ -66,7 +66,9 @@ if sysname in ["Linux", "Windows"]:
 else:
     app = BUNDLE(exe,
                  data_tree,
-                 name=sys.argv[2])
+                 icon=None,
+                 name=sys.argv[2],
+                 bundle_identifier=None)
 
 # cleanup
 if os.path.exists(util_dir):
