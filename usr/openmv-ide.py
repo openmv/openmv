@@ -9,6 +9,7 @@ import sys, os, os.path
 from time import sleep
 from os.path import expanduser
 import gtksourceview2 as gtksourceview
+from glob import glob
 
 #import pydfu on Linux
 if platform.system() == "Linux":
@@ -660,7 +661,11 @@ class OMVGtk:
         serial_ports = []
         system_name = platform.system()
 
-        if system_name == "Windows":
+        if system_name == "Linux":
+            serial_ports.append("/dev/openmvcam")
+        elif system_name == "Darwin":
+            serial_ports.extend(glob('/dev/tty.*'))
+        elif system_name == "Windows":
             for i in range(256):
                 try:
                     port = "COM%d"%i
@@ -669,9 +674,6 @@ class OMVGtk:
                     s.close()
                 except serial.SerialException:
                     pass
-        else:
-            # Linux/Mac
-            serial_ports.append("/dev/openmvcam")
 
         return serial_ports
 
