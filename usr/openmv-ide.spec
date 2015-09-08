@@ -12,7 +12,8 @@ pyz = PYZ(a.pure,
              cipher=block_cipher)
 
 # append 'exe' to windows binary
-if platform.system() == "Linux":
+sysname = platform.system()
+if sysname in ["Linux", "Darwin"]:
     exe_name ='openmv-ide'
 else:
     exe_name ='openmv-ide.exe'
@@ -51,7 +52,9 @@ data_tree += Tree('../firmware', prefix='firmware')
 # bundle gtksourceview style/lang files
 if platform.system() == "Linux":
     data_tree += Tree('/usr/share/gtksourceview-2.0/', prefix='share/gtksourceview-2.0')
-else:
+elif platform.system() == "Darwin":
+    data_tree += Tree('/usr/local/share/gtksourceview-2.0/', prefix='share/gtksourceview-2.0')
+elif platform.system() == "Windows":
     data_tree += Tree('C:/Python27/Lib/site-packages/gtk-2.0/runtime/share/gtksourceview-2.0', prefix='share/gtksourceview-2.0')
 
 coll = COLLECT(exe,
