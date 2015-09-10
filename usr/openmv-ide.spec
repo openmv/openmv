@@ -50,11 +50,11 @@ data_tree += Tree('../udev', prefix='udev')
 data_tree += Tree('../firmware', prefix='firmware')
 
 # bundle gtksourceview style/lang files
-if platform.system() == "Linux":
+if sysname == "Linux":
     data_tree += Tree('/usr/share/gtksourceview-2.0/', prefix='share/gtksourceview-2.0')
-elif platform.system() == "Darwin":
+elif sysname == "Darwin":
     data_tree += Tree('/usr/local/share/gtksourceview-2.0/', prefix='share/gtksourceview-2.0')
-elif platform.system() == "Windows":
+elif sysname == "Windows":
     data_tree += Tree('C:/Python27/Lib/site-packages/gtk-2.0/runtime/share/gtksourceview-2.0', prefix='share/gtksourceview-2.0')
 
 if sysname in ["Linux", "Windows"]:
@@ -64,6 +64,7 @@ if sysname in ["Linux", "Windows"]:
                   strip=None,
                   name=sys.argv[2])
 else:
+# create an app bundle for OSX
     app = BUNDLE(exe,
                  data_tree,
                  icon=None,
