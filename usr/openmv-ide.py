@@ -100,11 +100,11 @@ class OMVGtk:
 
         # append cwd to style search paths
         style_manager.set_search_path(style_manager.get_search_path() +
-                [os.path.join(IDE_DIR, "usr/share/gtksourceview-2.0/styles")])
+                [os.path.join(IDE_DIR, "share/gtksourceview-2.0/styles")])
 
         # append cwd to language search paths
         lang_manager.set_search_path(lang_manager.get_search_path() +
-                [os.path.join(IDE_DIR, "usr/share/gtksourceview-2.0/language-specs")])
+                [os.path.join(IDE_DIR, "share/gtksourceview-2.0/language-specs")])
 
         # configure gtksourceview widget
         sourceview.set_show_line_numbers(True)
