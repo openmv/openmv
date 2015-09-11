@@ -93,8 +93,20 @@ class OMVGtk:
         if platform.system() == "Windows":
             self.controls.pop(1)
 
-        # configure gtksourceview widget
+        # gtksourceview widget
         sourceview = gtksourceview.View()
+        lang_manager = gtksourceview.language_manager_get_default()
+        style_manager = gtksourceview.style_scheme_manager_get_default()
+
+        # append cwd to style search paths
+        style_manager.set_search_path(style_manager.get_search_path() +
+                [os.path.join(IDE_DIR, "usr/share/gtksourceview-2.0/styles")])
+
+        # append cwd to language search paths
+        lang_manager.set_search_path(lang_manager.get_search_path() +
+                [os.path.join(IDE_DIR, "usr/share/gtksourceview-2.0/language-specs")])
+
+        # configure gtksourceview widget
         sourceview.set_show_line_numbers(True)
         sourceview.set_tab_width(4)
         sourceview.set_indent_on_tab(True)
@@ -105,7 +117,6 @@ class OMVGtk:
         # configure gtksourceview buffer
         self.buffer = gtksourceview.Buffer()
         self.buffer.set_highlight_syntax(True)
-        lang_manager = gtksourceview.language_manager_get_default()
         self.buffer.set_language(lang_manager.get_language("python"))
         self.buffer.connect("changed", self.text_changed)
 
