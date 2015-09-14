@@ -212,7 +212,7 @@ class OMVGtk:
         for f in files:
             if f.endswith(".py"):
                 label = os.path.basename(f)
-                mitem = gtk.MenuItem(label)
+                mitem = gtk.MenuItem(label, use_underline=False)
                 mitem.connect("activate", self.open_example, EXAMPLES_DIR)
                 submenu.append(mitem)
 
@@ -547,7 +547,7 @@ class OMVGtk:
         menu = self.builder.get_object('recent_menu')
         for f in self.files:
             if f.endswith(".py"):
-                mitem =gtk.MenuItem(f)
+                mitem =gtk.MenuItem(f, use_underline=False)
                 mitem.connect("activate", self.open_example, "")
                 submenu.append(mitem)
 
