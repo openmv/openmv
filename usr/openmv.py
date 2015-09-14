@@ -141,7 +141,7 @@ if __name__ == '__main__':
     with open(sys.argv[1], 'r') as fin:
         buf = fin.read()
 
-    s = serial.Serial("/dev/openmvcam", 12000000, timeout=0.1)
+    s = serial.Serial("/dev/openmvcam", 921600, timeout=0.3)
     init(s)
     exec_script(buf)
     tx_len = tx_buf_len()
