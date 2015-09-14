@@ -12,12 +12,7 @@ import platform
 import numpy as np
 from PIL import Image
 
-#import pydfu on Linux
-if platform.system() == "Linux":
-    import pydfu
-
 __serial = None
-
 __FB_HDR_SIZE   =12
 
 # USB Debug commands
