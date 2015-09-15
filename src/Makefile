@@ -23,6 +23,7 @@ STUSB_DIR=stusb
 FATFS_DIR=fatfs
 MICROPY_DIR=micropython
 OMV_DIR=omv
+WINC1500_DIR=winc1500
 
 # Target
 TARGET ?= OPENMV2
@@ -70,6 +71,7 @@ CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/boards/$(TARGET)/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
+CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 
 # Linker Flags
 
@@ -90,6 +92,7 @@ OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
 OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/*.o)
 OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
+OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
@@ -291,6 +294,7 @@ objs: | $(BUILD)
 	$(MAKE)  -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
 	$(MAKE)  -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET)
 	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
+	$(MAKE)  -C $(WINC1500_DIR)       BUILD=$(BUILD)/$(WINC1500_DIR)
 
 $(BUILD)/$(BIN).elf: objs
 	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
