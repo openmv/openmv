@@ -48,4 +48,5 @@ Todo:
 * Remove pincfg.h and use mpconfigboard.h
 * Use dfu in IDE instead of bin, and simpler upload dialog
 * move serial port opening to openmv.py
+* Test DFU on Mac/OSX (and fix it if needed)
 * Grep for TODOs
