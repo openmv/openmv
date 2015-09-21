@@ -27,7 +27,10 @@ static mp_obj_t py_sensor_reset() {
 
 static mp_obj_t py_sensor_snapshot() {
     mp_obj_t image = py_image(0, 0, 0, 0);
-    sensor_snapshot((struct image*) py_image_cobj(image));
+    if (sensor_snapshot((struct image*) py_image_cobj(image))==-1) {
+        nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
+        return mp_const_false;
+    }
     return image;
 }
 

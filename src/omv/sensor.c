@@ -291,6 +291,7 @@ int sensor_snapshot(struct image *image)
 {
     volatile uint32_t addr;
     volatile uint16_t length;
+    uint32_t snapshot_start;
 
     addr = (uint32_t) fb->pixels;
 
@@ -303,13 +304,22 @@ int sensor_snapshot(struct image *image)
     /* Lock framebuffer mutex */
     mutex_lock(&fb->lock);
 
+    // Snapshot start tick
+    snapshot_start = HAL_GetTick();
+
     /* Start the DCMI */
     HAL_DCMI_Start_DMA(&DCMIHandle,
             DCMI_MODE_SNAPSHOT, addr, length);
 
     /* Wait for frame */
     while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
-
+        if (sys_tick_has_passed(snapshot_start, 1000)) {
+            // Sensor timeout, most likely a HW issue.
+            // unlock fb mutex and abort the DMA request
+            mutex_unlock(&fb->lock);
+            HAL_DMA_Abort(&DMAHandle);
+            return -1;
+        }
     }
 
     if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
