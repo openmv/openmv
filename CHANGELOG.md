@@ -31,3 +31,20 @@
 * Remove lib folder
 * Fix draw_string
 * Disable built-in DFU on Windows
+
+## [1.0.3-beta](https://github.com/openmv/openmv/releases/tag/v1.0.3-beta) (2014-11-15)
+* Binary packaged using py2exe
+* Mixed 32/64 bit Windows installer
+* Fix USB issue on Windows 7 64-bit
+* Enable color-lookup (was disabled in binaries)
+
+## [1.0.2-beta](https://github.com/openmv/openmv/releases/tag/v1.0.1-beta) (2014-11-11)
+* Fixes USB issues on Windows.
+* New MSI package for Windows users
+* Moved all user data are stored in home directory.
+
+## [1.0.1-beta](https://github.com/openmv/openmv/releases/tag/v1.0.1-beta) (2014-11-2)
+* Minor fixes for compatibility with Windows.
+
+## [1.0.0-beta](https://github.com/openmv/openmv/releases/tag/v1.0.0-beta) (2014-10-31)
+* First release.
