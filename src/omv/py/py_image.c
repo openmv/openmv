@@ -1207,8 +1207,8 @@ static const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_Image),           (mp_obj_t)&py_image_load_image_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_HaarCascade),     (mp_obj_t)&py_image_load_cascade_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDesc),       (mp_obj_t)&py_image_load_descriptor_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDescSave),   (mp_obj_t)&py_image_load_lbp_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_LBPDesc),         (mp_obj_t)&py_image_save_descriptor_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDescSave),   (mp_obj_t)&py_image_save_descriptor_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_LBPDesc),         (mp_obj_t)&py_image_load_lbp_obj},
 };
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
