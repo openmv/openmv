@@ -10,6 +10,7 @@ from time import sleep
 from os.path import expanduser
 import gtksourceview2 as gtksourceview
 from glob import glob
+import urllib2, json
 
 #import pydfu on Linux
 if platform.system() == "Linux":
@@ -54,6 +55,8 @@ recent =
 last_fw_path =
 baudrate = 921600
 '''
+RELEASE_TAG_NAME = 'v1.0'
+RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
 
 class OMVGtk:
     def __init__(self):
@@ -688,6 +691,25 @@ class OMVGtk:
 
         return serial_ports
 
+    def check_for_updates(self):
+        try:
+            url = urllib2.urlopen(RELEASE_URL)
+            release = json.loads(url.read())
+            url.close()
+            if (release['tag_name'] != RELEASE_TAG_NAME):
+                dialog = self.builder.get_object("update_dialog")
+                dn_button = self.builder.get_object("download_button")
+
+                # Set release notes
+                self.builder.get_object("rn_label").\
+                set_text('Release notes (%s):\n\n%s'%(release['tag_name'], release['body']))
+                # Set URL
+                dn_button.set_uri(release['html_url'])
+                dialog.run()
+                dialog.hide()
+        except:
+            pass #pass quietly
+
     def quit(self, widget):
         try:
             # disconnect
@@ -702,5 +724,6 @@ class OMVGtk:
 if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
+    omvgtk.check_for_updates()
     gobject.gobject.timeout_add(30, omvgtk.update_drawing)
     gtk.main()

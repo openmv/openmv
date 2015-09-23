@@ -181,6 +181,11 @@
     <property name="step_increment">1</property>
     <signal name="value-changed" handler="on_ctrl_scale_value_changed" swapped="no"/>
   </object>
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-sort-ascending</property>
+  </object>
   <object class="GtkListStore" id="pref_board_liststore">
     <columns>
       <!-- column-name Text -->
@@ -1140,6 +1145,80 @@
     <action-widgets>
       <action-widget response="-5">button11</action-widget>
       <action-widget response="-6">button12</action-widget>
+    </action-widgets>
+  </object>
+  <object class="GtkDialog" id="update_dialog">
+    <property name="can_focus">False</property>
+    <property name="border_width">5</property>
+    <property name="title" translatable="yes">An Update is Available!</property>
+    <property name="window_position">center-on-parent</property>
+    <property name="destroy_with_parent">True</property>
+    <property name="type_hint">dialog</property>
+    <property name="transient_for">top_window</property>
+    <child internal-child="vbox">
+      <object class="GtkVBox" id="dialog-vbox56">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="spacing">2</property>
+        <child>
+          <object class="GtkLabel" id="rn_label">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="label" translatable="yes">label</property>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child internal-child="action_area">
+          <object class="GtkHButtonBox" id="dialog-action_area56">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="layout_style">end</property>
+            <child>
+              <object class="GtkLinkButton" id="download_button">
+                <property name="label" translatable="yes">Download</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="has_tooltip">True</property>
+                <property name="image">image1</property>
+                <property name="uri">http://www.google.com</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="button22">
+                <property name="label">gtk-cancel</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+    <action-widgets>
+      <action-widget response="0">download_button</action-widget>
+      <action-widget response="0">button22</action-widget>
     </action-widgets>
   </object>
   <object class="GtkDialog" id="save_descriptor_dialog">
