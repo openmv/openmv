@@ -55,7 +55,7 @@ recent =
 last_fw_path =
 baudrate = 921600
 '''
-RELEASE_TAG_NAME = 'v1.0'
+RELEASE_TAG_NAME = 'v1.1'
 RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
 
 class OMVGtk:
