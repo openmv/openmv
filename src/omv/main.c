@@ -42,6 +42,7 @@
 #include "i2c.h"
 #include "uart.h"
 #include "extint.h"
+#include "servo.h"
 
 #include "sensor.h"
 #include "usbdbg.h"
@@ -315,6 +316,7 @@ soft_reset:
     pyb_usb_init0();
     usbdbg_init();
     sensor_init_ret = sensor_init();
+    servo_init();
 
     if (sdcard_is_present()) {
         sdcard_init();
