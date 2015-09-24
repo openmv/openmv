@@ -103,6 +103,10 @@
 #include "bsp/include/nm_bsp_arduino_uno.h"
 #endif
 
+#ifdef OPENMV1
+#include "nm_bsp_openmv1.h"
+#endif
+
 #ifdef OPENMV2 
 #include "nm_bsp_openmv2.h"
 #endif
