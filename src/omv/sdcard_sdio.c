@@ -6,13 +6,14 @@
  * SD card SDIO driver.
  *
  */
-#include "mp.h"
 #include <stdbool.h>
 #include <stm32f4xx_hal.h>
+#include <stm32f4xx_hal_msp.h>
+
+#include "mp.h"
 #include "mdefs.h"
 #include "ffconf.h"
 #include "diskio.h"
-#include "pincfg.h"
 #include "systick.h"
 #include "sdcard.h"
 

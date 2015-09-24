@@ -8,12 +8,14 @@
  */
 #include <stdlib.h>
 #include <string.h>
+#include <stm32f4xx_hal.h>
+#include <stm32f4xx_hal_msp.h>
+
 #include "sccb.h"
 #include "ov9650.h"
 #include "ov2640.h"
 #include "sensor.h"
 #include "systick.h"
-#include "pincfg.h"
 #include "framebuffer.h"
 
 #define REG_PID        0x0A

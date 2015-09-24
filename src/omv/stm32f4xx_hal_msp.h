@@ -6,8 +6,8 @@
  * Pin definitions.
  *
  */
-#ifndef __PINCFG_H__
-#define __PINCFG_H__
+#ifndef __STM32F4XX_HAL_MSP_H__
+#define __STM32F4XX_HAL_MSP_H__
 #ifdef OPENMV1
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
@@ -159,4 +159,4 @@
 #define SD_CD_PORT              (GPIOA)
 
 #endif //OPENMV1
-#endif //__PINCFG_H__
+#endif //__STM32F4XX_HAL_MSP_H__

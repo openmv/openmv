@@ -7,8 +7,8 @@
  *
  */
 #include <stm32f4xx_hal.h>
+#include <stm32f4xx_hal_msp.h>
 #include "sccb.h"
-#include "pincfg.h"
 #include "mdefs.h"
 #define SCCB_FREQ       (100000)
 #define SLAVE_ADDR      (0x60)

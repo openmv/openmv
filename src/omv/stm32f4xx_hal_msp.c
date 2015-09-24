@@ -6,37 +6,13 @@
  * HAL MSP.
  *
  */
-#include "pincfg.h"
 #include <stm32f4xx_hal.h>
-
-/* GPIOs */
-#ifdef OPENMV1
-const gpio_t gpio_pins[] = {
-    {GPIOC, GPIO_PIN_12},
-    {GPIOB, GPIO_PIN_11},
-    {GPIOC, GPIO_PIN_11},
-    {GPIOB, GPIO_PIN_10},
-    {GPIOC, GPIO_PIN_10},
-    {GPIOA, GPIO_PIN_15},
-    {NULL, 0}
-};
-#else
-const gpio_t gpio_pins[] = {
-    {GPIOA, GPIO_PIN_2 },
-    {GPIOA, GPIO_PIN_3 },
-    {GPIOC, GPIO_PIN_4 },
-    {GPIOC, GPIO_PIN_5 },
-    {GPIOD, GPIO_PIN_8 },
-    {GPIOD, GPIO_PIN_9 },
-    {GPIOD, GPIO_PIN_12},
-    {GPIOD, GPIO_PIN_13},
-    {GPIOE, GPIO_PIN_2 },
-    {GPIOE, GPIO_PIN_3 },
-    {GPIOE, GPIO_PIN_5 },
-    {GPIOE, GPIO_PIN_6 },
-    {NULL, 0}
-};
-#endif
+#include <stm32f4xx_hal_msp.h>
+/* GPIO struct */
+typedef struct {
+    GPIO_TypeDef *port;
+    uint16_t pin;
+} gpio_t;
 
 /* DCMI GPIOs */
 static const gpio_t dcmi_pins[] = {
