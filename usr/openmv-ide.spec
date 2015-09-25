@@ -18,7 +18,8 @@ if sysname in ["Linux", "Darwin"]:
 else:
     exe_name ='openmv-ide.exe'
 
-exe_tree = [('openmv-ide.glade', 'openmv-ide.glade', 'DATA')]
+exe_tree = [('logo.png', 'logo.png', 'DATA'),
+            ('openmv-ide.glade', 'openmv-ide.glade', 'DATA')]
 
 exe = EXE(pyz,
           a.scripts,
