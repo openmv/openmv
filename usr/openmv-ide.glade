@@ -9,7 +9,8 @@
     <property name="window_position">center-on-parent</property>
     <property name="destroy_with_parent">True</property>
     <property name="type_hint">dialog</property>
-    <property name="program_name">OpenMV IDE v1.1</property>
+    <property name="program_name">OpenMV IDE </property>
+    <property name="version">v1.1</property>
     <property name="copyright" translatable="yes">Copyright (c) 2014 Ibrahim Abdalkader &lt;i.abdalkader@gmail.com&gt;</property>
     <property name="comments" translatable="yes">Machine vision with Python! </property>
     <property name="website">https://openmv.io/</property>
@@ -38,6 +39,7 @@ THE SOFTWARE</property>
     <property name="authors">Ibrahim Abdalkader
 Kwabena W. Agyeman</property>
     <property name="logo">logo.png</property>
+    <property name="wrap_license">True</property>
     <child internal-child="vbox">
       <object class="GtkVBox" id="dialog-vbox6">
         <property name="visible">True</property>
