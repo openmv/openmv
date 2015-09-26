@@ -315,7 +315,7 @@ int sensor_snapshot(struct image *image)
 
     /* Wait for frame */
     while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
-        if ((HAL_GetTick() - snapshot_start) >= 1000) {
+        if ((HAL_GetTick() - snapshot_start) >= 2000) {
             // Sensor timeout, most likely a HW issue.
             // unlock fb mutex and abort the DMA request
             mutex_unlock(&fb->lock);
