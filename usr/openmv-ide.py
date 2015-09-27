@@ -247,9 +247,8 @@ class OMVGtk:
 
     def connect(self):
         try:
-            # open VCP and configure the terminal
-            self.serial = serial.Serial(self.config.get("main", "serial_port"), self.baudrate, timeout=0.3)
-            gobject.gobject.timeout_add(10, omvgtk.update_terminal)
+            # opens CDC port.
+            openmv.init(self.config.get("main", "serial_port"), baudrate=self.baudrate, timeout=0.3)
         except Exception as e:
             # create fresh config if needed
             if platform.system() == "Linux" and not os.path.isfile(UDEV_PATH):
@@ -265,7 +264,8 @@ class OMVGtk:
 
             return
 
-        openmv.init(self.serial)
+        # add terminal update callback
+        gobject.gobject.timeout_add(10, omvgtk.update_terminal)
 
         # check firmware version
         fw_ver = openmv.fw_version()
@@ -289,7 +289,6 @@ class OMVGtk:
         except:
             pass
 
-        self.serial.close()
         self.connected = False
         self._update_title()
         self.connect_button.set_sensitive(True)

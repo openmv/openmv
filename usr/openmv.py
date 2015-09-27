@@ -39,9 +39,10 @@ ATTR_BRIGHTNESS =1
 ATTR_SATURATION =2
 ATTR_GAINCEILING=3
 
-def init(serial):
+def init(port, baudrate=921600, timeout=0.3):
     global __serial
-    __serial = serial
+    # open CDC port
+    __serial =  serial.Serial(port, baudrate=baudrate, timeout=timeout)
 
 def fb_size():
     # read fb header
