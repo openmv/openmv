@@ -165,6 +165,7 @@ class OMVGtk:
             "on_save_file"                  : self.save_file,
             "on_save_file_as"               : self.save_file_as,
             "on_about_dialog"               : self.about_dialog,
+            "on_pinout_dialog"              : self.pinout_dialog,
             "on_save_template_activate"     : self.save_template,
             "on_save_descriptor_activate"   : self.save_descriptor,
             "on_ctrl_scale_value_changed"   : self.on_ctrl_scale_value_changed,
@@ -670,6 +671,11 @@ class OMVGtk:
 
     def about_dialog(self, widget):
         dialog = self.builder.get_object("about_dialog")
+        dialog.run()
+        dialog.hide()
+
+    def pinout_dialog(self, widget):
+        dialog = self.builder.get_object("pinout_dialog")
         dialog.run()
         dialog.hide()
 
