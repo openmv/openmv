@@ -254,10 +254,10 @@ void imlib_binary(image_t *src, int threshold)
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
 {
     struct color rgb, lab;
-    /* Square threshold */
+    // Square the threshold to avoid sqrt
     threshold *= threshold;
 
-    /* Convert reference RGB888 to LAB */
+    // Convert the RGB888 color list to LAB
     for (int c=0; c<color_size; c++) {
         rgb.r = color[c].r;
         rgb.g = color[c].g;
@@ -265,6 +265,7 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
         imlib_rgb_to_lab(&rgb, &color[c]);
     }
 
+    // Source image is RGB565 (2BPP)
     uint16_t *pixels = (uint16_t*) src->pixels;
 
     for (int y=0; y<src->h; y++) {
@@ -282,8 +283,9 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
                               (color[c].A-lab.A) * (color[c].A-lab.A) +
                               (color[c].B-lab.B) * (color[c].B-lab.B);
                 if (sum<threshold) {
-                    /* set pixel if within threshold */
-                    dst->pixels[i+x] = c+1; //sets color label c+1
+                    // Set pixel if within threshold
+                    // use color index as label (c+1)
+                    dst->pixels[i+x] = c+1;
                     break;
                 }
             }
@@ -293,10 +295,10 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
 #else
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
 {
-    /* Square threshold */
+    // Square the threshold to avoid sqrt
     threshold *= threshold;
 
-    /* Convert reference RGB888 to LAB */
+    // Convert the RGB888 color list to LAB
     for (int c=0; c<color_size; c++) {
         uint16_t r = color[c].r*31/255;
         uint16_t g = color[c].g*63/255;
@@ -308,22 +310,24 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
         color[c].B = lab_table[rgb+2];
     }
 
+    // Source image is RGB565 (2BPP)
     uint16_t *pixels = (uint16_t*) src->pixels;
 
     for (int y=0; y<src->h; y++) {
         int i=y*src->w;
         for (int x=0; x<src->w; x++) {
-            // mult by 3 for lab_table lookup
+            // multiply by 3 to get the LAB table index
             uint32_t rgb = pixels[i+x]*3;
             dst->pixels[i+x] = 0;
             for (int c=0; c<color_size; c++) {
-                // TODO
+                // TODO optimize
                 uint32_t sum =(color[c].L-lab_table[rgb])   * (color[c].L-lab_table[rgb])   +
                               (color[c].A-lab_table[rgb+1]) * (color[c].A-lab_table[rgb+1]) +
                               (color[c].B-lab_table[rgb+2]) * (color[c].B-lab_table[rgb+2]);
                 if (sum<threshold) {
-                    /* set pixel if within threshold */
-                    dst->pixels[i+x] = c+1; //sets color label c+1
+                    // Set pixel if within threshold
+                    // use color index as label (c+1)
+                    dst->pixels[i+x] = c+1;
                     break;
                 }
             }
