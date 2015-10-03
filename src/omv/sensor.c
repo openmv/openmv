@@ -37,7 +37,6 @@ struct sensor_dev sensor;
 TIM_HandleTypeDef  TIMHandle;
 DMA_HandleTypeDef  DMAHandle;
 DCMI_HandleTypeDef DCMIHandle;
-int usbdbg_is_connected();
 
 const int res_width[] = {
     88,     /* QQCIF */
