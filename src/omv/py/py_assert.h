@@ -10,7 +10,7 @@
 #define __PY_ASSERT_H__
 #define PY_ASSERT_TRUE(cond)                            \
     do {                                                \
-        if ((cond) ==0){                                \
+        if ((cond) == 0) {                              \
             nlr_jump(mp_obj_new_exception_msg(          \
                         &mp_type_OSError,               \
                         "Operation not supported"));    \
@@ -19,7 +19,15 @@
 
 #define PY_ASSERT_TRUE_MSG(cond, msg)                   \
     do {                                                \
-        if ((cond) ==0){                                \
+        if ((cond) == 0) {                              \
+            nlr_jump(mp_obj_new_exception_msg(          \
+                        &mp_type_OSError, msg));        \
+        }                                               \
+    } while(0)
+
+#define PY_ASSERT_FALSE_MSG(cond, msg)                  \
+    do {                                                \
+        if ((cond) == 1) {                              \
             nlr_jump(mp_obj_new_exception_msg(          \
                         &mp_type_OSError, msg));        \
         }                                               \
