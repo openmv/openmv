@@ -4,7 +4,7 @@ led_r = pyb.LED(1)
 led_g = pyb.LED(2)
 led_b = pyb.LED(3)
 
-#sensor.reset()
+sensor.reset()
 sensor.set_contrast(2)
 sensor.set_framesize(sensor.QCIF)
 sensor.set_pixformat(sensor.RGB565)
