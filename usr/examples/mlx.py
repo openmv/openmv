@@ -1,33 +1,38 @@
-import sensor, lcd, mlx, time, led, gpio
+import sensor, mlx, time
 
-lcd.init()
+# Initialize the MLX module
 mlx.init()
+
+# Reset sensor
 sensor.reset()
+
+# Set sensor settings
+sensor.set_contrast(1)
+sensor.set_brightness(0)
+sensor.set_saturation(2)
 sensor.set_pixformat(sensor.RGB565)
 sensor.set_framesize(sensor.QQVGA)
 
-thermal_on = True
+#The following registers fine-tune the window to align it with the FIR sensor.
+sensor.__write_reg(0xFF, 0x01)
+#HSTART/HSTOP
+sensor.__write_reg(0x17, 0x19)
+sensor.__write_reg(0x18, 0x43)
 
-def switch_cb(line):
-    global thermal_on
-    if (line == 9):
-        led.toggle(led.IR)
-    if (line == 12):
-        thermal_on = not thermal_on
-
-gpio.EXTI(gpio.PB2,  switch_cb)
-gpio.EXTI(gpio.PB3,  switch_cb)
-
+# FPS clock
 clock = time.clock()
+
 while (True):
-  clock.tick()
-  rgb = sensor.snapshot()
-  rgb = rgb.scaled((128, 160))
-  if (thermal_on):
-    ir = mlx.read()
-    x=ir.rainbow()
-    x=ir.scale((64, 160))
-    #rgb.blend(ir, (rgb.w/2-ir.w/2, rgb.h/2-ir.h/2), 0.4)
-    rgb.blend(ir, (32, 0, 0.6))
-  lcd.write_image(rgb)
-  print(clock.fps())
+    clock.tick()
+    # Capture an image
+    image = sensor.snapshot()
+
+    # Capture an FIR image
+    ir = mlx.read(mlx.RAINBOW)
+
+    # Scale the image and belnd it with the framebuffer
+    ir.scale((160, 32))
+    image.blend(ir, (0, 48, 0.6))
+
+    # Print FPS.
+    print(clock.fps())
