@@ -70,6 +70,16 @@ enum image_type {
     GRAYSCALE,
 };
 
+enum ir_refresh_rate {
+    IR_REFRESH_512HZ = 5,
+    IR_REFRESH_256HZ,
+    IR_REFRESH_128HZ,
+    IR_REFRESH_64HZ,
+    IR_REFRESH_32HZ,
+    IR_REFRESH_16HZ,
+    IR_REFRESH_8HZ,
+};
+
 /* Temp [0..99] to rainbow lookup */
 extern const uint16_t rainbow_table[256];
 
@@ -147,25 +157,31 @@ static void calculate_To(float Ta, float *To)
     //printf ("\n\n");
 }
 
-mp_obj_t mlx90620_read(mp_obj_t type_obj, mp_obj_t t_obj, mp_obj_t p_obj)
+mp_obj_t mlx90620_read_ta()
+{
+    return mp_obj_new_float(calculate_Ta());
+    
+}
+
+mp_obj_t mlx90620_read_ir(mp_obj_t type_obj, mp_obj_t t_obj, mp_obj_t p_obj)
 {
     float Ta, To[64];
-    float To_flip[64];
+    float To_rot[64];
     float max_To = FLT_MIN;
     float min_To = FLT_MAX;
     
     image_t *img;
     enum image_type img_type;
 
-    //alloc image
+    // Alloc image
     img = xalloc(sizeof(*img));
     img->w = 16;
     img->h = 4;
 
-    // read image type
+    // Read image type
     img_type = mp_obj_get_int(type_obj);
 
-    // read params
+    // Read params
     float t = mp_obj_get_float(t_obj);
     float p = mp_obj_get_float(p_obj);
 
@@ -180,13 +196,18 @@ mp_obj_t mlx90620_read(mp_obj_t type_obj, mp_obj_t t_obj, mp_obj_t p_obj)
             break;
     }
 
-    // get raw Temperatures
+    // Calculate ambient temperature
     Ta = calculate_Ta();
+
+    // Calculate object temperatures
     calculate_To(Ta, To);
 
-    // flip IR data, sensor memory read is column wise
-    float *To_p = To_flip;
+    // Copy temperatures
+    float *To_p = To_rot;
     memcpy(To_p, To, sizeof(To));
+
+    // Rotate object temperatures.
+    // Note: sensor memory is read column wise.
     for (int x=15; x>=0; x--) {
         for (int y=0; y<4; y++) {
             float to = To[x+y*16] = *To_p++;
@@ -225,14 +246,27 @@ mp_obj_t mlx90620_read(mp_obj_t type_obj, mp_obj_t t_obj, mp_obj_t p_obj)
 
 mp_obj_t mlx90620_read_raw()
 {
-    float *To = m_new(float, 64);
+    float Ta, To[64], To_rot[64];
     mp_obj_t t_list = mp_obj_new_list(0, NULL);
 
-    // get raw Temperatures
-    float Ta = calculate_Ta();
+    // Calculate ambient temperature
+    Ta = calculate_Ta();
+
+    // Calculate object temperatures
     calculate_To(Ta, To);
 
-    // TODO normalize To readings
+    // Copy temperatures
+    float *To_p = To_rot;
+    memcpy(To_p, To, sizeof(To));
+
+    // Rotate object temperatures.
+    // Note: sensor memory is read column wise.
+    for (int x=15; x>=0; x--) {
+        for (int y=0; y<4; y++) {
+            To[x+y*16] = *To_p++;
+        }
+    }
+
     for (int i=0; i<64; i++) {
         mp_obj_list_append(t_list, mp_obj_new_float(To[i]));
     }
@@ -240,13 +274,7 @@ mp_obj_t mlx90620_read_raw()
     return t_list;
 }
 
-mp_obj_t mlx90620_read_ta()
-{
-    return mp_obj_new_float(calculate_Ta());
-    
-}
-
-mp_obj_t mlx90620_init()
+mp_obj_t mlx90620_init(mp_obj_t refresh_rate)
 {
     uint8_t cmd_buf[5];
 
@@ -267,7 +295,7 @@ mp_obj_t mlx90620_init()
     soft_i2c_write_bytes(MLX_SLAVE_ADDR, cmd_buf, sizeof(cmd_buf), true);
 
     // Write configuration register
-    uint8_t lsb = 0x39; //32Hz
+    uint8_t lsb = 0x30 | (mp_obj_get_int(refresh_rate) & 0x0F);
     uint8_t msb = 0x44;
     memcpy(cmd_buf, (uint8_t [5]){SET_CONFIG_DATA, (uint8_t)(lsb-0x55), lsb, (uint8_t)(msb-0x55), msb}, 5);
     soft_i2c_write_bytes(MLX_SLAVE_ADDR, cmd_buf, sizeof(cmd_buf), true);
@@ -323,22 +351,27 @@ mp_obj_t mlx90620_init()
     return mp_const_true;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(mlx90620_init_obj,     mlx90620_init);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(mlx90620_read_obj,     mlx90620_read);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mlx90620_init_obj,     mlx90620_init);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(mlx90620_read_ta_obj,  mlx90620_read_ta);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(mlx90620_read_ir_obj,  mlx90620_read_ir);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mlx90620_read_raw_obj, mlx90620_read_raw);
 
 static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_mlx) },
-    //{ MP_OBJ_NEW_QSTR(MP_QSTR_HZ_8),      MP_OBJ_NEW_SMALL_INT(MLX_HZ_8)},
-    //{ MP_OBJ_NEW_QSTR(MP_QSTR_HZ_16),     MP_OBJ_NEW_SMALL_INT(MLX_HZ_16)},
-    //{ MP_OBJ_NEW_QSTR(MP_QSTR_HZ_32),     MP_OBJ_NEW_SMALL_INT(MLX_HZ_32)},
-    //{ MP_OBJ_NEW_QSTR(MP_QSTR_HZ_64),     MP_OBJ_NEW_SMALL_INT(MLX_HZ_64)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_RAINBOW),     MP_OBJ_NEW_SMALL_INT(RAINBOW)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_GRAYSCALE),   MP_OBJ_NEW_SMALL_INT(GRAYSCALE)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),         MP_OBJ_NEW_QSTR(MP_QSTR_mlx) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IR_REFRESH_8HZ),   MP_OBJ_NEW_SMALL_INT(IR_REFRESH_8HZ)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IR_REFRESH_16HZ),  MP_OBJ_NEW_SMALL_INT(IR_REFRESH_16HZ)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IR_REFRESH_32HZ),  MP_OBJ_NEW_SMALL_INT(IR_REFRESH_32HZ)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IR_REFRESH_64HZ),  MP_OBJ_NEW_SMALL_INT(IR_REFRESH_64HZ)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IR_REFRESH_128HZ), MP_OBJ_NEW_SMALL_INT(IR_REFRESH_128HZ)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IR_REFRESH_256HZ), MP_OBJ_NEW_SMALL_INT(IR_REFRESH_256HZ)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IR_REFRESH_512HZ), MP_OBJ_NEW_SMALL_INT(IR_REFRESH_512HZ)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_RAINBOW),          MP_OBJ_NEW_SMALL_INT(RAINBOW)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_GRAYSCALE),        MP_OBJ_NEW_SMALL_INT(GRAYSCALE)},
 
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init),        (mp_obj_t)&mlx90620_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read),        (mp_obj_t)&mlx90620_read_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_raw),    (mp_obj_t)&mlx90620_read_raw_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_init),             (mp_obj_t)&mlx90620_init_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read_ta),          (mp_obj_t)&mlx90620_read_ta_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read_ir),          (mp_obj_t)&mlx90620_read_ir_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read_raw),         (mp_obj_t)&mlx90620_read_raw_obj },
 };
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
