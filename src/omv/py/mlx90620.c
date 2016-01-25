@@ -3,7 +3,7 @@
  * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * MLX90620 Python module.
+ * MLX90621 Python module.
  *
  */
 #include <mp.h>
@@ -54,6 +54,11 @@
 #define CAL_DELTA_A_SCALE   0xE3
 #define CAL_EMIS_L          0xE4
 #define CAL_EMIS_H          0xE5
+#define CAL_KSTA_L          0xE6
+#define CAL_KSTA_H          0xE7
+#define CAL_KS_SCALE        0xC0
+#define CAL_KS4_EE          0xC4
+#define TA0                 (25)
 
 #define MAP(OldValue, OldMin, OldMax, NewMin, NewMax)\
     (((OldValue - OldMin) * (NewMax - NewMin)) / (OldMax - OldMin)) + NewMin
@@ -65,9 +70,16 @@ enum image_type {
     GRAYSCALE,
 };
 
-/* Grayscale [0..255] to rainbox lookup */
+/* Temp [0..99] to rainbow lookup */
 extern const uint16_t rainbow_table[256];
 
+// These are constants calculated from
+// the calibration data stored in EEPROM
+float a_ij[64], b_ij[64];
+float v_th, k_t1, k_t2, ks4, ksta, tgc;
+float emissivity, alpha_cp, a_cp, b_cp;
+
+// Alpha(i,j) table
 static const float alpha_ij[64] = {
     6.0415914049e-08f, 6.6935172072e-08f, 6.7866494646e-08f, 6.2045728555e-08f, 6.6003849497e-08f, 7.4618583312e-08f, 7.5084244600e-08f, 6.9729139796e-08f, 
     7.2057446232e-08f, 8.1370671978e-08f, 8.3466147771e-08f, 7.6946889749e-08f, 7.7179720392e-08f, 8.8821252575e-08f, 9.1382389655e-08f, 8.1603502622e-08f, 
@@ -79,30 +91,22 @@ static const float alpha_ij[64] = {
     7.5084244600e-08f, 8.3233317127e-08f, 8.7424268713e-08f, 8.0672180047e-08f, 6.7168002715e-08f, 7.5782736531e-08f, 7.9508026829e-08f, 7.5084244600e-08f,
 };
 
-// These are constants calculated from
-// the calibration data stored in EEPROM
-float v_th, k_t1, k_t2, emissivity, a_common, alpha_cp, a_cp, b_cp, tgc;
-float a_ij[64], b_ij[64];
-
-uint8_t EEPROM_DATA[256];
-
 static float calculate_Ta()
 {
     uint16_t ptat=0;
     uint8_t cmd_buf[4]={MLX_READ_REG, 0x40, 0x00, 0x01};
     soft_i2c_write_bytes(MLX_SLAVE_ADDR, cmd_buf, sizeof(cmd_buf), false);
     soft_i2c_read_bytes(MLX_SLAVE_ADDR, (uint8_t*)&ptat, 2, true);
-    return (-k_t1 + fast_sqrtf(k_t1 * k_t1 - (4 * k_t2 * (v_th - ptat)))) / (2 * k_t2) + 25;
+    return (-k_t1 + fast_sqrtf(k_t1 * k_t1 - (4 * k_t2 * (v_th - ptat)))) / (2 * k_t2) + TA0;
 }
 
 static void calculate_To(float Ta, float *To)
 {
-    float v_ir_norm;
     float v_ir_comp;
     float v_ir_off_comp;
     float v_ir_tgc_comp;
 
-    int16_t cpix;
+    int16_t v_cp;
     uint8_t cmd_buf[4];
     int16_t ir_data[64];
 
@@ -117,36 +121,39 @@ static void calculate_To(float Ta, float *To)
     // Read compensation data
     memcpy(cmd_buf, (uint8_t [4]){MLX_READ_REG, 0x41, 0x00, 0x01}, sizeof(cmd_buf));
     soft_i2c_write_bytes(MLX_SLAVE_ADDR, cmd_buf, sizeof(cmd_buf), false);
-    soft_i2c_read_bytes(MLX_SLAVE_ADDR, (uint8_t*)&cpix, 2, true);
+    soft_i2c_read_bytes(MLX_SLAVE_ADDR, (uint8_t*)&v_cp, 2, true);
 
     //Calculate the offset compensation for the one compensation pixel
     //This is a constant in the TO calculation, so calculate it here.
-    float v_cp_off_comp = (float)cpix - ((a_cp + b_cp) * (Ta - 25));
+    float v_ir_cp_off_comp = (float)v_cp - ((a_cp + b_cp) * (Ta - TA0));
 
     for (int i=0; i<64; i++) {
         //#1: Calculate Offset Compensation
-        v_ir_off_comp = ir_data[i] - (a_ij[i] + b_ij[i] * (Ta - 25));
+        v_ir_off_comp = ir_data[i] - (a_ij[i] + b_ij[i] * (Ta - TA0));
 
         //#2: Calculate Thermal Gradien Compensation (TGC)
-        v_ir_tgc_comp = v_ir_off_comp - tgc * v_cp_off_comp;
+        v_ir_tgc_comp = v_ir_off_comp - tgc * v_ir_cp_off_comp;
 
         //#3: Calculate Emissivity Compensation
-        v_ir_norm = v_ir_tgc_comp / (alpha_ij[i] - tgc * alpha_cp);
-		v_ir_comp = v_ir_norm / emissivity;
+		v_ir_comp = v_ir_tgc_comp / emissivity;
 
-        To[i] = fast_sqrtf(fast_sqrtf(v_ir_comp/alpha_ij[i] + Ta4)) - 273.15f;
+        float alpha_comp_ij = (1 + ksta * (Ta - TA0)) * (alpha_ij[i] - tgc * alpha_cp);
+        // Ks4=0 for 40 and 60 FOV sensors.
+        //float sx = ks4 * sqrtf(sqrtf(powf(alpha_comp_ij, 3) * v_ir_comp  + powf(alpha_comp_ij, 4) * Ta4));
+        //To[i] = sqrtf(sqrtf((v_ir_comp/alpha_comp_ij * (1-ks4*273.15f)+sx) + Ta4)) - 273.15f;
+        To[i] = sqrtf(sqrtf(v_ir_comp/alpha_comp_ij + Ta4)) - 273.15f;
         //printf ("%f, ", (double) To[i]);
     }
     //printf ("\n\n");
 }
 
-mp_obj_t mlx90620_read(mp_obj_t type_obj)
+mp_obj_t mlx90620_read(mp_obj_t type_obj, mp_obj_t t_obj, mp_obj_t p_obj)
 {
     float Ta, To[64];
     float To_flip[64];
     float max_To = FLT_MIN;
     float min_To = FLT_MAX;
-
+    
     image_t *img;
     enum image_type img_type;
 
@@ -157,6 +164,10 @@ mp_obj_t mlx90620_read(mp_obj_t type_obj)
 
     // read image type
     img_type = mp_obj_get_int(type_obj);
+
+    // read params
+    float t = mp_obj_get_float(t_obj);
+    float p = mp_obj_get_float(p_obj);
 
     switch (img_type) {
         case GRAYSCALE:
@@ -178,37 +189,38 @@ mp_obj_t mlx90620_read(mp_obj_t type_obj)
     memcpy(To_p, To, sizeof(To));
     for (int x=15; x>=0; x--) {
         for (int y=0; y<4; y++) {
-            To[x+y*16] = *To_p++;
+            float to = To[x+y*16] = *To_p++;
+            // Find min and max object temperature.
+            if (to > max_To) {
+                max_To = to;
+            } else if (to < min_To) {
+                min_To = to;
+            }
         }
     }
 
-    // Normalize Temperatures by finding the min and max, and mapping the range
-    // of Temperatures to 0->255 to index into rainbow or grayscale tables.
+    // Map object temperature to rainbow or grayscale
     for (int i=0; i<64; i++) {
-        //To[i] = To[i]-Ta;
-        if (To[i] > max_To) {
-            max_To = To[i];
-        } else if (To[i] < min_To) {
-            min_To = To[i];
-        }
-    }
-
-    // map Tos to rainbow or grayscale
-    for (int i=0; i<64; i++) {
-        uint16_t p = (uint16_t) MAP(To[i], min_To, max_To, 0, 255);
-        //uint16_t p = (((To[i]-min_To)/(max_To-min_To))*255.0f);
+        int to= atanf((To[i]/t)*tanf(p*(3.1415f/2)))*(512/3.1415f);
 
         switch (img_type) {
             case GRAYSCALE:
-                img->pixels[i] = p;
+                img->pixels[i] = to;
                 break;
             case RAINBOW:
-                ((uint16_t*)img->pixels)[i] = rainbow_table[(uint8_t)p];
+                ((uint16_t*)img->pixels)[i] = rainbow_table[to];
                 break;
         }
     }
 
-    return py_image_from_struct(img);
+    mp_obj_t ret_obj[] = {
+        mp_obj_new_float(Ta),
+        mp_obj_new_float(min_To),
+        mp_obj_new_float(max_To),
+        py_image_from_struct(img),
+    };
+
+    return mp_obj_new_tuple(sizeof(ret_obj)/sizeof(mp_obj_t), ret_obj);
 }
 
 mp_obj_t mlx90620_read_raw()
@@ -228,9 +240,18 @@ mp_obj_t mlx90620_read_raw()
     return t_list;
 }
 
+mp_obj_t mlx90620_read_ta()
+{
+    return mp_obj_new_float(calculate_Ta());
+    
+}
+
 mp_obj_t mlx90620_init()
 {
     uint8_t cmd_buf[5];
+
+    // EEPROM data for quick lookup
+    uint8_t EEPROM_DATA[256];
 
     // Init I2C
     soft_i2c_init();
@@ -252,38 +273,42 @@ mp_obj_t mlx90620_init()
     soft_i2c_write_bytes(MLX_SLAVE_ADDR, cmd_buf, sizeof(cmd_buf), true);
 
     // Calculate To/Ta constants
-    int resolution = 3; //TODO read or set resolution
+    // Note the ADC is set to the highest resolution, the following
+    // calculations can omit the (2^3-ConfigReg[5:4]) value which is equal to 1.
+    int resolution = 3; //TODO read resolution
     int k_t1_scale = (EEPROM_DATA[KT_SCALE] & 0xF0) >> 4;
     int k_t2_scale = (EEPROM_DATA[KT_SCALE] & 0x0F) + 10;
     int a_i_scale = (EEPROM_DATA[CAL_AI_SCALE] & 0xF0) >> 4;
 	int b_i_scale = (EEPROM_DATA[CAL_BI_SCALE] & 0x0F);
+    int ks_scale = (EEPROM_DATA[CAL_KS_SCALE] & 0x0F) + 8;
+    int a_common = (int16_t) (EEPROM_DATA[CAL_ACOMMON_H] << 8 | EEPROM_DATA[CAL_ACOMMON_L]);
 
     v_th = (int16_t) (EEPROM_DATA[VTH_H] << 8 | EEPROM_DATA[VTH_L]) / (float) (1 << (3 - resolution));
     k_t1 = (int16_t) (EEPROM_DATA[KT1_H] << 8 | EEPROM_DATA[KT1_L]) / (float) (1 << (k_t1_scale + (3 - resolution)));
     k_t2 = (int16_t) (EEPROM_DATA[KT2_H] << 8 | EEPROM_DATA[KT2_L]) / (float) (1 << (k_t2_scale + (3 - resolution)));           
 
     emissivity = (EEPROM_DATA[CAL_EMIS_H] << 8 | EEPROM_DATA[CAL_EMIS_L]) >> 15;
-    a_common =  (int16_t) (EEPROM_DATA[CAL_ACOMMON_H] << 8 | EEPROM_DATA[CAL_ACOMMON_L]);
     alpha_cp =  (EEPROM_DATA[CAL_ALPHACP_H] << 8 | EEPROM_DATA[CAL_ALPHACP_L]) / powf(2, (EEPROM_DATA[CAL_A0_SCALE] + (3 - resolution)));
 
 	a_cp = (int16_t) (EEPROM_DATA[CAL_ACP_H] << 8 | EEPROM_DATA[CAL_ACP_L]) / (float) (1 << (3 - resolution));
 	b_cp = (int16_t) EEPROM_DATA[CAL_BCP] / (float) (1 << (b_i_scale + (3 - resolution)));
     tgc  = (int8_t) EEPROM_DATA[CAL_TGC] / 32.0f;
+    ks4 = (int8_t) EEPROM_DATA[CAL_KS4_EE] / (float) (1 << ks_scale);
+    ksta = (int16_t) (EEPROM_DATA[CAL_KSTA_H] << 8 | EEPROM_DATA[CAL_KSTA_L])/ (float) (1 << 20);
 
-    printf("vth: %f kt1: %f kt2: %f a_common: %f emissivity: %f\n",
-          (double) v_th, (double) k_t1, (double)k_t2, (double) a_common, (double) emissivity);
-
+    printf("vth: %f kt1: %f kt2: %f a_common: %d emissivity: %f\n",
+          (double) v_th, (double) k_t1, (double)k_t2, a_common, (double) emissivity);
     printf("a_scale: %d b_scale: %d alpha_cp:%f a_cp: %f b_cp: %f tgc: %f \n",
           a_i_scale, b_i_scale, (double) alpha_cp, (double) a_cp, (double) b_cp, (double) tgc);
 
-    printf("a_ij, b_ij:\n");
-
+    printf("a_ij, b_ij\n");
     for (int i=0; i<64; i++) {
         // Pixel offsets
         a_ij[i] = (a_common + EEPROM_DATA[i] * (1 << a_i_scale)) / (float) (1 << (3 - resolution));
 
         // Slope coefficients
         b_ij[i] = EEPROM_DATA[0x40 + i] / (float) (1 << (b_i_scale + (3 - resolution)));
+        printf("a_ij %f b_ij %f\n", (double) a_ij[i], (double) b_ij[i]);
     }
  
     /*
@@ -299,7 +324,7 @@ mp_obj_t mlx90620_init()
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mlx90620_init_obj,     mlx90620_init);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mlx90620_read_obj,     mlx90620_read);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(mlx90620_read_obj,     mlx90620_read);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(mlx90620_read_raw_obj, mlx90620_read_raw);
 
 static const mp_map_elem_t globals_dict_table[] = {
