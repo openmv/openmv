@@ -103,6 +103,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	sccb.o                                  \
 	ov9650.o                                \
 	ov2640.o                                \
+	ov7725.o                                \
 	sensor.o                                \
 	stm32f4xx_hal_msp.o                     \
 	soft_i2c.o                              \

@@ -7,6 +7,7 @@ SRCS += $(addprefix ,   \
 	sccb.c              \
 	ov9650.c            \
 	ov2640.c            \
+	ov7725.c            \
 	sensor.c            \
 	stm32f4xx_hal_msp.c \
 	soft_i2c.c          \
