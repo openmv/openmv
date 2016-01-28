@@ -14,6 +14,7 @@
 #include "sccb.h"
 #include "ov9650.h"
 #include "ov2640.h"
+#include "ov7725.h"
 #include "sensor.h"
 #include "systick.h"
 #include "framebuffer.h"
@@ -26,6 +27,7 @@
 
 #define OV9650_PID     0x96
 #define OV2640_PID     0x26
+#define OV7725_PID     0x77
 #ifdef OPENMV1
 #define XCLK_FREQ      (12000000)
 #else
@@ -195,34 +197,40 @@ int sensor_init()
     memset(&sensor, 0, sizeof(struct sensor_dev));
 
     /* Some sensors have different reset polarities, and we can't know which sensor
-       is connected before initializing SCCB and reading the PID register, which in
-       turn requires pulling the sensor out of the reset state. So we try to read a
-       register with both polarities to determine line state. */
+       is connected before initializing SCCB and probing the sensor, which in turn
+       requires pulling the sensor out of the reset state. So we try to probe the
+       sensor with both polarities to determine line state. */
     sensor.reset_pol = ACTIVE_HIGH;
 
+    /* Reset the sensor */
     DCMI_RESET_HIGH();
     systick_sleep(10);
 
     DCMI_RESET_LOW();
     systick_sleep(10);
 
-    /* Check if we can read PID */
-    if (SCCB_Read(REG_PID) == 255) {
-        /* Sensor is held in reset, so reset is active high */
+    /* Probe the sensor */
+    if (SCCB_Probe() == 0) {
+        /* Sensor has been held in reset,
+           so the reset line is active low */
         sensor.reset_pol = ACTIVE_LOW;
 
-        DCMI_RESET_LOW();
-        systick_sleep(10);
-
+        /* Pull the sensor out of the reset state */
         DCMI_RESET_HIGH();
         systick_sleep(10);
+
+        /* Probe again to set the slave addr */
+        if (SCCB_Probe() == 0)  {
+            /* Probe failed */
+            return -1;
+        }
     }
 
     /* Read the sensor information */
-    sensor.id.MIDH = SCCB_Read(REG_MIDH);
-    sensor.id.MIDL = SCCB_Read(REG_MIDL);
     sensor.id.PID  = SCCB_Read(REG_PID);
     sensor.id.VER  = SCCB_Read(REG_VER);
+    sensor.id.MIDL = SCCB_Read(REG_MIDL);
+    sensor.id.MIDH = SCCB_Read(REG_MIDH);
 
     /* Call the sensor-specific init function */
     switch (sensor.id.PID) {
@@ -232,27 +240,34 @@ int sensor_init()
         case OV2640_PID:
             ov2640_init(&sensor);
             break;
+        case OV7725_PID:
+            ov7725_init(&sensor);
+            break;
         default:
-            /* sensor not supported */
-            return -1;
+            /* Sensor not supported */
+            return -2;
     }
 
     /* Configure the DCMI DMA Stream */
     if (dma_config() != 0) {
-        return -2;
+        /* DMA problem */
+        return -3;
     }
 
     /* Configure the DCMI interface. This should be called
        after ovxxx_init to set VSYNC/HSYNC/PCLK polarities */
     if (dcmi_config(DCMI_JPEG_DISABLE) != 0){
-        return -3;
+        /* DCMI config failed */
+        return -4;
     }
 
-    /* init/re-init mutex */
+    /* Init/re-init mutex */
     mutex_init(&fb->lock);
 
-    // blocks usbdbg until the sensor is configured
+    /* Block usbdbg until the sensor is configured */
     fb->ready=0;
+
+    /* All good! */
     return 0;
 }
 
