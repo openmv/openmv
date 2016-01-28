@@ -9,13 +9,15 @@
 #include <stm32f4xx_hal.h>
 #include <stm32f4xx_hal_msp.h>
 #include "sccb.h"
-#include "mdefs.h"
+#include "stdbool.h"
+#include "systick.h"
 #define SCCB_FREQ       (100000)
-#define SLAVE_ADDR      (0x60)
 #define TIMEOUT         (10000)
+
+static uint8_t slave_addr;
 static I2C_HandleTypeDef I2CHandle;
 
-void SCCB_Init()
+int SCCB_Init()
 {
     /* Configure I2C */
     I2CHandle.Instance             = SCCB_I2C;
@@ -30,8 +32,24 @@ void SCCB_Init()
 
     if (HAL_I2C_Init(&I2CHandle) != HAL_OK) {
         /* Initialization Error */
-        BREAK();
+        return -1;
     }
+    return 0;
+}
+
+uint8_t SCCB_Probe()
+{
+    uint8_t reg = 0x00;
+
+    slave_addr=0;
+    for (int i=0; i<127; i++) {
+        if (HAL_I2C_Master_Transmit(&I2CHandle, i, &reg, 1, TIMEOUT) == HAL_OK) {
+            slave_addr = i;
+            break;
+        }
+        systick_sleep(1);
+    }
+    return slave_addr;
 }
 
 uint8_t SCCB_Write(uint8_t addr, uint8_t data)
@@ -40,7 +58,7 @@ uint8_t SCCB_Write(uint8_t addr, uint8_t data)
     uint8_t buf[] = {addr, data};
 
     __disable_irq();
-    if (HAL_I2C_Master_Transmit(&I2CHandle, SLAVE_ADDR, buf, 2, TIMEOUT) != HAL_OK) {
+    if (HAL_I2C_Master_Transmit(&I2CHandle, slave_addr, buf, 2, TIMEOUT) != HAL_OK) {
         ret=0xFF;
     }
     __enable_irq();
@@ -52,11 +70,11 @@ uint8_t SCCB_Read(uint8_t addr)
     uint8_t data=0;
 
     __disable_irq();
-    if (HAL_I2C_Master_Transmit(&I2CHandle, SLAVE_ADDR, &addr, 1, TIMEOUT) != HAL_OK) {
+    if (HAL_I2C_Master_Transmit(&I2CHandle, slave_addr, &addr, 1, TIMEOUT) != HAL_OK) {
         data = 0xFF;
         goto error_w;
     }
-    if (HAL_I2C_Master_Receive(&I2CHandle, SLAVE_ADDR, &data, 1, TIMEOUT) != HAL_OK) {
+    if (HAL_I2C_Master_Receive(&I2CHandle, slave_addr, &data, 1, TIMEOUT) != HAL_OK) {
         data = 0xFF;
     }
 error_w:
