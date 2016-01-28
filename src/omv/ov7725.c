@@ -154,29 +154,29 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS][2] = {
 };
 
 #include <mp.h>
-static int reset()
+static int reset(struct sensor_dev *sensor)
 {
     int i=0;
     const uint8_t (*regs)[2];
 
     // Reset all registers
-    SCCB_Write(COM7, COM7_RESET);
+    SCCB_Write(sensor->slv_addr, COM7, COM7_RESET);
 
     // Delay 10 ms
     systick_sleep(10);
 
     // Write default regsiters
     for (i=0, regs = default_regs; regs[i][0]; i++) {
-        SCCB_Write(regs[i][0], regs[i][1]);
+        SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
     }
 
     return 0;
 }
 
-static int set_pixformat(enum sensor_pixformat pixformat)
+static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixformat)
 {
     // Read register COM7
-    uint8_t reg = SCCB_Read(COM7);
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM7);
 
     switch (pixformat) {
         case PIXFORMAT_RGB565:
@@ -191,26 +191,26 @@ static int set_pixformat(enum sensor_pixformat pixformat)
     }
 
     // Write back register COM7
-    return SCCB_Write(COM7, reg);
+    return SCCB_Write(sensor->slv_addr, COM7, reg);
 }
 
-static int set_framesize(enum sensor_framesize framesize)
+static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize framesize)
 {
     int ret=0;
     uint16_t w=res_width[framesize];
     uint16_t h=res_height[framesize];
 
-    ret |= SCCB_Write(HOUTSIZE, w>>2);
-    ret |= SCCB_Write(VOUTSIZE, h>>1);
+    ret |= SCCB_Write(sensor->slv_addr, HOUTSIZE, w>>2);
+    ret |= SCCB_Write(sensor->slv_addr, VOUTSIZE, h>>1);
     return ret;
 }
 
-static int set_framerate(enum sensor_framerate framerate)
+static int set_framerate(struct sensor_dev *sensor, enum sensor_framerate framerate)
 {
     return 0;
 }
 
-static int set_contrast(int level)
+static int set_contrast(struct sensor_dev *sensor, int level)
 {
     int ret=0;
 
@@ -219,11 +219,11 @@ static int set_contrast(int level)
         return -1;
     }
 
-    ret |= SCCB_Write(CONTRAST, contrast_regs[level][0]);
+    ret |= SCCB_Write(sensor->slv_addr, CONTRAST, contrast_regs[level][0]);
     return ret;
 }
 
-static int set_brightness(int level)
+static int set_brightness(struct sensor_dev *sensor, int level)
 {
     int ret=0;
 
@@ -232,12 +232,12 @@ static int set_brightness(int level)
         return -1;
     }
 
-    ret |= SCCB_Write(BRIGHTNESS, brightness_regs[level][0]);
-    ret |= SCCB_Write(SIGN_BIT,   brightness_regs[level][1]);
+    ret |= SCCB_Write(sensor->slv_addr, BRIGHTNESS, brightness_regs[level][0]);
+    ret |= SCCB_Write(sensor->slv_addr, SIGN_BIT,   brightness_regs[level][1]);
     return ret;
 }
 
-static int set_saturation(int level)
+static int set_saturation(struct sensor_dev *sensor, int level)
 {
     int ret=0;
 
@@ -246,38 +246,38 @@ static int set_saturation(int level)
         return -1;
     }
 
-    ret |= SCCB_Write(USAT, saturation_regs[level][0]);
-    ret |= SCCB_Write(VSAT, saturation_regs[level][1]);
+    ret |= SCCB_Write(sensor->slv_addr, USAT, saturation_regs[level][0]);
+    ret |= SCCB_Write(sensor->slv_addr, VSAT, saturation_regs[level][1]);
     return ret;
 }
 
-static int set_exposure(int exposure)
+static int set_exposure(struct sensor_dev *sensor, int exposure)
 {
    return 0;
 }
 
-static int set_gainceiling(enum sensor_gainceiling gainceiling)
+static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling)
 {
     // Read register COM9
-    uint8_t reg = SCCB_Read(COM9);
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM9);
 
     // Set gain ceiling
     reg = COM9_SET_AGC(reg, gainceiling);
 
     // Write back register COM9
-    return SCCB_Write(COM9, reg);
+    return SCCB_Write(sensor->slv_addr, COM9, reg);
 }
 
-static int set_colorbar(int enable)
+static int set_colorbar(struct sensor_dev *sensor, int enable)
 {
     // Read register COM3
-    uint8_t reg = SCCB_Read(COM3);
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM3);
 
     // Set color bar on/off 
     reg = COM3_SET_CBAR(reg, enable);
 
     // Write back register COM3
-    return SCCB_Write(COM3, reg);
+    return SCCB_Write(sensor->slv_addr, COM3, reg);
 }
 
 int ov7725_init(struct sensor_dev *sensor)

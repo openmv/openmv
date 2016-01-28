@@ -72,6 +72,7 @@ extern const int res_height[];
 
 struct sensor_dev {
     struct sensor_id id;
+    uint8_t  slv_addr;
     uint32_t vsync_pol;
     uint32_t hsync_pol;
     uint32_t pixck_pol;
@@ -81,17 +82,17 @@ struct sensor_dev {
     enum sensor_framerate framerate;
     enum sensor_gainceiling gainceiling;
     /* Sensor function pointers */
-    int  (*reset)           ();
-    int  (*set_pixformat)   (enum sensor_pixformat pixformat);
-    int  (*set_framesize)   (enum sensor_framesize framesize);
-    int  (*set_framerate)   (enum sensor_framerate framerate);
-    int  (*set_contrast)    (int level);
-    int  (*set_brightness)  (int level);
-    int  (*set_saturation)  (int level);
-    int  (*set_exposure)    (int exposure);
-    int  (*set_gainceiling) (enum sensor_gainceiling gainceiling);
-    int  (*set_quality)     (int quality);
-    int  (*set_colorbar)    (int enable);
+    int  (*reset)           (struct sensor_dev *sensor);
+    int  (*set_pixformat)   (struct sensor_dev *sensor, enum sensor_pixformat pixformat);
+    int  (*set_framesize)   (struct sensor_dev *sensor, enum sensor_framesize framesize);
+    int  (*set_framerate)   (struct sensor_dev *sensor, enum sensor_framerate framerate);
+    int  (*set_contrast)    (struct sensor_dev *sensor, int level);
+    int  (*set_brightness)  (struct sensor_dev *sensor, int level);
+    int  (*set_saturation)  (struct sensor_dev *sensor, int level);
+    int  (*set_exposure)    (struct sensor_dev *sensor, int exposure);
+    int  (*set_gainceiling) (struct sensor_dev *sensor, enum sensor_gainceiling gainceiling);
+    int  (*set_quality)     (struct sensor_dev *sensor, int quality);
+    int  (*set_colorbar)    (struct sensor_dev *sensor, int enable);
 };
 
 /**

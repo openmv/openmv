@@ -384,14 +384,14 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS + 1][5] = {
     { 0x00, 0x02, 0x03, 0x58, 0x58 }, /* +2 */
 };
 
-static int reset()
+static int reset(struct sensor_dev *sensor)
 {
     int i=0;
     const uint8_t (*regs)[2];
 
     /* Reset all registers */
-    SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
-    SCCB_Write(COM7, COM7_SRST);
+    SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
+    SCCB_Write(sensor->slv_addr, COM7, COM7_SRST);
 
     /* delay n ms */
     systick_sleep(10);
@@ -400,7 +400,7 @@ static int reset()
     regs = default_regs;
     /* Write initial regsiters */
     while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
+        SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
         i++;
     }
 
@@ -408,14 +408,14 @@ static int reset()
     regs = svga_regs;
     /* Write DSP input regsiters */
     while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
+        SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
         i++;
     }
 
     return 0;
 }
 
-static int set_pixformat(enum sensor_pixformat pixformat)
+static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixformat)
 {
     int i=0;
     const uint8_t (*regs)[2]=NULL;
@@ -438,13 +438,13 @@ static int set_pixformat(enum sensor_pixformat pixformat)
 
     /* Write initial regsiters */
     while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
+        SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
         i++;
     }
     return 0;
 }
 
-static int set_framesize(enum sensor_framesize framesize)
+static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize framesize)
 {
     int ret=0;
     uint8_t clkrc;
@@ -463,37 +463,37 @@ static int set_framesize(enum sensor_framesize framesize)
     }
 
     /* Disable DSP */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
-    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_BYPAS);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(sensor->slv_addr, R_BYPASS, R_BYPASS_DSP_BYPAS);
 
     /* Write output width */
-    ret |= SCCB_Write(ZMOW, (w>>2)&0xFF); /* OUTW[7:0] (real/4) */
-    ret |= SCCB_Write(ZMOH, (h>>2)&0xFF); /* OUTH[7:0] (real/4) */
-    ret |= SCCB_Write(ZMHH, ((h>>8)&0x04)|((w>>10)&0x03)); /* OUTH[8]/OUTW[9:8] */
+    ret |= SCCB_Write(sensor->slv_addr, ZMOW, (w>>2)&0xFF); /* OUTW[7:0] (real/4) */
+    ret |= SCCB_Write(sensor->slv_addr, ZMOH, (h>>2)&0xFF); /* OUTH[7:0] (real/4) */
+    ret |= SCCB_Write(sensor->slv_addr, ZMHH, ((h>>8)&0x04)|((w>>10)&0x03)); /* OUTH[8]/OUTW[9:8] */
 
     /* Set CLKRC */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
-    ret |= SCCB_Write(CLKRC, clkrc);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
+    ret |= SCCB_Write(sensor->slv_addr, CLKRC, clkrc);
 
     /* Write DSP input regsiters */
     while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
+        SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
         i++;
     }
 
     /* Enable DSP */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
-    ret |= SCCB_Write(R_BYPASS, R_BYPASS_DSP_EN);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(sensor->slv_addr, R_BYPASS, R_BYPASS_DSP_EN);
 
     return ret;
 }
 
-static int set_framerate(enum sensor_framerate framerate)
+static int set_framerate(struct sensor_dev *sensor, enum sensor_framerate framerate)
 {
     return 0;
 }
 
-static int set_contrast(int level)
+static int set_contrast(struct sensor_dev *sensor, int level)
 {
     int ret=0;
 
@@ -503,17 +503,17 @@ static int set_contrast(int level)
     }
 
     /* Switch to DSP register bank */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
 
     /* Write contrast registers */
     for (int i=0; i<sizeof(contrast_regs[0])/sizeof(contrast_regs[0][0]); i++) {
-        ret |= SCCB_Write(contrast_regs[0][i], contrast_regs[level][i]);
+        ret |= SCCB_Write(sensor->slv_addr, contrast_regs[0][i], contrast_regs[level][i]);
     }
 
     return ret;
 }
 
-static int set_brightness(int level)
+static int set_brightness(struct sensor_dev *sensor, int level)
 {
     int ret=0;
 
@@ -523,17 +523,17 @@ static int set_brightness(int level)
     }
 
     /* Switch to DSP register bank */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
 
     /* Write brightness registers */
     for (int i=0; i<sizeof(brightness_regs[0])/sizeof(brightness_regs[0][0]); i++) {
-        ret |= SCCB_Write(brightness_regs[0][i], brightness_regs[level][i]);
+        ret |= SCCB_Write(sensor->slv_addr, brightness_regs[0][i], brightness_regs[level][i]);
     }
 
     return ret;
 }
 
-static int set_saturation(int level)
+static int set_saturation(struct sensor_dev *sensor, int level)
 {
     int ret=0;
 
@@ -543,57 +543,57 @@ static int set_saturation(int level)
     }
 
     /* Switch to DSP register bank */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
 
     /* Write contrast registers */
     for (int i=0; i<sizeof(saturation_regs[0])/sizeof(saturation_regs[0][0]); i++) {
-        ret |= SCCB_Write(saturation_regs[0][i], saturation_regs[level][i]);
+        ret |= SCCB_Write(sensor->slv_addr, saturation_regs[0][i], saturation_regs[level][i]);
     }
 
     return ret;
 }
 
-static int set_exposure(int exposure)
+static int set_exposure(struct sensor_dev *sensor, int exposure)
 {
    return 0;
 }
 
-static int set_gainceiling(enum sensor_gainceiling gainceiling)
+static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling)
 {
     int ret =0;
 
     /* Switch to SENSOR register bank */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
 
     /* Write gain ceiling register */
-    ret |= SCCB_Write(COM9, COM9_AGC_SET(gainceiling));
+    ret |= SCCB_Write(sensor->slv_addr, COM9, COM9_AGC_SET(gainceiling));
 
     return ret;
 }
 
-static int set_quality(int qs)
+static int set_quality(struct sensor_dev *sensor, int qs)
 {
     int ret=0;
 
     /* Switch to DSP register bank */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_DSP);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
 
     /* Write QS register */
-    ret |= SCCB_Write(QS, qs);
+    ret |= SCCB_Write(sensor->slv_addr, QS, qs);
 
     return ret;
 }
 
-static int set_colorbar(int enable)
+static int set_colorbar(struct sensor_dev *sensor, int enable)
 {
     int ret=0;
     uint8_t reg;
 
     /* Switch to SENSOR register bank */
-    ret |= SCCB_Write(BANK_SEL, BANK_SEL_SENSOR);
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
 
     /* Update COM7 */
-    reg = SCCB_Read(COM7);
+    reg = SCCB_Read(sensor->slv_addr, COM7);
 
     if (enable) {
         reg |= COM7_COLOR_BAR;
@@ -601,17 +601,12 @@ static int set_colorbar(int enable)
         reg &= ~COM7_COLOR_BAR;
     }
 
-    ret |= SCCB_Write(COM7, reg);
+    ret |= SCCB_Write(sensor->slv_addr, COM7, reg);
     return ret;
 }
 
 int ov2640_init(struct sensor_dev *sensor)
 {
-    /* set HSYNC/VSYNC/PCLK polarity */
-    sensor->vsync_pol = DCMI_VSPOLARITY_LOW;
-    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
-    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
-
     /* set function pointers */
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;
@@ -624,5 +619,11 @@ int ov2640_init(struct sensor_dev *sensor)
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_quality = set_quality;
     sensor->set_colorbar = set_colorbar;
+
+    /* set HSYNC/VSYNC/PCLK polarity */
+    sensor->vsync_pol = DCMI_VSPOLARITY_LOW;
+    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
+    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
+
     return 0;
 }

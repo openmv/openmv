@@ -210,7 +210,8 @@ int sensor_init()
     systick_sleep(10);
 
     /* Probe the sensor */
-    if (SCCB_Probe() == 0) {
+    sensor.slv_addr = SCCB_Probe();
+    if (sensor.slv_addr == 0) {
         /* Sensor has been held in reset,
            so the reset line is active low */
         sensor.reset_pol = ACTIVE_LOW;
@@ -220,17 +221,18 @@ int sensor_init()
         systick_sleep(10);
 
         /* Probe again to set the slave addr */
-        if (SCCB_Probe() == 0)  {
+        sensor.slv_addr = SCCB_Probe();
+        if (sensor.slv_addr == 0)  {
             /* Probe failed */
             return -1;
         }
     }
 
     /* Read the sensor information */
-    sensor.id.PID  = SCCB_Read(REG_PID);
-    sensor.id.VER  = SCCB_Read(REG_VER);
-    sensor.id.MIDL = SCCB_Read(REG_MIDL);
-    sensor.id.MIDH = SCCB_Read(REG_MIDH);
+    sensor.id.PID  = SCCB_Read(sensor.slv_addr, REG_PID);
+    sensor.id.VER  = SCCB_Read(sensor.slv_addr, REG_VER);
+    sensor.id.MIDL = SCCB_Read(sensor.slv_addr, REG_MIDL);
+    sensor.id.MIDH = SCCB_Read(sensor.slv_addr, REG_MIDH);
 
     /* Call the sensor-specific init function */
     switch (sensor.id.PID) {
@@ -284,7 +286,7 @@ int sensor_reset()
     mutex_unlock(&fb->lock);
 
     /* Call sensor-specific reset function */
-    sensor.reset();
+    sensor.reset(&sensor);
 
     // just in case there's a running DMA request.
     HAL_DMA_Abort(&DMAHandle);
@@ -293,12 +295,12 @@ int sensor_reset()
 
 int sensor_read_reg(uint8_t reg)
 {
-    return SCCB_Read(reg);
+    return SCCB_Read(sensor.slv_addr, reg);
 }
 
 int sensor_write_reg(uint8_t reg, uint8_t val)
 {
-    return SCCB_Write(reg, val);
+    return SCCB_Write(sensor.slv_addr, reg, val);
 }
 
 #define MAX_XFER_SIZE (0xFFFC)
@@ -385,7 +387,7 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
     mutex_unlock(&fb->lock);
 
     if (sensor.set_pixformat == NULL
-        || sensor.set_pixformat(pixformat) != 0) {
+        || sensor.set_pixformat(&sensor, pixformat) != 0) {
         /* operation not supported */
         return -1;
     }
@@ -429,7 +431,7 @@ int sensor_set_framesize(enum sensor_framesize framesize)
 
     /* call the sensor specific function */
     if (sensor.set_framesize == NULL
-        || sensor.set_framesize(framesize) != 0) {
+        || sensor.set_framesize(&sensor, framesize) != 0) {
         /* operation not supported */
         return -1;
     }
@@ -468,7 +470,7 @@ int sensor_set_framerate(enum sensor_framerate framerate)
 
     /* call the sensor specific function */
     if (sensor.set_framerate == NULL
-        || sensor.set_framerate(framerate) != 0) {
+        || sensor.set_framerate(&sensor, framerate) != 0) {
         /* operation not supported */
         return -1;
     }
@@ -482,7 +484,7 @@ int sensor_set_framerate(enum sensor_framerate framerate)
 int sensor_set_contrast(int level)
 {
     if (sensor.set_contrast != NULL) {
-        return sensor.set_contrast(level);
+        return sensor.set_contrast(&sensor, level);
     }
     return -1;
 }
@@ -490,7 +492,7 @@ int sensor_set_contrast(int level)
 int sensor_set_brightness(int level)
 {
     if (sensor.set_brightness != NULL) {
-        return sensor.set_brightness(level);
+        return sensor.set_brightness(&sensor, level);
     }
     return -1;
 }
@@ -498,7 +500,7 @@ int sensor_set_brightness(int level)
 int sensor_set_saturation(int level)
 {
     if (sensor.set_saturation != NULL) {
-        return sensor.set_saturation(level);
+        return sensor.set_saturation(&sensor, level);
     }
     return -1;
 }
@@ -517,7 +519,7 @@ int sensor_set_gainceiling(enum sensor_gainceiling gainceiling)
 
     /* call the sensor specific function */
     if (sensor.set_gainceiling == NULL
-        || sensor.set_gainceiling(gainceiling) != 0) {
+        || sensor.set_gainceiling(&sensor, gainceiling) != 0) {
         /* operation not supported */
         return -1;
     }
@@ -530,7 +532,7 @@ int sensor_set_quality(int qs)
 {
     /* call the sensor specific function */
     if (sensor.set_quality == NULL
-        || sensor.set_quality(qs) != 0) {
+        || sensor.set_quality(&sensor, qs) != 0) {
         /* operation not supported */
         return -1;
     }
@@ -541,7 +543,7 @@ int sensor_set_colorbar(int enable)
 {
     /* call the sensor specific function */
     if (sensor.set_colorbar == NULL
-        || sensor.set_colorbar(enable) != 0) {
+        || sensor.set_colorbar(&sensor, enable) != 0) {
         /* operation not supported */
         return -1;
     }

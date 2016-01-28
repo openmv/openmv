@@ -27,6 +27,7 @@ static mp_obj_t py_sensor_reset() {
 
 static mp_obj_t py_sensor_snapshot() {
     mp_obj_t image = py_image(0, 0, 0, 0);
+
     if (sensor_snapshot((struct image*) py_image_cobj(image))==-1) {
         nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         return mp_const_false;
@@ -153,12 +154,12 @@ static mp_obj_t py_sensor_set_colorbar(mp_obj_t enable) {
 }
 
 static mp_obj_t py_sensor_write_reg(mp_obj_t addr, mp_obj_t val) {
-    SCCB_Write(mp_obj_get_int(addr), mp_obj_get_int(val));
+    sensor_write_reg(mp_obj_get_int(addr), mp_obj_get_int(val));
     return mp_const_none;
 }
 
 static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
-    return mp_obj_new_int(SCCB_Read(mp_obj_get_int(addr)));
+    return mp_obj_new_int(sensor_read_reg(mp_obj_get_int(addr)));
 }
 
 //static void py_sensor_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {

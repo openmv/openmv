@@ -196,34 +196,34 @@ static const uint8_t yuv422_regs[][2] = {
     {0x00,  0x00}
 };
 
-static int reset()
+static int reset(struct sensor_dev *sensor)
 {
     int i=0;
     const uint8_t (*regs)[2]=default_regs;
 
     /* Reset all registers */
-    SCCB_Write(REG_COM7, 0x80);
+    SCCB_Write(sensor->slv_addr, REG_COM7, 0x80);
 
     /* delay n ms */
     systick_sleep(10);
 
     /* Write initial regsiters */
     while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
+        SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
         i++;
     }
 
     return 0;
 }
 
-static int set_pixformat(enum sensor_pixformat pixformat)
+static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixformat)
 {
     int i=0;
     const uint8_t (*regs)[2];
     uint8_t com7=0; /* framesize/RGB */
 
     /* read pixel format reg */
-    com7 = SCCB_Read(REG_COM7);
+    com7 = SCCB_Read(sensor->slv_addr, REG_COM7);
 
     switch (pixformat) {
         case PIXFORMAT_RGB565:
@@ -243,24 +243,24 @@ static int set_pixformat(enum sensor_pixformat pixformat)
     }
 
     /* Set pixel format */
-    SCCB_Write(REG_COM7, com7);
+    SCCB_Write(sensor->slv_addr, REG_COM7, com7);
 
     /* Write pixel format registers */
     while (regs[i][0]) {
-        SCCB_Write(regs[i][0], regs[i][1]);
+        SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
         i++;
     }
 
     return 0;
 }
 
-static int set_framesize(enum sensor_framesize framesize)
+static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize framesize)
 {
     uint8_t com7=0; /* framesize/RGB */
     uint8_t com1=0; /* Skip option */
 
     /* read COM7 RGB bit */
-    com7 = (SCCB_Read(REG_COM7) & REG_COM7_RGB);
+    com7 = (SCCB_Read(sensor->slv_addr, REG_COM7) & REG_COM7_RGB);
 
     switch (framesize) {
         case FRAMESIZE_QQCIF:
@@ -279,20 +279,20 @@ static int set_framesize(enum sensor_framesize framesize)
     }
 
     /* write the frame size registers */
-    SCCB_Write(REG_COM1, com1);
-    SCCB_Write(REG_COM7, com7);
+    SCCB_Write(sensor->slv_addr, REG_COM1, com1);
+    SCCB_Write(sensor->slv_addr, REG_COM7, com7);
 
     return 0;
 }
 
-static int set_framerate(enum sensor_framerate framerate)
+static int set_framerate(struct sensor_dev *sensor, enum sensor_framerate framerate)
 {
     /* Write framerate register */
-    SCCB_Write(REG_CLKRC, framerate);
+    SCCB_Write(sensor->slv_addr, REG_CLKRC, framerate);
     return 0;
 }
 
-static int set_brightness(int level)
+static int set_brightness(struct sensor_dev *sensor, int level)
 {
     int i;
 
@@ -313,43 +313,38 @@ static int set_brightness(int level)
     }
 
     for (i=0; i<3; i++) {
-        SCCB_Write(regs[0][i], regs[level][i]);
+        SCCB_Write(sensor->slv_addr, regs[0][i], regs[level][i]);
     }
 
     return 0;
 }
 
-static int set_exposure(int exposure)
+static int set_exposure(struct sensor_dev *sensor, int exposure)
 {
    uint8_t val;
-   val = SCCB_Read(REG_COM1);
+   val = SCCB_Read(sensor->slv_addr, REG_COM1);
 
    /* exposure [1:0] */
-   SCCB_Write(REG_COM1, val | (exposure&0x03));
+   SCCB_Write(sensor->slv_addr, REG_COM1, val | (exposure&0x03));
 
    /* exposure [9:2] */
-   SCCB_Write(REG_AECH, ((exposure>>2)&0xFF));
+   SCCB_Write(sensor->slv_addr, REG_AECH, ((exposure>>2)&0xFF));
 
    /* exposure [15:10] */
-   SCCB_Write(REG_AECHM, ((exposure>>10)&0x3F));
+   SCCB_Write(sensor->slv_addr, REG_AECHM, ((exposure>>10)&0x3F));
 
    return 0;
 }
 
-static int set_gainceiling(enum sensor_gainceiling gainceiling)
+static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling)
 {
     /* Write gain ceiling register */
-    SCCB_Write(REG_COM9, (gainceiling<<4));
+    SCCB_Write(sensor->slv_addr, REG_COM9, (gainceiling<<4));
     return 0;
 }
 
 int ov9650_init(struct sensor_dev *sensor)
 {
-    /* set HSYNC/VSYNC/PCLK polarity */
-    sensor->vsync_pol = DCMI_VSPOLARITY_HIGH;
-    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
-    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
-
     /* set function pointers */
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;
@@ -358,5 +353,11 @@ int ov9650_init(struct sensor_dev *sensor)
     sensor->set_brightness= set_brightness;
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
+
+    /* set HSYNC/VSYNC/PCLK polarity */
+    sensor->vsync_pol = DCMI_VSPOLARITY_HIGH;
+    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
+    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
+
     return 0;
 }
