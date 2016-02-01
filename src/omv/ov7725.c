@@ -100,6 +100,7 @@ static const uint8_t default_regs[][2] = {
 
     // For 30 fps/60Hz
     {DM_LNL,        0x00},
+    {DM_LNH,        0x00},
     {BDBASE,        0x7F},
     {DBSTEP,        0x03},
 
