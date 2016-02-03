@@ -35,6 +35,8 @@
 #endif
 #define BREAK()         __asm__ volatile ("BKPT")
 
+#define MAX_XFER_SIZE (0xFFFC)
+
 struct sensor_dev sensor;
 TIM_HandleTypeDef  TIMHandle;
 DMA_HandleTypeDef  DMAHandle;
@@ -303,8 +305,6 @@ int sensor_write_reg(uint8_t reg, uint8_t val)
     return SCCB_Write(sensor.slv_addr, reg, val);
 }
 
-#define MAX_XFER_SIZE (0xFFFC)
-
 int sensor_snapshot(struct image *image)
 {
     volatile uint32_t addr;
@@ -318,6 +318,12 @@ int sensor_snapshot(struct image *image)
     } else {
         length =(fb->w * fb->h * 2)/4;
     }
+
+    fb->ready = 1;
+    while (fb->lock_tried) {
+        systick_sleep(2);
+    }
+    fb->ready = 0;
 
     /* Lock framebuffer mutex */
     mutex_lock(&fb->lock);
@@ -362,14 +368,8 @@ int sensor_snapshot(struct image *image)
         image->pixels = fb->pixels;
     }
 
-    fb->ready = 1;
-
     /* unlock framebuffer mutex */
     mutex_unlock(&fb->lock);
-
-    while (fb->lock_tried) {
-        systick_sleep(2);
-    }
     return 0;
 }
 
