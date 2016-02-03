@@ -15,12 +15,6 @@
 #include "systick.h"
 #include "ov7725_regs.h"
 
-#define SVGA_HSIZE     (800)
-#define SVGA_VSIZE     (600)
-
-#define UXGA_HSIZE     (1600)
-#define UXGA_VSIZE     (1200)
-
 static const uint8_t default_regs[][2] = {
     {COM3,          COM3_SWAP_YUV},
     {COM7,          COM7_RES_VGA | COM7_FMT_RGB565 | COM7_FMT_RGB},
