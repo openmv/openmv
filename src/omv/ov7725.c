@@ -25,8 +25,8 @@ static const uint8_t default_regs[][2] = {
     {COM3,          COM3_SWAP_YUV},
     {COM7,          COM7_RES_VGA | COM7_FMT_RGB565 | COM7_FMT_RGB},
 
-    {COM4,          0x81}, /* PLL */
-    {CLKRC,         0x01},
+    {COM4,          0xC1}, /* PLL */
+    {CLKRC,         0x00},
 
     // VGA Window Size  
     {HSTART,        0x23},
