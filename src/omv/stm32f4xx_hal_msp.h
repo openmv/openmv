@@ -86,7 +86,8 @@
 #define SD_SELECT()             HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_RESET)
 #define SD_DESELECT()           HAL_GPIO_WritePin(SD_CS_PORT, SD_CS_PIN, GPIO_PIN_SET)
 
-#else //OPENMV2
+#elif defined OPENMV2
+
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
 #define SCCB_AF                 (GPIO_AF4_I2C1)
@@ -116,6 +117,9 @@
 
 #define DCMI_EXPST_PIN          (GPIO_PIN_8)
 #define DCMI_EXPST_PORT         (GPIOD)
+
+#define DCMI_FSIN_PIN           (GPIO_PIN_3)
+#define DCMI_FSIN_PORT          (GPIOD)
 
 #define DCMI_D0_PIN             (GPIO_PIN_6)
 #define DCMI_D1_PIN             (GPIO_PIN_7)
@@ -155,8 +159,13 @@
 #define DCMI_EXPST_LOW()        HAL_GPIO_WritePin(DCMI_EXPST_PORT, DCMI_EXPST_PIN, GPIO_PIN_RESET)
 #define DCMI_EXPST_HIGH()       HAL_GPIO_WritePin(DCMI_EXPST_PORT, DCMI_EXPST_PIN, GPIO_PIN_SET)
 
+#define DCMI_FSIN_LOW()         HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_RESET)
+#define DCMI_FSIN_HIGH()        HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_SET)
+
 #define SD_CD_PIN               (GPIO_PIN_15)
 #define SD_CD_PORT              (GPIOA)
 
+#else
+#error "board is not supported!"
 #endif //OPENMV1
 #endif //__STM32F4XX_HAL_MSP_H__
