@@ -35,7 +35,8 @@
 #define COM3_TRI_CLOCK          0x04 /* Tri-state option for output clock at power-down period  */
 #define COM3_TRI_DATA           0x02 /* Tri-state option for output data at power-down period   */
 #define COM3_COLOR_BAR          0x01 /* Sensor color bar test pattern output enable             */
-#define COM3_SET_CBAR(r, x)     ((r&0xFE)|((x&0x1)<<0))
+#define COM3_SET_CBAR(r, x)     ((r&0xFE)|((x&1)<<0))
+#define COM3_SET_MIRROR(r, x)   ((r&0xBF)|((x&1)<<6))
 
 #define COM4                    0x0D /* Common Control 4         */
 #define COM4_PLL_BYPASS         0x00 /* Bypass PLL               */

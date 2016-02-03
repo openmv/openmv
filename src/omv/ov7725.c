@@ -271,6 +271,9 @@ static int set_colorbar(struct sensor_dev *sensor, int enable)
     // Set color bar on/off 
     reg = COM3_SET_CBAR(reg, enable);
 
+    // Set mirror on/off to pass self-tests
+    reg = COM3_SET_MIRROR(reg, enable);
+
     // Write back register COM3
     return SCCB_Write(sensor->slv_addr, COM3, reg);
 }
