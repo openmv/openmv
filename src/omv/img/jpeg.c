@@ -4,6 +4,7 @@
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Minimalistic JPEG baseline encoder.
+ * Ported from public domain JPEG writer by Jon Olick - http://jonolick.com
  *
  */
 #include <stdio.h>
@@ -13,39 +14,13 @@
 #include "xalloc.h"
 #include "imlib.h"
 
-#define R8(p) \
-    rb_tbl[((p>>3)&0x1F)]
-
-#define G8(p) \
-    g_tbl[((p&0x07)<<3)|(p>>13)]
-
-#define B8(p) \
-    rb_tbl[((p>>8)&0x1F)]
-
 typedef struct {
     int idx;
     int length;
     uint8_t *buf;
 } jpeg_buf_t;
 
-static float fdtbl_Y[64], fdtbl_UV[64];
-static uint8_t YTable[64], UVTable[64];
-
-static uint8_t rb_tbl []= {
-    0, 8, 16, 24, 32, 41, 49, 57, 65, 74,
-    82, 90, 98, 106, 115, 123, 131, 139,
-    148, 156, 164, 172, 180, 189, 197, 205,
-    213, 222, 230, 238, 246, 255
-};
-
-static uint8_t g_tbl []= {
-    0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44,
-    48, 52, 56, 60, 64, 68, 72, 76, 80, 85, 89,
-    93, 97, 101, 105, 109, 113, 117, 121, 125, 129,
-    133, 137, 141, 145, 149, 153, 157, 161, 165, 170,
-    174, 178, 182, 186, 190, 194, 198, 202, 206, 210,
-    214, 218, 222, 226, 230, 234, 238, 242, 246, 250, 255
-};
+extern const int8_t yuv_table[196608];
 
 static const uint8_t s_jo_ZigZag[] = {
     0,  1,   5,  6, 14, 15, 27, 28,
@@ -195,10 +170,11 @@ static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
 
 static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size)
 {
-    if (jpeg_buf->idx+size == jpeg_buf->length) {
+    if (jpeg_buf->idx+size >= jpeg_buf->length) {
         jpeg_buf->length += 1024;
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
     }
+
     memcpy(jpeg_buf->buf+jpeg_buf->idx, data, size);
     jpeg_buf->idx += size;
 }
@@ -383,16 +359,24 @@ static int jo_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU
 
 void jpeg_compress(image_t *src, image_t *dst, int quality)
 {
+    // Quality
     static int q =0;
+
+    // JPEG buffer
+    jpeg_buf_t  jpeg_buf = {
+        .idx =0,
+        .buf = dst->pixels,
+        .length = dst->bpp,
+    };
+
+    // Quantization tables
+    float fdtbl_Y[64], fdtbl_UV[64];
+    uint8_t YTable[64], UVTable[64];
+
+    // JPEG headers
     uint8_t head0[] = { 0xFF,0xD8,0xFF,0xE0,0,0x10,'J','F','I','F',0,1,1,0,0,1,0,1,0,0,0xFF,0xDB,0,0x84,0 };
     uint8_t head1[] = { 0xFF,0xC0,0,0x11,8,src->h>>8,src->h&0xFF,src->w>>8,src->w&0xFF,3,1,0x11,0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
     uint8_t head2[] = { 0xFF,0xDA,0,0xC,3,1,0,2,0x11,3,0x11,0,0x3F,0 };
-
-    jpeg_buf_t  jpeg_buf = {
-        .idx =0,
-        .length=4096,
-        .buf = xalloc(4096)
-    };
 
     quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
 
@@ -441,24 +425,43 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     int bitBuf=0, bitCnt=0;
     int DCY=0, DCU=0, DCV=0;
     int YDU[64], UDU[64], VDU[64];
-    uint16_t *data = (uint16_t *)src->pixels;
-
-    uint32_t cv1 =__PKHBT(66, 129, 16);
-    uint32_t cv2 =__PKHBT(-38, -74, 16);
-    uint32_t cv3 =__PKHBT(112, -94, 16);
+    uint16_t *pixels = (uint16_t *)src->pixels;
 
     for (int y=0; y<src->h; y+=8) {
         for (int x=0; x<src->w; x+=8) {
-            for (int r=y, pos=0; r<y+8; ++r) {
-                int ofs = r*src->w;
-                for (int c=x; c<x+8; ++c, ++pos) {
-                    int p = ofs + c;
-                    int b = B8(data[p]);
-                    uint32_t v0 =__PKHBT(R8(data[p]), G8(data[p]), 16);
-                    YDU[pos]=(     __SMLAD(v0, cv1, 128+25 *b) >>8)-128;
-                    UDU[pos]=((int)__SMLAD(v0, cv2, 128+112*b))>>8;
-                    VDU[pos]=((int)__SMLAD(v0, cv3, 128-18 *b))>>8;
-                }
+            for (int r=y, pos=0; r<y+8; ++r, pos+=8) {
+                int ofs = r*src->w+x;
+                YDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 0];
+                UDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 1];
+                VDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 2];
+
+                YDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 0];
+                UDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 1];
+                VDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 2];
+
+                YDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 0];
+                UDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 1];
+                VDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 2];
+
+                YDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 0];
+                UDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 1];
+                VDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 2];
+
+                YDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 0];
+                UDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 1];
+                VDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 2];
+
+                YDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 0];
+                UDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 1];
+                VDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 2];
+
+                YDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 0];
+                UDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 1];
+                VDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 2];
+
+                YDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 0];
+                UDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 1];
+                VDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 2];
             }
 
             DCY = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
