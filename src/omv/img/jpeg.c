@@ -18,7 +18,15 @@ typedef struct {
     int idx;
     int length;
     uint8_t *buf;
+    // The offset buffer allows JPEG compression in place (src and dst pointers passed to jpeg_compress() can be the same).
+    // JPEG headers and data are written to this buffer until enough image pixels has been read and compressed. The offset
+    // buffer is then swapped with the destination buffer.
+    uint8_t *offs_buf;
 } jpeg_buf_t;
+
+// Note: The offset buffer size may need to be adjusted depending on the quality, otherwise JPEG data may
+// overwrite the image before compression. However, note that the offset buffer is allocated on the stack.
+#define OFFS_BUF_SIZE   (1024)
 
 extern const int8_t yuv_table[196608];
 
@@ -165,6 +173,13 @@ static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
         jpeg_buf->length += 1024;
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
     }
+
+    if (jpeg_buf->idx == OFFS_BUF_SIZE) {
+        // exausted the offset buffer
+        memcpy(jpeg_buf->offs_buf, jpeg_buf->buf, OFFS_BUF_SIZE);
+        jpeg_buf->buf = jpeg_buf->offs_buf;
+    }
+
     jpeg_buf->buf[jpeg_buf->idx++]=c;
 }
 
@@ -173,6 +188,13 @@ static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size)
     if (jpeg_buf->idx+size >= jpeg_buf->length) {
         jpeg_buf->length += 1024;
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
+    }
+
+    if (jpeg_buf->idx+size >= OFFS_BUF_SIZE
+            && jpeg_buf->buf != jpeg_buf->offs_buf) {
+        // Exhausted the offset buffer
+        memcpy(jpeg_buf->offs_buf, jpeg_buf->buf, OFFS_BUF_SIZE);
+        jpeg_buf->buf = jpeg_buf->offs_buf;
     }
 
     memcpy(jpeg_buf->buf+jpeg_buf->idx, data, size);
@@ -361,11 +383,13 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
 {
     // Quality
     static int q =0;
+    uint8_t offs_buf[1024];
 
     // JPEG buffer
     jpeg_buf_t  jpeg_buf = {
         .idx =0,
-        .buf = dst->pixels,
+        .buf = offs_buf,
+        .offs_buf = dst->pixels,
         .length = dst->bpp,
     };
 
@@ -401,21 +425,21 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     // Write Headers
     jpeg_put_bytes(&jpeg_buf, head0, sizeof(head0));
     jpeg_put_bytes(&jpeg_buf, YTable, sizeof(YTable));
-    jpeg_put_char(&jpeg_buf, 1);
+    jpeg_put_char (&jpeg_buf, 1);
 
     jpeg_put_bytes(&jpeg_buf, UVTable, sizeof(UVTable));
     jpeg_put_bytes(&jpeg_buf, head1, sizeof(head1));
     jpeg_put_bytes(&jpeg_buf, std_dc_luminance_nrcodes+1, sizeof(std_dc_luminance_nrcodes)-1);
     jpeg_put_bytes(&jpeg_buf, std_dc_luminance_values, sizeof(std_dc_luminance_values));
-    jpeg_put_char(&jpeg_buf, 0x10); // HTYACinfo
+    jpeg_put_char (&jpeg_buf, 0x10); // HTYACinfo
 
     jpeg_put_bytes(&jpeg_buf, std_ac_luminance_nrcodes+1, sizeof(std_ac_luminance_nrcodes)-1);
     jpeg_put_bytes(&jpeg_buf, std_ac_luminance_values, sizeof(std_ac_luminance_values));
-    jpeg_put_char(&jpeg_buf, 1); // HTUDCinfo
+    jpeg_put_char (&jpeg_buf, 1); // HTUDCinfo
 
     jpeg_put_bytes(&jpeg_buf, std_dc_chrominance_nrcodes+1, sizeof(std_dc_chrominance_nrcodes)-1);
     jpeg_put_bytes(&jpeg_buf, std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
-    jpeg_put_char(&jpeg_buf, 0x11); // HTUACinfo
+    jpeg_put_char( &jpeg_buf, 0x11); // HTUACinfo
 
     jpeg_put_bytes(&jpeg_buf, std_ac_chrominance_nrcodes+1, sizeof(std_ac_chrominance_nrcodes)-1);
     jpeg_put_bytes(&jpeg_buf, std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
