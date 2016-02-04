@@ -425,48 +425,81 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     int bitBuf=0, bitCnt=0;
     int DCY=0, DCU=0, DCV=0;
     int YDU[64], UDU[64], VDU[64];
-    uint16_t *pixels = (uint16_t *)src->pixels;
 
-    for (int y=0; y<src->h; y+=8) {
-        for (int x=0; x<src->w; x+=8) {
-            for (int r=y, pos=0; r<y+8; ++r, pos+=8) {
-                int ofs = r*src->w+x;
-                YDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 0];
-                UDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 1];
-                VDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 2];
+    if (src->bpp == 1) {
+        uint8_t *pixels = (uint8_t *)src->pixels;
+        for (int y=0; y<src->h; y+=8) {
+            for (int x=0; x<src->w; x+=8) {
+                for (int r=y, pos=0; r<y+8; ++r, pos+=8) {
+                    int ofs = r*src->w+x;
+                    YDU[pos + 0] = pixels[ofs + 0] - 128;
+                    YDU[pos + 1] = pixels[ofs + 1] - 128;
+                    YDU[pos + 2] = pixels[ofs + 2] - 128;
+                    YDU[pos + 3] = pixels[ofs + 3] - 128;
+                    YDU[pos + 4] = pixels[ofs + 4] - 128;
+                    YDU[pos + 5] = pixels[ofs + 5] - 128;
+                    YDU[pos + 6] = pixels[ofs + 6] - 128;
+                    YDU[pos + 7] = pixels[ofs + 7] - 128;
 
-                YDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 0];
-                UDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 1];
-                VDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 2];
+                    UDU[pos + 0] = 0;   UDU[pos + 1] = 0;
+                    UDU[pos + 2] = 0;   UDU[pos + 4] = 0;
+                    UDU[pos + 3] = 0;   UDU[pos + 5] = 0;
+                    UDU[pos + 6] = 0;   UDU[pos + 7] = 0;
 
-                YDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 0];
-                UDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 1];
-                VDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 2];
+                    VDU[pos + 0] = 0;   VDU[pos + 1] = 0;
+                    VDU[pos + 2] = 0;   VDU[pos + 3] = 0;
+                    VDU[pos + 4] = 0;   VDU[pos + 5] = 0;
+                    VDU[pos + 6] = 0;   VDU[pos + 7] = 0;
+                }
 
-                YDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 0];
-                UDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 1];
-                VDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 2];
-
-                YDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 0];
-                UDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 1];
-                VDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 2];
-
-                YDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 0];
-                UDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 1];
-                VDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 2];
-
-                YDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 0];
-                UDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 1];
-                VDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 2];
-
-                YDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 0];
-                UDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 1];
-                VDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 2];
+                DCY = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                DCU = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                DCV = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
             }
+        }
+    } else if (src->bpp == 2) {// TODO assuming RGB565
+        uint16_t *pixels = (uint16_t *)src->pixels;
+        for (int y=0; y<src->h; y+=8) {
+            for (int x=0; x<src->w; x+=8) {
+                for (int r=y, pos=0; r<y+8; ++r, pos+=8) {
+                    int ofs = r*src->w+x;
+                    YDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 0];
+                    UDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 1];
+                    VDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 2];
 
-            DCY = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-            DCU = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
-            DCV = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                    YDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 0];
+                    UDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 1];
+                    VDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 2];
+
+                    YDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 0];
+                    UDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 1];
+                    VDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 2];
+
+                    YDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 0];
+                    UDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 1];
+                    VDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 2];
+
+                    YDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 0];
+                    UDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 1];
+                    VDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 2];
+
+                    YDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 0];
+                    UDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 1];
+                    VDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 2];
+
+                    YDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 0];
+                    UDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 1];
+                    VDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 2];
+
+                    YDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 0];
+                    UDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 1];
+                    VDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 2];
+                }
+
+                DCY = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                DCU = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                DCV = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+            }
         }
     }
 
