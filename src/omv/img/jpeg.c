@@ -512,6 +512,6 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     jpeg_put_char(&jpeg_buf, 0xD9);
 
 
-    dst->bpp = jpeg_buf.idx+1;
+    dst->bpp = jpeg_buf.idx;
     dst->data = jpeg_buf.buf;
 }
