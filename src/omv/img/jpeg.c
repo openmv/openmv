@@ -167,6 +167,10 @@ static const uint16_t UVAC_HT[256][2] = {
     {0xFFFC, 0x0010},{0xFFFD, 0x0010},{0xFFFE, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
 };
 
+// Quantization tables
+static float fdtbl_Y[64], fdtbl_UV[64];
+static uint8_t YTable[64], UVTable[64];
+
 static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
 {
     if (jpeg_buf->idx == jpeg_buf->length) {
@@ -392,10 +396,6 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
         .offs_buf = dst->pixels,
         .length = dst->bpp,
     };
-
-    // Quantization tables
-    float fdtbl_Y[64], fdtbl_UV[64];
-    uint8_t YTable[64], UVTable[64];
 
     // JPEG headers
     uint8_t head0[] = { 0xFF,0xD8,0xFF,0xE0,0,0x10,'J','F','I','F',0,1,1,0,0,1,0,1,0,0,0xFF,0xDB,0,0x84,0 };
