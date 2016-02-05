@@ -37,7 +37,7 @@ static mp_obj_t py_sensor_snapshot() {
 
 static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {
     if (sensor_set_pixformat(mp_obj_get_int(pixformat)) != 0) {
-        return mp_const_false;
+        PY_ASSERT_TRUE_MSG(0, "Pixel format is not supported!");
     }
     return mp_const_true;
 }
@@ -188,6 +188,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_YUV422),      MP_OBJ_NEW_SMALL_INT(PIXFORMAT_YUV422)},   /* 2BPP/YUV422*/
     { MP_OBJ_NEW_QSTR(MP_QSTR_GRAYSCALE),   MP_OBJ_NEW_SMALL_INT(PIXFORMAT_GRAYSCALE)},/* 1BPP/GRAYSCALE*/
     { MP_OBJ_NEW_QSTR(MP_QSTR_JPEG),        MP_OBJ_NEW_SMALL_INT(PIXFORMAT_JPEG)},     /* JPEG/COMPRESSED*/
+
     /* Frame size */
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQCIF),       MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQCIF)},    /* 88x72     */
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQVGA),       MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQVGA)},    /* 160x120   */
