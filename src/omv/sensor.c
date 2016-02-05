@@ -311,31 +311,55 @@ int sensor_snapshot(struct image *image)
     volatile uint16_t length;
     uint32_t snapshot_start;
 
-    addr = (uint32_t) fb->pixels;
+    // Compress the framebuffer for the IDE
+    if (sensor.pixformat != PIXFORMAT_JPEG) {
+        // The framebuffer is compressed in place.
+        // Assuming we have at least 128KBs of SRAM.
+        image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels};
+        image_t dst = {.w=fb->w, .h=fb->h, .bpp=128*1024, .pixels=fb->pixels};
 
-    if (sensor.pixformat==PIXFORMAT_JPEG) {
-        length = MAX_XFER_SIZE;
-    } else {
-        length =(fb->w * fb->h * 2)/4;
+        // Note: lower quality results in a faster IDE
+        // framerates, since it saves on USB bandwidth.
+        jpeg_compress(&src, &dst, 50);
+        fb->bpp = dst.bpp;
     }
 
-    fb->ready = 1;
-    while (fb->lock_tried) {
+    // Note: fb->bpp is set to zero for the first JPEG frame.
+    fb->ready = (fb->bpp>0);
+
+    // Wait for the IDE to read the framebuffer before it gets overwritten with a new frame, and
+    // after all the image processing code has run (which possibily draws over the framebuffer).
+    // This fakes double buffering without having to allocate a second buffer and allows us to
+    // re-use the framebuffer for software JPEG compression.
+    while (fb->ready && fb->lock_tried) {
+        // Note: This delay is only executed when the USB debug is active.
         systick_sleep(2);
     }
     fb->ready = 0;
 
-    /* Lock framebuffer mutex */
+    // Setup the address of the transfer
+    addr = (uint32_t) (fb->pixels);
+
+    // Setup the size of the transfer
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        // Sensor has hardware JPEG set max frame size.
+        length = MAX_XFER_SIZE;
+    } else {
+        // No hardware JPEG, set w*h*2 bytes per pixel.
+        length =(fb->w * fb->h * 2)/4;
+    }
+
+    // Lock framebuffer mutex
     mutex_lock(&fb->lock);
 
     // Snapshot start tick
     snapshot_start = HAL_GetTick();
 
-    /* Start the DCMI */
+    // Start the DCMI
     HAL_DCMI_Start_DMA(&DCMIHandle,
             DCMI_MODE_SNAPSHOT, addr, length);
 
-    /* Wait for frame */
+    // Wait for frame
     while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
         if ((HAL_GetTick() - snapshot_start) >= 3000) {
             // Sensor timeout, most likely a HW issue.
@@ -347,18 +371,23 @@ int sensor_snapshot(struct image *image)
     }
 
     if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
-        /* If GRAYSCALE extract Y channel from YUYV */
+        // Set the correct BPP
+        fb->bpp = 1;
+
+        // If GRAYSCALE extract Y channel from YUV
         for (int i=0; i<(fb->w * fb->h); i++) {
-            fb->pixels[i] = fb->pixels[i*2];
+            fb->pixels[i] = fb->pixels[i<<1];
         }
     } else if (sensor.pixformat == PIXFORMAT_JPEG) {
-        /* The frame is finished, but DMA still waiting
-           for data because we set max frame size
-           so we need to abort the DMA transfer here */
+        // The frame readout has finished, however the DMA's still waiting for data
+        // because the max frame size is set, so we need to abort the DMA transfer.
         HAL_DMA_Abort(&DMAHandle);
 
-        /* Read the number of data items transferred */
+        // Read the number of data items transferred
         fb->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
+    } else { // RGB565
+        // Set the correct BPP
+        fb->bpp = 2;
     }
 
     if (image != NULL) {
@@ -368,7 +397,7 @@ int sensor_snapshot(struct image *image)
         image->pixels = fb->pixels;
     }
 
-    /* unlock framebuffer mutex */
+    // Unlock framebuffer mutex
     mutex_unlock(&fb->lock);
     return 0;
 }
