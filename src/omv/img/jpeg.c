@@ -241,7 +241,6 @@ static int jo_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU
     const uint16_t EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
     const uint16_t M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
     static int C0 =(int)(0.382683433f * 4096);
-    static int C1 =(int)(0.541196100f * 4096);
     static int C2 =(int)(1.306562965f * 4096);
     static int C3 =(int)(0.707106781f * 4096);
 
@@ -276,7 +275,7 @@ static int jo_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU
 
         // The rotator is modified from fig 4-8 to avoid extra negations.
         int z5 = (tmp10 - tmp12) * C0>>12; // c6
-        int z2 = (tmp10 * C1>>12) + z5; // c2-c6
+        int z2 = (tmp10 >> 1) + z5; // c2-c6
         int z4 = (tmp12 * C2>>12) + z5; // c2+c6
         int z3 = (tmp11 * C3>>12); // c4
         int z11 = tmp7 + z3;    // phase 5
@@ -321,7 +320,7 @@ static int jo_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU
 
         // The rotator is modified from fig 4-8 to avoid extra negations.
         int z5 = (tmp10 - tmp12) * C0>>12; // c6
-        int z2 = (tmp10 * C1>>12) + z5; // c2-c6
+        int z2 = (tmp10 >> 1) + z5; // c2-c6
         int z4 = (tmp12 * C2>>12) + z5; // c2+c6
         int z3 = (tmp11 * C3>>12); // c4
         int z11 = tmp7 + z3;		// phase 5
@@ -338,7 +337,7 @@ static int jo_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU
     // Quantize/descale/zigzag the coefficients
     int DU[64];
     for(int i=0; i<64; ++i) {
-        DU[s_jo_ZigZag[i]] = fast_roundf(CDU[i]*fdtbl[i]);
+        DU[s_jo_ZigZag[i]] = (int)(CDU[i]*fdtbl[i]);
     }
 
     // Encode DC
