@@ -280,7 +280,7 @@ static int set_colorbar(struct sensor_dev *sensor, int enable)
 
 int ov7725_init(struct sensor_dev *sensor)
 {
-    /* set function pointers */
+    // Set function pointers
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
@@ -292,10 +292,11 @@ int ov7725_init(struct sensor_dev *sensor)
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_colorbar = set_colorbar;
 
-    /* set HSYNC/VSYNC/PCLK polarity */
-    sensor->vsync_pol = DCMI_VSPOLARITY_HIGH;
-    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
-    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
+    // Set sensor flags
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 1);
 
     return 0;
 }

@@ -345,7 +345,7 @@ static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling ga
 
 int ov9650_init(struct sensor_dev *sensor)
 {
-    /* set function pointers */
+    // Set function pointers
     sensor->reset = reset;
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
@@ -354,10 +354,11 @@ int ov9650_init(struct sensor_dev *sensor)
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
 
-    /* set HSYNC/VSYNC/PCLK polarity */
-    sensor->vsync_pol = DCMI_VSPOLARITY_HIGH;
-    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
-    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
+    // Set sensor flags
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
 
     return 0;
 }

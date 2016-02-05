@@ -70,12 +70,17 @@ enum reset_polarity {
 extern const int res_width[];
 extern const int res_height[];
 
+#define SENSOR_HW_FLAGS_VSYNC        (0) // vertical sync polarity.
+#define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
+#define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
+#define SENSOR_HW_FLAGS_FSYNC        (3) // hardware frame sync.
+#define SENSOR_HW_FLAGS_GET(s, x)    ((s)->hw_flags &  (1<<x))
+#define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
+
 struct sensor_dev {
     struct sensor_id id;
     uint8_t  slv_addr;
-    uint32_t vsync_pol;
-    uint32_t hsync_pol;
-    uint32_t pixck_pol;
+    uint32_t hw_flags;
     enum reset_polarity reset_pol;
     enum sensor_pixformat pixformat;
     enum sensor_framesize framesize;

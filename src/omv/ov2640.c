@@ -620,10 +620,11 @@ int ov2640_init(struct sensor_dev *sensor)
     sensor->set_quality = set_quality;
     sensor->set_colorbar = set_colorbar;
 
-    /* set HSYNC/VSYNC/PCLK polarity */
-    sensor->vsync_pol = DCMI_VSPOLARITY_LOW;
-    sensor->hsync_pol = DCMI_HSPOLARITY_LOW;
-    sensor->pixck_pol = DCMI_PCKPOLARITY_RISING;
+    // Set sensor flags
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
 
     return 0;
 }

@@ -115,13 +115,16 @@ static int dcmi_config(uint32_t jpeg_mode)
 {
     /* DCMI configuration */
     DCMIHandle.Instance         = DCMI;
-    DCMIHandle.Init.VSPolarity  = sensor.vsync_pol;         /* VSYNC clock polarity                 */
-    DCMIHandle.Init.HSPolarity  = sensor.hsync_pol;         /* HSYNC clock polarity                 */
-    DCMIHandle.Init.PCKPolarity = sensor.pixck_pol;         /* PXCLK clock polarity                 */
-    DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    /* Enable Hardware synchronization      */
-    DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        /* Capture rate all frames              */
-    DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; /* Capture 8 bits on every pixel clock  */
-    DCMIHandle.Init.JPEGMode = jpeg_mode;                   /* Set JPEG Mode                        */
+    DCMIHandle.Init.VSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_VSYNC) ? /* VSYNC clock polarity */
+                                    DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW; 
+    DCMIHandle.Init.HSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_HSYNC) ? /* HSYNC clock polarity */
+                                    DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW; 
+    DCMIHandle.Init.PCKPolarity = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_PIXCK) ? /* PXCLK clock polarity */
+                                    DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING; 
+    DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;        /* Enable Hardware synchronization      */
+    DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;            /* Capture rate all frames              */
+    DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B;     /* Capture 8 bits on every pixel clock  */
+    DCMIHandle.Init.JPEGMode = jpeg_mode;                       /* Set JPEG Mode                        */
 
     /* Associate the DMA handle to the DCMI handle */
     __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
