@@ -28,11 +28,8 @@
 #define OV9650_PID     0x96
 #define OV2640_PID     0x26
 #define OV7725_PID     0x77
-#ifdef OPENMV1
+
 #define XCLK_FREQ      (12000000)
-#else
-#define XCLK_FREQ      (13000000)
-#endif
 #define BREAK()         __asm__ volatile ("BKPT")
 
 #define MAX_XFER_SIZE (0xFFFC)
@@ -185,7 +182,7 @@ int sensor_init()
     SCCB_Init();
     systick_sleep(10);
 
-    /* Configure the sensor external clock (XCLK) to XCLK_FREQ (13MHz).
+    /* Configure the sensor external clock (XCLK) to XCLK_FREQ.
        Note: The sensor's internal PLL (when CLKRC=0x80) doubles the XCLK_FREQ
              (XCLK=XCLK_FREQ*2), and the unscaled PIXCLK output is XCLK_FREQ*4 */
     extclk_config(XCLK_FREQ);
