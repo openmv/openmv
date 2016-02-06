@@ -133,6 +133,7 @@ class OMVGtk:
         self.terminal.modify_text(gtk.STATE_NORMAL, gtk.gdk.color_parse('green'))
 
         # get drawingarea
+        self.fb = None
         self.pixbuf = None
         self.drawingarea = self.builder.get_object("drawingarea")
         self.da_menu = self.builder.get_object("da_menu")
@@ -493,16 +494,19 @@ class OMVGtk:
         return True
 
     def update_drawing(self):
-        if (not self.connected):
-            return True
-
-        try:
-            # read drawingarea
-            fb = openmv.fb_dump()
-        except Exception as e:
-            self.disconnect()
-            self._update_title()
-            return True
+        fb = None
+        if (self.connected):
+            try:
+                # read drawingarea
+                fb = openmv.fb_dump()
+            except Exception as e:
+                self.disconnect()
+                self._update_title()
+                return True
+        if fb:
+            self.fb = fb
+        else:
+            fb = self.fb
 
         if fb:
             # create pixbuf from np array
