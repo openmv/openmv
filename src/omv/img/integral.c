@@ -17,7 +17,7 @@ void imlib_integral_image_alloc(struct integral_image *i_img, int w, int h)
 {
     i_img->w = w;
     i_img->h = h;
-    i_img->data = (uint32_t*) (fb->pixels+(fb->w * fb->h));
+    i_img->data = (uint32_t*) FB_PIXELS();
 }
 
 void imlib_integral_image(struct image *src, struct integral_image *sum)

@@ -314,6 +314,9 @@ int sensor_write_reg(uint8_t reg, uint8_t val)
     return SCCB_Write(sensor.slv_addr, reg, val);
 }
 
+// The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
+// The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
+// overwrite image pixels before they are compressed.
 int sensor_snapshot(struct image *image)
 {
     volatile uint32_t addr;
@@ -324,7 +327,7 @@ int sensor_snapshot(struct image *image)
     if (sensor.pixformat != PIXFORMAT_JPEG) {
         // The framebuffer is compressed in place.
         // Assuming we have at least 128KBs of SRAM.
-        image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels};
+        image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};
         image_t dst = {.w=fb->w, .h=fb->h, .bpp=128*1024, .pixels=fb->pixels};
 
         // Note: lower quality results in a faster IDE
@@ -346,16 +349,15 @@ int sensor_snapshot(struct image *image)
     }
     fb->ready = 0;
 
-    // Setup the address of the transfer
-    addr = (uint32_t) (fb->pixels);
-
-    // Setup the size of the transfer
+    // Setup the size and address of the transfer
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         // Sensor has hardware JPEG set max frame size.
         length = MAX_XFER_SIZE;
+        addr = (uint32_t) (fb->pixels);
     } else {
         // No hardware JPEG, set w*h*2 bytes per pixel.
         length =(fb->w * fb->h * 2)/4;
+        addr = (uint32_t) (fb->pixels+FB_JPEG_OFFS_SIZE);
     }
 
     // Lock framebuffer mutex
@@ -384,8 +386,9 @@ int sensor_snapshot(struct image *image)
         fb->bpp = 1;
 
         // If GRAYSCALE extract Y channel from YUV
+        uint8_t *pixels = fb->pixels + FB_JPEG_OFFS_SIZE;
         for (int i=0; i<(fb->w * fb->h); i++) {
-            fb->pixels[i] = fb->pixels[i<<1];
+            pixels[i] = pixels[i<<1];
         }
     } else if (sensor.pixformat == PIXFORMAT_JPEG) {
         // The frame readout has finished, however the DMA's still waiting for data
@@ -404,6 +407,9 @@ int sensor_snapshot(struct image *image)
         image->h = fb->h;
         image->bpp = fb->bpp;
         image->pixels = fb->pixels;
+        if (sensor.pixformat != PIXFORMAT_JPEG) {
+            image->pixels += FB_JPEG_OFFS_SIZE;
+        }
     }
 
     // Unlock framebuffer mutex
