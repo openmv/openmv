@@ -8,7 +8,6 @@
  */
 #include <stdbool.h>
 #include <stm32f4xx_hal.h>
-#include <stm32f4xx_hal_msp.h>
 
 #include "mp.h"
 #include "mdefs.h"
@@ -16,6 +15,7 @@
 #include "diskio.h"
 #include "systick.h"
 #include "sdcard.h"
+#include "omv_boardconfig.h"
 
 #define SDIO_TIMEOUT         (100)  /* in ms */
 static SD_HandleTypeDef SDHandle;

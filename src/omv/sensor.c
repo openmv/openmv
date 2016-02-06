@@ -9,7 +9,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stm32f4xx_hal.h>
-#include <stm32f4xx_hal_msp.h>
 
 #include "sccb.h"
 #include "ov9650.h"
@@ -18,6 +17,7 @@
 #include "sensor.h"
 #include "systick.h"
 #include "framebuffer.h"
+#include "omv_boardconfig.h"
 
 #define REG_PID        0x0A
 #define REG_VER        0x0B

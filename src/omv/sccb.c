@@ -7,10 +7,10 @@
  *
  */
 #include <stm32f4xx_hal.h>
-#include <stm32f4xx_hal_msp.h>
 #include "sccb.h"
 #include "stdbool.h"
 #include "systick.h"
+#include "omv_boardconfig.h"
 #define SCCB_FREQ       (100000)
 #define TIMEOUT         (10000)
 

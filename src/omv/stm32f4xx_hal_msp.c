@@ -7,7 +7,8 @@
  *
  */
 #include <stm32f4xx_hal.h>
-#include <stm32f4xx_hal_msp.h>
+#include "omv_boardconfig.h"
+
 /* GPIO struct */
 typedef struct {
     GPIO_TypeDef *port;
