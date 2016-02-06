@@ -30,8 +30,8 @@ else:
     IDE_DIR=os.path.dirname(os.path.realpath(__file__))
     BUNDLE_DIR = IDE_DIR
 
-FIRMWARE_VERSION_MAJOR  = 2
-FIRMWARE_VERSION_MINOR  = 0
+FIRMWARE_VERSION_MAJOR  = 1
+FIRMWARE_VERSION_MINOR  = 2
 FIRMWARE_VERSION_PATCH  = 0
 
 DATA_DIR     = os.path.join(os.path.expanduser("~"), "openmv") #use home dir
