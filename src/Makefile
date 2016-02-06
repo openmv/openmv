@@ -71,6 +71,7 @@ CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/boards/$(TARGET)/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
+CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 
 # Linker Flags
