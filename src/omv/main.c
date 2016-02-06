@@ -377,7 +377,7 @@ soft_reset:
 
     // Run self tests the first time only
     f_res = f_stat("selftest.py", NULL);
-    if (0 && first_soft_reset && f_res == FR_OK) {
+    if (first_soft_reset && f_res == FR_OK) {
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
             // Parse, compile and execute the self-tests script.
