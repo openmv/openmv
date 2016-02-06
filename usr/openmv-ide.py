@@ -30,8 +30,8 @@ else:
     IDE_DIR=os.path.dirname(os.path.realpath(__file__))
     BUNDLE_DIR = IDE_DIR
 
-FIRMWARE_VERSION_MAJOR  = 1
-FIRMWARE_VERSION_MINOR  = 1
+FIRMWARE_VERSION_MAJOR  = 2
+FIRMWARE_VERSION_MINOR  = 0
 FIRMWARE_VERSION_PATCH  = 0
 
 DATA_DIR     = os.path.join(os.path.expanduser("~"), "openmv") #use home dir
@@ -74,8 +74,12 @@ class OMVGtk:
         # set buttons
         self.save_button = self.builder.get_object('save_file_toolbutton')
         self.connect_button = self.builder.get_object('connect_button')
+        self.exec_button = self.builder.get_object('exec_button')
+        self.stop_button = self.builder.get_object('stop_button')
 
         self.save_button.set_sensitive(False)
+        self.exec_button.set_sensitive(False)
+        self.stop_button.set_sensitive(False)
         self.connect_button.set_sensitive(True)
 
         # set control buttons
@@ -83,7 +87,6 @@ class OMVGtk:
             self.builder.get_object('reset_button'),
             self.builder.get_object('bootloader_button'),
             self.builder.get_object('exec_button'),
-            self.builder.get_object('stop_button'),
             self.builder.get_object('zoomin_button'),
             self.builder.get_object('zoomout_button'),
             self.builder.get_object('bestfit_button'),
@@ -293,6 +296,7 @@ class OMVGtk:
 
         self.connected = False
         self._update_title()
+        self.stop_button.set_sensitive(False)
         self.connect_button.set_sensitive(True)
         map(lambda x:x.set_sensitive(False), self.controls)
 
@@ -407,9 +411,13 @@ class OMVGtk:
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
         # exec script
         openmv.exec_script(buf)
+        self.exec_button.set_sensitive(False)
+        self.stop_button.set_sensitive(True)
 
     def stop_clicked(self, widget):
         openmv.stop_script();
+        self.exec_button.set_sensitive(True)
+        self.stop_button.set_sensitive(False)
 
     def zoomin_clicked(self, widget):
         global SCALE
@@ -524,6 +532,18 @@ class OMVGtk:
 
         return True
 
+    def update_exec_button(self):
+        if (self.connected):
+            try:
+                # read drawingarea
+                running = (openmv.script_running()==1)
+                self.stop_button.set_sensitive(running)
+                self.exec_button.set_sensitive(not running)
+            except Exception as e:
+                self.disconnect()
+                self._update_title()
+
+        return True
 
     def on_ctrl_scale_value_changed(self, adjust):
         openmv.set_attr(adjust.attr, int(adjust.value))
@@ -741,4 +761,5 @@ if __name__ == "__main__":
     omvgtk.window.show_all()
     omvgtk.check_for_updates()
     gobject.gobject.timeout_add(30, omvgtk.update_drawing)
+    gobject.gobject.timeout_add(500, omvgtk.update_exec_button)
     gtk.main()

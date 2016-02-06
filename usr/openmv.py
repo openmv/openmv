@@ -25,6 +25,7 @@ __USBDBG_FRAME_UPDATE   = 0x04
 __USBDBG_SCRIPT_EXEC    = 0x05
 __USBDBG_SCRIPT_STOP    = 0x06
 __USBDBG_SCRIPT_SAVE    = 0x07
+__USBDBG_SCRIPT_RUNNING = 0x87
 __USBDBG_TEMPLATE_SAVE  = 0x08
 __USBDBG_DESCRIPTOR_SAVE= 0x09
 __USBDBG_ATTR_READ      = 0x8A
@@ -99,6 +100,10 @@ def exec_script(buf):
 
 def stop_script():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_STOP, 0))
+
+def script_running():
+    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_RUNNING, 4))
+    return struct.unpack("I", __serial.read(4))[0]
 
 def save_template(x, y, w, h, path):
     buf = struct.pack("IIII", x, y, w, h) + path

@@ -17,8 +17,8 @@
   * Note: incrementing the major version will require a fw upgrade,
   * the IDE will Not connect if the major version number is different.
   */
-#define FIRMWARE_VERSION_MAJOR      (1)
-#define FIRMWARE_VERSION_MINOR      (1)
+#define FIRMWARE_VERSION_MAJOR      (2)
+#define FIRMWARE_VERSION_MINOR      (0)
 #define FIRMWARE_VERSION_PATCH      (0)
 
 /**
@@ -39,6 +39,7 @@ enum usbdbg_cmd {
     USBDBG_SCRIPT_EXEC      =0x05,
     USBDBG_SCRIPT_STOP      =0x06,
     USBDBG_SCRIPT_SAVE      =0x07,
+    USBDBG_SCRIPT_RUNNING   =0x87,
     USBDBG_TEMPLATE_SAVE    =0x08,
     USBDBG_DESCRIPTOR_SAVE  =0x09,
     USBDBG_ATTR_READ        =0x8A,

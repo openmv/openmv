@@ -24,6 +24,7 @@ static int xfer_length;
 static enum usbdbg_cmd cmd;
 
 static volatile bool script_ready;
+static volatile bool script_running;
 static volatile bool irq_enabled;
 static vstr_t script_buf;
 mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
@@ -37,6 +38,7 @@ void usbdbg_init()
 {
     irq_enabled=false;
     script_ready=false;
+    script_running=false;
     vstr_init(&script_buf, 32);
     mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, "IDE interrupt");
 }
@@ -118,6 +120,12 @@ void usbdbg_data_in(void *buffer, int length)
             }
             break;
 
+        case USBDBG_SCRIPT_RUNNING: {
+            uint32_t *buf = buffer;
+            buf[0] = (uint32_t) script_running;
+            cmd = USBDBG_NONE;
+            break;
+        }
         default: /* error */
             break;
     }
@@ -137,9 +145,13 @@ void usbdbg_data_out(void *buffer, int length)
                 xfer_bytes += length;
                 if (xfer_bytes == xfer_length) {
                     // Set script ready flag
-                    script_ready = 1;
+                    script_ready = true;
+                    // Set script running flag
+                    script_running = true;
+
                     // Disable IDE IRQ (re-enabled by pyexec or main).
                     usbdbg_set_irq_enabled(false);
+
                     // interrupt running script/REPL
                     mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
                     pendsv_nlr_jump_hard(mp_const_ide_interrupt);
@@ -231,8 +243,12 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
         case USBDBG_SCRIPT_STOP:
             if (usbdbg_get_irq_enabled()) {
+                // Set script running flag
+                script_running = false;
+
                 // Disable IDE IRQ (re-enabled by pyexec or main).
                 usbdbg_set_irq_enabled(false);
+
                 // interrupt running code by raising an exception
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
                 pendsv_nlr_jump_hard(mp_const_ide_interrupt);
@@ -242,6 +258,12 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
         case USBDBG_SCRIPT_SAVE:
             /* save running script */
+            // TODO
+            break;
+
+        case USBDBG_SCRIPT_RUNNING:
+            xfer_bytes = 0;
+            xfer_length =length;
             break;
 
         case USBDBG_TEMPLATE_SAVE:
