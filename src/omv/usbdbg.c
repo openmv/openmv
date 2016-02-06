@@ -23,7 +23,7 @@ static int xfer_bytes;
 static int xfer_length;
 static enum usbdbg_cmd cmd;
 
-static int script_ready;
+static volatile bool script_ready;
 static volatile bool irq_enabled;
 static vstr_t script_buf;
 mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
@@ -36,12 +36,12 @@ extern const char *ffs_strerror(FRESULT res);
 void usbdbg_init()
 {
     irq_enabled=false;
+    script_ready=false;
     vstr_init(&script_buf, 32);
     mp_const_ide_interrupt = mp_obj_new_exception_msg(&mp_type_Exception, "IDE interrupt");
-    usbdbg_clear_flags();
 }
 
-int usbdbg_script_ready()
+bool usbdbg_script_ready()
 {
     return script_ready;
 }
@@ -49,14 +49,6 @@ int usbdbg_script_ready()
 vstr_t *usbdbg_get_script()
 {
     return &script_buf;
-}
-
-void usbdbg_clear_flags()
-{
-    script_ready=0;
-    fb->ready=0;
-    fb->lock_tried=0;
-    mutex_unlock(&fb->lock);
 }
 
 inline bool usbdbg_get_irq_enabled()

@@ -49,9 +49,8 @@ enum usbdbg_cmd {
     USBDBG_TX_BUF           =0x8F
 };
 void usbdbg_init();
-int usbdbg_script_ready();
+bool usbdbg_script_ready();
 vstr_t *usbdbg_get_script();
-void usbdbg_clear_flags();
 bool usbdbg_get_irq_enabled();
 void usbdbg_set_irq_enabled(bool enabled);
 #endif /* __USBDBG_H__ */
