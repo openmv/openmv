@@ -698,6 +698,8 @@ class OMVGtk:
 
     def about_dialog(self, widget):
         dialog = self.builder.get_object("about_dialog")
+        ide_version = "v%d.%d.%d"%(FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR, FIRMWARE_VERSION_PATCH)
+        dialog.set_version(ide_version)
         dialog.run()
         dialog.hide()
 
