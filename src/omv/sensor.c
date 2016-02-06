@@ -176,7 +176,7 @@ int sensor_init()
     systick_sleep(10);
 
     DCMI_PWDN_LOW();
-    systick_sleep(100);
+    systick_sleep(10);
 
     /* Initialize the SCCB interface */
     SCCB_Init();
