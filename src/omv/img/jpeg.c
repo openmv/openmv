@@ -14,6 +14,12 @@
 #include "xalloc.h"
 #include "imlib.h"
 
+// BinDCT Constants
+#define C0 (1567) // 0.382683433f * 4096
+#define C2 (5351) // 1.306562965f * 4096
+#define C3 (2896) // 0.707106781f * 4096
+
+
 typedef struct {
     int idx;
     int length;
@@ -28,9 +34,14 @@ typedef struct {
 // overwrite the image before compression. However, note that the offset buffer is allocated on the stack.
 #define OFFS_BUF_SIZE   (1024)
 
+// Quantization tables
+static float fdtbl_Y[64], fdtbl_UV[64];
+static uint8_t YTable[64], UVTable[64];
+
+// RGB565 to YUV table
 extern const int8_t yuv_table[196608];
 
-static const uint8_t s_jo_ZigZag[] = {
+static const uint8_t s_jpeg_ZigZag[] = {
     0,  1,   5,  6, 14, 15, 27, 28,
     2,  4,   7, 13, 16, 26, 29, 42,
     3,  8,  12, 17, 25, 30, 41, 43,
@@ -167,10 +178,6 @@ static const uint16_t UVAC_HT[256][2] = {
     {0xFFFC, 0x0010},{0xFFFD, 0x0010},{0xFFFE, 0x0010},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},{0x0000, 0x0000},
 };
 
-// Quantization tables
-static float fdtbl_Y[64], fdtbl_UV[64];
-static uint8_t YTable[64], UVTable[64];
-
 static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
 {
     if (jpeg_buf->idx == jpeg_buf->length) {
@@ -205,7 +212,7 @@ static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size)
     jpeg_buf->idx += size;
 }
 
-static void jo_writeBits(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, const uint16_t *bs)
+static void jpeg_writeBits(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, const uint16_t *bs)
 {
     int bitc = *bitCnt;
     int bitb = *bitBuf;
@@ -225,130 +232,127 @@ static void jo_writeBits(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, const u
     *bitBuf = bitb;
 }
 
-static void jo_calcBits(int val, uint16_t bits[2]) {
-    int tmp1 = val < 0 ? -val : val;
+static void jpeg_calcBits(int val, uint16_t bits[2]) {
+    int t1 = val < 0 ? -val : val;
     val = val < 0 ? val-1 : val;
     bits[1] = 1;
-    while(tmp1 >>= 1) {
+    while(t1 >>= 1) {
         ++bits[1];
     }
     bits[0] = val & ((1<<bits[1])-1);
 }
 
-static int jo_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU,
+static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU,
         float *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
 {
+    int z1, z2, z3, z4, z5, z11, z13;
+    int t0, t1, t2, t3, t4, t5, t6, t7, t10, t11, t12, t13;
+
     const uint16_t EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
     const uint16_t M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
-    static int C0 =(int)(0.382683433f * 4096);
-    static int C2 =(int)(1.306562965f * 4096);
-    static int C3 =(int)(0.707106781f * 4096);
 
+    // Bin DCT
     // DCT rows
-    for (int i=8; i>0; i--, CDU+=8) {
-        int tmp0 = CDU[0] + CDU[7];
-        int tmp1 = CDU[1] + CDU[6];
-        int tmp2 = CDU[2] + CDU[5];
-        int tmp3 = CDU[3] + CDU[4];
+    for (int i=8, *p=CDU; i>0; i--, p+=8) {
+        t0 = p[0] + p[7];
+        t1 = p[1] + p[6];
+        t2 = p[2] + p[5];
+        t3 = p[3] + p[4];
 
-        int tmp7 = CDU[0] - CDU[7];
-        int tmp6 = CDU[1] - CDU[6];
-        int tmp5 = CDU[2] - CDU[5];
-        int tmp4 = CDU[3] - CDU[4];
+        t7 = p[0] - p[7];
+        t6 = p[1] - p[6];
+        t5 = p[2] - p[5];
+        t4 = p[3] - p[4];
 
         // Even part
-        int tmp10 = tmp0 + tmp3;
-        int tmp13 = tmp0 - tmp3;
-        int tmp11 = tmp1 + tmp2;
-        int tmp12 = tmp1 - tmp2;
-        int z1 = (tmp12 + tmp13) * C3>>12; // c4
+        t10 = t0 + t3;
+        t13 = t0 - t3;
+        t11 = t1 + t2;
+        t12 = t1 - t2;
+        z1 = (t12 + t13) * C3>>12; // c4
 
-        CDU[0] = tmp10 + tmp11;
-        CDU[4] = tmp10 - tmp11;
-        CDU[2] = tmp13 + z1;
-        CDU[6] = tmp13 - z1;
+        p[0] = t10 + t11;
+        p[4] = t10 - t11;
+        p[2] = t13 + z1;
+        p[6] = t13 - z1;
 
         // Odd part
-        tmp10 = tmp4 + tmp5;// phase 2
-        tmp11 = tmp5 + tmp6;
-        tmp12 = tmp6 + tmp7;
+        t10 = t4 + t5;// phase 2
+        t11 = t5 + t6;
+        t12 = t6 + t7;
 
         // The rotator is modified from fig 4-8 to avoid extra negations.
-        int z5 = (tmp10 - tmp12) * C0>>12; // c6
-        int z2 = (tmp10 >> 1) + z5; // c2-c6
-        int z4 = (tmp12 * C2>>12) + z5; // c2+c6
-        int z3 = (tmp11 * C3>>12); // c4
-        int z11 = tmp7 + z3;    // phase 5
-        int z13 = tmp7 - z3;
+        z5 = (t10 - t12) * C0>>12; // c6
+        z2 = (t10 >> 1) + z5; // c2-c6
+        z4 = (t12 * C2>>12) + z5; // c2+c6
+        z3 = (t11 * C3>>12); // c4
+        z11 = t7 + z3;    // phase 5
+        z13 = t7 - z3;
 
-        CDU[5] = z13 + z2;// phase 6
-        CDU[3] = z13 - z2;
-        CDU[1] = z11 + z4;
-        CDU[7] = z11 - z4;
+        p[5] = z13 + z2;// phase 6
+        p[3] = z13 - z2;
+        p[1] = z11 + z4;
+        p[7] = z11 - z4;
     }
-
-    CDU -= 64;
 
     // DCT columns
-    for (int i=8; i>0; i--, CDU++) {
-        int tmp0 = CDU[0]  + CDU[56];
-        int tmp1 = CDU[8]  + CDU[48];
-        int tmp2 = CDU[16] + CDU[40];
-        int tmp3 = CDU[24] + CDU[32];
+    for (int i=8, *p=CDU; i>0; i--, p++) {
+        t0 = p[0]  + p[56];
+        t1 = p[8]  + p[48];
+        t2 = p[16] + p[40];
+        t3 = p[24] + p[32];
 
-        int tmp7 = CDU[0]  - CDU[56];
-        int tmp6 = CDU[8]  - CDU[48];
-        int tmp5 = CDU[16] - CDU[40];
-        int tmp4 = CDU[24] - CDU[32];
+        t7 = p[0]  - p[56];
+        t6 = p[8]  - p[48];
+        t5 = p[16] - p[40];
+        t4 = p[24] - p[32];
 
         // Even part
-        int tmp10 = tmp0 + tmp3;	// phase 2
-        int tmp13 = tmp0 - tmp3;
-        int tmp11 = tmp1 + tmp2;
-        int tmp12 = tmp1 - tmp2;
-        int z1 = (tmp12 + tmp13) * C3>>12; // c4
+        t10 = t0 + t3;	// phase 2
+        t13 = t0 - t3;
+        t11 = t1 + t2;
+        t12 = t1 - t2;
+        z1 = (t12 + t13) * C3>>12; // c4
 
-        CDU[0] = tmp10 + tmp11; 		// phase 3
-        CDU[32] = tmp10 - tmp11;
-        CDU[16] = tmp13 + z1; 		// phase 5
-        CDU[48] = tmp13 - z1;
+        p[0] = t10 + t11; 		// phase 3
+        p[32] = t10 - t11;
+        p[16] = t13 + z1; 		// phase 5
+        p[48] = t13 - z1;
 
         // Odd part
-        tmp10 = tmp4 + tmp5; 		// phase 2
-        tmp11 = tmp5 + tmp6;
-        tmp12 = tmp6 + tmp7;
+        t10 = t4 + t5; 		// phase 2
+        t11 = t5 + t6;
+        t12 = t6 + t7;
 
         // The rotator is modified from fig 4-8 to avoid extra negations.
-        int z5 = (tmp10 - tmp12) * C0>>12; // c6
-        int z2 = (tmp10 >> 1) + z5; // c2-c6
-        int z4 = (tmp12 * C2>>12) + z5; // c2+c6
-        int z3 = (tmp11 * C3>>12); // c4
-        int z11 = tmp7 + z3;		// phase 5
-        int z13 = tmp7 - z3;
+        z5 = (t10 - t12) * C0>>12; // c6
+        z2 = (t10 >> 1) + z5; // c2-c6
+        z4 = (t12 * C2>>12) + z5; // c2+c6
+        z3 = (t11 * C3>>12); // c4
+        z11 = t7 + z3;		// phase 5
+        z13 = t7 - z3;
 
-        CDU[40] = z13 + z2;// phase 6
-        CDU[24] = z13 - z2;
-        CDU[8] = z11 + z4;
-        CDU[56] = z11 - z4;
+        p[40] = z13 + z2;// phase 6
+        p[24] = z13 - z2;
+        p[8] = z11 + z4;
+        p[56] = z11 - z4;
     }
-
-    CDU-=8;
 
     // Quantize/descale/zigzag the coefficients
     int DU[64];
     for(int i=0; i<64; ++i) {
-        DU[s_jo_ZigZag[i]] = (int)(CDU[i]*fdtbl[i]);
+        DU[s_jpeg_ZigZag[i]] = (int)(CDU[i]*fdtbl[i]);
     }
 
     // Encode DC
     int diff = DU[0] - DC;
     if (diff == 0) {
-        jo_writeBits(jpeg_buf, bitBuf, bitCnt, HTDC[0]);
+        jpeg_writeBits(jpeg_buf, bitBuf, bitCnt, HTDC[0]);
     } else {
         uint16_t bits[2];
-        jo_calcBits(diff, bits);
-        jo_writeBits(jpeg_buf, bitBuf, bitCnt, HTDC[bits[1]]);
-        jo_writeBits(jpeg_buf, bitBuf, bitCnt, bits);
+        jpeg_calcBits(diff, bits);
+        jpeg_writeBits(jpeg_buf, bitBuf, bitCnt, HTDC[bits[1]]);
+        jpeg_writeBits(jpeg_buf, bitBuf, bitCnt, bits);
     }
 
     // Encode ACs
@@ -357,7 +361,7 @@ static int jo_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU
     }
     // end0pos = first element in reverse order !=0
     if(end0pos == 0) {
-        jo_writeBits(jpeg_buf, bitBuf, bitCnt, EOB);
+        jpeg_writeBits(jpeg_buf, bitBuf, bitCnt, EOB);
         return DU[0];
     }
     for(int i = 1; i <= end0pos; ++i) {
@@ -368,25 +372,85 @@ static int jo_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU
         if ( nrzeroes >= 16 ) {
             int lng = nrzeroes>>4;
             for (int nrmarker=1; nrmarker <= lng; ++nrmarker)
-                jo_writeBits(jpeg_buf, bitBuf, bitCnt, M16zeroes);
+                jpeg_writeBits(jpeg_buf, bitBuf, bitCnt, M16zeroes);
             nrzeroes &= 15;
         }
         uint16_t bits[2];
-        jo_calcBits(DU[i], bits);
-        jo_writeBits(jpeg_buf, bitBuf, bitCnt, HTAC[(nrzeroes<<4)+bits[1]]);
-        jo_writeBits(jpeg_buf, bitBuf, bitCnt, bits);
+        jpeg_calcBits(DU[i], bits);
+        jpeg_writeBits(jpeg_buf, bitBuf, bitCnt, HTAC[(nrzeroes<<4)+bits[1]]);
+        jpeg_writeBits(jpeg_buf, bitBuf, bitCnt, bits);
     }
     if(end0pos != 63) {
-        jo_writeBits(jpeg_buf, bitBuf, bitCnt, EOB);
+        jpeg_writeBits(jpeg_buf, bitBuf, bitCnt, EOB);
     }
     return DU[0];
 }
 
+void jpeg_init(int quality)
+{
+    static int q =0;
+
+    quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
+
+    // If quality changed, update quantization matrix
+    if (q != quality) {
+        q = quality;
+        for(int i = 0; i < 64; ++i) {
+            int yti = (YQT[i]*quality+50)/100;
+            YTable[s_jpeg_ZigZag[i]] = yti < 1 ? 1 : yti > 255 ? 255 : yti;
+            int uvti  = (UVQT[i]*quality+50)/100;
+            UVTable[s_jpeg_ZigZag[i]] = uvti < 1 ? 1 : uvti > 255 ? 255 : uvti;
+        }
+
+        for(int r = 0, k = 0; r < 8; ++r) {
+            for(int c = 0; c < 8; ++c, ++k) {
+                fdtbl_Y[k]  = 1 / (YTable [s_jpeg_ZigZag[k]] * aasf[r] * aasf[c]);
+                fdtbl_UV[k] = 1 / (UVTable[s_jpeg_ZigZag[k]] * aasf[r] * aasf[c]);
+            }
+        }
+    }
+}
+
+void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int width, int height)
+{
+    // JPEG headers
+    uint8_t head0[] = { 0xFF, 0xD8, 0xFF, 0xE0, 0, 0x10, 'J', 'F',
+                        'I', 'F', 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xFF, 0xDB, 0, 0x84, 0 };
+    uint8_t head1[] = { 0xFF, 0xC0, 0, 0x11, 8, height>>8, height&0xFF, width>>8, width&0xFF,
+                        3, 1, 0x11, 0, 2, 0x11, 1, 3, 0x11, 1, 0xFF, 0xC4, 0x01, 0xA2, 0 };
+    uint8_t head2[] = { 0xFF, 0xDA, 0, 0xC, 3, 1, 0, 2, 0x11, 3, 0x11, 0, 0x3F, 0 };
+
+    // Write Headers
+    jpeg_put_bytes(jpeg_buf, head0, sizeof(head0));
+    jpeg_put_bytes(jpeg_buf, YTable, sizeof(YTable));
+    jpeg_put_char (jpeg_buf, 1);
+
+    jpeg_put_bytes(jpeg_buf, UVTable, sizeof(UVTable));
+    jpeg_put_bytes(jpeg_buf, head1, sizeof(head1));
+    jpeg_put_bytes(jpeg_buf, std_dc_luminance_nrcodes+1, sizeof(std_dc_luminance_nrcodes)-1);
+    jpeg_put_bytes(jpeg_buf, std_dc_luminance_values, sizeof(std_dc_luminance_values));
+    jpeg_put_char (jpeg_buf, 0x10); // HTYACinfo
+
+    jpeg_put_bytes(jpeg_buf, std_ac_luminance_nrcodes+1, sizeof(std_ac_luminance_nrcodes)-1);
+    jpeg_put_bytes(jpeg_buf, std_ac_luminance_values, sizeof(std_ac_luminance_values));
+    jpeg_put_char (jpeg_buf, 1); // HTUDCinfo
+
+    jpeg_put_bytes(jpeg_buf, std_dc_chrominance_nrcodes+1, sizeof(std_dc_chrominance_nrcodes)-1);
+    jpeg_put_bytes(jpeg_buf, std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
+    jpeg_put_char( jpeg_buf, 0x11); // HTUACinfo
+
+    jpeg_put_bytes(jpeg_buf, std_ac_chrominance_nrcodes+1, sizeof(std_ac_chrominance_nrcodes)-1);
+    jpeg_put_bytes(jpeg_buf, std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
+    jpeg_put_bytes(jpeg_buf, head2, sizeof(head2));
+}
+
 void jpeg_compress(image_t *src, image_t *dst, int quality)
 {
-    // Quality
-    static int q =0;
     uint8_t offs_buf[1024];
+
+    int bitBuf=0, bitCnt=0;
+    int DCY=0, DCU=0, DCV=0;
+    int YDU[64], UDU[64], VDU[64];
 
     // JPEG buffer
     jpeg_buf_t  jpeg_buf = {
@@ -396,59 +460,13 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
         .length = dst->bpp,
     };
 
-    // JPEG headers
-    uint8_t head0[] = { 0xFF,0xD8,0xFF,0xE0,0,0x10,'J','F','I','F',0,1,1,0,0,1,0,1,0,0,0xFF,0xDB,0,0x84,0 };
-    uint8_t head1[] = { 0xFF,0xC0,0,0x11,8,src->h>>8,src->h&0xFF,src->w>>8,src->w&0xFF,3,1,0x11,0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
-    uint8_t head2[] = { 0xFF,0xDA,0,0xC,3,1,0,2,0x11,3,0x11,0,0x3F,0 };
+    // Initialize quantization tables
+    jpeg_init(quality);
 
-    quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
-
-    // If quality changed, update quantization matrix
-    if (q != quality) {
-        q = quality;
-        for(int i = 0; i < 64; ++i) {
-            int yti = (YQT[i]*quality+50)/100;
-            YTable[s_jo_ZigZag[i]] = yti < 1 ? 1 : yti > 255 ? 255 : yti;
-            int uvti  = (UVQT[i]*quality+50)/100;
-            UVTable[s_jo_ZigZag[i]] = uvti < 1 ? 1 : uvti > 255 ? 255 : uvti;
-        }
-
-        for(int r = 0, k = 0; r < 8; ++r) {
-            for(int c = 0; c < 8; ++c, ++k) {
-                fdtbl_Y[k]  = 1 / (YTable [s_jo_ZigZag[k]] * aasf[r] * aasf[c]);
-                fdtbl_UV[k] = 1 / (UVTable[s_jo_ZigZag[k]] * aasf[r] * aasf[c]);
-            }
-        }
-    }
-
-    // Write Headers
-    jpeg_put_bytes(&jpeg_buf, head0, sizeof(head0));
-    jpeg_put_bytes(&jpeg_buf, YTable, sizeof(YTable));
-    jpeg_put_char (&jpeg_buf, 1);
-
-    jpeg_put_bytes(&jpeg_buf, UVTable, sizeof(UVTable));
-    jpeg_put_bytes(&jpeg_buf, head1, sizeof(head1));
-    jpeg_put_bytes(&jpeg_buf, std_dc_luminance_nrcodes+1, sizeof(std_dc_luminance_nrcodes)-1);
-    jpeg_put_bytes(&jpeg_buf, std_dc_luminance_values, sizeof(std_dc_luminance_values));
-    jpeg_put_char (&jpeg_buf, 0x10); // HTYACinfo
-
-    jpeg_put_bytes(&jpeg_buf, std_ac_luminance_nrcodes+1, sizeof(std_ac_luminance_nrcodes)-1);
-    jpeg_put_bytes(&jpeg_buf, std_ac_luminance_values, sizeof(std_ac_luminance_values));
-    jpeg_put_char (&jpeg_buf, 1); // HTUDCinfo
-
-    jpeg_put_bytes(&jpeg_buf, std_dc_chrominance_nrcodes+1, sizeof(std_dc_chrominance_nrcodes)-1);
-    jpeg_put_bytes(&jpeg_buf, std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
-    jpeg_put_char( &jpeg_buf, 0x11); // HTUACinfo
-
-    jpeg_put_bytes(&jpeg_buf, std_ac_chrominance_nrcodes+1, sizeof(std_ac_chrominance_nrcodes)-1);
-    jpeg_put_bytes(&jpeg_buf, std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
-    jpeg_put_bytes(&jpeg_buf, head2, sizeof(head2));
+    // Write JPEG headers
+    jpeg_write_headers(&jpeg_buf, src->w, src->h);
 
     // Encode 8x8 macroblocks
-    int bitBuf=0, bitCnt=0;
-    int DCY=0, DCU=0, DCV=0;
-    int YDU[64], UDU[64], VDU[64];
-
     if (src->bpp == 1) {
         uint8_t *pixels = (uint8_t *)src->pixels;
         for (int y=0; y<src->h; y+=8) {
@@ -465,8 +483,8 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
                     YDU[pos + 7] = pixels[ofs + 7] - 128;
 
                     UDU[pos + 0] = 0;   UDU[pos + 1] = 0;
-                    UDU[pos + 2] = 0;   UDU[pos + 4] = 0;
-                    UDU[pos + 3] = 0;   UDU[pos + 5] = 0;
+                    UDU[pos + 2] = 0;   UDU[pos + 3] = 0;
+                    UDU[pos + 4] = 0;   UDU[pos + 5] = 0;
                     UDU[pos + 6] = 0;   UDU[pos + 7] = 0;
 
                     VDU[pos + 0] = 0;   VDU[pos + 1] = 0;
@@ -475,9 +493,9 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
                     VDU[pos + 6] = 0;   VDU[pos + 7] = 0;
                 }
 
-                DCY = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-                DCU = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
-                DCV = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                DCY = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                DCU = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                DCV = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
             }
         }
     } else if (src->bpp == 2) {// TODO assuming RGB565
@@ -519,16 +537,16 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
                     VDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 2];
                 }
 
-                DCY = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-                DCU = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
-                DCV = jo_processDU(&jpeg_buf, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                DCY = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                DCU = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                DCV = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
             }
         }
     }
 
     // Do the bit alignment of the EOI marker
     static const uint16_t fillBits[] = {0x7F, 7};
-    jo_writeBits(&jpeg_buf, &bitBuf, &bitCnt, fillBits);
+    jpeg_writeBits(&jpeg_buf, &bitBuf, &bitCnt, fillBits);
 
     // EOI
     jpeg_put_char(&jpeg_buf, 0xFF);
