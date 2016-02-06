@@ -17,7 +17,7 @@ void imlib_integral_image_alloc(struct integral_image *i_img, int w, int h)
 {
     i_img->w = w;
     i_img->h = h;
-    i_img->data = (uint32_t*) FB_PIXELS();
+    i_img->data = (typeof(*i_img->data)*) FB_PIXELS();
 }
 
 void imlib_integral_image(struct image *src, struct integral_image *sum)
@@ -28,8 +28,8 @@ void imlib_integral_image(struct image *src, struct integral_image *sum)
     // Compute first column to avoid branching
     for (int s=0, x=0; x<src->w; x++) {
         /* sum of the current row (integer) */
-        s += img_data[src->w+x];
-        sum_data[src->w+x] = s;
+        s += img_data[x];
+        sum_data[x] = s;
     }
 
     for (int y=1; y<src->h; y++) {
