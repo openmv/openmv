@@ -48,9 +48,9 @@
 #define RGB565(r, g, b)\
     (uint32_t)(((r&0x1F)<<3)|((g&0x3F)>>3)|(g<<13)|((b&0x1F)<<8))
 
-#define SWAP(x)\
-   ({ uint16_t _x = (x); \
-    (((_x & 0xff)<<8 |(_x & 0xff00) >> 8));})
+#define SWAP16(x) __REV16(x)
+
+#define SWAP32(x) __REV32(x)
 
 #define MAX_GRAY_LEVEL (255)
 
@@ -303,7 +303,7 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
         uint16_t r = color[c].r*31/255;
         uint16_t g = color[c].g*63/255;
         uint16_t b = color[c].b*31/255;
-        uint32_t rgb = SWAP((r << 11) | (g << 5) | b) * 3;
+        uint32_t rgb = SWAP16((r << 11) | (g << 5) | b) * 3;
 
         color[c].L = lab_table[rgb];
         color[c].A = lab_table[rgb+1];
