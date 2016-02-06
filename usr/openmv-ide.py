@@ -275,8 +275,11 @@ class OMVGtk:
         # check firmware version
         fw_ver = openmv.fw_version()
         print("fw_version:" + str(fw_ver))
-        if (fw_ver[0] != FIRMWARE_VERSION_MAJOR):
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Firmware version mismatch! Please upgrade the firmware")
+        if (fw_ver[0] > FIRMWARE_VERSION_MAJOR):
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Firmware version mismatch!\nPlease update the IDE")
+            return
+        elif (fw_ver[0] < FIRMWARE_VERSION_MAJOR):
+            self.show_message_dialog(gtk.MESSAGE_ERROR, "Firmware version mismatch!\nPlease upgrade the firmware")
             return
 
         # interrupt any running code
