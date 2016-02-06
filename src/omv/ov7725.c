@@ -40,7 +40,7 @@ static const uint8_t default_regs[][2] = {
     {AWB_CTRL0,     0xE0},
     {DSP_CTRL1,     0xFF},
 
-    {DSP_CTRL2,     DSP_CTRL2_VDCW_EN|DSP_CTRL2_HDCW_EN},
+    {DSP_CTRL2,     DSP_CTRL2_VDCW_EN | DSP_CTRL2_HDCW_EN | DSP_CTRL2_HZOOM_EN | DSP_CTRL2_VZOOM_EN},
 
     {DSP_CTRL3,     0x00},
     {DSP_CTRL4,     0x00},
