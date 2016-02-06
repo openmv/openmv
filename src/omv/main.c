@@ -269,6 +269,7 @@ int main(void)
 {
     FRESULT f_res;
     int sensor_init_ret;
+    bool first_soft_reset = true;
 
     // Stack limit should be less than real stack size, so we
     // had chance to recover from limit hit.
@@ -283,19 +284,15 @@ int main(void)
     HAL_Init();
 
     // basic sub-system init
+    led_init();
     pendsv_init();
     timer_tim3_init();
-    led_init();
 
 soft_reset:
-    // check if user switch held to select the reset mode
+    led_state(LED_IR, 0);
     led_state(LED_RED, 1);
     led_state(LED_GREEN, 1);
     led_state(LED_BLUE, 1);
-
-#if MICROPY_HW_ENABLE_RTC
-    rtc_init();
-#endif
 
     // GC init
     gc_init(&_heap_start, &_heap_end);
@@ -314,12 +311,28 @@ soft_reset:
     spi_init0();
     uart_init0();
     pyb_usb_init0();
-    usbdbg_init();
-    sensor_init_ret = sensor_init();
-    servo_init();
+    sensor_init0();
 
+#if MICROPY_HW_ENABLE_RTC
+    if (first_soft_reset) {
+        rtc_init();
+    }
+#endif
+
+    // Initialize the sensor and check the result after
+    // mounting the file-system to log errors (if any).
+    if (first_soft_reset) {
+        sensor_init_ret = sensor_init();
+    }
+
+    servo_init();
+    usbdbg_init();
+
+    // Initialize storage
     if (sdcard_is_present()) {
-        sdcard_init();
+        if (first_soft_reset) {
+            sdcard_init();
+        }
         FRESULT res = f_mount(&fatfs, "1:", 1);
         if (res != FR_OK) {
             __fatal_error("could not mount SD\n");
@@ -328,7 +341,9 @@ soft_reset:
         f_chdrive("1:");
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
     } else {
-        storage_init();
+        if (first_soft_reset) {
+            storage_init();
+        }
         // try to mount the flash
         FRESULT res = f_mount(&fatfs, "0:", 1);
         if (res == FR_NO_FILESYSTEM) {
@@ -354,7 +369,7 @@ soft_reset:
     }
 
     // check sensor init result
-    if (sensor_init_ret != 0) {
+    if (first_soft_reset && sensor_init_ret != 0) {
         char buf[512];
         snprintf(buf, sizeof(buf), "Failed to init sensor, error:%d", sensor_init_ret);
         __fatal_error(buf);
@@ -362,7 +377,7 @@ soft_reset:
 
     // Run self tests the first time only
     f_res = f_stat("selftest.py", NULL);
-    if (f_res == FR_OK) {
+    if (0 && first_soft_reset && f_res == FR_OK) {
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
             // Parse, compile and execute the self-tests script.
@@ -382,7 +397,7 @@ soft_reset:
 
     // Run the main script from the current directory.
     f_res = f_stat("main.py", NULL);
-    if (f_res == FR_OK) {
+    if (first_soft_reset && f_res == FR_OK) {
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
             // Parse, compile and execute the main script.
@@ -399,50 +414,33 @@ soft_reset:
 
     // Enter REPL
     nlr_buf_t nlr;
-    for (;;) {
-        if (nlr_push(&nlr) == 0) {
-            while (usbdbg_script_ready()) {
-                nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        // enable IDE interrupt
+        usbdbg_set_irq_enabled(true);
 
-                // re-init MP state
-                mp_deinit();
-                mp_init();
+        // run REPL
+        pyexec_friendly_repl();
 
-                // clear debugging flags
-                usbdbg_clear_flags();
-
-                // execute the script
-                if (nlr_push(&nlr) == 0) {
-                    // parse, compile and execute script
-                    pyexec_str(usbdbg_get_script());
-                    nlr_pop();
-                } else {
-                    mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
-                }
-            }
-
-            // re-init MP state
-            mp_deinit();
-            mp_init();
-
-            // clear debugging flags
-            usbdbg_clear_flags();
-
-            // enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-
-            // no script run REPL
-            pyexec_friendly_repl();
-
-            nlr_pop();
-        }
-
+        nlr_pop();
     }
 
-    printf("PYB: sync filesystems\n");
+    if (usbdbg_script_ready()) {
+        // execute the script
+        if (nlr_push(&nlr) == 0) {
+            // parse, compile and execute script
+            pyexec_str(usbdbg_get_script());
+            nlr_pop();
+        } else {
+            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+        }
+    }
+
+    // soft reset
     storage_flush();
+    timer_deinit();
+    uart_deinit();
 
-    printf("PYB: soft reboot\n");
-
+    first_soft_reset = false;
     goto soft_reset;
+
 }
