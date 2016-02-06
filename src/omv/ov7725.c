@@ -195,8 +195,12 @@ static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize frames
     uint16_t w=res_width[framesize];
     uint16_t h=res_height[framesize];
 
+    // Write MSBs
     ret |= SCCB_Write(sensor->slv_addr, HOUTSIZE, w>>2);
     ret |= SCCB_Write(sensor->slv_addr, VOUTSIZE, h>>1);
+
+    // Write LSBs
+    ret |= SCCB_Write(sensor->slv_addr, EXHCH, ((w&0x3) | ((h&0x1) << 2)));
     return ret;
 }
 
