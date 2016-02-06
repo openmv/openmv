@@ -76,6 +76,7 @@ class OMVGtk:
         self.connect_button = self.builder.get_object('connect_button')
         self.exec_button = self.builder.get_object('exec_button')
         self.stop_button = self.builder.get_object('stop_button')
+        self.fwupdate_button = self.builder.get_object('bootloader_button')
 
         self.save_button.set_sensitive(False)
         self.exec_button.set_sensitive(False)
@@ -238,6 +239,7 @@ class OMVGtk:
 
         # load helloworld.py
         self._load_file(os.path.join(EXAMPLES_DIR, "helloworld.py"))
+        self.save_button.set_sensitive(False)
 
     def show_message_dialog(self, msg_type, msg):
         message = gtk.MessageDialog(parent=self.window, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -273,13 +275,32 @@ class OMVGtk:
         gobject.gobject.timeout_add(10, omvgtk.update_terminal)
 
         # check firmware version
+        self.fw_mismatch = False
         fw_ver = openmv.fw_version()
+        ide_ver = (FIRMWARE_VERSION_MAJOR,
+                   FIRMWARE_VERSION_MINOR,
+                   FIRMWARE_VERSION_PATCH)
+
         print("fw_version:" + str(fw_ver))
-        if (fw_ver[0] > FIRMWARE_VERSION_MAJOR):
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Firmware version mismatch!\nPlease update the IDE")
+        print("ide_version:" + str(ide_ver))
+        if (fw_ver[0] != FIRMWARE_VERSION_MAJOR):
+            # If ABI versions don't match, nothing todo here...
+            self.show_message_dialog(gtk.MESSAGE_ERROR,
+                            "Firmware ABI version mismatch!\n"
+                            "Please update the IDE and/or FW manually\n")
             return
-        elif (fw_ver[0] < FIRMWARE_VERSION_MAJOR):
-            self.show_message_dialog(gtk.MESSAGE_ERROR, "Firmware version mismatch!\nPlease upgrade the firmware")
+        elif (FIRMWARE_VERSION_MINOR > fw_ver[1]
+                or FIRMWARE_VERSION_PATCH > fw_ver[2]):
+            self.fw_mismatch = True
+            self.show_message_dialog(gtk.MESSAGE_ERROR,
+                    "Firmware version mismatch!\n"
+                    "An older firmware version has been detected.\n"
+                    "Please update the firmware!")
+
+        if (self.fw_mismatch):
+            self.connected = True
+            self.connect_button.set_sensitive(False)
+            self.fwupdate_button.set_sensitive(True)
             return
 
         # interrupt any running code
@@ -358,6 +379,7 @@ class OMVGtk:
             if (xfer_bytes == xfer_total):
                 pydfu.exit_dfu()
                 state["dialog"].hide()
+                self.disconnect()
                 return False
 
             return True
@@ -493,20 +515,21 @@ class OMVGtk:
         adj.set_value(adj.upper - adj.page_size)
 
     def update_terminal(self):
-        try:
-            buf_len = openmv.tx_buf_len()
-            if (buf_len):
-                buf = openmv.tx_buf(buf_len)
-                buffer = self.terminal.get_buffer()
-                buffer.insert(buffer.get_end_iter(), buf)
-        except:
-            pass
+        if (self.connected and not self.fw_mismatch):
+            try:
+                buf_len = openmv.tx_buf_len()
+                if (buf_len):
+                    buf = openmv.tx_buf(buf_len)
+                    buffer = self.terminal.get_buffer()
+                    buffer.insert(buffer.get_end_iter(), buf)
+            except:
+                pass
 
         return True
 
     def update_drawing(self):
         fb = None
-        if (self.connected):
+        if (self.connected and not self.fw_mismatch):
             try:
                 # read drawingarea
                 fb = openmv.fb_dump()
@@ -536,7 +559,7 @@ class OMVGtk:
         return True
 
     def update_exec_button(self):
-        if (self.connected):
+        if (self.connected and not self.fw_mismatch):
             try:
                 # read drawingarea
                 running = (openmv.script_running()==1)
