@@ -110,6 +110,10 @@ struct sensor_dev {
  */
 int sensor_init();
 /**
+ * Initialize the sensor state.
+ */
+void sensor_init0();
+/**
  * Reset the sensor to its default state.
  *
  * @param sensor A pointer to the sensor device handle.

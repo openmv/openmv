@@ -275,6 +275,15 @@ int sensor_init()
     return 0;
 }
 
+void sensor_init0()
+{
+    // Clear framebuffer
+    memset(fb, 0, sizeof(*fb));
+
+    // Init mutex
+    mutex_init(&fb->lock);
+}
+
 int sensor_reset()
 {
     /* Reset the sesnor state */
