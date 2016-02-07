@@ -67,8 +67,8 @@ static const uint8_t UVQT[] = {
 };
 
 static const float aasf[] = {
-    1.0f * 2.828427125f, 1.387039845f * 2.828427125f, 1.306562965f * 2.828427125f, 1.175875602f * 2.828427125f,
-    1.0f * 2.828427125f, 0.785694958f * 2.828427125f, 0.541196100f * 2.828427125f, 0.275899379f * 2.828427125f
+    1.0f, 1.387039845f, 1.306562965f, 1.175875602f,
+    1.0f, 0.785694958f, 0.541196100f, 0.275899379f
 };
 
 static const uint8_t std_dc_luminance_nrcodes[] = {0,0,1,5,1,1,1,1,1,1,0,0,0,0,0,0,0};
@@ -224,13 +224,13 @@ static void jpeg_calcBits(int val, uint16_t bits[2]) {
 static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *bitBuf, int *bitCnt, int *CDU,
         float *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
 {
-    int z1, z2, z3, z4, z5, z11, z13;
-    int t0, t1, t2, t3, t4, t5, t6, t7, t10, t11, t12, t13;
-
     const uint16_t EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
     const uint16_t M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
 
-    // Bin DCT
+    int z1, z2, z3, z4, z5, z11, z13;
+    int t0, t1, t2, t3, t4, t5, t6, t7, t10, t11, t12, t13;
+
+    // BinDCT
     // DCT rows
     for (int i=8, *p=CDU; i>0; i--, p+=8) {
         t0 = p[0] + p[7];
@@ -383,8 +383,8 @@ void jpeg_init(int quality)
 
         for(int r = 0, k = 0; r < 8; ++r) {
             for(int c = 0; c < 8; ++c, ++k) {
-                fdtbl_Y[k]  = 1 / (YTable [s_jpeg_ZigZag[k]] * aasf[r] * aasf[c]);
-                fdtbl_UV[k] = 1 / (UVTable[s_jpeg_ZigZag[k]] * aasf[r] * aasf[c]);
+                fdtbl_Y[k]  = 1 / (YTable [s_jpeg_ZigZag[k]] * aasf[r] * aasf[c] * 8.0f);
+                fdtbl_UV[k] = 1 / (UVTable[s_jpeg_ZigZag[k]] * aasf[r] * aasf[c] * 8.0f);
             }
         }
     }
