@@ -23,9 +23,7 @@
 #define B(p) \
     (uint8_t)(p&0x1F)
 
-#define SWAP(x)\
-   ({ uint16_t _x = (x); \
-    (((_x & 0xff)<<8 |(_x & 0xff00) >> 8));})
+#define SWAP16(x) __REV16(x)
 
 typedef struct {
     int n;
@@ -50,7 +48,7 @@ void del_pixels(image_t * im, int row, int col, int size, histo_t *h)
     } else {
         for (int i = row - size; i <= row + size && i < im->h; i++) {
             if (i < 0) continue;
-            uint16_t c = SWAP(((uint16_t*)im->pixels)[i*im->w+col]);
+            uint16_t c = SWAP16(((uint16_t*)im->pixels)[i*im->w+col]);
             h->r[R(c)]--;
             h->g[G(c)]--;
             h->b[B(c)]--;
@@ -70,7 +68,7 @@ void add_pixels(image_t * im, int row, int col, int size, histo_t *h)
     } else {
         for (int i = row - size; i <= row + size && i < im->h; i++) {
             if (i < 0) continue;
-            uint16_t c = SWAP(((uint16_t*)im->pixels)[i*im->w+col]);
+            uint16_t c = SWAP16(((uint16_t*)im->pixels)[i*im->w+col]);
             h->r[R(c)]++;
             h->g[G(c)]++;
             h->b[B(c)]++;
@@ -114,7 +112,7 @@ void median_filter_rgb(image_t *in, int size)
             r = median(h->r, h->n);
             g = median(h->g, h->n);
             b = median(h->b, h->n);
-            data[(row%k_rows)*in->w+col] = SWAP(((r << 11) | (g << 5) | b));
+            data[(row%k_rows)*in->w+col] = SWAP16(((r << 11) | (g << 5) | b));
         }
         if ((row+1)%k_rows==0) {
             memcpy((uint16_t*)in->data+((row/k_rows)*k_rows*in->w), data, (k_rows*in->w*sizeof(*data)));
