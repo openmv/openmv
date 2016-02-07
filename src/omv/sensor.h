@@ -29,6 +29,7 @@ enum sensor_framesize {
     FRAMESIZE_QQVGA,    /* 160x120   */
     FRAMESIZE_QQVGA2,   /* 128x160   */
     FRAMESIZE_QCIF,     /* 176x144   */
+    FRAMESIZE_HQVGA,    /* 220x160   */
     FRAMESIZE_QVGA,     /* 320x240   */
     FRAMESIZE_CIF,      /* 352x288   */
     FRAMESIZE_VGA,      /* 640x480   */

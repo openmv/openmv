@@ -43,11 +43,8 @@ const int res_width[] = {
     88,     /* QQCIF */
     160,    /* QQVGA */
     128,    /* QQVGA2*/
-    #ifdef OPENMV2
-    192,    /* QCIF  */
-    #else
     176,    /* QCIF  */
-    #endif
+    220,    /* HQVGA */
     320,    /* QVGA  */
     352,    /* CIF   */
     640,    /* VGA   */
@@ -61,10 +58,12 @@ const int res_height[]= {
     120,    /* QQVGA */
     160,    /* QQVGA2*/
     144,    /* QCIF  */
+    160,    /* HQVGA */
+    320,    /* QVGA  */
     240,    /* QVGA  */
     288,    /* CIF   */
     480,    /* VGA   */
-    600,    /* SVGA   */
+    600,    /* SVGA  */
     1024,   /* SXGA  */
     1200,   /* UXGA  */
 };
@@ -489,6 +488,7 @@ int sensor_set_framesize(enum sensor_framesize framesize)
         case FRAMESIZE_QQVGA:
         case FRAMESIZE_QQVGA2:
         case FRAMESIZE_QCIF:
+        case FRAMESIZE_HQVGA:
         case FRAMESIZE_QVGA:
         case FRAMESIZE_CIF:
         case FRAMESIZE_VGA:
