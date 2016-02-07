@@ -59,7 +59,6 @@ const int res_height[]= {
     160,    /* QQVGA2*/
     144,    /* QCIF  */
     160,    /* HQVGA */
-    320,    /* QVGA  */
     240,    /* QVGA  */
     288,    /* CIF   */
     480,    /* VGA   */
