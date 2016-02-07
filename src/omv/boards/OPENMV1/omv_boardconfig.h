@@ -11,8 +11,6 @@
 
 // Sensor external clock frequency.
 #define OMV_XCLK_FREQUENCY      (12000000)
-// QCIF frame width.
-#define OMV_QCIF_FRAME_WIDTH    (177)
 // Max integral image.
 #define OMV_MAX_INT_FRAME       FRAMESIZE_QCIF
 #define OMV_MAX_INT_FRAME_STR   "QCIF"
