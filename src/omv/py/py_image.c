@@ -15,6 +15,9 @@
 #include "py_assert.h"
 #include "py_image.h"
 #include "arm_math.h"
+#include "omv_boardconfig.h"
+
+#define JPEG_INIT_BUF   (5*1024)
 
 extern struct sensor_dev sensor;
 static const mp_obj_type_t py_cascade_type;
@@ -338,7 +341,8 @@ static mp_obj_t py_image_histeq(mp_obj_t image_obj)
     image = (struct image*) py_image_cobj(image_obj);
 
     /* sanity checks */
-    PY_ASSERT_TRUE(image->bpp == 1);
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     imlib_histeq(image);
     return mp_const_none;
@@ -365,7 +369,8 @@ static mp_obj_t py_image_invert(mp_obj_t image_obj)
     image = py_image_cobj(image_obj);
 
     /* Sanity checks */
-    PY_ASSERT_TRUE(image->bpp == 1);
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     /* Threshold image */
     imlib_invert(image);
@@ -377,8 +382,11 @@ static mp_obj_t py_image_binary(mp_obj_t image_obj, mp_obj_t threshold)
     image_t *image;
 
     /* sanity checks */
-    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QCIF);
-    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
+            "This function is only supported on GRAYSCALE images");
+
+    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_RAW_FRAME,
+            "This function is only supported on "OMV_MAX_RAW_FRAME_STR" and smaller frames");
 
     /* read arguments */
     image = py_image_cobj(image_obj);
@@ -396,8 +404,12 @@ static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, 
     image_t *image;
 
     /* sanity checks */
-    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_RGB565);
-    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QCIF);
+    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_RGB565,
+            "This function is only supported on RGB565 images");
+
+    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_BLOB_FRAME,
+            "This function is only supported on "OMV_MAX_BLOB_FRAME_STR" and smaller frames");
+
 
     /* read arguments */
     image = py_image_cobj(image_obj);
@@ -438,8 +450,10 @@ static mp_obj_t py_image_rainbow(mp_obj_t src_image_obj)
 
     /* get C image pointer */
     src_image = py_image_cobj(src_image_obj);
+
     /* sanity checks */
-    PY_ASSERT_TRUE(src_image->bpp==1);
+    PY_ASSERT_TRUE_MSG(src_image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     image_t dst_image = {
         .w=src_image->w,
@@ -460,11 +474,12 @@ static mp_obj_t py_image_compress(mp_obj_t image_obj, mp_obj_t quality)
     image_t cimage = {
         .w=image->w,
         .h=image->h,
-        .bpp=0,
-        .pixels= NULL
+        .bpp = JPEG_INIT_BUF,
+        .pixels = xalloc(JPEG_INIT_BUF)
     };
 
     jpeg_compress(image, &cimage, mp_obj_get_int(quality));
+
     return py_image_from_struct(&cimage);
 }
 
@@ -516,9 +531,9 @@ static mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args)
     color_t c = {.r=0xFF, .g=0xFF, .b=0xFF};
 
     // check x, y
-    PY_ASSERT_TRUE_MSG(x>=0 && x<image->w, "image index out of range");
-    PY_ASSERT_TRUE_MSG(y>=0 && y<image->h, "image index out of range");
-    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "Operation not supported on JPEG");
+    PY_ASSERT_TRUE_MSG(x>=0 && x<image->w, "Image index out of range");
+    PY_ASSERT_TRUE_MSG(y>=0 && y<image->h, "Image index out of range");
+    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "This function is not supported on JPEG images");
 
     if (n_args == 5) {
         // get color
@@ -539,7 +554,8 @@ static mp_obj_t py_image_erode(mp_obj_t image_obj, mp_obj_t ksize_obj)
     image = py_image_cobj(image_obj);
 
     /* sanity checks */
-    PY_ASSERT_TRUE(image->bpp==1);
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     imlib_erode(image, mp_obj_get_int(ksize_obj));
     return mp_const_none;
@@ -551,7 +567,8 @@ static mp_obj_t py_image_dilate(mp_obj_t image_obj, mp_obj_t ksize_obj)
     image = py_image_cobj(image_obj);
 
     /* sanity checks */
-    PY_ASSERT_TRUE(image->bpp==1);
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     imlib_dilate(image, mp_obj_get_int(ksize_obj));
     return mp_const_none;
@@ -563,7 +580,8 @@ static mp_obj_t py_image_morph(mp_obj_t image_obj, mp_obj_t ksize_obj)
     image = py_image_cobj(image_obj);
 
     /* sanity checks */
-    PY_ASSERT_TRUE(image->bpp==1);
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     imlib_morph(image, NULL, mp_obj_get_int(ksize_obj));
 
@@ -598,7 +616,9 @@ static mp_obj_t py_image_draw_keypoints(mp_obj_t image_obj, mp_obj_t kpts_obj)
     image = py_image_cobj(image_obj);
     kpts = (py_kp_obj_t*)kpts_obj;
 
-    PY_ASSERT_TRUE(image->bpp == 1);
+    /* sanity checks */
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
     PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
 
     color_t cl = {.r=0xFF, .g=0xFF, .b=0xFF};
@@ -657,8 +677,12 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
     mp_obj_t objects_list = mp_const_none;
 
     /* sanity checks */
-    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QCIF);
-    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
+            "This function is only supported on GRAYSCALE images");
+
+    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
+            "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
+
 
     /* read arguments */
     image = py_image_cobj(args[0]);
@@ -712,8 +736,12 @@ static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj
     mp_obj_t obj=mp_const_none;
 
     /* sanity checks */
-    PY_ASSERT_TRUE(sensor.framesize <= FRAMESIZE_QQVGA);
-    PY_ASSERT_TRUE(sensor.pixformat == PIXFORMAT_GRAYSCALE);
+    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
+            "This function is only supported on GRAYSCALE images");
+
+    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
+            "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
+
 
     /* get C image pointer */
     image = py_image_cobj(image_obj);
@@ -743,10 +771,12 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     kp_t *kpts = NULL;
     py_kp_obj_t *kp_obj =NULL;
 
-    /* make sure image is grayscale */
     image_t *image = py_image_cobj(args[0]);
     rectangle_t roi={0, 0, image->w, image->h};
-    PY_ASSERT_TRUE(image->bpp == 1);
+
+    /* sanity checks */
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     /* read var args */
     mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("threshold")), MP_MAP_LOOKUP);
@@ -794,7 +824,9 @@ static mp_obj_t py_image_find_lbp(mp_obj_t image_obj, mp_obj_t roi_obj)
     py_lbp_obj_t *lbp_obj;
 
     image = py_image_cobj(image_obj);
-    PY_ASSERT_TRUE(image->bpp == 1);
+    /* sanity checks */
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     mp_obj_t *array;
     mp_obj_get_array_fixed_n(roi_obj, 4, &array);
@@ -817,7 +849,9 @@ static mp_obj_t py_image_find_eyes(mp_obj_t image_obj, mp_obj_t roi_obj)
     image_t *image;
 
     image = py_image_cobj(image_obj);
-    PY_ASSERT_TRUE(image->bpp == 1);
+    /* sanity checks */
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
 
     mp_obj_t *array;
     mp_obj_get_array_fixed_n(roi_obj, 4, &array);
@@ -844,13 +878,12 @@ static mp_obj_t py_image_find_eyes(mp_obj_t image_obj, mp_obj_t roi_obj)
 
 static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
 {
-    image_t *image = py_image_cobj(args[0]);
+    int16_t *kpts_match;
+    int threshold = mp_obj_get_int(args[3]);
     py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
     py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
-    int threshold = mp_obj_get_int(args[3]);
 
     // sanity checks
-    PY_ASSERT_TRUE(image->bpp == 1);
     PY_ASSERT_TYPE(kpts1, &py_kp_type);
     PY_ASSERT_TYPE(kpts2, &py_kp_type);
 
@@ -859,10 +892,9 @@ static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
     }
 
     // match the keypoint sets
-    int16_t *kpts_match = freak_match_keypoints(kpts1->kpts, kpts1->size, kpts2->kpts, kpts2->size, threshold);
+    kpts_match = freak_match_keypoints(kpts1->kpts, kpts1->size, kpts2->kpts, kpts2->size, threshold);
 
     int match=0, cx=0, cy=0;
-    //color_t cl = {.r=0xFF, .g=0xFF, .b=0xFF};
     for (int i=0; i<kpts1->size; i++) {
         if (kpts_match[i] != -1) {
             kp_t *kp = &kpts2->kpts[kpts_match[i]];
@@ -903,7 +935,7 @@ static mp_obj_t py_image_get_pixel(mp_obj_t image_obj, mp_obj_t x_obj, mp_obj_t 
     // check x, y
     PY_ASSERT_TRUE_MSG(x>=0 && x<image->w, "image index out of range");
     PY_ASSERT_TRUE_MSG(y>=0 && y<image->h, "image index out of range");
-    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "Operation not supported on JPEG");
+    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "This function not supported on JPEG images");
 
     switch (image->bpp) {
         case 1:
@@ -939,7 +971,7 @@ static mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args)
     // check x, y, format
     PY_ASSERT_TRUE_MSG(x>=0 && x<image->w, "image index out of range");
     PY_ASSERT_TRUE_MSG(y>=0 && y<image->h, "image index out of range");
-    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "Operation not supported on JPEG");
+    PY_ASSERT_TRUE_MSG(image->bpp <= 2, "This function is not supported on JPEG images");
 
     switch (image->bpp) {
         case 1:

@@ -12,6 +12,9 @@
 #include "py_assert.h"
 #include "py_image.h"
 #include "py_sensor.h"
+#include "omv_boardconfig.h"
+
+extern struct sensor_dev sensor;
 
 static mp_obj_t py_sensor_reset() {
     sensor_reset();
@@ -27,6 +30,10 @@ static mp_obj_t py_sensor_reset() {
 
 static mp_obj_t py_sensor_snapshot() {
     mp_obj_t image = py_image(0, 0, 0, 0);
+
+    PY_ASSERT_FALSE_MSG((sensor.pixformat != PIXFORMAT_JPEG &&
+                         sensor.framesize > OMV_MAX_RAW_FRAME),
+                         "Raw image is only supported for "OMV_MAX_RAW_FRAME_STR" and smaller frames");
 
     if (sensor_snapshot((struct image*) py_image_cobj(image))==-1) {
         nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
