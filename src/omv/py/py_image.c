@@ -683,7 +683,6 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
     PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
             "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
 
-
     /* read arguments */
     image = py_image_cobj(args[0]);
     cascade = py_cascade_cobj(args[1]);
@@ -775,8 +774,11 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     rectangle_t roi={0, 0, image->w, image->h};
 
     /* sanity checks */
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
             "This function is only supported on GRAYSCALE images");
+
+    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
+            "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
 
     /* read var args */
     mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("threshold")), MP_MAP_LOOKUP);
