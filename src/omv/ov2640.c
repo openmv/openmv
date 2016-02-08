@@ -448,8 +448,8 @@ static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize frames
 {
     int ret=0;
     uint8_t clkrc;
-    uint16_t w=res_width[framesize];
-    uint16_t h=res_height[framesize];
+    uint16_t w = resolution[framesize][0];
+    uint16_t h = resolution[framesize][1];
 
     int i=0;
     const uint8_t (*regs)[2];

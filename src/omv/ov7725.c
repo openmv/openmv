@@ -192,8 +192,8 @@ static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixfor
 static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize framesize)
 {
     int ret=0;
-    uint16_t w=res_width[framesize];
-    uint16_t h=res_height[framesize];
+    uint16_t w = resolution[framesize][0];
+    uint16_t h = resolution[framesize][1];
 
     // Write MSBs
     ret |= SCCB_Write(sensor->slv_addr, HOUTSIZE, w>>2);

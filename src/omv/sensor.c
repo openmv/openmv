@@ -39,32 +39,18 @@ TIM_HandleTypeDef  TIMHandle;
 DMA_HandleTypeDef  DMAHandle;
 DCMI_HandleTypeDef DCMIHandle;
 
-const int res_width[] = {
-    88,     /* QQCIF */
-    160,    /* QQVGA */
-    128,    /* QQVGA2*/
-    176,    /* QCIF  */
-    220,    /* HQVGA */
-    320,    /* QVGA  */
-    352,    /* CIF   */
-    640,    /* VGA   */
-    800,    /* SVGA  */
-    1280,   /* SXGA  */
-    1600,   /* UXGA  */
-};
-
-const int res_height[]= {
-    72,     /* QQCIF */
-    120,    /* QQVGA */
-    160,    /* QQVGA2*/
-    144,    /* QCIF  */
-    160,    /* HQVGA */
-    240,    /* QVGA  */
-    288,    /* CIF   */
-    480,    /* VGA   */
-    600,    /* SVGA  */
-    1024,   /* SXGA  */
-    1200,   /* UXGA  */
+const int resolution[][2] = {
+    {88,    72 },    /* QQCIF */
+    {160,   120},    /* QQVGA */
+    {128,   160},    /* QQVGA2*/
+    {176,   144},    /* QCIF  */
+    {220,   160},    /* HQVGA */
+    {320,   240},    /* QVGA  */
+    {352,   288},    /* CIF   */
+    {640,   480},    /* VGA   */
+    {800,   600},    /* SVGA  */
+    {1280,  1024},   /* SXGA  */
+    {1600,  1200},   /* UXGA  */
 };
 
 static void extclk_config(int frequency)
@@ -494,8 +480,8 @@ int sensor_set_framesize(enum sensor_framesize framesize)
         case FRAMESIZE_SVGA:
         case FRAMESIZE_SXGA:
         case FRAMESIZE_UXGA:
-            fb->w =res_width[framesize];
-            fb->h =res_height[framesize];
+            fb->w = resolution[framesize][0];
+            fb->h = resolution[framesize][1];
             break;
         default:
             return -1;

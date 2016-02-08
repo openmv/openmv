@@ -38,6 +38,8 @@ enum sensor_framesize {
     FRAMESIZE_UXGA,     /* 1600x1200 */
 };
 
+extern const int resolution[][2];
+
 enum sensor_framerate {
     FRAMERATE_2FPS =0x9F,
     FRAMERATE_8FPS =0x87,
@@ -67,9 +69,6 @@ enum reset_polarity {
     ACTIVE_LOW,
     ACTIVE_HIGH
 };
-
-extern const int res_width[];
-extern const int res_height[];
 
 #define SENSOR_HW_FLAGS_VSYNC        (0) // vertical sync polarity.
 #define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
