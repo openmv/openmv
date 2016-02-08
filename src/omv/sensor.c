@@ -39,6 +39,9 @@ TIM_HandleTypeDef  TIMHandle;
 DMA_HandleTypeDef  DMAHandle;
 DCMI_HandleTypeDef DCMIHandle;
 
+static int line = 0;
+extern uint8_t _line_buf;
+
 const int resolution[][2] = {
     {88,    72 },    /* QQCIF */
     {160,   120},    /* QQVGA */
@@ -153,6 +156,15 @@ static int dma_config()
     return 0;
 }
 
+void sensor_init0()
+{
+    // Clear framebuffer
+    memset(fb, 0, sizeof(*fb));
+
+    // Init mutex
+    mutex_init(&fb->lock);
+}
+
 int sensor_init()
 {
     /* Do a power cycle */
@@ -259,15 +271,6 @@ int sensor_init()
     return 0;
 }
 
-void sensor_init0()
-{
-    // Clear framebuffer
-    memset(fb, 0, sizeof(*fb));
-
-    // Init mutex
-    mutex_init(&fb->lock);
-}
-
 int sensor_reset()
 {
     /* Reset the sesnor state */
@@ -296,109 +299,6 @@ int sensor_read_reg(uint8_t reg)
 int sensor_write_reg(uint8_t reg, uint8_t val)
 {
     return SCCB_Write(sensor.slv_addr, reg, val);
-}
-
-// The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
-// The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
-// overwrite image pixels before they are compressed.
-int sensor_snapshot(struct image *image)
-{
-    volatile uint32_t addr;
-    volatile uint16_t length;
-    uint32_t snapshot_start;
-
-    // Compress the framebuffer for the IDE
-    if (sensor.pixformat != PIXFORMAT_JPEG) {
-        // The framebuffer is compressed in place.
-        // Assuming we have at least 128KBs of SRAM.
-        image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};
-        image_t dst = {.w=fb->w, .h=fb->h, .bpp=128*1024, .pixels=fb->pixels};
-
-        // Note: lower quality results in a faster IDE
-        // framerates, since it saves on USB bandwidth.
-        jpeg_compress(&src, &dst, 50);
-        fb->bpp = dst.bpp;
-    }
-
-    // Note: fb->bpp is set to zero for the first JPEG frame.
-    fb->ready = (fb->bpp>0);
-
-    // Wait for the IDE to read the framebuffer before it gets overwritten with a new frame, and
-    // after all the image processing code has run (which possibily draws over the framebuffer).
-    // This fakes double buffering without having to allocate a second buffer and allows us to
-    // re-use the framebuffer for software JPEG compression.
-    while (fb->ready && fb->lock_tried) {
-        // Note: This delay is only executed when the USB debug is active.
-        systick_sleep(2);
-    }
-    fb->ready = 0;
-
-    // Setup the size and address of the transfer
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
-        // Sensor has hardware JPEG set max frame size.
-        length = MAX_XFER_SIZE;
-        addr = (uint32_t) (fb->pixels);
-    } else {
-        // No hardware JPEG, set w*h*2 bytes per pixel.
-        length =(fb->w * fb->h * 2)/4;
-        addr = (uint32_t) (fb->pixels+FB_JPEG_OFFS_SIZE);
-    }
-
-    // Lock framebuffer mutex
-    mutex_lock(&fb->lock);
-
-    // Snapshot start tick
-    snapshot_start = HAL_GetTick();
-
-    // Start the DCMI
-    HAL_DCMI_Start_DMA(&DCMIHandle,
-            DCMI_MODE_SNAPSHOT, addr, length);
-
-    // Wait for frame
-    while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
-        if ((HAL_GetTick() - snapshot_start) >= 3000) {
-            // Sensor timeout, most likely a HW issue.
-            // unlock fb mutex and abort the DMA request
-            mutex_unlock(&fb->lock);
-            HAL_DMA_Abort(&DMAHandle);
-            return -1;
-        }
-    }
-
-    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
-        // Set the correct BPP
-        fb->bpp = 1;
-
-        // If GRAYSCALE extract Y channel from YUV
-        uint8_t *pixels = fb->pixels + FB_JPEG_OFFS_SIZE;
-        for (int i=0; i<(fb->w * fb->h); i++) {
-            pixels[i] = pixels[i<<1];
-        }
-    } else if (sensor.pixformat == PIXFORMAT_JPEG) {
-        // The frame readout has finished, however the DMA's still waiting for data
-        // because the max frame size is set, so we need to abort the DMA transfer.
-        HAL_DMA_Abort(&DMAHandle);
-
-        // Read the number of data items transferred
-        fb->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
-    } else { // RGB565
-        // Set the correct BPP
-        fb->bpp = 2;
-    }
-
-    if (image != NULL) {
-        image->w = fb->w;
-        image->h = fb->h;
-        image->bpp = fb->bpp;
-        image->pixels = fb->pixels;
-        if (sensor.pixformat != PIXFORMAT_JPEG) {
-            image->pixels += FB_JPEG_OFFS_SIZE;
-        }
-    }
-
-    // Unlock framebuffer mutex
-    mutex_unlock(&fb->lock);
-    return 0;
 }
 
 int sensor_set_pixformat(enum sensor_pixformat pixformat)
@@ -468,23 +368,12 @@ int sensor_set_framesize(enum sensor_framesize framesize)
     sensor.framesize = framesize;
 
     /* set framebuffer dimensions */
-    switch (framesize) {
-        case FRAMESIZE_QQCIF:
-        case FRAMESIZE_QQVGA:
-        case FRAMESIZE_QQVGA2:
-        case FRAMESIZE_QCIF:
-        case FRAMESIZE_HQVGA:
-        case FRAMESIZE_QVGA:
-        case FRAMESIZE_CIF:
-        case FRAMESIZE_VGA:
-        case FRAMESIZE_SVGA:
-        case FRAMESIZE_SXGA:
-        case FRAMESIZE_UXGA:
-            fb->w = resolution[framesize][0];
-            fb->h = resolution[framesize][1];
-            break;
-        default:
-            return -1;
+    if (framesize < FRAMESIZE_QQCIF
+            || framesize > FRAMESIZE_UXGA) {
+        return -1;
+    } else {
+        fb->w = resolution[framesize][0];
+        fb->h = resolution[framesize][1];
     }
 
     return 0;
@@ -576,5 +465,138 @@ int sensor_set_colorbar(int enable)
         /* operation not supported */
         return -1;
     }
+    return 0;
+}
+
+// This function is called back after each line transfer is complete,
+// with a pointer to the line buffer that was used. At this point the
+// DMA transfers the next line to the other half of the line buffer.
+// Note:  For JPEG this function is called once (and ignored) at the end of the transfer.
+void DCMI_DMAConvCpltUser(uint32_t addr)
+{
+    uint8_t *src = (uint8_t*) addr;
+    uint8_t *dst = fb->pixels + FB_JPEG_OFFS_SIZE;
+
+    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
+        dst += line++ * fb->w;
+        // If GRAYSCALE extract Y channel from YUV
+        for (int i=0; i<fb->w; i++) {
+            dst[i] = src[i<<1];
+        }
+    } else if (sensor.pixformat == PIXFORMAT_RGB565) {
+        dst += line++ * fb->w * 2;
+        for (int i=0; i<fb->w * 2; i++) {
+            dst[i] = src[i];
+        }
+    }
+}
+
+// The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
+// The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
+// overwrite image pixels before they are compressed.
+int sensor_snapshot(struct image *image)
+{
+    volatile uint32_t addr;
+    volatile uint16_t length;
+    uint32_t snapshot_start;
+
+    // Compress the framebuffer for the IDE
+    if (sensor.pixformat != PIXFORMAT_JPEG) {
+        // The framebuffer is compressed in place.
+        // Assuming we have at least 128KBs of SRAM.
+        image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};
+        image_t dst = {.w=fb->w, .h=fb->h, .bpp=128*1024, .pixels=fb->pixels};
+
+        // Note: lower quality results in a faster IDE
+        // framerates, since it saves on USB bandwidth.
+        jpeg_compress(&src, &dst, 50);
+        fb->bpp = dst.bpp;
+    }
+
+    // Note: fb->bpp is set to zero for the first JPEG frame.
+    fb->ready = (fb->bpp>0);
+
+    // Wait for the IDE to read the framebuffer before it gets overwritten with a new frame, and
+    // after all the image processing code has run (which possibily draws over the framebuffer).
+    // This fakes double buffering without having to allocate a second buffer and allows us to
+    // re-use the framebuffer for software JPEG compression.
+    while (fb->ready && fb->lock_tried) {
+        // Note: This delay is only executed when the USB debug is active.
+        systick_sleep(2);
+    }
+    fb->ready = 0;
+
+    // Setup the size and address of the transfer
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        // Sensor has hardware JPEG set max frame size.
+        length = MAX_XFER_SIZE;
+        addr = (uint32_t) (fb->pixels);
+    } else {
+        // No hardware JPEG, set w*h*2 bytes per pixel.
+        length =(fb->w * fb->h * 2)/4;
+        addr = (uint32_t) &_line_buf;
+    }
+
+    // Clear line counter
+    line = 0;
+
+    // Lock framebuffer mutex
+    mutex_lock(&fb->lock);
+
+    // Snapshot start tick
+    snapshot_start = HAL_GetTick();
+
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        // Start a regular transfer
+        HAL_DCMI_Start_DMA(&DCMIHandle,
+                DCMI_MODE_SNAPSHOT, addr, length);
+    } else {
+        // Start a multibuffer transfer (line by line)
+        HAL_DCMI_Start_DMA_MB(&DCMIHandle,
+                DCMI_MODE_SNAPSHOT, addr, length, fb->h);
+    }
+
+    // Wait for frame
+    while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
+        if ((HAL_GetTick() - snapshot_start) >= 3000) {
+            // Sensor timeout, most likely a HW issue.
+            // unlock fb mutex and abort the DMA request
+            mutex_unlock(&fb->lock);
+            HAL_DMA_Abort(&DMAHandle);
+            return -1;
+        }
+    }
+
+    // Fix the BPP
+    switch (sensor.pixformat) {
+        case PIXFORMAT_GRAYSCALE:
+            fb->bpp = 1;
+            break;
+        case PIXFORMAT_YUV422:
+        case PIXFORMAT_RGB565:
+            fb->bpp = 2;
+            break;
+        case PIXFORMAT_JPEG:
+            // The frame readout has finished, however the DMA's still waiting for data
+            // because the max frame size is set, so we need to abort the DMA transfer.
+            HAL_DMA_Abort(&DMAHandle);
+            // Read the number of data items transferred
+            fb->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
+            break;
+    }
+
+    // Set the user image.
+    if (image != NULL) {
+        image->w = fb->w;
+        image->h = fb->h;
+        image->bpp = fb->bpp;
+        image->pixels = fb->pixels;
+        if (sensor.pixformat != PIXFORMAT_JPEG) {
+            image->pixels += FB_JPEG_OFFS_SIZE;
+        }
+    }
+
+    // Unlock framebuffer mutex
+    mutex_unlock(&fb->lock);
     return 0;
 }

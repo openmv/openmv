@@ -464,6 +464,7 @@ void       HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi);
 
 /* IO operation functions *****************************************************/
 HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mode, uint32_t pData, uint32_t Length);
+HAL_StatusTypeDef HAL_DCMI_Start_DMA_MB(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mode, uint32_t pData, uint32_t Length, uint32_t Count);
 HAL_StatusTypeDef HAL_DCMI_Stop(DCMI_HandleTypeDef* hdcmi);
 void       HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi);
 void       HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi);
