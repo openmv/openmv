@@ -20,7 +20,6 @@ __USBDBG_CMD            = 48
 __USBDBG_FW_VERSION     = 0x80
 __USBDBG_FRAME_SIZE     = 0x81
 __USBDBG_FRAME_DUMP     = 0x82
-__USBDBG_FRAME_LOCK     = 0x83
 __USBDBG_FRAME_UPDATE   = 0x04
 __USBDBG_SCRIPT_EXEC    = 0x05
 __USBDBG_SCRIPT_STOP    = 0x06
@@ -50,12 +49,8 @@ def fb_size():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_SIZE, __FB_HDR_SIZE))
     return struct.unpack("III", __serial.read(12))
 
-def fb_lock():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_LOCK, __FB_HDR_SIZE))
-    return struct.unpack("III", __serial.read(12))
-
 def fb_dump():
-    size = fb_lock()
+    size = fb_size()
 
     if (not size[0]):
         # frame not ready

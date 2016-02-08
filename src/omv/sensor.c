@@ -160,9 +160,6 @@ void sensor_init0()
 {
     // Clear framebuffer
     memset(fb, 0, sizeof(*fb));
-
-    // Init mutex
-    mutex_init(&fb->lock);
 }
 
 int sensor_init()
@@ -261,12 +258,6 @@ int sensor_init()
         return -4;
     }
 
-    /* Init/re-init mutex */
-    mutex_init(&fb->lock);
-
-    /* Block usbdbg until the sensor is configured */
-    fb->ready=0;
-
     /* All good! */
     return 0;
 }
@@ -278,10 +269,6 @@ int sensor_reset()
     sensor.framesize=0xFF;
     sensor.framerate=0xFF;
     sensor.gainceiling=0xFF;
-
-    mutex_lock(&fb->lock);
-    fb->ready=0;
-    mutex_unlock(&fb->lock);
 
     /* Call sensor-specific reset function */
     sensor.reset(&sensor);
@@ -309,10 +296,6 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
         /* no change */
         return 0;
     }
-
-    mutex_lock(&fb->lock);
-    fb->ready = 0;
-    mutex_unlock(&fb->lock);
 
     if (sensor.set_pixformat == NULL
         || sensor.set_pixformat(&sensor, pixformat) != 0) {
@@ -352,10 +335,6 @@ int sensor_set_framesize(enum sensor_framesize framesize)
        /* no change */
         return 0;
     }
-
-    mutex_lock(&fb->lock);
-    fb->ready = 0;
-    mutex_unlock(&fb->lock);
 
     /* call the sensor specific function */
     if (sensor.set_framesize == NULL
@@ -500,8 +479,10 @@ int sensor_snapshot(struct image *image)
     volatile uint16_t length;
     uint32_t snapshot_start;
 
-    // Compress the framebuffer for the IDE
-    if (sensor.pixformat != PIXFORMAT_JPEG) {
+    // Compress the framebuffer for the IDE only for non-JPEG
+    // images and only if the IDE has requested a framebuffer.
+    // Note: This doesn't run unless the camera is connected to PC.
+    if (fb->request && sensor.pixformat != PIXFORMAT_JPEG) {
         // The framebuffer is compressed in place.
         // Assuming we have at least 128KBs of SRAM.
         image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};
@@ -520,7 +501,7 @@ int sensor_snapshot(struct image *image)
     // after all the image processing code has run (which possibily draws over the framebuffer).
     // This fakes double buffering without having to allocate a second buffer and allows us to
     // re-use the framebuffer for software JPEG compression.
-    while (fb->ready && fb->lock_tried) {
+    while (fb->ready && fb->request) {
         // Note: This delay is only executed when the USB debug is active.
         systick_sleep(2);
     }
@@ -540,9 +521,6 @@ int sensor_snapshot(struct image *image)
     // Clear line counter
     line = 0;
 
-    // Lock framebuffer mutex
-    mutex_lock(&fb->lock);
-
     // Snapshot start tick
     snapshot_start = HAL_GetTick();
 
@@ -560,8 +538,7 @@ int sensor_snapshot(struct image *image)
     while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
         if ((HAL_GetTick() - snapshot_start) >= 3000) {
             // Sensor timeout, most likely a HW issue.
-            // unlock fb mutex and abort the DMA request
-            mutex_unlock(&fb->lock);
+            // Abort the DMA request.
             HAL_DMA_Abort(&DMAHandle);
             return -1;
         }
@@ -596,7 +573,5 @@ int sensor_snapshot(struct image *image)
         }
     }
 
-    // Unlock framebuffer mutex
-    mutex_unlock(&fb->lock);
     return 0;
 }
