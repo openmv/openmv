@@ -30,7 +30,6 @@
 #define OV7725_PID     0x77
 
 #define XCLK_FREQ      (12000000)
-#define BREAK()         __asm__ volatile ("BKPT")
 
 #define MAX_XFER_SIZE (0xFFFC)
 
@@ -56,7 +55,7 @@ const int resolution[][2] = {
     {1600,  1200},   /* UXGA  */
 };
 
-static void extclk_config(int frequency)
+static int extclk_config(int frequency)
 {
     /* TCLK (PCLK2 * 2) */
     int tclk  = HAL_RCC_GetPCLK2Freq() * 2;
@@ -81,18 +80,15 @@ static void extclk_config(int frequency)
     TIMOCHandle.OCPolarity  = TIM_OCPOLARITY_HIGH;
     TIMOCHandle.OCFastMode  = TIM_OCFAST_DISABLE;
     TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
-    if (HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK) {
-        /* Initialization Error */
-        BREAK();
+
+    if (HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK
+            || HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK
+            || HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK) {
+        // Initialization Error
+        return -1;
     }
 
-    if (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK) {
-        BREAK();
-    }
-
-    if (HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK) {
-        BREAK();
-    }
+    return 0;
 }
 
 static int dcmi_config(uint32_t jpeg_mode)
@@ -119,7 +115,7 @@ static int dcmi_config(uint32_t jpeg_mode)
 
     /* Init DCMI */
     if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
-        /* Initialization Error */
+        // Initialization Error
         return -1;
     }
 
@@ -149,8 +145,8 @@ static int dma_config()
 
     /* Initialize the DMA stream */
     if (HAL_DMA_Init(&DMAHandle) != HAL_OK) {
-        /* Initialization Error */
-        return 1;
+        /// Initialization Error
+        return -1;
     }
 
     return 0;
@@ -178,7 +174,10 @@ int sensor_init()
     /* Configure the sensor external clock (XCLK) to XCLK_FREQ.
        Note: The sensor's internal PLL (when CLKRC=0x80) doubles the XCLK_FREQ
              (XCLK=XCLK_FREQ*2), and the unscaled PIXCLK output is XCLK_FREQ*4 */
-    extclk_config(XCLK_FREQ);
+    if (extclk_config(XCLK_FREQ) != 0) {
+        // Timer problem
+        return -1;
+    }
 
     /* Uncomment this to pass through the MCO1 clock (HSI=16MHz) this results in a
        64MHz PIXCLK output from the sensor.
@@ -218,8 +217,8 @@ int sensor_init()
         /* Probe again to set the slave addr */
         sensor.slv_addr = SCCB_Probe();
         if (sensor.slv_addr == 0)  {
-            /* Probe failed */
-            return -1;
+            // Probe failed
+            return -2;
         }
     }
 
@@ -242,20 +241,20 @@ int sensor_init()
             break;
         default:
             /* Sensor not supported */
-            return -2;
+            return -3;
     }
 
     /* Configure the DCMI DMA Stream */
     if (dma_config() != 0) {
-        /* DMA problem */
-        return -3;
+        // DMA problem
+        return -4;
     }
 
     /* Configure the DCMI interface. This should be called
        after ovxxx_init to set VSYNC/HSYNC/PCLK polarities */
     if (dcmi_config(DCMI_JPEG_DISABLE) != 0){
-        /* DCMI config failed */
-        return -4;
+        // DCMI config failed
+        return -5;
     }
 
     /* All good! */
