@@ -94,13 +94,12 @@ void usbdbg_data_in(void *buffer, int length)
         case USBDBG_FRAME_SIZE:
             if (fb->ready) {
                 // Frame ready return header
-                fb->request = 0;
                 memcpy(buffer, fb, length);
             } else {
                 // Frame not ready return 0
-                fb->request = 1;
                 ((uint32_t*)buffer)[0] = 0;
             }
+            fb->request = 1;
             cmd = USBDBG_NONE;
             break;
 
