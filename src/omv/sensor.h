@@ -58,6 +58,11 @@ enum sensor_gainceiling {
     GAINCEILING_128X,
 };
 
+enum sensor_sde {
+    SDE_NORMAL,
+    SDE_NEGATIVE,
+};
+
 enum sensor_attr {
     ATTR_CONTRAST=0,
     ATTR_BRIGHTNESS,
@@ -78,15 +83,23 @@ enum reset_polarity {
 #define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
 
 struct sensor_dev {
+    // Sensor ID.
     struct sensor_id id;
+    // Sensor I2C slave address.
     uint8_t  slv_addr;
+    // Hardware flags (clock polarities/hw capabilities)
     uint32_t hw_flags;
+    // Reset polarity (TODO move to hw_flags)
     enum reset_polarity reset_pol;
+
+    // Sensor state
+    enum sensor_sde sde;
     enum sensor_pixformat pixformat;
     enum sensor_framesize framesize;
     enum sensor_framerate framerate;
     enum sensor_gainceiling gainceiling;
-    /* Sensor function pointers */
+
+    // Sensor function pointers
     int  (*reset)           (struct sensor_dev *sensor);
     int  (*set_pixformat)   (struct sensor_dev *sensor, enum sensor_pixformat pixformat);
     int  (*set_framesize)   (struct sensor_dev *sensor, enum sensor_framesize framesize);
@@ -98,6 +111,7 @@ struct sensor_dev {
     int  (*set_gainceiling) (struct sensor_dev *sensor, enum sensor_gainceiling gainceiling);
     int  (*set_quality)     (struct sensor_dev *sensor, int quality);
     int  (*set_colorbar)    (struct sensor_dev *sensor, int enable);
+    int  (*set_special_effect)  (struct sensor_dev *sensor, enum sensor_sde sde);
 };
 
 /**
@@ -228,4 +242,11 @@ int sensor_set_quality(int qs);
  * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
  */
 int sensor_set_colorbar(int enable);
+/**
+ * Set special digital effects (SDE).
+ *
+ * @param sde Special digital effect.
+ * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
+ */
+int sensor_set_special_effect(enum sensor_sde sde);
 #endif /* __SENSOR_H__ */

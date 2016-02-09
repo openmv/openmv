@@ -282,6 +282,26 @@ static int set_colorbar(struct sensor_dev *sensor, int enable)
     return SCCB_Write(sensor->slv_addr, COM3, reg);
 }
 
+static int set_special_effect(struct sensor_dev *sensor, enum sensor_sde sde)
+{
+    int ret=0;
+
+    switch (sde) {
+        case SDE_NEGATIVE:
+            ret |= SCCB_Write(sensor->slv_addr, SDE, 0x46);
+            break;
+        case SDE_NORMAL:
+            ret |= SCCB_Write(sensor->slv_addr, SDE, 0x06);
+            ret |= SCCB_Write(sensor->slv_addr, UFIX, 0x80);
+            ret |= SCCB_Write(sensor->slv_addr, UFIX, 0x80);
+            break;
+        default:
+            return -1;
+    }
+
+    return 0;
+}
+
 int ov7725_init(struct sensor_dev *sensor)
 {
     // Set function pointers
@@ -295,6 +315,7 @@ int ov7725_init(struct sensor_dev *sensor)
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_colorbar = set_colorbar;
+    sensor->set_special_effect = set_special_effect;
 
     // Set sensor flags
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);

@@ -264,16 +264,17 @@ int sensor_init()
 
 int sensor_reset()
 {
-    /* Reset the sesnor state */
+    // Reset the sesnor state
+    sensor.sde = 0xFF;
     sensor.pixformat=0xFF;
     sensor.framesize=0xFF;
     sensor.framerate=0xFF;
     sensor.gainceiling=0xFF;
 
-    /* Call sensor-specific reset function */
+    // Call sensor-specific reset function
     sensor.reset(&sensor);
 
-    // just in case there's a running DMA request.
+    // Just in case there's a running DMA request.
     HAL_DMA_Abort(&DMAHandle);
     return 0;
 }
@@ -444,6 +445,24 @@ int sensor_set_colorbar(int enable)
         /* operation not supported */
         return -1;
     }
+    return 0;
+}
+
+int sensor_set_special_effect(enum sensor_sde sde)
+{
+    if (sensor.sde == sde) {
+        /* no change */
+        return 0;
+    }
+
+    /* call the sensor specific function */
+    if (sensor.set_special_effect == NULL
+        || sensor.set_special_effect(&sensor, sde) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+
+    sensor.sde = sde;
     return 0;
 }
 
