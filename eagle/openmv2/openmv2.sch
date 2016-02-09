@@ -3786,12 +3786,6 @@ Various standard crystals. Proven footprints. Spark Fun Electronics SKU : COM-00
 </package>
 </packages>
 <symbols>
-<symbol name="VBUS">
-<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
-<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
-<text x="-1.016" y="3.556" size="1.778" layer="96">&gt;VALUE</text>
-<pin name="VBUS" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
-</symbol>
 <symbol name="VIN">
 <wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
 <wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
@@ -3838,20 +3832,14 @@ Various standard crystals. Proven footprints. Spark Fun Electronics SKU : COM-00
 <wire x1="4.6199" y1="5.1267" x2="4.8997" y2="4.4959" width="0.254" layer="94" curve="-19.303177"/>
 <wire x1="4.9045" y1="3.5472" x2="4.6484" y2="2.8689" width="0.254" layer="94" curve="-20.344696"/>
 </symbol>
+<symbol name="VBUS">
+<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
+<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
+<text x="-1.016" y="3.556" size="1.778" layer="96">&gt;VALUE</text>
+<pin name="VBUS" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
+</symbol>
 </symbols>
 <devicesets>
-<deviceset name="VBUS">
-<gates>
-<gate name="G$1" symbol="VBUS" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
 <deviceset name="VIN" prefix="P+">
 <description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
 <gates>
@@ -3919,6 +3907,18 @@ Various standard crystals. Proven footprints. Spark Fun Electronics SKU : COM-00
 </technologies>
 </device>
 <device name="X0070-NT" package="OSHW_FILLX70_NOTEXT">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="VBUS">
+<gates>
+<gate name="G$1" symbol="VBUS" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
 <technologies>
 <technology name=""/>
 </technologies>
@@ -5964,7 +5964,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <attribute name="OC_FARNELL" value="unknown"/>
 <attribute name="OC_NEWARK" value="unknown"/>
 </part>
-<part name="LED1" library="sfe" deviceset="LED-TRICOLOR" device=""/>
+<part name="LED1" library="sfe" deviceset="LED-TRICOLOR" device="" value="LED-TRICOLOR"/>
 <part name="P+11" library="SparkFun" deviceset="VCC" device=""/>
 <part name="Y1" library="mux" deviceset="CRYSTAL" device="2.5X2.0"/>
 <part name="LOGO1" library="iofault" deviceset="OSHW_LOGO_FILL" device="X0150-NT"/>
@@ -5983,7 +5983,6 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="X2" library="sfe" deviceset="USB" device="-MICROB"/>
 <part name="GND3" library="sfe" deviceset="GND" device=""/>
 <part name="U7" library="sfe" deviceset="INDUCTOR" device="0603"/>
-<part name="U$5" library="iofault" deviceset="VBUS" device=""/>
 <part name="P+7" library="iofault" deviceset="VIN" device=""/>
 <part name="C1" library="sfe" deviceset="CAP" device="0805" value="22uF"/>
 <part name="GND5" library="SparkFun" deviceset="GND" device=""/>
@@ -6004,6 +6003,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="D1" library="diode" deviceset="BAT54C" device=""/>
 <part name="P+4" library="supply1" deviceset="VCC" device=""/>
 <part name="U5" library="omnivision" deviceset="OV7725" device=""/>
+<part name="U$5" library="iofault" deviceset="VBUS" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -6206,7 +6206,6 @@ Source: Fairchild .. BAT54.pdf</description>
 <attribute name="NAME" x="293.37" y="296.545" size="1.27" layer="95" font="vector"/>
 <attribute name="VALUE" x="297.815" y="292.735" size="1.27" layer="96" font="vector" rot="R90"/>
 </instance>
-<instance part="U$5" gate="G$1" x="304.8" y="312.42"/>
 <instance part="P+7" gate="G$1" x="332.74" y="312.42"/>
 <instance part="C1" gate="G$1" x="381" y="162.56" smashed="yes" rot="MR0">
 <attribute name="NAME" x="379.095" y="164.846" size="1.778" layer="95" rot="MR90"/>
@@ -6236,6 +6235,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <instance part="D1" gate="G$1" x="332.74" y="294.64" rot="MR0"/>
 <instance part="P+4" gate="VCC" x="294.64" y="116.84"/>
 <instance part="U5" gate="G$1" x="358.14" y="63.5"/>
+<instance part="U$5" gate="G$1" x="304.8" y="312.42"/>
 </instances>
 <busses>
 </busses>
@@ -6531,9 +6531,9 @@ Source: Fairchild .. BAT54.pdf</description>
 <pinref part="U7" gate="G$1" pin="2"/>
 <wire x1="304.8" y1="294.64" x2="327.66" y2="294.64" width="0.1524" layer="91"/>
 <wire x1="304.8" y1="294.64" x2="304.8" y2="312.42" width="0.1524" layer="91"/>
-<pinref part="U$5" gate="G$1" pin="VBUS"/>
 <junction x="304.8" y="294.64"/>
 <pinref part="D1" gate="G$1" pin="A2"/>
+<pinref part="U$5" gate="G$1" pin="VBUS"/>
 </segment>
 </net>
 <net name="VIN" class="0">
