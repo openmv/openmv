@@ -148,7 +148,6 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS][2] = {
     {0x80, 0x80}, /* +4 */
 };
 
-#include <mp.h>
 static int reset(struct sensor_dev *sensor)
 {
     int i=0;
