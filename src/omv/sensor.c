@@ -25,10 +25,6 @@
 #define REG_MIDH       0x1C
 #define REG_MIDL       0x1D
 
-#define OV9650_PID     0x96
-#define OV2640_PID     0x26
-#define OV7725_PID     0x77
-
 #define XCLK_FREQ      (12000000)
 
 #define MAX_XFER_SIZE (0xFFFC)
@@ -276,6 +272,11 @@ int sensor_reset()
     // Just in case there's a running DMA request.
     HAL_DMA_Abort(&DMAHandle);
     return 0;
+}
+
+int sensor_get_id()
+{
+    return sensor.id.PID;
 }
 
 int sensor_read_reg(uint8_t reg)

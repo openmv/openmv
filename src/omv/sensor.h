@@ -10,6 +10,11 @@
 #define __SENSOR_H__
 #include <stdint.h>
 #include "imlib.h"
+
+#define OV9650_PID     (0x96)
+#define OV2640_PID     (0x26)
+#define OV7725_PID     (0x77)
+
 struct sensor_id {
     uint8_t MIDH;
     uint8_t MIDL;
@@ -134,6 +139,12 @@ void sensor_init0();
  * @return On success, 0 is returned. If the sensor is not supported, or not detected, -1 is returned.
  */
 int sensor_reset();
+/**
+ * Return sensor PID.
+ *
+ * @return On success, sensor PID is returned. If the sensor is not supported, or not detected, -1 is returned.
+ */
+int sensor_get_id();
 /**
  * Read a sensor register.
  *
