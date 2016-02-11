@@ -1521,143 +1521,6 @@ These are standard SMD and PTH capacitors. Normally 10uF, 47uF, and 100uF in ele
 </library>
 <library name="iofault">
 <packages>
-<package name="OSHW_6X100_NOTEXT">
-<wire x1="1.2192" y1="0.7112" x2="0.9652" y2="0.127" width="0.1524" layer="21"/>
-<wire x1="0.9652" y1="0.127" x2="0.8382" y2="0.2032" width="0.1524" layer="21"/>
-<wire x1="0.8382" y1="0.2032" x2="0.5334" y2="0" width="0.1524" layer="21"/>
-<wire x1="0.5334" y1="0" x2="0.3048" y2="0.2286" width="0.1524" layer="21"/>
-<wire x1="0.3048" y1="0.2286" x2="0.508" y2="0.5588" width="0.1524" layer="21"/>
-<wire x1="0.508" y1="0.5588" x2="0.381" y2="0.889" width="0.1524" layer="21"/>
-<wire x1="0.381" y1="0.889" x2="0" y2="0.9652" width="0.1524" layer="21"/>
-<wire x1="0" y1="0.9652" x2="0" y2="1.2954" width="0.1524" layer="21"/>
-<wire x1="0" y1="1.2954" x2="0.381" y2="1.3462" width="0.1524" layer="21"/>
-<wire x1="0.381" y1="1.3462" x2="0.5334" y2="1.6764" width="0.1524" layer="21"/>
-<wire x1="0.5334" y1="1.6764" x2="0.3048" y2="2.0066" width="0.1524" layer="21"/>
-<wire x1="0.3048" y1="2.0066" x2="0.5334" y2="2.2352" width="0.1524" layer="21"/>
-<wire x1="0.5334" y1="2.2352" x2="0.8636" y2="2.0066" width="0.1524" layer="21"/>
-<wire x1="0.8636" y1="2.0066" x2="1.1684" y2="2.1336" width="0.1524" layer="21"/>
-<wire x1="1.1684" y1="2.1336" x2="1.2446" y2="2.54" width="0.1524" layer="21"/>
-<wire x1="1.2446" y1="2.54" x2="1.5748" y2="2.54" width="0.1524" layer="21"/>
-<wire x1="1.5748" y1="2.54" x2="1.651" y2="2.1336" width="0.1524" layer="21"/>
-<wire x1="1.651" y1="2.1336" x2="1.9558" y2="2.0066" width="0.1524" layer="21"/>
-<wire x1="1.9558" y1="2.0066" x2="2.3114" y2="2.2352" width="0.1524" layer="21"/>
-<wire x1="2.3114" y1="2.2352" x2="2.54" y2="2.0066" width="0.1524" layer="21"/>
-<wire x1="2.54" y1="2.0066" x2="2.3114" y2="1.6764" width="0.1524" layer="21"/>
-<wire x1="2.3114" y1="1.6764" x2="2.4384" y2="1.3716" width="0.1524" layer="21"/>
-<wire x1="2.4384" y1="1.3716" x2="2.8194" y2="1.2954" width="0.1524" layer="21"/>
-<wire x1="2.8194" y1="1.2954" x2="2.8194" y2="0.9652" width="0.1524" layer="21"/>
-<wire x1="2.8194" y1="0.9652" x2="2.4638" y2="0.889" width="0.1524" layer="21"/>
-<wire x1="2.4638" y1="0.889" x2="2.3114" y2="0.5588" width="0.1524" layer="21"/>
-<wire x1="2.3114" y1="0.5588" x2="2.54" y2="0.2286" width="0.1524" layer="21"/>
-<wire x1="2.54" y1="0.2286" x2="2.3114" y2="0" width="0.1524" layer="21"/>
-<wire x1="2.3114" y1="0" x2="2.0066" y2="0.2032" width="0.1524" layer="21"/>
-<wire x1="2.0066" y1="0.2032" x2="1.8542" y2="0.127" width="0.1524" layer="21"/>
-<wire x1="1.8542" y1="0.127" x2="1.6256" y2="0.7112" width="0.1524" layer="21"/>
-<wire x1="1.2192" y1="0.7112" x2="1.6256" y2="0.7112" width="0.1524" layer="21" curve="-306.869898"/>
-</package>
-<package name="OSHW_6X150_NOTEXT">
-<wire x1="1.8288" y1="1.0668" x2="1.4478" y2="0.2032" width="0.1524" layer="21"/>
-<wire x1="1.4478" y1="0.2032" x2="1.27" y2="0.3048" width="0.1524" layer="21"/>
-<wire x1="1.27" y1="0.3048" x2="0.8128" y2="0" width="0.1524" layer="21"/>
-<wire x1="0.8128" y1="0" x2="0.4572" y2="0.3556" width="0.1524" layer="21"/>
-<wire x1="0.4572" y1="0.3556" x2="0.762" y2="0.8128" width="0.1524" layer="21"/>
-<wire x1="0.5588" y1="1.3208" x2="0" y2="1.4224" width="0.1524" layer="21"/>
-<wire x1="0" y1="1.4224" x2="0" y2="1.9304" width="0.1524" layer="21"/>
-<wire x1="0" y1="1.9304" x2="0.5842" y2="2.032" width="0.1524" layer="21"/>
-<wire x1="0.7874" y1="2.5146" x2="0.4572" y2="2.9972" width="0.1524" layer="21"/>
-<wire x1="0.4572" y1="2.9972" x2="0.8128" y2="3.3528" width="0.1524" layer="21"/>
-<wire x1="0.8128" y1="3.3528" x2="1.2954" y2="3.0226" width="0.1524" layer="21"/>
-<wire x1="1.7526" y1="3.2004" x2="1.8796" y2="3.81" width="0.1524" layer="21"/>
-<wire x1="1.8796" y1="3.81" x2="2.3622" y2="3.81" width="0.1524" layer="21"/>
-<wire x1="2.3622" y1="3.81" x2="2.4892" y2="3.2004" width="0.1524" layer="21"/>
-<wire x1="2.9464" y1="3.0226" x2="3.4544" y2="3.3528" width="0.1524" layer="21"/>
-<wire x1="3.4544" y1="3.3528" x2="3.81" y2="2.9972" width="0.1524" layer="21"/>
-<wire x1="3.81" y1="2.9972" x2="3.4544" y2="2.5146" width="0.1524" layer="21"/>
-<wire x1="3.683" y1="2.032" x2="4.2418" y2="1.9304" width="0.1524" layer="21"/>
-<wire x1="4.2418" y1="1.9304" x2="4.2418" y2="1.4224" width="0.1524" layer="21"/>
-<wire x1="4.2418" y1="1.4224" x2="3.683" y2="1.3208" width="0.1524" layer="21"/>
-<wire x1="3.4798" y1="0.8128" x2="3.81" y2="0.3556" width="0.1524" layer="21"/>
-<wire x1="3.81" y1="0.3556" x2="3.4544" y2="0" width="0.1524" layer="21"/>
-<wire x1="3.4544" y1="0" x2="2.9972" y2="0.3048" width="0.1524" layer="21"/>
-<wire x1="2.9972" y1="0.3048" x2="2.794" y2="0.2032" width="0.1524" layer="21"/>
-<wire x1="2.794" y1="0.2032" x2="2.4384" y2="1.0668" width="0.1524" layer="21"/>
-<wire x1="1.8288" y1="1.0668" x2="2.4384" y2="1.0668" width="0.1524" layer="21" curve="-307.809152"/>
-<wire x1="0.7681" y1="0.825" x2="0.5654" y2="1.2802" width="0.1524" layer="21" curve="-18.384503"/>
-<wire x1="0.5796" y1="2.0376" x2="0.7859" y2="2.5141" width="0.1524" layer="21" curve="-18.74246"/>
-<wire x1="1.3015" y1="3.0119" x2="1.7496" y2="3.1933" width="0.1524" layer="21" curve="-17.515118"/>
-<wire x1="2.4892" y1="3.204" x2="2.9444" y2="3.0226" width="0.1524" layer="21" curve="-17.788236"/>
-<wire x1="3.4671" y1="2.5105" x2="3.6876" y2="2.034" width="0.1524" layer="21" curve="-19.769635"/>
-<wire x1="3.6805" y1="1.3228" x2="3.4778" y2="0.8179" width="0.1524" layer="21" curve="-19.717465"/>
-</package>
-<package name="OSHW_6X200_NOTEXT">
-<wire x1="2.4384" y1="1.4224" x2="1.9304" y2="0.2794" width="0.1524" layer="21"/>
-<wire x1="1.9304" y1="0.2794" x2="1.6764" y2="0.4318" width="0.1524" layer="21"/>
-<wire x1="1.6764" y1="0.4318" x2="1.0668" y2="0" width="0.1524" layer="21"/>
-<wire x1="1.0668" y1="0" x2="0.6096" y2="0.4826" width="0.1524" layer="21"/>
-<wire x1="0.6096" y1="0.4826" x2="1.016" y2="1.0922" width="0.1524" layer="21"/>
-<wire x1="0.762" y1="1.778" x2="0" y2="1.905" width="0.1524" layer="21"/>
-<wire x1="0" y1="1.905" x2="0" y2="2.5654" width="0.1524" layer="21"/>
-<wire x1="0" y1="2.5654" x2="0.762" y2="2.7178" width="0.1524" layer="21"/>
-<wire x1="1.0414" y1="3.3528" x2="0.5842" y2="4.0132" width="0.1524" layer="21"/>
-<wire x1="0.5842" y1="4.0132" x2="1.0668" y2="4.4704" width="0.1524" layer="21"/>
-<wire x1="1.0668" y1="4.4704" x2="1.7272" y2="4.0132" width="0.1524" layer="21"/>
-<wire x1="2.3622" y1="4.2672" x2="2.4892" y2="5.08" width="0.1524" layer="21"/>
-<wire x1="2.4892" y1="5.08" x2="3.175" y2="5.08" width="0.1524" layer="21"/>
-<wire x1="3.175" y1="5.08" x2="3.302" y2="4.2672" width="0.1524" layer="21"/>
-<wire x1="3.937" y1="4.0132" x2="4.5974" y2="4.4704" width="0.1524" layer="21"/>
-<wire x1="4.5974" y1="4.4704" x2="5.08" y2="4.0132" width="0.1524" layer="21"/>
-<wire x1="5.08" y1="4.0132" x2="4.6228" y2="3.3528" width="0.1524" layer="21"/>
-<wire x1="4.9022" y1="2.7178" x2="5.6642" y2="2.5654" width="0.1524" layer="21"/>
-<wire x1="5.6642" y1="2.5654" x2="5.6642" y2="1.905" width="0.1524" layer="21"/>
-<wire x1="5.6642" y1="1.905" x2="4.9022" y2="1.778" width="0.1524" layer="21"/>
-<wire x1="4.6482" y1="1.0922" x2="5.08" y2="0.4826" width="0.1524" layer="21"/>
-<wire x1="5.08" y1="0.4826" x2="4.5974" y2="0" width="0.1524" layer="21"/>
-<wire x1="4.5974" y1="0" x2="3.9878" y2="0.4318" width="0.1524" layer="21"/>
-<wire x1="3.9878" y1="0.4318" x2="3.7338" y2="0.2794" width="0.1524" layer="21"/>
-<wire x1="3.7338" y1="0.2794" x2="3.2512" y2="1.4224" width="0.1524" layer="21"/>
-<wire x1="2.4384" y1="1.4478" x2="3.2512" y2="1.4478" width="0.1524" layer="21" curve="-308.267286"/>
-<wire x1="1.0245" y1="1.1004" x2="0.7637" y2="1.774" width="0.1524" layer="21" curve="-19.673848"/>
-<wire x1="0.7779" y1="2.7179" x2="1.0435" y2="3.3392" width="0.1524" layer="21" curve="-18.371859"/>
-<wire x1="1.736" y1="4.0223" x2="2.3432" y2="4.2689" width="0.1524" layer="21" curve="-17.83212"/>
-<wire x1="3.3155" y1="4.2736" x2="3.9464" y2="4.0175" width="0.1524" layer="21" curve="-18.449318"/>
-<wire x1="4.6199" y1="3.3487" x2="4.8997" y2="2.7179" width="0.1524" layer="21" curve="-19.303177"/>
-<wire x1="4.9045" y1="1.7692" x2="4.6484" y2="1.0909" width="0.1524" layer="21" curve="-20.344696"/>
-</package>
-<package name="OSHW_6X70_NOTEXT">
-<wire x1="0.8382" y1="0.508" x2="1.143" y2="0.508" width="0.1524" layer="21" curve="-300.510237"/>
-<wire x1="0.8382" y1="0.508" x2="0.6858" y2="0.1016" width="0.1524" layer="21"/>
-<wire x1="0.6858" y1="0.1016" x2="0.5842" y2="0.1524" width="0.1524" layer="21"/>
-<wire x1="0.5842" y1="0.1524" x2="0.381" y2="0" width="0.1524" layer="21"/>
-<wire x1="0.381" y1="0" x2="0.2032" y2="0.1524" width="0.1524" layer="21"/>
-<wire x1="0.2032" y1="0.1524" x2="0.3556" y2="0.381" width="0.1524" layer="21"/>
-<wire x1="0.3556" y1="0.381" x2="0.254" y2="0.6096" width="0.1524" layer="21"/>
-<wire x1="0.254" y1="0.6096" x2="0" y2="0.6604" width="0.1524" layer="21"/>
-<wire x1="0" y1="0.6604" x2="0" y2="0.889" width="0.1524" layer="21"/>
-<wire x1="0" y1="0.889" x2="0.2794" y2="0.9398" width="0.1524" layer="21"/>
-<wire x1="0.2794" y1="0.9398" x2="0.3556" y2="1.1684" width="0.1524" layer="21"/>
-<wire x1="0.3556" y1="1.1684" x2="0.2032" y2="1.397" width="0.1524" layer="21"/>
-<wire x1="0.2032" y1="1.397" x2="0.381" y2="1.5748" width="0.1524" layer="21"/>
-<wire x1="0.381" y1="1.5748" x2="0.6096" y2="1.397" width="0.1524" layer="21"/>
-<wire x1="0.6096" y1="1.397" x2="0.8128" y2="1.4986" width="0.1524" layer="21"/>
-<wire x1="0.8128" y1="1.4986" x2="0.889" y2="1.778" width="0.1524" layer="21"/>
-<wire x1="0.889" y1="1.778" x2="1.1176" y2="1.778" width="0.1524" layer="21"/>
-<wire x1="1.1176" y1="1.778" x2="1.1684" y2="1.4986" width="0.1524" layer="21"/>
-<wire x1="1.1684" y1="1.4986" x2="1.3716" y2="1.397" width="0.1524" layer="21"/>
-<wire x1="1.3716" y1="1.397" x2="1.6002" y2="1.5748" width="0.1524" layer="21"/>
-<wire x1="1.6002" y1="1.5748" x2="1.778" y2="1.397" width="0.1524" layer="21"/>
-<wire x1="1.778" y1="1.397" x2="1.6256" y2="1.1684" width="0.1524" layer="21"/>
-<wire x1="1.6256" y1="1.1684" x2="1.7272" y2="0.9398" width="0.1524" layer="21"/>
-<wire x1="1.7272" y1="0.9398" x2="1.9812" y2="0.889" width="0.1524" layer="21"/>
-<wire x1="1.9812" y1="0.889" x2="1.9812" y2="0.6604" width="0.1524" layer="21"/>
-<wire x1="1.9812" y1="0.6604" x2="1.7272" y2="0.6096" width="0.1524" layer="21"/>
-<wire x1="1.7272" y1="0.6096" x2="1.6256" y2="0.381" width="0.1524" layer="21"/>
-<wire x1="1.6256" y1="0.381" x2="1.778" y2="0.1524" width="0.1524" layer="21"/>
-<wire x1="1.778" y1="0.1524" x2="1.6002" y2="0" width="0.1524" layer="21"/>
-<wire x1="1.6002" y1="0" x2="1.397" y2="0.1524" width="0.1524" layer="21"/>
-<wire x1="1.397" y1="0.1524" x2="1.2954" y2="0.1016" width="0.1524" layer="21"/>
-<wire x1="1.2954" y1="0.1016" x2="1.143" y2="0.508" width="0.1524" layer="21"/>
-<wire x1="0.8382" y1="0.508" x2="1.143" y2="0.508" width="0.1524" layer="21" curve="-300.510237"/>
-</package>
 </packages>
 <symbols>
 <symbol name="VIN">
@@ -1665,41 +1528,6 @@ These are standard SMD and PTH capacitors. Normally 10uF, 47uF, and 100uF in ele
 <wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
 <text x="-1.016" y="3.556" size="1.778" layer="96">&gt;VALUE</text>
 <pin name="VIN" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
-</symbol>
-<symbol name="OSHW_LOGO">
-<text x="0" y="0" size="1.3208" layer="94" ratio="16">OSHW</text>
-<wire x1="2.4384" y1="3.2004" x2="1.9304" y2="2.0574" width="0.254" layer="94"/>
-<wire x1="1.9304" y1="2.0574" x2="1.6764" y2="2.2098" width="0.254" layer="94"/>
-<wire x1="1.6764" y1="2.2098" x2="1.0668" y2="1.778" width="0.254" layer="94"/>
-<wire x1="1.0668" y1="1.778" x2="0.6096" y2="2.2606" width="0.254" layer="94"/>
-<wire x1="0.6096" y1="2.2606" x2="1.016" y2="2.8702" width="0.254" layer="94"/>
-<wire x1="0.762" y1="3.556" x2="0" y2="3.683" width="0.254" layer="94"/>
-<wire x1="0" y1="3.683" x2="0" y2="4.3434" width="0.254" layer="94"/>
-<wire x1="0" y1="4.3434" x2="0.762" y2="4.4958" width="0.254" layer="94"/>
-<wire x1="1.0414" y1="5.1308" x2="0.5842" y2="5.7912" width="0.254" layer="94"/>
-<wire x1="0.5842" y1="5.7912" x2="1.0668" y2="6.2484" width="0.254" layer="94"/>
-<wire x1="1.0668" y1="6.2484" x2="1.7272" y2="5.7912" width="0.254" layer="94"/>
-<wire x1="2.3622" y1="6.0452" x2="2.4892" y2="6.858" width="0.254" layer="94"/>
-<wire x1="2.4892" y1="6.858" x2="3.175" y2="6.858" width="0.254" layer="94"/>
-<wire x1="3.175" y1="6.858" x2="3.302" y2="6.0452" width="0.254" layer="94"/>
-<wire x1="3.937" y1="5.7912" x2="4.5974" y2="6.2484" width="0.254" layer="94"/>
-<wire x1="4.5974" y1="6.2484" x2="5.08" y2="5.7912" width="0.254" layer="94"/>
-<wire x1="5.08" y1="5.7912" x2="4.6228" y2="5.1308" width="0.254" layer="94"/>
-<wire x1="4.9022" y1="4.4958" x2="5.6642" y2="4.3434" width="0.254" layer="94"/>
-<wire x1="5.6642" y1="4.3434" x2="5.6642" y2="3.683" width="0.254" layer="94"/>
-<wire x1="5.6642" y1="3.683" x2="4.9022" y2="3.556" width="0.254" layer="94"/>
-<wire x1="4.6482" y1="2.8702" x2="5.08" y2="2.2606" width="0.254" layer="94"/>
-<wire x1="5.08" y1="2.2606" x2="4.5974" y2="1.778" width="0.254" layer="94"/>
-<wire x1="4.5974" y1="1.778" x2="3.9878" y2="2.2098" width="0.254" layer="94"/>
-<wire x1="3.9878" y1="2.2098" x2="3.7338" y2="2.0574" width="0.254" layer="94"/>
-<wire x1="3.7338" y1="2.0574" x2="3.2512" y2="3.2004" width="0.254" layer="94"/>
-<wire x1="2.4384" y1="3.2258" x2="3.2512" y2="3.2258" width="0.254" layer="94" curve="-308.267286"/>
-<wire x1="1.0245" y1="2.8784" x2="0.7637" y2="3.552" width="0.254" layer="94" curve="-19.673848"/>
-<wire x1="0.7779" y1="4.4959" x2="1.0435" y2="5.1172" width="0.254" layer="94" curve="-18.371859"/>
-<wire x1="1.736" y1="5.8003" x2="2.3432" y2="6.0469" width="0.254" layer="94" curve="-17.83212"/>
-<wire x1="3.3155" y1="6.0516" x2="3.9464" y2="5.7955" width="0.254" layer="94" curve="-18.449318"/>
-<wire x1="4.6199" y1="5.1267" x2="4.8997" y2="4.4959" width="0.254" layer="94" curve="-19.303177"/>
-<wire x1="4.9045" y1="3.5472" x2="4.6484" y2="2.8689" width="0.254" layer="94" curve="-20.344696"/>
 </symbol>
 </symbols>
 <devicesets>
@@ -1710,33 +1538,6 @@ These are standard SMD and PTH capacitors. Normally 10uF, 47uF, and 100uF in ele
 </gates>
 <devices>
 <device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="OSHW_LOGO_6MIL" prefix="LOGO">
-<gates>
-<gate name="G$1" symbol="OSHW_LOGO" x="0" y="0"/>
-</gates>
-<devices>
-<device name="X0100-NT" package="OSHW_6X100_NOTEXT">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-<device name="X0150-NT" package="OSHW_6X150_NOTEXT">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-<device name="X0200-NT" package="OSHW_6X200_NOTEXT">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-<device name="X0070-NT" package="OSHW_6X70_NOTEXT">
 <technologies>
 <technology name=""/>
 </technologies>
@@ -1999,21 +1800,6 @@ DIN A3, landscape with extra doc field</description>
 <wire x1="34.544" y1="2.794" x2="33.274" y2="2.794" width="0.2032" layer="21"/>
 <wire x1="0" y1="26.67" x2="35.56" y2="26.67" width="0.127" layer="49"/>
 </package>
-<package name="OPENMV-LOGO">
-<circle x="1.6002" y="1.6256" radius="1.65470625" width="0.127" layer="21"/>
-<wire x1="1.7272" y1="2.2352" x2="1.1684" y2="3.2004" width="0.127" layer="21"/>
-<wire x1="0.0762" y1="2.2352" x2="1.7272" y2="2.2352" width="0.127" layer="21"/>
-<wire x1="1.1176" y1="2.0066" x2="0" y2="2.0066" width="0.127" layer="21"/>
-<wire x1="1.1176" y1="2.0066" x2="0.3048" y2="0.6096" width="0.127" layer="21"/>
-<wire x1="0.4572" y1="0.4318" x2="1.016" y2="1.3716" width="0.127" layer="21"/>
-<wire x1="1.016" y1="1.3716" x2="1.8034" y2="0" width="0.127" layer="21"/>
-<wire x1="1.4986" y1="0.9652" x2="2.032" y2="0.0254" width="0.127" layer="21"/>
-<wire x1="1.4986" y1="0.9652" x2="3.0988" y2="0.9652" width="0.127" layer="21"/>
-<wire x1="2.1082" y1="1.1938" x2="2.921" y2="2.6162" width="0.127" layer="21"/>
-<wire x1="2.1082" y1="1.1938" x2="3.2004" y2="1.1938" width="0.127" layer="21"/>
-<wire x1="2.2098" y1="1.8288" x2="1.3716" y2="3.2512" width="0.127" layer="21"/>
-<wire x1="2.2098" y1="1.8288" x2="2.7686" y2="2.7686" width="0.127" layer="21"/>
-</package>
 </packages>
 <symbols>
 <symbol name="OPENMV3">
@@ -2039,23 +1825,6 @@ DIN A3, landscape with extra doc field</description>
 <pin name="SWD" x="-17.78" y="0" length="middle"/>
 <pin name="RESET" x="-17.78" y="-2.54" length="middle"/>
 <pin name="BOOT" x="-17.78" y="-5.08" length="middle"/>
-</symbol>
-<symbol name="OPENMV-LOGO">
-<wire x1="-4.953" y1="0.889" x2="-4.953" y2="-0.635" width="0.2032" layer="94"/>
-<wire x1="-4.953" y1="-0.635" x2="-3.429" y2="-0.635" width="0.2032" layer="94"/>
-<wire x1="-3.429" y1="-0.635" x2="-3.429" y2="0.889" width="0.2032" layer="94"/>
-<wire x1="-3.429" y1="0.889" x2="-4.953" y2="0.889" width="0.2032" layer="94"/>
-<circle x="-4.572" y="0.508" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-4.191" y="0.508" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-3.81" y="0.508" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-3.81" y="0.127" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-4.191" y="0.127" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-4.572" y="0.127" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-4.572" y="-0.254" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-4.191" y="-0.254" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-3.81" y="-0.254" radius="0.0508" width="0.1016" layer="94"/>
-<circle x="-4.191" y="0.127" radius="1.397" width="0.254" layer="94"/>
-<text x="-2.413" y="-0.889" size="1.6764" layer="94" font="vector" ratio="17">penMV</text>
 </symbol>
 </symbols>
 <devicesets>
@@ -2083,18 +1852,6 @@ DIN A3, landscape with extra doc field</description>
 <connect gate="G$1" pin="TXD/SCL" pad="15"/>
 <connect gate="G$1" pin="VIN" pad="27"/>
 </connects>
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="OPENMV-LOGO">
-<gates>
-<gate name="G$1" symbol="OPENMV-LOGO" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="OPENMV-LOGO">
 <technologies>
 <technology name=""/>
 </technologies>
@@ -2996,8 +2753,6 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <part name="TP3" library="testpad" deviceset="TP" device="TP12R">
 <attribute name="TP_SIGNAL_NAME" value=""/>
 </part>
-<part name="U$4" library="openmv" deviceset="OPENMV-LOGO" device=""/>
-<part name="LOGO1" library="iofault" deviceset="OSHW_LOGO_6MIL" device="X0150-NT"/>
 <part name="GND2" library="supply1" deviceset="GND" device=""/>
 <part name="R3" library="sfe" deviceset="RESISTOR" device="0603-RES" value="220R"/>
 <part name="GND3" library="supply1" deviceset="GND" device=""/>
@@ -3061,8 +2816,6 @@ new: Attribute TP_SIGNAL_NAME&lt;br&gt;
 <instance part="TP5" gate="G$1" x="147.32" y="114.3"/>
 <instance part="TP2" gate="G$1" x="132.08" y="139.7"/>
 <instance part="TP3" gate="G$1" x="137.16" y="139.7"/>
-<instance part="U$4" gate="G$1" x="236.22" y="25.4"/>
-<instance part="LOGO1" gate="G$1" x="231.14" y="27.94"/>
 <instance part="GND2" gate="1" x="152.4" y="86.36"/>
 <instance part="R3" gate="G$1" x="152.4" y="116.84" smashed="yes" rot="R90">
 <attribute name="NAME" x="152.4" y="111.76" size="1.778" layer="95" rot="R90"/>

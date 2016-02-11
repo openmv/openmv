@@ -1697,7 +1697,7 @@ DIN A3, landscape with extra doc field</description>
 <text x="0" y="12.7" size="3.81" layer="150">Copyright (c) 2013 Ibrahim Abd Elkader &lt;i.abdalkader@gmail.com&gt;</text>
 <text x="0" y="7.62" size="3.81" layer="150">This work is licensed under the Creative Commons Attribution-ShareAlike 3.0 License.</text>
 <text x="0" y="2.54" size="3.81" layer="150">To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/</text>
-<text x="264.16" y="7.62" size="2.54" layer="94" ratio="12">1</text>
+<text x="264.16" y="7.62" size="2.54" layer="94" ratio="12">2</text>
 <wire x1="271.78" y1="167.64" x2="0" y2="167.64" width="0.1524" layer="94"/>
 <wire x1="0" y1="167.64" x2="0" y2="0" width="0.1524" layer="94"/>
 </plain>
