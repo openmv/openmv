@@ -445,6 +445,8 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     // Encode 8x8 macroblocks
     if (src->bpp == 1) {
         uint8_t *pixels = (uint8_t *)src->pixels;
+        const uint16_t EOB[2] = { UVAC_HT[0x00][0], UVAC_HT[0x00][1] };
+
         for (int y=0; y<src->h; y+=8) {
             for (int x=0; x<src->w; x+=8) {
                 for (int r=y, pos=0; r<y+8; ++r, pos+=8) {
@@ -457,21 +459,16 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
                     YDU[pos + 5] = pixels[ofs + 5] - 128;
                     YDU[pos + 6] = pixels[ofs + 6] - 128;
                     YDU[pos + 7] = pixels[ofs + 7] - 128;
-
-                    UDU[pos + 0] = 0;   UDU[pos + 1] = 0;
-                    UDU[pos + 2] = 0;   UDU[pos + 3] = 0;
-                    UDU[pos + 4] = 0;   UDU[pos + 5] = 0;
-                    UDU[pos + 6] = 0;   UDU[pos + 7] = 0;
-
-                    VDU[pos + 0] = 0;   VDU[pos + 1] = 0;
-                    VDU[pos + 2] = 0;   VDU[pos + 3] = 0;
-                    VDU[pos + 4] = 0;   VDU[pos + 5] = 0;
-                    VDU[pos + 6] = 0;   VDU[pos + 7] = 0;
                 }
 
                 DCY = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-                DCU = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
-                DCV = jpeg_processDU(&jpeg_buf, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+
+                // Skip UV blocks
+                jpeg_writeBits(&jpeg_buf, &bitBuf, &bitCnt, UVDC_HT[0]);
+                jpeg_writeBits(&jpeg_buf, &bitBuf, &bitCnt, EOB);
+
+                jpeg_writeBits(&jpeg_buf, &bitBuf, &bitCnt, UVDC_HT[0]);
+                jpeg_writeBits(&jpeg_buf, &bitBuf, &bitCnt, EOB);
             }
         }
     } else if (src->bpp == 2) {// TODO assuming RGB565
