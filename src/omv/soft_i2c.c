@@ -6,10 +6,8 @@
  * Software I2C implementation.
  *
  */
-#include <stdbool.h>
-#include <stm32f4xx_hal.h>
+#include <mp.h>
 #include "soft_i2c.h"
-#include "mp.h"
 
 #define I2C_PORT            GPIOB
 #define I2C_SIOC_PIN        GPIO_PIN_10
@@ -27,23 +25,17 @@
 #define ACK 0
 #define NACK 1
 
-static void delay(void)
+static void delay(void) // TODO: Update with clock speed knowledge for M7.
 {
-    volatile uint32_t i;
-    for (i=0; i<18; i++);
+    for(volatile int i=0; i<16; i++);
 }
 
 static void i2c_start(void)
 {
     /* The start of data transmission occurs when
        SIO_D is driven low while SIO_C is high */
-    I2C_SIOC_H();
-    I2C_SIOD_H();
-    delay();
-
     I2C_SIOD_L();
     delay();
-
     I2C_SIOC_L();
     delay();
 }
@@ -52,13 +44,8 @@ static void i2c_stop(void)
 {
     /* The stop of data transmission occurs when
        SIO_D is driven high while SIO_C is high */
-    I2C_SIOC_L();
-    I2C_SIOD_L();
-    delay();
-
     I2C_SIOC_H();
     delay();
-
     I2C_SIOD_H();
     delay();
 }
@@ -67,26 +54,29 @@ static uint8_t i2c_read_byte(char ack)
 {
     uint8_t data = 0;
 
-    for(char i = 0; i < 8; i++) {
+    I2C_SIOD_H();
+    delay();
+
+    for(char i=0; i<8; i++) {
         I2C_SIOC_H();
         delay();
-
-        data |= I2C_SIOD_READ()&0x01;
-        data <<= (i != 7);
-
+        data += data + I2C_SIOD_READ();
+        delay();
         I2C_SIOC_L();
-        if (i == 7) {
-            /* Write ACK */
-            I2C_SIOD_WRITE(ack);
-        }
         delay();
     }
+
+    /* Write ACK */
+    I2C_SIOD_WRITE(ack);
+    delay();
 
     I2C_SIOC_H();
     delay();
 
     I2C_SIOC_L();
-    I2C_SIOD_H();
+    delay();
+
+    I2C_SIOD_L();
     delay();
     return data;
 }
@@ -95,48 +85,49 @@ static char i2c_write_byte(uint8_t data)
 {
     char i;
 
-    /* Shift the 8 bits out */
-    for (i=0; i<8; i++) {
-        if (data & 0x80) {
-            I2C_SIOD_H();
-        } else {
-            I2C_SIOD_L();
-        }
-
+    for(i=0; i<8; i++) {
+        I2C_SIOD_WRITE((data >> (7 - i)) & 1);
+        delay();
         I2C_SIOC_H();
         delay();
-
         I2C_SIOC_L();
         delay();
-
-        data <<= 1;
     }
+
+    I2C_SIOD_H();
+    delay();
 
     I2C_SIOC_H();
     delay();
 
     /* Read ACK */
-    i = I2C_SIOD_READ()&0x01;
+    i = I2C_SIOD_READ();
+    delay();
 
     I2C_SIOC_L();
     delay();
 
-    I2C_SIOD_H();
+    I2C_SIOD_L();
+    delay();
     return i;
 }
 
 int soft_i2c_read_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
 {
     int ret = 0;
-
     mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     i2c_start();
-    ret |= i2c_write_byte(slv_addr | 0x01);
-    for (int i=0; i<len; i++) {
+    ret |= i2c_write_byte(slv_addr | 1);
+    for(int i=0; i<len; i++) {
         buf[i] = i2c_read_byte(ACK);
     }
     if (stop) {
         i2c_stop();
+    } else {
+        I2C_SIOD_H();
+        delay();
+        I2C_SIOC_H();
+        delay();
     }
     MICROPY_END_ATOMIC_SECTION(atomic_state);
     return ret;
@@ -144,17 +135,20 @@ int soft_i2c_read_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
 
 int soft_i2c_write_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
 {
-    uint8_t ret = 0;
-
+    int ret = 0;
     mp_uint_t atomic_state = MICROPY_BEGIN_ATOMIC_SECTION();
     i2c_start();
     ret |= i2c_write_byte(slv_addr);
-    for (int i=0; i<len; i++) {
-        ret |= i2c_write_byte(*buf++);
+    for(int i=0; i<len; i++) {
+        ret |= i2c_write_byte(buf[i]);
     }
-
     if (stop) {
         i2c_stop();
+    } else {
+        I2C_SIOD_H();
+        delay();
+        I2C_SIOC_H();
+        delay();
     }
     MICROPY_END_ATOMIC_SECTION(atomic_state);
     return ret;
@@ -162,19 +156,22 @@ int soft_i2c_write_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
 
 void soft_i2c_init()
 {
-    /* Conigure I2C GPIOs */
-    GPIO_InitTypeDef  GPIO_InitStructure;
+    GPIO_InitTypeDef GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_NOPULL;
-    GPIO_InitStructure.Speed = GPIO_SPEED_MEDIUM;
+    GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_OD;
 
     GPIO_InitStructure.Pin = I2C_SIOC_PIN;
+    I2C_SIOC_H(); // Set first to prevent glitches.
     HAL_GPIO_Init(I2C_PORT, &GPIO_InitStructure);
 
     GPIO_InitStructure.Pin = I2C_SIOD_PIN;
+    I2C_SIOD_H(); // Set first to prevent glitches.
     HAL_GPIO_Init(I2C_PORT, &GPIO_InitStructure);
 
-    I2C_SIOC_H();
-    I2C_SIOD_H();
-    delay();
+    for(volatile int i=0; i<1000; i++);
+
+    for(int j=0; j<127; j++) { // initialize bus
+        soft_i2c_write_bytes(j << 1, NULL, 0, true);
+    }
 }
