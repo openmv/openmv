@@ -13,12 +13,8 @@
 #include "ff.h"
 #include "xalloc.h"
 #include "imlib.h"
-
-// BinDCT Constants
-#define C0 (1567) // 0.382683433f * 4096
-#define C2 (5351) // 1.306562965f * 4096
-#define C3 (2896) // 0.707106781f * 4096
-
+#include "stm32f4xx_hal.h"
+#define TIME_JPEG   (0)
 
 typedef struct {
     int idx;
@@ -219,17 +215,16 @@ static void jpeg_calcBits(int val, uint16_t bits[2]) {
     bits[0] = val & ((1<<bits[1])-1);
 }
 
-static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int16_t *CDU, int *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
+static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
 {
     const uint16_t EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
     const uint16_t M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
 
-    int z1, z2, z3, z4, z5, z11, z13;
     int t0, t1, t2, t3, t4, t5, t6, t7, t10, t11, t12, t13;
 
-    // BinDCT
+    // BinDCT-a1
     // DCT rows
-    for (int16_t i=8, *p=CDU; i>0; i--, p+=8) {
+    for (int i=8, *p=CDU; i>0; i--, p+=8) {
         t0 = p[0] + p[7];
         t1 = p[1] + p[6];
         t2 = p[2] + p[5];
@@ -240,78 +235,85 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int16_t *CDU, int *fdtbl, int DC
         t5 = p[2] - p[5];
         t4 = p[3] - p[4];
 
-        // Even part
-        t10 = t0 + t3;
+        /* Even part */
+        t10 = t0 + t3 ;	/* phase 2 */
         t13 = t0 - t3;
-        t11 = t1 + t2;
+        t11 = t1 + t2 ;
         t12 = t1 - t2;
-        z1 = (t12 + t13) * C3>>12; // c4
 
-        p[0] = t10 + t11;
-        p[4] = t10 - t11;
-        p[2] = t13 + z1;
-        p[6] = t13 - z1;
+        p[0] = (t10 + t11);             /* phase 3 */
+        p[4] = ((p[0] ) >> 1) - t11;   /* Jie 05/18/00 */
 
-        // Odd part
-        t10 = t4 + t5;// phase 2
-        t11 = t5 + t6;
-        t12 = t6 + t7;
+        /*1/2, -1/2: alter the sign to get positive scaling factor */
+        p[6] = (( t13 ) >> 1) - t12;
+        p[2] = t13 - ((p[6] ) >> 1);
 
-        // The rotator is modified from fig 4-8 to avoid extra negations.
-        z5 = (t10 - t12) * C0>>12; // c6
-        z2 = (t10 >> 1) + z5; // c2-c6
-        z4 = (t12 * C2>>12) + z5; // c2+c6
-        z3 = (t11 * C3>>12); // c4
-        z11 = t7 + z3;    // phase 5
-        z13 = t7 - z3;
+        /* Odd part */
+        /* pi/4 = -1/2u 3/4d -1/2u*/
+        t10 = t5 - (( t6 ) >> 1);
+        t6 = t6 + t10 - ((t10 ) >> 2);
+        t5 = ((t6 ) >> 1) - t10;
 
-        p[5] = z13 + z2;// phase 6
-        p[3] = z13 - z2;
-        p[1] = z11 + z4;
-        p[7] = z11 - z4;
+        t10 = t4 + t5;
+        t11 = t4 - t5;
+        t12 = t7 - t6;
+        t13 = t7 + t6;
+
+        /* 7pi/16 = 1/4u -1/4d: alter the sign to get positive scaling factor */
+        p[7] = ((t13 ) >> 2) - t10;
+        p[1] = t13 - ((p[7] ) >> 2);
+
+        /* 3pi/16 = */
+        /* new version: 1, -1/2 */
+        p[5] = t11 + t12;
+        p[3] = t12 - ((p[5] ) >> 1);
     }
 
+
     // DCT columns
-    for (int16_t i=8, *p=CDU; i>0; i--, p++) {
-        t0 = p[0]  + p[56];
-        t1 = p[8]  + p[48];
-        t2 = p[16] + p[40];
-        t3 = p[24] + p[32];
+    for (int i=8, *p=CDU; i>0; i--, p++) {
+        t0 = (p[8*0] + p[8*7]);
+        t1 = (p[8*1] + p[8*6]);
+        t2 = (p[8*2] + p[8*5]);
+        t3 = (p[8*3] + p[8*4]);
 
-        t7 = p[0]  - p[56];
-        t6 = p[8]  - p[48];
-        t5 = p[16] - p[40];
-        t4 = p[24] - p[32];
+        t7 = (p[8*0] - p[8*7]);
+        t6 = (p[8*1] - p[8*6]);
+        t5 = (p[8*2] - p[8*5]);
+        t4 = (p[8*3] - p[8*4]);
 
-        // Even part
-        t10 = t0 + t3;	// phase 2
+        /* Even part */
+        t10 = t0 + t3;	/* phase 2 */
         t13 = t0 - t3;
         t11 = t1 + t2;
         t12 = t1 - t2;
-        z1 = (t12 + t13) * C3>>12; // c4
 
-        p[0] = t10 + t11; 		// phase 3
-        p[32] = t10 - t11;
-        p[16] = t13 + z1; 		// phase 5
-        p[48] = t13 - z1;
+        p[8*0] = (t10 + t11); /* phase 3 */
+        p[8*4] = ((p[8*0] ) >> 1) - t11;   /* Jie 05/18/00 */
 
-        // Odd part
-        t10 = t4 + t5; 		// phase 2
-        t11 = t5 + t6;
-        t12 = t6 + t7;
+        // 1/2, 1/2
+        p[8*6] = ((t13 ) >> 1) - t12;
+        p[8*2] = t13 - ((p[8*6] ) >> 1);
 
-        // The rotator is modified from fig 4-8 to avoid extra negations.
-        z5 = (t10 - t12) * C0>>12; // c6
-        z2 = (t10 >> 1) + z5; // c2-c6
-        z4 = (t12 * C2>>12) + z5; // c2+c6
-        z3 = (t11 * C3>>12); // c4
-        z11 = t7 + z3;		// phase 5
-        z13 = t7 - z3;
+        /* Odd part */
+        /* pi/4 = -1/2u 3/4d -1/2u*/
+        t10 = t5 - ((t6 ) >> 1);
+        t6 = t6 + t10 - ((t10 ) >> 2);
+        t5 = ((t6 ) >> 1) - t10;
 
-        p[40] = z13 + z2;// phase 6
-        p[24] = z13 - z2;
-        p[8] = z11 + z4;
-        p[56] = z11 - z4;
+        t10 = t4 + t5;
+        t11 = t4 - t5;
+        t12 = t7 - t6;
+        t13 = t7 + t6;
+
+        /* 7pi/16 = 1/4u -1/4d: alter sign to get positive scaling factor */
+        p[8*7] = ((t13 ) >> 2) - t10;
+        p[8*1] = t13 - ((p[8*7] ) >> 2);
+
+        /* 3pi/16 = */
+        /* new : 1 and -1/2 */
+        p[8*5] = t11 + t12 ;
+        p[8*3] = t12 - ((p[8*5] ) >> 1);
     }
 
     // first non-zero element in reverse order
@@ -342,6 +344,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int16_t *CDU, int *fdtbl, int DC
         jpeg_writeBits(jpeg_buf, EOB);
         return DU[0];
     }
+
     for(int i = 1; i <= end0pos; ++i) {
         int startpos = i;
         for (; DU[i]==0 && i<=end0pos ; ++i) {
@@ -382,8 +385,8 @@ void jpeg_init(int quality)
 
         for(int r = 0, k = 0; r < 8; ++r) {
             for(int c = 0; c < 8; ++c, ++k) {
-                fdtbl_Y[k]  = (int)((1/(YTable [s_jpeg_ZigZag[k]] * aasf[r] * aasf[c] * 8.0f))*4096);
-                fdtbl_UV[k] = (int)((1/(UVTable[s_jpeg_ZigZag[k]] * aasf[r] * aasf[c] * 8.0f))*4096);
+                fdtbl_Y[k]  = (int)((aasf[r] * aasf[c] /(YTable [s_jpeg_ZigZag[k]] * 8.0f))*4096);
+                fdtbl_UV[k] = (int)((aasf[r] * aasf[c] /(UVTable[s_jpeg_ZigZag[k]] * 8.0f))*4096);
             }
         }
     }
@@ -425,7 +428,11 @@ void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int width, int height)
 void jpeg_compress(image_t *src, image_t *dst, int quality)
 {
     int DCY=0, DCU=0, DCV=0;
-    int16_t YDU[64], UDU[64], VDU[64];
+    int YDU[64], UDU[64], VDU[64];
+
+    #if (TIME_JPEG==1)
+    uint32_t start = HAL_GetTick();
+    #endif
 
     // JPEG buffer
     jpeg_buf_t  jpeg_buf = {
@@ -528,4 +535,8 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
 
     dst->bpp = jpeg_buf.idx;
     dst->data = jpeg_buf.buf;
+
+    #if (TIME_JPEG==1)
+    printf("time: %lums\n", HAL_GetTick() - start);
+    #endif
 }
