@@ -367,7 +367,7 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, co
     return DU[0];
 }
 
-void jpeg_init(int quality)
+static void jpeg_init(int quality)
 {
     static int q =0;
 
@@ -392,43 +392,115 @@ void jpeg_init(int quality)
     }
 }
 
-void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int width, int height)
+static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp)
 {
+
+    // Number of components (1 or 3)
+    uint8_t nr_comp = (bpp == 1)? 1 : 3;
+
     // JPEG headers
-    uint8_t head0[] = { 0xFF, 0xD8, 0xFF, 0xE0, 0, 0x10, 'J', 'F',
-                        'I', 'F', 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xFF, 0xDB, 0, 0x84, 0 };
-    uint8_t head1[] = { 0xFF, 0xC0, 0, 0x11, 8, height>>8, height&0xFF, width>>8, width&0xFF,
-                        3, 1, 0x11, 0, 2, 0x11, 1, 3, 0x11, 1, 0xFF, 0xC4, 0x01, 0xA2, 0 };
-    uint8_t head2[] = { 0xFF, 0xDA, 0, 0xC, 3, 1, 0, 2, 0x11, 3, 0x11, 0, 0x3F, 0 };
+    uint8_t m_soi[] = {
+        0xFF, 0xD8          // SOI
+    };
 
-    // Write Headers
-    jpeg_put_bytes(jpeg_buf, head0, sizeof(head0));
+    uint8_t m_app0[] =  {
+        0xFF, 0xE0,         // APP0
+        0x00, 0x10,  'J',  'F',  'I',  'F', 0x00, 0x01,
+        0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00
+    };
+
+    uint8_t m_dqt[] = {
+        0xFF, 0xDB,         // DQT
+        (bpp*65+2)>>8,      // Header length MSB
+        (bpp*65+2)&0xFF,    // Header length LSB
+    };
+
+    uint8_t m_sof0[] = {
+        0xFF, 0xC0,         // SOF0
+        (nr_comp*3+8)>>8,   // Header length MSB
+        (nr_comp*3+8)&0xFF, // Header length LSB
+        0x08,               // Bits per sample
+        h>>8, h&0xFF,       // Height
+        w>>8, w&0xFF,       // Width
+        nr_comp,            // Number of components
+    };
+
+    uint8_t m_dht[] = {
+        0xFF, 0xC4,         // DHT
+        (bpp*208+2)>>8,     // Header length MSB
+        (bpp*208+2)&0xFF,   // Header length LSB
+    };
+
+    uint8_t m_sos[] = {
+        0xFF, 0xDA,         // SOS
+        (nr_comp*2+6)>>8,   // Header length MSB
+        (nr_comp*2+6)&0xFF, // Header length LSB
+        nr_comp,            // Number of components
+    };
+
+    // Write SOI marker
+    jpeg_put_bytes(jpeg_buf, m_soi, sizeof(m_soi));
+    // Write APP0 marker
+    jpeg_put_bytes(jpeg_buf, m_app0, sizeof(m_app0));
+
+    // Write DQT marker
+    jpeg_put_bytes(jpeg_buf, m_dqt, sizeof(m_dqt));
+    // Write Y quantization table (index, table)
+    jpeg_put_char (jpeg_buf, 0);
     jpeg_put_bytes(jpeg_buf, YTable, sizeof(YTable));
-    jpeg_put_char (jpeg_buf, 1);
 
-    jpeg_put_bytes(jpeg_buf, UVTable, sizeof(UVTable));
-    jpeg_put_bytes(jpeg_buf, head1, sizeof(head1));
+    if (bpp > 1) {
+        // Write UV quantization table (index, table)
+        jpeg_put_char (jpeg_buf, 1);
+        jpeg_put_bytes(jpeg_buf, UVTable, sizeof(UVTable));
+    }
+
+    // Write SOF0 marker
+    jpeg_put_bytes(jpeg_buf, m_sof0, sizeof(m_sof0));
+    for (int i=0; i<nr_comp; i++) {
+        // Component ID, HV sampling, q table idx
+        jpeg_put_bytes(jpeg_buf, (uint8_t [3]){i+1, 0x11, (i>0)}, 3);
+
+    }
+
+    // Write DHT marker
+    jpeg_put_bytes(jpeg_buf, m_dht, sizeof(m_dht));
+
+    // Write DHT-YDC
+    jpeg_put_char (jpeg_buf, 0x00);
     jpeg_put_bytes(jpeg_buf, std_dc_luminance_nrcodes+1, sizeof(std_dc_luminance_nrcodes)-1);
     jpeg_put_bytes(jpeg_buf, std_dc_luminance_values, sizeof(std_dc_luminance_values));
-    jpeg_put_char (jpeg_buf, 0x10); // HTYACinfo
 
+    // Write DHT-YAC
+    jpeg_put_char (jpeg_buf, 0x10);
     jpeg_put_bytes(jpeg_buf, std_ac_luminance_nrcodes+1, sizeof(std_ac_luminance_nrcodes)-1);
     jpeg_put_bytes(jpeg_buf, std_ac_luminance_values, sizeof(std_ac_luminance_values));
-    jpeg_put_char (jpeg_buf, 1); // HTUDCinfo
 
-    jpeg_put_bytes(jpeg_buf, std_dc_chrominance_nrcodes+1, sizeof(std_dc_chrominance_nrcodes)-1);
-    jpeg_put_bytes(jpeg_buf, std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
-    jpeg_put_char( jpeg_buf, 0x11); // HTUACinfo
+    if (bpp > 1) {
+        // Write DHT-UDC
+        jpeg_put_char (jpeg_buf, 0x01);
+        jpeg_put_bytes(jpeg_buf, std_dc_chrominance_nrcodes+1, sizeof(std_dc_chrominance_nrcodes)-1);
+        jpeg_put_bytes(jpeg_buf, std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
 
-    jpeg_put_bytes(jpeg_buf, std_ac_chrominance_nrcodes+1, sizeof(std_ac_chrominance_nrcodes)-1);
-    jpeg_put_bytes(jpeg_buf, std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
-    jpeg_put_bytes(jpeg_buf, head2, sizeof(head2));
+        // Write DHT-UAC
+        jpeg_put_char (jpeg_buf, 0x11);
+        jpeg_put_bytes(jpeg_buf, std_ac_chrominance_nrcodes+1, sizeof(std_ac_chrominance_nrcodes)-1);
+        jpeg_put_bytes(jpeg_buf, std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
+    }
+
+    // Write SOS marker
+    jpeg_put_bytes(jpeg_buf, m_sos, sizeof(m_sos));
+    for (int i=0; i<nr_comp; i++) {
+        jpeg_put_bytes(jpeg_buf, (uint8_t [2]){i+1, (i==0)? 0x00:0x11}, 2);
+    }
+
+    // Spectral selection
+    jpeg_put_bytes(jpeg_buf, (uint8_t [3]){0x00, 0x3F, 0x0}, 3);
 }
 
-void jpeg_compress(image_t *src, image_t *dst, int quality)
+static void jpeg_compress(image_t *src, image_t *dst, int quality)
 {
     int DCY=0, DCU=0, DCV=0;
-    int YDU[64], UDU[64], VDU[64];
 
     #if (TIME_JPEG==1)
     uint32_t start = HAL_GetTick();
@@ -447,13 +519,14 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     jpeg_init(quality);
 
     // Write JPEG headers
-    jpeg_write_headers(&jpeg_buf, src->w, src->h);
+    jpeg_write_headers(&jpeg_buf, src->w, src->h, src->bpp);
 
     // Encode 8x8 macroblocks
     if (src->bpp == 1) {
+        int YDU[64];
         uint8_t *pixels = (uint8_t *)src->pixels;
-        const uint16_t EOB[2] = { UVAC_HT[0x00][0], UVAC_HT[0x00][1] };
 
+        // Copy 8x8 MCUs
         for (int y=0; y<src->h; y+=8) {
             for (int x=0; x<src->w; x+=8) {
                 for (int r=y, pos=0; r<y+8; ++r, pos+=8) {
@@ -467,19 +540,13 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
                     YDU[pos + 6] = pixels[ofs + 6] - 128;
                     YDU[pos + 7] = pixels[ofs + 7] - 128;
                 }
-
                 DCY = jpeg_processDU(&jpeg_buf, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-
-                // Skip UV blocks
-                jpeg_writeBits(&jpeg_buf, UVDC_HT[0]);
-                jpeg_writeBits(&jpeg_buf, EOB);
-
-                jpeg_writeBits(&jpeg_buf, UVDC_HT[0]);
-                jpeg_writeBits(&jpeg_buf, EOB);
             }
         }
     } else if (src->bpp == 2) {// TODO assuming RGB565
+        int YDU[64], UDU[64], VDU[64];
         uint16_t *pixels = (uint16_t *)src->pixels;
+
         for (int y=0; y<src->h; y+=8) {
             for (int x=0; x<src->w; x+=8) {
                 for (int r=y, pos=0; r<y+8; ++r, pos+=8) {
