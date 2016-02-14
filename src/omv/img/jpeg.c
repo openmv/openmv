@@ -459,7 +459,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp)
     jpeg_put_bytes(jpeg_buf, m_sof0, sizeof(m_sof0));
     for (int i=0; i<nr_comp; i++) {
         // Component ID, HV sampling, q table idx
-        jpeg_put_bytes(jpeg_buf, (uint8_t [3]){i+1, 0x11, (i>0)}, 3);
+        jpeg_put_bytes(jpeg_buf, (uint8_t [3]){i+1, (i==0 && bpp==2)? 0x21:0x11, (i>0)}, 3);
 
     }
 
@@ -498,7 +498,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp)
     jpeg_put_bytes(jpeg_buf, (uint8_t [3]){0x00, 0x3F, 0x0}, 3);
 }
 
-static void jpeg_compress(image_t *src, image_t *dst, int quality)
+void jpeg_compress(image_t *src, image_t *dst, int quality)
 {
     int DCY=0, DCU=0, DCV=0;
 
@@ -544,47 +544,53 @@ static void jpeg_compress(image_t *src, image_t *dst, int quality)
             }
         }
     } else if (src->bpp == 2) {// TODO assuming RGB565
-        int YDU[64], UDU[64], VDU[64];
+        int YDU[128], UDU[64], VDU[64];
         uint16_t *pixels = (uint16_t *)src->pixels;
 
         for (int y=0; y<src->h; y+=8) {
-            for (int x=0; x<src->w; x+=8) {
-                for (int r=y, pos=0; r<y+8; ++r, pos+=8) {
+            for (int x=0; x<src->w; x+=16) {
+                for (int r=y, v_pos=0, uv_pos=0; r<y+8; r++, v_pos+=8, uv_pos+=8) {
                     int ofs = r*src->w+x;
-                    YDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 0];
-                    UDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 1];
-                    VDU[pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 2];
+                    YDU[v_pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 0];
+                    YDU[v_pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 0];
+                    YDU[v_pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 0];
+                    YDU[v_pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 0];
+                    YDU[v_pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 0];
+                    YDU[v_pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 0];
+                    YDU[v_pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 0];
+                    YDU[v_pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 0];
 
-                    YDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 0];
-                    UDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 1];
-                    VDU[pos + 1] = yuv_table[pixels[ofs + 1] * 3 + 2];
+                    YDU[v_pos + 0 + 64] = yuv_table[pixels[ofs + 8 + 0] * 3 + 0];
+                    YDU[v_pos + 1 + 64] = yuv_table[pixels[ofs + 8 + 1] * 3 + 0];
+                    YDU[v_pos + 2 + 64] = yuv_table[pixels[ofs + 8 + 2] * 3 + 0];
+                    YDU[v_pos + 3 + 64] = yuv_table[pixels[ofs + 8 + 3] * 3 + 0];
+                    YDU[v_pos + 4 + 64] = yuv_table[pixels[ofs + 8 + 4] * 3 + 0];
+                    YDU[v_pos + 5 + 64] = yuv_table[pixels[ofs + 8 + 5] * 3 + 0];
+                    YDU[v_pos + 6 + 64] = yuv_table[pixels[ofs + 8 + 6] * 3 + 0];
+                    YDU[v_pos + 7 + 64] = yuv_table[pixels[ofs + 8 + 7] * 3 + 0];
 
-                    YDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 0];
-                    UDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 1];
-                    VDU[pos + 2] = yuv_table[pixels[ofs + 2] * 3 + 2];
+                    // Just toss the old UV pixels (could average for better quality)
+                    UDU[uv_pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 1];
+                    UDU[uv_pos + 1] = yuv_table[pixels[ofs + 2] * 3 + 1];
+                    UDU[uv_pos + 2] = yuv_table[pixels[ofs + 4] * 3 + 1];
+                    UDU[uv_pos + 3] = yuv_table[pixels[ofs + 6] * 3 + 1];
+                    UDU[uv_pos + 4] = yuv_table[pixels[ofs + 8] * 3 + 1];
+                    UDU[uv_pos + 5] = yuv_table[pixels[ofs +10] * 3 + 1];
+                    UDU[uv_pos + 6] = yuv_table[pixels[ofs +12] * 3 + 1];
+                    UDU[uv_pos + 7] = yuv_table[pixels[ofs +14] * 3 + 1];
 
-                    YDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 0];
-                    UDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 1];
-                    VDU[pos + 3] = yuv_table[pixels[ofs + 3] * 3 + 2];
-
-                    YDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 0];
-                    UDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 1];
-                    VDU[pos + 4] = yuv_table[pixels[ofs + 4] * 3 + 2];
-
-                    YDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 0];
-                    UDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 1];
-                    VDU[pos + 5] = yuv_table[pixels[ofs + 5] * 3 + 2];
-
-                    YDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 0];
-                    UDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 1];
-                    VDU[pos + 6] = yuv_table[pixels[ofs + 6] * 3 + 2];
-
-                    YDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 0];
-                    UDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 1];
-                    VDU[pos + 7] = yuv_table[pixels[ofs + 7] * 3 + 2];
+                    VDU[uv_pos + 0] = yuv_table[pixels[ofs + 0] * 3 + 2];
+                    VDU[uv_pos + 1] = yuv_table[pixels[ofs + 2] * 3 + 2];
+                    VDU[uv_pos + 2] = yuv_table[pixels[ofs + 4] * 3 + 2];
+                    VDU[uv_pos + 3] = yuv_table[pixels[ofs + 6] * 3 + 2];
+                    VDU[uv_pos + 4] = yuv_table[pixels[ofs + 8] * 3 + 2];
+                    VDU[uv_pos + 5] = yuv_table[pixels[ofs +10] * 3 + 2];
+                    VDU[uv_pos + 6] = yuv_table[pixels[ofs +12] * 3 + 2];
+                    VDU[uv_pos + 7] = yuv_table[pixels[ofs +14] * 3 + 2];
                 }
 
-                DCY = jpeg_processDU(&jpeg_buf, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                DCY = jpeg_processDU(&jpeg_buf, YDU,    fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                DCY = jpeg_processDU(&jpeg_buf, YDU+64, fdtbl_Y, DCY, YDC_HT, YAC_HT);
                 DCU = jpeg_processDU(&jpeg_buf, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
                 DCV = jpeg_processDU(&jpeg_buf, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
             }
