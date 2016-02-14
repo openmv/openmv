@@ -11,7 +11,9 @@
 #include <systick.h>
 #include "omv_boardconfig.h"
 #include "sccb.h"
-#define SCCB_FREQ (100000)
+#define SCCB_FREQ   (100000) // We don't need fast I2C. 100KHz is fine here.
+#define TIMEOUT     (1000) /* Can't be sure when I2C routines return. Interrupts
+while polling hardware may result in unknown delays. */
 static I2C_HandleTypeDef I2CHandle;
 
 int SCCB_Init()
@@ -40,7 +42,7 @@ uint8_t SCCB_Probe()
     uint8_t slv_addr = 0x00;
 
     for (int i=0; i<127; i++) {
-        if (HAL_I2C_Master_Transmit(&I2CHandle, i, &reg, 1, 1) == HAL_OK) {
+        if (HAL_I2C_Master_Transmit(&I2CHandle, i, &reg, 1, TIMEOUT) == HAL_OK) {
             slv_addr = i;
             break;
         }
@@ -56,8 +58,8 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
     uint8_t data=0;
 
     __disable_irq();
-    if((HAL_I2C_Master_Transmit(&I2CHandle, slv_addr, &reg, 1, 1) != HAL_OK)
-    || (HAL_I2C_Master_Receive(&I2CHandle, slv_addr, &data, 1, 1) != HAL_OK)) {
+    if((HAL_I2C_Master_Transmit(&I2CHandle, slv_addr, &reg, 1, TIMEOUT) != HAL_OK)
+    || (HAL_I2C_Master_Receive(&I2CHandle, slv_addr, &data, 1, TIMEOUT) != HAL_OK)) {
         data=0xFF;
     }
     __enable_irq();
@@ -70,7 +72,7 @@ uint8_t SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
     uint8_t buf[] = {reg, data};
 
     __disable_irq();
-    if(HAL_I2C_Master_Transmit(&I2CHandle, slv_addr, buf, 2, 1) != HAL_OK) {
+    if(HAL_I2C_Master_Transmit(&I2CHandle, slv_addr, buf, 2, TIMEOUT) != HAL_OK) {
         ret=0xFF;
     }
     __enable_irq();
