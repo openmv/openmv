@@ -1153,13 +1153,10 @@ mp_obj_t py_image_load_image(mp_obj_t path_obj)
 
 mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    cascade_t cascade;
+
     py_cascade_obj_t *o = NULL;
     mp_map_elem_t *kw_stages = NULL;
-
-    // detection parameters
-    struct cascade cascade = {
-        .step = 2,
-    };
 
     // Load cascade from file or flash
     const char *path = mp_obj_str_get_str(args[0]);
