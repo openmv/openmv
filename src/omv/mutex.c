@@ -7,9 +7,10 @@
  *
  */
 #include <stm32f4xx.h>
-#include <core_cm4.h>
-#include <core_cmInstr.h>
 #include "mutex.h"
+
+// This is a standard implementation of mutexs on ARM processors following the ARM guide.
+// http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHEJCHB.html
 
 void mutex_init(mutex_t *mutex)
 {
