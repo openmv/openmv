@@ -16,15 +16,6 @@
 #include "xalloc.h"
 #include "mdefs.h"
 #include "font.h"
-#define MIN(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
-
-#define MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
 
 #define PIXEL_AT(src, x, y) \
    ({ __typeof__ (x) _x = (x); \
@@ -123,8 +114,8 @@ void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv)
     g = rgb->g*100/255;
     b = rgb->b*100/255;
 
-    min = MIN(r, MIN(g, b));
-    max = MAX(r, MAX(g, b));
+    min = IM_MIN(r, IM_MIN(g, b));
+    max = IM_MAX(r, IM_MAX(g, b));
 
     if (min == max) {
         /* Black/gray/white */
@@ -250,7 +241,7 @@ void imlib_binary(image_t *src, int threshold)
     }
 }
 
-#ifdef OPENMV1 
+#ifdef OPENMV1
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
 {
     struct color rgb, lab;
@@ -276,7 +267,7 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
             rgb.g = ((p&0x07)<<3)|(p>>13)*255/63;
             rgb.b = ((p>>8)&0x1F)*255/31;
             imlib_rgb_to_lab(&rgb, &lab);
-            
+
             dst->pixels[i+x] = 0;
             for (int c=0; c<color_size; c++) {
                 uint32_t sum =(color[c].L-lab.L) * (color[c].L-lab.L) +
@@ -599,8 +590,8 @@ void imlib_draw_rectangle(struct image *image, struct rectangle *r)
 {
     int i;
     uint8_t c=0xFF;
-    int x = MIN(MAX(r->x, 0), image->w-1);
-    int y = MIN(MAX(r->y, 0), image->h-1);
+    int x = IM_MIN(IM_MAX(r->x, 0), image->w-1);
+    int y = IM_MIN(IM_MAX(r->y, 0), image->h-1);
     int w = (x+r->w) >= image->w ? (image->w-x-1):r->w;
     int h = (y+r->h) >= image->h ? (image->h-y-1):r->h;
 
