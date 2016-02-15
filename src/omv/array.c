@@ -6,62 +6,64 @@
  * Dynamic array.
  *
  */
-#include <stdlib.h>
-#include <string.h>
+#include <mp.h>
+#include <stackctrl.h>
 #include "xalloc.h"
 #include "array.h"
-#define ARRAY_INIT_SIZE  10
-struct array {
-    int index;
-    int length;
-    void **data;
-    array_dtor dtor;
-};
+#define ARRAY_INIT_SIZE (4) // Size of one GC block.
 
-void array_alloc(struct array **a, array_dtor dtor)
+void array_alloc(array_t **a, array_dtor_t dtor)
 {
-    struct array *array;
-    array = xalloc(sizeof(struct array));
+    array_t *array = xalloc(sizeof(array_t));
     array->index  = 0;
     array->length = ARRAY_INIT_SIZE;
     array->dtor   = dtor;
-    array->data   = xalloc(array->length*sizeof(void*));
+    array->data   = xalloc(ARRAY_INIT_SIZE * sizeof(void*));
     *a = array;
 }
 
-void array_alloc_init(struct array **a, array_dtor dtor, int size)
+void array_alloc_init(array_t **a, array_dtor_t dtor, int size)
 {
-    struct array *array;
-    array = xalloc(sizeof(struct array));
+    array_t *array = xalloc(sizeof(array_t));
     array->index  = 0;
     array->length = size;
     array->dtor   = dtor;
-    array->data   = xalloc(array->length*sizeof(void*));
+    array->data   = xalloc(size * sizeof(void*));
     *a = array;
 }
 
-void array_free(struct array *array)
+void array_clear(array_t *array)
 {
     if (array->dtor != NULL) {
-        for (int i=0; i<array->index; i++){
+        for (int i=0, j=array->index; i<j; i++) {
             array->dtor(array->data[i]);
         }
     }
     xfree(array->data);
+    array->index = 0;
+    array->length = 0;
+    array->data = NULL;
+    // Note: realloc with null pointer and (size != 0) returns valid pointer.
+    // Note: realloc with valid pointer and (size == 0) returns null pointer.
+}
+
+void array_free(array_t *array)
+{
+    array_clear(array);
     xfree(array);
 }
 
-int  array_length(struct array *array)
+int array_length(array_t *array)
 {
-    return array->index;
+    return array->index; // index is the actual length, length is the max length
 }
 
-void *array_at(struct array *array, int idx)
+void *array_at(array_t *array, int idx)
 {
     return array->data[idx];
 }
 
-void array_push_back(struct array *array, void *element)
+void array_push_back(array_t *array, void *element)
 {
     if (array->index == array->length) {
         array->length += ARRAY_INIT_SIZE;
@@ -70,7 +72,7 @@ void array_push_back(struct array *array, void *element)
     array->data[array->index++] = element;
 }
 
-void *array_pop_back(struct array *array)
+void *array_pop_back(array_t *array)
 {
     void *el=NULL;
     if (array->index) {
@@ -79,31 +81,80 @@ void *array_pop_back(struct array *array)
     return el;
 }
 
-void array_erase(struct array *array, int idx)
+void *array_take(array_t *array, int idx)
 {
-    if (array->dtor) {
-        array->dtor(array->data[idx]);
-    }
-    if (array->index >1 && idx < array->index){
+    void *el=array->data[idx];
+    if ((1 < array->index) && (idx < (array->index - 1))) {
         /* Since dst is always < src we can just use memcpy */
         memcpy(array->data+idx, array->data+idx+1, (array->index-idx-1) * sizeof(void*));
     }
     array->index--;
+    return el;
 }
 
-void array_resize(struct array *array, int idx)
+void array_erase(array_t *array, int idx)
 {
-    //TODO realloc
-    while (array->index > idx) {
-        if (array->dtor != NULL) {
-            array->dtor(array->data[array->index-1]);
+    if (array->dtor) {
+        array->dtor(array->data[idx]);
+    }
+    array_take(array, idx);
+}
+
+void array_resize(array_t *array, int num)
+{
+    if (array->index != num) {
+        if (!num) {
+            array_clear(array);
+        } else {
+            if (array->index > num) {
+                if (array->dtor != NULL) {
+                    for (int i=num, j=array->index; i<j; i++) {
+                        array->dtor(array->data[i]);
+                    }
+                }
+                array->index = num;
+            }
+            // resize array
+            array->length = num;
+            array->data = xrealloc(array->data, array->length * sizeof(void*));
         }
-        array->index--;
     }
 }
 
-void array_sort(struct array *array, array_comp comp)
+// see micropython quicksort (objlist.c -> mp_quicksort)
+static void quicksort(void **head, void **tail, array_comp_t comp)
 {
-    //qsort(array->data, array->index, sizeof(void*), comp);
+    MP_STACK_CHECK();
+    while (head < tail) {
+        void **h = head - 1;
+        void **t = tail;
+        void *v = tail[0];
+        for (;;) {
+            do ++h; while(h < t && comp(h[0], v) < 0);
+            do --t; while(h < t && comp(v, t[0]) < 0);
+            if (h >= t) break;
+            void *x = h[0];
+            h[0] = t[0];
+            t[0] = x;
+        }
+        void *x = h[0];
+        h[0] = tail[0];
+        tail[0] = x;
+        // do the smaller recursive call first, to keep stack within O(log(N))
+        if (t - head < tail - h - 1) {
+            quicksort(head, t, comp);
+            head = h + 1;
+        } else {
+            quicksort(h + 1, tail, comp);
+            tail = t;
+        }
+    }
 }
 
+// TODO Python defines sort to be stable but ours is not
+void array_sort(array_t *array, array_comp_t comp)
+{
+    if (array->index > 1) {
+        quicksort(array->data, array->data + array->index - 1, comp);
+    }
+}

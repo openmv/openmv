@@ -150,7 +150,7 @@ rectangle_t *rectangle_clone(rectangle_t *r);
 void rectangle_add(rectangle_t *r0, rectangle_t *r1);
 void rectangle_div(rectangle_t *r0, int c);
 int rectangle_intersects(rectangle_t *r0, rectangle_t *r1);
-struct array *rectangle_merge(struct array *r);
+array_t *rectangle_merge(array_t *r);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
@@ -189,7 +189,7 @@ float imlib_template_match(struct image *image, struct image *template, struct r
 
 /* Haar/VJ */
 int imlib_load_cascade(struct cascade* cascade, const char *path);
-struct array *imlib_detect_objects(struct image *image, struct cascade* cascade);
+array_t *imlib_detect_objects(struct image *image, struct cascade* cascade);
 
 /* FAST/FREAK Feature Extractor */
 kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners, rectangle_t *roi);
