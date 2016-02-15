@@ -12,15 +12,26 @@
 #include <stdbool.h>
 #include "array.h"
 #include "fmath.h"
-typedef struct point {
-    uint16_t x;
-    uint16_t y;
-} point_t;
+
+#define IM_MIN(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
+#define IM_MAX(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
 
 typedef struct size {
     int w;
     int h;
 } wsize_t;
+
+typedef struct point {
+    int x;
+    int y;
+} point_t;
 
 typedef struct rectangle {
     int x;
@@ -141,16 +152,15 @@ typedef enum interp {
 
 /* Point functions */
 point_t *point_alloc(int x, int y);
-int point_equal(point_t *p1, point_t *p2);
+bool point_equal(point_t *p1, point_t *p2);
 float point_distance(point_t *p1, point_t *p2);
 
 /* Rectangle functions */
-rectangle_t *rectangle_alloc();
-rectangle_t *rectangle_clone(rectangle_t *r);
-void rectangle_add(rectangle_t *r0, rectangle_t *r1);
-void rectangle_div(rectangle_t *r0, int c);
-int rectangle_intersects(rectangle_t *r0, rectangle_t *r1);
-array_t *rectangle_merge(array_t *r);
+rectangle_t *rectangle_alloc(int x, int y, int w, int h);
+bool rectangle_equal(rectangle_t *r1, rectangle_t *r2);
+bool rectangle_intersects(rectangle_t *r1, rectangle_t *r2);
+bool rectangle_subimg(image_t *img, rectangle_t *r, rectangle_t *r_out);
+array_t *rectangle_merge(array_t *rectangles);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);

@@ -6,95 +6,100 @@
  * Rectangle functions.
  *
  */
-#include <float.h>
-#include <limits.h>
-#include <arm_math.h>
 #include "imlib.h"
 #include "array.h"
 #include "xalloc.h"
 
 rectangle_t *rectangle_alloc(int x, int y, int w, int h)
 {
-    rectangle_t *rectangle;
-    rectangle = xalloc(sizeof(*rectangle));
-    rectangle->x = x;
-    rectangle->y = y;
-    rectangle->w = w;
-    rectangle->h = h;
-    return rectangle;
+    rectangle_t *r = xalloc(sizeof(rectangle_t));
+    r->x = x;
+    r->y = y;
+    r->w = w;
+    r->h = h;
+    return r;
 }
 
-rectangle_t *rectangle_clone(rectangle_t *rect)
+bool rectangle_equal(rectangle_t *r1, rectangle_t *r2)
 {
-    rectangle_t *rectangle;
-    rectangle = xalloc(sizeof(rectangle_t));
-    memcpy(rectangle, rect, sizeof(rectangle_t));
-    return rectangle;
+    return ((r1->x==r2->x)&&(r1->y==r2->y)&&(r1->w==r2->w)&&(r1->h==r2->h));
 }
 
-void rectangle_add(rectangle_t *rect0, rectangle_t *rect1)
+bool rectangle_intersects(rectangle_t *r1, rectangle_t *r2)
 {
-    rect0->x += rect1->x;
-    rect0->y += rect1->y;
-    rect0->w += rect1->w;
-    rect0->h += rect1->h;
+    return  ((r1->x < (r2->x+r2->w)) &&
+             (r1->y < (r2->y+r2->h)) &&
+             ((r1->x+r1->w) > r2->x) &&
+             ((r1->y+r1->h) > r2->y));
 }
 
-void rectangle_div(rectangle_t *rect0, int c)
+// Determine subimg even if it is going off the edge of the main image.
+bool rectangle_subimg(image_t *img, rectangle_t *r, rectangle_t *r_out)
 {
-    rect0->x /= c;
-    rect0->y /= c;
-    rect0->w /= c;
-    rect0->h /= c;
+    rectangle_t r_img;
+    r_img.x = 0;
+    r_img.y = 0;
+    r_img.w = img->w;
+    r_img.h = img->h;
+    bool result = rectangle_intersects(&r_img, r);
+    if (result) {
+        int r_img_x2 = r_img.x + r_img.w;
+        int r_img_y2 = r_img.y + r_img.h;
+        int r_x2 = r->x + r->w;
+        int r_y2 = r->y + r->h;
+        r_out->x = IM_MAX(r_img.x, r->x);
+        r_out->y = IM_MAX(r_img.y, r->y);
+        r_out->w = IM_MIN(r_img_x2, r_x2) - r_out->x;
+        r_out->h = IM_MIN(r_img_y2, r_y2) - r_out->y;
+    }
+    return result;
 }
 
-int rectangle_intersects(rectangle_t *rect0, rectangle_t *rect1)
+// This isn't for actually combining the rects standardly, but, to instead
+// find the average rectangle between a bunch of overlapping rectangles.
+static void rectangle_add(rectangle_t *r1, rectangle_t *r2)
 {
-    return  ((rect0->x < (rect1->x+rect1->w)) &&
-             (rect0->y < (rect1->y+rect1->h)) &&
-             ((rect0->x+rect0->w) > rect1->x) &&
-             ((rect0->y+rect0->h) > rect1->y));
+    r1->x += r2->x;
+    r1->y += r2->y;
+    r1->w += r2->w;
+    r1->h += r2->h;
+}
+
+// This isn't for actually combining the rects standardly, but, to instead
+// find the average rectangle between a bunch of overlapping rectangles.
+static void rectangle_div(rectangle_t *r, int c)
+{
+    r->x /= c;
+    r->y /= c;
+    r->w /= c;
+    r->h /= c;
 }
 
 array_t *rectangle_merge(array_t *rectangles)
 {
-    int j;
-    array_t *objects;
-    array_t *overlap;
-    rectangle_t *rect1, *rect2;
-
-    array_alloc(&objects, xfree);
-    array_alloc(&overlap, xfree);
-
+    array_t *objects; array_alloc(&objects, xfree);
+    array_t *overlap; array_alloc(&overlap, xfree);
     /* merge overlaping detections */
     while (array_length(rectangles)) {
         /* check for overlaping detections */
-        rect1 = (rectangle_t *) array_at(rectangles, 0);
-        for (j=1; j<array_length(rectangles); j++) {
-            rect2 = (rectangle_t *) array_at(rectangles, j);
-            if (rectangle_intersects(rect1, rect2)) {
-                array_push_back(overlap, rectangle_clone(rect2));
-                array_erase(rectangles, j--);
+        rectangle_t *rect = (rectangle_t *) array_take(rectangles, 0);
+        for (int j=0; j<array_length(rectangles); j++) { // do not cache bound
+            if (rectangle_intersects(rect, (rectangle_t *) array_at(rectangles, j))) {
+                array_push_back(overlap, array_take(rectangles, j--));
             }
         }
-
         /* add the overlaping detections */
-        int count = array_length(overlap)+1;
-        while (array_length(overlap)) {
-            rect2 = (rectangle_t *) array_at(overlap, 0);
-            rectangle_add(rect1, rect2);
-            array_erase(overlap, 0);
+        int count = array_length(overlap);
+        for (int i=0; i<count; i++) {
+            rectangle_t *overlap_rect = (rectangle_t *) array_pop_back(overlap);
+            rectangle_add(rect, overlap_rect);
+            xfree(overlap_rect);
         }
-
         /* average the overlaping detections */
-        rectangle_div(rect1, count);
-        array_push_back(objects, rectangle_clone(rect1));
-        array_erase(rectangles, 0);
+        rectangle_div(rect, count + 1);
+        array_push_back(objects, rect);
     }
-
-    array_free(overlap);
     array_free(rectangles);
+    array_free(overlap);
     return objects;
 }
-
-

@@ -3,27 +3,21 @@
  * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * X,Y Point.
+ * Point functions.
  *
  */
-#include <float.h>
-#include <limits.h>
-#include <arm_math.h>
 #include "imlib.h"
-#include "array.h"
 #include "xalloc.h"
 
 point_t *point_alloc(int x, int y)
 {
-    point_t *p = xalloc(sizeof(*p));
-    if (p != NULL) {
-        p->x = x;
-        p->y = y;
-    }
+    point_t *p = xalloc(sizeof(point_t));
+    p->x = x;
+    p->y = y;
     return p;
 }
 
-int point_equal(point_t *p1, point_t *p2)
+bool point_equal(point_t *p1, point_t *p2)
 {
     return ((p1->x==p2->x)&&(p1->y==p2->y));
 }
