@@ -10,7 +10,7 @@
 #include "array.h"
 #include "xalloc.h"
 
-rectangle_t *rectangle_alloc(int x, int y, int w, int h)
+rectangle_t *rectangle_alloc(int16_t x, int16_t y, int16_t w, int16_t h)
 {
     rectangle_t *r = xalloc(sizeof(rectangle_t));
     r->x = x;

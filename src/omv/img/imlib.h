@@ -29,15 +29,15 @@ typedef struct size {
 } wsize_t;
 
 typedef struct point {
-    int x;
-    int y;
+    int16_t x;
+    int16_t y;
 } point_t;
 
 typedef struct rectangle {
-    int x;
-    int y;
-    int w;
-    int h;
+    int16_t x;
+    int16_t y;
+    int16_t w;
+    int16_t h;
 } rectangle_t;
 
 typedef struct blob {
@@ -151,12 +151,12 @@ typedef enum interp {
 } interp_t;
 
 /* Point functions */
-point_t *point_alloc(int x, int y);
+point_t *point_alloc(int16_t x, int16_t y);
 bool point_equal(point_t *p1, point_t *p2);
 float point_distance(point_t *p1, point_t *p2);
 
 /* Rectangle functions */
-rectangle_t *rectangle_alloc(int x, int y, int w, int h);
+rectangle_t *rectangle_alloc(int16_t x, int16_t y, int16_t w, int16_t h);
 bool rectangle_equal(rectangle_t *r1, rectangle_t *r2);
 bool rectangle_intersects(rectangle_t *r1, rectangle_t *r2);
 bool rectangle_subimg(image_t *img, rectangle_t *r, rectangle_t *r_out);
