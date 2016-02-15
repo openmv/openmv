@@ -673,7 +673,7 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
     struct image *image = NULL;
     struct cascade *cascade = NULL;
 
-    struct array *objects_array=NULL;
+    array_t *objects_array=NULL;
     mp_obj_t objects_list = mp_const_none;
 
     /* sanity checks */
