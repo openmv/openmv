@@ -17,40 +17,34 @@
 #include "mdefs.h"
 #include "font.h"
 
-#define PIXEL_AT(src, x, y) \
-   ({ __typeof__ (x) _x = (x); \
-       __typeof__ (y) _y = (y); \
-     src->data[_y*src->w+_x]; })
-
-#define SET_PIXEL(src, x, y, c) \
-   ({ __typeof__ (x) _x = (x);  \
-      __typeof__ (y) _y = (y);  \
-     src->data[_y*src->w+_x]=c; })
-
-#define R565(p) \
-    (uint32_t)((p>>3)&0x1F)
-
-#define G565(p) \
-    (uint32_t)(((p&0x07)<<3)|(p>>13))
-
-#define B565(p) \
-    (uint32_t)((p>>8)&0x1F)
-
-#define RGB565(r, g, b)\
-    (uint32_t)(((r&0x1F)<<3)|((g&0x3F)>>3)|(g<<13)|((b&0x1F)<<8))
-
-#define SWAP16(x) __REV16(x)
-
-#define SWAP32(x) __REV32(x)
-
-#define MAX_GRAY_LEVEL (255)
-
 /* XYZ lookup table */
 extern const float xyz_table[256];
 /* RGB565->LAB lookup */
 extern const int8_t lab_table[196608];
 /* Grayscale [0..255] to rainbox lookup */
 extern const uint16_t rainbow_table[256];
+
+// Get pixel (handles boundary check and image type check).
+int imlib_get_pixel(image_t *img, int x, int y)
+{
+    return (IM_X_INSIDE(img, x) && IM_Y_INSIDE(img, y)) ?
+        ( IM_IS_GS(img)
+        ? IM_GET_GS_PIXEL(img, x, y)
+        : IM_GET_RGB565_PIXEL(img, x, y) )
+    : 0;
+}
+
+// Set pixel (handles boundary check and image type check).
+void imlib_set_pixel(image_t *img, int x, int y, int p)
+{
+    if (IM_X_INSIDE(img, x) && IM_Y_INSIDE(img, y)) {
+        if (IM_IS_GS(img)) {
+            IM_SET_GS_PIXEL(img, x, y, p);
+        } else {
+            IM_SET_RGB565_PIXEL(img, x, y, p);
+        }
+    }
+}
 
 uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
 {
@@ -294,7 +288,7 @@ void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size,
         uint16_t r = color[c].r*31/255;
         uint16_t g = color[c].g*63/255;
         uint16_t b = color[c].b*31/255;
-        uint32_t rgb = SWAP16((r << 11) | (g << 5) | b) * 3;
+        uint32_t rgb = IM_SWAP16((r << 11) | (g << 5) | b) * 3;
 
         color[c].L = lab_table[rgb];
         color[c].A = lab_table[rgb+1];
@@ -419,13 +413,13 @@ void imlib_blend(struct image *src, struct image *dst, int x_off, int y_off, uin
         for (int x=x_off; x<src->w+x_off; x++) {
             spix = *srcp++;
             dpix = dstp[i+x];
-            vr = __PKHBT(R565(dpix), R565(spix), 16);
-            vg = __PKHBT(G565(dpix), G565(spix), 16);
-            vb = __PKHBT(B565(dpix), B565(spix), 16);
+            vr = __PKHBT(IM_R565(dpix), IM_R565(spix), 16);
+            vg = __PKHBT(IM_G565(dpix), IM_G565(spix), 16);
+            vb = __PKHBT(IM_B565(dpix), IM_B565(spix), 16);
             r = __SMUAD(v0, vr)>>8;
             g = __SMUAD(v0, vg)>>8;
             b = __SMUAD(v0, vb)>>8;
-            dstp[i+x]= RGB565(r, g, b);
+            dstp[i+x]= IM_RGB565(r, g, b);
         }
     }
 }
@@ -512,18 +506,18 @@ void imlib_scale_bilinear(struct image *src, struct image *dst)
             D = srcp[index+w1+1];
 
             // Yb = Ar(1-w)(1-h) + Br(w)(1-h) + Cr(h)(1-w) + Dr(wh)
-            r = (int)(R565(A)*(1-x_diff)*(1-y_diff) + R565(B)*(x_diff)*(1-y_diff) +
-                      R565(C)*(y_diff)*(1-x_diff)   + R565(D)*(x_diff*y_diff));
+            r = (int)(IM_R565(A)*(1-x_diff)*(1-y_diff) + IM_R565(B)*(x_diff)*(1-y_diff) +
+                      IM_R565(C)*(y_diff)*(1-x_diff)   + IM_R565(D)*(x_diff*y_diff));
 
             // Yb = Ag(1-w)(1-h) + Bg(w)(1-h) + Cg(h)(1-w) + Dg(wh)
-            g = (int)(G565(A)*(1-x_diff)*(1-y_diff) + G565(B)*(x_diff)*(1-y_diff) +
-                      G565(C)*(y_diff)*(1-x_diff)   + G565(D)*(x_diff*y_diff));
+            g = (int)(IM_G565(A)*(1-x_diff)*(1-y_diff) + IM_G565(B)*(x_diff)*(1-y_diff) +
+                      IM_G565(C)*(y_diff)*(1-x_diff)   + IM_G565(D)*(x_diff*y_diff));
 
             // Yb = Ab(1-w)(1-h) + Bb(w)(1-h) + Cb(h)(1-w) + Db(wh)
-            b =(int)(B565(A)*(1-x_diff)*(1-y_diff) + B565(B)*(x_diff)*(1-y_diff) +
-                     B565(C)*(y_diff)*(1-x_diff)   + B565(D)*(x_diff*y_diff));
+            b =(int)(IM_B565(A)*(1-x_diff)*(1-y_diff) + IM_B565(B)*(x_diff)*(1-y_diff) +
+                     IM_B565(C)*(y_diff)*(1-x_diff)   + IM_B565(D)*(x_diff*y_diff));
 
-            dstp[offset++] = RGB565(r, g, b);
+            dstp[offset++] = IM_RGB565(r, g, b);
         }
     }
 }
@@ -625,21 +619,21 @@ void imlib_draw_circle(struct image *image, int cx, int cy, int r, color_t *colo
 {
     int x = r, y = 0;
     int radiusError = 1-x;
-    uint16_t c = RGB565(color->r, color->g, color->b);
+    uint16_t c = IM_RGB565(color->r, color->g, color->b);
     if (cx+r >= image->w || cx-r < 0 ||
         cy+r >= image->h || cy-r < 0) {
         return;
     }
 
     while(x >= y) {
-        SET_PIXEL(image,  x + cx,  y + cy, c);
-        SET_PIXEL(image,  y + cx,  x + cy, c);
-        SET_PIXEL(image, -x + cx,  y + cy, c);
-        SET_PIXEL(image, -y + cx,  x + cy, c);
-        SET_PIXEL(image, -x + cx, -y + cy, c);
-        SET_PIXEL(image, -y + cx, -x + cy, c);
-        SET_PIXEL(image,  x + cx, -y + cy, c);
-        SET_PIXEL(image,  y + cx, -x + cy, c);
+        imlib_set_pixel(image,  x + cx,  y + cy, c);
+        imlib_set_pixel(image,  y + cx,  x + cy, c);
+        imlib_set_pixel(image, -x + cx,  y + cy, c);
+        imlib_set_pixel(image, -y + cx,  x + cy, c);
+        imlib_set_pixel(image, -x + cx, -y + cy, c);
+        imlib_set_pixel(image, -y + cx, -x + cy, c);
+        imlib_set_pixel(image,  x + cx, -y + cy, c);
+        imlib_set_pixel(image,  y + cx, -x + cy, c);
         y++;
         if (radiusError<0) {
             radiusError += 2 * y + 1;
@@ -679,7 +673,7 @@ void imlib_draw_string(image_t *src, int x_off, int y_off, const char *str, colo
     const glyph_t *g;
     uint8_t *srcp8 = (uint8_t*)src->pixels;
     uint16_t *srcp16 = (uint16_t*)src->pixels;
-    uint16_t color = RGB565(c->r, c->g, c->b);
+    uint16_t color = IM_RGB565(c->r, c->g, c->b);
 
     for(char c; (c=*str); str++) {
         if (c < ' ' || c > '~') {
@@ -705,7 +699,7 @@ void imlib_histeq(struct image *src)
 {
     int i, sum;
     int a = src->w*src->h;
-    uint32_t hist[MAX_GRAY_LEVEL+1]={0};
+    uint32_t hist[IM_MAX_GS+1]={0};
 
     /* compute image histogram */
     for (i=0; i<a; i++) {
@@ -713,13 +707,13 @@ void imlib_histeq(struct image *src)
     }
 
     /* compute the CDF */
-    for (i=0, sum=0; i<MAX_GRAY_LEVEL+1; i++) {
+    for (i=0, sum=0; i<IM_MAX_GS+1; i++) {
         sum += hist[i];
         hist[i] = sum;
     }
 
     for (i=0; i<a; i++) {
-        src->pixels[i] = (uint8_t) ((MAX_GRAY_LEVEL/(float)a) * hist[src->pixels[i]]);
+        src->pixels[i] = (uint8_t) ((IM_MAX_GS/(float)a) * hist[src->pixels[i]]);
     }
 }
 

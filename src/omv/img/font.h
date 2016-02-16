@@ -8,6 +8,7 @@
  */
 #ifndef __FONT_H__
 #define __FONT_H__
+#include <stdint.h>
 typedef struct {
     int w;
     int h;

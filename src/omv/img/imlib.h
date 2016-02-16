@@ -8,20 +8,137 @@
  */
 #ifndef __IMLIB_H__
 #define __IMLIB_H__
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "array.h"
 #include "fmath.h"
 
+#define IM_SWAP16(x) __REV16(x) // Swap bottom two chars in short.
+#define IM_SWAP32(x) __REV32(x) // Swap bottom two shorts in long.
+
 #define IM_MIN(a,b) \
-   ({ __typeof__ (a) _a = (a); \
+    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
-     _a < _b ? _a : _b; })
+       _a < _b ? _a : _b; })
 
 #define IM_MAX(a,b) \
-   ({ __typeof__ (a) _a = (a); \
+    ({ __typeof__ (a) _a = (a); \
        __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
+       _a > _b ? _a : _b; })
+
+// RGB565 to RGB888 conversion.
+extern const uint8_t rb528_table[32];
+extern const uint8_t g628_table[64];
+
+#define IM_R528(p) \
+    ({ __typeof__ (p) _p = (p); \
+       rb528_table[_p]; })
+
+#define IM_G628(p) \
+    ({ __typeof__ (p) _p = (p); \
+       g628_table[_p]; })
+
+#define IM_B528(p) \
+    ({ __typeof__ (p) _p = (p); \
+       rb528_table[_p]; })
+
+// RGB888 to RGB565 conversion.
+extern const uint8_t rb825_table[256];
+extern const uint8_t g826_table[256];
+
+#define IM_R825(p) \
+    ({ __typeof__ (p) _p = (p); \
+       rb825_table[_p]; })
+
+#define IM_G826(p) \
+    ({ __typeof__ (p) _p = (p); \
+       g826_table[_p]; })
+
+#define IM_B825(p) \
+    ({ __typeof__ (p) _p = (p); \
+       rb825_table[_p]; })
+
+// Split RGB565 values (note the RGB565 value is byte reversed).
+
+#define IM_R565(p) \
+    ({ __typeof__ (p) _p = (p); \
+       ((_p)>>3)&0x1F; })
+
+#define IM_G565(p) \
+    ({ __typeof__ (p) _p = (p); \
+       (((_p)&0x07)<<3)|((_p)>>13); })
+
+#define IM_B565(p) \
+    ({ __typeof__ (p) _p = (p); \
+       ((_p)>>8)&0x1F; })
+
+// Merge RGB565 values (note the RGB565 value is byte reversed).
+
+#define IM_RGB565(r, g, b) \
+    ({ __typeof__ (r) _r = (r); \
+       __typeof__ (g) _g = (g); \
+       __typeof__ (b) _b = (b); \
+       ((_r)<<3)|((_g)>>3)|((_g)<<13)|((_b)<<8); })
+
+// Grayscale maxes
+#define IM_MAX_GS (255)
+
+// RGB565 maxes
+#define IM_MAX_R5 (31)
+#define IM_MAX_G6 (63)
+#define IM_MAX_B5 (31)
+
+#define IM_IS_NULL(img) \
+    ({ __typeof__ (img) _img = (img); \
+       _img->bpp <= 0; })
+
+#define IM_IS_GS(img) \
+    ({ __typeof__ (img) _img = (img); \
+       _img->bpp == 1; })
+
+#define IM_IS_RGB565(img) \
+    ({ __typeof__ (img) _img = (img); \
+       _img->bpp == 2; })
+
+#define IM_IS_JPEG(img) \
+    ({ __typeof__ (img) _img = (img); \
+       _img->bpp >= 3; })
+
+#define IM_X_INSIDE(img, x) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       (0<=_x)&&(_x<_img->w); })
+
+#define IM_Y_INSIDE(img, y) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (y) _y = (y); \
+       (0<=_y)&&(_y<_img->h); })
+
+#define IM_GET_GS_PIXEL(img, x, y) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       __typeof__ (y) _y = (y); \
+       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
+
+#define IM_GET_RGB565_PIXEL(img, x, y) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       __typeof__ (y) _y = (y); \
+       ((uint16_t*)_img->pixels)[(_y*_img->w)+_x]; })
+
+#define IM_SET_GS_PIXEL(img, x, y, p) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       __typeof__ (y) _y = (y); \
+       __typeof__ (p) _p = (p); \
+       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]=_p; })
+
+#define IM_SET_RGB565_PIXEL(img, x, y, p) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       __typeof__ (y) _y = (y); \
+       __typeof__ (p) _p = (p); \
+       ((uint16_t*)_img->pixels)[(_y*_img->w)+_x]=_p; })
 
 typedef struct size {
     int w;
@@ -149,6 +266,9 @@ typedef enum interp {
     INTERP_BILINEAR,
     INTERP_BICUBIC
 } interp_t;
+
+int imlib_get_pixel(image_t *img, int x, int y);
+void imlib_set_pixel(image_t *img, int x, int y, int p);
 
 /* Point functions */
 point_t *point_alloc(int16_t x, int16_t y);
