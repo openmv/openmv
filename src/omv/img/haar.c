@@ -3,7 +3,7 @@
  * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Viola-Jones face detector implementation.
+ * Viola-Jones object detector implementation.
  * Original Author: Francesco Comaschi (f.comaschi@tue.nl)
  *
  */
@@ -15,162 +15,142 @@
 // built-in cascades
 #include "cascade.h"
 
-static int imlib_std(image_t *image)
+static int eval_weak_classifier(cascade_t *cascade, point_t pt, int t_idx, int w_idx, int r_idx)
 {
-    int w=image->w;
-    int h=image->h;
-    int n = w*h;
-    uint8_t *data = image->pixels;
+    int32_t sumw=0;
+    mw_image_t *sum = cascade->sum;
 
-    uint32_t s=0, sq=0;
-    for (int i=0; i<n; i+=2) {
-        s += data[i+0] + data[i+1];
-        uint32_t v0 = __PKHBT(data[i+0],
-                              data[i+1], 16);
-        sq = __SMLAD(v0, v0, sq);
-    }
+    /* The node threshold is multiplied by the standard deviation of the sub window */
+    int32_t t = cascade->tree_thresh_array[t_idx] * cascade->std;
 
-    /* mean */
-    int m = s/n;
-
-    /* variance */
-    uint32_t v = sq*n-(m*m);
-
-    /* std */
-    return fast_sqrtf(v);
-}
-
-static int evalWeakClassifier(cascade_t *cascade, int p_offset, int tree_index, int w_index, int r_index)
-{
-    int sumw=0;
-    i_image_t *sum = cascade->sum;
-    /* the node threshold is multiplied by the standard deviation of the image */
-    int t = cascade->tree_thresh_array[tree_index] * cascade->std;
-
-    for (int i=0; i<cascade->num_rectangles_array[tree_index]; i++) {
-        int x = cascade->rectangles_array[r_index + (i<<2) + 0];
-        int y = cascade->rectangles_array[r_index + (i<<2) + 1];
-        int w = cascade->rectangles_array[r_index + (i<<2) + 2];
-        int h = cascade->rectangles_array[r_index + (i<<2) + 3];
-
-        int idx0=sum->w*y + x + p_offset;
-        int idx1=sum->w*(y + h) + x + p_offset;
-        sumw += ( sum->data[idx0]
-                - sum->data[idx0 + w]
-                - sum->data[idx1]
-                + sum->data[idx1 + w])
-                * (cascade->weights_array[w_index + i]<<12);
+    for (int i=0; i<cascade->num_rectangles_array[t_idx]; i++) {
+        int x = cascade->rectangles_array[r_idx + (i<<2) + 0];
+        int y = cascade->rectangles_array[r_idx + (i<<2) + 1];
+        int w = cascade->rectangles_array[r_idx + (i<<2) + 2];
+        int h = cascade->rectangles_array[r_idx + (i<<2) + 3];
+        // Lookup the feature
+        sumw += imlib_integral_mw_lookup(sum, pt.x+x, y, w, h) * (cascade->weights_array[w_idx + i]<<12);
     }
 
     if (sumw >= t) {
-        return cascade->alpha2_array[tree_index];
+        return cascade->alpha2_array[t_idx];
     }
 
-    return cascade->alpha1_array[tree_index];
+    return cascade->alpha1_array[t_idx];
 }
 
-static int runCascadeClassifier(cascade_t* cascade, struct point pt, int start_stage)
+static int run_cascade_classifier(cascade_t* cascade, point_t pt)
 {
-    int w_index = 0;
-    int r_index = 0;
-    int tree_index = 0;
-    int p_offset = pt.y * cascade->sum->w + pt.x;
+    int win_w = cascade->window.w;
+    int win_h = cascade->window.h;
+    int32_t n = (win_w * win_h);
+    int32_t i_s = imlib_integral_mw_lookup (cascade->sum, pt.x,   0, win_w, win_h);
+    int32_t i_sq = imlib_integral_mw_lookup(cascade->ssq, pt.x, 0, win_w, win_h);
+    int32_t v = i_sq*n-(i_s*i_s);
+    cascade->std = fast_sqrtf(fast_fabsf(v));
 
-    for (int i=start_stage; i<cascade->n_stages; i++) {
+    for (int i=0, w_idx=0, r_idx=0, t_idx=0; i<cascade->n_stages; i++) {
         int stage_sum = 0;
-        for (int j=0; j<cascade->stages_array[i]; j++, tree_index++) {
-            /* send the shifted window to a haar filter */
-              stage_sum += evalWeakClassifier(cascade, p_offset, tree_index, w_index, r_index);
-              w_index+=cascade->num_rectangles_array[tree_index];
-              r_index+=4*cascade->num_rectangles_array[tree_index];
+        for (int j=0; j<cascade->stages_array[i]; j++, t_idx++) {
+            // Send the shifted window to a haar filter
+            stage_sum += eval_weak_classifier(cascade, pt, t_idx, w_idx, r_idx);
+            w_idx += cascade->num_rectangles_array[t_idx];
+            r_idx += cascade->num_rectangles_array[t_idx] * 4;
         }
-
-        /* If the sum is below the stage threshold, no faces are detected */
-        if (stage_sum < cascade->threshold*cascade->stages_thresh_array[i]) {
+        // If the sum is below the stage threshold, no objects were detected
+        if (stage_sum < (cascade->threshold * cascade->stages_thresh_array[i])) {
             return -i;
         }
     }
-
     return 1;
-}
-
-static void ScaleImageInvoker(cascade_t *cascade, float factor, int sum_row, int sum_col, array_t *vec)
-{
-    int result;
-    struct point p;
-
-    /* When filter window shifts to image boarder, some margin need to be kept */
-    int y2 = sum_row - cascade->window.w;
-    int x2 = sum_col - cascade->window.h;
-
-    int win_w =  fast_roundf(cascade->window.w*factor);
-    int win_h =  fast_roundf(cascade->window.h*factor);
-
-    /* Shift the filter window over the image. */
-    for (int x=0; x<=x2; x+=cascade->step) {
-        for (int y=0; y<=y2; y+=cascade->step) {
-            p.x = x;
-            p.y = y;
-
-            result = runCascadeClassifier(cascade, p, 0);
-
-            /* If a face is detected, record the coordinates of the filter window */
-            if (result > 0) {
-                array_push_back(vec, rectangle_alloc(fast_roundf(x*factor), fast_roundf(y*factor), win_w, win_h));
-            }
-        }
-    }
 }
 
 array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
 {
-    /* allocate the detections array */
+
+    // Integral images
+    mw_image_t sum;
+    mw_image_t ssq;
+
+    // Detected objects array
     array_t *objects;
+
+    // Allocate the objects array
     array_alloc(&objects, xfree);
 
-    /* allocate integral image */
-    i_image_t sum;
-    imlib_integral_image_alloc(&sum, image->w, image->h);
-
-    /* set cascade image pointer */
+    // Set cascade image pointers
     cascade->img = image;
-
-    /* sets cascade integral image */
     cascade->sum = &sum;
+    cascade->ssq = &ssq;
 
-    /* set image standard deviation */
-    cascade->std = imlib_std(image);
-
+    // Set scanning step.
     // Viola and Jones achieved best results using a scaling factor
     // of 1.25 and a scanning factor proportional to the current scale.
-    float scale_factor = cascade->scale_factor;
-    cascade->step = (image->w*75)/1000; //7.5% of the image width
+    // Start with a step of 5% of the image width and reduce at each scaling step
+    cascade->step = (image->w*50)/1000; 
 
-    /* iterate over the image pyramid */
-    for(float factor=1.0f; ; factor*=scale_factor) {
-        /* Set the width and height of the images */
-        sum.w = image->w/factor;
-        sum.h = image->h/factor;
-        cascade->step = cascade->step/factor;
-        cascade->step = (cascade->step == 0) ? 1:cascade->step;
+    // Make sure step is less than feature height + 1
+    if (cascade->step > cascade->window.w) {
+        cascade->step = cascade->window.w;
+    }
 
-        /* Check if scaled image is smaller
-           than the original detection window */
-        if (sum.w < cascade->window.w ||
-            sum.h < cascade->window.h) {
+    // Allocate integral images
+    imlib_integral_mw_alloc(&sum,   image->w, cascade->window.h+1);
+    imlib_integral_mw_alloc(&ssq, image->w, cascade->window.h+1);
+
+    // Iterate over the image pyramid
+    for(float factor=1.0f; ; factor *= cascade->scale_factor) {
+        // Set the scaled width and height
+        int szw = image->w/factor;
+        int szh = image->h/factor;
+
+        // Break if scaled image is smaller than feature size
+        if (szw < cascade->window.w || szh < cascade->window.h) {
             break;
         }
 
-        /* Compute a new scaled integral image */
-        imlib_integral_image_scaled(image, &sum);
+        // Set the integral images scale
+        imlib_integral_mw_scale(image, &sum, szw, szh);
+        imlib_integral_mw_scale(image, &ssq, szw, szh);
 
-        /* Process the current scale */
-        ScaleImageInvoker(cascade, factor, sum.h, sum.w, objects);
+        // Compute new scaled integral images
+        imlib_integral_mw_ss(image, &sum, &ssq);
+
+        // Scale the scanning step
+        cascade->step = cascade->step/factor;
+        cascade->step = (cascade->step == 0) ? 1 : cascade->step;
+
+        // Process image at the current scale
+        // When filter window shifts to borders, some margin need to be kept
+        int y2 = szh - cascade->window.h;
+        int x2 = szw - cascade->window.w;
+
+        // Shift the filter window over the image.
+        for (int y=0; y<y2; y+=cascade->step) {
+            for (int x=0; x<x2; x+=cascade->step) {
+                point_t p = {x, y};
+                // If an object is detected, record the coordinates of the filter window
+                if (run_cascade_classifier(cascade, p) > 0) {
+                    array_push_back(objects, rectangle_alloc(fast_roundf(x*factor), fast_roundf(y*factor),
+                                fast_roundf(cascade->window.w*factor), fast_roundf(cascade->window.h*factor)));
+                }
+            }
+
+            // If not last line, shift integral images
+            if ((y+cascade->step) < y2) {
+                imlib_integral_mw_shift_ss(cascade->img, cascade->sum, cascade->ssq, cascade->step);
+            }
+        }
     }
 
-    if (array_length(objects) >1)   {
+    imlib_integral_mw_free(&ssq);
+    imlib_integral_mw_free(&sum);
+
+    if (array_length(objects) > 1)   {
+        // Merge objects detected at different scales
         objects = rectangle_merge(objects);
     }
+
     return objects;
 }
 
