@@ -19,7 +19,7 @@
 
 #define JPEG_INIT_BUF   (5*1024)
 
-extern struct sensor_dev sensor;
+extern sensor_t sensor;
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
 

@@ -196,7 +196,7 @@ static const uint8_t yuv422_regs[][2] = {
     {0x00,  0x00}
 };
 
-static int reset(struct sensor_dev *sensor)
+static int reset(sensor_t *sensor)
 {
     int i=0;
     const uint8_t (*regs)[2]=default_regs;
@@ -216,7 +216,7 @@ static int reset(struct sensor_dev *sensor)
     return 0;
 }
 
-static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixformat)
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
     int i=0;
     const uint8_t (*regs)[2];
@@ -254,7 +254,7 @@ static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixfor
     return 0;
 }
 
-static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize framesize)
+static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     uint8_t com7=0; /* framesize/RGB */
     uint8_t com1=0; /* Skip option */
@@ -285,14 +285,14 @@ static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize frames
     return 0;
 }
 
-static int set_framerate(struct sensor_dev *sensor, enum sensor_framerate framerate)
+static int set_framerate(sensor_t *sensor, framerate_t framerate)
 {
     /* Write framerate register */
     SCCB_Write(sensor->slv_addr, REG_CLKRC, framerate);
     return 0;
 }
 
-static int set_brightness(struct sensor_dev *sensor, int level)
+static int set_brightness(sensor_t *sensor, int level)
 {
     int i;
 
@@ -319,7 +319,7 @@ static int set_brightness(struct sensor_dev *sensor, int level)
     return 0;
 }
 
-static int set_exposure(struct sensor_dev *sensor, int exposure)
+static int set_exposure(sensor_t *sensor, int exposure)
 {
    uint8_t val;
    val = SCCB_Read(sensor->slv_addr, REG_COM1);
@@ -336,14 +336,14 @@ static int set_exposure(struct sensor_dev *sensor, int exposure)
    return 0;
 }
 
-static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling)
+static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 {
     /* Write gain ceiling register */
     SCCB_Write(sensor->slv_addr, REG_COM9, (gainceiling<<4));
     return 0;
 }
 
-int ov9650_init(struct sensor_dev *sensor)
+int ov9650_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;

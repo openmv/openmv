@@ -384,7 +384,7 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS + 1][5] = {
     { 0x00, 0x02, 0x03, 0x58, 0x58 }, /* +2 */
 };
 
-static int reset(struct sensor_dev *sensor)
+static int reset(sensor_t *sensor)
 {
     int i=0;
     const uint8_t (*regs)[2];
@@ -415,7 +415,7 @@ static int reset(struct sensor_dev *sensor)
     return 0;
 }
 
-static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixformat)
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
     int i=0;
     const uint8_t (*regs)[2]=NULL;
@@ -444,7 +444,7 @@ static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixfor
     return 0;
 }
 
-static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize framesize)
+static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret=0;
     uint8_t clkrc;
@@ -488,12 +488,12 @@ static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize frames
     return ret;
 }
 
-static int set_framerate(struct sensor_dev *sensor, enum sensor_framerate framerate)
+static int set_framerate(sensor_t *sensor, framerate_t framerate)
 {
     return 0;
 }
 
-static int set_contrast(struct sensor_dev *sensor, int level)
+static int set_contrast(sensor_t *sensor, int level)
 {
     int ret=0;
 
@@ -513,7 +513,7 @@ static int set_contrast(struct sensor_dev *sensor, int level)
     return ret;
 }
 
-static int set_brightness(struct sensor_dev *sensor, int level)
+static int set_brightness(sensor_t *sensor, int level)
 {
     int ret=0;
 
@@ -533,7 +533,7 @@ static int set_brightness(struct sensor_dev *sensor, int level)
     return ret;
 }
 
-static int set_saturation(struct sensor_dev *sensor, int level)
+static int set_saturation(sensor_t *sensor, int level)
 {
     int ret=0;
 
@@ -553,12 +553,12 @@ static int set_saturation(struct sensor_dev *sensor, int level)
     return ret;
 }
 
-static int set_exposure(struct sensor_dev *sensor, int exposure)
+static int set_exposure(sensor_t *sensor, int exposure)
 {
    return 0;
 }
 
-static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling)
+static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 {
     int ret =0;
 
@@ -571,7 +571,7 @@ static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling ga
     return ret;
 }
 
-static int set_quality(struct sensor_dev *sensor, int qs)
+static int set_quality(sensor_t *sensor, int qs)
 {
     int ret=0;
 
@@ -584,7 +584,7 @@ static int set_quality(struct sensor_dev *sensor, int qs)
     return ret;
 }
 
-static int set_colorbar(struct sensor_dev *sensor, int enable)
+static int set_colorbar(sensor_t *sensor, int enable)
 {
     int ret=0;
     uint8_t reg;
@@ -605,7 +605,7 @@ static int set_colorbar(struct sensor_dev *sensor, int enable)
     return ret;
 }
 
-int ov2640_init(struct sensor_dev *sensor)
+int ov2640_init(sensor_t *sensor)
 {
     /* set function pointers */
     sensor->reset = reset;

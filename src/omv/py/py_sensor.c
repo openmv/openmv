@@ -14,7 +14,7 @@
 #include "py_sensor.h"
 #include "omv_boardconfig.h"
 
-extern struct sensor_dev sensor;
+extern sensor_t sensor;
 
 static mp_obj_t py_sensor_reset() {
     sensor_reset();
@@ -54,7 +54,7 @@ static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {
 }
 
 static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
-    enum sensor_framerate fr;
+    framerate_t fr;
     switch (mp_obj_get_int(framerate)) {
         case 2:
             fr = FRAMERATE_2FPS;
@@ -90,7 +90,7 @@ static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
 }
 
 static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling) {
-    enum sensor_gainceiling gain;
+    gainceiling_t gain;
     switch (mp_obj_get_int(gainceiling)) {
         case 2:
             gain = GAINCEILING_2X;

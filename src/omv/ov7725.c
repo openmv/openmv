@@ -148,7 +148,7 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS][2] = {
     {0x80, 0x80}, /* +4 */
 };
 
-static int reset(struct sensor_dev *sensor)
+static int reset(sensor_t *sensor)
 {
     int i=0;
     const uint8_t (*regs)[2];
@@ -167,7 +167,7 @@ static int reset(struct sensor_dev *sensor)
     return 0;
 }
 
-static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixformat)
+static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
     // Read register COM7
     uint8_t reg = SCCB_Read(sensor->slv_addr, COM7);
@@ -188,7 +188,7 @@ static int set_pixformat(struct sensor_dev *sensor, enum sensor_pixformat pixfor
     return SCCB_Write(sensor->slv_addr, COM7, reg);
 }
 
-static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize framesize)
+static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret=0;
     uint16_t w = resolution[framesize][0];
@@ -203,12 +203,12 @@ static int set_framesize(struct sensor_dev *sensor, enum sensor_framesize frames
     return ret;
 }
 
-static int set_framerate(struct sensor_dev *sensor, enum sensor_framerate framerate)
+static int set_framerate(sensor_t *sensor, framerate_t framerate)
 {
     return 0;
 }
 
-static int set_contrast(struct sensor_dev *sensor, int level)
+static int set_contrast(sensor_t *sensor, int level)
 {
     int ret=0;
 
@@ -221,7 +221,7 @@ static int set_contrast(struct sensor_dev *sensor, int level)
     return ret;
 }
 
-static int set_brightness(struct sensor_dev *sensor, int level)
+static int set_brightness(sensor_t *sensor, int level)
 {
     int ret=0;
 
@@ -235,7 +235,7 @@ static int set_brightness(struct sensor_dev *sensor, int level)
     return ret;
 }
 
-static int set_saturation(struct sensor_dev *sensor, int level)
+static int set_saturation(sensor_t *sensor, int level)
 {
     int ret=0;
 
@@ -249,12 +249,12 @@ static int set_saturation(struct sensor_dev *sensor, int level)
     return ret;
 }
 
-static int set_exposure(struct sensor_dev *sensor, int exposure)
+static int set_exposure(sensor_t *sensor, int exposure)
 {
    return 0;
 }
 
-static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling gainceiling)
+static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 {
     // Read register COM9
     uint8_t reg = SCCB_Read(sensor->slv_addr, COM9);
@@ -266,7 +266,7 @@ static int set_gainceiling(struct sensor_dev *sensor, enum sensor_gainceiling ga
     return SCCB_Write(sensor->slv_addr, COM9, reg);
 }
 
-static int set_colorbar(struct sensor_dev *sensor, int enable)
+static int set_colorbar(sensor_t *sensor, int enable)
 {
     // Read register COM3
     uint8_t reg = SCCB_Read(sensor->slv_addr, COM3);
@@ -281,7 +281,7 @@ static int set_colorbar(struct sensor_dev *sensor, int enable)
     return SCCB_Write(sensor->slv_addr, COM3, reg);
 }
 
-static int set_special_effect(struct sensor_dev *sensor, enum sensor_sde sde)
+static int set_special_effect(sensor_t *sensor, sde_t sde)
 {
     int ret=0;
 
@@ -301,7 +301,7 @@ static int set_special_effect(struct sensor_dev *sensor, enum sensor_sde sde)
     return 0;
 }
 
-int ov7725_init(struct sensor_dev *sensor)
+int ov7725_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;

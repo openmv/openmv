@@ -29,7 +29,7 @@
 
 #define MAX_XFER_SIZE (0xFFFC)
 
-struct sensor_dev sensor;
+sensor_t sensor;
 TIM_HandleTypeDef  TIMHandle;
 DMA_HandleTypeDef  DMAHandle;
 DCMI_HandleTypeDef DCMIHandle;
@@ -188,7 +188,7 @@ int sensor_init()
     //HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSI, RCC_MCODIV_1);
 
     /* Reset the sesnor state */
-    memset(&sensor, 0, sizeof(struct sensor_dev));
+    memset(&sensor, 0, sizeof(sensor_t));
 
     /* Some sensors have different reset polarities, and we can't know which sensor
        is connected before initializing SCCB and probing the sensor, which in turn
@@ -293,7 +293,7 @@ int sensor_write_reg(uint8_t reg, uint8_t val)
     return SCCB_Write(sensor.slv_addr, reg, val);
 }
 
-int sensor_set_pixformat(enum sensor_pixformat pixformat)
+int sensor_set_pixformat(pixformat_t pixformat)
 {
     uint32_t jpeg_mode = DCMI_JPEG_DISABLE;
 
@@ -334,7 +334,7 @@ int sensor_set_pixformat(enum sensor_pixformat pixformat)
     return dcmi_config(jpeg_mode);
 }
 
-int sensor_set_framesize(enum sensor_framesize framesize)
+int sensor_set_framesize(framesize_t framesize)
 {
     if (sensor.framesize == framesize) {
        /* no change */
@@ -363,7 +363,7 @@ int sensor_set_framesize(enum sensor_framesize framesize)
     return 0;
 }
 
-int sensor_set_framerate(enum sensor_framerate framerate)
+int sensor_set_framerate(framerate_t framerate)
 {
     if (sensor.framerate == framerate) {
        /* no change */
@@ -412,7 +412,7 @@ int sensor_set_exposure(int exposure)
     return 0;
 }
 
-int sensor_set_gainceiling(enum sensor_gainceiling gainceiling)
+int sensor_set_gainceiling(gainceiling_t gainceiling)
 {
     if (sensor.gainceiling == gainceiling) {
         /* no change */
@@ -452,7 +452,7 @@ int sensor_set_colorbar(int enable)
     return 0;
 }
 
-int sensor_set_special_effect(enum sensor_sde sde)
+int sensor_set_special_effect(sde_t sde)
 {
     if (sensor.sde == sde) {
         /* no change */
@@ -496,7 +496,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 // The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
 // The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
 // overwrite image pixels before they are compressed.
-int sensor_snapshot(struct image *image)
+int sensor_snapshot(image_t *image)
 {
     volatile uint32_t addr;
     volatile uint16_t length;
