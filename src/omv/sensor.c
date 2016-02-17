@@ -115,6 +115,10 @@ static int dcmi_config(uint32_t jpeg_mode)
         return -1;
     }
 
+    // Uncomment the following to configure crop for testing.
+    // Use width*2-1 and height-1.
+    //HAL_DCMI_ConfigCROP(&DCMIHandle, 0, 0, 320*2-1, 240-1);
+    //HAL_DCMI_EnableCROP(&DCMIHandle);
     return 0;
 }
 
