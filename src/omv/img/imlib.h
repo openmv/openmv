@@ -208,6 +208,16 @@ typedef struct integral_image {
     uint32_t *data;
 } i_image_t;
 
+typedef struct {
+    int w;
+    int h;
+    int y_offs;
+    int x_ratio;
+    int y_ratio;
+    uint32_t **data;
+    uint32_t **swap;
+} mw_image_t;
+
 typedef struct _vector {
     float x;
     float y;
@@ -230,35 +240,25 @@ typedef struct {
 
 /* Haar cascade struct */
 typedef struct cascade {
-    /* Step size of filter window shifting */
-    int step;
-    /* Image standard deviation */
-    int std;
-    /* Detection threshold */
-    float threshold;
-    /* Scaling step size */
-    float scale_factor;
-    /* Number of stages in the cascade */
-    int n_stages;
-    /* Number of features in the cascade */
-    int n_features;
-    /* Number of rectangles in the cascade */
-    int n_rectangles;
-    /* Detection window size */
-    struct size window;
-    /* Grayscale image */
-    struct image *img;
-    /* Integral image */
-    struct integral_image *sum;
-    /* Haar cascade arrays */
-    uint8_t *stages_array;
-    int16_t *stages_thresh_array;
-    int16_t *tree_thresh_array;
-    int16_t *alpha1_array;
-    int16_t *alpha2_array;
-    int8_t *num_rectangles_array;
-    int8_t *weights_array;
-    int8_t *rectangles_array;
+    int std;                        // Image standard deviation.
+    int step;                       // Image scanning factor.
+    float threshold;                // Detection threshold.
+    float scale_factor;             // Image scaling factor.
+    int n_stages;                   // Number of stages in the cascade.
+    int n_features;                 // Number of features in the cascade.
+    int n_rectangles;               // Number of rectangles in the cascade.
+    struct size window;             // Detection window size.
+    struct image *img;              // Grayscale image.
+    mw_image_t *sum;                // Integral image.
+    mw_image_t *ssq;                // Squared integral image.
+    uint8_t *stages_array;          // Number of features per stage.
+    int16_t *stages_thresh_array;   // Stages thresholds.
+    int16_t *tree_thresh_array;     // Features threshold (1 per feature).
+    int16_t *alpha1_array;          // Alpha1 array (1 per feature).
+    int16_t *alpha2_array;          // Alpha2 array (1 per feature).
+    int8_t *num_rectangles_array;   // Number of rectangles per features (1 per feature).
+    int8_t *weights_array;          // Rectangles weights (1 per rectangle).
+    int8_t *rectangles_array;       // Rectangles array.
 } cascade_t;
 
 typedef enum interp {
@@ -313,6 +313,18 @@ void imlib_integral_image(struct image *src, struct integral_image *sum);
 void imlib_integral_image_sq(struct image *src, struct integral_image *sum);
 void imlib_integral_image_scaled(struct image *src, struct integral_image *sum);
 uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h);
+
+// Integral moving window 
+void imlib_integral_mw_alloc(mw_image_t *sum, int w, int h);
+void imlib_integral_mw_free(mw_image_t *sum);
+void imlib_integral_mw_scale(image_t *src, mw_image_t *sum, int w, int h);
+void imlib_integral_mw(image_t *src, mw_image_t *sum);
+void imlib_integral_mw_sq(image_t *src, mw_image_t *sum);
+void imlib_integral_mw_shift(image_t *src, mw_image_t *sum, int n);
+void imlib_integral_mw_shift_sq(image_t *src, mw_image_t *sum, int n);
+void imlib_integral_mw_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq);
+void imlib_integral_mw_shift_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, int n);
+long imlib_integral_mw_lookup(mw_image_t *sum, int x, int y, int w, int h);
 
 /* Template matching */
 float imlib_template_match(struct image *image, struct image *template, struct rectangle *r);

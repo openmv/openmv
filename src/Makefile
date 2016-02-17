@@ -129,6 +129,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	haar.o                                  \
 	imlib.o                                 \
 	integral.o                              \
+	integral_mw.o                           \
 	kmeans.o                                \
 	lab_tab.o                               \
 	xyz_tab.o                               \

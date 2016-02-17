@@ -32,6 +32,7 @@ SRCS += $(addprefix img/,   \
 	haar.c                  \
 	imlib.c                 \
 	integral.c              \
+	integral_mw.c           \
 	kmeans.c                \
 	lab_tab.c               \
 	xyz_tab.c               \
