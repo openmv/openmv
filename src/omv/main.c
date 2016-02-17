@@ -156,7 +156,7 @@ static const char fresh_selftest_py[] =
 "        avg = (0, 0, 0)\n"
 "        idx = 40*i+20 #center of colorbars\n"
 "        for off in range(0, 10): #avg 10 pixels\n"
-"            rgb = image.get_pixel(idx+off, 120)\n"
+"            rgb = image.get_pixel([idx+off, 120])\n"
 "            avg = tuple(map(sum, zip(avg, rgb)))\n"
 "\n"
 "        if not t[i](avg[0]/10, avg[1]/10, avg[2]/10):\n"
