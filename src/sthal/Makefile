@@ -10,6 +10,7 @@ stm32f4xx_hal_cortex.c\
 stm32f4xx_hal_dcmi.c\
 stm32f4xx_hal_dma.c\
 stm32f4xx_hal_dma_ex.c\
+stm32f4xx_hal_dma2d.c\
 stm32f4xx_hal_flash.c\
 stm32f4xx_hal_flash_ex.c\
 stm32f4xx_hal_gpio.c\
