@@ -12,20 +12,20 @@
 #include "imlib.h"
 #include "fb_alloc.h"
 
-void imlib_integral_image_alloc(struct integral_image *sum, int w, int h)
+void imlib_integral_image_alloc(i_image_t *sum, int w, int h)
 {
     sum->w = w;
     sum->h = h;
     sum->data = fb_alloc(w * h * sizeof(*sum->data));
 }
 
-void imlib_integral_image_free(struct integral_image *sum)
+void imlib_integral_image_free(i_image_t *sum)
 {
     // 1 allocation
     fb_free();
 }
 
-void imlib_integral_image(struct image *src, struct integral_image *sum)
+void imlib_integral_image(image_t *src, i_image_t *sum)
 {
     typeof(*src->data) *img_data = src->data;
     typeof(*sum->data) *sum_data = sum->data;
@@ -47,7 +47,7 @@ void imlib_integral_image(struct image *src, struct integral_image *sum)
     }
 }
 
-void imlib_integral_image_scaled(struct image *src, struct integral_image *sum)
+void imlib_integral_image_scaled(image_t *src, i_image_t *sum)
 {
     typeof(*src->data) *img_data = src->data;
     typeof(*sum->data) *sum_data = sum->data;
@@ -76,7 +76,7 @@ void imlib_integral_image_scaled(struct image *src, struct integral_image *sum)
     }
 }
 
-void imlib_integral_image_sq(struct image *src, struct integral_image *sum)
+void imlib_integral_image_sq(image_t *src, i_image_t *sum)
 {
     typeof(*src->data) *img_data = src->data;
     typeof(*sum->data) *sum_data = sum->data;
@@ -99,7 +99,7 @@ void imlib_integral_image_sq(struct image *src, struct integral_image *sum)
 
 }
 
-uint32_t imlib_integral_lookup(struct integral_image *sum, int x, int y, int w, int h)
+uint32_t imlib_integral_lookup(i_image_t *sum, int x, int y, int w, int h)
 {
 #define PIXEL_AT(x,y)\
     (sum->data[sum->w*(y)+(x)])
