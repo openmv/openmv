@@ -731,3 +731,29 @@ int imlib_save_image(image_t *image, const char *path, rectangle_t *r)
         return ppm_write_subimg(image, path, r);
     }
 }
+
+// One pass standard deviation
+int imlib_std(image_t *image)
+{
+    int w=image->w;
+    int h=image->h;
+    int n = w*h;
+    uint8_t *data = image->pixels;
+
+    uint32_t s=0, sq=0;
+    for (int i=0; i<n; i+=2) {
+        s += data[i+0] + data[i+1];
+        uint32_t v0 = __PKHBT(data[i+0],
+                              data[i+1], 16);
+        sq = __SMLAD(v0, v0, sq);
+    }
+
+    /* mean */
+    int m = s/n;
+
+    /* variance */
+    uint32_t v = sq/n-(m*m);
+
+    /* std */
+    return fast_sqrtf(v);
+}
