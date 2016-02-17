@@ -99,21 +99,10 @@ void imlib_integral_image_sq(struct image *src, struct integral_image *sum)
 
 }
 
-uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h)
+uint32_t imlib_integral_lookup(struct integral_image *sum, int x, int y, int w, int h)
 {
 #define PIXEL_AT(x,y)\
-    (src->data[src->w*(y-1)+(x-1)])
-
-    if (x==0 && y==0) {
-        return PIXEL_AT(w,h);
-    } else if (y==0) {
-        return PIXEL_AT(w+x, h+y) - PIXEL_AT(x, h+y);
-    } else if (x==0) {
-        return PIXEL_AT(w+x, h+y) - PIXEL_AT(w+x, y);
-    } else {
-        return PIXEL_AT(w+x, h+y) + PIXEL_AT(x, y) - PIXEL_AT(w+x, y) - PIXEL_AT(x, h+y);
-    }
+    (sum->data[sum->w*(y)+(x)])
+    return PIXEL_AT(w+x, h+y) + PIXEL_AT(x, y) - PIXEL_AT(w+x, y) - PIXEL_AT(x, h+y);
 #undef  PIXEL_AT
 }
-
-
