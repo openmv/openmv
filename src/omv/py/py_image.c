@@ -683,15 +683,15 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
     PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
             "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
 
-    /* read arguments */
+    // Read positional arguments
     image = py_image_cobj(args[0]);
     cascade = py_cascade_cobj(args[1]);
 
-    /* set some defaults */
-    cascade->threshold = 0.65f;
-    cascade->scale_factor = 1.65f;
+    // Set defaults before reading keywords arguments
+    cascade->threshold = 0.5f;
+    cascade->scale_factor = 1.5f;
 
-    /* read kw args */
+    // Read keyword arguments (threshold, scale and roi)
     mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("threshold")), MP_MAP_LOOKUP);
     if (kw_thresh != NULL) {
         cascade->threshold = mp_obj_get_float(kw_thresh->value);
@@ -702,7 +702,40 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
         cascade->scale_factor = mp_obj_get_float(kw_scalef->value);
     }
 
-    /* Detect objects */
+    mp_map_elem_t *kw_roi = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("roi")), MP_MAP_LOOKUP);
+    if (kw_roi != NULL) {
+        mp_obj_t *array;
+        mp_obj_get_array_fixed_n(kw_roi->value, 4, &array);
+
+        // If one of those is negative roi.(x) will overflow uint16_t
+        // And this error will be detected when checking ROI's bounds
+        uint16_t x = mp_obj_get_int(array[0]);
+        uint16_t y = mp_obj_get_int(array[1]);
+        uint16_t w = mp_obj_get_int(array[2]);
+        uint16_t h = mp_obj_get_int(array[3]);
+
+        // Make sure ROI is bigger than feature size
+        PY_ASSERT_TRUE_MSG((w > cascade->window.w &&
+                            h > cascade->window.h),
+                "Region of interest is smaller than detector window!");
+
+        // Make sure ROI is smaller than image size
+        PY_ASSERT_TRUE_MSG(((x + w) < image->w &&
+                            (y + h) < image->h),
+                "Region of interest is bigger than frame size!");
+
+        image_t subimg = {
+            .w = w,
+            .h = h,
+            .bpp = image->bpp,
+            .pixels = xalloc(w*h*image->bpp)
+        };
+
+        imlib_subimage(image, &subimg, x, y);
+        image = &subimg;
+    }
+
+    // Detect objects
     objects_array = imlib_detect_objects(image, cascade);
 
     /* Create empty Python list */
