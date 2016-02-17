@@ -53,7 +53,7 @@ def test_color_bars():
         avg = (0, 0, 0)
         idx = 40*i+20 #center of colorbars
         for off in range(0, 10): #avg 10 pixels
-            rgb = image.get_pixel(idx+off, 120)
+            rgb = image.get_pixel([idx+off, 120])
             avg = tuple(map(sum, zip(avg, rgb)))
     
         if not t[i](avg[0]/10, avg[1]/10, avg[2]/10):
