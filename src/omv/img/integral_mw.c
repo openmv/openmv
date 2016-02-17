@@ -48,7 +48,6 @@
 #include <stdio.h>
 #include <string.h>
 #include "imlib.h"
-#include "xalloc.h"
 #include "fb_alloc.h"
 
 // This macro swaps two pointers.
