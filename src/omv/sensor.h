@@ -23,24 +23,24 @@ struct sensor_id {
 };
 
 enum sensor_pixformat {
-    PIXFORMAT_RGB565,    /* 2BPP/RGB565*/
-    PIXFORMAT_YUV422,    /* 2BPP/YUV422*/
-    PIXFORMAT_GRAYSCALE, /* 1BPP/GRAYSCALE*/
-    PIXFORMAT_JPEG,      /* JPEG/COMPRESSED */
+    PIXFORMAT_RGB565,    // 2BPP/RGB565
+    PIXFORMAT_YUV422,    // 2BPP/YUV422
+    PIXFORMAT_GRAYSCALE, // 1BPP/GRAYSCALE
+    PIXFORMAT_JPEG,      // JPEG/COMPRESSED
 };
 
 enum sensor_framesize {
-    FRAMESIZE_QQCIF,    /* 88x72     */
-    FRAMESIZE_QQVGA,    /* 160x120   */
-    FRAMESIZE_QQVGA2,   /* 128x160   */
-    FRAMESIZE_QCIF,     /* 176x144   */
-    FRAMESIZE_HQVGA,    /* 220x160   */
-    FRAMESIZE_QVGA,     /* 320x240   */
-    FRAMESIZE_CIF,      /* 352x288   */
-    FRAMESIZE_VGA,      /* 640x480   */
-    FRAMESIZE_SVGA,     /* 800x600   */
-    FRAMESIZE_SXGA,     /* 1280x1024 */
-    FRAMESIZE_UXGA,     /* 1600x1200 */
+    FRAMESIZE_QQCIF,    // 88x72
+    FRAMESIZE_QQVGA,    // 160x120
+    FRAMESIZE_QQVGA2,   // 128x160
+    FRAMESIZE_QCIF,     // 176x144
+    FRAMESIZE_HQVGA,    // 220x160
+    FRAMESIZE_QVGA,     // 320x240
+    FRAMESIZE_CIF,      // 352x288
+    FRAMESIZE_VGA,      // 640x480
+    FRAMESIZE_SVGA,     // 800x600
+    FRAMESIZE_SXGA,     // 1280x1024
+    FRAMESIZE_UXGA,     // 1600x1200
 };
 
 extern const int resolution[][2];
@@ -88,14 +88,10 @@ enum reset_polarity {
 #define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
 
 struct sensor_dev {
-    // Sensor ID.
-    struct sensor_id id;
-    // Sensor I2C slave address.
-    uint8_t  slv_addr;
-    // Hardware flags (clock polarities/hw capabilities)
-    uint32_t hw_flags;
-    // Reset polarity (TODO move to hw_flags)
-    enum reset_polarity reset_pol;
+    struct sensor_id id;            // Sensor ID.
+    uint8_t  slv_addr;              // Sensor I2C slave address.
+    uint32_t hw_flags;              // Hardware flags (clock polarities/hw capabilities)
+    enum reset_polarity reset_pol;  // Reset polarity (TODO move to hw_flags)
 
     // Sensor state
     enum sensor_sde sde;
@@ -119,145 +115,59 @@ struct sensor_dev {
     int  (*set_special_effect)  (struct sensor_dev *sensor, enum sensor_sde sde);
 };
 
-/**
- * Initialize the sensor.
- * This function will initialize SCCB and XCLK, and will attempt to detect
- * the connected sensor. If a sensor supported sensor is detected, its driver will be used.
- *
- * @param sensor A pointer to the sensor device handle.
- * @return On success, 0 is returned. If the sensor is not supported, or not detected, -1 is returned.
- */
+// Initialize the sensor hardware and probe the image sensor.
 int sensor_init();
-/**
- * Initialize the sensor state.
- */
+
+// Initialize the sensor state.
 void sensor_init0();
-/**
- * Reset the sensor to its default state.
- *
- * @param sensor A pointer to the sensor device handle.
- * @return On success, 0 is returned. If the sensor is not supported, or not detected, -1 is returned.
- */
+
+// Reset the sensor to its default state.
 int sensor_reset();
-/**
- * Return sensor PID.
- *
- * @return On success, sensor PID is returned. If the sensor is not supported, or not detected, -1 is returned.
- */
+
+// Return sensor PID.
 int sensor_get_id();
-/**
- * Read a sensor register.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param reg    Register address.
- * @return On success, the regsiter value is returned. Otherwise, -1 is returned.
- */
+
+// Read a sensor register.
 int sensor_read_reg(uint8_t reg);
-/**
- * Write a sensor register.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param reg Register address.
- * @param val Register value.
- * @return On success, 0 is returned. Otherwise, -1 is returned.
- */
+
+// Write a sensor register.
 int sensor_write_reg(uint8_t reg, uint8_t val);
-/**
- * Capture a Snapshot.
- *
- * @param sensor A pointer to the sensor device handle.
- * @return  On success, 0 is returned. If the format is not supported by this sensor, -1 is returned.
- */
+
+// Capture a Snapshot.
 int sensor_snapshot(struct image *image);
-/**
- * Set the sensor pixel format.
- *
- * @see   sensor_pixelformat.
- * @param sensor A pointer to the sensor device handle.
- * @param pixformat The new pixel format.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the sensor pixel format.
 int sensor_set_pixformat(enum sensor_pixformat pixformat);
-/**
- * Set the sensor frame size.
- *
- * @see   sensor_framesize.
- * @param sensor A pointer to the sensor device handle.
- * @param framesize The new frame size.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the sensor frame size.
 int sensor_set_framesize(enum sensor_framesize framesize);
-/**
- * Set the sensor frame rate.
- *
- * @see   sensor_framerate.
- * @param sensor A pointer to the sensor device handle.
- * @param pixformat The new frame rate.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the sensor frame rate.
 int sensor_set_framerate(enum sensor_framerate framerate);
-/**
- * Set the sensor contrast level.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param level The new contrast level allowed values from -3 to +3.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the sensor contrast level (from -3 to +3).
 int sensor_set_contrast(int level);
-/**
- * Set the sensor brightness level.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param level The new brightness level allowed values from -3 to +3.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the sensor brightness level (from -3 to +3).
 int sensor_set_brightness(int level);
-/**
- * Set the sensor saturation level.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param level The new saturation level allowed values from -3 to +3.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the sensor saturation level (from -3 to +3).
 int sensor_set_saturation(int level);
-/**
- * Set the sensor exposure level. This function has no
- * effect when AEC (Automatic Exposure Control) is enabled.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param exposure The new exposure level.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the sensor exposure level.
+// Note: This function has no effect when AEC (Automatic Exposure Control) is enabled.
 int sensor_set_exposure(int exposure);
-/**
- * Set the sensor AGC gain ceiling.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param exposure The new exposure level.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the sensor AGC gain ceiling.
+// Note: This function has no effect when AGC (Automatic Gain Control) is disabled.
 int sensor_set_gainceiling(enum sensor_gainceiling gainceiling);
-/**
- * Set the quantization scale factor, controls JPEG quality.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param quality 0-255.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set the quantization scale factor, controls JPEG quality (quality 0-255).
 int sensor_set_quality(int qs);
-/**
- * Set the colorbar mode.
- *
- * @param sensor A pointer to the sensor device handle.
- * @param Enable enable or disable colorbar mode.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Enable/disable the colorbar mode.
 int sensor_set_colorbar(int enable);
-/**
- * Set special digital effects (SDE).
- *
- * @param sde Special digital effect.
- * @return  On success, 0 is returned. If the operation not supported by the sensor, -1 is returned.
- */
+
+// Set special digital effects (SDE).
 int sensor_set_special_effect(enum sensor_sde sde);
 #endif /* __SENSOR_H__ */
