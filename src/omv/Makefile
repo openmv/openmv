@@ -2,7 +2,7 @@
 SRCS += $(addprefix ,   \
 	main.c              \
 	xalloc.c            \
-	fb_stack.c          \
+	fb_alloc.c          \
 	ff_wrapper.c        \
 	array.c             \
 	usbdbg.c            \

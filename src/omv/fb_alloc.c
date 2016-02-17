@@ -8,7 +8,7 @@
  */
 #include <mp.h>
 #include "framebuffer.h"
-#include "fb_stack.h"
+#include "fb_alloc.h"
 
 extern char _fs_cache;
 static char *pointer = &_fs_cache;
@@ -18,12 +18,14 @@ NORETURN static void fb_alloc_fail()
     nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!!"));
 }
 
-void fb_init() {
+void fb_alloc_init0()
+{
     pointer = &_fs_cache;
 }
 
 // returns null pointer without error if size==0
-void *fb_alloc(uint32_t size) {
+void *fb_alloc(uint32_t size)
+{
     if (!size) {
         return NULL;
     }
@@ -45,13 +47,15 @@ void *fb_alloc(uint32_t size) {
 }
 
 // returns null pointer without error if size==0
-void *fb_alloc0(uint32_t size) {
+void *fb_alloc0(uint32_t size)
+{
     void *mem = fb_alloc(size);
     memset(mem, 0, size);
     return mem;
 }
 
-void fb_free() {
+void fb_free()
+{
     if (pointer < &_fs_cache) {
         pointer += *((uint32_t *) pointer); // Get size and pop.
     }
