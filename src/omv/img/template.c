@@ -56,5 +56,7 @@ float imlib_template_match(struct image *f,  struct image *t, struct rectangle *
         }
     }
     }
+
+    imlib_integral_image_free(f_imgs);
     return corr;
 }

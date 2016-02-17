@@ -10,14 +10,19 @@
 #include <string.h>
 #include <arm_math.h>
 #include "imlib.h"
-#include "xalloc.h"
-#include "framebuffer.h"
+#include "fb_alloc.h"
 
-void imlib_integral_image_alloc(struct integral_image *i_img, int w, int h)
+void imlib_integral_image_alloc(struct integral_image *sum, int w, int h)
 {
-    i_img->w = w;
-    i_img->h = h;
-    i_img->data = (typeof(*i_img->data)*) FB_PIXELS();
+    sum->w = w;
+    sum->h = h;
+    sum->data = fb_alloc(w * h * sizeof(*sum->data));
+}
+
+void imlib_integral_image_free(struct integral_image *sum)
+{
+    // 1 allocation
+    fb_free();
 }
 
 void imlib_integral_image(struct image *src, struct integral_image *sum)

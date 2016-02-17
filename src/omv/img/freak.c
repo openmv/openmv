@@ -300,6 +300,8 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
             desc[m/8] |= (pointsValue[DESCRIPTION_PAIRS[m][0]]> pointsValue[DESCRIPTION_PAIRS[m][1]]) << (m%8);
         }
     }
+
+    imlib_integral_image_free(&i_image);
 }
 
 int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpts2_size, int t)
