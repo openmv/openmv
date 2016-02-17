@@ -99,7 +99,7 @@ OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	main.o                                  \
 	xalloc.o                                \
-	fb_stack.o                              \
+	fb_alloc.o                              \
 	ff_wrapper.o                            \
 	array.o                                 \
 	usbdbg.o                                \

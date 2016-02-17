@@ -34,7 +34,7 @@ static int imlib_std(image_t *image)
     int m = s/n;
 
     /* variance */
-    uint32_t v = sq*24*24-(m*m);
+    uint32_t v = sq*n-(m*m);
 
     /* std */
     return fast_sqrtf(v);
@@ -141,14 +141,18 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
     /* set image standard deviation */
     cascade->std = imlib_std(image);
 
-    //float scale_factor = (1.0f-cascade->scale_factor)+1.0f;
-
+    // Viola and Jones achieved best results using a scaling factor
+    // of 1.25 and a scanning factor proportional to the current scale.
     float scale_factor = cascade->scale_factor;
+    cascade->step = (image->w*75)/1000; //7.5% of the image width
+
     /* iterate over the image pyramid */
     for(float factor=1.0f; ; factor*=scale_factor) {
         /* Set the width and height of the images */
-        sum.w = (image->w/factor);
-        sum.h = (image->h/factor);
+        sum.w = image->w/factor;
+        sum.h = image->h/factor;
+        cascade->step = cascade->step/factor;
+        cascade->step = (cascade->step == 0) ? 1:cascade->step;
 
         /* Check if scaled image is smaller
            than the original detection window */

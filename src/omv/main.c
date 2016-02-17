@@ -47,6 +47,7 @@
 #include "sensor.h"
 #include "usbdbg.h"
 #include "sdram.h"
+#include "fb_alloc.h"
 
 #include "usbd_core.h"
 #include "usbd_desc.h"
@@ -312,6 +313,7 @@ soft_reset:
     uart_init0();
     pyb_usb_init0();
     sensor_init0();
+    fb_alloc_init0();
 
 #if MICROPY_HW_ENABLE_RTC
     if (first_soft_reset) {
