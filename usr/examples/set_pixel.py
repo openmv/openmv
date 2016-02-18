@@ -15,7 +15,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 image = sensor.snapshot()
 for y in range(0, 240):
     for x in range(0, 320):
-        image.set_pixel(x, y, 0xFF)
+        image.set_pixel([x, y], 0xFF)
 
 time.sleep(1000)
 
@@ -26,4 +26,4 @@ sensor.set_pixformat(sensor.RGB565)
 image = sensor.snapshot()
 for y in range(0, 240):
     for x in range(0, 320):
-        image.set_pixel(x, y, (0xFF, 0x00, 0x00))
+        image.set_pixel([x, y], (0xFF, 0x00, 0x00))
