@@ -215,16 +215,17 @@ static void jpeg_calcBits(int val, uint16_t bits[2]) {
     bits[0] = val & ((1<<bits[1])-1);
 }
 
-static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
+static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, int *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
 {
+    int DU[64], DUQ[64];
+    int t0, t1, t2, t3, t4, t5, t6, t7, t10, t11, t12, t13;
     const uint16_t EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
     const uint16_t M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
 
-    int t0, t1, t2, t3, t4, t5, t6, t7, t10, t11, t12, t13;
-
     // BinDCT-a1
     // DCT rows
-    for (int i=8, *p=CDU; i>0; i--, p+=8) {
+    int8_t *p=CDU;
+    for (int i=8, *du=DU; i>0; i--, p+=8, du+=8) {
         t0 = p[0] + p[7];
         t1 = p[1] + p[6];
         t2 = p[2] + p[5];
@@ -241,14 +242,14 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, co
         t11 = t1 + t2 ;
         t12 = t1 - t2;
 
-        p[0] = (t10 + t11);             /* phase 3 */
-        p[4] = ((p[0] ) >> 1) - t11;   /* Jie 05/18/00 */
+        du[0] = (t10 + t11);             /* phase 3 */
+        du[4] = ((du[0] ) >> 1) - t11;   /* jie 05/18/00 */
 
         /*1/2, -1/2: alter the sign to get positive scaling factor */
-        p[6] = (( t13 ) >> 1) - t12;
-        p[2] = t13 - ((p[6] ) >> 1);
+        du[6] = (( t13 ) >> 1) - t12;
+        du[2] = t13 - ((du[6] ) >> 1);
 
-        /* Odd part */
+        /* odd part */
         /* pi/4 = -1/2u 3/4d -1/2u*/
         t10 = t5 - (( t6 ) >> 1);
         t6 = t6 + t10 - ((t10 ) >> 2);
@@ -260,27 +261,26 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, co
         t13 = t7 + t6;
 
         /* 7pi/16 = 1/4u -1/4d: alter the sign to get positive scaling factor */
-        p[7] = ((t13 ) >> 2) - t10;
-        p[1] = t13 - ((p[7] ) >> 2);
+        du[7] = ((t13 ) >> 2) - t10;
+        du[1] = t13 - ((du[7] ) >> 2);
 
         /* 3pi/16 = */
         /* new version: 1, -1/2 */
-        p[5] = t11 + t12;
-        p[3] = t12 - ((p[5] ) >> 1);
+        du[5] = t11 + t12;
+        du[3] = t12 - ((du[5] ) >> 1);
     }
 
-
     // DCT columns
-    for (int i=8, *p=CDU; i>0; i--, p++) {
-        t0 = (p[8*0] + p[8*7]);
-        t1 = (p[8*1] + p[8*6]);
-        t2 = (p[8*2] + p[8*5]);
-        t3 = (p[8*3] + p[8*4]);
+    for (int i=8, *du=DU; i>0; i--, du++) {
+        t0 = (du[8*0] + du[8*7]);
+        t1 = (du[8*1] + du[8*6]);
+        t2 = (du[8*2] + du[8*5]);
+        t3 = (du[8*3] + du[8*4]);
 
-        t7 = (p[8*0] - p[8*7]);
-        t6 = (p[8*1] - p[8*6]);
-        t5 = (p[8*2] - p[8*5]);
-        t4 = (p[8*3] - p[8*4]);
+        t7 = (du[8*0] - du[8*7]);
+        t6 = (du[8*1] - du[8*6]);
+        t5 = (du[8*2] - du[8*5]);
+        t4 = (du[8*3] - du[8*4]);
 
         /* Even part */
         t10 = t0 + t3;	/* phase 2 */
@@ -288,12 +288,12 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, co
         t11 = t1 + t2;
         t12 = t1 - t2;
 
-        p[8*0] = (t10 + t11); /* phase 3 */
-        p[8*4] = ((p[8*0] ) >> 1) - t11;   /* Jie 05/18/00 */
+        du[8*0] = (t10 + t11); /* phase 3 */
+        du[8*4] = ((du[8*0] ) >> 1) - t11;   /* Jie 05/18/00 */
 
         // 1/2, 1/2
-        p[8*6] = ((t13 ) >> 1) - t12;
-        p[8*2] = t13 - ((p[8*6] ) >> 1);
+        du[8*6] = ((t13 ) >> 1) - t12;
+        du[8*2] = t13 - ((du[8*6] ) >> 1);
 
         /* Odd part */
         /* pi/4 = -1/2u 3/4d -1/2u*/
@@ -307,29 +307,27 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, co
         t13 = t7 + t6;
 
         /* 7pi/16 = 1/4u -1/4d: alter sign to get positive scaling factor */
-        p[8*7] = ((t13 ) >> 2) - t10;
-        p[8*1] = t13 - ((p[8*7] ) >> 2);
+        du[8*7] = ((t13 ) >> 2) - t10;
+        du[8*1] = t13 - ((du[8*7] ) >> 2);
 
         /* 3pi/16 = */
         /* new : 1 and -1/2 */
-        p[8*5] = t11 + t12 ;
-        p[8*3] = t12 - ((p[8*5] ) >> 1);
+        du[8*5] = t11 + t12 ;
+        du[8*3] = t12 - ((du[8*5] ) >> 1);
     }
 
     // first non-zero element in reverse order
     int end0pos = 0;
-
     // Quantize/descale/zigzag the coefficients
-    int DU[64];
     for(int i=0; i<64; ++i) {
-        DU[s_jpeg_ZigZag[i]] = (CDU[i]*fdtbl[i])/4096;
-        if (s_jpeg_ZigZag[i] > end0pos && DU[s_jpeg_ZigZag[i]]) {
+        DUQ[s_jpeg_ZigZag[i]] = (DU[i]*fdtbl[i])/4096;
+        if (s_jpeg_ZigZag[i] > end0pos && DUQ[s_jpeg_ZigZag[i]]) {
             end0pos = s_jpeg_ZigZag[i];
         }
     }
 
     // Encode DC
-    int diff = DU[0] - DC;
+    int diff = DUQ[0] - DC;
     if (diff == 0) {
         jpeg_writeBits(jpeg_buf, HTDC[0]);
     } else {
@@ -342,12 +340,12 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, co
     // Encode ACs
     if(end0pos == 0) {
         jpeg_writeBits(jpeg_buf, EOB);
-        return DU[0];
+        return DUQ[0];
     }
 
     for(int i = 1; i <= end0pos; ++i) {
         int startpos = i;
-        for (; DU[i]==0 && i<=end0pos ; ++i) {
+        for (; DUQ[i]==0 && i<=end0pos ; ++i) {
         }
         int nrzeroes = i-startpos;
         if ( nrzeroes >= 16 ) {
@@ -357,14 +355,14 @@ static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int *CDU, int *fdtbl, int DC, co
             nrzeroes &= 15;
         }
         uint16_t bits[2];
-        jpeg_calcBits(DU[i], bits);
+        jpeg_calcBits(DUQ[i], bits);
         jpeg_writeBits(jpeg_buf, HTAC[(nrzeroes<<4)+bits[1]]);
         jpeg_writeBits(jpeg_buf, bits);
     }
     if(end0pos != 63) {
         jpeg_writeBits(jpeg_buf, EOB);
     }
-    return DU[0];
+    return DUQ[0];
 }
 
 static void jpeg_init(int quality)
@@ -523,7 +521,7 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
 
     // Encode 8x8 macroblocks
     if (src->bpp == 1) {
-        int YDU[64];
+        int8_t YDU[64];
         uint8_t *pixels = (uint8_t *)src->pixels;
 
         // Copy 8x8 MCUs
@@ -544,7 +542,7 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
             }
         }
     } else if (src->bpp == 2) {// TODO assuming RGB565
-        int YDU[256], UDU[64], VDU[64];
+        int8_t YDU[256], UDU[64], VDU[64];
         uint16_t *pixels = (uint16_t *)src->pixels;
 
         for (int y=0; y<src->h; y+=16) {
@@ -626,7 +624,6 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     // EOI
     jpeg_put_char(&jpeg_buf, 0xFF);
     jpeg_put_char(&jpeg_buf, 0xD9);
-
 
     dst->bpp = jpeg_buf.idx;
     dst->data = jpeg_buf.buf;
