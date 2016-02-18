@@ -82,6 +82,8 @@ typedef enum {
 #define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
 #define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
 #define SENSOR_HW_FLAGS_FSYNC        (3) // hardware frame sync.
+#define SENSOR_HW_FLAGS_HW_JPEG      (4) // hardware JPEG encoder.
+#define SENSOR_HW_FLAGS_SW_JPEG      (5) // software JPEG encoder enable/disable.
 #define SENSOR_HW_FLAGS_GET(s, x)    ((s)->hw_flags &  (1<<x))
 #define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
 
