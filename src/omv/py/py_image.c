@@ -190,15 +190,14 @@ static mp_obj_t py_image_size(mp_obj_t img_obj)
     }
 }
 
-static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t point_obj)
+static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
     "Operation not supported on JPEG");
 
-    mp_obj_t *arg_point; mp_obj_get_array_fixed_n(point_obj, 2, &arg_point);
-    int arg_x = mp_obj_get_int(arg_point[0]);
-    int arg_y = mp_obj_get_int(arg_point[1]);
+    int arg_x = mp_obj_get_int(x_obj);
+    int arg_y = mp_obj_get_int(y_obj);
     if ((!IM_X_INSIDE(arg_img, arg_x)) || (!IM_Y_INSIDE(arg_img, arg_y))) {
         return mp_const_none;
     }
@@ -215,15 +214,14 @@ static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t point_obj)
     }
 }
 
-static mp_obj_t py_image_set_pixel(mp_obj_t img_obj, mp_obj_t point_obj, mp_obj_t color_obj)
+static mp_obj_t py_image_set_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_obj, mp_obj_t color_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
     "Operation not supported on JPEG");
 
-    mp_obj_t *arg_point; mp_obj_get_array_fixed_n(point_obj, 2, &arg_point);
-    int arg_x = mp_obj_get_int(arg_point[0]);
-    int arg_y = mp_obj_get_int(arg_point[1]);
+    int arg_x = mp_obj_get_int(x_obj);
+    int arg_y = mp_obj_get_int(y_obj);
     if ((!IM_X_INSIDE(arg_img, arg_x)) || (!IM_Y_INSIDE(arg_img, arg_y))) {
         return mp_const_none;
     }
@@ -1033,8 +1031,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_width_obj, py_image_width);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_height_obj, py_image_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_format_obj, py_image_format);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_get_pixel_obj, py_image_get_pixel);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_set_pixel_obj, py_image_set_pixel);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_get_pixel_obj, py_image_get_pixel);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_set_pixel_obj, 4, 4, py_image_set_pixel);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
