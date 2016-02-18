@@ -290,10 +290,17 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             NVIC_SystemReset();
             break;
 
-        case USBDBG_BOOT:
+        case USBDBG_SYS_BOOT:
             *((uint32_t *)0x20002000) = 0xDEADBEEF;
             NVIC_SystemReset();
             break;
+
+        case USBDBG_JPEG_ENABLE: {
+            int16_t enable= *((int16_t*)buffer);
+            sensor_enable_jpeg(enable);
+            cmd = USBDBG_NONE;
+            break;
+        }
 
         case USBDBG_TX_BUF:
         case USBDBG_TX_BUF_LEN:

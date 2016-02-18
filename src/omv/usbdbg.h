@@ -18,7 +18,7 @@
   * the IDE will Not connect if the major version number is different.
   */
 #define FIRMWARE_VERSION_MAJOR      (1)
-#define FIRMWARE_VERSION_MINOR      (3)
+#define FIRMWARE_VERSION_MINOR      (4)
 #define FIRMWARE_VERSION_PATCH      (0)
 
 /**
@@ -44,7 +44,8 @@ enum usbdbg_cmd {
     USBDBG_ATTR_READ        =0x8A,
     USBDBG_ATTR_WRITE       =0x0B,
     USBDBG_SYS_RESET        =0x0C,
-    USBDBG_BOOT             =0x0D,
+    USBDBG_SYS_BOOT         =0x0D,
+    USBDBG_JPEG_ENABLE      =0x0E,
     USBDBG_TX_BUF_LEN       =0x8E,
     USBDBG_TX_BUF           =0x8F
 };
