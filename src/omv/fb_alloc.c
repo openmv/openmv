@@ -29,6 +29,7 @@ void *fb_alloc(uint32_t size)
     if (!size) {
         return NULL;
     }
+
     size=((size+sizeof(uint32_t)-1)/sizeof(uint32_t))*sizeof(uint32_t);// Round Up
     char *result = pointer - size;
     char *new_pointer = result - sizeof(uint32_t);
