@@ -86,6 +86,7 @@ typedef enum {
 #define SENSOR_HW_FLAGS_SW_JPEG      (5) // software JPEG encoder enable/disable.
 #define SENSOR_HW_FLAGS_GET(s, x)    ((s)->hw_flags &  (1<<x))
 #define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
+#define SENSOR_HW_FLAGS_CLR(s, x)    ((s)->hw_flags &= ~(1<<x))
 
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
@@ -136,6 +137,10 @@ int sensor_read_reg(uint8_t reg);
 
 // Write a sensor register.
 int sensor_write_reg(uint8_t reg, uint8_t val);
+
+// Enable/disable framebuffer JPEG compression.
+// Note: Has nothing to do with HW JPEG.
+int sensor_enable_jpeg(bool enable);
 
 // Capture a Snapshot.
 int sensor_snapshot(image_t *image);

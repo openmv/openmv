@@ -257,6 +257,9 @@ int sensor_init()
         return -5;
     }
 
+    // Enable framebuffer JPEG compression by default
+    sensor_enable_jpeg(true);
+
     /* All good! */
     return 0;
 }
@@ -281,6 +284,13 @@ int sensor_reset()
 int sensor_get_id()
 {
     return sensor.id.PID;
+}
+
+int sensor_enable_jpeg(bool enable)
+{
+    SENSOR_HW_FLAGS_CLR(&sensor, SENSOR_HW_FLAGS_SW_JPEG);
+    SENSOR_HW_FLAGS_SET(&sensor, SENSOR_HW_FLAGS_SW_JPEG, enable);
+    return 0;
 }
 
 int sensor_read_reg(uint8_t reg)
@@ -477,7 +487,11 @@ int sensor_set_special_effect(sde_t sde)
 void DCMI_DMAConvCpltUser(uint32_t addr)
 {
     uint8_t *src = (uint8_t*) addr;
-    uint8_t *dst = fb->pixels + FB_JPEG_OFFS_SIZE;
+    uint8_t *dst = fb->pixels;
+
+    if (SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
+        dst += FB_JPEG_OFFS_SIZE;
+    }
 
     if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
         dst += line++ * fb->w;
@@ -505,7 +519,8 @@ int sensor_snapshot(image_t *image)
     // Compress the framebuffer for the IDE only for non-JPEG
     // images and only if the IDE has requested a framebuffer.
     // Note: This doesn't run unless the camera is connected to PC.
-    if (fb->request && sensor.pixformat != PIXFORMAT_JPEG) {
+    if (fb->request && sensor.pixformat != PIXFORMAT_JPEG &&
+            SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
         // The framebuffer is compressed in place.
         // Assuming we have at least 128KBs of SRAM.
         image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};
@@ -591,7 +606,8 @@ int sensor_snapshot(image_t *image)
         image->h = fb->h;
         image->bpp = fb->bpp;
         image->pixels = fb->pixels;
-        if (sensor.pixformat != PIXFORMAT_JPEG) {
+        if (sensor.pixformat != PIXFORMAT_JPEG &&
+                SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
             image->pixels += FB_JPEG_OFFS_SIZE;
         }
     }
