@@ -54,7 +54,9 @@ serial_port = /dev/openmvcam
 recent =
 last_fw_path =
 baudrate = 921600
+enable_jpeg = True
 '''
+CONFIG_KEYS = ['board', 'serial_port', 'recent', 'last_fw_path', 'baudrate', 'enable_jpeg']
 RELEASE_TAG_NAME = 'v1.1'
 RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
 
@@ -191,8 +193,30 @@ class OMVGtk:
         if not os.path.isdir(SCRIPTS_DIR):
             os.makedirs(SCRIPTS_DIR)
 
+        # set config parser
+        self.config = configparser.ConfigParser()
+
+        config_valid = True 
+
+        # check if config file exists
+        if os.path.isfile(CONFIG_PATH):
+            try:
+                # load config
+                self.config.read(CONFIG_PATH)
+            except Exception as e:
+                print ("Failed to open config file %s"%(e))
+                sys.exit(1)
+
+            # Check config keys, if one is missing set invalid
+            for key in CONFIG_KEYS:
+                if not self.config.has_option('main', key):
+                    config_valid = False
+                    break
+        else:
+             config_valid = False
+
         # create fresh config if needed
-        if not os.path.isfile(CONFIG_PATH):
+        if config_valid == False:
             try:
                 with open(CONFIG_PATH, "w") as f:
                     f.write(DEFAULT_CONFIG)
@@ -200,8 +224,7 @@ class OMVGtk:
                 print ("Failed to create config file %s"%(e))
                 sys.exit(1)
 
-        # load config
-        self.config = configparser.ConfigParser()
+        # load or reload the config file
         try:
             self.config.read(CONFIG_PATH)
         except Exception as e:
@@ -236,6 +259,9 @@ class OMVGtk:
             self.update_recent_files()
 
         self.baudrate = int(self.config.get("main", "baudrate"))
+
+        # set enable/disable JPEG
+        self.enable_jpeg = self.config.get("main", "enable_jpeg") == 'True'
 
         # load helloworld.py
         self._load_file(os.path.join(EXAMPLES_DIR, "helloworld.py"))
@@ -305,6 +331,9 @@ class OMVGtk:
 
         # interrupt any running code
         openmv.stop_script()
+
+        # set enable JPEG
+        openmv.enable_jpeg(self.enable_jpeg)
 
         self.connected = True
         self._update_title()
@@ -462,6 +491,7 @@ class OMVGtk:
         sport_combo = self.builder.get_object("sport_combo")
         baud_combo = self.builder.get_object("baud_combo")
         dialog = self.builder.get_object("preferences_dialog")
+        jpeg_check = self.builder.get_object("jpeg_check")
 
         # Fill serial ports combo
         sport_combo.get_model().clear()
@@ -472,11 +502,15 @@ class OMVGtk:
         if len(serial_ports):
             sport_combo.set_active(0)
 
+        jpeg_check.set_active(self.enable_jpeg)
+
         # Save config
         if dialog.run() == gtk.RESPONSE_OK:
             self.config.set("main", "board", board_combo.get_active_text())
             self.config.set("main", "serial_port", sport_combo.get_active_text())
             self.config.set("main", "baudrate", baud_combo.get_active_text())
+            self.config.set("main", "enable_jpeg", jpeg_check.get_active())
+            print(jpeg_check.get_active())
             self.save_config()
 
         dialog.hide()

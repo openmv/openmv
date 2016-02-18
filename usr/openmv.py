@@ -31,6 +31,7 @@ __USBDBG_ATTR_READ      = 0x8A
 __USBDBG_ATTR_WRITE     = 0x0B
 __USBDBG_SYS_RESET      = 0x0C
 __USBDBG_SYS_BOOT       = 0x0D
+__USBDBG_JPEG_ENABLE    = 0x0E
 __USBDBG_TX_BUF_LEN     = 0x8E
 __USBDBG_TX_BUF         = 0x8F
 
@@ -134,6 +135,9 @@ def tx_buf(bytes):
 def fw_version():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FW_VERSION, 12))
     return struct.unpack("III", __serial.read(12))
+
+def enable_jpeg(enable):
+    __serial.write(struct.pack("<BBIH", __USBDBG_CMD, __USBDBG_JPEG_ENABLE, 0, enable))
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:
