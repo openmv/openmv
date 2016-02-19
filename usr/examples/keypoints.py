@@ -26,10 +26,6 @@ while (kpts1 == None):
 print (kpts1)
 time.sleep(1000)
 
-def draw_cross(img, x, y, l):
-    img.draw_line((x-l, y,   x+l, y))
-    img.draw_line((x,   y-l, x,   y+l))
-
 clock = time.clock()
 while (True):
     clock.tick()
@@ -40,6 +36,6 @@ while (True):
 
     c=img.match_keypoints(kpts1, kpts2, MATCHING_THRESH)
     if (c):
-        draw_cross(img, c[0],  c[1], 10)
+        img.draw_cross(c[0],  c[1], size = 10)
         time.sleep(10)
     print (clock.fps())

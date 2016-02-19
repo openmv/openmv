@@ -282,6 +282,12 @@ bool rectangle_intersects(rectangle_t *r1, rectangle_t *r2);
 bool rectangle_subimg(image_t *img, rectangle_t *r, rectangle_t *r_out);
 array_t *rectangle_merge(array_t *rectangles);
 
+/* Drawing functions */
+void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c);
+void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c);
+void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c);
+void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c);
+
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
 
@@ -349,12 +355,6 @@ int imlib_lbp_desc_load(const char *path, uint8_t **desc);
 
 /* Eye detector */
 void imlib_find_eyes(image_t *src, point_t *left, point_t *right, rectangle_t *roi);
-
-/* Drawing functions */
-void imlib_draw_rectangle(struct image *image, struct rectangle *r);
-void imlib_draw_circle(struct image *image, int cx, int cy, int r, color_t *c);
-void imlib_draw_line(image_t *src, int x0, int y0, int x1, int y1);
-void imlib_draw_string(image_t *src, int x, int y, const char *str, color_t *c);
 
 /* Misc */
 void imlib_scale(struct image *src, struct image *dst, interp_t interp);

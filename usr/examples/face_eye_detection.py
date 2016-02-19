@@ -18,10 +18,6 @@ print(face_cascade, eyes_cascade)
 # FPS clock
 clock = time.clock()
 
-def draw_cross(img, x, y, l):
-    img.draw_line((x-l, y,   x+l, y))
-    img.draw_line((x,   y-l, x,   y+l))
-    
 while (True):
     clock.tick()
 
@@ -43,7 +39,7 @@ while (True):
             e = [face[0]+e[0], face[1]+e[1], e[2], e[3]] # Add face offset
             img.draw_rectangle(e)
             # Draw crosshair, add width/2 and height/2
-            draw_cross(img, e[0]+int(e[2]/2), e[1]+int(e[3]/2), 5)
+            img.draw_cross(e[0]+int(e[2]/2), e[1]+int(e[3]/2))
             
     # Print FPS.
     # Note: Actual FPS is higher, streaming the FB makes it slower.
