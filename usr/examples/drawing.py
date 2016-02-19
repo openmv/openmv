@@ -18,8 +18,10 @@ for i in range(0, 3):
 
 x = int(320/2)
 y = int(240/2)
-image.draw_circle((x, y), 50)
+image.draw_circle(x, y, 50)
 image.draw_line((x, y, int(50*sin(45))+x, int(50*cos(45))+y))
 image.draw_rectangle((x-60, y-60, 120, 120))
-image.draw_string(10, 10, "OpenMV", (0xFF, 0xFF, 0xFF))
-image.draw_string(10, 25, "Hello World", (0xFF, 0xFF, 0xFF))
+image.draw_string(10, 10, "OpenMV", 0xFF)
+image.draw_string(10, 25, "Hello World", 0xFF)
+# Flush buffer...
+sensor.snapshot()

@@ -14,10 +14,6 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 face_cascade = image.HaarCascade("frontalface", stages=16)
 print(face_cascade)
 
-def draw_cross(img, x, y, l):
-    img.draw_line((x-l, y,   x+l, y))
-    img.draw_line((x,   y-l, x,   y+l))
-
 # FPS clock
 clock = time.clock()
 while (True):
@@ -35,8 +31,8 @@ while (True):
     for roi in objects:
         #img.histeq()
         eyes = img.find_eyes(roi)
-        draw_cross(img, eyes[0], eyes[1], 5)
-        draw_cross(img, eyes[2], eyes[3], 5)
+        img.draw_cross(eyes[0], eyes[1])
+        img.draw_cross(eyes[2], eyes[3])
         img.draw_rectangle(roi)
 
     if (len(objects)):

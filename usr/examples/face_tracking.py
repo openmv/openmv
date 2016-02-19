@@ -49,7 +49,6 @@ while (True):
     c=img.match_keypoints(kpts1, kpts2, 70)
     if (c):
         l=10
-        img.draw_line((c[0]-l,  c[1],  c[0]+l, c[1]))
-        img.draw_line((c[0],  c[1]-l,  c[0], c[1]+l))
+        img.draw_cross(c[0], c[1])
         time.sleep(10)
     print (clock.fps())

@@ -46,6 +46,87 @@ void imlib_set_pixel(image_t *img, int x, int y, int p)
     }
 }
 
+void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c)
+{
+    int dx = abs(x1-x0);
+    int dy = abs(y1-y0);
+    int sx = x0<x1 ? 1 : -1;
+    int sy = y0<y1 ? 1 : -1;
+    int err = (dx>dy ? dx : -dy)/2;
+    for (;;) {
+        imlib_set_pixel(img, x0, y0, c);
+        if (x0==x1 && y0==y1) break;
+        int e2 = err;
+        if (e2 > -dx) { err -= dy; x0 += sx; }
+        if (e2 <  dy) { err += dx; y0 += sy; }
+    }
+}
+
+void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c)
+{
+    if (rw<=0 || rh<=0) {
+        return;
+    }
+    for (int i=rx, j=rx+rw, k=ry+rh-1; i<j; i++) {
+        imlib_set_pixel(img, i, ry, c);
+        imlib_set_pixel(img, i, k, c);
+    }
+    for (int i=ry+1, j=ry+rh-1, k=rx+rw-1; i<j; i++) {
+        imlib_set_pixel(img, rx, i, c);
+        imlib_set_pixel(img, k, i, c);
+    }
+}
+
+void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c)
+{
+    int x = r, y = 0, radiusError = 1-x;
+    while (x>=y) {
+        imlib_set_pixel(img,  x + cx,  y + cy, c);
+        imlib_set_pixel(img,  y + cx,  x + cy, c);
+        imlib_set_pixel(img, -x + cx,  y + cy, c);
+        imlib_set_pixel(img, -y + cx,  x + cy, c);
+        imlib_set_pixel(img, -x + cx, -y + cy, c);
+        imlib_set_pixel(img, -y + cx, -x + cy, c);
+        imlib_set_pixel(img,  x + cx, -y + cy, c);
+        imlib_set_pixel(img,  y + cx, -x + cy, c);
+        y++;
+        if (radiusError<0) {
+            radiusError += 2 * y + 1;
+        } else {
+            x--;
+            radiusError += 2 * (y - x + 1);
+        }
+    }
+}
+
+void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c)
+{
+    const int anchor = x_off;
+    for(char ch, last='\0'; (ch=*str); str++, last=ch) {
+        if (last=='\r' && ch=='\n') { // handle "\r\n" strings
+            continue;
+        }
+        if (ch=='\n' || ch=='\r') { // handle '\n' or '\r' strings
+            x_off = anchor;
+            y_off += font[0].h; // newline height == space height
+            continue;
+        }
+        if (ch<' ' || ch>'~') {
+            imlib_draw_rectangle(img,(x_off+1),(y_off+1),font[0].w-2,font[0].h-2,c);
+            continue;
+        }
+        const glyph_t *g = &font[ch-' '];
+        for (int y=0; y<g->h; y++) {
+            for (int x=0; x<g->w; x++) {
+                if (g->data[y] & (1<<(g->w-x))) {
+                    imlib_set_pixel(img, (x_off+x), (y_off+y), c);
+                }
+            }
+        }
+        x_off += g->w;
+    }
+}
+
 uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
 {
     uint32_t sum=0;
@@ -577,121 +658,6 @@ void imlib_scale(struct image *src, struct image *dst, interp_t interp)
         case INTERP_BICUBIC:
             //NOT implemented
             break;
-    }
-}
-
-void imlib_draw_rectangle(struct image *image, struct rectangle *r)
-{
-    int i;
-    uint8_t c=0xFF;
-    int x = IM_MIN(IM_MAX(r->x, 0), image->w-1);
-    int y = IM_MIN(IM_MAX(r->y, 0), image->h-1);
-    int w = (x+r->w) >= image->w ? (image->w-x-1):r->w;
-    int h = (y+r->h) >= image->h ? (image->h-y-1):r->h;
-
-    x *= image->bpp;
-    w *= image->bpp;
-    int col = image->w*image->bpp;
-
-    for (i=0; i<w; i++) {
-        image->pixels[y*col + x + i] = c;
-        image->pixels[(y+h)*col + x + i] = c;
-    }
-
-    for (i=0; i<h; i++) {
-        image->pixels[(y+i)*col + x] = c;
-        image->pixels[(y+i)*col + x + w] = c;
-        if (image->bpp>1) {
-            image->pixels[(y+i)*col + x+1] = c;
-            image->pixels[(y+i)*col + x + w+1] = c;
-        }
-    }
-
-    if (image->bpp>1) {
-        for (i=0; i<h; i++) {
-            image->pixels[(y+i)*col + x+1] = c;
-            image->pixels[(y+i)*col + x + w+1] = c;
-        }
-    }
-}
-
-void imlib_draw_circle(struct image *image, int cx, int cy, int r, color_t *color)
-{
-    int x = r, y = 0;
-    int radiusError = 1-x;
-    uint16_t c = IM_RGB565(color->r, color->g, color->b);
-    if (cx+r >= image->w || cx-r < 0 ||
-        cy+r >= image->h || cy-r < 0) {
-        return;
-    }
-
-    while(x >= y) {
-        imlib_set_pixel(image,  x + cx,  y + cy, c);
-        imlib_set_pixel(image,  y + cx,  x + cy, c);
-        imlib_set_pixel(image, -x + cx,  y + cy, c);
-        imlib_set_pixel(image, -y + cx,  x + cy, c);
-        imlib_set_pixel(image, -x + cx, -y + cy, c);
-        imlib_set_pixel(image, -y + cx, -x + cy, c);
-        imlib_set_pixel(image,  x + cx, -y + cy, c);
-        imlib_set_pixel(image,  y + cx, -x + cy, c);
-        y++;
-        if (radiusError<0) {
-            radiusError += 2 * y + 1;
-        } else {
-            x--;
-            radiusError+= 2 * (y - x + 1);
-        }
-    }
-}
-
-void imlib_draw_line(image_t *src, int x0, int y0, int x1, int y1)
-{
-    int dx, dy, sx, sy, err, e2;
-
-    if (x0<0||y0<0||x1>src->w||y1>src->h) {
-        return;
-    }
-
-    dx = abs(x1-x0);
-    dy = abs(y1-y0);
-    sx = x0<x1 ? 1 : -1;
-    sy = y0<y1 ? 1 : -1;
-    err = (dx>dy ? dx : -dy)/2;
-
-    for (;;) {
-        src->data[src->w*y0+x0]=0xFF;
-        if (x0==x1 && y0==y1) break;
-        e2 = err;
-        if (e2 >-dx) { err -= dy; x0 += sx; }
-        if (e2 < dy) { err += dx; y0 += sy; }
-    }
-}
-
-// TODO check image bounds
-void imlib_draw_string(image_t *src, int x_off, int y_off, const char *str, color_t *c)
-{
-    const glyph_t *g;
-    uint8_t *srcp8 = (uint8_t*)src->pixels;
-    uint16_t *srcp16 = (uint16_t*)src->pixels;
-    uint16_t color = IM_RGB565(c->r, c->g, c->b);
-
-    for(char c; (c=*str); str++) {
-        if (c < ' ' || c > '~') {
-            continue;
-        }
-        g = &font[c-' '];
-        for (int y=0; y<g->h; y++) {
-            for (int x=0; x<g->w; x++) {
-                if (g->data[y] & (0x80>>x)){
-                    if (src->bpp == 1) {
-                        srcp8[(y_off+y)*src->w+x_off+x]=color;
-                    } else {
-                        srcp16[(y_off+y)*src->w+x_off+x]=color;
-                    }
-                }
-            }
-        }
-        x_off += g->w;
     }
 }
 
