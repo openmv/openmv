@@ -510,8 +510,12 @@ class OMVGtk:
             self.config.set("main", "serial_port", sport_combo.get_active_text())
             self.config.set("main", "baudrate", baud_combo.get_active_text())
             self.config.set("main", "enable_jpeg", jpeg_check.get_active())
-            print(jpeg_check.get_active())
+            self.enable_jpeg = jpeg_check.get_active()
             self.save_config()
+
+        # Enable/Disable JPEG
+        if (self.connected):
+            openmv.enable_jpeg(self.enable_jpeg)
 
         dialog.hide()
 
