@@ -67,7 +67,6 @@ static int run_cascade_classifier(cascade_t* cascade, point_t pt)
 
 array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
 {
-
     // Integral images
     mw_image_t sum;
     mw_image_t ssq;
@@ -95,7 +94,7 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
     }
 
     // Allocate integral images
-    imlib_integral_mw_alloc(&sum,   image->w, cascade->window.h+1);
+    imlib_integral_mw_alloc(&sum, image->w, cascade->window.h+1);
     imlib_integral_mw_alloc(&ssq, image->w, cascade->window.h+1);
 
     // Iterate over the image pyramid
