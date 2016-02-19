@@ -6,15 +6,12 @@ import time, sensor
 sensor.reset()
 
 # Set sensor settings
-sensor.set_brightness(0)
-sensor.set_saturation(0)
-sensor.set_gainceiling(16)
 sensor.set_contrast(1)
+sensor.set_brightness(1)
+sensor.set_saturation(1)
+sensor.set_gainceiling(16)
 sensor.set_framesize(sensor.QVGA)
-
-# Enable JPEG and set quality
-sensor.set_pixformat(sensor.JPEG)
-sensor.set_quality(98)
+sensor.set_pixformat(sensor.RGB565)
 
 # FPS clock
 clock = time.clock()

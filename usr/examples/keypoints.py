@@ -1,8 +1,8 @@
 import sensor, time
 
-KEYPOINTS_THRESH=32
-MATCHING_THRESH=70
 NORMALIZED=False
+MATCHING_THRESH=70
+KEYPOINTS_THRESH=32
 
 # Reset sensor
 sensor.reset()
@@ -15,15 +15,16 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Skip a few frames to allow the sensor settle down
 # Note: This takes more time when exec from the IDE.
-for i in range(0, 10):
+for i in range(0, 30):
     img = sensor.snapshot()
+    img.draw_string(0, 0, "Please wait...")
 
 kpts1 = None
 while (kpts1 == None):
     img = sensor.snapshot()
     kpts1 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED)
 
-print (kpts1)
+img.draw_keypoints(kpts1)
 time.sleep(1000)
 
 clock = time.clock()
@@ -37,5 +38,4 @@ while (True):
     c=img.match_keypoints(kpts1, kpts2, MATCHING_THRESH)
     if (c):
         img.draw_cross(c[0],  c[1], size = 10)
-        time.sleep(10)
     print (clock.fps())

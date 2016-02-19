@@ -10,12 +10,13 @@ sensor.set_gainceiling(16)
 sensor.set_contrast(1)
 
 # Set sensor to QQVGA/RGB565
-sensor.set_framesize(sensor.QQVGA)
+sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.RGB565)
+sensor.set_colorbar(True)
 
 # Skip a few frames to allow the sensor settle down
 # Note: This takes more time when exec from the IDE.
-for i in range(0, 10):
+for i in range(0, 30):
     sensor.snapshot()
 
 clock = time.clock()
@@ -24,8 +25,8 @@ img = sensor.snapshot()
 
 # Compress Image
 clock.tick()
-img = img.compress(30)
-print(clock.avg())
+img = img.compress(50)
+print(clock.avg(),"\n")
 
 with open("/test.jpeg", "w") as f:
     f.write(img)
