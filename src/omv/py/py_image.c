@@ -185,6 +185,24 @@ static int get_color_kw(mp_map_t *kw_args, int default_color)
     return default_color;
 }
 
+static void get_rectangle_kw(mp_map_t *kw_args, image_t *img, rectangle_t *r)
+{
+    r->x = 0;
+    r->y = 0;
+    r->w = img->w;
+    r->h = img->h;
+    mp_map_elem_t *kw_rectangle = mp_map_lookup(kw_args,
+            MP_OBJ_NEW_QSTR(MP_QSTR_r), MP_MAP_LOOKUP);
+    if (kw_rectangle != NULL) {
+        mp_obj_t *arg_rectangle;
+        mp_obj_get_array_fixed_n(kw_rectangle->value, 4, &arg_rectangle);
+        r->x = mp_obj_get_int(arg_rectangle[0]);
+        r->y = mp_obj_get_int(arg_rectangle[1]);
+        r->w = mp_obj_get_int(arg_rectangle[2]);
+        r->h = mp_obj_get_int(arg_rectangle[3]);
+    }
+}
+
 // End Helper Functions ///////////////////////////////////////////////////////
 
 static mp_obj_t py_image_width(mp_obj_t img_obj)
@@ -372,6 +390,232 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
         imlib_draw_circle(arg_img, kp->x, kp->y, (arg_s-2)/2, arg_c);
     }
     return mp_const_none;
+}
+
+static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    mp_uint_t arg_t_len;
+    mp_obj_t *arg_t;
+    mp_obj_get_array(args[1], &arg_t_len, &arg_t);
+    PY_ASSERT_TRUE_MSG(arg_t_len, "Invalid Argument: threshold_list_len == 0");
+
+    simple_color_t l_t[arg_t_len], u_t[arg_t_len];
+    if (IM_IS_GS(arg_img)) {
+        for (int i=0; i<arg_t_len; i++) {
+            mp_obj_t *temp;
+            mp_obj_get_array_fixed_n(arg_t[i], 2, &temp);
+            l_t[i].G = mp_obj_get_int(temp[0]);
+            u_t[i].G = mp_obj_get_int(temp[1]);
+            // Swap ranges if they are wrong.
+            l_t[i].G = IM_MIN(l_t[i].G, u_t[i].G);
+            u_t[i].G = IM_MAX(l_t[i].G, u_t[i].G);
+        }
+    } else {
+        for (int i=0; i<arg_t_len; i++) {
+            mp_obj_t *temp;
+            mp_obj_get_array_fixed_n(arg_t[i], 6, &temp);
+            l_t[i].L = mp_obj_get_int(temp[0]);
+            u_t[i].L = mp_obj_get_int(temp[1]);
+            l_t[i].A = mp_obj_get_int(temp[2]);
+            u_t[i].A = mp_obj_get_int(temp[3]);
+            l_t[i].B = mp_obj_get_int(temp[4]);
+            u_t[i].B = mp_obj_get_int(temp[5]);
+            // Swap ranges if they are wrong.
+            l_t[i].L = IM_MIN(l_t[i].L, u_t[i].L);
+            u_t[i].L = IM_MAX(l_t[i].L, u_t[i].L);
+            l_t[i].A = IM_MIN(l_t[i].A, u_t[i].A);
+            u_t[i].A = IM_MAX(l_t[i].A, u_t[i].A);
+            l_t[i].B = IM_MIN(l_t[i].B, u_t[i].B);
+            u_t[i].B = IM_MAX(l_t[i].B, u_t[i].B);
+        }
+    }
+
+    int arg_invert = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), 0);
+    imlib_binary(arg_img, arg_t_len, l_t, u_t, arg_invert ? 1 : 0);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_invert(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    imlib_invert(arg_img);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_and(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        imlib_and(arg_img, mp_obj_str_get_str(other_obj), NULL);
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
+                "Invalid Argument: img_0_geometry != img_1_geometry");
+        imlib_and(arg_img, NULL, arg_other);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_nand(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        imlib_nand(arg_img, mp_obj_str_get_str(other_obj), NULL);
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
+                "Invalid Argument: img_0_geometry != img_1_geometry");
+        imlib_nand(arg_img, NULL, arg_other);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_or(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        imlib_or(arg_img, mp_obj_str_get_str(other_obj), NULL);
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
+                "Invalid Argument: img_0_geometry != img_1_geometry");
+        imlib_or(arg_img, NULL, arg_other);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_nor(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        imlib_nor(arg_img, mp_obj_str_get_str(other_obj), NULL);
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
+                "Invalid Argument: img_0_geometry != img_1_geometry");
+        imlib_nor(arg_img, NULL, arg_other);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_xor(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        imlib_xor(arg_img, mp_obj_str_get_str(other_obj), NULL);
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
+                "Invalid Argument: img_0_geometry != img_1_geometry");
+        imlib_xor(arg_img, NULL, arg_other);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        imlib_xnor(arg_img, mp_obj_str_get_str(other_obj), NULL);
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
+                "Invalid Argument: img_0_geometry != img_1_geometry");
+        imlib_xnor(arg_img, NULL, arg_other);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_pixels(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    rectangle_t arg_r;
+    get_rectangle_kw(kw_args, arg_img, &arg_r);
+    return mp_obj_new_int(imlib_pixels(arg_img, &arg_r));
+}
+
+static mp_obj_t py_image_centroid(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    rectangle_t arg_r;
+    get_rectangle_kw(kw_args, arg_img, &arg_r);
+    int x, y;
+    int sum = imlib_centroid(arg_img, &x, &y, &arg_r);
+
+    mp_obj_t result[3];
+    result[0] = mp_obj_new_int(sum);
+    result[1] = mp_obj_new_int(x);
+    result[2] = mp_obj_new_int(y);
+    return mp_obj_new_tuple(3, result);
+}
+
+static mp_obj_t py_image_orientation_radians(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    rectangle_t arg_r;
+    get_rectangle_kw(kw_args, arg_img, &arg_r);
+    int sum, x, y;
+    float o = imlib_orientation_radians(arg_img, &sum, &x, &y, &arg_r);
+
+    mp_obj_t result[4];
+    result[0] = mp_obj_new_int(sum);
+    result[1] = mp_obj_new_int(x);
+    result[2] = mp_obj_new_int(y);
+    result[3] = mp_obj_new_float(o);
+    return mp_obj_new_tuple(4, result);
+}
+
+static mp_obj_t py_image_orientation_degrees(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    rectangle_t arg_r;
+    get_rectangle_kw(kw_args, arg_img, &arg_r);
+    int sum, x, y;
+    float o = imlib_orientation_degrees(arg_img, &sum, &x, &y, &arg_r);
+
+    mp_obj_t result[4];
+    result[0] = mp_obj_new_int(sum);
+    result[1] = mp_obj_new_int(x);
+    result[2] = mp_obj_new_int(y);
+    result[3] = mp_obj_new_float(o);
+    return mp_obj_new_tuple(4, result);
 }
 
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -569,41 +813,6 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     return mp_const_none;
 }
 
-static mp_obj_t py_image_invert(mp_obj_t image_obj)
-{
-    image_t *image;
-    image = py_image_cobj(image_obj);
-
-    /* Sanity checks */
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    /* Threshold image */
-    imlib_invert(image);
-    return mp_const_none;
-}
-
-static mp_obj_t py_image_binary(mp_obj_t image_obj, mp_obj_t threshold)
-{
-    image_t *image;
-
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
-            "This function is only supported on GRAYSCALE images");
-
-    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_RAW_FRAME,
-            "This function is only supported on "OMV_MAX_RAW_FRAME_STR" and smaller frames");
-
-    /* read arguments */
-    image = py_image_cobj(image_obj);
-    int thresh = mp_obj_get_int(threshold);
-
-    /* Threshold image */
-    imlib_binary(image, thresh);
-
-    return mp_const_none;
-}
-
 static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, mp_obj_t threshold)
 {
     color_t *color;
@@ -712,20 +921,6 @@ static mp_obj_t py_image_dilate(mp_obj_t image_obj, mp_obj_t ksize_obj)
             "This function is only supported on GRAYSCALE images");
 
     imlib_dilate(image, mp_obj_get_int(ksize_obj));
-    return mp_const_none;
-}
-
-static mp_obj_t py_image_morph(mp_obj_t image_obj, mp_obj_t ksize_obj)
-{
-    image_t *image = NULL;
-    image = py_image_cobj(image_obj);
-
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    imlib_morph(image, NULL, mp_obj_get_int(ksize_obj));
-
     return mp_const_none;
 }
 
@@ -1066,6 +1261,19 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_circle_obj, 4, py_image_draw_cir
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_string_obj, 4, py_image_draw_string);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_cross_obj, 3, py_image_draw_cross);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_keypoints_obj, 2, py_image_draw_keypoints);
+/* Binary functions */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_binary_obj, 2, py_image_binary);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_invert_obj, py_image_invert);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_and_obj, py_image_and);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_nand_obj, py_image_nand);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_or_obj, py_image_or);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_nor_obj, py_image_nor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_xor_obj, py_image_xor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_xnor_obj, py_image_xnor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_pixels_obj, 1, py_image_pixels);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_centroid_obj, 1, py_image_centroid);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_radians_obj, 1, py_image_orientation_radians);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_degrees_obj, 1, py_image_orientation_degrees);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
@@ -1075,13 +1283,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj, py_image_blit);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blend_obj, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 1, py_image_median);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_invert_obj, py_image_invert);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_binary_obj, py_image_binary);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj, py_image_threshold);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rainbow_obj, py_image_rainbow);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_erode_obj, py_image_erode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_dilate_obj, py_image_dilate);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_morph_obj, py_image_morph);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_compress_obj, py_image_compress);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
@@ -1107,7 +1312,20 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_string),         (mp_obj_t)&py_image_draw_string_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_cross),          (mp_obj_t)&py_image_draw_cross_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_draw_keypoints),      (mp_obj_t)&py_image_draw_keypoints_obj},
-                    
+    /* Binary functions */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_binary),              (mp_obj_t)&py_image_binary_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_invert),              (mp_obj_t)&py_image_invert_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_and),                 (mp_obj_t)&py_image_and_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_nand),                (mp_obj_t)&py_image_nand_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_or),                  (mp_obj_t)&py_image_or_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_nor),                 (mp_obj_t)&py_image_nor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_xor),                 (mp_obj_t)&py_image_xor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_xnor),                (mp_obj_t)&py_image_xnor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_pixels),              (mp_obj_t)&py_image_pixels_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_centroid),            (mp_obj_t)&py_image_centroid_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_orientation_radians), (mp_obj_t)&py_image_orientation_radians_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_orientation_degrees), (mp_obj_t)&py_image_orientation_degrees_obj},
+
     /* basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
@@ -1117,13 +1335,10 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_invert),              (mp_obj_t)&py_image_invert_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_binary),              (mp_obj_t)&py_image_binary_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_threshold),           (mp_obj_t)&py_image_threshold_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_rainbow),             (mp_obj_t)&py_image_rainbow_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_erode),               (mp_obj_t)&py_image_erode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_dilate),              (mp_obj_t)&py_image_dilate_obj},
-//    {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
 
     /* objects/feature detection */
