@@ -156,6 +156,37 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t va
     }
 }
 
+// Start Helper Functions /////////////////////////////////////////////////////
+
+static int get_int_kw(mp_map_t *kw_args, mp_obj_t kw, int default_val)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+    if (kw_arg != NULL) {
+        default_val = mp_obj_get_int(kw_arg->value);
+    }
+    return default_val;
+}
+
+static int get_color_kw(mp_map_t *kw_args, int default_color)
+{
+    mp_map_elem_t *kw_color = mp_map_lookup(kw_args,
+            MP_OBJ_NEW_QSTR(MP_QSTR_color), MP_MAP_LOOKUP);
+    if (kw_color != NULL) {
+        if (mp_obj_is_integer(kw_color->value)) {
+            default_color = mp_obj_get_int(kw_color->value);
+        } else {
+            mp_obj_t *arg_color;
+            mp_obj_get_array_fixed_n(kw_color->value, 3, &arg_color);
+            default_color = IM_RGB565(IM_R825(mp_obj_get_int(arg_color[0])),
+                                      IM_G826(mp_obj_get_int(arg_color[1])),
+                                      IM_B825(mp_obj_get_int(arg_color[2])));
+        }
+    }
+    return default_color;
+}
+
+// End Helper Functions ///////////////////////////////////////////////////////
+
 static mp_obj_t py_image_width(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
@@ -194,7 +225,7 @@ static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-    "Operation not supported on JPEG");
+            "Operation not supported on JPEG");
 
     int arg_x = mp_obj_get_int(x_obj);
     int arg_y = mp_obj_get_int(y_obj);
@@ -214,58 +245,28 @@ static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_
     }
 }
 
-static mp_obj_t py_image_set_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_obj, mp_obj_t color_obj)
+static mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args)
 {
-    image_t *arg_img = py_image_cobj(img_obj);
+    image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-    "Operation not supported on JPEG");
+            "Operation not supported on JPEG");
 
-    int arg_x = mp_obj_get_int(x_obj);
-    int arg_y = mp_obj_get_int(y_obj);
+    int arg_x = mp_obj_get_int(args[1]);
+    int arg_y = mp_obj_get_int(args[2]);
     if ((!IM_X_INSIDE(arg_img, arg_x)) || (!IM_Y_INSIDE(arg_img, arg_y))) {
         return mp_const_none;
     }
 
     if (IM_IS_GS(arg_img)) {
-        IM_SET_GS_PIXEL(arg_img, arg_x, arg_y, mp_obj_get_int(color_obj));
+        IM_SET_GS_PIXEL(arg_img, arg_x, arg_y, mp_obj_get_int(args[3]));
     } else {
-        mp_obj_t *arg_color; mp_obj_get_array_fixed_n(color_obj, 3, &arg_color);
+        mp_obj_t *arg_color; mp_obj_get_array_fixed_n(args[3], 3, &arg_color);
         int red = IM_R825(mp_obj_get_int(arg_color[0]));
         int green = IM_G826(mp_obj_get_int(arg_color[1]));
         int blue = IM_B825(mp_obj_get_int(arg_color[2]));
         IM_SET_RGB565_PIXEL(arg_img, arg_x, arg_y, IM_RGB565(red, green, blue));
     }
     return mp_const_none;
-}
-
-static int kwargs_helper_lookup_int(mp_map_t *kw_args, mp_obj_t kw, int default_val)
-{
-    int val = default_val;
-    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
-
-    if (kw_arg != NULL) {
-        val =  mp_obj_get_int(kw_arg->value);
-    }
-    return val;
-}
-
-static int kwargs_helper_lookup_color(mp_map_t *kw_args, int default_col)
-{
-    int arg_c = default_col; // white
-    mp_map_elem_t *kw_color = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color), MP_MAP_LOOKUP);
-
-    if (kw_color != NULL) {
-        if (MP_OBJ_IS_INT(kw_color->value)) {
-            arg_c = mp_obj_get_int(kw_color->value);
-        } else if(MP_OBJ_IS_OBJ(kw_color->value)) {
-            mp_obj_t *arg_color;
-            mp_obj_get_array_fixed_n(kw_color->value, 3, &arg_color);
-            arg_c = IM_RGB565(IM_R825(mp_obj_get_int(arg_color[0])),
-                    IM_G826(mp_obj_get_int(arg_color[1])),
-                    IM_G826(mp_obj_get_int(arg_color[2])));
-        }
-    }
-    return arg_c;
 }
 
 static mp_obj_t py_image_draw_line(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -281,7 +282,7 @@ static mp_obj_t py_image_draw_line(uint n_args, const mp_obj_t *args, mp_map_t *
     int arg_y0 = mp_obj_get_int(arg_vec[1]);
     int arg_x1 = mp_obj_get_int(arg_vec[2]);
     int arg_y1 = mp_obj_get_int(arg_vec[3]);
-    int arg_c  = kwargs_helper_lookup_color(kw_args, -1);
+    int arg_c  = get_color_kw(kw_args, -1); // white
 
     imlib_draw_line(arg_img, arg_x0, arg_y0, arg_x1, arg_y1, arg_c);
     return mp_const_none;
@@ -291,7 +292,7 @@ static mp_obj_t py_image_draw_rectangle(uint n_args, const mp_obj_t *args, mp_ma
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-    "Operation not supported on JPEG");
+            "Operation not supported on JPEG");
 
     mp_obj_t *arg_vec;
     mp_obj_get_array_fixed_n(args[1], 4, &arg_vec);
@@ -300,7 +301,7 @@ static mp_obj_t py_image_draw_rectangle(uint n_args, const mp_obj_t *args, mp_ma
     int arg_ry = mp_obj_get_int(arg_vec[1]);
     int arg_rw = mp_obj_get_int(arg_vec[2]);
     int arg_rh = mp_obj_get_int(arg_vec[3]);
-    int arg_c  = kwargs_helper_lookup_color(kw_args, -1);
+    int arg_c  = get_color_kw(kw_args, -1); // white
 
     imlib_draw_rectangle(arg_img, arg_rx, arg_ry, arg_rw, arg_rh, arg_c);
     return mp_const_none;
@@ -310,12 +311,12 @@ static mp_obj_t py_image_draw_circle(uint n_args, const mp_obj_t *args, mp_map_t
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-    "Operation not supported on JPEG");
+            "Operation not supported on JPEG");
 
     int arg_cx = mp_obj_get_int(args[1]);
     int arg_cy = mp_obj_get_int(args[2]);
     int arg_r  = mp_obj_get_int(args[3]);
-    int arg_c  = kwargs_helper_lookup_color(kw_args, -1);
+    int arg_c  = get_color_kw(kw_args, -1); // white
 
     imlib_draw_circle(arg_img, arg_cx, arg_cy, arg_r, arg_c);
     return mp_const_none;
@@ -327,10 +328,10 @@ static mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    int arg_x_off = mp_obj_get_int(args[1]);
-    int arg_y_off = mp_obj_get_int(args[2]);
+    int arg_x_off       = mp_obj_get_int(args[1]);
+    int arg_y_off       = mp_obj_get_int(args[2]);
     const char *arg_str = mp_obj_str_get_str(args[3]);
-    int arg_c  = kwargs_helper_lookup_color(kw_args, -1);
+    int arg_c           = get_color_kw(kw_args, -1); // white
 
     imlib_draw_string(arg_img, arg_x_off, arg_y_off, arg_str, arg_c);
     return mp_const_none;
@@ -344,8 +345,8 @@ static mp_obj_t py_image_draw_cross(uint n_args, const mp_obj_t *args, mp_map_t 
 
     int arg_x = mp_obj_get_int(args[1]);
     int arg_y = mp_obj_get_int(args[2]);
-    int arg_c = kwargs_helper_lookup_color(kw_args, -1);
-    int arg_s = kwargs_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 5);
+    int arg_c = get_color_kw(kw_args, -1); // white
+    int arg_s = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 5);
 
     imlib_draw_line(arg_img, arg_x-arg_s, arg_y      , arg_x+arg_s, arg_y      , arg_c);
     imlib_draw_line(arg_img, arg_x      , arg_y-arg_s, arg_x      , arg_y+arg_s, arg_c);
@@ -360,9 +361,8 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
 
     mp_obj_t kpts_obj = args[1];
     PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
-
-    int arg_c = kwargs_helper_lookup_color(kw_args, -1);
-    int arg_s = kwargs_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
+    int arg_c = get_color_kw(kw_args, -1); // white
+    int arg_s = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
 
     for (int i=0; i<((py_kp_obj_t*)kpts_obj)->size; i++) {
         kp_t *kp = &((py_kp_obj_t*)kpts_obj)->kpts[i];
