@@ -43,9 +43,9 @@ while (True):
     image.blend(ir, (0, int(120/2-32/2), 0.6))
 
     # Draw ambient, min and max temperatures.
-    image.draw_string(0, 0, "Ta: %0.2f"%ta, (0xFF, 0x00, 0x00))
-    image.draw_string(0, 5, "To min: %0.2f"%(to_min+ta), (0xFF, 0x00, 0x00))
-    image.draw_string(0, 10, "To max: %0.2f"%(to_max+ta), (0xFF, 0x00, 0x00))
+    image.draw_string(0, 0, "Ta: %0.2f"%ta, color = (0xFF, 0x00, 0x00))
+    image.draw_string(0, 8, "To min: %0.2f"%(to_min+ta), color = (0xFF, 0x00, 0x00))
+    image.draw_string(0, 16, "To max: %0.2f"%(to_max+ta), color = (0xFF, 0x00, 0x00))
 
     # Print FPS.
     print(clock.fps())
