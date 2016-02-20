@@ -57,3 +57,10 @@ void fb_free()
         pointer += *((uint32_t *) pointer); // Get size and pop.
     }
 }
+
+void fb_free_all()
+{
+    while (pointer < &_fs_cache) {
+        pointer += *((uint32_t *) pointer); // Get size and pop.
+    }
+}
