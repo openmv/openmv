@@ -369,4 +369,9 @@ int ppm_write(image_t *img, const char *path);
 int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
 int imlib_load_image(image_t *image, const char *path);
 int imlib_save_image(image_t *image, const char *path, rectangle_t *r);
+
+
+// Image filter functions
+void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
+void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 #endif //__IMLIB_H__

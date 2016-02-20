@@ -9,6 +9,8 @@
 #include "mp.h"
 #include "sccb.h"
 #include "sensor.h"
+#include "imlib.h"
+#include "xalloc.h"
 #include "py_assert.h"
 #include "py_image.h"
 #include "py_sensor.h"
@@ -171,6 +173,44 @@ static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde) {
     return mp_const_true;
 }
 
+#define MP_MAP_LOOKUP_STR(s)    mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str(s)), MP_MAP_LOOKUP)
+static mp_obj_t py_sensor_set_image_filter(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    int *im_filter_args=NULL;
+    im_filter_t im_filter=NULL;
+    im_filter_type_t im_filter_type = mp_obj_get_int(args[0]);
+
+    switch (im_filter_type) {
+        case IM_FILTER_BW: {
+            int lower = 200, upper = 255;
+            // Read keyword arguments
+            mp_map_elem_t *kw_lower = MP_MAP_LOOKUP_STR("lower");
+            mp_map_elem_t *kw_upper = MP_MAP_LOOKUP_STR("upper");
+
+            if (kw_lower) {
+                lower = mp_obj_get_int(kw_lower->value);
+            }
+
+            if (kw_upper) {
+                lower = mp_obj_get_int(kw_lower->value);
+            }
+
+            im_filter = &im_filter_bw;
+            im_filter_args = (int*) xalloc(2*sizeof(int));
+            im_filter_args[0] = lower;
+            im_filter_args[1] = upper;
+            break;
+        }
+        case IM_FILTER_SKIN:
+            im_filter = &im_filter_skin;
+            break;
+    }
+
+    if (sensor_set_image_filter(im_filter, im_filter_args) != 0) {
+        return mp_const_false;
+    }
+
+    return mp_const_true;
+}
 static mp_obj_t py_sensor_write_reg(mp_obj_t addr, mp_obj_t val) {
     sensor_write_reg(mp_obj_get_int(addr), mp_obj_get_int(val));
     return mp_const_none;
@@ -185,21 +225,22 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
 //            sensor.id.MIDH, sensor.id.MIDL, sensor.id.PID, sensor.id.VER);
 //}
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,           py_sensor_reset);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,          py_sensor_get_id);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_obj,        py_sensor_snapshot);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,   py_sensor_set_pixformat);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,   py_sensor_set_framerate);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,   py_sensor_set_framesize);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj, py_sensor_set_gainceiling);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj,    py_sensor_set_contrast);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,  py_sensor_set_brightness);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_saturation_obj,  py_sensor_set_saturation);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_quality_obj,     py_sensor_set_quality);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_colorbar_obj,    py_sensor_set_colorbar);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj, py_sensor_set_special_effect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,       py_sensor_write_reg);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,        py_sensor_read_reg);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,               py_sensor_reset);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,              py_sensor_get_id);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_obj,            py_sensor_snapshot);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_set_pixformat);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,       py_sensor_set_framerate);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_set_framesize);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj,     py_sensor_set_gainceiling);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj,        py_sensor_set_contrast);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,      py_sensor_set_brightness);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_saturation_obj,      py_sensor_set_saturation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_quality_obj,         py_sensor_set_quality);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_colorbar_obj,        py_sensor_set_colorbar);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_image_filter_obj,1, py_sensor_set_image_filter);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,           py_sensor_write_reg);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,            py_sensor_read_reg);
 
 STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_sensor) },
@@ -215,6 +256,10 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     // Special effects
     { MP_OBJ_NEW_QSTR(MP_QSTR_NORMAL),              MP_OBJ_NEW_SMALL_INT(SDE_NORMAL)},          /* Normal/No SDE */
     { MP_OBJ_NEW_QSTR(MP_QSTR_NEGATIVE),            MP_OBJ_NEW_SMALL_INT(SDE_NEGATIVE)},        /* Negative image */
+
+    // Image filters
+    { MP_OBJ_NEW_QSTR(MP_QSTR_FILTER_BW),           MP_OBJ_NEW_SMALL_INT(IM_FILTER_BW)},       /* Black/White filter */
+    { MP_OBJ_NEW_QSTR(MP_QSTR_FILTER_SKIN),         MP_OBJ_NEW_SMALL_INT(IM_FILTER_SKIN)},     /* Skin filter */
 
     // Frame size
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQCIF),               MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQCIF)},    /* 88x72     */
@@ -243,6 +288,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_quality),         (mp_obj_t)&py_sensor_set_quality_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_colorbar),        (mp_obj_t)&py_sensor_set_colorbar_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_image_filter),    (mp_obj_t)&py_sensor_set_image_filter_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),         (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),          (mp_obj_t)&py_sensor_read_reg_obj },
 };

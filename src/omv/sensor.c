@@ -273,6 +273,9 @@ int sensor_reset()
     sensor.framerate=0xFF;
     sensor.gainceiling=0xFF;
 
+    // Reset image filter
+    sensor_set_image_filter(NULL, NULL);
+
     // Call sensor-specific reset function
     sensor.reset(&sensor);
 
@@ -480,6 +483,13 @@ int sensor_set_special_effect(sde_t sde)
     return 0;
 }
 
+int sensor_set_image_filter(im_filter_t filter, void *args)
+{
+    sensor.im_filter = filter;
+    sensor.im_filter_args = args;
+    return 0;
+}
+
 // This function is called back after each line transfer is complete,
 // with a pointer to the line buffer that was used. At this point the
 // DMA transfers the next line to the other half of the line buffer.
@@ -493,16 +503,24 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         dst += FB_JPEG_OFFS_SIZE;
     }
 
-    if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
-        dst += line++ * fb->w;
-        // If GRAYSCALE extract Y channel from YUV
-        for (int i=0; i<fb->w; i++) {
-            dst[i] = src[i<<1];
-        }
-    } else if (sensor.pixformat == PIXFORMAT_RGB565) {
-        dst += line++ * fb->w * 2;
-        for (int i=0; i<fb->w * 2; i++) {
-            dst[i] = src[i];
+    if (sensor.im_filter != NULL) {
+        dst += line++ * fb->w * ((sensor.pixformat == PIXFORMAT_GRAYSCALE) ? 1:2);
+        // If there's an image filter installed call it.
+        sensor.im_filter(src, dst, fb->w,
+                (sensor.pixformat == PIXFORMAT_GRAYSCALE) ? 1:2, sensor.im_filter_args);
+    } else {
+        // Else just process the line normally.
+        if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
+            dst += line++ * fb->w;
+            // If GRAYSCALE extract Y channel from YUV
+            for (int i=0; i<fb->w; i++) {
+                dst[i] = src[i<<1];
+            }
+        } else if (sensor.pixformat == PIXFORMAT_RGB565) {
+            dst += line++ * fb->w * 2;
+            for (int i=0; i<fb->w * 2; i++) {
+                dst[i] = src[i];
+            }
         }
     }
 }

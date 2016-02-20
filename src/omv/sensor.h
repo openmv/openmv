@@ -78,6 +78,15 @@ typedef enum {
     ACTIVE_HIGH
 } reset_polarity_t;
 
+// Sensor filter functions
+// These functions process single image lines.
+typedef enum {
+    IM_FILTER_BW,
+    IM_FILTER_SKIN
+} im_filter_type_t;
+
+typedef void (*im_filter_t) (uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
+
 #define SENSOR_HW_FLAGS_VSYNC        (0) // vertical sync polarity.
 #define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
 #define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
@@ -93,6 +102,9 @@ typedef struct _sensor {
     sensor_id_t id;             // Sensor ID.
     uint8_t  slv_addr;          // Sensor I2C slave address.
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
+
+    void *im_filter_args;
+    im_filter_t im_filter;
     reset_polarity_t reset_pol; // Reset polarity (TODO move to hw_flags)
 
     // Sensor state
@@ -179,4 +191,7 @@ int sensor_set_colorbar(int enable);
 
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);
+
+// Set filter function.
+int sensor_set_image_filter(im_filter_t im_filter, void *args);
 #endif /* __SENSOR_H__ */
