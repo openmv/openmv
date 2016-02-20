@@ -214,22 +214,22 @@ static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_
     }
 }
 
-static mp_obj_t py_image_set_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_obj, mp_obj_t color_obj)
+static mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args)
 {
-    image_t *arg_img = py_image_cobj(img_obj);
+    image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
     "Operation not supported on JPEG");
 
-    int arg_x = mp_obj_get_int(x_obj);
-    int arg_y = mp_obj_get_int(y_obj);
+    int arg_x = mp_obj_get_int(args[1]);
+    int arg_y = mp_obj_get_int(args[2]);
     if ((!IM_X_INSIDE(arg_img, arg_x)) || (!IM_Y_INSIDE(arg_img, arg_y))) {
         return mp_const_none;
     }
 
     if (IM_IS_GS(arg_img)) {
-        IM_SET_GS_PIXEL(arg_img, arg_x, arg_y, mp_obj_get_int(color_obj));
+        IM_SET_GS_PIXEL(arg_img, arg_x, arg_y, mp_obj_get_int(args[3]));
     } else {
-        mp_obj_t *arg_color; mp_obj_get_array_fixed_n(color_obj, 3, &arg_color);
+        mp_obj_t *arg_color; mp_obj_get_array_fixed_n(args[3], 3, &arg_color);
         int red = IM_R825(mp_obj_get_int(arg_color[0]));
         int green = IM_G826(mp_obj_get_int(arg_color[1]));
         int blue = IM_B825(mp_obj_get_int(arg_color[2]));
