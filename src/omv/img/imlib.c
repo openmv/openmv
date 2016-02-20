@@ -127,6 +127,311 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
     }
 }
 
+void imlib_binary(image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        for (int i=0, j=img->w*img->h; i<j; i++) {
+            bool in = false;
+            for (int k=0; k<num_thresholds; k++) {
+                in |= invert ^
+                      ((l_thresholds[k].G <= pixels[i])
+                   && (pixels[i] <= h_thresholds[k].G));
+            }
+            pixels[i] = in ? 0xFF : 0;
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        for (int i=0, j=img->w*img->h; i<j; i++) {
+            const int pixel = pixels[i] * 3;
+            const int lab_l = lab_table[pixel];
+            const int lab_a = lab_table[pixel + 1];
+            const int lab_b = lab_table[pixel + 2];
+            bool in = false;
+            for (int k=0; k<num_thresholds; k++) {
+                in |= invert ^
+                     (((l_thresholds[k].L <= lab_l)
+                   && (lab_l <= h_thresholds[k].L))
+                   && ((l_thresholds[k].A <= lab_a)
+                   && (lab_a <= h_thresholds[k].A))
+                   && ((l_thresholds[k].B <= lab_b)
+                   && (lab_b <= h_thresholds[k].B)));
+            }
+            pixels[i] = in ? 0xFFFF : 0;
+        }
+    }
+}
+
+void imlib_invert(image_t *img)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        for (int i=0, j=img->w*img->h; i<j; i++) {
+            pixels[i] = ~pixels[i];
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        for (int i=0, j=img->w*img->h; i<j; i++) {
+            pixels[i] = ~pixels[i];
+        }
+    }
+}
+
+void imlib_and(image_t *img, const char *file, image_t *other)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        if (file) {
+
+        } else {
+            uint8_t *other_pixels = other->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] &= other_pixels[i];
+            }
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        if (file) {
+
+        } else {
+            uint16_t *other_pixels = (uint16_t *) img->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] &= other_pixels[i];
+            }
+        }
+    }
+}
+
+void imlib_nand(image_t *img, const char *file, image_t *other)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        if (file) {
+
+        } else {
+            uint8_t *other_pixels = other->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] = ~(pixels[i] & other_pixels[i]);
+            }
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        if (file) {
+
+        } else {
+            uint16_t *other_pixels = (uint16_t *) img->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] = ~(pixels[i] & other_pixels[i]);
+            }
+        }
+    }
+}
+
+void imlib_or(image_t *img, const char *file, image_t *other)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        if (file) {
+
+        } else {
+            uint8_t *other_pixels = other->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] |= other_pixels[i];
+            }
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        if (file) {
+
+        } else {
+            uint16_t *other_pixels = (uint16_t *) img->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] |= other_pixels[i];
+            }
+        }
+    }
+}
+
+void imlib_nor(image_t *img, const char *file, image_t *other)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        if (file) {
+
+        } else {
+            uint8_t *other_pixels = other->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] = ~(pixels[i] | other_pixels[i]);
+            }
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        if (file) {
+
+        } else {
+            uint16_t *other_pixels = (uint16_t *) img->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] = ~(pixels[i] | other_pixels[i]);
+            }
+        }
+    }
+}
+
+void imlib_xor(image_t *img, const char *file, image_t *other)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        if (file) {
+
+        } else {
+            uint8_t *other_pixels = other->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] ^= other_pixels[i];
+            }
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        if (file) {
+
+        } else {
+            uint16_t *other_pixels = (uint16_t *) img->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] ^= other_pixels[i];
+            }
+        }
+    }
+}
+
+void imlib_xnor(image_t *img, const char *file, image_t *other)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        if (file) {
+
+        } else {
+            uint8_t *other_pixels = other->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] = ~(pixels[i] ^ other_pixels[i]);
+            }
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        if (file) {
+
+        } else {
+            uint16_t *other_pixels = (uint16_t *) img->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] = ~(pixels[i] ^ other_pixels[i]);
+            }
+        }
+    }
+}
+
+int imlib_pixels(image_t *img, rectangle_t *r)
+{
+    rectangle_t rect;
+    if (!rectangle_subimg(img, r, &rect)) {
+        return 0;
+    }
+
+    int sum = 0;
+    if (IM_IS_GS(img)) {
+        for (int i = 0; i < rect.h; i++) {
+            for (int j = 0; j < rect.w; j++) {
+                sum += !!IM_GET_GS_PIXEL(img, (rect.x + j), (rect.y + i));
+            }
+        }
+    } else {
+        for (int i = 0; i < rect.h; i++) {
+            for (int j = 0; j < rect.w; j++) {
+                sum += !!IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i));
+            }
+        }
+    }
+    return sum;
+}
+
+int imlib_centroid(image_t *img, int *x_center, int *y_center, rectangle_t *r)
+{
+    rectangle_t rect;
+    if (!rectangle_subimg(img, r, &rect)) {
+        return 0;
+    }
+
+    int sum = 0, x_sum = 0, y_sum = 0;
+    if (IM_IS_GS(img)) {
+        for (int i = 0; i < rect.h; i++) {
+            for (int j = 0; j < rect.w; j++) {
+                int x = (rect.x + j);
+                int y = (rect.y + i);
+                if(IM_GET_GS_PIXEL(img, x, y)) {
+                    sum += 1;
+                    x_center += x;
+                    y_center += y;
+                }
+            }
+        }
+    } else {
+        for (int i = 0; i < rect.h; i++) {
+            for (int j = 0; j < rect.w; j++) {
+                int x = (rect.x + j);
+                int y = (rect.y + i);
+                if(IM_GET_RGB565_PIXEL(img, x, y)) {
+                    sum += 1;
+                    x_center += x;
+                    y_center += y;
+                }
+            }
+        }
+    }
+    *x_center = sum ? (x_sum / sum) : 0;
+    *y_center = sum ? (y_sum / sum) : 0;
+    return sum;
+}
+
+float imlib_orientation_radians(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r)
+{
+    rectangle_t rect;
+    if (!rectangle_subimg(img, r, &rect)) {
+        return 0;
+    }
+
+    *sum = imlib_centroid(img, x_center, y_center, r);
+    int a = 0, b = 0, c = 0;
+    if (IM_IS_GS(img)) {
+        for (int i = 0; i < rect.h; i++) {
+            for (int j = 0; j < rect.w; j++) {
+                int x = (rect.x + j);
+                int y = (rect.y + i);
+                if(IM_GET_GS_PIXEL(img, x, y)) {
+                    a += (x - *x_center) * (x - *x_center);
+                    b += (x - *x_center) * (y - *y_center);
+                    c += (y - *y_center) * (y - *y_center);
+                }
+            }
+        }
+    } else {
+        for (int i = 0; i < rect.h; i++) {
+            for (int j = 0; j < rect.w; j++) {
+                int x = (rect.x + j);
+                int y = (rect.y + i);
+                if(IM_GET_RGB565_PIXEL(img, x, y)) {
+                    a += (x - *x_center) * (x - *x_center);
+                    b += (x - *x_center) * (y - *y_center);
+                    c += (y - *y_center) * (y - *y_center);
+                }
+            }
+        }
+    }
+    b *= 2;
+    return ((a!=c) ? fast_atan2f(b, a-c) : 0.0) / 2.0;
+}
+
+float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r)
+{
+    return (imlib_orientation_radians(img, sum, x_center, y_center, r) * 180.0) / M_PI;
+}
+
 uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
 {
     uint32_t sum=0;
@@ -293,27 +598,6 @@ void imlib_dilate(image_t *src, int ksize)
         }
     }
     fb_free();
-}
-
-void imlib_morph(struct image *src, uint8_t *kernel, int ksize)
-{
-
-}
-
-void imlib_invert(image_t *src)
-{
-    int size = src->w*src->h;
-    for (int i=0; i<size; i++) {
-        src->pixels[i] = ~src->pixels[i];
-    }
-}
-
-void imlib_binary(image_t *src, int threshold)
-{
-    int size = src->w*src->h;
-    for (int i=0; i<size; i++) {
-        src->pixels[i] = (src->pixels[i]>threshold? 255:0);
-    }
 }
 
 #ifdef OPENMV1

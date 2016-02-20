@@ -140,6 +140,11 @@ extern const uint8_t g826_table[256];
        __typeof__ (p) _p = (p); \
        ((uint16_t*)_img->pixels)[(_y*_img->w)+_x]=_p; })
 
+#define IM_EQUAL(img0, img1) \
+    ({ __typeof__ (img0) _img0 = (img0); \
+       __typeof__ (img1) _img1 = (img1); \
+       (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
+
 typedef struct size {
     int w;
     int h;
@@ -156,6 +161,14 @@ typedef struct rectangle {
     int16_t w;
     int16_t h;
 } rectangle_t;
+
+typedef struct simple_color {
+    uint8_t G;
+    int8_t L;
+    int8_t A;
+    int8_t B;
+}
+simple_color_t;
 
 typedef struct blob {
     int x;
@@ -288,6 +301,20 @@ void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c);
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c);
 
+/* Binary functions */
+void imlib_binary(image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert);
+void imlib_invert(image_t *img);
+void imlib_and(image_t *img, const char *file, image_t *other);
+void imlib_nand(image_t *img, const char *file, image_t *other);
+void imlib_or(image_t *img, const char *file, image_t *other);
+void imlib_nor(image_t *img, const char *file, image_t *other);
+void imlib_xor(image_t *img, const char *file, image_t *other);
+void imlib_xnor(image_t *img, const char *file, image_t *other);
+int imlib_pixels(image_t *img, rectangle_t *r);
+int imlib_centroid(image_t *img, int *x_center, int *y_center, rectangle_t *r);
+float imlib_orientation_radians(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
+float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
+
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
 
@@ -306,9 +333,7 @@ void imlib_histeq(struct image *src);
 void imlib_median_filter(image_t *src, int r);
 void imlib_erode(image_t *src, int ksize);
 void imlib_dilate(image_t *src, int ksize);
-void imlib_morph(image_t *src, uint8_t *kernel, int k_size);
 void imlib_invert(image_t *src);
-void imlib_binary(image_t *src, int threshold);
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold);
 void imlib_rainbow(image_t *src, struct image *dst);
 array_t *imlib_count_blobs(struct image *image);
@@ -321,7 +346,7 @@ void imlib_integral_image_sq(struct image *src, struct integral_image *sum);
 void imlib_integral_image_scaled(struct image *src, struct integral_image *sum);
 uint32_t imlib_integral_lookup(struct integral_image *src, int x, int y, int w, int h);
 
-// Integral moving window 
+// Integral moving window
 void imlib_integral_mw_alloc(mw_image_t *sum, int w, int h);
 void imlib_integral_mw_free(mw_image_t *sum);
 void imlib_integral_mw_scale(image_t *src, mw_image_t *sum, int w, int h);
