@@ -377,17 +377,35 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    mp_obj_t kpts_obj = args[1];
-    PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
     int arg_c = get_color_kw(kw_args, -1); // white
     int arg_s = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
 
-    for (int i=0; i<((py_kp_obj_t*)kpts_obj)->size; i++) {
-        kp_t *kp = &((py_kp_obj_t*)kpts_obj)->kpts[i];
-        float co = arm_cos_f32(kp->angle);
-        float si = arm_sin_f32(kp->angle);
-        imlib_draw_line(arg_img, kp->x, kp->y, kp->x+(co*arg_s), kp->y+(si*arg_s), arg_c);
-        imlib_draw_circle(arg_img, kp->x, kp->y, (arg_s-2)/2, arg_c);
+    if (MP_OBJ_IS_TYPE(args[1],&mp_type_tuple)||(MP_OBJ_IS_TYPE(args[1],&mp_type_list))) {
+        mp_uint_t arg_vec_len;
+        mp_obj_t *arg_vec;
+        mp_obj_get_array(args[1], &arg_vec_len, &arg_vec);
+        if (!arg_vec_len) return mp_const_none;
+        for (int i=0; i<arg_vec_len; i++) {
+            mp_obj_t *arg_keypoint;
+            mp_obj_get_array_fixed_n(arg_vec[i], 3, &arg_keypoint);
+            int x = mp_obj_get_int(arg_keypoint[0]);
+            int y = mp_obj_get_int(arg_keypoint[1]);
+            float angle = mp_obj_get_float(arg_keypoint[2]);
+            float co = arm_cos_f32(angle);
+            float si = arm_sin_f32(angle);
+            imlib_draw_line(arg_img, x, y, x+(co*arg_s), y+(si*arg_s), arg_c);
+            imlib_draw_circle(arg_img, x, y, (arg_s-2)/2, arg_c);
+        }
+    } else {
+        mp_obj_t kpts_obj = args[1];
+        PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
+        for (int i=0; i<((py_kp_obj_t*)kpts_obj)->size; i++) {
+            kp_t *kp = &((py_kp_obj_t*)kpts_obj)->kpts[i];
+            float co = arm_cos_f32(kp->angle);
+            float si = arm_sin_f32(kp->angle);
+            imlib_draw_line(arg_img, kp->x, kp->y, kp->x+(co*arg_s), kp->y+(si*arg_s), arg_c);
+            imlib_draw_circle(arg_img, kp->x, kp->y, (arg_s-2)/2, arg_c);
+        }
     }
     return mp_const_none;
 }
@@ -401,7 +419,7 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     mp_uint_t arg_t_len;
     mp_obj_t *arg_t;
     mp_obj_get_array(args[1], &arg_t_len, &arg_t);
-    PY_ASSERT_TRUE_MSG(arg_t_len, "Invalid Argument: threshold_list_len == 0");
+    if (!arg_t_len) return mp_const_none;
 
     simple_color_t l_t[arg_t_len], u_t[arg_t_len];
     if (IM_IS_GS(arg_img)) {
