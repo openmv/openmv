@@ -22,11 +22,18 @@ void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args)
     int lower = ((int*)args)[0];
     int upper = ((int*)args)[1];
 
-    if (bpp == 1) { // 
+    if (bpp == 1) {
+        // Extract Y channel from YUV and process
         for (int i=0; i<size; i++) {
-            // Extract Y channel from YUV and process
-            dst[i] = (src[i<<1] >= lower && src[i<<1] <= upper) ? 255 : 0;
-
+            dst[i] = (src[i<<1] >= lower && src[i<<1] <= upper) ? 0xFF : 0;
+        }
+    } else {
+        // Lookup Y channel from RGB2YUV 
+        uint16_t *srcrgb = (uint16_t*) src;
+        uint16_t *dstrgb = (uint16_t*) dst;
+        for (int i=0; i<size; i++) {
+            int y = yuv_table[srcrgb[i] * 3 + 0]+128;
+            dstrgb[i] = (y >= lower && y <= upper) ? 0xFFFF : 0;
         }
     }
 }
