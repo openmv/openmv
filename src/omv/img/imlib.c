@@ -13,9 +13,9 @@
 #include "array.h"
 #include "imlib.h"
 #include "ff.h"
-#include "xalloc.h"
 #include "mdefs.h"
 #include "font.h"
+#include "fb_alloc.h"
 
 /* XYZ lookup table */
 extern const float xyz_table[256];
@@ -235,7 +235,7 @@ void imlib_erode(image_t *src, int ksize)
 {
     int c = ksize/2;// center pixel
     int k_rows = (ksize+1)*2;
-    uint8_t *dst = xalloc0(src->w * k_rows);
+    uint8_t *dst = fb_alloc0(src->w * k_rows);
 
     for (int y=1; y<src->h-ksize; y++) {
         for (int x=1; x<src->w-ksize; x++) {
@@ -260,14 +260,14 @@ void imlib_erode(image_t *src, int ksize)
             memcpy(src->pixels+((y/k_rows)*k_rows*src->w), dst, src->w*k_rows);
         }
     }
-    xfree(dst);
+    fb_free();
 }
 
 void imlib_dilate(image_t *src, int ksize)
 {
     int c = ksize/2;// center pixel
     int k_rows = (ksize+1)*2;
-    uint8_t *dst = xalloc0(src->w * k_rows);
+    uint8_t *dst = fb_alloc0(src->w * k_rows);
 
     for (int y=1; y<src->h-ksize; y++) {
         for (int x=1; x<src->w-ksize; x++) {
@@ -292,7 +292,7 @@ void imlib_dilate(image_t *src, int ksize)
             memcpy(src->pixels+((y/k_rows)*k_rows*src->w), dst, src->w*k_rows);
         }
     }
-    xfree(dst);
+    fb_free();
 }
 
 void imlib_morph(struct image *src, uint8_t *kernel, int ksize)

@@ -6,9 +6,10 @@
  * O(N) median filter with histograms.
  *
  */
-#include "xalloc.h"
-#include "imlib.h"
 #include <arm_math.h>
+#include "imlib.h"
+#include "fb_alloc.h"
+
 #define R8(p) \
     (uint8_t)((p>>11) * 255/31)
 #define G8(p) \
@@ -98,8 +99,8 @@ void median_filter_rgb(image_t *in, int size)
     uint16_t r,g,b;
     //int k_rows = size+1;
     int k_rows = (2*size+1)*2;
-    histo_t *h = xalloc(sizeof(*h));
-    uint16_t *data = xalloc(in->w * k_rows * sizeof(*data));
+    histo_t *h = fb_alloc(sizeof(*h));
+    uint16_t *data = fb_alloc(in->w * k_rows * sizeof(*data));
 
     for (int row = 0; row<in->h; row++) {
         for (int col = 0; col<in->w; col++) {
@@ -119,8 +120,7 @@ void median_filter_rgb(image_t *in, int size)
         }
     }
 
-    xfree(h);
-    xfree(data);
+    fb_free_all();
 }
 
 void median_filter_gs(image_t *in, int size)
@@ -128,7 +128,7 @@ void median_filter_gs(image_t *in, int size)
     histo_t hist;
     histo_t *h = &hist;
     int k_rows = (2*size+1)*2;
-    uint8_t *data = xalloc(in->w * k_rows * sizeof(*data));
+    uint8_t *data = fb_alloc(in->w * k_rows * sizeof(*data));
 
     for (int row = 0; row<in->h; row ++) {
         for (int col = 0; col<in->w; col++) {
@@ -144,8 +144,8 @@ void median_filter_gs(image_t *in, int size)
             memcpy(in->data+((row/k_rows)*k_rows*in->w), data, (k_rows*in->w*sizeof(*data)));
         }
     }
-    xfree(h);
-    xfree(data);
+
+    fb_free_all();
 }
 
 void imlib_median_filter(image_t *in, int size)
