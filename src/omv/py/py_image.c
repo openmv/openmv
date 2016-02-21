@@ -1038,6 +1038,13 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
         cascade->scale_factor = mp_obj_get_float(kw_scalef->value);
     }
 
+    rectangle_t roi = {
+        .x = 0,
+        .y = 0,
+        .w = image->w,
+        .h = image->h,
+    };
+
     mp_map_elem_t *kw_roi = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("roi")), MP_MAP_LOOKUP);
     if (kw_roi != NULL) {
         mp_obj_t *array;
@@ -1045,10 +1052,10 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
 
         // If one of those is negative roi.(x) will overflow uint16_t
         // And this error will be detected when checking ROI's bounds
-        uint16_t x = mp_obj_get_int(array[0]);
-        uint16_t y = mp_obj_get_int(array[1]);
-        uint16_t w = mp_obj_get_int(array[2]);
-        uint16_t h = mp_obj_get_int(array[3]);
+        uint16_t x = roi.x = mp_obj_get_int(array[0]);
+        uint16_t y = roi.y = mp_obj_get_int(array[1]);
+        uint16_t w = roi.w = mp_obj_get_int(array[2]);
+        uint16_t h = roi.h = mp_obj_get_int(array[3]);
 
         // Make sure ROI is bigger than feature size
         PY_ASSERT_TRUE_MSG((w > cascade->window.w &&
@@ -1059,20 +1066,10 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
         PY_ASSERT_TRUE_MSG(((x + w) < image->w &&
                             (y + h) < image->h),
                 "Region of interest is bigger than frame size!");
-
-        image_t subimg = {
-            .w = w,
-            .h = h,
-            .bpp = image->bpp,
-            .pixels = xalloc(w*h*image->bpp)
-        };
-
-        imlib_subimage(image, &subimg, x, y);
-        image = &subimg;
     }
 
     // Detect objects
-    objects_array = imlib_detect_objects(image, cascade);
+    objects_array = imlib_detect_objects(image, cascade, &roi);
 
     /* Create empty Python list */
     objects_list = mp_obj_new_list(0, NULL);

@@ -65,7 +65,7 @@ static int run_cascade_classifier(cascade_t* cascade, point_t pt)
     return 1;
 }
 
-array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
+array_t *imlib_detect_objects(image_t *image, cascade_t *cascade, rectangle_t *roi)
 {
     // Integral images
     mw_image_t sum;
@@ -86,7 +86,7 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
     // Viola and Jones achieved best results using a scaling factor
     // of 1.25 and a scanning factor proportional to the current scale.
     // Start with a step of 5% of the image width and reduce at each scaling step
-    cascade->step = (image->w*50)/1000; 
+    cascade->step = (roi->w*50)/1000;
 
     // Make sure step is less than feature height + 1
     if (cascade->step > cascade->window.w) {
@@ -94,14 +94,14 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
     }
 
     // Allocate integral images
-    imlib_integral_mw_alloc(&sum, image->w, cascade->window.h+1);
-    imlib_integral_mw_alloc(&ssq, image->w, cascade->window.h+1);
+    imlib_integral_mw_alloc(&sum, roi->w, cascade->window.h+1);
+    imlib_integral_mw_alloc(&ssq, roi->w, cascade->window.h+1);
 
     // Iterate over the image pyramid
     for(float factor=1.0f; ; factor *= cascade->scale_factor) {
         // Set the scaled width and height
-        int szw = image->w/factor;
-        int szh = image->h/factor;
+        int szw = roi->w/factor;
+        int szh = roi->h/factor;
 
         // Break if scaled image is smaller than feature size
         if (szw < cascade->window.w || szh < cascade->window.h) {
@@ -109,11 +109,11 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
         }
 
         // Set the integral images scale
-        imlib_integral_mw_scale(image, &sum, szw, szh);
-        imlib_integral_mw_scale(image, &ssq, szw, szh);
+        imlib_integral_mw_scale(roi, &sum, szw, szh);
+        imlib_integral_mw_scale(roi, &ssq, szw, szh);
 
         // Compute new scaled integral images
-        imlib_integral_mw_ss(image, &sum, &ssq);
+        imlib_integral_mw_ss(image, &sum, &ssq, roi);
 
         // Scale the scanning step
         cascade->step = cascade->step/factor;
@@ -130,14 +130,15 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade)
                 point_t p = {x, y};
                 // If an object is detected, record the coordinates of the filter window
                 if (run_cascade_classifier(cascade, p) > 0) {
-                    array_push_back(objects, rectangle_alloc(fast_roundf(x*factor), fast_roundf(y*factor),
+                    array_push_back(objects,
+                                rectangle_alloc(fast_roundf(x*factor) + roi->x, fast_roundf(y*factor) + roi->y,
                                 fast_roundf(cascade->window.w*factor), fast_roundf(cascade->window.h*factor)));
                 }
             }
 
             // If not last line, shift integral images
             if ((y+cascade->step) < y2) {
-                imlib_integral_mw_shift_ss(cascade->img, cascade->sum, cascade->ssq, cascade->step);
+                imlib_integral_mw_shift_ss(image, &sum, &ssq, roi, cascade->step);
             }
         }
     }
