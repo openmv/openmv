@@ -138,6 +138,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	rgb2rgb_tab.o                           \
 	median.o                                \
 	point.o                                 \
+	bmp.o                                   \
 	ppm.o                                   \
 	rectangle.o                             \
 	fast.o                                  \

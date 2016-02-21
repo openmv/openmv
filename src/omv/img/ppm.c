@@ -6,253 +6,214 @@
  * PPM/PGM reader/writer.
  *
  */
-#include <ff.h>
 #include <stdio.h>
+#include <ff.h>
+#include "ff_wrapper.h"
 #include "xalloc.h"
 #include "imlib.h"
-#include "mdefs.h"
 
-#define BUF_LEN   (1024*3)
-
-/*
- * The following macros and lookup tables extract and convert
- * packed RGB565 to RGB888, this saves 1 mult and 1 div later.
- * Note the packed RGB565 pixel is accessed LSB first in memory.
- */
-#define R8(p) \
-    rb_tbl[((p>>3)&0x1F)]
-
-#define G8(p) \
-    g_tbl[((p&0x07)<<3)|(p>>13)]
-
-#define B8(p) \
-    rb_tbl[((p>>8)&0x1F)]
-
-static uint8_t rb_tbl []= {
-    0, 8, 16, 24, 32, 41, 49, 57, 65, 74,
-    82, 90, 98, 106, 115, 123, 131, 139,
-    148, 156, 164, 172, 180, 189, 197, 205,
-    213, 222, 230, 238, 246, 255
-};
-
-static uint8_t g_tbl []= {
-    0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44,
-    48, 52, 56, 60, 64, 68, 72, 76, 80, 85, 89,
-    93, 97, 101, 105, 109, 113, 117, 121, 125, 129,
-    133, 137, 141, 145, 149, 153, 157, 161, 165, 170,
-    174, 178, 182, 186, 190, 194, 198, 202, 206, 210,
-    214, 218, 222, 226, 230, 234, 238, 242, 246, 250, 255
-};
-
-static int isspace(int c)
-{
-    return (c=='\n'||c=='\r'||c=='\t'||c==' ');
+static uint8_t read_int_c;
+static bool read_int_c_valid;
+static void read_int_reset() {
+    read_int_c_valid = false;
 }
 
-static char f_getc(FIL *fp)
+static int read_int(FIL *fp, uint32_t *i)
 {
-    char c;
-    UINT bytes;
-    FRESULT res = f_read(fp, &c, 1, &bytes);
-    if (res != FR_OK || bytes != 1) {
-        c = EOF;
-    }
-    return c;
-}
-
-static DISABLE_OPT int read_num(FIL *fp)
-{
-    int x=0, c=0;
-    while (1) {
-        c = f_getc(fp);
-        if (c == '#') {
-            /* skip comments */
-            while ((c = f_getc(fp)) != EOF && c != '\n');
-        } else if (c >= 48 && c <= 57) {
-            x *= 10;
-            x += (c-48);
-        } else {
-            break;
+    enum { EAT_WHITESPACE, EAT_COMMENT, EAT_NUMBER } mode = EAT_WHITESPACE;
+    for(*i = 0;;) {
+        if (!read_int_c_valid) {
+            if (f_eof(fp)) {
+                return FR_OK;
+            }
+            int res = read_byte(fp, &read_int_c);
+            if (res != FR_OK) {
+                return res;
+            }
+            read_int_c_valid = true;
         }
+        if (mode == EAT_WHITESPACE) {
+            if (read_int_c == '#') {
+                mode = EAT_COMMENT;
+            } else if (('0' <= read_int_c) && (read_int_c <= '9')) {
+                *i = read_int_c - '0';
+                mode = EAT_NUMBER;
+            }
+        } else if (mode == EAT_COMMENT) {
+            if ((read_int_c == '\n') || (read_int_c == '\r')) {
+                mode = EAT_WHITESPACE;
+            }
+        } else if (mode == EAT_NUMBER) {
+            if (('0' <= read_int_c) && (read_int_c <= '9')) {
+                *i = (*i * 10) + read_int_c - '0';
+            } else {
+                return FR_OK; // read_int_c_valid==true on exit
+            }
+        }
+        read_int_c_valid = false;
     }
-    return x;
 }
 
-int ppm_write(image_t *img, const char *path)
+#define READ_INT(fp, i) \
+    ({ FRESULT _res = read_int((fp), (i)); \
+       if (_res != FR_OK) { f_close((fp)); return _res; } })
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Store mode settings internally, no need for callers to store this info.
+static uint8_t ppm_fmt;
+
+// This function inits the geometry values of an image.
+int ppm_read_geometry(FIL *fp, image_t *img, const char *path)
 {
-    FIL fp;
-    UINT bytes;
-    FRESULT res=FR_OK;
-
-    int idx=0;
-    uint8_t buf[BUF_LEN];
-
-    res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
+    read_int_reset();
+    FRESULT res = f_open(fp, path, FA_READ|FA_OPEN_EXISTING);
     if (res != FR_OK) {
         return res;
     }
 
-    if (img->bpp == 1) {
-        bytes = f_printf(&fp, "P5\n%d %d\n255\n", img->w, img->h);
-    } else {
-        bytes = f_printf(&fp, "P6\n%d %d\n255\n", img->w, img->h);
+    READ_BYTE_EXPECT(fp, 'P');
+    READ_BYTE(fp, &ppm_fmt);
+    if ((ppm_fmt!='2') && (ppm_fmt!='3') && (ppm_fmt!='5') && (ppm_fmt!='6')) {
+        f_close(fp);
+        return -1;
+    }
+    img->bpp = ((ppm_fmt == '2') || (ppm_fmt == '5')) ? 1 : 2;
+
+    READ_INT(fp, (uint32_t *) &img->w);
+    READ_INT(fp, (uint32_t *) &img->h);
+    if ((img->w == 0) || (img->h == 0)) {
+        f_close(fp);
+        return -1;
     }
 
-    if (bytes == -1) {
-        res = FR_DENIED;
-        goto error;
+    uint32_t max;
+    READ_INT(fp, &max);
+    if (max != 255) {
+        f_close(fp);
+        return -1;
     }
 
-    if (img->bpp == 1) {
-        res = f_write(&fp, img->data, img->w*img->h, &bytes);
-    } else {
-        uint16_t *pixels = (uint16_t*)img->data;
-        for (int i=0; i<img->w*img->h; i++) {
-            uint16_t p = pixels[i];
-            buf[idx++]=R8(p); buf[idx++]=G8(p); buf[idx++]=B8(p); //RGB565->RGB888
-            if (idx == BUF_LEN) {
-                idx = 0;
-                res = f_write(&fp, buf, BUF_LEN, &bytes);
-                if (res != FR_OK || bytes != BUF_LEN) {
-                    goto error;
-                }
+    return FR_OK;
+}
+
+// This function reads the pixel values of an image.
+int ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end)
+{
+    if (ppm_fmt == '2') {
+        for (int i = line_start; i < line_end; i++) {
+            for (int j = 0; j < img->w; j++) {
+                uint32_t pixel;
+                READ_INT(fp, &pixel);
+                IM_SET_GS_PIXEL(img, j, i, pixel);
             }
         }
-        if (idx) {
-            res = f_write(&fp, buf, idx, &bytes);
-            if (res != FR_OK || bytes != idx) {
-                goto error;
+    } else if (ppm_fmt == '3') {
+        for (int i = line_start; i < line_end; i++) {
+            for (int j = 0; j < img->w; j++) {
+                uint32_t r, g, b;
+                READ_INT(fp, &r);
+                READ_INT(fp, &g);
+                READ_INT(fp, &b);
+                IM_SET_RGB565_PIXEL(img, j, i, IM_RGB565(IM_R825(r),
+                                                         IM_G826(g),
+                                                         IM_B825(b)));
+            }
+        }
+    } else if (ppm_fmt == '5') {
+        for (int i = line_start; i < line_end; i++) {
+            for (int j = 0; j < img->w; j++) {
+                uint8_t pixel;
+                READ_BYTE(fp, &pixel);
+                IM_SET_GS_PIXEL(img, j, i, pixel);
+            }
+        }
+    } else if (ppm_fmt == '6') {
+        for (int i = line_start; i < line_end; i++) {
+            for (int j = 0; j < img->w; j++) {
+                uint8_t r, g, b;
+                READ_BYTE(fp, &r);
+                READ_BYTE(fp, &g);
+                READ_BYTE(fp, &b);
+                IM_SET_RGB565_PIXEL(img, j, i, IM_RGB565(IM_R825(r),
+                                                         IM_G826(g),
+                                                         IM_B825(b)));
             }
         }
     }
 
-error:
-    f_close(&fp);
-    return res;
+    return FR_OK;
+}
+
+static int ppm_read_int(image_t *img, const char *path)
+{
+    FIL fp;
+
+    int res = ppm_read_geometry(&fp, img, path);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    if (!img->pixels) { // don't allocate if already allocated...
+        img->pixels = xalloc(img->w * img->h * img->bpp);
+    }
+
+    res = ppm_read_pixels(&fp, img, 0, img->h);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    return f_close(&fp);
 }
 
 int ppm_read(image_t *img, const char *path)
 {
-    FIL fp;
-    UINT bytes;
-    FRESULT res=FR_OK;
-
-    res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING);
-    if (res != FR_OK) {
-        return res;
+    const uint8_t *backup = img->pixels;
+    const int res = ppm_read_int(img, path);
+    // free image if I didn't start with one...
+    if ((res != FR_OK) && (!backup) && (img->pixels)) {
+        xfree(img->pixels);
     }
-
-    /* read image header */
-    if (f_getc(&fp) != 'P') {
-        printf("ppm:image format not supported\n");
-        res = -1;
-        goto error;
-    }
-
-    int type = f_getc(&fp);
-    if (type != '5' && type != '6') {
-        printf("ppm:image format not supported\n");
-        res = -1;
-        goto error;
-    }
-
-    if (!isspace(f_getc(&fp))) {
-        printf("ppm:image format not supported\n");
-        res = -1;
-        goto error;
-    }
-
-    img->w = read_num(&fp); /* read image width */
-    img->h = read_num(&fp); /* read image height */
-    int max_gray = read_num(&fp); /* read image max gray */
-    if (img->w == -1 || img->h == -1 || max_gray != 255) {
-        printf("ppm:image format not supported\n");
-        res = -1;
-        goto error;
-    }
-
-    img->bpp = (type=='5')? 1:2;
-    int size = img->w*img->h*img->bpp;
-
-    /* alloc image */
-    img->data = xalloc(size);
-    if (img->data == NULL) {
-        printf("ppm: out of memory\n");
-        res = -1;
-        goto error;
-    }
-
-    /* read image data */
-    res = f_read(&fp, img->data, size, &bytes);
-    if (res != FR_OK || bytes != size) {
-        goto error;
-    }
-
-error:
-    f_close(&fp);
     return res;
 }
 
 int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
 {
+    rectangle_t rect;
+    if (!rectangle_subimg(img, r, &rect)) {
+        return -1; // no image intersection
+    }
+
     FIL fp;
-    UINT bytes;
-    FRESULT res=FR_OK;
-
-    int idx=0;
-    uint8_t buf[BUF_LEN];
-
-    res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
+    FRESULT res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
     if (res != FR_OK) {
         return res;
     }
 
-    if (img->bpp == 1) {
-        bytes = f_printf(&fp, "P5\n%d %d\n255\n", r->w, r->h);
-    } else {
-        bytes = f_printf(&fp, "P6\n%d %d\n255\n", r->w, r->h);
-    }
-
-    if (bytes == -1) {
-        res = FR_DENIED;
-        goto error;
-    }
-
-    if (img->bpp == 1) {
-        for (int j=r->y; j<r->y+r->h; j++) {
-            for (int i=r->x; i<r->x+r->w; i++) {
-                uint8_t c = img->pixels[j*img->w+i];
-                res = f_write(&fp, &c, 1, &bytes);
-                if (res != FR_OK || bytes != 1) {
-                    goto error;
-                }
+    if (IM_IS_GS(img)) {
+        char buffer[20]; // exactly big enough for 5-digit w/h
+        int len = snprintf(buffer, 20, "P5\n%d %d\n255\n", rect.w, rect.h);
+        WRITE_DATA(&fp, buffer, len);
+        for (int i = 0; i < rect.h; i++) {
+            for (int j = 0; j < rect.w; j++) {
+                WRITE_BYTE(&fp, IM_GET_GS_PIXEL(img, (rect.x + j), (rect.y + i)));
             }
         }
     } else {
-        uint16_t *pixels = (uint16_t*)img->data;
-        for (int j=r->y; j<r->y+r->h; j++) {
-            for (int i=r->x; i<r->x+r->w; i++) {
-                uint16_t p = pixels[j*img->w+i];
-                buf[idx++]=R8(p); buf[idx++]=G8(p); buf[idx++]=B8(p); //RGB565->RGB888
-                if (idx == BUF_LEN) {
-                    idx = 0;
-                    res = f_write(&fp, buf, BUF_LEN, &bytes);
-                    if (res != FR_OK || bytes != BUF_LEN) {
-                        goto error;
-                    }
-                }
-            }
-        }
-
-        if (idx) {
-            res = f_write(&fp, buf, idx, &bytes);
-            if (res != FR_OK || bytes != idx) {
-                goto error;
+        char buffer[20]; // exactly big enough for 5-digit w/h
+        int len = snprintf(buffer, 20, "P6\n%d %d\n255\n", rect.w, rect.h);
+        WRITE_DATA(&fp, buffer, len);
+        for (int i = 0; i < rect.h; i++) {
+            for (int j = 0; j < rect.w; j++) {
+                int pixel = IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i));
+                char buff[3];
+                buff[0] = IM_R528(IM_R565(pixel));
+                buff[1] = IM_G628(IM_G565(pixel));
+                buff[2] = IM_B528(IM_B565(pixel));
+                WRITE_DATA(&fp, buff, 3);
             }
         }
     }
 
-error:
-    f_close(&fp);
-    return res;
+    return f_close(&fp);
 }

@@ -10,6 +10,7 @@
 #define __IMLIB_H__
 #include <stdbool.h>
 #include <stdint.h>
+#include <ff.h>
 #include "array.h"
 #include "fmath.h"
 
@@ -288,6 +289,18 @@ point_t *point_alloc(int16_t x, int16_t y);
 bool point_equal(point_t *p1, point_t *p2);
 float point_distance(point_t *p1, point_t *p2);
 
+/* Image file functions */
+int ppm_read_geometry(FIL *fp, image_t *img, const char *path);
+int ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
+int ppm_read(image_t *img, const char *path);
+int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
+int bmp_read_geometry(FIL *fp, image_t *img, const char *path);
+int bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
+int bmp_read(image_t *img, const char *path);
+int bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
+int imlib_load_image(image_t *image, const char *path);
+int imlib_save_image(image_t *image, const char *path, rectangle_t *r);
+
 /* Rectangle functions */
 rectangle_t *rectangle_alloc(int16_t x, int16_t y, int16_t w, int16_t h);
 bool rectangle_equal(rectangle_t *r1, rectangle_t *r2);
@@ -391,14 +404,6 @@ void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off);
 void imlib_blend(struct image *src, struct image *dst, int x_off, int y_off, uint8_t alpha);
 void imlib_subimage(struct image *src, struct image *dst, int x_off, int y_off);
 void jpeg_compress(image_t *src, image_t *dst, int quality);
-
-/* Image file functions */
-int ppm_read(image_t *img, const char *path);
-int ppm_write(image_t *img, const char *path);
-int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
-int imlib_load_image(image_t *image, const char *path);
-int imlib_save_image(image_t *image, const char *path, rectangle_t *r);
-
 
 // Image filter functions
 void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
