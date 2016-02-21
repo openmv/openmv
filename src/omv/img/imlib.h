@@ -382,8 +382,8 @@ uint8_t *imlib_lbp_cascade(image_t *image, rectangle_t *roi);
 int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1);
 int imlib_lbp_desc_load(const char *path, uint8_t **desc);
 
-/* Eye detector */
-void imlib_find_eyes(image_t *src, point_t *left, point_t *right, rectangle_t *roi);
+/* Iris detector */
+void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi);
 
 /* Misc */
 void imlib_scale(struct image *src, struct image *dst, interp_t interp);

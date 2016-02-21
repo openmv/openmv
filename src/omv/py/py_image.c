@@ -1234,17 +1234,15 @@ static mp_obj_t py_image_find_eyes(mp_obj_t image_obj, mp_obj_t roi_obj)
         mp_obj_get_int(array[3]),
     };
 
-    point_t l={0}, r={0};
-    imlib_find_eyes(image, &l, &r, &roi);
+    point_t iris;
+    imlib_find_iris(image, &iris, &roi);
 
-    mp_obj_t eyes_obj[4] = {
-        mp_obj_new_int(l.x),
-        mp_obj_new_int(l.y),
-        mp_obj_new_int(r.x),
-        mp_obj_new_int(r.y),
+    mp_obj_t eyes_obj[2] = {
+        mp_obj_new_int(iris.x),
+        mp_obj_new_int(iris.y),
     };
 
-    return mp_obj_new_tuple(4, eyes_obj);
+    return mp_obj_new_tuple(2, eyes_obj);
 }
 
 static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
