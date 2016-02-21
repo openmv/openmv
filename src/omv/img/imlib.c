@@ -432,6 +432,54 @@ float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_ce
     return (imlib_orientation_radians(img, sum, x_center, y_center, r) * 180.0) / M_PI;
 }
 
+void imlib_negate(image_t *img)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        for (int i=0, j=img->w*img->h; i<j; i++) {
+            pixels[i] = IM_MAX_GS - pixels[i];
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        for (int i=0, j=img->w*img->h; i<j; i++) {
+            const int pixel = pixels[i];
+            const int r = IM_MAX_R5 - IM_R565(pixel);
+            const int g = IM_MAX_G6 - IM_G565(pixel);
+            const int b = IM_MAX_B5 - IM_B565(pixel);
+            pixels[i] = IM_RGB565(r, g, b);
+        }
+    }
+}
+
+void imlib_difference(image_t *img, const char *file, image_t *other)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels;
+        if (file) {
+
+        } else {
+            uint8_t *other_pixels = other->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                pixels[i] = abs(pixels[i] - other_pixels[i]);
+            }
+        }
+    } else {
+        uint16_t *pixels = (uint16_t *) img->pixels;
+        if (file) {
+
+        } else {
+            uint16_t *other_pixels = (uint16_t *) img->pixels;
+            for (int i=0, j=img->w*img->h; i<j; i++) {
+                const int pixel = pixels[i], other_pixel = other_pixels[i];
+                const int r = abs(IM_R565(pixel) - IM_R565(other_pixel));
+                const int g = abs(IM_G565(pixel) - IM_G565(other_pixel));
+                const int b = abs(IM_B565(pixel) - IM_B565(other_pixel));
+                pixels[i] = IM_RGB565(r, g, b);
+            }
+        }
+    }
+}
+
 uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
 {
     uint32_t sum=0;

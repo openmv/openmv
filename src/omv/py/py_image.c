@@ -636,6 +636,33 @@ static mp_obj_t py_image_orientation_degrees(uint n_args, const mp_obj_t *args, 
     return mp_obj_new_tuple(4, result);
 }
 
+static mp_obj_t py_image_negate(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    imlib_negate(arg_img);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        imlib_difference(arg_img, mp_obj_str_get_str(other_obj), NULL);
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
+                "Invalid Argument: img_0_geometry != img_1_geometry");
+        imlib_difference(arg_img, NULL, arg_other);
+    }
+    return mp_const_none;
+}
+
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     int res;
@@ -1292,6 +1319,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_pixels_obj, 1, py_image_pixels);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_centroid_obj, 1, py_image_centroid);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_radians_obj, 1, py_image_orientation_radians);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_degrees_obj, 1, py_image_orientation_degrees);
+/* Background Subtraction (Frame Differencing) functions */
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_difference_obj, py_image_difference);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
@@ -1343,6 +1373,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_centroid),            (mp_obj_t)&py_image_centroid_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_orientation_radians), (mp_obj_t)&py_image_orientation_radians_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_orientation_degrees), (mp_obj_t)&py_image_orientation_degrees_obj},
+    /* Background Subtraction (Frame Differencing) functions */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_negate),              (mp_obj_t)&py_image_negate_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_difference),          (mp_obj_t)&py_image_difference_obj},
 
     /* basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
