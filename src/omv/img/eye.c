@@ -117,11 +117,11 @@ void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi)
     array_t *iris_gradients;
     array_alloc(&iris_gradients, xfree);
 
-    // Tune these offsets to avoid eyebrows and reduce window size
-    int box_w = roi->w;
-    int box_h = roi->h;
-    int x_off = roi->x+((int)(0.25f*roi->w));
-    int y_off = roi->y+((int)(0.25f*roi->h));
+    // Tune these offsets to skip eyebrows and reduce window size
+    int box_w = roi->w-((int)(0.15f*roi->w));
+    int box_h = roi->h-((int)(0.40f*roi->h));
+    int x_off = roi->x+((int)(0.15f*roi->w));
+    int y_off = roi->y+((int)(0.40f*roi->h));
 
     // find gradients with strong magnitudes
     find_gradients(src, iris_gradients,  x_off, y_off, box_w, box_h);
