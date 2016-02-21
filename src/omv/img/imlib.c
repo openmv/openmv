@@ -366,8 +366,8 @@ int imlib_centroid(image_t *img, int *x_center, int *y_center, rectangle_t *r)
                 int y = (rect.y + i);
                 if(IM_GET_GS_PIXEL(img, x, y)) {
                     sum += 1;
-                    x_center += x;
-                    y_center += y;
+                    x_sum += x;
+                    y_sum += y;
                 }
             }
         }
@@ -378,8 +378,8 @@ int imlib_centroid(image_t *img, int *x_center, int *y_center, rectangle_t *r)
                 int y = (rect.y + i);
                 if(IM_GET_RGB565_PIXEL(img, x, y)) {
                     sum += 1;
-                    x_center += x;
-                    y_center += y;
+                    x_sum += x;
+                    y_sum += y;
                 }
             }
         }

@@ -1,4 +1,4 @@
-import pyb, sensor, image
+import pyb, sensor, image, math
 sensor.reset()
 sensor.set_framesize(sensor.QVGA)
 while(True):
@@ -102,3 +102,20 @@ while(True):
             x = (pyb.rng() % (2*img.width())) - (img.width()//2)
             y = (pyb.rng() % (2*img.height())) - (img.height()//2)
             img.draw_cross(x, y)
+    # Test Draw Keypoints
+    sensor.set_pixformat(sensor.GRAYSCALE)
+    for i in range(10):
+        img = sensor.snapshot()
+        for j in range(100):
+            x = (pyb.rng() % (2*img.width())) - (img.width()//2)
+            y = (pyb.rng() % (2*img.height())) - (img.height()//2)
+            a = (pyb.rng() % (2*math.pi))
+            img.draw_keypoints([(x, y, a)])
+    sensor.set_pixformat(sensor.RGB565)
+    for i in range(10):
+        img = sensor.snapshot()
+        for j in range(100):
+            x = (pyb.rng() % (2*img.width())) - (img.width()//2)
+            y = (pyb.rng() % (2*img.height())) - (img.height()//2)
+            a = (pyb.rng() % (2*math.pi))
+            img.draw_keypoints([(x, y, a)])
