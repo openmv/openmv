@@ -315,6 +315,10 @@ int imlib_centroid(image_t *img, int *x_center, int *y_center, rectangle_t *r);
 float imlib_orientation_radians(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
 float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
 
+/* Background Subtraction (Frame Differencing) functions */
+void imlib_negate(image_t *img);
+void imlib_difference(image_t *img, const char *file, image_t *other);
+
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
 
