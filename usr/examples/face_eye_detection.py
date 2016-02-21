@@ -34,13 +34,10 @@ while (True):
         img.draw_rectangle(face)
         # Now find eyes within each face.
         # Note: Use a higher threshold here (more detections) and lower scale (to find small objects)
-        eyes = img.find_features(eyes_cascade, threshold=0.65, scale=1.25, roi=face)
+        eyes = img.find_features(eyes_cascade, threshold=0.5, scale=1.2, roi=face)
         for e in eyes:
-            e = [face[0]+e[0], face[1]+e[1], e[2], e[3]] # Add face offset
             img.draw_rectangle(e)
-            # Draw crosshair, add width/2 and height/2
-            img.draw_cross(e[0]+int(e[2]/2), e[1]+int(e[3]/2))
-            
+
     # Print FPS.
     # Note: Actual FPS is higher, streaming the FB makes it slower.
     print(clock.fps())

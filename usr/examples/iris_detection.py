@@ -33,9 +33,8 @@ while (True):
         img.draw_rectangle(face)
         # Now find eyes within each face.
         # Note: Use a higher threshold here (more detections) and lower scale (to find small objects)
-        eyes = img.find_features(eyes_cascade, threshold=0.5, scale=1.25, roi=face)
+        eyes = img.find_features(eyes_cascade, threshold=0.5, scale=1.2, roi=face)
         for e in eyes:
-            e = [face[0]+e[0], face[1]+e[1], e[2], e[3]] # Add face offset
             iris = img.find_eyes(e)
             img.draw_rectangle(e)
             img.draw_cross(iris[0], iris[1])
