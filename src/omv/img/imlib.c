@@ -46,6 +46,26 @@ void imlib_set_pixel(image_t *img, int x, int y, int p)
     }
 }
 
+/* those just call ppm for now */
+int imlib_load_image(image_t *image, const char *path)
+{
+    return ppm_read(image, path);
+}
+
+int imlib_save_image(image_t *image, const char *path, rectangle_t *r)
+{
+    if (r == NULL) {
+        rectangle_t rectangle;
+        rectangle.x = 0;
+        rectangle.y = 0;
+        rectangle.w = image->w;
+        rectangle.h = image->h;
+        return ppm_write_subimg(image, path, &rectangle);
+    } else {
+        return ppm_write_subimg(image, path, r);
+    }
+}
+
 void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c)
 {
     int dx = abs(x1-x0);
@@ -1012,21 +1032,6 @@ void imlib_histeq(struct image *src)
 
     for (i=0; i<a; i++) {
         src->pixels[i] = (uint8_t) ((IM_MAX_GS/(float)a) * hist[src->pixels[i]]);
-    }
-}
-
-/* those just call ppm for now */
-int imlib_load_image(image_t *image, const char *path)
-{
-    return ppm_read(image, path);
-}
-
-int imlib_save_image(image_t *image, const char *path, rectangle_t *r)
-{
-    if (r == NULL) {
-        return ppm_write(image, path);
-    } else {
-        return ppm_write_subimg(image, path, r);
     }
 }
 

@@ -41,6 +41,7 @@ SRCS += $(addprefix img/,   \
 	rgb2rgb_tab.c           \
 	median.c                \
 	point.c                 \
+	bmp.c                   \
 	ppm.c                   \
 	rectangle.c             \
 	fast.c                  \
