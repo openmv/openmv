@@ -119,22 +119,28 @@ int bmp_read_geometry(FIL *fp, image_t *img, const char *path)
 int bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end)
 {
     if (bmp_bpp == 8) {
-        for (int i = line_start; i < line_end; i++) {
-            for (int j = 0; j < bmp_row_bytes; j++) {
-                uint8_t pixel;
-                READ_BYTE(fp, &pixel);
-                if (j < img->w) {
-                    if (bmp_h < 0) { // vertical flip
-                        if (bmp_w < 0) { // horizontal flip
-                            IM_SET_GS_PIXEL(img, (img->w-j-1), i, pixel);
+        if ((bmp_h < 0) && (bmp_w >= 0) && (img->w == bmp_row_bytes)) {
+            READ_DATA(fp, // Super Fast - Zoom, Zoom!
+                      img->pixels + (line_start * img->w),
+                      (line_end - line_start + 1) * img->w);
+        } else {
+            for (int i = line_start; i < line_end; i++) {
+                for (int j = 0; j < bmp_row_bytes; j++) {
+                    uint8_t pixel;
+                    READ_BYTE(fp, &pixel);
+                    if (j < img->w) {
+                        if (bmp_h < 0) { // vertical flip
+                            if (bmp_w < 0) { // horizontal flip
+                                IM_SET_GS_PIXEL(img, (img->w-j-1), i, pixel);
+                            } else {
+                                IM_SET_GS_PIXEL(img, j, i, pixel);
+                            }
                         } else {
-                            IM_SET_GS_PIXEL(img, j, i, pixel);
-                        }
-                    } else {
-                        if (bmp_w < 0) {
-                            IM_SET_GS_PIXEL(img, (img->w-j-1), (img->h-i-1), pixel);
-                        } else {
-                            IM_SET_GS_PIXEL(img, j, (img->h-i-1), pixel);
+                            if (bmp_w < 0) {
+                                IM_SET_GS_PIXEL(img, (img->w-j-1), (img->h-i-1), pixel);
+                            } else {
+                                IM_SET_GS_PIXEL(img, j, (img->h-i-1), pixel);
+                            }
                         }
                     }
                 }
@@ -268,12 +274,16 @@ int bmp_write_subimg(image_t *img, const char *path, rectangle_t *r)
         for (int i = 0; i < 256; i++) {
             WRITE_LONG(&fp, ((i) << 16) | ((i) << 8) | i);
         }
-        for (int i = 0; i < rect.h; i++) {
-            for (int j = 0; j < rect.w; j++) {
-                WRITE_BYTE(&fp, IM_GET_GS_PIXEL(img, (rect.x + j), (rect.y + i)));
-            }
-            for (int j = 0; j < waste; j++) {
-                WRITE_BYTE(&fp, 0);
+        if ((rect.x == 0) && (rect.w == img->w) && (img->w == row_bytes)) {
+            WRITE_DATA(&fp, // Super Fast - Zoom, Zoom!
+                       img->pixels + (rect.y * img->w),
+                       rect.w * rect.h);
+        } else {
+            for (int i = 0; i < rect.h; i++) {
+                WRITE_DATA(&fp, img->pixels+((rect.y+i)*img->w)+rect.x, rect.w);
+                for (int j = 0; j < waste; j++) {
+                    WRITE_BYTE(&fp, 0);
+                }
             }
         }
     } else {
