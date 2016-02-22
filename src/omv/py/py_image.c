@@ -942,7 +942,7 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
     cascade->scale_factor = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1.5f);
 
     // Make sure ROI is not negative
-    PY_ASSERT_TRUE_MSG((roi.x < 0) || (roi.y < 0) || (roi.w < 0) || (roi.h < 0),
+    PY_ASSERT_FALSE_MSG((roi.x < 0) || (roi.y < 0) || (roi.w < 0) || (roi.h < 0),
             "Region of interest is negative!");
 
     // Make sure ROI is bigger than feature size
