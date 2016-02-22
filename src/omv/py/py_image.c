@@ -230,7 +230,8 @@ static mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args)
     if (IM_IS_GS(arg_img)) {
         IM_SET_GS_PIXEL(arg_img, arg_x, arg_y, mp_obj_get_int(args[3]));
     } else {
-        mp_obj_t *arg_color; mp_obj_get_array_fixed_n(args[3], 3, &arg_color);
+        mp_obj_t *arg_color;
+        mp_obj_get_array_fixed_n(args[3], 3, &arg_color);
         int red = IM_R825(mp_obj_get_int(arg_color[0]));
         int green = IM_G826(mp_obj_get_int(arg_color[1]));
         int blue = IM_B825(mp_obj_get_int(arg_color[2]));
@@ -252,7 +253,7 @@ static mp_obj_t py_image_draw_line(uint n_args, const mp_obj_t *args, mp_map_t *
     int arg_y0 = mp_obj_get_int(arg_vec[1]);
     int arg_x1 = mp_obj_get_int(arg_vec[2]);
     int arg_y1 = mp_obj_get_int(arg_vec[3]);
-    int arg_c  = get_color_kw(kw_args, -1); // white
+    int arg_c  = py_helper_lookup_color(kw_args, -1); // white
 
     imlib_draw_line(arg_img, arg_x0, arg_y0, arg_x1, arg_y1, arg_c);
     return mp_const_none;
@@ -271,7 +272,7 @@ static mp_obj_t py_image_draw_rectangle(uint n_args, const mp_obj_t *args, mp_ma
     int arg_ry = mp_obj_get_int(arg_vec[1]);
     int arg_rw = mp_obj_get_int(arg_vec[2]);
     int arg_rh = mp_obj_get_int(arg_vec[3]);
-    int arg_c  = get_color_kw(kw_args, -1); // white
+    int arg_c  = py_helper_lookup_color(kw_args, -1); // white
 
     imlib_draw_rectangle(arg_img, arg_rx, arg_ry, arg_rw, arg_rh, arg_c);
     return mp_const_none;
@@ -286,7 +287,7 @@ static mp_obj_t py_image_draw_circle(uint n_args, const mp_obj_t *args, mp_map_t
     int arg_cx = mp_obj_get_int(args[1]);
     int arg_cy = mp_obj_get_int(args[2]);
     int arg_r  = mp_obj_get_int(args[3]);
-    int arg_c  = get_color_kw(kw_args, -1); // white
+    int arg_c  = py_helper_lookup_color(kw_args, -1); // white
 
     imlib_draw_circle(arg_img, arg_cx, arg_cy, arg_r, arg_c);
     return mp_const_none;
@@ -301,7 +302,7 @@ static mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t
     int arg_x_off       = mp_obj_get_int(args[1]);
     int arg_y_off       = mp_obj_get_int(args[2]);
     const char *arg_str = mp_obj_str_get_str(args[3]);
-    int arg_c           = get_color_kw(kw_args, -1); // white
+    int arg_c           = py_helper_lookup_color(kw_args, -1); // white
 
     imlib_draw_string(arg_img, arg_x_off, arg_y_off, arg_str, arg_c);
     return mp_const_none;
@@ -315,8 +316,8 @@ static mp_obj_t py_image_draw_cross(uint n_args, const mp_obj_t *args, mp_map_t 
 
     int arg_x = mp_obj_get_int(args[1]);
     int arg_y = mp_obj_get_int(args[2]);
-    int arg_c = get_color_kw(kw_args, -1); // white
-    int arg_s = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 5);
+    int arg_c = py_helper_lookup_color(kw_args, -1); // white
+    int arg_s = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 5);
 
     imlib_draw_line(arg_img, arg_x-arg_s, arg_y      , arg_x+arg_s, arg_y      , arg_c);
     imlib_draw_line(arg_img, arg_x      , arg_y-arg_s, arg_x      , arg_y+arg_s, arg_c);
@@ -329,8 +330,8 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    int arg_c = get_color_kw(kw_args, -1); // white
-    int arg_s = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
+    int arg_c = py_helper_lookup_color(kw_args, -1); // white
+    int arg_s = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
 
     if (MP_OBJ_IS_TYPE(args[1],&mp_type_tuple)||(MP_OBJ_IS_TYPE(args[1],&mp_type_list))) {
         mp_uint_t arg_vec_len;
@@ -404,7 +405,7 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         }
     }
 
-    int arg_invert = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), 0);
+    int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), 0);
     imlib_binary(arg_img, arg_t_len, l_t, u_t, arg_invert ? 1 : 0);
     return mp_const_none;
 }
@@ -528,7 +529,7 @@ static mp_obj_t py_image_pixels(uint n_args, const mp_obj_t *args, mp_map_t *kw_
             "Operation not supported on JPEG");
 
     rectangle_t arg_r;
-    get_rectangle_kw(kw_args, arg_img, &arg_r);
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
     return mp_obj_new_int(imlib_pixels(arg_img, &arg_r));
 }
 
@@ -539,7 +540,7 @@ static mp_obj_t py_image_centroid(uint n_args, const mp_obj_t *args, mp_map_t *k
             "Operation not supported on JPEG");
 
     rectangle_t arg_r;
-    get_rectangle_kw(kw_args, arg_img, &arg_r);
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
     int x, y;
     int sum = imlib_centroid(arg_img, &x, &y, &arg_r);
 
@@ -557,7 +558,7 @@ static mp_obj_t py_image_orientation_radians(uint n_args, const mp_obj_t *args, 
             "Operation not supported on JPEG");
 
     rectangle_t arg_r;
-    get_rectangle_kw(kw_args, arg_img, &arg_r);
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
     int sum, x, y;
     float o = imlib_orientation_radians(arg_img, &sum, &x, &y, &arg_r);
 
@@ -576,7 +577,7 @@ static mp_obj_t py_image_orientation_degrees(uint n_args, const mp_obj_t *args, 
             "Operation not supported on JPEG");
 
     rectangle_t arg_r;
-    get_rectangle_kw(kw_args, arg_img, &arg_r);
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
     int sum, x, y;
     float o = imlib_orientation_degrees(arg_img, &sum, &x, &y, &arg_r);
 
@@ -622,7 +623,7 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     image_t *image = py_image_cobj(args[0]);
     const char *path = mp_obj_str_get_str(args[1]);
 
-    get_rectangle_kw(kw_args, image, &roi);
+    py_helper_lookup_rectangle(kw_args, image, &roi);
 
     res = imlib_save_image(image, path, &roi);
     if (res != FR_OK) {
@@ -786,7 +787,7 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 {
     // Read args
     image_t *image = py_image_cobj(args[0]);
-    int ksize = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 1);
+    int ksize = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 1);
 
     // Call median filter
     imlib_median_filter(image, ksize);
@@ -956,9 +957,9 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
     cascade = py_cascade_cobj(args[1]);
 
     // Read keyword arguments
-    get_rectangle_kw(kw_args, image, &roi);
-    cascade->threshold = get_float_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.5f);
-    cascade->scale_factor = get_float_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1.5f);
+    py_helper_lookup_rectangle(kw_args, image, &roi);
+    cascade->threshold = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.5f);
+    cascade->scale_factor = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1.5f);
 
     // Make sure ROI is not negative
     PY_ASSERT_TRUE_MSG((roi.x < 0) || (roi.y < 0) || (roi.w < 0) || (roi.h < 0),
@@ -1042,9 +1043,9 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
             "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
 
     // Read keyword arguments
-    get_rectangle_kw(kw_args, image, &roi);
-    int threshold = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 32);
-    bool normalized = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), false);
+    py_helper_lookup_rectangle(kw_args, image, &roi);
+    int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 32);
+    bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), false);
 
     // Run keypoint extractor on ROI
     int kpts_size = 0;
@@ -1366,7 +1367,7 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     }
 
     // Read the number of stages
-    int stages = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), cascade.n_stages);
+    int stages = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), cascade.n_stages);
     // Check the number of stages
     if (stages > 0 && stages < cascade.n_stages) {
         cascade.n_stages = stages;

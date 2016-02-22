@@ -2,7 +2,7 @@
 #include "imlib.h"
 #include "py_helper.h"
 
-int get_int_kw(mp_map_t *kw_args, mp_obj_t kw, int default_val)
+int py_helper_lookup_int(mp_map_t *kw_args, mp_obj_t kw, int default_val)
 {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
 
@@ -12,7 +12,7 @@ int get_int_kw(mp_map_t *kw_args, mp_obj_t kw, int default_val)
     return default_val;
 }
 
-float get_float_kw(mp_map_t *kw_args, mp_obj_t kw, float default_val)
+float py_helper_lookup_float(mp_map_t *kw_args, mp_obj_t kw, float default_val)
 {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
 
@@ -22,7 +22,7 @@ float get_float_kw(mp_map_t *kw_args, mp_obj_t kw, float default_val)
     return default_val;
 }
 
-int get_color_kw(mp_map_t *kw_args, int default_color)
+int py_helper_lookup_color(mp_map_t *kw_args, int default_color)
 {
     mp_map_elem_t *kw_color = mp_map_lookup(kw_args,
             MP_OBJ_NEW_QSTR(MP_QSTR_color), MP_MAP_LOOKUP);
@@ -41,7 +41,7 @@ int get_color_kw(mp_map_t *kw_args, int default_color)
     return default_color;
 }
 
-void get_rectangle_kw(mp_map_t *kw_args, image_t *img, rectangle_t *r)
+void py_helper_lookup_rectangle(mp_map_t *kw_args, image_t *img, rectangle_t *r)
 {
     mp_map_elem_t *kw_rectangle = mp_map_lookup(kw_args,
             MP_OBJ_NEW_QSTR(MP_QSTR_roi), MP_MAP_LOOKUP);
