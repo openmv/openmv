@@ -187,13 +187,15 @@ static int get_color_kw(mp_map_t *kw_args, int default_color)
 
 static void get_rectangle_kw(mp_map_t *kw_args, image_t *img, rectangle_t *r)
 {
-    r->x = 0;
-    r->y = 0;
-    r->w = img->w;
-    r->h = img->h;
     mp_map_elem_t *kw_rectangle = mp_map_lookup(kw_args,
             MP_OBJ_NEW_QSTR(MP_QSTR_r), MP_MAP_LOOKUP);
-    if (kw_rectangle != NULL) {
+
+    if (kw_rectangle == NULL) {
+        r->x = 0;
+        r->y = 0;
+        r->w = img->w;
+        r->h = img->h;
+    } else {
         mp_obj_t *arg_rectangle;
         mp_obj_get_array_fixed_n(kw_rectangle->value, 4, &arg_rectangle);
         r->x = mp_obj_get_int(arg_rectangle[0]);
@@ -670,7 +672,7 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     image_t *image = py_image_cobj(args[0]);
     const char *path = mp_obj_str_get_str(args[1]);
 
-    get_rectangle_kw(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("subimage")), &roi);
+    get_rectangle_kw(kw_args, image, &roi);
 
     res = imlib_save_image(image, path, &roi);
     if (res != FR_OK) {
