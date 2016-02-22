@@ -55,6 +55,7 @@ SRCS += $(addprefix img/,   \
    )
 
 SRCS += $(addprefix py/,    \
+	py_helper.c             \
 	py_sensor.c             \
 	py_image.c              \
 	py_time.c               \

@@ -152,6 +152,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
    )
 
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
+	py_helper.o                             \
 	py_sensor.o                             \
 	py_image.o                              \
 	py_time.o                               \
