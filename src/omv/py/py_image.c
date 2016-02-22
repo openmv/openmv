@@ -1110,9 +1110,10 @@ static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
     py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
     py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
 
-    // sanity checks
+    // Sanity checks
     PY_ASSERT_TYPE(kpts1, &py_kp_type);
     PY_ASSERT_TYPE(kpts2, &py_kp_type);
+    PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
     if (kpts1->size == 0 || kpts2->size == 0) {
         return mp_const_none;

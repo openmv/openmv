@@ -69,6 +69,7 @@
 #define SCALE_FACTOR        (1.0f)                      // SCALE_STEP ^ SCALE_IDX
 #define PATTERN_SCALE       (22)
 
+#define MAX_KP_DIST         (512)
 // number of points on each concentric circle (from outer to inner)
 const static int n[8] = {6,6,6,6,6,6,6,1};
 
@@ -311,7 +312,7 @@ int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpt
     for (int x=0; x<kpts1_size; x++) {
         kp_t *kp1 = &kpts1[x];
         int min_idx = 0;
-        int min_dist = 512;
+        int min_dist = MAX_KP_DIST;
 
         for (int y=0; y<kpts2_size; y++) {
             kp_t *kp2 = &kpts2[y];
@@ -345,7 +346,7 @@ int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpt
             }
         }
 
-        if (min_dist > t) {
+        if ((((MAX_KP_DIST-min_dist)*100/MAX_KP_DIST)) < t) {
             //no match
             kpts_match[x] = -1;
         } else {
