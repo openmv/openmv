@@ -121,13 +121,9 @@ int ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end)
             }
         }
     } else if (ppm_fmt == '5') {
-        for (int i = line_start; i < line_end; i++) {
-            for (int j = 0; j < img->w; j++) {
-                uint8_t pixel;
-                READ_BYTE(fp, &pixel);
-                IM_SET_GS_PIXEL(img, j, i, pixel);
-            }
-        }
+        READ_DATA(fp, // Super Fast - Zoom, Zoom!
+                  img->pixels + (line_start * img->w),
+                  (line_end - line_start + 1) * img->w);
     } else if (ppm_fmt == '6') {
         for (int i = line_start; i < line_end; i++) {
             for (int j = 0; j < img->w; j++) {
@@ -194,9 +190,13 @@ int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
         char buffer[20]; // exactly big enough for 5-digit w/h
         int len = snprintf(buffer, 20, "P5\n%d %d\n255\n", rect.w, rect.h);
         WRITE_DATA(&fp, buffer, len);
-        for (int i = 0; i < rect.h; i++) {
-            for (int j = 0; j < rect.w; j++) {
-                WRITE_BYTE(&fp, IM_GET_GS_PIXEL(img, (rect.x + j), (rect.y + i)));
+        if ((rect.x == 0) && (rect.w == img->w)) {
+            WRITE_DATA(&fp, // Super Fast - Zoom, Zoom!
+                       img->pixels + (rect.y * img->w),
+                       rect.w * rect.h);
+        } else {
+            for (int i = 0; i < rect.h; i++) {
+                WRITE_DATA(&fp, img->pixels+((rect.y+i)*img->w)+rect.x, rect.w);
             }
         }
     } else {
