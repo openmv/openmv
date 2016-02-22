@@ -544,11 +544,8 @@ static mp_obj_t py_image_centroid(uint n_args, const mp_obj_t *args, mp_map_t *k
     int x, y;
     int sum = imlib_centroid(arg_img, &x, &y, &arg_r);
 
-    mp_obj_t result[3];
-    result[0] = mp_obj_new_int(sum);
-    result[1] = mp_obj_new_int(x);
-    result[2] = mp_obj_new_int(y);
-    return mp_obj_new_tuple(3, result);
+    return mp_obj_new_tuple(3, (mp_obj_t[3])
+            {mp_obj_new_int(sum), mp_obj_new_int(x), mp_obj_new_int(y)});
 }
 
 static mp_obj_t py_image_orientation_radians(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -562,12 +559,8 @@ static mp_obj_t py_image_orientation_radians(uint n_args, const mp_obj_t *args, 
     int sum, x, y;
     float o = imlib_orientation_radians(arg_img, &sum, &x, &y, &arg_r);
 
-    mp_obj_t result[4];
-    result[0] = mp_obj_new_int(sum);
-    result[1] = mp_obj_new_int(x);
-    result[2] = mp_obj_new_int(y);
-    result[3] = mp_obj_new_float(o);
-    return mp_obj_new_tuple(4, result);
+    return mp_obj_new_tuple(4, (mp_obj_t[4])
+            {mp_obj_new_int(sum), mp_obj_new_int(x), mp_obj_new_int(y), mp_obj_new_float(o)});
 }
 
 static mp_obj_t py_image_orientation_degrees(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -581,12 +574,8 @@ static mp_obj_t py_image_orientation_degrees(uint n_args, const mp_obj_t *args, 
     int sum, x, y;
     float o = imlib_orientation_degrees(arg_img, &sum, &x, &y, &arg_r);
 
-    mp_obj_t result[4];
-    result[0] = mp_obj_new_int(sum);
-    result[1] = mp_obj_new_int(x);
-    result[2] = mp_obj_new_int(y);
-    result[3] = mp_obj_new_float(o);
-    return mp_obj_new_tuple(4, result);
+    return mp_obj_new_tuple(4, (mp_obj_t[4])
+            {mp_obj_new_int(sum), mp_obj_new_int(x), mp_obj_new_int(y), mp_obj_new_float(o)});
 }
 
 static mp_obj_t py_image_negate(mp_obj_t img_obj)
@@ -906,33 +895,24 @@ static mp_obj_t py_image_dilate(mp_obj_t image_obj, mp_obj_t ksize_obj)
 
 static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
 {
-    /* C stuff */
-    array_t *blobs;
-    struct image *image;
-    mp_obj_t blob_obj[6];
+     // Get image pointer
+    image_t *image = py_image_cobj(image_obj);
 
-    /* MP List */
+    // Run blob detector
+    array_t *blobs = imlib_count_blobs(image);
+
+    // Add blobs to Python list
     mp_obj_t objects_list = mp_const_none;
 
-     /* get image pointer */
-    image = py_image_cobj(image_obj);
-
-    /* run color dector */
-    blobs = imlib_count_blobs(image);
-
-    /* Create empty Python list */
-    objects_list = mp_obj_new_list(0, NULL);
-
     if (array_length(blobs)) {
+        objects_list = mp_obj_new_list(0, NULL);
         for (int j=0; j<array_length(blobs); j++) {
-             blob_t *r = array_at(blobs, j);
-             blob_obj[0] = mp_obj_new_int(r->x);
-             blob_obj[1] = mp_obj_new_int(r->y);
-             blob_obj[2] = mp_obj_new_int(r->w);
-             blob_obj[3] = mp_obj_new_int(r->h);
-             blob_obj[4] = mp_obj_new_int(r->c);
-             blob_obj[5] = mp_obj_new_int(r->id);
-             mp_obj_list_append(objects_list, mp_obj_new_tuple(6, blob_obj));
+            blob_t *r = array_at(blobs, j);
+            mp_obj_t blob[6] = {
+                mp_obj_new_int(r->x), mp_obj_new_int(r->y), mp_obj_new_int(r->w),
+                mp_obj_new_int(r->h), mp_obj_new_int(r->c), mp_obj_new_int(r->id)
+            };
+            mp_obj_list_append(objects_list, mp_obj_new_tuple(6, blob));
         }
     }
     array_free(blobs);
