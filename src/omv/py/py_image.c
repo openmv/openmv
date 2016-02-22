@@ -950,7 +950,7 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
             "Region of interest is smaller than detector window!");
 
     // Make sure ROI is smaller than image size
-    PY_ASSERT_TRUE_MSG(((roi.x+roi.w) < image->w && (roi.y+roi.h) < image->h),
+    PY_ASSERT_TRUE_MSG(((roi.x+roi.w) <= image->w && (roi.y+roi.h) <= image->h),
             "Region of interest is bigger than frame size!");
 
     // Detect objects
