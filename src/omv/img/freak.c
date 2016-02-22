@@ -245,7 +245,7 @@ static uint8_t mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int 
     }
 }
 
-void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient_normalized, bool scale_normalized)
+kp_t *freak_find_keypoints(image_t *image, bool normalized, int kpts_threshold, int *kpts_size, rectangle_t *roi)
 {
     int thetaIdx=0;
     int direction0;
@@ -254,16 +254,22 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
     uint8_t *desc;
     uint8_t pointsValue[kNB_POINTS];
 
-    i_image_t i_image;
+    // Find keypoints
+    kp_t *kpts = fast_detect(image, kpts_threshold, kpts_size, roi);
+    if (*kpts_size == 0) {
+        return kpts;
+    }
+
     // compute integral image
+    i_image_t i_image;
     imlib_integral_image_alloc(&i_image, image->w, image->h);
     imlib_integral_image(image, &i_image);
 
-    for (size_t k=kpts_size; k--;) {
+    for (size_t k=*kpts_size; k--;) {
         kpts[k].desc=desc=xalloc0(64);
 
         // estimate orientation (gradient)
-        if (orient_normalized) {
+        if (normalized) {
             thetaIdx = 0; // assign 0° to all kpts
             kpts[k].angle = 0.0f;
         } else {
@@ -303,6 +309,8 @@ void freak_find_keypoints(image_t *image, kp_t *kpts, int kpts_size, bool orient
     }
 
     imlib_integral_image_free(&i_image);
+
+    return kpts;
 }
 
 int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpts2_size, int t)

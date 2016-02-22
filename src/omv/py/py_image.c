@@ -1027,14 +1027,11 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 32);
     bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), false);
 
-    // Run keypoint extractor on ROI
     int kpts_size = 0;
-    kp_t *kpts = fast_detect(image, threshold, &kpts_size, &roi);
+    // Run keypoint descriptor on ROI
+    kp_t *kpts = freak_find_keypoints(image, normalized, threshold, &kpts_size, &roi);
 
     if (kpts_size) {
-        // Run keypoint descriptor
-        freak_find_keypoints(image, kpts, kpts_size, normalized, normalized);
-
         // Return keypoints MP object
         py_kp_obj_t * kp_obj = m_new_obj(py_kp_obj_t);
         kp_obj->base.type = &py_kp_type;
@@ -1308,8 +1305,7 @@ int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *
     int threshold = 10;
     bool normalized = false;
 
-    kpts = fast_detect(image, threshold, &kpts_size, roi);
-    freak_find_keypoints(image, kpts, kpts_size, normalized, normalized);
+    kpts = freak_find_keypoints(image, normalized, threshold, &kpts_size, roi);
 
     printf("Save Descriptor: KPTS(%d)\n", kpts_size);
     printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
