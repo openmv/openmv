@@ -10,7 +10,7 @@ sensor.reset()
 # Sensor settings
 sensor.set_contrast(1)
 sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.HQVGA)
+sensor.set_framesize(sensor.QQVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Skip a few frames to allow the sensor settle down
@@ -38,9 +38,10 @@ while (kpts1 == None):
         img.draw_rectangle(objects[0])
         # Extract keypoints using the detect face size as the ROI
         kpts1 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED, roi=objects[0])
-        if kpts1:
-            img.draw_keypoints(kpts1)
-            time.sleep(1000)
+
+# Draw keypoints
+img.draw_keypoints(kpts1)
+time.sleep(1000)
 
 # FPS clock
 clock = time.clock()
@@ -49,15 +50,19 @@ while (True):
     clock.tick()
     img = sensor.snapshot()
 
-    # Extract keypoints using the whole image.
-    kpts2 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED)
+    # Find faces
+    objects = img.find_features(face_cascade, threshold=0.5, scale=1.5)
+    if objects:
+        # Extract keypoints using the detect face size as the ROI
+        kpts2 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED, roi=objects[0])
 
-    # Match the first set of keypoints with the second one
-    if (kpts2):
-        c=img.match_keypoints(kpts1, kpts2, MATCHING_THRESH)
+        # Match the first set of keypoints with the second one
+        if (kpts2):
+            c=img.match_keypoints(kpts1, kpts2, MATCHING_THRESH)
 
-    # If a match was found, draw the matching keypoints
-    if (c):
-        img.draw_cross(c[0], c[1], size=5)
-        img.draw_string(0, 0, "Tracking face...")
+        # If more than 10% of the keypoints match draw the matching set
+        if (c[2]>10):
+            img.draw_rectangle(objects[0])
+            img.draw_cross(c[0], c[1], size=5)
+            img.draw_string(0, 0, "Match %d%%"%(c[2]))
     print (clock.fps())
