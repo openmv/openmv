@@ -1138,13 +1138,22 @@ static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
     return mp_obj_new_tuple(3, rec_obj);
 }
 
-static mp_obj_t py_image_match_lbp(mp_obj_t image_obj, mp_obj_t d0_obj, mp_obj_t d1_obj)
+static mp_obj_t py_image_match_lbp(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-   // image_t *image;
-   // image = py_image_cobj(image_obj);
-    py_lbp_obj_t *d0 = ((py_lbp_obj_t*)d0_obj);
-    py_lbp_obj_t *d1 = ((py_lbp_obj_t*)d1_obj);
-    return mp_obj_new_int(imlib_lbp_desc_distance(d0->hist, d1->hist));
+    // Read args
+    image_t *image = py_image_cobj(args[0]);
+    uint8_t *d0 = ((py_lbp_obj_t*)args[1])->hist;
+
+    // Sanity checks
+    PY_ASSERT_TRUE_MSG(image->bpp == 1,
+            "This function is only supported on GRAYSCALE images");
+
+    // Extract second LBP descriptor
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, image, &roi);
+    uint8_t *d1 = imlib_lbp_cascade(image, &roi);
+
+    return mp_obj_new_int(imlib_lbp_desc_distance(d0, d1));
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_width_obj, py_image_width);
@@ -1198,7 +1207,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eyes_obj, py_image_find_eyes);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_match_lbp_obj, py_image_match_lbp);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_lbp_obj, 2, py_image_match_lbp);
 
 static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_width),               (mp_obj_t)&py_image_width_obj},
