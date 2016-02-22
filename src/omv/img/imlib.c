@@ -52,18 +52,9 @@ int imlib_load_image(image_t *image, const char *path)
     return ppm_read(image, path);
 }
 
-int imlib_save_image(image_t *image, const char *path, rectangle_t *r)
+int imlib_save_image(image_t *image, const char *path, rectangle_t *roi)
 {
-    if (r == NULL) {
-        rectangle_t rectangle;
-        rectangle.x = 0;
-        rectangle.y = 0;
-        rectangle.w = image->w;
-        rectangle.h = image->h;
-        return ppm_write_subimg(image, path, &rectangle);
-    } else {
-        return ppm_write_subimg(image, path, r);
-    }
+    return ppm_write_subimg(image, path, roi);
 }
 
 void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c)

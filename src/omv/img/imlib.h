@@ -299,7 +299,7 @@ int bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
 int bmp_read(image_t *img, const char *path);
 int bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 int imlib_load_image(image_t *image, const char *path);
-int imlib_save_image(image_t *image, const char *path, rectangle_t *r);
+int imlib_save_image(image_t *image, const char *path, rectangle_t *roi);
 
 /* Rectangle functions */
 rectangle_t *rectangle_alloc(int16_t x, int16_t y, int16_t w, int16_t h);

@@ -666,26 +666,13 @@ static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     int res;
+    rectangle_t roi;
     image_t *image = py_image_cobj(args[0]);
     const char *path = mp_obj_str_get_str(args[1]);
 
-    mp_map_elem_t *kw_subimage = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("subimage")), MP_MAP_LOOKUP);
-    if (kw_subimage != NULL) {
-        mp_obj_t *array;
-        mp_obj_get_array_fixed_n(kw_subimage->value, 4, &array);
+    get_rectangle_kw(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("subimage")), &roi);
 
-        rectangle_t r = {
-            mp_obj_get_int(array[0]),
-            mp_obj_get_int(array[1]),
-            mp_obj_get_int(array[2]),
-            mp_obj_get_int(array[3]),
-        };
-
-        res = imlib_save_image(image, path, &r);
-    } else {
-        res = imlib_save_image(image, path, NULL);
-    }
-
+    res = imlib_save_image(image, path, &roi);
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
