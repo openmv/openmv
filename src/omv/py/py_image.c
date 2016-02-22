@@ -161,8 +161,19 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t va
 static int get_int_kw(mp_map_t *kw_args, mp_obj_t kw, int default_val)
 {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
     if (kw_arg != NULL) {
         default_val = mp_obj_get_int(kw_arg->value);
+    }
+    return default_val;
+}
+
+static float get_float_kw(mp_map_t *kw_args, mp_obj_t kw, float default_val)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg != NULL) {
+        default_val = mp_obj_get_float(kw_arg->value);
     }
     return default_val;
 }
@@ -171,6 +182,7 @@ static int get_color_kw(mp_map_t *kw_args, int default_color)
 {
     mp_map_elem_t *kw_color = mp_map_lookup(kw_args,
             MP_OBJ_NEW_QSTR(MP_QSTR_color), MP_MAP_LOOKUP);
+
     if (kw_color != NULL) {
         if (mp_obj_is_integer(kw_color->value)) {
             default_color = mp_obj_get_int(kw_color->value);
@@ -188,7 +200,7 @@ static int get_color_kw(mp_map_t *kw_args, int default_color)
 static void get_rectangle_kw(mp_map_t *kw_args, image_t *img, rectangle_t *r)
 {
     mp_map_elem_t *kw_rectangle = mp_map_lookup(kw_args,
-            MP_OBJ_NEW_QSTR(MP_QSTR_r), MP_MAP_LOOKUP);
+            MP_OBJ_NEW_QSTR(MP_QSTR_roi), MP_MAP_LOOKUP);
 
     if (kw_rectangle == NULL) {
         r->x = 0;
@@ -834,15 +846,11 @@ static mp_obj_t py_image_histeq(mp_obj_t image_obj)
 
 static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    int ksize = 1;
-    /* get image pointer */
+    // Read args
     image_t *image = py_image_cobj(args[0]);
+    int ksize = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 1);
 
-    mp_map_elem_t *kw_ksize = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("size")), MP_MAP_LOOKUP);
-    if (kw_ksize != NULL) {
-        ksize = mp_obj_get_int(kw_ksize->value);
-    }
-
+    // Call median filter
     imlib_median_filter(image, ksize);
     return mp_const_none;
 }
@@ -858,7 +866,6 @@ static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, 
 
     PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_BLOB_FRAME,
             "This function is only supported on "OMV_MAX_BLOB_FRAME_STR" and smaller frames");
-
 
     /* read arguments */
     image = py_image_cobj(image_obj);
@@ -995,13 +1002,11 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
 
 static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    struct image *image = NULL;
-    struct cascade *cascade = NULL;
+    rectangle_t roi;
+    image_t *image = NULL;
+    cascade_t *cascade = NULL;
 
-    array_t *objects_array=NULL;
-    mp_obj_t objects_list = mp_const_none;
-
-    /* sanity checks */
+    // Sanity checks
     PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
             "This function is only supported on GRAYSCALE images");
 
@@ -1012,60 +1017,30 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
     image = py_image_cobj(args[0]);
     cascade = py_cascade_cobj(args[1]);
 
-    // Set defaults before reading keywords arguments
-    cascade->threshold = 0.5f;
-    cascade->scale_factor = 1.5f;
+    // Read keyword arguments
+    get_rectangle_kw(kw_args, image, &roi);
+    cascade->threshold = get_float_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.5f);
+    cascade->scale_factor = get_float_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1.5f);
 
-    // Read keyword arguments (threshold, scale and roi)
-    mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("threshold")), MP_MAP_LOOKUP);
-    if (kw_thresh != NULL) {
-        cascade->threshold = mp_obj_get_float(kw_thresh->value);
-    }
+    // Make sure ROI is not negative
+    PY_ASSERT_TRUE_MSG((roi.x < 0) || (roi.y < 0) || (roi.w < 0) || (roi.h < 0),
+            "Region of interest is negative!");
 
-    mp_map_elem_t *kw_scalef = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("scale")), MP_MAP_LOOKUP);
-    if (kw_scalef != NULL) {
-        cascade->scale_factor = mp_obj_get_float(kw_scalef->value);
-    }
+    // Make sure ROI is bigger than feature size
+    PY_ASSERT_TRUE_MSG((roi.w > cascade->window.w && roi.h > cascade->window.h),
+            "Region of interest is smaller than detector window!");
 
-    rectangle_t roi = {
-        .x = 0,
-        .y = 0,
-        .w = image->w,
-        .h = image->h,
-    };
-
-    mp_map_elem_t *kw_roi = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("roi")), MP_MAP_LOOKUP);
-    if (kw_roi != NULL) {
-        mp_obj_t *array;
-        mp_obj_get_array_fixed_n(kw_roi->value, 4, &array);
-
-        // If one of those is negative roi.(x) will overflow uint16_t
-        // And this error will be detected when checking ROI's bounds
-        uint16_t x = roi.x = mp_obj_get_int(array[0]);
-        uint16_t y = roi.y = mp_obj_get_int(array[1]);
-        uint16_t w = roi.w = mp_obj_get_int(array[2]);
-        uint16_t h = roi.h = mp_obj_get_int(array[3]);
-
-        // Make sure ROI is bigger than feature size
-        PY_ASSERT_TRUE_MSG((w > cascade->window.w &&
-                            h > cascade->window.h),
-                "Region of interest is smaller than detector window!");
-
-        // Make sure ROI is smaller than image size
-        PY_ASSERT_TRUE_MSG(((x + w) < image->w &&
-                            (y + h) < image->h),
-                "Region of interest is bigger than frame size!");
-    }
+    // Make sure ROI is smaller than image size
+    PY_ASSERT_TRUE_MSG(((roi.x+roi.w) < image->w && (roi.y+roi.h) < image->h),
+            "Region of interest is bigger than frame size!");
 
     // Detect objects
-    objects_array = imlib_detect_objects(image, cascade, &roi);
+    array_t *objects_array = imlib_detect_objects(image, cascade, &roi);
 
-    /* Create empty Python list */
-    objects_list = mp_obj_new_list(0, NULL);
-
-    /* Add detected objects to the list */
+    // Add detected objects to a new Python list
+    mp_obj_t objects_list = mp_obj_new_list(0, NULL);
     for (int i=0; i<array_length(objects_array); i++) {
-        struct rectangle *r = array_at(objects_array, i);
+        rectangle_t *r = array_at(objects_array, i);
         mp_obj_t rec_obj[4] = {
             mp_obj_new_int(r->x),
             mp_obj_new_int(r->y),
@@ -1075,7 +1050,7 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
         mp_obj_list_append(objects_list, mp_obj_new_tuple(4, rec_obj));
     }
 
-    /* Free the objects array */
+    // Free the objects array
     array_free(objects_array);
 
     return objects_list;
@@ -1118,53 +1093,31 @@ static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj
 
 static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    int threshold = 20;
-    bool normalized = false;
-
-    int kpts_size = 0;
-    kp_t *kpts = NULL;
-    py_kp_obj_t *kp_obj =NULL;
-
+    rectangle_t roi;
     image_t *image = py_image_cobj(args[0]);
-    rectangle_t roi={0, 0, image->w, image->h};
 
-    /* sanity checks */
+    // Sanity checks
     PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
             "This function is only supported on GRAYSCALE images");
 
     PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
             "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
 
-    /* read var args */
-    mp_map_elem_t *kw_thresh = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("threshold")), MP_MAP_LOOKUP);
-    if (kw_thresh != NULL) {
-        threshold = mp_obj_get_int(kw_thresh->value);
-    }
+    // Read keyword arguments
+    get_rectangle_kw(kw_args, image, &roi);
+    int threshold = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 32);
+    bool normalized = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), false);
 
-    mp_map_elem_t *kw_norm = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), MP_MAP_LOOKUP);
-    if (kw_norm != NULL) {
-        normalized = mp_obj_get_int(kw_norm->value);
-    }
-
-    mp_map_elem_t *kw_roi = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("roi")), MP_MAP_LOOKUP);
-    if (kw_roi != NULL) {
-        mp_obj_t *array;
-        mp_obj_get_array_fixed_n(kw_roi->value, 4, &array);
-        roi.x=mp_obj_get_int(array[0]);
-        roi.y=mp_obj_get_int(array[1]);
-        roi.w=mp_obj_get_int(array[2]);
-        roi.h=mp_obj_get_int(array[3]);
-    }
-
-    /* run keypoint extractor on ROI */
-    kpts = fast_detect(image, threshold, &kpts_size, &roi);
+    // Run keypoint extractor on ROI
+    int kpts_size = 0;
+    kp_t *kpts = fast_detect(image, threshold, &kpts_size, &roi);
 
     if (kpts_size) {
-        /* run keypoint descriptor */
+        // Run keypoint descriptor
         freak_find_keypoints(image, kpts, kpts_size, normalized, normalized);
 
-        /* return keypoints MP object */
-        kp_obj = m_new_obj(py_kp_obj_t);
+        // Return keypoints MP object
+        py_kp_obj_t * kp_obj = m_new_obj(py_kp_obj_t);
         kp_obj->base.type = &py_kp_type;
         kp_obj->kpts = kpts;
         kp_obj->size = kpts_size;
@@ -1466,28 +1419,23 @@ mp_obj_t py_image_load_image(mp_obj_t path_obj)
 mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     cascade_t cascade;
-
-    py_cascade_obj_t *o = NULL;
-    mp_map_elem_t *kw_stages = NULL;
+    const char *path = mp_obj_str_get_str(args[0]);
 
     // Load cascade from file or flash
-    const char *path = mp_obj_str_get_str(args[0]);
     int res = imlib_load_cascade(&cascade, path);
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
 
-    // Limit the number of stages if specified
-    kw_stages = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), MP_MAP_LOOKUP);
-    if (kw_stages != NULL) {
-        int stages = mp_obj_get_int(kw_stages->value);
-        if (stages > 0 && stages <= cascade.n_stages) {
-            cascade.n_stages = stages;
-        }
+    // Read the number of stages
+    int stages = get_int_kw(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), cascade.n_stages);
+    // Check the number of stages
+    if (stages > 0 && stages < cascade.n_stages) {
+        cascade.n_stages = stages;
     }
 
     // Return micropython cascade object
-    o = m_new_obj(py_cascade_obj_t);
+    py_cascade_obj_t *o = m_new_obj(py_cascade_obj_t);
     o->base.type = &py_cascade_type;
     o->_cobj = cascade;
     return o;
