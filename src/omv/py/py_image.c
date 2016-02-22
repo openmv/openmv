@@ -1269,14 +1269,12 @@ static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
         }
     }
 
-    if (match>=(kpts1->size/16)) {
-        mp_obj_t rec_obj[2] = {
-            mp_obj_new_int(cx/match),
-            mp_obj_new_int(cy/match),
-        };
-        return mp_obj_new_tuple(2, rec_obj);
-    }
-    return mp_const_none;
+    mp_obj_t rec_obj[3] = {
+        mp_obj_new_int(cx/match),
+        mp_obj_new_int(cy/match),
+        mp_obj_new_int((match*1000/kpts1->size)/10)
+    };
+    return mp_obj_new_tuple(3, rec_obj);
 }
 
 static mp_obj_t py_image_match_lbp(mp_obj_t image_obj, mp_obj_t d0_obj, mp_obj_t d1_obj)
