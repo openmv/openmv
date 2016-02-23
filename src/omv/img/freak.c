@@ -239,8 +239,8 @@ static int mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int kp_y
     } else {
         int x_left    = (int) (xf-psigma+0.5f);
         int y_top     = (int) (yf-psigma+0.5f);
-        int x_right   = (int) (xf+psigma+1.5f);//integral image is 1px wider
-        int y_bottom  = (int) (yf+psigma+1.5f);//integral image is 1px higher
+        int x_right   = (int) (xf+psigma+0.5f);
+        int y_bottom  = (int) (yf+psigma+0.5f);
 
         ret_val  = i_image->data[i_image->w*y_bottom+x_right];//bottom right corner
         ret_val -= i_image->data[i_image->w*y_bottom+x_left];

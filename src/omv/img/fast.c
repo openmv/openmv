@@ -2,7 +2,7 @@
 #include "xalloc.h"
 #include <stdio.h>
 
-#define KP_SIZE     (23)
+#define KP_SIZE         (23)
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {
@@ -3100,17 +3100,12 @@ static void fast9_score(image_t *image, array_t *corners, int b)
 
 static array_t *fast9_detect(image_t *image, int b, rectangle_t *roi)
 {
-    int xsize = image->w;
-    int ysize = image->h;
-    int stride= image->w;
-    const uint8_t* im = image->pixels;
-
     array_t *corners;
     array_alloc(&corners, xfree);
 
-    for(int y=3; y < ysize - 3; y++) {
-            const uint8_t *r = im + y*stride;
-        for(int x=3; x < xsize - 3; x++) {
+    for(int y=roi->y+KP_SIZE; y < roi->y+roi->h-KP_SIZE; y++) {
+            const uint8_t *r = image->pixels + y*image->w;
+        for(int x=roi->x+KP_SIZE; x < roi->x+roi->w-KP_SIZE; x++) {
             const uint8_t *p = r + x;
             int cb = *p + b;
             int c_b= *p - b;
@@ -6015,19 +6010,6 @@ static array_t *fast9_detect(image_t *image, int b, rectangle_t *roi)
            continue;
          else
           continue;
-            // check if x,y fits smallest kpt.
-            if (x <= KP_SIZE || x >= (xsize-KP_SIZE) ||
-                y <= KP_SIZE || y >= (ysize-KP_SIZE)) {
-                continue;
-            }
-
-            // check if kpt inside ROI
-            if (roi) {
-                if (x <= (roi->x) || x >= (roi->x+roi->w) ||
-                    y <= (roi->y) || y >= (roi->y+roi->h)) {
-                    continue;
-                }
-            }
 
             array_push_back(corners, alloc_corner(x, y));
 		}
