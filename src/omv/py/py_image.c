@@ -354,9 +354,6 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
 
         for (int i=0; i<array_length(kpts_obj->kpts); i++) {
             kp_t *kp = array_at(kpts_obj->kpts, i);
-            float co = arm_cos_f32(kp->angle);
-            float si = arm_sin_f32(kp->angle);
-            imlib_draw_line(arg_img, kp->x, kp->y, kp->x+(co*arg_s), kp->y+(si*arg_s), arg_c);
             imlib_draw_circle(arg_img, kp->x, kp->y, (arg_s-2)/2, arg_c);
         }
     }

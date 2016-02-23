@@ -198,7 +198,7 @@ const static uint8_t DESCRIPTION_PAIRS[512][2] = {
 
 
 // simply take average on a square patch, not even gaussian approx
-static uint8_t mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int kp_y, uint32_t rot, uint32_t point)
+static int mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int kp_y, uint32_t rot, uint32_t point)
 {
     int pidx = (point/6)%8;
     float alpha, beta, theta = 0;
@@ -266,7 +266,7 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
     fast_detect(image, keypoints, threshold, roi);
 
     if (array_length(keypoints)) {
-        // compute integral image
+        // Compute integral image
         imlib_integral_image_alloc(&i_image, image->w, image->h);
         imlib_integral_image(image, &i_image);
 
@@ -276,7 +276,6 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
             // Estimate orientation (gradient)
             if (normalized) {
                 thetaIdx = 0; // Assign 0° to all kpts
-                kpt->angle = 0.0f;
             } else {
                 // Get the points intensity value in the un-rotated pattern
                 for (int i=kNB_POINTS; i--;) {
@@ -294,12 +293,14 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
                 }
 
                 // Estimate orientation
-                kpt->angle = fast_atan2f((float)direction1, (float)direction0) * (180.0f/PI);
-                thetaIdx = (int)(kNB_ORIENTATION * kpt->angle * (1.0f/360.0f) + 0.5f);
+                float angle = fast_atan2f((float)direction1, (float)direction0) * (180.0f/PI);
+                thetaIdx = (int)(kNB_ORIENTATION * angle * (1.0f/360.0f) + 0.5f);
 
                 if (thetaIdx < 0) {
                     thetaIdx += kNB_ORIENTATION;
-                } else if (thetaIdx >= kNB_ORIENTATION) {
+                }
+
+                if (thetaIdx >= kNB_ORIENTATION) {
                     thetaIdx -= kNB_ORIENTATION;
                 }
             }
@@ -408,12 +409,6 @@ int freak_save_descriptor(array_t *kpts, const char *path)
             goto error;
         }
 
-        // Write angle
-        res = f_write(&fp, &kp->angle, sizeof(kp->angle), &bytes);
-        if (res != FR_OK || bytes != sizeof(kp->angle)) {
-            goto error;
-        }
-
         // Write descriptor
         res = f_write(&fp, kp->desc, KPT_DESC_SIZE, &bytes);
         if (res != FR_OK || bytes != KPT_DESC_SIZE) {
@@ -458,12 +453,6 @@ int freak_load_descriptor(array_t *kpts, const char *path)
         // Read Y
         res = f_read(&fp, &kp->y, sizeof(kp->y), &bytes);
         if (res != FR_OK || bytes != sizeof(kp->y)) {
-            goto error;
-        }
-
-        // Read angle
-        res = f_read(&fp, &kp->angle, sizeof(kp->angle), &bytes);
-        if (res != FR_OK || bytes != sizeof(kp->angle)) {
             goto error;
         }
 

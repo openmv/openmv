@@ -248,7 +248,6 @@ typedef struct cluster {
 typedef struct {
     uint16_t x;
     uint16_t y;
-    float angle;
     uint8_t desc[64];
 } kp_t;
 
