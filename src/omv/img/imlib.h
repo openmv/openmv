@@ -249,7 +249,7 @@ typedef struct {
     uint16_t x;
     uint16_t y;
     float angle;
-    uint8_t *desc;
+    uint8_t desc[64];
 } kp_t;
 
 /* Haar cascade struct */
@@ -383,11 +383,11 @@ int imlib_load_cascade(struct cascade* cascade, const char *path);
 array_t *imlib_detect_objects(struct image *image, struct cascade *cascade, struct rectangle *roi);
 
 /* FAST/FREAK Feature Extractor */
-kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners, rectangle_t *roi);
-kp_t *freak_find_keypoints(image_t *image, bool normalized, int kpts_threshold, int *kpts_size, rectangle_t *roi);
-int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpts2_size, int threshold);
-int freak_save_descriptor(kp_t *kpts, int kpts_size, const char *path);
-int freak_load_descriptor(kp_t **kpts_out, int *kpts_size_out, const char *path);
+void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi);
+array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, rectangle_t *roi);
+int16_t *freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold);
+int freak_save_descriptor(array_t *kpts, const char *path);
+int freak_load_descriptor(array_t *kpts, const char *path);
 
 /* LBP Operator */
 void imlib_lbp_desc(image_t *image, int div, uint8_t *desc, rectangle_t *roi);

@@ -1,13 +1,36 @@
 #include "imlib.h"
 #include "xalloc.h"
+#include <stdio.h>
+
 #define KP_SIZE     (23)
-#define INIT_ALLOC  (50)
 #define Compare(X, Y) ((X)>=(Y))
 
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+    uint8_t score;
+} corner_t;
+
 static int pixel[16];
-static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners, rectangle_t *roi);
-static uint8_t* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_corners, int b);
-static kp_t* nonmax_suppression(const kp_t* corners, const uint8_t* scores, int num_corners, int* ret_num_nonmax);
+static array_t *fast9_detect(image_t *image, int b, rectangle_t *roi);
+static void fast9_score(image_t *image, array_t *corners, int b);
+static void nonmax_suppression(array_t *corners, array_t *keypoints);
+
+static kp_t *alloc_keypoint(uint16_t x, uint16_t y)
+{
+    kp_t *kpt = xalloc(sizeof*kpt);
+    kpt->x = x;
+    kpt->y = y;
+    return kpt;
+}
+
+static corner_t *alloc_corner(uint16_t x, uint16_t y)
+{
+    corner_t *cor = xalloc(sizeof*cor);
+    cor->x = x;
+    cor->y = y;
+    return cor;
+}
 
 static void make_offsets(int pixel[], int row_stride)
 {
@@ -29,140 +52,114 @@ static void make_offsets(int pixel[], int row_stride)
     pixel[15] = -1 + row_stride * 3;
 }
 
-kp_t *fast_detect(image_t *image, int threshold, int *ret_num_corners, rectangle_t *roi)
+void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi)
 {
-    kp_t* corners=0;
-    int num_corners=0;
-
-    uint8_t* scores=0;
-    kp_t* nonmax=0;
-
     make_offsets(pixel, image->w);
 
-    corners = fast9_detect(image->data, image->w, image->h, image->w, threshold, &num_corners, roi);
-    if (num_corners) {
-        scores = fast9_score(image->data, image->w, corners, num_corners, threshold);
-        nonmax = nonmax_suppression(corners, scores, num_corners, ret_num_corners);
-        xfree(scores);
+    // Find corners
+    array_t *corners = fast9_detect(image, threshold, roi);
+    if (array_length(corners)) {
+        // Score corners
+        fast9_score(image, corners, threshold);
+        // Non-max suppression
+        nonmax_suppression(corners, keypoints);
     }
-    xfree(corners);
-
-    return nonmax;
+    array_free(corners);
 }
 
-static kp_t* nonmax_suppression(const kp_t* corners, const uint8_t* scores, int num_corners, int* ret_num_nonmax)
+static void nonmax_suppression(array_t *corners, array_t *keypoints)
 {
-	int num_nonmax=0;
 	int last_row;
 	int* row_start;
-	int i, j;
-	kp_t* ret_nonmax;
-	const int sz = (int)num_corners;
+	const int sz = array_length(corners);
 
-	/*Point above points (roughly) to the pixel above the one of interest, if there
-    is a feature there.*/
+	/* Point above points (roughly) to the pixel above
+       the one of interest, if there is a feature there.*/
 	int point_above = 0;
 	int point_below = 0;
 
-	
-	if(num_corners < 1)
-	{
-		*ret_num_nonmax = 0;
-		return 0;
-	}
+    #define CORNER_AT(x) ((corner_t*) (corners->data[x]))
 
-	ret_nonmax = (kp_t*)xalloc(num_corners * sizeof(kp_t));
-
-	/* Find where each row begins
-	   (the corners are output in raster scan order). A beginning of -1 signifies
-	   that there are no corners on that row. */
-	last_row = corners[num_corners-1].y;
+	/* Find where each row begins (the corners are output in raster scan order).
+       A beginning of -1 signifies that there are no corners on that row. */
+	last_row  = CORNER_AT(sz-1)->y;
 	row_start = (int*)xalloc((last_row+1)*sizeof(int));
 
-	for(i=0; i < last_row+1; i++)
+	for(int i=0; i<last_row+1; i++) {
 		row_start[i] = -1;
-	
-	{
-		int prev_row = -1;
-		for(i=0; i< num_corners; i++)
-			if(corners[i].y != prev_row)
-			{
-				row_start[corners[i].y] = i;
-				prev_row = corners[i].y;
-			}
-	}
-	
-	
-	
-	for(i=0; i < sz; i++)
-	{
-		uint8_t score = scores[i];
-		kp_t pos = corners[i];
+    }
+
+    for (int i=0, prev_row=-1; i<sz; i++) {
+        corner_t *c = CORNER_AT(i);
+        if (c->y != prev_row) {
+            row_start[c->y] = i;
+            prev_row = c->y;
+        }
+    }
+
+    for(int i=0; i<sz; i++) {
+		corner_t *pos = CORNER_AT(i);
+		uint8_t score = pos->score;
 			
 		/*Check left */
-		if(i > 0)
-			if(corners[i-1].x == pos.x-1 && corners[i-1].y == pos.y && Compare(scores[i-1], score))
-				continue;
-			
+		if(i > 0) {
+			if(CORNER_AT(i-1)->x == pos->x-1 && CORNER_AT(i-1)->y == pos->y && Compare(CORNER_AT(i-1)->score, score)) {
+                goto nonmax;
+            }
+        }
+
 		/*Check right*/
-		if(i < (sz - 1))
-			if(corners[i+1].x == pos.x+1 && corners[i+1].y == pos.y && Compare(scores[i+1], score))
-				continue;
+		if(i < (sz - 1)) {
+			if(CORNER_AT(i+1)->x == pos->x+1 && CORNER_AT(i+1)->y == pos->y && Compare(CORNER_AT(i+1)->score, score)) {
+                goto nonmax;
+            }
+        }
 			
 		/*Check above (if there is a valid row above)*/
-		if(pos.y != 0 && row_start[pos.y - 1] != -1) 
-		{
-			/*Make sure that current point_above is one
-			  row above.*/
-			if(corners[point_above].y < pos.y - 1)
-				point_above = row_start[pos.y-1];
+		if(pos->y != 0 && row_start[pos->y - 1] != -1) {
+			/*Make sure that current point_above is one row above.*/
+			if(CORNER_AT(point_above)->y < pos->y - 1)
+				point_above = row_start[pos->y-1];
 			
-			/*Make point_above point to the first of the pixels above the current point,
-			  if it exists.*/
-			for(; corners[point_above].y < pos.y && corners[point_above].x < pos.x - 1; point_above++)
-			{}
+			/*Make point_above point to the first of the pixels above the current point, if it exists.*/
+			for(; CORNER_AT(point_above)->y < pos->y && CORNER_AT(point_above)->x < pos->x - 1; point_above++) {
+            }
 			
-			
-			for(j=point_above; corners[j].y < pos.y && corners[j].x <= pos.x + 1; j++)
-			{
-				int x = corners[j].x;
-				if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(scores[j], score))
-					goto cont;
+			for(int j=point_above; CORNER_AT(j)->y < pos->y && CORNER_AT(j)->x <= pos->x + 1; j++) {
+				int x = CORNER_AT(j)->x;
+				if( (x == pos->x - 1 || x ==pos->x || x == pos->x+1) && Compare(CORNER_AT(j)->score, score))
+					goto nonmax;
 			}
-			
 		}
 			
 		/*Check below (if there is anything below)*/
-		if(pos.y != last_row && row_start[pos.y + 1] != -1 && point_below < sz) /*Nothing below*/
-		{
-			if(corners[point_below].y < pos.y + 1)
-				point_below = row_start[pos.y+1];
+		if(pos->y != last_row && row_start[pos->y + 1] != -1 && point_below < sz) /*Nothing below*/ {
+			if(CORNER_AT(point_below)->y < pos->y + 1)
+				point_below = row_start[pos->y+1];
 			
-			/* Make point below point to one of the pixels belowthe current point, if it
-			   exists.*/
-			for(; point_below < sz && corners[point_below].y == pos.y+1 && corners[point_below].x < pos.x - 1; point_below++)
-			{}
+			/* Make point below point to one of the pixels belowthe current point, if it exists.*/
+            for(; point_below < sz && CORNER_AT(point_below)->y == pos->y+1 && CORNER_AT(point_below)->x < pos->x - 1; point_below++) {
+            }
 
-			for(j=point_below; j < sz && corners[j].y == pos.y+1 && corners[j].x <= pos.x + 1; j++)
-			{
-				int x = corners[j].x;
-				if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(scores[j],score))
-					goto cont;
+			for(int j=point_below; j < sz && CORNER_AT(j)->y == pos->y+1 && CORNER_AT(j)->x <= pos->x + 1; j++) {
+				int x = CORNER_AT(j)->x;
+				if( (x == pos->x - 1 || x ==pos->x || x == pos->x+1) && Compare(CORNER_AT(j)->score, score))
+					goto nonmax;
 			}
 		}
 		
-		ret_nonmax[num_nonmax++] = corners[i];
-		cont:
-			;
+        array_push_back(keypoints, alloc_keypoint(pos->x, pos->y));
+		nonmax:
+        ;
 	}
 
+    #undef CORNER_AT
+
 	xfree(row_start);
-	*ret_num_nonmax = num_nonmax;
-	return ret_nonmax;
 }
 
 /* Auto-generated code*/
-static uint8_t fast9_corner_score(const uint8_t* p, const int pixel[], int bstart)
+static uint8_t fast9_corner_score(const uint8_t* p, int bstart)
 {    
     int bmin = bstart;
     int bmax = 255;
@@ -3093,24 +3090,23 @@ static uint8_t fast9_corner_score(const uint8_t* p, const int pixel[], int bstar
     }
 }
 
-static uint8_t* fast9_score(const uint8_t* i, int stride, kp_t* corners, int num_corners, int b)
+static void fast9_score(image_t *image, array_t *corners, int b)
 {	
-	int n;
-	uint8_t* scores = (uint8_t*)xalloc(sizeof(uint8_t)* num_corners);
-
-    for(n=0; n < num_corners; n++)
-        scores[n] = fast9_corner_score(i + corners[n].y*stride + corners[n].x, pixel, b);
-
-	return scores;
+    for (int i=0; i<array_length(corners); i++) {
+        corner_t *c = array_at(corners, i);
+        c->score = fast9_corner_score(image->pixels + c->y*image->w + c->x, b);
+    }
 }
 
-static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, int b, int* ret_num_corners, rectangle_t *roi)
+static array_t *fast9_detect(image_t *image, int b, rectangle_t *roi)
 {
-	int num_corners=0;
-	kp_t* ret_corners;
-	int rsize= INIT_ALLOC;
+    int xsize = image->w;
+    int ysize = image->h;
+    int stride= image->w;
+    const uint8_t* im = image->pixels;
 
-	ret_corners = (kp_t*)xalloc(sizeof(kp_t)*rsize);
+    array_t *corners;
+    array_alloc(&corners, xfree);
 
     for(int y=3; y < ysize - 3; y++) {
             const uint8_t *r = im + y*stride;
@@ -6019,19 +6015,13 @@ static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, i
            continue;
          else
           continue;
-			if(num_corners == rsize)
-			{
-				rsize+=INIT_ALLOC;
-				ret_corners = (kp_t*)xrealloc(ret_corners, sizeof(kp_t)*rsize);
-			}
-
-            // check if x,y fits smallest KP.
+            // check if x,y fits smallest kpt.
             if (x <= KP_SIZE || x >= (xsize-KP_SIZE) ||
                 y <= KP_SIZE || y >= (ysize-KP_SIZE)) {
                 continue;
             }
 
-            // check if kp inside ROI
+            // check if kpt inside ROI
             if (roi) {
                 if (x <= (roi->x) || x >= (roi->x+roi->w) ||
                     y <= (roi->y) || y >= (roi->y+roi->h)) {
@@ -6039,14 +6029,9 @@ static kp_t* fast9_detect(const uint8_t* im, int xsize, int ysize, int stride, i
                 }
             }
 
-			ret_corners[num_corners].x = x;
-			ret_corners[num_corners].y = y;
-			num_corners++;
-				
+            array_push_back(corners, alloc_corner(x, y));
 		}
     }
-	
-	*ret_num_corners = num_corners;
-	return ret_corners;
 
+    return corners;
 }

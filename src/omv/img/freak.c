@@ -38,19 +38,23 @@
 #include "imlib.h"
 #include "xalloc.h"
 
+#undef PI
+#undef PI_2
+#undef min
+#undef max
+
+#define PI    (3.14159265f)
+#define PI_2  (3.14159265f*2.0f)
+
 #define min(a,b) \
-   ({ __typeof__ (a) _a = (a); \
+   ({ __typeof__ (a) _a = (a);  \
        __typeof__ (b) _b = (b); \
      _a < _b ? _a : _b; })
 
 #define max(a,b) \
-   ({ __typeof__ (a) _a = (a); \
+   ({ __typeof__ (a) _a = (a);  \
        __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
-
-#undef PI
-#define PI    (3.14159265f)
-#define PI_2  (3.14159265f*2.0f)
 
 #define kNB_SCALES          (64)
 #define kNB_ORIENTATION     (256)
@@ -70,6 +74,8 @@
 #define PATTERN_SCALE       (22)
 
 #define MAX_KP_DIST         (512)
+#define KPT_DESC_SIZE       (kNB_PAIRS/8)
+
 // number of points on each concentric circle (from outer to inner)
 const static int n[8] = {6,6,6,6,6,6,6,1};
 
@@ -245,86 +251,89 @@ static uint8_t mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int 
     }
 }
 
-kp_t *freak_find_keypoints(image_t *image, bool normalized, int kpts_threshold, int *kpts_size, rectangle_t *roi)
+array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, rectangle_t *roi)
 {
     int thetaIdx=0;
     int direction0;
     int direction1;
-
-    uint8_t *desc;
     uint8_t pointsValue[kNB_POINTS];
 
-    // Find keypoints
-    kp_t *kpts = fast_detect(image, kpts_threshold, kpts_size, roi);
-    if (*kpts_size == 0) {
-        return kpts;
-    }
-
-    // compute integral image
     i_image_t i_image;
-    imlib_integral_image_alloc(&i_image, image->w, image->h);
-    imlib_integral_image(image, &i_image);
+    array_t *keypoints;
+    array_alloc(&keypoints, xfree);
 
-    for (size_t k=*kpts_size; k--;) {
-        kpts[k].desc=desc=xalloc0(64);
+    // Find keypoints
+    fast_detect(image, keypoints, threshold, roi);
 
-        // estimate orientation (gradient)
-        if (normalized) {
-            thetaIdx = 0; // assign 0° to all kpts
-            kpts[k].angle = 0.0f;
-        } else {
-            // get the points intensity value in the un-rotated pattern
+    if (array_length(keypoints)) {
+        // compute integral image
+        imlib_integral_image_alloc(&i_image, image->w, image->h);
+        imlib_integral_image(image, &i_image);
+
+        for (int i=0; i<array_length(keypoints); i++) {
+            kp_t *kpt = array_at(keypoints, i);
+
+            // Estimate orientation (gradient)
+            if (normalized) {
+                thetaIdx = 0; // Assign 0° to all kpts
+                kpt->angle = 0.0f;
+            } else {
+                // Get the points intensity value in the un-rotated pattern
+                for (int i=kNB_POINTS; i--;) {
+                    pointsValue[i] = mean_intensity(image, &i_image, kpt->x, kpt->y, 0, i);
+                }
+
+                direction0 = 0;
+                direction1 = 0;
+                for (int m=45; m--;) {
+                    // Iterate through the orientation pairs
+                    int delta = (pointsValue[ORIENTATION_PAIRS[m][0]]
+                                -pointsValue[ORIENTATION_PAIRS[m][1]]);
+                    direction0 += delta*(ORIENTATION_PAIRS[m][2])/2048;
+                    direction1 += delta*(ORIENTATION_PAIRS[m][3])/2048;
+                }
+
+                // Estimate orientation
+                kpt->angle = fast_atan2f((float)direction1, (float)direction0) * (180.0f/PI);
+                thetaIdx = (int)(kNB_ORIENTATION * kpt->angle * (1.0f/360.0f) + 0.5f);
+
+                if (thetaIdx < 0) {
+                    thetaIdx += kNB_ORIENTATION;
+                } else if (thetaIdx >= kNB_ORIENTATION) {
+                    thetaIdx -= kNB_ORIENTATION;
+                }
+            }
+
+            // Extract descriptor at the computed orientation
             for (int i=kNB_POINTS; i--;) {
-                pointsValue[i] = mean_intensity(image, &i_image, kpts[k].x, kpts[k].y, 0, i);
+                pointsValue[i] = mean_intensity(image, &i_image, kpt->x, kpt->y, thetaIdx, i);
             }
 
-            direction0 = 0;
-            direction1 = 0;
-            for (int m=45; m--;) {
-                //iterate through the orientation pairs
-                int delta = (pointsValue[ORIENTATION_PAIRS[m][0]]
-                            -pointsValue[ORIENTATION_PAIRS[m][1]]);
-                direction0 += delta*(ORIENTATION_PAIRS[m][2])/2048;
-                direction1 += delta*(ORIENTATION_PAIRS[m][3])/2048;
+            for (int m=kNB_PAIRS; m--;) {
+                kpt->desc[m/8] |= (pointsValue[DESCRIPTION_PAIRS[m][0]]> pointsValue[DESCRIPTION_PAIRS[m][1]]) << (m%8);
             }
-
-            kpts[k].angle = fast_atan2f((float)direction1, (float)direction0) * (180.0f/PI);//estimate orientation
-            thetaIdx = (int)(kNB_ORIENTATION * kpts[k].angle * (1.0f/360.0f) + 0.5f);
-
-            if (thetaIdx < 0) {
-                thetaIdx += kNB_ORIENTATION;
-            } else if (thetaIdx >= kNB_ORIENTATION) {
-                thetaIdx -= kNB_ORIENTATION;
-            }
-        }
-
-        // extract descriptor at the computed orientation
-        for (int i=kNB_POINTS; i--;) {
-            pointsValue[i] = mean_intensity(image, &i_image, kpts[k].x, kpts[k].y, thetaIdx, i);
-        }
-
-        for (int m=kNB_PAIRS; m--;) {
-            desc[m/8] |= (pointsValue[DESCRIPTION_PAIRS[m][0]]> pointsValue[DESCRIPTION_PAIRS[m][1]]) << (m%8);
         }
     }
 
     imlib_integral_image_free(&i_image);
 
-    return kpts;
+    return keypoints;
 }
 
-int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpts2_size, int t)
+int16_t *freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
 {
-    int16_t *kpts_match = xalloc(kpts1_size*sizeof(*kpts_match));
+    int kpts1_size = array_length(kpts1);
+    int kpts2_size = array_length(kpts2);
+    int16_t *kpts_match = xalloc(array_length(kpts1)*sizeof(*kpts_match));
 
     for (int x=0; x<kpts1_size; x++) {
-        kp_t *kp1 = &kpts1[x];
         int min_idx = 0;
         int min_dist = MAX_KP_DIST;
+        kp_t *kp1 = array_at(kpts1, x);
 
         for (int y=0; y<kpts2_size; y++) {
-            kp_t *kp2 = &kpts2[y];
             int dist = 0;
+            kp_t *kp2 = array_at(kpts2, y);
 
             for (int m=0; m<4; m++) { //128 bits
                 uint32_t v = ((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m];
@@ -354,7 +363,7 @@ int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpt
             }
         }
 
-        if ((((MAX_KP_DIST-min_dist)*100/MAX_KP_DIST)) < t) {
+        if ((((MAX_KP_DIST-min_dist)*100/MAX_KP_DIST)) < threshold) {
             //no match
             kpts_match[x] = -1;
         } else {
@@ -364,36 +373,50 @@ int16_t *freak_match_keypoints(kp_t *kpts1, int kpts1_size, kp_t *kpts2, int kpt
     return kpts_match;
 }
 
-int freak_save_descriptor(kp_t *kpts, int kpts_size, const char *path)
+int freak_save_descriptor(array_t *kpts, const char *path)
 {
     FIL fp;
     UINT bytes;
-    FRESULT res=FR_OK;
+    FRESULT res;
+
+    int kpts_size = array_length(kpts);
 
     res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
     if (res != FR_OK) {
         return res;
     }
 
-    /* write number of keypoints */
+    // Write the number of keypoints
     res = f_write(&fp, &kpts_size, sizeof(kpts_size), &bytes);
     if (res != FR_OK || bytes != sizeof(kpts_size)) {
         goto error;
     }
 
-    /* write keypoints */
+    // Write keypoints
     for (int i=0; i<kpts_size; i++) {
-        kp_t *kp = &kpts[i];
+        kp_t *kp = array_at(kpts, i);
 
-        /* write angle */
+        // Write X
+        res = f_write(&fp, &kp->x, sizeof(kp->x), &bytes);
+        if (res != FR_OK || bytes != sizeof(kp->x)) {
+            goto error;
+        }
+
+        // Write Y
+        res = f_write(&fp, &kp->y, sizeof(kp->y), &bytes);
+        if (res != FR_OK || bytes != sizeof(kp->y)) {
+            goto error;
+        }
+
+        // Write angle
         res = f_write(&fp, &kp->angle, sizeof(kp->angle), &bytes);
         if (res != FR_OK || bytes != sizeof(kp->angle)) {
             goto error;
         }
 
-        /* write descriptor */
-        res = f_write(&fp, kp->desc, kNB_PAIRS/8, &bytes);
-        if (res != FR_OK || bytes != kNB_PAIRS/8) {
+        // Write descriptor
+        res = f_write(&fp, kp->desc, KPT_DESC_SIZE, &bytes);
+        if (res != FR_OK || bytes != KPT_DESC_SIZE) {
             goto error;
         }
     }
@@ -403,47 +426,57 @@ error:
     return res;
 }
 
-int freak_load_descriptor(kp_t **kpts_out, int *kpts_size_out, const char *path)
+int freak_load_descriptor(array_t *kpts, const char *path)
 {
     FIL fp;
     UINT bytes;
     FRESULT res=FR_OK;
 
     int kpts_size=0;
-    kp_t *kpts = NULL;
 
     res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING);
     if (res != FR_OK) {
         return res;
     }
 
-    /* read number of keypoints */
+    // Read number of keypoints
     res = f_read(&fp, &kpts_size, sizeof(kpts_size), &bytes);
     if (res != FR_OK || bytes != sizeof(kpts_size)) {
         goto error;
     }
 
-    kpts = xalloc(kpts_size*sizeof(*kpts));
-
-    /* read keypoints */
+    // Read keypoints
     for (int i=0; i<kpts_size; i++) {
-        kp_t *kp = &kpts[i];
+        kp_t *kp = xalloc(sizeof(*kp));
 
-        /* read angle */
+        // Read X
+        res = f_read(&fp, &kp->x, sizeof(kp->x), &bytes);
+        if (res != FR_OK || bytes != sizeof(kp->x)) {
+            goto error;
+        }
+
+        // Read Y
+        res = f_read(&fp, &kp->y, sizeof(kp->y), &bytes);
+        if (res != FR_OK || bytes != sizeof(kp->y)) {
+            goto error;
+        }
+
+        // Read angle
         res = f_read(&fp, &kp->angle, sizeof(kp->angle), &bytes);
         if (res != FR_OK || bytes != sizeof(kp->angle)) {
             goto error;
         }
 
-        /* read descriptor */
-        res = f_read(&fp, kp->desc, kNB_PAIRS/8, &bytes);
-        if (res != FR_OK || bytes != kNB_PAIRS/8) {
+        // Read descriptor
+        res = f_read(&fp, kp->desc,  KPT_DESC_SIZE, &bytes);
+        if (res != FR_OK || bytes != KPT_DESC_SIZE) {
             goto error;
         }
+
+        // Add keypoint to array
+        array_push_back(kpts, kp);
     }
 
-    *kpts_out = kpts;
-    *kpts_size_out = kpts_size;
 error:
     f_close(&fp);
     return res;

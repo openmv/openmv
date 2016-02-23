@@ -55,8 +55,7 @@ static const mp_obj_type_t py_cascade_type = {
 /* Keypoints object */
 typedef struct _py_kp_obj_t {
     mp_obj_base_t base;
-    int size;
-    kp_t *kpts;
+    array_t *kpts;
     int threshold;
     bool normalized;
 } py_kp_obj_t;
@@ -64,7 +63,7 @@ typedef struct _py_kp_obj_t {
 static void py_kp_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_kp_obj_t *self = self_in;
-    mp_printf(print, "size:%d threshold:%d normalized:%d\n", self->size, self->threshold, self->normalized);
+    mp_printf(print, "size:%d threshold:%d normalized:%d\n", array_length(self->kpts), self->threshold, self->normalized);
 }
 
 static const mp_obj_type_t py_kp_type = {
@@ -350,10 +349,11 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
             imlib_draw_circle(arg_img, x, y, (arg_s-2)/2, arg_c);
         }
     } else {
-        mp_obj_t kpts_obj = args[1];
+        py_kp_obj_t *kpts_obj = ((py_kp_obj_t*)args[1]);
         PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
-        for (int i=0; i<((py_kp_obj_t*)kpts_obj)->size; i++) {
-            kp_t *kp = &((py_kp_obj_t*)kpts_obj)->kpts[i];
+
+        for (int i=0; i<array_length(kpts_obj->kpts); i++) {
+            kp_t *kp = array_at(kpts_obj->kpts, i);
             float co = arm_cos_f32(kp->angle);
             float si = arm_sin_f32(kp->angle);
             imlib_draw_line(arg_img, kp->x, kp->y, kp->x+(co*arg_s), kp->y+(si*arg_s), arg_c);
@@ -1027,16 +1027,14 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 32);
     bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), false);
 
-    int kpts_size = 0;
     // Run keypoint descriptor on ROI
-    kp_t *kpts = freak_find_keypoints(image, normalized, threshold, &kpts_size, &roi);
+    array_t *kpts= freak_find_keypoints(image, normalized, threshold, &roi);
 
-    if (kpts_size) {
+    if (array_length(kpts)) {
         // Return keypoints MP object
-        py_kp_obj_t * kp_obj = m_new_obj(py_kp_obj_t);
+        py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
         kp_obj->base.type = &py_kp_type;
         kp_obj->kpts = kpts;
-        kp_obj->size = kpts_size;
         kp_obj->threshold = threshold;
         kp_obj->normalized = normalized;
         return kp_obj;
@@ -1112,17 +1110,17 @@ static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
     PY_ASSERT_TYPE(kpts2, &py_kp_type);
     PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
-    if (kpts1->size == 0 || kpts2->size == 0) {
+    if (array_length(kpts1->kpts) == 0 || array_length(kpts2->kpts) == 0) {
         return mp_const_none;
     }
 
     // match the keypoint sets
-    kpts_match = freak_match_keypoints(kpts1->kpts, kpts1->size, kpts2->kpts, kpts2->size, threshold);
+    kpts_match = freak_match_keypoints(kpts1->kpts, kpts2->kpts, threshold);
 
     int match=0, cx=0, cy=0;
-    for (int i=0; i<kpts1->size; i++) {
+    for (int i=0; i<array_length(kpts1->kpts); i++) {
         if (kpts_match[i] != -1) {
-            kp_t *kp = &kpts2->kpts[kpts_match[i]];
+            kp_t *kp = array_at(kpts2->kpts, kpts_match[i]);
             cx += kp->x; cy += kp->y;
             match++;
         }
@@ -1131,7 +1129,7 @@ static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
     mp_obj_t rec_obj[3] = {
         mp_obj_new_int(cx/match),
         mp_obj_new_int(cy/match),
-        mp_obj_new_int((match*1000/kpts1->size)/10)
+        mp_obj_new_int(match*100/array_length(kpts1->kpts))
     };
     return mp_obj_new_tuple(3, rec_obj);
 }
@@ -1299,24 +1297,15 @@ mp_obj_t py_image_from_struct(image_t *image)
 
 int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *roi)
 {
-    int kpts_size = 0;
-    kp_t *kpts = NULL;
-
-    int threshold = 10;
-    bool normalized = false;
-
-    kpts = freak_find_keypoints(image, normalized, threshold, &kpts_size, roi);
-
-    printf("Save Descriptor: KPTS(%d)\n", kpts_size);
+    array_t *kpts = freak_find_keypoints(image, false, 10, roi);
+    printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
     printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
 
-    if (kpts_size ==0) {
-        return 0;
-    }
-
-    int res = freak_save_descriptor(kpts, kpts_size, path);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    if (array_length(kpts)) {
+        int res = freak_save_descriptor(kpts, path);
+        if (res != FR_OK) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+        }
     }
     return 0;
 }
@@ -1368,21 +1357,21 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
 mp_obj_t py_image_load_descriptor(mp_obj_t path_obj)
 {
-    kp_t *kpts=NULL;
-    int kpts_size =0;
+    array_t *kpts;
+    array_alloc(&kpts, xfree);
 
     py_kp_obj_t *kp_obj =NULL;
     const char *path = mp_obj_str_get_str(path_obj);
 
-    int res = freak_load_descriptor(&kpts, &kpts_size, path);
+    int res = freak_load_descriptor(kpts, path);
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
-    /* return keypoints MP object */
+
+    // Return keypoints MP object
     kp_obj = m_new_obj(py_kp_obj_t);
     kp_obj->base.type = &py_kp_type;
     kp_obj->kpts = kpts;
-    kp_obj->size = kpts_size;
     kp_obj->threshold = 10;
     kp_obj->normalized = false;
     return kp_obj;
@@ -1405,7 +1394,7 @@ mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
     py_kp_obj_t *kpts = ((py_kp_obj_t*)kpts_obj);
     const char *path = mp_obj_str_get_str(path_obj);
 
-    int res = freak_save_descriptor(kpts->kpts, kpts->size, path);
+    int res = freak_save_descriptor(kpts->kpts, path);
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
