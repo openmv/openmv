@@ -21,7 +21,8 @@ static uint32_t bmp_fmt;
 static uint32_t bmp_row_bytes;
 
 // This function inits the geometry values of an image.
-int bmp_read_geometry(FIL *fp, image_t *img, const char *path)
+int bmp_read_geometry(FIL *fp, image_t *img, const char *path,
+                      bool *w_flipped, bool *h_flipped)
 {
     FRESULT res = f_open(fp, path, FA_READ|FA_OPEN_EXISTING);
     if (res != FR_OK) {
@@ -112,6 +113,13 @@ int bmp_read_geometry(FIL *fp, image_t *img, const char *path)
         return -1;
     }
 
+    if (w_flipped) {
+        *w_flipped = (bmp_w < 0); // Raster scan perspective
+    }
+    if (h_flipped) {
+        *h_flipped = (bmp_h >= 0); // Raster scan perspective
+    }
+
     return FR_OK;
 }
 
@@ -129,8 +137,8 @@ int bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end)
                     uint8_t pixel;
                     READ_BYTE(fp, &pixel);
                     if (j < img->w) {
-                        if (bmp_h < 0) { // vertical flip
-                            if (bmp_w < 0) { // horizontal flip
+                        if (bmp_h < 0) { // vertical flip (BMP file perspective)
+                            if (bmp_w < 0) { // horizontal flip (BMP file perspective)
                                 IM_SET_GS_PIXEL(img, (img->w-j-1), i, pixel);
                             } else {
                                 IM_SET_GS_PIXEL(img, j, i, pixel);
@@ -153,8 +161,8 @@ int bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end)
                 READ_WORD(fp, &pixel);
                 IM_SWAP16(pixel);
                 if (j < img->w) {
-                    if (bmp_h < 0) { // vertical flip
-                        if (bmp_w < 0) { // horizontal flip
+                    if (bmp_h < 0) { // vertical flip (BMP file perspective)
+                        if (bmp_w < 0) { // horizontal flip (BMP file perspective)
                             IM_SET_RGB565_PIXEL(img, (img->w-j-1), i, pixel);
                         } else {
                             IM_SET_RGB565_PIXEL(img, j, i, pixel);
@@ -206,7 +214,7 @@ static int bmp_read_int(image_t *img, const char *path)
 {
     FIL fp;
 
-    int res = bmp_read_geometry(&fp, img, path);
+    int res = bmp_read_geometry(&fp, img, path, NULL, NULL);
     if (res != FR_OK) {
         return res;
     }

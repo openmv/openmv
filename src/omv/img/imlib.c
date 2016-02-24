@@ -10,9 +10,11 @@
 #include <string.h>
 #include <arm_math.h>
 #include <stm32f4xx.h>
+#include <mp.h>
 #include "array.h"
 #include "imlib.h"
 #include "ff.h"
+#include "ff_wrapper.h"
 #include "mdefs.h"
 #include "font.h"
 #include "fb_alloc.h"
@@ -23,6 +25,76 @@ extern const float xyz_table[256];
 extern const int8_t lab_table[196608];
 /* Grayscale [0..255] to rainbox lookup */
 extern const uint16_t rainbow_table[256];
+
+////////////////////////////////////////////////////////////////////////////////
+
+#define IMLIB_READ_FUNCTION_LINE_BUFFER (32)
+
+static enum { PPM_IMAGE, BMP_IMAGE, JPEG_IMAGE } imlib_image_type;
+
+int imlib_read_geometry(FIL *fp, image_t *image, const char *path,
+                        bool *w_flipped, bool *h_flipped, bool disable_jpeg)
+{
+    FRESULT res = f_open(fp, path, FA_READ|FA_OPEN_EXISTING);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    char magic[2];
+    READ_DATA(fp, &magic, 2);
+
+    res = f_close(fp);
+    if (res != FR_OK) {
+        return res;
+    }
+
+    if ((magic[0]=='P')
+    && ((magic[1]=='2') || (magic[1]=='3')
+    ||  (magic[1]=='5') || (magic[1]=='6'))) { // PPM
+        imlib_image_type = PPM_IMAGE;
+        *w_flipped = false;
+        *h_flipped = false;
+        return ppm_read_geometry(fp, image, path);
+    } else if ((magic[0]=='B') && (magic[1]=='M')) { // BMP
+        imlib_image_type = BMP_IMAGE;
+        return bmp_read_geometry(fp, image, path, w_flipped, h_flipped);
+    } else if ((magic[0]==0xFF) && (magic[1]==0xD8)) { // JPEG
+        if (disable_jpeg) {
+            nlr_jump(mp_obj_new_exception_msg(
+                    &mp_type_OSError,
+                    "Operation not supported on JPEG"));
+        }
+        imlib_image_type = JPEG_IMAGE;
+        *w_flipped = false;
+        *h_flipped = false;
+        return jpeg_read_geometry(fp, image, path);
+    }
+
+    return -1;
+}
+
+int imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end)
+{
+    switch (imlib_image_type) {
+        case PPM_IMAGE: return ppm_read_pixels(fp, img, line_start, line_end);
+        case BMP_IMAGE: return bmp_read_pixels(fp, img, line_start, line_end);
+        default: return jpeg_read_pixels(fp, img);
+    }
+}
+
+/* those just call ppm for now */
+int imlib_load_image(image_t *image, const char *path)
+{
+    // needs to be redone still
+    return ppm_read(image, path);
+}
+
+int imlib_save_image(image_t *image, const char *path, rectangle_t *roi)
+{
+    return ppm_write_subimg(image, path, roi);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 // Get pixel (handles boundary check and image type check).
 int imlib_get_pixel(image_t *img, int x, int y)
@@ -46,16 +118,7 @@ void imlib_set_pixel(image_t *img, int x, int y, int p)
     }
 }
 
-/* those just call ppm for now */
-int imlib_load_image(image_t *image, const char *path)
-{
-    return ppm_read(image, path);
-}
-
-int imlib_save_image(image_t *image, const char *path, rectangle_t *roi)
-{
-    return ppm_write_subimg(image, path, roi);
-}
+////////////////////////////////////////////////////////////////////////////////
 
 void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c)
 {
@@ -137,6 +200,8 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
         x_off += g->w;
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 void imlib_binary(image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert)
 {
@@ -443,6 +508,8 @@ float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_ce
     return (imlib_orientation_radians(img, sum, x_center, y_center, r) * 180.0) / M_PI;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 void imlib_negate(image_t *img)
 {
     if (IM_IS_GS(img)) {
@@ -490,6 +557,8 @@ void imlib_difference(image_t *img, const char *file, image_t *other)
         }
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
 {
