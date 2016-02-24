@@ -280,6 +280,27 @@ typedef enum interp {
     INTERP_BICUBIC
 } interp_t;
 
+/* Image file functions */
+int ppm_read_geometry(FIL *fp, image_t *img, const char *path);
+int ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
+int ppm_read(image_t *img, const char *path);
+int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
+int bmp_read_geometry(FIL *fp, image_t *img, const char *path,
+                      bool *w_flipped, bool *h_flipped);
+int bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
+int bmp_read(image_t *img, const char *path);
+int bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
+int jpeg_read_geometry(FIL *fp, image_t *img, const char *path);
+int jpeg_read_pixels(FIL *fp, image_t *img);
+int jpeg_read(image_t *img, const char *path);
+int jpeg_write(image_t *img, const char *path);
+int imlib_read_geometry(FIL *fp, image_t *img, const char *path,
+                        bool *w_flipped, bool *h_flipped, bool disable_jpeg);
+int imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
+int imlib_load_image(image_t *image, const char *path);
+int imlib_save_image(image_t *image, const char *path, rectangle_t *roi);
+
+/* Basic image functions */
 int imlib_get_pixel(image_t *img, int x, int y);
 void imlib_set_pixel(image_t *img, int x, int y, int p);
 
@@ -287,18 +308,6 @@ void imlib_set_pixel(image_t *img, int x, int y, int p);
 point_t *point_alloc(int16_t x, int16_t y);
 bool point_equal(point_t *p1, point_t *p2);
 float point_distance(point_t *p1, point_t *p2);
-
-/* Image file functions */
-int ppm_read_geometry(FIL *fp, image_t *img, const char *path);
-int ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
-int ppm_read(image_t *img, const char *path);
-int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
-int bmp_read_geometry(FIL *fp, image_t *img, const char *path);
-int bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
-int bmp_read(image_t *img, const char *path);
-int bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
-int imlib_load_image(image_t *image, const char *path);
-int imlib_save_image(image_t *image, const char *path, rectangle_t *roi);
 
 /* Rectangle functions */
 rectangle_t *rectangle_alloc(int16_t x, int16_t y, int16_t w, int16_t h);
@@ -349,7 +358,6 @@ void imlib_histeq(struct image *src);
 void imlib_median_filter(image_t *src, int r);
 void imlib_erode(image_t *src, int ksize);
 void imlib_dilate(image_t *src, int ksize);
-void imlib_invert(image_t *src);
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold);
 void imlib_rainbow(image_t *src, struct image *dst);
 array_t *imlib_count_blobs(struct image *image);
