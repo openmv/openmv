@@ -376,29 +376,29 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         for (int i=0; i<arg_t_len; i++) {
             mp_obj_t *temp;
             mp_obj_get_array_fixed_n(arg_t[i], 2, &temp);
-            l_t[i].G = mp_obj_get_int(temp[0]);
-            u_t[i].G = mp_obj_get_int(temp[1]);
+            int lo = mp_obj_get_int(temp[0]);
+            int hi = mp_obj_get_int(temp[1]);
             // Swap ranges if they are wrong.
-            l_t[i].G = IM_MIN(l_t[i].G, u_t[i].G);
-            u_t[i].G = IM_MAX(l_t[i].G, u_t[i].G);
+            l_t[i].G = IM_MIN(lo, hi);
+            u_t[i].G = IM_MAX(lo, hi);
         }
     } else {
         for (int i=0; i<arg_t_len; i++) {
             mp_obj_t *temp;
             mp_obj_get_array_fixed_n(arg_t[i], 6, &temp);
-            l_t[i].L = mp_obj_get_int(temp[0]);
-            u_t[i].L = mp_obj_get_int(temp[1]);
-            l_t[i].A = mp_obj_get_int(temp[2]);
-            u_t[i].A = mp_obj_get_int(temp[3]);
-            l_t[i].B = mp_obj_get_int(temp[4]);
-            u_t[i].B = mp_obj_get_int(temp[5]);
+            int l_lo = mp_obj_get_int(temp[0]);
+            int l_hi = mp_obj_get_int(temp[1]);
+            int a_lo = mp_obj_get_int(temp[2]);
+            int a_hi = mp_obj_get_int(temp[3]);
+            int b_lo = mp_obj_get_int(temp[4]);
+            int b_hi = mp_obj_get_int(temp[5]);
             // Swap ranges if they are wrong.
-            l_t[i].L = IM_MIN(l_t[i].L, u_t[i].L);
-            u_t[i].L = IM_MAX(l_t[i].L, u_t[i].L);
-            l_t[i].A = IM_MIN(l_t[i].A, u_t[i].A);
-            u_t[i].A = IM_MAX(l_t[i].A, u_t[i].A);
-            l_t[i].B = IM_MIN(l_t[i].B, u_t[i].B);
-            u_t[i].B = IM_MAX(l_t[i].B, u_t[i].B);
+            l_t[i].L = IM_MIN(l_lo, l_hi);
+            u_t[i].L = IM_MAX(l_lo, l_hi);
+            l_t[i].A = IM_MIN(a_lo, a_hi);
+            u_t[i].A = IM_MAX(a_lo, a_hi);
+            l_t[i].B = IM_MIN(b_lo, b_hi);
+            u_t[i].B = IM_MAX(b_lo, b_hi);
         }
     }
 
