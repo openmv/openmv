@@ -3,7 +3,7 @@
 #include "xalloc.h"
 #include "fb_alloc.h"
 
-#define KP_SIZE         (23)
+#define PATTERN_SCALE   (22)
 #define MAX_CORNERS     (1500)  // allocated on fb
 #define MAX_KEYPOINTS   (200)   // ~17KBs
 #define Compare(X, Y) ((X)>=(Y))
@@ -93,65 +93,66 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     }
 
     for(int i=0; i<sz; i++) {
-		corner_t pos = corners[i];
-		uint8_t  score = pos.score;
-			
-		/*Check left */
-		if(i > 0) {
-			if(corners[i-1].x == pos.x-1 && corners[i-1].y == pos.y && Compare(corners[i-1].score, score)) {
+        corner_t pos = corners[i];
+        uint8_t score = pos.score;
+
+        /*Check left */
+        if (i > 0) {
+            if (corners[i-1].x == pos.x-1 && corners[i-1].y == pos.y && Compare(corners[i-1].score, score)) {
                 goto nonmax;
             }
         }
 
-		/*Check right*/
-		if(i < (sz - 1)) {
-			if(corners[i+1].x == pos.x+1 && corners[i+1].y == pos.y && Compare(corners[i+1].score, score)) {
+        /*Check right*/
+        if (i < (sz - 1)) {
+            if (corners[i+1].x == pos.x+1 && corners[i+1].y == pos.y && Compare(corners[i+1].score, score)) {
                 goto nonmax;
             }
         }
-			
-		/*Check above (if there is a valid row above)*/
-		if(pos.y != 0 && row_start[pos.y - 1] != -1) {
-			/*Make sure that current point_above is one row above.*/
-			if(corners[point_above].y < pos.y - 1)
-				point_above = row_start[pos.y-1];
-			
-			/*Make point_above point to the first of the pixels above the current point, if it exists.*/
-			for(; corners[point_above].y < pos.y && corners[point_above].x < pos.x - 1; point_above++) {
-            }
-			
-			for(int j=point_above; corners[j].y < pos.y && corners[j].x <= pos.x + 1; j++) {
-				int x = corners[j].x;
-				if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(corners[j].score, score))
-					goto nonmax;
-			}
-		}
-			
-		/*Check below (if there is anything below)*/
-		if(pos.y != last_row && row_start[pos.y + 1] != -1 && point_below < sz) /*Nothing below*/ {
-			if(corners[point_below].y < pos.y + 1)
-				point_below = row_start[pos.y+1];
-			
-			/* Make point below point to one of the pixels belowthe current point, if it exists.*/
-            for(; point_below < sz && corners[point_below].y == pos.y+1 && corners[point_below].x < pos.x - 1; point_below++) {
+
+        /*Check above (if there is a valid row above)*/
+        if (pos.y != 0 && row_start[pos.y - 1] != -1)  {
+            /*Make sure that current point_above is one row above.*/
+            if(corners[point_above].y < pos.y - 1)
+                point_above = row_start[pos.y-1];
+
+            /*Make point_above point to the first of the pixels above the current point, if it exists.*/
+            for (; corners[point_above].y < pos.y && corners[point_above].x < pos.x - 1; point_above++) {
+
             }
 
-			for(int j=point_below; j < sz && corners[j].y == pos.y+1 && corners[j].x <= pos.x + 1; j++) {
-				int x = corners[j].x;
-				if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(corners[j].score, score))
-					goto nonmax;
-			}
-		}
-		
+            for (int j=point_above; corners[j].y < pos.y && corners[j].x <= pos.x + 1; j++) {
+                int x = corners[j].x;
+                if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(corners[j].score, score))
+                    goto nonmax;
+            }
+        }
+
+        /*Check below (if there is anything below)*/
+        if (pos.y != last_row && row_start[pos.y + 1] != -1 && point_below < sz) /*Nothing below*/ {
+            if (corners[point_below].y < pos.y + 1)
+                point_below = row_start[pos.y+1];
+
+            /* Make point below point to one of the pixels belowthe current point, if it exists.*/
+            for (; point_below < sz && corners[point_below].y == pos.y+1 && corners[point_below].x < pos.x - 1; point_below++) {
+            }
+
+            for (int j=point_below; j < sz && corners[j].y == pos.y+1 && corners[j].x <= pos.x + 1; j++) {
+                int x = corners[j].x;
+                if( (x == pos.x - 1 || x ==pos.x || x == pos.x+1) && Compare(corners[j].score, score))
+                    goto nonmax;
+            }
+        }
+
         array_push_back(keypoints, alloc_keypoint(pos.x, pos.y));
 
         // Do not add more than max keypoints
         if (array_length(keypoints) == MAX_KEYPOINTS) {
             break;
         }
-		nonmax:
+        nonmax:
         ;
-	}
+    }
 
     fb_free();
 }
@@ -3101,9 +3102,9 @@ static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, 
     int num_corners=0;
     corner_t *corners = (corner_t*) fb_alloc(sizeof(corner_t)*MAX_CORNERS);
 
-    for(int y=roi->y+KP_SIZE; y < roi->y+roi->h-KP_SIZE; y++) {
+    for(int y=roi->y+PATTERN_SCALE; y < roi->y+roi->h-PATTERN_SCALE; y++) {
             const uint8_t *r = image->pixels + y*image->w;
-        for(int x=roi->x+KP_SIZE; x < roi->x+roi->w-KP_SIZE; x++) {
+        for(int x=roi->x+PATTERN_SCALE; x < roi->x+roi->w-PATTERN_SCALE; x++) {
             const uint8_t *p = r + x;
             int cb = *p + b;
             int c_b= *p - b;
@@ -6009,14 +6010,13 @@ static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, 
          else
           continue;
 
-			if(num_corners == MAX_CORNERS) {
-                goto done;
-			}
-
             // Add corner
 			corners[num_corners].x = x;
 			corners[num_corners].y = y;
-			num_corners++;
+
+			if (++num_corners == MAX_CORNERS) {
+                goto done;
+			}
 		}
     }
 
