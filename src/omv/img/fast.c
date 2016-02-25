@@ -2,10 +2,10 @@
 #include "imlib.h"
 #include "xalloc.h"
 #include "fb_alloc.h"
+#include "gc.h"
 
 #define PATTERN_SCALE   (22)
 #define MAX_CORNERS     (1500)  // allocated on fb
-#define MAX_KEYPOINTS   (200)   // ~17KBs
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {
@@ -67,6 +67,8 @@ void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t 
 
 static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints)
 {
+    gc_info_t info;
+
 	int last_row;
 	int* row_start;
 	const int sz = num_corners;
@@ -145,12 +147,20 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
             }
         }
 
-        array_push_back(keypoints, alloc_keypoint(pos.x, pos.y));
-
-        // Do not add more than max keypoints
-        if (array_length(keypoints) == MAX_KEYPOINTS) {
-            break;
+        gc_info(&info);
+        #define MIN_MEM (2*1024)
+        // Allocate keypoints until we're almost out of memory
+        if (info.free < MIN_MEM) {
+            // Try collecting memory
+            gc_collect();
+            // If it didn't work break
+            gc_info(&info);
+            if (info.free < MIN_MEM) {
+                break;
+            }
         }
+        #undef MIN_MEM
+        array_push_back(keypoints, alloc_keypoint(pos.x, pos.y));
         nonmax:
         ;
     }
