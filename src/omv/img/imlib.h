@@ -245,9 +245,10 @@ typedef struct cluster {
 } cluster_t;
 
 /* FAST/FREAK Keypoint */
-typedef struct {
+typedef struct kp {
     uint16_t x;
     uint16_t y;
+    struct kp *match;
     uint8_t desc[64];
 } kp_t;
 
@@ -392,7 +393,7 @@ array_t *imlib_detect_objects(struct image *image, struct cascade *cascade, stru
 /* FAST/FREAK Feature Extractor */
 void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi);
 array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, rectangle_t *roi);
-int16_t *freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold);
+int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold);
 int freak_save_descriptor(array_t *kpts, const char *path);
 int freak_load_descriptor(array_t *kpts, const char *path);
 

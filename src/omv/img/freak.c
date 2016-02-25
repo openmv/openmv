@@ -321,21 +321,35 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
     return keypoints;
 }
 
-int16_t *freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
+int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
 {
+    int matches=0;
     int kpts1_size = array_length(kpts1);
     int kpts2_size = array_length(kpts2);
-    int16_t *kpts_match = xalloc(array_length(kpts1)*sizeof(*kpts_match));
 
+    // Reset the second set of keypoints.
+    // Note: The first set will be cleared when matching.
+    for (int x=0; x<kpts2_size; x++) {
+        ((kp_t*)array_at(kpts2, x))->match = NULL;
+    }
+
+    // Match keypoints
     for (int x=0; x<kpts1_size; x++) {
-        int min_idx = 0;
+        kp_t *min_kp=NULL;
         int min_dist = MAX_KP_DIST;
+
         kp_t *kp1 = array_at(kpts1, x);
 
         for (int y=0; y<kpts2_size; y++) {
             int dist = 0;
             kp_t *kp2 = array_at(kpts2, y);
 
+            // If keypoint was matched skip it
+            if (kp2->match != NULL) {
+                continue;
+            }
+
+            // Check the first 128 bits of the descriptor
             for (int m=0; m<4; m++) { //128 bits
                 uint32_t v = ((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m];
                 while (v) {
@@ -359,19 +373,21 @@ int16_t *freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
             }
 
             if (dist < min_dist) {
-                min_idx = y;
+                min_kp = kp2;
                 min_dist = dist;
             }
         }
 
         if ((((MAX_KP_DIST-min_dist)*100/MAX_KP_DIST)) < threshold) {
-            //no match
-            kpts_match[x] = -1;
+            kp1->match = NULL;
+            // No match
         } else {
-            kpts_match[x] = min_idx;
+            matches++;
+            kp1->match = min_kp;
+            min_kp->match = kp1;
         }
     }
-    return kpts_match;
+    return matches;
 }
 
 int freak_save_descriptor(array_t *kpts, const char *path)
