@@ -21,7 +21,8 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
 
 static kp_t *alloc_keypoint(uint16_t x, uint16_t y)
 {
-    kp_t *kpt = xalloc(sizeof*kpt);
+    // Note must set keypoint descriptor to zeros
+    kp_t *kpt = xalloc0(sizeof*kpt);
     kpt->x = x;
     kpt->y = y;
     return kpt;
