@@ -25,7 +25,7 @@ while (True):
     binary.erode(3)
 
     # Detect blobs in image
-    blobs = binary.find_blobs()
+    blobs = binary.find_blobs() or ()
 
     led_r.off()
     led_g.off()
