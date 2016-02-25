@@ -198,8 +198,9 @@ const static uint8_t DESCRIPTION_PAIRS[512][2] = {
 
 
 // simply take average on a square patch, not even gaussian approx
-static int mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int kp_y, uint32_t rot, uint32_t point)
+static uint8_t mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int kp_y, uint32_t rot, uint32_t point)
 {
+    int ret_val;
     int pidx = (point/6)%8;
     float alpha, beta, theta = 0;
 
@@ -216,39 +217,36 @@ static int mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int kp_y
     // get point position in image
     float xf = px+kp_x;
     float yf = py+kp_y;
-    int x = (int) xf;
-    int y = (int) yf;
-    int imagecols = image->w;
 
     // calculate output:
-    int ret_val;
     if (psigma < 0.5f) {
+        int x = (int) xf;
+        int y = (int) yf;
+        int imagecols = image->w;
+
         // interpolation multipliers:
         int r_x = (xf-x)*1024;
         int r_y = (yf-y)*1024;
         int r_x_1 = (1024-r_x);
         int r_y_1 = (1024-r_y);
         uint8_t* ptr = image->data+(y*imagecols+x);
+
         // linear interpolation:
         ret_val = (r_x_1*r_y_1*(int)(*ptr++));
         ret_val += (r_x*r_y_1*(int)(*ptr));
         ptr += imagecols;
         ret_val += (r_x*r_y*(int)(*ptr--));
         ret_val += (r_x_1*r_y*(int)(*ptr));
-        return (ret_val+512)/1024;
+        ret_val = (ret_val+512)/1024;
     } else {
-        int x_left    = (int) (xf-psigma+0.5f);
-        int y_top     = (int) (yf-psigma+0.5f);
-        int x_right   = (int) (xf+psigma+0.5f);
-        int y_bottom  = (int) (yf+psigma+0.5f);
-
-        ret_val  = i_image->data[i_image->w*y_bottom+x_right];//bottom right corner
-        ret_val -= i_image->data[i_image->w*y_bottom+x_left];
-        ret_val += i_image->data[i_image->w*y_top+x_left];
-        ret_val -= i_image->data[i_image->w*y_top+x_right];
-        ret_val  = ret_val/( (x_right-x_left)* (y_bottom-y_top) );
-        return ret_val;
+        int x = (int) (xf-psigma+0.5f);
+        int y = (int) (yf-psigma+0.5f);
+        int w = (int) ((psigma+psigma)+0.5);
+        int h = (int) ((psigma+psigma)+0.5);
+        ret_val = imlib_integral_lookup(i_image, x, y, w, h)/(w*h);
     }
+
+    return ret_val;
 }
 
 array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, rectangle_t *roi)
