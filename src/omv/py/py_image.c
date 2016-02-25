@@ -898,11 +898,9 @@ static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
     // Run blob detector
     array_t *blobs = imlib_count_blobs(image);
 
-    // Add blobs to Python list
-    mp_obj_t objects_list = mp_const_none;
-
+    // Add detected blobs to a new Python list
+    mp_obj_t objects_list = mp_obj_new_list(0, NULL);
     if (array_length(blobs)) {
-        objects_list = mp_obj_new_list(0, NULL);
         for (int j=0; j<array_length(blobs); j++) {
             blob_t *r = array_at(blobs, j);
             mp_obj_t blob[6] = {
