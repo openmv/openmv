@@ -1373,18 +1373,6 @@ mp_obj_t py_image_load_descriptor(mp_obj_t path_obj)
     return kp_obj;
 }
 
-mp_obj_t py_image_load_lbp(mp_obj_t path_obj)
-{
-    py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
-    lbp->base.type = &py_lbp_type;
-
-    int res = imlib_lbp_desc_load(mp_obj_str_get_str(path_obj), &lbp->hist);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-    return lbp;
-}
-
 mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
 {
     py_kp_obj_t *kpts = ((py_kp_obj_t*)kpts_obj);
@@ -1397,11 +1385,36 @@ mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
     return mp_const_true;
 }
 
+mp_obj_t py_image_load_lbp(mp_obj_t path_obj)
+{
+    py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
+    lbp->base.type = &py_lbp_type;
+
+    int res = imlib_lbp_desc_load(mp_obj_str_get_str(path_obj), &lbp->hist);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    return lbp;
+}
+
+mp_obj_t py_image_save_lbp(mp_obj_t path_obj, mp_obj_t lbp_obj)
+{
+    py_lbp_obj_t *lbp = ((py_lbp_obj_t*)lbp_obj);
+    const char *path = mp_obj_str_get_str(path_obj);
+
+    int res = imlib_lbp_desc_save(path, lbp->hist);
+    if (res != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+    return lbp;
+}
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_descriptor_obj, py_image_load_descriptor);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_lbp_obj, py_image_load_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_save_descriptor_obj, py_image_save_descriptor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_lbp_obj, py_image_load_lbp);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_save_lbp_obj, py_image_save_lbp);
 
 static const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_image) },
@@ -1410,6 +1423,7 @@ static const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDesc),       (mp_obj_t)&py_image_load_descriptor_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDescSave),   (mp_obj_t)&py_image_save_descriptor_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_LBPDesc),         (mp_obj_t)&py_image_load_lbp_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_LBPDescSave),     (mp_obj_t)&py_image_save_lbp_obj},
 };
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 

@@ -427,6 +427,7 @@ int freak_load_descriptor(array_t *kpts, const char *path);
 void imlib_lbp_desc(image_t *image, int div, uint8_t *desc, rectangle_t *roi);
 uint8_t *imlib_lbp_cascade(image_t *image, rectangle_t *roi);
 int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1);
+int imlib_lbp_desc_save(const char *path, uint8_t *desc);
 int imlib_lbp_desc_load(const char *path, uint8_t **desc);
 
 /* Iris detector */
