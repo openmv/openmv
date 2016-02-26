@@ -14,8 +14,8 @@
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
 // Max integral image.
-#define OMV_MAX_INT_FRAME       FRAMESIZE_HQVGA
-#define OMV_MAX_INT_FRAME_STR   "HQVGA"
+#define OMV_MAX_INT_FRAME       FRAMESIZE_QVGA
+#define OMV_MAX_INT_FRAME_STR   "QVGA"
 // Max GS/RGB565/YUV422/Binary image.
 #define OMV_MAX_RAW_FRAME       FRAMESIZE_QVGA
 #define OMV_MAX_RAW_FRAME_STR   "QVGA"
