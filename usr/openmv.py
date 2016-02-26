@@ -107,7 +107,7 @@ def save_template(x, y, w, h, path):
     __serial.write(buf)
 
 def save_descriptor(x, y, w, h, path):
-    buf = struct.pack("IIII", x, y, w, h) + path
+    buf = struct.pack("HHHH", x, y, w, h) + path
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_DESCRIPTOR_SAVE, len(buf)))
     __serial.write(buf)
 
