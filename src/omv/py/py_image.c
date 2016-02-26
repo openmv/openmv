@@ -156,6 +156,20 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t va
     }
 }
 
+static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    const char *path = mp_obj_str_get_str(args[1]);
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    imlib_save_image(arg_img, path, &roi,
+            py_helper_lookup_int(kw_args,
+            MP_OBJ_NEW_QSTR(MP_QSTR_format), FORMAT_BMP));
+    return mp_const_true;
+}
+
 static mp_obj_t py_image_width(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
@@ -600,23 +614,6 @@ static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
         imlib_difference(arg_img, NULL, arg_other);
     }
     return mp_const_none;
-}
-
-static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    int res;
-    rectangle_t roi;
-    image_t *image = py_image_cobj(args[0]);
-    const char *path = mp_obj_str_get_str(args[1]);
-
-    py_helper_lookup_rectangle(kw_args, image, &roi);
-
-    res = imlib_save_image(image, path, &roi);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-
-    return mp_const_true;
 }
 
 static mp_obj_t py_image_scale(mp_obj_t image_obj, mp_obj_t size_obj)
@@ -1149,6 +1146,9 @@ static mp_obj_t py_image_match_lbp(uint n_args, const mp_obj_t *args, mp_map_t *
     return mp_obj_new_int(imlib_lbp_desc_distance(d0, d1));
 }
 
+/* Image file functions */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
+/* Basic image functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_width_obj, py_image_width);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_height_obj, py_image_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_format_obj, py_image_format);
@@ -1179,7 +1179,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_degrees_obj, 1, py_image_
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_difference_obj, py_image_difference);
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scaled_obj, py_image_scaled);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_subimg_obj, py_image_subimg);
@@ -1203,6 +1202,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, p
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_lbp_obj, 2, py_image_match_lbp);
 
 static const mp_map_elem_t locals_dict_table[] = {
+    {MP_OBJ_NEW_QSTR(MP_QSTR_FORMAT_BMP),          MP_OBJ_NEW_SMALL_INT(FORMAT_BMP)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_FORMAT_PNM),          MP_OBJ_NEW_SMALL_INT(FORMAT_PNM)},
+    /* Image file functions */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
+    /* Basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_width),               (mp_obj_t)&py_image_width_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_height),              (mp_obj_t)&py_image_height_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_format),              (mp_obj_t)&py_image_format_obj},
@@ -1233,8 +1237,6 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_negate),              (mp_obj_t)&py_image_negate_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_difference),          (mp_obj_t)&py_image_difference_obj},
 
-    /* basic image functions */
-    {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),              (mp_obj_t)&py_image_scaled_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_subimg),              (mp_obj_t)&py_image_subimg_obj},
@@ -1319,10 +1321,7 @@ mp_obj_t py_image_load_image(mp_obj_t path_obj)
     /* get image pointer */
     image = py_image_cobj(image_obj);
 
-    int res = imlib_load_image(image, path);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
+    imlib_load_image(image, path);
 
     return image_obj;
 }

@@ -7,14 +7,13 @@
  * Ported from public domain JPEG writer by Jon Olick - http://jonolick.com
  *
  */
-#include <stdio.h>
 #include <arm_math.h>
-
-#include "ff.h"
+#include <stdio.h>
+#include <stm32f4xx_hal.h>
+#include <ff.h>
 #include "ff_wrapper.h"
 #include "xalloc.h"
 #include "imlib.h"
-#include "stm32f4xx_hal.h"
 #define TIME_JPEG   (0)
 
 typedef struct {
@@ -635,16 +634,12 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
 }
 
 // This function inits the geometry values of an image.
-int jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
+void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
 {
-    FRESULT res = f_open(fp, path, FA_READ|FA_OPEN_EXISTING);
-    if (res != FR_OK) {
-        return res;
-    }
-
+    file_read_open(fp, path);
     for (;;) {
         uint16_t header;
-        READ_WORD(fp, &header);
+        read_word(fp, &header);
         IM_SWAP16(header);
         if ((0xFFD0 <= header) && (header <= 0xFFD9)) {
             continue;
@@ -654,88 +649,53 @@ int jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
                 || ((0xFFF0 <= header) && (header <= 0xFFFE)))
         {
             uint16_t size;
-            READ_WORD(fp, &size);
+            read_word(fp, &size);
             IM_SWAP16(size);
             if (((0xFFC0 <= header) && (header <= 0xFFC3))
              || ((0xFFC5 <= header) && (header <= 0xFFC7))
              || ((0xFFC9 <= header) && (header <= 0xFFCB))
              || ((0xFFCD <= header) && (header <= 0xFFCF)))
             {
-                READ_BYTE_IGNORE(fp);
+                read_byte_ignore(fp);
                 uint16_t width;
-                READ_WORD(fp, &width);
+                read_word(fp, &width);
                 IM_SWAP16(width);
                 uint16_t height;
-                READ_WORD(fp, &height);
+                read_word(fp, &height);
                 IM_SWAP16(height);
                 img->w = width;
                 img->h = height;
                 img->bpp = f_size(fp);
-                return FR_OK;
-            }
-            FRESULT res = f_lseek(fp, f_tell(fp) + size - 2);
-            if (res != FR_OK) {
-                f_close(fp);
-                return res;
+                return;
+            } else {
+                file_seek(fp, f_tell(fp) + size - 2);
             }
         } else {
-            f_close(fp);
-            return -1;
+            ff_file_corrupted(fp);
         }
     }
 }
 
 // This function reads the pixel values of an image.
-int jpeg_read_pixels(FIL *fp, image_t *img)
+void jpeg_read_pixels(FIL *fp, image_t *img)
 {
-    FRESULT res = f_lseek(fp, 0);
-    if (res != FR_OK) {
-        f_close(fp);
-        return res;
-    }
-    READ_DATA(fp, img->pixels, img->bpp);
-    return FR_OK;
+    file_seek(fp, 0);
+    read_data(fp, img->pixels, img->bpp);
 }
 
-static int jpeg_read_int(image_t *img, const char *path)
+void jpeg_read(image_t *img, const char *path)
 {
     FIL fp;
-
-    int res = jpeg_read_geometry(&fp, img, path);
-    if (res != FR_OK) {
-        return res;
-    }
-
-    if (!img->pixels) { // don't allocate if already allocated...
-        img->pixels = xalloc(img->bpp);
-    }
-
-    res = jpeg_read_pixels(&fp, img);
-    if (res != FR_OK) {
-        return res;
-    }
-
-    return f_close(&fp);
+    jpeg_read_geometry(&fp, img, path);
+    if (!img->pixels) img->pixels = xalloc(img->w * img->h * img->bpp);
+    jpeg_read_pixels(&fp, img);
+    file_close(&fp);
 }
 
-int jpeg_read(image_t *img, const char *path)
-{
-    const uint8_t *backup = img->pixels;
-    const int res = jpeg_read_int(img, path);
-    // free image if I didn't start with one...
-    if ((res != FR_OK) && (!backup) && (img->pixels)) {
-        xfree(img->pixels);
-    }
-    return res;
-}
-
-int jpeg_write(image_t *img, const char *path)
+void jpeg_write(image_t *img, const char *path)
 {
     FIL fp;
-    FRESULT res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
-    if (res != FR_OK) {
-        return res;
-    }
-    WRITE_DATA(&fp, img->pixels, img->bpp);
-    return f_close(&fp);
+    file_write_open(&fp, path);
+    write_data(&fp, img->pixels, img->bpp);
+    file_close(&fp);
 }
