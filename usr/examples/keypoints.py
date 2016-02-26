@@ -1,8 +1,16 @@
 import sensor, time
 
+# Rotation.
 NORMALIZED=False
-MATCHING_THRESH=70
-KEYPOINTS_THRESH=32
+# Keypoint extractor threshold, range from 0 to any number.
+# This threshold is used when extracting keypoints, the lower
+# the threshold the higher the number of keypoints extracted.
+KEYPOINTS_THRESH=20
+# Keypoint-level threshold, range from 0 to 100.
+# This threshold is used when matching two keypoint descriptors, it's the
+# percentage of the distance between two descriptors to the max distance.
+# In other words, the minimum matching percentage between 2 keypoints.
+MATCHING_THRESH=80
 
 # Reset sensor
 sensor.reset()
@@ -20,22 +28,24 @@ for i in range(0, 30):
     img.draw_string(0, 0, "Please wait...")
 
 kpts1 = None
-while (kpts1 == None):
-    img = sensor.snapshot()
-    kpts1 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED)
-
-img.draw_keypoints(kpts1)
-time.sleep(1000)
-
 clock = time.clock()
 while (True):
     clock.tick()
     img = sensor.snapshot()
     kpts2 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED)
-    if not kpts2:
-        continue
 
-    c=img.match_keypoints(kpts1, kpts2, MATCHING_THRESH)
-    if (c):
-        img.draw_cross(c[0],  c[1], size = 10)
+    if (kpts1==None):
+        kpts1 = kpts2
+        kpts2 = None
+        print(kpts1)
+
+    if kpts2:
+        c=img.match_keypoints(kpts1, kpts2, MATCHING_THRESH)
+        # C[3] contains the percentage of matching keypoints.
+        # If more than 25% of the keypoints match, draw stuff.
+        if (c[2]>25):
+            img.draw_cross(c[0], c[1], size=5)
+            img.draw_keypoints(kpts2, color=255, size=12)
+            img.draw_string(0, 0, "Match %d%%"%(c[2]))
+
     print (clock.fps())
