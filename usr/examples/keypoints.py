@@ -29,6 +29,7 @@ for i in range(0, 30):
 
 kpts1 = None
 clock = time.clock()
+
 while (True):
     clock.tick()
     img = sensor.snapshot()
@@ -46,6 +47,7 @@ while (True):
         if (c[2]>25):
             img.draw_cross(c[0], c[1], size=5)
             img.draw_keypoints(kpts2, color=255, size=12)
-            img.draw_string(0, 0, "Match %d%%"%(c[2]))
+            img.draw_string(0, 10, "Match %d%%"%(c[2]))
 
-    print (clock.fps())
+    # Draw FPS
+    img.draw_string(0, 0, "FPS:%.2f"%(clock.fps()))
