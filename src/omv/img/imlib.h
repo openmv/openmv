@@ -281,25 +281,51 @@ typedef enum interp {
     INTERP_BICUBIC
 } interp_t;
 
+typedef struct bmp_read_settings {
+    int32_t bmp_w;
+    int32_t bmp_h;
+    uint16_t bmp_bpp;
+    uint32_t bmp_fmt;
+    uint32_t bmp_row_bytes;
+} bmp_read_settings_t;
+
+typedef struct ppm_read_settings {
+    uint8_t read_int_c;
+    bool read_int_c_valid;
+    uint8_t ppm_fmt;
+} ppm_read_settings_t;
+
+typedef enum save_image_format {
+    FORMAT_BMP,
+    FORMAT_PNM
+} save_image_format_t;
+
+typedef struct img_read_settings {
+    union
+    {
+        bmp_read_settings_t bmp_rs;
+        ppm_read_settings_t ppm_rs;
+    };
+    save_image_format_t format;
+} img_read_settings_t;
+
 /* Image file functions */
-int ppm_read_geometry(FIL *fp, image_t *img, const char *path);
-int ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
-int ppm_read(image_t *img, const char *path);
-int ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
-int bmp_read_geometry(FIL *fp, image_t *img, const char *path,
-                      bool *w_flipped, bool *h_flipped);
-int bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
-int bmp_read(image_t *img, const char *path);
-int bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
-int jpeg_read_geometry(FIL *fp, image_t *img, const char *path);
-int jpeg_read_pixels(FIL *fp, image_t *img);
-int jpeg_read(image_t *img, const char *path);
-int jpeg_write(image_t *img, const char *path);
-int imlib_read_geometry(FIL *fp, image_t *img, const char *path,
-                        bool *w_flipped, bool *h_flipped, bool disable_jpeg);
-int imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end);
-int imlib_load_image(image_t *image, const char *path);
-int imlib_save_image(image_t *image, const char *path, rectangle_t *roi);
+void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);
+void ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, ppm_read_settings_t *rs);
+void ppm_read(image_t *img, const char *path);
+void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
+bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_settings_t *rs);
+void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_read_settings_t *rs);
+void bmp_read(image_t *img, const char *path);
+void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
+void jpeg_read_geometry(FIL *fp, image_t *img, const char *path);
+void jpeg_read_pixels(FIL *fp, image_t *img);
+void jpeg_read(image_t *img, const char *path);
+void jpeg_write(image_t *img, const char *path);
+bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs);
+void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs);
+void imlib_load_image(image_t *img, const char *path);
+void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, save_image_format_t format);
 
 /* Basic image functions */
 int imlib_get_pixel(image_t *img, int x, int y);

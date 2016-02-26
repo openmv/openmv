@@ -162,16 +162,13 @@ void usbdbg_data_out(void *buffer, int length)
             };
 
             // null terminate the path
-            length = (length == 64) ? 63:length; 
+            length = (length == 64) ? 63:length;
             ((char*)buffer)[length] = 0;
 
             rectangle_t *roi = (rectangle_t*)buffer;
             char *path = (char*)buffer+sizeof(rectangle_t);
 
-            int res=imlib_save_image(&image, path, roi);
-            if (res != FR_OK) {
-                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-            }
+            imlib_save_image(&image, path, roi, FORMAT_PNM);
             // raise a flash IRQ to flush image
             //NVIC->STIR = FLASH_IRQn;
             break;
@@ -186,7 +183,7 @@ void usbdbg_data_out(void *buffer, int length)
             };
 
             // null terminate the path
-            length = (length == 64) ? 63:length; 
+            length = (length == 64) ? 63:length;
             ((char*)buffer)[length] = 0;
 
             rectangle_t *roi = (rectangle_t*)buffer;

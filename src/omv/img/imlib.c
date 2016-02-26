@@ -28,70 +28,78 @@ extern const uint16_t rainbow_table[256];
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define IMLIB_READ_FUNCTION_LINE_BUFFER (32)
-
-static enum { PPM_IMAGE, BMP_IMAGE, JPEG_IMAGE } imlib_image_type;
-
-int imlib_read_geometry(FIL *fp, image_t *image, const char *path,
-                        bool *w_flipped, bool *h_flipped, bool disable_jpeg)
+bool imlib_read_geometry(FIL *fp, image_t *image, const char *path, img_read_settings_t *rs)
 {
-    FRESULT res = f_open(fp, path, FA_READ|FA_OPEN_EXISTING);
-    if (res != FR_OK) {
-        return res;
-    }
-
+    file_read_open(fp, path);
     char magic[2];
-    READ_DATA(fp, &magic, 2);
-
-    res = f_close(fp);
-    if (res != FR_OK) {
-        return res;
-    }
+    read_data(fp, &magic, 2);
+    file_close(fp);
 
     if ((magic[0]=='P')
     && ((magic[1]=='2') || (magic[1]=='3')
     ||  (magic[1]=='5') || (magic[1]=='6'))) { // PPM
-        imlib_image_type = PPM_IMAGE;
-        *w_flipped = false;
-        *h_flipped = false;
-        return ppm_read_geometry(fp, image, path);
+        rs->format = FORMAT_PNM;
+        ppm_read_geometry(fp, image, path, &rs->ppm_rs);
     } else if ((magic[0]=='B') && (magic[1]=='M')) { // BMP
-        imlib_image_type = BMP_IMAGE;
-        return bmp_read_geometry(fp, image, path, w_flipped, h_flipped);
+        rs->format = FORMAT_BMP;
+        return bmp_read_geometry(fp, image, path, &rs->bmp_rs);
+    } else {
+        ff_unsupported_format(NULL);
+    }
+    return false;
+}
+
+void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
+{
+    switch (rs->format) {
+        case FORMAT_BMP:
+            bmp_read_pixels(fp, img, line_start, line_end, &rs->bmp_rs);
+            break;
+        case FORMAT_PNM:
+            ppm_read_pixels(fp, img, line_start, line_end, &rs->ppm_rs);
+            break;
+    }
+}
+
+void imlib_load_image(image_t *img, const char *path)
+{
+    FIL fp;
+    file_read_open(&fp, path);
+    char magic[2];
+    read_data(&fp, &magic, 2);
+    file_close(&fp);
+
+    if ((magic[0]=='P')
+    && ((magic[1]=='2') || (magic[1]=='3')
+    ||  (magic[1]=='5') || (magic[1]=='6'))) { // PPM
+        ppm_read(img, path);
+    } else if ((magic[0]=='B') && (magic[1]=='M')) { // BMP
+        bmp_read(img, path);
     } else if ((magic[0]==0xFF) && (magic[1]==0xD8)) { // JPEG
-        if (disable_jpeg) {
-            nlr_jump(mp_obj_new_exception_msg(
-                    &mp_type_OSError,
-                    "Operation not supported on JPEG"));
-        }
-        imlib_image_type = JPEG_IMAGE;
-        *w_flipped = false;
-        *h_flipped = false;
-        return jpeg_read_geometry(fp, image, path);
-    }
-
-    return -1;
-}
-
-int imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end)
-{
-    switch (imlib_image_type) {
-        case PPM_IMAGE: return ppm_read_pixels(fp, img, line_start, line_end);
-        case BMP_IMAGE: return bmp_read_pixels(fp, img, line_start, line_end);
-        default: return jpeg_read_pixels(fp, img);
+        jpeg_read(img, path);
+    } else {
+        ff_unsupported_format(NULL);
     }
 }
 
-/* those just call ppm for now */
-int imlib_load_image(image_t *image, const char *path)
+void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, save_image_format_t format)
 {
-    // needs to be redone still
-    return ppm_read(image, path);
-}
-
-int imlib_save_image(image_t *image, const char *path, rectangle_t *roi)
-{
-    return ppm_write_subimg(image, path, roi);
+    if (IM_IS_JPEG(img)) {
+        char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
+        jpeg_write(img, new_path);
+        fb_free();
+    } else if (format == FORMAT_BMP) {
+        char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".bmp");
+        bmp_write_subimg(img, new_path, roi);
+        fb_free();
+    } else if (format == FORMAT_PNM) {
+        char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path),
+        IM_IS_GS(img) ? ".pgm" : ".ppm");
+        ppm_write_subimg(img, new_path, roi);
+        fb_free();
+    } else {
+        ff_unsupported_format(NULL);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
