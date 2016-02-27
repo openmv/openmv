@@ -313,6 +313,12 @@ typedef struct img_read_settings {
 
 typedef void (*line_op_t)(image_t*, int, uint8_t*);
 
+typedef enum descriptor_type {
+    DESC_HAAR,
+    DESC_FREAK,
+    DESC_LBP,
+} descriptor_t;
+
 /* Image file functions */
 void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);
 void ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, ppm_read_settings_t *rs);

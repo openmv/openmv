@@ -1292,7 +1292,7 @@ int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *
 }
 
 
-// image module
+// The image module (it's different from the Image class!)
 mp_obj_t py_image_load_image(mp_obj_t path_obj)
 {
     mp_obj_t image_obj =NULL;
@@ -1308,104 +1308,118 @@ mp_obj_t py_image_load_image(mp_obj_t path_obj)
     return image_obj;
 }
 
-mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    cascade_t cascade;
-    const char *path = mp_obj_str_get_str(args[0]);
+    int res = FR_OK;
+    mp_obj_t desc = mp_const_none;
+    descriptor_t desc_type = mp_obj_get_int(args[0]);
+    const char *path = mp_obj_str_get_str(args[1]);
 
-    // Load cascade from file or flash
-    int res = imlib_load_cascade(&cascade, path);
+    switch (desc_type) {
+        case DESC_HAAR: {
+            cascade_t cascade;
+            // Load cascade from file or flash
+            res = imlib_load_cascade(&cascade, path);
+            if (res != FR_OK) {
+                break;
+            }
+
+            // Read the number of stages
+            int stages = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), cascade.n_stages);
+            // Check the number of stages
+            if (stages > 0 && stages < cascade.n_stages) {
+                cascade.n_stages = stages;
+            }
+
+            // Return micropython cascade object
+            py_cascade_obj_t *o = m_new_obj(py_cascade_obj_t);
+            o->base.type = &py_cascade_type;
+            o->_cobj = cascade;
+            desc = o;
+            break;
+        }
+        case DESC_FREAK: {
+            array_t *kpts = NULL;
+            array_alloc(&kpts, xfree);
+
+            res = freak_load_descriptor(kpts, path);
+            if (res != FR_OK) {
+                break;
+            }
+
+            // Return keypoints MP object
+            py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
+            kp_obj->base.type = &py_kp_type;
+            kp_obj->kpts = kpts;
+            kp_obj->threshold = 10;
+            kp_obj->normalized = false;
+            desc = kp_obj;
+            break;
+        }
+        case DESC_LBP: {
+            py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
+            lbp->base.type = &py_lbp_type;
+
+            res = imlib_lbp_desc_load(path, &lbp->hist);
+            if (res != FR_OK) {
+                break;
+            }
+            desc = lbp;
+            break;
+        }
+        default:
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
+    }
+
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
-
-    // Read the number of stages
-    int stages = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("stages")), cascade.n_stages);
-    // Check the number of stages
-    if (stages > 0 && stages < cascade.n_stages) {
-        cascade.n_stages = stages;
-    }
-
-    // Return micropython cascade object
-    py_cascade_obj_t *o = m_new_obj(py_cascade_obj_t);
-    o->base.type = &py_cascade_type;
-    o->_cobj = cascade;
-    return o;
+    return desc;
 }
 
-mp_obj_t py_image_load_descriptor(mp_obj_t path_obj)
+mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    array_t *kpts;
-    array_alloc(&kpts, xfree);
+    int res = FR_OK;
+    descriptor_t desc_type = mp_obj_get_int(args[0]);
+    const char *path = mp_obj_str_get_str(args[1]);
 
-    py_kp_obj_t *kp_obj =NULL;
-    const char *path = mp_obj_str_get_str(path_obj);
-
-    int res = freak_load_descriptor(kpts, path);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    switch (desc_type) {
+        case DESC_FREAK: {
+            py_kp_obj_t *kpts = ((py_kp_obj_t*)args[2]);
+            res = freak_save_descriptor(kpts->kpts, path);
+            break;
+        }
+        case DESC_LBP: {
+            py_lbp_obj_t *lbp = ((py_lbp_obj_t*)args[2]);
+            res = imlib_lbp_desc_save(path, lbp->hist);
+            break;
+        }
+        case DESC_HAAR: // Can't save Haar
+        default:
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
     }
 
-    // Return keypoints MP object
-    kp_obj = m_new_obj(py_kp_obj_t);
-    kp_obj->base.type = &py_kp_type;
-    kp_obj->kpts = kpts;
-    kp_obj->threshold = 10;
-    kp_obj->normalized = false;
-    return kp_obj;
-}
-
-mp_obj_t py_image_save_descriptor(mp_obj_t path_obj, mp_obj_t kpts_obj)
-{
-    py_kp_obj_t *kpts = ((py_kp_obj_t*)kpts_obj);
-    const char *path = mp_obj_str_get_str(path_obj);
-
-    int res = freak_save_descriptor(kpts->kpts, path);
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
     return mp_const_true;
 }
 
-mp_obj_t py_image_load_lbp(mp_obj_t path_obj)
-{
-    py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
-    lbp->base.type = &py_lbp_type;
-
-    int res = imlib_lbp_desc_load(mp_obj_str_get_str(path_obj), &lbp->hist);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-    return lbp;
-}
-
-mp_obj_t py_image_save_lbp(mp_obj_t path_obj, mp_obj_t lbp_obj)
-{
-    py_lbp_obj_t *lbp = ((py_lbp_obj_t*)lbp_obj);
-    const char *path = mp_obj_str_get_str(path_obj);
-
-    int res = imlib_lbp_desc_save(path, lbp->hist);
-    if (res != FR_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-    }
-    return lbp;
-}
-
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_descriptor_obj, py_image_load_descriptor);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_save_descriptor_obj, py_image_save_descriptor);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_lbp_obj, py_image_load_lbp);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_save_lbp_obj, py_image_save_lbp);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 2, py_image_load_descriptor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 3, py_image_save_descriptor);
 
 static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_image) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_image) },
+    // Descriptor types
+    { MP_OBJ_NEW_QSTR(MP_QSTR_HAAR),            MP_OBJ_NEW_SMALL_INT(DESC_HAAR)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),           MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_LBP),             MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
+
+    // Image module functions
     { MP_OBJ_NEW_QSTR(MP_QSTR_Image),           (mp_obj_t)&py_image_load_image_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_HaarCascade),     (mp_obj_t)&py_image_load_cascade_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDesc),       (mp_obj_t)&py_image_load_descriptor_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_FreakDescSave),   (mp_obj_t)&py_image_save_descriptor_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_LBPDesc),         (mp_obj_t)&py_image_load_lbp_obj},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_LBPDescSave),     (mp_obj_t)&py_image_save_lbp_obj},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_load_descriptor), (mp_obj_t)&py_image_load_descriptor_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_save_descriptor), (mp_obj_t)&py_image_save_descriptor_obj },
 };
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
