@@ -355,12 +355,12 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
 /* Binary functions */
 void imlib_binary(image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert);
 void imlib_invert(image_t *img);
-void imlib_and(image_t *img, const char *file, image_t *other);
-void imlib_nand(image_t *img, const char *file, image_t *other);
-void imlib_or(image_t *img, const char *file, image_t *other);
-void imlib_nor(image_t *img, const char *file, image_t *other);
-void imlib_xor(image_t *img, const char *file, image_t *other);
-void imlib_xnor(image_t *img, const char *file, image_t *other);
+void imlib_and(image_t *img, const char *path, image_t *other);
+void imlib_nand(image_t *img, const char *path, image_t *other);
+void imlib_or(image_t *img, const char *path, image_t *other);
+void imlib_nor(image_t *img, const char *path, image_t *other);
+void imlib_xor(image_t *img, const char *path, image_t *other);
+void imlib_xnor(image_t *img, const char *path, image_t *other);
 int imlib_pixels(image_t *img, rectangle_t *r);
 int imlib_centroid(image_t *img, int *x_center, int *y_center, rectangle_t *r);
 float imlib_orientation_radians(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
@@ -368,7 +368,7 @@ float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_ce
 
 /* Background Subtraction (Frame Differencing) functions */
 void imlib_negate(image_t *img);
-void imlib_difference(image_t *img, const char *file, image_t *other);
+void imlib_difference(image_t *img, const char *path, image_t *other);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);

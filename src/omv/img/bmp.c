@@ -22,8 +22,8 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
 
     uint32_t file_size;
     read_long(fp, &file_size);
-    read_long_ignore(fp);
-    read_long_ignore(fp);
+    read_word_ignore(fp);
+    read_word_ignore(fp);
 
     uint32_t header_size;
     read_long(fp, &header_size);
