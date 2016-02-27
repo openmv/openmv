@@ -86,7 +86,7 @@ void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_re
         if ((rs->bmp_h < 0) && (rs->bmp_w >= 0) && (img->w == rs->bmp_row_bytes)) {
             read_data(fp, // Super Fast - Zoom, Zoom!
                       img->pixels + (line_start * img->w),
-                      (line_end - line_start + 1) * img->w);
+                      (line_end - line_start) * img->w);
         } else {
             for (int i = line_start; i < line_end; i++) {
                 for (int j = 0; j < rs->bmp_row_bytes; j++) {
@@ -177,7 +177,7 @@ void bmp_read(image_t *img, const char *path)
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r)
 {
     rectangle_t rect;
-    if (!rectangle_subimg(img, r, &rect)) ff_no_intersection();
+    if (!rectangle_subimg(img, r, &rect)) ff_no_intersection(NULL);
     FIL fp;
     file_write_open(&fp, path);
 

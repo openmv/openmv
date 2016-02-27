@@ -93,7 +93,7 @@ void ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, ppm_re
     } else if (rs->ppm_fmt == '5') {
         read_data(fp, // Super Fast - Zoom, Zoom!
                   img->pixels + (line_start * img->w),
-                  (line_end - line_start + 1) * img->w);
+                  (line_end - line_start) * img->w);
     } else if (rs->ppm_fmt == '6') {
         for (int i = line_start; i < line_end; i++) {
             for (int j = 0; j < img->w; j++) {
@@ -122,7 +122,7 @@ void ppm_read(image_t *img, const char *path)
 void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
 {
     rectangle_t rect;
-    if (!rectangle_subimg(img, r, &rect)) ff_no_intersection();
+    if (!rectangle_subimg(img, r, &rect)) ff_no_intersection(NULL);
     FIL fp;
     file_write_open(&fp, path);
 
