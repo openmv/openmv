@@ -47,13 +47,15 @@ NORETURN void ff_file_corrupted(FIL *fp)
     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "File corrupted!"));
 }
 
-NORETURN void ff_not_equal()
+NORETURN void ff_not_equal(FIL *fp)
 {
+    if (fp) f_close(fp);
     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Images not equal!"));
 }
 
-NORETURN void ff_no_intersection()
+NORETURN void ff_no_intersection(FIL *fp)
 {
+    if (fp) f_close(fp);
     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "No intersection!"));
 }
 

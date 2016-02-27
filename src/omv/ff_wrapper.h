@@ -12,8 +12,8 @@
 #include <ff.h>
 void ff_unsupported_format(FIL *fp);
 void ff_file_corrupted(FIL *fp);
-void ff_not_equal();
-void ff_no_intersection();
+void ff_not_equal(FIL *fp);
+void ff_no_intersection(FIL *fp);
 void file_read_open(FIL *fp, const char *path);
 void file_write_open(FIL *fp, const char *path);
 void file_close(FIL *fp);

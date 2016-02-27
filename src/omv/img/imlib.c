@@ -87,7 +87,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
     return FORMAT_DONT_CARE;
 }
 
-bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs)
+static bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs)
 {
     file_read_open(fp, path);
     char magic[2];
@@ -110,7 +110,7 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
     return vflipped;
 }
 
-void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
+static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
 {
     switch (rs->format) {
         case FORMAT_DONT_CARE: // won't happen
@@ -123,6 +123,79 @@ void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_
             break;
         case FORMAT_JPG: // won't happen
             break;
+    }
+}
+
+// Main Ram = 196,608 bytes
+// -
+// struct framebuffer = 20 bytes
+// FB_JPEG_OFFS_SIZE = 1,024 bytes
+// GRAYSCALE 320x240x1 image = 76,800 bytes
+// fb_alloc = 4 bytes
+// flash cache = 16,384 bytes
+// =
+// 102,376 bytes
+// /
+// GRAYSCALE 320x1 lines
+// =
+// 319 GRAYSCALE 320x1 lines
+#define GS_LINE_BUFFER_SIZE (64) // double rgb565
+
+// Main Ram = 196,608 bytes
+// -
+// struct framebuffer = 20 bytes
+// FB_JPEG_OFFS_SIZE = 1,024 bytes
+// RGB565 320x240x2 image = 153,600 bytes
+// fb_alloc = 4 bytes
+// flash cache = 16,384 bytes
+// =
+// 25,576 bytes
+// /
+// RGB565 320x2 lines
+// =
+// 39 RGB565 320x2 lines
+#define RGB565_LINE_BUFFER_SIZE (32)
+
+void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op)
+{
+    if (path) {
+        FIL fp;
+        image_t temp;
+        img_read_settings_t rs;
+        bool vflipped = imlib_read_geometry(&fp, &temp, path, &rs);
+        if (!IM_EQUAL(img, &temp)) {
+            ff_not_equal(&fp);
+        }
+        // This code reads a window of an image in at a time and then executes
+        // the line operation on each line in that window before moving to the
+        // next window. The vflipped part is here because BMP files can be saved
+        // vertically flipped resulting in us reading the image backwards.
+        temp.h = IM_IS_GS(img) ? GS_LINE_BUFFER_SIZE : RGB565_LINE_BUFFER_SIZE;
+        // When processing vertically flipped images the read function will fill
+        // the window up from the bottom. The read function assumes that the
+        // window is equal to an image in size. However, since this is not the
+        // case we shrink the window size to how many lines we're buffering.
+        temp.pixels = fb_alloc(temp.w * temp.h * temp.bpp);
+        for (int i=0; i<img->h; i+=temp.h) { // goes past end
+            int can_do = IM_MIN(temp.h, img->h-i);
+            imlib_read_pixels(&fp, &temp, 0, can_do, &rs);
+            for (int j=0; j<can_do; j++) {
+                if (!vflipped) {
+                    op(img, i+j, temp.pixels+(temp.w*temp.bpp*j));
+                } else {
+                    op(img, (img->h-i-can_do)+j, temp.pixels+(temp.w*temp.bpp*j));
+                }
+            }
+        }
+        fb_free();
+        file_close(&fp);
+    } else {
+        if (!IM_EQUAL(img, other)) {
+            ff_not_equal(NULL);
+        }
+        for (int i=0; i<img->h; i++) {
+            op(img, i, other->pixels + (img->w * img->bpp * i));
+        }
     }
 }
 
