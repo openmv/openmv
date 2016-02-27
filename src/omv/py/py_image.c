@@ -164,9 +164,7 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
-    imlib_save_image(arg_img, path, &roi,
-            py_helper_lookup_int(kw_args,
-            MP_OBJ_NEW_QSTR(MP_QSTR_format), FORMAT_BMP));
+    imlib_save_image(arg_img, path, &roi);
     return mp_const_true;
 }
 
@@ -1202,8 +1200,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, p
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_lbp_obj, 2, py_image_match_lbp);
 
 static const mp_map_elem_t locals_dict_table[] = {
-    {MP_OBJ_NEW_QSTR(MP_QSTR_FORMAT_BMP),          MP_OBJ_NEW_SMALL_INT(FORMAT_BMP)},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_FORMAT_PNM),          MP_OBJ_NEW_SMALL_INT(FORMAT_PNM)},
     /* Image file functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     /* Basic image functions */

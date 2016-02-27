@@ -28,35 +28,100 @@ extern const uint16_t rainbow_table[256];
 
 ////////////////////////////////////////////////////////////////////////////////
 
-bool imlib_read_geometry(FIL *fp, image_t *image, const char *path, img_read_settings_t *rs)
+static save_image_format_t imblib_parse_extension(image_t *img, const char *path)
+{
+    size_t l = strlen(path);
+    const char *p = path + l;
+    if (l >= 5) {
+               if (((p[-1] == 'g') || (p[-1] == 'G'))
+               &&  ((p[-2] == 'e') || (p[-2] == 'E'))
+               &&  ((p[-3] == 'p') || (p[-3] == 'P'))
+               &&  ((p[-4] == 'j') || (p[-4] == 'J'))
+               &&  ((p[-5] == '.') || (p[-5] == '.'))) {
+                    if (!IM_IS_JPEG(img)) {
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
+                        "Image is not JPEG!"));
+                    }
+                    return FORMAT_JPG;
+        }
+    }
+    if (l >= 4) {
+               if (((p[-1] == 'g') || (p[-1] == 'G'))
+               &&  ((p[-2] == 'p') || (p[-2] == 'P'))
+               &&  ((p[-3] == 'j') || (p[-3] == 'J'))
+               &&  ((p[-4] == '.') || (p[-4] == '.'))) {
+                    if (!IM_IS_JPEG(img)) {
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
+                        "Image is not JPG!"));
+                    }
+                    return FORMAT_JPG;
+        } else if (((p[-1] == 'p') || (p[-1] == 'P'))
+               &&  ((p[-2] == 'm') || (p[-2] == 'M'))
+               &&  ((p[-3] == 'b') || (p[-3] == 'B'))
+               &&  ((p[-4] == '.') || (p[-4] == '.'))) {
+                    if (IM_IS_JPEG(img)) {
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
+                        "Image is not BMP!"));
+                    }
+                    return FORMAT_BMP;
+        } else if (((p[-1] == 'm') || (p[-1] == 'M'))
+               &&  ((p[-2] == 'p') || (p[-2] == 'P'))
+               &&  ((p[-3] == 'p') || (p[-3] == 'P'))
+               &&  ((p[-4] == '.') || (p[-4] == '.'))) {
+                    if (!IM_IS_RGB565(img)) {
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
+                        "Image is not PPM!"));
+                    }
+                    return FORMAT_PNM;
+        } else if (((p[-1] == 'm') || (p[-1] == 'M'))
+               &&  ((p[-2] == 'g') || (p[-2] == 'G'))
+               &&  ((p[-3] == 'p') || (p[-3] == 'P'))
+               &&  ((p[-4] == '.') || (p[-4] == '.'))) {
+                    if (!IM_IS_GS(img)) {
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
+                        "Image is not PGM!"));
+                    }
+                    return FORMAT_PNM;
+        }
+    }
+    return FORMAT_DONT_CARE;
+}
+
+bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs)
 {
     file_read_open(fp, path);
     char magic[2];
     read_data(fp, &magic, 2);
     file_close(fp);
 
+    bool vflipped = false;
     if ((magic[0]=='P')
     && ((magic[1]=='2') || (magic[1]=='3')
     ||  (magic[1]=='5') || (magic[1]=='6'))) { // PPM
         rs->format = FORMAT_PNM;
-        ppm_read_geometry(fp, image, path, &rs->ppm_rs);
+        ppm_read_geometry(fp, img, path, &rs->ppm_rs);
     } else if ((magic[0]=='B') && (magic[1]=='M')) { // BMP
         rs->format = FORMAT_BMP;
-        return bmp_read_geometry(fp, image, path, &rs->bmp_rs);
+        vflipped = bmp_read_geometry(fp, img, path, &rs->bmp_rs);
     } else {
         ff_unsupported_format(NULL);
     }
-    return false;
+    imblib_parse_extension(img, path); // Enforce extension!
+    return vflipped;
 }
 
 void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
 {
     switch (rs->format) {
+        case FORMAT_DONT_CARE: // won't happen
+            break;
         case FORMAT_BMP:
             bmp_read_pixels(fp, img, line_start, line_end, &rs->bmp_rs);
             break;
         case FORMAT_PNM:
             ppm_read_pixels(fp, img, line_start, line_end, &rs->ppm_rs);
+            break;
+        case FORMAT_JPG: // won't happen
             break;
     }
 }
@@ -80,25 +145,32 @@ void imlib_load_image(image_t *img, const char *path)
     } else {
         ff_unsupported_format(NULL);
     }
+    imblib_parse_extension(img, path); // Enforce extension!
 }
 
-void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, save_image_format_t format)
+void imlib_save_image(image_t *img, const char *path, rectangle_t *roi)
 {
-    if (IM_IS_JPEG(img)) {
-        char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
-        jpeg_write(img, new_path);
-        fb_free();
-    } else if (format == FORMAT_BMP) {
-        char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".bmp");
-        bmp_write_subimg(img, new_path, roi);
-        fb_free();
-    } else if (format == FORMAT_PNM) {
-        char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path),
-        IM_IS_GS(img) ? ".pgm" : ".ppm");
-        ppm_write_subimg(img, new_path, roi);
-        fb_free();
-    } else {
-        ff_unsupported_format(NULL);
+    switch (imblib_parse_extension(img, path)) {
+        case FORMAT_DONT_CARE:
+            if (IM_IS_JPEG(img)) {
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
+                jpeg_write(img, new_path);
+                fb_free();
+            } else {
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".bmp");
+                bmp_write_subimg(img, new_path, roi);
+                fb_free();
+            }
+            break;
+        case FORMAT_BMP:
+            bmp_write_subimg(img, path, roi);
+            break;
+        case FORMAT_PNM:
+            ppm_write_subimg(img, path, roi);
+            break;
+        case FORMAT_JPG:
+            jpeg_write(img, path);
+            break;
     }
 }
 

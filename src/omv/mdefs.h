@@ -17,3 +17,7 @@
 #ifndef DISABLE_OPT
 #define DISABLE_OPT __attribute__((optimize("O0")))
 #endif
+
+#ifndef PRINT_LINE
+#define PRINT_LINE printf("%s:%d\n", __FILE__, __LINE__)
+#endif
