@@ -439,8 +439,6 @@ static mp_obj_t py_image_and(mp_obj_t img_obj, mp_obj_t other_obj)
         imlib_and(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
-                "Invalid Argument: img_0_geometry != img_1_geometry");
         imlib_and(arg_img, NULL, arg_other);
     }
     return mp_const_none;
@@ -456,8 +454,6 @@ static mp_obj_t py_image_nand(mp_obj_t img_obj, mp_obj_t other_obj)
         imlib_nand(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
-                "Invalid Argument: img_0_geometry != img_1_geometry");
         imlib_nand(arg_img, NULL, arg_other);
     }
     return mp_const_none;
@@ -473,8 +469,6 @@ static mp_obj_t py_image_or(mp_obj_t img_obj, mp_obj_t other_obj)
         imlib_or(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
-                "Invalid Argument: img_0_geometry != img_1_geometry");
         imlib_or(arg_img, NULL, arg_other);
     }
     return mp_const_none;
@@ -490,8 +484,6 @@ static mp_obj_t py_image_nor(mp_obj_t img_obj, mp_obj_t other_obj)
         imlib_nor(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
-                "Invalid Argument: img_0_geometry != img_1_geometry");
         imlib_nor(arg_img, NULL, arg_other);
     }
     return mp_const_none;
@@ -507,8 +499,6 @@ static mp_obj_t py_image_xor(mp_obj_t img_obj, mp_obj_t other_obj)
         imlib_xor(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
-                "Invalid Argument: img_0_geometry != img_1_geometry");
         imlib_xor(arg_img, NULL, arg_other);
     }
     return mp_const_none;
@@ -524,8 +514,6 @@ static mp_obj_t py_image_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
         imlib_xnor(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
-                "Invalid Argument: img_0_geometry != img_1_geometry");
         imlib_xnor(arg_img, NULL, arg_other);
     }
     return mp_const_none;
@@ -607,8 +595,6 @@ static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
         imlib_difference(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        PY_ASSERT_TRUE_MSG(IM_EQUAL(arg_img, arg_other),
-                "Invalid Argument: img_0_geometry != img_1_geometry");
         imlib_difference(arg_img, NULL, arg_other);
     }
     return mp_const_none;

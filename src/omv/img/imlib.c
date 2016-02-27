@@ -406,154 +406,124 @@ void imlib_invert(image_t *img)
     }
 }
 
-void imlib_and(image_t *img, const char *file, image_t *other)
+static void imlib_and_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
-        uint8_t *pixels = img->pixels;
-        if (file) {
-
-        } else {
-            uint8_t *other_pixels = other->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] &= other_pixels[i];
-            }
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] &= other[i];
         }
     } else {
-        uint16_t *pixels = (uint16_t *) img->pixels;
-        if (file) {
-
-        } else {
-            uint16_t *other_pixels = (uint16_t *) img->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] &= other_pixels[i];
-            }
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] &= ((uint16_t *) other)[i];
         }
     }
 }
 
-void imlib_nand(image_t *img, const char *file, image_t *other)
+void imlib_and(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_and_line_op);
+}
+
+static void imlib_nand_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
-        uint8_t *pixels = img->pixels;
-        if (file) {
-
-        } else {
-            uint8_t *other_pixels = other->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] = ~(pixels[i] & other_pixels[i]);
-            }
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = ~(pixels[i] & other[i]);
         }
     } else {
-        uint16_t *pixels = (uint16_t *) img->pixels;
-        if (file) {
-
-        } else {
-            uint16_t *other_pixels = (uint16_t *) img->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] = ~(pixels[i] & other_pixels[i]);
-            }
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = ~(pixels[i] & ((uint16_t *) other)[i]);
         }
     }
 }
 
-void imlib_or(image_t *img, const char *file, image_t *other)
+void imlib_nand(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_nand_line_op);
+}
+
+static void imlib_or_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
-        uint8_t *pixels = img->pixels;
-        if (file) {
-
-        } else {
-            uint8_t *other_pixels = other->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] |= other_pixels[i];
-            }
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] |= other[i];
         }
     } else {
-        uint16_t *pixels = (uint16_t *) img->pixels;
-        if (file) {
-
-        } else {
-            uint16_t *other_pixels = (uint16_t *) img->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] |= other_pixels[i];
-            }
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] |= ((uint16_t *) other)[i];
         }
     }
 }
 
-void imlib_nor(image_t *img, const char *file, image_t *other)
+void imlib_or(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_or_line_op);
+}
+
+static void imlib_nor_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
-        uint8_t *pixels = img->pixels;
-        if (file) {
-
-        } else {
-            uint8_t *other_pixels = other->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] = ~(pixels[i] | other_pixels[i]);
-            }
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = ~(pixels[i] | other[i]);
         }
     } else {
-        uint16_t *pixels = (uint16_t *) img->pixels;
-        if (file) {
-
-        } else {
-            uint16_t *other_pixels = (uint16_t *) img->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] = ~(pixels[i] | other_pixels[i]);
-            }
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = ~(pixels[i] | ((uint16_t *) other)[i]);
         }
     }
 }
 
-void imlib_xor(image_t *img, const char *file, image_t *other)
+void imlib_nor(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_nor_line_op);
+}
+
+static void imlib_xor_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
-        uint8_t *pixels = img->pixels;
-        if (file) {
-
-        } else {
-            uint8_t *other_pixels = other->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] ^= other_pixels[i];
-            }
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] ^= other[i];
         }
     } else {
-        uint16_t *pixels = (uint16_t *) img->pixels;
-        if (file) {
-
-        } else {
-            uint16_t *other_pixels = (uint16_t *) img->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] ^= other_pixels[i];
-            }
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] ^= ((uint16_t *) other)[i];
         }
     }
 }
 
-void imlib_xnor(image_t *img, const char *file, image_t *other)
+void imlib_xor(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_xor_line_op);
+}
+
+static void imlib_xnor_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
-        uint8_t *pixels = img->pixels;
-        if (file) {
-
-        } else {
-            uint8_t *other_pixels = other->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] = ~(pixels[i] ^ other_pixels[i]);
-            }
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = ~(pixels[i] ^ other[i]);
         }
     } else {
-        uint16_t *pixels = (uint16_t *) img->pixels;
-        if (file) {
-
-        } else {
-            uint16_t *other_pixels = (uint16_t *) img->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] = ~(pixels[i] ^ other_pixels[i]);
-            }
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = ~(pixels[i] ^ ((uint16_t *) other)[i]);
         }
     }
+}
+
+void imlib_xnor(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_xnor_line_op);
 }
 
 int imlib_pixels(image_t *img, rectangle_t *r)
@@ -682,33 +652,28 @@ void imlib_negate(image_t *img)
     }
 }
 
-void imlib_difference(image_t *img, const char *file, image_t *other)
+static void imlib_difference_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
-        uint8_t *pixels = img->pixels;
-        if (file) {
-
-        } else {
-            uint8_t *other_pixels = other->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                pixels[i] = abs(pixels[i] - other_pixels[i]);
-            }
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = abs(pixels[i] - other[i]);
         }
     } else {
-        uint16_t *pixels = (uint16_t *) img->pixels;
-        if (file) {
-
-        } else {
-            uint16_t *other_pixels = (uint16_t *) img->pixels;
-            for (int i=0, j=img->w*img->h; i<j; i++) {
-                const int pixel = pixels[i], other_pixel = other_pixels[i];
-                const int r = abs(IM_R565(pixel) - IM_R565(other_pixel));
-                const int g = abs(IM_G565(pixel) - IM_G565(other_pixel));
-                const int b = abs(IM_B565(pixel) - IM_B565(other_pixel));
-                pixels[i] = IM_RGB565(r, g, b);
-            }
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            const int pixel = pixels[i], other_pixel = ((uint16_t *) other)[i];
+            const int r = abs(IM_R565(pixel) - IM_R565(other_pixel));
+            const int g = abs(IM_G565(pixel) - IM_G565(other_pixel));
+            const int b = abs(IM_B565(pixel) - IM_B565(other_pixel));
+            pixels[i] = IM_RGB565(r, g, b);
         }
     }
+}
+
+void imlib_difference(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_difference_line_op);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
