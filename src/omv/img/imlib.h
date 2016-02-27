@@ -296,8 +296,10 @@ typedef struct ppm_read_settings {
 } ppm_read_settings_t;
 
 typedef enum save_image_format {
+    FORMAT_DONT_CARE,
     FORMAT_BMP,
-    FORMAT_PNM
+    FORMAT_PNM,
+    FORMAT_JPG
 } save_image_format_t;
 
 typedef struct img_read_settings {
@@ -322,10 +324,8 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path);
 void jpeg_read_pixels(FIL *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
 void jpeg_write(image_t *img, const char *path);
-bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs);
-void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs);
 void imlib_load_image(image_t *img, const char *path);
-void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, save_image_format_t format);
+void imlib_save_image(image_t *img, const char *path, rectangle_t *roi);
 
 /* Basic image functions */
 int imlib_get_pixel(image_t *img, int x, int y);
