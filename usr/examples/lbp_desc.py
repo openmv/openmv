@@ -22,6 +22,7 @@ for i in range(0, 30):
     img.draw_string(0, 0, "Please wait...")
 
 d0 = None
+#d0 = image.load_descriptor(image.LBP, "/desc.lbp")
 clock = time.clock()
 
 while (True):

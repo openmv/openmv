@@ -1,4 +1,4 @@
-import sensor, time
+import sensor, time, image
 
 # Rotation.
 NORMALIZED=False
@@ -28,6 +28,8 @@ for i in range(0, 30):
     img.draw_string(0, 0, "Please wait...")
 
 kpts1 = None
+# Uncomment to load keypoints from file
+#kpts1 = image.load_descriptor(image.FREAK, "/desc.freak")
 clock = time.clock()
 
 while (True):
@@ -37,11 +39,9 @@ while (True):
 
     if (kpts1==None):
         kpts1 = kpts2
-        kpts2 = None
         print(kpts1)
-
-    if kpts2:
-        c=img.match_keypoints(kpts1, kpts2, MATCHING_THRESH)
+    elif kpts2:
+        c = image.match_descriptor(image.FREAK, kpts1, kpts2, threshold=MATCHING_THRESH)
         # C[3] contains the percentage of matching keypoints.
         # If more than 25% of the keypoints match, draw stuff.
         if (c[2]>25):

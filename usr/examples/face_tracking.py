@@ -44,10 +44,10 @@ while (kpts1 == None):
     if objects:
         # Expand the ROI by 11 pixels in each direction (half the pattern scale)
         face = (objects[0][0]-22, objects[0][1]-22,objects[0][2]+22*2, objects[0][3]+22*2)
-        # Draw a rectangle around the first face
-        img.draw_rectangle(objects[0])        
         # Extract keypoints using the detect face size as the ROI
         kpts1 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED, roi=face)
+        # Draw a rectangle around the first face
+        img.draw_rectangle(objects[0])
 
 # Draw keypoints
 print(kpts1)
@@ -60,17 +60,16 @@ clock = time.clock()
 while (True):
     clock.tick()
     img = sensor.snapshot()
-    kpts2=None
     # Extract keypoints using the detect face size as the ROI
     kpts2 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED)
-    # Match the first set of keypoints with the second one
-    if (kpts2):
-        c=img.match_keypoints(kpts1, kpts2, MATCHING_THRESH)
 
-    # If more than 10% of the keypoints match draw the matching set
-    if (c[2]>25):
-        img.draw_cross(c[0], c[1], size=5)
-        img.draw_string(0, 10, "Match %d%%"%(c[2]))
+    if (kpts2):
+        # Match the first set of keypoints with the second one
+        c=image.match_descriptor(image.FREAK, kpts1, kpts2, threshold=MATCHING_THRESH)
+        # If more than 10% of the keypoints match draw the matching set
+        if (c[2]>25):
+            img.draw_cross(c[0], c[1], size=5)
+            img.draw_string(0, 10, "Match %d%%"%(c[2]))
 
     # Draw FPS
     img.draw_string(0, 0, "FPS:%.2f"%(clock.fps()))
