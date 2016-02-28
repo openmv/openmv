@@ -1074,62 +1074,6 @@ static mp_obj_t py_image_find_eyes(mp_obj_t image_obj, mp_obj_t roi_obj)
     return mp_obj_new_tuple(2, eyes_obj);
 }
 
-static mp_obj_t py_image_match_keypoints(uint n_args, const mp_obj_t *args)
-{
-    int threshold = mp_obj_get_int(args[3]);
-    py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
-    py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
-
-    // Sanity checks
-    PY_ASSERT_TYPE(kpts1, &py_kp_type);
-    PY_ASSERT_TYPE(kpts2, &py_kp_type);
-    PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
-
-    if (array_length(kpts1->kpts) == 0 || array_length(kpts2->kpts) == 0) {
-        return mp_const_none;
-    }
-
-    // Match the two keypoint sets
-    int match=0, cx=0, cy=0;
-    // Returns the number of matches
-    match = freak_match_keypoints(kpts1->kpts, kpts2->kpts, threshold);
-
-    if (match) {
-        for (int i=0; i<array_length(kpts1->kpts); i++) {
-            kp_t *kp = array_at(kpts1->kpts, i);
-            if (kp->match != NULL) {
-                cx += kp->match->x;
-                cy += kp->match->y;
-            }
-        }
-    }
-
-    mp_obj_t rec_obj[3] = {
-        mp_obj_new_int(cx/match),
-        mp_obj_new_int(cy/match),
-        mp_obj_new_int(match*100/array_length(kpts1->kpts))
-    };
-    return mp_obj_new_tuple(3, rec_obj);
-}
-
-static mp_obj_t py_image_match_lbp(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    // Read args
-    image_t *image = py_image_cobj(args[0]);
-    uint8_t *d0 = ((py_lbp_obj_t*)args[1])->hist;
-
-    // Sanity checks
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    // Extract second LBP descriptor
-    rectangle_t roi;
-    py_helper_lookup_rectangle(kw_args, image, &roi);
-    uint8_t *d1 = imlib_lbp_cascade(image, &roi);
-
-    return mp_obj_new_int(imlib_lbp_desc_distance(d0, d1));
-}
-
 /* Image file functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 /* Basic image functions */
@@ -1182,8 +1126,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_f
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eyes_obj, py_image_find_eyes);
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_match_keypoints_obj, 4, 4, py_image_match_keypoints);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_lbp_obj, 2, py_image_match_lbp);
 
 static const mp_map_elem_t locals_dict_table[] = {
     /* Image file functions */
@@ -1239,8 +1181,6 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lbp),            (mp_obj_t)&py_image_find_lbp_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_eyes),           (mp_obj_t)&py_image_find_eyes_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_match_keypoints),     (mp_obj_t)&py_image_match_keypoints_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_match_lbp),           (mp_obj_t)&py_image_match_lbp_obj},
 
     { NULL, NULL },
 };
@@ -1430,23 +1370,80 @@ mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
     return mp_const_true;
 }
 
+static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    mp_obj_t match_obj = mp_const_none;
+    descriptor_t desc_type = mp_obj_get_int(args[0]);
+
+    switch (desc_type) {
+        case DESC_LBP: {
+            py_lbp_obj_t *lbp1 = ((py_lbp_obj_t*)args[1]);
+            py_lbp_obj_t *lbp2 = ((py_lbp_obj_t*)args[2]);
+
+            // Sanity checks
+            PY_ASSERT_TYPE(lbp1, &py_lbp_type);
+            PY_ASSERT_TYPE(lbp2, &py_lbp_type);
+
+            match_obj = mp_obj_new_int(imlib_lbp_desc_distance(lbp1->hist, lbp2->hist));
+            break;
+        }
+
+        case DESC_FREAK: {
+            py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
+            py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
+            int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 60);
+
+            // Sanity checks
+            PY_ASSERT_TYPE(kpts1, &py_kp_type);
+            PY_ASSERT_TYPE(kpts2, &py_kp_type);
+            PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
+
+            int match=0, cx=0, cy=0;
+            // Match the two keypoint sets
+            // Returns the number of matches
+            match = freak_match_keypoints(kpts1->kpts, kpts2->kpts, threshold);
+
+            if (match) {
+                for (int i=0; i<array_length(kpts1->kpts); i++) {
+                    kp_t *kp = array_at(kpts1->kpts, i);
+                    if (kp->match != NULL) {
+                        cx += kp->match->x;
+                        cy += kp->match->y;
+                    }
+                }
+            }
+
+            mp_obj_t rec_obj[3] = {
+                mp_obj_new_int(cx/match),
+                mp_obj_new_int(cy/match),
+                mp_obj_new_int(match*100/IM_MAX(array_length(kpts1->kpts), 1))
+            };
+            match_obj = mp_obj_new_tuple(3, rec_obj);
+        }
+    }
+
+    return match_obj;
+}
+
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 2, py_image_load_descriptor);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 3, py_image_save_descriptor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 3, py_image_match_descriptor);
 
 static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_image) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image) },
     // Descriptor types
-    { MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),           MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_LBP),             MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_LBP),                 MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),               MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
 
     // Image module functions
-    { MP_OBJ_NEW_QSTR(MP_QSTR_Image),           (mp_obj_t)&py_image_load_image_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_HaarCascade),     (mp_obj_t)&py_image_load_cascade_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_load_descriptor), (mp_obj_t)&py_image_load_descriptor_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_save_descriptor), (mp_obj_t)&py_image_save_descriptor_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_Image),               (mp_obj_t)&py_image_load_image_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_HaarCascade),         (mp_obj_t)&py_image_load_cascade_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_load_descriptor),     (mp_obj_t)&py_image_load_descriptor_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_save_descriptor),     (mp_obj_t)&py_image_save_descriptor_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_match_descriptor),    (mp_obj_t)&py_image_match_descriptor_obj },
 };
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
