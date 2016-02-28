@@ -314,9 +314,8 @@ typedef struct img_read_settings {
 typedef void (*line_op_t)(image_t*, int, uint8_t*);
 
 typedef enum descriptor_type {
-    DESC_HAAR,
-    DESC_FREAK,
     DESC_LBP,
+    DESC_FREAK,
 } descriptor_t;
 
 /* Image file functions */
