@@ -428,15 +428,15 @@ array_t *imlib_detect_objects(struct image *image, struct cascade *cascade, stru
 void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi);
 array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, rectangle_t *roi);
 int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold);
-int freak_save_descriptor(array_t *kpts, const char *path);
-int freak_load_descriptor(array_t *kpts, const char *path);
+int freak_save_descriptor(FIL *fp, array_t *kpts);
+int freak_load_descriptor(FIL *fp, array_t *kpts);
 
 /* LBP Operator */
 void imlib_lbp_desc(image_t *image, int div, uint8_t *desc, rectangle_t *roi);
 uint8_t *imlib_lbp_cascade(image_t *image, rectangle_t *roi);
 int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1);
-int imlib_lbp_desc_save(const char *path, uint8_t *desc);
-int imlib_lbp_desc_load(const char *path, uint8_t **desc);
+int imlib_lbp_desc_save(FIL *fp, uint8_t *desc);
+int imlib_lbp_desc_load(FIL *fp, uint8_t **desc);
 
 /* Iris detector */
 void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi);

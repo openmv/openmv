@@ -388,21 +388,15 @@ int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
     return matches;
 }
 
-int freak_save_descriptor(array_t *kpts, const char *path)
+int freak_save_descriptor(FIL *fp, array_t *kpts)
 {
-    FIL fp;
     UINT bytes;
     FRESULT res;
 
     int kpts_size = array_length(kpts);
 
-    res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
-    if (res != FR_OK) {
-        return res;
-    }
-
     // Write the number of keypoints
-    res = f_write(&fp, &kpts_size, sizeof(kpts_size), &bytes);
+    res = f_write(fp, &kpts_size, sizeof(kpts_size), &bytes);
     if (res != FR_OK || bytes != sizeof(kpts_size)) {
         goto error;
     }
@@ -412,44 +406,37 @@ int freak_save_descriptor(array_t *kpts, const char *path)
         kp_t *kp = array_at(kpts, i);
 
         // Write X
-        res = f_write(&fp, &kp->x, sizeof(kp->x), &bytes);
+        res = f_write(fp, &kp->x, sizeof(kp->x), &bytes);
         if (res != FR_OK || bytes != sizeof(kp->x)) {
             goto error;
         }
 
         // Write Y
-        res = f_write(&fp, &kp->y, sizeof(kp->y), &bytes);
+        res = f_write(fp, &kp->y, sizeof(kp->y), &bytes);
         if (res != FR_OK || bytes != sizeof(kp->y)) {
             goto error;
         }
 
         // Write descriptor
-        res = f_write(&fp, kp->desc, KPT_DESC_SIZE, &bytes);
+        res = f_write(fp, kp->desc, KPT_DESC_SIZE, &bytes);
         if (res != FR_OK || bytes != KPT_DESC_SIZE) {
             goto error;
         }
     }
 
 error:
-    f_close(&fp);
     return res;
 }
 
-int freak_load_descriptor(array_t *kpts, const char *path)
+int freak_load_descriptor(FIL *fp, array_t *kpts)
 {
-    FIL fp;
     UINT bytes;
     FRESULT res=FR_OK;
 
     int kpts_size=0;
 
-    res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING);
-    if (res != FR_OK) {
-        return res;
-    }
-
     // Read number of keypoints
-    res = f_read(&fp, &kpts_size, sizeof(kpts_size), &bytes);
+    res = f_read(fp, &kpts_size, sizeof(kpts_size), &bytes);
     if (res != FR_OK || bytes != sizeof(kpts_size)) {
         goto error;
     }
@@ -459,19 +446,19 @@ int freak_load_descriptor(array_t *kpts, const char *path)
         kp_t *kp = xalloc(sizeof(*kp));
 
         // Read X
-        res = f_read(&fp, &kp->x, sizeof(kp->x), &bytes);
+        res = f_read(fp, &kp->x, sizeof(kp->x), &bytes);
         if (res != FR_OK || bytes != sizeof(kp->x)) {
             goto error;
         }
 
         // Read Y
-        res = f_read(&fp, &kp->y, sizeof(kp->y), &bytes);
+        res = f_read(fp, &kp->y, sizeof(kp->y), &bytes);
         if (res != FR_OK || bytes != sizeof(kp->y)) {
             goto error;
         }
 
         // Read descriptor
-        res = f_read(&fp, kp->desc,  KPT_DESC_SIZE, &bytes);
+        res = f_read(fp, kp->desc,  KPT_DESC_SIZE, &bytes);
         if (res != FR_OK || bytes != KPT_DESC_SIZE) {
             goto error;
         }
@@ -481,6 +468,5 @@ int freak_load_descriptor(array_t *kpts, const char *path)
     }
 
 error:
-    f_close(&fp);
     return res;
 }

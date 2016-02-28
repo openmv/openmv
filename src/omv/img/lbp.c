@@ -147,42 +147,23 @@ int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1)
 }
 #endif
 
-int imlib_lbp_desc_save(const char *path, uint8_t *desc)
+int imlib_lbp_desc_save(FIL *fp, uint8_t *desc)
 {
-    FIL fp;
     UINT bytes;
-    FRESULT res=FR_OK;
-
-    // Open LBP file
-    res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS);
-    if (res != FR_OK) {
-        return res;
-    }
-
     // Write descriptor
-    res = f_write(&fp, desc, LBP_DESC_SIZE, &bytes);
-
-    f_close(&fp);
-    return res;
+    return f_write(fp, desc, LBP_DESC_SIZE, &bytes);
 }
 
-int imlib_lbp_desc_load(const char *path, uint8_t **desc)
+int imlib_lbp_desc_load(FIL *fp, uint8_t **desc)
 {
-    FIL fp;
     UINT bytes;
     FRESULT res=FR_OK;
 
     *desc = NULL;
     uint8_t *hist = xalloc(LBP_DESC_SIZE);
 
-    // Open LBP file
-    res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING);
-    if (res != FR_OK) {
-        return res;
-    }
-
     // Read descriptor
-    res = f_read(&fp, hist, LBP_DESC_SIZE, &bytes);
+    res = f_read(fp, hist, LBP_DESC_SIZE, &bytes);
     if (res != FR_OK || bytes != LBP_DESC_SIZE) {
         *desc = NULL;
         xfree(hist);
@@ -190,6 +171,5 @@ int imlib_lbp_desc_load(const char *path, uint8_t **desc)
         *desc = hist;
     }
 
-    f_close(&fp);
     return res;
 }

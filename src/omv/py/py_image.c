@@ -1278,12 +1278,20 @@ mp_obj_t py_image_from_struct(image_t *image)
 
 int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *roi)
 {
+    FIL fp;
+    FRESULT res = FR_OK;
+
     array_t *kpts = freak_find_keypoints(image, false, 10, roi);
     printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
     printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
 
     if (array_length(kpts)) {
-        int res = freak_save_descriptor(kpts, path);
+        if ((res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
+            res = freak_save_descriptor(&fp, kpts);
+            f_close(&fp);
+        }
+
+        // File open/write error
         if (res != FR_OK) {
             nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
         }
@@ -1335,83 +1343,93 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
 mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    int res = FR_OK;
+    FIL fp;
+    FRESULT res;
+
     mp_obj_t desc = mp_const_none;
     descriptor_t desc_type = mp_obj_get_int(args[0]);
     const char *path = mp_obj_str_get_str(args[1]);
 
-    switch (desc_type) {
-        case DESC_LBP: {
-            py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
-            lbp->base.type = &py_lbp_type;
+    if ((res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING)) == FR_OK) {
+        switch (desc_type) {
+            case DESC_LBP: {
+                py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
+                lbp->base.type = &py_lbp_type;
 
-            res = imlib_lbp_desc_load(path, &lbp->hist);
-            if (res != FR_OK) {
-                break;
-            }
-            desc = lbp;
-            break;
-        }
-
-        case DESC_FREAK: {
-            array_t *kpts = NULL;
-            array_alloc(&kpts, xfree);
-
-            res = freak_load_descriptor(kpts, path);
-            if (res != FR_OK) {
+                res = imlib_lbp_desc_load(&fp, &lbp->hist);
+                if (res == FR_OK) {
+                    desc = lbp;
+                }
                 break;
             }
 
-            // Return keypoints MP object
-            py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
-            kp_obj->base.type = &py_kp_type;
-            kp_obj->kpts = kpts;
-            kp_obj->threshold = 10;
-            kp_obj->normalized = false;
-            desc = kp_obj;
-            break;
+            case DESC_FREAK: {
+                array_t *kpts = NULL;
+                array_alloc(&kpts, xfree);
+
+                res = freak_load_descriptor(&fp, kpts);
+                if (res == FR_OK) {
+                    // Return keypoints MP object
+                    py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
+                    kp_obj->base.type = &py_kp_type;
+                    kp_obj->kpts = kpts;
+                    kp_obj->threshold = 10;
+                    kp_obj->normalized = false;
+                    desc = kp_obj;
+                }
+                break;
+            }
         }
 
-        default: {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
-        }
+        f_close(&fp);
     }
 
+    // File open or write error
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+
+    // If no file error and descriptor is still none, then it's not supported.
+    if (desc == mp_const_none) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
     }
     return desc;
 }
 
 mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    int res = FR_OK;
+    FIL fp;
+    FRESULT res;
+
     descriptor_t desc_type = mp_obj_get_int(args[0]);
     const char *path = mp_obj_str_get_str(args[1]);
 
-    switch (desc_type) {
-        case DESC_LBP: {
-            py_lbp_obj_t *lbp = ((py_lbp_obj_t*)args[2]);
-            res = imlib_lbp_desc_save(path, lbp->hist);
-            break;
-        }
+    if ((res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
+        switch (desc_type) {
+            case DESC_LBP: {
+                py_lbp_obj_t *lbp = ((py_lbp_obj_t*)args[2]);
+                res = imlib_lbp_desc_save(&fp, lbp->hist);
+                break;
+            }
 
-        case DESC_FREAK: {
-            py_kp_obj_t *kpts = ((py_kp_obj_t*)args[2]);
-            res = freak_save_descriptor(kpts->kpts, path);
-            break;
+            case DESC_FREAK: {
+                py_kp_obj_t *kpts = ((py_kp_obj_t*)args[2]);
+                res = freak_save_descriptor(&fp, kpts->kpts);
+                break;
+            }
         }
+        // ignore unsupported descriptors when saving
 
-        default: {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
-        }
+        f_close(&fp);
     }
 
+    // File open or read error
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
     }
     return mp_const_true;
 }
+
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
