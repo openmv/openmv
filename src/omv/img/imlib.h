@@ -146,6 +146,36 @@ extern const uint8_t g826_table[256];
        __typeof__ (img1) _img1 = (img1); \
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
+// Main Ram = 196,608 bytes
+// -
+// struct framebuffer = 20 bytes
+// FB_JPEG_OFFS_SIZE = 1,024 bytes
+// GRAYSCALE 320x240x1 image = 76,800 bytes
+// fb_alloc = 4 bytes
+// flash cache = 16,384 bytes
+// =
+// 102,376 bytes
+// /
+// GRAYSCALE 320x1 lines
+// =
+// 319 GRAYSCALE 320x1 lines
+#define GS_LINE_BUFFER_SIZE (64) // double rgb565
+
+// Main Ram = 196,608 bytes
+// -
+// struct framebuffer = 20 bytes
+// FB_JPEG_OFFS_SIZE = 1,024 bytes
+// RGB565 320x240x2 image = 153,600 bytes
+// fb_alloc = 4 bytes
+// flash cache = 16,384 bytes
+// =
+// 25,576 bytes
+// /
+// RGB565 320x2 lines
+// =
+// 39 RGB565 320x2 lines
+#define RGB565_LINE_BUFFER_SIZE (32)
+
 typedef struct size {
     int w;
     int h;
@@ -370,6 +400,8 @@ int imlib_pixels(image_t *img, rectangle_t *r);
 int imlib_centroid(image_t *img, int *x_center, int *y_center, rectangle_t *r);
 float imlib_orientation_radians(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
 float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
+void imlib_erode(image_t *img, int ksize, int threshold);
+void imlib_dilate(image_t *img, int ksize, int threshold);
 
 /* Background Subtraction (Frame Differencing) functions */
 void imlib_negate(image_t *img);
@@ -391,8 +423,6 @@ void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv);
 int  imlib_image_mean(struct image *src);
 void imlib_histeq(struct image *src);
 void imlib_median_filter(image_t *src, int r);
-void imlib_erode(image_t *src, int ksize);
-void imlib_dilate(image_t *src, int ksize);
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold);
 void imlib_rainbow(image_t *src, struct image *dst);
 array_t *imlib_count_blobs(struct image *image);
