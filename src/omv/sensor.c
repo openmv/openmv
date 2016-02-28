@@ -172,7 +172,7 @@ int sensor_init()
     /* Configure the sensor external clock (XCLK) to XCLK_FREQ.
        Note: The sensor's internal PLL (when CLKRC=0x80) doubles the XCLK_FREQ
              (XCLK=XCLK_FREQ*2), and the unscaled PIXCLK output is XCLK_FREQ*4 */
-    if (extclk_config(OMV_XCLK_FREQ) != 0) {
+    if (extclk_config(OMV_XCLK_FREQUENCY) != 0) {
         // Timer problem
         return -1;
     }
