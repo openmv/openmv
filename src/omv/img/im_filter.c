@@ -39,18 +39,19 @@ void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args)
 }
 
 
+// Thresholds taken from "Skin Segmentation Using YUV and RGB Color Spaces" Zaher Hamid Al-Tairi
 void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args)
 {
     if (bpp == 1) {
         // Kinda works
         for (int i=0; i<size; i+=2, src+=4) {
-            uint8_t y0 = src[0];
+            //uint8_t y0 = src[0];
             uint8_t u  = src[1];
-            uint8_t y1 = src[2];
+            //uint8_t y1 = src[2];
             uint8_t v  = src[3];
             // YCbCr
-            dst[i+0] = (y0>80 && u>85 && u<135 && v>135 && v<180) ? 255 : 0;
-            dst[i+1] = (y1>80 && u>85 && u<135 && v>135 && v<180) ? 255 : 0;
+            dst[i+0] = (u>80 && u<130 && v>136 && v<200 && v>u) ? 255 : 0;
+            dst[i+1] = (u>80 && u<130 && v>136 && v<200 && v>u) ? 255 : 0;
 
         }
     } else {
@@ -58,17 +59,14 @@ void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args)
         uint16_t *srcrgb = (uint16_t*) src;
         uint16_t *dstrgb = (uint16_t*) dst;
         for (int i=0; i<size; i++) {
-            int r = IM_R528(srcrgb[i]); 
-            int g = IM_G628(srcrgb[i]); 
-            int b = IM_B528(srcrgb[i]); 
+            int r = IM_R528(srcrgb[i]);
+            int g = IM_G628(srcrgb[i]);
+            int b = IM_B528(srcrgb[i]);
             //int y = yuv_table[srcrgb[i] * 3 + 0] + 128;
             int u = (int) yuv_table[srcrgb[i] * 3 + 1] + 128;
             int v = (int) yuv_table[srcrgb[i] * 3 + 2] + 128;
-            // From "Skin Segmentation Using YUV and RGB Color Spaces" Zaher Hamid Al-Tairi
-            dstrgb[i] = (u>80  && u<130 &&
-                         v>136 && v<200 && v>u   &&
-                         r>80  && g>30  && b>15  &&
-                         (((r-g)*(r-g)) > 225)) ? srcrgb[i] : 0;
+            dstrgb[i] = (u>80  && u<130 && v>136 && v<200 &&
+                         r>80  && g>30  && b>15  && (((r-g)*(r-g)) > 225)) ? srcrgb[i] : 0;
         }
     }
 }
