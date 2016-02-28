@@ -140,6 +140,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	point.o                                 \
 	bmp.o                                   \
 	ppm.o                                   \
+	gif.o                                   \
 	rectangle.o                             \
 	fast.o                                  \
 	freak.o                                 \
@@ -157,6 +158,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_image.o                              \
 	py_time.o                               \
 	mlx90620.o                              \
+	py_gif.o                                \
 	)
 
 ifeq ($(TARGET), OPENMV1)

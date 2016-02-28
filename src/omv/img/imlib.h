@@ -451,4 +451,10 @@ void jpeg_compress(image_t *src, image_t *dst, int quality);
 // Image filter functions
 void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
+
+
+// GIF functions
+void gif_open(FIL *fp, int width, int height, bool loop);
+void gif_add_frame(FIL *fp, image_t *img, uint16_t delay);
+void gif_close(FIL *fp);
 #endif //__IMLIB_H__

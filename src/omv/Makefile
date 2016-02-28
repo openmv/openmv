@@ -43,6 +43,7 @@ SRCS += $(addprefix img/,   \
 	point.c                 \
 	bmp.c                   \
 	ppm.c                   \
+	gif.c                   \
 	rectangle.c             \
 	fast.c                  \
 	freak.c                 \
@@ -60,6 +61,7 @@ SRCS += $(addprefix py/,    \
 	py_image.c              \
 	py_time.c               \
 	mlx90620.c              \
+	py_gif.c                \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
