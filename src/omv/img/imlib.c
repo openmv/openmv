@@ -126,36 +126,6 @@ static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_en
     }
 }
 
-// Main Ram = 196,608 bytes
-// -
-// struct framebuffer = 20 bytes
-// FB_JPEG_OFFS_SIZE = 1,024 bytes
-// GRAYSCALE 320x240x1 image = 76,800 bytes
-// fb_alloc = 4 bytes
-// flash cache = 16,384 bytes
-// =
-// 102,376 bytes
-// /
-// GRAYSCALE 320x1 lines
-// =
-// 319 GRAYSCALE 320x1 lines
-#define GS_LINE_BUFFER_SIZE (64) // double rgb565
-
-// Main Ram = 196,608 bytes
-// -
-// struct framebuffer = 20 bytes
-// FB_JPEG_OFFS_SIZE = 1,024 bytes
-// RGB565 320x240x2 image = 153,600 bytes
-// fb_alloc = 4 bytes
-// flash cache = 16,384 bytes
-// =
-// 25,576 bytes
-// /
-// RGB565 320x2 lines
-// =
-// 39 RGB565 320x2 lines
-#define RGB565_LINE_BUFFER_SIZE (32)
-
 void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op)
 {
     if (path) {
@@ -631,6 +601,102 @@ float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_ce
     return (imlib_orientation_radians(img, sum, x_center, y_center, r) * 180.0) / M_PI;
 }
 
+static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_d)
+{
+    int brows = ksize + 1;
+    uint8_t *buffer = fb_alloc(img->w * brows * img->bpp);
+    if (IM_IS_GS(img)) {
+        for (int y=0; y<img->h; y++) {
+            for (int x=0; x<img->w; x++) {
+                // We're writing into the buffer like if it were a window.
+                int buffer_idx = ((y%brows)*img->w)+x;
+                buffer[buffer_idx] = IM_GET_GS_PIXEL(img, x, y);
+                if ((!!buffer[buffer_idx]) == e_or_d) {
+                    continue; // short circuit (makes this very fast - usually)
+                }
+                int acc = 0;
+                for (int j=-ksize; j<=ksize; j++) {
+                    for (int k=-ksize; k<=ksize; k++) {
+                        if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
+                            acc += !!IM_GET_GS_PIXEL(img, x+k, y+j);
+                        } else { // outer pixels should not affect result.
+                            acc += e_or_d ? 0 : 1;
+                            // 1 for erode prevents acc from being lower.
+                            // 0 for dilate prevents acc from being higher.
+                        }
+                    }
+                }
+                buffer[buffer_idx] = (acc >= threshold) ? 0xFF : 0;
+            }
+            if (y>=ksize) {
+                memcpy(img->pixels+((y-ksize)*img->w),
+                       buffer+(((y-ksize)%brows)*img->w),
+                       img->w * sizeof(uint8_t));
+            }
+        }
+        for (int y=img->h-ksize; y<img->h; y++) {
+            memcpy(img->pixels+(y*img->w),
+                   buffer+((y%brows)*img->w),
+                   img->w * sizeof(uint8_t));
+        }
+    } else {
+        for (int y=0; y<img->h; y++) {
+            for (int x=0; x<img->w; x++) {
+                // We're writing into the buffer like if it were a window.
+                int buffer_idx = ((y%brows)*img->w)+x;
+                ((uint16_t *) buffer)[buffer_idx] = IM_GET_RGB565_PIXEL(img, x, y);
+                if ((!!((uint16_t *) buffer)[buffer_idx]) == e_or_d) {
+                    continue; // short circuit (makes this very fast - usually)
+                }
+                int acc = 0;
+                for (int j=-ksize; j<=ksize; j++) {
+                    for (int k=-ksize; k<=ksize; k++) {
+                        if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
+                            acc += !!IM_GET_RGB565_PIXEL(img, x+k, y+j);
+                        } else { // outer pixels should not affect result.
+                            acc += e_or_d ? 0 : 1;
+                            // 1 for erode prevents acc from being lower.
+                            // 0 for dilate prevents acc from being higher.
+                        }
+                    }
+                }
+                ((uint16_t *) buffer)[buffer_idx] = (acc >= threshold) ? 0xFFFF : 0;
+            }
+            if (y>=ksize) {
+                memcpy(((uint16_t *) img->pixels)+((y-ksize)*img->w),
+                       ((uint16_t *) buffer)+(((y-ksize)%brows)*img->w),
+                       img->w * sizeof(uint16_t));
+            }
+        }
+        for (int y=img->h-ksize; y<img->h; y++) {
+            memcpy(((uint16_t *) img->pixels)+(y*img->w),
+                   ((uint16_t *) buffer)+((y%brows)*img->w),
+                   img->w * sizeof(uint16_t));
+        }
+    }
+    fb_free();
+}
+
+void imlib_erode(image_t *img, int ksize, int threshold)
+{
+    // Threshold should be equal to ((ksize*2)+1)*((ksize*2)+1)
+    // for normal operation. E.g. for ksize==3 -> threshold==9
+    // Basically you're adjusting the number of pixels that
+    // must be set in the kernel for the output to be 1.
+    // Erode normally requires all pixels to be 1.
+    imlib_erode_dilate(img, ksize, threshold, 0);
+}
+
+void imlib_dilate(image_t *img, int ksize, int threshold)
+{
+    // Threshold should be equal to 1
+    // for normal operation. E.g. for ksize==3 -> threshold==1
+    // Basically you're adjusting the number of pixels that
+    // must be set in the kernel for the output to be 1.
+    // Dilate normally requires one pixel to be 1.
+    imlib_erode_dilate(img, ksize, threshold, 1);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 void imlib_negate(image_t *img)
@@ -780,70 +846,6 @@ void imlib_grayscale_to_rgb565(struct image *image)
         //uint16_t rgb = (r << 11) | (g << 5) | b;
     }
 #endif
-}
-
-void imlib_erode(image_t *src, int ksize)
-{
-    int c = ksize/2;// center pixel
-    int k_rows = (ksize+1)*2;
-    uint8_t *dst = fb_alloc0(src->w * k_rows);
-
-    for (int y=1; y<src->h-ksize; y++) {
-        for (int x=1; x<src->w-ksize; x++) {
-            int i = y*src->w+x;
-            int di = (y%k_rows)*src->w+x;
-            if ((dst[di] = src->pixels[i])==0) {
-                continue;
-            }
-
-            for (int j=-c; j<c; j++) {
-                for (int k=-c; k<c; k++) {
-                    if (src->pixels[(y+j)*src->w+x+k]==0) {
-                        dst[di]=0;
-                        goto done;
-                    }
-                }
-            }
-            done:;
-        }
-
-        if ((y+1)%k_rows==0) {
-            memcpy(src->pixels+((y/k_rows)*k_rows*src->w), dst, src->w*k_rows);
-        }
-    }
-    fb_free();
-}
-
-void imlib_dilate(image_t *src, int ksize)
-{
-    int c = ksize/2;// center pixel
-    int k_rows = (ksize+1)*2;
-    uint8_t *dst = fb_alloc0(src->w * k_rows);
-
-    for (int y=1; y<src->h-ksize; y++) {
-        for (int x=1; x<src->w-ksize; x++) {
-            int i = y*src->w+x;
-            int di = (y%k_rows)*src->w+x;
-            if ((dst[di] = src->pixels[i])) {
-                continue;
-            }
-
-            for (int j=-c; j<c; j++) {
-                for (int k=-c; k<c; k++) {
-                    if (src->pixels[(y+j)*src->w+x+k]) {
-                        dst[di]=src->pixels[(y+j)*src->w+x+k];
-                        goto done;
-                    }
-                }
-            }
-            done:;
-        }
-
-        if ((y+1)%k_rows==0) {
-            memcpy(src->pixels+((y/k_rows)*k_rows*src->w), dst, src->w*k_rows);
-        }
-    }
-    fb_free();
 }
 
 #ifdef OPENMV1

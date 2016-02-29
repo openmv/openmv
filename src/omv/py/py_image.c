@@ -575,6 +575,34 @@ static mp_obj_t py_image_orientation_degrees(uint n_args, const mp_obj_t *args, 
             {mp_obj_new_int(sum), mp_obj_new_int(x), mp_obj_new_int(y), mp_obj_new_float(o)});
 }
 
+static mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int ksize = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(ksize >= 0, "Kernel Size must be >= 0");
+    imlib_erode(arg_img, ksize,
+            py_helper_lookup_int(kw_args,
+            MP_OBJ_NEW_QSTR(MP_QSTR_threshold), ((ksize*2)+1)*((ksize*2)+1)));
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_dilate(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int ksize = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(ksize >= 0, "Kernel Size must be >= 0");
+    imlib_dilate(arg_img, ksize,
+            py_helper_lookup_int(kw_args,
+            MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 1));
+    return mp_const_none;
+}
+
 static mp_obj_t py_image_negate(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
@@ -845,32 +873,6 @@ static mp_obj_t py_image_compress(mp_obj_t image_obj, mp_obj_t quality)
     return py_image_from_struct(&cimage);
 }
 
-static mp_obj_t py_image_erode(mp_obj_t image_obj, mp_obj_t ksize_obj)
-{
-    image_t *image = NULL;
-    image = py_image_cobj(image_obj);
-
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    imlib_erode(image, mp_obj_get_int(ksize_obj));
-    return mp_const_none;
-}
-
-static mp_obj_t py_image_dilate(mp_obj_t image_obj, mp_obj_t ksize_obj)
-{
-    image_t *image = NULL;
-    image = py_image_cobj(image_obj);
-
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    imlib_dilate(image, mp_obj_get_int(ksize_obj));
-    return mp_const_none;
-}
-
 static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
 {
      // Get image pointer
@@ -1103,6 +1105,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_pixels_obj, 1, py_image_pixels);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_centroid_obj, 1, py_image_centroid);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_radians_obj, 1, py_image_orientation_radians);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_degrees_obj, 1, py_image_orientation_degrees);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_erode_obj, 2, py_image_erode);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_dilate_obj, 2, py_image_dilate);
 /* Background Subtraction (Frame Differencing) functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_difference_obj, py_image_difference);
@@ -1116,8 +1120,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 1, py_image_median);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj, py_image_threshold);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rainbow_obj, py_image_rainbow);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_erode_obj, py_image_erode);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_dilate_obj, py_image_dilate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_compress_obj, py_image_compress);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
@@ -1157,6 +1159,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_centroid),            (mp_obj_t)&py_image_centroid_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_orientation_radians), (mp_obj_t)&py_image_orientation_radians_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_orientation_degrees), (mp_obj_t)&py_image_orientation_degrees_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_erode),               (mp_obj_t)&py_image_erode_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_dilate),              (mp_obj_t)&py_image_dilate_obj},
     /* Background Subtraction (Frame Differencing) functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_negate),              (mp_obj_t)&py_image_negate_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_difference),          (mp_obj_t)&py_image_difference_obj},
@@ -1170,10 +1174,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_threshold),           (mp_obj_t)&py_image_threshold_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_rainbow),             (mp_obj_t)&py_image_rainbow_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_erode),               (mp_obj_t)&py_image_erode_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_dilate),              (mp_obj_t)&py_image_dilate_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
-
     /* objects/feature detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
