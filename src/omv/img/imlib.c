@@ -614,7 +614,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                 if ((!!buffer[buffer_idx]) == e_or_d) {
                     continue; // short circuit (makes this very fast - usually)
                 }
-                int acc = 0;
+                int acc = -1; // don't count center pixel...
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
                         if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
@@ -648,7 +648,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                 if ((!!((uint16_t *) buffer)[buffer_idx]) == e_or_d) {
                     continue; // short circuit (makes this very fast - usually)
                 }
-                int acc = 0;
+                int acc = -1; // don't count center pixel...
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
                         if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {

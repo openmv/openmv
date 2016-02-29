@@ -363,7 +363,6 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     } else {
         py_kp_obj_t *kpts_obj = ((py_kp_obj_t*)args[1]);
         PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
-
         for (int i=0; i<array_length(kpts_obj->kpts); i++) {
             kp_t *kp = array_at(kpts_obj->kpts, i);
             imlib_draw_circle(arg_img, kp->x, kp->y, (arg_s-2)/2, arg_c);
@@ -581,11 +580,11 @@ static mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    int ksize = mp_obj_get_int(args[1]);
-    PY_ASSERT_TRUE_MSG(ksize >= 0, "Kernel Size must be >= 0");
-    imlib_erode(arg_img, ksize,
+    int arg_ksize = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
+    imlib_erode(arg_img, arg_ksize,
             py_helper_lookup_int(kw_args,
-            MP_OBJ_NEW_QSTR(MP_QSTR_threshold), ((ksize*2)+1)*((ksize*2)+1)));
+            MP_OBJ_NEW_QSTR(MP_QSTR_threshold), ((arg_ksize*2)+1)*((arg_ksize*2)+1)-1));
     return mp_const_none;
 }
 
@@ -595,11 +594,11 @@ static mp_obj_t py_image_dilate(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    int ksize = mp_obj_get_int(args[1]);
-    PY_ASSERT_TRUE_MSG(ksize >= 0, "Kernel Size must be >= 0");
-    imlib_dilate(arg_img, ksize,
+    int arg_ksize = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
+    imlib_dilate(arg_img, arg_ksize,
             py_helper_lookup_int(kw_args,
-            MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 1));
+            MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0));
     return mp_const_none;
 }
 
@@ -625,6 +624,41 @@ static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_difference(arg_img, NULL, arg_other);
     }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int arg_ksize = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
+
+    int array_size = ((arg_ksize*2)+1)*((arg_ksize*2)+1);
+    mp_obj_t *krn;
+    mp_obj_get_array_fixed_n(args[2], array_size, &krn);
+
+    int8_t arg_krn[array_size];
+    int arg_m = 0;
+    for (int i = 0; i < array_size; i++) {
+        int value = mp_obj_get_int(krn[i]);
+        PY_ASSERT_FALSE_MSG((value < -128) || (127 < value),
+                "Kernel Values must be between [-128:127] inclusive");
+        arg_krn[i] = value;
+        arg_m += arg_krn[i];
+    }
+
+    if (arg_m == 0) {
+        arg_m = 1;
+    }
+
+    imlib_morph(arg_img, arg_ksize, arg_krn,
+            py_helper_lookup_float(kw_args,
+                    MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0 / ((float) arg_m)),
+            py_helper_lookup_int(kw_args,
+                    MP_OBJ_NEW_QSTR(MP_QSTR_add), 0));
     return mp_const_none;
 }
 
@@ -1110,6 +1144,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_dilate_obj, 2, py_image_dilate);
 /* Background Subtraction (Frame Differencing) functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_difference_obj, py_image_difference);
+/* Image Morphing */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scaled_obj, py_image_scaled);
@@ -1164,6 +1200,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* Background Subtraction (Frame Differencing) functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_negate),              (mp_obj_t)&py_image_negate_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_difference),          (mp_obj_t)&py_image_difference_obj},
+    /* Image Morphing */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
 
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),              (mp_obj_t)&py_image_scaled_obj},
