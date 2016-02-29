@@ -407,6 +407,9 @@ void imlib_dilate(image_t *img, int ksize, int threshold);
 void imlib_negate(image_t *img);
 void imlib_difference(image_t *img, const char *path, image_t *other);
 
+/* Image Morphing */
+void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
+
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
 
