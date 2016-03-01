@@ -62,8 +62,12 @@ _fb_base    = 0x20000000;
 _stack_size = 0xC00;        /* minimum amount of stack */
 _heap_size  = 0xCF00;       /* required amount of heap */
 _fs_cache   = 0x20030000-(16*1024);
-/* This needs to be max_line * 4 (VGA_line * 4)*/
+// This needs to be max frame line * 2BPP * 2 for double buffering.
 _line_buf   = _fs_cache - (640*4);
+
+// _line_buf is only used when reading frames and when reading
+// frames fb_alloc is not used so we can overwrite _line_buf.
+_fb_alloc   = _fs_cache;
 
 /* Define output sections */
 SECTIONS

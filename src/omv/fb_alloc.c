@@ -10,8 +10,8 @@
 #include "fb_alloc.h"
 #include "framebuffer.h"
 
-extern char _fs_cache;
-static char *pointer = &_fs_cache;
+extern char _fballoc;
+static char *pointer = &_fballoc;
 
 NORETURN static void fb_alloc_fail()
 {
@@ -20,7 +20,7 @@ NORETURN static void fb_alloc_fail()
 
 void fb_alloc_init0()
 {
-    pointer = &_fs_cache;
+    pointer = &_fballoc;
 }
 
 // returns null pointer without error if size==0
@@ -53,14 +53,14 @@ void *fb_alloc0(uint32_t size)
 
 void fb_free()
 {
-    if (pointer < &_fs_cache) {
+    if (pointer < &_fballoc) {
         pointer += *((uint32_t *) pointer); // Get size and pop.
     }
 }
 
 void fb_free_all()
 {
-    while (pointer < &_fs_cache) {
+    while (pointer < &_fballoc) {
         pointer += *((uint32_t *) pointer); // Get size and pop.
     }
 }
