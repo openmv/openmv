@@ -537,7 +537,7 @@ static mp_obj_t py_image_centroid(uint n_args, const mp_obj_t *args, mp_map_t *k
 
     rectangle_t arg_r;
     py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
-    int x, y;
+    int x = 0, y = 0;
     int sum = imlib_centroid(arg_img, &x, &y, &arg_r);
 
     return mp_obj_new_tuple(3, (mp_obj_t[3])
@@ -552,7 +552,7 @@ static mp_obj_t py_image_orientation_radians(uint n_args, const mp_obj_t *args, 
 
     rectangle_t arg_r;
     py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
-    int sum, x, y;
+    int sum = 0, x = 0, y = 0;
     float o = imlib_orientation_radians(arg_img, &sum, &x, &y, &arg_r);
 
     return mp_obj_new_tuple(4, (mp_obj_t[4])
@@ -567,7 +567,7 @@ static mp_obj_t py_image_orientation_degrees(uint n_args, const mp_obj_t *args, 
 
     rectangle_t arg_r;
     py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
-    int sum, x, y;
+    int sum = 0, x = 0, y = 0;
     float o = imlib_orientation_degrees(arg_img, &sum, &x, &y, &arg_r);
 
     return mp_obj_new_tuple(4, (mp_obj_t[4])
