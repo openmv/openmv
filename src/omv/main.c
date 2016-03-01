@@ -60,8 +60,9 @@
 #include "mlx90620.h"
 
 int errno;
-static FATFS fatfs;
+extern char _fatfs_buf;
 extern char _stack_size;
+static FATFS *fatfs = (FATFS*) &_fatfs_buf;
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
@@ -335,7 +336,7 @@ soft_reset:
         if (first_soft_reset) {
             sdcard_init();
         }
-        FRESULT res = f_mount(&fatfs, "1:", 1);
+        FRESULT res = f_mount(fatfs, "1:", 1);
         if (res != FR_OK) {
             __fatal_error("could not mount SD\n");
         }
@@ -347,7 +348,7 @@ soft_reset:
             storage_init();
         }
         // try to mount the flash
-        FRESULT res = f_mount(&fatfs, "0:", 1);
+        FRESULT res = f_mount(fatfs, "0:", 1);
         if (res == FR_NO_FILESYSTEM) {
             // create a fresh fs
             make_flash_fs();
