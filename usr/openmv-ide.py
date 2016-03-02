@@ -298,7 +298,7 @@ class OMVGtk:
             return
 
         # add terminal update callback
-        gobject.gobject.timeout_add(10, omvgtk.update_terminal)
+        gobject.gobject.timeout_add(30, omvgtk.update_terminal)
 
         # check firmware version
         self.fw_mismatch = False
