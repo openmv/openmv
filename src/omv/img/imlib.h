@@ -81,6 +81,21 @@ extern const uint8_t g826_table[256];
        __typeof__ (b) _b = (b); \
        ((_r)<<3)|((_g)>>3)|((_g)<<13)|((_b)<<8); })
 
+// RGB565 to LAB conversion
+extern const int8_t lab_table[196608];
+
+#define IM_RGB5652L(p) \
+    ({ __typeof__ (p) _p = (p); \
+       lab_table[_p * 3]; })
+
+#define IM_RGB5652A(p) \
+    ({ __typeof__ (p) _p = (p); \
+       lab_table[(_p * 3) + 1]; })
+
+#define IM_RGB5652B(p) \
+    ({ __typeof__ (p) _p = (p); \
+       lab_table[(_p * 3) + 2]; })
+
 // Grayscale maxes
 #define IM_MAX_GS (255)
 
@@ -88,6 +103,18 @@ extern const uint8_t g826_table[256];
 #define IM_MAX_R5 (31)
 #define IM_MAX_G6 (63)
 #define IM_MAX_B5 (31)
+
+// Grayscale histogram
+#define IM_G_HIST_SIZE (256)
+#define IM_G_HIST_OFFSET (0)
+
+// LAB histogram
+#define IM_L_HIST_SIZE (256)
+#define IM_L_HIST_OFFSET (0)
+#define IM_A_HIST_SIZE (256)
+#define IM_A_HIST_OFFSET (256)
+#define IM_B_HIST_SIZE (256)
+#define IM_B_HIST_OFFSET (512)
 
 #define IM_IS_NULL(img) \
     ({ __typeof__ (img) _img = (img); \
@@ -200,6 +227,17 @@ typedef struct simple_color {
     int8_t B;
 }
 simple_color_t;
+
+typedef struct statistics {
+    uint8_t g_mean, l_mean, a_mean, b_mean;
+    uint8_t g_median, l_median, a_median, b_median;
+    uint8_t g_mode, l_mode, a_mode, b_mode;
+    uint8_t g_st_dev, l_st_dev, a_st_dev, b_st_dev;
+    uint8_t g_min, l_min, a_min, b_min;
+    uint8_t g_max, l_max, a_max, b_max;
+    uint8_t g_lower_q, l_lower_q, a_lower_q, b_lower_q;
+    uint8_t g_upper_q, l_upper_q, a_upper_q, b_upper_q;
+} statistics_t;
 
 typedef struct blob {
     int x;
@@ -409,6 +447,10 @@ void imlib_difference(image_t *img, const char *path, image_t *other);
 
 /* Image Morphing */
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
+
+/* Image Statistics */
+uint32_t *imlib_histogram(image_t *img, rectangle_t *r);
+void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
