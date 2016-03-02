@@ -662,6 +662,40 @@ static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     return mp_const_none;
 }
 
+static mp_obj_t py_image_statistics(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    rectangle_t arg_r;
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
+    statistics_t out;
+    imlib_statistics(arg_img, &arg_r, &out);
+
+    if (IM_IS_GS(arg_img)) {
+        return mp_obj_new_tuple(8, (mp_obj_t[8])
+                {mp_obj_new_int(out.g_mean), mp_obj_new_int(out.g_median),
+                 mp_obj_new_int(out.g_mode), mp_obj_new_int(out.g_st_dev),
+                 mp_obj_new_int(out.g_min), mp_obj_new_int(out.g_max),
+                 mp_obj_new_int(out.g_lower_q), mp_obj_new_int(out.g_upper_q)});
+    } else {
+        return mp_obj_new_tuple(24, (mp_obj_t[24])
+                {mp_obj_new_int(out.l_mean), mp_obj_new_int(out.l_median),
+                 mp_obj_new_int(out.l_mode), mp_obj_new_int(out.l_st_dev),
+                 mp_obj_new_int(out.l_min), mp_obj_new_int(out.l_max),
+                 mp_obj_new_int(out.l_lower_q), mp_obj_new_int(out.l_upper_q),
+                 mp_obj_new_int(out.a_mean), mp_obj_new_int(out.a_median),
+                 mp_obj_new_int(out.a_mode), mp_obj_new_int(out.a_st_dev),
+                 mp_obj_new_int(out.a_min), mp_obj_new_int(out.a_max),
+                 mp_obj_new_int(out.a_lower_q), mp_obj_new_int(out.a_upper_q),
+                 mp_obj_new_int(out.b_mean), mp_obj_new_int(out.b_median),
+                 mp_obj_new_int(out.b_mode), mp_obj_new_int(out.b_st_dev),
+                 mp_obj_new_int(out.b_min), mp_obj_new_int(out.b_max),
+                 mp_obj_new_int(out.b_lower_q), mp_obj_new_int(out.b_upper_q)});
+    }
+}
+
 static mp_obj_t py_image_scale(mp_obj_t image_obj, mp_obj_t size_obj)
 {
     int w,h;
@@ -1146,6 +1180,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_difference_obj, py_image_difference);
 /* Image Morphing */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
+/* Image Statistics */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_statistics_obj, 1, py_image_statistics);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scaled_obj, py_image_scaled);
@@ -1202,6 +1238,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_difference),          (mp_obj_t)&py_image_difference_obj},
     /* Image Morphing */
     {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
+    /* Image Statistics */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_statistics),          (mp_obj_t)&py_image_statistics_obj},
 
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),              (mp_obj_t)&py_image_scaled_obj},

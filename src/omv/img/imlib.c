@@ -22,11 +22,8 @@
 /* XYZ lookup table */
 extern const float xyz_table[256];
 /* RGB565->LAB lookup */
-extern const int8_t lab_table[196608];
 /* Grayscale [0..255] to rainbox lookup */
 extern const uint16_t rainbow_table[256];
-
-////////////////////////////////////////////////////////////////////////////////
 
 static save_image_format_t imblib_parse_extension(image_t *img, const char *path)
 {
@@ -342,10 +339,10 @@ void imlib_binary(image_t *img, int num_thresholds, simple_color_t *l_thresholds
     } else {
         uint16_t *pixels = (uint16_t *) img->pixels;
         for (int i=0, j=img->w*img->h; i<j; i++) {
-            const int pixel = pixels[i] * 3;
-            const int lab_l = lab_table[pixel];
-            const int lab_a = lab_table[pixel + 1];
-            const int lab_b = lab_table[pixel + 2];
+            const int pixel = pixels[i];
+            const int lab_l = IM_RGB5652L(pixel);
+            const int lab_a = IM_RGB5652A(pixel);
+            const int lab_b = IM_RGB5652B(pixel);
             bool in = false;
             for (int k=0; k<num_thresholds; k++) {
                 in |= invert ^
@@ -679,20 +676,20 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
 
 void imlib_erode(image_t *img, int ksize, int threshold)
 {
-    // Threshold should be equal to ((ksize*2)+1)*((ksize*2)+1)
-    // for normal operation. E.g. for ksize==3 -> threshold==9
+    // Threshold should be equal to ((ksize*2)+1)*((ksize*2)+1)-1
+    // for normal operation. E.g. for ksize==3 -> threshold==8
     // Basically you're adjusting the number of pixels that
-    // must be set in the kernel for the output to be 1.
+    // must be set in the kernel (besides the center) for the output to be 1.
     // Erode normally requires all pixels to be 1.
     imlib_erode_dilate(img, ksize, threshold, 0);
 }
 
 void imlib_dilate(image_t *img, int ksize, int threshold)
 {
-    // Threshold should be equal to 1
-    // for normal operation. E.g. for ksize==3 -> threshold==1
+    // Threshold should be equal to 0
+    // for normal operation. E.g. for ksize==3 -> threshold==0
     // Basically you're adjusting the number of pixels that
-    // must be set in the kernel for the output to be 1.
+    // must be set in the kernel (besides the center) for the output to be 1.
     // Dilate normally requires one pixel to be 1.
     imlib_erode_dilate(img, ksize, threshold, 1);
 }
