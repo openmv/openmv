@@ -10,19 +10,19 @@
 #include "imlib.h"
 #include "fb_alloc.h"
 
-uint32_t *imlib_histogram(image_t *img, rectangle_t *r)
+int32_t *imlib_histogram(image_t *img, rectangle_t *r)
 {
     rectangle_t rect;
     if (!rectangle_subimg(img, r, &rect)) {
         return NULL;
     }
-    uint32_t *histogram;
+    int32_t *histogram;
     if (IM_IS_GS(img)) {
-        histogram = fb_alloc0(IM_G_HIST_SIZE * sizeof(uint32_t));
+        histogram = fb_alloc0(IM_G_HIST_SIZE * sizeof(int32_t));
     } else {
-        histogram = fb_alloc0((IM_L_HIST_SIZE * sizeof(uint32_t)) +
-                              (IM_A_HIST_SIZE * sizeof(uint32_t)) +
-                              (IM_B_HIST_SIZE * sizeof(uint32_t)));
+        histogram = fb_alloc0((IM_L_HIST_SIZE * sizeof(int32_t)) +
+                              (IM_A_HIST_SIZE * sizeof(int32_t)) +
+                              (IM_B_HIST_SIZE * sizeof(int32_t)));
     }
     if (IM_IS_GS(img)) {
         for (int i = 0; i < rect.h; i++) {
@@ -50,7 +50,7 @@ uint32_t *imlib_histogram(image_t *img, rectangle_t *r)
 void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out)
 {
     memset(out, 0, sizeof(statistics_t));
-    uint32_t *histogram = imlib_histogram(img, r);
+    int32_t *histogram = imlib_histogram(img, r);
     if (!histogram) {
         return;
     }
@@ -61,7 +61,7 @@ void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out)
         for (int i = IM_G_HIST_OFFSET; i < (IM_G_HIST_OFFSET + IM_G_HIST_SIZE); i++) {
             sum += histogram[i];
             avg += (i-IM_G_HIST_OFFSET) * histogram[i];
-            if (((int32_t) histogram[i]) > mode_count) {
+            if (histogram[i] > mode_count) {
                 mode_count = histogram[i];
                 out->g_mode = (i-IM_G_HIST_OFFSET);
             }
@@ -101,7 +101,7 @@ void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out)
             for (int i = IM_L_HIST_OFFSET; i < (IM_L_HIST_OFFSET + IM_L_HIST_SIZE); i++) {
                 sum += histogram[i];
                 avg += (i-IM_L_HIST_OFFSET-128) * histogram[i];
-                if (((int32_t) histogram[i]) > mode_count) {
+                if (histogram[i] > mode_count) {
                     mode_count = histogram[i];
                     out->l_mode = (i-IM_L_HIST_OFFSET-128);
                 }
@@ -142,7 +142,7 @@ void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out)
             for (int i = IM_A_HIST_OFFSET; i < (IM_A_HIST_OFFSET + IM_A_HIST_SIZE); i++) {
                 sum += histogram[i];
                 avg += (i-IM_A_HIST_OFFSET-128) * histogram[i];
-                if (((int32_t) histogram[i]) > mode_count) {
+                if (histogram[i] > mode_count) {
                     mode_count = histogram[i];
                     out->a_mode = (i-IM_A_HIST_OFFSET-128);
                 }
@@ -183,7 +183,7 @@ void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out)
             for (int i = IM_B_HIST_OFFSET; i < (IM_B_HIST_OFFSET + IM_B_HIST_SIZE); i++) {
                 sum += histogram[i];
                 avg += (i-IM_B_HIST_OFFSET-128) * histogram[i];
-                if (((int32_t) histogram[i]) > mode_count) {
+                if (histogram[i] > mode_count) {
                     mode_count = histogram[i];
                     out->b_mode = (i-IM_B_HIST_OFFSET-128);
                 }

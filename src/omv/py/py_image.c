@@ -1316,6 +1316,65 @@ int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *
     return 0;
 }
 
+mp_obj_t py_image_rgb_to_lab(mp_obj_t tuple)
+{
+    mp_obj_t *rgb;
+    mp_obj_get_array_fixed_n(tuple, 3, &rgb);
+
+    simple_color_t rgb_color, lab_color;
+    rgb_color.red = mp_obj_get_int(rgb[0]);
+    rgb_color.green = mp_obj_get_int(rgb[1]);
+    rgb_color.blue = mp_obj_get_int(rgb[2]);
+    imlib_rgb_to_lab(&rgb_color, &lab_color);
+
+    return mp_obj_new_tuple(3, (mp_obj_t[3])
+            {mp_obj_new_int(lab_color.L),
+             mp_obj_new_int(lab_color.A),
+             mp_obj_new_int(lab_color.B)});
+}
+
+mp_obj_t py_image_lab_to_rgb(mp_obj_t tuple)
+{
+    mp_obj_t *lab;
+    mp_obj_get_array_fixed_n(tuple, 3, &lab);
+
+    simple_color_t lab_color, rgb_color;
+    lab_color.L = mp_obj_get_int(lab[0]);
+    lab_color.A = mp_obj_get_int(lab[1]);
+    lab_color.B = mp_obj_get_int(lab[2]);
+    imlib_lab_to_rgb(&lab_color, &rgb_color);
+
+    return mp_obj_new_tuple(3, (mp_obj_t[3])
+            {mp_obj_new_int(rgb_color.red),
+             mp_obj_new_int(rgb_color.green),
+             mp_obj_new_int(rgb_color.blue)});
+}
+
+mp_obj_t py_image_rgb_to_grayscale(mp_obj_t tuple)
+{
+    mp_obj_t *rgb;
+    mp_obj_get_array_fixed_n(tuple, 3, &rgb);
+
+    simple_color_t rgb_color, grayscale_color;
+    rgb_color.red = mp_obj_get_int(rgb[0]);
+    rgb_color.green = mp_obj_get_int(rgb[1]);
+    rgb_color.blue = mp_obj_get_int(rgb[2]);
+    imlib_rgb_to_grayscale(&rgb_color, &grayscale_color);
+
+    return mp_obj_new_int(grayscale_color.G);
+}
+
+mp_obj_t py_image_grayscale_to_rgb(mp_obj_t not_tuple)
+{
+    simple_color_t grayscale_color, rgb_color;
+    grayscale_color.G = mp_obj_get_int(not_tuple);
+    imlib_grayscale_to_rgb(&grayscale_color, &rgb_color);
+
+    return mp_obj_new_tuple(3, (mp_obj_t[3])
+            {mp_obj_new_int(rgb_color.red),
+             mp_obj_new_int(rgb_color.green),
+             mp_obj_new_int(rgb_color.blue)});
+}
 
 // The image module (it's different from the Image class!)
 mp_obj_t py_image_load_image(mp_obj_t path_obj)
@@ -1502,6 +1561,11 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
     return match_obj;
 }
 
+/* Color space functions */
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rgb_to_lab_obj, py_image_rgb_to_lab);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_lab_to_rgb_obj, py_image_lab_to_rgb);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rgb_to_grayscale_obj, py_image_rgb_to_grayscale);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_grayscale_to_rgb_obj, py_image_grayscale_to_rgb);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
@@ -1510,18 +1574,26 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 3, py_image_save
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 3, py_image_match_descriptor);
 
 static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image) },
-    // Descriptor types
-    { MP_OBJ_NEW_QSTR(MP_QSTR_LBP),                 MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),               MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
+    /* Descriptor types */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_LBP),                 MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),               MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
+    /* Color space functions */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_rgb_to_lab),          (mp_obj_t)&py_image_rgb_to_lab_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_lab_to_rgb),          (mp_obj_t)&py_image_lab_to_rgb_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_rgb_to_grayscale),    (mp_obj_t)&py_image_rgb_to_grayscale_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_grayscale_to_rgb),    (mp_obj_t)&py_image_grayscale_to_rgb_obj},
 
     // Image module functions
-    { MP_OBJ_NEW_QSTR(MP_QSTR_Image),               (mp_obj_t)&py_image_load_image_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_HaarCascade),         (mp_obj_t)&py_image_load_cascade_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_load_descriptor),     (mp_obj_t)&py_image_load_descriptor_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_save_descriptor),     (mp_obj_t)&py_image_save_descriptor_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_match_descriptor),    (mp_obj_t)&py_image_match_descriptor_obj },
+    {MP_OBJ_NEW_QSTR(MP_QSTR_Image),               (mp_obj_t)&py_image_load_image_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_HaarCascade),         (mp_obj_t)&py_image_load_cascade_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_load_descriptor),     (mp_obj_t)&py_image_load_descriptor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_save_descriptor),     (mp_obj_t)&py_image_save_descriptor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_match_descriptor),    (mp_obj_t)&py_image_match_descriptor_obj},
+
+    { NULL, NULL }
 };
+
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t image_module = {

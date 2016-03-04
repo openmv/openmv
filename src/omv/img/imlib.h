@@ -222,21 +222,41 @@ typedef struct rectangle {
 
 typedef struct simple_color {
     uint8_t G;
-    int8_t L;
-    int8_t A;
-    int8_t B;
+    union
+    {
+        int8_t L;
+        uint8_t red; // RGB888 not RGB565
+    };
+    union
+    {
+        int8_t A;
+        uint8_t green; // RGB888 not RGB565
+    };
+    union
+    {
+        int8_t B;
+        uint8_t blue; // RGB888 not RGB565
+    };
 }
 simple_color_t;
 
 typedef struct statistics {
-    uint8_t g_mean, l_mean, a_mean, b_mean;
-    uint8_t g_median, l_median, a_median, b_median;
-    uint8_t g_mode, l_mode, a_mode, b_mode;
-    uint8_t g_st_dev, l_st_dev, a_st_dev, b_st_dev;
-    uint8_t g_min, l_min, a_min, b_min;
-    uint8_t g_max, l_max, a_max, b_max;
-    uint8_t g_lower_q, l_lower_q, a_lower_q, b_lower_q;
-    uint8_t g_upper_q, l_upper_q, a_upper_q, b_upper_q;
+    uint8_t g_mean;
+    int8_t l_mean, a_mean, b_mean;
+    uint8_t g_median;
+    int8_t l_median, a_median, b_median;
+    uint8_t g_mode;
+    int8_t l_mode, a_mode, b_mode;
+    uint8_t g_st_dev;
+    int8_t l_st_dev, a_st_dev, b_st_dev;
+    uint8_t g_min;
+    int8_t l_min, a_min, b_min;
+    uint8_t g_max;
+    int8_t l_max, a_max, b_max;
+    uint8_t g_lower_q;
+    int8_t l_lower_q, a_lower_q, b_lower_q;
+    uint8_t g_upper_q;
+    int8_t l_upper_q, a_upper_q, b_upper_q;
 } statistics_t;
 
 typedef struct blob {
@@ -386,6 +406,12 @@ typedef enum descriptor_type {
     DESC_FREAK,
 } descriptor_t;
 
+/* Color space functions */
+void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
+void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
+void imlib_rgb_to_grayscale(simple_color_t *rgb, simple_color_t *grayscale);
+void imlib_grayscale_to_rgb(simple_color_t *grayscale, simple_color_t *rgb);
+
 /* Image file functions */
 void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);
 void ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, ppm_read_settings_t *rs);
@@ -449,20 +475,11 @@ void imlib_difference(image_t *img, const char *path, image_t *other);
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
 
 /* Image Statistics */
-uint32_t *imlib_histogram(image_t *img, rectangle_t *r);
+int32_t *imlib_histogram(image_t *img, rectangle_t *r);
 void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
-
-/* Dela E on RGB/HSV/LAB */
-uint32_t imlib_lab_distance(struct color *c0, struct color *c1);
-uint32_t imlib_rgb_distance(struct color *c0, struct color *c1);
-uint32_t imlib_rgb_distance(struct color *c0, struct color *c1);
-
-/* Color space conversion */
-void imlib_rgb_to_lab(struct color *rgb, struct color *lab);
-void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv);
 
 /* Image filtering functions */
 int  imlib_image_mean(struct image *src);
