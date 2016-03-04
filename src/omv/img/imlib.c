@@ -19,11 +19,80 @@
 #include "font.h"
 #include "fb_alloc.h"
 
-/* XYZ lookup table */
+// Gamma uncompress
 extern const float xyz_table[256];
-/* RGB565->LAB lookup */
-/* Grayscale [0..255] to rainbox lookup */
+
+// Grayscale to RGB565 conversion
 extern const uint16_t rainbow_table[256];
+
+// USE THE LUT FOR RGB->LAB CONVERSION - NOT THIS FUNCTION!
+void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab)
+{
+    // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
+    // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
+
+    float r_lin = xyz_table[rgb->red];
+    float g_lin = xyz_table[rgb->green];
+    float b_lin = xyz_table[rgb->blue];
+
+    float x = ((r_lin * 0.4124f) + (g_lin * 0.3576f) + (b_lin * 0.1805f)) / 095.047f;
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) / 100.000f;
+    float z = ((r_lin * 0.0193f) + (g_lin * 0.1192f) + (b_lin * 0.9505f)) / 108.883f;
+
+    x = (x>0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f);
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
+    z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f);
+
+    lab->L = ((int8_t) fast_roundf(116 * y)) - 16;
+    lab->A = ((int8_t) fast_roundf(500 * (x-y)));
+    lab->B = ((int8_t) fast_roundf(200 * (y-z)));
+}
+
+void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb)
+{
+    // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
+    // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
+
+    float x = ((lab->L + 16) * 0.008621f) + (lab->A * 0.002f);
+    float y = ((lab->L + 16) * 0.008621f);
+    float z = ((lab->L + 16) * 0.008621f) - (lab->B * 0.005f);
+
+    x = ((x>0.206897f) ? (x*x*x) : ((0.128419f * x) - 0.017713f)) * 095.047f;
+    y = ((y>0.206897f) ? (y*y*y) : ((0.128419f * y) - 0.017713f)) * 100.000f;
+    z = ((z>0.206897f) ? (z*z*z) : ((0.128419f * z) - 0.017713f)) * 108.883f;
+
+    float r_lin = ((x * +3.2406f) + (y * -1.5372f) + (z * -0.4986f)) / 100.0f;
+    float g_lin = ((x * -0.9689f) + (y * +1.8758f) + (z * +0.0415f)) / 100.0f;
+    float b_lin = ((x * +0.0557f) + (y * -0.2040f) + (z * +1.0570f)) / 100.0f;
+
+    r_lin = (r_lin>0.0031308f) ? ((1.055f*powf(r_lin, 0.416666f))-0.055f) : (r_lin*12.92f);
+    g_lin = (g_lin>0.0031308f) ? ((1.055f*powf(g_lin, 0.416666f))-0.055f) : (g_lin*12.92f);
+    b_lin = (b_lin>0.0031308f) ? ((1.055f*powf(b_lin, 0.416666f))-0.055f) : (b_lin*12.92f);
+
+    rgb->red   = IM_MAX(IM_MIN(fast_roundf(r_lin * 255), 255), 0);
+    rgb->green = IM_MAX(IM_MIN(fast_roundf(g_lin * 255), 255), 0);
+    rgb->blue  = IM_MAX(IM_MIN(fast_roundf(b_lin * 255), 255), 0);
+}
+
+void imlib_rgb_to_grayscale(simple_color_t *rgb, simple_color_t *grayscale)
+{
+    float r_lin = xyz_table[rgb->red];
+    float g_lin = xyz_table[rgb->green];
+    float b_lin = xyz_table[rgb->blue];
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) / 100.0f;
+    y = (y>0.0031308f) ? ((1.055f*powf(y, 0.416666f))-0.055f) : (y*12.92f);
+    grayscale->G = IM_MAX(IM_MIN(fast_roundf(y * 255), 255), 0);
+}
+
+// Just copy settings back.
+void imlib_grayscale_to_rgb(simple_color_t *grayscale, simple_color_t *rgb)
+{
+    rgb->red   = grayscale->G;
+    rgb->green = grayscale->G;
+    rgb->blue  = grayscale->G;
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 static save_image_format_t imblib_parse_extension(image_t *img, const char *path)
 {
@@ -623,7 +692,8 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                         }
                     }
                 }
-                buffer[buffer_idx] = (acc >= threshold) ? 0xFF : 0;
+                // Preserve original pixel value...
+                if (acc < threshold) buffer[buffer_idx] = 0;
             }
             if (y>=ksize) {
                 memcpy(img->pixels+((y-ksize)*img->w),
@@ -657,7 +727,8 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                         }
                     }
                 }
-                ((uint16_t *) buffer)[buffer_idx] = (acc >= threshold) ? 0xFFFF : 0;
+                // Preserve original pixel value...
+                if (acc < threshold) ((uint16_t *) buffer)[buffer_idx] = 0;
             }
             if (y>=ksize) {
                 memcpy(((uint16_t *) img->pixels)+((y-ksize)*img->w),
@@ -740,110 +811,6 @@ void imlib_difference(image_t *img, const char *path, image_t *other)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-uint32_t imlib_lab_distance(struct color *c0, struct color *c1)
-{
-    uint32_t sum=0;
-    sum += (c0->L - c1->L) * (c0->L - c1->L);
-    sum += (c0->A - c1->A) * (c0->A - c1->A);
-    sum += (c0->B - c1->B) * (c0->B - c1->B);
-    return fast_sqrtf(sum);
-}
-
-uint32_t imlib_rgb_distance(struct color *c0, struct color *c1)
-{
-    uint32_t sum=0;
-    sum += (c0->r - c1->r) * (c0->r - c1->r);
-    sum += (c0->g - c1->g) * (c0->g - c1->g);
-    sum += (c0->b - c1->b) * (c0->b - c1->b);
-    return fast_sqrtf(sum);
-}
-
-uint32_t imlib_hsv_distance(struct color *c0, struct color *c1)
-{
-    uint32_t sum=0;
-    sum += (c0->h - c1->h) * (c0->h - c1->h);
-    sum += (c0->s - c1->s) * (c0->s - c1->s);
-    sum += (c0->v - c1->v) * (c0->v - c1->v);
-    return fast_sqrtf(sum);
-}
-
-void imlib_rgb_to_lab(struct color *rgb, struct color *lab)
-{
-    float v[3];
-    float x,y,z;
-    const float c = 16.0f/ 116.0f;
-
-    v[0] = xyz_table[rgb->vec[0]];
-    v[1] = xyz_table[rgb->vec[1]];
-    v[2] = xyz_table[rgb->vec[2]];
-
-    x = (v[0] * 0.4124f + v[1] * 0.3576f + v[2] * 0.1805f) / 95.047f  ;
-    y = (v[0] * 0.2126f + v[1] * 0.7152f + v[2] * 0.0722f) / 100.0f   ;
-    z = (v[0] * 0.0193f + v[1] * 0.1192f + v[2] * 0.9505f) / 108.883f ;
-
-    x = (x>0.008856f)? fast_cbrtf(x) : (x * 7.787f) + c;
-    y = (y>0.008856f)? fast_cbrtf(y) : (y * 7.787f) + c;
-    z = (z>0.008856f)? fast_cbrtf(z) : (z * 7.787f) + c;
-
-    lab->L = (int8_t) (116.0f * y-16.0f);
-    lab->A = (int8_t) (500.0f * (x-y));
-    lab->B = (int8_t) (200.0f * (y-z));
-}
-
-void imlib_rgb_to_hsv(struct color *rgb, struct color *hsv)
-{
-    int min;
-    int max;
-    int r,g,b;
-    int delta;
-
-    /* 0..100 */
-    r = rgb->r*100/255;
-    g = rgb->g*100/255;
-    b = rgb->b*100/255;
-
-    min = IM_MIN(r, IM_MIN(g, b));
-    max = IM_MAX(r, IM_MAX(g, b));
-
-    if (min == max) {
-        /* Black/gray/white */
-        hsv->h = 0;
-        hsv->s = 0;
-        hsv->v = min;
-    } else {
-        delta = max-min;
-        //scaled to avoid floats
-        if (r==max) {
-            hsv->h = (g-b)*100/delta;
-        } else if (g==max) {
-            hsv->h = 200 + (b-r)*100/delta;
-        } else {
-            hsv->h = 400 + (r-g)*100/delta;
-        }
-        hsv->h = hsv->h*60/100;
-        if (hsv->h<0) {
-            hsv->h+=360;
-        }
-        hsv->s = delta*100/max;
-        hsv->v = max;
-    }
-}
-
-/* converts a grayscale buffer to RGB565 to display on LCDs */
-void imlib_grayscale_to_rgb565(struct image *image)
-{
-#if 0
-    int i;
-    for (i=0; i<(image->w * image->h * image->bpp); i++) {
-        uint8_t y = image->pixels[i];
-        uint8_t r = y*31/255;
-        uint8_t g = y*63/255;
-        uint8_t b = y*31/255;
-        //uint16_t rgb = (r << 11) | (g << 5) | b;
-    }
-#endif
-}
 
 #ifdef OPENMV1
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold)
