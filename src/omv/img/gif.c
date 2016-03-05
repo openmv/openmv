@@ -9,8 +9,10 @@
 #include "ff_wrapper.h"
 #include "imlib.h"
 #include "fb_alloc.h"
+
 #define BLOCK_SIZE  (126) // (2^(7)) - 2
-#define BUFF_SIZE   ((BLOCK_SIZE+2)*128) // 128 blocks at once (don't increase)
+// TODO fix this, use all available FB memory
+#define BUFF_SIZE   (16*1024) // Multiple of (block size + 2)
 
 void gif_open(FIL *fp, int width, int height, bool color, bool loop)
 {
@@ -55,31 +57,34 @@ void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
     write_data(fp, (uint8_t []) {0x00, 0x07}, 2); // 7-bits
 
     int buf_ofs = 0;
-    uint8_t *buf = fb_alloc(BUFF_SIZE);
     int bytes  = img->h * img->w;
-    int blocks = (bytes + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    for (int y=0; y<blocks; y++) {
-        int block_size = IM_MIN(BLOCK_SIZE, bytes - (y * BLOCK_SIZE));
-        buf[buf_ofs++] = 1 + block_size;
-        buf[buf_ofs++] = 0x80; // clear code
+    // FatFS writes partial sectors (512-(fptr%512)) before writing the maximum contiguous sectors,
+    // increamenting the buffer during the process. This results in an unaligned buffer sent DMA.
+    // We intentionally misalign the buffer here so FatFS re-aligns it when writing the remainder.
+    int ff_ofs = f_tell(fp) % 4;
+    uint8_t *buf = fb_alloc((BUFF_SIZE+ff_ofs) * sizeof(*buf));
+    buf += ff_ofs;
 
-        if (IM_IS_GS(img)) {
-            for (int x=0; x<block_size; x++) {
-                buf[buf_ofs++] = img->pixels[(y*BLOCK_SIZE)+x] >> 1;
-            }
-        } else {
-            for (int x=0; x<block_size; x++) {
-                int pixel = ((uint16_t *) img->pixels)[(y*BLOCK_SIZE)+x];
-                int red = IM_R565(pixel) >> 3;
-                int green = IM_G565(pixel) >> 3;
-                int blue = IM_B565(pixel) >> 3;
-                buf[buf_ofs++] = (red << 5) | (green << 2) | blue;
-            }
+    for (int x=0; x<bytes; x++) {
+        if (x%BLOCK_SIZE==0) {
+            int block_size = IM_MIN(BLOCK_SIZE, bytes - x);
+            buf[buf_ofs++] = 1 + block_size;
+            buf[buf_ofs++] = 0x80; // clear code
         }
 
-        if (buf_ofs>=BUFF_SIZE) { // flush data
-            buf_ofs-=BUFF_SIZE;
+        if (IM_IS_GS(img)) {
+            buf[buf_ofs++] = img->pixels[x]>>1;
+        } else {
+            int pixel = ((uint16_t *) img->pixels)[x];
+            int red = IM_R565(pixel) >> 3;
+            int green = IM_G565(pixel) >> 3;
+            int blue = IM_B565(pixel) >> 3;
+            buf[buf_ofs++] = (red << 5) | (green << 2) | blue;
+        }
+
+        if (buf_ofs==BUFF_SIZE) { // flush data
+            buf_ofs = 0;
             write_data(fp, buf, BUFF_SIZE);
         }
     }
