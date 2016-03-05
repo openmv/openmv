@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stm32f4xx_hal.h>
 
+#include "irqs.h"
 #include "sccb.h"
 #include "ov9650.h"
 #include "ov2640.h"
@@ -104,7 +105,7 @@ static int dcmi_config(uint32_t jpeg_mode)
     __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
 
     /* Configure and enable DCMI IRQ Channel */
-    HAL_NVIC_SetPriority(DCMI_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(DCMI_IRQn, IRQ_DCMI_PRE_PRI, IRQ_DCMI_SUB_PRI);
     HAL_NVIC_EnableIRQ(DCMI_IRQn);
 
     /* Init DCMI */
@@ -138,7 +139,7 @@ static int dma_config()
     DMAHandle.Init.PeriphBurst      = DMA_PBURST_SINGLE;        /* Peripheral burst                 */
 
     /* Configure and enable DMA IRQ Channel */
-    HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_DMA21_PRE_PRI, IRQ_DMA21_SUB_PRI);
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
 
     /* Initialize the DMA stream */
