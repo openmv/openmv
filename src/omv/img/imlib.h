@@ -429,6 +429,11 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, line_
 void imlib_load_image(image_t *img, const char *path);
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi);
 
+/* GIF functions */
+void gif_open(FIL *fp, int width, int height, bool color, bool loop);
+void gif_add_frame(FIL *fp, image_t *img, uint16_t delay);
+void gif_close(FIL *fp);
+
 /* Basic image functions */
 int imlib_get_pixel(image_t *img, int x, int y);
 void imlib_set_pixel(image_t *img, int x, int y, int p);
@@ -544,9 +549,4 @@ void jpeg_compress(image_t *src, image_t *dst, int quality);
 void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 
-
-// GIF functions
-void gif_open(FIL *fp, int width, int height, bool loop);
-void gif_add_frame(FIL *fp, image_t *img, uint16_t delay);
-void gif_close(FIL *fp);
 #endif //__IMLIB_H__

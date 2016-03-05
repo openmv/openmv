@@ -12,19 +12,19 @@ sensor.set_framesize(sensor.QQVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 for i in range(30):
-  	img = sensor.snapshot()
+    img = sensor.snapshot()
 
 # FPS clock
 clock = time.clock()
-gif = gif.Gif(img.width(), img.height(), "/test.gif", loop=True)
+gif = gif.Gif("/test.gif", loop=True)
 
 for i in range(30):
-	clock.tick()
-  	img = sensor.snapshot()
-  	gif.add_frame(img, delay=10)
+    clock.tick()
+    img = sensor.snapshot()
+    gif.add_frame(img, delay=10)
     # Print FPS.
     # Note: Actual FPS is higher, the IDE slows down streaming.
-  	print(clock.fps())  	
+    print(clock.fps())
 
 gif.close()
 print("done")
