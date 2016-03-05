@@ -29,6 +29,7 @@ void *fb_alloc(uint32_t size)
     if (!size) {
         return NULL;
     }
+
     size=((size+sizeof(uint32_t)-1)/sizeof(uint32_t))*sizeof(uint32_t);// Round Up
     char *result = pointer - size;
     char *new_pointer = result - sizeof(uint32_t);
@@ -43,11 +44,37 @@ void *fb_alloc(uint32_t size)
     return result;
 }
 
-// returns null pointer without error if size==0
+// returns null pointer without error if passed size==0
 void *fb_alloc0(uint32_t size)
 {
     void *mem = fb_alloc(size);
-    memset(mem, 0, size);
+    memset(mem, 0, size); // does nothing if size is zero.
+    return mem;
+}
+
+void *fb_alloc_all(uint32_t *size)
+{
+    int temp = pointer - ((char *) FB_PIXELS()) - sizeof(uint32_t);
+
+    if (temp < sizeof(uint32_t)) {
+        *size = 0;
+        return NULL;
+    }
+
+    *size = (temp / sizeof(uint32_t)) * sizeof(uint32_t); // Round Down
+    char *result = pointer - *size;
+    char *new_pointer = result - sizeof(uint32_t);
+
+    *((uint32_t *) new_pointer) = *size + sizeof(uint32_t); // Save size.
+    pointer = new_pointer;
+    return result;
+}
+
+// returns null pointer without error if returned size==0
+void *fb_alloc0_all(uint32_t *size)
+{
+    void *mem = fb_alloc_all(size);
+    memset(mem, 0, *size); // does nothing if size is zero.
     return mem;
 }
 
