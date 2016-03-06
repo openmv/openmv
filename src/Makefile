@@ -140,10 +140,11 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	rgb2rgb_tab.o                           \
 	median.o                                \
 	point.o                                 \
+	rectangle.o                             \
 	bmp.o                                   \
 	ppm.o                                   \
 	gif.o                                   \
-	rectangle.o                             \
+	mjpeg.o                                 \
 	fast.o                                  \
 	freak.o                                 \
 	template.o                              \
@@ -161,6 +162,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_time.o                               \
 	mlx90620.o                              \
 	py_gif.o                                \
+	py_mjpeg.o                              \
 	)
 
 ifeq ($(TARGET), OPENMV1)
