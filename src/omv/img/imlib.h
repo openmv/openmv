@@ -173,6 +173,8 @@ extern const int8_t lab_table[196608];
        __typeof__ (img1) _img1 = (img1); \
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
+#define IM_JPEG_QUALITY (50)
+
 // Main Ram = 196,608 bytes
 // -
 // struct framebuffer = 20 bytes
@@ -433,6 +435,11 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi);
 void gif_open(FIL *fp, int width, int height, bool color, bool loop);
 void gif_add_frame(FIL *fp, image_t *img, uint16_t delay);
 void gif_close(FIL *fp);
+
+/* MJPEG functions */
+void mjpeg_open(FIL *fp, int width, int height);
+void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img);
+void mjpeg_close(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps);
 
 /* Basic image functions */
 int imlib_get_pixel(image_t *img, int x, int y);

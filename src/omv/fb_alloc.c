@@ -54,7 +54,7 @@ void *fb_alloc0(uint32_t size)
 
 void *fb_alloc_all(uint32_t *size)
 {
-    int temp = pointer - ((char *) FB_PIXELS()) - sizeof(uint32_t);
+    int32_t temp = pointer - ((char *) FB_PIXELS()) - sizeof(uint32_t);
 
     if (temp < sizeof(uint32_t)) {
         *size = 0;
