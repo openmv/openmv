@@ -183,7 +183,7 @@ void flash_error(int n) {
     led_state(LED_RED, 0);
 }
 
-void __fatal_error(const char *msg) {
+void NORETURN __fatal_error(const char *msg) {
     FIL fp;
     if (f_open(&fp, "ERROR.LOG",
                FA_WRITE|FA_CREATE_ALWAYS) == FR_OK) {
