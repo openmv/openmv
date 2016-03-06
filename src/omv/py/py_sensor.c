@@ -20,13 +20,6 @@ extern sensor_t sensor;
 
 static mp_obj_t py_sensor_reset() {
     sensor_reset();
-    sensor_set_pixformat(PIXFORMAT_RGB565);
-    sensor_set_framesize(FRAMESIZE_QQVGA);
-    sensor_set_framerate(FRAMERATE_30FPS);
-    sensor_set_gainceiling(GAINCEILING_8X);
-    sensor_set_contrast(0);
-    sensor_set_brightness(0);
-    sensor_set_saturation(0);
     return mp_const_none;
 }
 
