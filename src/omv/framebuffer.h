@@ -3,7 +3,7 @@
  * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Global framebuffer pointer.
+ * Framebuffer pointer.
  *
  */
 #ifndef __FRAMEBUFFER_H__
