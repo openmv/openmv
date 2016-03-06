@@ -314,10 +314,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
 {
     uint32_t jpeg_mode = DCMI_JPEG_DISABLE;
 
-    // Set BPP to zero to skip the first frame.
-    fb->bpp = 0;
-
-    if (sensor.pixformat == pixformat) {
+   if (sensor.pixformat == pixformat) {
         // No change
         return 0;
     }
@@ -336,34 +333,35 @@ int sensor_set_pixformat(pixformat_t pixformat)
         jpeg_mode = DCMI_JPEG_ENABLE;
     }
 
+    // Skip the first frame.
+    fb->bpp = 0;
+
     return dcmi_config(jpeg_mode);
 }
 
 int sensor_set_framesize(framesize_t framesize)
 {
     if (sensor.framesize == framesize) {
-       /* no change */
+        // No change
         return 0;
     }
 
-    /* call the sensor specific function */
+    // Call the sensor specific function
     if (sensor.set_framesize == NULL
         || sensor.set_framesize(&sensor, framesize) != 0) {
-        /* operation not supported */
+        // Operation not supported
         return -1;
     }
 
-    /* set framebuffer size */
+    // Set framebuffer size
     sensor.framesize = framesize;
 
-    /* set framebuffer dimensions */
-    if (framesize < FRAMESIZE_QQCIF
-            || framesize > FRAMESIZE_UXGA) {
-        return -1;
-    } else {
-        fb->w = resolution[framesize][0];
-        fb->h = resolution[framesize][1];
-    }
+    // Skip the first frame.
+    fb->bpp = 0;
+
+    // Set framebuffer dimensions
+    fb->w = resolution[framesize][0];
+    fb->h = resolution[framesize][1];
 
     return 0;
 }
@@ -542,9 +540,9 @@ int sensor_snapshot(image_t *image)
         fb->bpp = dst.bpp;
     }
 
-    // Note: fb->bpp is set to zero for the first frame.
-    // If BPP is not zero, then we have a valid frame (compressed or raw).
-    fb->ready = (fb->bpp>0);
+    // fb->bpp is set to zero for the first frame after changing the resolution/format.
+    // Note: If fb->bpp is not zero, then we have a valid frame (compressed or raw).
+    fb->ready = (fb->bpp > 0);
 
     // Wait for the IDE to read the framebuffer before it gets overwritten with a new frame, and
     // after all the image processing code has run (which possibily draws over the framebuffer).
