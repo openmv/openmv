@@ -314,36 +314,24 @@ int sensor_set_pixformat(pixformat_t pixformat)
 {
     uint32_t jpeg_mode = DCMI_JPEG_DISABLE;
 
+    // Set BPP to zero to skip the first frame.
+    fb->bpp = 0;
+
     if (sensor.pixformat == pixformat) {
-        /* no change */
+        // No change
         return 0;
     }
 
     if (sensor.set_pixformat == NULL
         || sensor.set_pixformat(&sensor, pixformat) != 0) {
-        /* operation not supported */
+        // Operation not supported
         return -1;
     }
 
-    /* set pixel format */
+    // Set pixel format
     sensor.pixformat = pixformat;
 
-    /* set bytes per pixel */
-    switch (pixformat) {
-        case PIXFORMAT_GRAYSCALE:
-            fb->bpp    = 1;
-            break;
-        case PIXFORMAT_RGB565:
-        case PIXFORMAT_YUV422:
-            fb->bpp    = 2;
-            break;
-        case PIXFORMAT_JPEG:
-            fb->bpp    = 0;
-            break;
-        default:
-            return -1;
-    }
-
+    // Set JPEG mode
     if (pixformat == PIXFORMAT_JPEG) {
         jpeg_mode = DCMI_JPEG_ENABLE;
     }
@@ -538,10 +526,10 @@ int sensor_snapshot(image_t *image)
     volatile uint16_t length;
     uint32_t snapshot_start;
 
-    // Compress the framebuffer for the IDE only for non-JPEG
-    // images and only if the IDE has requested a framebuffer.
+    // Compress the framebuffer for the IDE only for non-JPEG images and
+    // only if the IDE has requested a framebuffer and it's not the first frame.
     // Note: This doesn't run unless the camera is connected to PC.
-    if (fb->request && sensor.pixformat != PIXFORMAT_JPEG &&
+    if (fb->bpp && fb->request && sensor.pixformat != PIXFORMAT_JPEG &&
             SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
         // The framebuffer is compressed in place.
         // Assuming we have at least 128KBs of SRAM.
@@ -554,15 +542,17 @@ int sensor_snapshot(image_t *image)
         fb->bpp = dst.bpp;
     }
 
-    // Note: fb->bpp is set to zero for the first JPEG frame.
+    // Note: fb->bpp is set to zero for the first frame.
+    // If BPP is not zero, then we have a valid frame (compressed or raw).
     fb->ready = (fb->bpp>0);
 
     // Wait for the IDE to read the framebuffer before it gets overwritten with a new frame, and
     // after all the image processing code has run (which possibily draws over the framebuffer).
+    //
     // This fakes double buffering without having to allocate a second buffer and allows us to
     // re-use the framebuffer for software JPEG compression.
+    // Note: This loop is executed only if the USB debug is active and we have a valid frame.
     while (fb->ready && fb->request) {
-        // Note: This delay is only executed when the USB debug is active.
         systick_sleep(2);
     }
     fb->ready = 0;
