@@ -48,6 +48,7 @@
 #include "usbdbg.h"
 #include "sdram.h"
 #include "fb_alloc.h"
+#include "irqs.h"
 
 #include "usbd_core.h"
 #include "usbd_desc.h"
@@ -331,6 +332,9 @@ soft_reset:
     servo_init();
     usbdbg_init();
 
+    // Remove the BASEPRI masking (if any)
+    irq_set_base_priority(0);
+
     // Initialize storage
     if (sdcard_is_present()) {
         if (first_soft_reset) {
@@ -441,6 +445,8 @@ soft_reset:
         }
     }
 
+    // Disable all IRQs except Systick and Flash IRQs
+    irq_set_base_priority(2);
 
     // soft reset
     storage_flush();
