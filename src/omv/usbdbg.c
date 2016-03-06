@@ -60,7 +60,7 @@ inline bool usbdbg_get_irq_enabled()
 
 inline void usbdbg_set_irq_enabled(bool enabled)
 {
-    irq_enabled=enabled;
+    irq_enabled=enabled; __DSB();
 }
 
 void usbdbg_data_in(void *buffer, int length)
@@ -140,6 +140,7 @@ void usbdbg_data_out(void *buffer, int length)
                 if (xfer_bytes == xfer_length) {
                     // Set script ready flag
                     script_ready = true;
+
                     // Set script running flag
                     script_running = true;
 
