@@ -6,13 +6,12 @@
  * A super simple GIF encoder.
  *
  */
+#include "mp.h"
 #include "ff_wrapper.h"
 #include "imlib.h"
 #include "fb_alloc.h"
 
-#define BLOCK_SIZE  (126) // (2^(7)) - 2
-// TODO fix this, use all available FB memory
-#define BUFF_SIZE   (16*1024) // Multiple of (block size + 2)
+#define BLOCK_SIZE (126) // (2^(7)) - 2 (DO NOT CHANGE!)
 
 void gif_open(FIL *fp, int width, int height, bool color, bool loop)
 {
@@ -56,20 +55,36 @@ void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
     write_word(fp, img->h);
     write_data(fp, (uint8_t []) {0x00, 0x07}, 2); // 7-bits
 
-    int buf_ofs = 0;
-    int bytes  = img->h * img->w;
+    uint32_t size;
+    uint8_t *buf = fb_alloc_all(&size);
 
-    // FatFS writes partial sectors (512-(fptr%512)) before writing the maximum contiguous sectors,
-    // increamenting the buffer during the process. This results in an unaligned buffer sent DMA.
-    // We intentionally misalign the buffer here so FatFS re-aligns it when writing the remainder.
-    int ff_ofs = f_tell(fp) % 4;
-    uint8_t *buf = fb_alloc((BUFF_SIZE+ff_ofs) * sizeof(*buf));
-    buf += ff_ofs;
+    // This should never happen unless someone forgot to free.
+    if (size < (sizeof(uint32_t) * 2)) { // We need atleast 8 bytes.
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
+                                           "Memory leak detected!!!"));
+    }
+
+    int buf_ofs = 0;
+    int bytes   = img->h * img->w;
+
+    // When a sector boundary is encountered while writing a file and there are
+    // more than 512 bytes left to write FatFs will detect that it can bypass
+    // its internal write buffer and pass the data buffer passed to it directly
+    // to the disk write function. However, the disk write function needs the
+    // buffer to be aligned to a 4-byte boundary. FatFs doesn't know this and
+    // will pass an unaligned buffer if we don't fix the issue.
+
+    int fat_ofs = f_tell(fp) % 4;
+    buf += fat_ofs;
+    size -= fat_ofs;
+
+    // Since we're about to do a more than 512 byte write which will trigger
+    // the above issue we can fix the problem by misaligning our buffer before
+    // calling write so that the first partial write gets us back aligned.
 
     for (int x=0; x<bytes; x++) {
-        if (x%BLOCK_SIZE==0) {
-            int block_size = IM_MIN(BLOCK_SIZE, bytes - x);
-            buf[buf_ofs++] = 1 + block_size;
+        if ((x%BLOCK_SIZE)==0) {
+            buf[buf_ofs++] = 1 + IM_MIN(BLOCK_SIZE, bytes - x);
             buf[buf_ofs++] = 0x80; // clear code
         }
 
@@ -83,9 +98,13 @@ void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
             buf[buf_ofs++] = (red << 5) | (green << 2) | blue;
         }
 
-        if (buf_ofs==BUFF_SIZE) { // flush data
+        if (buf_ofs==size) { // flush data
             buf_ofs = 0;
-            write_data(fp, buf, BUFF_SIZE);
+            write_data(fp, buf, size);
+            // Undo alignment fix. fp will be aligned from now on.
+            buf -= fat_ofs;
+            size += fat_ofs;
+            fat_ofs = 0;
         }
     }
 
