@@ -88,34 +88,38 @@ static int extclk_config(int frequency)
 
 static int dcmi_config(uint32_t jpeg_mode)
 {
-    /* DCMI configuration */
+    // DCMI configuration
     DCMIHandle.Instance         = DCMI;
-    DCMIHandle.Init.VSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_VSYNC) ? /* VSYNC clock polarity */
-                                    DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW; 
-    DCMIHandle.Init.HSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_HSYNC) ? /* HSYNC clock polarity */
-                                    DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW; 
-    DCMIHandle.Init.PCKPolarity = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_PIXCK) ? /* PXCLK clock polarity */
-                                    DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING; 
-    DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;        /* Enable Hardware synchronization      */
-    DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;            /* Capture rate all frames              */
-    DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B;     /* Capture 8 bits on every pixel clock  */
-    DCMIHandle.Init.JPEGMode = jpeg_mode;                       /* Set JPEG Mode                        */
+    // VSYNC clock polarity
+    DCMIHandle.Init.VSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_VSYNC) ?
+                                    DCMI_VSPOLARITY_HIGH : DCMI_VSPOLARITY_LOW;
+    // HSYNC clock polarity
+    DCMIHandle.Init.HSPolarity  = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_HSYNC) ?
+                                    DCMI_HSPOLARITY_HIGH : DCMI_HSPOLARITY_LOW;
+    // PXCLK clock polarity
+    DCMIHandle.Init.PCKPolarity = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_PIXCK) ?
+                                    DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
 
-    /* Associate the DMA handle to the DCMI handle */
+    DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    // Enable Hardware synchronization
+    DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        // Capture rate all frames
+    DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; // Capture 8 bits on every pixel clock
+    DCMIHandle.Init.JPEGMode = jpeg_mode;                   // Set JPEG Mode
+
+    // Associate the DMA handle to the DCMI handle
     __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
 
-    /* Configure and enable DCMI IRQ Channel */
-    HAL_NVIC_SetPriority(DCMI_IRQn, IRQ_DCMI_PRE_PRI, IRQ_DCMI_SUB_PRI);
-    HAL_NVIC_EnableIRQ(DCMI_IRQn);
-
-    /* Init DCMI */
+   // Initialize the DCMI
+    HAL_DCMI_DeInit(&DCMIHandle);
     if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
         // Initialization Error
         return -1;
     }
 
-    // Uncomment the following to configure crop for testing.
-    // Use width*2-1 and height-1.
+    // Configure and enable DCMI IRQ Channel
+    HAL_NVIC_SetPriority(DCMI_IRQn, IRQ_DCMI_PRE_PRI, IRQ_DCMI_SUB_PRI);
+    HAL_NVIC_EnableIRQ(DCMI_IRQn);
+
+    // Uncomment the following to configure DCMI crop for testing (use width*2-1 and height-1).
     //HAL_DCMI_ConfigCROP(&DCMIHandle, 0, 0, 320*2-1, 240-1);
     //HAL_DCMI_EnableCROP(&DCMIHandle);
     return 0;
@@ -123,7 +127,7 @@ static int dcmi_config(uint32_t jpeg_mode)
 
 static int dma_config()
 {
-    /* DMA Stream configuration */
+    // DMA Stream configuration
     DMAHandle.Instance              = DMA2_Stream1;             /* Select the DMA instance          */
     DMAHandle.Init.Channel          = DMA_CHANNEL_1;            /* DMA Channel                      */
     DMAHandle.Init.Direction        = DMA_PERIPH_TO_MEMORY;     /* Peripheral to memory transfer    */
@@ -138,13 +142,14 @@ static int dma_config()
     DMAHandle.Init.MemBurst         = DMA_MBURST_INC4;          /* Memory burst                     */
     DMAHandle.Init.PeriphBurst      = DMA_PBURST_SINGLE;        /* Peripheral burst                 */
 
-    /* Configure and enable DMA IRQ Channel */
+    // Configure and disable DMA IRQ Channel
     HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_DMA21_PRE_PRI, IRQ_DMA21_SUB_PRI);
-    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+    HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 
-    /* Initialize the DMA stream */
+    // Initialize the DMA stream
+    HAL_DMA_DeInit(&DMAHandle);
     if (HAL_DMA_Init(&DMAHandle) != HAL_OK) {
-        /// Initialization Error
+        // Initialization Error
         return -1;
     }
 
@@ -579,6 +584,9 @@ int sensor_snapshot(image_t *image)
     // Snapshot start tick
     snapshot_start = HAL_GetTick();
 
+    // Enable DMA IRQ
+    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         // Start a regular transfer
         HAL_DCMI_Start_DMA(&DCMIHandle,
@@ -598,6 +606,9 @@ int sensor_snapshot(image_t *image)
             return -1;
         }
     }
+
+    // Disable DMA IRQ
+    HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 
     // Fix the BPP
     switch (sensor.pixformat) {
