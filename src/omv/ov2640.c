@@ -441,6 +441,10 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
         i++;
     }
+
+    /* delay n ms */
+    systick_sleep(30);
+
     return 0;
 }
 
@@ -484,6 +488,9 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     /* Enable DSP */
     ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
     ret |= SCCB_Write(sensor->slv_addr, R_BYPASS, R_BYPASS_DSP_EN);
+
+    /* delay n ms */
+    systick_sleep(30);
 
     return ret;
 }

@@ -164,11 +164,15 @@ static int reset(sensor_t *sensor)
         SCCB_Write(sensor->slv_addr, regs[i][0], regs[i][1]);
     }
 
+    // Delay
+    systick_sleep(30);
+
     return 0;
 }
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
+    int ret=0;
     // Read register COM7
     uint8_t reg = SCCB_Read(sensor->slv_addr, COM7);
 
@@ -185,7 +189,12 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     }
 
     // Write back register COM7
-    return SCCB_Write(sensor->slv_addr, COM7, reg);
+    ret = SCCB_Write(sensor->slv_addr, COM7, reg);
+
+    // Delay
+    systick_sleep(30);
+
+    return ret;
 }
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
@@ -200,6 +209,10 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Write LSBs
     ret |= SCCB_Write(sensor->slv_addr, EXHCH, ((w&0x3) | ((h&0x1) << 2)));
+
+    // Delay
+    systick_sleep(30);
+
     return ret;
 }
 
