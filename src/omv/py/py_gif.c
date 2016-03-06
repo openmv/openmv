@@ -63,6 +63,12 @@ static mp_obj_t py_gif_size(mp_obj_t gif_obj)
     return mp_obj_new_int(f_size(&arg_gif->fp));
 }
 
+static mp_obj_t py_gif_loop(mp_obj_t gif_obj)
+{
+    py_gif_obj_t *arg_gif = gif_obj;
+    return mp_obj_new_int(arg_gif->loop);
+}
+
 static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_gif_obj_t *arg_gif = args[0];
@@ -96,6 +102,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_width_obj, py_gif_width);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_height_obj, py_gif_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_format_obj, py_gif_format);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_size_obj, py_gif_size);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_loop_obj, py_gif_loop);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_gif_add_frame_obj, 2, py_gif_add_frame);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_gif_close_obj, py_gif_close);
 static const mp_map_elem_t locals_dict_table[] = {
@@ -103,6 +110,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_height),      (mp_obj_t)&py_gif_height_obj    },
     { MP_OBJ_NEW_QSTR(MP_QSTR_format),      (mp_obj_t)&py_gif_format_obj    },
     { MP_OBJ_NEW_QSTR(MP_QSTR_size),        (mp_obj_t)&py_gif_size_obj      },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_loop),        (mp_obj_t)&py_gif_loop_obj      },
     { MP_OBJ_NEW_QSTR(MP_QSTR_add_frame),   (mp_obj_t)&py_gif_add_frame_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_close),       (mp_obj_t)&py_gif_close_obj     },
     { NULL, NULL },

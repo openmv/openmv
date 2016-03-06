@@ -1,27 +1,27 @@
-import time, sensor, image, gif
+# Gif recording example:
+#
+# You can use your OpenMV Cam to record gif files. You can either feed the
+# recorder object RGB565 frames or Grayscale frames. Use photo editing software
+# like GIMP to compress and optimize the Gif before uploading it to the web.
 
-# Reset sensor
+import sensor, image, time, gif
+
 sensor.reset()
-
-# Set sensor settings
-sensor.set_contrast(1)
-sensor.set_brightness(1)
-sensor.set_saturation(1)
-sensor.set_gainceiling(16)
 sensor.set_framesize(sensor.QQVGA)
-sensor.set_pixformat(sensor.GRAYSCALE)
+sensor.set_pixformat(sensor.RGB565) # you can also use grayscale
 
-for i in range(30):
-    img = sensor.snapshot()
+# Warm up the cam
+for i in range(10):
+    sensor.snapshot()
 
 # FPS clock
 clock = time.clock()
-gif = gif.Gif("/test.gif", loop=True)
+gif = gif.Gif("/test.gif", loop=True) # video setup to use current resolution
 
 for i in range(30):
     clock.tick()
     img = sensor.snapshot()
-    gif.add_frame(img, delay=10)
+    gif.add_frame(img, delay=10) # centi seconds
     # Print FPS.
     # Note: Actual FPS is higher, the IDE slows down streaming.
     print(clock.fps())
