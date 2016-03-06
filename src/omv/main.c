@@ -415,19 +415,22 @@ soft_reset:
         }
     }
 
-    // Enter REPL
-    nlr_buf_t nlr;
-    if (nlr_push(&nlr) == 0) {
-        // enable IDE interrupt
-        usbdbg_set_irq_enabled(true);
+    // If there's no script ready, just re-exec REPL
+    while (!usbdbg_script_ready()) {
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            // enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
 
-        // run REPL
-        pyexec_friendly_repl();
+            // run REPL
+            pyexec_friendly_repl();
 
-        nlr_pop();
+            nlr_pop();
+        }
     }
 
     if (usbdbg_script_ready()) {
+        nlr_buf_t nlr;
         // execute the script
         if (nlr_push(&nlr) == 0) {
             // parse, compile and execute script
@@ -437,6 +440,7 @@ soft_reset:
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
         }
     }
+
 
     // soft reset
     storage_flush();
