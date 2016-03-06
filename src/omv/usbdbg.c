@@ -134,7 +134,7 @@ void usbdbg_data_out(void *buffer, int length)
             // check if GC is locked before allocating memory for vstr. If GC was locked
             // at least once before the script is fully uploaded xfer_bytes will be less
             // than the total length (xfer_length) and the script will Not be executed.
-            if (usbdbg_get_irq_enabled() && !gc_is_locked()) {
+            if (!script_running && usbdbg_get_irq_enabled() && !gc_is_locked()) {
                 vstr_add_strn(&script_buf, buffer, length);
                 xfer_bytes += length;
                 if (xfer_bytes == xfer_length) {
