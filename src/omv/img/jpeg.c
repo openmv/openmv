@@ -10,9 +10,9 @@
 #include <arm_math.h>
 #include <stdio.h>
 #include <stm32f4xx_hal.h>
-#include <ff.h>
-#include "ff_wrapper.h"
 #include "xalloc.h"
+#include "fb_alloc.h"
+#include "ff_wrapper.h"
 #include "imlib.h"
 #define TIME_JPEG   (0)
 
@@ -687,7 +687,7 @@ void jpeg_read(image_t *img, const char *path)
 {
     FIL fp;
     jpeg_read_geometry(&fp, img, path);
-    if (!img->pixels) img->pixels = xalloc(img->w * img->h * img->bpp);
+    if (!img->pixels) img->pixels = xalloc(img->bpp);
     jpeg_read_pixels(&fp, img);
     file_close(&fp);
 }
@@ -696,6 +696,18 @@ void jpeg_write(image_t *img, const char *path)
 {
     FIL fp;
     file_write_open(&fp, path);
-    write_data(&fp, img->pixels, img->bpp);
+    if (IM_IS_JPEG(img)) {
+        write_data(&fp, img->pixels, img->bpp);
+    } else {
+        uint32_t size;
+        uint8_t *buffer = fb_alloc_all(&size);
+        image_t out = { .w=img->w, .h=img->h, .bpp=size, .pixels=buffer };
+        // When jpeg_compress needs more memory than in currently allocated it
+        // will try to realloc. MP will detect that the pointer is outside of
+        // the heap and return NULL which will cause an out of memory error.
+        jpeg_compress(img, &out, IM_JPEG_QUALITY);
+        write_data(&fp, out.pixels, out.bpp);
+        fb_free();
+    }
     file_close(&fp);
 }

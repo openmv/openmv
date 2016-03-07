@@ -6,15 +6,16 @@
  * A super simple GIF encoder.
  *
  */
-#include "mp.h"
+#include <mp.h>
+#include "fb_alloc.h"
 #include "ff_wrapper.h"
 #include "imlib.h"
-#include "fb_alloc.h"
-
-#define BLOCK_SIZE (126) // (2^(7)) - 2 (DO NOT CHANGE!)
+#define BLOCK_SIZE (126) // (2^7) - 2 // (DO NOT CHANGE!)
 
 void gif_open(FIL *fp, int width, int height, bool color, bool loop)
 {
+    file_buffer_on(fp);
+
     write_data(fp, "GIF89a", 6);
     write_word(fp, width);
     write_word(fp, height);
@@ -39,10 +40,14 @@ void gif_open(FIL *fp, int width, int height, bool color, bool loop)
         write_data(fp, "NETSCAPE2.0", 11);
         write_data(fp, (uint8_t []) {0x03, 0x01, 0x00, 0x00, 0x00}, 5);
     }
+
+    file_buffer_off(fp);
 }
 
 void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
 {
+    file_buffer_on(fp);
+
     if (delay) {
         write_data(fp, (uint8_t []) {'!', 0xF9, 0x04, 0x04}, 4);
         write_word(fp, delay);
@@ -55,65 +60,36 @@ void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
     write_word(fp, img->h);
     write_data(fp, (uint8_t []) {0x00, 0x07}, 2); // 7-bits
 
-    uint32_t size;
-    uint8_t *buf = fb_alloc_all(&size);
+    int bytes  = img->h * img->w;
+    int blocks = (bytes + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-    // This should never happen unless someone forgot to free.
-    if (size < (sizeof(uint32_t) * 2)) { // We need atleast 8 bytes.
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
-                                           "Memory leak detected!!!"));
-    }
-
-    int buf_ofs = 0;
-    int bytes   = img->h * img->w;
-
-    // When a sector boundary is encountered while writing a file and there are
-    // more than 512 bytes left to write FatFs will detect that it can bypass
-    // its internal write buffer and pass the data buffer passed to it directly
-    // to the disk write function. However, the disk write function needs the
-    // buffer to be aligned to a 4-byte boundary. FatFs doesn't know this and
-    // will pass an unaligned buffer if we don't fix the issue.
-
-    int fat_ofs = f_tell(fp) % 4;
-    buf += fat_ofs;
-    size -= fat_ofs;
-
-    // Since we're about to do a more than 512 byte write which will trigger
-    // the above issue we can fix the problem by misaligning our buffer before
-    // calling write so that the first partial write gets us back aligned.
-
-    for (int x=0; x<bytes; x++) {
-        if ((x%BLOCK_SIZE)==0) {
-            buf[buf_ofs++] = 1 + IM_MIN(BLOCK_SIZE, bytes - x);
-            buf[buf_ofs++] = 0x80; // clear code
+    if (IM_IS_GS(img)) {
+        for (int y=0; y<blocks; y++) {
+            int block_size = IM_MIN(BLOCK_SIZE, bytes - (y*BLOCK_SIZE));
+            write_byte(fp, 1 + block_size);
+            write_byte(fp, 0x80); // clear code
+            for (int x=0; x<block_size; x++) {
+                write_byte(fp, img->pixels[(y*BLOCK_SIZE)+x]>>1);
+            }
         }
-
-        if (IM_IS_GS(img)) {
-            buf[buf_ofs++] = img->pixels[x]>>1;
-        } else {
-            int pixel = ((uint16_t *) img->pixels)[x];
-            int red = IM_R565(pixel) >> 3;
-            int green = IM_G565(pixel) >> 3;
-            int blue = IM_B565(pixel) >> 3;
-            buf[buf_ofs++] = (red << 5) | (green << 2) | blue;
+    } else {
+        for (int y=0; y<blocks; y++) {
+            int block_size = IM_MIN(BLOCK_SIZE, bytes - (y*BLOCK_SIZE));
+            write_byte(fp, 1 + block_size);
+            write_byte(fp, 0x80); // clear code
+            for (int x=0; x<block_size; x++) {
+                int pixel = ((uint16_t *) img->pixels)[(y*BLOCK_SIZE)+x];
+                int red = IM_R565(pixel)>>3;
+                int green = IM_G565(pixel)>>3;
+                int blue = IM_B565(pixel)>>3;
+                write_byte(fp, (red<<5) | (green<<2) | blue);
+            }
         }
-
-        if (buf_ofs==size) { // flush data
-            buf_ofs = 0;
-            write_data(fp, buf, size);
-            // Undo alignment fix. fp will be aligned from now on.
-            buf -= fat_ofs;
-            size += fat_ofs;
-            fat_ofs = 0;
-        }
-    }
-
-    if (buf_ofs) { // flush remaining
-        write_data(fp, buf, buf_ofs);
     }
 
     write_data(fp, (uint8_t []) {0x01, 0x81, 0x00}, 3); // end code
-    fb_free();
+
+    file_buffer_off(fp);
 }
 
 void gif_close(FIL *fp)
