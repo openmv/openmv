@@ -126,6 +126,7 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
     FIL fp;
     file_write_open(&fp, path);
 
+    file_buffer_on(&fp);
     if (IM_IS_GS(img)) {
         char buffer[20]; // exactly big enough for 5-digit w/h
         int len = snprintf(buffer, 20, "P5\n%d %d\n255\n", rect.w, rect.h);
@@ -154,6 +155,7 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
             }
         }
     }
+    file_buffer_off(&fp);
 
     file_close(&fp);
 }

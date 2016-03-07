@@ -175,36 +175,6 @@ extern const int8_t lab_table[196608];
 
 #define IM_JPEG_QUALITY (50)
 
-// Main Ram = 196,608 bytes
-// -
-// struct framebuffer = 20 bytes
-// FB_JPEG_OFFS_SIZE = 1,024 bytes
-// GRAYSCALE 320x240x1 image = 76,800 bytes
-// fb_alloc = 4 bytes
-// flash cache = 16,384 bytes
-// =
-// 102,376 bytes
-// /
-// GRAYSCALE 320x1 lines
-// =
-// 319 GRAYSCALE 320x1 lines
-#define GS_LINE_BUFFER_SIZE (64) // double rgb565
-
-// Main Ram = 196,608 bytes
-// -
-// struct framebuffer = 20 bytes
-// FB_JPEG_OFFS_SIZE = 1,024 bytes
-// RGB565 320x240x2 image = 153,600 bytes
-// fb_alloc = 4 bytes
-// flash cache = 16,384 bytes
-// =
-// 25,576 bytes
-// /
-// RGB565 320x2 lines
-// =
-// 39 RGB565 320x2 lines
-#define RGB565_LINE_BUFFER_SIZE (32)
-
 typedef struct size {
     int w;
     int h;

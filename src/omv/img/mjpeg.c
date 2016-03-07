@@ -6,9 +6,9 @@
  * A super simple MJPEG encoder.
  *
  */
+#include "fb_alloc.h"
 #include "ff_wrapper.h"
 #include "imlib.h"
-#include "fb_alloc.h"
 
 #define SIZE_OFFSET             (1*4)
 #define MICROS_OFFSET           (8*4)

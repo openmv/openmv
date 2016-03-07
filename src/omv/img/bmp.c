@@ -181,6 +181,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r)
     FIL fp;
     file_write_open(&fp, path);
 
+    file_buffer_on(&fp);
     if (IM_IS_GS(img)) {
         const int row_bytes = (((rect.w * 8) + 31) / 32) * 4;
         const int data_size = (row_bytes * rect.h);
@@ -256,6 +257,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r)
             }
         }
     }
+    file_buffer_off(&fp);
 
     file_close(&fp);
 }

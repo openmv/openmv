@@ -104,10 +104,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
                &&  ((p[-3] == 'p') || (p[-3] == 'P'))
                &&  ((p[-4] == 'j') || (p[-4] == 'J'))
                &&  ((p[-5] == '.') || (p[-5] == '.'))) {
-                    if (!IM_IS_JPEG(img)) {
-                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
-                        "Image is not JPEG!"));
-                    }
+                    // Will convert to JPG if not.
                     return FORMAT_JPG;
         }
     }
@@ -116,10 +113,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
                &&  ((p[-2] == 'p') || (p[-2] == 'P'))
                &&  ((p[-3] == 'j') || (p[-3] == 'J'))
                &&  ((p[-4] == '.') || (p[-4] == '.'))) {
-                    if (!IM_IS_JPEG(img)) {
-                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
-                        "Image is not JPG!"));
-                    }
+                    // Will convert to JPG if not.
                     return FORMAT_JPG;
         } else if (((p[-1] == 'p') || (p[-1] == 'P'))
                &&  ((p[-2] == 'm') || (p[-2] == 'M'))
@@ -206,12 +200,18 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, line_
         // the line operation on each line in that window before moving to the
         // next window. The vflipped part is here because BMP files can be saved
         // vertically flipped resulting in us reading the image backwards.
-        temp.h = IM_IS_GS(img) ? GS_LINE_BUFFER_SIZE : RGB565_LINE_BUFFER_SIZE;
+        uint32_t size;
+        temp.pixels = fb_alloc_all(&size);
+        temp.h = (size / (temp.w * temp.bpp)); // round down
+        // This should never happen unless someone forgot to free.
+        if (!temp.h) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
+                                               "Memory leak detected!!!"));
+        }
         // When processing vertically flipped images the read function will fill
         // the window up from the bottom. The read function assumes that the
         // window is equal to an image in size. However, since this is not the
         // case we shrink the window size to how many lines we're buffering.
-        temp.pixels = fb_alloc(temp.w * temp.h * temp.bpp);
         for (int i=0; i<img->h; i+=temp.h) { // goes past end
             int can_do = IM_MIN(temp.h, img->h-i);
             imlib_read_pixels(&fp, &temp, 0, can_do, &rs);
