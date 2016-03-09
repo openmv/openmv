@@ -636,11 +636,10 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
 // This function inits the geometry values of an image.
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
 {
-    file_read_open(fp, path);
     for (;;) {
         uint16_t header;
         read_word(fp, &header);
-        IM_SWAP16(header);
+        header = IM_SWAP16(header);
         if ((0xFFD0 <= header) && (header <= 0xFFD9)) {
             continue;
         } else if (((0xFFC0 <= header) && (header <= 0xFFCF))
@@ -650,7 +649,7 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
         {
             uint16_t size;
             read_word(fp, &size);
-            IM_SWAP16(size);
+            size = IM_SWAP16(size);
             if (((0xFFC0 <= header) && (header <= 0xFFC3))
              || ((0xFFC5 <= header) && (header <= 0xFFC7))
              || ((0xFFC9 <= header) && (header <= 0xFFCB))
@@ -659,10 +658,10 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
                 read_byte_ignore(fp);
                 uint16_t width;
                 read_word(fp, &width);
-                IM_SWAP16(width);
+                width = IM_SWAP16(width);
                 uint16_t height;
                 read_word(fp, &height);
-                IM_SWAP16(height);
+                height = IM_SWAP16(height);
                 img->w = width;
                 img->h = height;
                 img->bpp = f_size(fp);
@@ -686,9 +685,12 @@ void jpeg_read_pixels(FIL *fp, image_t *img)
 void jpeg_read(image_t *img, const char *path)
 {
     FIL fp;
+    file_read_open(&fp, path);
+    // Do not use file_buffer_on() here.
     jpeg_read_geometry(&fp, img, path);
     if (!img->pixels) img->pixels = xalloc(img->bpp);
     jpeg_read_pixels(&fp, img);
+    // Do not use file_buffer_off() here.
     file_close(&fp);
 }
 

@@ -22,7 +22,7 @@ static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs)
     enum { EAT_WHITESPACE, EAT_COMMENT, EAT_NUMBER } mode = EAT_WHITESPACE;
     for(*i = 0;;) {
         if (!rs->read_int_c_valid) {
-            if (f_eof(fp)) return;
+            if (file_tell_w_buf(fp) == file_size_w_buf(fp)) return;
             read_byte(fp, &rs->read_int_c);
             rs->read_int_c_valid = true;
         }
@@ -52,7 +52,6 @@ static void read_int(FIL *fp, uint32_t *i, ppm_read_settings_t *rs)
 void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs)
 {
     read_int_reset(rs);
-    file_read_open(fp, path);
     read_byte_expect(fp, 'P');
     read_byte(fp, &rs->ppm_fmt);
     if ((rs->ppm_fmt!='2') && (rs->ppm_fmt!='3') && (rs->ppm_fmt!='5') && (rs->ppm_fmt!='6')) ff_unsupported_format(fp);
@@ -113,9 +112,12 @@ void ppm_read(image_t *img, const char *path)
 {
     FIL fp;
     ppm_read_settings_t rs;
+    file_read_open(&fp, path);
+    file_buffer_on(&fp);
     ppm_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) img->pixels = xalloc(img->w * img->h * img->bpp);
     ppm_read_pixels(&fp, img, 0, img->h, &rs);
+    file_buffer_off(&fp);
     file_close(&fp);
 }
 
