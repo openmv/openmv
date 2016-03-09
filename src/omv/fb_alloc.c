@@ -23,6 +23,13 @@ void fb_alloc_init0()
     pointer = &_fballoc;
 }
 
+uint32_t fb_avail()
+{
+    int32_t temp = pointer - ((char *) FB_PIXELS()) - sizeof(uint32_t);
+
+    return (temp < sizeof(uint32_t)) ? 0 : temp;
+}
+
 // returns null pointer without error if size==0
 void *fb_alloc(uint32_t size)
 {

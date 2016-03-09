@@ -60,7 +60,7 @@ static mp_obj_t py_gif_format(mp_obj_t gif_obj)
 static mp_obj_t py_gif_size(mp_obj_t gif_obj)
 {
     py_gif_obj_t *arg_gif = gif_obj;
-    return mp_obj_new_int(f_size(&arg_gif->fp));
+    return mp_obj_new_int(file_size_w_buf(&arg_gif->fp));
 }
 
 static mp_obj_t py_gif_loop(mp_obj_t gif_obj)

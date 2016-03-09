@@ -16,7 +16,6 @@
 // This function inits the geometry values of an image (opens file).
 bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_settings_t *rs)
 {
-    file_read_open(fp, path);
     read_byte_expect(fp, 'B');
     read_byte_expect(fp, 'M');
 
@@ -115,7 +114,7 @@ void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_re
             for (int j = 0, jj = rs->bmp_row_bytes / 2; j < jj; j++) {
                 uint16_t pixel;
                 read_word(fp, &pixel);
-                IM_SWAP16(pixel);
+                pixel = IM_SWAP16(pixel);
                 if (j < img->w) {
                     if (rs->bmp_h < 0) { // vertical flip (BMP file perspective)
                         if (rs->bmp_w < 0) { // horizontal flip (BMP file perspective)
@@ -168,9 +167,12 @@ void bmp_read(image_t *img, const char *path)
 {
     FIL fp;
     bmp_read_settings_t rs;
+    file_read_open(&fp, path);
+    file_buffer_on(&fp);
     bmp_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) img->pixels = xalloc(img->w * img->h * img->bpp);
     bmp_read_pixels(&fp, img, 0, img->h, &rs);
+    file_buffer_off(&fp);
     file_close(&fp);
 }
 

@@ -19,6 +19,8 @@ void file_write_open(FIL *fp, const char *path);
 void file_close(FIL *fp);
 void file_seek(FIL *fp, UINT offset);
 void file_buffer_on(FIL *fp); // does fb_alloc_all
+uint32_t file_tell_w_buf(FIL *fp); // valid between on and off
+uint32_t file_size_w_buf(FIL *fp); // valid between on and off
 void file_buffer_off(FIL *fp); // does fb_free
 void read_byte(FIL *fp, uint8_t *value);
 void read_byte_expect(FIL *fp, uint8_t value);

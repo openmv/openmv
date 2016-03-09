@@ -159,9 +159,13 @@ static bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_rea
     && ((magic[1]=='2') || (magic[1]=='3')
     ||  (magic[1]=='5') || (magic[1]=='6'))) { // PPM
         rs->format = FORMAT_PNM;
+        file_read_open(fp, path);
+        file_buffer_on(fp); // REMEMBER TO TURN THIS OFF LATER!
         ppm_read_geometry(fp, img, path, &rs->ppm_rs);
     } else if ((magic[0]=='B') && (magic[1]=='M')) { // BMP
         rs->format = FORMAT_BMP;
+        file_read_open(fp, path);
+        file_buffer_on(fp); // REMEMBER TO TURN THIS OFF LATER!
         vflipped = bmp_read_geometry(fp, img, path, &rs->bmp_rs);
     } else {
         ff_unsupported_format(NULL);
@@ -189,6 +193,12 @@ static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_en
 void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op)
 {
     if (path) {
+        uint32_t size = fb_avail() / 2;
+        void *alloc = fb_alloc(size); // We have to do this before the read.
+        // This code reads a window of an image in at a time and then executes
+        // the line operation on each line in that window before moving to the
+        // next window. The vflipped part is here because BMP files can be saved
+        // vertically flipped resulting in us reading the image backwards.
         FIL fp;
         image_t temp;
         img_read_settings_t rs;
@@ -196,22 +206,17 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, line_
         if (!IM_EQUAL(img, &temp)) {
             ff_not_equal(&fp);
         }
-        // This code reads a window of an image in at a time and then executes
-        // the line operation on each line in that window before moving to the
-        // next window. The vflipped part is here because BMP files can be saved
-        // vertically flipped resulting in us reading the image backwards.
-        uint32_t size;
-        temp.pixels = fb_alloc_all(&size);
-        temp.h = (size / (temp.w * temp.bpp)); // round down
-        // This should never happen unless someone forgot to free.
-        if (!temp.h) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
-                                               "Memory leak detected!!!"));
-        }
         // When processing vertically flipped images the read function will fill
         // the window up from the bottom. The read function assumes that the
         // window is equal to an image in size. However, since this is not the
         // case we shrink the window size to how many lines we're buffering.
+        temp.pixels = alloc;
+        temp.h = (size / (temp.w * temp.bpp)); // round down
+        // This should never happen unless someone forgot to free.
+        if ((!temp.pixels) || (!temp.h)) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
+                                               "Not enough memory available!"));
+        }
         for (int i=0; i<img->h; i+=temp.h) { // goes past end
             int can_do = IM_MIN(temp.h, img->h-i);
             imlib_read_pixels(&fp, &temp, 0, can_do, &rs);
@@ -223,8 +228,9 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, line_
                 }
             }
         }
-        fb_free();
+        file_buffer_off(&fp);
         file_close(&fp);
+        fb_free();
     } else {
         if (!IM_EQUAL(img, other)) {
             ff_not_equal(NULL);

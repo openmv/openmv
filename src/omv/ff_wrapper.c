@@ -94,10 +94,29 @@ void file_seek(FIL *fp, UINT offset)
 // will pass an unaligned buffer if we don't fix the issue. To fix this problem
 // we use a temporary buffer to fix the alignment and to speed everything up.
 
+// We use this temporary buffer for both reads and writes. The buffer allows us
+// to do multi-block reads and writes which signifcantly speed things up.
+
 static uint32_t file_buffer_offset = 0;
 static uint8_t *file_buffer_pointer = 0;
 static uint32_t file_buffer_size = 0;
 static uint32_t file_buffer_index = 0;
+
+ALWAYS_INLINE static void file_fill(FIL *fp)
+{
+    if (file_buffer_index == file_buffer_size) {
+        file_buffer_pointer -= file_buffer_offset;
+        file_buffer_size += file_buffer_offset;
+        file_buffer_offset = 0;
+        file_buffer_index = 0;
+        uint32_t file_remaining = f_size(fp) - f_tell(fp);
+        uint32_t can_do = FF_MIN(file_buffer_size, file_remaining);
+        UINT bytes;
+        FRESULT res = f_read(fp, file_buffer_pointer, can_do, &bytes);
+        if (res != FR_OK) ff_fail(fp, res);
+        if (bytes != can_do) ff_read_fail(fp);
+    }
+}
 
 ALWAYS_INLINE static void file_flush(FIL *fp)
 {
@@ -113,6 +132,24 @@ ALWAYS_INLINE static void file_flush(FIL *fp)
     }
 }
 
+uint32_t file_tell_w_buf(FIL *fp)
+{
+    if (fp->flag & FA_READ) {
+        return f_tell(fp) - file_buffer_size + file_buffer_index;
+    } else {
+        return f_tell(fp) + file_buffer_index;
+    }
+}
+
+uint32_t file_size_w_buf(FIL *fp)
+{
+    if (fp->flag & FA_READ) {
+        return f_size(fp);
+    } else {
+        return f_size(fp) + file_buffer_index;
+    }
+}
+
 void file_buffer_on(FIL *fp)
 {
     file_buffer_offset = f_tell(fp) % 4;
@@ -122,6 +159,14 @@ void file_buffer_on(FIL *fp)
     }
     file_buffer_size -= file_buffer_offset;
     file_buffer_index = 0;
+    if (fp->flag & FA_READ) {
+        uint32_t file_remaining = f_size(fp) - f_tell(fp);
+        uint32_t can_do = FF_MIN(file_buffer_size, file_remaining);
+        UINT bytes;
+        FRESULT res = f_read(fp, file_buffer_pointer, can_do, &bytes);
+        if (res != FR_OK) ff_fail(fp, res);
+        if (bytes != can_do) ff_read_fail(fp);
+    }
 }
 
 void file_buffer_off(FIL *fp)
@@ -138,10 +183,20 @@ void file_buffer_off(FIL *fp)
 
 void read_byte(FIL *fp, uint8_t *value)
 {
-    UINT bytes;
-    FRESULT res = f_read(fp, value, sizeof(*value), &bytes);
-    if (res != FR_OK) ff_fail(fp, res);
-    if (bytes != sizeof(*value)) ff_read_fail(fp);
+    if (file_buffer_pointer) {
+        // We get a massive speed boost by buffering up as much data as possible
+        // via massive reads. So much so that the time wasted by
+        // all these operations does not cost us.
+        for (size_t i = 0; i < sizeof(*value); i++) {
+            file_fill(fp);
+            ((uint8_t *) value)[i] = file_buffer_pointer[file_buffer_index++];
+        }
+    } else {
+        UINT bytes;
+        FRESULT res = f_read(fp, value, sizeof(*value), &bytes);
+        if (res != FR_OK) ff_fail(fp, res);
+        if (bytes != sizeof(*value)) ff_read_fail(fp);
+    }
 }
 
 void read_byte_expect(FIL *fp, uint8_t value)
@@ -159,10 +214,20 @@ void read_byte_ignore(FIL *fp)
 
 void read_word(FIL *fp, uint16_t *value)
 {
-    UINT bytes;
-    FRESULT res = f_read(fp, value, sizeof(*value), &bytes);
-    if (res != FR_OK) ff_fail(fp, res);
-    if (bytes != sizeof(*value)) ff_read_fail(fp);
+    if (file_buffer_pointer) {
+        // We get a massive speed boost by buffering up as much data as possible
+        // via massive reads. So much so that the time wasted by
+        // all these operations does not cost us.
+        for (size_t i = 0; i < sizeof(*value); i++) {
+            file_fill(fp);
+            ((uint8_t *) value)[i] = file_buffer_pointer[file_buffer_index++];
+        }
+    } else {
+        UINT bytes;
+        FRESULT res = f_read(fp, value, sizeof(*value), &bytes);
+        if (res != FR_OK) ff_fail(fp, res);
+        if (bytes != sizeof(*value)) ff_read_fail(fp);
+    }
 }
 
 void read_word_expect(FIL *fp, uint16_t value)
@@ -180,10 +245,20 @@ void read_word_ignore(FIL *fp)
 
 void read_long(FIL *fp, uint32_t *value)
 {
-    UINT bytes;
-    FRESULT res = f_read(fp, value, sizeof(*value), &bytes);
-    if (res != FR_OK) ff_fail(fp, res);
-    if (bytes != sizeof(*value)) ff_read_fail(fp);
+    if (file_buffer_pointer) {
+        // We get a massive speed boost by buffering up as much data as possible
+        // via massive reads. So much so that the time wasted by
+        // all these operations does not cost us.
+        for (size_t i = 0; i < sizeof(*value); i++) {
+            file_fill(fp);
+            ((uint8_t *) value)[i] = file_buffer_pointer[file_buffer_index++];
+        }
+    } else {
+        UINT bytes;
+        FRESULT res = f_read(fp, value, sizeof(*value), &bytes);
+        if (res != FR_OK) ff_fail(fp, res);
+        if (bytes != sizeof(*value)) ff_read_fail(fp);
+    }
 }
 
 void read_long_expect(FIL *fp, uint32_t value)
@@ -201,10 +276,25 @@ void read_long_ignore(FIL *fp)
 
 void read_data(FIL *fp, void *data, UINT size)
 {
-    UINT bytes;
-    FRESULT res = f_read(fp, data, size, &bytes);
-    if (res != FR_OK) ff_fail(fp, res);
-    if (bytes != size) ff_read_fail(fp);
+    if (file_buffer_pointer) {
+        // We get a massive speed boost by buffering up as much data as possible
+        // via massive reads. So much so that the time wasted by
+        // all these operations does not cost us.
+        while (size) {
+            file_fill(fp);
+            uint32_t file_buffer_space_left = file_buffer_size - file_buffer_index;
+            uint32_t can_do = FF_MIN(size, file_buffer_space_left);
+            memcpy(data, file_buffer_pointer+file_buffer_index, can_do);
+            file_buffer_index += can_do;
+            data += can_do;
+            size -= can_do;
+        }
+    } else {
+        UINT bytes;
+        FRESULT res = f_read(fp, data, size, &bytes);
+        if (res != FR_OK) ff_fail(fp, res);
+        if (bytes != size) ff_read_fail(fp);
+    }
 }
 
 void write_byte(FIL *fp, uint8_t value)
@@ -213,7 +303,7 @@ void write_byte(FIL *fp, uint8_t value)
         // We get a massive speed boost by buffering up as much data as possible
         // before a write to the SD card. So much so that the time wasted by
         // all these operations does not cost us.
-        for (int i = 0; i < sizeof(value); i++) {
+        for (size_t i = 0; i < sizeof(value); i++) {
             file_buffer_pointer[file_buffer_index++] = ((uint8_t *) &value)[i];
             file_flush(fp);
         }
@@ -231,7 +321,7 @@ void write_word(FIL *fp, uint16_t value)
         // We get a massive speed boost by buffering up as much data as possible
         // before a write to the SD card. So much so that the time wasted by
         // all these operations does not cost us.
-        for (int i = 0; i < sizeof(value); i++) {
+        for (size_t i = 0; i < sizeof(value); i++) {
             file_buffer_pointer[file_buffer_index++] = ((uint8_t *) &value)[i];
             file_flush(fp);
         }
@@ -249,7 +339,7 @@ void write_long(FIL *fp, uint32_t value)
         // We get a massive speed boost by buffering up as much data as possible
         // before a write to the SD card. So much so that the time wasted by
         // all these operations does not cost us.
-        for (int i = 0; i < sizeof(value); i++) {
+        for (size_t i = 0; i < sizeof(value); i++) {
             file_buffer_pointer[file_buffer_index++] = ((uint8_t *) &value)[i];
             file_flush(fp);
         }
@@ -267,12 +357,14 @@ void write_data(FIL *fp, const void *data, UINT size)
         // We get a massive speed boost by buffering up as much data as possible
         // before a write to the SD card. So much so that the time wasted by
         // all these operations does not cost us.
-        for (int i = 0; i < size;) {
-            int can_do = FF_MIN(size, file_buffer_size - file_buffer_index);
-            memcpy(file_buffer_pointer+file_buffer_index, ((uint8_t *) data)+i, can_do);
+        while (size) {
+            uint32_t file_buffer_space_left = file_buffer_size - file_buffer_index;
+            uint32_t can_do = FF_MIN(size, file_buffer_space_left);
+            memcpy(file_buffer_pointer+file_buffer_index, data, can_do);
             file_buffer_index += can_do;
+            data += can_do;
+            size -= can_do;
             file_flush(fp);
-            i += can_do;
         }
     } else {
         UINT bytes;
