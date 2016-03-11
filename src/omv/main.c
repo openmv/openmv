@@ -337,9 +337,7 @@ soft_reset:
 
     // Initialize storage
     if (sdcard_is_present()) {
-        if (first_soft_reset) {
-            sdcard_init();
-        }
+        sdcard_init();
         FRESULT res = f_mount(fatfs, "1:", 1);
         if (res != FR_OK) {
             __fatal_error("could not mount SD\n");
@@ -348,9 +346,7 @@ soft_reset:
         f_chdrive("1:");
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
     } else {
-        if (first_soft_reset) {
-            storage_init();
-        }
+        storage_init();
         // try to mount the flash
         FRESULT res = f_mount(fatfs, "0:", 1);
         if (res == FR_NO_FILESYSTEM) {
