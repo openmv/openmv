@@ -378,6 +378,9 @@ soft_reset:
         __fatal_error(buf);
     }
 
+    // Re-enable FS IRQ (disabled in usbdbg)
+    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+
     // Run self tests the first time only
     f_res = f_stat("selftest.py", NULL);
     if (first_soft_reset && f_res == FR_OK) {
@@ -413,6 +416,9 @@ soft_reset:
                 nlr_pop();
             }// if this gets interrupted again ignore it.
         }
+
+        // Re-enable FS IRQ (disabled in usbdbg)
+        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
     }
 
     // If there's no script ready, just re-exec REPL
@@ -427,6 +433,9 @@ soft_reset:
 
             nlr_pop();
         }
+
+        // Re-enable FS IRQ (disabled in usbdbg)
+        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
     }
 
     if (usbdbg_script_ready()) {
@@ -441,7 +450,8 @@ soft_reset:
         }
     }
 
-    // Disable all IRQs except Systick and Flash IRQs
+    // Disable all other IRQs except Systick and Flash IRQs
+    // Note: FS IRQ is disable, since we're going for a soft-reset.
     irq_set_base_priority(2);
 
     // soft reset
