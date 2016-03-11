@@ -45,6 +45,9 @@ def init(port, baudrate=921600, timeout=0.3):
     # open CDC port
     __serial =  serial.Serial(port, baudrate=baudrate, timeout=timeout)
 
+def set_timeout(timeout):
+    __serial.timeout = timeout
+
 def fb_size():
     # read fb header
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_SIZE, __FB_HDR_SIZE))

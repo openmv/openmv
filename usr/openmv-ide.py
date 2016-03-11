@@ -279,10 +279,18 @@ class OMVGtk:
         sleep(wait)
 
     def connect(self):
-        try:
-            # opens CDC port.
-            openmv.init(self.config.get("main", "serial_port"), baudrate=self.baudrate, timeout=0.3)
-        except Exception as e:
+        connected = False
+        for i in range(10):
+            try:
+                # opens CDC port.
+                # Set small timeout when connecting
+                openmv.init(self.config.get("main", "serial_port"), baudrate=self.baudrate, timeout=0.050)
+                connected = True
+            except Exception as e:
+                connected = False
+                sleep(0.100)
+
+        if not connected:
             # create fresh config if needed
             if platform.system() == "Linux" and not os.path.isfile(UDEV_PATH):
                 error_msg = ("Failed to open serial port.\n"
@@ -294,8 +302,10 @@ class OMVGtk:
                              "Please check the preferences Dialog.\n")
 
             self.show_message_dialog(gtk.MESSAGE_ERROR,"%s%s"%(error_msg, e))
-
             return
+
+        # Set higher timeout after connecting for lengthy transfers.
+        openmv.set_timeout(0.3)
 
         # add terminal update callback
         gobject.gobject.timeout_add(30, omvgtk.update_terminal)
