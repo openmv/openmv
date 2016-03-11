@@ -595,6 +595,11 @@ int sensor_snapshot(image_t *image)
         }
     }
 
+    // Abort DMA transfer.
+    // Note: In JPEG mode the DMA will still be waiting for data since
+    // the max frame size is set, so we need to abort the DMA transfer.
+    HAL_DMA_Abort(&DMAHandle);
+
     // Disable DMA IRQ
     HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 
@@ -608,9 +613,6 @@ int sensor_snapshot(image_t *image)
             fb->bpp = 2;
             break;
         case PIXFORMAT_JPEG:
-            // The frame readout has finished, however the DMA's still waiting for data
-            // because the max frame size is set, so we need to abort the DMA transfer.
-            HAL_DMA_Abort(&DMAHandle);
             // Read the number of data items transferred
             fb->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
             break;
