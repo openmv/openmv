@@ -72,19 +72,12 @@ bool sdcard_is_present(void)
     return (HAL_GPIO_ReadPin(SD_CD_PORT, SD_CD_PIN)==GPIO_PIN_RESET);
 }
 
+extern void __fatal_error(const char *msg);
+
 void sdcard_init(void)
-{
-
-}
-
-bool sdcard_power_on(void)
 {
     volatile int retry=10;
     HAL_SD_CardInfoTypedef cardinfo;
-
-    if (!sdcard_is_present()) {
-        return false;
-    }
 
     // SDIO configuration
     SDHandle.Instance                 = SDIO;
@@ -100,15 +93,14 @@ bool sdcard_power_on(void)
     // Init SD interface
     while(HAL_SD_Init(&SDHandle, &cardinfo) != SD_OK && retry--) {
         if (retry == 0) {
-            return false;
+            __fatal_error("Failed to init sdcard: init timeout");
         }
-
         systick_sleep(100);
     }
 
     /* Configure the SD Card in wide bus mode. */
     if (HAL_SD_WideBusOperation_Config(&SDHandle, SDIO_BUS_WIDE_4B) != SD_OK) {
-        return false;
+        __fatal_error("Failed to init sensor, sdcard: config wide bus");
     }
 
     // Configure and enable DMA IRQ Channel
@@ -116,6 +108,13 @@ bool sdcard_power_on(void)
     // preempt the DMA irq handler to set a flag indicating the end of transfer.
     HAL_NVIC_SetPriority(SDIO_IRQn, IRQ_SDIO_PRE_PRI, IRQ_SDIO_SUB_PRI);
     HAL_NVIC_EnableIRQ(SDIO_IRQn);
+}
+
+bool sdcard_power_on(void)
+{
+    if (!sdcard_is_present()) {
+        return false;
+    }
 
     return true;
 }
