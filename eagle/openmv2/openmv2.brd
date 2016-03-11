@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="5" unitdist="mil" unit="mil" style="lines" multiple="1" display="yes" altdistance="0.025" altunitdist="mm" altunit="mm"/>
+<grid distance="1" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.025" altunitdist="mm" altunit="mm"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="2" name="GND" color="1" fill="1" visible="yes" active="yes"/>
@@ -230,7 +230,7 @@
 <text x="3.175" y="16.256" size="0.8128" layer="22" font="vector" ratio="20" rot="MR90">P1</text>
 <text x="3.175" y="18.796" size="0.8128" layer="22" font="vector" ratio="20" rot="MR90">P0</text>
 <text x="31.623" y="0.635" size="0.8128" layer="22" font="vector" ratio="20" rot="MR90">GND</text>
-<text x="31.623" y="3.175" size="0.8128" layer="22" font="vector" ratio="20" rot="MR90">VIN</text>
+<text x="31.623" y="3.175" size="0.8128" layer="22" font="vector" ratio="20" rot="MR90">VCC</text>
 <text x="31.623" y="6.096" size="0.8128" layer="22" font="vector" ratio="20" rot="MR90">P7</text>
 <text x="31.623" y="8.509" size="0.8128" layer="22" font="vector" ratio="20" rot="MR90">P8</text>
 <text x="31.623" y="10.541" size="0.8128" layer="22" font="vector" ratio="20" rot="MR90">RST</text>
@@ -271,6 +271,7 @@
 <wire x1="22.606" y1="21.082" x2="21.336" y2="21.082" width="0.254" layer="22"/>
 <wire x1="20.066" y1="21.082" x2="12.954" y2="21.082" width="0.254" layer="22"/>
 <wire x1="22.606" y1="10.16" x2="12.954" y2="10.16" width="0.254" layer="22"/>
+<text x="22.606" y="7.668" size="0.8128" layer="22" font="vector" ratio="20" rot="MR0">Max voltage: 5v</text>
 </plain>
 <libraries>
 <library name="sfe">
