@@ -198,7 +198,7 @@ const static uint8_t DESCRIPTION_PAIRS[512][2] = {
 
 
 // simply take average on a square patch, not even gaussian approx
-static uint8_t mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int kp_y, uint32_t rot, uint32_t point)
+static uint8_t mean_intensity(image_t *image, mw_image_t *i_image, int kp_x, int kp_y, uint32_t rot, uint32_t point)
 {
     int ret_val;
     int pidx = (point/6)%8;
@@ -243,7 +243,8 @@ static uint8_t mean_intensity(image_t *image, i_image_t *i_image, int kp_x, int 
         int y = (int) (yf-psigma+0.5f);
         int w = (int) ((psigma+psigma)+0.5);
         int h = (int) ((psigma+psigma)+0.5);
-        ret_val = imlib_integral_lookup(i_image, x, y, w, h)/(w*h);
+        int shift = i_image->y_offs-i_image->h;
+        ret_val = imlib_integral_mw_lookup(i_image, x, y-shift, w, h)/(w*h);
     }
 
     return ret_val;
@@ -256,7 +257,7 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
     int direction1;
     uint8_t pointsValue[kNB_POINTS];
 
-    i_image_t i_image;
+    mw_image_t i_image;
     array_t *keypoints;
     array_alloc(&keypoints, xfree);
 
@@ -264,12 +265,32 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
     fast_detect(image, keypoints, threshold, roi);
 
     if (array_length(keypoints)) {
+        int n_lines;
+        if (image->h <= 144) {
+            // Allocate and compute the whole integral image if
+            // the image height is smaller than or equal to QCIF.
+            n_lines = image->h/2; // Note: nlines is multiplied by 2
+        } else {
+            n_lines = (PATTERN_SCALE+1);
+        }
+
+        // Allocate 2 * (PATTERN_SCALE+1)
+        // The lookup can access -(PATTERN_SCALE+1)...(PATTERN_SCALE+1),
+        // keep (PATTERN_SCALE+1) rows before and after keypoint y.
+        imlib_integral_mw_alloc(&i_image, image->w, n_lines*2);
+
         // Compute integral image
-        imlib_integral_image_alloc(&i_image, image->w, image->h);
-        imlib_integral_image(image, &i_image);
+        imlib_integral_mw(image, &i_image);
 
         for (int i=0; i<array_length(keypoints); i++) {
             kp_t *kpt = array_at(keypoints, i);
+
+            while (i_image.y_offs < (kpt->y+n_lines)) {
+                // Shift image if needed.
+                int shift = (kpt->y+n_lines) - i_image.y_offs;
+                shift =  min(i_image.h-1, shift);
+                imlib_integral_mw_shift(image, &i_image, shift);
+            }
 
             // Estimate orientation (gradient)
             if (normalized) {
@@ -312,9 +333,9 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
                 kpt->desc[m/8] |= (pointsValue[DESCRIPTION_PAIRS[m][0]]> pointsValue[DESCRIPTION_PAIRS[m][1]]) << (m%8);
             }
         }
-    }
 
-    imlib_integral_image_free(&i_image);
+        imlib_integral_mw_free(&i_image);
+    }
 
     return keypoints;
 }
