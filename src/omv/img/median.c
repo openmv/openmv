@@ -3,28 +3,12 @@
  * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * O(N) median filter with histograms.
+ * O(N) median_gs filter with histograms.
  *
  */
 #include <arm_math.h>
 #include "imlib.h"
 #include "fb_alloc.h"
-
-#define R8(p) \
-    (uint8_t)((p>>11) * 255/31)
-#define G8(p) \
-    (uint8_t)(((p>>5)&0x3F)* 255/63)
-#define B8(p) \
-    (uint8_t)((p&0x1F) * 255/31)
-
-#define R(p) \
-    (uint8_t)((p>>11)&0x1F)
-#define G(p) \
-    (uint8_t)((p>>5) &0x3F)
-#define B(p) \
-    (uint8_t)(p&0x1F)
-
-#define SWAP16(x) __REV16(x)
 
 typedef struct {
     int n;
@@ -49,10 +33,10 @@ void del_pixels(image_t * im, int row, int col, int size, histo_t *h)
     } else {
         for (int i = row - size; i <= row + size && i < im->h; i++) {
             if (i < 0) continue;
-            uint16_t c = SWAP16(((uint16_t*)im->pixels)[i*im->w+col]);
-            h->r[R(c)]--;
-            h->g[G(c)]--;
-            h->b[B(c)]--;
+            uint16_t c = ((uint16_t*)im->pixels)[i*im->w+col];
+            h->r[IM_R565(c)]--;
+            h->g[IM_G565(c)]--;
+            h->b[IM_B565(c)]--;
             h->n--;
         }
     }
@@ -69,10 +53,10 @@ void add_pixels(image_t * im, int row, int col, int size, histo_t *h)
     } else {
         for (int i = row - size; i <= row + size && i < im->h; i++) {
             if (i < 0) continue;
-            uint16_t c = SWAP16(((uint16_t*)im->pixels)[i*im->w+col]);
-            h->r[R(c)]++;
-            h->g[G(c)]++;
-            h->b[B(c)]++;
+            uint16_t c = ((uint16_t*)im->pixels)[i*im->w+col];
+            h->r[IM_R565(c)]++;
+            h->g[IM_G565(c)]++;
+            h->b[IM_B565(c)]++;
             h->n++;
         }
     }
@@ -86,65 +70,100 @@ void init_histo(image_t *im, int row, int size, histo_t *h)
     }
 }
 
-uint16_t median(const int *x, int n)
+uint8_t median_gs(histo_t *h)
 {
-    uint16_t i;
-    for (n /= 2, i = 0;(n -= x[i]) > 0; i++);
+    int i, n;
+    for (i=0, n=h->n/2; (n -= h->h[i]) >0; i++) {
+    }
     return i;
 }
 
-
-void median_filter_rgb(image_t *in, int size)
+uint16_t median_rgb(histo_t *h)
 {
-    uint16_t r,g,b;
-    //int k_rows = size+1;
-    int k_rows = (2*size+1)*2;
-    histo_t *h = fb_alloc(sizeof(*h));
-    uint16_t *data = fb_alloc(in->w * k_rows * sizeof(*data));
+    int rx = h->n/2;
+    int gx = h->n/2;
+    int bx = h->n/2;
+    uint16_t r=0, g=0, b=0;
 
-    for (int row = 0; row<in->h; row++) {
-        for (int col = 0; col<in->w; col++) {
-            if (!col) {
-                init_histo(in, row, size, h);
-            } else {
-                del_pixels(in, row, col - size, size, h);
-                add_pixels(in, row, col + size, size, h);
-            }
-            r = median(h->r, h->n);
-            g = median(h->g, h->n);
-            b = median(h->b, h->n);
-            data[(row%k_rows)*in->w+col] = SWAP16(((r << 11) | (g << 5) | b));
+    for (int i=0; (rx>0 || gx>0 || bx>0); i++) {
+        if (rx > 0) {
+            rx -= h->r[i];
+            r = i;
         }
-        if ((row+1)%k_rows==0) {
-            memcpy((uint16_t*)in->data+((row/k_rows)*k_rows*in->w), data, (k_rows*in->w*sizeof(*data)));
+
+        if (gx > 0) {
+            gx -= h->g[i];
+            g = i;
+        }
+
+        if (bx > 0) {
+            bx -= h->b[i];
+            b = i;
         }
     }
 
+    return IM_RGB565(r, g, b);
+}
+
+void median_filter_rgb(image_t *in, int size)
+{
+    int k_rows = 24;
+    histo_t *h = fb_alloc(sizeof(*h));
+    uint16_t *dst = (uint16_t*) in->data;
+    uint16_t *data = fb_alloc(in->w * k_rows * sizeof(*data));
+
+    for (int row=0; row<in->h; row++) {
+        init_histo(in, row, size, h);
+        data[(row%k_rows)*in->w+size] = median_rgb(h);
+
+        for (int col=0; col<in->w; col++) {
+            del_pixels(in, row, col - size, size, h);
+            add_pixels(in, row, col + size, size, h);
+            data[(row%k_rows)*in->w+col] = median_rgb(h);
+        }
+
+        if ((row+1)%k_rows==0) {
+            memcpy(dst, data, (in->w*(k_rows-size)*2));
+            dst += (in->w*(k_rows-size));
+        }
+
+        if ((row>size && (row+1)%k_rows==size) || row+1==in->h){
+            memcpy(dst, data+in->w*(k_rows-size), (in->w*size*2));
+            dst += (in->w*size);
+        }
+
+    }
     fb_free_all();
 }
 
 void median_filter_gs(image_t *in, int size)
 {
-    histo_t hist;
-    histo_t *h = &hist;
-    int k_rows = (2*size+1)*2;
+    int k_rows = 24;
+    histo_t *h = fb_alloc(sizeof(*h));
+    uint8_t *dst = (uint8_t*) in->data;
     uint8_t *data = fb_alloc(in->w * k_rows * sizeof(*data));
 
-    for (int row = 0; row<in->h; row ++) {
-        for (int col = 0; col<in->w; col++) {
-            if (!col) {
-                init_histo(in, row, size, h);
-            } else if ((col-size) > 0 && (col+size) < in->w) {
-                del_pixels(in, row, col - size, size, h);
-                add_pixels(in, row, col + size, size, h);
-            }
-            data[(row%k_rows)*in->w+col] = (uint8_t)median(h->h, h->n);
-        }
-        if ((row+1)%k_rows==0) {
-            memcpy(in->data+((row/k_rows)*k_rows*in->w), data, (k_rows*in->w*sizeof(*data)));
-        }
-    }
+    for (int row=0; row<in->h; row++) {
+        init_histo(in, row, size, h);
+        data[(row%k_rows)*in->w+size] = median_gs(h);
 
+        for (int col=0; col<in->w; col++) {
+            del_pixels(in, row, col - size, size, h);
+            add_pixels(in, row, col + size, size, h);
+            data[(row%k_rows)*in->w+col] = median_gs(h);
+        }
+
+        if ((row+1)%k_rows==0) {
+            memcpy(dst, data, (in->w*(k_rows-size)));
+            dst += (in->w*(k_rows-size));
+        }
+
+        if ((row>size && (row+1)%k_rows==size) || row+1==in->h){
+            memcpy(dst, data+in->w*(k_rows-size), (in->w*size));
+            dst += (in->w*size);
+        }
+
+    }
     fb_free_all();
 }
 
