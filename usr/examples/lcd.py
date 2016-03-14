@@ -47,10 +47,10 @@ class LCD:
 			self.bl.low()
 
 	def __init__(self, madctl=0xC0):
-		self.rst = Pin('PD12', Pin.OUT_PP, Pin.PULL_UP)
-		self.rs  = Pin('PD13', Pin.OUT_PP, Pin.PULL_UP)
-		self.cs  = Pin('PB12', Pin.OUT_PP, Pin.PULL_UP)
-		self.bl  = Pin('PA5',  Pin.OUT_PP, Pin.PULL_UP)
+		self.rst = Pin('P7', Pin.OUT_PP, Pin.PULL_UP)
+		self.rs  = Pin('P8', Pin.OUT_PP, Pin.PULL_UP)
+		self.cs  = Pin('P3', Pin.OUT_PP, Pin.PULL_UP)
+		self.bl  = Pin('P6',  Pin.OUT_PP, Pin.PULL_UP)
 		self.spi = SPI(2, SPI.MASTER, baudrate=22500000, polarity=0, phase=0)
 
 		# LCD init sequence

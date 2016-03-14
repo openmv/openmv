@@ -37,7 +37,7 @@ class BLE:
         return devices
         
     def __init__(self):
-        self.rst = Pin('PD12', Pin.OUT_PP, Pin.PULL_UP)
+        self.rst = Pin('P7', Pin.OUT_PP, Pin.PULL_UP)
         self.uart = UART(3, 115200, bits=8, parity=None, stop=1, flow=UART.RTS|UART.CTS)
 
 if __name__ == "__main__":
