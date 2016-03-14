@@ -12,6 +12,7 @@ pyz = PYZ(a.pure,
              cipher=block_cipher)
 
 # append 'exe' to windows binary
+import platform
 sysname = platform.system()
 if sysname in ["Linux", "Darwin"]:
     exe_name ='openmv-ide'
@@ -19,6 +20,7 @@ else:
     exe_name ='openmv-ide.exe'
 
 exe_tree = [('logo.png', 'logo.png', 'DATA'),
+            ('pinout.png', 'pinout.png', 'DATA'),
             ('openmv-ide.glade', 'openmv-ide.glade', 'DATA')]
 
 exe = EXE(pyz,
