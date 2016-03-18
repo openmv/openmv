@@ -59,6 +59,7 @@
 #include "py_sensor.h"
 #include "py_image.h"
 #include "mlx90620.h"
+#include "py_lcd.h"
 
 int errno;
 extern char _fatfs_buf;
@@ -271,7 +272,7 @@ static void make_flash_fs()
 int main(void)
 {
     FRESULT f_res;
-    int sensor_init_ret;
+    int sensor_init_ret = 0;
     bool first_soft_reset = true;
 
     // Stack limit should be less than real stack size, so we
@@ -316,6 +317,7 @@ soft_reset:
     pyb_usb_init0();
     sensor_init0();
     fb_alloc_init0();
+    py_lcd_init0();
 
 #if MICROPY_HW_ENABLE_RTC
     if (first_soft_reset) {
