@@ -286,6 +286,7 @@ class OMVGtk:
                 # Set small timeout when connecting
                 openmv.init(self.config.get("main", "serial_port"), baudrate=self.baudrate, timeout=0.050)
                 connected = True
+                break
             except Exception as e:
                 connected = False
                 sleep(0.100)
