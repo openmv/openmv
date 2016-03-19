@@ -100,6 +100,7 @@ Kwabena W. Agyeman</property>
         <property name="can_focus">False</property>
         <property name="label" translatable="yes">Copy Color</property>
         <property name="use_underline">True</property>
+        <signal name="activate" handler="on_copy_color_activate" swapped="no"/>
       </object>
     </child>
     <child>
@@ -342,7 +343,7 @@ Kwabena W. Agyeman</property>
     <property name="can_focus">False</property>
     <property name="events">GDK_POINTER_MOTION_MASK | GDK_BUTTON_PRESS_MASK | GDK_STRUCTURE_MASK</property>
     <property name="title" translatable="yes">OpenMV IDE</property>
-    <property name="default_width">800</property>
+    <property name="default_width">1024</property>
     <property name="default_height">600</property>
     <signal name="destroy" handler="on_top_window_destroy" swapped="no"/>
     <child>
