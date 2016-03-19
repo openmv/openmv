@@ -306,7 +306,7 @@ class OMVGtk:
             return
 
         # Set higher timeout after connecting for lengthy transfers.
-        openmv.set_timeout(0.3)
+        openmv.set_timeout(2)
 
         # add terminal update callback
         gobject.gobject.timeout_add(30, omvgtk.update_terminal)
