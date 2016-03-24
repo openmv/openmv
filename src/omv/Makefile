@@ -58,13 +58,13 @@ SRCS += $(addprefix img/,   \
 	im_filter.c             \
    )
 
-SRCS += $(addprefix py/,    \
+SRCS += $(addprefix py/, \
 	py_helper.c             \
 	py_sensor.c             \
 	py_image.c              \
 	py_time.c               \
-	mlx90620.c              \
 	py_lcd.c                \
+	py_fir.c                \
 	py_gif.c                \
 	py_mjpeg.c              \
    )

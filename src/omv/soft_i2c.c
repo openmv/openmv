@@ -175,3 +175,10 @@ void soft_i2c_init()
         soft_i2c_write_bytes(j << 1, NULL, 0, true);
     }
 }
+
+void soft_i2c_deinit()
+{
+    for(volatile int i=0; i<1000; i++);
+    HAL_GPIO_DeInit(I2C_PORT, I2C_SIOC_PIN);
+    HAL_GPIO_DeInit(I2C_PORT, I2C_SIOD_PIN);
+}

@@ -71,9 +71,14 @@ _fatfs_buf  = _fs_cache - (1024);
 // USB MSC bot data
 _msc_buf    = _fatfs_buf - (2048);
 
+// MLX constants
+_a_ij       = _msc_buf - (64*4);
+_b_ij       = _a_ij - (64*4);
+_alpha_ij   = _b_ij - (64*4);
+
 // Image line buffer.
 // Maximum line * 2BPP * 2 (for double buffering).
-_line_buf   = _msc_buf - (640*4);
+_line_buf   = _alpha_ij - (640*4);
 
 // _line_buf is only used when reading frames and when reading
 // frames fb_alloc is not used so we can overwrite _line_buf.
