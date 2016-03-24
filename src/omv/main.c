@@ -58,8 +58,8 @@
 
 #include "py_sensor.h"
 #include "py_image.h"
-#include "mlx90620.h"
 #include "py_lcd.h"
+#include "py_fir.h"
 
 int errno;
 extern char _fatfs_buf;
@@ -318,6 +318,7 @@ soft_reset:
     sensor_init0();
     fb_alloc_init0();
     py_lcd_init0();
+    py_fir_init0();
 
 #if MICROPY_HW_ENABLE_RTC
     if (first_soft_reset) {
