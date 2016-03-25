@@ -164,6 +164,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_fir.o                                \
 	py_gif.o                                \
 	py_mjpeg.o                              \
+	py_winc.o                               \
 	)
 
 ifeq ($(TARGET), OPENMV1)

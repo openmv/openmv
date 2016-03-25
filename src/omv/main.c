@@ -35,6 +35,7 @@
 #include "sdcard.h"
 #include "ff.h"
 #include "mdefs.h"
+#include "modnetwork.h"
 
 #include "rng.h"
 #include "led.h"
@@ -334,6 +335,7 @@ soft_reset:
 
     servo_init();
     usbdbg_init();
+    mod_network_init();
 
     // Remove the BASEPRI masking (if any)
     irq_set_base_priority(0);
