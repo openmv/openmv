@@ -253,8 +253,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             int16_t a_common = (int16_t)((eeprom[CAL_ACOMMON_H]<<8)|eeprom[CAL_ACOMMON_L]);
             uint8_t a_i_scale = (uint8_t)((eeprom[CAL_AI_SCALE]&0xF0)>>4);
             uint8_t b_i_scale = (uint8_t)(eeprom[CAL_BI_SCALE]&0x0F);
-            uint16_t aplha_0 = (uint16_t)((eeprom[CAL_A0_H]<<8)|eeprom[CAL_A0_L]);
-            uint8_t aplha_0_scale = (uint8_t)eeprom[CAL_A0_SCALE];
+            uint16_t alpha_0 = (uint16_t)((eeprom[CAL_A0_H]<<8)|eeprom[CAL_A0_L]);
+            uint8_t alpha_0_scale = (uint8_t)eeprom[CAL_A0_SCALE];
             uint8_t delta_a_scale = (uint8_t)eeprom[CAL_D_A_SCALE];
 
             for (int i=0; i<64; i++) {
@@ -265,7 +265,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                 b_ij[i] = ((int8_t)eeprom[CAL_BI_OFFSET+i]) /
                     powf(2,b_i_scale+(3-ADC_resolution));
                 // Sensitivity coefficient
-                float t0 = aplha_0/powf(2,aplha_0_scale);
+                float t0 = alpha_0/powf(2,alpha_0_scale);
                 float t1 = ((uint8_t)eeprom[CAL_A_CP_OFFSET+i])/powf(2,delta_a_scale);
                 alpha_ij[i] = (t0+t1) /
                     powf(2,3-ADC_resolution);
@@ -278,7 +278,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             ksta = ((int16_t)((eeprom[CAL_KSTA_H]<<8)|eeprom[CAL_KSTA_L])) /
                 1048576.0f;
             alpha_cp = ((uint16_t)((eeprom[CAL_ALPHA_CP_H]<<8)|eeprom[CAL_ALPHA_CP_L])) /
-                powf(2,aplha_0_scale+(3-ADC_resolution));
+                powf(2,alpha_0_scale+(3-ADC_resolution));
 
             uint8_t ks_scale = (uint8_t)(eeprom[CAL_KS_SCALE]&0x0F);
             ks4 = ((int8_t)eeprom[CAL_KS4_EE]) /
@@ -322,7 +322,7 @@ mp_obj_t py_fir_read_ta()
 mp_obj_t py_fir_read_ir()
 {
     if (type == FIR_NONE) return mp_const_none;
-    float Ta = calculate_Ta(), To[64];
+    float Ta = calculate_Ta(), To[64], min = FLT_MAX, max = FLT_MIN;
     calculate_To(Ta, To);
 
     // Copy temperature array.
@@ -331,17 +331,21 @@ mp_obj_t py_fir_read_ir()
     // Rotate temperatures array (sensor memory is read column wise).
     for (int x=15; x>=0; x--) {
         for (int y=0; y<4; y++) {
-            To[x+(y*16)] = *To_rot_p++;
+            float temp = To[x+(y*16)] = *To_rot_p++;
+            min = IM_MIN(min, temp);
+            max = IM_MAX(max, temp);
         }
     }
 
-    mp_obj_t tuple[2];
+    mp_obj_t tuple[4];
     tuple[0] = mp_obj_new_float(Ta);
     tuple[1] = mp_obj_new_list(64, NULL);
+    tuple[2] = mp_obj_new_float(min);
+    tuple[3] = mp_obj_new_float(max);
     for (int i=0; i<64; i++) {
         mp_obj_list_store(tuple[1], mp_obj_new_int(i), mp_obj_new_float(To[i]));
     }
-    return mp_obj_new_tuple(2, tuple);
+    return mp_obj_new_tuple(4, tuple);
 }
 
 mp_obj_t py_fir_display_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -351,7 +355,7 @@ mp_obj_t py_fir_display_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    float Ta = calculate_Ta();
+    float Ta = mp_obj_get_float(args[1]);
     float min = -17.7778, max = 37.7778; // 0F to 100F
 
     int alpha = IM_MIN(IM_MAX(py_helper_lookup_int(kw_args,
@@ -400,20 +404,14 @@ mp_obj_t py_fir_display_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    float Ta = calculate_Ta(), To[64];
-    calculate_To(Ta, To);
-    float min = FLT_MAX, max = FLT_MIN;
+    mp_obj_t *arg_To;
+    mp_obj_get_array_fixed_n(args[1], 64, &arg_To);
 
-    // Copy temperature array.
-    float To_rot[64], *To_rot_p = To_rot;
-    memcpy(To_rot, To, sizeof(To));
-    // Rotate temperatures array (sensor memory is read column wise).
-    for (int x=15; x>=0; x--) {
-        for (int y=0; y<4; y++) {
-            float temp = To[x+(y*16)] = *To_rot_p++;
-            min = IM_MIN(min, temp);
-            max = IM_MAX(max, temp);
-        }
+    float To[64], min = FLT_MAX, max = FLT_MIN;
+    for (int i=0; i<64; i++) {
+        float temp = To[i] = mp_obj_get_float(arg_To[i]);
+        min = IM_MIN(min, temp);
+        max = IM_MAX(max, temp);
     }
 
     int alpha = IM_MIN(IM_MAX(py_helper_lookup_int(kw_args,
@@ -467,8 +465,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_type_obj, py_fir_type);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ir_obj,  py_fir_read_ir);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_display_ta_obj, 1, py_fir_display_ta);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_display_ir_obj, 1, py_fir_display_ir);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_display_ta_obj, 2, py_fir_display_ta);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_display_ir_obj, 2, py_fir_display_ir);
 static const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_fir)     },
     { MP_OBJ_NEW_QSTR(MP_QSTR_init),        (mp_obj_t)&py_fir_init_obj       },
