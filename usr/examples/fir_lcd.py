@@ -5,19 +5,55 @@
 
 import sensor, image, time, fir, lcd
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
-fir.init() # Initialize the thermal sensor
-lcd.init() # Initialize the lcd sensor
+# Reset sensor
+sensor.reset()
 
-clock = time.clock() # Tracks FPS.
+# Set sensor settings
+sensor.set_contrast(1)
+sensor.set_brightness(0)
+sensor.set_saturation(2)
+sensor.set_pixformat(sensor.RGB565)
+sensor.set_framesize(sensor.QQVGA2)
+
+# The following registers fine-tune the image
+# sensor window to align it with the FIR sensor.
+if (sensor.get_id() == sensor.OV2640):
+    sensor.__write_reg(0xFF, 0x01) # switch to reg bank
+    sensor.__write_reg(0x17, 0x19) # set HSTART
+    sensor.__write_reg(0x18, 0x43) # set HSTOP
+
+# Initialize the thermal sensor
+fir.init()
+
+# Initialize the lcd sensor
+lcd.init()
+
+# FPS clock
+clock = time.clock()
 
 while(True):
     clock.tick()
-    ta, ir, min_temp, max_temp = fir.read_ir()
-    img = sensor.snapshot()
-    fir.display_ir(img, ir) # draws on img
-    lcd.display(img)
-    print("FPS: %f - Ambient Temp: %f C - Min Temp %f C - Max Temp %f C" % \
-        (clock.fps(), ta, min_temp, max_temp))
+
+    # Capture an image
+    image = sensor.snapshot()
+
+    # Capture FIR data
+    #   ta: Ambient temperature
+    #   ir: Object temperatures (IR array)
+    #   to_min: Minimum object temperature
+    #   to_max: Maximum object temperature
+    ta, ir, to_min, to_max = fir.read_ir()
+
+    # Draw IR data on the framebuffer
+    fir.display_ir(image, ir)
+
+    # Draw ambient, min and max temperatures.
+    image.draw_string(0, 0, "Ta: %0.2f"%ta, color = (0xFF, 0x00, 0x00))
+    image.draw_string(0, 8, "To min: %0.2f"%(to_min+ta), color = (0xFF, 0x00, 0x00))
+    image.draw_string(0, 16, "To max: %0.2f"%(to_max+ta), color = (0xFF, 0x00, 0x00))
+
+    # Display image on LCD
+    lcd.display(image)
+
+    # Print FPS.
+    print(clock.fps())
