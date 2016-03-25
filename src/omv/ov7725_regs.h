@@ -25,7 +25,7 @@
 
 #define PID                     0x0A /* Product ID Number MSB */
 #define VER                     0x0B /* Product ID Number LSB */
-                                        
+
 #define COM3                    0x0C /* Common Control 3                                        */
 #define COM3_VFLIP              0x80 /* Vertical flip image ON/OFF selection                    */
 #define COM3_MIRROR             0x40 /* Horizontal mirror image ON/OFF selection                */
@@ -37,6 +37,7 @@
 #define COM3_COLOR_BAR          0x01 /* Sensor color bar test pattern output enable             */
 #define COM3_SET_CBAR(r, x)     ((r&0xFE)|((x&1)<<0))
 #define COM3_SET_MIRROR(r, x)   ((r&0xBF)|((x&1)<<6))
+#define COM3_SET_FLIP(r, x)     ((r&0x7F)|((x&1)<<7))
 
 #define COM4                    0x0D /* Common Control 4         */
 #define COM4_PLL_BYPASS         0x00 /* Bypass PLL               */
@@ -61,11 +62,11 @@
 #define COM5_AEC_NO_LIMIT       0x01 /* No limit to AEC increase step       */
 
 #define COM6                    0x0F /* Common Control 6 */
-#define COM6_AUTO_WINDOW        0x01 /* Auto window setting ON/OFF selection when format changes */ 
+#define COM6_AUTO_WINDOW        0x01 /* Auto window setting ON/OFF selection when format changes */
 
 #define AEC                     0x10 /* AEC[7:0] (see register AECH for AEC[15:8]) */
 #define CLKRC                   0x11 /* Internal Clock */
-                                
+
 #define COM7                    0x12 /* Common Control 7         */
 #define COM7_RESET              0x80 /* SCCB Register Reset      */
 #define COM7_RES_VGA            0x00 /* Resolution VGA           */
@@ -92,6 +93,7 @@
 #define COM8_AGC_EN             0x04 /* AGC Enable */
 #define COM8_AWB_EN             0x02 /* AWB Enable */
 #define COM8_AEC_EN             0x01 /* AEC Enable */
+#define COM8_SET_AWB(r, x)      ((r&0xFD)|((x&0x1)<<1))
 
 #define COM9                    0x14 /* Common Control 9 */
 #define COM9_HISTO_AVG          0x80 /* Histogram or average based AEC/AGC selection */
@@ -178,7 +180,7 @@
 #define LC_CTR_RGB_COMP_1       0x00 /* R, G, and B channel compensation coefficient is set by LC_COEF (0x49) */
 #define LC_CTR_RGB_COMP_3       0x04 /* R, G, and B channel compensation coefficient is set by registers
                                         LC_COEFB (0x4B), LC_COEF (0x49), and LC_COEFR (0x4C), respectively */
-#define LC_CTR_EN               0x01 /* Lens correction enable */ 
+#define LC_CTR_EN               0x01 /* Lens correction enable */
 #define LC_XC                   0x47 /* X Coordinate of Lens Correction Center Relative to Array Center */
 #define LC_YC                   0x48 /* Y Coordinate of Lens Correction Center Relative to Array Center */
 #define LC_COEF                 0x49 /* Lens Correction Coefficient */

@@ -22,14 +22,14 @@ static const uint8_t default_regs[][2] = {
     {COM4,          0xC1}, /* PLL */
     {CLKRC,         0x00},
 
-    // VGA Window Size  
+    // VGA Window Size
     {HSTART,        0x23},
     {HSIZE,         0xA0},
     {VSTART,        0x07},
     {VSIZE,         0xF0},
     {HREF,          0x00},
 
-    // Scale down to QVGA Resoultion 
+    // Scale down to QVGA Resoultion
     {HOUTSIZE,      0x50},
     {VOUTSIZE,      0x78},
 
@@ -284,11 +284,47 @@ static int set_colorbar(sensor_t *sensor, int enable)
     // Read register COM3
     uint8_t reg = SCCB_Read(sensor->slv_addr, COM3);
 
-    // Set color bar on/off 
+    // Set color bar on/off
     reg = COM3_SET_CBAR(reg, enable);
 
     // Set mirror on/off to pass self-tests
     reg = COM3_SET_MIRROR(reg, enable);
+
+    // Write back register COM3
+    return SCCB_Write(sensor->slv_addr, COM3, reg);
+}
+
+static int set_whitebal(sensor_t *sensor, int enable)
+{
+    // Read register COM8
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM8);
+
+    // Set white bal on/off
+    reg = COM8_SET_AWB(reg, enable);
+
+    // Write back register COM8
+    return SCCB_Write(sensor->slv_addr, COM8, reg);
+}
+
+static int set_hmirror(sensor_t *sensor, int enable)
+{
+    // Read register COM3
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM3);
+
+    // Set mirror on/off
+    reg = COM3_SET_MIRROR(reg, enable);
+
+    // Write back register COM3
+    return SCCB_Write(sensor->slv_addr, COM3, reg);
+}
+
+static int set_vflip(sensor_t *sensor, int enable)
+{
+    // Read register COM3
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM3);
+
+    // Set mirror on/off
+    reg = COM3_SET_FLIP(reg, enable);
 
     // Write back register COM3
     return SCCB_Write(sensor->slv_addr, COM3, reg);
@@ -327,6 +363,9 @@ int ov7725_init(sensor_t *sensor)
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_colorbar = set_colorbar;
+    sensor->set_whitebal = set_whitebal;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
     sensor->set_special_effect = set_special_effect;
 
     // Set sensor flags

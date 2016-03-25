@@ -187,6 +187,8 @@
 #define COM9_AGC_GAIN_128x  0x06 /* AGC:  128x */
 #define COM9_AGC_SET(x)     (COM9_DEFAULT|(x<<5))
 
+#define CTRL1_AWB           0x08 /* Enable AWB */
+
 #define VV                  0x26
 #define VV_AGC_TH_SET(h,l)  ((h<<4)|(l&0x0F))
 

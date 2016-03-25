@@ -159,6 +159,27 @@ static mp_obj_t py_sensor_set_colorbar(mp_obj_t enable) {
     return mp_const_true;
 }
 
+static mp_obj_t py_sensor_set_whitebal(mp_obj_t enable) {
+    if (sensor_set_whitebal(mp_obj_is_true(enable)) != 0) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+
+static mp_obj_t py_sensor_set_hmirror(mp_obj_t enable) {
+    if (sensor_set_hmirror(mp_obj_is_true(enable)) != 0) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+
+static mp_obj_t py_sensor_set_vflip(mp_obj_t enable) {
+    if (sensor_set_vflip(mp_obj_is_true(enable)) != 0) {
+        return mp_const_false;
+    }
+    return mp_const_true;
+}
+
 static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde) {
     if (sensor_set_special_effect(mp_obj_get_int(sde)) != 0) {
         return mp_const_false;
@@ -230,6 +251,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,      py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_saturation_obj,      py_sensor_set_saturation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_quality_obj,         py_sensor_set_quality);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_colorbar_obj,        py_sensor_set_colorbar);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_whitebal_obj,        py_sensor_set_whitebal);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_hmirror_obj,         py_sensor_set_hmirror);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vflip_obj,           py_sensor_set_vflip);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_image_filter_obj,1, py_sensor_set_image_filter);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,           py_sensor_write_reg);
@@ -280,6 +304,9 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_saturation),      (mp_obj_t)&py_sensor_set_saturation_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_quality),         (mp_obj_t)&py_sensor_set_quality_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_colorbar),        (mp_obj_t)&py_sensor_set_colorbar_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_whitebal),        (mp_obj_t)&py_sensor_set_whitebal_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_hmirror),         (mp_obj_t)&py_sensor_set_hmirror_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_vflip),           (mp_obj_t)&py_sensor_set_vflip_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_image_filter),    (mp_obj_t)&py_sensor_set_image_filter_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),         (mp_obj_t)&py_sensor_write_reg_obj },
