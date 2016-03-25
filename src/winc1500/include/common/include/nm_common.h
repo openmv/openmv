@@ -45,6 +45,8 @@
 #include "bsp/include/nm_bsp.h"
 #include "common/include/nm_debug.h"
 
+#define WINC1500_EXPORT(name) winc1500_ ## name
+
 /**@defgroup  CommonDefines CommonDefines
  * @ingroup WlanDefines
  */

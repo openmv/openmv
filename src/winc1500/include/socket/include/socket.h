@@ -888,7 +888,7 @@ socket operations. Socket creation is dependent on the socket type.
 	tcp_client_socket = socket(AF_INET, SOCK_STREAM, 0));
 @endcode
 */
-NMI_API SOCKET socket(uint16 u16Domain, uint8 u8Type, uint8 u8Flags);
+NMI_API SOCKET WINC1500_EXPORT(socket)(uint16 u16Domain, uint8 u8Type, uint8 u8Flags);
 /** @} */
 /** @defgroup BindFn bind
  *  @ingroup SocketAPI
@@ -970,7 +970,7 @@ NMI_API SOCKET socket(uint16 u16Domain, uint8 u8Type, uint8 u8Flags);
 	}
 @endcode
 */
-NMI_API sint8 bind(SOCKET sock, struct sockaddr *pstrAddr, uint8 u8AddrLen);
+NMI_API sint8 WINC1500_EXPORT(bind)(SOCKET sock, struct sockaddr *pstrAddr, uint8 u8AddrLen);
 /** @} */
 
 /** @defgroup ListenFn listen
@@ -1092,7 +1092,7 @@ This example demonstrates the call of the listen socket operation after a succes
 
 @endcode
 */
-NMI_API sint8 listen(SOCKET sock, uint8 backlog);
+NMI_API sint8 WINC1500_EXPORT(listen)(SOCKET sock, uint8 backlog);
 /** @} */
 /** @defgroup AcceptFn accept
  *    @ingroup SocketAPI
@@ -1122,7 +1122,7 @@ NMI_API sint8 listen(SOCKET sock, uint8 backlog);
 	- [SOCK_ERR_INVALID_ARG](@ref SOCK_ERR_INVALID_ARG)
 		Indicating passing invalid arguments such as negative socket ID.
 */
-NMI_API sint8 accept(SOCKET sock, struct sockaddr *addr, uint8 *addrlen);
+NMI_API sint8 WINC1500_EXPORT(accept)(SOCKET sock, struct sockaddr *addr, uint8 *addrlen);
 /** @} */
 /** @defgroup ConnectFn connect
  *    @ingroup SocketAPI
@@ -1226,7 +1226,7 @@ NMI_API sint8 accept(SOCKET sock, struct sockaddr *addr, uint8 *addrlen);
 	}
 @endcode
 */
-NMI_API sint8 connect(SOCKET sock, struct sockaddr *pstrAddr, uint8 u8AddrLen);
+NMI_API sint8 WINC1500_EXPORT(connect)(SOCKET sock, struct sockaddr *pstrAddr, uint8 u8AddrLen);
 /** @} */
 /** @defgroup ReceiveFn recv
  *    @ingroup SocketAPI
@@ -1336,7 +1336,7 @@ NMI_API sint8 connect(SOCKET sock, struct sockaddr *pstrAddr, uint8 u8AddrLen);
 }
 @endcode
 */
-NMI_API sint16 recv(SOCKET sock, void *pvRecvBuf, uint16 u16BufLen, uint32 u32Timeoutmsec);
+NMI_API sint16 WINC1500_EXPORT(recv)(SOCKET sock, void *pvRecvBuf, uint16 u16BufLen, uint32 u32Timeoutmsec);
 /** @} */
 /** @defgroup ReceiveFromSocketFn recvfrom
  *   @ingroup SocketAPI
@@ -1450,7 +1450,7 @@ NMI_API sint16 recv(SOCKET sock, void *pvRecvBuf, uint16 u16BufLen, uint32 u32Ti
 }
 @endcode
 */
-NMI_API sint16 recvfrom(SOCKET sock, void *pvRecvBuf, uint16 u16BufLen, uint32 u32Timeoutmsec);
+NMI_API sint16 WINC1500_EXPORT(recvfrom)(SOCKET sock, void *pvRecvBuf, uint16 u16BufLen, uint32 u32Timeoutmsec);
 /** @} */
 /** @defgroup SendFn send
  *   @ingroup SocketAPI
@@ -1513,7 +1513,7 @@ NMI_API sint16 recvfrom(SOCKET sock, void *pvRecvBuf, uint16 u16BufLen, uint32 u
 @return
 	The function shall return @ref SOCK_ERR_NO_ERROR for successful operation and a negative value (indicating the error) otherwise.
 */
-NMI_API sint16 send(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 u16Flags);
+NMI_API sint16 WINC1500_EXPORT(send)(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 u16Flags);
 /** @} */
 /** @defgroup SendToSocketFn sendto
  *  @ingroup SocketAPI
@@ -1572,7 +1572,7 @@ NMI_API sint16 send(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint1
 @return
 	The function  returns @ref SOCK_ERR_NO_ERROR for successful operation and a negative value (indicating the error) otherwise.
 */
-NMI_API sint16 sendto(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flags, struct sockaddr *pstrDestAddr, uint8 u8AddrLen);
+NMI_API sint16 WINC1500_EXPORT(sendto)(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uint16 flags, struct sockaddr *pstrDestAddr, uint8 u8AddrLen);
 /** @} */
 /** @defgroup CloseSocketFn close
  *  @ingroup SocketAPI
@@ -1601,7 +1601,7 @@ NMI_API sint16 sendto(SOCKET sock, void *pvSendBuffer, uint16 u16SendLength, uin
 @return
 	The function returned @ref SOCK_ERR_NO_ERROR for successful operation and a negative value (indicating the error) otherwise.
 */
-NMI_API sint8 close(SOCKET sock);
+NMI_API sint8 WINC1500_EXPORT(close)(SOCKET sock);
 /** @} */
 /** @defgroup InetAddressFn nmi_inet_addr
 *  @ingroup SocketAPI
@@ -1642,7 +1642,7 @@ NMI_API uint32 nmi_inet_addr(char *pcIpAddr);
 
 @see
 	registerSocketCallback
-
+    )
 @warning
 	Successful completion of a call to gethostbyname() does not guarantee success of the DNS request,
 	a negative return value indicates only locally-detected errors
@@ -1651,7 +1651,7 @@ NMI_API uint32 nmi_inet_addr(char *pcIpAddr);
 	- [SOCK_ERR_NO_ERROR](@ref SOCK_ERR_NO_ERROR)
 	- [SOCK_ERR_INVALID_ARG](@ref SOCK_ERR_INVALID_ARG)
 */
-NMI_API sint8 gethostbyname(uint8 * pcHostName);
+NMI_API sint8 WINC1500_EXPORT(gethostbyname)(uint8 * pcHostName);
 
 NMI_API sint8 sslSetSockOpt(SOCKET sock, uint8  u8Opt, const void *pvOptVal, uint16 u16OptLen);
 /** @} */
@@ -1704,7 +1704,7 @@ NMI_API sint8 sslSetSockOpt(SOCKET sock, uint8  u8Opt, const void *pvOptVal, uin
 	The function shall return \ref SOCK_ERR_NO_ERROR for successful operation
 	and a negative value (indicating the error) otherwise.
 */
-NMI_API sint8 setsockopt(SOCKET socket, uint8 u8Level, uint8 option_name,
+NMI_API sint8 WINC1500_EXPORT(setsockopt)(SOCKET socket, uint8 u8Level, uint8 option_name,
        const void *option_value, uint16 u16OptionLen);
 /** @} */
 /** @defgroup GetSocketOptionsFn getsockopt
@@ -1733,7 +1733,7 @@ NMI_API sint8 setsockopt(SOCKET socket, uint8 u8Level, uint8 option_name,
 @return
 	The function shall return ZERO for successful operation and a negative value otherwise.
 */
-NMI_API sint8 getsockopt(SOCKET sock, uint8 u8Level, uint8 u8OptName, const void *pvOptValue, uint8* pu8OptLen);
+NMI_API sint8 WINC1500_EXPORT(getsockopt)(SOCKET sock, uint8 u8Level, uint8 u8OptName, const void *pvOptValue, uint8* pu8OptLen);
 /** @} */
 
 /**@}*/
