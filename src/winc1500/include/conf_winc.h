@@ -103,7 +103,7 @@ extern "C" {
    ---------------------------------
 */
 
-#define CONF_WINC_DEBUG					(1)
+#define CONF_WINC_DEBUG					(0)
 #define CONF_WINC_PRINTF				printf
 
 #ifdef __cplusplus
