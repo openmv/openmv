@@ -612,6 +612,69 @@ static int set_colorbar(sensor_t *sensor, int enable)
     return ret;
 }
 
+static int set_whitebal(sensor_t *sensor, int enable)
+{
+    int ret=0;
+    uint8_t reg;
+
+    /* Switch to SENSOR register bank */
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
+
+    /* Update COM7 */
+    reg = SCCB_Read(sensor->slv_addr, CTRL1);
+
+    if (enable) {
+        reg |= CTRL1_AWB;
+    } else {
+        reg &= ~CTRL1_AWB;
+    }
+
+    ret |= SCCB_Write(sensor->slv_addr, CTRL1, reg);
+    return ret;
+}
+
+static int set_hmirror(sensor_t *sensor, int enable)
+{
+    int ret=0;
+    uint8_t reg;
+
+    /* Switch to SENSOR register bank */
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
+
+    /* Update REG04 */
+    reg = SCCB_Read(sensor->slv_addr, REG04);
+
+    if (enable) {
+        reg |= REG04_HFLIP_IMG;
+    } else {
+        reg &= ~REG04_HFLIP_IMG;
+    }
+
+    ret |= SCCB_Write(sensor->slv_addr, REG04, reg);
+    return ret;
+}
+
+static int set_vflip(sensor_t *sensor, int enable)
+{
+    int ret=0;
+    uint8_t reg;
+
+    /* Switch to SENSOR register bank */
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
+
+    /* Update REG04 */
+    reg = SCCB_Read(sensor->slv_addr, REG04);
+
+    if (enable) {
+        reg |= REG04_VFLIP_IMG;
+    } else {
+        reg &= ~REG04_VFLIP_IMG;
+    }
+
+    ret |= SCCB_Write(sensor->slv_addr, REG04, reg);
+    return ret;
+}
+
 int ov2640_init(sensor_t *sensor)
 {
     /* set function pointers */
@@ -626,6 +689,9 @@ int ov2640_init(sensor_t *sensor)
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_quality = set_quality;
     sensor->set_colorbar = set_colorbar;
+    sensor->set_whitebal = set_whitebal;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
 
     // Set sensor flags
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);

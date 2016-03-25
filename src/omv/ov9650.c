@@ -343,6 +343,39 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
     return 0;
 }
 
+static int set_whitebal(sensor_t *sensor, int enable)
+{
+   uint8_t val;
+   val = SCCB_Read(sensor->slv_addr, REG_COM8);
+
+   SCCB_Write(sensor->slv_addr, REG_COM8,
+              enable ? (val | REG_COM8_AWB) : (val & ~REG_COM8_AWB));
+
+   return 0;
+}
+
+static int set_hmirror(sensor_t *sensor, int enable)
+{
+   uint8_t val;
+   val = SCCB_Read(sensor->slv_addr, REG_MVFP);
+
+   SCCB_Write(sensor->slv_addr, REG_MVFP,
+              enable ? (val | REG_MVFP_HMIRROR) : (val & ~REG_MVFP_HMIRROR));
+
+   return 0;
+}
+
+static int set_vflip(sensor_t *sensor, int enable)
+{
+   uint8_t val;
+   val = SCCB_Read(sensor->slv_addr, REG_MVFP);
+
+   SCCB_Write(sensor->slv_addr, REG_MVFP,
+              enable ? (val | REG_MVFP_VFLIP) : (val & ~REG_MVFP_VFLIP));
+
+   return 0;
+}
+
 int ov9650_init(sensor_t *sensor)
 {
     // Set function pointers
@@ -353,6 +386,9 @@ int ov9650_init(sensor_t *sensor)
     sensor->set_brightness= set_brightness;
     sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
+    sensor->set_whitebal = set_whitebal;
+    sensor->set_hmirror = set_hmirror;
+    sensor->set_vflip = set_vflip;
 
     // Set sensor flags
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);

@@ -120,4 +120,7 @@
 #define REG_COM7_QVGA    (1<<4)
 #define REG_COM7_CIF     (1<<5)
 #define REG_COM7_VGA     (1<<6)
+#define REG_COM8_AWB     (1<<1)
+#define REG_MVFP_HMIRROR (1<<5)
+#define REG_MVFP_VFLIP   (1<<4)
 #endif //__REG_REGS_H__

@@ -455,6 +455,39 @@ int sensor_set_colorbar(int enable)
     return 0;
 }
 
+int sensor_set_whitebal(int enable)
+{
+    /* call the sensor specific function */
+    if (sensor.set_whitebal == NULL
+        || sensor.set_whitebal(&sensor, enable) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
+
+int sensor_set_hmirror(int enable)
+{
+    /* call the sensor specific function */
+    if (sensor.set_hmirror == NULL
+        || sensor.set_hmirror(&sensor, enable) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
+
+int sensor_set_vflip(int enable)
+{
+    /* call the sensor specific function */
+    if (sensor.set_vflip == NULL
+        || sensor.set_vflip(&sensor, enable) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
+
 int sensor_set_special_effect(sde_t sde)
 {
     if (sensor.sde == sde) {

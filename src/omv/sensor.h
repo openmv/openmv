@@ -126,6 +126,9 @@ typedef struct _sensor {
     int  (*set_gainceiling)     (sensor_t *sensor, gainceiling_t gainceiling);
     int  (*set_quality)         (sensor_t *sensor, int quality);
     int  (*set_colorbar)        (sensor_t *sensor, int enable);
+    int  (*set_whitebal)        (sensor_t *sensor, int enable);
+    int  (*set_hmirror)         (sensor_t *sensor, int enable);
+    int  (*set_vflip)           (sensor_t *sensor, int enable);
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
 } sensor_t;
 
@@ -188,6 +191,15 @@ int sensor_set_quality(int qs);
 
 // Enable/disable the colorbar mode.
 int sensor_set_colorbar(int enable);
+
+// Enable/disable the whitebal mode.
+int sensor_set_whitebal(int enable);
+
+// Enable/disable the hmirror mode.
+int sensor_set_hmirror(int enable);
+
+// Enable/disable the vflip mode.
+int sensor_set_vflip(int enable);
 
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);
