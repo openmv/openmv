@@ -348,7 +348,7 @@ mp_obj_t py_fir_read_ir()
     return mp_obj_new_tuple(4, tuple);
 }
 
-mp_obj_t py_fir_display_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (type == FIR_NONE) return mp_const_none;
     image_t *arg_img = py_image_cobj(args[0]);
@@ -359,7 +359,7 @@ mp_obj_t py_fir_display_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     float min = -17.7778, max = 37.7778; // 0F to 100F
 
     int alpha = IM_MIN(IM_MAX(py_helper_lookup_int(kw_args,
-        MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 255);
+        MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 256);
 
     mp_map_elem_t *kw_scale = mp_map_lookup(kw_args,
         MP_OBJ_NEW_QSTR(MP_QSTR_scale), MP_MAP_LOOKUP);
@@ -374,7 +374,7 @@ mp_obj_t py_fir_display_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     uint16_t r_ta = IM_R565(rainbow_table[gs_ta]);
     uint16_t g_ta = IM_G565(rainbow_table[gs_ta]);
     uint16_t b_ta = IM_B565(rainbow_table[gs_ta]);
-    uint32_t va = __PKHBT((255-alpha), alpha, 16);
+    uint32_t va = __PKHBT((256-alpha), alpha, 16);
     for (int y=0; y<arg_img->h; y++) {
         for (int x=0; x<arg_img->w; x++) {
             if (IM_IS_GS(arg_img)) {
@@ -397,7 +397,7 @@ mp_obj_t py_fir_display_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     return mp_const_none;
 }
 
-mp_obj_t py_fir_display_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (type == FIR_NONE) return mp_const_none;
     image_t *arg_img = py_image_cobj(args[0]);
@@ -415,7 +415,7 @@ mp_obj_t py_fir_display_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     int alpha = IM_MIN(IM_MAX(py_helper_lookup_int(kw_args,
-        MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 255);
+        MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 256);
 
     mp_map_elem_t *kw_scale = mp_map_lookup(kw_args,
         MP_OBJ_NEW_QSTR(MP_QSTR_scale), MP_MAP_LOOKUP);
@@ -430,7 +430,7 @@ mp_obj_t py_fir_display_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int x_offset = (arg_img->w - (width * x_scale)) / 2;
     int y_scale = x_scale; // keep aspect ratio
     int y_offset = (arg_img->h - (height * y_scale)) / 2;
-    uint32_t va = __PKHBT((255-alpha), alpha, 16);
+    uint32_t va = __PKHBT((256-alpha), alpha, 16);
     for (int y=y_offset; y<y_offset+(height*y_scale); y++) {
         for (int x=x_offset; x<x_offset+(width*x_scale); x++) {
             int index = (((y-y_offset)/y_scale)*width)+((x-x_offset)/x_scale);
@@ -465,19 +465,19 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_type_obj, py_fir_type);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ir_obj,  py_fir_read_ir);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_display_ta_obj, 2, py_fir_display_ta);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_display_ir_obj, 2, py_fir_display_ir);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ta_obj, 2, py_fir_draw_ta);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
 static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_fir)     },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init),        (mp_obj_t)&py_fir_init_obj       },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_deinit),      (mp_obj_t)&py_fir_deinit_obj     },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_width),       (mp_obj_t)&py_fir_width_obj      },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_height),      (mp_obj_t)&py_fir_height_obj     },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_type),        (mp_obj_t)&py_fir_type_obj       },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_ta),     (mp_obj_t)&py_fir_read_ta_obj    },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_ir),     (mp_obj_t)&py_fir_read_ir_obj    },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_display_ta),  (mp_obj_t)&py_fir_display_ta_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_display_ir),  (mp_obj_t)&py_fir_display_ir_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_fir)  },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_init),        (mp_obj_t)&py_fir_init_obj    },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_deinit),      (mp_obj_t)&py_fir_deinit_obj  },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_width),       (mp_obj_t)&py_fir_width_obj   },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_height),      (mp_obj_t)&py_fir_height_obj  },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_type),        (mp_obj_t)&py_fir_type_obj    },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read_ta),     (mp_obj_t)&py_fir_read_ta_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read_ir),     (mp_obj_t)&py_fir_read_ir_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_draw_ta),     (mp_obj_t)&py_fir_draw_ta_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_draw_ir),     (mp_obj_t)&py_fir_draw_ir_obj },
     { NULL, NULL },
 };
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
