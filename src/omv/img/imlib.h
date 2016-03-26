@@ -460,13 +460,16 @@ void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m
 int32_t *imlib_histogram(image_t *img, rectangle_t *r);
 void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out);
 
+/* Image Filtering */
+void imlib_midpoint_filter(image_t *img, const int ksize, const int bias);
+void imlib_median_filter(image_t *src, int r);
+
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
 
 /* Image filtering functions */
 int  imlib_image_mean(struct image *src);
 void imlib_histeq(struct image *src);
-void imlib_median_filter(image_t *src, int r);
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold);
 void imlib_rainbow(image_t *src, struct image *dst);
 array_t *imlib_count_blobs(struct image *image);
