@@ -45,7 +45,7 @@ while(True):
     ta, ir, to_min, to_max = fir.read_ir()
 
     # Draw IR data on the framebuffer
-    fir.display_ir(image, ir)
+    fir.draw_ir(image, ir)
 
     # Draw ambient, min and max temperatures.
     image.draw_string(0, 0, "Ta: %0.2f"%ta, color = (0xFF, 0x00, 0x00))
