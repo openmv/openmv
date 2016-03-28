@@ -260,17 +260,24 @@ class OMVGtk:
         if os.path.isfile(path):
             self.fw_file_path = path
 
-        # built-in examples menu
+        # Built-in examples menu
         submenu = gtk.Menu()
-        menu = self.builder.get_object('example_menu')
-        files = sorted(os.listdir(EXAMPLES_DIR))
-        for f in files:
-            if f.endswith(".py"):
-                label = os.path.basename(f)
-                mitem = gtk.MenuItem(label, use_underline=False)
-                mitem.connect("activate", self.open_example, EXAMPLES_DIR)
-                submenu.append(mitem)
+        for root, dirs, files in os.walk(EXAMPLES_DIR, topdown=True):
+            for dirname in sorted(dirs):
+                smenu = gtk.Menu()
+                path = os.path.join(root, dirname)
+                for f in os.listdir(path):
+                    if f.endswith(".py"):
+                        label = os.path.basename(f)
+                        mitem = gtk.MenuItem(label, use_underline=False)
+                        mitem.connect("activate", self.open_example, path)
+                        smenu.append(mitem)
 
+                menu = gtk.MenuItem(dirname)
+                menu.set_submenu(smenu)
+                submenu.append(menu)
+
+        menu = self.builder.get_object('example_menu')
         menu.set_submenu(submenu)
 
         # recent files menu
@@ -286,7 +293,7 @@ class OMVGtk:
         self.enable_jpeg = self.config.get("main", "enable_jpeg") == 'True'
 
         # load helloworld.py
-        self._load_file(os.path.join(EXAMPLES_DIR, "helloworld.py"))
+        self._load_file(os.path.join(EXAMPLES_DIR, "00-Basics", "helloworld.py"))
         self.save_button.set_sensitive(False)
 
     def show_message_dialog(self, msg_type, msg):
