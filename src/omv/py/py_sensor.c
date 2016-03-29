@@ -15,6 +15,7 @@
 #include "py_image.h"
 #include "py_sensor.h"
 #include "omv_boardconfig.h"
+#include "py_helper.h"
 
 extern sensor_t sensor;
 
@@ -39,6 +40,16 @@ static mp_obj_t py_sensor_snapshot() {
         return mp_const_false;
     }
     return image;
+}
+
+static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args) {
+    int frames = (n_args == 1) ? mp_obj_get_int(args[0]) : 10; // OV Recommended.
+    for (int i = 0; i < frames; i++) {
+        if (sensor_snapshot(NULL) == -1) {
+            nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
+        }
+    }
+    return mp_const_none;
 }
 
 static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {
@@ -242,6 +253,7 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,               py_sensor_reset);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,              py_sensor_get_id);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_obj,            py_sensor_snapshot);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_skip_frames_obj, 0, 1, py_sensor_skip_frames);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_set_pixformat);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,       py_sensor_set_framerate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_set_framesize);
@@ -294,6 +306,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     // Sensor functions
     { MP_OBJ_NEW_QSTR(MP_QSTR_reset),               (mp_obj_t)&py_sensor_reset_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_snapshot),            (mp_obj_t)&py_sensor_snapshot_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_skip_frames),         (mp_obj_t)&py_sensor_skip_frames_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_id),              (mp_obj_t)&py_sensor_get_id_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_pixformat),       (mp_obj_t)&py_sensor_set_pixformat_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framerate),       (mp_obj_t)&py_sensor_set_framerate_obj },

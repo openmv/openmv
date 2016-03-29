@@ -161,6 +161,7 @@ Q(NEGATIVE)
 
 Q(reset)
 Q(snapshot)
+Q(skip_frames)
 Q(get_id)
 Q(set_pixformat)
 Q(set_framerate)
