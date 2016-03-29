@@ -45,12 +45,128 @@
 
 static volatile bool ip_obtained = false;
 static volatile bool wlan_connected = false;
+static volatile bool tcp_connected = false;
 
 static void *async_request_data;
 static volatile bool async_request_done = false;
 
 /**
- * Callback to get the Wi-Fi status update.
+ * DNS Callback.
+ *
+ * host: Domain name.
+ * ip: Server IP.
+ */
+static void resolve_callback(uint8_t *host, uint32_t ip)
+{
+    async_request_done = true;
+    *((uint32_t*) async_request_data) = ip;
+}
+
+/**
+ * Sockets Callback.
+ *
+ * sock: Socket descriptor.
+ * msg_type: Type of Socket notification. Possible types are:
+ *  SOCKET_MSG_BIND
+ *  SOCKET_MSG_LISTEN
+ *  SOCKET_MSG_ACCEPT
+ *  SOCKET_MSG_CONNECT
+ *  SOCKET_MSG_SEND
+ *  SOCKET_MSG_RECV
+ *  SOCKET_MSG_SENDTO
+ *  SOCKET_MSG_RECVFROM
+ *
+ * msg: A structure contains notification informations.
+ *  tstrSocketBindMsg
+ *  tstrSocketListenMsg
+ *  tstrSocketAcceptMsg
+ *  tstrSocketConnectMsg
+ *  tstrSocketRecvMsg
+ */
+static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
+{
+    switch (msg_type) {
+        // Socket bind.
+        case SOCKET_MSG_BIND: {
+            tstrSocketBindMsg *pstrBind = (tstrSocketBindMsg *)msg;
+            if (pstrBind && pstrBind->status == 0) {
+                printf("socket_callback: bind success.\r\n");
+            } else {
+                printf("socket_callback: bind error!\r\n");
+            }
+            break;
+        }
+
+        // Socket listen.
+        case SOCKET_MSG_LISTEN: {
+            tstrSocketListenMsg *pstrListen = (tstrSocketListenMsg *)msg;
+            if (pstrListen && pstrListen->status == 0) {
+                printf("socket_callback: listen success.\r\n");
+            } else {
+                printf("socket_callback: listen error!\r\n");
+            }
+            break;
+        }
+
+        // Connect accept.
+        case SOCKET_MSG_ACCEPT: {
+            tstrSocketAcceptMsg *pstrAccept = (tstrSocketAcceptMsg *)msg;
+            if (pstrAccept) {
+                tcp_connected = 1;
+                //tcp_client_socket = pstrAccept->sock;
+                printf("socket_callback: accept success.\r\n");
+            } else {
+                tcp_connected = 0;
+                //WINC1500_EXPORT(close)(tcp_server_socket);
+                //tcp_server_socket = -1;
+                printf("socket_callback: accept error!\r\n");
+            }
+            break;
+        }
+
+        // Socket connected.
+        case SOCKET_MSG_CONNECT: {
+            tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)msg;
+            if (pstrConnect && pstrConnect->s8Error >= 0) {
+                tcp_connected = 1;
+                printf("socket_callback: connect success.\r\n");
+            } else {
+                tcp_connected = 0;
+                printf("socket_callback: connect error!\r\n");
+            }
+            break;
+        }
+
+        // Message send.
+        case SOCKET_MSG_SEND: {
+            //recv(tcp_client_socket, gau8SocketBuffer, sizeof(gau8SocketBuffer), 0);
+            break;
+        }
+
+        // Message receive.
+        case SOCKET_MSG_RECV: {
+            //tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)msg;
+            //if (pstrRecv && pstrRecv->s16BufferSize > 0) {
+            //    if (!strncmp((char *)pstrRecv->pu8Buffer, REMOTE_CMD_INDICATOR, INDICATOR_STRING_LEN)) {
+            //        parse_command((char *)(pstrRecv->pu8Buffer + INDICATOR_STRING_LEN), 1);
+            //    } else {
+            //        PRINT_REMOTE_MSG(pstrRecv->pu8Buffer);
+            //    }
+            //} else {
+            //    disconnect_cmd_handler(NULL);
+            //    printf("socket_callback: recv error!\r\n");
+            //    break;
+            //}
+            break;
+        }
+
+        default:
+            break;
+    }
+}
+
+/**
+ * WiFi Callback.
  *
  * msg_type: type of Wi-Fi notification. Possible types are:
  *  M2M_WIFI_RESP_CON_STATE_CHANGED
@@ -191,20 +307,27 @@ static void wifi_callback(uint8_t msg_type, void *msg)
 
 static int winc_gethostbyname(mp_obj_t nic, const char *name, mp_uint_t len, uint8_t *out_ip)
 {
-//    uint32_t ip;
-//
-//    WINC1500_EXPORT(gethostbyname)((char*)name, len, &ip);
-//
-//    if (ip == 0) {
-//        // unknown host
-//        return ENOENT;
-//    }
-//
-//    out_ip[0] = ip >> 24;
-//    out_ip[1] = ip >> 16;
-//    out_ip[2] = ip >> 8;
-//    out_ip[3] = ip;
+    uint32_t ip=0;
 
+    async_request_done = false;
+    async_request_data = &ip;
+
+    WINC1500_EXPORT(gethostbyname)((uint8_t*) name);
+
+    while (async_request_done == false) {
+		// Handle pending events from network controller.
+		m2m_wifi_handle_events(NULL);
+	}
+
+    if (ip == 0) {
+        // unknown host
+        return ENOENT;
+    }
+
+    out_ip[0] = ip >> 24;
+    out_ip[1] = ip >> 16;
+    out_ip[2] = ip >> 8;
+    out_ip[3] = ip;
     return 0;
 }
 
@@ -533,7 +656,10 @@ static mp_obj_t winc_make_new(mp_obj_t type_in, mp_uint_t n_args, mp_uint_t n_kw
 	// Initialize socket layer.
 	socketInit();
 
-    // register with network module
+    // Register sockets callback functions
+    registerSocketCallback(socket_callback, resolve_callback);
+
+    // Register with network module
     mod_network_register_nic((mp_obj_t)&winc_obj);
 
     return (mp_obj_t)&winc_obj;
