@@ -360,20 +360,20 @@ static int winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
     }
 
     // store state of this socket
-    socket->u_state = fd;
+    socket->fd = fd;
     socket->timeout = 0; // blocking
     return 0;
 }
 
 static void winc_socket_close(mod_network_socket_obj_t *socket)
 {
-    WINC1500_EXPORT(close)(socket->u_state);
+    WINC1500_EXPORT(close)(socket->fd);
 }
 
 static int winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
-    int ret = WINC1500_EXPORT(bind)(socket->u_state, &addr, sizeof(addr));
+    int ret = WINC1500_EXPORT(bind)(socket->fd, &addr, sizeof(addr));
     if (ret != 0) {
         *_errno = ret;
         return -1;
@@ -382,7 +382,7 @@ static int winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_
 }
 
 static int winc_socket_listen(mod_network_socket_obj_t *socket, mp_int_t backlog, int *_errno) {
-    int ret = WINC1500_EXPORT(listen)(socket->u_state, backlog);
+    int ret = WINC1500_EXPORT(listen)(socket->fd, backlog);
     if (ret != 0) {
         *_errno = ret;
         return -1;
@@ -394,7 +394,7 @@ static int winc_socket_accept(mod_network_socket_obj_t *socket, mod_network_sock
 {
     // TODO
     // accept incoming connection
-    int ret = WINC1500_EXPORT(accept)(socket->u_state, NULL, 0);
+    int ret = WINC1500_EXPORT(accept)(socket->fd, NULL, 0);
     if (ret != 0) {
         *_errno = ret;
         return -1;
@@ -408,7 +408,7 @@ static int winc_socket_accept(mod_network_socket_obj_t *socket, mod_network_sock
 static int winc_socket_connect(mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
-    int ret = WINC1500_EXPORT(connect)(socket->u_state, &addr, sizeof(addr));
+    int ret = WINC1500_EXPORT(connect)(socket->fd, &addr, sizeof(addr));
 
     if (ret == 0) {
         async_request_done = false;
@@ -432,7 +432,7 @@ static mp_uint_t winc_socket_send(mod_network_socket_obj_t *socket, const byte *
         int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
 
         // do the send
-        int ret = WINC1500_EXPORT(send)(socket->u_state, (uint8_t*)buf + bytes, n, socket->timeout);
+        int ret = WINC1500_EXPORT(send)(socket->fd, (uint8_t*)buf + bytes, n, socket->timeout);
         if (ret != SOCK_ERR_NO_ERROR) {
             *_errno = ret;
             return -1;
@@ -456,7 +456,7 @@ static mp_uint_t winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, m
     len = MIN(len, SOCKET_BUFFER_MAX_LENGTH);
 
     // do the recv
-    int ret = WINC1500_EXPORT(recv)(socket->u_state, buf, len, socket->timeout);
+    int ret = WINC1500_EXPORT(recv)(socket->fd, buf, len, socket->timeout);
     if (ret == SOCK_ERR_NO_ERROR) {
         async_request_done = false;
         async_request_data = &ret;
@@ -477,7 +477,7 @@ static mp_uint_t winc_socket_sendto(mod_network_socket_obj_t *socket,
         const byte *buf, mp_uint_t len, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
-    int ret = WINC1500_EXPORT(sendto)(socket->u_state, (byte*)buf, len, 0, (struct sockaddr*)&addr, sizeof(addr));
+    int ret = WINC1500_EXPORT(sendto)(socket->fd, (byte*)buf, len, 0, (struct sockaddr*)&addr, sizeof(addr));
     if (ret < 0) {
         *_errno = ret;
         return -1;
@@ -491,7 +491,7 @@ static mp_uint_t winc_socket_recvfrom(mod_network_socket_obj_t *socket,
     //TODO
 //    struct sockaddr addr;
 //    socklen_t addr_len = sizeof(addr);
-//    mp_int_t ret = WINC1500_EXPORT(recvfrom)(socket->u_state, buf, len, 0, &addr, &addr_len);
+//    mp_int_t ret = WINC1500_EXPORT(recvfrom)(socket->fd, buf, len, 0, &addr, &addr_len);
 //    if (ret < 0) {
 //        *_errno = ret;
 //        return -1;
@@ -504,7 +504,7 @@ static mp_uint_t winc_socket_recvfrom(mod_network_socket_obj_t *socket,
 static int winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
         level, mp_uint_t opt, const void *optval, mp_uint_t optlen, int *_errno)
 {
-    int ret = WINC1500_EXPORT(setsockopt)(socket->u_state, level, opt, optval, optlen);
+    int ret = WINC1500_EXPORT(setsockopt)(socket->fd, level, opt, optval, optlen);
     if (ret < 0) {
         *_errno = ret;
         return -1;
