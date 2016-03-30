@@ -152,8 +152,7 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
                 printf("socket_callback: recv %d\r\n", pstrRecv->s16BufferSize);
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: recv error!\r\n");
-                break;
+                printf("socket_callback: recv error! %d\r\n", pstrRecv->s16BufferSize);
             }
             async_request_done = true;
             break;
@@ -323,10 +322,10 @@ static int winc_gethostbyname(mp_obj_t nic, const char *name, mp_uint_t len, uin
         return ENOENT;
     }
 
-    out_ip[0] = ip >> 24;
-    out_ip[1] = ip >> 16;
-    out_ip[2] = ip >> 8;
-    out_ip[3] = ip;
+    out_ip[0] = ip;
+    out_ip[1] = ip >> 8;
+    out_ip[2] = ip >> 16;
+    out_ip[3] = ip >> 24;
     return 0;
 }
 
@@ -362,6 +361,7 @@ static int winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
 
     // store state of this socket
     socket->u_state = fd;
+    socket->timeout = 0; // blocking
     return 0;
 }
 
@@ -401,7 +401,7 @@ static int winc_socket_accept(mod_network_socket_obj_t *socket, mod_network_sock
     }
 
     // store state in new socket object
-    socket2->u_state = ret;
+    socket2->fd = ret;
     return 0;
 }
 
@@ -432,7 +432,7 @@ static mp_uint_t winc_socket_send(mod_network_socket_obj_t *socket, const byte *
         int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
 
         // do the send
-        int ret = WINC1500_EXPORT(send)(socket->u_state, (uint8_t*)buf + bytes, n, 0);
+        int ret = WINC1500_EXPORT(send)(socket->u_state, (uint8_t*)buf + bytes, n, socket->timeout);
         if (ret != SOCK_ERR_NO_ERROR) {
             *_errno = ret;
             return -1;
@@ -456,7 +456,7 @@ static mp_uint_t winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, m
     len = MIN(len, SOCKET_BUFFER_MAX_LENGTH);
 
     // do the recv
-    int ret = WINC1500_EXPORT(recv)(socket->u_state, buf, len, 0);
+    int ret = WINC1500_EXPORT(recv)(socket->u_state, buf, len, socket->timeout);
     if (ret == SOCK_ERR_NO_ERROR) {
         async_request_done = false;
         async_request_data = &ret;
@@ -512,95 +512,15 @@ static int winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
     return 0;
 }
 
-//static int winc_socket_settimeout(mod_network_socket_obj_t *socket, mp_uint_t timeout_ms, int *_errno)
-//{
-//    int ret;
-//    if (timeout_ms == 0 || timeout_ms == -1) {
-//        int optval;
-//        socklen_t optlen = sizeof(optval);
-//        if (timeout_ms == 0) {
-//            // set non-blocking mode
-//            optval = SOCK_ON;
-//        } else {
-//            // set blocking mode
-//            optval = SOCK_OFF;
-//        }
-//        ret = WINC1500_EXPORT(setsockopt)(socket->u_state, SOL_SOCKET, SOCKOPT_RECV_NONBLOCK, &optval, optlen);
-//        if (ret == 0) {
-//            ret = WINC1500_EXPORT(setsockopt)(socket->u_state, SOL_SOCKET, SOCKOPT_ACCEPT_NONBLOCK, &optval, optlen);
-//        }
-//    } else {
-//        // set timeout
-//        socklen_t optlen = sizeof(timeout_ms);
-//        ret = WINC1500_EXPORT(setsockopt)(socket->u_state, SOL_SOCKET, SOCKOPT_RECV_TIMEOUT, &timeout_ms, optlen);
-//    }
-//
-//    if (ret != 0) {
-//        *_errno = ret;
-//        return -1;
-//    }
-//
-//    return 0;
-//}
+static int winc_socket_settimeout(mod_network_socket_obj_t *socket, mp_uint_t timeout_ms, int *_errno)
+{
+    socket->timeout = timeout_ms;
+    return 0;
+}
 
 //static int winc_socket_ioctl(mod_network_socket_obj_t *socket, mp_uint_t request, mp_uint_t arg, int *_errno)
 //{
-//    mp_uint_t ret;
-//    if (request == MP_IOCTL_POLL) {
-//        mp_uint_t flags = arg;
-//        ret = 0;
-//        int fd = socket->u_state;
-//
-//        // init fds
-//        fd_set rfds, wfds, xfds;
-//        FD_ZERO(&rfds);
-//        FD_ZERO(&wfds);
-//        FD_ZERO(&xfds);
-//
-//        // set fds if needed
-//        if (flags & MP_IOCTL_POLL_RD) {
-//            FD_SET(fd, &rfds);
-//
-//            // A socked that just closed is available for reading.  A call to
-//            // recv() returns 0 which is consistent with BSD.
-//            if (winc_get_fd_closed_state(fd)) {
-//                ret |= MP_IOCTL_POLL_RD;
-//            }
-//        }
-//        if (flags & MP_IOCTL_POLL_WR) {
-//            FD_SET(fd, &wfds);
-//        }
-//        if (flags & MP_IOCTL_POLL_HUP) {
-//            FD_SET(fd, &xfds);
-//        }
-//
-//        // call cc3000 select with minimum timeout
-//        timeval tv;
-//        tv.tv_sec = 0;
-//        tv.tv_usec = 1;
-//        int nfds = WINC1500_EXPORT(select)(fd + 1, &rfds, &wfds, &xfds, &tv);
-//
-//        // check for error
-//        if (nfds == -1) {
-//            *_errno = ret;
-//            return -1;
-//        }
-//
-//        // check return of select
-//        if (FD_ISSET(fd, &rfds)) {
-//            ret |= MP_IOCTL_POLL_RD;
-//        }
-//        if (FD_ISSET(fd, &wfds)) {
-//            ret |= MP_IOCTL_POLL_WR;
-//        }
-//        if (FD_ISSET(fd, &xfds)) {
-//            ret |= MP_IOCTL_POLL_HUP;
-//        }
-//    } else {
-//        *_errno = EINVAL;
-//        ret = -1;
-//    }
-//    return ret;
+//    return -1;
 //}
 
 /******************************************************************************/
@@ -829,6 +749,6 @@ const mod_network_nic_type_t mod_network_nic_type_winc = {
     .sendto = winc_socket_sendto,
     .recvfrom = winc_socket_recvfrom,
     .setsockopt = winc_socket_setsockopt,
-    //.settimeout = winc_socket_settimeout,
+    .settimeout = winc_socket_settimeout,
     //.ioctl = winc_socket_ioctl,
 };
