@@ -127,36 +127,35 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         // Socket connected.
         case SOCKET_MSG_CONNECT: {
             tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)msg;
-            if (pstrConnect && pstrConnect->s8Error >= 0) {
-                tcp_connected = 1;
+            if (pstrConnect->s8Error == 0) {
+                *((int*) async_request_data) = 0;
                 printf("socket_callback: connect success.\r\n");
             } else {
-                tcp_connected = 0;
+                *((int*) async_request_data) = -1;
                 printf("socket_callback: connect error!\r\n");
             }
+            async_request_done = true;
             break;
         }
 
         // Message send.
         case SOCKET_MSG_SEND: {
-            //recv(tcp_client_socket, gau8SocketBuffer, sizeof(gau8SocketBuffer), 0);
+            async_request_done = true;
             break;
         }
 
         // Message receive.
         case SOCKET_MSG_RECV: {
-            //tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)msg;
-            //if (pstrRecv && pstrRecv->s16BufferSize > 0) {
-            //    if (!strncmp((char *)pstrRecv->pu8Buffer, REMOTE_CMD_INDICATOR, INDICATOR_STRING_LEN)) {
-            //        parse_command((char *)(pstrRecv->pu8Buffer + INDICATOR_STRING_LEN), 1);
-            //    } else {
-            //        PRINT_REMOTE_MSG(pstrRecv->pu8Buffer);
-            //    }
-            //} else {
-            //    disconnect_cmd_handler(NULL);
-            //    printf("socket_callback: recv error!\r\n");
-            //    break;
-            //}
+            tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)msg;
+            if (pstrRecv && pstrRecv->s16BufferSize > 0) {
+                *((int*) async_request_data) = pstrRecv->s16BufferSize;
+                printf("socket_callback: recv %d\r\n", pstrRecv->s16BufferSize);
+            } else {
+                *((int*) async_request_data) = -1;
+                printf("socket_callback: recv error!\r\n");
+                break;
+            }
+            async_request_done = true;
             break;
         }
 
@@ -333,12 +332,13 @@ static int winc_gethostbyname(mp_obj_t nic, const char *name, mp_uint_t len, uin
 
 static int winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
 {
+    uint8_t type;
+
     if (socket->u_param.domain != MOD_NETWORK_AF_INET) {
         *_errno = EAFNOSUPPORT;
         return -1;
     }
 
-    mp_uint_t type;
     switch (socket->u_param.type) {
         case MOD_NETWORK_SOCK_STREAM:
             type = SOCK_STREAM;
@@ -362,12 +362,6 @@ static int winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
 
     // store state of this socket
     socket->u_state = fd;
-
-    //// make accept blocking by default
-    //int optval = SOCK_OFF;
-    //socklen_t optlen = sizeof(optval);
-    //WINC1500_EXPORT(setsockopt)(socket->u_state, SOL_SOCKET, SOCKOPT_ACCEPT_NONBLOCK, &optval, optlen);
-
     return 0;
 }
 
@@ -415,23 +409,40 @@ static int winc_socket_connect(mod_network_socket_obj_t *socket, byte *ip, mp_ui
 {
     MAKE_SOCKADDR(addr, ip, port)
     int ret = WINC1500_EXPORT(connect)(socket->u_state, &addr, sizeof(addr));
-    if (ret != 0) {
-        *_errno = ret;
-        return -1;
+
+    if (ret == 0) {
+        async_request_done = false;
+        async_request_data = &ret;
+
+        while (async_request_done == false) {
+            // Handle pending events from network controller.
+            m2m_wifi_handle_events(NULL);
+        }
     }
-    return 0;
+
+    *_errno = ret;
+    return ret;
 }
 
 static mp_uint_t winc_socket_send(mod_network_socket_obj_t *socket, const byte *buf, mp_uint_t len, int *_errno)
 {
-    // Split the packet into smaller ones and send them out.
     mp_int_t bytes = 0;
+    // Split the packet into smaller ones.
     while (bytes < len) {
         int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
-        n = WINC1500_EXPORT(send)(socket->u_state, (uint8_t*)buf + bytes, n, 0);
-        if (n <= 0) {
-            *_errno = n; 
+
+        // do the send
+        int ret = WINC1500_EXPORT(send)(socket->u_state, (uint8_t*)buf + bytes, n, 0);
+        if (ret != SOCK_ERR_NO_ERROR) {
+            *_errno = ret;
             return -1;
+        }
+
+        async_request_done = false;
+        // Wait for async request to finish.
+        while (async_request_done == false) {
+            // Handle pending events from network controller.
+            m2m_wifi_handle_events(NULL);
         }
         bytes += n;
     }
@@ -441,34 +452,24 @@ static mp_uint_t winc_socket_send(mod_network_socket_obj_t *socket, const byte *
 
 static mp_uint_t winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno)
 {
-    // check the socket is open
-    //if (winc_get_fd_closed_state(socket->u_state)) {
-    //    // socket is closed, but CC3000 may have some data remaining in buffer, so check
-    //    fd_set rfds;
-    //    FD_ZERO(&rfds);
-    //    FD_SET(socket->u_state, &rfds);
-    //    timeval tv;
-    //    tv.tv_sec = 0;
-    //    tv.tv_usec = 1;
-    //    int nfds = WINC1500_EXPORT(select)(socket->u_state + 1, &rfds, NULL, NULL, &tv);
-    //    if (nfds == -1 || !FD_ISSET(socket->u_state, &rfds)) {
-    //        // no data waiting, so close socket and return 0 data
-    //        WINC1500_EXPORT(closesocket)(socket->u_state);
-    //        return 0;
-    //    }
-    //}
-
-    // TODO
     // cap length at SOCKET_BUFFER_MAX_LENGTH
     len = MIN(len, SOCKET_BUFFER_MAX_LENGTH);
 
     // do the recv
     int ret = WINC1500_EXPORT(recv)(socket->u_state, buf, len, 0);
-    if (ret < 0) {
+    if (ret == SOCK_ERR_NO_ERROR) {
+        async_request_done = false;
+        async_request_data = &ret;
+
+        // Wait for async request to finish.
+        while (async_request_done == false) {
+            // Handle pending events from network controller.
+            m2m_wifi_handle_events(NULL);
+        }
+    } else {
         *_errno = ret;
         return -1;
     }
-
     return ret;
 }
 
@@ -654,6 +655,7 @@ static mp_obj_t winc_make_new(mp_obj_t type_in, mp_uint_t n_args, mp_uint_t n_kw
 	}
 
 	// Initialize socket layer.
+    socketDeinit();
 	socketInit();
 
     // Register sockets callback functions
