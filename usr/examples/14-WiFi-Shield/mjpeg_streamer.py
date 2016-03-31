@@ -1,52 +1,44 @@
 '''
     Simple MJPEG streaming server
 '''
-import wlan, socket
-import led,time,sensor
+import time, sensor, pyb, network, usocket
 
 SSID=''         # Network SSID
 KEY=''          # Network key
 HOST = ''       # Use first available interface
 PORT = 8000     # Arbitrary non-privileged port
 
-led.off(led.RED)
-led.off(led.BLUE)
-led.on(led.GREEN)
+led_r = pyb.LED(1)
+led_b = pyb.LED(2)
+led_g = pyb.LED(3)
 
-# Init sensor and set sensor parameters
+# Reset sensor
 sensor.reset()
-sensor.set_brightness(-2)
+
+# Set sensor settings
 sensor.set_contrast(1)
+sensor.set_brightness(1)
+sensor.set_saturation(1)
+sensor.set_gainceiling(16)
 sensor.set_framesize(sensor.QVGA)
-sensor.set_pixformat(sensor.JPEG)
+sensor.set_pixformat(sensor.RGB565)
 
 # Init wlan module and connect to network
-wlan.init()
-wlan.connect(SSID, sec=wlan.WPA2, key=KEY)
-led.off(led.GREEN)
-
-# Wait for connection to be established
-while (True):
-    led.toggle(led.BLUE)
-    time.sleep(250)
-    led.toggle(led.BLUE)
-    time.sleep(250)
-    if wlan.connected():
-        led.on(led.BLUE)
-        break;
+wlan = network.WINC()
+wlan.connect(SSID, key=KEY, security=wlan.WPA_PSK)
 
 # We should have a valid IP now via DHCP
-wlan.ifconfig()
+print(wlan.ifconfig())
 
 # Create server socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-
-# Set socket in blocking mode
-s.setblocking(True)
+s = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
 
 # Bind and listen
 s.bind((HOST, PORT))
 s.listen(5)
+
+# Set timeout to 1s
+s.settimeout(1.0)
 
 print ('Waiting for connections..')
 client, addr = s.accept()
@@ -70,7 +62,7 @@ while (True):
     client.send("\r\n--openmv\r\n"  \
                 "Content-Type: image/jpeg\r\n"\
                 "Content-Length:"+str(frame.size())+"\r\n\r\n")
-    client.send(frame)
-    time.sleep(30)
+    client.send(frame.compress(50))
+    time.sleep(10)
 
 client.close()
