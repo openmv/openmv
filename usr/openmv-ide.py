@@ -293,7 +293,7 @@ class OMVGtk:
         self.enable_jpeg = self.config.get("main", "enable_jpeg") == 'True'
 
         # load helloworld.py
-        self._load_file(os.path.join(EXAMPLES_DIR, "00-Basics", "helloworld.py"))
+        self._load_file(os.path.join(EXAMPLES_DIR, "01-Basics", "helloworld.py"))
         self.save_button.set_sensitive(False)
 
     def show_message_dialog(self, msg_type, msg):
