@@ -37,18 +37,22 @@
     addr.sa_data[5] = ip[3];
 
 #define UNPACK_SOCKADDR(addr, ip, port) \
-    port = (addr.sa_data[0] << 8) | addr.sa_data[1]; \
-    ip[0] = addr.sa_data[2]; \
-    ip[1] = addr.sa_data[3]; \
-    ip[2] = addr.sa_data[4]; \
-    ip[3] = addr.sa_data[5];
+    port = (addr->sa_data[0] << 8) | addr->sa_data[1]; \
+    ip[0] = addr->sa_data[2]; \
+    ip[1] = addr->sa_data[3]; \
+    ip[2] = addr->sa_data[4]; \
+    ip[3] = addr->sa_data[5];
 
 static volatile bool ip_obtained = false;
 static volatile bool wlan_connected = false;
-static volatile bool tcp_connected = false;
 
 static void *async_request_data;
 static volatile bool async_request_done = false;
+
+typedef struct {
+    int size;
+    struct sockaddr_in addr;
+} recv_from_t;
 
 /**
  * DNS Callback.
@@ -89,18 +93,21 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         // Socket bind.
         case SOCKET_MSG_BIND: {
             tstrSocketBindMsg *pstrBind = (tstrSocketBindMsg *)msg;
-            if (pstrBind && pstrBind->status == 0) {
+            if (pstrBind->status == 0) {
+                *((int*) async_request_data) = 0;
                 printf("socket_callback: bind success.\r\n");
             } else {
+                *((int*) async_request_data) = -1;
                 printf("socket_callback: bind error!\r\n");
             }
+            async_request_done = true;
             break;
         }
 
         // Socket listen.
         case SOCKET_MSG_LISTEN: {
             tstrSocketListenMsg *pstrListen = (tstrSocketListenMsg *)msg;
-            if (pstrListen && pstrListen->status == 0) {
+            if (pstrListen->status == 0) {
                 printf("socket_callback: listen success.\r\n");
             } else {
                 printf("socket_callback: listen error!\r\n");
@@ -112,11 +119,9 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         case SOCKET_MSG_ACCEPT: {
             tstrSocketAcceptMsg *pstrAccept = (tstrSocketAcceptMsg *)msg;
             if (pstrAccept) {
-                tcp_connected = 1;
                 //tcp_client_socket = pstrAccept->sock;
                 printf("socket_callback: accept success.\r\n");
             } else {
-                tcp_connected = 0;
                 //WINC1500_EXPORT(close)(tcp_server_socket);
                 //tcp_server_socket = -1;
                 printf("socket_callback: accept error!\r\n");
@@ -139,7 +144,8 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         }
 
         // Message send.
-        case SOCKET_MSG_SEND: {
+        case SOCKET_MSG_SEND:
+        case SOCKET_MSG_SENDTO: {
             async_request_done = true;
             break;
         }
@@ -147,7 +153,7 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         // Message receive.
         case SOCKET_MSG_RECV: {
             tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)msg;
-            if (pstrRecv && pstrRecv->s16BufferSize > 0) {
+            if (pstrRecv->s16BufferSize > 0) {
                 *((int*) async_request_data) = pstrRecv->s16BufferSize;
                 printf("socket_callback: recv %d\r\n", pstrRecv->s16BufferSize);
             } else {
@@ -157,6 +163,26 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             async_request_done = true;
             break;
         }
+
+        case SOCKET_MSG_RECVFROM: {
+			tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg*) msg;
+            recv_from_t *rfrom = (recv_from_t*) async_request_data;
+
+            if (pstrRecv->s16BufferSize > 0) {
+				// Get the remote host address and port number
+                rfrom->size = pstrRecv->s16BufferSize;
+				rfrom->addr.sin_port = pstrRecv->strRemoteAddr.sin_port;
+				rfrom->addr.sin_addr = pstrRecv->strRemoteAddr.sin_addr;
+				printf("socket_callback: recvfrom: size: %d addr:%lu port:%d\n",
+                        pstrRecv->s16BufferSize, rfrom->addr.sin_addr.s_addr, rfrom->addr.sin_port);
+			} else {
+                rfrom->size = -1;
+				printf("socket_callback: recvfrom error:%d\n", pstrRecv->s16BufferSize);
+			}
+            async_request_done = true;
+            break;
+        }
+
 
         default:
             break;
@@ -374,11 +400,20 @@ static int winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_
 {
     MAKE_SOCKADDR(addr, ip, port)
     int ret = WINC1500_EXPORT(bind)(socket->fd, &addr, sizeof(addr));
-    if (ret != 0) {
+    if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
         return -1;
     }
-    return 0;
+
+    async_request_data = &ret;
+    async_request_done = false;
+
+    // Wait for async request to finish.
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
+    }
+    return ret;
 }
 
 static int winc_socket_listen(mod_network_socket_obj_t *socket, mp_int_t backlog, int *_errno) {
@@ -478,27 +513,42 @@ static mp_uint_t winc_socket_sendto(mod_network_socket_obj_t *socket,
 {
     MAKE_SOCKADDR(addr, ip, port)
     int ret = WINC1500_EXPORT(sendto)(socket->fd, (byte*)buf, len, 0, (struct sockaddr*)&addr, sizeof(addr));
-    if (ret < 0) {
+    if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
         return -1;
     }
+
+    async_request_done = false;
+    // Wait for async request to finish.
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
+    }
+
     return ret;
 }
 
 static mp_uint_t winc_socket_recvfrom(mod_network_socket_obj_t *socket,
         byte *buf, mp_uint_t len, byte *ip, mp_uint_t *port, int *_errno)
 {
-    //TODO
-//    struct sockaddr addr;
-//    socklen_t addr_len = sizeof(addr);
-//    mp_int_t ret = WINC1500_EXPORT(recvfrom)(socket->fd, buf, len, 0, &addr, &addr_len);
-//    if (ret < 0) {
-//        *_errno = ret;
-//        return -1;
-//    }
-//    UNPACK_SOCKADDR(addr, ip, *port);
-//    return ret;
-    return 0;
+    int ret = WINC1500_EXPORT(recvfrom)(socket->fd, buf, len, socket->timeout);
+    if (ret != SOCK_ERR_NO_ERROR) {
+        *_errno = ret;
+        return -1;
+    }
+
+    recv_from_t rfrom;
+    async_request_done = false;
+    async_request_data = &rfrom;
+
+    // Wait for async request to finish.
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
+    }
+
+    UNPACK_SOCKADDR(((struct sockaddr*) &rfrom.addr), ip, *port);
+    return rfrom.size;
 }
 
 static int winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
