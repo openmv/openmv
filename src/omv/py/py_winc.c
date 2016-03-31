@@ -108,10 +108,13 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         case SOCKET_MSG_LISTEN: {
             tstrSocketListenMsg *pstrListen = (tstrSocketListenMsg *)msg;
             if (pstrListen->status == 0) {
+                *((int*) async_request_data) = 0;
                 printf("socket_callback: listen success.\r\n");
             } else {
+                *((int*) async_request_data) = -1;
                 printf("socket_callback: listen error!\r\n");
             }
+            async_request_done = true;
             break;
         }
 
@@ -120,12 +123,15 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             tstrSocketAcceptMsg *pstrAccept = (tstrSocketAcceptMsg *)msg;
             if (pstrAccept) {
                 //tcp_client_socket = pstrAccept->sock;
+                *((int*) async_request_data) = pstrAccept->sock;
                 printf("socket_callback: accept success.\r\n");
             } else {
                 //WINC1500_EXPORT(close)(tcp_server_socket);
                 //tcp_server_socket = -1;
+                *((int*) async_request_data) = -1;
                 printf("socket_callback: accept error!\r\n");
             }
+            async_request_done = true;
             break;
         }
 
@@ -416,23 +422,41 @@ static int winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_
     return ret;
 }
 
-static int winc_socket_listen(mod_network_socket_obj_t *socket, mp_int_t backlog, int *_errno) {
+static int winc_socket_listen(mod_network_socket_obj_t *socket, mp_int_t backlog, int *_errno)
+{
     int ret = WINC1500_EXPORT(listen)(socket->fd, backlog);
-    if (ret != 0) {
+    if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
         return -1;
     }
-    return 0;
+
+    async_request_data = &ret;
+    async_request_done = false;
+
+    // Wait for async request to finish.
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
+    }
+
+    return ret;
 }
 
 static int winc_socket_accept(mod_network_socket_obj_t *socket, mod_network_socket_obj_t *socket2, byte *ip, mp_uint_t *port, int *_errno)
 {
-    // TODO
-    // accept incoming connection
     int ret = WINC1500_EXPORT(accept)(socket->fd, NULL, 0);
-    if (ret != 0) {
+    if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
         return -1;
+    }
+
+    async_request_data = &ret;
+    async_request_done = false;
+
+    // Wait for async request to finish.
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
     }
 
     // store state in new socket object
