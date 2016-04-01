@@ -768,15 +768,21 @@ static mp_obj_t winc_rssi(mp_obj_t self_in)
 
 static mp_obj_t winc_fw_version(mp_obj_t self_in)
 {
-    //uint8_t pver[2];
-    //mp_obj_tuple_t *t_pver;
+    tstrM2mRev fwver;
+    mp_obj_tuple_t *t_fwver;
 
-    //nvmem_read_sp_version(pver);
-    //t_pver = mp_obj_new_tuple(2, NULL);
-    //t_pver->items[0] = mp_obj_new_int(pver[0]);
-    //t_pver->items[1] = mp_obj_new_int(pver[1]);
-    //return t_pver;
-    return mp_const_none;
+    // Read FW, Driver and HW versions.
+    m2m_wifi_get_firmware_version(&fwver);
+
+    t_fwver = mp_obj_new_tuple(7, NULL);
+	t_fwver->items[0] = mp_obj_new_int(fwver.u8FirmwareMajor);     // Firmware version major number.
+	t_fwver->items[1] = mp_obj_new_int(fwver.u8FirmwareMinor);     // Firmware version minor number.
+	t_fwver->items[2] = mp_obj_new_int(fwver.u8FirmwarePatch);     // Firmware version patch number.
+	t_fwver->items[3] = mp_obj_new_int(fwver.u8DriverMajor);       // Driver version major number.
+	t_fwver->items[4] = mp_obj_new_int(fwver.u8DriverMinor);       // Driver version minor number.
+	t_fwver->items[5] = mp_obj_new_int(fwver.u8DriverPatch);       // Driver version patch number.
+	t_fwver->items[6] = mp_obj_new_int(fwver.u32Chipid);           // HW revision number (chip ID).
+    return t_fwver;
 }
 
 static MP_DEFINE_CONST_FUN_OBJ_KW(winc_connect_obj, 1,  winc_connect);
