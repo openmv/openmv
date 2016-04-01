@@ -54,7 +54,7 @@ static uint8* 	        gau8ethRcvBuf=NULL;
 static uint16 	        gu16ethRcvBufSize ;
 #endif
 
-//#define CONF_MGMT
+#define CONF_MGMT
 
 #ifdef CONF_MGMT
 static tpfAppMonCb  gpfAppMonCb  = NULL;
