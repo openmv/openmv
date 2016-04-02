@@ -14,7 +14,7 @@ BLUE_LED_PIN = 3
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.QQVGA) # or sensor.QVGA (or others)
-sensor.skip_frames() # Let new settings take affect.
+sensor.skip_frames(10) # Let new settings take affect.
 clock = time.clock() # Tracks FPS.
 
 pyb.LED(RED_LED_PIN).on()
@@ -23,15 +23,15 @@ sensor.skip_frames(30) # Give the user time to get ready.
 pyb.LED(RED_LED_PIN).off()
 pyb.LED(BLUE_LED_PIN).on()
 
-gif = gif.Gif("demo.gif", loop=True)
+g = gif.Gif("example.gif", loop=True)
 
 print("You're on camera!")
 for i in range(100):
     clock.tick()
     # clock.avg() returns the milliseconds between frames - gif delay is in
-    gif.add_frame(sensor.snapshot(), delay=int(clock.avg()/10)) # centiseconds.
+    g.add_frame(sensor.snapshot(), delay=int(clock.avg()/10)) # centiseconds.
     print(clock.fps())
 
-gif.close()
+g.close()
 pyb.LED(BLUE_LED_PIN).off()
 print("Done! Reset the camera to see the saved recording.")
