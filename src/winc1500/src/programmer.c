@@ -97,13 +97,13 @@ int verify_firmware()
 
         if (programmer_read_firmware_image(flash_buf, offset, bytes) != M2M_SUCCESS) {
             printf("verify_firmware: read access failed on firmware section!\r\n");
-            return M2M_ERR_FAIL;
+            goto error;
         }
 
         for (int i=0; i<bytes; i++) {
             if (flash_buf[i] != file_buf[i]) {
-                printf("verify_firmware: verification failed! offset:%d flash:%x file:%x\n", i, flash_buf[i], file_buf[i]);
-                return M2M_ERR_FAIL;
+                printf("verify_firmware: verification failed! offset:%d flash:%x file:%x\n", offset+i, flash_buf[i], file_buf[i]);
+                goto error;
             }
         }
 
