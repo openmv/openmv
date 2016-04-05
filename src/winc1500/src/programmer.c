@@ -102,7 +102,7 @@ int verify_firmware()
 
         for (int i=0; i<bytes; i++) {
             if (flash_buf[i] != file_buf[i]) {
-                printf("verify_firmware: verification failed! offset:%d flash:%x file:%x\n", offset+i, flash_buf[i], file_buf[i]);
+                printf("verify_firmware: verification failed! offset:%ld flash:%x file:%x\n", offset+i, flash_buf[i], file_buf[i]);
                 goto error;
             }
         }
