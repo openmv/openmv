@@ -2,6 +2,7 @@
 import time, network
 
 wlan = network.WINC()
+print("\nFirmware version:", wlan.fw_version())
 
 while (True):
     scan_result = wlan.scan()
