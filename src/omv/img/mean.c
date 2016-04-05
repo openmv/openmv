@@ -1,40 +1,39 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ * Copyright (c) 2013-2016 Kwabena W. Agyeman <kwagyeman@openmv.io>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Median filtering.
+ * Mean filtering.
  *
  */
 #include <string.h>
 #include "imlib.h"
 #include "fb_alloc.h"
-#include "fsort.h"
 
-void imlib_median_filter(image_t *img, const int ksize, const int percentile)
+// krn_s == 0 -> 1x1 kernel
+// krn_s == 1 -> 3x3 kernel
+// ...
+// krn_s == n -> ((n*2)+1)x((n*2)+1) kernel
+
+void imlib_mean_filter(image_t *img, const int ksize)
 {
     int n = ((ksize*2)+1)*((ksize*2)+1);
     int brows = ksize + 1;
     uint8_t *buffer = fb_alloc(img->w * brows * img->bpp);
     if (IM_IS_GS(img)) {
-        uint8_t data[n];
         for (int y=0; y<img->h; y++) {
             for (int x=0; x<img->w; x++) {
-                uint8_t *data_ptr = data;
+                int acc = 0;
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
                         if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
                             const uint8_t pixel = IM_GET_GS_PIXEL(img, x+k, y+j);
-                            *data_ptr++ = pixel;
-                        } else {
-                            *data_ptr++ = 0;
+                            acc += pixel;
                         }
                     }
                 }
-                fsort(data, n);
-                int median = data[percentile];
                 // We're writing into the buffer like if it were a window.
-                buffer[((y%brows)*img->w)+x] = median;
+                buffer[((y%brows)*img->w)+x] = acc/n;
             }
             if (y>=ksize) {
                 memcpy(img->pixels+((y-ksize)*img->w),
@@ -48,36 +47,23 @@ void imlib_median_filter(image_t *img, const int ksize, const int percentile)
                    img->w * sizeof(uint8_t));
         }
     } else {
-        uint8_t r_data[n];
-        uint8_t g_data[n];
-        uint8_t b_data[n];
         for (int y=0; y<img->h; y++) {
             for (int x=0; x<img->w; x++) {
-                uint8_t *r_data_ptr = r_data;
-                uint8_t *g_data_ptr = g_data;
-                uint8_t *b_data_ptr = b_data;
+                int r_acc = 0;
+                int g_acc = 0;
+                int b_acc = 0;
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
                         if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
                             const uint16_t pixel = IM_GET_RGB565_PIXEL(img, x+k, y+j);
-                            *r_data_ptr++ = IM_R565(pixel);
-                            *g_data_ptr++ = IM_G565(pixel);
-                            *b_data_ptr++ = IM_B565(pixel);
-                        } else {
-                            *r_data_ptr++ = 0;
-                            *g_data_ptr++ = 0;
-                            *b_data_ptr++ = 0;
+                            r_acc += IM_R565(pixel);
+                            g_acc += IM_G565(pixel);
+                            b_acc += IM_B565(pixel);
                         }
                     }
                 }
-                fsort(r_data, n);
-                fsort(g_data, n);
-                fsort(b_data, n);
-                int r_median = r_data[percentile];
-                int g_median = g_data[percentile];
-                int b_median = b_data[percentile];
                 // We're writing into the buffer like if it were a window.
-                ((uint16_t *) buffer)[((y%brows)*img->w)+x] = IM_RGB565(r_median, g_median, b_median);
+                ((uint16_t *) buffer)[((y%brows)*img->w)+x] = IM_RGB565(r_acc/n, g_acc/n, b_acc/n);
             }
             if (y>=ksize) {
                 memcpy(((uint16_t *) img->pixels)+((y-ksize)*img->w),

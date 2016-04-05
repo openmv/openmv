@@ -462,7 +462,9 @@ void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out);
 
 /* Image Filtering */
 void imlib_midpoint_filter(image_t *img, const int ksize, const int bias);
-void imlib_median_filter(image_t *src, int r);
+void imlib_mean_filter(image_t *img, const int ksize);
+void imlib_mode_filter(image_t *img, const int ksize);
+void imlib_median_filter(image_t *img, const int ksize, const int percentile);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);

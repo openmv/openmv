@@ -29,6 +29,7 @@ endif
 SRCS += $(addprefix img/,   \
 	blob.c                  \
 	fmath.c                 \
+	fsort.c                 \
 	haar.c                  \
 	imlib.c                 \
 	stats.c                 \
@@ -41,8 +42,10 @@ SRCS += $(addprefix img/,   \
 	yuv_tab.c               \
 	rainbow_tab.c           \
 	rgb2rgb_tab.c           \
-	median.c                \
 	midpoint.c              \
+	mean.c                  \
+	mode.c                  \
+	median.c                \
 	point.c                 \
 	rectangle.c             \
 	bmp.c                   \
