@@ -710,6 +710,48 @@ static mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
     return mp_const_none;
 }
 
+static mp_obj_t py_image_mean(mp_obj_t img_obj, mp_obj_t k_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int arg_ksize = mp_obj_get_int(k_obj);
+    PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
+
+    imlib_mean_filter(arg_img, arg_ksize);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_mode(mp_obj_t img_obj, mp_obj_t k_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int arg_ksize = mp_obj_get_int(k_obj);
+    PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
+
+    imlib_mode_filter(arg_img, arg_ksize);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int arg_ksize = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
+    PY_ASSERT_TRUE_MSG(arg_ksize <= 2, "Kernel Size must be <= 2");
+
+    int n = ((arg_ksize*2)+1)*((arg_ksize*2)+1);
+    int percentile = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_percentile), 0.5) * n;
+    imlib_median_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(percentile, 0), n-1));
+    return mp_const_none;
+}
+
 static mp_obj_t py_image_scale(mp_obj_t image_obj, mp_obj_t size_obj)
 {
     int w,h;
@@ -857,17 +899,6 @@ static mp_obj_t py_image_histeq(mp_obj_t image_obj)
             "This function is only supported on GRAYSCALE images");
 
     imlib_histeq(image);
-    return mp_const_none;
-}
-
-static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    // Read args
-    image_t *image = py_image_cobj(args[0]);
-    int ksize = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 1);
-
-    // Call median filter
-    imlib_median_filter(image, ksize);
     return mp_const_none;
 }
 
@@ -1198,7 +1229,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_statistics_obj, 1, py_image_statistics);
 /* Image Filtering */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_obj, 2, py_image_midpoint);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 1, py_image_median);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mean_obj, py_image_mean);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mode_obj, py_image_mode);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scaled_obj, py_image_scaled);
@@ -1258,6 +1291,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_statistics),          (mp_obj_t)&py_image_statistics_obj},
     /* Image Filtering */
     {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint),            (mp_obj_t)&py_image_midpoint_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_mean),                (mp_obj_t)&py_image_mean_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_mode),                (mp_obj_t)&py_image_mode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
 
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},

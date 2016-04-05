@@ -129,6 +129,7 @@ endif
 OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	blob.o                                  \
 	fmath.o                                 \
+	fsort.o                                 \
 	haar.o                                  \
 	imlib.o                                 \
 	stats.o                                 \
@@ -141,8 +142,10 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	yuv_tab.o                               \
 	rainbow_tab.o                           \
 	rgb2rgb_tab.o                           \
-	median.o                                \
 	midpoint.o                              \
+	mean.o                                  \
+	mode.o                                  \
+	median.o                                \
 	point.o                                 \
 	rectangle.o                             \
 	bmp.o                                   \
