@@ -22,9 +22,10 @@
 #include "pybioctl.h"
 
 // WINC's includes
-#include "driver/include/m2m_wifi.h"
 #include "driver/include/nmasic.h"
 #include "socket/include/socket.h"
+#include "programmer/programmer.h"
+#include "driver/include/m2m_wifi.h"
 
 #define MAKE_SOCKADDR(addr, ip, port) \
     struct sockaddr addr; \
@@ -607,56 +608,55 @@ typedef struct _winc_obj_t {
 static const winc_obj_t winc_obj = {{(mp_obj_type_t*)&mod_network_nic_type_winc}};
 
 // Initialise the module using the given SPI bus and pins and return a winc object.
-// // TODO pass SPI pins
-// init(pyb.SPI(2), pyb.Pin.cpu.A15, pyb.Pin.cpu.B10, pyb.Pin.cpu.B11)
 static mp_obj_t winc_make_new(mp_obj_t type_in, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args)
 {
-    //// check arguments
-    //mp_arg_check_num(n_args, n_kw, 4, 4, false);
-
-    //// set the pins to use
-    //SpiInit(
-    //    spi_get_handle(args[0]),
-    //    pin_find(args[1]),
-    //    pin_find(args[2]),
-    //    pin_find(args[3])
-    //);
+    // check arguments
+    mp_arg_check_num(n_args, n_kw, 0, 1, false);
 
 	// Initialize the BSP.
 	nm_bsp_init();
 
-	// Initialize Wi-Fi parameters structure.
-	tstrWifiInitParam param;
-	memset((uint8_t *)&param, 0, sizeof(tstrWifiInitParam));
-	param.pfAppWifiCb = wifi_callback;
-	
-    // Initialize Wi-Fi driver with data and status callbacks.
-	int ret = m2m_wifi_init(&param);
-	if (M2M_SUCCESS != ret) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "failed to init WINC1500 module"));
-	}
+    // Firmware update enabled
+    if (n_args && mp_obj_get_int(args[0]) == true) {
+        // Enter download mode.
+        printf("Enabling download mode...\n");
+        if (m2m_wifi_download_mode() != M2M_SUCCESS) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to enter download mode!"));
+        }
+    } else {
+	    // Initialize Wi-Fi parameters structure.
+	    tstrWifiInitParam param;
+	    memset((uint8_t *)&param, 0, sizeof(tstrWifiInitParam));
+	    param.pfAppWifiCb = wifi_callback;
+	    
+        // Initialize Wi-Fi driver with data and status callbacks.
+	    int ret = m2m_wifi_init(&param);
+	    if (M2M_SUCCESS != ret) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "failed to init WINC1500 module"));
+	    }
 
-    uint8_t mac_addr_valid;
-    uint8_t mac_addr[M2M_MAC_ADDRES_LEN];
-	// Get MAC Address from OTP.
-	m2m_wifi_get_otp_mac_address(mac_addr, &mac_addr_valid);
+        uint8_t mac_addr_valid;
+        uint8_t mac_addr[M2M_MAC_ADDRES_LEN];
+	    // Get MAC Address from OTP.
+	    m2m_wifi_get_otp_mac_address(mac_addr, &mac_addr_valid);
 
-	if (!mac_addr_valid) {
-        // User define MAC Address.
-        const char main_user_define_mac_address[] = {0xf8, 0xf0, 0x05, 0x20, 0x0b, 0x09};
-		// Cannot found MAC Address from OTP. Set user define MAC address.
-		m2m_wifi_set_mac_address((uint8_t *) main_user_define_mac_address);
-	}
+	    if (!mac_addr_valid) {
+            // User define MAC Address.
+            const char main_user_define_mac_address[] = {0xf8, 0xf0, 0x05, 0x20, 0x0b, 0x09};
+	    	// Cannot found MAC Address from OTP. Set user define MAC address.
+	    	m2m_wifi_set_mac_address((uint8_t *) main_user_define_mac_address);
+	    }
 
-	// Initialize socket layer.
-    socketDeinit();
-	socketInit();
+	    // Initialize socket layer.
+        socketDeinit();
+	    socketInit();
 
-    // Register sockets callback functions
-    registerSocketCallback(socket_callback, resolve_callback);
+        // Register sockets callback functions
+        registerSocketCallback(socket_callback, resolve_callback);
 
-    // Register with network module
-    mod_network_register_nic((mp_obj_t)&winc_obj);
+        // Register with network module
+        mod_network_register_nic((mp_obj_t)&winc_obj);
+    }
 
     return (mp_obj_t)&winc_obj;
 }
@@ -785,6 +785,42 @@ static mp_obj_t winc_fw_version(mp_obj_t self_in)
     return t_fwver;
 }
 
+static mp_obj_t winc_fw_update(mp_obj_t self_in)
+{
+    // Erase the WINC1500 flash.
+    printf("Erasing WINC's flash...\n");
+    if (programmer_erase_all() != M2M_SUCCESS) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to erase entire flash!"));
+    }
+
+    // Program the firmware on the WINC1500 flash.
+    printf("Programming firmware...\n");
+    if (burn_firmware() != M2M_SUCCESS) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Error while writing firmware!"));
+    }
+
+    // Verify the firmware on the WINC1500 flash.
+    printf("Verifying firmware image from flash...\n");
+    if (verify_firmware() != M2M_SUCCESS) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to verify firmware section!"));
+    }
+
+    // Program the certificates on the WINC1500 flash.
+    printf("Programming certificates...\n");
+    if (burn_certificates() != M2M_SUCCESS) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Error while writing certificates!"));
+    }
+
+    // Verify the certificates on the WINC1500 flash.
+    //printf("Reading certificates from flash...\n");
+    //if (dump_certificate_section() != M2M_SUCCESS) {
+    //    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to dump certificate section!"));
+    //}
+
+    printf("All task completed successfully.\n");
+    return mp_const_none;
+}
+
 static MP_DEFINE_CONST_FUN_OBJ_KW(winc_connect_obj, 1,  winc_connect);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_disconnect_obj,   winc_disconnect);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_isconnected_obj,  winc_isconnected);
@@ -792,6 +828,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(winc_ifconfig_obj,     winc_ifconfig);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_scan_obj,         winc_scan);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_rssi_obj,         winc_rssi);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_fw_version_obj,   winc_fw_version);
+static MP_DEFINE_CONST_FUN_OBJ_1(winc_fw_update_obj,    winc_fw_update);
 
 static const mp_map_elem_t winc_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_connect),         (mp_obj_t)&winc_connect_obj },
@@ -801,6 +838,7 @@ static const mp_map_elem_t winc_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_scan),            (mp_obj_t)&winc_scan_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_rssi),            (mp_obj_t)&winc_rssi_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fw_version),      (mp_obj_t)&winc_fw_version_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fw_update),       (mp_obj_t)&winc_fw_update_obj },
 
     { MP_OBJ_NEW_QSTR(MP_QSTR_OPEN),            MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_OPEN) },      // Network is not secured.
     { MP_OBJ_NEW_QSTR(MP_QSTR_WEP),             MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_WEP) },       // Security type WEP (40 or 104) OPEN OR SHARED.
