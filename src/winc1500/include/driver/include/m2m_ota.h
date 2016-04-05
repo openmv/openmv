@@ -2,7 +2,7 @@
  *
  * \file
  *
- * \brief NMC1500 IoT OTA Interface.
+ * \brief WINC OTA Upgrade API Interface.
  *
  * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
@@ -48,8 +48,9 @@ INCLUDES
 
 #include "common/include/nm_common.h"
 #include "driver/include/m2m_types.h"
-/**@defgroup  OTATYPEDEF  WLANTypedef
- * @ingroup WlanEnums
+#include "driver/include/nmdrv.h"
+/**@addtogroup WlanEnums Enumerations and Typedefs
+ * @ingroup m2m_wifi
  */
  /* @{ */
 
@@ -321,6 +322,17 @@ NMI_API sint8 m2m_ota_rollback(void);
 	The function returns @ref M2M_SUCCESS for successful operations  and a negative value otherwise.
 */
 NMI_API sint8 m2m_ota_switch_firmware(void);
+/*!
+@fn	\
+	NMI_API sint8 m2m_ota_get_firmware_version(void);
+
+@brief
+	Get the OTA Firmware version.
+
+@return
+	The function SHALL return 0 for success and a negative value otherwise.
+*/
+NMI_API sint8 m2m_ota_get_firmware_version(tstrM2mRev *pstrRev);
   /**@}*/
 NMI_API sint8 m2m_ota_test(void);
 

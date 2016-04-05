@@ -47,6 +47,7 @@ INCLUDES
 #include "socket/include/socket.h"
 #include "driver/include/m2m_hif.h"
 #include "socket/include/socket_internal.h"
+#include "driver/include/m2m_types.h"
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
 MACROS
@@ -66,11 +67,15 @@ MACROS
 #define SSL_TX_PACKET_OFFSET				(TCP_TX_PACKET_OFFSET + TLS_RECORD_HEADER_LENGTH)
 
 #define SOCKET_REQUEST(reqID, reqArgs, reqSize, reqPayload, reqPayloadSize, reqPayloadOffset)		\
-	hif_send(M2M_REQ_GRP_IP, reqID, reqArgs, reqSize, reqPayload, reqPayloadSize, reqPayloadOffset)
+	hif_send(M2M_REQ_GROUP_IP, reqID, reqArgs, reqSize, reqPayload, reqPayloadSize, reqPayloadOffset)
 
 
-#define SSL_FLAGS_ACTIVE					0x01
-#define SSL_FLAGS_BYPASS_X509				0x02
+#define SSL_FLAGS_ACTIVE					NBIT0
+#define SSL_FLAGS_BYPASS_X509				NBIT1
+#define SSL_FLAGS_2_RESERVD					NBIT2
+#define SSL_FLAGS_3_RESERVD					NBIT3
+#define SSL_FLAGS_CACHE_SESSION				NBIT4
+#define SSL_FLAGS_NO_TX_COPY				NBIT5
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
 PRIVATE DATA TYPES
@@ -93,10 +98,11 @@ typedef struct{
 typedef struct{
 	uint8				*pu8UserBuffer;
 	uint16				u16UserBufferSize;
+	uint16				u16SessionID;
+	uint16				u16DataOffset;
 	uint8				bIsUsed;
 	uint8				u8SSLFlags;
 	uint8				bIsRecvPending;
-	uint16				u16SessionID;
 }tstrSocket;
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
@@ -113,6 +119,7 @@ volatile tpfAppSocketCb		    gpfAppSocketCb;
 volatile tpfAppResolveCb		gpfAppResolveCb;
 volatile uint8					gbSocketInit = 0;
 volatile tpfPingCb				gfpPingCb;
+
 /*********************************************************************
 Function
 		Socket_ReadSocketData
@@ -255,6 +262,10 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 		{
 			strConnMsg.sock		= strConnectReply.sock;
 			strConnMsg.s8Error	= strConnectReply.s8Error;
+			if(strConnectReply.s8Error == SOCK_ERR_NO_ERROR)
+			{
+				gastrSockets[strConnectReply.sock].u16DataOffset = strConnectReply.u16AppDataOffset - M2M_HIF_HDR_OFFSET;
+			}
 			if(gpfAppSocketCb)
 				gpfAppSocketCb(strConnectReply.sock,SOCKET_MSG_CONNECT, &strConnMsg);
 		}
@@ -400,12 +411,11 @@ void socketInit(void)
 	if(gbSocketInit==0)
 	{
 		m2m_memset((uint8*)gastrSockets, 0, MAX_SOCKET * sizeof(tstrSocket));
-		hif_register_cb(M2M_REQ_GRP_IP,m2m_ip_cb);
+		hif_register_cb(M2M_REQ_GROUP_IP,m2m_ip_cb);
 		gbSocketInit=1;
 		gu16SessionID = 0;
 	}
 }
-
 /*********************************************************************
 Function
 		socketDeinit
@@ -427,13 +437,11 @@ Date
 void socketDeinit(void)
 {	
 	m2m_memset((uint8*)gastrSockets, 0, MAX_SOCKET * sizeof(tstrSocket));
-	hif_register_cb(M2M_REQ_GRP_IP, NULL);
+	hif_register_cb(M2M_REQ_GROUP_IP, NULL);
 	gpfAppSocketCb = NULL;
 	gpfAppResolveCb = NULL;
 	gbSocketInit = 0;
 }
-
-
 /*********************************************************************
 Function
 		registerSocketCallback
@@ -480,9 +488,10 @@ Date
 *********************************************************************/
 SOCKET WINC1500_EXPORT(socket)(uint16 u16Domain, uint8 u8Type, uint8 u8Flags)
 {
-	SOCKET	sock = -1;
-	uint8	u8Count,u8SocketCount = MAX_SOCKET;
-
+	SOCKET		sock = -1;
+	uint8		u8Count,u8SocketCount = MAX_SOCKET;
+	volatile tstrSocket	*pstrSock;
+	
 	/* The only supported family is the AF_INET for UDP and TCP transport layer protocols. */
 	if(u16Domain == AF_INET)
 	{
@@ -502,17 +511,20 @@ SOCKET WINC1500_EXPORT(socket)(uint16 u16Domain, uint8 u8Type, uint8 u8Flags)
 
 		for(;u8Count < u8SocketCount; u8Count ++)
 		{
-			if(gastrSockets[u8Count].bIsUsed == 0)
+			pstrSock = &gastrSockets[u8Count];
+			if(pstrSock->bIsUsed == 0)
 			{
-				gastrSockets[u8Count].bIsUsed = 1;
-				
+				m2m_memset((uint8*)pstrSock, 0, sizeof(tstrSocket));
+
+				pstrSock->bIsUsed = 1;
+
 				/* The session ID is used to distinguish different socket connections
 					by comparing the assigned session ID to the one reported by the firmware*/
 				++gu16SessionID;
 				if(gu16SessionID == 0)
 					++gu16SessionID;
 				
-				gastrSockets[u8Count].u16SessionID = gu16SessionID;
+				pstrSock->u16SessionID = gu16SessionID;
 				M2M_DBG("1 Socket %d session ID = %d\r\n",u8Count, gu16SessionID );
 				sock = (SOCKET)u8Count;
 
@@ -520,7 +532,7 @@ SOCKET WINC1500_EXPORT(socket)(uint16 u16Domain, uint8 u8Type, uint8 u8Flags)
 				{
 					tstrSSLSocketCreateCmd	strSSLCreate;
 					strSSLCreate.sslSock = sock;
-					gastrSockets[u8Count].u8SSLFlags = SSL_FLAGS_ACTIVE;
+					pstrSock->u8SSLFlags = SSL_FLAGS_ACTIVE | SSL_FLAGS_NO_TX_COPY;
 					SOCKET_REQUEST(SOCKET_CMD_SSL_CREATE, (uint8*)&strSSLCreate, sizeof(tstrSSLSocketCreateCmd), 0, 0, 0);
 				}
 				break;
@@ -558,7 +570,6 @@ sint8 WINC1500_EXPORT(bind)(SOCKET sock, struct sockaddr *pstrAddr, uint8 u8Addr
 		/* Build the bind request. */
 		strBind.sock = sock;
 		m2m_memcpy((uint8 *)&strBind.strAddr, (uint8 *)pstrAddr, sizeof(tstrSockAddr));
-		//strBind.strAddr = *((tstrSockAddr*)pstrAddr);
 
 		strBind.strAddr.u16Family	= strBind.strAddr.u16Family;
 		strBind.strAddr.u16Port		= strBind.strAddr.u16Port;
@@ -675,9 +686,6 @@ sint8 WINC1500_EXPORT(connect)(SOCKET sock, struct sockaddr *pstrAddr, uint8 u8A
 		strConnect.sock = sock;
 		m2m_memcpy((uint8 *)&strConnect.strAddr, (uint8 *)pstrAddr, sizeof(tstrSockAddr));
 
-		strConnect.strAddr.u16Family	= strConnect.strAddr.u16Family;
-		strConnect.strAddr.u16Port		= strConnect.strAddr.u16Port;
-		strConnect.strAddr.u32IPAddr	= strConnect.strAddr.u32IPAddr;
 		strConnect.u16SessionID		= gastrSockets[sock].u16SessionID;
 		s8Ret = SOCKET_REQUEST(u8Cmd, (uint8*)&strConnect,sizeof(tstrConnectCmd), NULL, 0, 0);
 		if(s8Ret != SOCK_ERR_NO_ERROR)
@@ -717,9 +725,9 @@ sint16 WINC1500_EXPORT(send)(SOCKET sock, void *pvSendBuffer, uint16 u16SendLeng
 		u8Cmd			= SOCKET_CMD_SEND;
 		u16DataOffset	= TCP_TX_PACKET_OFFSET;
 
-		strSend.sock		= sock;
-		strSend.u16DataSize	= NM_BSP_B_L_16(u16SendLength);
-		strSend.u16SessionID		= gastrSockets[sock].u16SessionID;
+		strSend.sock			= sock;
+		strSend.u16DataSize		= NM_BSP_B_L_16(u16SendLength);
+		strSend.u16SessionID	= gastrSockets[sock].u16SessionID;
 
 		if(sock >= TCP_SOCK_MAX)
 		{
@@ -728,7 +736,7 @@ sint16 WINC1500_EXPORT(send)(SOCKET sock, void *pvSendBuffer, uint16 u16SendLeng
 		if(gastrSockets[sock].u8SSLFlags & SSL_FLAGS_ACTIVE)
 		{
 			u8Cmd			= SOCKET_CMD_SSL_SEND;
-			u16DataOffset	= SSL_TX_PACKET_OFFSET;
+			u16DataOffset	= gastrSockets[sock].u16DataOffset;
 		}
 
 		s16Ret =  SOCKET_REQUEST(u8Cmd|M2M_REQ_DATA_PKT, (uint8*)&strSend, sizeof(tstrSendCmd), pvSendBuffer, u16SendLength, u16DataOffset);
@@ -770,7 +778,7 @@ sint16 WINC1500_EXPORT(sendto)(SOCKET sock, void *pvSendBuffer, uint16 u16SendLe
 
 			strSendTo.sock			= sock;
 			strSendTo.u16DataSize	= NM_BSP_B_L_16(u16SendLength);
-			strSendTo.u16SessionID		= gastrSockets[sock].u16SessionID;
+			strSendTo.u16SessionID	= gastrSockets[sock].u16SessionID;
 			
 			if(pstrDestAddr != NULL)
 			{
@@ -1060,7 +1068,7 @@ Version
 Date
 		9 September 2014
 *********************************************************************/
-sint8 sslSetSockOpt(SOCKET sock, uint8  u8Opt, const void *pvOptVal, uint16 u16OptLen)
+static sint8 sslSetSockOpt(SOCKET sock, uint8  u8Opt, const void *pvOptVal, uint16 u16OptLen)
 {
 	sint8	s8Ret = SOCK_ERR_INVALID_ARG;
 	if(sock < TCP_SOCK_MAX)
@@ -1077,6 +1085,19 @@ sint8 sslSetSockOpt(SOCKET sock, uint8  u8Opt, const void *pvOptVal, uint16 u16O
 				else
 				{
 					gastrSockets[sock].u8SSLFlags &= ~SSL_FLAGS_BYPASS_X509;
+				}
+				s8Ret = SOCK_ERR_NO_ERROR;
+			}
+			else if(u8Opt == SO_SSL_ENABLE_SESSION_CACHING)
+			{
+				int	optVal = *((int*)pvOptVal);
+				if(optVal)
+				{
+					gastrSockets[sock].u8SSLFlags |= SSL_FLAGS_CACHE_SESSION;
+				}
+				else
+				{
+					gastrSockets[sock].u8SSLFlags &= ~SSL_FLAGS_CACHE_SESSION;
 				}
 				s8Ret = SOCK_ERR_NO_ERROR;
 			}
@@ -1219,6 +1240,36 @@ sint8 m2m_ping_req(uint32 u32DstIP, uint8 u8TTL, tpfPingCb fpPingCb)
 		strPingCmd.u8TTL			= u8TTL;
 
 		s8Ret = SOCKET_REQUEST(SOCKET_CMD_PING, (uint8*)&strPingCmd, sizeof(tstrPingCmd), NULL, 0, 0);
+	}
+	return s8Ret;
+}
+/*********************************************************************
+Function
+	sslSetActiveCipherSuites
+
+Description
+	Send Ping request.
+
+Return
+	
+Author
+	Ahmed Ezzat
+
+Version
+	1.0
+
+Date
+	4 June 2015
+*********************************************************************/
+sint8 sslSetActiveCipherSuites(uint32 u32SslCsBMP)
+{
+	sint8	s8Ret = SOCK_ERR_INVALID_ARG;
+	if(u32SslCsBMP != 0)
+	{
+		tstrSslSetActiveCsList	strCsList;
+	
+		strCsList.u32CsBMP = u32SslCsBMP;
+		s8Ret = SOCKET_REQUEST(SOCKET_CMD_SSL_SET_CS_LIST, (uint8*)&strCsList, sizeof(tstrSslSetActiveCsList), NULL, 0, 0);
 	}
 	return s8Ret;
 }

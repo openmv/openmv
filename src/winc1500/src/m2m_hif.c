@@ -77,7 +77,9 @@ static volatile uint8 gu8Interrupt = 0;
 tpfHifCallBack pfWifiCb = NULL;		/*!< pointer to Wi-Fi call back function */
 tpfHifCallBack pfIpCb  = NULL;		/*!< pointer to Socket call back function */
 tpfHifCallBack pfOtaCb = NULL;		/*!< pointer to OTA call back function */
+tpfHifCallBack pfSigmaCb = NULL;
 tpfHifCallBack pfHifCb = NULL;
+tpfHifCallBack pfCryptoCb = NULL;
 
 static void isr(void)
 {
@@ -202,7 +204,7 @@ sint8 hif_chip_sleep(void)
 	{
 		gu8ChipSleep--;
 	}
-
+	
 	if(gu8ChipSleep == 0)
 	{
 		if((gu8ChipMode == M2M_PS_DEEP_AUTOMATIC)||(gu8ChipMode == M2M_PS_MANUAL))
@@ -245,7 +247,7 @@ sint8 hif_init(void * arg)
 	gu8Interrupt = 0;
 	nm_bsp_register_isr(isr);
 
-	hif_register_cb(M2M_REQ_GRP_HIF,m2m_hif_cb);
+	hif_register_cb(M2M_REQ_GROUP_HIF,m2m_hif_cb);
 
 	return M2M_SUCCESS;
 }
@@ -370,11 +372,17 @@ sint8 hif_send(uint8 u8Gid,uint8 u8Opcode,uint8 *pu8CtrlBuf,uint16 u16CtrlBufSiz
 			u32CurrAddr = dma_addr;
 			strHif.u16Length=NM_BSP_B_L_16(strHif.u16Length);
 			ret = nm_write_block(u32CurrAddr, (uint8*)&strHif, M2M_HIF_HDR_OFFSET);
+		#ifdef CONF_WINC_USE_I2C
+			nm_bsp_sleep(1);
+		#endif
 			if(M2M_SUCCESS != ret) goto ERR1;
 			u32CurrAddr += M2M_HIF_HDR_OFFSET;
 			if(pu8CtrlBuf != NULL)
 			{
 				ret = nm_write_block(u32CurrAddr, pu8CtrlBuf, u16CtrlBufSize);
+			#ifdef CONF_WINC_USE_I2C
+				nm_bsp_sleep(1);
+			#endif
 				if(M2M_SUCCESS != ret) goto ERR1;
 				u32CurrAddr += u16CtrlBufSize;
 			}
@@ -382,6 +390,9 @@ sint8 hif_send(uint8 u8Gid,uint8 u8Opcode,uint8 *pu8CtrlBuf,uint16 u16CtrlBufSiz
 			{
 				u32CurrAddr += (u16DataOffset - u16CtrlBufSize);
 				ret = nm_write_block(u32CurrAddr, pu8DataBuf, u16DataSize);
+			#ifdef CONF_WINC_USE_I2C	
+				nm_bsp_sleep(1);
+			#endif
 				if(M2M_SUCCESS != ret) goto ERR1;
 				u32CurrAddr += u16DataSize;
 			}
@@ -426,7 +437,7 @@ static sint8 hif_isr(void)
 	ret = hif_chip_wake();
 	if(ret == M2M_SUCCESS)
 	{
-		ret = nm_read_reg_with_ret(0x1070, &reg);
+		ret = nm_read_reg_with_ret(WIFI_HOST_RCV_CTRL_0, &reg);
 		if(M2M_SUCCESS == ret)
 		{
 			if(reg & 0x1)	/* New interrupt has been received */
@@ -435,19 +446,9 @@ static sint8 hif_isr(void)
 
 				nm_bsp_interrupt_ctrl(0);
 				/*Clearing RX interrupt*/
-				ret = nm_read_reg_with_ret(WIFI_HOST_RCV_CTRL_0,&reg);
-				if(ret != M2M_SUCCESS)goto ERR1;
 				reg &= ~(1<<0);
 				ret = nm_write_reg(WIFI_HOST_RCV_CTRL_0,reg);
 				if(ret != M2M_SUCCESS)goto ERR1;
-				/* read the rx size */
-				ret = nm_read_reg_with_ret(WIFI_HOST_RCV_CTRL_0, &reg);
-				if(M2M_SUCCESS != ret)
-				{
-					M2M_ERR("(hif) WIFI_HOST_RCV_CTRL_0 bus fail\n");
-					nm_bsp_interrupt_ctrl(1);
-					goto ERR1;
-				}
 				gu8HifSizeDone = 0;
 				size = (uint16)((reg >> 2) & 0xfff);
 				if (size > 0) {
@@ -482,21 +483,31 @@ static sint8 hif_isr(void)
 						}
 					}
 
-					if(M2M_REQ_GRP_WIFI == strHif.u8Gid)
+					if(M2M_REQ_GROUP_WIFI == strHif.u8Gid)
 					{
 						if(pfWifiCb)
 							pfWifiCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
 
 					}
-					else if(M2M_REQ_GRP_IP == strHif.u8Gid)
+					else if(M2M_REQ_GROUP_IP == strHif.u8Gid)
 					{
 						if(pfIpCb)
 							pfIpCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
 					}
-					else if(M2M_REQ_GRP_OTA == strHif.u8Gid)
+					else if(M2M_REQ_GROUP_OTA == strHif.u8Gid)
 					{
 						if(pfOtaCb)
 							pfOtaCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
+					}
+					else if(M2M_REQ_GROUP_CRYPTO == strHif.u8Gid)
+					{
+						if(pfCryptoCb)
+							pfCryptoCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
+					}
+					else if(M2M_REQ_GROUP_SIGMA == strHif.u8Gid)
+					{
+						if(pfSigmaCb)
+							pfSigmaCb(strHif.u8Opcode,strHif.u16Length - M2M_HIF_HDR_OFFSET, address + M2M_HIF_HDR_OFFSET);
 					}
 					else
 					{
@@ -596,13 +607,15 @@ sint8 hif_receive(uint32 u32Addr, uint8 *pu8Buf, uint16 u16Sz, uint8 isDone)
 		if(isDone)
 		{
 			gu8HifSizeDone = 1;
-
+			
 			/* set RX done */
 			ret = hif_set_rx_done();
 		}
-			
-		ret = M2M_ERR_FAIL;
-		M2M_ERR(" hif_receive: Invalid argument\n");
+		else
+		{
+			ret = M2M_ERR_FAIL;
+			M2M_ERR(" hif_receive: Invalid argument\n");
+		}
 		goto ERR1;
 	}
 
@@ -614,9 +627,6 @@ sint8 hif_receive(uint32 u32Addr, uint8 *pu8Buf, uint16 u16Sz, uint8 isDone)
 	ret = nm_read_reg_with_ret(WIFI_HOST_RCV_CTRL_1,&address);
 	if(ret != M2M_SUCCESS)goto ERR1;
 
-	/* Receive the payload */
-	ret = nm_read_block(u32Addr, pu8Buf, u16Sz);
-	if(ret != M2M_SUCCESS)goto ERR1;
 
 	if(u16Sz > size)
 	{
@@ -630,9 +640,13 @@ sint8 hif_receive(uint32 u32Addr, uint8 *pu8Buf, uint16 u16Sz, uint8 isDone)
 		M2M_ERR("APP Requested Address beyond the recived buffer address and length\n");
 		goto ERR1;
 	}
+	
+	/* Receive the payload */
+	ret = nm_read_block(u32Addr, pu8Buf, u16Sz);
+	if(ret != M2M_SUCCESS)goto ERR1;
 
 	/* check if this is the last packet */
-	if((((address+size) - (u32Addr+u16Sz)) <= 0) || isDone)
+	if((((address + size) - (u32Addr + u16Sz)) <= 0) || isDone)
 	{
 		gu8HifSizeDone = 1;
 
@@ -661,17 +675,23 @@ sint8 hif_register_cb(uint8 u8Grp,tpfHifCallBack fn)
 	sint8 ret = M2M_SUCCESS;
 	switch(u8Grp)
 	{
-		case M2M_REQ_GRP_IP:
+		case M2M_REQ_GROUP_IP:
 			pfIpCb = fn;
 			break;
-		case M2M_REQ_GRP_WIFI:
+		case M2M_REQ_GROUP_WIFI:
 			pfWifiCb = fn;
 			break;
-		case M2M_REQ_GRP_OTA:
+		case M2M_REQ_GROUP_OTA:
 			pfOtaCb = fn;
 			break;
-		case M2M_REQ_GRP_HIF:
+		case M2M_REQ_GROUP_HIF:
 			pfHifCb = fn;
+			break;
+		case M2M_REQ_GROUP_CRYPTO:
+			pfCryptoCb = fn;
+			break;
+		case M2M_REQ_GROUP_SIGMA:
+			pfSigmaCb = fn;
 			break;
 		default:
 			M2M_ERR("GRp ? %d\n",u8Grp);

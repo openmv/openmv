@@ -2,7 +2,7 @@
  *
  * \file
  *
- * \brief NMC1500 Peripherals Application Interface.
+ * \brief WINC Peripherals Application Interface.
  *
  * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
@@ -79,6 +79,10 @@ typedef struct {
 	A list of GPIO numbers configurable through the m2m_periph module.
 */
 typedef enum {
+	M2M_PERIPH_GPIO3, /*!< GPIO15 pad	*/
+	M2M_PERIPH_GPIO4, /*!< GPIO16 pad	*/
+	M2M_PERIPH_GPIO5, /*!< GPIO18 pad	*/
+	M2M_PERIPH_GPIO6, /*!< GPIO18 pad	*/
 	M2M_PERIPH_GPIO15, /*!< GPIO15 pad	*/
 	M2M_PERIPH_GPIO16, /*!< GPIO16 pad	*/
 	M2M_PERIPH_GPIO18, /*!< GPIO18 pad	*/
@@ -165,35 +169,35 @@ typedef enum  {
 
 */
 typedef enum {
-	M2M_PERIPH_PULLUP_HOST_WAKEUP     = (1ul << 0),
-	M2M_PERIPH_PULLUP_RTC_CLK         = (1ul << 1),
-	M2M_PERIPH_PULLUP_IRQN            = (1ul << 2),
-	M2M_PERIPH_PULLUP_GPIO_3          = (1ul << 3),
-	M2M_PERIPH_PULLUP_GPIO_4          = (1ul << 4),
-	M2M_PERIPH_PULLUP_GPIO_5          = (1ul << 5),
-	M2M_PERIPH_PULLUP_SD_DAT3         = (1ul << 6),
-	M2M_PERIPH_PULLUP_SD_DAT2_SPI_RXD = (1ul << 7),
-	M2M_PERIPH_PULLUP_SD_DAT1_SPI_SSN = (1ul << 8),
-	M2M_PERIPH_PULLUP_SD_CMD_SPI_SCK  = (1ul << 9),
-	M2M_PERIPH_PULLUP_SD_DAT0_SPI_TXD = (1ul << 10),
-	M2M_PERIPH_PULLUP_GPIO_6          = (1ul << 11),
-	M2M_PERIPH_PULLUP_SD_CLK          = (1ul << 12),
-	M2M_PERIPH_PULLUP_I2C_SCL         = (1ul << 13),
-	M2M_PERIPH_PULLUP_I2C_SDA         = (1ul << 14),
-	M2M_PERIPH_PULLUP_GPIO_11         = (1ul << 15),
-	M2M_PERIPH_PULLUP_GPIO_12         = (1ul << 16),
-	M2M_PERIPH_PULLUP_GPIO_13         = (1ul << 17),
-	M2M_PERIPH_PULLUP_GPIO_14         = (1ul << 18),
-	M2M_PERIPH_PULLUP_GPIO_15         = (1ul << 19),
-	M2M_PERIPH_PULLUP_GPIO_16         = (1ul << 20),
-	M2M_PERIPH_PULLUP_GPIO_17         = (1ul << 21),
-	M2M_PERIPH_PULLUP_GPIO_18         = (1ul << 22),
-	M2M_PERIPH_PULLUP_GPIO_19         = (1ul << 23),
-	M2M_PERIPH_PULLUP_GPIO_20         = (1ul << 24),
-	M2M_PERIPH_PULLUP_GPIO_21         = (1ul << 25),
-	M2M_PERIPH_PULLUP_GPIO_22         = (1ul << 26),
-	M2M_PERIPH_PULLUP_GPIO_23         = (1ul << 27),
-	M2M_PERIPH_PULLUP_GPIO_24         = (1ul << 28),
+	M2M_PERIPH_PULLUP_DIS_HOST_WAKEUP     = (1ul << 0),
+	M2M_PERIPH_PULLUP_DIS_RTC_CLK         = (1ul << 1),
+	M2M_PERIPH_PULLUP_DIS_IRQN            = (1ul << 2),
+	M2M_PERIPH_PULLUP_DIS_GPIO_3          = (1ul << 3),
+	M2M_PERIPH_PULLUP_DIS_GPIO_4          = (1ul << 4),
+	M2M_PERIPH_PULLUP_DIS_GPIO_5          = (1ul << 5),
+	M2M_PERIPH_PULLUP_DIS_SD_DAT3         = (1ul << 6),
+	M2M_PERIPH_PULLUP_DIS_SD_DAT2_SPI_RXD = (1ul << 7),
+	M2M_PERIPH_PULLUP_DIS_SD_DAT1_SPI_SSN = (1ul << 9),
+	M2M_PERIPH_PULLUP_DIS_SD_CMD_SPI_SCK  = (1ul << 10),
+	M2M_PERIPH_PULLUP_DIS_SD_DAT0_SPI_TXD = (1ul << 11),
+	M2M_PERIPH_PULLUP_DIS_GPIO_6          = (1ul << 12),
+	M2M_PERIPH_PULLUP_DIS_SD_CLK          = (1ul << 13),
+	M2M_PERIPH_PULLUP_DIS_I2C_SCL         = (1ul << 14),
+	M2M_PERIPH_PULLUP_DIS_I2C_SDA         = (1ul << 15),
+	M2M_PERIPH_PULLUP_DIS_GPIO_11         = (1ul << 16),
+	M2M_PERIPH_PULLUP_DIS_GPIO_12         = (1ul << 17),
+	M2M_PERIPH_PULLUP_DIS_GPIO_13         = (1ul << 18),
+	M2M_PERIPH_PULLUP_DIS_GPIO_14         = (1ul << 19),
+	M2M_PERIPH_PULLUP_DIS_GPIO_15         = (1ul << 20),
+	M2M_PERIPH_PULLUP_DIS_GPIO_16         = (1ul << 21),
+	M2M_PERIPH_PULLUP_DIS_GPIO_17         = (1ul << 22),
+	M2M_PERIPH_PULLUP_DIS_GPIO_18         = (1ul << 23),
+	M2M_PERIPH_PULLUP_DIS_GPIO_19         = (1ul << 24),
+	M2M_PERIPH_PULLUP_DIS_GPIO_20         = (1ul << 25),
+	M2M_PERIPH_PULLUP_DIS_GPIO_21         = (1ul << 26),
+	M2M_PERIPH_PULLUP_DIS_GPIO_22         = (1ul << 27),
+	M2M_PERIPH_PULLUP_DIS_GPIO_23         = (1ul << 28),
+	M2M_PERIPH_PULLUP_DIS_GPIO_24         = (1ul << 29),
 } tenuPullupMask;
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*

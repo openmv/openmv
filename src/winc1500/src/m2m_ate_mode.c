@@ -133,9 +133,28 @@ FUNCTION IMPLEMENTATION
 sint8 m2m_ate_init(void)
 {
 	sint8 s8Ret = M2M_SUCCESS;
-	uint8 u8WifiMode = M2M_WIFI_MODE_CONFIG;
+	uint8 u8WifiMode = M2M_WIFI_MODE_ATE_HIGH;
 	
 	s8Ret = nm_drv_init(&u8WifiMode);
+	
+	return s8Ret;
+}
+
+/*!
+@fn	\
+	sint8 m2m_ate_init(tstrM2mAteInit *pstrInit);
+
+@brief
+	This function used to download ATE firmware from flash and start it
+
+@return
+	The function SHALL return 0 for success and a negative value otherwise.
+*/
+sint8 m2m_ate_init_param(tstrM2mAteInit *pstrInit)
+{
+	sint8 s8Ret = M2M_SUCCESS;
+	
+	s8Ret = nm_drv_init((void*)&pstrInit->u8RxPwrMode);
 	
 	return s8Ret;
 }
@@ -465,7 +484,7 @@ sint8 m2m_ate_get_rx_status(void)
 */
 sint8 m2m_ate_start_rx(tstrM2mAteRx * strM2mAteRxStr)
 {
-	sint8	s8Ret = M2M_SUCCESS;
+	sint8		s8Ret = M2M_SUCCESS;
 	uint32  	val32;
 	if(NULL == strM2mAteRxStr) 
 	{

@@ -2,7 +2,7 @@
  *
  * \file
  *
- * \brief This module contains common APIs declarations.
+ * \brief WINC Driver Common API Declarations.
  *
  * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
@@ -139,16 +139,6 @@ Invalid argument
 #define BYTE_3(word)   					((uint8)(((word) >> 0 	) & 0x000000FFUL))
 #endif
 
-
-typedef enum{
-	M2M_REQ_GRP_MAIN = 0, M2M_REQ_GRP_WIFI, M2M_REQ_GRP_IP, M2M_REQ_GRP_HIF, M2M_REQ_GRP_OTA
-}tenuM2mReqGrp;
-
-
-typedef enum{
-	M2M_REQ_CONFIG_PKT,
-	M2M_REQ_DATA_PKT = NBIT7
-}tenuM2mReqPkt;
 /**@}*/
 #ifdef __cplusplus
      extern "C" {

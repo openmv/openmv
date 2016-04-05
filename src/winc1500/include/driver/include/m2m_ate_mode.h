@@ -2,7 +2,7 @@
  *
  * \file
  *
- * \brief NMC1500 Peripherals Application Interface.
+ * \brief WINC ATE Test Driver Interface.
  *
  * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
@@ -210,6 +210,15 @@ typedef enum {
 }tenuM2mAteTxMode;
 
 /*!
+ *@enum		tenuM2mAteRxPwrMode	
+ *@brief	Used to define type of RX mode either high power or low power
+ */
+typedef enum {
+	M2M_ATE_RX_PWR_HIGH	= 0x00,
+	M2M_ATE_RX_PWR_LOW	= 0x01,
+}tenuM2mAteRxPwrMode;
+
+/*!
  *@enum		tenuM2mAteChannels	
  *@brief	Available channels for TX and RX 
  */
@@ -245,6 +254,16 @@ typedef struct {
 	/*!< Number of RX packets actually received
 	 */
 } tstrM2mAteRxStatus;
+
+/*!
+ *@struct	tstrM2mAteRxStatus
+ *@brief	Used to save statistics of RX case
+ */
+typedef struct {
+	uint8 u8RxPwrMode;
+	/*!< RX power mode review tenuM2mAteRxPwrMode
+	 */
+} tstrM2mAteInit;
 
 /*!
  *@struct	tstrM2mAteTx
@@ -344,6 +363,19 @@ FUNCTION PROTOTYPES
 	The function SHALL return 0 for success and a negative value otherwise.
 */
 sint8 m2m_ate_init(void);
+
+
+/*!
+@fn	\
+	sint8 m2m_ate_init(tstrM2mAteInit *pstrInit);
+
+@brief
+	This function used to download ATE firmware from flash and start it
+
+@return
+	The function SHALL return 0 for success and a negative value otherwise.
+*/
+sint8 m2m_ate_init_param(tstrM2mAteInit *pstrInit);
 
 /*!
 @fn	\
