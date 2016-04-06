@@ -7,6 +7,7 @@
 #include "spi_flash/include/spi_flash_map.h"
 
 #define FW_PATH             "/firmware/bin/m2m_aio_3a0.bin"
+#define FW_DUMP_PATH        "/firmware/bin/fw_dump.bin"
 #define CERT_DIGI_PATH      "/firmware/cert/DigiCert_Root.cer"
 #define CERT_DIGISHA2_PATH  "/firmware/cert/DigiCertSHA2_Root.cer"
 #define CERT_GEOTRUST_PATH  "/firmware/cert/GeoTrustGlobalCA_Root.cer"
@@ -120,12 +121,58 @@ error:
     return ret;
 }
 
+/**
+ * dump WINC1500 firmware
+ * return M2M_SUCCESS on success, error code otherwise.
+ */
+int dump_firmware()
+{
+    FIL fp;
+    uint32_t offset = 0;
+    UINT bytes = 0, bytes_out=0;
+
+    int ret = M2M_ERR_FAIL;
+    uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ);
+
+    if (f_open(&fp, FW_DUMP_PATH, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+        goto error;
+    }
+
+    // Firmware image size
+    uint32_t size = FLASH_4M_TOTAL_SZ;
+
+    while (size) {
+        // Firmware chuck size (max FLASH_SECTOR_SZ bytes).
+        bytes = MIN(size, FLASH_SECTOR_SZ);
+
+        if (programmer_read_firmware_image(flash_buf, offset, bytes) != M2M_SUCCESS) {
+            printf("verify_firmware: read access failed on firmware section!\r\n");
+            goto error;
+        }
+
+        if (f_write(&fp, flash_buf, bytes, &bytes_out) != FR_OK || bytes_out != bytes) {
+            printf("burn_firmware: file read error!\n");
+            goto error;
+        }
+
+        size -= bytes;
+        offset += bytes;
+    }
+
+    ret = M2M_SUCCESS;
+
+error:
+    fb_free();
+    f_close(&fp);
+    return ret;
+}
+
 static int burn_certificate(const char *cert, const char *path)
 {
     FIL fp;
     int ret = M2M_ERR_FAIL;
     // This is big enough for the max certificate
-    char *buf = fb_alloc(2048);
+    char *buf = fb_alloc(FLASH_SECTOR_SZ);
 
     if (f_open(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
@@ -174,21 +221,24 @@ int burn_certificates()
     return ret;
 }
 
-#if 0
 /**
  * Verify WINC1500 certificates
  * return M2M_SUCCESS on success, error code otherwise.
  */
-int verify_certificate(void)
+int verify_certificates(void)
 {
-    uint8_t flash_content[FLASH_SECTOR_SZ] = {0};
+    int ret = M2M_ERR_FAIL;
+    uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ);
 
     /* Dump entire root certificate memory region. */
-    if (programmer_read_cert_image(flash_content) != M2M_SUCCESS) {
+    if (programmer_read_cert_image(flash_buf) != M2M_SUCCESS) {
         printf("verify_certificate: read access failed on certificate section!\r\n");
-        return M2M_ERR_FAIL;
+        goto error;
     }
 
-    return M2M_SUCCESS;
+    ret = M2M_SUCCESS;
+
+error:
+    fb_free();
+    return ret;
 }
-#endif
