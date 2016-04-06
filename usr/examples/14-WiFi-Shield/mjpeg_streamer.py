@@ -21,7 +21,7 @@ sensor.set_brightness(1)
 sensor.set_saturation(1)
 sensor.set_gainceiling(16)
 sensor.set_framesize(sensor.QVGA)
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Init wlan module and connect to network
 wlan = network.WINC()
@@ -56,13 +56,16 @@ client.send("HTTP/1.1 200 OK\r\n"   \
             "Cache-Control: no-cache\r\n" \
             "Pragma: no-cache\r\n\r\n")
 
+# FPS clock
+clock = time.clock()
 # Start streaming images
 while (True):
+    clock.tick() # Track elapsed milliseconds between snapshots().
     frame = sensor.snapshot()
     client.send("\r\n--openmv\r\n"  \
                 "Content-Type: image/jpeg\r\n"\
                 "Content-Length:"+str(frame.size())+"\r\n\r\n")
     client.send(frame.compress(50))
-    time.sleep(10)
+    print(clock.fps())
 
 client.close()
