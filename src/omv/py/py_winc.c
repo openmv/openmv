@@ -799,7 +799,7 @@ static mp_obj_t winc_fw_dump(mp_obj_t self_in)
 static mp_obj_t winc_fw_update(mp_obj_t self_in)
 {
     // Erase the WINC1500 flash.
-    printf("Erasing WINC's flash...\n");
+    printf("Erasing flash...\n");
     if (programmer_erase_all() != M2M_SUCCESS) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to erase entire flash!"));
     }
@@ -811,21 +811,9 @@ static mp_obj_t winc_fw_update(mp_obj_t self_in)
     }
 
     // Verify the firmware on the WINC1500 flash.
-    printf("Verifying firmware image from flash...\n");
+    printf("Verifying firmware image...\n");
     if (verify_firmware() != M2M_SUCCESS) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to verify firmware section!"));
-    }
-
-    // Program the certificates on the WINC1500 flash.
-    printf("Programming certificates...\n");
-    if (burn_certificates() != M2M_SUCCESS) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Error while writing certificates!"));
-    }
-
-    // Verify the certificates on the WINC1500 flash.
-    printf("Reading certificates from flash...\n");
-    if (verify_certificates() != M2M_SUCCESS) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to dump certificate section!"));
     }
 
     printf("All task completed successfully.\n");
