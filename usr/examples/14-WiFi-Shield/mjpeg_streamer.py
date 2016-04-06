@@ -3,8 +3,8 @@
 '''
 import time, sensor, pyb, network, usocket
 
-SSID=''         # Network SSID
-KEY=''          # Network key
+SSID='' # Network SSID
+KEY=''  # Network key
 HOST = ''       # Use first available interface
 PORT = 8000     # Arbitrary non-privileged port
 
@@ -65,7 +65,7 @@ while (True):
     client.send("\r\n--openmv\r\n"  \
                 "Content-Type: image/jpeg\r\n"\
                 "Content-Length:"+str(frame.size())+"\r\n\r\n")
-    client.send(frame.compress(50))
+    client.send(frame.compress(35))
     print(clock.fps())
 
 client.close()

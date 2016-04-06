@@ -81,6 +81,6 @@ while (True):
     client.send("\r\n--openmv\r\n"  \
                 "Content-Type: image/jpeg\r\n"\
                 "Content-Length:"+str(image.size())+"\r\n\r\n")
-    client.send(image.compress(50))
+    client.send(image.compress(35))
     
 client.close()
