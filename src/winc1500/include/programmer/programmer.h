@@ -56,6 +56,7 @@
 
 int burn_firmware(void);
 int verify_firmware(void);
+int dump_firmware(void);
 int burn_certificates(void);
 int verify_certificates(void);
 #endif /* IMAGE_DOWNLOADER_H_INCLUDED */

@@ -785,6 +785,17 @@ static mp_obj_t winc_fw_version(mp_obj_t self_in)
     return t_fwver;
 }
 
+static mp_obj_t winc_fw_dump(mp_obj_t self_in)
+{
+    // Erase the WINC1500 flash.
+    printf("Dumping firmware...\n");
+    if (dump_firmware() != M2M_SUCCESS) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to erase entire flash!"));
+    }
+
+    return mp_const_none;
+}
+
 static mp_obj_t winc_fw_update(mp_obj_t self_in)
 {
     // Erase the WINC1500 flash.
@@ -812,10 +823,10 @@ static mp_obj_t winc_fw_update(mp_obj_t self_in)
     }
 
     // Verify the certificates on the WINC1500 flash.
-    //printf("Reading certificates from flash...\n");
-    //if (dump_certificate_section() != M2M_SUCCESS) {
-    //    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to dump certificate section!"));
-    //}
+    printf("Reading certificates from flash...\n");
+    if (verify_certificates() != M2M_SUCCESS) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to dump certificate section!"));
+    }
 
     printf("All task completed successfully.\n");
     return mp_const_none;
@@ -828,6 +839,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(winc_ifconfig_obj,     winc_ifconfig);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_scan_obj,         winc_scan);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_rssi_obj,         winc_rssi);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_fw_version_obj,   winc_fw_version);
+static MP_DEFINE_CONST_FUN_OBJ_1(winc_fw_dump_obj,      winc_fw_dump);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_fw_update_obj,    winc_fw_update);
 
 static const mp_map_elem_t winc_locals_dict_table[] = {
@@ -838,6 +850,7 @@ static const mp_map_elem_t winc_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_scan),            (mp_obj_t)&winc_scan_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_rssi),            (mp_obj_t)&winc_rssi_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fw_version),      (mp_obj_t)&winc_fw_version_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_fw_dump),         (mp_obj_t)&winc_fw_dump_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fw_update),       (mp_obj_t)&winc_fw_update_obj },
 
     { MP_OBJ_NEW_QSTR(MP_QSTR_OPEN),            MP_OBJ_NEW_SMALL_INT(M2M_WIFI_SEC_OPEN) },      // Network is not secured.
