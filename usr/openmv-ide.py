@@ -9,7 +9,7 @@ import sys, os, os.path
 from time import sleep
 from os.path import expanduser
 import gtksourceview2 as gtksourceview
-from glob import glob
+import glob
 import urllib2, json
 import numpy as np
 
@@ -940,7 +940,7 @@ class OMVGtk:
         if system_name == "Linux":
             serial_ports.append("/dev/openmvcam")
         elif system_name == "Darwin":
-            serial_ports.extend(glob('/dev/tty.*'))
+            serial_ports.extend(glob.glob('/dev/tty.*'))
         elif system_name == "Windows":
             for i in range(256):
                 try:
