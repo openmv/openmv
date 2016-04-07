@@ -58,7 +58,7 @@ baudrate = 921600
 enable_jpeg = True
 '''
 CONFIG_KEYS = ['board', 'serial_port', 'recent', 'last_fw_path', 'baudrate', 'enable_jpeg']
-RELEASE_TAG_NAME = 'v1.2'
+RELEASE_TAG_NAME = 'v1.3'
 RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
 
 class OMVGtk:
