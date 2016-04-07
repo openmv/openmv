@@ -1,19 +1,23 @@
 # -*- mode: python -*-
+import platform
 
 block_cipher = None
+sysname = platform.system()
+
+rt_hooks = None
+if sysname == "Linux" or sysname == "Darwin":
+    rt_hooks=['gdk_rthook.py'],
 
 a = Analysis(['openmv-ide.py'],
              hiddenimports=['usb', 'numpy'],
              hookspath=None,
-             runtime_hooks=['gdk_rthook.py'],
+             runtime_hooks=rt_hooks,
              excludes=None,
              cipher=block_cipher)
 pyz = PYZ(a.pure,
              cipher=block_cipher)
 
 # append 'exe' to windows binary
-import platform
-sysname = platform.system()
 if sysname in ["Linux", "Darwin"]:
     exe_name ='openmv-ide'
 else:
@@ -25,10 +29,11 @@ exe_tree = [('logo.png', 'logo.png', 'DATA'),
             ('loaders.cache', 'loaders.cache', 'DATA')]
 
 gdk_loaders = []
-pixbuf_dir = '/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders'
-for pixbuf_type in os.listdir(pixbuf_dir):
-    if pixbuf_type.endswith('.so'):
-        gdk_loaders.append((pixbuf_type, os.path.join(pixbuf_dir, pixbuf_type), 'BINARY'))
+if sysname == "Linux" or sysname == "Darwin":
+    pixbuf_dir = '/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders'
+    for pixbuf_type in os.listdir(pixbuf_dir):
+        if pixbuf_type.endswith('.so'):
+            gdk_loaders.append((pixbuf_type, os.path.join(pixbuf_dir, pixbuf_type), 'BINARY'))
 
 exe = EXE(pyz,
           a.scripts,
