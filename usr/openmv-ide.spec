@@ -6,7 +6,7 @@ sysname = platform.system()
 
 rt_hooks = None
 if sysname == "Linux" or sysname == "Darwin":
-    rt_hooks=['gdk_rthook.py'],
+    rt_hooks=['gdk_rthook.py']
 
 a = Analysis(['openmv-ide.py'],
              hiddenimports=['usb', 'numpy'],
