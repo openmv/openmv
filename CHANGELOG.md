@@ -2,14 +2,14 @@
 ## [1.3](https://github.com/openmv/openmv/releases/tag/v1.3) (2016-04-07)
 IDE:
 * Implement the IDE copy color function.
-* Update examples menu using cateogries.
+* Update examples menu using categories.
 * Fix conflict with PyInstaller scripts.
 
 Firmware:
 * Add initial WiFi (WINC1500) support.
 * Update WINC1500 driver and firmware to 19.4.4
 * Support WINC1500 firmware update from uSD fw image.
-* Improved MLX (FIR) temprature scaling and drawing.
+* Improved MLX (FIR) temperature scaling and drawing.
 * Add WiFi examples (mjpeg streamer, NTP, scan, connect and firmware update)
 
 Image processing:
