@@ -5,7 +5,7 @@ block_cipher = None
 a = Analysis(['openmv-ide.py'],
              hiddenimports=['usb', 'numpy'],
              hookspath=None,
-             runtime_hooks=None,
+             runtime_hooks=['gdk_rthook.py'],
              excludes=None,
              cipher=block_cipher)
 pyz = PYZ(a.pure,
@@ -21,11 +21,18 @@ else:
 
 exe_tree = [('logo.png', 'logo.png', 'DATA'),
             ('pinout.png', 'pinout.png', 'DATA'),
-            ('openmv-ide.glade', 'openmv-ide.glade', 'DATA')]
+            ('openmv-ide.glade', 'openmv-ide.glade', 'DATA'),
+            ('loaders.cache', 'loaders.cache', 'DATA')]
+
+gdk_loaders = []
+pixbuf_dir = '/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders'
+for pixbuf_type in os.listdir(pixbuf_dir):
+    if pixbuf_type.endswith('.so'):
+        gdk_loaders.append((pixbuf_type, os.path.join(pixbuf_dir, pixbuf_type), 'BINARY'))
 
 exe = EXE(pyz,
           a.scripts,
-          a.binaries,
+          a.binaries + gdk_loaders,
           a.zipfiles,
           a.datas,
           exe_tree,
@@ -77,4 +84,3 @@ else:
 # cleanup
 if os.path.exists(util_dir):
     shutil.rmtree(util_dir)
-
