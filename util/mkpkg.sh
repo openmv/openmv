@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This script generates a Linux package.
 # Execute in openmv/user ./mkpkg.sh
 DIST_DIR=dist
