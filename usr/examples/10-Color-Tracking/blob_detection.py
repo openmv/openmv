@@ -1,13 +1,15 @@
 import sensor, time, pyb
 
 led_r = pyb.LED(1)
-led_g = pyb.LED(2)
-led_b = pyb.LED(3)
 
 sensor.reset()
-sensor.set_contrast(2)
-sensor.set_framesize(sensor.QCIF)
+sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.RGB565)
+
+# Finds a red blob.
+COLOR1 = (  50,   55,   73,   82,   47,   63)
+# Select an aera of the image and click copy color to get
+# new color tracking parameters for something in the image.
 
 clock = time.clock()
 while (True):
@@ -15,31 +17,15 @@ while (True):
     # Take snapshot
     image = sensor.snapshot()
 
-    # Threshold image with RGB
-    binary  = image.threshold([(255, 0, 0),
-                               (0, 255,  0),
-                               (0, 0, 255)], 80)
-
-    # Image closing
-    binary.dilate(3)
-    binary.erode(3)
-
     # Detect blobs in image
-    blobs = binary.find_blobs()
+    blob_l = image.find_blobs([COLOR1])
 
     led_r.off()
-    led_g.off()
-    led_b.off()
 
     # Draw rectangles around detected blobs
-    for r in blobs:
-        if r[5]==1:
-            led_r.on()
-        if r[5]==2:
-            led_g.on()
-        if r[5]==3:
-            led_b.on()
-        image.draw_rectangle(r[0:4])
-        time.sleep(50)
-
+    for blobs in blob_l:
+        for r in blobs:
+            if r[8]==1:
+                led_r.on()
+            image.draw_rectangle(r[0:4])
     print(clock.fps())
