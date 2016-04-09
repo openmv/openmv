@@ -434,10 +434,6 @@ void imlib_or(image_t *img, const char *path, image_t *other);
 void imlib_nor(image_t *img, const char *path, image_t *other);
 void imlib_xor(image_t *img, const char *path, image_t *other);
 void imlib_xnor(image_t *img, const char *path, image_t *other);
-int imlib_pixels(image_t *img, rectangle_t *r);
-int imlib_centroid(image_t *img, int *x_center, int *y_center, rectangle_t *r);
-float imlib_orientation_radians(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
-float imlib_orientation_degrees(image_t *img, int *sum, int *x_center, int *y_center, rectangle_t *r);
 void imlib_erode(image_t *img, int ksize, int threshold);
 void imlib_dilate(image_t *img, int ksize, int threshold);
 
@@ -468,7 +464,6 @@ array_t *cluster_kmeans(array_t *points, int k);
 /* Image filtering functions */
 int  imlib_image_mean(struct image *src);
 void imlib_histeq(struct image *src);
-void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold);
 void imlib_rainbow(image_t *src, struct image *dst);
 
 /* Integral image functions */

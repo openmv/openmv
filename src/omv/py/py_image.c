@@ -518,62 +518,6 @@ static mp_obj_t py_image_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
     return mp_const_none;
 }
 
-static mp_obj_t py_image_pixels(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
-
-    rectangle_t arg_r;
-    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
-    return mp_obj_new_int(imlib_pixels(arg_img, &arg_r));
-}
-
-static mp_obj_t py_image_centroid(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
-
-    rectangle_t arg_r;
-    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
-    int x = 0, y = 0;
-    int sum = imlib_centroid(arg_img, &x, &y, &arg_r);
-
-    return mp_obj_new_tuple(3, (mp_obj_t[3])
-            {mp_obj_new_int(sum), mp_obj_new_int(x), mp_obj_new_int(y)});
-}
-
-static mp_obj_t py_image_orientation_radians(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
-
-    rectangle_t arg_r;
-    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
-    int sum = 0, x = 0, y = 0;
-    float o = imlib_orientation_radians(arg_img, &sum, &x, &y, &arg_r);
-
-    return mp_obj_new_tuple(4, (mp_obj_t[4])
-            {mp_obj_new_int(sum), mp_obj_new_int(x), mp_obj_new_int(y), mp_obj_new_float(o)});
-}
-
-static mp_obj_t py_image_orientation_degrees(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
-
-    rectangle_t arg_r;
-    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
-    int sum = 0, x = 0, y = 0;
-    float o = imlib_orientation_degrees(arg_img, &sum, &x, &y, &arg_r);
-
-    return mp_obj_new_tuple(4, (mp_obj_t[4])
-            {mp_obj_new_int(sum), mp_obj_new_int(x), mp_obj_new_int(y), mp_obj_new_float(o)});
-}
-
 static mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -968,51 +912,6 @@ static mp_obj_t py_image_histeq(mp_obj_t image_obj)
     return mp_const_none;
 }
 
-static mp_obj_t py_image_threshold(mp_obj_t image_obj, mp_obj_t color_list_obj, mp_obj_t threshold)
-{
-    color_t *color;
-    image_t *image;
-
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_RGB565,
-            "This function is only supported on RGB565 images");
-
-    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_BLOB_FRAME,
-            "This function is only supported on "OMV_MAX_BLOB_FRAME_STR" and smaller frames");
-
-    /* read arguments */
-    image = py_image_cobj(image_obj);
-    int thresh = mp_obj_get_int(threshold);
-
-    /* returned image */
-    image_t bimage = {
-        .w=image->w,
-        .h=image->h,
-        .bpp=1,
-        .pixels=image->data+(image->w*image->h*image->bpp)
-    };
-
-    /* copy color list */
-    uint len;
-    mp_obj_t *color_arr;
-    mp_obj_get_array(color_list_obj, &len, &color_arr);
-
-    color = xalloc(len*sizeof*color);
-
-    for (int i=0; i<len; i++) {
-        mp_obj_t *color_obj;
-        mp_obj_get_array_fixed_n(color_arr[i], 3, &color_obj);
-        color[i].r = mp_obj_get_int(color_obj[0]);
-        color[i].g = mp_obj_get_int(color_obj[1]);
-        color[i].b = mp_obj_get_int(color_obj[2]);
-    }
-
-    /* Threshold image using reference color */
-    imlib_threshold(image, &bimage, color, len, thresh);
-
-    return py_image_from_struct(&bimage);
-}
-
 static mp_obj_t py_image_rainbow(mp_obj_t src_image_obj)
 {
     image_t *src_image = NULL;
@@ -1256,10 +1155,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_or_obj, py_image_or);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_nor_obj, py_image_nor);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_xor_obj, py_image_xor);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_xnor_obj, py_image_xnor);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_pixels_obj, 1, py_image_pixels);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_centroid_obj, 1, py_image_centroid);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_radians_obj, 1, py_image_orientation_radians);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_orientation_degrees_obj, 1, py_image_orientation_degrees);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_erode_obj, 2, py_image_erode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_dilate_obj, 2, py_image_dilate);
 /* Background Subtraction (Frame Differencing) functions */
@@ -1284,7 +1179,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_subimg_obj, py_image_subimg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj, py_image_blit);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blend_obj, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj, py_image_threshold);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rainbow_obj, py_image_rainbow);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_compress_obj, py_image_compress);
 
@@ -1320,10 +1214,6 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_nor),                 (mp_obj_t)&py_image_nor_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_xor),                 (mp_obj_t)&py_image_xor_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_xnor),                (mp_obj_t)&py_image_xnor_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_pixels),              (mp_obj_t)&py_image_pixels_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_centroid),            (mp_obj_t)&py_image_centroid_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_orientation_radians), (mp_obj_t)&py_image_orientation_radians_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_orientation_degrees), (mp_obj_t)&py_image_orientation_degrees_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_erode),               (mp_obj_t)&py_image_erode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_dilate),              (mp_obj_t)&py_image_dilate_obj},
     /* Background Subtraction (Frame Differencing) functions */
@@ -1348,7 +1238,6 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_blit),                (mp_obj_t)&py_image_blit_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_threshold),           (mp_obj_t)&py_image_threshold_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_rainbow),             (mp_obj_t)&py_image_rainbow_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
     /* objects/feature detection */

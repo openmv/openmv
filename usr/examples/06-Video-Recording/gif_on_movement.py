@@ -37,10 +37,10 @@ while(True):
     while(diff):
         img = sensor.snapshot()
         img.difference("temp/bg.bmp")
-        img.binary([(20, 100, -128, 127, -128, 127)])
-        sum = img.pixels()
-        if sum > 100: # Over 100 pixels need to change to detect motion.
-            diff -= 1
+        for blob_l in img.find_blobs([(20, 100, -128, 127, -128, 127)]):
+            for blob in blob_l:
+                # Over 100 pixels need to change to detect motion.
+                if (diff and (blob[4] > 100)): diff -= 1
 
     g = gif.Gif("example-%d.gif" % pyb.rng(), loop=True)
 
