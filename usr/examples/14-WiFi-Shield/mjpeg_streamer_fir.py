@@ -74,8 +74,8 @@ while (True):
 
     # Draw ambient, min and max temperatures.
     image.draw_string(0, 0, "Ta: %0.2f"%ta, color = (0xFF, 0x00, 0x00))
-    image.draw_string(0, 8, "To min: %0.2f"%(to_min+ta), color = (0xFF, 0x00, 0x00))
-    image.draw_string(0, 16, "To max: %0.2f"%(to_max+ta), color = (0xFF, 0x00, 0x00))
+    image.draw_string(0, 8, "To min: %0.2f"%to_min, color = (0xFF, 0x00, 0x00))
+    image.draw_string(0, 16, "To max: %0.2f"%to_max, color = (0xFF, 0x00, 0x00))
 
     
     client.send("\r\n--openmv\r\n"  \
