@@ -752,6 +752,72 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     return mp_const_none;
 }
 
+static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    mp_uint_t arg_t_len;
+    mp_obj_t *arg_t;
+    mp_obj_get_array(args[1], &arg_t_len, &arg_t);
+    if (!arg_t_len) return mp_const_none;
+
+    simple_color_t l_t[arg_t_len], u_t[arg_t_len];
+    if (IM_IS_GS(arg_img)) {
+        for (int i=0; i<arg_t_len; i++) {
+            mp_obj_t *temp;
+            mp_obj_get_array_fixed_n(arg_t[i], 2, &temp);
+            int lo = mp_obj_get_int(temp[0]);
+            int hi = mp_obj_get_int(temp[1]);
+            // Swap ranges if they are wrong.
+            l_t[i].G = IM_MIN(lo, hi);
+            u_t[i].G = IM_MAX(lo, hi);
+        }
+    } else {
+        for (int i=0; i<arg_t_len; i++) {
+            mp_obj_t *temp;
+            mp_obj_get_array_fixed_n(arg_t[i], 6, &temp);
+            int l_lo = mp_obj_get_int(temp[0]);
+            int l_hi = mp_obj_get_int(temp[1]);
+            int a_lo = mp_obj_get_int(temp[2]);
+            int a_hi = mp_obj_get_int(temp[3]);
+            int b_lo = mp_obj_get_int(temp[4]);
+            int b_hi = mp_obj_get_int(temp[5]);
+            // Swap ranges if they are wrong.
+            l_t[i].L = IM_MIN(l_lo, l_hi);
+            u_t[i].L = IM_MAX(l_lo, l_hi);
+            l_t[i].A = IM_MIN(a_lo, a_hi);
+            u_t[i].A = IM_MAX(a_lo, a_hi);
+            l_t[i].B = IM_MIN(b_lo, b_hi);
+            u_t[i].B = IM_MAX(b_lo, b_hi);
+        }
+    }
+
+    rectangle_t arg_r;
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
+
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_feature_filter), MP_MAP_LOOKUP);
+    mp_obj_t kw_val = (kw_arg != NULL) ? kw_arg->value : MP_OBJ_NULL;
+
+    int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), 0);
+    return imlib_find_blobs(args[0], arg_img, arg_t_len, l_t, u_t, arg_invert ? 1 : 0, &arg_r, kw_val);
+}
+
+static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int margin = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 2);
+
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_feature_filter), MP_MAP_LOOKUP);
+    mp_obj_t kw_val = (kw_arg != NULL) ? kw_arg->value : MP_OBJ_NULL;
+
+    return imlib_find_markers(args[0], args[1], margin, kw_val);
+}
+
 static mp_obj_t py_image_scale(mp_obj_t image_obj, mp_obj_t size_obj)
 {
     int w,h;
@@ -986,30 +1052,6 @@ static mp_obj_t py_image_compress(mp_obj_t image_obj, mp_obj_t quality)
     return py_image_from_struct(&cimage);
 }
 
-static mp_obj_t py_image_find_blobs(mp_obj_t image_obj)
-{
-     // Get image pointer
-    image_t *image = py_image_cobj(image_obj);
-
-    // Run blob detector
-    array_t *blobs = imlib_count_blobs(image);
-
-    // Add detected blobs to a new Python list
-    mp_obj_t objects_list = mp_obj_new_list(0, NULL);
-    if (array_length(blobs)) {
-        for (int j=0; j<array_length(blobs); j++) {
-            blob_t *r = array_at(blobs, j);
-            mp_obj_t blob[6] = {
-                mp_obj_new_int(r->x), mp_obj_new_int(r->y), mp_obj_new_int(r->w),
-                mp_obj_new_int(r->h), mp_obj_new_int(r->c), mp_obj_new_int(r->id)
-            };
-            mp_obj_list_append(objects_list, mp_obj_new_tuple(6, blob));
-        }
-    }
-    array_free(blobs);
-    return objects_list;
-}
-
 static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     rectangle_t roi;
@@ -1232,6 +1274,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_obj, 2, py_image_midpoint);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mean_obj, py_image_mean);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mode_obj, py_image_mode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
+/* Color Tracking */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_markers_obj, 2, py_image_find_markers);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scaled_obj, py_image_scaled);
@@ -1243,7 +1288,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_threshold_obj, py_image_threshold);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rainbow_obj, py_image_rainbow);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_compress_obj, py_image_compress);
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_find_blobs_obj, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
@@ -1294,6 +1338,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_mean),                (mp_obj_t)&py_image_mean_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_mode),                (mp_obj_t)&py_image_mode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
+    /* Color Tracking */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_markers),        (mp_obj_t)&py_image_find_markers_obj},
 
     {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),              (mp_obj_t)&py_image_scaled_obj},
@@ -1305,7 +1352,6 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_rainbow),             (mp_obj_t)&py_image_rainbow_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
     /* objects/feature detection */
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_features),       (mp_obj_t)&py_image_find_features_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},

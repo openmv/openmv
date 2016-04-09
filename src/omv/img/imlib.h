@@ -13,6 +13,7 @@
 #include <ff.h>
 #include "array.h"
 #include "fmath.h"
+#include "obj.h"
 
 #define IM_SWAP16(x) __REV16(x) // Swap bottom two chars in short.
 #define IM_SWAP32(x) __REV32(x) // Swap bottom two shorts in long.
@@ -230,15 +231,6 @@ typedef struct statistics {
     uint8_t g_upper_q;
     int8_t l_upper_q, a_upper_q, b_upper_q;
 } statistics_t;
-
-typedef struct blob {
-    int x;
-    int y;
-    int w;
-    int h;
-    int c;
-    int id;
-} blob_t;
 
 typedef struct color {
     union {
@@ -466,6 +458,10 @@ void imlib_mean_filter(image_t *img, const int ksize);
 void imlib_mode_filter(image_t *img, const int ksize);
 void imlib_median_filter(image_t *img, const int ksize, const int percentile);
 
+/* Color Tracking */
+mp_obj_t imlib_find_blobs(mp_obj_t img_obj, image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert, rectangle_t *r, mp_obj_t filtering_fn);
+mp_obj_t imlib_find_markers(mp_obj_t img_obj, mp_obj_t blob_lists_obj, int margin, mp_obj_t filtering_fn);
+
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
 
@@ -474,7 +470,6 @@ int  imlib_image_mean(struct image *src);
 void imlib_histeq(struct image *src);
 void imlib_threshold(image_t *src, image_t *dst, color_t *color, int color_size, int threshold);
 void imlib_rainbow(image_t *src, struct image *dst);
-array_t *imlib_count_blobs(struct image *image);
 
 /* Integral image functions */
 void imlib_integral_image_alloc(struct integral_image *sum, int w, int h);
