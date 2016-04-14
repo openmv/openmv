@@ -13,7 +13,6 @@
 #include <ff.h>
 #include "array.h"
 #include "fmath.h"
-#include "obj.h"
 
 #define IM_SWAP16(x) __REV16(x) // Swap bottom two chars in short.
 #define IM_SWAP32(x) __REV32(x) // Swap bottom two shorts in long.
@@ -232,6 +231,20 @@ typedef struct statistics {
     int8_t l_upper_q, a_upper_q, b_upper_q;
 } statistics_t;
 
+typedef struct color_blob { // organized this way to pack it...
+    int16_t x; // rect - 0
+    int16_t y; // rect - 1
+    int16_t w; // rect - 2
+    int16_t h; // rect - 3
+    int16_t cx; // centroid - 5
+    int16_t cy; // centroid - 6
+    float rotation; // rotation - 7
+    uint16_t pixels; // number of pixels in merged blobs - 4
+    uint16_t count; // number of blobs merged into this blob - 9
+    uint32_t code; // color code index bits of merged blobs - 8
+}
+color_blob_t;
+
 typedef struct color {
     union {
         uint8_t vec[3];
@@ -426,7 +439,9 @@ void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c);
 
 /* Binary functions */
-void imlib_binary(image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert);
+void imlib_binary(image_t *img,
+                  int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds,
+                  bool invert);
 void imlib_invert(image_t *img);
 void imlib_and(image_t *img, const char *path, image_t *other);
 void imlib_nand(image_t *img, const char *path, image_t *other);
@@ -455,8 +470,12 @@ void imlib_mode_filter(image_t *img, const int ksize);
 void imlib_median_filter(image_t *img, const int ksize, const int percentile);
 
 /* Color Tracking */
-mp_obj_t imlib_find_blobs(mp_obj_t img_obj, image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert, rectangle_t *r, mp_obj_t filtering_fn);
-mp_obj_t imlib_find_markers(mp_obj_t img_obj, mp_obj_t blob_lists_obj, int margin, mp_obj_t filtering_fn);
+array_t *imlib_find_blobs(image_t *img,
+                          int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds,
+                          bool invert, rectangle_t *r,
+                          bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1);
+array_t *imlib_find_markers(array_t *blobs_list, int margin,
+                            bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);

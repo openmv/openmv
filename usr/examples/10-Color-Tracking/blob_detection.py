@@ -1,7 +1,5 @@
 import sensor, time, pyb
 
-led_r = pyb.LED(1)
-
 sensor.reset()
 sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.RGB565)
@@ -18,14 +16,10 @@ while (True):
     image = sensor.snapshot()
 
     # Detect blobs in image
-    blob_l = image.find_blobs([COLOR1])
-
-    led_r.off()
+    blobs = image.find_blobs([COLOR1])
 
     # Draw rectangles around detected blobs
-    for blobs in blob_l:
-        for r in blobs:
-            if r[8]==1:
-                led_r.on()
-            image.draw_rectangle(r[0:4])
+    for blob in blobs:
+        image.draw_rectangle(blob[0:4])
+
     print(clock.fps())

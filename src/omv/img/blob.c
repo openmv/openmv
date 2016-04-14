@@ -6,9 +6,10 @@
  * Blob and color code/marker detection code...
  *
  */
-#include <mp.h>
+#include <string.h>
 #include "mdefs.h"
 #include "fb_alloc.h"
+#include "xalloc.h"
 #include "imlib.h"
 
 ALWAYS_INLINE static uint8_t *init_mask(rectangle_t *roi)
@@ -106,7 +107,10 @@ ALWAYS_INLINE static bool threshold(image_t *img, int x, int y, simple_color_t l
     }
 }
 
-mp_obj_t imlib_find_blobs(mp_obj_t img_obj, image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert, rectangle_t *r, mp_obj_t filtering_fn)
+array_t *imlib_find_blobs(image_t *img,
+                          int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds,
+                          bool invert, rectangle_t *r,
+                          bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1)
 {
     // We're using a modified wildfire algorithm below where instead of using a
     // the stack we use a queue along with a burn mask to filter out already
@@ -114,22 +118,20 @@ mp_obj_t imlib_find_blobs(mp_obj_t img_obj, image_t *img, int num_thresholds, si
     // an area of connected pixels that all are within a threshold, the algorithm
     // computes the bounding box around all those pixels, number of pixels in the
     // blob, centroid, and blob orientation. The algorithm then returns a list
-    // of blobs for each set of thresholds passed in. That is, this function
-    // returns a tuple of lists of blobs.
+    // of all the blobs in the image. Note that blobs can be mapped back to colors
+    // by their blob code number.
 
     rectangle_t rect;
     if (!rectangle_subimg(img, r, &rect)) {
-        return mp_const_none;
+        return NULL;
     }
-
-    mp_obj_t blob_lists[num_thresholds];
 
     uint8_t *mask = init_mask(&rect);
     stack_queue_t *sq = init_stack_queue(&rect);
 
+    array_t *blobs_list;
+    array_alloc(&blobs_list, xfree);
     for (int n = 0; n < num_thresholds; n++) {
-        blob_lists[n] = mp_obj_new_list(4, NULL); // 4 is just the intial list size guess
-        mp_obj_list_set_len(blob_lists[n], 0);
         for (int i = 0; i < rect.h; i++) {
             for (int j = 0; j < rect.w; j++) {
                 int x = (rect.x + j); // in img
@@ -188,29 +190,29 @@ mp_obj_t imlib_find_blobs(mp_obj_t img_obj, image_t *img, int num_thresholds, si
                     blob_c += blob_pixels*my*my;
                     // Compute the final blob orientation from a, b, and c sums.
                     float o = ((blob_a!=blob_c)?fast_atan2f(blob_b,blob_a-blob_c):0.0)/2.0;
-                    mp_obj_t blob_tuple[10];
-                    blob_tuple[0] = mp_obj_new_int(blob_x1);
-                    blob_tuple[1] = mp_obj_new_int(blob_y1);
-                    blob_tuple[2] = mp_obj_new_int(blob_x2-blob_x1+1);
-                    blob_tuple[3] = mp_obj_new_int(blob_y2-blob_y1+1);
-                    blob_tuple[4] = mp_obj_new_int(blob_pixels);
-                    blob_tuple[5] = mp_obj_new_int(mx);
-                    blob_tuple[6] = mp_obj_new_int(my);
-                    blob_tuple[7] = mp_obj_new_float(o);
-                    blob_tuple[8] = mp_obj_new_int(1<<n);
-                    blob_tuple[9] = mp_obj_new_int(1);
-                    mp_obj_t blob_tuple_obj = mp_obj_new_tuple(10, blob_tuple);
-                    if (filtering_fn != MP_OBJ_NULL) {
-                        if (mp_obj_is_true(mp_call_function_2(filtering_fn, img_obj, blob_tuple_obj))) {
-                            mp_obj_list_append(blob_lists[n], blob_tuple_obj);
-                        } else {
-                            mp_obj_tuple_del(blob_tuple_obj);
+                    color_blob_t cb;
+                    cb.x = blob_x1;
+                    cb.y = blob_y1;
+                    cb.w = blob_x2-blob_x1+1;
+                    cb.h = blob_y2-blob_y1+1;
+                    cb.pixels = blob_pixels;
+                    cb.cx = mx;
+                    cb.cy = my;
+                    cb.rotation = o;
+                    cb.code = 1<<n;
+                    cb.count = 1;
+                    // We allocate in the below code to sped things up.
+                    if ((f_fun != NULL) && (f_fun_arg_0 != NULL) && (f_fun_arg_1 != NULL)) {
+                        if (f_fun(f_fun_arg_0, f_fun_arg_1, &cb)) {
+                            color_blob_t *cb2 = xalloc(sizeof(color_blob_t));
+                            memcpy(cb2, &cb, sizeof(color_blob_t));
+                            array_push_back(blobs_list, cb2);
                         }
                     } else {
                         if (blob_pixels >= ((img->w*img->h)/1000)) {
-                            mp_obj_list_append(blob_lists[n], blob_tuple_obj);
-                        } else {
-                            mp_obj_tuple_del(blob_tuple_obj);
+                            color_blob_t *cb2 = xalloc(sizeof(color_blob_t));
+                            memcpy(cb2, &cb, sizeof(color_blob_t));
+                            array_push_back(blobs_list, cb2);
                         }
                     }
                 }
@@ -221,137 +223,125 @@ mp_obj_t imlib_find_blobs(mp_obj_t img_obj, image_t *img, int num_thresholds, si
     deinit_stack_queue();
     deinit_mask();
 
-    return mp_obj_new_tuple(num_thresholds, blob_lists);
+    return blobs_list;
 }
 
-mp_obj_t imlib_find_markers(mp_obj_t img_obj, mp_obj_t blob_lists_obj, int margin, mp_obj_t filtering_fn)
+array_t *imlib_find_markers(array_t *blobs_list, int margin,
+                            bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1)
 {
-    // After you have a list of blobs this function will merge blobs from the
-    // different colors lists that intersect into one blob. The new merged big
-    // blob will have a bounding box that surronds all the merged blobs, pixels will
-    // include all the blobs, and centroids/orientations are averaged. Additionally,
-    // the new blob will have an extra code value with a bit set for each color
-    // that was merged into the blob along with the number of blobs merged. The
-    // color code provides a nice and easy user controllable way to get an idea
-    // of what colors are in a merged blob.
+    // After you have a list of blobs this function will merge blobs that
+    // intersect into one blob. The new merged big blob will have a bounding box
+    // that surronds all the merged blobs, pixels will include all the blobs,
+    // and centroids/orientations are averaged. Additionally, the new blob will
+    // have an extra code value with a bit set for each color that was merged
+    // into the blob along with the number of blobs merged. The color code
+    // provides a nice and easy user controllable way to get an idea of what
+    // colors are in a merged blob.
 
-    mp_uint_t blob_l_len;
-    mp_obj_t *blob_l;
-    mp_obj_get_array(blob_lists_obj, &blob_l_len, &blob_l);
-    if (!blob_l_len) return mp_const_none;
-
-    mp_uint_t blob_lists_len[blob_l_len];
-    mp_obj_t *blob_lists[blob_l_len];
+    if (!array_length(blobs_list)) return NULL;
 
     rectangle_t rect; // reusing mask from above - so we need a fake rect obj.
     rect.x = 0;
     rect.y = 0;
-    rect.w = 0;
-    rect.h = blob_l_len;
-
-    for (mp_uint_t i = 0; i < blob_l_len; i++) {
-        mp_obj_get_array(blob_l[i], &blob_lists_len[i], &blob_lists[i]);
-        rect.w = IM_MAX(rect.w, blob_lists_len[i]); // find longest list
-    }
-    if (!rect.w) return mp_const_none;
+    rect.w = array_length(blobs_list);
+    rect.h = 1;
 
     uint8_t *mask = init_mask(&rect);
 
-    mp_obj_t out = mp_obj_new_list(4, NULL); // 4 is just the intial list size guess
-    mp_obj_list_set_len(out, 0);
-    for (mp_uint_t i = 0; i < blob_l_len; i++) {
-        for (mp_uint_t j = 0; j < blob_lists_len[i]; j++) {
-            if (get_not_mask_pixel(&rect, mask, j, i)) {
-                set_mask_pixel(&rect, mask, j, i);
+    array_t *blobs_list_ret;
+    array_alloc(&blobs_list_ret, xfree);
+    for (int i = 0, ii = array_length(blobs_list); i < ii; i++) {
+        if (get_not_mask_pixel(&rect, mask, i, 0)) {
+            set_mask_pixel(&rect, mask, i, 0);
 
-                mp_obj_t *temp0;
-                mp_obj_get_array_fixed_n(blob_lists[i][j], 10, &temp0);
+            color_blob_t *cb0 = array_at(blobs_list, i);
 
-                int blob_x = mp_obj_get_int(temp0[0]); // rect x
-                int blob_y = mp_obj_get_int(temp0[1]); // rect y
-                int blob_w = mp_obj_get_int(temp0[2]); // rect w
-                int blob_h = mp_obj_get_int(temp0[3]); // rect h
-                int blob_pixels = mp_obj_get_int(temp0[4]); // pixels
-                int blob_cx = mp_obj_get_int(temp0[5]); // centroid x
-                int blob_cy = mp_obj_get_int(temp0[6]); // centroid y
-                float blob_rotation = mp_obj_get_float(temp0[7]); // rotation
-                int blob_code = mp_obj_get_int(temp0[8]); // code bit
-                int blob_count = mp_obj_get_int(temp0[9]); // blob count
+            int blob_x = cb0->x; // rect x
+            int blob_y = cb0->y; // rect y
+            int blob_w = cb0->w; // rect w
+            int blob_h = cb0->h; // rect h
+            int blob_pixels = cb0->pixels; // pixels
+            int blob_cx = cb0->cx; // centroid x
+            int blob_cy = cb0->cy; // centroid y
+            float blob_rotation = cb0->rotation; // rotation
+            int blob_code = cb0->code; // code bit
+            int blob_count = cb0->count; // blob count
 
-                for (mp_uint_t a = 0; a < blob_l_len; a++) {
-                    for (mp_uint_t b = 0; b < blob_lists_len[a]; b++) {
-                        if (get_not_mask_pixel(&rect, mask, b, a)) {
+            for (int j = 0, jj = array_length(blobs_list); j < jj;) {
+                if (get_not_mask_pixel(&rect, mask, j, 0)) {
 
-                            mp_obj_t *temp1;
-                            mp_obj_get_array_fixed_n(blob_lists[a][b], 10, &temp1);
+                    color_blob_t *cb1 = array_at(blobs_list, j);
 
-                            rectangle_t t0;
-                            t0.x = blob_x - margin;
-                            t0.y = blob_y - margin;
-                            t0.w = blob_w + (2*margin);
-                            t0.h = blob_h + (2*margin);
+                    rectangle_t t0, t1;
+                    t0.x = blob_x - margin;
+                    t0.y = blob_y - margin;
+                    t0.w = blob_w + (2*margin);
+                    t0.h = blob_h + (2*margin);
+                    t1.x = cb1->x - margin;
+                    t1.y = cb1->y - margin;
+                    t1.w = cb1->w + (2*margin);
+                    t1.h = cb1->h + (2*margin);
 
-                            rectangle_t t1;
-                            t1.x = mp_obj_get_int(temp1[0]) - margin;
-                            t1.y = mp_obj_get_int(temp1[1]) - margin;
-                            t1.w = mp_obj_get_int(temp1[2]) + (2*margin);
-                            t1.h = mp_obj_get_int(temp1[3]) + (2*margin);
-
-                            if (rectangle_intersects(&t0, &t1)) {
-                                set_mask_pixel(&rect, mask, b, a);
-
-                                // Compute bounding rect...
-                                blob_x = IM_MIN(blob_x, t1.x);
-                                blob_y = IM_MIN(blob_y, t1.y);
-                                int x2_0 = t0.x+t0.w-1;
-                                int x2_1 = t1.x+t1.w-1;
-                                int x2 = IM_MAX(x2_0, x2_1);
-                                blob_w = x2-blob_x+1;
-                                int y2_0 = t0.y+t0.h-1;
-                                int y2_1 = t1.y+t1.h-1;
-                                int y2 = IM_MAX(y2_0, y2_1);
-                                blob_h = y2-blob_y+1;
-                                // Update tracking info...
-                                blob_pixels += mp_obj_get_int(temp1[4]);
-                                blob_cx += mp_obj_get_int(temp1[5]);
-                                blob_cy += mp_obj_get_int(temp1[6]);
-                                blob_rotation += mp_obj_get_float(temp1[7]);
-                                blob_code |= mp_obj_get_int(temp1[8]);
-                                blob_count += mp_obj_get_int(temp1[9]);
-                            }
-                        }
+                    if (rectangle_intersects(&t0, &t1)) {
+                        set_mask_pixel(&rect, mask, j, 0);
+                        // Compute bounding rect...
+                        int x2_0 = blob_x+blob_w-1;
+                        int x2_1 = cb1->x+cb1->w-1;
+                        int x2 = IM_MAX(x2_0, x2_1);
+                        blob_x = IM_MIN(blob_x, cb1->x);
+                        blob_w = x2-blob_x+1;
+                        int y2_0 = blob_y+blob_h-1;
+                        int y2_1 = cb1->y+cb1->h-1;
+                        int y2 = IM_MAX(y2_0, y2_1);
+                        blob_y = IM_MIN(blob_y, cb1->y);
+                        blob_h = y2-blob_y+1;
+                        // Update tracking info...
+                        blob_pixels += cb1->pixels;
+                        blob_cx += cb1->cx;
+                        blob_cy += cb1->cy;
+                        blob_rotation += cb1->rotation;
+                        blob_code |= cb1->code;
+                        blob_count += cb1->count;
+                        // Start over if we merged so we don't miss something.
+                        // Since our rect has grown we have to recheck blobs
+                        // that didn't intersect previously.
+                        j = 0;
+                        continue;
                     }
                 }
-                blob_cx /= blob_count;
-                blob_cy /= blob_count;
-                blob_rotation /= blob_count;
-                // Build output object.
-                mp_obj_t blob_tuple[10];
-                blob_tuple[0] = mp_obj_new_int(blob_x);
-                blob_tuple[1] = mp_obj_new_int(blob_y);
-                blob_tuple[2] = mp_obj_new_int(blob_w);
-                blob_tuple[3] = mp_obj_new_int(blob_h);
-                blob_tuple[4] = mp_obj_new_int(blob_pixels);
-                blob_tuple[5] = mp_obj_new_int(blob_cx);
-                blob_tuple[6] = mp_obj_new_int(blob_cy);
-                blob_tuple[7] = mp_obj_new_float(blob_rotation);
-                blob_tuple[8] = mp_obj_new_int(blob_code);
-                blob_tuple[9] = mp_obj_new_int(blob_count);
-                mp_obj_t blob_tuple_obj = mp_obj_new_tuple(10, blob_tuple);
-                if (filtering_fn != MP_OBJ_NULL) {
-                    if (mp_obj_is_true(mp_call_function_2(filtering_fn, img_obj, blob_tuple_obj))) {
-                        mp_obj_list_append(out, blob_tuple_obj);
-                    } else {
-                        mp_obj_tuple_del(blob_tuple_obj);
-                    }
-                } else {
-                    mp_obj_list_append(out, blob_tuple_obj);
+                j += 1;
+            }
+            blob_cx /= blob_count;
+            blob_cy /= blob_count;
+            blob_rotation /= blob_count;
+            // Build output object.
+            color_blob_t cb;
+            cb.x = blob_x;
+            cb.y = blob_y;
+            cb.w = blob_w;
+            cb.h = blob_h;
+            cb.pixels = blob_pixels;
+            cb.cx = blob_cx;
+            cb.cy = blob_cy;
+            cb.rotation = blob_rotation;
+            cb.code = blob_code;
+            cb.count = blob_count;
+            // We allocate in the below code to sped things up.
+            if ((f_fun != NULL) && (f_fun_arg_0 != NULL) && (f_fun_arg_1 != NULL)) {
+                if (f_fun(f_fun_arg_0, f_fun_arg_1, &cb)) {
+                    color_blob_t *cb2 = xalloc(sizeof(color_blob_t));
+                    memcpy(cb2, &cb, sizeof(color_blob_t));
+                    array_push_back(blobs_list_ret, cb2);
                 }
+            } else {
+                color_blob_t *cb2 = xalloc(sizeof(color_blob_t));
+                memcpy(cb2, &cb, sizeof(color_blob_t));
+                array_push_back(blobs_list_ret, cb2);
             }
         }
     }
 
     deinit_mask();
 
-    return out;
+    return blobs_list_ret;
 }
