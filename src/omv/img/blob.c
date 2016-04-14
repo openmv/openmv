@@ -267,7 +267,7 @@ array_t *imlib_find_markers(array_t *blobs_list, int margin,
             int blob_code = cb0->code; // code bit
             int blob_count = cb0->count; // blob count
 
-            for (int j = 0, jj = array_length(blobs_list); j < jj; j++) {
+            for (int j = 0, jj = array_length(blobs_list); j < jj;) {
                 if (get_not_mask_pixel(&rect, mask, j, 0)) {
 
                     color_blob_t *cb1 = array_at(blobs_list, j);
@@ -299,11 +299,17 @@ array_t *imlib_find_markers(array_t *blobs_list, int margin,
                         blob_pixels += cb1->pixels;
                         blob_cx += cb1->cx;
                         blob_cy += cb1->cy;
-                        blob_rotation +=cb1->rotation;
+                        blob_rotation += cb1->rotation;
                         blob_code |= cb1->code;
                         blob_count += cb1->count;
+                        // Start over if we merged so we don't miss something.
+                        // Since our rect has grown we have to recheck blobs
+                        // that didn't intersect previously.
+                        j = 0;
+                        continue;
                     }
                 }
+                j += 1;
             }
             blob_cx /= blob_count;
             blob_cy /= blob_count;
