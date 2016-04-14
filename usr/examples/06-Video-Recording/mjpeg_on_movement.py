@@ -38,10 +38,12 @@ while(True):
     while(diff):
         img = sensor.snapshot()
         img.difference("temp/bg.bmp")
-        for blob_l in img.find_blobs([(20, 100, -128, 127, -128, 127)]):
-            for blob in blob_l:
-                # Over 100 pixels need to change to detect motion.
-                if (diff and (blob[4] > 100)): diff -= 1
+        stats = img.statistics()
+        # Stats 5 is the max of the lighting color channel. The below code
+        # triggers when the lighting max for the whole image goes above 10.
+        # The lighting difference maximum should be zero normally.
+        if (stats[5] > 10):
+            diff -= 1
 
     m = mjpeg.Mjpeg("example-%d.mjpeg" % pyb.rng())
 

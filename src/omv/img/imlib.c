@@ -398,7 +398,9 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void imlib_binary(image_t *img, int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds, bool invert)
+void imlib_binary(image_t *img,
+                  int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds,
+                  bool invert)
 {
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels;

@@ -696,6 +696,23 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     return mp_const_none;
 }
 
+static bool py_image_find_blobs_f_fun(void *fun_obj, void *img_obj, color_blob_t *cb)
+{
+    mp_obj_t blob_obj[10] = {
+        mp_obj_new_int(cb->x),
+        mp_obj_new_int(cb->y),
+        mp_obj_new_int(cb->w),
+        mp_obj_new_int(cb->h),
+        mp_obj_new_int(cb->pixels),
+        mp_obj_new_int(cb->cx),
+        mp_obj_new_int(cb->cy),
+        mp_obj_new_float(cb->rotation),
+        mp_obj_new_int(cb->code),
+        mp_obj_new_int(cb->count)
+    };
+    return mp_obj_is_true(mp_call_function_2(fun_obj, img_obj, mp_obj_new_tuple(10, blob_obj)));
+}
+
 static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -742,10 +759,50 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
 
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_feature_filter), MP_MAP_LOOKUP);
-    mp_obj_t kw_val = (kw_arg != NULL) ? kw_arg->value : MP_OBJ_NULL;
+    mp_obj_t kw_val = (kw_arg != NULL) ? kw_arg->value : NULL;
 
     int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), 0);
-    return imlib_find_blobs(args[0], arg_img, arg_t_len, l_t, u_t, arg_invert ? 1 : 0, &arg_r, kw_val);
+    array_t *blobs_list = imlib_find_blobs(arg_img, arg_t_len, l_t, u_t, arg_invert ? 1 : 0, &arg_r,
+                                           py_image_find_blobs_f_fun, kw_val, args[0]);
+    if (blobs_list == NULL) {
+        return mp_const_none;
+    }
+    mp_obj_t objects_list = mp_obj_new_list(0, NULL);
+    for (int i=0, j=array_length(blobs_list); i<j; i++) {
+        color_blob_t *cb = array_at(blobs_list, i);
+        mp_obj_t blob_obj[10] = {
+            mp_obj_new_int(cb->x),
+            mp_obj_new_int(cb->y),
+            mp_obj_new_int(cb->w),
+            mp_obj_new_int(cb->h),
+            mp_obj_new_int(cb->pixels),
+            mp_obj_new_int(cb->cx),
+            mp_obj_new_int(cb->cy),
+            mp_obj_new_float(cb->rotation),
+            mp_obj_new_int(cb->code),
+            mp_obj_new_int(cb->count)
+        };
+        mp_obj_list_append(objects_list, mp_obj_new_tuple(10, blob_obj));
+    }
+    array_free(blobs_list);
+    return objects_list;
+}
+
+static bool py_image_find_markers_f_fun(void *fun_obj, void *img_obj, color_blob_t *cb)
+{
+    mp_obj_t blob_obj[10] = {
+        mp_obj_new_int(cb->x),
+        mp_obj_new_int(cb->y),
+        mp_obj_new_int(cb->w),
+        mp_obj_new_int(cb->h),
+        mp_obj_new_int(cb->pixels),
+        mp_obj_new_int(cb->cx),
+        mp_obj_new_int(cb->cy),
+        mp_obj_new_float(cb->rotation),
+        mp_obj_new_int(cb->code),
+        mp_obj_new_int(cb->count)
+    };
+    return mp_obj_is_true(mp_call_function_2(fun_obj, img_obj, mp_obj_new_tuple(10, blob_obj)));
 }
 
 static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -757,9 +814,56 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
     int margin = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 2);
 
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_feature_filter), MP_MAP_LOOKUP);
-    mp_obj_t kw_val = (kw_arg != NULL) ? kw_arg->value : MP_OBJ_NULL;
+    mp_obj_t kw_val = (kw_arg != NULL) ? kw_arg->value : NULL;
 
-    return imlib_find_markers(args[0], args[1], margin, kw_val);
+    mp_uint_t arg_t_len;
+    mp_obj_t *arg_t;
+    mp_obj_get_array(args[1], &arg_t_len, &arg_t);
+    if (!arg_t_len) return mp_const_none;
+
+    array_t *blobs_list;
+    array_alloc_init(&blobs_list, xfree, arg_t_len);
+    for (int i=0; i<arg_t_len; i++) {
+        mp_obj_t *temp;
+        mp_obj_get_array_fixed_n(arg_t[i], 10, &temp);
+        color_blob_t *cb = xalloc(sizeof(color_blob_t));
+        cb->x = mp_obj_get_int(temp[0]);
+        cb->y = mp_obj_get_int(temp[1]);
+        cb->w = mp_obj_get_int(temp[2]);
+        cb->h = mp_obj_get_int(temp[3]);
+        cb->pixels = mp_obj_get_int(temp[4]);
+        cb->cx = mp_obj_get_int(temp[5]);
+        cb->cy = mp_obj_get_int(temp[6]);
+        cb->rotation = mp_obj_get_float(temp[7]);
+        cb->code = mp_obj_get_int(temp[8]);
+        cb->count = mp_obj_get_int(temp[9]);
+        array_push_back(blobs_list, cb);
+    }
+    array_t *blobs_list_ret = imlib_find_markers(blobs_list, margin,
+                                                 py_image_find_markers_f_fun, kw_val, args[0]);
+    if (blobs_list_ret == NULL) {
+        return mp_const_none;
+    }
+    array_free(blobs_list);
+    mp_obj_t objects_list = mp_obj_new_list(0, NULL);
+    for (int i=0, j=array_length(blobs_list_ret); i<j; i++) {
+        color_blob_t *cb = array_at(blobs_list_ret, i);
+        mp_obj_t blob_obj[10] = {
+            mp_obj_new_int(cb->x),
+            mp_obj_new_int(cb->y),
+            mp_obj_new_int(cb->w),
+            mp_obj_new_int(cb->h),
+            mp_obj_new_int(cb->pixels),
+            mp_obj_new_int(cb->cx),
+            mp_obj_new_int(cb->cy),
+            mp_obj_new_float(cb->rotation),
+            mp_obj_new_int(cb->code),
+            mp_obj_new_int(cb->count)
+        };
+        mp_obj_list_append(objects_list, mp_obj_new_tuple(10, blob_obj));
+    }
+    array_free(blobs_list_ret);
+    return objects_list;
 }
 
 static mp_obj_t py_image_scale(mp_obj_t image_obj, mp_obj_t size_obj)
