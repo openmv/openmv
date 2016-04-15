@@ -49,6 +49,7 @@
 #include "usbdbg.h"
 #include "sdram.h"
 #include "fb_alloc.h"
+#include "ff_wrapper.h"
 #include "irqs.h"
 
 #include "usbd_core.h"
@@ -318,6 +319,7 @@ soft_reset:
     pyb_usb_init0();
     sensor_init0();
     fb_alloc_init0();
+    file_buffer_init0();
     py_lcd_init0();
     py_fir_init0();
 

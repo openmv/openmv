@@ -102,6 +102,14 @@ static uint8_t *file_buffer_pointer = 0;
 static uint32_t file_buffer_size = 0;
 static uint32_t file_buffer_index = 0;
 
+void file_buffer_init0()
+{
+    file_buffer_offset = 0;
+    file_buffer_pointer = 0;
+    file_buffer_size = 0;
+    file_buffer_index = 0;
+}
+
 ALWAYS_INLINE static void file_fill(FIL *fp)
 {
     if (file_buffer_index == file_buffer_size) {
