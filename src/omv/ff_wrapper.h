@@ -18,6 +18,8 @@ void file_read_open(FIL *fp, const char *path);
 void file_write_open(FIL *fp, const char *path);
 void file_close(FIL *fp);
 void file_seek(FIL *fp, UINT offset);
+// File buffer functions.
+void file_buffer_init0();
 void file_buffer_on(FIL *fp); // does fb_alloc_all
 uint32_t file_tell_w_buf(FIL *fp); // valid between on and off
 uint32_t file_size_w_buf(FIL *fp); // valid between on and off
