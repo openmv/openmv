@@ -405,6 +405,7 @@ void jpeg_write(image_t *img, const char *path);
 void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op);
 void imlib_load_image(image_t *img, const char *path);
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi);
+void imlib_copy_image(image_t *dst, image_t *src, rectangle_t *roi);
 
 /* GIF functions */
 void gif_open(FIL *fp, int width, int height, bool color, bool loop);
@@ -455,6 +456,8 @@ void imlib_dilate(image_t *img, int ksize, int threshold);
 /* Background Subtraction (Frame Differencing) functions */
 void imlib_negate(image_t *img);
 void imlib_difference(image_t *img, const char *path, image_t *other);
+void imlib_replace(image_t *img, const char *path, image_t *other);
+void imlib_blend(image_t *img, const char *path, image_t *other, int alpha);
 
 /* Image Morphing */
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
@@ -483,7 +486,6 @@ array_t *cluster_kmeans(array_t *points, int k);
 /* Image filtering functions */
 int  imlib_image_mean(struct image *src);
 void imlib_histeq(struct image *src);
-void imlib_rainbow(image_t *src, struct image *dst);
 
 /* Integral image functions */
 void imlib_integral_image_alloc(struct integral_image *sum, int w, int h);
@@ -530,10 +532,6 @@ int imlib_lbp_desc_load(FIL *fp, uint8_t **desc);
 void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi);
 
 /* Misc */
-void imlib_scale(struct image *src, struct image *dst, interp_t interp);
-void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off);
-void imlib_blend(struct image *src, struct image *dst, int x_off, int y_off, uint8_t alpha);
-void imlib_subimage(struct image *src, struct image *dst, int x_off, int y_off);
 void jpeg_compress(image_t *src, image_t *dst, int quality);
 
 // Image filter functions
