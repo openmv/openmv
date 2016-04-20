@@ -38,7 +38,7 @@ class BLE:
               ((r[4]-48)*100)+\
               ((r[5]-48)*10)+\
               ((r[6]-48)*1)
-            if not l: return ""
+            if not l: return None
             if l==1 or l==2: raise OSError("Response corrupted!")
             response=self.uart.read(l-2)
             if self.uart.readchar()!=13: raise OSError("Response corrupted!")
