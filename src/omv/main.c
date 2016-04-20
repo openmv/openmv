@@ -292,7 +292,6 @@ int main(void)
     // basic sub-system init
     led_init();
     pendsv_init();
-    timer_tim3_init();
 
 soft_reset:
     led_state(LED_IR, 0);
