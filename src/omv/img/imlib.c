@@ -18,6 +18,7 @@
 #include "mdefs.h"
 #include "font.h"
 #include "fb_alloc.h"
+#include "xalloc.h"
 
 // Gamma uncompress
 extern const float xyz_table[256];
@@ -286,6 +287,32 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi)
         case FORMAT_JPG:
             jpeg_write(img, path);
             break;
+    }
+}
+
+void imlib_copy_image(image_t *dst, image_t *src, rectangle_t *roi)
+{
+    if (IM_IS_JPEG(src)) {
+        dst->w = src->w;
+        dst->h = src->h;
+        dst->bpp = src->bpp;
+        dst->pixels = xalloc(src->bpp);
+        memcpy(dst->pixels, src->pixels, src->bpp);
+    } else {
+        rectangle_t rect;
+        if (!rectangle_subimg(src, roi, &rect)) ff_no_intersection(NULL);
+        dst->w = rect.w;
+        dst->h = rect.h;
+        dst->bpp = src->bpp;
+        dst->pixels = xalloc(rect.w * rect.h * src->bpp);
+        uint8_t *dst_pointer = dst->pixels;
+        for (int i = rect.y; i < (rect.y + rect.h); i++) {
+            int length = rect.w * src->bpp;
+            memcpy(dst_pointer,
+                   src->pixels + (rect.x * src->bpp) + (i * src->w * src->bpp),
+                   length);
+            dst_pointer += length;
+        }
     }
 }
 
@@ -713,17 +740,53 @@ void imlib_difference(image_t *img, const char *path, image_t *other)
     imlib_image_operation(img, path, other, imlib_difference_line_op);
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-void imlib_rainbow(image_t *src, image_t *dst)
+static void imlib_replace_line_op(image_t *img, int line, uint8_t *other)
 {
-    uint8_t  *srcp = src->pixels;
-    uint16_t *dstp = (uint16_t*)dst->pixels;
-
-    for (int i=0; i<(src->w*src->h); i++) {
-        dstp[i] = rainbow_table[srcp[i]];
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels + (img->w * line);
+        memcpy(pixels, other, img->w * sizeof(uint8_t));
+    } else {
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        memcpy(pixels, other, img->w * sizeof(uint16_t));
     }
 }
+
+void imlib_replace(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_replace_line_op);
+}
+
+static uint32_t alpha_temp;
+
+static void imlib_blend_line_op(image_t *img, int line, uint8_t *other)
+{
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = __SMUAD(alpha_temp,__PKHBT(pixels[i],other[i],16))>>8;
+        }
+    } else {
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            const int pixel = pixels[i], other_pixel = ((uint16_t *) other)[i];
+            uint32_t vr = __PKHBT(IM_R565(pixel), IM_R565(other_pixel), 16);
+            uint32_t vg = __PKHBT(IM_G565(pixel), IM_G565(other_pixel), 16);
+            uint32_t vb = __PKHBT(IM_B565(pixel), IM_B565(other_pixel), 16);
+            uint32_t r = __SMUAD(alpha_temp, vr)>>8;
+            uint32_t g = __SMUAD(alpha_temp, vg)>>8;
+            uint32_t b = __SMUAD(alpha_temp, vb)>>8;
+            pixels[i] = IM_RGB565(r, g, b);
+        }
+    }
+}
+
+void imlib_blend(image_t *img, const char *path, image_t *other, int alpha)
+{
+    alpha_temp = __PKHBT((256-alpha), alpha, 16);
+    imlib_image_operation(img, path, other, imlib_blend_line_op);
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 int imlib_image_mean(struct image *src)
 {
@@ -739,239 +802,6 @@ int imlib_image_mean(struct image *src)
 
     /* mean */
     return s/n;
-}
-
-void imlib_subimage(struct image *src_img, struct image *dst_img, int x_off, int y_off)
-{
-    int x, y;
-    typeof(*src_img->data) *src = src_img->data;
-    typeof(*dst_img->data) *dst = dst_img->data;
-
-    for (y=y_off; y<dst_img->h+y_off; y++) {
-        for (x=x_off; x<dst_img->w+x_off; x++) {
-            *dst++ = src[y*src_img->w+x];
-        }
-    }
-}
-
-void imlib_blit_bytes(struct image *src, struct image *dst, int x_off, int y_off)
-{
-    int x, y;
-    typeof(*src->data) *srcp = src->data;
-    typeof(*dst->data) *dstp = dst->data;
-
-    for (y=y_off; y<src->h+y_off; y++) {
-        for (x=x_off; x<src->w+x_off; x++) {
-            dstp[y*dst->w+x]=*srcp++;
-        }
-    }
-}
-
-void imlib_blit_gs_to_rgb(struct image *src, struct image *dst, int x_off, int y_off)
-{
-    int x, y;
-    uint8_t  *srcp = src->data;
-    uint16_t *dstp = (uint16_t*) dst->data;
-
-    for (y=y_off; y<src->h+y_off; y++) {
-        for (x=x_off; x<src->w+x_off; x++) {
-            uint8_t p =*srcp++;
-            dstp[y*dst->w+x]= ((uint16_t)p<<8)|p;
-        }
-    }
-}
-
-void imlib_blit(struct image *src, struct image *dst, int x_off, int y_off)
-{
-    if (src->bpp == dst->bpp) {
-        imlib_blit_bytes(src, dst, x_off, y_off);
-    } else if (src->bpp == 1 && dst->bpp == 2) {
-        imlib_blit_gs_to_rgb(src, dst, x_off, y_off);
-    } else if (src->bpp == 2 && dst->bpp == 1) {
-        //imlib_blit_rgb_to_gs(src, dst, x_off, y_off);
-    }
-}
-
-void imlib_blend(struct image *src, struct image *dst, int x_off, int y_off, uint8_t alpha)
-{
-    uint16_t i,r, g, b;
-
-    uint16_t spix, dpix;
-    uint16_t *srcp = (uint16_t *)src->pixels;
-    uint16_t *dstp = (uint16_t *)dst->pixels;
-
-    uint32_t v0, vr, vg, vb;
-    v0 = __PKHBT((256-alpha), alpha, 16);
-    for (int y=y_off; y<src->h+y_off; y++) {
-        i=y*dst->w;
-        for (int x=x_off; x<src->w+x_off; x++) {
-            spix = *srcp++;
-            dpix = dstp[i+x];
-            vr = __PKHBT(IM_R565(dpix), IM_R565(spix), 16);
-            vg = __PKHBT(IM_G565(dpix), IM_G565(spix), 16);
-            vb = __PKHBT(IM_B565(dpix), IM_B565(spix), 16);
-            r = __SMUAD(v0, vr)>>8;
-            g = __SMUAD(v0, vg)>>8;
-            b = __SMUAD(v0, vb)>>8;
-            dstp[i+x]= IM_RGB565(r, g, b);
-        }
-    }
-}
-
-void imlib_scale_nearest(struct image *src, struct image *dst)
-{
-    int x, y, i, j;
-    int w1 = src->w;
-    int h1 = src->h;
-    int w2 = dst->w;
-    int h2 = dst->h;
-
-    int rat = 0;
-    if (src->bpp ==1) {
-        uint8_t *t, *p;
-        uint8_t *src_data = src->pixels;
-        uint8_t *dst_data = dst->pixels;
-        int x_ratio = (int)((w1<<16)/w2) +1;
-        int y_ratio = (int)((h1<<16)/h2) +1;
-
-        for (i=0; i<h2; i++) {
-            t = dst_data + i*w2;
-            y = ((i*y_ratio)>>16);
-            p = src_data + y*w1;
-            rat = 0;
-            for (j=0; j<w2; j++) {
-                x = (rat>>16);
-                *t++ = p[x];
-                rat += x_ratio;
-            }
-        }
-    } else if (src->bpp==2) {
-        uint16_t *t, *p;
-        uint16_t *src_data = (uint16_t *)src->pixels;
-        uint16_t *dst_data = (uint16_t *)dst->pixels;
-        int x_ratio = (int)((w1<<16)/w2) +1;
-        int y_ratio = (int)((h1<<16)/h2) +1;
-
-        for (i=0; i<h2; i++) {
-            t = dst_data + i*w2;
-            y = ((i*y_ratio)>>16);
-            p = src_data + y*w1;
-            rat = 0;
-            for (j=0; j<w2; j++) {
-                x = (rat>>16);
-                *t++ = p[x];
-                rat += x_ratio;
-            }
-        }
-
-    }
-}
-
-void imlib_scale_bilinear(struct image *src, struct image *dst)
-{
-    int w1 = src->w;
-    int h1 = src->h;
-    int w2 = dst->w;
-    int h2 = dst->h;
-
-    int offset = 0 ;
-    int x, y, index;
-
-    int r, g, b;
-    uint16_t A, B, C, D;
-
-    float x_diff, y_diff;
-    float x_ratio = ((float)(w1-1))/w2 ;
-    float y_ratio = ((float)(h1-1))/h2 ;
-    uint16_t *srcp = (uint16_t *)src->pixels;
-    uint16_t *dstp = (uint16_t *)dst->pixels;
-
-    for (int i=0;i<h2;i++) {
-        for (int j=0;j<w2;j++) {
-            x = (int)(x_ratio * j) ;
-            y = (int)(y_ratio * i) ;
-            x_diff = (x_ratio * j) - x ;
-            y_diff = (y_ratio * i) - y ;
-            index = y*w1+x ;
-
-            A = srcp[index];
-            B = srcp[index+1];
-            C = srcp[index+w1];
-            D = srcp[index+w1+1];
-
-            // Yb = Ar(1-w)(1-h) + Br(w)(1-h) + Cr(h)(1-w) + Dr(wh)
-            r = (int)(IM_R565(A)*(1-x_diff)*(1-y_diff) + IM_R565(B)*(x_diff)*(1-y_diff) +
-                      IM_R565(C)*(y_diff)*(1-x_diff)   + IM_R565(D)*(x_diff*y_diff));
-
-            // Yb = Ag(1-w)(1-h) + Bg(w)(1-h) + Cg(h)(1-w) + Dg(wh)
-            g = (int)(IM_G565(A)*(1-x_diff)*(1-y_diff) + IM_G565(B)*(x_diff)*(1-y_diff) +
-                      IM_G565(C)*(y_diff)*(1-x_diff)   + IM_G565(D)*(x_diff*y_diff));
-
-            // Yb = Ab(1-w)(1-h) + Bb(w)(1-h) + Cb(h)(1-w) + Db(wh)
-            b =(int)(IM_B565(A)*(1-x_diff)*(1-y_diff) + IM_B565(B)*(x_diff)*(1-y_diff) +
-                     IM_B565(C)*(y_diff)*(1-x_diff)   + IM_B565(D)*(x_diff*y_diff));
-
-            dstp[offset++] = IM_RGB565(r, g, b);
-        }
-    }
-}
-
-void imlib_scale_bilinear_gray(struct image *src, struct image *dst)
-{
-    int w1 = src->w;
-    int h1 = src->h;
-    int w2 = dst->w;
-    int h2 = dst->h;
-
-    int offset = 0 ;
-    int A, B, C, D, x, y, index, gray ;
-
-    float x_diff, y_diff;
-    float x_ratio = ((float)(w1-1))/w2 ;
-    float y_ratio = ((float)(h1-1))/h2 ;
-
-    uint8_t *srcp = src->pixels;
-    uint8_t *dstp = dst->pixels;
-
-    for (int i=0;i<h2;i++) {
-        for (int j=0;j<w2;j++) {
-            x = (int)(x_ratio * j) ;
-            y = (int)(y_ratio * i) ;
-            x_diff = (x_ratio * j) - x ;
-            y_diff = (y_ratio * i) - y ;
-
-            index = y*w1+x;
-            A = srcp[index];
-            B = srcp[index+1];
-            C = srcp[index+w1];
-            D = srcp[index+w1+1];
-
-            // Y = A(1-w)(1-h) + B(w)(1-h) + C(h)(1-w) + Dwh
-            gray = (int)(A*(1-x_diff)*(1-y_diff) +  B*(x_diff)*(1-y_diff) +
-                         C*(y_diff)*(1-x_diff)   +  D*(x_diff*y_diff));
-
-            dstp[offset++] = gray ;
-        }
-    }
-}
-
-void imlib_scale(struct image *src, struct image *dst, interp_t interp)
-{
-    switch (interp) {
-        case INTERP_NEAREST:
-            imlib_scale_nearest(src, dst);
-            break;
-        case INTERP_BILINEAR:
-            if (src->bpp==2) {
-                imlib_scale_bilinear(src, dst);
-            } else {
-                imlib_scale_bilinear_gray(src, dst);
-            }
-            break;
-        case INTERP_BICUBIC:
-            //NOT implemented
-            break;
-    }
 }
 
 void imlib_histeq(struct image *src)

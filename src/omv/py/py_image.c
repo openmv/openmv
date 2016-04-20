@@ -156,6 +156,20 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t va
     }
 }
 
+static mp_obj_t py_image_copy(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    mp_obj_t img_obj = py_image(0, 0, 0, 0);
+    image_t *img = py_image_cobj(img_obj);
+
+    imlib_copy_image(img, arg_img, &roi);
+    return img_obj;
+}
+
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -571,6 +585,39 @@ static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
     return mp_const_none;
 }
 
+static mp_obj_t py_image_replace(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        imlib_replace(arg_img, mp_obj_str_get_str(other_obj), NULL);
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        imlib_replace(arg_img, NULL, arg_other);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_blend(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int alpha = IM_MIN(IM_MAX(py_helper_lookup_int(kw_args,
+        MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 256);
+
+    if (MP_OBJ_IS_STR(args[1])) {
+        imlib_blend(arg_img, mp_obj_str_get_str(args[1]), NULL, alpha);
+    } else {
+        image_t *arg_other = py_image_cobj(args[1]);
+        imlib_blend(arg_img, NULL, arg_other, alpha);
+    }
+    return mp_const_none;
+}
+
 static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -866,142 +913,6 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
     return objects_list;
 }
 
-static mp_obj_t py_image_scale(mp_obj_t image_obj, mp_obj_t size_obj)
-{
-    int w,h;
-    mp_obj_t *array;
-    image_t *src_image = NULL;
-
-    /* get C image pointer */
-    src_image = py_image_cobj(image_obj);
-
-    /* get x,y */
-    mp_obj_get_array_fixed_n(size_obj, 2, &array);
-    w = mp_obj_get_int(array[0]);
-    h = mp_obj_get_int(array[1]);
-
-    image_t dst_image = {
-        .w=w,
-        .h=h,
-        .bpp=src_image->bpp,
-        .pixels=xalloc(w*h*src_image->bpp)
-    };
-
-    imlib_scale(src_image, &dst_image, INTERP_BILINEAR);
-
-    *src_image = dst_image;
-    return image_obj;
-}
-
-static mp_obj_t py_image_scaled(mp_obj_t image_obj, mp_obj_t size_obj)
-{
-    int w,h;
-    mp_obj_t *array;
-    image_t *src_image = NULL;
-
-    /* get C image pointer */
-    src_image = py_image_cobj(image_obj);
-
-    /* get x,y */
-    mp_obj_get_array_fixed_n(size_obj, 2, &array);
-    w = mp_obj_get_int(array[0]);
-    h = mp_obj_get_int(array[1]);
-
-    image_t dst_image = {
-        .w=w,
-        .h=h,
-        .bpp=src_image->bpp,
-        .pixels=xalloc(w*h*src_image->bpp)
-    };
-
-    imlib_scale(src_image, &dst_image, INTERP_NEAREST);
-
-    return py_image_from_struct(&dst_image);
-}
-
-static mp_obj_t py_image_subimg(mp_obj_t image_obj, mp_obj_t subimg_obj)
-{
-    rectangle_t r;
-    image_t *image;
-    mp_obj_t *array;
-
-    /* image pointer */
-    image = py_image_cobj(image_obj);
-
-    /* sub image */
-    mp_obj_get_array_fixed_n(subimg_obj, 4, &array);
-    r.x = mp_obj_get_int(array[0]);
-    r.y = mp_obj_get_int(array[1]);
-    r.w = mp_obj_get_int(array[2]);
-    r.h = mp_obj_get_int(array[3]);
-
-    image_t subimg = {
-        .w=r.w,
-        .h=r.h,
-        .bpp=image->bpp,
-        .pixels=xalloc(r.w*r.h*image->bpp)
-    };
-
-    imlib_subimage(image, &subimg, r.x, r.y);
-
-    return py_image_from_struct(&subimg);
-}
-
-static mp_obj_t py_image_blit(mp_obj_t dst_image_obj, mp_obj_t src_image_obj, mp_obj_t offset_obj)
-{
-    int x,y;
-    image_t *src_image = NULL;
-    image_t *dst_image = NULL;
-
-    /* get C image pointer */
-    src_image = py_image_cobj(src_image_obj);
-    dst_image = py_image_cobj(dst_image_obj);
-
-    /* get x,y */
-    mp_obj_t *array;
-    mp_obj_get_array_fixed_n(offset_obj, 2, &array);
-    x = mp_obj_get_int(array[0]);
-    y = mp_obj_get_int(array[1]);
-
-    if ((src_image->w+x)>dst_image->w ||
-        (src_image->h+y)>dst_image->h) {
-        printf("src image > dst image\n");
-        return mp_const_none;
-    }
-
-    imlib_blit(src_image, dst_image, x, y);
-    return mp_const_none;
-}
-
-static mp_obj_t py_image_blend(mp_obj_t dst_image_obj,
-        mp_obj_t src_image_obj, mp_obj_t param_obj)
-{
-    int x,y;
-    float alpha;
-    image_t *src_image = NULL;
-    image_t *dst_image = NULL;
-
-    /* get C image pointer */
-    src_image = py_image_cobj(src_image_obj);
-    dst_image = py_image_cobj(dst_image_obj);
-
-    /* get x,y,alpha */
-    mp_obj_t *array;
-    mp_obj_get_array_fixed_n(param_obj, 3, &array);
-    x = mp_obj_get_int(array[0]);
-    y = mp_obj_get_int(array[1]);
-    alpha = mp_obj_get_float(array[2]);
-
-    if ((src_image->w+x)>dst_image->w ||
-        (src_image->h+y)>dst_image->h) {
-        printf("src image > dst image\n");
-        return mp_const_none;
-    }
-
-    imlib_blend(src_image, dst_image, x, y, (uint8_t)(alpha*256));
-    return mp_const_none;
-}
-
 static mp_obj_t py_image_histeq(mp_obj_t image_obj)
 {
     struct image *image;
@@ -1014,29 +925,6 @@ static mp_obj_t py_image_histeq(mp_obj_t image_obj)
 
     imlib_histeq(image);
     return mp_const_none;
-}
-
-static mp_obj_t py_image_rainbow(mp_obj_t src_image_obj)
-{
-    image_t *src_image = NULL;
-
-    /* get C image pointer */
-    src_image = py_image_cobj(src_image_obj);
-
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(src_image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    image_t dst_image = {
-        .w=src_image->w,
-        .h=src_image->h,
-        .bpp=2,
-        .pixels=xalloc(src_image->w*src_image->h*2)
-    };
-
-    imlib_rainbow(src_image, &dst_image);
-    *src_image = dst_image;
-    return src_image_obj;
 }
 
 static mp_obj_t py_image_compress(mp_obj_t image_obj, mp_obj_t quality)
@@ -1235,6 +1123,7 @@ static mp_obj_t py_image_find_eyes(mp_obj_t image_obj, mp_obj_t roi_obj)
 }
 
 /* Image file functions */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 /* Basic image functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_width_obj, py_image_width);
@@ -1264,6 +1153,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_dilate_obj, 2, py_image_dilate);
 /* Background Subtraction (Frame Differencing) functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_difference_obj, py_image_difference);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_replace_obj, py_image_replace);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_blend_obj, 2, py_image_blend);
 /* Image Morphing */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
 /* Image Statistics */
@@ -1277,15 +1168,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_markers_obj, 2, py_image_find_markers);
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scale_obj, py_image_scale);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_scaled_obj, py_image_scaled);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_subimg_obj, py_image_subimg);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blit_obj, py_image_blit);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_blend_obj, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rainbow_obj, py_image_rainbow);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_compress_obj, py_image_compress);
-
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
@@ -1294,6 +1178,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eyes_obj, py_image_find_eyes);
 
 static const mp_map_elem_t locals_dict_table[] = {
     /* Image file functions */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_copy),                (mp_obj_t)&py_image_copy_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     /* Basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_width),               (mp_obj_t)&py_image_width_obj},
@@ -1323,6 +1208,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* Background Subtraction (Frame Differencing) functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_negate),              (mp_obj_t)&py_image_negate_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_difference),          (mp_obj_t)&py_image_difference_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_replace),             (mp_obj_t)&py_image_replace_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     /* Image Morphing */
     {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
     /* Image Statistics */
@@ -1336,13 +1223,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_markers),        (mp_obj_t)&py_image_find_markers_obj},
 
-    {MP_OBJ_NEW_QSTR(MP_QSTR_scale),               (mp_obj_t)&py_image_scale_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_scaled),              (mp_obj_t)&py_image_scaled_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_subimg),              (mp_obj_t)&py_image_subimg_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_blit),                (mp_obj_t)&py_image_blit_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_rainbow),             (mp_obj_t)&py_image_rainbow_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
     /* objects/feature detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
