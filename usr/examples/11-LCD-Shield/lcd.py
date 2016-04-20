@@ -1,4 +1,4 @@
-# Example 1 - LCD Shield Demo
+# LCD Example
 #
 # Note: To run this example you will need a LCD Shield for your OpenMV Cam.
 #

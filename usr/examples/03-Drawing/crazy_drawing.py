@@ -1,7 +1,16 @@
+# Crazy Drawing Example
+#
+# This example shows off your OpenMV Cam's built-in drawing capabilities. This
+# example was originally a test but serves as good reference code. Please put
+# your IDE into non-JPEG mode to see the best drawing quality.
+
 import pyb, sensor, image, math
+
 sensor.reset()
 sensor.set_framesize(sensor.QVGA)
+
 while(True):
+
     # Test Set Pixel
     sensor.set_pixformat(sensor.GRAYSCALE)
     for i in range(10):
@@ -17,6 +26,7 @@ while(True):
             x = (pyb.rng() % (2*img.width())) - (img.width()//2)
             y = (pyb.rng() % (2*img.height())) - (img.height()//2)
             img.set_pixel(x, y, (255, 255, 255))
+
     # Test Draw Line
     sensor.set_pixformat(sensor.GRAYSCALE)
     for i in range(10):
@@ -36,6 +46,7 @@ while(True):
             x1 = (pyb.rng() % (2*img.width())) - (img.width()//2)
             y1 = (pyb.rng() % (2*img.height())) - (img.height()//2)
             img.draw_line([x0, y0, x1, y1])
+
     # Test Draw Rectangle
     sensor.set_pixformat(sensor.GRAYSCALE)
     for i in range(10):
@@ -72,6 +83,7 @@ while(True):
             y = (pyb.rng() % (2*img.height())) - (img.height()//2)
             r = (pyb.rng() % (img.width() if (img.width() > img.height()) else img.height()))
             img.draw_circle(x, y, r)
+
     # Test Draw String
     sensor.set_pixformat(sensor.GRAYSCALE)
     for i in range(10):
@@ -87,6 +99,7 @@ while(True):
             x = (pyb.rng() % (2*img.width())) - (img.width()//2)
             y = (pyb.rng() % (2*img.height())) - (img.height()//2)
             img.draw_string(x, y, "Hello\nWorld!")
+
     # Test Draw Cross
     sensor.set_pixformat(sensor.GRAYSCALE)
     for i in range(10):
@@ -102,6 +115,7 @@ while(True):
             x = (pyb.rng() % (2*img.width())) - (img.width()//2)
             y = (pyb.rng() % (2*img.height())) - (img.height()//2)
             img.draw_cross(x, y)
+
     # Test Draw Keypoints
     sensor.set_pixformat(sensor.GRAYSCALE)
     for i in range(10):
