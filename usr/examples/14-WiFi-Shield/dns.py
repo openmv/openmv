@@ -1,11 +1,16 @@
-# Simple DNS example 
-import time, pyb, network, usocket
+# DNS Example
+#
+# This example shows how to get the IP address for websites via DNS.
+
+import network, usocket
 
 # AP info
 SSID='' # Network SSID
 KEY=''  # Network key
 
 # Init wlan module and connect to network
+print("Trying to connect... (may take a while)...")
+
 wlan = network.WINC()
 wlan.connect(SSID, key=KEY, security=wlan.WPA_PSK)
 

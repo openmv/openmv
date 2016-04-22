@@ -1,7 +1,13 @@
+# Colorbar Test Example
+#
+# This example is the color bar test run by each OpenMV Cam before being allowed
+# out of the factory. The OMV sensors can output a color bar image which you
+# can threshold to check the the camera bus is connected correctly.
+
 import sensor, time
 
 sensor.reset()
-# Set sensor settings 
+# Set sensor settings
 sensor.set_brightness(0)
 sensor.set_saturation(0)
 sensor.set_gainceiling(8)
@@ -14,11 +20,11 @@ sensor.set_pixformat(sensor.RGB565)
 # Enable colorbar test mode
 sensor.set_colorbar(True)
 
-# Skip a few frames to allow the sensor settle down 
-for i in range(0, 30):
+# Skip a few frames to allow the sensor settle down
+for i in range(0, 100):
     image = sensor.snapshot()
 
-#color bars thresholds
+# Color bars thresholds
 t = [lambda r, g, b: r < 50  and g < 50  and b < 50,   # Black
      lambda r, g, b: r < 50  and g < 50  and b > 200,  # Blue
      lambda r, g, b: r > 200 and g < 50  and b < 50,   # Red
@@ -28,13 +34,13 @@ t = [lambda r, g, b: r < 50  and g < 50  and b < 50,   # Black
      lambda r, g, b: r > 200 and g > 200 and b < 50,   # Yellow
      lambda r, g, b: r > 200 and g > 200 and b > 200]  # White
 
-#320x240 image with 8 color bars each one is approx 40 pixels.
-#we start from the center of the frame buffer, and average the 
-#values of 10 sample pixels from the center of each color bar.
+# 320x240 image with 8 color bars each one is approx 40 pixels.
+# we start from the center of the frame buffer, and average the
+# values of 10 sample pixels from the center of each color bar.
 for i in range(0, 8):
     avg = (0, 0, 0)
-    idx = 40*i+20 #center of colorbars
-    for off in range(0, 10): #avg 10 pixels
+    idx = 40*i+20 # center of colorbars
+    for off in range(0, 10): # avg 10 pixels
         rgb = image.get_pixel(idx+off, 120)
         avg = tuple(map(sum, zip(avg, rgb)))
 

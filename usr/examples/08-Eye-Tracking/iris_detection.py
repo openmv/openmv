@@ -1,3 +1,10 @@
+# Iris Detection Example
+#
+# This example shows how to find the eye gaze (pupil detection) after finding
+# the eyes in an image. This script uses the find_eyes function which determines
+# the center point of roi that should contain a pupil. It does this by basically
+# finding the center of the darkest area in the eye roi which is the pupil center.
+
 import sensor, time, image
 
 # Reset sensor

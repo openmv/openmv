@@ -1,16 +1,15 @@
-'''
-    Simple MJPEG streaming server
-'''
-import time, sensor, pyb, network, usocket
+# MJPEG Streaming
+#
+# This example shows off how to do MJPEG streaming to a FIREFOX webrowser
+# (IE and Chrome do not work). Just input your network SSID and KEY and then
+# connect to the IP address/port printed out from ifconfig.
 
-SSID='' # Network SSID
-KEY=''  # Network key
-HOST = ''       # Use first available interface
-PORT = 8000     # Arbitrary non-privileged port
+import sensor, image, time, network, usocket
 
-led_r = pyb.LED(1)
-led_b = pyb.LED(2)
-led_g = pyb.LED(3)
+SSID=''     # Network SSID
+KEY=''      # Network key
+HOST = ''   # Use first available interface
+PORT = 8000 # Arbitrary non-privileged port
 
 # Reset sensor
 sensor.reset()
@@ -24,6 +23,7 @@ sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Init wlan module and connect to network
+print("Trying to connect... (may take a while)...")
 wlan = network.WINC()
 wlan.connect(SSID, key=KEY, security=wlan.WPA_PSK)
 
@@ -34,7 +34,7 @@ print(wlan.ifconfig())
 s = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
 
 # Bind and listen
-s.bind((HOST, PORT))
+s.bind([HOST, PORT])
 s.listen(5)
 
 # Set timeout to 1s
@@ -50,8 +50,8 @@ data = client.recv(1024)
 # Should parse client request here
 
 # Send multipart header
-client.send("HTTP/1.1 200 OK\r\n"   \
-            "Server: OpenMV\r\n"    \
+client.send("HTTP/1.1 200 OK\r\n" \
+            "Server: OpenMV\r\n" \
             "Content-Type: multipart/x-mixed-replace;boundary=openmv\r\n" \
             "Cache-Control: no-cache\r\n" \
             "Pragma: no-cache\r\n\r\n")
@@ -62,10 +62,10 @@ clock = time.clock()
 while (True):
     clock.tick() # Track elapsed milliseconds between snapshots().
     frame = sensor.snapshot()
-    client.send("\r\n--openmv\r\n"  \
+    cframe = frame.compress(35)
+    client.send("\r\n--openmv\r\n" \
                 "Content-Type: image/jpeg\r\n"\
-                "Content-Length:"+str(frame.size())+"\r\n\r\n")
-    client.send(frame.compress(35))
+                "Content-Length:"+str(cframe.size())+"\r\n\r\n")
+    client.send(cframe)
     print(clock.fps())
-
 client.close()

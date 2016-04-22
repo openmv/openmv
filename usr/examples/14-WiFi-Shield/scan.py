@@ -1,4 +1,7 @@
-# Simple WiFi scan example
+# Scan Example
+#
+# This example shows how to scan for networks with the WiFi shield.
+
 import time, network
 
 wlan = network.WINC()

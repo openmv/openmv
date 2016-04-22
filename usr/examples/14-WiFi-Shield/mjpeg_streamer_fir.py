@@ -1,16 +1,15 @@
-'''
-    Simple MJPEG streaming server + FIR
-'''
-import time, sensor, pyb, network, usocket, fir
+# MJPEG Streaming with FIR
+#
+# This example shows off how to do MJPEG streaming to a FIREFOX webrowser
+# (IE and Chrome do not work). Just input your network SSID and KEY and then
+# connect to the IP address/port printed out from ifconfig.
 
-SSID=''         # Network SSID
-KEY=''          # Network key
-HOST = ''       # Use first available interface
-PORT = 8000     # Arbitrary non-privileged port
+import sensor, image, network, usocket, fir
 
-led_r = pyb.LED(1)
-led_b = pyb.LED(2)
-led_g = pyb.LED(3)
+SSID=''     # Network SSID
+KEY=''      # Network key
+HOST = ''   # Use first available interface
+PORT = 8000 # Arbitrary non-privileged port
 
 # Reset sensor
 sensor.reset()
@@ -20,13 +19,14 @@ sensor.set_contrast(1)
 sensor.set_brightness(1)
 sensor.set_saturation(1)
 sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.QVGA)
-sensor.set_pixformat(sensor.GRAYSCALE)
+sensor.set_framesize(sensor.QQVGA)
+sensor.set_pixformat(sensor.RGB565)
 
 # Initialize the thermal sensor
 fir.init()
 
 # Init wlan module and connect to network
+print("Trying to connect... (may take a while)...")
 wlan = network.WINC()
 wlan.connect(SSID, key=KEY, security=wlan.WPA_PSK)
 
@@ -62,6 +62,7 @@ client.send("HTTP/1.1 200 OK\r\n"   \
 # Start streaming images
 while (True):
     image = sensor.snapshot()
+
     # Capture FIR data
     #   ta: Ambient temperature
     #   ir: Object temperatures (IR array)
@@ -77,10 +78,10 @@ while (True):
     image.draw_string(0, 8, "To min: %0.2f"%to_min, color = (0xFF, 0x00, 0x00))
     image.draw_string(0, 16, "To max: %0.2f"%to_max, color = (0xFF, 0x00, 0x00))
 
-    
-    client.send("\r\n--openmv\r\n"  \
+    cimage = image.compress(90)
+    client.send("\r\n--openmv\r\n" \
                 "Content-Type: image/jpeg\r\n"\
-                "Content-Length:"+str(image.size())+"\r\n\r\n")
-    client.send(image.compress(35))
-    
+                "Content-Length:"+str(cimage.size())+"\r\n\r\n")
+    client.send(cimage)
+
 client.close()

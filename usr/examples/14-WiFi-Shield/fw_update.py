@@ -1,10 +1,12 @@
-'''
-    Firmware update examples
-    Note: copy the WINC1500/firmware folder to uSD
-'''
-import time, network
+# WINC Firmware Update Script
+#
+# To start have a successful firmware update create a "firmware" folder on the
+# uSD card and but a bin file in it. The firmware update code will load that
+# new firmware onto the WINC module.
 
-# Init wlan module in Download mode
+import network
+
+# Init wlan module in Download mode.
 wlan = network.WINC(True)
 #print("Firmware version:", wlan.fw_version())
 
