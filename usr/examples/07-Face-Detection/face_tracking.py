@@ -1,6 +1,16 @@
+# Face Tracking Example
+#
+# This example shows off using the keypoints feature of your OpenMV Cam to track
+# a face after it has been detected by a Haar Cascade. The first part of this
+# script finds a face in the image using the frontalface Haar Cascade.
+# After which the script uses the keypoints feature to automatically learn your
+# face and track it. Keypoints can be used to automatically track anything.
+#
+# NOTE: LOTS OF KEYPOINTS MAY CAUSE THE SYSTEM TO RUN OUT OF MEMORY!
+
 import sensor, time, image
 
-# Rotation.
+# Normalized keypoints are not rotation invariant...
 NORMALIZED=False
 # Keypoint extractor threshold, range from 0 to any number.
 # This threshold is used when extracting keypoints, the lower

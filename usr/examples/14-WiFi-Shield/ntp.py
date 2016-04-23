@@ -1,11 +1,17 @@
-# Simple NTP client
-import time, pyb, network, usocket, ustruct, utime
+# NTP Example
+#
+# This example shows how to get the current time using NTP with the WiFi shield.
+
+import network, usocket, ustruct, utime
 
 SSID='' # Network SSID
 KEY=''  # Network key
+
 TIMESTAMP = 2208988800+946684800
 
 # Init wlan module and connect to network
+print("Trying to connect... (may take a while)...")
+
 wlan = network.WINC()
 wlan.connect(SSID, key=KEY, security=wlan.WPA_PSK)
 

@@ -1,7 +1,9 @@
-# Thermopile Shield Demo 2
+# Thermopile Shield Demo with LCD
 #
 # Note: To run this example you will need a Thermopile Shield for your OpenMV
-#       Cam and a LCD Shield.
+#       Cam and a LCD Shield. Also, please disable JPEG mode in the IDE.
+#
+# The Thermopile Shield allows your OpenMV Cam to see heat!
 
 import sensor, image, time, fir, lcd
 

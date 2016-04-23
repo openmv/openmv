@@ -1,11 +1,16 @@
-# Simple NTP client
-import time, pyb, network, usocket
+# TCP Client Example
+#
+# This example shows how to send and receive TCP traffic with the WiFi shield.
+
+import network, usocket
 
 # AP info
 SSID='' # Network SSID
 KEY=''  # Network key
 
 # Init wlan module and connect to network
+print("Trying to connect... (may take a while)...")
+
 wlan = network.WINC()
 wlan.connect(SSID, key=KEY, security=wlan.WPA_PSK)
 

@@ -1,3 +1,9 @@
+# Face Eye Detection Example
+#
+# This script uses the built-in frontalface detector to find a face and then
+# the eyes within the face. If you want to determine the eye gaze please see the
+# iris_detection script for an example on how to do that.
+
 import sensor, time, image
 
 # Reset sensor

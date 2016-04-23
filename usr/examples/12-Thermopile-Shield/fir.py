@@ -1,6 +1,7 @@
 # Thermopile Shield Demo
 #
-# Note: To run this example you will need a Thermopile Shield for your OpenMV Cam.
+# Note: To run this example you will need a Thermopile Shield for your OpenMV
+#       Cam. Also, please disable JPEG mode in the IDE.
 #
 # The Thermopile Shield allows your OpenMV Cam to see heat!
 

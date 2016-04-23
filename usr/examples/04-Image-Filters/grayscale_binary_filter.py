@@ -1,9 +1,17 @@
+# Grayscale Binary Filter Example
+#
+# This script shows off the binary image filter. This script was originally a
+# test script... but, it can be useful for showing how to use binary.
+
 import pyb, sensor, image, math
+
 sensor.reset()
 sensor.set_framesize(sensor.QVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
+
 low_threshold = (0, 50)
 high_threshold = (205, 255)
+
 while(True):
     # Test low threshold
     for i in range(100):
