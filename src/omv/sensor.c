@@ -561,7 +561,8 @@ int sensor_snapshot(image_t *image)
     // only if the IDE has requested a framebuffer and it's not the first frame.
     // Note: This doesn't run unless the camera is connected to PC.
     if (fb->bpp && fb->request && sensor.pixformat != PIXFORMAT_JPEG &&
-            SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
+            SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG) &&
+            (!IM_IS_JPEG(fb))) {
         // The framebuffer is compressed in place.
         // Assuming we have at least 128KBs of SRAM.
         image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};

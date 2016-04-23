@@ -62,7 +62,7 @@ clock = time.clock()
 while (True):
     clock.tick() # Track elapsed milliseconds between snapshots().
     frame = sensor.snapshot()
-    cframe = frame.compress(35)
+    cframe = frame.compressed(quality=90)
     client.send("\r\n--openmv\r\n" \
                 "Content-Type: image/jpeg\r\n"\
                 "Content-Length:"+str(cframe.size())+"\r\n\r\n")

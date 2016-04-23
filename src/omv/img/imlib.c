@@ -264,13 +264,13 @@ void imlib_load_image(image_t *img, const char *path)
     imblib_parse_extension(img, path); // Enforce extension!
 }
 
-void imlib_save_image(image_t *img, const char *path, rectangle_t *roi)
+void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality)
 {
     switch (imblib_parse_extension(img, path)) {
         case FORMAT_DONT_CARE:
             if (IM_IS_JPEG(img)) {
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
-                jpeg_write(img, new_path);
+                jpeg_write(img, new_path, quality);
                 fb_free();
             } else {
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".bmp");
@@ -285,7 +285,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi)
             ppm_write_subimg(img, path, roi);
             break;
         case FORMAT_JPG:
-            jpeg_write(img, path);
+            jpeg_write(img, path, quality);
             break;
     }
 }

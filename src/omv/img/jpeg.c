@@ -694,7 +694,7 @@ void jpeg_read(image_t *img, const char *path)
     file_close(&fp);
 }
 
-void jpeg_write(image_t *img, const char *path)
+void jpeg_write(image_t *img, const char *path, int quality)
 {
     FIL fp;
     file_write_open(&fp, path);
@@ -707,7 +707,7 @@ void jpeg_write(image_t *img, const char *path)
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(img, &out, IM_JPEG_QUALITY);
+        jpeg_compress(img, &out, quality);
         write_data(&fp, out.pixels, out.bpp);
         fb_free();
     }
