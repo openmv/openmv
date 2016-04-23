@@ -13,13 +13,13 @@ ENTRY(Reset_Handler)
 #ifdef OPENMV1
 #define HEAP_MEMORY     CCM
 #define FLASH_ORIGIN    0x08000000
-#define FLASH_LENGTH    512K
+#define FLASH_LENGTH    1024K
 
 #define ISR_ORIGIN      0x08000000
 #define ISR_LENGTH      16K
 
 #define TEXT_ORIGIN     0x08010000
-#define TEXT_LENGTH     448K
+#define TEXT_LENGTH     960K
 
 #define RAM_ORIGIN      0x20000000
 #define RAM_LENGTH      128K
