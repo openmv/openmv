@@ -30,7 +30,7 @@
 #include "mdefs.h"
 #include "ffconf.h"
 #include "diskio.h"
-#include "pincfg.h"
+#include "omv_boardconfig.h"
 #include "systick.h"
 #include "sdcard.h"
 

@@ -67,10 +67,10 @@ void HAL_MspInit(void)
 
     GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
     HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
-
+#ifdef DCMI_FSIN_PORT
     GPIO_InitStructure.Pin = DCMI_FSIN_PIN;
     HAL_GPIO_Init(DCMI_FSIN_PORT, &GPIO_InitStructure);
-
+#endif
     /* Configure SD CD PIN */
     GPIO_InitStructure.Pin      = SD_CD_PIN;
     GPIO_InitStructure.Pull     = GPIO_NOPULL;

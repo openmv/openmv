@@ -294,7 +294,9 @@ int main(void)
     pendsv_init();
 
 soft_reset:
+#ifdef LED_IR
     led_state(LED_IR, 0);
+#endif
     led_state(LED_RED, 1);
     led_state(LED_GREEN, 1);
     led_state(LED_BLUE, 1);
