@@ -1,4 +1,5 @@
 BIN     = openmv
+BOOT_BIN= bootloader
 CC      = arm-none-eabi-gcc
 AS      = arm-none-eabi-as
 LD      = arm-none-eabi-ld
@@ -24,13 +25,14 @@ FATFS_DIR=fatfs
 MICROPY_DIR=micropython
 OMV_DIR=omv
 WINC1500_DIR=winc1500
+BOOT_DIR=bootloader
 
 # Additional qstr definitions for OpenMV
 OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/py/qstrdefsomv.h
 
 # Target
 TARGET ?= OPENMV2
-FW_DIR=$(TOP_DIR)/../firmware/$(TARGET)/
+FW_DIR=$(TOP_DIR)/../firmware/$(TARGET)
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -57,6 +59,7 @@ else
 endif
 
 CFLAGS += -I. -Iinclude
+CFLAGS += -I$(TOP_DIR)/$(BOOT_DIR)/include/
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/st
 CFLAGS += -I$(TOP_DIR)/$(STHAL_DIR)/include/
@@ -78,9 +81,12 @@ CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 
 # Linker Flags
-
 LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard\
           -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/stm32f4xx.lds
+
+# Linker Flags
+BOOT_LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard\
+             -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
 
 #------------- Libraries ----------------#
 #OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
@@ -291,6 +297,28 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	class/src/usbd_msc_data.o           \
 	)
 
+# Bootloader object files
+BOOT_OBJ += $(wildcard $(BUILD)/$(BOOT_DIR)/src/*.o)
+BOOT_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
+
+ifeq ($(TARGET), OPENMV1)
+BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+	system_stm32f4xx.o                          \
+	startup_stm32f407xx.o                       \
+	)
+else
+BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+	system_stm32f4xx.o                          \
+	startup_stm32f427xx.o                       \
+	)
+endif
+
+BOOT_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
+	core/src/usbd_core.o                            \
+	core/src/usbd_ctlreq.o                          \
+	core/src/usbd_ioreq.o                           \
+	)
+
 ###################################################
 #Export Variables
 export CC
@@ -308,7 +336,7 @@ export TOP_DIR
 export BUILD
 export TARGET
 ###################################################
-all: $(BUILD)/$(BIN).elf
+all: $(BUILD)/firmware.dfu
 
 $(BUILD):
 	$(MKDIR) -p $@
@@ -321,18 +349,41 @@ objs: | $(BUILD)
 	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
 	$(MAKE)  -C $(WINC1500_DIR)       BUILD=$(BUILD)/$(WINC1500_DIR)
 
-$(BUILD)/$(BIN).elf: objs
+boot_objs: | $(BUILD)
+	$(MAKE)  -C $(BOOT_DIR)       BUILD=$(BUILD)/$(BOOT_DIR)
+
+$(BUILD)/$(BIN).bin: objs
 	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
 	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(FW_DIR)/$(BIN).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BIN).elf $(FW_DIR)/$(BIN).bin
-	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/$(BIN).dfu
+	$(PYTHON) $(DFU) -b 0x08010000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/$(BIN).dfu
 	$(SIZE) $(FW_DIR)/$(BIN).elf
+
+$(BUILD)/$(BOOT_BIN).bin: boot_objs
+	$(CCP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32f4xx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
+	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOT_BIN).elf
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOT_BIN).elf $(FW_DIR)/$(BOOT_BIN).bin
+	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOT_BIN).bin $(FW_DIR)/$(BOOT_BIN).dfu
+	$(SIZE) $(FW_DIR)/$(BOOT_BIN).elf
+
+$(BUILD)/firmware.dfu: $(BUILD)/$(BOOT_BIN).bin $(BUILD)/$(BIN).bin
+	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOT_BIN).bin -b 0x08010000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/firmware.dfu
 
 size:
 	$(SIZE) $(FW_DIR)/$(BIN).elf
+	$(SIZE) $(FW_DIR)/$(BOOT_BIN).elf
 
 clean:
 	$(RM) -fr $(BUILD)
 
-flash::
+# Flash the main firmware image
+flash_image::
 	../usr/pydfu.py -u $(FW_DIR)/$(BIN).dfu
+
+# Flash the bootloader
+flash_boot::
+	../usr/pydfu.py -u $(FW_DIR)/$(BOOT_BIN).dfu
+
+# Flash the bootloader + main firmware image
+flash::
+	../usr/pydfu.py -u $(FW_DIR)/firmware.dfu
