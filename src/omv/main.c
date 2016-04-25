@@ -293,6 +293,9 @@ int main(void)
     led_init();
     pendsv_init();
 
+    // Re-enable IRQs (disabled by bootloader)
+    __enable_irq();
+
 soft_reset:
     led_state(LED_IR, 0);
     led_state(LED_RED, 1);
