@@ -87,23 +87,11 @@ _fballoc    = _line_buf + (640*4);
 /* Define output sections */
 SECTIONS
 {
-  /* The startup code goes first into FLASH */
-  .isr_vector :
-  {
-    . = ALIGN(4);
-    KEEP(*(.isr_vector)) /* Startup code */
-    . = ALIGN(4);
-    */ff.o(.text*)
-    */ccsbcs.o(.text*)
-    */stm32f4xx_hal.o(.text*)
-    */stm32f4xx_hal_msp.o(.text*)
-    */stm32f4xx_hal_spi.o(.text*)
-    . = ALIGN(4);
-  } >FLASH_ISR
-
   /* The program code and other data goes into FLASH */
   .text :
   {
+    . = ALIGN(4);
+    KEEP(*(.isr_vector)) /* Startup code */
     . = ALIGN(4);
     *(.text)           /* .text sections (code) */
     *(.text*)          /* .text* sections (code) */
