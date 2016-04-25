@@ -16,7 +16,7 @@ __serial = None
 __FB_HDR_SIZE   =12
 
 # USB Debug commands
-__USBDBG_CMD            = 48 
+__USBDBG_CMD            = 48
 __USBDBG_FW_VERSION     = 0x80
 __USBDBG_FRAME_SIZE     = 0x81
 __USBDBG_FRAME_DUMP     = 0x82
@@ -39,6 +39,11 @@ ATTR_CONTRAST   =0
 ATTR_BRIGHTNESS =1
 ATTR_SATURATION =2
 ATTR_GAINCEILING=3
+
+__BOOTLDR_START         = 0xABCD0001
+__BOOTLDR_RESET         = 0xABCD0002
+__BOOTLDR_ERASE         = 0xABCD0004
+__BOOTLDR_WRITE         = 0xABCD0008
 
 def init(port, baudrate=921600, timeout=0.3):
     global __serial
@@ -121,11 +126,21 @@ def get_attr(attr):
     __serial.write(struct.pack("<BBIh", __USBDBG_CMD, __USBDBG_ATTR_READ, 1, attr))
     return __serial.read(1)
 
-def enter_dfu():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SYS_BOOT, 0))
-
 def reset():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SYS_RESET, 0))
+
+def bootloader_start():
+    __serial.write(struct.pack("<I", __BOOTLDR_START))
+    return struct.unpack("I", __serial.read(4))[0] == __BOOTLDR_START
+
+def bootloader_reset():
+    __serial.write(struct.pack("<I", __BOOTLDR_RESET))
+
+def flash_erase(sector):
+    __serial.write(struct.pack("<II", __BOOTLDR_ERASE, sector))
+
+def flash_write(buf):
+    __serial.write(struct.pack("<I", __BOOTLDR_WRITE) + buf)
 
 def tx_buf_len():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_TX_BUF_LEN, 4))

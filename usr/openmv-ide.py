@@ -13,10 +13,6 @@ import glob
 import urllib2, json
 import numpy as np
 
-#import pydfu on Linux
-if platform.system() == "Linux":
-    import pydfu
-
 try:
     # 3.x name
     import configparser
@@ -44,9 +40,8 @@ UDEV_PATH    = "/etc/udev/rules.d/50-openmv.rules"
 
 SCALE =1
 RECENT_FILES_LIMIT=5
-FLASH_OFFSETS= [0x08000000, 0x08004000, 0x08008000, 0x0800C000,
-                0x08010000, 0x08020000, 0x08040000, 0x08060000,
-                0x08080000, 0x080A0000, 0x080C0000, 0x080E0000]
+FLASH_SECTOR_START=4
+FLASH_SECTOR_END=11
 
 DEFAULT_CONFIG='''\
 [main]
@@ -60,6 +55,167 @@ enable_jpeg = True
 CONFIG_KEYS = ['board', 'serial_port', 'recent', 'last_fw_path', 'baudrate', 'enable_jpeg']
 RELEASE_TAG_NAME = 'v1.3'
 RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
+
+class Bootloader:
+    def __init__(self, builder, config):
+        self.config = config
+        self.port = config.get("main", "serial_port")
+        self.baud = int(config.get("main", "baudrate"))
+
+        self.parent = builder.get_object("top_window")
+        self.dialog = builder.get_object("fw_dialog")
+        self.dialog.set_transient_for(self.parent)
+
+        self.fw_progress = builder.get_object("fw_progressbar")
+        self.fw_path_entry = builder.get_object("fw_path_entry")
+        self.fw_path_button = builder.get_object("fw_path_button")
+
+        self.ok_button = builder.get_object("fw_ok_button")
+        self.cancel_button = builder.get_object("fw_cancel_button")
+
+        self.ok_button.set_sensitive(True)
+        self.cancel_button.set_sensitive(True)
+        self.fw_path_button.set_sensitive(True)
+
+        # Firmware file path
+        self.last_fw_path = self.config.get("main", "last_fw_path")
+        if os.path.isfile(self.last_fw_path) == False:
+            self.last_fw_path = ""
+
+        # Connect signals
+        self.dialog.connect("close", self.on_dialog_close)
+        self.dialog.connect("delete_event", self.on_dialog_close)
+        self.dialog.connect("response", self.on_dialog_response)
+        self.fw_path_button.connect("clicked", self.on_fw_path)
+
+    def show_message_dialog(self, msg_type, msg):
+        message = gtk.MessageDialog(parent=self.parent, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
+                                    type=msg_type, buttons=gtk.BUTTONS_OK, message_format=msg)
+        message.run()
+        message.destroy()
+
+    def on_fw_path(self, widget):
+        dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
+                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+        dialog.set_default_response(gtk.RESPONSE_OK)
+        dialog.set_current_folder(SCRIPTS_DIR)
+        ff = gtk.FileFilter()
+        ff.set_name("binary")
+        ff.add_pattern("*.bin")
+        dialog.add_filter(ff)
+
+        if dialog.run() == gtk.RESPONSE_OK:
+            self.fw_path_entry.set_text(dialog.get_filename())
+
+        dialog.destroy()
+
+    # Fake multitasking :P
+    def task_init(self, state):
+        state["next"] = self.task_connect
+        return True
+
+    def task_connect(self, state):
+        try:
+            # Attempt to connect to bootloader
+            openmv.init(self.port, self.baud, timeout=0.050)
+            if openmv.bootloader_start():
+                state["next"] = self.task_erase
+                state["bar"].set_text("Erasing...")
+                self.cancel_button.set_sensitive(False)
+        except Exception as e:
+            if self.flash_msg:
+                state["bar"].set_text("Connecting to bootloader...\
+                                       \n                              ")
+            else:
+                state["bar"].set_text("Connecting to bootloader...\
+                                       \nDisconnect and re-connect cam!")
+            self.flash_msg = self.flash_msg ^ 1
+            sleep(0.100)
+
+        return True
+
+    def task_erase(self, state):
+        sector = state["sector"]
+        state["bar"].set_text("Erasing sector %d/%d"%((sector-FLASH_SECTOR_START+1), FLASH_SECTOR_END-FLASH_SECTOR_START+1))
+        state["bar"].set_fraction((sector-FLASH_SECTOR_START+1)/float(FLASH_SECTOR_END-FLASH_SECTOR_START+1))
+        openmv.flash_erase(sector)
+        sector += 1
+        if (sector == FLASH_SECTOR_END+1):
+            state["next"] = self.task_upload
+        state["sector"] = sector
+        return True
+
+    def task_upload(self, state):
+        buf = state["buf"]
+        xfer_bytes = state["xfer_bytes"]
+        xfer_total = state["xfer_total"]
+
+        # Send chunk
+        chunk = min (60, xfer_total-xfer_bytes)
+        #openmv.flash_write(buf[xfer_bytes:xfer_bytes+chunk], xfer_bytes)
+        openmv.flash_write(buf[xfer_bytes : xfer_bytes+chunk])
+
+        xfer_bytes += chunk
+        state["xfer_bytes"] = xfer_bytes
+        state["bar"].set_text("Uploading %d/%d"%(xfer_bytes, xfer_total))
+        state["bar"].set_fraction(xfer_bytes/float(xfer_total))
+
+        if (xfer_bytes == xfer_total):
+            openmv.bootloader_reset()
+            state["dialog"].hide()
+            return False
+        return True
+
+    def task(self, state):
+        return self.running and state["next"](state)
+
+    def run(self):
+        self.running = True
+        self.flash_msg = 1
+
+        self.ok_button.set_sensitive(True)
+        self.cancel_button.set_sensitive(True)
+        self.fw_path_button.set_sensitive(True)
+
+        # Firmware progress
+        self.fw_progress.set_text("")
+        self.fw_progress.set_fraction(0.0)
+
+        # Last firmware path
+        self.fw_path_entry.set_text(self.last_fw_path)
+
+        # Run bootloader dialog
+        self.dialog.run()
+
+    def on_dialog_close(self, widget, event=None):
+        self.dialog.hide()
+        self.running = False
+        return True
+
+    def on_dialog_response(self, dialog, response, *args):
+        if response == gtk.RESPONSE_OK:
+            self.ok_button.set_sensitive(False)
+            self.fw_path_button.set_sensitive(False)
+
+            fw_path = self.fw_path_entry.get_text()
+            try:
+                with open(fw_path, 'r') as f:
+                    buf= f.read()
+            except Exception as e:
+                self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open file %s"%str(e))
+                self.dialog.hide()
+                return
+
+            self.last_fw_path = fw_path
+            self.config.set("main", "last_fw_path", self.last_fw_path)
+
+            self.state={ "next":self.task_init, "buf":buf, "sector":FLASH_SECTOR_START, "running":True,
+                         "bar":self.fw_progress, "dialog":self.dialog, "xfer_bytes":0, "xfer_total":len(buf)}
+
+            gobject.gobject.idle_add(self.task, self.state)
+        else:
+            self.dialog.hide()
+            self.running = False
 
 class OMVGtk:
     def __init__(self):
@@ -79,7 +235,6 @@ class OMVGtk:
         self.connect_button = self.builder.get_object('connect_button')
         self.exec_button = self.builder.get_object('exec_button')
         self.stop_button = self.builder.get_object('stop_button')
-        self.fwupdate_button = self.builder.get_object('bootloader_button')
 
         self.save_button.set_sensitive(False)
         self.exec_button.set_sensitive(False)
@@ -89,7 +244,6 @@ class OMVGtk:
         # set control buttons
         self.controls = [
             self.builder.get_object('reset_button'),
-            self.builder.get_object('bootloader_button'),
             self.builder.get_object('exec_button'),
             self.builder.get_object('zoomin_button'),
             self.builder.get_object('zoomout_button'),
@@ -98,10 +252,6 @@ class OMVGtk:
 
         self.connected = False
         map(lambda x:x.set_sensitive(False), self.controls)
-
-        # Disable dfu button on Windows
-        if platform.system() == "Windows":
-            self.controls.pop(1)
 
         # gtksourceview widget
         sourceview = gtksourceview.View()
@@ -176,37 +326,6 @@ class OMVGtk:
         self.builder.get_object("saturation_adjust").attr=  openmv.ATTR_SATURATION
         self.builder.get_object("gainceiling_adjust").attr= openmv.ATTR_GAINCEILING
 
-        #connect signals
-        signals = {
-            "on_top_window_destroy"         : self.quit,
-            "on_connect_clicked"            : self.connect_clicked,
-            "on_reset_clicked"              : self.reset_clicked,
-            "on_fwupdate_clicked"           : self.fwupdate_clicked,
-            "on_fwpath_clicked"             : self.fwpath_clicked,
-            "on_execute_clicked"            : self.execute_clicked,
-            "on_stop_clicked"               : self.stop_clicked,
-            "on_motion_notify"              : self.motion_notify,
-            "on_button_press"               : self.button_pressed,
-            "on_button_release"             : self.button_released,
-            "on_open_file"                  : self.open_file,
-            "on_new_file"                   : self.new_file,
-            "on_save_file"                  : self.save_file,
-            "on_save_file_as"               : self.save_file_as,
-            "on_about_dialog"               : self.about_dialog,
-            "on_pinout_dialog"              : self.pinout_dialog,
-            "on_copy_color_activate"        : self.copy_color,
-            "on_save_template_activate"     : self.save_template,
-            "on_save_descriptor_activate"   : self.save_descriptor,
-            "on_ctrl_scale_value_changed"   : self.on_ctrl_scale_value_changed,
-            "on_zoomin_clicked"             : self.zoomin_clicked,
-            "on_zoomout_clicked"            : self.zoomout_clicked,
-            "on_bestfit_clicked"            : self.bestfit_clicked,
-            "on_preferences_clicked"        : self.preferences_clicked,
-            "on_updatefb_clicked"           : self.updatefb_clicked,
-            "on_vte_size_allocate"          : self.scroll_terminal,
-        }
-        self.builder.connect_signals(signals)
-
         # create data directory
         if not os.path.isdir(DATA_DIR):
             os.makedirs(DATA_DIR)
@@ -253,12 +372,8 @@ class OMVGtk:
             print ("Failed to open config file %s"%(e))
             sys.exit(1)
 
-        # current file path
+        # Current file path
         self.file_path= None
-        self.fw_file_path=""
-        path = self.config.get("main", "last_fw_path")
-        if os.path.isfile(path):
-            self.fw_file_path = path
 
         # Built-in examples menu
         submenu = gtk.Menu()
@@ -295,6 +410,36 @@ class OMVGtk:
         # load helloworld.py
         self._load_file(os.path.join(EXAMPLES_DIR, "01-Basics", "helloworld.py"))
         self.save_button.set_sensitive(False)
+
+        #connect signals
+        signals = {
+            "on_top_window_destroy"         : self.quit,
+            "on_connect_clicked"            : self.connect_clicked,
+            "on_reset_clicked"              : self.reset_clicked,
+            "on_execute_clicked"            : self.execute_clicked,
+            "on_stop_clicked"               : self.stop_clicked,
+            "on_bootloader_clicked"         : self.bootloader_clicked,
+            "on_motion_notify"              : self.motion_notify,
+            "on_button_press"               : self.button_pressed,
+            "on_button_release"             : self.button_released,
+            "on_open_file"                  : self.open_file,
+            "on_new_file"                   : self.new_file,
+            "on_save_file"                  : self.save_file,
+            "on_save_file_as"               : self.save_file_as,
+            "on_about_dialog"               : self.about_dialog,
+            "on_pinout_dialog"              : self.pinout_dialog,
+            "on_copy_color_activate"        : self.copy_color,
+            "on_save_template_activate"     : self.save_template,
+            "on_save_descriptor_activate"   : self.save_descriptor,
+            "on_ctrl_scale_value_changed"   : self.on_ctrl_scale_value_changed,
+            "on_zoomin_clicked"             : self.zoomin_clicked,
+            "on_zoomout_clicked"            : self.zoomout_clicked,
+            "on_bestfit_clicked"            : self.bestfit_clicked,
+            "on_preferences_clicked"        : self.preferences_clicked,
+            "on_updatefb_clicked"           : self.updatefb_clicked,
+            "on_vte_size_allocate"          : self.scroll_terminal,
+        }
+        self.builder.connect_signals(signals)
 
     def show_message_dialog(self, msg_type, msg):
         message = gtk.MessageDialog(parent=self.window, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
@@ -341,44 +486,30 @@ class OMVGtk:
         gobject.gobject.timeout_add(30, omvgtk.update_terminal)
 
         # check firmware version
-        self.fw_mismatch = False
         fw_ver = openmv.fw_version()
-        ide_ver = (FIRMWARE_VERSION_MAJOR,
-                   FIRMWARE_VERSION_MINOR,
-                   FIRMWARE_VERSION_PATCH)
+        ide_ver = (FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR, FIRMWARE_VERSION_PATCH)
 
-        print("fw_version:" + str(fw_ver))
-        print("ide_version:" + str(ide_ver))
-        if (fw_ver[0] != FIRMWARE_VERSION_MAJOR):
-            # If ABI versions don't match, nothing todo here...
-            self.show_message_dialog(gtk.MESSAGE_ERROR,
-                            "Firmware ABI version mismatch!\n"
-                            "Please update the IDE and/or FW manually\n")
-            return
-        elif (FIRMWARE_VERSION_MINOR > fw_ver[1]
-                or FIRMWARE_VERSION_PATCH > fw_ver[2]):
+        print("fw_version:%s\nide_version:%s" %(str(fw_ver), str(ide_ver)))
+
+        if (fw_ver[0] != FIRMWARE_VERSION_MAJOR or fw_ver[1] != FIRMWARE_VERSION_MINOR):
+            self.connected = False
             self.fw_mismatch = True
+            self.connect_button.set_sensitive(False)
             self.show_message_dialog(gtk.MESSAGE_ERROR,
                     "Firmware version mismatch!\n"
-                    "An older firmware version has been detected.\n"
-                    "Please update the firmware!")
+                    "Please update the firmware image and/or the IDE!")
+        else:
+            # interrupt any running code
+            openmv.stop_script()
 
-        if (self.fw_mismatch):
+            # set enable JPEG
+            openmv.enable_jpeg(self.enable_jpeg)
+
             self.connected = True
+            self.fw_mismatch = False
+            self._update_title()
             self.connect_button.set_sensitive(False)
-            self.fwupdate_button.set_sensitive(True)
-            return
-
-        # interrupt any running code
-        openmv.stop_script()
-
-        # set enable JPEG
-        openmv.enable_jpeg(self.enable_jpeg)
-
-        self.connected = True
-        self._update_title()
-        self.connect_button.set_sensitive(False)
-        map(lambda x:x.set_sensitive(True), self.controls)
+            map(lambda x:x.set_sensitive(True), self.controls)
 
     def disconnect(self):
         try:
@@ -395,107 +526,6 @@ class OMVGtk:
 
     def connect_clicked(self, widget):
         self.connect()
-
-    def fwpath_clicked(self, widget):
-        fw_entry = self.builder.get_object("fw_entry")
-        dialog = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
-                buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-        dialog.set_default_response(gtk.RESPONSE_OK)
-        dialog.set_current_folder(SCRIPTS_DIR)
-        ff = gtk.FileFilter()
-        ff.set_name("dfu")
-        ff.add_pattern("*.bin") #TODO change to DFU
-        dialog.add_filter(ff)
-
-        if dialog.run() == gtk.RESPONSE_OK:
-            fw_entry.set_text(dialog.get_filename())
-
-        dialog.destroy()
-
-    # Fake multitasking :P
-    def fwupdate_task(self, state):
-        if (state["init"]):
-            pydfu.init()
-            state["init"]=False
-            state["erase"]=True
-            state["bar"].set_text("Erasing...")
-            return True
-        elif (state["erase"]):
-            page = state["page"]
-            total = len(FLASH_OFFSETS)
-            pydfu.page_erase(FLASH_OFFSETS[page])
-            page +=1
-            state["bar"].set_fraction(page/float(total))
-            if (page == total):
-                state["erase"] = False
-                state["write"] = True
-                state["bar"].set_text("Uploading...")
-            state["page"] = page
-            return True
-        elif (state["write"]):
-            buf = state["buf"]
-            xfer_bytes = state["xfer_bytes"]
-            xfer_total = state["xfer_total"]
-
-            # Send chunk
-            chunk = min (64, xfer_total-xfer_bytes)
-            pydfu.write_page(buf[xfer_bytes:xfer_bytes+chunk], xfer_bytes)
-
-            xfer_bytes += chunk
-            state["xfer_bytes"] = xfer_bytes
-            state["bar"].set_fraction(xfer_bytes/float(xfer_total))
-
-            if (xfer_bytes == xfer_total):
-                pydfu.exit_dfu()
-                state["dialog"].hide()
-                self.disconnect()
-                return False
-
-            return True
-
-    def fwupdate_clicked(self, widget):
-        if (self.connected):
-            dialog = self.builder.get_object("fw_dialog")
-            fw_entry = self.builder.get_object("fw_entry")
-            fw_progress = self.builder.get_object("fw_progressbar")
-            ok_button = self.builder.get_object("fw_ok_button")
-            cancel_button = self.builder.get_object("fw_cancel_button")
-
-            ok_button.set_sensitive(True)
-            cancel_button.set_sensitive(True)
-            dialog.set_transient_for(self.window);
-
-            # default FW bin path
-            fw_entry.set_text(self.fw_file_path)
-            fw_progress.set_text("")
-            fw_progress.set_fraction(0.0)
-
-            if dialog.run() == gtk.RESPONSE_OK:
-                ok_button.set_sensitive(False)
-                cancel_button.set_sensitive(False)
-
-                fw_path = fw_entry.get_text()
-                try:
-                    with open(fw_path, 'r') as f:
-                        buf= f.read()
-                except Exception as e:
-                    dialog.hide()
-                    self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open file %s"%str(e))
-                    return
-
-                self.fw_file_path = fw_path
-                self.config.set("main", "last_fw_path", fw_path)
-
-                state={"init":True, "erase":False, "write":False,
-                    "page":0, "buf":buf, "bar":fw_progress, "dialog":dialog,
-                    "xfer_bytes":0, "xfer_total":len(buf)}
-
-                # call dfu-util
-                openmv.enter_dfu()
-                sleep(1.0)
-                gobject.gobject.idle_add(self.fwupdate_task, state)
-            else:
-                dialog.hide()
 
     def reset_clicked(self, widget):
         if (self.connected):
@@ -561,6 +591,10 @@ class OMVGtk:
 
     def updatefb_clicked(self, widget):
         openmv.fb_update()
+
+    def bootloader_clicked(self, widget):
+        # Create bootloader object
+        Bootloader(self.builder, self.config).run()
 
     def button_pressed(self, widget, event):
         self.x1 = int(event.x)

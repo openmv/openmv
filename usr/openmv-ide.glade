@@ -181,7 +181,7 @@ Kwabena W. Agyeman</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="show_text">True</property>
-            <property name="text" translatable="yes"> </property>
+            <property name="text" translatable="yes">                                                                                                  '</property>
           </object>
           <packing>
             <property name="expand">True</property>
@@ -194,7 +194,7 @@ Kwabena W. Agyeman</property>
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <child>
-              <object class="GtkEntry" id="fw_entry">
+              <object class="GtkEntry" id="fw_path_entry">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="invisible_char">•</property>
@@ -211,12 +211,11 @@ Kwabena W. Agyeman</property>
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="fw_button">
+              <object class="GtkButton" id="fw_path_button">
                 <property name="label" translatable="yes">...</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="on_fwpath_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -447,7 +446,30 @@ Kwabena W. Agyeman</property>
               </object>
             </child>
             <child>
-              <object class="GtkMenuItem" id="menuitem4">
+              <object class="GtkMenuItem" id="menuitem2">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">_Tools</property>
+                <property name="use_underline">True</property>
+                <child type="submenu">
+                  <object class="GtkMenu" id="menu2">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkMenuItem" id="menuitem4">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Bootloader</property>
+                        <property name="use_underline">True</property>
+                        <signal name="activate" handler="on_bootloader_clicked" swapped="no"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuItem" id="menuitem3">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="label" translatable="yes">_Help</property>
@@ -519,20 +541,6 @@ Kwabena W. Agyeman</property>
                 <property name="use_underline">True</property>
                 <property name="stock_id">gtk-quit</property>
                 <signal name="clicked" handler="on_reset_clicked" swapped="no"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="homogeneous">True</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkToolButton" id="bootloader_button">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="tooltip_text" translatable="yes">Update Firmware</property>
-                <property name="use_underline">True</property>
-                <property name="stock_id">gtk-go-up</property>
-                <signal name="clicked" handler="on_fwupdate_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -1280,7 +1288,6 @@ Kwabena W. Agyeman</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">False</property>
                 <property name="image_position">right</property>
-                <property name="active">False</property>
                 <property name="draw_indicator">True</property>
               </object>
               <packing>
