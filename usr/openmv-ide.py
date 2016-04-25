@@ -28,7 +28,7 @@ else:
     BUNDLE_DIR = IDE_DIR
 
 FIRMWARE_VERSION_MAJOR  = 1
-FIRMWARE_VERSION_MINOR  = 4
+FIRMWARE_VERSION_MINOR  = 5
 FIRMWARE_VERSION_PATCH  = 0
 
 DATA_DIR     = os.path.join(os.path.expanduser("~"), "openmv") #use home dir

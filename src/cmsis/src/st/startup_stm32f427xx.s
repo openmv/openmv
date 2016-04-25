@@ -78,35 +78,15 @@ defined in linker script */
   .type  Reset_Handler, %function
 
 Reset_Handler:
-  ldr r0,=0x20002000    /* load magic number location */
-  ldr r2,[r0, #0]
-  str r0,[r0, #0]       /* invalidate */
-  ldr r1,=0xDEADBEEF    /* if magic number found */
-  cmp r2,r1
-  bne EnableCCM         /* run the bootloader, else... */
-
-Reboot_Loader:
-  ldr     r0, =0x40023844 /* RCC_APB2ENR */
-  ldr     r1, =0x00004000 /* enable SYSCFG clock */
-  str     r1, [r0, #0]
-  ldr     r0, =0x40013800 /* SYSCFG_MEMRMP */
-  ldr     r1, =0x00000001 /* remap ROM at zero */
-  str     r1, [r0, #0]
-  ldr r0,=0x1FFF0000
-  ldr sp,[r0, #0] /* 0x20002d40 */
-  ldr r0,[r0, #4]
-  bx r0
-
-EnableCCM:
-  /* enable ccm clock */
+  /* Enable ccm clock */
   ldr r0,=0x40023830
   ldr r3,[r0]
   orr r3, r3, #1048576 /* 0x100000 */
   str r3,[r0]
 
-  ldr   sp, =_estack     /* set stack pointer */
+  ldr sp, =_estack     /* set stack pointer */
 
-/* Copy the data segment initializers from flash to SRAM */  
+  /* Copy the data segment initializers from flash to SRAM */  
   movs  r1, #0
   b  LoopCopyDataInit
 
@@ -124,6 +104,7 @@ LoopCopyDataInit:
   bcc  CopyDataInit
   ldr  r2, =_sbss
   b  LoopFillZerobss
+
 /* Zero fill the bss segment. */  
 FillZerobss:
   movs  r3, #0
@@ -134,11 +115,11 @@ LoopFillZerobss:
   cmp  r2, r3
   bcc  FillZerobss
 
-/* Call the clock system intitialization function.*/
+ /* Call the clock system intitialization function.*/
   bl  SystemInit   
-/* Call static constructors */
-/*    bl __libc_init_array */
-/* Call the application's entry point.*/
+ /* Call static constructors */
+ /*    bl __libc_init_array */
+ /* Call the application's entry point.*/
   bl  main
   bx  lr    
 .size  Reset_Handler, .-Reset_Handler
