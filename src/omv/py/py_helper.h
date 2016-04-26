@@ -8,6 +8,8 @@
  */
 #ifndef __PY_HELPER_H__
 #define __PY_HELPER_H__
+#include <mp.h>
+#include "imlib.h"
 int py_helper_lookup_int(mp_map_t *kw_args, mp_obj_t kw, int default_val);
 float py_helper_lookup_float(mp_map_t *kw_args, mp_obj_t kw, float default_val);
 int py_helper_lookup_color(mp_map_t *kw_args, int default_color);

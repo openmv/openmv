@@ -192,18 +192,15 @@ typedef struct rectangle {
 
 typedef struct simple_color {
     uint8_t G;
-    union
-    {
+    union {
         int8_t L;
         uint8_t red; // RGB888 not RGB565
     };
-    union
-    {
+    union {
         int8_t A;
         uint8_t green; // RGB888 not RGB565
     };
-    union
-    {
+    union {
         int8_t B;
         uint8_t blue; // RGB888 not RGB565
     };
@@ -242,32 +239,6 @@ typedef struct color_blob { // organized this way to pack it...
     uint32_t code; // color code index bits of merged blobs - 8
 }
 color_blob_t;
-
-typedef struct color {
-    union {
-        uint8_t vec[3];
-        struct {
-            uint8_t r;
-            uint8_t g;
-            uint8_t b;
-        };
-        struct {
-            int h;
-            int s;
-            int v;
-        };
-        struct {
-            int8_t L;
-            int8_t A;
-            int8_t B;
-        };
-        struct {
-            float x;
-            float y;
-            float z;
-        };
-    };
-} color_t;
 
 typedef struct image {
     int w;
@@ -338,12 +309,6 @@ typedef struct cascade {
     int8_t *rectangles_array;       // Rectangles array.
 } cascade_t;
 
-typedef enum interp {
-    INTERP_NEAREST,
-    INTERP_BILINEAR,
-    INTERP_BICUBIC
-} interp_t;
-
 typedef struct bmp_read_settings {
     int32_t bmp_w;
     int32_t bmp_h;
@@ -396,6 +361,7 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
 void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_read_settings_t *rs);
 void bmp_read(image_t *img, const char *path);
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
+void jpeg_compress(image_t *src, image_t *dst, int quality);
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path);
 void jpeg_read_pixels(FIL *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
@@ -463,12 +429,15 @@ void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m
 /* Image Statistics */
 int32_t *imlib_histogram(image_t *img, rectangle_t *r);
 void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out);
+int imlib_image_mean(image_t *src); // grayscale only
+int imlib_image_std(image_t *src); // grayscale only
 
 /* Image Filtering */
 void imlib_midpoint_filter(image_t *img, const int ksize, const int bias);
 void imlib_mean_filter(image_t *img, const int ksize);
 void imlib_mode_filter(image_t *img, const int ksize);
 void imlib_median_filter(image_t *img, const int ksize, const int percentile);
+void imlib_histeq(image_t *img);
 
 /* Color Tracking */
 array_t *imlib_find_blobs(image_t *img,
@@ -480,10 +449,6 @@ array_t *imlib_find_markers(array_t *blobs_list, int margin,
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
-
-/* Image filtering functions */
-int  imlib_image_mean(struct image *src);
-void imlib_histeq(struct image *src);
 
 /* Integral image functions */
 void imlib_integral_image_alloc(struct integral_image *sum, int w, int h);
@@ -528,9 +493,6 @@ int imlib_lbp_desc_load(FIL *fp, uint8_t **desc);
 
 /* Iris detector */
 void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi);
-
-/* Misc */
-void jpeg_compress(image_t *src, image_t *dst, int quality);
 
 // Image filter functions
 void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);

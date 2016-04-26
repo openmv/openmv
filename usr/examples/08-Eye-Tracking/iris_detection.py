@@ -42,7 +42,7 @@ while (True):
         # Note: Use a higher threshold here (more detections) and lower scale (to find small objects)
         eyes = img.find_features(eyes_cascade, threshold=0.5, scale=1.2, roi=face)
         for e in eyes:
-            iris = img.find_eyes(e)
+            iris = img.find_eye(e)
             img.draw_rectangle(e)
             img.draw_cross(iris[0], iris[1])
 
