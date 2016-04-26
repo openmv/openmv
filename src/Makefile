@@ -366,7 +366,7 @@ $(BUILD)/$(BOOT_BIN).bin: boot_objs
 	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOT_BIN).bin $(FW_DIR)/$(BOOT_BIN).dfu
 	$(SIZE) $(FW_DIR)/$(BOOT_BIN).elf
 
-$(BUILD)/firmware.dfu: $(BUILD)/$(BOOT_BIN).bin $(BUILD)/$(BIN).bin
+$(BUILD)/firmware.dfu: $(BUILD)/$(BIN).bin $(BUILD)/$(BOOT_BIN).bin
 	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOT_BIN).bin -b 0x08010000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/firmware.dfu
 
 size:
