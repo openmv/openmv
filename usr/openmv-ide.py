@@ -721,16 +721,20 @@ class OMVGtk:
         menu.show_all()
 
     def _load_file(self, path):
+        buf = ''
         self.file_path = path
         if path == None: # New file
             self.save_button.set_sensitive(True)
-            self.buffer.set_text("")
         else:
             self.save_button.set_sensitive(False)
             with open(path, "r") as file:
-                self.buffer.set_text(file.read())
+                buf = file.read()
             self.update_recent_files()
+
         self._update_title()
+        self.buffer.begin_not_undoable_action()
+        self.buffer.set_text(buf)
+        self.buffer.end_not_undoable_action()
 
     def _save_file(self, new_file):
         if new_file:
