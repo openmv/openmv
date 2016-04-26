@@ -466,7 +466,6 @@ class OMVGtk:
                 sleep(0.100)
 
         if not connected:
-            # create fresh config if needed
             if platform.system() == "Linux" and not os.path.isfile(UDEV_PATH):
                 error_msg = ("Failed to open serial port.\n"
                              "Please install OpenMV's udev rules first:\n\n"
@@ -493,7 +492,6 @@ class OMVGtk:
 
         if (fw_ver[0] != FIRMWARE_VERSION_MAJOR or fw_ver[1] != FIRMWARE_VERSION_MINOR):
             self.connected = False
-            self.fw_mismatch = True
             self.connect_button.set_sensitive(False)
             self.show_message_dialog(gtk.MESSAGE_ERROR,
                     "Firmware version mismatch!\n"
@@ -506,7 +504,6 @@ class OMVGtk:
             openmv.enable_jpeg(self.enable_jpeg)
 
             self.connected = True
-            self.fw_mismatch = False
             self._update_title()
             self.connect_button.set_sensitive(False)
             map(lambda x:x.set_sensitive(True), self.controls)
@@ -627,7 +624,7 @@ class OMVGtk:
         adj.set_value(adj.upper - adj.page_size)
 
     def update_terminal(self):
-        if (self.connected and not self.fw_mismatch):
+        if (self.connected):
             try:
                 buf_len = openmv.tx_buf_len()
                 if (buf_len):
@@ -641,7 +638,7 @@ class OMVGtk:
 
     def update_drawing(self):
         fb = None
-        if (self.connected and not self.fw_mismatch):
+        if (self.connected):
             try:
                 # read drawingarea
                 fb = openmv.fb_dump()
@@ -671,7 +668,7 @@ class OMVGtk:
         return True
 
     def update_exec_button(self):
-        if (self.connected and not self.fw_mismatch):
+        if (self.connected):
             try:
                 # read drawingarea
                 running = (openmv.script_running()==1)
