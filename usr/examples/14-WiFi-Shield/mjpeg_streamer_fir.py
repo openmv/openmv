@@ -78,7 +78,7 @@ while (True):
     image.draw_string(0, 8, "To min: %0.2f"%to_min, color = (0xFF, 0x00, 0x00))
     image.draw_string(0, 16, "To max: %0.2f"%to_max, color = (0xFF, 0x00, 0x00))
 
-    cimage = image.compress(90)
+    cimage = image.compressed(quality=90)
     client.send("\r\n--openmv\r\n" \
                 "Content-Type: image/jpeg\r\n"\
                 "Content-Length:"+str(cimage.size())+"\r\n\r\n")

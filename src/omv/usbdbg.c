@@ -171,7 +171,7 @@ void usbdbg_data_out(void *buffer, int length)
             rectangle_t *roi = (rectangle_t*)buffer;
             char *path = (char*)buffer+sizeof(rectangle_t);
 
-            imlib_save_image(&image, path, roi);
+            imlib_save_image(&image, path, roi, 50);
             // raise a flash IRQ to flush image
             //NVIC->STIR = FLASH_IRQn;
             break;

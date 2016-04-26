@@ -57,15 +57,17 @@ static mp_obj_t py_mjpeg_size(mp_obj_t mjpeg_obj)
     return mp_obj_new_int(f_size(&arg_mjpeg->fp));
 }
 
-static mp_obj_t py_mjpeg_add_frame(mp_obj_t mjpeg_obj, mp_obj_t img_obj)
+static mp_obj_t py_mjpeg_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    py_mjpeg_obj_t *arg_mjpeg = mjpeg_obj;
-    image_t *arg_img = py_image_cobj(img_obj);
+    py_mjpeg_obj_t *arg_mjpeg = args[0];
+    image_t *arg_img = py_image_cobj(args[1]);
     PY_ASSERT_FALSE_MSG((arg_mjpeg->width != arg_img->w)
                      || (arg_mjpeg->height != arg_img->h),
             "Unexpected image geometry");
 
-    mjpeg_add_frame(&arg_mjpeg->fp, &arg_mjpeg->frames, &arg_mjpeg->bytes, arg_img);
+    int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
+    arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
+    mjpeg_add_frame(&arg_mjpeg->fp, &arg_mjpeg->frames, &arg_mjpeg->bytes, arg_img, arg_q);
     return mp_const_none;
 }
 
@@ -85,7 +87,7 @@ static void py_mjpeg_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_width_obj, py_mjpeg_width);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_height_obj, py_mjpeg_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mjpeg_size_obj, py_mjpeg_size);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_mjpeg_add_frame_obj, py_mjpeg_add_frame);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_mjpeg_add_frame_obj, 2, py_mjpeg_add_frame);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_mjpeg_close_obj, py_mjpeg_close);
 static const mp_map_elem_t locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_width),       (mp_obj_t)&py_mjpeg_width_obj     },

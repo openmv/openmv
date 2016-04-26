@@ -63,7 +63,7 @@ void mjpeg_open(FIL *fp, int width, int height)
     write_long(fp, 0); // DWORD dwStart; - 34
     write_long(fp, 0); // DWORD dwLength; length - updated on close - 35
     write_long(fp, 0); // DWORD dwSuggestedBufferSize; - 36
-    write_long(fp, IM_JPEG_QUALITY * 100); // DWORD dwQuality; - 37
+    write_long(fp, 10000); // DWORD dwQuality; - 37
     write_long(fp, 0); // DWORD dwSampleSize; - 38
     write_word(fp, 0); // short int left; - 39
     write_word(fp, 0); // short int top; - 39.5
@@ -89,7 +89,7 @@ void mjpeg_open(FIL *fp, int width, int height)
     write_data(fp, "movi", 4); // FOURCC fcc; - 55
 }
 
-void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img)
+void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, int quality)
 {
     write_data(fp, "00dc", 4); // FOURCC fcc;
     *frames += 1;
@@ -105,7 +105,7 @@ void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img)
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(img, &out, IM_JPEG_QUALITY);
+        jpeg_compress(img, &out, quality);
         int pad = (((out.bpp + 3) / 4) * 4) - out.bpp;
         write_long(fp, out.bpp + pad); // DWORD cb;
         write_data(fp, out.pixels, out.bpp + pad); // reading past okay

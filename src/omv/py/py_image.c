@@ -12,13 +12,13 @@
 #include "sensor.h"
 #include "ff.h"
 #include "xalloc.h"
+#include "fb_alloc.h"
 #include "arm_math.h"
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
 #include "omv_boardconfig.h"
-
-#define JPEG_INIT_BUF   (5*1024)
+#include "framebuffer.h"
 
 extern sensor_t sensor;
 static const mp_obj_type_t py_cascade_type;
@@ -178,8 +178,83 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
-    imlib_save_image(arg_img, path, &roi);
-    return mp_const_true;
+    int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
+    arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
+
+    imlib_save_image(arg_img, path, &roi, arg_q);
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
+    arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
+
+    // Check if this image is the one in the frame buffer...
+    if ((fb->pixels+FB_JPEG_OFFS_SIZE) == arg_img->pixels) {
+        // We do not allow shallow copies so this is okay...
+        image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};
+        image_t dst = {.w=fb->w, .h=fb->h, .bpp=128*1024, .pixels=fb->pixels};
+        jpeg_compress(&src, &dst, arg_q);
+        fb->bpp = dst.bpp;
+        arg_img->bpp = dst.bpp;
+        arg_img->pixels = dst.pixels;
+    } else {
+        // Use fb_alloc to compress and then copy image over into old image...
+        uint32_t size;
+        uint8_t *buffer = fb_alloc_all(&size);
+        image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .pixels=buffer };
+        // When jpeg_compress needs more memory than in currently allocated it
+        // will try to realloc. MP will detect that the pointer is outside of
+        // the heap and return NULL which will cause an out of memory error.
+        jpeg_compress(arg_img, &out, arg_q);
+        if (out.bpp <= (arg_img->w * arg_img->h * arg_img->bpp)) {
+            memcpy(arg_img->pixels, out.pixels, out.bpp);
+            arg_img->bpp = out.bpp;
+        } else {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Won't fit!"));
+        }
+        fb_free();
+        // Double check this was not the fb.
+        // (happens in non-JPEG mode)...
+        if (fb->pixels == arg_img->pixels) {
+            fb->bpp = arg_img->bpp;
+        }
+    }
+
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
+    arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
+
+    // We use fb_alloc here versus xalloc to avoid huge memory hole issues while
+    // JPEG compression is running. We don't want to try to compress using the
+    // heap because of the massive memory requirement until we are done...
+
+    uint32_t size;
+    uint8_t *buffer = fb_alloc_all(&size);
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .pixels=buffer };
+    // When jpeg_compress needs more memory than in currently allocated it
+    // will try to realloc. MP will detect that the pointer is outside of
+    // the heap and return NULL which will cause an out of memory error.
+    jpeg_compress(arg_img, &out, arg_q);
+    uint8_t *temp = xalloc(out.bpp);
+    memcpy(temp, out.pixels, out.bpp);
+    out.pixels = temp;
+    fb_free();
+
+    return py_image_from_struct(&out);
 }
 
 static mp_obj_t py_image_width(mp_obj_t img_obj)
@@ -927,22 +1002,6 @@ static mp_obj_t py_image_histeq(mp_obj_t image_obj)
     return mp_const_none;
 }
 
-static mp_obj_t py_image_compress(mp_obj_t image_obj, mp_obj_t quality)
-{
-    image_t *image = py_image_cobj(image_obj);
-
-    image_t cimage = {
-        .w=image->w,
-        .h=image->h,
-        .bpp = JPEG_INIT_BUF,
-        .pixels = xalloc(JPEG_INIT_BUF)
-    };
-
-    jpeg_compress(image, &cimage, mp_obj_get_int(quality));
-
-    return py_image_from_struct(&cimage);
-}
-
 static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     rectangle_t roi;
@@ -1125,6 +1184,8 @@ static mp_obj_t py_image_find_eyes(mp_obj_t image_obj, mp_obj_t roi_obj)
 /* Image file functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_obj, 1, py_image_compress);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_obj, 1, py_image_compressed);
 /* Basic image functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_width_obj, py_image_width);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_height_obj, py_image_height);
@@ -1169,7 +1230,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blob
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_markers_obj, 2, py_image_find_markers);
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_compress_obj, py_image_compress);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
@@ -1180,6 +1240,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* Image file functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_copy),                (mp_obj_t)&py_image_copy_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_compressed),          (mp_obj_t)&py_image_compressed_obj},
     /* Basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_width),               (mp_obj_t)&py_image_width_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_height),              (mp_obj_t)&py_image_height_obj},
@@ -1224,7 +1286,6 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_markers),        (mp_obj_t)&py_image_find_markers_obj},
 
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
     /* objects/feature detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_features),       (mp_obj_t)&py_image_find_features_obj},

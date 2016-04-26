@@ -173,8 +173,6 @@ extern const int8_t lab_table[196608];
        __typeof__ (img1) _img1 = (img1); \
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
-#define IM_JPEG_QUALITY (50)
-
 typedef struct size {
     int w;
     int h;
@@ -401,10 +399,10 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path);
 void jpeg_read_pixels(FIL *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
-void jpeg_write(image_t *img, const char *path);
+void jpeg_write(image_t *img, const char *path, int quality);
 void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op);
 void imlib_load_image(image_t *img, const char *path);
-void imlib_save_image(image_t *img, const char *path, rectangle_t *roi);
+void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality);
 void imlib_copy_image(image_t *dst, image_t *src, rectangle_t *roi);
 
 /* GIF functions */
@@ -414,7 +412,7 @@ void gif_close(FIL *fp);
 
 /* MJPEG functions */
 void mjpeg_open(FIL *fp, int width, int height);
-void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img);
+void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, int quality);
 void mjpeg_close(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps);
 
 /* Basic image functions */
