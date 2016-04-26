@@ -9,16 +9,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arm_math.h>
-#include <stm32f4xx.h>
 #include <mp.h>
-#include "array.h"
-#include "imlib.h"
-#include "ff.h"
-#include "ff_wrapper.h"
-#include "mdefs.h"
 #include "font.h"
+#include "array.h"
+#include "ff_wrapper.h"
 #include "fb_alloc.h"
 #include "xalloc.h"
+#include "imlib.h"
 
 // Gamma uncompress
 extern const float xyz_table[256];
@@ -798,58 +795,67 @@ void imlib_blend(image_t *img, const char *path, image_t *other, int alpha)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int imlib_image_mean(struct image *src)
+void imlib_histeq(image_t *img)
+{
+    if (IM_IS_GS(img)) {
+        int a = img->w * img->h;
+        float s = IM_MAX_GS / ((float)a);
+        uint32_t *hist = fb_alloc0(IM_G_HIST_SIZE * sizeof(uint32_t));
+
+        /* compute image histogram */
+        for (int i=0; i<a; i++) {
+            hist[img->pixels[i]] += 1;
+        }
+
+        /* compute the CDF */
+        for (int i=0, sum=0; i<IM_G_HIST_SIZE; i++) {
+            sum += hist[i];
+            hist[i] = sum;
+        }
+
+        for (int i=0; i<a; i++) {
+            img->pixels[i] =  s * hist[img->pixels[i]];
+        }
+
+        fb_free();
+    } else {
+        // do nothing for now
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+int imlib_image_mean(image_t *src)
 {
     int s=0;
-    int x,y;
-    int n = src->w*src->h;
+    int n=src->w*src->h;
 
-    for (y=0; y<src->h; y++) {
-        for (x=0; x<src->w; x++) {
-            s += src->data[src->w*y+x];
-        }
+    for (int i=0; i<n; i++) {
+        s += src->pixels[i];
     }
 
     /* mean */
     return s/n;
 }
 
-void imlib_histeq(struct image *src)
+// One pass standard deviation.
+int imlib_image_std(image_t *src)
 {
-    int i, sum;
-    int a = src->w*src->h;
-    uint32_t hist[IM_MAX_GS+1]={0};
-
-    /* compute image histogram */
-    for (i=0; i<a; i++) {
-        hist[src->pixels[i]]+=1;
-    }
-
-    /* compute the CDF */
-    for (i=0, sum=0; i<IM_MAX_GS+1; i++) {
-        sum += hist[i];
-        hist[i] = sum;
-    }
-
-    for (i=0; i<a; i++) {
-        src->pixels[i] = (uint8_t) ((IM_MAX_GS/(float)a) * hist[src->pixels[i]]);
-    }
-}
-
-// One pass standard deviation
-int imlib_std(image_t *image)
-{
-    int w=image->w;
-    int h=image->h;
-    int n = w*h;
-    uint8_t *data = image->pixels;
+    int w=src->w;
+    int h=src->h;
+    int n=w*h;
+    uint8_t *data=src->pixels;
 
     uint32_t s=0, sq=0;
     for (int i=0; i<n; i+=2) {
-        s += data[i+0] + data[i+1];
-        uint32_t v0 = __PKHBT(data[i+0],
-                              data[i+1], 16);
-        sq = __SMLAD(v0, v0, sq);
+        s += data[i+0]+data[i+1];
+        uint32_t tmp = __PKHBT(data[i+0], data[i+1], 16);
+        sq = __SMLAD(tmp, tmp, sq);
+    }
+
+    if (n%2) {
+        s += data[n-1];
+        sq += data[n-1]*data[n-1];
     }
 
     /* mean */

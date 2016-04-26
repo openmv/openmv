@@ -6,27 +6,26 @@
  * Image Python module.
  *
  */
-#include "mp.h"
+#include <arm_math.h>
+#include <mp.h>
 #include "imlib.h"
 #include "array.h"
 #include "sensor.h"
 #include "ff.h"
 #include "xalloc.h"
 #include "fb_alloc.h"
-#include "arm_math.h"
+#include "framebuffer.h"
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
-#include "omv_boardconfig.h"
-#include "framebuffer.h"
 
-extern sensor_t sensor;
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
 
 extern const char *ffs_strerror(FRESULT res);
 
-/* Haar Cascade */
+// Haar Cascade ///////////////////////////////////////////////////////////////
+
 typedef struct _py_cascade_obj_t {
     mp_obj_base_t base;
     struct cascade _cobj;
@@ -41,9 +40,9 @@ void *py_cascade_cobj(mp_obj_t cascade)
 static void py_cascade_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_cascade_obj_t *self = self_in;
-    /* print some info */
-    mp_printf(print, "width:%d height:%d n_stages:%d n_features:%d n_rectangles:%d\n", self->_cobj.window.w,
-          self->_cobj.window.h, self->_cobj.n_stages, self->_cobj.n_features, self->_cobj.n_rectangles);
+    mp_printf(print, "width:%d height:%d n_stages:%d n_features:%d n_rectangles:%d\n",
+            self->_cobj.window.w, self->_cobj.window.h, self->_cobj.n_stages,
+            self->_cobj.n_features, self->_cobj.n_rectangles);
 }
 
 static const mp_obj_type_t py_cascade_type = {
@@ -52,7 +51,8 @@ static const mp_obj_type_t py_cascade_type = {
     .print = py_cascade_print,
 };
 
-/* Keypoints object */
+// Keypoints object ///////////////////////////////////////////////////////////
+
 typedef struct _py_kp_obj_t {
     mp_obj_base_t base;
     array_t *kpts;
@@ -72,7 +72,8 @@ static const mp_obj_type_t py_kp_type = {
     .print = py_kp_print,
 };
 
-/* LBP descriptor */
+// LBP descriptor /////////////////////////////////////////////////////////////
+
 typedef struct _py_lbp_obj_t {
     mp_obj_base_t base;
     uint8_t *hist;
@@ -89,16 +90,17 @@ static const mp_obj_type_t py_lbp_type = {
     .print = py_lbp_print,
 };
 
-/* Image */
+// Image //////////////////////////////////////////////////////////////////////
+
 typedef struct _py_image_obj_t {
     mp_obj_base_t base;
-    struct image _cobj;
+    image_t _cobj;
 } py_image_obj_t;
 
-void *py_image_cobj(mp_obj_t image)
+void *py_image_cobj(mp_obj_t img_obj)
 {
-    PY_ASSERT_TYPE(image, &py_image_type);
-    return &((py_image_obj_t *)image)->_cobj;
+    PY_ASSERT_TYPE(img_obj, &py_image_type);
+    return &((py_image_obj_t *)img_obj)->_cobj;
 }
 
 static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
@@ -107,52 +109,68 @@ static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
     mp_printf(print, "<image width:%d height:%d bpp:%d>", self->_cobj.w, self->_cobj.h, self->_cobj.bpp);
 }
 
-static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags) {
-    image_t *image = py_image_cobj(self_in);
-
-    if (flags == MP_BUFFER_READ) {
-        bufinfo->buf = (void*)image->pixels;
-        if (image->bpp > 2) { //JPEG
-            bufinfo->len = image->bpp;
+static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    py_image_obj_t *o = self_in;
+    image_t *arg_img = py_image_cobj(self_in);
+    if (value == MP_OBJ_NULL) {
+        // delete
+        // not supported
+        return MP_OBJ_NULL;
+    } else if (value == MP_OBJ_SENTINEL) {
+        // load
+        if (IM_IS_GS(arg_img)) {
+            int i = mp_get_index(o->base.type, arg_img->w*arg_img->h, index, false);
+            int x = (i % arg_img->w);
+            int y = (i / arg_img->w);
+            return mp_obj_new_int(IM_GET_GS_PIXEL(arg_img, x, y));
+        } else if (IM_IS_RGB565(arg_img)) {
+            int i = mp_get_index(o->base.type, arg_img->w*arg_img->h, index, false);
+            int x = (i % arg_img->w);
+            int y = (i / arg_img->w);
+            return mp_obj_new_int(IM_GET_RGB565_PIXEL(arg_img, x, y));
         } else {
-            bufinfo->len = image->w*image->h*image->bpp;
+            int i = mp_get_index(o->base.type, arg_img->bpp, index, false);
+            return mp_obj_new_int(arg_img->pixels[i]); // JPEG
+        }
+    } else {
+        // store
+        if (IM_IS_GS(arg_img)) {
+            int i = mp_get_index(o->base.type, arg_img->w*arg_img->h, index, false);
+            int x = (i % arg_img->w);
+            int y = (i / arg_img->w);
+            IM_SET_GS_PIXEL(arg_img, x, y, mp_obj_get_int(value));
+        } else if (IM_IS_RGB565(arg_img)) {
+            int i = mp_get_index(o->base.type, arg_img->w*arg_img->h, index, false);
+            int x = (i % arg_img->w);
+            int y = (i / arg_img->w);
+            IM_SET_RGB565_PIXEL(arg_img, x, y, mp_obj_get_int(value));
+        } else {
+            int i = mp_get_index(o->base.type, arg_img->bpp, index, false);
+            arg_img->pixels[i] = mp_obj_get_int(value); // JPEG
+        }
+    }
+    return mp_const_none;
+}
+
+static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags)
+{
+    image_t *arg_img = py_image_cobj(self_in);
+    if (flags == MP_BUFFER_READ) {
+        bufinfo->buf = arg_img->pixels;
+        if (IM_IS_JPEG(arg_img)) {
+            bufinfo->len = arg_img->bpp;
+        } else {
+            bufinfo->len = arg_img->w*arg_img->h*arg_img->bpp;
         }
         bufinfo->typecode = 'b';
         return 0;
     } else {
-        // disable write for now
+        // not supported
         bufinfo->buf = NULL;
         bufinfo->len = 0;
         bufinfo->typecode = -1;
         return 1;
-    }
-}
-
-static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index_in, mp_obj_t value) {
-    py_image_obj_t *o = self_in;
-    image_t *image = py_image_cobj(self_in);
-
-    if (value == MP_OBJ_NULL) {
-        // delete
-        return MP_OBJ_NULL; // op not supported
-    } else if (value == MP_OBJ_SENTINEL) {
-        // load
-        mp_uint_t pixel;
-        mp_uint_t index = mp_get_index(o->base.type, image->w*image->h, index_in, false);
-        switch (image->bpp) {
-            case 1:
-                pixel = image->pixels[index];
-                break;
-            case 2:
-                pixel = image->pixels[index*2]<<8 | image->pixels[index*2+1];
-                break;
-            default:
-                return MP_OBJ_NULL; // op not supported
-        }
-        return mp_obj_new_int(pixel);
-    } else {
-        // store
-        return mp_const_none;
     }
 }
 
@@ -818,6 +836,16 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     return mp_const_none;
 }
 
+static mp_obj_t py_image_histeq(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    imlib_histeq(arg_img);
+    return mp_const_none;
+}
+
 static bool py_image_find_blobs_f_fun(void *fun_obj, void *img_obj, color_blob_t *cb)
 {
     mp_obj_t blob_obj[10] = {
@@ -844,7 +872,7 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     mp_uint_t arg_t_len;
     mp_obj_t *arg_t;
     mp_obj_get_array(args[1], &arg_t_len, &arg_t);
-    if (!arg_t_len) return mp_const_none;
+    if (!arg_t_len) return mp_obj_new_list(0, NULL); // return an empty array to be iteratable
 
     simple_color_t l_t[arg_t_len], u_t[arg_t_len];
     if (IM_IS_GS(arg_img)) {
@@ -887,7 +915,7 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     array_t *blobs_list = imlib_find_blobs(arg_img, arg_t_len, l_t, u_t, arg_invert ? 1 : 0, &arg_r,
                                            py_image_find_blobs_f_fun, kw_val, args[0]);
     if (blobs_list == NULL) {
-        return mp_const_none;
+        return mp_obj_new_list(0, NULL); // return an empty array to be iteratable
     }
     mp_obj_t objects_list = mp_obj_new_list(0, NULL);
     for (int i=0, j=array_length(blobs_list); i<j; i++) {
@@ -941,7 +969,7 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
     mp_uint_t arg_t_len;
     mp_obj_t *arg_t;
     mp_obj_get_array(args[1], &arg_t_len, &arg_t);
-    if (!arg_t_len) return mp_const_none;
+    if (!arg_t_len) return mp_obj_new_list(0, NULL); // return an empty array to be iteratable
 
     array_t *blobs_list;
     array_alloc_init(&blobs_list, xfree, arg_t_len);
@@ -964,7 +992,7 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
     array_t *blobs_list_ret = imlib_find_markers(blobs_list, margin,
                                                  py_image_find_markers_f_fun, kw_val, args[0]);
     if (blobs_list_ret == NULL) {
-        return mp_const_none;
+        return mp_obj_new_list(0, NULL); // return an empty array to be iteratable
     }
     array_free(blobs_list);
     mp_obj_t objects_list = mp_obj_new_list(0, NULL);
@@ -988,58 +1016,32 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
     return objects_list;
 }
 
-static mp_obj_t py_image_histeq(mp_obj_t image_obj)
-{
-    struct image *image;
-    /* get image pointer */
-    image = (struct image*) py_image_cobj(image_obj);
-
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    imlib_histeq(image);
-    return mp_const_none;
-}
-
 static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    rectangle_t roi;
-    image_t *image = NULL;
-    cascade_t *cascade = NULL;
-
-    // Sanity checks
-    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
             "This function is only supported on GRAYSCALE images");
 
-    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
-            "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
-
-    // Read positional arguments
-    image = py_image_cobj(args[0]);
-    cascade = py_cascade_cobj(args[1]);
-
-    // Read keyword arguments
-    py_helper_lookup_rectangle(kw_args, image, &roi);
+    cascade_t *cascade = py_cascade_cobj(args[1]);
     cascade->threshold = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.5f);
     cascade->scale_factor = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1.5f);
 
-    // Make sure ROI is not negative
-    PY_ASSERT_FALSE_MSG((roi.x < 0) || (roi.y < 0) || (roi.w < 0) || (roi.h < 0),
-            "Region of interest is negative!");
+    rectangle_t arg_r;
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
+
+    rectangle_t rect;
+    if (!rectangle_subimg(arg_img, &arg_r, &rect)) {
+        return mp_obj_new_list(0, NULL);
+    }
 
     // Make sure ROI is bigger than feature size
-    PY_ASSERT_TRUE_MSG((roi.w > cascade->window.w && roi.h > cascade->window.h),
+    PY_ASSERT_TRUE_MSG((rect.w > cascade->window.w && rect.h > cascade->window.h),
             "Region of interest is smaller than detector window!");
 
-    // Make sure ROI is smaller than image size
-    PY_ASSERT_TRUE_MSG(((roi.x+roi.w) <= image->w && (roi.y+roi.h) <= image->h),
-            "Region of interest is bigger than frame size!");
-
     // Detect objects
-    array_t *objects_array = imlib_detect_objects(image, cascade, &roi);
+    array_t *objects_array = imlib_detect_objects(arg_img, cascade, &rect);
 
-    // Add detected objects to a new Python list
+    // Add detected objects to a new Python list...
     mp_obj_t objects_list = mp_obj_new_list(0, NULL);
     for (int i=0; i<array_length(objects_array); i++) {
         rectangle_t *r = array_at(objects_array, i);
@@ -1051,70 +1053,111 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
         };
         mp_obj_list_append(objects_list, mp_obj_new_tuple(4, rec_obj));
     }
-
-    // Free the objects array
     array_free(objects_array);
-
     return objects_list;
 }
 
-static mp_obj_t py_image_find_template(mp_obj_t image_obj, mp_obj_t template_obj, mp_obj_t threshold)
+static mp_obj_t py_image_find_eye(mp_obj_t img_obj, mp_obj_t roi_obj)
 {
-    struct rectangle r;
-    struct image *image = NULL;
-    struct image *template = NULL;
-    mp_obj_t rec_obj[4];
-    mp_obj_t obj=mp_const_none;
-
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
             "This function is only supported on GRAYSCALE images");
 
-    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
-            "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
+    mp_obj_t *array;
+    mp_obj_get_array_fixed_n(roi_obj, 4, &array);
 
+    rectangle_t arg_r = {
+        mp_obj_get_int(array[0]),
+        mp_obj_get_int(array[1]),
+        mp_obj_get_int(array[2]),
+        mp_obj_get_int(array[3]),
+    };
 
-    /* get C image pointer */
-    image = py_image_cobj(image_obj);
-    template= py_image_cobj(template_obj);
+    rectangle_t rect;
+    if (!rectangle_subimg(arg_img, &arg_r, &rect)) {
+        return mp_const_none;
+    }
+
+    point_t iris;
+    imlib_find_iris(arg_img, &iris, &rect);
+
+    mp_obj_t eye_obj[2] = {
+        mp_obj_new_int(iris.x),
+        mp_obj_new_int(iris.y),
+    };
+
+    return mp_obj_new_tuple(2, eye_obj);
+}
+
+static mp_obj_t py_image_find_template(mp_obj_t img_obj, mp_obj_t template_obj, mp_obj_t threshold)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
+            "This function is only supported on GRAYSCALE images");
+
+    image_t *arg_template = py_image_cobj(template_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_template),
+            "This function is only supported on GRAYSCALE images");
 
     float t = mp_obj_get_float(threshold);
 
-    /* look for object */
-    float corr = imlib_template_match(image, template, &r);
-    //printf("t:%f coor:%f\n", (double)t, (double)corr);
+    rectangle_t r;
+    float corr = imlib_template_match(arg_img, arg_template, &r);
+
     if (corr > t) {
-        rec_obj[0] = mp_obj_new_int(r.x);
-        rec_obj[1] = mp_obj_new_int(r.y);
-        rec_obj[2] = mp_obj_new_int(r.w);
-        rec_obj[3] = mp_obj_new_int(r.h);
-        obj = mp_obj_new_tuple(4, rec_obj);
+        mp_obj_t rec_obj[4] = {
+            mp_obj_new_int(r.x),
+            mp_obj_new_int(r.y),
+            mp_obj_new_int(r.w),
+            mp_obj_new_int(r.h)
+        };
+        return mp_obj_new_tuple(4, rec_obj);
     }
-    return obj;
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_find_lbp(mp_obj_t img_obj, mp_obj_t roi_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
+            "This function is only supported on GRAYSCALE images");
+
+    mp_obj_t *array;
+    mp_obj_get_array_fixed_n(roi_obj, 4, &array);
+
+    rectangle_t roi = {
+        mp_obj_get_int(array[0]),
+        mp_obj_get_int(array[1]),
+        mp_obj_get_int(array[2]),
+        mp_obj_get_int(array[3]),
+    };
+
+    py_lbp_obj_t *lbp_obj = m_new_obj(py_lbp_obj_t);
+    lbp_obj->base.type = &py_lbp_type;
+    lbp_obj->hist = imlib_lbp_cascade(arg_img, &roi);
+    return lbp_obj;
 }
 
 static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    rectangle_t roi;
-    image_t *image = py_image_cobj(args[0]);
-
-    // Sanity checks
-    PY_ASSERT_TRUE_MSG(sensor.pixformat == PIXFORMAT_GRAYSCALE,
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
             "This function is only supported on GRAYSCALE images");
 
-    PY_ASSERT_TRUE_MSG(sensor.framesize <= OMV_MAX_INT_FRAME,
-            "This function is only supported on "OMV_MAX_INT_FRAME_STR" and smaller frames");
+    rectangle_t arg_r;
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
 
-    // Read keyword arguments
-    py_helper_lookup_rectangle(kw_args, image, &roi);
+    rectangle_t rect;
+    if (!rectangle_subimg(arg_img, &arg_r, &rect)) {
+        return mp_const_none;
+    }
+
     int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 32);
-    bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str("normalized")), false);
+    bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_normalized), false);
 
-    // Run keypoint descriptor on ROI
-    array_t *kpts= freak_find_keypoints(image, normalized, threshold, &roi);
+    array_t *kpts = freak_find_keypoints(arg_img, normalized, threshold, &rect);
 
     if (array_length(kpts)) {
-        // Return keypoints MP object
         py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
         kp_obj->base.type = &py_kp_type;
         kp_obj->kpts = kpts;
@@ -1123,62 +1166,6 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
         return kp_obj;
     }
     return mp_const_none;
-}
-
-static mp_obj_t py_image_find_lbp(mp_obj_t image_obj, mp_obj_t roi_obj)
-{
-    image_t *image;
-    py_lbp_obj_t *lbp_obj;
-
-    image = py_image_cobj(image_obj);
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    mp_obj_t *array;
-    mp_obj_get_array_fixed_n(roi_obj, 4, &array);
-
-    rectangle_t roi = {
-        mp_obj_get_int(array[0]),
-        mp_obj_get_int(array[1]),
-        mp_obj_get_int(array[2]),
-        mp_obj_get_int(array[3]),
-    };
-
-    lbp_obj = m_new_obj(py_lbp_obj_t);
-    lbp_obj->base.type = &py_lbp_type;
-    lbp_obj->hist = imlib_lbp_cascade(image, &roi);
-    return lbp_obj;
-}
-
-static mp_obj_t py_image_find_eyes(mp_obj_t image_obj, mp_obj_t roi_obj)
-{
-    image_t *image;
-
-    image = py_image_cobj(image_obj);
-    /* sanity checks */
-    PY_ASSERT_TRUE_MSG(image->bpp == 1,
-            "This function is only supported on GRAYSCALE images");
-
-    mp_obj_t *array;
-    mp_obj_get_array_fixed_n(roi_obj, 4, &array);
-
-    rectangle_t roi = {
-        mp_obj_get_int(array[0]),
-        mp_obj_get_int(array[1]),
-        mp_obj_get_int(array[2]),
-        mp_obj_get_int(array[3]),
-    };
-
-    point_t iris;
-    imlib_find_iris(image, &iris, &roi);
-
-    mp_obj_t eyes_obj[2] = {
-        mp_obj_new_int(iris.x),
-        mp_obj_new_int(iris.y),
-    };
-
-    return mp_obj_new_tuple(2, eyes_obj);
 }
 
 /* Image file functions */
@@ -1225,17 +1212,16 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_obj, 2, py_image_midpoint);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mean_obj, py_image_mean);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mode_obj, py_image_mode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 /* Color Tracking */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_markers_obj, 2, py_image_find_markers);
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
+/* Feature Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eye_obj, py_image_find_eye);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eyes_obj, py_image_find_eyes);
-
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 static const mp_map_elem_t locals_dict_table[] = {
     /* Image file functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_copy),                (mp_obj_t)&py_image_copy_obj},
@@ -1281,26 +1267,23 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_mean),                (mp_obj_t)&py_image_mean_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_mode),                (mp_obj_t)&py_image_mode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
     /* Color Tracking */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_markers),        (mp_obj_t)&py_image_find_markers_obj},
-
-    {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
-    /* objects/feature detection */
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
+    /* Feature Detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_features),       (mp_obj_t)&py_image_find_features_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_eye),            (mp_obj_t)&py_image_find_eye_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lbp),            (mp_obj_t)&py_image_find_lbp_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_eyes),           (mp_obj_t)&py_image_find_eyes_obj},
-
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
     { NULL, NULL },
 };
-
 STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
 
 static const mp_obj_type_t py_image_type = {
     { &mp_type_type },
-    .name  = MP_QSTR_image,
+    .name  = MP_QSTR_Image,
     .print = py_image_print,
     .buffer_p = { .get_buffer = py_image_get_buffer },
     .subscr = py_image_subscr,
@@ -1311,43 +1294,19 @@ mp_obj_t py_image(int w, int h, int bpp, void *pixels)
 {
     py_image_obj_t *o = m_new_obj(py_image_obj_t);
     o->base.type = &py_image_type;
-
-    o->_cobj.w =w;
-    o->_cobj.h =h;
-    o->_cobj.bpp =bpp;
-    o->_cobj.pixels =pixels;
+    o->_cobj.w = w;
+    o->_cobj.h = h;
+    o->_cobj.bpp = bpp;
+    o->_cobj.pixels = pixels;
     return o;
 }
 
-mp_obj_t py_image_from_struct(image_t *image)
+mp_obj_t py_image_from_struct(image_t *img)
 {
     py_image_obj_t *o = m_new_obj(py_image_obj_t);
     o->base.type = &py_image_type;
-    o->_cobj =*image;
+    o->_cobj = *img;
     return o;
-}
-
-int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *roi)
-{
-    FIL fp;
-    FRESULT res = FR_OK;
-
-    array_t *kpts = freak_find_keypoints(image, false, 10, roi);
-    printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
-    printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
-
-    if (array_length(kpts)) {
-        if ((res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
-            res = freak_save_descriptor(&fp, kpts);
-            f_close(&fp);
-        }
-
-        // File open/write error
-        if (res != FR_OK) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
-        }
-    }
-    return 0;
 }
 
 mp_obj_t py_image_rgb_to_lab(mp_obj_t tuple)
@@ -1410,19 +1369,10 @@ mp_obj_t py_image_grayscale_to_rgb(mp_obj_t not_tuple)
              mp_obj_new_int(rgb_color.blue)});
 }
 
-// The image module (it's different from the Image class!)
 mp_obj_t py_image_load_image(mp_obj_t path_obj)
 {
-    mp_obj_t image_obj =NULL;
-    struct image *image;
-    const char *path = mp_obj_str_get_str(path_obj);
-    image_obj = py_image(0, 0, 0, 0);
-
-    /* get image pointer */
-    image = py_image_cobj(image_obj);
-
-    imlib_load_image(image, path);
-
+    mp_obj_t image_obj = py_image(0, 0, 0, 0);
+    imlib_load_image(py_image_cobj(image_obj), mp_obj_str_get_str(path_obj));
     return image_obj;
 }
 
@@ -1595,21 +1545,41 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
     return match_obj;
 }
 
+int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *roi)
+{
+    FIL fp;
+    FRESULT res = FR_OK;
+
+    printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
+    array_t *kpts = freak_find_keypoints(img, false, 10, roi);
+    printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
+
+    if (array_length(kpts)) {
+        if ((res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
+            res = freak_save_descriptor(&fp, kpts);
+            f_close(&fp);
+        }
+        // File open/write error
+        if (res != FR_OK) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+        }
+    }
+    return 0;
+}
+
 /* Color space functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rgb_to_lab_obj, py_image_rgb_to_lab);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_lab_to_rgb_obj, py_image_lab_to_rgb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rgb_to_grayscale_obj, py_image_rgb_to_grayscale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_grayscale_to_rgb_obj, py_image_grayscale_to_rgb);
-
+/* Image Module Functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 2, py_image_load_descriptor);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 3, py_image_save_descriptor);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 3, py_image_match_descriptor);
-
 static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
-    /* Descriptor types */
     {MP_OBJ_NEW_QSTR(MP_QSTR_LBP),                 MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),               MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
     /* Color space functions */
@@ -1617,17 +1587,14 @@ static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_lab_to_rgb),          (mp_obj_t)&py_image_lab_to_rgb_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_rgb_to_grayscale),    (mp_obj_t)&py_image_rgb_to_grayscale_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_grayscale_to_rgb),    (mp_obj_t)&py_image_grayscale_to_rgb_obj},
-
-    // Image module functions
+    /* Image Module Functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_Image),               (mp_obj_t)&py_image_load_image_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_HaarCascade),         (mp_obj_t)&py_image_load_cascade_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_load_descriptor),     (mp_obj_t)&py_image_load_descriptor_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_save_descriptor),     (mp_obj_t)&py_image_save_descriptor_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_match_descriptor),    (mp_obj_t)&py_image_match_descriptor_obj},
-
     { NULL, NULL }
 };
-
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t image_module = {
