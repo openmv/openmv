@@ -146,11 +146,6 @@ void HAL_PCD_SOFCallback(PCD_HandleTypeDef *hpcd)
     uint32_t buffptr;
     uint32_t buffsize;
 
-    //if (!vcp_connected) {
-    //    // CDC device is not connected to a host, so we are unable to send any data
-    //    return;
-    //}
-
     if(UserTxBufPtrOut != UserTxBufPtrIn) {
         if (UserTxBufPtrOut > UserTxBufPtrIn) /* Rollback */ {
             buffsize = APP_RX_DATA_SIZE - UserTxBufPtrOut;
