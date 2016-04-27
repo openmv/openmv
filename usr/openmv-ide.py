@@ -199,7 +199,7 @@ class Bootloader:
 
             fw_path = self.fw_path_entry.get_text()
             try:
-                with open(fw_path, 'r') as f:
+                with open(fw_path, 'rb') as f:
                     buf= f.read()
             except Exception as e:
                 self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open file %s"%str(e))
