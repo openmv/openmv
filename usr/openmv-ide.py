@@ -481,32 +481,29 @@ class OMVGtk:
         # Set higher timeout after connecting for lengthy transfers.
         openmv.set_timeout(1*2) # SD Cards can cause big hicups.
 
-        # add terminal update callback
-        gobject.gobject.timeout_add(30, omvgtk.update_terminal)
-
         # check firmware version
         fw_ver = openmv.fw_version()
         ide_ver = (FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR, FIRMWARE_VERSION_PATCH)
-
         print("fw_version:%s\nide_version:%s" %(str(fw_ver), str(ide_ver)))
 
         if (fw_ver[0] != FIRMWARE_VERSION_MAJOR or fw_ver[1] != FIRMWARE_VERSION_MINOR):
             self.connected = False
-            self.connect_button.set_sensitive(False)
             self.show_message_dialog(gtk.MESSAGE_ERROR,
                     "Firmware version mismatch!\n"
                     "Please update the firmware image and/or the IDE!")
         else:
-            # interrupt any running code
-            openmv.stop_script()
-
-            # set enable JPEG
-            openmv.enable_jpeg(self.enable_jpeg)
-
             self.connected = True
             self._update_title()
-            self.connect_button.set_sensitive(False)
             map(lambda x:x.set_sensitive(True), self.controls)
+
+            # Interrupt running code
+            openmv.stop_script()
+
+            # Enable JPEG transfers
+            openmv.enable_jpeg(self.enable_jpeg)
+
+        # Disable connect button
+        self.connect_button.set_sensitive(False)
 
     def disconnect(self):
         try:
@@ -1022,6 +1019,10 @@ if __name__ == "__main__":
     omvgtk = OMVGtk()
     omvgtk.window.show_all()
     omvgtk.check_for_updates()
+    # Terminal update callback
+    gobject.gobject.timeout_add(30, omvgtk.update_terminal)
+    # Framebuffer update callback
     gobject.gobject.timeout_add(30, omvgtk.update_drawing)
+    # Execute button update callback
     gobject.gobject.timeout_add(500, omvgtk.update_exec_button)
     gtk.main()
