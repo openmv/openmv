@@ -115,7 +115,6 @@ class Bootloader:
         return True
 
     def task_connect(self, state):
-        openmv.disconnect()
         try:
             # Attempt to connect to bootloader
             openmv.init(self.port, self.baud, timeout=0.050)
@@ -588,8 +587,10 @@ class OMVGtk:
         openmv.fb_update()
 
     def bootloader_clicked(self, widget):
-        # Create bootloader object
-        Bootloader(self.builder, self.config).run()
+        if (self.connected):
+            openmv.reset()
+            # Create bootloader object
+            Bootloader(self.builder, self.config).run()
 
     def button_pressed(self, widget, event):
         self.x1 = int(event.x)
