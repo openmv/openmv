@@ -50,6 +50,13 @@ def init(port, baudrate=921600, timeout=0.3):
     # open CDC port
     __serial =  serial.Serial(port, baudrate=baudrate, timeout=timeout)
 
+def disconnect():
+    try:
+        if (__serial):
+            __serial.close()
+    except:
+        pass
+
 def set_timeout(timeout):
     __serial.timeout = timeout
 

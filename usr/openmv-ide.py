@@ -115,6 +115,7 @@ class Bootloader:
         return True
 
     def task_connect(self, state):
+        openmv.disconnect()
         try:
             # Attempt to connect to bootloader
             openmv.init(self.port, self.baud, timeout=0.050)
@@ -123,12 +124,11 @@ class Bootloader:
                 state["bar"].set_text("Erasing...")
                 self.cancel_button.set_sensitive(False)
         except Exception as e:
+            openmv.disconnect()
             if self.flash_msg:
-                state["bar"].set_text("Connecting to bootloader...\
-                                       \n                              ")
+                state["bar"].set_text("Connecting to bootloader...\n                              ")
             else:
-                state["bar"].set_text("Connecting to bootloader...\
-                                       \nDisconnect and re-connect cam!")
+                state["bar"].set_text("Connecting to bootloader...\nDisconnect and re-connect cam!")
             self.flash_msg = self.flash_msg ^ 1
             sleep(0.100)
 
@@ -152,7 +152,6 @@ class Bootloader:
 
         # Send chunk
         chunk = min (60, xfer_total-xfer_bytes)
-        #openmv.flash_write(buf[xfer_bytes:xfer_bytes+chunk], xfer_bytes)
         openmv.flash_write(buf[xfer_bytes : xfer_bytes+chunk])
 
         xfer_bytes += chunk
