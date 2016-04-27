@@ -126,9 +126,11 @@ class Bootloader:
         except Exception as e:
             openmv.disconnect()
             if self.flash_msg:
-                state["bar"].set_text("Connecting to bootloader...\n                              ")
+                state["bar"].set_text("Connecting to bootloader...\
+                                       \n                              ")
             else:
-                state["bar"].set_text("Connecting to bootloader...\nDisconnect and re-connect cam!")
+                state["bar"].set_text("Connecting to bootloader...\
+                                       \nDisconnect and re-connect cam!")
             self.flash_msg = self.flash_msg ^ 1
             sleep(0.100)
 
