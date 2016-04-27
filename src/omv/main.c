@@ -84,8 +84,8 @@ static const char fresh_main_py[] =
 "   time.sleep(600)\n"
 ;
 
-static const char fresh_pybcdc_inf[] =
-#include "genhdr/pybcdc_inf.h"
+static const char fresh_openmv_inf[] =
+#include "genhdr/openmv_inf.h"
 ;
 
 static const char fresh_readme_txt[] =
@@ -95,12 +95,12 @@ static const char fresh_readme_txt[] =
 "\r\n"
 "For a serial prompt:\r\n"
 " - Windows: you need to go to 'Device manager', right click on the unknown device,\r\n"
-"   then update the driver software, using the 'pybcdc.inf' file found on this drive.\r\n"
+"   then update the driver software, using the 'openmv.inf' file found on this drive.\r\n"
 "   Then use a terminal program like Hyperterminal or putty.\r\n"
 " - Mac OS X: use the command: screen /dev/tty.usbmodem*\r\n"
 " - Linux: use the command: screen /dev/ttyACM0\r\n"
 "\r\n"
-"Please visit http://micropython.org/help/ for further help.\r\n"
+"Please visit https://openmv.io/ or http://micropython.org/help/ for further help.\r\n"
 ;
 
 #ifdef OPENMV1
@@ -254,8 +254,8 @@ static void make_flash_fs()
     f_close(&fp);
 
     // create .inf driver file
-    f_open(&fp, "pybcdc.inf", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_pybcdc_inf, sizeof(fresh_pybcdc_inf) - 1 /* don't count null terminator */, &n);
+    f_open(&fp, "openmv.inf", FA_WRITE | FA_CREATE_ALWAYS);
+    f_write(&fp, fresh_openmv_inf, sizeof(fresh_openmv_inf) - 1 /* don't count null terminator */, &n);
     f_close(&fp);
 
     // create readme file
