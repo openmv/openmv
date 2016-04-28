@@ -12,7 +12,7 @@ import gtksourceview2 as gtksourceview
 import glob
 import urllib2, json
 import numpy as np
-
+import serial.tools.list_ports as list_ports
 try:
     # 3.x name
     import configparser
@@ -976,14 +976,8 @@ class OMVGtk:
         elif system_name == "Darwin":
             serial_ports.extend(glob.glob('/dev/tty.*'))
         elif system_name == "Windows":
-            for i in range(256):
-                try:
-                    port = "COM%d"%i
-                    s = serial.Serial(port)
-                    serial_ports.append(port)
-                    s.close()
-                except serial.SerialException:
-                    pass
+            for port in list_ports.comports():
+                serial_ports.append(port[0])
 
         return serial_ports
 
