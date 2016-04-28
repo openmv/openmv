@@ -93,7 +93,9 @@
 #define COM8_AGC_EN             0x04 /* AGC Enable */
 #define COM8_AWB_EN             0x02 /* AWB Enable */
 #define COM8_AEC_EN             0x01 /* AEC Enable */
+#define COM8_SET_AGC(r, x)      ((r&0xFB)|((x&0x1)<<2))
 #define COM8_SET_AWB(r, x)      ((r&0xFD)|((x&0x1)<<1))
+#define COM8_SET_AEC(r, x)      ((r&0xFE)|((x&0x1)<<0))
 
 #define COM9                    0x14 /* Common Control 9 */
 #define COM9_HISTO_AVG          0x80 /* Histogram or average based AEC/AGC selection */

@@ -560,11 +560,6 @@ static int set_saturation(sensor_t *sensor, int level)
     return ret;
 }
 
-static int set_exposure(sensor_t *sensor, int exposure)
-{
-   return 0;
-}
-
 static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 {
     int ret =0;
@@ -620,7 +615,7 @@ static int set_whitebal(sensor_t *sensor, int enable)
     /* Switch to SENSOR register bank */
     ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
 
-    /* Update COM7 */
+    /* Update CTRL1 */
     reg = SCCB_Read(sensor->slv_addr, CTRL1);
 
     if (enable) {
@@ -630,6 +625,48 @@ static int set_whitebal(sensor_t *sensor, int enable)
     }
 
     ret |= SCCB_Write(sensor->slv_addr, CTRL1, reg);
+    return ret;
+}
+
+static int set_gain_ctrl(sensor_t *sensor, int enable)
+{
+    int ret=0;
+    uint8_t reg;
+
+    /* Switch to SENSOR register bank */
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
+
+    /* Update COM8 */
+    reg = SCCB_Read(sensor->slv_addr, COM8);
+
+    if (enable) {
+        reg |= COM8_AGC_EN;
+    } else {
+        reg &= ~COM8_AGC_EN;
+    }
+
+    ret |= SCCB_Write(sensor->slv_addr, COM8, reg);
+    return ret;
+}
+
+static int set_exposure_ctrl(sensor_t *sensor, int enable)
+{
+    int ret=0;
+    uint8_t reg;
+
+    /* Switch to SENSOR register bank */
+    ret |= SCCB_Write(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
+
+    /* Update COM8 */
+    reg = SCCB_Read(sensor->slv_addr, COM8);
+
+    if (enable) {
+        reg |= COM8_AEC_EN;
+    } else {
+        reg &= ~COM8_AEC_EN;
+    }
+
+    ret |= SCCB_Write(sensor->slv_addr, COM8, reg);
     return ret;
 }
 
@@ -685,10 +722,11 @@ int ov2640_init(sensor_t *sensor)
     sensor->set_contrast  = set_contrast;
     sensor->set_brightness= set_brightness;
     sensor->set_saturation= set_saturation;
-    sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_quality = set_quality;
     sensor->set_colorbar = set_colorbar;
+    sensor->set_gain_ctrl = set_gain_ctrl;
+    sensor->set_exposure_ctrl = set_exposure_ctrl;
     sensor->set_whitebal = set_whitebal;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;

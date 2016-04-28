@@ -262,11 +262,6 @@ static int set_saturation(sensor_t *sensor, int level)
     return ret;
 }
 
-static int set_exposure(sensor_t *sensor, int exposure)
-{
-   return 0;
-}
-
 static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 {
     // Read register COM9
@@ -301,6 +296,30 @@ static int set_whitebal(sensor_t *sensor, int enable)
 
     // Set white bal on/off
     reg = COM8_SET_AWB(reg, enable);
+
+    // Write back register COM8
+    return SCCB_Write(sensor->slv_addr, COM8, reg);
+}
+
+static int set_gain_ctrl(sensor_t *sensor, int enable)
+{
+    // Read register COM8
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM8);
+
+    // Set white bal on/off
+    reg = COM8_SET_AGC(reg, enable);
+
+    // Write back register COM8
+    return SCCB_Write(sensor->slv_addr, COM8, reg);
+}
+
+static int set_exposure_ctrl(sensor_t *sensor, int enable)
+{
+    // Read register COM8
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM8);
+
+    // Set white bal on/off
+    reg = COM8_SET_AEC(reg, enable);
 
     // Write back register COM8
     return SCCB_Write(sensor->slv_addr, COM8, reg);
@@ -360,10 +379,11 @@ int ov7725_init(sensor_t *sensor)
     sensor->set_contrast  = set_contrast;
     sensor->set_brightness= set_brightness;
     sensor->set_saturation= set_saturation;
-    sensor->set_exposure  = set_exposure;
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_colorbar = set_colorbar;
     sensor->set_whitebal = set_whitebal;
+    sensor->set_gain_ctrl = set_gain_ctrl;
+    sensor->set_exposure_ctrl = set_exposure_ctrl;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
     sensor->set_special_effect = set_special_effect;

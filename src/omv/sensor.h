@@ -122,11 +122,12 @@ typedef struct _sensor {
     int  (*set_contrast)        (sensor_t *sensor, int level);
     int  (*set_brightness)      (sensor_t *sensor, int level);
     int  (*set_saturation)      (sensor_t *sensor, int level);
-    int  (*set_exposure)        (sensor_t *sensor, int exposure);
     int  (*set_gainceiling)     (sensor_t *sensor, gainceiling_t gainceiling);
     int  (*set_quality)         (sensor_t *sensor, int quality);
     int  (*set_colorbar)        (sensor_t *sensor, int enable);
     int  (*set_whitebal)        (sensor_t *sensor, int enable);
+    int  (*set_gain_ctrl)       (sensor_t *sensor, int enable);
+    int  (*set_exposure_ctrl)   (sensor_t *sensor, int enable);
     int  (*set_hmirror)         (sensor_t *sensor, int enable);
     int  (*set_vflip)           (sensor_t *sensor, int enable);
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
@@ -160,6 +161,9 @@ int sensor_enable_jpeg(bool enable);
 // Capture a Snapshot.
 int sensor_snapshot(image_t *image);
 
+// Capture the frame buffer.
+int sensor_get_fb(image_t *img);
+
 // Set the sensor pixel format.
 int sensor_set_pixformat(pixformat_t pixformat);
 
@@ -178,10 +182,6 @@ int sensor_set_brightness(int level);
 // Set the sensor saturation level (from -3 to +3).
 int sensor_set_saturation(int level);
 
-// Set the sensor exposure level.
-// Note: This function has no effect when AEC (Automatic Exposure Control) is enabled.
-int sensor_set_exposure(int exposure);
-
 // Set the sensor AGC gain ceiling.
 // Note: This function has no effect when AGC (Automatic Gain Control) is disabled.
 int sensor_set_gainceiling(gainceiling_t gainceiling);
@@ -194,6 +194,12 @@ int sensor_set_colorbar(int enable);
 
 // Enable/disable the whitebal mode.
 int sensor_set_whitebal(int enable);
+
+// Enable/disable the agc mode.
+int sensor_set_gain_ctrl(int enable);
+
+// Enable/disable the aec mode.
+int sensor_set_exposure_ctrl(int enable);
 
 // Enable/disable the hmirror mode.
 int sensor_set_hmirror(int enable);
