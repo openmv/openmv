@@ -410,11 +410,6 @@ int sensor_set_saturation(int level)
     return -1;
 }
 
-int sensor_set_exposure(int exposure)
-{
-    return 0;
-}
-
 int sensor_set_gainceiling(gainceiling_t gainceiling)
 {
     if (sensor.gainceiling == gainceiling) {
@@ -460,6 +455,28 @@ int sensor_set_whitebal(int enable)
     /* call the sensor specific function */
     if (sensor.set_whitebal == NULL
         || sensor.set_whitebal(&sensor, enable) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
+
+int sensor_set_gain_ctrl(int enable)
+{
+    /* call the sensor specific function */
+    if (sensor.set_gain_ctrl == NULL
+        || sensor.set_gain_ctrl(&sensor, enable) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
+
+int sensor_set_exposure_ctrl(int enable)
+{
+    /* call the sensor specific function */
+    if (sensor.set_exposure_ctrl == NULL
+        || sensor.set_exposure_ctrl(&sensor, enable) != 0) {
         /* operation not supported */
         return -1;
     }
@@ -661,6 +678,26 @@ int sensor_snapshot(image_t *image)
         if (sensor.pixformat != PIXFORMAT_JPEG &&
                 SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
             image->pixels += FB_JPEG_OFFS_SIZE;
+        }
+    }
+
+    return 0;
+}
+
+int sensor_get_fb(image_t *img)
+{
+    if (!fb->bpp) {
+        return -1;
+    }
+
+    if (img != NULL) {
+        img->w = fb->w;
+        img->h = fb->h;
+        img->bpp = fb->bpp;
+        img->pixels = fb->pixels;
+        if (sensor.pixformat != PIXFORMAT_JPEG &&
+                SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
+            img->pixels += FB_JPEG_OFFS_SIZE;
         }
     }
 
