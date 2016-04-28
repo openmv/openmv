@@ -63,7 +63,7 @@
 #include "usbd_desc.h"
 #include "usbd_ctlreq.h"
 
-#define CDC_IFACE_NUM (1)
+#define CDC_IFACE_NUM (0)
 static USBD_CDC_HandleTypeDef CDC_ClassData;
 static uint8_t  USBD_CDC_Init (USBD_HandleTypeDef *pdev, 
                                uint8_t cfgidx);
@@ -152,7 +152,7 @@ __ALIGN_BEGIN uint8_t USBD_CDC_CfgFSDesc[USB_CDC_CONFIG_DESC_SIZ] __ALIGN_END =
   0x24,   /* bDescriptorType: CS_INTERFACE */
   0x01,   /* bDescriptorSubtype: Call Management Func Desc */
   0x00,   /* bmCapabilities: D0+D1 */
-  0x01,   /* bDataInterface: 1 */
+  CDC_IFACE_NUM + 1,   /* bDataInterface: 1 */
   
   /*ACM Functional Descriptor*/
   0x04,   /* bFunctionLength */
@@ -164,8 +164,8 @@ __ALIGN_BEGIN uint8_t USBD_CDC_CfgFSDesc[USB_CDC_CONFIG_DESC_SIZ] __ALIGN_END =
   0x05,   /* bFunctionLength */
   0x24,   /* bDescriptorType: CS_INTERFACE */
   0x06,   /* bDescriptorSubtype: Union func desc */
-  0x00,   /* bMasterInterface: Communication class interface */
-  0x01,   /* bSlaveInterface0: Data Class Interface */
+  CDC_IFACE_NUM + 0,   /* bMasterInterface: Communication class interface */
+  CDC_IFACE_NUM + 1,   /* bSlaveInterface0: Data Class Interface */
   
   /*Endpoint 2 Descriptor*/
   0x07,                           /* bLength: Endpoint Descriptor size */
