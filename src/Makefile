@@ -386,4 +386,4 @@ flash_boot::
 
 # Flash the bootloader + main firmware image
 flash::
-	../usr/pydfu.py -u $(FW_DIR)/firmware.dfu
+	../usr/pydfu.py -m -u $(FW_DIR)/firmware.dfu
