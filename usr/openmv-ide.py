@@ -55,6 +55,7 @@ enable_jpeg = True
 CONFIG_KEYS = ['board', 'serial_port', 'recent', 'last_fw_path', 'baudrate', 'enable_jpeg']
 RELEASE_TAG_NAME = 'v1.3'
 RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
+OPENMV_BOARDS = ['OpenMV1', 'OpenMV2']
 
 class Bootloader:
     def __init__(self, builder, config):
@@ -560,11 +561,19 @@ class OMVGtk:
         dialog = self.builder.get_object("preferences_dialog")
         jpeg_check = self.builder.get_object("jpeg_check")
 
+        # Set selected board
+        board_combo.get_model().clear()
+        config_board = self.config.get("main", "board")
+        for i in range(0, len(OPENMV_BOARDS)):
+            board = OPENMV_BOARDS[i]
+            board_combo.append_text(board)
+            if (board == config_board):
+                board_combo.set_active(i)
+
         # Fill serial ports combo
         sport_combo.get_model().clear()
         serial_ports = self.list_serial_ports()
         config_port = self.config.get("main", "serial_port")
-
         for i in range(0, len(serial_ports)):
             port = serial_ports[i]
             sport_combo.append_text(port)
