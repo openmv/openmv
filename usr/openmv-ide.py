@@ -454,6 +454,7 @@ class OMVGtk:
 
     def connect(self):
         connected = False
+        openmv.disconnect()
         for i in range(10):
             try:
                 # opens CDC port.
@@ -512,6 +513,7 @@ class OMVGtk:
         except:
             pass
 
+        openmv.disconnect()
         self.connected = False
         self._update_title()
         self.stop_button.set_sensitive(False)
@@ -524,6 +526,7 @@ class OMVGtk:
     def reset_clicked(self, widget):
         if (self.connected):
             openmv.reset()
+        openmv.disconnect()
 
     def execute_clicked(self, widget):
         buf = self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter())
