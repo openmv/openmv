@@ -563,11 +563,13 @@ class OMVGtk:
         # Fill serial ports combo
         sport_combo.get_model().clear()
         serial_ports = self.list_serial_ports()
-        for i in serial_ports:
-            sport_combo.append_text(i)
+        config_port = self.config.get("main", "serial_port")
 
-        if len(serial_ports):
-            sport_combo.set_active(0)
+        for i in range(0, len(serial_ports)):
+            port = serial_ports[i]
+            sport_combo.append_text(port)
+            if (port == config_port):
+                sport_combo.set_active(i)
 
         jpeg_check.set_active(self.enable_jpeg)
 
