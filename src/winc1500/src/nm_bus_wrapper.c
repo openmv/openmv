@@ -100,21 +100,22 @@ static sint8 spi_rw(uint8 *tx_buf, uint8 *rx_buf, uint16 u16Sz)
 {
 	sint8 result = M2M_SUCCESS;
 
-	if (tx_buf == 0) {
-        memset(rx_buf, 0, u16Sz);
-        tx_buf = rx_buf;
-	}
-
-    if (rx_buf == 0) {
-        rx_buf = tx_buf;
-	}
-
 	// Start SPI transfer
     // TODO: Use DMA
+
     __disable_irq();
     SPI_ASSERT_CS();
-    if (HAL_SPI_TransmitReceive(&SPI_HANDLE, tx_buf, rx_buf, u16Sz, SPI_TIMEOUT) != HAL_OK) {
-        result = M2M_ERR_BUS_FAIL;
+    if (tx_buf != 0) {
+        if (HAL_SPI_Transmit(&SPI_HANDLE, tx_buf, u16Sz, SPI_TIMEOUT) != HAL_OK) {
+            result = M2M_ERR_BUS_FAIL;
+        }
+	} else {
+        tx_buf = rx_buf;
+        memset(tx_buf, 0, u16Sz);
+        if (HAL_SPI_TransmitReceive(&SPI_HANDLE, tx_buf, rx_buf, u16Sz, SPI_TIMEOUT) != HAL_OK) {
+            result = M2M_ERR_BUS_FAIL;
+        }
+
     }
 	SPI_DEASSERT_CS();
     __enable_irq();
