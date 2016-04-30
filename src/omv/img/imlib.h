@@ -351,6 +351,7 @@ void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
 void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
 void imlib_rgb_to_grayscale(simple_color_t *rgb, simple_color_t *grayscale);
 void imlib_grayscale_to_rgb(simple_color_t *grayscale, simple_color_t *rgb);
+uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v);
 
 /* Image file functions */
 void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);
