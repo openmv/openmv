@@ -16,12 +16,13 @@
 #include "fb_alloc.h"
 #include "xalloc.h"
 #include "imlib.h"
+#include "mdefs.h"
 
 // Gamma uncompress
 extern const float xyz_table[256];
 
-// Grayscale to RGB565 conversion
-extern const uint16_t rainbow_table[256];
+// RGB565 to YUV conversion
+extern const int8_t yuv_table[196608];
 
 // USE THE LUT FOR RGB->LAB CONVERSION - NOT THIS FUNCTION!
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab)
@@ -88,6 +89,14 @@ void imlib_grayscale_to_rgb(simple_color_t *grayscale, simple_color_t *rgb)
     rgb->red   = grayscale->G;
     rgb->green = grayscale->G;
     rgb->blue  = grayscale->G;
+}
+
+ALWAYS_INLINE uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v)
+{
+    uint32_t r = IM_MAX(IM_MIN(y + ((91881*v)>>16), 255), 0);
+    uint32_t g = IM_MAX(IM_MIN(y - (((22554*u)+(46802*v))>>16), 255), 0);
+    uint32_t b = IM_MAX(IM_MIN(y + ((116130*u)>>16), 255), 0);
+    return IM_RGB565(IM_R825(r), IM_G826(g), IM_B825(b));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -797,10 +806,11 @@ void imlib_blend(image_t *img, const char *path, image_t *other, int alpha)
 
 void imlib_histeq(image_t *img)
 {
+    int a = img->w * img->h;
+    float s = IM_MAX_GS / ((float)a);
+    uint32_t *hist = fb_alloc0(IM_G_HIST_SIZE * sizeof(uint32_t));
+
     if (IM_IS_GS(img)) {
-        int a = img->w * img->h;
-        float s = IM_MAX_GS / ((float)a);
-        uint32_t *hist = fb_alloc0(IM_G_HIST_SIZE * sizeof(uint32_t));
 
         /* compute image histogram */
         for (int i=0; i<a; i++) {
@@ -817,10 +827,31 @@ void imlib_histeq(image_t *img)
             img->pixels[i] =  s * hist[img->pixels[i]];
         }
 
-        fb_free();
     } else {
-        // do nothing for now
+
+        uint16_t *pixels = (uint16_t *) img->pixels;
+
+        /* compute image histogram */
+        for (int i=0; i<a; i++) {
+            hist[yuv_table[pixels[i]*3]+128] += 1;
+        }
+
+        /* compute the CDF */
+        for (int i=0, sum=0; i<IM_G_HIST_SIZE; i++) {
+            sum += hist[i];
+            hist[i] = sum;
+        }
+
+        for (int i=0; i<a; i++) {
+            uint8_t y = s * hist[yuv_table[pixels[i]*3]+128];
+            int8_t u = yuv_table[(pixels[i]*3)+1];
+            int8_t v = yuv_table[(pixels[i]*3)+2];
+            pixels[i] = imlib_yuv_to_rgb(y, u, v);
+        }
+
     }
+
+    fb_free();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
