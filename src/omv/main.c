@@ -42,6 +42,7 @@
 #include "spi.h"
 #include "i2c.h"
 #include "uart.h"
+#include "dac.h"
 #include "extint.h"
 #include "servo.h"
 
@@ -318,6 +319,7 @@ soft_reset:
     i2c_init0();
     spi_init0();
     uart_init0();
+    dac_init();
     pyb_usb_init0();
     sensor_init0();
     fb_alloc_init0();
