@@ -74,6 +74,11 @@ class Bootloader:
         self.ok_button = builder.get_object("fw_ok_button")
         self.cancel_button = builder.get_object("fw_cancel_button")
 
+        # Firmware progress
+        self.fw_progress.set_text("")
+        self.fw_progress.set_fraction(0.0)
+
+        # Buttons initial state
         self.ok_button.set_sensitive(True)
         self.cancel_button.set_sensitive(True)
         self.fw_path_button.set_sensitive(True)
@@ -82,6 +87,9 @@ class Bootloader:
         self.last_fw_path = self.config.get("main", "last_fw_path")
         if os.path.isfile(self.last_fw_path) == False:
             self.last_fw_path = ""
+
+        # Set firmware path entry
+        self.fw_path_entry.set_text(self.last_fw_path)
 
         # Connect signals
         self.dialog.connect("close", self.on_dialog_close)
@@ -110,16 +118,24 @@ class Bootloader:
 
         dialog.destroy()
 
+    def run(self):
+        # Run bootloader dialog
+        self.dialog.run()
+
     # Fake multitasking :P
-    def task_init(self, state):
-        state["next"] = self.task_connect
+    def task(self, state):
+        if (self.running == False or state["next"](state) == False):
+            self.dialog.hide()
+            return False
         return True
 
-    def task_connect(self, state):
+    def task_init(self, state):
+        openmv.disconnect()
         try:
             # Attempt to connect to bootloader
-            openmv.init(self.port, self.baud, timeout=0.050)
+            openmv.init(self.port, baudrate=self.baud, timeout=0.050)
             if openmv.bootloader_start():
+                openmv.set_timeout(1)
                 state["next"] = self.task_erase
                 state["bar"].set_text("Erasing...")
                 self.cancel_button.set_sensitive(False)
@@ -138,8 +154,8 @@ class Bootloader:
 
     def task_erase(self, state):
         sector = state["sector"]
-        state["bar"].set_text("Erasing sector %d/%d"%((sector-FLASH_SECTOR_START+1), FLASH_SECTOR_END-FLASH_SECTOR_START+1))
         state["bar"].set_fraction((sector-FLASH_SECTOR_START+1)/float(FLASH_SECTOR_END-FLASH_SECTOR_START+1))
+        state["bar"].set_text("Erasing sector %d/%d"%((sector-FLASH_SECTOR_START+1), FLASH_SECTOR_END-FLASH_SECTOR_START+1))
         openmv.flash_erase(sector)
         sector += 1
         if (sector == FLASH_SECTOR_END+1):
@@ -158,35 +174,14 @@ class Bootloader:
 
         xfer_bytes += chunk
         state["xfer_bytes"] = xfer_bytes
-        state["bar"].set_text("Uploading %d/%d"%(xfer_bytes, xfer_total))
         state["bar"].set_fraction(xfer_bytes/float(xfer_total))
+        state["bar"].set_text("Uploading %d/%d"%(xfer_bytes, xfer_total))
 
         if (xfer_bytes == xfer_total):
             openmv.bootloader_reset()
-            state["dialog"].hide()
+            openmv.disconnect()
             return False
         return True
-
-    def task(self, state):
-        return self.running and state["next"](state)
-
-    def run(self):
-        self.running = True
-        self.flash_msg = 1
-
-        self.ok_button.set_sensitive(True)
-        self.cancel_button.set_sensitive(True)
-        self.fw_path_button.set_sensitive(True)
-
-        # Firmware progress
-        self.fw_progress.set_text("")
-        self.fw_progress.set_fraction(0.0)
-
-        # Last firmware path
-        self.fw_path_entry.set_text(self.last_fw_path)
-
-        # Run bootloader dialog
-        self.dialog.run()
 
     def on_dialog_close(self, widget, event=None):
         self.dialog.hide()
@@ -201,7 +196,7 @@ class Bootloader:
             fw_path = self.fw_path_entry.get_text()
             try:
                 with open(fw_path, 'rb') as f:
-                    buf= f.read()
+                    buf = f.read()
             except Exception as e:
                 self.show_message_dialog(gtk.MESSAGE_ERROR, "Failed to open file %s"%str(e))
                 self.dialog.hide()
@@ -210,8 +205,11 @@ class Bootloader:
             self.last_fw_path = fw_path
             self.config.set("main", "last_fw_path", self.last_fw_path)
 
-            self.state={ "next":self.task_init, "buf":buf, "sector":FLASH_SECTOR_START, "running":True,
+            self.state={ "next":self.task_init, "buf":buf, "sector":FLASH_SECTOR_START,
                          "bar":self.fw_progress, "dialog":self.dialog, "xfer_bytes":0, "xfer_total":len(buf)}
+
+            self.flash_msg = 1
+            self.running = True
 
             gobject.gobject.idle_add(self.task, self.state)
         else:
@@ -604,7 +602,8 @@ class OMVGtk:
         if (self.connected):
             openmv.reset()
         # Create bootloader object
-        Bootloader(self.builder, self.config).run()
+        self.bootloader = None 
+        self.bootloader = Bootloader(self.builder, self.config).run()
 
     def button_pressed(self, widget, event):
         self.x1 = int(event.x)
