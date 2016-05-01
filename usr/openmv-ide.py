@@ -60,9 +60,6 @@ OPENMV_BOARDS = ['OpenMV1', 'OpenMV2']
 class Bootloader:
     def __init__(self, builder, config):
         self.config = config
-        self.port = config.get("main", "serial_port")
-        self.baud = int(config.get("main", "baudrate"))
-
         self.parent = builder.get_object("top_window")
         self.dialog = builder.get_object("fw_dialog")
         self.dialog.set_transient_for(self.parent)
@@ -73,23 +70,6 @@ class Bootloader:
 
         self.ok_button = builder.get_object("fw_ok_button")
         self.cancel_button = builder.get_object("fw_cancel_button")
-
-        # Firmware progress
-        self.fw_progress.set_text("")
-        self.fw_progress.set_fraction(0.0)
-
-        # Buttons initial state
-        self.ok_button.set_sensitive(True)
-        self.cancel_button.set_sensitive(True)
-        self.fw_path_button.set_sensitive(True)
-
-        # Firmware file path
-        self.last_fw_path = self.config.get("main", "last_fw_path")
-        if os.path.isfile(self.last_fw_path) == False:
-            self.last_fw_path = ""
-
-        # Set firmware path entry
-        self.fw_path_entry.set_text(self.last_fw_path)
 
         # Connect signals
         self.dialog.connect("close", self.on_dialog_close)
@@ -119,6 +99,25 @@ class Bootloader:
         dialog.destroy()
 
     def run(self):
+        # Read config options
+        self.port = self.config.get("main", "serial_port")
+        self.baud = int(self.config.get("main", "baudrate"))
+        self.last_fw_path = self.config.get("main", "last_fw_path")
+
+        # Firmware progress
+        self.fw_progress.set_text("")
+        self.fw_progress.set_fraction(0.0)
+
+        # Buttons initial state
+        self.ok_button.set_sensitive(True)
+        self.cancel_button.set_sensitive(True)
+        self.fw_path_button.set_sensitive(True)
+
+        # Set firmware path entry
+        if os.path.isfile(self.last_fw_path) == False:
+            self.last_fw_path = ""
+        self.fw_path_entry.set_text(self.last_fw_path)
+
         # Run bootloader dialog
         self.dialog.run()
 
@@ -440,6 +439,9 @@ class OMVGtk:
         }
         self.builder.connect_signals(signals)
 
+        # Create bootloader object
+        self.bootloader = Bootloader(self.builder, self.config)
+
     def show_message_dialog(self, msg_type, msg):
         message = gtk.MessageDialog(parent=self.window, flags=gtk.DIALOG_DESTROY_WITH_PARENT,
                                     type=msg_type, buttons=gtk.BUTTONS_OK, message_format=msg)
@@ -601,9 +603,7 @@ class OMVGtk:
     def bootloader_clicked(self, widget):
         if (self.connected):
             openmv.reset()
-        # Create bootloader object
-        self.bootloader = None 
-        self.bootloader = Bootloader(self.builder, self.config).run()
+        self.bootloader.run()
 
     def button_pressed(self, widget, event):
         self.x1 = int(event.x)
