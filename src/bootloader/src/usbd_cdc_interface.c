@@ -2,8 +2,9 @@
 #include <usbd_cdc.h>
 #include "flash.h"
 
-#define APP_RX_DATA_SIZE  2048
-#define APP_TX_DATA_SIZE  2048
+#define MAIN_FW_ADDR        0x08010000
+#define APP_RX_DATA_SIZE    2048
+#define APP_TX_DATA_SIZE    2048
 
 USBD_CDC_LineCodingTypeDef LineCoding =
 {
@@ -191,9 +192,10 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
 
     uint32_t *cmd_buf = (uint32_t*) Buf; 
     uint32_t cmd = *cmd_buf++;
+
     switch (cmd) {
         case BOOTLDR_START:
-            flash_offset = 0x08010000;
+            flash_offset = MAIN_FW_ADDR;
             ide_connected = 1;
             // Send back the START command as an ACK
             CDC_Tx(Buf, 4);
