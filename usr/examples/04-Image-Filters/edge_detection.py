@@ -19,6 +19,13 @@ sensor.set_framesize(sensor.QQVGA) # or sensor.QVGA (or others)
 sensor.skip_frames(10) # Let new settings take affect.
 clock = time.clock() # Tracks FPS.
 
+# On the OV7725 sensor, edge detection can be enhanced
+# significantly by setting the sharpness/edge registers.
+# Note: This will be implemented as a function later.
+if (sensor.get_id() == sensor.OV7725):
+    sensor.__write_reg(0xAC, 0xDF)
+    sensor.__write_reg(0x8F, 0xFF)
+
 while(True):
     clock.tick() # Track elapsed milliseconds between snapshots().
     img = sensor.snapshot() # Take a picture and return the image.
