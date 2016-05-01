@@ -245,8 +245,7 @@ class OMVGtk:
             self.builder.get_object('exec_button'),
             self.builder.get_object('zoomin_button'),
             self.builder.get_object('zoomout_button'),
-            self.builder.get_object('bestfit_button'),
-            self.builder.get_object('refresh_button')]
+            self.builder.get_object('bestfit_button')]
 
         self.connected = False
         map(lambda x:x.set_sensitive(False), self.controls)
@@ -434,7 +433,6 @@ class OMVGtk:
             "on_zoomout_clicked"            : self.zoomout_clicked,
             "on_bestfit_clicked"            : self.bestfit_clicked,
             "on_preferences_clicked"        : self.preferences_clicked,
-            "on_updatefb_clicked"           : self.updatefb_clicked,
             "on_vte_size_allocate"          : self.scroll_terminal,
         }
         self.builder.connect_signals(signals)
@@ -447,11 +445,6 @@ class OMVGtk:
                                     type=msg_type, buttons=gtk.BUTTONS_OK, message_format=msg)
         message.run()
         message.destroy()
-
-    def refresh_gui(self, delay=0.0001, wait=0.0001):
-        sleep(delay)
-        gtk.main_iteration_do(block=False)
-        sleep(wait)
 
     def connect(self):
         connected = False
@@ -596,9 +589,6 @@ class OMVGtk:
             openmv.enable_jpeg(self.enable_jpeg)
 
         dialog.hide()
-
-    def updatefb_clicked(self, widget):
-        openmv.fb_update()
 
     def bootloader_clicked(self, widget):
         if (self.connected):
