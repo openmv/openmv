@@ -1,4 +1,22 @@
 # Change Log
+## [1.4](https://github.com/openmv/openmv/releases/tag/v1.4) (2016-05-02)
+IDE:
+* Fix text editor undo bug.
+* New bootloader dialog.
+* Fix and update example scripts.
+* Fix preferences dialog.
+* Remove refresh button.
+
+Firmware:
+* Fixed file wrapper initialization bug.
+* New CDC-based bootloader (works on Linux, Windows and OSX)
+* Implement new sensor functions (disable AGC and AEC)
+* Fix WINC bug overriding sent data.
+
+Image processing:
+* Color codes support.
+* New color blob detector.
+
 ## [1.3](https://github.com/openmv/openmv/releases/tag/v1.3) (2016-04-07)
 IDE:
 * Implement the IDE copy color function.
