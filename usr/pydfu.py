@@ -20,6 +20,7 @@ import sys
 import usb.core
 import usb.util
 import zlib
+import os
 
 # VID/PID
 __VID = 0x0483
@@ -466,6 +467,24 @@ def write_elements(elements, mass_erase_used, progress=None):
             if progress:
                 progress(elem_addr, addr - elem_addr, elem_size)
 
+def write_bin(path, progress=None):
+    try:
+        with open(path, 'rb') as f:
+            buf = f.read()
+    except Exception as e:
+        print(e)
+        return               
+    
+    xfer_bytes = 0 
+    xfer_total = len(buf)
+    
+    while xfer_bytes < xfer_total:
+        # Send chunk
+        chunk = min (64, xfer_total-xfer_bytes)
+        write_page(buf[xfer_bytes:xfer_bytes+chunk], xfer_bytes)
+        xfer_bytes += chunk
+        if (progress):
+            progress(0x08000000+xfer_bytes, xfer_bytes, xfer_total)
 
 def cli_progress(addr, offset, size):
     """Prints a progress report suitable for use on the command line."""
@@ -524,14 +543,25 @@ def main():
         mass_erase()
 
     if args.path:
-        elements = read_dfu_file(args.path)
-        if not elements:
-            return
-        print("Writing memory...")
-        write_elements(elements, args.mass_erase, progress=cli_progress)
+        ext = os.path.splitext(args.path)[1]
+        if ext == ".bin":
+            print("Writing binary...")
+            write_bin(args.path, progress=cli_progress)
 
-        print("Exiting DFU...")
-        exit_dfu()
+            print("Exiting DFU...")
+            exit_dfu()
+        elif (ext == '.dfu'):
+            elements = read_dfu_file(args.path)
+            if not elements:
+                return
+            print("Writing memory...")
+            write_elements(elements, args.mass_erase, progress=cli_progress)
+
+            print("Exiting DFU...")
+            exit_dfu()
+        else:
+            print("File format not supported!")
+
         return
 
     print("No command specified")
