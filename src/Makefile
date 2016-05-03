@@ -359,14 +359,19 @@ $(BUILD)/$(BIN).bin: objs
 	$(PYTHON) $(DFU) -b 0x08010000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/$(BIN).dfu
 	$(SIZE) $(FW_DIR)/$(BIN).elf
 
+# This target generates the bootloader. It generats the bootloader binary twice,
+# The first time without padding, to generate the bootloader.dfu. Second time 
+# with padding up to the main fw image, to generate a contiguous firmware.bin image.
 $(BUILD)/$(BOOT_BIN).bin: boot_objs
 	$(CCP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32f4xx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
 	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOT_BIN).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOT_BIN).elf $(FW_DIR)/$(BOOT_BIN).bin
 	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOT_BIN).bin $(FW_DIR)/$(BOOT_BIN).dfu
+	$(OBJCOPY) -Obinary --pad-to=0x08010000 $(FW_DIR)/$(BOOT_BIN).elf $(FW_DIR)/$(BOOT_BIN).bin
 	$(SIZE) $(FW_DIR)/$(BOOT_BIN).elf
 
 $(BUILD)/firmware.dfu: $(BUILD)/$(BIN).bin $(BUILD)/$(BOOT_BIN).bin
+	cat $(FW_DIR)/$(BOOT_BIN).bin $(FW_DIR)/$(BIN).bin > $(FW_DIR)/firmware.bin
 	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOT_BIN).bin -b 0x08010000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/firmware.dfu
 
 size:
@@ -387,3 +392,7 @@ flash_boot::
 # Flash the bootloader + main firmware image
 flash::
 	../usr/pydfu.py -m -u $(FW_DIR)/firmware.dfu
+
+# Flash the bootloader + main firmware image
+flash_bin::
+	../usr/pydfu.py -m -u $(FW_DIR)/firmware.bin
