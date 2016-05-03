@@ -1,5 +1,6 @@
-BIN     = openmv
-BOOT_BIN= bootloader
+OPENMV = openmv
+BOOTLOADER = bootloader
+FIRMWARE = firmware
 CC      = arm-none-eabi-gcc
 AS      = arm-none-eabi-as
 LD      = arm-none-eabi-ld
@@ -89,23 +90,23 @@ BOOT_LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat
              -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
 
 #------------- Libraries ----------------#
-#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
-OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
-OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
-OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
-#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ComplexMathFunctions/*.o)
-#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ControllerFunctions/*.o)
-#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FilteringFunctions/*.o)
-#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/StatisticsFunctions/*.o)
-#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
-#OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/TransformFunctions/*.o)
-OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
-OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/*.o)
-OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
-OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ComplexMathFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ControllerFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FilteringFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/StatisticsFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
+#FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/TransformFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
-OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	main.o                                  \
 	xalloc.o                                \
 	fb_alloc.o                              \
@@ -123,16 +124,16 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
 	)
 
 ifeq ($(TARGET), OPENMV1)
-OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	sdcard_spi.o                            \
 	)
 else
-OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/,    \
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	sdcard_sdio.o                           \
 	)
 endif
 
-OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	blob.o                                  \
 	fmath.o                                 \
 	fsort.o                                 \
@@ -168,7 +169,7 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	im_filter.o                             \
    )
 
-OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_helper.o                             \
 	py_sensor.o                             \
 	py_image.o                              \
@@ -181,22 +182,22 @@ OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	)
 
 ifeq ($(TARGET), OPENMV1)
-OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 	system_stm32f4xx.o                          \
 	startup_stm32f407xx.o                       \
 	)
 else
-OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 	system_stm32f4xx.o                          \
 	startup_stm32f427xx.o                       \
 	)
 endif
 
 #------------- MicroPy Core -------------------#
-OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
 
 #------------- MicroPy Objects ----------------#
-OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	stm32f4xx_it.o          \
 	usbd_conf.o             \
 	usbd_desc.o             \
@@ -248,13 +249,13 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
     )
 
 #------------- MicroPy Objects ----------------#
-OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	libc/string0.o          \
 	netutils/netutils.o     \
 	timeutils/timeutils.o   \
     )
 
-OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	math.o          \
 	asinfacosf.o    \
 	atanf.o         \
@@ -282,12 +283,12 @@ OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	wf_tgamma.o     \
     )
 
-OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
 	readline.o               \
     )
 
 
-OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	core/src/usbd_core.o                            \
 	core/src/usbd_ctlreq.o                          \
 	core/src/usbd_ioreq.o                           \
@@ -336,63 +337,65 @@ export TOP_DIR
 export BUILD
 export TARGET
 ###################################################
-all: $(BUILD)/firmware.dfu
+all: $(OPENMV)
 
 $(BUILD):
 	$(MKDIR) -p $@
 
-objs: | $(BUILD)
+BOOTLOADER_OBJS:
+	$(MAKE)  -C $(BOOT_DIR)           BUILD=$(BUILD)/$(BOOT_DIR)
+
+FIRMWARE_OBJS:
 	$(MAKE)  -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR)
 	$(MAKE)  -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)
 	$(MAKE)  -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
 	$(MAKE)  -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET) QSTR_DEFS=$(OMV_QSTR_DEFS)
-	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
 	$(MAKE)  -C $(WINC1500_DIR)       BUILD=$(BUILD)/$(WINC1500_DIR)
+	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
 
-boot_objs: | $(BUILD)
-	$(MAKE)  -C $(BOOT_DIR)       BUILD=$(BUILD)/$(BOOT_DIR)
-
-$(BUILD)/$(BIN).bin: objs
+# This target generates the main/app firmware image located at 0x08010000
+$(FIRMWARE): FIRMWARE_OBJS
 	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
-	$(CC) $(LDFLAGS) $(OBJ) $(LIB) -o $(FW_DIR)/$(BIN).elf
-	$(OBJCOPY) -Obinary $(FW_DIR)/$(BIN).elf $(FW_DIR)/$(BIN).bin
-	$(PYTHON) $(DFU) -b 0x08010000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/$(BIN).dfu
-	$(SIZE) $(FW_DIR)/$(BIN).elf
+	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
+	$(PYTHON) $(DFU) -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
-# This target generates the bootloader. It generats the bootloader binary twice,
-# The first time without padding, to generate the bootloader.dfu. Second time 
-# with padding up to the main fw image, to generate a contiguous firmware.bin image.
-$(BUILD)/$(BOOT_BIN).bin: boot_objs
+# This target generates the bootloader. The bootloader binary is generated twice,
+# once without padding, to generate the bootloader.dfu file, and once with padding
+# up to the main fw image (0x08010000), to generate a contiguous firmware.bin image.
+$(BOOTLOADER): BOOTLOADER_OBJS
 	$(CCP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32f4xx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
-	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOT_BIN).elf
-	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOT_BIN).elf $(FW_DIR)/$(BOOT_BIN).bin
-	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOT_BIN).bin $(FW_DIR)/$(BOOT_BIN).dfu
-	$(OBJCOPY) -Obinary --pad-to=0x08010000 $(FW_DIR)/$(BOOT_BIN).elf $(FW_DIR)/$(BOOT_BIN).bin
-	$(SIZE) $(FW_DIR)/$(BOOT_BIN).elf
+	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
+	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
+	$(OBJCOPY) -Obinary --pad-to=0x08010000 $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 
-$(BUILD)/firmware.dfu: $(BUILD)/$(BIN).bin $(BUILD)/$(BOOT_BIN).bin
-	cat $(FW_DIR)/$(BOOT_BIN).bin $(FW_DIR)/$(BIN).bin > $(FW_DIR)/firmware.bin
-	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOT_BIN).bin -b 0x08010000:$(FW_DIR)/$(BIN).bin $(FW_DIR)/firmware.dfu
+# This target generates a combined bootloader+main firmware image.
+$(OPENMV): $(BUILD) $(FIRMWARE) $(BOOTLOADER)
+	cat $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
+	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
+	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
+	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
 
 size:
-	$(SIZE) $(FW_DIR)/$(BIN).elf
-	$(SIZE) $(FW_DIR)/$(BOOT_BIN).elf
+	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
+	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
 
 clean:
 	$(RM) -fr $(BUILD)
 
-# Flash the main firmware image
-flash_image::
-	../usr/pydfu.py -u $(FW_DIR)/$(BIN).dfu
-
 # Flash the bootloader
 flash_boot::
-	../usr/pydfu.py -u $(FW_DIR)/$(BOOT_BIN).dfu
+	../usr/pydfu.py -u $(FW_DIR)/$(BOOTLOADER).dfu
 
-# Flash the bootloader + main firmware image
-flash::
-	../usr/pydfu.py -m -u $(FW_DIR)/firmware.dfu
+# Flash the main firmware image
+flash_image::
+	../usr/pydfu.py -u $(FW_DIR)/$(FIRMWARE).dfu
 
-# Flash the bootloader + main firmware image
+# Flash the bootloader + main firmware image (DFU)
+flash_dfu::
+	../usr/pydfu.py -m -u $(FW_DIR)/$(OPENMV).dfu
+
+# Flash the bootloader + main firmware image (binary)
 flash_bin::
-	../usr/pydfu.py -m -u $(FW_DIR)/firmware.bin
+	../usr/pydfu.py -m -u $(FW_DIR)/$(OPENMV).bin
