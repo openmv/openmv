@@ -84,9 +84,9 @@
 extern const uint16_t rainbow_table[256];
 
 // MLX variables
-static float *a_ij = 0;
-static float *b_ij = 0;
-static float *alpha_ij = 0;
+static float *a_ij = NULL;
+static float *b_ij = NULL;
+static float *alpha_ij = NULL;
 static float v_th, k_t1, k_t2, tgc, emissivity, ksta, alpha_cp, ks4, a_cp, b_cp;
 
 static int width = 0;
@@ -119,10 +119,10 @@ static float calculate_Ta() // ambient temp
 
             // Write device configuration value.
             uint8_t IR_refresh_rate = 0x8; // 64 Hz
-            uint8_t ADC_resolution = 0x1; // 16-bits
+            uint8_t ADC_resolution = 0x3; // 18-bits
             uint8_t lsb = (ADC_resolution << 4) | IR_refresh_rate;
             // Normal Operation Mode - Continuous Measurment Mode
-            // ADC set to 16 bit resolution - IR Refresh rate = 64 Hz
+            // ADC set to 18 bit resolution - IR Refresh rate = 64 Hz
             uint8_t msb = 0x44;
             // ADC low reference enabled - EEPROM enabled
             // I2C FM+ enabled
@@ -193,6 +193,16 @@ static mp_obj_t py_fir_deinit()
             width = 0;
             height = 0;
             type = FIR_NONE;
+
+            if (a_ij) {
+                a_ij = NULL;
+            }
+            if (b_ij) {
+                b_ij = NULL;
+            }
+            if (alpha_ij) {
+                alpha_ij = NULL;
+            }
             return mp_const_none;
     }
     return mp_const_none;
@@ -230,10 +240,10 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             // Write device configuration value.
             uint8_t IR_refresh_rate = 0x8; // 64 Hz
-            uint8_t ADC_resolution = 0x1; // 16-bits
+            uint8_t ADC_resolution = 0x3; // 18-bits
             uint8_t lsb = (ADC_resolution << 4) | IR_refresh_rate;
             // Normal Operation Mode - Continuous Measurment Mode
-            // ADC set to 16 bit resolution - IR Refresh rate = 64 Hz
+            // ADC set to 18 bit resolution - IR Refresh rate = 64 Hz
             uint8_t msb = 0x44;
             // ADC low reference enabled - EEPROM enabled
             // I2C FM+ enabled
