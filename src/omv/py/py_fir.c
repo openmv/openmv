@@ -83,13 +83,12 @@
 // Grayscale to RGB565 conversion
 extern const uint16_t rainbow_table[256];
 
-extern float _a_ij; // see linker script
-extern float _b_ij; // see linker script
-extern float _alpha_ij; // see linker script
-static float *a_ij = &_a_ij; // 64 floats
-static float *b_ij = &_b_ij; // 64 floats
-static float *alpha_ij = &_alpha_ij; // 64 floats
+// MLX variables
+static float *a_ij = 0;
+static float *b_ij = 0;
+static float *alpha_ij = 0;
 static float v_th, k_t1, k_t2, tgc, emissivity, ksta, alpha_cp, ks4, a_cp, b_cp;
+
 static int width = 0;
 static int height = 0;
 static enum { FIR_NONE, FIR_SHIELD } type = FIR_NONE;
@@ -207,10 +206,14 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             return mp_const_none;
         case FIR_SHIELD:
         {
-            soft_i2c_init();
             width = 16;
             height = 4;
             type = FIR_SHIELD;
+            soft_i2c_init();
+
+            a_ij = xalloc(64 * sizeof(*a_ij));
+            b_ij = xalloc(64 * sizeof(*b_ij));
+            alpha_ij = xalloc(64 * sizeof(*alpha_ij));
 
             uint8_t eeprom[256];
             // Read the whole eeprom.
@@ -321,17 +324,21 @@ mp_obj_t py_fir_read_ta()
 
 mp_obj_t py_fir_read_ir()
 {
-    if (type == FIR_NONE) return mp_const_none;
-    float Ta = calculate_Ta(), To[64], min = FLT_MAX, max = FLT_MIN;
-    calculate_To(Ta, To);
+    if (type == FIR_NONE) {
+        return mp_const_none;
+    }
 
-    // Copy temperature array.
-    float To_rot[64], *To_rot_p = To_rot;
-    memcpy(To_rot, To, sizeof(To));
+    float To[64], To_rot[64];
+    float Ta = calculate_Ta();
+    float min = FLT_MAX, max = FLT_MIN;
+
+    // Calculate object temperatures
+    calculate_To(Ta, To_rot);
+
     // Rotate temperatures array (sensor memory is read column wise).
-    for (int x=15; x>=0; x--) {
+    for (int x=15, r=0; x>=0; x--) {
         for (int y=0; y<4; y++) {
-            float temp = To[x+(y*16)] = *To_rot_p++;
+            float temp = To[y*16 + x] = To_rot[r++];
             min = IM_MIN(min, temp);
             max = IM_MAX(max, temp);
         }
@@ -339,11 +346,12 @@ mp_obj_t py_fir_read_ir()
 
     mp_obj_t tuple[4];
     tuple[0] = mp_obj_new_float(Ta);
-    tuple[1] = mp_obj_new_list(64, NULL);
+    tuple[1] = mp_obj_new_list(0, NULL);
     tuple[2] = mp_obj_new_float(min);
     tuple[3] = mp_obj_new_float(max);
+
     for (int i=0; i<64; i++) {
-        mp_obj_list_store(tuple[1], mp_obj_new_int(i), mp_obj_new_float(To[i]));
+        mp_obj_list_append(tuple[1], mp_obj_new_float(To[i]));
     }
     return mp_obj_new_tuple(4, tuple);
 }
