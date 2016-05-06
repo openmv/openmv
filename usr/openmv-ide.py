@@ -70,6 +70,7 @@ class Bootloader:
 
         self.ok_button = builder.get_object("fw_ok_button")
         self.cancel_button = builder.get_object("fw_cancel_button")
+        self.erase_fs_check = builder.get_object("erase_fs_check")
 
         # Connect signals
         self.dialog.connect("close", self.on_dialog_close)
@@ -153,8 +154,9 @@ class Bootloader:
 
     def task_erase(self, state):
         sector = state["sector"]
-        state["bar"].set_fraction((sector-FLASH_SECTOR_START+1)/float(FLASH_SECTOR_END-FLASH_SECTOR_START+1))
-        state["bar"].set_text("Erasing sector %d/%d"%((sector-FLASH_SECTOR_START+1), FLASH_SECTOR_END-FLASH_SECTOR_START+1))
+        sector_offset = state["sector_offset"]
+        state["bar"].set_fraction((sector-sector_offset+1)/float(FLASH_SECTOR_END-sector_offset+1))
+        state["bar"].set_text("Erasing sector %d/%d"%((sector-sector_offset+1), FLASH_SECTOR_END-sector_offset+1))
         openmv.flash_erase(sector)
         sector += 1
         if (sector == FLASH_SECTOR_END+1):
@@ -204,7 +206,12 @@ class Bootloader:
             self.last_fw_path = fw_path
             self.config.set("main", "last_fw_path", self.last_fw_path)
 
-            self.state={ "next":self.task_init, "buf":buf, "sector":FLASH_SECTOR_START,
+            if self.erase_fs_check.get_active():
+                sector_offset = FLASH_SECTOR_START
+            else:
+                sector_offset = FLASH_SECTOR_START + 3
+
+            self.state={ "next":self.task_init, "buf":buf, "sector":sector_offset, "sector_offset": sector_offset,
                          "bar":self.fw_progress, "dialog":self.dialog, "xfer_bytes":0, "xfer_total":len(buf)}
 
             self.flash_msg = 1
