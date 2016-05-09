@@ -52,7 +52,9 @@ endif
 # Compiler Flags
 CFLAGS += -std=gnu99 -Wall -Werror -mlittle-endian -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
 CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000 -D$(TARGET)
+CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000\
+          -D$(TARGET) -DSTM32_HAL_H='<stm32f4xx_hal.h>'
+
 ifeq ($(TARGET), OPENMV1)
     CFLAGS += -DSTM32F407xx
 else
@@ -198,7 +200,7 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
 
 #------------- MicroPy Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
-	stm32f4xx_it.o          \
+	stm32_it.o              \
 	usbd_conf.o             \
 	usbd_desc.o             \
 	usbd_cdc_interface.o    \
@@ -206,20 +208,15 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pendsv.o                \
 	bufhelper.o             \
 	usb.o                   \
-	printf.o                \
 	gchelper.o              \
 	gccollect.o             \
 	pybstdio.o              \
-	pyexec.o                \
 	help.o                  \
 	input.o                 \
 	import.o                \
 	lexerfatfs.o            \
 	flash.o                 \
-	diskio.o                \
-    fsusermount.o           \
 	storage.o               \
-	file.o                  \
 	rtc.o                   \
 	irq.o                   \
 	adc.o                   \
@@ -237,7 +234,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	servo.o                 \
 	rng.o                   \
 	led.o                   \
-	mphal.o                 \
+	mphalport.o             \
+	fatfs_port.o            \
+	builtin_open.o          \
 	extint.o                \
 	modpyb.o                \
 	modstm.o                \
@@ -250,6 +249,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 
 #------------- MicroPy Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
+	utils/pyexec.o          \
+	utils/pyhelp.o          \
+	utils/printf.o          \
 	libc/string0.o          \
 	netutils/netutils.o     \
 	timeutils/timeutils.o   \
@@ -297,6 +299,17 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	class/src/usbd_msc_scsi.o           \
 	class/src/usbd_msc_data.o           \
 	)
+
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
+	fsusermount.o       \
+	vfs_fat.o           \
+	vfs_fat_ffconf.o    \
+	vfs_fat_diskio.o    \
+	vfs_fat_file.o      \
+	vfs_fat_lexer.o     \
+	vfs_fat_misc.o      \
+    )
+
 
 # Bootloader object files
 BOOT_OBJ += $(wildcard $(BUILD)/$(BOOT_DIR)/src/*.o)

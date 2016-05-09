@@ -608,7 +608,7 @@ typedef struct _winc_obj_t {
 static const winc_obj_t winc_obj = {{(mp_obj_type_t*)&mod_network_nic_type_winc}};
 
 // Initialise the module using the given SPI bus and pins and return a winc object.
-static mp_obj_t winc_make_new(mp_obj_t type_in, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args)
+static mp_obj_t winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_uint_t n_kw, const mp_obj_t *args)
 {
     // check arguments
     mp_arg_check_num(n_args, n_kw, 0, 1, false);
@@ -708,7 +708,7 @@ static mp_obj_t winc_disconnect(mp_obj_t self_in)
 
 static mp_obj_t winc_isconnected(mp_obj_t self_in)
 {
-    return MP_BOOL(wlan_connected && ip_obtained);
+    return mp_obj_new_bool(wlan_connected && ip_obtained);
 }
 
 static mp_obj_t winc_ifconfig(mp_obj_t self_in)

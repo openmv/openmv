@@ -27,7 +27,6 @@
 #include "gc.h"
 #include "gccollect.h"
 #include "readline.h"
-#include "pyexec.h"
 #include "extint.h"
 #include "usb.h"
 #include "storage.h"

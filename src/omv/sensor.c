@@ -10,7 +10,8 @@
 #include <string.h>
 #include <stm32f4xx_hal.h>
 
-#include "irqs.h"
+#include "mp.h"
+#include "irq.h"
 #include "sccb.h"
 #include "ov9650.h"
 #include "ov2640.h"
@@ -116,7 +117,7 @@ static int dcmi_config(uint32_t jpeg_mode)
     }
 
     // Configure and enable DCMI IRQ Channel
-    HAL_NVIC_SetPriority(DCMI_IRQn, IRQ_DCMI_PRE_PRI, IRQ_DCMI_SUB_PRI);
+    HAL_NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI, IRQ_SUBPRI_DCMI);
     HAL_NVIC_EnableIRQ(DCMI_IRQn);
 
     // Uncomment the following to configure DCMI crop for testing (use width*2-1 and height-1).
@@ -143,7 +144,7 @@ static int dma_config()
     DMAHandle.Init.PeriphBurst      = DMA_PBURST_SINGLE;        /* Peripheral burst                 */
 
     // Configure and disable DMA IRQ Channel
-    HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_DMA21_PRE_PRI, IRQ_DMA21_SUB_PRI);
+    HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21, IRQ_SUBPRI_DMA21);
     HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 
     // Initialize the DMA stream

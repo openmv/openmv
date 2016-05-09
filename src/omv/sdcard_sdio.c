@@ -11,7 +11,7 @@
 #include <core_cmInstr.h>
 
 #include "mp.h"
-#include "irqs.h"
+#include "irq.h"
 #include "ffconf.h"
 #include "diskio.h"
 #include "systick.h"
@@ -57,7 +57,7 @@ static void dma_init(DMA_Stream_TypeDef *dma_stream, uint32_t dma_channel, uint3
     }
 
     // Configure and enable SD IRQ Channel
-    HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, IRQ_DMA23_PRE_PRI, IRQ_DMA23_SUB_PRI);
+    HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, IRQ_PRI_DMA, IRQ_SUBPRI_DMA);
     HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
 }
 
@@ -106,7 +106,7 @@ void sdcard_init(void)
     // Configure and enable DMA IRQ Channel
     // SDIO IRQ should have a higher priority than DMA IRQ because it needs to
     // preempt the DMA irq handler to set a flag indicating the end of transfer.
-    HAL_NVIC_SetPriority(SDIO_IRQn, IRQ_SDIO_PRE_PRI, IRQ_SDIO_SUB_PRI);
+    HAL_NVIC_SetPriority(SDIO_IRQn, IRQ_PRI_SDIO, IRQ_SUBPRI_SDIO);
     HAL_NVIC_EnableIRQ(SDIO_IRQn);
 }
 

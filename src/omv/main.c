@@ -26,7 +26,6 @@
 #include "stackctrl.h"
 #include "gccollect.h"
 #include "readline.h"
-#include "pyexec.h"
 #include "timer.h"
 #include "pin.h"
 #include "usb.h"
@@ -37,6 +36,11 @@
 #include "mdefs.h"
 #include "modnetwork.h"
 
+#include "lib/utils/pyexec.h"
+#include "lib/fatfs/ff.h"
+#include "extmod/fsusermount.h"
+
+#include "irq.h"
 #include "rng.h"
 #include "led.h"
 #include "spi.h"
@@ -51,7 +55,6 @@
 #include "sdram.h"
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
-#include "irqs.h"
 
 #include "usbd_core.h"
 #include "usbd_desc.h"
@@ -65,9 +68,9 @@
 #include "py_fir.h"
 
 int errno;
-extern char _fatfs_buf;
+extern char _vfs_buf;
 extern char _stack_size;
-static FATFS *fatfs = (FATFS*) &_fatfs_buf;
+static fs_user_mount_t *vfs = (fs_user_mount_t *) &_vfs_buf;
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
@@ -280,6 +283,7 @@ int main(void)
 
     // Stack limit should be less than real stack size, so we
     // had chance to recover from limit hit.
+    mp_stack_ctrl_init();
     mp_stack_set_limit((char*)&_ram_end - (char*)&_heap_end - 1024);
 
     /* STM32F4xx HAL library initialization:
@@ -310,6 +314,14 @@ soft_reset:
     mp_init();
     mp_obj_list_init(mp_sys_path, 0);
     mp_obj_list_init(mp_sys_argv, 0);
+
+    // zero out the pointers to the mounted devices
+    memset(MP_STATE_PORT(fs_user_mount), 0, sizeof(MP_STATE_PORT(fs_user_mount)));
+
+    // Initialise low-level sub-systems.  Here we need to very basic things like
+    // zeroing out memory and resetting any of the sub-systems.  Following this
+    // we can run Python scripts (eg boot.py), but anything that is configurable
+    // by boot.py must be set after boot.py is run.
 
     readline_init0();
     pin_init0();
@@ -349,7 +361,17 @@ soft_reset:
     // Initialize storage
     if (sdcard_is_present()) {
         sdcard_init();
-        FRESULT res = f_mount(fatfs, "1:", 1);
+        // init the vfs object
+        vfs->str = "1:";
+        vfs->len = 2;
+        vfs->flags = 0;
+        //sdcard_init_vfs(vfs);
+
+        // put the sdcard device in slot 0 (it will be unused at this point)
+        MP_STATE_PORT(fs_user_mount)[0] = vfs;
+
+        // try to mount the flash
+        FRESULT res = f_mount(&vfs->fatfs, vfs->str, 1);
         if (res != FR_OK) {
             __fatal_error("could not mount SD\n");
         }
@@ -358,8 +380,19 @@ soft_reset:
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
     } else {
         storage_init();
+
+        // init the vfs object
+        vfs->str = "0:";
+        vfs->len = 2;
+        vfs->flags = 0;
+        pyb_flash_init_vfs(vfs);
+
+        // put the flash device in slot 0 (it will be unused at this point)
+        MP_STATE_PORT(fs_user_mount)[0] = vfs;
+
         // try to mount the flash
-        FRESULT res = f_mount(fatfs, "0:", 1);
+        FRESULT res = f_mount(&vfs->fatfs, vfs->str, 1);
+
         if (res == FR_NO_FILESYSTEM) {
             // create a fresh fs
             make_flash_fs();

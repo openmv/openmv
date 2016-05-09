@@ -60,16 +60,17 @@ _ram_end    = 0x10010000;   /* 64KB CCM */
 
 _fb_base    = 0x20000000;
 _stack_size = 0xC00;        /* minimum amount of stack */
-_heap_size  = 0xD900;       /* required amount of heap */
+_heap_size  = 0xD800;       /* required amount of heap */
 
 // Flash filesystem cache
 _fs_cache   = 0x20030000-(16*1024);
 
-// FatFS file buffer
-_fatfs_buf  = _fs_cache - (1024);
+// VFS sturct + FATFS file buffer
+// VFS struct size is 624 bytes
+_vfs_buf  = _fs_cache - (1024);
 
 // USB MSC bot data
-_msc_buf    = _fatfs_buf - (2048);
+_msc_buf    = _vfs_buf - (2048);
 
 // Image line buffer.
 // Maximum line * 2BPP * 2 (for double buffering).

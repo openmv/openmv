@@ -46,7 +46,7 @@ void xfree(void *mem)
 // frees if mem!=null and size==0
 void *xrealloc(void *mem, uint32_t size)
 {
-    mem = gc_realloc(mem, size);
+    mem = gc_realloc(mem, size, true);
     if (size && (mem == NULL)) {
         xalloc_fail();
     }

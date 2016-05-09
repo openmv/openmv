@@ -18,28 +18,32 @@ typedef struct _py_clock_obj_t {
     uint32_t t_frame;
 } py_clock_obj_t;
 
-mp_obj_t py_clock_tick(py_clock_obj_t *clock)
+mp_obj_t py_clock_tick(mp_obj_t clock_obj)
 {
+    py_clock_obj_t *clock = (py_clock_obj_t*) clock_obj;
     clock->t_start = systick_current_millis();
     return mp_const_none;
 }
 
-mp_obj_t py_clock_fps(py_clock_obj_t *clock)
+mp_obj_t py_clock_fps(mp_obj_t clock_obj)
 {
+    py_clock_obj_t *clock = (py_clock_obj_t*) clock_obj;
     clock->t_frame++;
     clock->t_ticks += (systick_current_millis()-clock->t_start);
     return mp_obj_new_float(1000.0f/(clock->t_ticks/(float)clock->t_frame));
 }
 
-mp_obj_t py_clock_avg(py_clock_obj_t *clock)
+mp_obj_t py_clock_avg(mp_obj_t clock_obj)
 {
+    py_clock_obj_t *clock = (py_clock_obj_t*) clock_obj;
     clock->t_frame++;
     clock->t_ticks += (systick_current_millis()-clock->t_start);
     return mp_obj_new_float(clock->t_ticks/(float)clock->t_frame);
 }
 
-mp_obj_t py_clock_reset(py_clock_obj_t *clock)
+mp_obj_t py_clock_reset(mp_obj_t clock_obj)
 {
+    py_clock_obj_t *clock = (py_clock_obj_t*) clock_obj;
     clock->t_start = 0;
     clock->t_ticks = 0;
     clock->t_frame = 0;
