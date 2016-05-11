@@ -125,16 +125,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	mutex.o                                 \
 	)
 
-ifeq ($(TARGET), OPENMV1)
-FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
-	sdcard_spi.o                            \
-	)
-else
-FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
-	sdcard_sdio.o                           \
-	)
-endif
-
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	blob.o                                  \
 	fmath.o                                 \
@@ -235,6 +225,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	rng.o                   \
 	led.o                   \
 	mphalport.o             \
+	sdcard.o                \
 	fatfs_port.o            \
 	builtin_open.o          \
 	extint.o                \

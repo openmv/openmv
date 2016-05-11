@@ -365,10 +365,10 @@ soft_reset:
         vfs->str = "1:";
         vfs->len = 2;
         vfs->flags = 0;
-        //sdcard_init_vfs(vfs);
+        sdcard_init_vfs(vfs);
 
-        // put the sdcard device in slot 0 (it will be unused at this point)
-        MP_STATE_PORT(fs_user_mount)[0] = vfs;
+        // put the sdcard device in slot 1 (it will be unused at this point)
+        MP_STATE_PORT(fs_user_mount)[1] = vfs;
 
         // try to mount the flash
         FRESULT res = f_mount(&vfs->fatfs, vfs->str, 1);

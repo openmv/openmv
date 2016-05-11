@@ -56,7 +56,7 @@ void HAL_MspInit(void)
     /* Enable DMA clocks */
     __DMA2_CLK_ENABLE();
 
-    /* Conigure DCMI GPIO */
+    /* Configure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
@@ -70,13 +70,6 @@ void HAL_MspInit(void)
 
     GPIO_InitStructure.Pin = DCMI_FSIN_PIN;
     HAL_GPIO_Init(DCMI_FSIN_PORT, &GPIO_InitStructure);
-
-    /* Configure SD CD PIN */
-    GPIO_InitStructure.Pin      = SD_CD_PIN;
-    GPIO_InitStructure.Pull     = GPIO_NOPULL;
-    GPIO_InitStructure.Speed    = GPIO_SPEED_LOW;
-    GPIO_InitStructure.Mode     = GPIO_MODE_INPUT;
-    HAL_GPIO_Init(SD_CD_PORT, &GPIO_InitStructure);
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
@@ -141,68 +134,6 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
         HAL_GPIO_Init(dcmi_pins[i].port, &GPIO_InitStructure);
     }
 }
-
-#ifdef OPENMV1
-void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
-{
-    GPIO_InitTypeDef GPIO_InitStructure;
-    if (hspi->Instance == SD_SPI) {
-            /* Enable clock */
-            SD_SPI_CLK_ENABLE();
-
-            /* Configure SPI GPIOs */
-            GPIO_InitStructure.Pull      = GPIO_NOPULL;
-            GPIO_InitStructure.Speed     = GPIO_SPEED_MEDIUM;
-            GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
-            GPIO_InitStructure.Alternate = SD_SPI_AF;
-
-            GPIO_InitStructure.Pin = SD_MOSI_PIN;
-            HAL_GPIO_Init(SD_MOSI_PORT, &GPIO_InitStructure);
-
-            GPIO_InitStructure.Pin = SD_MISO_PIN;
-            HAL_GPIO_Init(SD_MISO_PORT, &GPIO_InitStructure);
-
-            GPIO_InitStructure.Pin = SD_SCLK_PIN;
-            HAL_GPIO_Init(SD_SCLK_PORT, &GPIO_InitStructure);
-
-            GPIO_InitStructure.Pin = SD_CS_PIN;
-            GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
-            HAL_GPIO_Init(SD_CS_PORT, &GPIO_InitStructure);
-
-            /* De-select the Card: Chip Select high */
-            SD_DESELECT();
-
-    }
-}
-#endif
-
-#ifdef OPENMV2
-void HAL_SD_MspInit(SD_HandleTypeDef *hsd)
-{
-    /* Enable SDIO clock */
-    __SDIO_CLK_ENABLE();
-
-    /* SDIO GPIOs configuration */
-    GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Pull      = GPIO_NOPULL;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_MEDIUM;
-    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
-    GPIO_InitStructure.Alternate = GPIO_AF12_SDIO;
-
-    /* SDIO_D0..D3, SDIO_CLK */
-    GPIO_InitStructure.Pin       = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
-
-    /* SDIO_CMD */
-    GPIO_InitStructure.Pin       = GPIO_PIN_2;
-    HAL_GPIO_Init(GPIOD, &GPIO_InitStructure);
-}
-
-void HAL_SD_MspDeInit(SD_HandleTypeDef *hsd)
-{
-    __SDIO_CLK_DISABLE();
-}
-#endif //OPENMV2
 
 void HAL_MspDeInit(void)
 {

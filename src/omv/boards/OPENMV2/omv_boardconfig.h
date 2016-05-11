@@ -96,8 +96,4 @@
 
 #define DCMI_FSIN_LOW()         HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_RESET)
 #define DCMI_FSIN_HIGH()        HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_SET)
-
-#define SD_CD_PIN               (GPIO_PIN_15)
-#define SD_CD_PORT              (GPIOA)
-
 #endif //__OMV_BOARDCONFIG_H__

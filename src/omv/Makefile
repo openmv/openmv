@@ -16,16 +16,6 @@ SRCS += $(addprefix ,   \
 	mutex.c             \
    )
 
-ifeq ($(TARGET), OPENMV1)
-SRCS += $(addprefix ,   \
-	sdcard_spi.c        \
-   )
-else
-SRCS += $(addprefix ,   \
-	sdcard_sdio.c       \
-   )
-endif
-
 SRCS += $(addprefix img/,   \
 	blob.c                  \
 	fmath.c                 \
