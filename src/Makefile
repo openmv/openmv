@@ -1,20 +1,33 @@
+# Set verbosity
+ifeq ($(V), 1)
+Q =
+else
+Q = @
+endif
+
+# Commands
+CC      = $(Q)arm-none-eabi-gcc
+AS      = $(Q)arm-none-eabi-as
+LD      = $(Q)arm-none-eabi-ld
+AR      = $(Q)arm-none-eabi-ar
+RM      = $(Q)rm
+CCP     = $(Q)arm-none-eabi-cpp
+SIZE    = $(Q)arm-none-eabi-size
+STRIP   = $(Q)arm-none-eabi-strip -s
+OBJCOPY = $(Q)arm-none-eabi-objcopy
+OBJDUMP = $(Q)arm-none-eabi-objdump
+PYTHON  = $(Q)python
+MKDFU   = micropython/tools/dfu.py
+PYDFU   = $(Q)../usr/pydfu.py
+MKDIR   = $(Q)mkdir
+ECHO    = $(Q)@echo
+MAKE    = $(Q)make
+CAT     = $(Q)cat
+
+# Targets
 OPENMV = openmv
 BOOTLOADER = bootloader
 FIRMWARE = firmware
-CC      = arm-none-eabi-gcc
-AS      = arm-none-eabi-as
-LD      = arm-none-eabi-ld
-AR      = arm-none-eabi-ar
-RM      = rm
-CCP     = arm-none-eabi-cpp
-SIZE    = arm-none-eabi-size
-STRIP   = arm-none-eabi-strip -s
-OBJCOPY = arm-none-eabi-objcopy
-OBJDUMP = arm-none-eabi-objdump
-PYTHON  = python
-DFU     = micropython/tools/dfu.py
-MKDIR   = mkdir
-ECHO    = @echo
 
 # Directories
 TOP_DIR=$(shell pwd)
@@ -40,13 +53,6 @@ ifeq ($(DEBUG), 1)
 CFLAGS += -O0 -ggdb3
 else
 CFLAGS += -O2 -ggdb3 -DNDEBUG
-endif
-
-# Verbose
-ifeq ($(V), 1)
-Q =
-else
-Q = @
 endif
 
 # Compiler Flags
@@ -329,6 +335,7 @@ BOOT_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 
 ###################################################
 #Export Variables
+export Q
 export CC
 export AS
 export LD
@@ -365,7 +372,7 @@ $(FIRMWARE): FIRMWARE_OBJS
 	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
-	$(PYTHON) $(DFU) -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
+	$(PYTHON) $(MKDFU) -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
 # This target generates the bootloader. The bootloader binary is generated twice,
 # once without padding, to generate the bootloader.dfu file, and once with padding
@@ -374,13 +381,13 @@ $(BOOTLOADER): BOOTLOADER_OBJS
 	$(CCP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32f4xx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
 	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
-	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
+	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
 	$(OBJCOPY) -Obinary --pad-to=0x08010000 $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 
 # This target generates a combined bootloader+main firmware image.
 $(OPENMV): $(BUILD) $(FIRMWARE) $(BOOTLOADER)
-	cat $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
-	$(PYTHON) $(DFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
+	$(CAT) $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
+	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
 
@@ -393,16 +400,16 @@ clean:
 
 # Flash the bootloader
 flash_boot::
-	../usr/pydfu.py -u $(FW_DIR)/$(BOOTLOADER).dfu
+	$(PYDFU) -u $(FW_DIR)/$(BOOTLOADER).dfu
 
 # Flash the main firmware image
 flash_image::
-	../usr/pydfu.py -u $(FW_DIR)/$(FIRMWARE).dfu
+	$(PYDFU) -u $(FW_DIR)/$(FIRMWARE).dfu
 
 # Flash the bootloader + main firmware image (DFU)
 flash_dfu::
-	../usr/pydfu.py -m -u $(FW_DIR)/$(OPENMV).dfu
+	$(PYDFU) -m -u $(FW_DIR)/$(OPENMV).dfu
 
 # Flash the bootloader + main firmware image (binary)
 flash_bin::
-	../usr/pydfu.py -m -u $(FW_DIR)/$(OPENMV).bin
+	$(PYDFU) -m -u $(FW_DIR)/$(OPENMV).bin
