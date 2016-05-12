@@ -236,6 +236,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	moduselect.o            \
 	modusocket.o            \
 	modnetwork.o            \
+	modmachine.o            \
     )
 
 #------------- MicroPy Objects ----------------#
@@ -299,6 +300,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	vfs_fat_file.o      \
 	vfs_fat_lexer.o     \
 	vfs_fat_misc.o      \
+	machine_mem.o       \
+	machine_i2c.o       \
     )
 
 
