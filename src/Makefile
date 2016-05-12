@@ -356,7 +356,7 @@ all: $(OPENMV)
 $(BUILD):
 	$(MKDIR) -p $@
 
-BOOTLOADER_OBJS:
+BOOTLOADER_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(BOOT_DIR)           BUILD=$(BUILD)/$(BOOT_DIR)
 
 FIRMWARE_OBJS:
@@ -377,7 +377,7 @@ $(FIRMWARE): FIRMWARE_OBJS
 # This target generates the bootloader. The bootloader binary is generated twice,
 # once without padding, to generate the bootloader.dfu file, and once with padding
 # up to the main fw image (0x08010000), to generate a contiguous firmware.bin image.
-$(BOOTLOADER): BOOTLOADER_OBJS
+$(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
 	$(CCP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32f4xx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
 	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
@@ -385,7 +385,7 @@ $(BOOTLOADER): BOOTLOADER_OBJS
 	$(OBJCOPY) -Obinary --pad-to=0x08010000 $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 
 # This target generates a combined bootloader+main firmware image.
-$(OPENMV): $(BUILD) $(FIRMWARE) $(BOOTLOADER)
+$(OPENMV): $(BOOTLOADER) $(FIRMWARE) | $(BUILD)
 	$(CAT) $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
 	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
