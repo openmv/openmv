@@ -34,7 +34,6 @@ enum usbdbg_cmd {
     USBDBG_FW_VERSION       =0x80,
     USBDBG_FRAME_SIZE       =0x81,
     USBDBG_FRAME_DUMP       =0x82,
-    USBDBG_FRAME_UPDATE     =0x04,
     USBDBG_SCRIPT_EXEC      =0x05,
     USBDBG_SCRIPT_STOP      =0x06,
     USBDBG_SCRIPT_SAVE      =0x07,

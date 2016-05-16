@@ -219,11 +219,6 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             xfer_length = length;
             break;
 
-        case USBDBG_FRAME_UPDATE:
-            sensor_snapshot(NULL);
-            cmd = USBDBG_NONE;
-            break;
-
         case USBDBG_SCRIPT_EXEC:
             xfer_bytes = 0;
             xfer_length =length;
