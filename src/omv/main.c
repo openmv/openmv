@@ -174,9 +174,10 @@ static const char fresh_selftest_py[] =
 "\n"
 "    print('COLOR BARS TEST PASSED...')\n"
 "\n"
-"print('')\n"
-"test_int_adc()\n"
-"test_color_bars()\n"
+"if __name__ == '__main__':\n"
+"    print('')\n"
+"    test_int_adc()\n"
+"    test_color_bars()\n"
 ;
 #endif
 
@@ -320,8 +321,7 @@ soft_reset:
 
     // Initialise low-level sub-systems.  Here we need to very basic things like
     // zeroing out memory and resetting any of the sub-systems.  Following this
-    // we can run Python scripts (eg boot.py), but anything that is configurable
-    // by boot.py must be set after boot.py is run.
+    // we can run Python scripts (eg main.py).
 
     readline_init0();
     pin_init0();
@@ -422,9 +422,6 @@ soft_reset:
         __fatal_error(buf);
     }
 
-    // Re-enable FS IRQ (disabled in usbdbg)
-    HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
-
     // Run self tests the first time only
     f_res = f_stat("selftest.py", NULL);
     if (first_soft_reset && f_res == FR_OK) {
@@ -460,14 +457,15 @@ soft_reset:
                 nlr_pop();
             }// if this gets interrupted again ignore it.
         }
-
-        // Re-enable FS IRQ (disabled in usbdbg)
-        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
     }
 
     // If there's no script ready, just re-exec REPL
     while (!usbdbg_script_ready()) {
         nlr_buf_t nlr;
+
+        // Re-enable FS IRQ (disabled in usbdbg)
+        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+
         if (nlr_push(&nlr) == 0) {
             // enable IDE interrupt
             usbdbg_set_irq_enabled(true);
@@ -477,13 +475,14 @@ soft_reset:
 
             nlr_pop();
         }
-
-        // Re-enable FS IRQ (disabled in usbdbg)
-        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
     }
 
     if (usbdbg_script_ready()) {
         nlr_buf_t nlr;
+
+        // Re-enable FS IRQ (disabled in usbdbg)
+        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+
         // execute the script
         if (nlr_push(&nlr) == 0) {
             // parse, compile and execute script
@@ -496,7 +495,7 @@ soft_reset:
 
     // Disable all other IRQs except Systick and Flash IRQs
     // Note: FS IRQ is disable, since we're going for a soft-reset.
-    irq_set_base_priority(2);
+    irq_set_base_priority(IRQ_PRI_FLASH+1);
 
     // soft reset
     storage_flush();
