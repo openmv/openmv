@@ -24,24 +24,60 @@ static mp_obj_t py_sensor_reset() {
     return mp_const_none;
 }
 
-static mp_obj_t py_sensor_snapshot() {
+/*
+ * Filter functions bypass the default line processing in sensor.c, and pre-process lines before anything else.
+ * Processing is done on the fly, i.e. line filters are called from sensor_snapshot after each line is readout.
+ *
+*
+ * Note2: This double indirection is to decouple omv/img code from omv/py code as much as possible.
+ */
+static void py_line_filter(uint8_t *src, int src_stride, uint8_t *dst, int dst_stride, void *args)
+{
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        mp_call_function_2((mp_obj_t) args,                  // Callback function
+            mp_obj_new_bytearray_by_ref(src_stride, src),    // Source line buffer
+            mp_obj_new_bytearray_by_ref(dst_stride, dst));   // Destination line buffer
+        nlr_pop();
+    } else {
+        // Uncaught exception; disable the callback so it doesn't run again.
+        sensor_set_line_filter(NULL, NULL);
+        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+    }
+}
+
+static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    // Snapshot image
     mp_obj_t image = py_image(0, 0, 0, 0);
 
+    // Line pre-processing function and args
+    mp_obj_t line_filter_args = NULL;
+    line_filter_t line_filter_func = NULL;
+
+    // Sanity checks
     PY_ASSERT_FALSE_MSG((sensor.pixformat != PIXFORMAT_JPEG &&
                          sensor.framesize > OMV_MAX_RAW_FRAME),
                          "Raw image is only supported for "OMV_MAX_RAW_FRAME_STR" and smaller frames");
 
-    if (sensor_snapshot((struct image*) py_image_cobj(image))==-1) {
+    // Lookup filter function
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_line_filter), MP_MAP_LOOKUP);
+    if (kw_arg != NULL) {
+       line_filter_args = kw_arg->value;
+       line_filter_func = py_line_filter;
+    }
+
+    if (sensor_snapshot((struct image*) py_image_cobj(image), line_filter_func, line_filter_args)==-1) {
         nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         return mp_const_false;
     }
+
     return image;
 }
 
 static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args) {
     int frames = (n_args == 1) ? mp_obj_get_int(args[0]) : 10; // OV Recommended.
     for (int i = 0; i < frames; i++) {
-        if (sensor_snapshot(NULL) == -1) {
+        if (sensor_snapshot(NULL, NULL, NULL) == -1) {
             nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         }
     }
@@ -220,44 +256,6 @@ static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde) {
     return mp_const_true;
 }
 
-#define MP_MAP_LOOKUP_STR(s)    mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(qstr_from_str(s)), MP_MAP_LOOKUP)
-static mp_obj_t py_sensor_set_image_filter(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    int *im_filter_args=NULL;
-    im_filter_t im_filter=NULL;
-    im_filter_type_t im_filter_type = mp_obj_get_int(args[0]);
-
-    switch (im_filter_type) {
-        case IM_FILTER_BW: {
-            int lower = 200, upper = 255;
-            // Read keyword arguments
-            mp_map_elem_t *kw_lower = MP_MAP_LOOKUP_STR("lower");
-            mp_map_elem_t *kw_upper = MP_MAP_LOOKUP_STR("upper");
-
-            if (kw_lower) {
-                lower = mp_obj_get_int(kw_lower->value);
-            }
-
-            if (kw_upper) {
-                lower = mp_obj_get_int(kw_lower->value);
-            }
-
-            im_filter = &im_filter_bw;
-            im_filter_args = (int*) xalloc(2*sizeof(int));
-            im_filter_args[0] = lower;
-            im_filter_args[1] = upper;
-            break;
-        }
-        case IM_FILTER_SKIN:
-            im_filter = &im_filter_skin;
-            break;
-    }
-
-    if (sensor_set_image_filter(im_filter, im_filter_args) != 0) {
-        return mp_const_false;
-    }
-
-    return mp_const_true;
-}
 static mp_obj_t py_sensor_write_reg(mp_obj_t addr, mp_obj_t val) {
     sensor_write_reg(mp_obj_get_int(addr), mp_obj_get_int(val));
     return mp_const_none;
@@ -273,7 +271,7 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
 //}
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,               py_sensor_reset);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_obj,            py_sensor_snapshot);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_snapshot_obj, 0,        py_sensor_snapshot);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_skip_frames_obj, 0, 1, py_sensor_skip_frames);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_fb_obj,              py_sensor_get_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,              py_sensor_get_id);
@@ -292,7 +290,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_exposure_ctrl_obj,   py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_hmirror_obj,         py_sensor_set_hmirror);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vflip_obj,           py_sensor_set_vflip);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_image_filter_obj,1, py_sensor_set_image_filter);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,           py_sensor_write_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,            py_sensor_read_reg);
 
@@ -310,10 +307,6 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     // Special effects
     { MP_OBJ_NEW_QSTR(MP_QSTR_NORMAL),              MP_OBJ_NEW_SMALL_INT(SDE_NORMAL)},          /* Normal/No SDE */
     { MP_OBJ_NEW_QSTR(MP_QSTR_NEGATIVE),            MP_OBJ_NEW_SMALL_INT(SDE_NEGATIVE)},        /* Negative image */
-
-    // Image filters
-    { MP_OBJ_NEW_QSTR(MP_QSTR_FILTER_BW),           MP_OBJ_NEW_SMALL_INT(IM_FILTER_BW)},       /* Black/White filter */
-    { MP_OBJ_NEW_QSTR(MP_QSTR_FILTER_SKIN),         MP_OBJ_NEW_SMALL_INT(IM_FILTER_SKIN)},     /* Skin filter */
 
     // Frame size
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQCIF),               MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQCIF)},    /* 88x72     */
@@ -349,7 +342,6 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_hmirror),         (mp_obj_t)&py_sensor_set_hmirror_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vflip),           (mp_obj_t)&py_sensor_set_vflip_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_set_image_filter),    (mp_obj_t)&py_sensor_set_image_filter_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),         (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),          (mp_obj_t)&py_sensor_read_reg_obj },
 };

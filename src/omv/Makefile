@@ -49,7 +49,6 @@ SRCS += $(addprefix img/,   \
 	jpeg.c                  \
 	lbp.c                   \
 	eye.c                   \
-	im_filter.c             \
    )
 
 SRCS += $(addprefix py/, \

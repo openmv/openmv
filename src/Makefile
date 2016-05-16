@@ -164,7 +164,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	jpeg.o                                  \
 	lbp.o                                   \
 	eye.o                                   \
-	im_filter.o                             \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \

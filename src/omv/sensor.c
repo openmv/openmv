@@ -278,8 +278,9 @@ int sensor_reset()
     sensor.framerate=0xFF;
     sensor.gainceiling=0xFF;
 
+
     // Reset image filter
-    sensor_set_image_filter(NULL, NULL);
+    sensor_set_line_filter(NULL, NULL);
 
     // Call sensor-specific reset function
     sensor.reset(&sensor);
@@ -524,10 +525,11 @@ int sensor_set_special_effect(sde_t sde)
     return 0;
 }
 
-int sensor_set_image_filter(im_filter_t filter, void *args)
+int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_args)
 {
-    sensor.im_filter = filter;
-    sensor.im_filter_args = args;
+    // Set line pre-processing function and args
+    sensor.line_filter_func = line_filter_func;
+    sensor.line_filter_args = line_filter_args;
     return 0;
 }
 
@@ -544,11 +546,13 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         dst += FB_JPEG_OFFS_SIZE;
     }
 
-    if (sensor.im_filter != NULL) {
-        dst += line++ * fb->w * ((sensor.pixformat == PIXFORMAT_GRAYSCALE) ? 1:2);
+    if (sensor.line_filter_func && sensor.line_filter_args) {
+        int bpp = ((sensor.pixformat == PIXFORMAT_GRAYSCALE) ? 1:2);
+        dst += line++ * fb->w * bpp;
         // If there's an image filter installed call it.
-        sensor.im_filter(src, dst, fb->w,
-                (sensor.pixformat == PIXFORMAT_GRAYSCALE) ? 1:2, sensor.im_filter_args);
+        // Note: BPP is the target BPP, not the line bpp (the line is always 2 bytes per pixel) if the target BPP is 1
+        // it means the image currently being read is going to be Grayscale, and the function needs to output w * 1BPP.
+        sensor.line_filter_func(src, fb->w * 2 , dst, fb->w * bpp, sensor.line_filter_args);
     } else {
         // Else just process the line normally.
         if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
@@ -569,11 +573,14 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 // The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
 // The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
 // overwrite image pixels before they are compressed.
-int sensor_snapshot(image_t *image)
+int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_filter_args)
 {
     volatile uint32_t addr;
     volatile uint16_t length;
     uint32_t snapshot_start;
+
+    // Set line filter
+    sensor_set_line_filter(line_filter_func, line_filter_args);
 
     // Compress the framebuffer for the IDE only for non-JPEG images and
     // only if the IDE has requested a framebuffer and it's not the first frame.
