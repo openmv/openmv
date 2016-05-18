@@ -229,6 +229,129 @@ class Bootloader:
             self.dialog.hide()
             self.running = False
 
+class ColorStats:
+        def __init__(self):
+            pass
+
+        def rgb2lab(self, rgb):
+
+            def lin(c):
+                return 100 * ((c/12.92) if (c<=0.04045) else pow((c+0.055)/1.055, 2.4))
+
+            def f(t):
+                return pow(t, (1/3.0)) if (t>0.008856) else ((7.787037*t)+0.137931)
+
+            r_lin = lin(rgb[0] / 255.0)
+            g_lin = lin(rgb[1] / 255.0)
+            b_lin = lin(rgb[2] / 255.0)
+
+            x = (r_lin * 0.4124) + (g_lin * 0.3576) + (b_lin * 0.1805);
+            y = (r_lin * 0.2126) + (g_lin * 0.7152) + (b_lin * 0.0722);
+            z = (r_lin * 0.0193) + (g_lin * 0.1192) + (b_lin * 0.9505);
+
+            x = f(x / 095.047)
+            y = f(y / 100.000)
+            z = f(z / 108.883)
+
+            l = int(round(116 * y)) - 16;
+            a = int(round(500 * (x-y)));
+            b = int(round(200 * (y-z)));
+
+            return (l, a, b)
+
+        def rgb2gry(self, rgb):
+
+            def lin(c):
+                return 100 * ((c/12.92) if (c<=0.04045) else pow((c+0.055)/1.055, 2.4))
+
+            def f(t):
+                return (1.055*pow(t, (1/2.4)))-0.055 if (t>0.0031308) else 12.92*t
+
+            r_lin = lin(rgb[0] / 255.0)
+            g_lin = lin(rgb[1] / 255.0)
+            b_lin = lin(rgb[2] / 255.0)
+
+            y = f(((r_lin * 0.2126) + (g_lin * 0.7152) + (b_lin * 0.0722)) / 100.0);
+            return max(min(y * 255, 255), 0)
+
+        def stats(self, buf, f):
+            new_buf = np.zeros((buf.shape[0], buf.shape[1]), int)
+            hist = np.zeros(384, int)
+            for i in range(buf.shape[0]):
+                for j in range(buf.shape[1]):
+                    color = f(buf[i][j])
+                    new_buf[i][j] = color
+                    hist[int(color + 128)] += 1
+            return (np.mean(new_buf),
+                    np.median(new_buf),
+                    np.argmax(hist) - 128,
+                    np.std(new_buf),
+                    np.amin(new_buf),
+                    np.amax(new_buf),
+                    np.percentile(new_buf, 25),
+                    np.percentile(new_buf, 75))
+
+        def get_color_stats(self, pixbuf, x1, y1, x2, y2):
+            x = min(0, x1)
+            y = min(0, y1)
+            w = min(1, x2-x1)
+            h = min(1, y2-y1)
+            buf = pixbuf.subpixbuf(x, y, w, h).get_pixels_array()
+
+            r_stats = self.stats(buf, lambda x: x[0])
+            g_stats = self.stats(buf, lambda x: x[1])
+            b1stats = self.stats(buf, lambda x: x[2])
+            l_stats = self.stats(buf, lambda x: self.rgb2lab(x)[0])
+            a_stats = self.stats(buf, lambda x: self.rgb2lab(x)[1])
+            b2stats = self.stats(buf, lambda x: self.rgb2lab(x)[2])
+            y_stats = self.stats(buf, lambda x: self.rgb2gry(x))
+            out = [r_stats, g_stats, b1stats, l_stats, a_stats, b2stats, y_stats]
+
+            rgb_thresholds = [max(r_stats[6] - r_stats[3]*3, 0),
+                              min(r_stats[7] + r_stats[3]*3, 255),
+                              max(g_stats[6] - g_stats[3]*3, 0),
+                              min(g_stats[7] + g_stats[3]*3, 255),
+                              max(b1stats[6] - b1stats[3]*3, 0),
+                              min(b1stats[7] + b1stats[3]*3, 255)]
+            lab_thresholds = [max(l_stats[6] - l_stats[3]*3, 0),
+                              min(l_stats[7] + l_stats[3]*3, 100),
+                              max(a_stats[6] - a_stats[3]*3, -128),
+                              min(a_stats[7] + a_stats[3]*3, 127),
+                              max(b2stats[6] - b2stats[3]*3, -128),
+                              min(b2stats[7] + b2stats[3]*3, 127)]
+            gry_thresholds = [max(y_stats[6] - y_stats[3]*3, 0),
+                              min(y_stats[7] + y_stats[3]*3, 255)]
+            out.extend([rgb_thresholds, lab_thresholds, gry_thresholds])
+
+            return \
+            "# RGB Color Space Stats:\n"\
+            "# R: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
+            "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
+            "# G: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
+            "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
+            "# B: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
+            "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
+            "#\n"\
+            "# LAB Color Space Stats:\n"\
+            "# L: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
+            "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
+            "# A: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
+            "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
+            "# B: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
+            "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
+            "#\n"\
+            "# GRY Color Space Stats:\n"\
+            "#    Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
+            "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
+            "#\n"\
+            "# Suggested Thresholds (LQ-Stdev*3, UQ+Stdev*3):\n"\
+            "# RGB = (%4d, %4d, %4d, %4d, %4d, %4d)\n"\
+            "# LAB = (%4d, %4d, %4d, %4d, %4d, %4d)\n"\
+            "# GRY = (%4d, %4d)\n"\
+            "#\n"\
+            "# *Use LAB for RGB565 and GRY for GRAYSCALE images."\
+            % tuple([i for sub in out for i in sub])
+
 class OMVGtk:
     def __init__(self):
         #Set the Glade file
@@ -787,124 +910,16 @@ class OMVGtk:
 
     def copy_color(self, widget):
         self.da_menu.hide()
-        x = self.x1
-        y = self.y1
-        w = self.x2-self.x1
-        h = self.y2-self.y1
 
-        def rgb2lab(rgb):
+        if (self.pixbuf):
+            x = min(0, self.x1)
+            y = min(0, self.y1)
+            w = max(1, self.x2-self.x1)
+            h = max(1, self.y2-self.y1)
 
-            def lin(c):
-                return 100 * ((c/12.92) if (c<=0.04045) else pow((c+0.055)/1.055, 2.4))
-
-            def f(t):
-                return pow(t, (1/3.0)) if (t>0.008856) else ((7.787037*t)+0.137931)
-
-            r_lin = lin(rgb[0] / 255.0)
-            g_lin = lin(rgb[1] / 255.0)
-            b_lin = lin(rgb[2] / 255.0)
-
-            x = (r_lin * 0.4124) + (g_lin * 0.3576) + (b_lin * 0.1805);
-            y = (r_lin * 0.2126) + (g_lin * 0.7152) + (b_lin * 0.0722);
-            z = (r_lin * 0.0193) + (g_lin * 0.1192) + (b_lin * 0.9505);
-
-            x = f(x / 095.047)
-            y = f(y / 100.000)
-            z = f(z / 108.883)
-
-            l = int(round(116 * y)) - 16;
-            a = int(round(500 * (x-y)));
-            b = int(round(200 * (y-z)));
-
-            return (l, a, b)
-
-        def rgb2gry(rgb):
-
-            def lin(c):
-                return 100 * ((c/12.92) if (c<=0.04045) else pow((c+0.055)/1.055, 2.4))
-
-            def f(t):
-                return (1.055*pow(t, (1/2.4)))-0.055 if (t>0.0031308) else 12.92*t
-
-            r_lin = lin(rgb[0] / 255.0)
-            g_lin = lin(rgb[1] / 255.0)
-            b_lin = lin(rgb[2] / 255.0)
-
-            y = f(((r_lin * 0.2126) + (g_lin * 0.7152) + (b_lin * 0.0722)) / 100.0);
-            return max(min(y * 255, 255), 0)
-
-        def stats(buf, f):
-            new_buf = np.zeros((buf.shape[0], buf.shape[1]), int)
-            hist = np.zeros(384, int)
-            for i in range(buf.shape[0]):
-                for j in range(buf.shape[1]):
-                    color = f(buf[i][j])
-                    new_buf[i][j] = color
-                    hist[color + 128] += 1
-            return (np.mean(new_buf),
-                    np.median(new_buf),
-                    np.argmax(hist) - 128,
-                    np.std(new_buf),
-                    np.amin(new_buf),
-                    np.amax(new_buf),
-                    np.percentile(new_buf, 25),
-                    np.percentile(new_buf, 75))
-
-        buf = self.pixbuf.subpixbuf(x, y, w, h).get_pixels_array()
-        r_stats = stats(buf, lambda x: x[0])
-        g_stats = stats(buf, lambda x: x[1])
-        b1stats = stats(buf, lambda x: x[2])
-        l_stats = stats(buf, lambda x: rgb2lab(x)[0])
-        a_stats = stats(buf, lambda x: rgb2lab(x)[1])
-        b2stats = stats(buf, lambda x: rgb2lab(x)[2])
-        y_stats = stats(buf, lambda x: rgb2gry(x))
-        out = [r_stats, g_stats, b1stats, l_stats, a_stats, b2stats, y_stats]
-
-        rgb_thresholds = [max(r_stats[6] - r_stats[3]*3, 0),
-                          min(r_stats[7] + r_stats[3]*3, 255),
-                          max(g_stats[6] - g_stats[3]*3, 0),
-                          min(g_stats[7] + g_stats[3]*3, 255),
-                          max(b1stats[6] - b1stats[3]*3, 0),
-                          min(b1stats[7] + b1stats[3]*3, 255)]
-        lab_thresholds = [max(l_stats[6] - l_stats[3]*3, 0),
-                          min(l_stats[7] + l_stats[3]*3, 100),
-                          max(a_stats[6] - a_stats[3]*3, -128),
-                          min(a_stats[7] + a_stats[3]*3, 127),
-                          max(b2stats[6] - b2stats[3]*3, -128),
-                          min(b2stats[7] + b2stats[3]*3, 127)]
-        gry_thresholds = [max(y_stats[6] - y_stats[3]*3, 0),
-                          min(y_stats[7] + y_stats[3]*3, 255)]
-        out.extend([rgb_thresholds, lab_thresholds, gry_thresholds])
-
-        self.buffer.begin_user_action()
-        iter = self.buffer.get_iter_at_mark(self.buffer.get_mark("insert"))
-        iter.forward_line()
-        self.buffer.insert(iter,\
-        "# = RGB Color Space Stats ========================\n"\
-        "# R: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
-        "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
-        "# G: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
-        "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
-        "# B: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
-        "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
-        "# = LAB Color Space Stats ========================\n"\
-        "# L: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
-        "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
-        "# A: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
-        "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
-        "# B: Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
-        "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
-        "# = GRY Color Space Stats ========================\n"\
-        "#    Mean %4d, Median %4d, Mode %4d, Stdev %4d\n"\
-        "#    Min  %4d, Max    %4d, LQ   %4d, UQ    %4d\n"\
-        "# = Suggested Thresholds (LQ-Stdev*3, UQ+Stdev*3) \n"\
-        "# Use LAB for RGB565 and GRY for GRAYSCALE images.\n"\
-        "# RGB = (%4d, %4d, %4d, %4d, %4d, %4d)\n"\
-        "# LAB = (%4d, %4d, %4d, %4d, %4d, %4d)\n"\
-        "# GRY = (%4d, %4d)\n"\
-        "# ================================================\n"\
-        % tuple([i for sub in out for i in sub]))
-        self.buffer.end_user_action()
+            cs = ColorStats()
+            stats = cs.get_color_stats(self.pixbuf, x, y, w, h)
+            self.show_message_dialog(gtk.MESSAGE_INFO, stats)
 
     def save_template(self, widget):
         self.da_menu.hide()
