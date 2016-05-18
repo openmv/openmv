@@ -95,15 +95,6 @@ Kwabena W. Agyeman</property>
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <child>
-      <object class="GtkMenuItem" id="da_menu_copy_color">
-        <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="label" translatable="yes">Copy Color</property>
-        <property name="use_underline">True</property>
-        <signal name="activate" handler="on_copy_color_activate" swapped="no"/>
-      </object>
-    </child>
-    <child>
       <object class="GtkMenuItem" id="da_menu_save_template">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
@@ -119,6 +110,15 @@ Kwabena W. Agyeman</property>
         <property name="label" translatable="yes">Save Descriptor</property>
         <property name="use_underline">True</property>
         <signal name="activate" handler="on_save_descriptor_activate" swapped="no"/>
+      </object>
+    </child>
+    <child>
+      <object class="GtkMenuItem" id="da_menu_color_stats">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">Show Color Statistics</property>
+        <property name="use_underline">True</property>
+        <signal name="activate" handler="on_color_stats_activate" swapped="no"/>
       </object>
     </child>
   </object>

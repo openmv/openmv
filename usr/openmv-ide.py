@@ -565,7 +565,7 @@ class OMVGtk:
             "on_save_file_as"               : self.save_file_as,
             "on_about_dialog"               : self.about_dialog,
             "on_pinout_dialog"              : self.pinout_dialog,
-            "on_copy_color_activate"        : self.copy_color,
+            "on_color_stats_activate"       : self.color_stats,
             "on_save_template_activate"     : self.save_template,
             "on_save_descriptor_activate"   : self.save_descriptor,
             "on_ctrl_scale_value_changed"   : self.on_ctrl_scale_value_changed,
@@ -908,7 +908,7 @@ class OMVGtk:
             with open(self.file_path, "w") as file:
                 file.write(self.buffer.get_text(self.buffer.get_start_iter(), self.buffer.get_end_iter()))
 
-    def copy_color(self, widget):
+    def color_stats(self, widget):
         self.da_menu.hide()
 
         if (self.pixbuf):
