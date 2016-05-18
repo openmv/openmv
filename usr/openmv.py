@@ -51,9 +51,11 @@ def init(port, baudrate=921600, timeout=0.3):
     __serial =  serial.Serial(port, baudrate=baudrate, timeout=timeout)
 
 def disconnect():
+    global __serial
     try:
         if (__serial):
             __serial.close()
+            __serial = None
     except:
         pass
 
