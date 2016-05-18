@@ -217,6 +217,13 @@ class Bootloader:
             self.flash_msg = 1
             self.running = True
 
+            # Reset the camera if it's connected, this way the bootloader
+            # runs without disconnecting and reconnecting the camera.
+            try:
+                openmv.reset()
+            except:
+                pass
+
             gobject.gobject.idle_add(self.task, self.state)
         else:
             self.dialog.hide()
@@ -598,8 +605,6 @@ class OMVGtk:
         dialog.hide()
 
     def bootloader_clicked(self, widget):
-        if (self.connected):
-            openmv.reset()
         self.bootloader.run()
 
     def button_pressed(self, widget, event):
