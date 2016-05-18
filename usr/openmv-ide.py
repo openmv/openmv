@@ -418,6 +418,9 @@ class OMVGtk:
         # set enable/disable JPEG
         self.enable_jpeg = self.config.get("main", "enable_jpeg") == 'True'
 
+        # Set firmware version
+        self.fw_version = (0, 0, 0)
+
         # load helloworld.py
         self._load_file(os.path.join(EXAMPLES_DIR, "01-Basics", "helloworld.py"))
         self.save_button.set_sensitive(False)
@@ -492,8 +495,8 @@ class OMVGtk:
 
         # check firmware version
         fw_ver = openmv.fw_version()
+        self.fw_version = fw_ver
         ide_ver = (FIRMWARE_VERSION_MAJOR, FIRMWARE_VERSION_MINOR, FIRMWARE_VERSION_PATCH)
-        print("fw_version:%s\nide_version:%s" %(str(fw_ver), str(ide_ver)))
 
         if (fw_ver[0] != FIRMWARE_VERSION_MAJOR or fw_ver[1] != FIRMWARE_VERSION_MINOR):
             self.connected = False
@@ -709,9 +712,12 @@ class OMVGtk:
         else:
             title = os.path.basename(self.file_path)
 
-        title += " [Connected]" if self.connected else " [Disconnected]"
-        self.window.set_title(title)
+        if not self.connected:
+            title += " [Disconnected]"
+        else:
+            title += " [Connected. Firmware: v%d.%d.%d]"%self.fw_version
 
+        self.window.set_title(title)
 
     def update_recent_files(self):
         if (self.file_path and self.file_path not in self.files ):
