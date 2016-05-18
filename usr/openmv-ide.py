@@ -291,12 +291,8 @@ class ColorStats:
                     np.percentile(new_buf, 25),
                     np.percentile(new_buf, 75))
 
-        def get_color_stats(self, pixbuf, x1, y1, x2, y2):
-            x = min(0, x1)
-            y = min(0, y1)
-            w = min(1, x2-x1)
-            h = min(1, y2-y1)
-            buf = pixbuf.subpixbuf(x, y, w, h).get_pixels_array()
+        def get_color_stats(self, pixbuf):
+            buf = pixbuf.get_pixels_array()
 
             r_stats = self.stats(buf, lambda x: x[0])
             g_stats = self.stats(buf, lambda x: x[1])
@@ -912,53 +908,57 @@ class OMVGtk:
         self.da_menu.hide()
 
         if (self.pixbuf):
-            x = min(0, self.x1)
-            y = min(0, self.y1)
+            x = max(0, self.x1)
+            y = max(0, self.y1)
             w = max(1, self.x2-self.x1)
             h = max(1, self.y2-self.y1)
 
             cs = ColorStats()
-            stats = cs.get_color_stats(self.pixbuf, x, y, w, h)
+            stats = cs.get_color_stats(self.pixbuf.subpixbuf(x, y, w, h))
             self.show_message_dialog(gtk.MESSAGE_INFO, stats)
 
     def save_template(self, widget):
         self.da_menu.hide()
-        x = self.x1
-        y = self.y1
-        w = self.x2-self.x1
-        h = self.y2-self.y1
 
-        entry = self.builder.get_object("template_entry")
-        image = self.builder.get_object("template_image")
-        image.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
+        if (self.pixbuf):
+            x = max(0, self.x1)
+            y = max(0, self.y1)
+            w = max(1, self.x2-self.x1)
+            h = max(1, self.y2-self.y1)
 
-        dialog = self.builder.get_object("save_template_dialog")
-        dialog.set_transient_for(self.window);
-        #dialog.set_default_response(gtk.RESPONSE_OK)
+            entry = self.builder.get_object("template_entry")
+            image = self.builder.get_object("template_image")
+            image.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
 
-        if dialog.run() == gtk.RESPONSE_OK:
-            openmv.save_template(x/SCALE, y/SCALE, w/SCALE, h/SCALE, entry.get_text()) #Use Scale
-        dialog.hide()
+            dialog = self.builder.get_object("save_template_dialog")
+            dialog.set_transient_for(self.window);
+            #dialog.set_default_response(gtk.RESPONSE_OK)
+
+            if dialog.run() == gtk.RESPONSE_OK:
+                openmv.save_template(x/SCALE, y/SCALE, w/SCALE, h/SCALE, entry.get_text()) #Use Scale
+            dialog.hide()
 
     def save_descriptor(self, widget):
         self.da_menu.hide()
-        x = self.x1
-        y = self.y1
-        w = self.x2-self.x1
-        h = self.y2-self.y1
 
-        entry = self.builder.get_object("desc_entry")
-        image = self.builder.get_object("desc_image")
-        image.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
+        if (self.pixbuf):
+            x = max(0, self.x1)
+            y = max(0, self.y1)
+            w = max(1, self.x2-self.x1)
+            h = max(1, self.y2-self.y1)
 
-        dialog = self.builder.get_object("save_descriptor_dialog")
-        dialog.set_transient_for(self.window);
-        #dialog.set_default_response(gtk.RESPONSE_OK)
+            entry = self.builder.get_object("desc_entry")
+            image = self.builder.get_object("desc_image")
+            image.set_from_pixbuf(self.pixbuf.subpixbuf(x, y, w, h))
 
-        if dialog.run() == gtk.RESPONSE_OK:
-            #if not entry.get_text():
-            openmv.save_descriptor(x/SCALE, y/SCALE, w/SCALE, h/SCALE, entry.get_text()) #Use Scale
-        dialog.hide()
+            dialog = self.builder.get_object("save_descriptor_dialog")
+            dialog.set_transient_for(self.window);
+            #dialog.set_default_response(gtk.RESPONSE_OK)
+
+            if dialog.run() == gtk.RESPONSE_OK:
+                #if not entry.get_text():
+                openmv.save_descriptor(x/SCALE, y/SCALE, w/SCALE, h/SCALE, entry.get_text()) #Use Scale
+            dialog.hide()
 
     def new_file(self, widget):
         self._load_file(None)
