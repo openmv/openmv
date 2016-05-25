@@ -11,7 +11,7 @@ AS      = $(Q)arm-none-eabi-as
 LD      = $(Q)arm-none-eabi-ld
 AR      = $(Q)arm-none-eabi-ar
 RM      = $(Q)rm
-CCP     = $(Q)arm-none-eabi-cpp
+CPP     = $(Q)arm-none-eabi-cpp
 SIZE    = $(Q)arm-none-eabi-size
 STRIP   = $(Q)arm-none-eabi-strip -s
 OBJCOPY = $(Q)arm-none-eabi-objcopy
@@ -368,7 +368,7 @@ FIRMWARE_OBJS:
 
 # This target generates the main/app firmware image located at 0x08010000
 $(FIRMWARE): FIRMWARE_OBJS
-	$(CCP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
+	$(CPP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
@@ -377,7 +377,7 @@ $(FIRMWARE): FIRMWARE_OBJS
 # once without padding, to generate the bootloader.dfu file, and once with padding
 # up to the main fw image (0x08010000), to generate a contiguous firmware.bin image.
 $(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
-	$(CCP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32f4xx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
+	$(CPP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32f4xx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
 	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
