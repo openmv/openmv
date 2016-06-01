@@ -1,4 +1,24 @@
 # Change Log
+## [1.5](https://github.com/openmv/openmv/releases/tag/v1.5) (2016-06-01)
+IDE:
+* Fix pinout reference image.
+* Fix reset on bootloader (reset cam just before the bootloader runs).
+* Add an option to erase flash filesystem sectors in bootloader dialog.
+* Show color statistics in a message dialog.
+
+Firmware:
+* Update to MicroPython v1.8
+* Change MLX ADC resolution to 18 bits.
+* Fixed GC collect bug (.bss and .data were not scanned, fixed in MP update).
+* Generate a combined (bootloader + app) dfu and binary images
+* Rename firmware images:
+ - bootloader.xxx (CDC bootloader images)
+ - firmware.xx (main application firmware images)
+ - openmv.xx (combined bootloader+firmware images)
+
+Image processing:
+* Allow image line-by-line pre-processing from Python callbacks.
+
 ## [1.4](https://github.com/openmv/openmv/releases/tag/v1.4) (2016-05-02)
 IDE:
 * Fix text editor undo bug.
