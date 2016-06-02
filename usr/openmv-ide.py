@@ -53,7 +53,7 @@ baudrate = 921600
 enable_jpeg = True
 '''
 CONFIG_KEYS = ['board', 'serial_port', 'recent', 'last_fw_path', 'baudrate', 'enable_jpeg']
-RELEASE_TAG_NAME = 'v1.4'
+RELEASE_TAG_NAME = 'v1.5'
 RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
 OPENMV_BOARDS = ['OpenMV1', 'OpenMV2']
 
