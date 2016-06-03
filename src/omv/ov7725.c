@@ -44,6 +44,8 @@ static const uint8_t default_regs[][2] = {
 
     {DSP_CTRL3,     0x00},
     {DSP_CTRL4,     0x00},
+    {DSPAUTO,       0xFF},
+
     {COM8,          0xF0},
     {COM6,          0xC5},
     {COM9,          0x11},
@@ -209,6 +211,19 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Write LSBs
     ret |= SCCB_Write(sensor->slv_addr, EXHCH, ((w&0x3) | ((h&0x1) << 2)));
+
+    if (framesize < FRAMESIZE_VGA) {
+        // Enable auto-scaling/zooming factors
+        ret |= SCCB_Write(sensor->slv_addr, DSPAUTO, 0xFF);
+    } else {
+        // Disable auto-scaling/zooming factors
+        ret |= SCCB_Write(sensor->slv_addr, DSPAUTO, 0xF3);
+
+        // Clear auto-scaling/zooming factors
+        ret |= SCCB_Write(sensor->slv_addr, SCAL0, 0x00);
+        ret |= SCCB_Write(sensor->slv_addr, SCAL1, 0x00);
+        ret |= SCCB_Write(sensor->slv_addr, SCAL2, 0x00);
+    }
 
     // Delay
     systick_sleep(30);
