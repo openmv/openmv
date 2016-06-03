@@ -16,9 +16,12 @@ sensor.reset()
 sensor.set_contrast(3)
 sensor.set_gainceiling(16)
 
-# Set resolution to VGA, the image will be binned to
-# QVGA which gives more details with less data to process
+# Set resolution to VGA.
 sensor.set_framesize(sensor.VGA)
+
+# Bin/Crop image to 200x100, which gives more details with less data to process
+sensor.set_binning((220, 200, 200, 100))
+
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load Haar Cascade
