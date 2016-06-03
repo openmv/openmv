@@ -13,7 +13,7 @@ import sensor, time, image
 sensor.reset()
 
 # Sensor settings
-sensor.set_contrast(1)
+sensor.set_contrast(3)
 sensor.set_gainceiling(16)
 
 # Set resolution to VGA, the image will be binned to
