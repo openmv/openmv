@@ -15,7 +15,10 @@ sensor.reset()
 # Sensor settings
 sensor.set_contrast(1)
 sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.QQVGA)
+
+# Set resolution to VGA, the image will be binned to
+# QVGA which gives more details with less data to process
+sensor.set_framesize(sensor.VGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load Haar Cascade
