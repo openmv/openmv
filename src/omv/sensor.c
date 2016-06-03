@@ -119,10 +119,6 @@ static int dcmi_config(uint32_t jpeg_mode)
     // Configure and enable DCMI IRQ Channel
     HAL_NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI, IRQ_SUBPRI_DCMI);
     HAL_NVIC_EnableIRQ(DCMI_IRQn);
-
-    // Uncomment the following to configure DCMI crop for testing (use width*2-1 and height-1).
-    //HAL_DCMI_ConfigCROP(&DCMIHandle, 0, 0, 320*2-1, 240-1);
-    //HAL_DCMI_EnableCROP(&DCMIHandle);
     return 0;
 }
 
@@ -361,10 +357,8 @@ int sensor_set_framesize(framesize_t framesize)
     // Skip the first frame.
     fb->bpp = 0;
 
-    // Set framebuffer dimensions
     fb->w = resolution[framesize][0];
     fb->h = resolution[framesize][1];
-
     return 0;
 }
 
@@ -385,6 +379,15 @@ int sensor_set_framerate(framerate_t framerate)
     /* set the frame rate */
     sensor.framerate = framerate;
 
+    return 0;
+}
+
+int sensor_set_binning(int x, int y, int w, int h)
+{
+    fb->w = w;
+    fb->h = h;
+    HAL_DCMI_ConfigCROP(&DCMIHandle, x*2, y, w*2-1, h-1);
+    HAL_DCMI_EnableCROP(&DCMIHandle);
     return 0;
 }
 
