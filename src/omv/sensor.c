@@ -357,8 +357,14 @@ int sensor_set_framesize(framesize_t framesize)
     // Skip the first frame.
     fb->bpp = 0;
 
-    fb->w = resolution[framesize][0];
-    fb->h = resolution[framesize][1];
+    if (framesize >= FRAMESIZE_VGA) {
+        // Crop higher resolutions to QVGA
+        sensor_set_binning(190, 120, 320, 240);
+    } else {
+        fb->w = resolution[framesize][0];
+        fb->h = resolution[framesize][1];
+        HAL_DCMI_DisableCROP(&DCMIHandle);
+    }
     return 0;
 }
 
