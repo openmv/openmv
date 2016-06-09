@@ -84,8 +84,8 @@ void imlib_integral_image_sq(image_t *src, i_image_t *sum)
     // Compute first column to avoid branching
     for (int s=0, x=0; x<src->w; x++) {
         /* sum of the current row (integer) */
-        s += img_data[src->w+x] * img_data[src->w+x];
-        sum_data[src->w+x] = s;
+        s += img_data[x] * img_data[x];
+        sum_data[x] = s;
     }
 
     for (int y=1; y<src->h; y++) {
