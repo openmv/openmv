@@ -31,17 +31,20 @@ FIRMWARE_VERSION_MAJOR  = 1
 FIRMWARE_VERSION_MINOR  = 5
 FIRMWARE_VERSION_PATCH  = 0
 
+RELEASE_TAG_NAME = 'v1.5'
+RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
+
+SCALE =1
+RECENT_FILES_LIMIT=5
+FLASH_SECTOR_START=1
+FLASH_SECTOR_END=11
+
 DATA_DIR     = os.path.join(os.path.expanduser("~"), "openmv") #use home dir
 SCRIPTS_DIR  = os.path.join(DATA_DIR, "scripts")
 EXAMPLES_DIR = os.path.join(IDE_DIR, "examples")
 GLADE_PATH   = os.path.join(BUNDLE_DIR, "openmv-ide.glade")
 CONFIG_PATH  = os.path.join(DATA_DIR, "openmv.config")
 UDEV_PATH    = "/etc/udev/rules.d/50-openmv.rules"
-
-SCALE =1
-RECENT_FILES_LIMIT=5
-FLASH_SECTOR_START=1
-FLASH_SECTOR_END=11
 
 DEFAULT_CONFIG='''\
 [main]
@@ -53,8 +56,6 @@ baudrate = 921600
 enable_jpeg = True
 '''
 CONFIG_KEYS = ['board', 'serial_port', 'recent', 'last_fw_path', 'baudrate', 'enable_jpeg']
-RELEASE_TAG_NAME = 'v1.5'
-RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
 OPENMV_BOARDS = ['OpenMV1', 'OpenMV2']
 
 class Bootloader:
