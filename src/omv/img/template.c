@@ -6,35 +6,35 @@
  * Template matching with NCC (Normalized Cross Correlation).
  *
  */
-#include "xalloc.h"
 #include "imlib.h"
-#include <arm_math.h>
-float imlib_template_match(struct image *f,  struct image *t, struct rectangle *r)
+#include "xalloc.h"
+float imlib_template_match(image_t *f, image_t *t, rectangle_t *r)
 {
     int den_b=0;
-    float corr =0.0;
+    float corr=0.0f;
 
-    struct integral_image sum;
-    struct integral_image *f_imgs=&sum;
+    // Integral image
+    i_image_t sum;
+    imlib_integral_image_alloc(&sum, f->w, f->h);
+    imlib_integral_image(f, &sum);
 
-    /* get integeral image */
-    imlib_integral_image_alloc(f_imgs, f->w, f->h);
-    imlib_integral_image(f, f_imgs);
-
-    /* get normalized template sum of squares */
+    // Normalized sum of squares of the template
     int t_mean = imlib_image_mean(t);
     for (int i=0; i < (t->w*t->h); i++) {
         int c = (int)t->data[i]-t_mean;
         den_b += c*c;
     }
 
-    for (int v=0; v < f->h - t->h; v+=3) {
-    for (int u=0; u < f->w - t->w; u+=3) {
+    for (int v=0; v < f->h - t->h; v+=2) {
+    for (int u=0; u < f->w - t->w; u+=2) {
         int num = 0;
         int den_a=0;
-        uint32_t f_sum  =imlib_integral_lookup(f_imgs, u, v, t->w, t->h);
-        int f_mean = f_sum / (t->w*t->h);
 
+        // The mean of the current patch
+        uint32_t f_sum = imlib_integral_lookup(&sum, u, v, t->w, t->h);
+        uint32_t f_mean = f_sum / (t->w*t->h);
+
+        // Normalized sum of squares of the image
         for (int y=v; y<t->h+v; y++) {
             for (int x=u; x<t->w+u; x++) {
                 int a = (int)f->data[y*f->w+x]-f_mean;
@@ -44,7 +44,7 @@ float imlib_template_match(struct image *f,  struct image *t, struct rectangle *
             }
         }
 
-        /* this overflows */
+        // Find normalized cross-correlation
         float c = num/(fast_sqrtf(den_a) *fast_sqrtf(den_b));
 
         if (c > corr) {
@@ -57,6 +57,6 @@ float imlib_template_match(struct image *f,  struct image *t, struct rectangle *
     }
     }
 
-    imlib_integral_image_free(f_imgs);
+    imlib_integral_image_free(&sum);
     return corr;
 }
