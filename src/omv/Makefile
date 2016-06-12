@@ -20,6 +20,7 @@ SRCS += $(addprefix img/,   \
 	blob.c                  \
 	fmath.c                 \
 	fsort.c                 \
+	fft.c                   \
 	haar.c                  \
 	imlib.c                 \
 	stats.c                 \
@@ -45,6 +46,7 @@ SRCS += $(addprefix img/,   \
 	fast.c                  \
 	freak.c                 \
 	template.c              \
+	phasecorrelation.c      \
 	font.c                  \
 	jpeg.c                  \
 	lbp.c                   \

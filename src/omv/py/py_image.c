@@ -1016,6 +1016,52 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
     return objects_list;
 }
 
+static mp_obj_t py_image_find_template(mp_obj_t img_obj, mp_obj_t template_obj, mp_obj_t threshold)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
+            "This function is only supported on GRAYSCALE images");
+
+    image_t *arg_template = py_image_cobj(template_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_template),
+            "This function is only supported on GRAYSCALE images");
+
+    float t = mp_obj_get_float(threshold);
+
+    rectangle_t r;
+    float corr = imlib_template_match(arg_img, arg_template, &r);
+
+    if (corr > t) {
+        mp_obj_t rec_obj[4] = {
+            mp_obj_new_int(r.x),
+            mp_obj_new_int(r.y),
+            mp_obj_new_int(r.w),
+            mp_obj_new_int(r.h)
+        };
+        return mp_obj_new_tuple(4, rec_obj);
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_find_displacement(mp_obj_t img_obj, mp_obj_t template_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    image_t *arg_template = py_image_cobj(template_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_template),
+            "Operation not supported on JPEG");
+
+    PY_ASSERT_FALSE_MSG((arg_img->w != arg_template->w)
+                     || (arg_img->h != arg_template->h),
+            "Images must have the atleast the same geometry");
+
+    int x_offset, y_offset;
+    imlib_phasecorrelate(arg_img, arg_template, &x_offset, &y_offset);
+    return mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(x_offset), mp_obj_new_int(y_offset)});
+}
+
 static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1087,33 +1133,6 @@ static mp_obj_t py_image_find_eye(mp_obj_t img_obj, mp_obj_t roi_obj)
     };
 
     return mp_obj_new_tuple(2, eye_obj);
-}
-
-static mp_obj_t py_image_find_template(mp_obj_t img_obj, mp_obj_t template_obj, mp_obj_t threshold)
-{
-    image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
-            "This function is only supported on GRAYSCALE images");
-
-    image_t *arg_template = py_image_cobj(template_obj);
-    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_template),
-            "This function is only supported on GRAYSCALE images");
-
-    float t = mp_obj_get_float(threshold);
-
-    rectangle_t r;
-    float corr = imlib_template_match(arg_img, arg_template, &r);
-
-    if (corr > t) {
-        mp_obj_t rec_obj[4] = {
-            mp_obj_new_int(r.x),
-            mp_obj_new_int(r.y),
-            mp_obj_new_int(r.w),
-            mp_obj_new_int(r.h)
-        };
-        return mp_obj_new_tuple(4, rec_obj);
-    }
-    return mp_const_none;
 }
 
 static mp_obj_t py_image_find_lbp(mp_obj_t img_obj, mp_obj_t roi_obj)
@@ -1216,10 +1235,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 /* Color Tracking */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_markers_obj, 2, py_image_find_markers);
+/* Template Matching */
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_displacement_obj, py_image_find_displacement);
 /* Feature Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eye_obj, py_image_find_eye);
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 static const mp_map_elem_t locals_dict_table[] = {
@@ -1271,10 +1292,12 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* Color Tracking */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_markers),        (mp_obj_t)&py_image_find_markers_obj},
+    /* Template Matching */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_displacement),   (mp_obj_t)&py_image_find_displacement_obj},
     /* Feature Detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_features),       (mp_obj_t)&py_image_find_features_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_eye),            (mp_obj_t)&py_image_find_eye_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lbp),            (mp_obj_t)&py_image_find_lbp_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
     { NULL, NULL },

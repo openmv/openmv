@@ -135,6 +135,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	blob.o                                  \
 	fmath.o                                 \
 	fsort.o                                 \
+	fft.o                                   \
 	haar.o                                  \
 	imlib.o                                 \
 	stats.o                                 \
@@ -160,6 +161,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	fast.o                                  \
 	freak.o                                 \
 	template.o                              \
+	phasecorrelation.o                      \
 	font.o                                  \
 	jpeg.o                                  \
 	lbp.o                                   \
