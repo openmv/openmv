@@ -14,20 +14,28 @@ import time, sensor, image
 sensor.reset()
 
 # Set sensor settings
-sensor.set_brightness(0)
-sensor.set_saturation(0)
+sensor.set_contrast(1)
 sensor.set_gainceiling(16)
-sensor.set_contrast(2)
-sensor.set_framesize(sensor.QQVGA)
+sensor.set_framesize(sensor.VGA)
+sensor.set_binning(((640-80)//2, (480-60)//2, 80, 60))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
-# Load template
-template = image.Image("/template.bmp") # Image should be like 32x32 grayscale.
+# Load template.
+# Template should be a small (eg. 32x32 pixels) grayscale image.
+template = image.Image("/template2.pgm")
+
+clock = time.clock()
 
 # Run template matching
 while (True):
+    clock.tick()
     img = sensor.snapshot()
 
-    r = img.find_template(template, 0.75)
+    # find_template(template, threshold, [roi, step])
+    # ROI: The region of interest tuple (x, y, w, h).
+    # Step: The loop step used (y+=step, x+=step) use a bigger step to make it faster.
+    # Note: ROI has to be smaller than the image and bigger than the template.
+    r = img.find_template(template, 0.70, step=3) #, roi=(10, 0, 60, 60))
     if r:
         img.draw_rectangle(r)
+    print(clock.fps())
