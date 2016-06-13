@@ -1016,22 +1016,34 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
     return objects_list;
 }
 
-static mp_obj_t py_image_find_template(mp_obj_t img_obj, mp_obj_t template_obj, mp_obj_t threshold)
+static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_image_cobj(img_obj);
+    image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
             "This function is only supported on GRAYSCALE images");
 
-    image_t *arg_template = py_image_cobj(template_obj);
+    image_t *arg_template = py_image_cobj(args[1]);
     PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_template),
             "This function is only supported on GRAYSCALE images");
 
-    float t = mp_obj_get_float(threshold);
+    float arg_thresh = mp_obj_get_float(args[2]);
 
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    // Make sure ROI is bigger than or equal to template size
+    PY_ASSERT_TRUE_MSG((roi.w >= arg_template->w && roi.h >= arg_template->h),
+            "Region of interest is smaller than template!");
+
+    // Make sure ROI is smaller than or equal to image size
+    PY_ASSERT_TRUE_MSG(((roi.x + roi.w) <= arg_img->w && (roi.y + roi.h) <= arg_img->h),
+            "Region of interest is bigger than image!");
+
+    // Find template
     rectangle_t r;
-    float corr = imlib_template_match(arg_img, arg_template, &r);
+    float corr = imlib_template_match(arg_img, arg_template, &roi, &r);
 
-    if (corr > t) {
+    if (corr > arg_thresh) {
         mp_obj_t rec_obj[4] = {
             mp_obj_new_int(r.x),
             mp_obj_new_int(r.y),
@@ -1236,7 +1248,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_markers_obj, 2, py_image_find_markers);
 /* Template Matching */
-STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_find_template_obj, py_image_find_template);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_template_obj, 3, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_displacement_obj, py_image_find_displacement);
 /* Feature Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_features);

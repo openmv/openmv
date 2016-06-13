@@ -8,7 +8,7 @@
  */
 #include "imlib.h"
 #include "xalloc.h"
-float imlib_template_match(image_t *f, image_t *t, rectangle_t *r)
+float imlib_template_match(image_t *f, image_t *t, rectangle_t *roi, rectangle_t *r)
 {
     int den_b=0;
     float corr=0.0f;
@@ -25,8 +25,8 @@ float imlib_template_match(image_t *f, image_t *t, rectangle_t *r)
         den_b += c*c;
     }
 
-    for (int v=0; v < f->h - t->h; v+=2) {
-    for (int u=0; u < f->w - t->w; u+=2) {
+    for (int v=roi->y; v < roi->y + roi->h - t->h; v+=2) {
+    for (int u=roi->x; u < roi->x + roi->w - t->w; u+=2) {
         int num = 0;
         int den_a=0;
 
