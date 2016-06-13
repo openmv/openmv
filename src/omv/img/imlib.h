@@ -448,6 +448,10 @@ array_t *imlib_find_blobs(image_t *img,
 array_t *imlib_find_markers(array_t *blobs_list, int margin,
                             bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1);
 
+/* Template Matching */
+float imlib_template_match(struct image *image, struct image *template, struct rectangle *r);
+void imlib_phasecorrelate(image_t *img0, image_t *img1, int *x_offset, int *y_offset);
+
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);
 
@@ -470,9 +474,6 @@ void imlib_integral_mw_shift_sq(image_t *src, mw_image_t *sum, int n);
 void imlib_integral_mw_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, rectangle_t *roi);
 void imlib_integral_mw_shift_ss(image_t *src, mw_image_t *sum, mw_image_t *ssq, rectangle_t *roi, int n);
 long imlib_integral_mw_lookup(mw_image_t *sum, int x, int y, int w, int h);
-
-/* Template matching */
-float imlib_template_match(struct image *image, struct image *template, struct rectangle *r);
 
 /* Haar/VJ */
 int imlib_load_cascade(struct cascade* cascade, const char *path);
