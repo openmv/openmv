@@ -1039,9 +1039,11 @@ static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map
     PY_ASSERT_TRUE_MSG(((roi.x + roi.w) <= arg_img->w && (roi.y + roi.h) <= arg_img->h),
             "Region of interest is bigger than image!");
 
+    int step = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_step), 2);
+
     // Find template
     rectangle_t r;
-    float corr = imlib_template_match(arg_img, arg_template, &roi, &r);
+    float corr = imlib_template_match(arg_img, arg_template, &roi, step, &r);
 
     if (corr > arg_thresh) {
         mp_obj_t rec_obj[4] = {

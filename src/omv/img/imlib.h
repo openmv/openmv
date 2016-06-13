@@ -449,7 +449,7 @@ array_t *imlib_find_markers(array_t *blobs_list, int margin,
                             bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1);
 
 /* Template Matching */
-float imlib_template_match(image_t *image, image_t *template, rectangle_t *r, rectangle_t *roi);
+float imlib_template_match(image_t *image, image_t *template, rectangle_t *roi, int step, rectangle_t *r);
 void imlib_phasecorrelate(image_t *img0, image_t *img1, int *x_offset, int *y_offset);
 
 /* Clustering functions */
