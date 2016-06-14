@@ -382,33 +382,35 @@ static void do_ifft(float *inout, int N_pow2, int stride)
             }
         }
     }
+
     float div = 1.0 / (N >> 1);
-    for (int i = 0; i < N; i++) {
-        inout[i] *= div;
+    for (int i = 0; i < N; i += 2) {
+        inout[(i*stride)+0] *= div;
+        inout[(i*stride)+1] *= div;
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void alloc_fft1d_buffer(fft1d_controller_t *controller, uint8_t *data, int len)
+void fft1d_alloc(fft1d_controller_t *controller, uint8_t *buf, int len)
 {
-    controller->d_pointer = data;
+    controller->d_pointer = buf;
     controller->d_len = len;
     controller->pow2 = int_clog2(len);
     controller->data = fb_alloc((2 << controller->pow2) * sizeof(float));
 }
 
-void dealloc_fft1d_buffer()
+void fft1d_dealloc()
 {
     fb_free();
 }
 
-void do_1dfft(fft1d_controller_t *controller)
+void fft1d_run(fft1d_controller_t *controller)
 {
     // We can speed up the FFT by packing data into both the real and imaginary
     // values. This results in having to do an FFT of half the size normally.
 
-    float *h_buffer = fb_alloc((2 << (controller->pow2-1)) * sizeof(float));
+    float *h_buffer = fb_alloc((1 << controller->pow2) * sizeof(float));
     prepare_real_input(controller->d_pointer, controller->d_len,
                        h_buffer, controller->pow2 - 1);
     do_fft(h_buffer, controller->pow2 - 1, 1);
@@ -416,24 +418,24 @@ void do_1dfft(fft1d_controller_t *controller)
     fb_free();
 }
 
-void do_1difft(fft1d_controller_t *controller)
+void ifft1d_run(fft1d_controller_t *controller)
 {
     // We can speed up the FFT by packing data into both the real and imaginary
     // values. This results in having to do an FFT of half the size normally.
 
-    float *h_buffer = fb_alloc((2 << (controller->pow2-1)) * sizeof(float));
+    float *h_buffer = fb_alloc((1 << controller->pow2) * sizeof(float));
     pack_fft(controller->data, h_buffer, controller->pow2 - 1);
     prepare_complex_input(h_buffer, h_buffer,
                           controller->pow2 - 1, 1);
     do_ifft(h_buffer, controller->pow2 - 1, 1);
     memset(controller->data, 0, (2 << controller->pow2) * sizeof(float));
-    memcpy(controller->data, h_buffer, (2 << (controller->pow2-1)) * sizeof(float));
+    memcpy(controller->data, h_buffer, (1 << controller->pow2) * sizeof(float));
     fb_free();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void alloc_fft2d_buffer(fft2d_controller_t *controller, image_t *img, rectangle_t *r)
+void fft2d_alloc(fft2d_controller_t *controller, image_t *img, rectangle_t *r)
 {
     controller->img = img;
     if (!rectangle_subimg(controller->img, r, &controller->r)) ff_no_intersection(NULL);
@@ -445,7 +447,7 @@ void alloc_fft2d_buffer(fft2d_controller_t *controller, image_t *img, rectangle_
     fb_alloc0(2 * (1 << controller->w_pow2) * (1 << controller->h_pow2) * sizeof(float));
 }
 
-void dealloc_fft2d_buffer()
+void fft2d_dealloc()
 {
     fb_free();
 }
@@ -453,7 +455,7 @@ void dealloc_fft2d_buffer()
 // RGB565 to YUV conversion
 extern const int8_t yuv_table[196608];
 
-void do_2dfft(fft2d_controller_t *controller)
+void fft2d_run(fft2d_controller_t *controller)
 {
     // This section copies image data into the fft buffer. It takes care of
     // extracting the grey channel from RGB images if necessary. The code
@@ -472,11 +474,11 @@ void do_2dfft(fft2d_controller_t *controller)
         }
         // Do FFT on image data and copy to main buffer.
         fft1d_controller_t fft1d_controller_i;
-        alloc_fft1d_buffer(&fft1d_controller_i, tmp, controller->r.w);
-        do_1dfft(&fft1d_controller_i);
+        fft1d_alloc(&fft1d_controller_i, tmp, controller->r.w);
+        fft1d_run(&fft1d_controller_i);
         memcpy(controller->data + (i * (2 << controller->w_pow2)),
                fft1d_controller_i.data, (2 << fft1d_controller_i.pow2) * sizeof(float));
-        dealloc_fft1d_buffer();
+        fft1d_dealloc();
         // Free image data buffer.
         fb_free();
     }
@@ -491,7 +493,7 @@ void do_2dfft(fft2d_controller_t *controller)
     }
 }
 
-void do_2difft(fft2d_controller_t *controller)
+void ifft2d_run(fft2d_controller_t *controller)
 {
     // Do columns...
     for (int i = 0, ii = (2 << controller->w_pow2); i < ii; i += 2) {
@@ -502,10 +504,10 @@ void do_2difft(fft2d_controller_t *controller)
     }
 
     // Do rows...
-    for (int i = 0, ii = (1 << controller->h_pow2); i < ii; i++) {
+    for (int i = 0; i < controller->r.h; i++) {
         fft1d_controller_t fft1d_controller_i;
         fft1d_controller_i.pow2 = controller->w_pow2;
         fft1d_controller_i.data = controller->data + (i * (2 << controller->w_pow2));
-        do_1difft(&fft1d_controller_i);
+        ifft1d_run(&fft1d_controller_i);
     }
 }
