@@ -16,18 +16,18 @@ typedef struct fft1d_controller {
     int pow2;
     float *data;
 } fft1d_controller_t;
-void alloc_fft1d_buffer(fft1d_controller_t *controller, uint8_t *data, int len);
-void dealloc_fft1d_buffer();
-void do_1dfft(fft1d_controller_t *controller);
-void do_1difft(fft1d_controller_t *controller);
+void fft1d_alloc(fft1d_controller_t *controller, uint8_t *buf, int len);
+void fft1d_dealloc();
+void fft1d_run(fft1d_controller_t *controller);
+void ifft1d_run(fft1d_controller_t *controller);
 typedef struct fft2d_controller {
     image_t *img;
     rectangle_t r;
     int w_pow2, h_pow2;
     float *data;
 } fft2d_controller_t;
-void alloc_fft2d_buffer(fft2d_controller_t *controller, image_t *img, rectangle_t *r);
-void dealloc_fft2d_buffer();
-void do_2dfft(fft2d_controller_t *controller);
-void do_2difft(fft2d_controller_t *controller);
+void fft2d_alloc(fft2d_controller_t *controller, image_t *img, rectangle_t *r);
+void fft2d_dealloc();
+void fft2d_run(fft2d_controller_t *controller);
+void ifft2d_run(fft2d_controller_t *controller);
 #endif /* __FFT_H__ */
