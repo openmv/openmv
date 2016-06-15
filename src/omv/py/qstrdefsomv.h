@@ -23,6 +23,7 @@ Q(match_descriptor)
 
 // Image class
 Q(copy)
+Q(copy_to_fb)
 Q(save)
 Q(compress)
 Q(compressed)
