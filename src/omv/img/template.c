@@ -91,11 +91,11 @@ static float find_block_ncc(image_t *f, image_t *t, i_image_t *sum, int t_mean, 
         v = 0;
     }
 
-    if (u+t->w > f->w) {
+    if (u+t->w >= f->w) {
         w = f->w - u;
     }
 
-    if (v+t->h > f->h) {
+    if (v+t->h >= f->h) {
         h = f->h - v;
     }
 
@@ -147,13 +147,17 @@ float imlib_template_match_ds(image_t *f, image_t *t, rectangle_t *r)
     // Start with the Large Diamond Search Pattern (LDSP) 9 points.
     bool sdsp = false;
 
-    while (true) {
+    // Step size == template width
+    int step = t->w;
 
+    while (step) {
+    //while (true) {
         // Set the Diamond Search Pattern (DSP).
-        set_dsp(cx, cy, pts, sdsp, t->w);
+        set_dsp(cx, cy, pts, sdsp, step);
 
         // Set the number of search blocks (5 or 9 for SDSP and LDSP respectively).
         int num_pts = (sdsp == true)? 5: 9;
+
         // Find the block with the highest NCC
         for (int i=0; i<num_pts; i++) {
             float blk_xc = find_block_ncc(f, t, &sum, t_mean, t_sumsq, pts[i].x, pts[i].y);
@@ -162,22 +166,26 @@ float imlib_template_match_ds(image_t *f, image_t *t, rectangle_t *r)
                 py = pts[i].y;
                 max_xc = blk_xc;
             }
-            //printf("blk xc: %f max xc: %f\n", (double) blk_xc, (double) max_xc);
         }
 
         // If the highest correlation is found at the center block and search is using
         // SDSP then the highest correlation is found, if not then switch search to SDSP.
         if (px == cx && py == cy) {
-            if (sdsp == true) {
-                break;
-            }
-            sdsp = true;
+            //if (sdsp == true) {
+            //    break;
+            //}
+            //sdsp = true;
+
+            // Note instead of switching to the smaller pattern, the step size can be reduced
+            // each time the highest correlation is found at the center, and break on step == 0.
+            // This makes DS much more accurate, but slower.
+
+            step /= 2;
         }
 
         // Set the new search center to the block with highest correlation
         cx = px;
         cy = py;
-        //printf("cx: %d cy: %d\n", cx, cy);
     }
 
     r->x = cx;
