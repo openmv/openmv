@@ -180,7 +180,7 @@ float imlib_template_match_ds(image_t *f, image_t *t, rectangle_t *r)
             // each time the highest correlation is found at the center, and break on step == 0.
             // This makes DS much more accurate, but slower.
 
-            step /= 2;
+            step --;
         }
 
         // Set the new search center to the block with highest correlation
