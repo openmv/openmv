@@ -44,7 +44,7 @@ static int run_cascade_classifier(cascade_t* cascade, point_t pt)
     int win_w = cascade->window.w;
     int win_h = cascade->window.h;
     int32_t n = (win_w * win_h);
-    int32_t i_s = imlib_integral_mw_lookup (cascade->sum, pt.x,   0, win_w, win_h);
+    int32_t i_s = imlib_integral_mw_lookup (cascade->sum, pt.x, 0, win_w, win_h);
     int32_t i_sq = imlib_integral_mw_lookup(cascade->ssq, pt.x, 0, win_w, win_h);
     int32_t v = i_sq*n-(i_s*i_s);
     cascade->std = fast_sqrtf(fast_fabsf(v));
