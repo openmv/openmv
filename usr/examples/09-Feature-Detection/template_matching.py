@@ -9,6 +9,7 @@
 # that the functionality exists, but, in its current state is inadequate.
 
 import time, sensor, image
+from image import SEARCH_EX, SEARCH_DS
 
 # Reset sensor
 sensor.reset()
@@ -16,13 +17,15 @@ sensor.reset()
 # Set sensor settings
 sensor.set_contrast(1)
 sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.VGA)
-sensor.set_binning(((640-80)//2, (480-60)//2, 80, 60))
+# Max resolution for template matching with SEARCH_EX is QQVGA
+sensor.set_framesize(sensor.QQVGA)
+# You can set binning to reduce the search image.
+#sensor.set_binning(((640-80)//2, (480-64)//2, 80, 64))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load template.
 # Template should be a small (eg. 32x32 pixels) grayscale image.
-template = image.Image("/template2.pgm")
+template = image.Image("/template.pgm")
 
 clock = time.clock()
 
@@ -31,11 +34,14 @@ while (True):
     clock.tick()
     img = sensor.snapshot()
 
-    # find_template(template, threshold, [roi, step])
+    # find_template(template, threshold, [roi, step, search])
     # ROI: The region of interest tuple (x, y, w, h).
     # Step: The loop step used (y+=step, x+=step) use a bigger step to make it faster.
-    # Note: ROI has to be smaller than the image and bigger than the template.
-    r = img.find_template(template, 0.70, step=3) #, roi=(10, 0, 60, 60))
+    # Search is either image.SEARCH_EX for exhaustive search or image.SEARCH_DS for diamond search
+    #
+    # Note1: ROI has to be smaller than the image and bigger than the template.
+    # Note2: In diamond search, step and ROI are both ignored.
+    r = img.find_template(template, 0.75, step=3, search=SEARCH_DS) #, roi=(10, 0, 60, 60))
     if r:
         img.draw_rectangle(r)
     print(clock.fps())

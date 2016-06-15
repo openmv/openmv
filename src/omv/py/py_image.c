@@ -1050,10 +1050,16 @@ static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map
             "Region of interest is bigger than image!");
 
     int step = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_step), 2);
+    int search = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_search), SEARCH_EX);
 
     // Find template
     rectangle_t r;
-    float corr = imlib_template_match(arg_img, arg_template, &roi, step, &r);
+    float corr;
+    if (search == SEARCH_DS) {
+        corr = imlib_template_match_ds(arg_img, arg_template, &r);
+    } else {
+        corr = imlib_template_match_ex(arg_img, arg_template, &roi, step, &r);
+    }
 
     if (corr > arg_thresh) {
         mp_obj_t rec_obj[4] = {
@@ -1631,6 +1637,8 @@ static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_LBP),                 MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),               MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_EX),           MP_OBJ_NEW_SMALL_INT(SEARCH_EX)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_DS),           MP_OBJ_NEW_SMALL_INT(SEARCH_DS)},
     /* Color space functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_rgb_to_lab),          (mp_obj_t)&py_image_rgb_to_lab_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_lab_to_rgb),          (mp_obj_t)&py_image_lab_to_rgb_obj},
