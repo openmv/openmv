@@ -41,7 +41,7 @@ while (True):
     #
     # Note1: ROI has to be smaller than the image and bigger than the template.
     # Note2: In diamond search, step and ROI are both ignored.
-    r = img.find_template(template, 0.75, step=3, search=SEARCH_DS) #, roi=(10, 0, 60, 60))
+    r = img.find_template(template, 0.70, step=4, search=SEARCH_DS) #, roi=(10, 0, 60, 60))
     if r:
         img.draw_rectangle(r)
     print(clock.fps())
