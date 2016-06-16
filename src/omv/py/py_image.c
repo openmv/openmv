@@ -190,11 +190,23 @@ static mp_obj_t py_image_copy(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 
 static mp_obj_t py_image_copy_to_fb(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    point_t arg_offs;
     image_t *arg_img = py_image_cobj(args[0]);
+    py_helper_lookup_offset(kw_args, arg_img, &arg_offs);
+
     fb->w = arg_img->w;
     fb->h = arg_img->h;
     fb->bpp = arg_img->bpp;
-    memcpy(fb->pixels, arg_img->pixels, fb->w * fb->h * fb->bpp);
+
+    int yoffs = arg_offs.y;
+    int xoffs = arg_offs.x * arg_img->bpp;
+    int stride = arg_img->w * arg_img->bpp;
+
+    for (int y=yoffs; y<arg_img->h; y++) {
+        for (int x=xoffs; x<stride; x++) {
+            fb->pixels[y*stride+x] = arg_img->pixels[y*stride+x];
+        }
+    }
     return mp_const_true;
 }
 
