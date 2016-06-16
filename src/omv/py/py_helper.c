@@ -47,6 +47,22 @@ int py_helper_lookup_color(mp_map_t *kw_args, int default_color)
     return default_color;
 }
 
+void py_helper_lookup_offset(mp_map_t *kw_args, image_t *img, point_t *p)
+{
+    mp_map_elem_t *kw_offset = mp_map_lookup(kw_args,
+            MP_OBJ_NEW_QSTR(MP_QSTR_offset), MP_MAP_LOOKUP);
+
+    if (kw_offset == NULL) {
+        p->x = 0;
+        p->y = 0;
+    } else {
+        mp_obj_t *arg_offset;
+        mp_obj_get_array_fixed_n(kw_offset->value, 2, &arg_offset);
+        p->x = mp_obj_get_int(arg_offset[0]);
+        p->y = mp_obj_get_int(arg_offset[1]);
+    }
+}
+
 void py_helper_lookup_rectangle(mp_map_t *kw_args, image_t *img, rectangle_t *r)
 {
     mp_map_elem_t *kw_rectangle = mp_map_lookup(kw_args,
