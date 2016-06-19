@@ -30,6 +30,9 @@ typedef enum {
 } pixformat_t;
 
 typedef enum {
+    FRAMESIZE_40x30,    // 40x30
+    FRAMESIZE_64x32,    // 64x32
+    FRAMESIZE_64x64,    // 64x64
     FRAMESIZE_QQCIF,    // 88x72
     FRAMESIZE_QQVGA,    // 160x120
     FRAMESIZE_QQVGA2,   // 128x160

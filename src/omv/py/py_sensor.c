@@ -326,6 +326,9 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_NEGATIVE),            MP_OBJ_NEW_SMALL_INT(SDE_NEGATIVE)},        /* Negative image */
 
     // Frame size
+    { MP_OBJ_NEW_QSTR(MP_QSTR_B40x30),              MP_OBJ_NEW_SMALL_INT(FRAMESIZE_40x30)},    /* 40x30     */
+    { MP_OBJ_NEW_QSTR(MP_QSTR_B64x32),              MP_OBJ_NEW_SMALL_INT(FRAMESIZE_64x32)},    /* 64x32     */
+    { MP_OBJ_NEW_QSTR(MP_QSTR_B64x64),              MP_OBJ_NEW_SMALL_INT(FRAMESIZE_64x64)},    /* 64x64     */
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQCIF),               MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQCIF)},    /* 88x72     */
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQVGA),               MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQVGA)},    /* 160x120   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_QQVGA2),              MP_OBJ_NEW_SMALL_INT(FRAMESIZE_QQVGA2)},   /* 128x160   */

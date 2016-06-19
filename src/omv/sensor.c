@@ -38,6 +38,9 @@ static int line = 0;
 extern uint8_t _line_buf;
 
 const int resolution[][2] = {
+    {40,    30 },    /* 40x30 */
+    {64,    32 },    /* 64x32 */
+    {64,    64 },    /* 64x64 */
     {88,    72 },    /* QQCIF */
     {160,   120},    /* QQVGA */
     {128,   160},    /* QQVGA2*/
