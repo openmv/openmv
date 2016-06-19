@@ -446,6 +446,10 @@ class OMVGtk:
         self.drawingarea = self.builder.get_object("drawingarea")
         self.da_menu = self.builder.get_object("da_menu")
 
+        # preview flags
+        self.enable_fb = True
+        self.disable_fb_request = False
+
         # selection coords
         self.sel_ended=False
         self.selection_started=False
@@ -553,6 +557,7 @@ class OMVGtk:
             "on_execute_clicked"            : self.execute_clicked,
             "on_stop_clicked"               : self.stop_clicked,
             "on_bootloader_clicked"         : self.bootloader_clicked,
+            "on_enable_fb_toggled"          : self.enable_fb_toggled,
             "on_motion_notify"              : self.motion_notify,
             "on_button_press"               : self.button_pressed,
             "on_button_release"             : self.button_released,
@@ -730,6 +735,12 @@ class OMVGtk:
     def bootloader_clicked(self, widget):
         self.bootloader.run()
 
+    def enable_fb_toggled(self, widget):
+        enable_fb_check = self.builder.get_object("enable_fb_check")
+        self.disable_fb_request = not enable_fb_check.get_active()
+        if (self.disable_fb_request == False):
+            self.enable_fb = True
+
     def button_pressed(self, widget, event):
         self.x1 = int(event.x)
         self.y1 = int(event.y)
@@ -775,7 +786,7 @@ class OMVGtk:
 
     def update_drawing(self):
         fb = None
-        if (self.connected):
+        if (self.enable_fb and self.connected):
             try:
                 # read drawingarea
                 fb = openmv.fb_dump()
@@ -785,6 +796,11 @@ class OMVGtk:
                 return True
         if fb:
             self.fb = fb
+            # If preview is disabled, don't read any more frames.
+            # This needs to be set here, after reading a valid frame,
+            # to ensure that fb_request flag is cleared in firmware.
+            if self.disable_fb_request:
+                self.enable_fb = False
         else:
             fb = self.fb
 

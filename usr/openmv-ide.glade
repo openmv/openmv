@@ -774,12 +774,14 @@ Kwabena W. Agyeman</property>
                           </object>
                         </child>
                         <child type="label">
-                          <object class="GtkLabel" id="label">
+                          <object class="GtkCheckButton" id="enable_fb_check">
+                            <property name="label" translatable="yes">Preview</property>
                             <property name="visible">True</property>
-                            <property name="can_focus">False</property>
-                            <property name="xalign">0</property>
-                            <property name="label" translatable="yes">&lt;b&gt;Framebuffer&lt;/b&gt;</property>
-                            <property name="use_markup">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">False</property>
+                            <property name="active">True</property>
+                            <property name="draw_indicator">True</property>
+                            <signal name="toggled" handler="on_enable_fb_toggled" swapped="no"/>
                           </object>
                         </child>
                       </object>
