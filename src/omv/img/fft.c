@@ -105,6 +105,18 @@ ALWAYS_INLINE static float get_b_star_i(int k, int N_pow2) // N=512 -> N=pow2=9
     return 0.5 * (-get_cos(k, N_pow2));
 }
 
+//// For samples 0 to (n/2)-1 --- Note: clog2(n/2) = N_pow2
+//ALWAYS_INLINE static float get_hann_l_side(int k, int N_pow2)
+//{
+//    return 0.5 * (1 - get_cos(k, N_pow2));
+//}
+
+//// For samples (n/2) to n-1 --- Note: clog2(n/2) = N_pow2
+//ALWAYS_INLINE static float get_hann_r_side(int k, int N_pow2)
+//{
+//    return 0.5 * (1 - get_cos((2 << N_pow2) - k - 1, N_pow2));
+//}
+
 const float sin_table[512] = {
      0.000000f,  0.006136f,  0.012272f,  0.018407f,  0.024541f,  0.030675f,  0.036807f,  0.042938f,
      0.049068f,  0.055195f,  0.061321f,  0.067444f,  0.073565f,  0.079682f,  0.085797f,  0.091909f,
@@ -296,6 +308,15 @@ ALWAYS_INLINE static void swap(float *a, float *b)
     *a = tmp;
 }
 
+//ALWAYS_INLINE static float get_hann(int k, int N_pow2)
+//{
+//    if (k < (1 << N_pow2)) {
+//        return get_hann_l_side(k, N_pow2);
+//    } else {
+//        return get_hann_r_side(k, N_pow2);
+//    }
+//}
+
 // Copies 2N real pairs (or pad with zero) from in to out while bit reversing
 // their indexes.
 
@@ -305,8 +326,20 @@ static void prepare_real_input(uint8_t *in, int in_len, float *out, int N_pow2)
         int m = bit_reverse(k, N_pow2);
         out[m+0] = ((k+0) < in_len) ? in[k+0] : 0;
         out[m+1] = ((k+1) < in_len) ? in[k+1] : 0;
+//        // Apply Hann Window (this is working on real numbers)
+//        out[m+0] *= get_hann(k+0, N_pow2);
+//        out[m+1] *= get_hann(k+1, N_pow2);
     }
 }
+
+//// This works on complex numbers...
+//static void apply_hann_window(float *inout, int N_pow2, int stride)
+//{
+//    for (int k = 0, l = 2 << N_pow2; k < l; k += 2) {
+//        inout[(k*stride)+0] *= get_hann(k>>1, N_pow2-1);
+//        inout[(k*stride)+1] *= get_hann(k>>1, N_pow2-1);
+//    }
+//}
 
 // Copies N complex pairs from in to out while bit reversing their indexes. The
 // in and out arrays may be the same.
@@ -488,6 +521,7 @@ void fft2d_run(fft2d_controller_t *controller)
     for (int i = 0, ii = (2 << controller->w_pow2); i < ii; i += 2) {
         float *p = controller->data + i;
         // Vertical FFTs are full FFTs...
+//        apply_hann_window(p, controller->h_pow2, (1 << controller->w_pow2));
         prepare_complex_input(p, p, controller->h_pow2, (1 << controller->w_pow2));
         do_fft(p, controller->h_pow2, (1 << controller->w_pow2));
     }

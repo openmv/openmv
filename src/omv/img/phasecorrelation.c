@@ -9,7 +9,7 @@
 #include "fmath.h"
 #include "fft.h"
 
-void imlib_phasecorrelate(image_t *img0, image_t *img1, int *x_offset, int *y_offset)
+void imlib_phasecorrelate(image_t *img0, image_t *img1, float *x_offset, float *y_offset, float *response)
 {
     fft2d_controller_t fft0, fft1;
     rectangle_t roi0, roi1;
@@ -47,6 +47,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, int *x_offset, int *y_of
 
     ifft2d_run(&fft0);
 
+    float sum = 0;
     float max = 0;
     int off_x = 0;
     int off_y = 0;
@@ -61,19 +62,52 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, int *x_offset, int *y_of
                 off_x = j;
                 off_y = i;
             }
+            sum += f_r;
         }
     }
 
-    if (off_x > (img0->w/2)) {
-        *x_offset = img0->w - off_x;
-    } else {
-        *x_offset = -off_x;
+    *response = max / sum; // normalize this to [0:1]
+
+    float f_sum = 0;
+    float f_off_x = 0;
+    float f_off_y = 0;
+    for (int i = -1; i < 1; i++) {
+        for (int j = -1; j < 1; j++) {
+
+            // Wrap around
+            int new_x = off_x + j;
+            if (new_x < 0) new_x += img0->w;
+            if (new_x >= img0->w) new_x -= img0->w;
+
+            // Wrap around
+            int new_y = off_y + i;
+            if (new_y < 0) new_y += img0->h;
+            if (new_y >= img0->h) new_y -= img0->h;
+
+            // Compute centroid.
+            int index = (new_y * (w * 2)) + new_x;
+            float f_r = fft0.data[index];
+            f_off_x += (off_x + j) * f_r; // don't use new_x here
+            f_off_y += (off_y + i) * f_r; // don't use new_y here
+            f_sum += f_r;
+        }
     }
 
-    if (off_y > (img0->h/2)) {
-        *y_offset = img0->h - off_y;
+    f_off_x /= f_sum;
+    f_off_y /= f_sum;
+
+    // FFT Shift X
+    if (f_off_x >= (img0->w/2)) {
+        *x_offset = f_off_x - img0->w;
     } else {
-        *y_offset = -off_y;
+        *x_offset = f_off_x;
+    }
+
+    // FFT Shift Y
+    if (f_off_y >= (img0->h/2)) {
+        *y_offset = -(f_off_y - img0->h);
+    } else {
+        *y_offset = -f_off_y;
     }
 
     fft2d_dealloc(); // fft1
