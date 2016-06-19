@@ -10,7 +10,7 @@
 #define __FRAMEBUFFER_H__
 extern char _fb_base;
 static struct framebuffer {
-    int w,h;
+    int w,h, org_w, org_h;
     int bpp;
     int ready;
     int request;

@@ -364,8 +364,8 @@ int sensor_set_framesize(framesize_t framesize)
         // Crop higher resolutions to QVGA
         sensor_set_binning(190, 120, 320, 240);
     } else {
-        fb->w = resolution[framesize][0];
-        fb->h = resolution[framesize][1];
+        fb->w = fb->org_w = resolution[framesize][0];
+        fb->h = fb->org_h = resolution[framesize][1];
         HAL_DCMI_DisableCROP(&DCMIHandle);
     }
     return 0;
@@ -393,8 +393,8 @@ int sensor_set_framerate(framerate_t framerate)
 
 int sensor_set_binning(int x, int y, int w, int h)
 {
-    fb->w = w;
-    fb->h = h;
+    fb->w = fb->org_w = w;
+    fb->h = fb->org_h = h;
     HAL_DCMI_ConfigCROP(&DCMIHandle, x*2, y, w*2-1, h-1);
     HAL_DCMI_EnableCROP(&DCMIHandle);
     return 0;
@@ -627,8 +627,8 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     fb->ready = 0;
 
     // Reset framebuffer (pooling may shrink this)...
-    fb->w = resolution[sensor.framesize][0];
-    fb->h = resolution[sensor.framesize][1];
+    fb->w = fb->org_w;
+    fb->h = fb->org_h;
 
     // Setup the size and address of the transfer
     if (sensor.pixformat == PIXFORMAT_JPEG) {
