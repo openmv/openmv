@@ -37,6 +37,7 @@ SRCS += $(addprefix img/,   \
 	mean.c                  \
 	mode.c                  \
 	median.c                \
+	pool.c                  \
 	point.c                 \
 	rectangle.c             \
 	bmp.c                   \

@@ -152,6 +152,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	mean.o                                  \
 	mode.o                                  \
 	median.o                                \
+	pool.o                                  \
 	point.o                                 \
 	rectangle.o                             \
 	bmp.o                                   \

@@ -454,9 +454,11 @@ array_t *imlib_find_markers(array_t *blobs_list, int margin,
                             bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1);
 
 /* Template Matching */
+void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, const int bias);
+void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div);
 float imlib_template_match_ds(image_t *image, image_t *template, rectangle_t *r);
 float imlib_template_match_ex(image_t *image, image_t *template, rectangle_t *roi, int step, rectangle_t *r);
-void imlib_phasecorrelate(image_t *img0, image_t *img1, int *x_offset, int *y_offset);
+void imlib_phasecorrelate(image_t *img0, image_t *img1, float *x_offset, float *y_offset, float *response);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k);

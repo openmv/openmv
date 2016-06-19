@@ -1038,6 +1038,116 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
     return objects_list;
 }
 
+static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int x_div = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(x_div <= arg_img->w, "Width divisor must be less than <= img width");
+    int y_div = mp_obj_get_int(args[2]);
+    PY_ASSERT_TRUE_MSG(y_div >= 1, "Height divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(y_div <= arg_img->h, "Height divisor must be less than <= img height");
+
+    image_t out_img;
+    out_img.w = arg_img->w / x_div;
+    out_img.h = arg_img->h / y_div;
+    out_img.bpp = arg_img->bpp;
+    out_img.pixels = arg_img->pixels;
+
+    int bias = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
+    imlib_midpoint_pool(arg_img, &out_img, x_div, y_div, IM_MIN(IM_MAX(bias, 0), 256));
+    arg_img->w = out_img.w;
+    arg_img->h = out_img.h;
+    // Check if this image is the one in the frame buffer...
+    if (((fb->pixels+FB_JPEG_OFFS_SIZE) == arg_img->pixels)
+    || (fb->pixels == arg_img->pixels)) {
+        fb->w = out_img.w;
+        fb->h = out_img.h;
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int x_div = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(x_div <= arg_img->w, "Width divisor must be less than <= img width");
+    int y_div = mp_obj_get_int(args[2]);
+    PY_ASSERT_TRUE_MSG(y_div >= 1, "Height divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(y_div <= arg_img->h, "Height divisor must be less than <= img height");
+
+    image_t out_img;
+    out_img.w = arg_img->w / x_div;
+    out_img.h = arg_img->h / y_div;
+    out_img.bpp = arg_img->bpp;
+    out_img.pixels = xalloc(out_img.w * out_img.h * out_img.bpp);
+
+    int bias = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
+    imlib_midpoint_pool(arg_img, &out_img, x_div, y_div, IM_MIN(IM_MAX(bias, 0), 256));
+    return py_image_from_struct(&out_img);
+}
+
+static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_t y_div_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int x_div = mp_obj_get_int(x_div_obj);
+    PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(x_div <= arg_img->w, "Width divisor must be less than <= img width");
+    int y_div = mp_obj_get_int(y_div_obj);
+    PY_ASSERT_TRUE_MSG(y_div >= 1, "Height divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(y_div <= arg_img->h, "Height divisor must be less than <= img height");
+
+    image_t out_img;
+    out_img.w = arg_img->w / x_div;
+    out_img.h = arg_img->h / y_div;
+    out_img.bpp = arg_img->bpp;
+    out_img.pixels = arg_img->pixels;
+
+    imlib_mean_pool(arg_img, &out_img, x_div, y_div);
+    arg_img->w = out_img.w;
+    arg_img->h = out_img.h;
+    // Check if this image is the one in the frame buffer...
+    if (((fb->pixels+FB_JPEG_OFFS_SIZE) == arg_img->pixels)
+    || (fb->pixels == arg_img->pixels)) {
+        fb->w = out_img.w;
+        fb->h = out_img.h;
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_image_mean_pooled(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_t y_div_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    int x_div = mp_obj_get_int(x_div_obj);
+    PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(x_div <= arg_img->w, "Width divisor must be less than <= img width");
+    int y_div = mp_obj_get_int(y_div_obj);
+    PY_ASSERT_TRUE_MSG(y_div >= 1, "Height divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(y_div <= arg_img->h, "Height divisor must be less than <= img height");
+
+    image_t out_img;
+    out_img.w = arg_img->w / x_div;
+    out_img.h = arg_img->h / y_div;
+    out_img.bpp = arg_img->bpp;
+    out_img.pixels = xalloc(out_img.w * out_img.h * out_img.bpp);
+
+    imlib_mean_pool(arg_img, &out_img, x_div, y_div);
+    return py_image_from_struct(&out_img);
+}
+
 static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1099,9 +1209,11 @@ static mp_obj_t py_image_find_displacement(mp_obj_t img_obj, mp_obj_t template_o
                      || (arg_img->h != arg_template->h),
             "Images must have the atleast the same geometry");
 
-    int x_offset, y_offset;
-    imlib_phasecorrelate(arg_img, arg_template, &x_offset, &y_offset);
-    return mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(x_offset), mp_obj_new_int(y_offset)});
+    float x_offset, y_offset, response;
+    imlib_phasecorrelate(arg_img, arg_template, &x_offset, &y_offset, &response);
+    return mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_float(x_offset),
+                                              mp_obj_new_float(y_offset),
+                                              mp_obj_new_float(response)});
 }
 
 static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -1279,6 +1391,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_markers_obj, 2, py_image_find_markers);
 /* Template Matching */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pool_obj, 3, py_image_midpoint_pool);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_mean_pool_obj, py_image_mean_pool);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_mean_pooled_obj, py_image_mean_pooled);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_template_obj, 3, py_image_find_template);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_displacement_obj, py_image_find_displacement);
 /* Feature Detection */
@@ -1337,6 +1453,10 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_markers),        (mp_obj_t)&py_image_find_markers_obj},
     /* Template Matching */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint_pool),       (mp_obj_t)&py_image_midpoint_pool_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint_pooled),     (mp_obj_t)&py_image_midpoint_pooled_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_mean_pool),           (mp_obj_t)&py_image_mean_pool_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_mean_pooled),         (mp_obj_t)&py_image_mean_pooled_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_template),       (mp_obj_t)&py_image_find_template_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_displacement),   (mp_obj_t)&py_image_find_displacement_obj},
     /* Feature Detection */
