@@ -1061,12 +1061,6 @@ static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map
     imlib_midpoint_pool(arg_img, &out_img, x_div, y_div, IM_MIN(IM_MAX(bias, 0), 256));
     arg_img->w = out_img.w;
     arg_img->h = out_img.h;
-    // Check if this image is the one in the frame buffer...
-    if (((fb->pixels+FB_JPEG_OFFS_SIZE) == arg_img->pixels)
-    || (fb->pixels == arg_img->pixels)) {
-        fb->w = out_img.w;
-        fb->h = out_img.h;
-    }
     return mp_const_none;
 }
 

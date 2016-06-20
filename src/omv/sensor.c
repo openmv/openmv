@@ -626,10 +626,6 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     }
     fb->ready = 0;
 
-    // Reset framebuffer (pooling may shrink this)...
-    fb->w = resolution[sensor.framesize][0];
-    fb->h = resolution[sensor.framesize][1];
-
     // Setup the size and address of the transfer
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         // Sensor has hardware JPEG set max frame size.
