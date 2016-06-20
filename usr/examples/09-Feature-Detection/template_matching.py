@@ -19,8 +19,8 @@ sensor.set_contrast(1)
 sensor.set_gainceiling(16)
 # Max resolution for template matching with SEARCH_EX is QQVGA
 sensor.set_framesize(sensor.QQVGA)
-# You can set binning to reduce the search image.
-#sensor.set_binning(((640-80)//2, (480-64)//2, 80, 64))
+# You can set windowing to reduce the search image.
+#sensor.set_windowing(((640-80)//2, (480-60)//2, 80, 60))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load template.
@@ -41,7 +41,8 @@ while (True):
     #
     # Note1: ROI has to be smaller than the image and bigger than the template.
     # Note2: In diamond search, step and ROI are both ignored.
-    r = img.find_template(template, 0.70, step=4, search=SEARCH_DS) #, roi=(10, 0, 60, 60))
+    r = img.find_template(template, 0.70, step=4, search=SEARCH_EX) #, roi=(10, 0, 60, 60))
     if r:
         img.draw_rectangle(r)
+
     print(clock.fps())

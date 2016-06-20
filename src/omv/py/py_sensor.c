@@ -139,7 +139,7 @@ static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
     return mp_const_true;
 }
 
-static mp_obj_t py_sensor_set_binning(mp_obj_t roi_obj) {
+static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj) {
     mp_obj_t *array;
     mp_obj_get_array_fixed_n(roi_obj, 4, &array);
 
@@ -148,7 +148,7 @@ static mp_obj_t py_sensor_set_binning(mp_obj_t roi_obj) {
     int w = mp_obj_get_int(array[2]);
     int h = mp_obj_get_int(array[3]);
 
-    if (sensor_set_binning(x, y, w, h) != 0) {
+    if (sensor_set_windowing(x, y, w, h) != 0) {
         return mp_const_false;
     }
 
@@ -294,7 +294,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,              py_sensor_ge
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_set_pixformat);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,       py_sensor_set_framerate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_set_framesize);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_binning_obj,         py_sensor_set_binning);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_windowing_obj,         py_sensor_set_windowing);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj,     py_sensor_set_gainceiling);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj,        py_sensor_set_contrast);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,      py_sensor_set_brightness);
@@ -350,7 +350,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_pixformat),       (mp_obj_t)&py_sensor_set_pixformat_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framerate),       (mp_obj_t)&py_sensor_set_framerate_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framesize),       (mp_obj_t)&py_sensor_set_framesize_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_set_binning),         (mp_obj_t)&py_sensor_set_binning_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_windowing),       (mp_obj_t)&py_sensor_set_windowing_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_gainceiling),     (mp_obj_t)&py_sensor_set_gainceiling_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_contrast),        (mp_obj_t)&py_sensor_set_contrast_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_brightness),      (mp_obj_t)&py_sensor_set_brightness_obj },

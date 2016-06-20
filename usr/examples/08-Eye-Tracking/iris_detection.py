@@ -20,7 +20,7 @@ sensor.set_gainceiling(16)
 sensor.set_framesize(sensor.VGA)
 
 # Bin/Crop image to 200x100, which gives more details with less data to process
-sensor.set_binning((220, 190, 200, 100))
+sensor.set_windowing((220, 190, 200, 100))
 
 sensor.set_pixformat(sensor.GRAYSCALE)
 

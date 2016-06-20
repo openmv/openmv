@@ -362,7 +362,7 @@ int sensor_set_framesize(framesize_t framesize)
 
     if (framesize >= FRAMESIZE_VGA) {
         // Crop higher resolutions to QVGA
-        sensor_set_binning(190, 120, 320, 240);
+        sensor_set_windowing(190, 120, 320, 240);
     } else {
         fb->w = resolution[framesize][0];
         fb->h = resolution[framesize][1];
@@ -391,7 +391,7 @@ int sensor_set_framerate(framerate_t framerate)
     return 0;
 }
 
-int sensor_set_binning(int x, int y, int w, int h)
+int sensor_set_windowing(int x, int y, int w, int h)
 {
     fb->w = w;
     fb->h = h;

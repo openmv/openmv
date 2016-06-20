@@ -172,7 +172,7 @@ int sensor_set_framesize(framesize_t framesize);
 int sensor_set_framerate(framerate_t framerate);
 
 // Set window size.
-int sensor_set_binning(int x, int y, int w, int h);
+int sensor_set_windowing(int x, int y, int w, int h);
 
 // Set the sensor contrast level (from -3 to +3).
 int sensor_set_contrast(int level);
