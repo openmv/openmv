@@ -351,6 +351,13 @@ typedef enum template_match {
     SEARCH_DS,  // Diamond search
 } template_match_t;
 
+typedef enum  jpeg_subsample {
+    JPEG_SUBSAMPLE_1x1 = 0x11,  // 1x1 chroma subsampling (No subsampling)
+    JPEG_SUBSAMPLE_2x1 = 0x21,  // 2x2 chroma subsampling
+    JPEG_SUBSAMPLE_2x2 = 0x22,  // 2x2 chroma subsampling
+} jpeg_subsample_t;
+
+
 /* Color space functions */
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
 void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
