@@ -607,7 +607,8 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
 
         // Note: lower quality results in a faster IDE
         // framerates, since it saves on USB bandwidth.
-        jpeg_compress(&src, &dst, 50);
+        int qs = (sensor.framesize <= FRAMESIZE_QVGA) ? 75:50;
+        jpeg_compress(&src, &dst, qs);
         fb->bpp = dst.bpp;
     }
 
