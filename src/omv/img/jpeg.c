@@ -6,7 +6,11 @@
  * Minimalistic JPEG baseline encoder.
  * Ported from public domain JPEG writer by Jon Olick - http://jonolick.com
  *
+ * DCT implementation is based on Arai, Agui, and Nakajima's algorithm for
+ * scaled DCT.
+ *
  */
+
 #include <arm_math.h>
 #include <stdio.h>
 #include <stm32f4xx_hal.h>
@@ -14,7 +18,16 @@
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
 #include "imlib.h"
+
 #define TIME_JPEG   (0)
+
+#define FIX_0_382683433  ((int32_t)   98)
+#define FIX_0_541196100  ((int32_t)  139)
+#define FIX_0_707106781  ((int32_t)  181)
+#define FIX_1_306562965  ((int32_t)  334)
+
+#define DESCALE(x, y)   (x>>y)
+#define MULTIPLY(x, y)  DESCALE((x) * (y), 8)
 
 typedef struct {
     int idx;
@@ -24,7 +37,7 @@ typedef struct {
 } jpeg_buf_t;
 
 // Quantization tables
-static int fdtbl_Y[64], fdtbl_UV[64];
+static float fdtbl_Y[64], fdtbl_UV[64];
 static uint8_t YTable[64], UVTable[64];
 
 // RGB565 to YUV table
@@ -67,6 +80,7 @@ static const float aasf[] = {
     1.0f, 1.387039845f, 1.306562965f, 1.175875602f,
     1.0f, 0.785694958f, 0.541196100f, 0.275899379f
 };
+
 
 static const uint8_t std_dc_luminance_nrcodes[] = {0,0,1,5,1,1,1,1,1,1,0,0,0,0,0,0,0};
 static const uint8_t std_dc_luminance_values[] = {0,1,2,3,4,5,6,7,8,9,10,11};
@@ -215,112 +229,106 @@ static void jpeg_calcBits(int val, uint16_t bits[2]) {
     bits[0] = val & ((1<<bits[1])-1);
 }
 
-static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, int *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
+static int jpeg_processDU(jpeg_buf_t *jpeg_buf, int8_t *CDU, float *fdtbl, int DC, const uint16_t (*HTDC)[2], const uint16_t (*HTAC)[2])
 {
-    int DU[64], DUQ[64];
+    int DU[64];
+    int DUQ[64];
+    int z1, z2, z3, z4, z5, z11, z13;
     int t0, t1, t2, t3, t4, t5, t6, t7, t10, t11, t12, t13;
     const uint16_t EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
     const uint16_t M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
 
-    // BinDCT-a1
     // DCT rows
-    int8_t *p=CDU;
-    for (int i=8, *du=DU; i>0; i--, p+=8, du+=8) {
-        t0 = p[0] + p[7];
-        t1 = p[1] + p[6];
-        t2 = p[2] + p[5];
-        t3 = p[3] + p[4];
+    for (int i=8, *p=DU; i>0; i--, p+=8, CDU+=8) {
+        t0 = CDU[0] + CDU[7];
+        t1 = CDU[1] + CDU[6];
+        t2 = CDU[2] + CDU[5];
+        t3 = CDU[3] + CDU[4];
 
-        t7 = p[0] - p[7];
-        t6 = p[1] - p[6];
-        t5 = p[2] - p[5];
-        t4 = p[3] - p[4];
+        t7 = CDU[0] - CDU[7];
+        t6 = CDU[1] - CDU[6];
+        t5 = CDU[2] - CDU[5];
+        t4 = CDU[3] - CDU[4];
 
-        /* Even part */
-        t10 = t0 + t3 ;	/* phase 2 */
-        t13 = t0 - t3;
-        t11 = t1 + t2 ;
-        t12 = t1 - t2;
-
-        du[0] = (t10 + t11);             /* phase 3 */
-        du[4] = ((du[0] ) >> 1) - t11;   /* jie 05/18/00 */
-
-        /*1/2, -1/2: alter the sign to get positive scaling factor */
-        du[6] = (( t13 ) >> 1) - t12;
-        du[2] = t13 - ((du[6] ) >> 1);
-
-        /* odd part */
-        /* pi/4 = -1/2u 3/4d -1/2u*/
-        t10 = t5 - (( t6 ) >> 1);
-        t6 = t6 + t10 - ((t10 ) >> 2);
-        t5 = ((t6 ) >> 1) - t10;
-
-        t10 = t4 + t5;
-        t11 = t4 - t5;
-        t12 = t7 - t6;
-        t13 = t7 + t6;
-
-        /* 7pi/16 = 1/4u -1/4d: alter the sign to get positive scaling factor */
-        du[7] = ((t13 ) >> 2) - t10;
-        du[1] = t13 - ((du[7] ) >> 2);
-
-        /* 3pi/16 = */
-        /* new version: 1, -1/2 */
-        du[5] = t11 + t12;
-        du[3] = t12 - ((du[5] ) >> 1);
-    }
-
-    // DCT columns
-    for (int i=8, *du=DU; i>0; i--, du++) {
-        t0 = (du[8*0] + du[8*7]);
-        t1 = (du[8*1] + du[8*6]);
-        t2 = (du[8*2] + du[8*5]);
-        t3 = (du[8*3] + du[8*4]);
-
-        t7 = (du[8*0] - du[8*7]);
-        t6 = (du[8*1] - du[8*6]);
-        t5 = (du[8*2] - du[8*5]);
-        t4 = (du[8*3] - du[8*4]);
-
-        /* Even part */
-        t10 = t0 + t3;	/* phase 2 */
+        // Even part
+        t10 = t0 + t3;
         t13 = t0 - t3;
         t11 = t1 + t2;
         t12 = t1 - t2;
+        z1 = MULTIPLY(t12 + t13, FIX_0_707106781); // c4
 
-        du[8*0] = (t10 + t11); /* phase 3 */
-        du[8*4] = ((du[8*0] ) >> 1) - t11;   /* Jie 05/18/00 */
+        p[0] = t10 + t11;
+        p[4] = t10 - t11;
+        p[2] = t13 + z1;
+        p[6] = t13 - z1;
 
-        // 1/2, 1/2
-        du[8*6] = ((t13 ) >> 1) - t12;
-        du[8*2] = t13 - ((du[8*6] ) >> 1);
+        // Odd part
+        t10 = t4 + t5;// phase 2
+        t11 = t5 + t6;
+        t12 = t6 + t7;
 
-        /* Odd part */
-        /* pi/4 = -1/2u 3/4d -1/2u*/
-        t10 = t5 - ((t6 ) >> 1);
-        t6 = t6 + t10 - ((t10 ) >> 2);
-        t5 = ((t6 ) >> 1) - t10;
+        // The rotator is modified from fig 4-8 to avoid extra negations.
+        z5 = MULTIPLY(t10 - t12, FIX_0_382683433); // c6
+        z2 = MULTIPLY(t10, FIX_0_541196100) + z5; // 1.306562965f-c6
+        z4 = MULTIPLY(t12, FIX_1_306562965) + z5; // 1.306562965f+c6
+        z3 = MULTIPLY(t11, FIX_0_707106781); // c4
+        z11 = t7 + z3;    // phase 5
+        z13 = t7 - z3;
 
-        t10 = t4 + t5;
-        t11 = t4 - t5;
-        t12 = t7 - t6;
-        t13 = t7 + t6;
+        p[5] = z13 + z2;// phase 6
+        p[3] = z13 - z2;
+        p[1] = z11 + z4;
+        p[7] = z11 - z4;
+    }
 
-        /* 7pi/16 = 1/4u -1/4d: alter sign to get positive scaling factor */
-        du[8*7] = ((t13 ) >> 2) - t10;
-        du[8*1] = t13 - ((du[8*7] ) >> 2);
+    // DCT columns
+    for (int i=8, *p=DU; i>0; i--, p++) {
+        t0 = p[0]  + p[56];
+        t1 = p[8]  + p[48];
+        t2 = p[16] + p[40];
+        t3 = p[24] + p[32];
 
-        /* 3pi/16 = */
-        /* new : 1 and -1/2 */
-        du[8*5] = t11 + t12 ;
-        du[8*3] = t12 - ((du[8*5] ) >> 1);
+        t7 = p[0]  - p[56];
+        t6 = p[8]  - p[48];
+        t5 = p[16] - p[40];
+        t4 = p[24] - p[32];
+
+        // Even part
+        t10 = t0 + t3;	// phase 2
+        t13 = t0 - t3;
+        t11 = t1 + t2;
+        t12 = t1 - t2;
+        z1 = MULTIPLY(t12 + t13, FIX_0_707106781); // c4
+
+        p[0] = t10 + t11; 		// phase 3
+        p[32] = t10 - t11;
+        p[16] = t13 + z1; 		// phase 5
+        p[48] = t13 - z1;
+
+        // Odd part
+        t10 = t4 + t5; 		// phase 2
+        t11 = t5 + t6;
+        t12 = t6 + t7;
+
+        // The rotator is modified from fig 4-8 to avoid extra negations.
+        z5 = MULTIPLY(t10 - t12, FIX_0_382683433); // c6
+        z2 = MULTIPLY(t10, FIX_0_541196100) + z5; // 1.306562965f-c6
+        z4 = MULTIPLY(t12, FIX_1_306562965) + z5; // 1.306562965f+c6
+        z3 = MULTIPLY(t11, FIX_0_707106781); // c4
+        z11 = t7 + z3;		// phase 5
+        z13 = t7 - z3;
+
+        p[40] = z13 + z2;// phase 6
+        p[24] = z13 - z2;
+        p[8] = z11 + z4;
+        p[56] = z11 - z4;
     }
 
     // first non-zero element in reverse order
     int end0pos = 0;
     // Quantize/descale/zigzag the coefficients
     for(int i=0; i<64; ++i) {
-        DUQ[s_jpeg_ZigZag[i]] = (DU[i]*fdtbl[i])/4096;
+		DUQ[s_jpeg_ZigZag[i]] = fast_roundf(DU[i]*fdtbl[i]);
         if (s_jpeg_ZigZag[i] > end0pos && DUQ[s_jpeg_ZigZag[i]]) {
             end0pos = s_jpeg_ZigZag[i];
         }
@@ -383,8 +391,8 @@ static void jpeg_init(int quality)
 
         for(int r = 0, k = 0; r < 8; ++r) {
             for(int c = 0; c < 8; ++c, ++k) {
-                fdtbl_Y[k]  = (int)((aasf[r] * aasf[c] /(YTable [s_jpeg_ZigZag[k]] * 8.0f))*4096);
-                fdtbl_UV[k] = (int)((aasf[r] * aasf[c] /(UVTable[s_jpeg_ZigZag[k]] * 8.0f))*4096);
+                fdtbl_Y[k]  = 1.0f / (aasf[r] * aasf[c] * YTable [s_jpeg_ZigZag[k]] * 8.0f);
+                fdtbl_UV[k] = 1.0f / (aasf[r] * aasf[c] * UVTable[s_jpeg_ZigZag[k]] * 8.0f);
             }
         }
     }
