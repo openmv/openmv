@@ -287,3 +287,9 @@ Q(ssid)
 Q(key)
 Q(security)
 Q(bssid)
+
+// ToF Module
+Q(tof)
+Q(read_frame)
+Q(draw_frame)
+Q(phase)
