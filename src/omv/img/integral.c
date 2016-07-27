@@ -82,15 +82,15 @@ void imlib_integral_image_sq(image_t *src, i_image_t *sum)
     typeof(*sum->data) *sum_data = sum->data;
 
     // Compute first column to avoid branching
-    for (int s=0, x=0; x<src->w; x++) {
+    for (uint32_t s=0, x=0; x<src->w; x++) {
         /* sum of the current row (integer) */
         s += img_data[x] * img_data[x];
         sum_data[x] = s;
     }
 
-    for (int y=1; y<src->h; y++) {
+    for (uint32_t y=1; y<src->h; y++) {
         /* loop over the number of columns */
-        for (int s=0, x=0; x<src->w; x++) {
+        for (uint32_t s=0, x=0; x<src->w; x++) {
             /* sum of the current row (integer) */
             s += img_data[y*src->w+x] * img_data[y*src->w+x];
             sum_data[y*src->w+x] = s+sum_data[(y-1)*src->w+x];
@@ -102,7 +102,15 @@ void imlib_integral_image_sq(image_t *src, i_image_t *sum)
 uint32_t imlib_integral_lookup(i_image_t *sum, int x, int y, int w, int h)
 {
 #define PIXEL_AT(x,y)\
-    (sum->data[sum->w*(y)+(x)])
-    return PIXEL_AT(w+x, h+y) + PIXEL_AT(x, y) - PIXEL_AT(w+x, y) - PIXEL_AT(x, h+y);
+    (sum->data[((y)-1)*sum->w+((x)-1)])
+    if (x==0 && y==0) {
+        return PIXEL_AT(w,h);
+    } else if (y==0) {
+        return PIXEL_AT(w+x, h) - PIXEL_AT(x, h);
+    } else if (x==0) {
+        return PIXEL_AT(w, h+y) - PIXEL_AT(w, y);
+    } else {
+        return PIXEL_AT(w+x, h+y) + PIXEL_AT(x, y) - PIXEL_AT(w+x, y) - PIXEL_AT(x, h+y);
+    }
 #undef  PIXEL_AT
 }
