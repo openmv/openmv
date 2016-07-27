@@ -1,4 +1,22 @@
 # Change Log
+## [1.6](https://github.com/openmv/openmv/releases/tag/v1.6) (2016-07-27)
+IDE:
+* Add checkbox to disable the framebuffer update
+
+Firmware:
+* Set FB JPEG quality/subsampling based on frame size.
+
+Image processing:
+* Implement windowing.
+* Implement horizontal and vertical binning.
+* Implement optical flow with phase correlation.
+* Implement copy image to framebuffer for testing.
+* Allow ROIs and step in template matching function.
+* Implemented diamond search for fast template matching.
+* Fix bug in integral_image_sq and lookup.
+* Add new smaller resolutions
+* Improved/fixed JPEG code
+
 ## [1.5](https://github.com/openmv/openmv/releases/tag/v1.5) (2016-06-01)
 IDE:
 * Fix pinout reference image.
