@@ -28,10 +28,10 @@ else:
     BUNDLE_DIR = IDE_DIR
 
 FIRMWARE_VERSION_MAJOR  = 1
-FIRMWARE_VERSION_MINOR  = 5
+FIRMWARE_VERSION_MINOR  = 6
 FIRMWARE_VERSION_PATCH  = 0
 
-RELEASE_TAG_NAME = 'v1.5'
+RELEASE_TAG_NAME = 'v1.6'
 RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
 
 SCALE =1
