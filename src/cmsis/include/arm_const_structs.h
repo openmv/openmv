@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-* Copyright (C) 2010-2013 ARM Limited. All rights reserved.
+* Copyright (C) 2010-2014 ARM Limited. All rights reserved.
 *
-* $Date:        17. January 2013
-* $Revision:    V1.4.1
+* $Date:        19. March 2015
+* $Revision: 	V.1.4.5
 *
-* Project:      CMSIS DSP Library
-* Title:        arm_const_structs.h
+* Project: 	    CMSIS DSP Library
+* Title:	    arm_const_structs.h
 *
-* Description:  This file has constant structs that are initialized for
-*               user convenience.  For example, some can be given as
-*               arguments to the arm_cfft_f32() function.
+* Description:	This file has constant structs that are initialized for
+*              user convenience.  For example, some can be given as
+*              arguments to the arm_cfft_f32() function.
 *
 * Target Processor: Cortex-M4/Cortex-M3
 *
@@ -46,40 +46,34 @@
 #include "arm_math.h"
 #include "arm_common_tables.h"
 
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len16 = {
-      16, twiddleCoef_16, armBitRevIndexTable16, ARMBITREVINDEXTABLE__16_TABLE_LENGTH
-   };
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len16;
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len32;
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len64;
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len128;
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len256;
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len512;
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len1024;
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len2048;
+   extern const arm_cfft_instance_f32 arm_cfft_sR_f32_len4096;
 
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len32 = {
-      32, twiddleCoef_32, armBitRevIndexTable32, ARMBITREVINDEXTABLE__32_TABLE_LENGTH
-   };
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len16;
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len32;
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len64;
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len128;
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len256;
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len512;
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len1024;
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len2048;
+   extern const arm_cfft_instance_q31 arm_cfft_sR_q31_len4096;
 
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len64 = {
-      64, twiddleCoef_64, armBitRevIndexTable64, ARMBITREVINDEXTABLE__64_TABLE_LENGTH
-   };
-
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len128 = {
-      128, twiddleCoef_128, armBitRevIndexTable128, ARMBITREVINDEXTABLE_128_TABLE_LENGTH
-   };
-
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len256 = {
-      256, twiddleCoef_256, armBitRevIndexTable256, ARMBITREVINDEXTABLE_256_TABLE_LENGTH
-   };
-
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len512 = {
-      512, twiddleCoef_512, armBitRevIndexTable512, ARMBITREVINDEXTABLE_512_TABLE_LENGTH
-   };
-
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len1024 = {
-      1024, twiddleCoef_1024, armBitRevIndexTable1024, ARMBITREVINDEXTABLE1024_TABLE_LENGTH
-   };
-
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len2048 = {
-      2048, twiddleCoef_2048, armBitRevIndexTable2048, ARMBITREVINDEXTABLE2048_TABLE_LENGTH
-   };
-
-   const arm_cfft_instance_f32 arm_cfft_sR_f32_len4096 = {
-      4096, twiddleCoef_4096, armBitRevIndexTable4096, ARMBITREVINDEXTABLE4096_TABLE_LENGTH
-   };
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len16;
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len32;
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len64;
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len128;
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len256;
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len512;
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len1024;
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len2048;
+   extern const arm_cfft_instance_q15 arm_cfft_sR_q15_len4096;
 
 #endif
