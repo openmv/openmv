@@ -10,46 +10,55 @@
 /* Entry Point */
 ENTRY(Reset_Handler)
 
-#ifdef OPENMV1
-#define HEAP_MEMORY     CCM
-#define FLASH_ORIGIN    0x08000000
-#define FLASH_LENGTH    512K
+#if   defined(OPENMV1)
+    #define FLASH_ORIGIN    0x08000000
+    #define FLASH_LENGTH    512K
+    
+    #define TEXT_ORIGIN     0x08000000
+    #define TEXT_LENGTH     16K
+    
+    #define RAM_ORIGIN      0x20000000
+    #define RAM_LENGTH      128K
+    
+    #define CCM_ORIGIN      0x10000000
+    #define CCM_LENGTH      64K
+#elif defined(OPENMV2)
+    #define FLASH_ORIGIN    0x08000000
+    #define FLASH_LENGTH    1024K
+    
+    #define TEXT_ORIGIN     0x08000000
+    #define TEXT_LENGTH     16K
+    
+    #define RAM_ORIGIN      0x20000000
+    #define RAM_LENGTH      192K
+    
+    #define CCM_ORIGIN      0x10000000
+    #define CCM_LENGTH      64K
+#elif defined(OPENMV7)
+    #define FLASH_ORIGIN    0x08000000
+    #define FLASH_LENGTH    1920K
+    
+    #define TEXT_ORIGIN     0x08000000
+    #define TEXT_LENGTH     32K
+    
+    #define CCM_ORIGIN      0x20000000
+    #define CCM_LENGTH      128K
 
-#define TEXT_ORIGIN     0x08000000
-#define TEXT_LENGTH     16K
-
-#define RAM_ORIGIN      0x20000000
-#define RAM_LENGTH      128K
-
-#define CCM_ORIGIN      0x10000000
-#define CCM_LENGTH      64K
-
-#else
-#define HEAP_MEMORY     CCM
-#define FLASH_ORIGIN    0x08000000
-#define FLASH_LENGTH    1024K
-
-#define TEXT_ORIGIN     0x08000000
-#define TEXT_LENGTH     16K
-
-#define RAM_ORIGIN      0x20000000
-#define RAM_LENGTH      192K
-
-#define CCM_ORIGIN      0x10000000
-#define CCM_LENGTH      64K
+    #define RAM_ORIGIN      0x20020000
+    #define RAM_LENGTH      384K    
 #endif //OPENMV1
 
 /* Specify the memory areas */
 MEMORY
 {
-  FLASH_TEXT (rx) : ORIGIN = TEXT_ORIGIN,   LENGTH = TEXT_LENGTH
-  RAM (xrw)       : ORIGIN = RAM_ORIGIN,    LENGTH = RAM_LENGTH
   CCM (xrw)       : ORIGIN = CCM_ORIGIN,    LENGTH = CCM_LENGTH
+  RAM (xrw)       : ORIGIN = RAM_ORIGIN,    LENGTH = RAM_LENGTH
+  FLASH_TEXT (rx) : ORIGIN = TEXT_ORIGIN,   LENGTH = TEXT_LENGTH
 }
 
-_estack     = 0x10010000;   /* Stack is allocated on CCM block */
-_ram_end    = 0x10010000;   /* 64KB CCM */
-_stack_size = 0xC00;        /* minimum amount of stack */
+_estack     = ORIGIN(CCM) + LENGTH(CCM);
+_ram_end    = ORIGIN(CCM) + LENGTH(CCM);
+_stack_size = (4K);       /* minimum amount of stack */
 
 /* Define output sections */
 SECTIONS
@@ -103,7 +112,7 @@ SECTIONS
   } >CCM
 
   /* Make sure there is enough RAM the stack and FS cache */
-  ._user_heap_stack :
+  .stack :
   {
     . = ALIGN(4);
     . = . + _stack_size;

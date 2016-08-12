@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include <usbd_cdc.h>
 #include "flash.h"
+#include "omv_boardconfig.h"
 
-#define MAIN_FW_ADDR        0x08010000
 #define APP_RX_DATA_SIZE    2048
 #define APP_TX_DATA_SIZE    2048
 
@@ -195,7 +195,7 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
 
     switch (cmd) {
         case BOOTLDR_START:
-            flash_offset = MAIN_FW_ADDR;
+            flash_offset = MAIN_APP_ADDR;
             ide_connected = 1;
             // Send back the START command as an ACK
             CDC_Tx(Buf, 4);

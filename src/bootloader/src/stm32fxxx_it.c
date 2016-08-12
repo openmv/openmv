@@ -36,8 +36,8 @@
   ******************************************************************************
   */
 
-#include "stm32f4xx_it.h"
-#include <stm32f4xx_hal.h>
+#include STM32_HAL_H 
+#include <stm32fxxx_it.h>
 
 extern PCD_HandleTypeDef hpcd;
 /**

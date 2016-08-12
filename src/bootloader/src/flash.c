@@ -24,8 +24,12 @@
  * THE SOFTWARE.
  */
 
-#include <stm32f4xx_hal.h>
+#include STM32_HAL_H
 #include "flash.h"
+
+#if defined(STM32F769xx)
+#define FLASH_FLAG_PGSERR (FLASH_FLAG_ERSERR)
+#endif
 
 extern void __fatal_error();
 
@@ -38,7 +42,7 @@ void flash_erase(uint32_t sector)
 
     // Clear pending flags (if any)
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR |
-                           FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR|FLASH_FLAG_PGSERR);
+                           FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
 
     // erase the sector(s)
     FLASH_EraseInitTypeDef EraseInitStruct;
