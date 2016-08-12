@@ -105,7 +105,7 @@ void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, i
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(img, &out, quality);
+        jpeg_compress(img, &out, quality, true);
         int pad = (((out.bpp + 3) / 4) * 4) - out.bpp;
         write_long(fp, out.bpp + pad); // DWORD cb;
         write_data(fp, out.pixels, out.bpp + pad); // reading past okay

@@ -34,6 +34,8 @@ typedef struct {
     int length;
     uint8_t *buf;
     int bitc, bitb;
+    bool realloc;
+    bool overflow;
 } jpeg_buf_t;
 
 // Quantization tables
@@ -184,6 +186,11 @@ static const uint16_t UVAC_HT[256][2] = {
 static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
 {
     if (jpeg_buf->idx == jpeg_buf->length) {
+        if (jpeg_buf->realloc == false) {
+            // Can't realloc buffer
+            jpeg_buf->overflow = true;
+            return;
+        }
         jpeg_buf->length += 1024;
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
     }
@@ -194,6 +201,11 @@ static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
 static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size)
 {
     if (jpeg_buf->idx+size >= jpeg_buf->length) {
+        if (jpeg_buf->realloc == false) {
+            // Can't realloc buffer
+            jpeg_buf->overflow = true;
+            return;
+        }
         jpeg_buf->length += 1024;
         jpeg_buf->buf = xrealloc(jpeg_buf->buf, jpeg_buf->length);
     }
@@ -504,12 +516,7 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     jpeg_put_bytes(jpeg_buf, (uint8_t [3]){0x00, 0x3F, 0x0}, 3);
 }
 
-void jpeg_init0()
-{
-
-}
-
-void jpeg_compress(image_t *src, image_t *dst, int quality)
+bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 {
     int DCY=0, DCU=0, DCV=0;
 
@@ -524,6 +531,8 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
         .length = dst->bpp,
         .bitc = 0,
         .bitb = 0,
+        .realloc = realloc,
+        .overflow = false,
     };
 
     // Initialize quantization tables
@@ -761,6 +770,8 @@ void jpeg_compress(image_t *src, image_t *dst, int quality)
     #if (TIME_JPEG==1)
     printf("time: %lums\n", HAL_GetTick() - start);
     #endif
+
+    return jpeg_buf.overflow;
 }
 
 // This function inits the geometry values of an image.
@@ -837,7 +848,7 @@ void jpeg_write(image_t *img, const char *path, int quality)
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(img, &out, quality);
+        jpeg_compress(img, &out, quality, false);
         write_data(&fp, out.pixels, out.bpp);
         fb_free();
     }
