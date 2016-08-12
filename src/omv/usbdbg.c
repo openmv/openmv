@@ -11,7 +11,6 @@
 #include "sensor.h"
 #include "framebuffer.h"
 #include "ff.h"
-#include "core_cm4.h"
 #include "usbdbg.h"
 #include "nlr.h"
 #include "lexer.h"
@@ -92,26 +91,29 @@ void usbdbg_data_in(void *buffer, int length)
         }
 
         case USBDBG_FRAME_SIZE:
-            if (!fb->ready) {
-                // Frame not ready return 0
-                ((uint32_t*)buffer)[0] = 0;
-            } else {
-                // Frame ready return header
-                ((uint32_t*)buffer)[0] = fb->w;
-                ((uint32_t*)buffer)[1] = fb->h;
-                ((uint32_t*)buffer)[2] = fb->bpp;
+            ((uint32_t*)buffer)[0] = 0;
+            // Try to lock FB
+            if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
+                // Return header w, h and size/bpp
+                ((uint32_t*)buffer)[0] = JPEG_FB()->w;
+                ((uint32_t*)buffer)[1] = JPEG_FB()->h;
+                ((uint32_t*)buffer)[2] = JPEG_FB()->size;
+                // If header size == 0 frame is not ready
+                if (JPEG_FB()->size == 0) {
+                    // unlock FB
+                    mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+                }
             }
-            fb->request = 1;
             cmd = USBDBG_NONE;
             break;
 
         case USBDBG_FRAME_DUMP:
             if (xfer_bytes < xfer_length) {
-                memcpy(buffer, fb->pixels+xfer_bytes, length);
+                memcpy(buffer, JPEG_FB()->pixels+xfer_bytes, length);
                 xfer_bytes += length;
                 if (xfer_bytes == xfer_length) {
-                    fb->request = 0;
                     cmd = USBDBG_NONE;
+                    mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
                 }
             }
             break;
@@ -288,8 +290,20 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             NVIC_SystemReset();
             break;
 
+        case USBDBG_FB_ENABLE: {
+            int16_t enable = *((int16_t*)buffer);
+            JPEG_FB()->enabled = enable;
+            if (enable == 0) {
+                // When disabling framebuffer, the IDE might still be holding FB lock.
+                // If the IDE is not the current lock owner, this operation is ignored.
+                mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+            }
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         case USBDBG_JPEG_ENABLE: {
-            int16_t enable= *((int16_t*)buffer);
+            int16_t enable = *((int16_t*)buffer);
             sensor_enable_jpeg(enable);
             cmd = USBDBG_NONE;
             break;

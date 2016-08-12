@@ -8,8 +8,6 @@
  */
 #include <stdlib.h>
 #include <string.h>
-#include <stm32f4xx_hal.h>
-
 #include "mp.h"
 #include "irq.h"
 #include "sccb.h"
@@ -28,6 +26,9 @@
 #define REG_MIDL       0x1D
 
 #define MAX_XFER_SIZE (0xFFFC)
+// If buffer size is bigger than this threshold, the quality is reduced.
+// This is only used for JPEG images sent to the IDE not normal compression.
+#define JPEG_QUALITY_THRESH     (160*120*1)
 
 sensor_t sensor;
 TIM_HandleTypeDef  TIMHandle;
@@ -56,19 +57,19 @@ const int resolution[][2] = {
 
 static int extclk_config(int frequency)
 {
-    /* TCLK (PCLK2 * 2) */
-    int tclk  = HAL_RCC_GetPCLK2Freq() * 2;
+    // Doubles PCLK
+    //__HAL_RCC_TIMCLKPRESCALER(RCC_TIMPRES_ACTIVATED);
 
-    /* SYSCLK/TCLK = No prescaler */
-    int prescaler = (uint16_t) (HAL_RCC_GetSysClockFreq()/ tclk) - 1;
+    /* TCLK (PCLK * 2) */
+    int tclk  = DCMI_TIM_PCLK_FREQ() * 2;
 
     /* Period should be even */
-    int period = (tclk / frequency)-1;
+    int period = (tclk / frequency) - 1;
 
     /* Timer base configuration */
     TIMHandle.Instance          = DCMI_TIM;
     TIMHandle.Init.Period       = period;
-    TIMHandle.Init.Prescaler    = prescaler;
+    TIMHandle.Init.Prescaler    = 0;
     TIMHandle.Init.ClockDivision = 0;
     TIMHandle.Init.CounterMode   = TIM_COUNTERMODE_UP;
 
@@ -158,8 +159,21 @@ static int dma_config()
 
 void sensor_init0()
 {
-    // Clear framebuffer
-    memset(fb, 0, sizeof(*fb));
+    // Init FB mutex
+    mutex_init(&JPEG_FB()->lock);
+
+    // Save fb_enabled flag state
+    int fb_enabled = JPEG_FB()->enabled;
+
+    // Clear framebuffers
+    memset(MAIN_FB(), 0, sizeof(*MAIN_FB()));
+    memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
+
+    // Set default quality
+    JPEG_FB()->quality = 50;
+
+    // Set fb_enabled
+    JPEG_FB()->enabled = fb_enabled;
 }
 
 int sensor_init()
@@ -175,21 +189,34 @@ int sensor_init()
     SCCB_Init();
     systick_sleep(10);
 
-    /* Configure the sensor external clock (XCLK) to XCLK_FREQ.
-       Note: The sensor's internal PLL (when CLKRC=0x80) doubles the XCLK_FREQ
-             (XCLK=XCLK_FREQ*2), and the unscaled PIXCLK output is XCLK_FREQ*4 */
+    // Configure the sensor external clock (XCLK) to XCLK_FREQ.
+    //
+    // Max pixclk is 2.5 * HCLK:
+    //  STM32F427@180MHz PCLK = 71.9999MHz
+    //  STM32F769@216MHz PCLK = 86.4000MHz
+    //
+    // OV7725 PCLK when prescalar is enabled (CLKRC[6]=0):
+    //  Internal clock = Input clock × PLL multiplier / [(CLKRC[5:0] + 1) × 2]
+    //
+    // OV7725 PCLK when prescalar is disabled (CLKRC[6]=1):
+    //  Internal clock = Input clock × PLL multiplier
+    //
+    // OV2640:
+    //  The sensor's internal PLL (when CLKRC=0x80) doubles the XCLK_FREQ
+    //  (XCLK=XCLK_FREQ*2), and the unscaled PIXCLK output is XCLK_FREQ*4
+
     if (extclk_config(OMV_XCLK_FREQUENCY) != 0) {
         // Timer problem
         return -1;
     }
 
     /* Uncomment this to pass through the MCO1 clock (HSI=16MHz) this results in a
-       64MHz PIXCLK output from the sensor.
-       Note: The maximum pixel clock input on the STM32F4xx is 54MHz,
-             the STM32F7 can probably handle higher input pixel clock.
-       */
-    //(void) extclk_config;
+       64MHz PIXCLK output from the sensor. */
+    #if defined OPENMV2
+    // Note: MCO is multiplexed on OPENMV2 TIM1 only.
+    //(void) extclk_config; // to avoid warnings
     //HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSI, RCC_MCODIV_1);
+    #endif
 
     /* Reset the sesnor state */
     memset(&sensor, 0, sizeof(sensor_t));
@@ -368,6 +395,9 @@ int sensor_set_framesize(framesize_t framesize)
         fb->h = resolution[framesize][1];
         HAL_DCMI_DisableCROP(&DCMIHandle);
     }
+
+    // Set initial JPEG buffer quality.
+    JPEG_FB()->quality = (MAIN_FB_SIZE() > JPEG_QUALITY_THRESH) ? 50:75;
     return 0;
 }
 
@@ -554,10 +584,6 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
     uint8_t *src = (uint8_t*) addr;
     uint8_t *dst = fb->pixels;
 
-    if (SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
-        dst += FB_JPEG_OFFS_SIZE;
-    }
-
     if (sensor.line_filter_func && sensor.line_filter_args) {
         int bpp = ((sensor.pixformat == PIXFORMAT_GRAYSCALE) ? 1:2);
         dst += line++ * fb->w * bpp;
@@ -589,43 +615,44 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
 {
     volatile uint32_t addr;
     volatile uint16_t length;
-    uint32_t snapshot_start;
+    uint32_t tick_start;
 
     // Set line filter
     sensor_set_line_filter(line_filter_func, line_filter_args);
 
-    // Compress the framebuffer for the IDE only for non-JPEG images and
-    // only if the IDE has requested a framebuffer and it's not the first frame.
-    // Note: This doesn't run unless the camera is connected to PC.
-    if (fb->bpp && fb->request && sensor.pixformat != PIXFORMAT_JPEG &&
-            SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG) &&
-            (!IM_IS_JPEG(fb))) {
-        // The framebuffer is compressed in place.
-        // Assuming we have at least 128KBs of SRAM.
-        image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};
-        image_t dst = {.w=fb->w, .h=fb->h, .bpp=128*1024, .pixels=fb->pixels};
+    // Compress the framebuffer for the IDE preview, only if it's not the first frame,
+    // the framebuffer is enabled and the image sensor does not support JPEG encoding.
+    // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
+    if ((fb->bpp == 1 || fb->bpp == 2) && JPEG_FB()->enabled && sensor.pixformat
+            != PIXFORMAT_JPEG && SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
+        // Lock FB
+        if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
+            // Set JPEG src and dst images.
+            image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,            .pixels=fb->pixels};
+            image_t dst = {.w=fb->w, .h=fb->h, .bpp=OMV_JPEG_BUF_SIZE,  .pixels=JPEG_FB()->pixels};
 
-        // Note: lower quality results in a faster IDE
-        // framerates, since it saves on USB bandwidth.
-        int qs = (sensor.framesize <= FRAMESIZE_QVGA) ? 75:50;
-        jpeg_compress(&src, &dst, qs);
-        fb->bpp = dst.bpp;
+            // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
+            bool overflow = jpeg_compress(&src, &dst, JPEG_FB()->quality, false);
+            if (overflow == true) {
+                // JPEG buffer overflowed, reduce JPEG quality for the next frame
+                // and skip the current frame. The IDE doesn't receive this frame.
+                if (JPEG_FB()->quality > 0) {
+                    JPEG_FB()->quality = IM_MAX(1, ((JPEG_FB()->quality) - 10));
+                }
+                JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
+            } else {
+                // No buffer overflow, increase quality up to max quality based on frame size
+                if (JPEG_FB()->quality < ((MAIN_FB_SIZE() > JPEG_QUALITY_THRESH) ? 50:75)) {
+                    JPEG_FB()->quality++;
+                }
+                // Set FB from JPEG image
+                JPEG_FB()->w = dst.w; JPEG_FB()->h = dst.h; JPEG_FB()->size = dst.bpp;
+            }
+
+            // Unlock the framebuffer mutex
+            mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
+        }
     }
-
-    // fb->bpp is set to zero for the first frame after changing the resolution/format.
-    // Note: If fb->bpp is not zero, then we have a valid frame (compressed or raw).
-    fb->ready = (fb->bpp > 0);
-
-    // Wait for the IDE to read the framebuffer before it gets overwritten with a new frame, and
-    // after all the image processing code has run (which possibily draws over the framebuffer).
-    //
-    // This fakes double buffering without having to allocate a second buffer and allows us to
-    // re-use the framebuffer for software JPEG compression.
-    // Note: This loop is executed only if the USB debug is active and we have a valid frame.
-    while (fb->ready && fb->request) {
-        systick_sleep(2);
-    }
-    fb->ready = 0;
 
     // Setup the size and address of the transfer
     if (sensor.pixformat == PIXFORMAT_JPEG) {
@@ -642,7 +669,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     line = 0;
 
     // Snapshot start tick
-    snapshot_start = HAL_GetTick();
+    tick_start = HAL_GetTick();
 
     // Enable DMA IRQ
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
@@ -659,7 +686,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
 
     // Wait for frame
     while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
-        if ((HAL_GetTick() - snapshot_start) >= 3000) {
+        if ((HAL_GetTick() - tick_start) >= 3000) {
             // Sensor timeout, most likely a HW issue.
             // Abort the DMA request.
             HAL_DMA_Abort(&DMAHandle);
@@ -674,6 +701,11 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
 
     // Disable DMA IRQ
     HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
+
+    // TODO on M4 we get an extra call
+    //if (line != fb->h) {
+    //    printf("lines %d\n", line);
+    //}
 
     // Fix the BPP
     switch (sensor.pixformat) {
@@ -696,30 +728,6 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
         image->h = fb->h;
         image->bpp = fb->bpp;
         image->pixels = fb->pixels;
-        if (sensor.pixformat != PIXFORMAT_JPEG &&
-                SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
-            image->pixels += FB_JPEG_OFFS_SIZE;
-        }
-    }
-
-    return 0;
-}
-
-int sensor_get_fb(image_t *img)
-{
-    if (!fb->bpp) {
-        return -1;
-    }
-
-    if (img != NULL) {
-        img->w = fb->w;
-        img->h = fb->h;
-        img->bpp = fb->bpp;
-        img->pixels = fb->pixels;
-        if (sensor.pixformat != PIXFORMAT_JPEG &&
-                SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
-            img->pixels += FB_JPEG_OFFS_SIZE;
-        }
     }
 
     return 0;

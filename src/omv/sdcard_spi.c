@@ -26,8 +26,7 @@
 
 #include "mp.h"
 #include <stdbool.h>
-#include <stm32f4xx_hal.h>
-#include "mdefs.h"
+#include STM32_HAL_H
 #include "ffconf.h"
 #include "diskio.h"
 #include "pincfg.h"

@@ -156,12 +156,6 @@ int sensor_write_reg(uint8_t reg, uint8_t val);
 // Note: Has nothing to do with HW JPEG.
 int sensor_enable_jpeg(bool enable);
 
-// Capture a Snapshot.
-int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_filter_args);
-
-// Capture the frame buffer.
-int sensor_get_fb(image_t *img);
-
 // Set the sensor pixel format.
 int sensor_set_pixformat(pixformat_t pixformat);
 
@@ -213,4 +207,7 @@ int sensor_set_special_effect(sde_t sde);
 
 // Set filter function.
 int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_args);
+
+// Capture a Snapshot.
+int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_filter_args);
 #endif /* __SENSOR_H__ */

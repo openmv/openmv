@@ -10,7 +10,6 @@
 #define __MP_H__
 #include <stdio.h>
 #include <string.h>
-#include <stm32f4xx_hal.h>
 #include "mpconfig.h"
 #include "misc.h"
 #include "systick.h"

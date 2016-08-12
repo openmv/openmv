@@ -1,4 +1,4 @@
-#include <stm32f4xx_hal.h>
+#include STM32_HAL_H
 #include "conf_winc.h"
 #include "bsp/include/nm_bsp.h"
 #include "common/include/nm_common.h"
@@ -10,10 +10,10 @@
 #include "systick.h"
 
 static tpfNmBspIsr gpfIsr;
-static const pin_obj_t *PIN_CS  = &pin_B12;
-static const pin_obj_t *PIN_EN  = &pin_A5;
-static const pin_obj_t *PIN_RST = &pin_D12;
-static const pin_obj_t *PIN_IRQ = &pin_D13;
+static const pin_obj_t *PIN_CS  = &(WINC_PIN_CS);
+static const pin_obj_t *PIN_EN  = &(WINC_PIN_EN);
+static const pin_obj_t *PIN_RST = &(WINC_PIN_RST);
+static const pin_obj_t *PIN_IRQ = &(WINC_PIN_IRQ);
 static const mp_obj_fun_builtin_t irq_callback_obj;
 
 /*

@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include <stm32f4xx_hal.h>
+#include STM32_HAL_H
 #include "mpconfig.h"
 #include "systick.h"
 #include "pendsv.h"
@@ -283,18 +283,17 @@ int main(void)
     int sensor_init_ret = 0;
     bool first_soft_reset = true;
 
-    // Stack limit should be less than real stack size, so we
-    // had chance to recover from limit hit.
+    // STM32F4xx HAL library initialization:
+    //  - Set NVIC Group Priority to 4
+    //  - Configure the Flash prefetch, instruction and Data caches
+    //  - Configure the Systick to generate an interrupt each 1 msec
+    //  Note: The bootloader enables the CCM/DTCM memory.
+    HAL_Init();
+
+    // Stack limit should be less than real stack size, so we have a chance
+    // to recover from limit hit.  (Limit is measured in bytes.)
     mp_stack_ctrl_init();
     mp_stack_set_limit((char*)&_ram_end - (char*)&_heap_end - 1024);
-
-    /* STM32F4xx HAL library initialization:
-       - Configure the Flash prefetch, instruction and Data caches
-       - Configure the Systick to generate an interrupt each 1 msec
-       - Set NVIC Group Priority to 4
-       - Global MSP (MCU Support Package) initialization
-    */
-    HAL_Init();
 
     // basic sub-system init
     led_init();

@@ -7,7 +7,7 @@
  *
  */
 #include <stdbool.h>
-#include <stm32f4xx_hal.h>
+#include STM32_HAL_H
 #include <systick.h>
 #include "omv_boardconfig.h"
 #include "sccb.h"
@@ -21,9 +21,13 @@ int SCCB_Init()
     /* Configure I2C */
     I2CHandle.Instance             = SCCB_I2C;
     I2CHandle.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
+    #if defined(STM32F769xx)
+    I2CHandle.Init.Timing          = 0x20404768; // 10KHz
+    #else
     I2CHandle.Init.ClockSpeed      = SCCB_FREQ;
-    I2CHandle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
     I2CHandle.Init.DutyCycle       = I2C_DUTYCYCLE_2;
+    #endif
+    I2CHandle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
     I2CHandle.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
     I2CHandle.Init.NoStretchMode   = I2C_NOSTRETCH_DISABLED;
     I2CHandle.Init.OwnAddress1     = 0xFE;

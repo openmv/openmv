@@ -40,6 +40,8 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include STM32_HAL_H
 #include "bsp/include/nm_bsp.h"
 #include "common/include/nm_common.h"
 #include "bus_wrapper/include/nm_bus_wrapper.h"
@@ -49,7 +51,6 @@
 #include "pin.h"
 #include "genhdr/pins.h"
 #include "extint.h"
-#include <stm32f4xx_hal.h>
 #include "spi.h"
 
 static SPI_HandleTypeDef SPI_HANDLE;
@@ -90,11 +91,10 @@ static sint8 nm_i2c_write_special(uint8 *wb1, uint16 sz1, uint8 *wb2, uint16 sz2
 
 #ifdef CONF_WINC_USE_SPI
 /** PIO instance used by CS. */
-static const pin_obj_t *PIN_CS  = &pin_B12;
-#define SPI_ASSERT_CS()		do {HAL_GPIO_WritePin(PIN_CS->gpio, PIN_CS->pin_mask, GPIO_PIN_RESET);} while(0)
-#define SPI_DEASSERT_CS()	do {HAL_GPIO_WritePin(PIN_CS->gpio, PIN_CS->pin_mask, GPIO_PIN_SET);} while(0)
+static const pin_obj_t *PIN_CS  = &WINC_PIN_CS;
 #define SPI_TIMEOUT         (10000)  /* in ms */
-#include <string.h>
+#define SPI_ASSERT_CS()     do {HAL_GPIO_WritePin(PIN_CS->gpio, PIN_CS->pin_mask, GPIO_PIN_RESET);} while(0)
+#define SPI_DEASSERT_CS()   do {HAL_GPIO_WritePin(PIN_CS->gpio, PIN_CS->pin_mask, GPIO_PIN_SET);} while(0)
 
 static sint8 spi_rw(uint8 *tx_buf, uint8 *rx_buf, uint16 u16Sz)
 {

@@ -33,7 +33,6 @@ FIRMWARE = firmware
 TOP_DIR=$(shell pwd)
 BUILD=$(TOP_DIR)/build
 CMSIS_DIR=cmsis
-STHAL_DIR=sthal
 STUSB_DIR=stusb
 FATFS_DIR=fatfs
 MICROPY_DIR=micropython
@@ -56,16 +55,11 @@ CFLAGS += -O2 -ggdb3 -DNDEBUG
 endif
 
 # Compiler Flags
-CFLAGS += -std=gnu99 -Wall -Werror -mlittle-endian -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
-CFLAGS += -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
-CFLAGS += -DARM_MATH_CM4 -D__FPU_PRESENT=1 -D__FPU_USED=1 -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000\
-          -D$(TARGET) -DSTM32_HAL_H='<stm32f4xx_hal.h>'
-
-ifeq ($(TARGET), OPENMV1)
-    CFLAGS += -DSTM32F407xx
-else
-    CFLAGS += -DSTM32F427xx
-endif
+include $(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/omv_boardconfig.mk
+CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
+CFLAGS += -D$(MCU) -D$(ARM_MATH) -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard
+CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000 -D$(TARGET)\
+          -DSTM32_HAL_H=$(HAL_INC) -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(MAIN_APP_ADDR)
 
 CFLAGS += -I. -Iinclude
 CFLAGS += -I$(TOP_DIR)/$(BOOT_DIR)/include/
@@ -90,12 +84,12 @@ CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 
 # Linker Flags
-LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard\
-          -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/stm32f4xx.lds
+LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
+          -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/stm32fxxx.lds
 
 # Linker Flags
-BOOT_LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mlittle-endian -mfloat-abi=hard\
-             -mfpu=fpv4-sp-d16 -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
+BOOT_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
+               -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(BOOT_DIR)/stm32fxxx.lds
 
 #------------- Libraries ----------------#
 #FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/st/*.o)
@@ -126,7 +120,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	ov2640.o                                \
 	ov7725.o                                \
 	sensor.o                                \
-	stm32f4xx_hal_msp.o                     \
+	stm32fxxx_hal_msp.o                     \
 	soft_i2c.o                              \
 	mutex.o                                 \
 	)
@@ -182,17 +176,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_tof.o                                \
 	)
 
-ifeq ($(TARGET), OPENMV1)
+
 FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
-	system_stm32f4xx.o                          \
-	startup_stm32f407xx.o                       \
+	$(STARTUP).o                                \
+	system_stm32fxxx.o                          \
 	)
-else
-FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
-	system_stm32f4xx.o                          \
-	startup_stm32f427xx.o                       \
-	)
-endif
 
 #------------- MicroPy Core -------------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
@@ -318,17 +306,10 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 BOOT_OBJ += $(wildcard $(BUILD)/$(BOOT_DIR)/src/*.o)
 BOOT_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
 
-ifeq ($(TARGET), OPENMV1)
 BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
-	system_stm32f4xx.o                          \
-	startup_stm32f407xx.o                       \
+	$(STARTUP).o                                \
+	system_stm32fxxx.o                          \
 	)
-else
-BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
-	system_stm32f4xx.o                          \
-	startup_stm32f427xx.o                       \
-	)
-endif
 
 BOOT_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	core/src/usbd_core.o                            \
@@ -353,6 +334,7 @@ export LDFLAGS
 export TOP_DIR
 export BUILD
 export TARGET
+export STARTUP
 ###################################################
 all: $(OPENMV)
 
@@ -372,31 +354,31 @@ FIRMWARE_OBJS:
 
 # This target generates the main/app firmware image located at 0x08010000
 $(FIRMWARE): FIRMWARE_OBJS
-	$(CPP) -P -E -D$(TARGET) $(OMV_DIR)/stm32f4xx.ld.S > $(BUILD)/stm32f4xx.lds
+	$(CPP) -P -E -D$(TARGET) $(OMV_DIR)/stm32fxxx.ld.S > $(BUILD)/stm32fxxx.lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
-	$(PYTHON) $(MKDFU) -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
+	$(PYTHON) $(MKDFU) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
 # This target generates the bootloader. The bootloader binary is generated twice,
 # once without padding, to generate the bootloader.dfu file, and once with padding
-# up to the main fw image (0x08010000), to generate a contiguous firmware.bin image.
+# up to the main fw image (MAIN_APP_ADDR), to generate a contiguous firmware.bin image.
 $(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
-	$(CPP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32f4xx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32f4xx.lds
+	$(CPP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32fxxx.lds
 	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
-	$(OBJCOPY) -Obinary --pad-to=0x08010000 $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
+	$(OBJCOPY) -Obinary --pad-to=$(MAIN_APP_ADDR) $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 
 # This target generates a combined bootloader+main firmware image.
 $(OPENMV): $(BOOTLOADER) $(FIRMWARE) | $(BUILD)
 	$(CAT) $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
-	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b 0x08010000:$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
+	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
 
 size:
-	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
-	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
+	$(SIZE) --format=SysV $(FW_DIR)/$(BOOTLOADER).elf
+	$(SIZE) --format=SysV $(FW_DIR)/$(FIRMWARE).elf
 
 clean:
 	$(RM) -fr $(BUILD)

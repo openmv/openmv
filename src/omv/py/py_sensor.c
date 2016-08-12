@@ -16,6 +16,7 @@
 #include "py_sensor.h"
 #include "omv_boardconfig.h"
 #include "py_helper.h"
+#include "framebuffer.h"
 
 extern sensor_t sensor;
 
@@ -84,12 +85,20 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-static mp_obj_t py_sensor_get_fb() {
-    mp_obj_t image = py_image(0, 0, 0, 0);
-    if (sensor_get_fb(py_image_cobj(image))) {
+static mp_obj_t py_sensor_get_fb()
+{
+    if (MAIN_FB()->bpp == 0) {
         return mp_const_none;
     }
-    return image;
+
+    image_t image = {
+        .w      = MAIN_FB()->w,
+        .h      = MAIN_FB()->h,
+        .bpp    = MAIN_FB()->bpp,
+        .pixels = MAIN_FB()->pixels
+    };
+
+    return py_image_from_struct(&image);
 }
 
 static mp_obj_t py_sensor_get_id() {

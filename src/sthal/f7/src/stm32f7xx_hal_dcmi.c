@@ -315,7 +315,7 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
 
   /* Enable DCMI by setting DCMIEN bit */
   __HAL_DCMI_ENABLE(hdcmi);
-  
+
   /* Configure the DCMI Mode */
   hdcmi->Instance->CR &= ~(DCMI_CR_CM);
   hdcmi->Instance->CR |=  (uint32_t)(DCMI_Mode);
@@ -390,8 +390,8 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA_MB(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI
   /* Lock the DCMI peripheral state */
   hdcmi->State = HAL_DCMI_STATE_BUSY;
 
-  /* Check the parameters */
-  assert_param(IS_DCMI_CAPTURE_MODE(DCMI_Mode));
+  /* Enable DCMI by setting DCMIEN bit */
+  __HAL_DCMI_ENABLE(hdcmi);
 
   /* Configure the DCMI Mode */
   hdcmi->Instance->CR &= ~(DCMI_CR_CM);
@@ -403,28 +403,29 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA_MB(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI
   /* Set the DMA error callback */
   hdcmi->DMA_Handle->XferErrorCallback = DCMI_DMAError;
 
+  /* Set the dma abort callback */
+  hdcmi->DMA_Handle->XferAbortCallback = NULL;
+
   /* DCMI_DOUBLE_BUFFER Mode */
   /* Set the DMA memory1 conversion complete callback */
-  hdcmi->DMA_Handle->XferM1CpltCallback = DCMI_DMAXferCplt; 
+  hdcmi->DMA_Handle->XferM1CpltCallback = DCMI_DMAXferCplt;
 
   /* Initialise transfer parameters */
-  hdcmi->XferCount = Count;
+  hdcmi->XferCount = Count-2;
   hdcmi->XferSize = Length/Count;
   hdcmi->pBuffPtr = pData;
     
-  /* Update DCMI counter  and transfer number*/
-  hdcmi->XferCount = (hdcmi->XferCount - 2);
-  hdcmi->XferTransferNumber = hdcmi->XferCount;
-
   /* Update second memory address */
   SecondMemAddress = (uint32_t)(pData + (4*hdcmi->XferSize));
 
   /* Start DMA multi buffer transfer */
   HAL_DMAEx_MultiBufferStart_IT(hdcmi->DMA_Handle, (uint32_t)&hdcmi->Instance->DR, (uint32_t)pData, SecondMemAddress, hdcmi->XferSize);
-  
 
   /* Enable Capture */
-  DCMI->CR |= DCMI_CR_CAPTURE;
+  hdcmi->Instance->CR |= DCMI_CR_CAPTURE;
+
+  /* Release Lock */
+  __HAL_UNLOCK(hdcmi);
 
   /* Return function status */
   return HAL_OK;
@@ -701,6 +702,10 @@ __weak void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
    */
 }
 
+__weak void DCMI_DMAConvCpltUser(uint32_t addr)
+{
+
+}
 /**
   * @}
   */
@@ -867,53 +872,28 @@ uint32_t HAL_DCMI_GetError(DCMI_HandleTypeDef *hdcmi)
   */
 static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 {
-  uint32_t tmp = 0;
+  DCMI_HandleTypeDef* hdcmi;
+  hdcmi = (DCMI_HandleTypeDef*) ((DMA_HandleTypeDef*)hdma)->Parent;
+  //hdcmi->State= HAL_DCMI_STATE_READY;
 
-  DCMI_HandleTypeDef* hdcmi = ( DCMI_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
-
-  if(hdcmi->XferCount != 0)
-  {
-    /* Update memory 0 address location */
-    tmp = ((hdcmi->DMA_Handle->Instance->CR) & DMA_SxCR_CT);
-    if(((hdcmi->XferCount % 2) == 0) && (tmp != 0))
-    {
-      tmp = hdcmi->DMA_Handle->Instance->M0AR;
-      HAL_DMAEx_ChangeMemory(hdcmi->DMA_Handle, (tmp + (8*hdcmi->XferSize)), MEMORY0);
-      hdcmi->XferCount--;
-    }
-    /* Update memory 1 address location */
-    else if((hdcmi->DMA_Handle->Instance->CR & DMA_SxCR_CT) == 0)
-    {
-      tmp = hdcmi->DMA_Handle->Instance->M1AR;
-      HAL_DMAEx_ChangeMemory(hdcmi->DMA_Handle, (tmp + (8*hdcmi->XferSize)), MEMORY1);
-      hdcmi->XferCount--;
-    }
-  }
-  /* Update memory 0 address location */
-  else if((hdcmi->DMA_Handle->Instance->CR & DMA_SxCR_CT) != 0)
-  {
-    hdcmi->DMA_Handle->Instance->M0AR = hdcmi->pBuffPtr;
-  }
-  /* Update memory 1 address location */
-  else if((hdcmi->DMA_Handle->Instance->CR & DMA_SxCR_CT) == 0)
-  {
-    tmp = hdcmi->pBuffPtr;
-    hdcmi->DMA_Handle->Instance->M1AR = (tmp + (4*hdcmi->XferSize));
-    hdcmi->XferCount = hdcmi->XferTransferNumber;
+  // Note: we don't need to adjust memory addresses because they stay the same.
+  if (hdcmi->XferCount != 0) {
+    hdcmi->XferCount--;
   }
 
-  /* Check if the frame is transferred */
-  if(hdcmi->XferCount == hdcmi->XferTransferNumber)
-  {
-    /* Enable the Frame interrupt */
+  if ((hdcmi->DMA_Handle->Instance->CR & DMA_SxCR_CT) == 0) {
+    // Current traget is M0 call user callback with M1
+    DCMI_DMAConvCpltUser(hdcmi->DMA_Handle->Instance->M1AR);
+  } else {
+    // Current traget is M1 call user callback with M0
+    DCMI_DMAConvCpltUser(hdcmi->DMA_Handle->Instance->M0AR);
+  }
+
+  if (__HAL_DCMI_GET_FLAG(hdcmi, DCMI_FLAG_FRAMERI) != RESET) {
+    /* Re-enable frame interrupt */
     __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_FRAME);
-    
-    /* When snapshot mode, set dcmi state to ready */
-    if((hdcmi->Instance->CR & DCMI_CR_CM) == DCMI_MODE_SNAPSHOT)
-    {  
-      hdcmi->State= HAL_DCMI_STATE_READY;
-    }
-  }  
+    hdcmi->State= HAL_DCMI_STATE_READY;
+  }
 }
 
 /**

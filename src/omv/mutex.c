@@ -6,7 +6,7 @@
  * Mutex.
  *
  */
-#include <stm32f4xx.h>
+#include STM32_HAL_H
 #include "mutex.h"
 
 // This is a standard implementation of mutexs on ARM processors following the ARM guide.
@@ -14,40 +14,58 @@
 
 void mutex_init(mutex_t *mutex)
 {
-    mutex_unlock(mutex);
+    __DMB();
+    mutex->tid = 0;
+    mutex->lock = 0;
 }
 
-void mutex_lock(mutex_t *mutex)
+void mutex_lock(mutex_t *mutex, uint32_t tid)
 {
     volatile int locked = 0;
     // Wait for mutex to be unlocked
     do {
         // Attempt exclusive read
-        while (__LDREXW(mutex) != 0);
+        while (__LDREXW(&mutex->lock) != 0);
 
         // Attempt to lock mutex
-        locked = __STREXW(1, mutex);
+        locked = __STREXW(1, &mutex->lock);
+
+        // Set TID if mutex is locked
+        if (locked == 0) {
+            mutex->tid = tid;
+        }
     } while (locked != 0);
+
     __DMB();
 }
 
-int mutex_try_lock(mutex_t *mutex)
+int mutex_try_lock(mutex_t *mutex, uint32_t tid)
 {
     volatile int locked = 1;
 
-    if (__LDREXW(mutex) != 0) {
-        return 0;
-    }
+    // If mutex is already locked by the current thread then
+    // release the Kraken err.. the mutex, else attempt to lock it.
+    if (mutex->tid == tid) {
+        mutex_unlock(mutex, tid);
+    } else if (__LDREXW(&mutex->lock) == 0) {
+        // Attempt to lock the mutex
+        locked = __STREXW(1, &mutex->lock);
+        __DMB();
 
-    // Attempt to lock mutex
-    locked = __STREXW(1, mutex);
-    __DMB();
+        // Set TID if mutex is locked
+        if (locked == 0) {
+            mutex->tid = tid;
+        }
+    }
 
     return (locked == 0);
 }
 
-void mutex_unlock(mutex_t *mutex)
+void mutex_unlock(mutex_t *mutex, uint32_t tid)
 {
-    __DMB();
-    *mutex = 0;
+    if (mutex->tid == tid) {
+        __DMB();
+        mutex->tid = 0;
+        mutex->lock = 0;
+    }
 }

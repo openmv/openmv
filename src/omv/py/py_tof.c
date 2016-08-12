@@ -9,10 +9,9 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <stm32f4xx_hal.h>
-
 #include <mp.h>
 #include <math.h>
+#include STM32_HAL_H
 #include <float.h>
 #include "fb_alloc.h"
 #include "xalloc.h"
@@ -104,9 +103,13 @@ static void i2c_init()
     // I2C configuration
     I2CHandle.Instance             = I2C2;
     I2CHandle.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
+    #if defined(STM32F769xx)
+    I2CHandle.Init.Timing          = 0x20404768; // 10KHz
+    #else
     I2CHandle.Init.ClockSpeed      = 10000;
-    I2CHandle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
     I2CHandle.Init.DutyCycle       = I2C_DUTYCYCLE_2;
+    #endif
+    I2CHandle.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
     I2CHandle.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
     I2CHandle.Init.NoStretchMode   = I2C_NOSTRETCH_DISABLED;
     I2CHandle.Init.OwnAddress1     = 0xFE;

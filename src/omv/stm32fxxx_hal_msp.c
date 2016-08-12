@@ -6,7 +6,7 @@
  * HAL MSP.
  *
  */
-#include <stm32f4xx_hal.h>
+#include STM32_HAL_H
 #include "omv_boardconfig.h"
 
 /* GPIO struct */
@@ -36,6 +36,16 @@ void SystemClock_Config(void);
 
 void HAL_MspInit(void)
 {
+    #if defined(STM32F769xx)
+    // Invalidate each cache before enabling it
+    SCB_InvalidateICache();
+    SCB_InvalidateDCache();
+
+    /* Enable the CPU Cache */
+    SCB_EnableICache();
+    SCB_EnableDCache();
+    #endif
+
     /* Set the system clock */
     SystemClock_Config();
 
@@ -48,13 +58,24 @@ void HAL_MspInit(void)
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-#ifdef OPENMV2
+
+#if defined (STM32F769xx)
     __GPIOF_CLK_ENABLE();
     __GPIOG_CLK_ENABLE();
+    __GPIOH_CLK_ENABLE();
+    __GPIOI_CLK_ENABLE();
+    __GPIOJ_CLK_ENABLE();
+    __GPIOK_CLK_ENABLE();
 #endif
 
     /* Enable DMA clocks */
+    __DMA1_CLK_ENABLE();
     __DMA2_CLK_ENABLE();
+
+#if defined (STM32F769xx)
+    /* Enable JPEG clock */
+    __HAL_RCC_JPEG_CLK_ENABLE();
+#endif
 
     /* Configure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;

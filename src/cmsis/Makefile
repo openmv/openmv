@@ -1,11 +1,7 @@
 # Sources
-ifeq ($(TARGET), OPENMV1)
-SRC_S = src/st/startup_stm32f407xx.s
-else
-SRC_S = src/st/startup_stm32f427xx.s
-endif
+SRC_S = src/st/$(STARTUP).s
+SRC_C = src/st/system_stm32fxxx.c
 
-SRC_C   = src/st/system_stm32f4xx.c
 SRC_C  += $(wildcard src/dsp/CommonTables/*.c)
 SRC_C  += $(wildcard src/dsp/FastMathFunctions/*.c)
 SRC_C  += $(wildcard src/dsp/MatrixFunctions/*.c)

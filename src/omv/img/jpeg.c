@@ -11,16 +11,16 @@
  *
  */
 
-#include <arm_math.h>
 #include <stdio.h>
-#include <stm32f4xx_hal.h>
+#include STM32_HAL_H
+#include <arm_math.h>
+
 #include "xalloc.h"
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
 #include "imlib.h"
 
 #define TIME_JPEG   (0)
-
 #define FIX_0_382683433  ((int32_t)   98)
 #define FIX_0_541196100  ((int32_t)  139)
 #define FIX_0_707106781  ((int32_t)  181)
@@ -502,6 +502,11 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
 
     // Spectral selection
     jpeg_put_bytes(jpeg_buf, (uint8_t [3]){0x00, 0x3F, 0x0}, 3);
+}
+
+void jpeg_init0()
+{
+
 }
 
 void jpeg_compress(image_t *src, image_t *dst, int quality)
