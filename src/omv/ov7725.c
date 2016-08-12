@@ -20,7 +20,7 @@ static const uint8_t default_regs[][2] = {
     {COM7,          COM7_RES_VGA | COM7_FMT_RGB565 | COM7_FMT_RGB},
 
     {COM4,          0x41}, /* PLL x4 */
-    {CLKRC,         0x40}, /* Bypass pre-scalar */
+    {CLKRC,         0xC0}, /* Res/Bypass pre-scalar */
 
     // VGA Window Size
     {HSTART,        0x23},
