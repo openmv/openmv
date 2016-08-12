@@ -446,9 +446,7 @@ class OMVGtk:
         self.drawingarea = self.builder.get_object("drawingarea")
         self.da_menu = self.builder.get_object("da_menu")
 
-        # preview flags
-        self.enable_fb = True
-        self.disable_fb_request = False
+        self.fb_enabled = True
 
         # selection coords
         self.sel_ended=False
@@ -636,7 +634,10 @@ class OMVGtk:
             # Interrupt running code
             openmv.stop_script()
 
-            # Enable JPEG transfers
+            # Enable Framebuffer
+            openmv.enable_fb(True)
+
+            # Enable JPEG compression
             openmv.enable_jpeg(self.enable_jpeg)
 
         # Disable connect button
@@ -737,9 +738,8 @@ class OMVGtk:
 
     def enable_fb_toggled(self, widget):
         enable_fb_check = self.builder.get_object("enable_fb_check")
-        self.disable_fb_request = not enable_fb_check.get_active()
-        if (self.disable_fb_request == False):
-            self.enable_fb = True
+        self.fb_enabled = enable_fb_check.get_active()
+        openmv.enable_fb(self.fb_enabled)
 
     def button_pressed(self, widget, event):
         self.x1 = int(event.x)
@@ -786,7 +786,7 @@ class OMVGtk:
 
     def update_drawing(self):
         fb = None
-        if (self.enable_fb and self.connected):
+        if (self.fb_enabled and self.connected):
             try:
                 # read drawingarea
                 fb = openmv.fb_dump()
@@ -796,11 +796,6 @@ class OMVGtk:
                 return True
         if fb:
             self.fb = fb
-            # If preview is disabled, don't read any more frames.
-            # This needs to be set here, after reading a valid frame,
-            # to ensure that fb_request flag is cleared in firmware.
-            if self.disable_fb_request:
-                self.enable_fb = False
         else:
             fb = self.fb
 
@@ -1071,7 +1066,7 @@ if __name__ == "__main__":
     # Terminal update callback
     gobject.gobject.timeout_add(30, omvgtk.update_terminal)
     # Framebuffer update callback
-    gobject.gobject.timeout_add(30, omvgtk.update_drawing)
+    gobject.gobject.timeout_add(10, omvgtk.update_drawing)
     # Execute button update callback
     gobject.gobject.timeout_add(500, omvgtk.update_exec_button)
     gtk.main()
