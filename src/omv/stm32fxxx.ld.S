@@ -112,10 +112,6 @@ _ram_end    = ORIGIN(MAIN_MEMORY) + LENGTH(MAIN_MEMORY);
 _heap_size  = HEAP_SIZE;    /* required amount of heap */
 _stack_size = STACK_SIZE;   /* minimum amount of stack */
 
-// _line_buf is only used when reading frames and when reading
-// frames fb_alloc is not used so we can overwrite _line_buf.
-//_fballoc  = _line_buf + (640*4);
-
 /* Define output sections */
 SECTIONS
 {
