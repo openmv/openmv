@@ -87,8 +87,7 @@ typedef void (*line_filter_t) (uint8_t *src, int src_stride, uint8_t *dst, int d
 #define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
 #define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
 #define SENSOR_HW_FLAGS_FSYNC        (3) // hardware frame sync.
-#define SENSOR_HW_FLAGS_HW_JPEG      (4) // hardware JPEG encoder.
-#define SENSOR_HW_FLAGS_SW_JPEG      (5) // software JPEG encoder enable/disable.
+#define SENSOR_HW_FLAGS_JPEGE        (4) // hardware JPEG encoder.
 #define SENSOR_HW_FLAGS_GET(s, x)    ((s)->hw_flags &  (1<<x))
 #define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
 #define SENSOR_HW_FLAGS_CLR(s, x)    ((s)->hw_flags &= ~(1<<x))
@@ -151,10 +150,6 @@ int sensor_read_reg(uint8_t reg);
 
 // Write a sensor register.
 int sensor_write_reg(uint8_t reg, uint8_t val);
-
-// Enable/disable framebuffer JPEG compression.
-// Note: Has nothing to do with HW JPEG.
-int sensor_enable_jpeg(bool enable);
 
 // Set the sensor pixel format.
 int sensor_set_pixformat(pixformat_t pixformat);

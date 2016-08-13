@@ -288,9 +288,6 @@ int sensor_init()
         return -5;
     }
 
-    // Enable framebuffer JPEG compression by default
-    sensor_enable_jpeg(true);
-
     /* All good! */
     return 0;
 }
@@ -319,13 +316,6 @@ int sensor_reset()
 int sensor_get_id()
 {
     return sensor.id.PID;
-}
-
-int sensor_enable_jpeg(bool enable)
-{
-    SENSOR_HW_FLAGS_CLR(&sensor, SENSOR_HW_FLAGS_SW_JPEG);
-    SENSOR_HW_FLAGS_SET(&sensor, SENSOR_HW_FLAGS_SW_JPEG, enable);
-    return 0;
 }
 
 int sensor_read_reg(uint8_t reg)
@@ -623,8 +613,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
     // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
-    if ((fb->bpp == 1 || fb->bpp == 2) && JPEG_FB()->enabled && sensor.pixformat
-            != PIXFORMAT_JPEG && SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_SW_JPEG)) {
+    if ((fb->bpp == 1 || fb->bpp == 2) && JPEG_FB()->enabled && sensor.pixformat != PIXFORMAT_JPEG) {
         // Lock FB
         if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
             // Set JPEG src and dst images.

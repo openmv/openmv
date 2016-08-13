@@ -302,13 +302,6 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             break;
         }
 
-        case USBDBG_JPEG_ENABLE: {
-            int16_t enable = *((int16_t*)buffer);
-            sensor_enable_jpeg(enable);
-            cmd = USBDBG_NONE;
-            break;
-        }
-
         case USBDBG_TX_BUF:
         case USBDBG_TX_BUF_LEN:
             xfer_bytes = 0;
