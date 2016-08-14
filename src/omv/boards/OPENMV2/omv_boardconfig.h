@@ -9,16 +9,23 @@
 #ifndef __OMV_BOARDCONFIG_H__
 #define __OMV_BOARDCONFIG_H__
 
+// Architecture info
+#define OMV_ARCH_STR            "OMV2 F4 256 JPEG"
+
 // Sensor external clock frequency.
 #define OMV_XCLK_FREQUENCY      (12000000)
+
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
+
 // Max integral image.
 #define OMV_MAX_INT_FRAME       FRAMESIZE_VGA
 #define OMV_MAX_INT_FRAME_STR   "VGA"
+
 // Max GS/RGB565/YUV422/Binary image.
 #define OMV_MAX_RAW_FRAME       FRAMESIZE_VGA
 #define OMV_MAX_RAW_FRAME_STR   "VGA"
+
 // Max raw (RGB565/YUV422) image for blob detection.
 #define OMV_MAX_BLOB_FRAME      FRAMESIZE_VGA
 #define OMV_MAX_BLOB_FRAME_STR  "VGA"
