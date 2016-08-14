@@ -386,8 +386,6 @@ int sensor_set_framesize(framesize_t framesize)
         HAL_DCMI_DisableCROP(&DCMIHandle);
     }
 
-    // Set initial JPEG buffer quality.
-    JPEG_FB()->quality = (MAIN_FB_SIZE() > JPEG_QUALITY_THRESH) ? 50:75;
     return 0;
 }
 
@@ -606,6 +604,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     volatile uint32_t addr;
     volatile uint16_t length;
     uint32_t tick_start;
+    static int overflow_count = 0;
 
     // Set line filter
     sensor_set_line_filter(line_filter_func, line_filter_args);
@@ -625,13 +624,19 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
             if (overflow == true) {
                 // JPEG buffer overflowed, reduce JPEG quality for the next frame
                 // and skip the current frame. The IDE doesn't receive this frame.
-                if (JPEG_FB()->quality > 0) {
-                    JPEG_FB()->quality = IM_MAX(1, ((JPEG_FB()->quality) - 10));
+                if (JPEG_FB()->quality > 1) {
+                    // Keep this quality for the next n frames
+                    overflow_count = 60;
+                    JPEG_FB()->quality = IM_MAX(1, (JPEG_FB()->quality/2));
                 }
                 JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
             } else {
+                if (overflow_count) {
+                    overflow_count--;
+                }
                 // No buffer overflow, increase quality up to max quality based on frame size
-                if (JPEG_FB()->quality < ((MAIN_FB_SIZE() > JPEG_QUALITY_THRESH) ? 50:75)) {
+                if (overflow_count == 0 &&
+                        JPEG_FB()->quality < ((MAIN_FB_SIZE() > JPEG_QUALITY_THRESH) ? 50:75)) {
                     JPEG_FB()->quality++;
                 }
                 // Set FB from JPEG image
