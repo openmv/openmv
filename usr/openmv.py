@@ -20,7 +20,6 @@ __USBDBG_CMD            = 48
 __USBDBG_FW_VERSION     = 0x80
 __USBDBG_FRAME_SIZE     = 0x81
 __USBDBG_FRAME_DUMP     = 0x82
-__USBDBG_FRAME_UPDATE   = 0x04
 __USBDBG_SCRIPT_EXEC    = 0x05
 __USBDBG_SCRIPT_STOP    = 0x06
 __USBDBG_SCRIPT_SAVE    = 0x07
@@ -102,9 +101,6 @@ def fb_dump():
         return None
 
     return (size[0], size[1], buff.reshape((size[1], size[0], 3)))
-
-def fb_update():
-    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FRAME_UPDATE, 0))
 
 def exec_script(buf):
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_EXEC, len(buf)))
