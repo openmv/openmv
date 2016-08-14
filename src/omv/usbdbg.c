@@ -17,6 +17,7 @@
 #include "parse.h"
 #include "compile.h"
 #include "runtime.h"
+#include "omv_boardconfig.h"
 
 static int xfer_bytes;
 static int xfer_length;
@@ -118,6 +119,14 @@ void usbdbg_data_in(void *buffer, int length)
             }
             break;
 
+        case USBDBG_ARCH_STR: {
+            int len = IM_MIN(64, (strlen(OMV_ARCH_STR)+1));
+            ((char *)buffer)[len-1] = 0;
+            memcpy(buffer, OMV_ARCH_STR, len);
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         case USBDBG_SCRIPT_RUNNING: {
             uint32_t *buf = buffer;
             buf[0] = (uint32_t) script_running;
@@ -217,6 +226,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             break;
 
         case USBDBG_FRAME_DUMP:
+            xfer_bytes = 0;
+            xfer_length = length;
+            break;
+
+        case USBDBG_ARCH_STR:
             xfer_bytes = 0;
             xfer_length = length;
             break;

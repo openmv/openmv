@@ -20,6 +20,7 @@ __USBDBG_CMD            = 48
 __USBDBG_FW_VERSION     = 0x80
 __USBDBG_FRAME_SIZE     = 0x81
 __USBDBG_FRAME_DUMP     = 0x82
+__USBDBG_ARCH_STR       = 0x83
 __USBDBG_SCRIPT_EXEC    = 0x05
 __USBDBG_SCRIPT_STOP    = 0x06
 __USBDBG_SCRIPT_SAVE    = 0x07
@@ -160,6 +161,10 @@ def fw_version():
 
 def enable_fb(enable):
     __serial.write(struct.pack("<BBIH", __USBDBG_CMD, __USBDBG_FB_ENABLE, 0, enable))
+
+def arch_str():
+    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_ARCH_STR, 64))
+    return __serial.read(64).split('\0', 1)[0]
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:
