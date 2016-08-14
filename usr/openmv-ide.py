@@ -537,9 +537,6 @@ class OMVGtk:
 
         self.baudrate = int(self.config.get("main", "baudrate"))
 
-        # set enable/disable JPEG
-        self.enable_jpeg = self.config.get("main", "enable_jpeg") == 'True'
-
         # Set firmware version
         self.fw_version = (0, 0, 0)
 
@@ -637,9 +634,6 @@ class OMVGtk:
             # Enable Framebuffer
             openmv.enable_fb(True)
 
-            # Enable JPEG compression
-            openmv.enable_jpeg(self.enable_jpeg)
-
         # Disable connect button
         self.connect_button.set_sensitive(False)
 
@@ -695,7 +689,6 @@ class OMVGtk:
         sport_combo = self.builder.get_object("sport_combo")
         baud_combo = self.builder.get_object("baud_combo")
         dialog = self.builder.get_object("preferences_dialog")
-        jpeg_check = self.builder.get_object("jpeg_check")
 
         # Set selected board
         board_combo.get_model().clear()
@@ -716,20 +709,13 @@ class OMVGtk:
             if (port == config_port):
                 sport_combo.set_active(i)
 
-        jpeg_check.set_active(self.enable_jpeg)
-
         # Save config
         if dialog.run() == gtk.RESPONSE_OK:
             self.config.set("main", "board", board_combo.get_active_text())
             self.config.set("main", "serial_port", sport_combo.get_active_text())
             self.config.set("main", "baudrate", baud_combo.get_active_text())
-            self.config.set("main", "enable_jpeg", jpeg_check.get_active())
-            self.enable_jpeg = jpeg_check.get_active()
+            self.config.set("main", "enable_jpeg", True)
             self.save_config()
-
-        # Enable/Disable JPEG
-        if (self.connected):
-            openmv.enable_jpeg(self.enable_jpeg)
 
         dialog.hide()
 
