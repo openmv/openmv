@@ -540,11 +540,11 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 
     jpeg_subsample_t jpeg_subsample;
 
-    if (quality > 70) {
+    if (quality > 60) {
          jpeg_subsample = JPEG_SUBSAMPLE_1x1;
-    } else if (quality > 50) {
+    } else if (quality > 35) {
          jpeg_subsample = JPEG_SUBSAMPLE_2x1;
-    } else { // <= 50
+    } else { // <= 35
          jpeg_subsample = JPEG_SUBSAMPLE_2x2;
     }
 
@@ -571,6 +571,9 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                     YDU[idx + 7] = pixels[ofs + 7] - 128;
                 }
                 DCY = jpeg_processDU(&jpeg_buf, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+            }
+            if (jpeg_buf.overflow) {
+                goto jpeg_overflow;
             }
         }
     } else if (src->bpp == 2) {// TODO assuming RGB565
@@ -619,6 +622,9 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                         DCY = jpeg_processDU(&jpeg_buf, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
                         DCU = jpeg_processDU(&jpeg_buf, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
                         DCV = jpeg_processDU(&jpeg_buf, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                    }
+                    if (jpeg_buf.overflow) {
+                        goto jpeg_overflow;
                     }
                 }
                 break;
@@ -673,6 +679,9 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                         DCY = jpeg_processDU(&jpeg_buf, YDU+64, fdtbl_Y, DCY, YDC_HT, YAC_HT);
                         DCU = jpeg_processDU(&jpeg_buf, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
                         DCV = jpeg_processDU(&jpeg_buf, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                    }
+                    if (jpeg_buf.overflow) {
+                        goto jpeg_overflow;
                     }
                 }
                 break;
@@ -750,6 +759,9 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                         DCU = jpeg_processDU(&jpeg_buf, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
                         DCV = jpeg_processDU(&jpeg_buf, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
                     }
+                    if (jpeg_buf.overflow) {
+                        goto jpeg_overflow;
+                    }
                 }
                 break;
             }
@@ -771,6 +783,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     printf("time: %lums\n", HAL_GetTick() - start);
     #endif
 
+jpeg_overflow:
     return jpeg_buf.overflow;
 }
 

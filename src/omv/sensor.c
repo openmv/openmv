@@ -170,7 +170,7 @@ void sensor_init0()
     memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
 
     // Set default quality
-    JPEG_FB()->quality = 50;
+    JPEG_FB()->quality = 35;
 
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled;
@@ -636,7 +636,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
                 }
                 // No buffer overflow, increase quality up to max quality based on frame size
                 if (overflow_count == 0 &&
-                        JPEG_FB()->quality < ((MAIN_FB_SIZE() > JPEG_QUALITY_THRESH) ? 50:75)) {
+                        JPEG_FB()->quality < ((MAIN_FB_SIZE() > JPEG_QUALITY_THRESH) ? 35:60)) {
                     JPEG_FB()->quality++;
                 }
                 // Set FB from JPEG image
