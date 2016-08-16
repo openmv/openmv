@@ -607,10 +607,8 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 // overwrite image pixels before they are compressed.
 int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_filter_args)
 {
-    volatile uint32_t addr;
-    volatile uint16_t length;
-    uint32_t tick_start;
     static int overflow_count = 0;
+    uint32_t addr, length, tick_start;
 
     // Set line filter
     sensor_set_line_filter(line_filter_func, line_filter_args);
