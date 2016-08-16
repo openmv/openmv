@@ -383,7 +383,7 @@ int sensor_set_framesize(framesize_t framesize)
     // Skip the first frame.
     fb->bpp = 0;
 
-    if (framesize >= FRAMESIZE_VGA) {
+    if (framesize > OMV_MAX_RAW_FRAME) {
         // Crop higher resolutions to QVGA
         sensor_set_windowing(190, 120, 320, 240);
     } else {
