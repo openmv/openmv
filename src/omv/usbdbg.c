@@ -27,7 +27,7 @@ static volatile bool script_ready;
 static volatile bool script_running;
 static volatile bool irq_enabled;
 static vstr_t script_buf;
-mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
+static mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
 
 extern void usbd_cdc_tx_buf_flush();
 extern uint32_t usbd_cdc_tx_buf_len();
