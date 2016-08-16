@@ -43,6 +43,7 @@ ENTRY(Reset_Handler)
     #define MSC_BUF_SIZE    (2K)    // USB MSC bot data
     #define VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
     #define FS_BUF_SIZE     (16K)   // Flash filesystem cache
+    // TODO Set OMV_JPEG_BUF_SIZE if you change this
     #define JPEG_BUF_SIZE   (8K)    // IDE JPEG buffer
 
     #define FLASH_ORIGIN    0x08000000
@@ -75,6 +76,7 @@ ENTRY(Reset_Handler)
     #define MSC_BUF_SIZE    (2K)    // USB MSC bot data
     #define VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
     #define FS_BUF_SIZE     (32K)   // Flash filesystem cache
+    // TODO Set OMV_JPEG_BUF_SIZE if you change this
     #define JPEG_BUF_SIZE   (64K)   // IDE JPEG buffer
 
     #define FLASH_ORIGIN    0x08000000
