@@ -55,6 +55,7 @@ const int resolution[][2] = {
     {1600,  1200},   /* UXGA  */
 };
 
+#if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 static int extclk_config(int frequency)
 {
     // Doubles PCLK
@@ -90,6 +91,7 @@ static int extclk_config(int frequency)
 
     return 0;
 }
+#endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 
 static int dcmi_config(uint32_t jpeg_mode)
 {
@@ -201,27 +203,28 @@ int sensor_init()
     //  STM32F427@180MHz PCLK = 71.9999MHz
     //  STM32F769@216MHz PCLK = 86.4000MHz
     //
+    // OV2640:
+    //  The sensor's internal PLL (when CLKRC=0x80) doubles the XCLK_FREQ
+    //  (XCLK=XCLK_FREQ*2), and the unscaled PIXCLK output is XCLK_FREQ*4
+    //
     // OV7725 PCLK when prescalar is enabled (CLKRC[6]=0):
     //  Internal clock = Input clock × PLL multiplier / [(CLKRC[5:0] + 1) × 2]
     //
     // OV7725 PCLK when prescalar is disabled (CLKRC[6]=1):
     //  Internal clock = Input clock × PLL multiplier
     //
-    // OV2640:
-    //  The sensor's internal PLL (when CLKRC=0x80) doubles the XCLK_FREQ
-    //  (XCLK=XCLK_FREQ*2), and the unscaled PIXCLK output is XCLK_FREQ*4
-
+    #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
+    // Configure external clock timer.
     if (extclk_config(OMV_XCLK_FREQUENCY) != 0) {
         // Timer problem
         return -1;
     }
-
-    /* Uncomment this to pass through the MCO1 clock (HSI=16MHz) this results in a
-       64MHz PIXCLK output from the sensor. */
-    #if defined OPENMV2
-    // Note: MCO is multiplexed on OPENMV2 TIM1 only.
-    //(void) extclk_config; // to avoid warnings
-    //HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSI, RCC_MCODIV_1);
+    #elif (OMV_XCLK_SOURCE == OMV_XCLK_MCO)
+    // Pass through the MCO1 clock with source input set to HSE (12MHz).
+    // Note MCO1 is multiplexed on OPENMV2/TIM1 only.
+    HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
+    #else
+    #error "OMV_XCLK_SOURCE is not set!"
     #endif
 
     /* Reset the sesnor state */

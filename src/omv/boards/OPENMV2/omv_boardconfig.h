@@ -12,7 +12,13 @@
 // Architecture info
 #define OMV_ARCH_STR            "OMV2 F4 256 JPEG"
 
-// Sensor external clock frequency.
+#define OMV_XCLK_MCO            (0U)
+#define OMV_XCLK_TIM            (1U)
+
+// Sensor external clock source.
+#define OMV_XCLK_SOURCE         (OMV_XCLK_MCO)
+
+// Sensor external clock timer frequency.
 #define OMV_XCLK_FREQUENCY      (12000000)
 
 // Have built-in RGB->LAB table.

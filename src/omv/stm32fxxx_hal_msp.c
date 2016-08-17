@@ -123,6 +123,7 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
 
 void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
 {
+    #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
     if (htim->Instance == DCMI_TIM) {
         /* Enable DCMI timer clock */
         DCMI_TIM_CLK_ENABLE();
@@ -136,6 +137,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
         GPIO_InitStructure.Alternate = DCMI_TIM_AF;
         HAL_GPIO_Init(DCMI_TIM_PORT, &GPIO_InitStructure);
     }
+    #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 }
 
 void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
