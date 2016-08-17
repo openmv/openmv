@@ -56,9 +56,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
     line_filter_t line_filter_func = NULL;
 
     // Sanity checks
-    PY_ASSERT_FALSE_MSG((sensor.pixformat != PIXFORMAT_JPEG &&
-                         sensor.framesize > OMV_MAX_RAW_FRAME),
-                         "Raw image is only supported for "OMV_MAX_RAW_FRAME_STR" and smaller frames");
+    PY_ASSERT_TRUE_MSG((sensor.pixformat != PIXFORMAT_JPEG), "Operation not supported on JPEG");
 
     // Lookup filter function
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_line_filter), MP_MAP_LOOKUP);
