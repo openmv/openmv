@@ -553,12 +553,12 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLN = 336;
   RCC_OscInitStruct.PLL.PLLQ = 7;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-#elif defined (STM32F427xx)// 180MHz/48MHz
-  flash_latency = FLASH_LATENCY_5;
-  RCC_OscInitStruct.PLL.PLLM = 6;
-  RCC_OscInitStruct.PLL.PLLN = 360;
-  RCC_OscInitStruct.PLL.PLLQ = 15;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+#elif defined (STM32F427xx)// 192MHz/48MHz
+  flash_latency = FLASH_LATENCY_7;
+  RCC_OscInitStruct.PLL.PLLM = 12;
+  RCC_OscInitStruct.PLL.PLLN = 384;
+  RCC_OscInitStruct.PLL.PLLQ = 8;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
 #elif defined (STM32F769xx)// 216MHz/48MHz
   flash_latency = FLASH_LATENCY_7;
   RCC_OscInitStruct.PLL.PLLM = 12;
