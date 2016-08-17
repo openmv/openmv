@@ -293,3 +293,13 @@ Q(tof)
 Q(read_frame)
 Q(draw_frame)
 Q(phase)
+
+// cpufreq Module
+Q(cpufreq)
+Q(CPUFREQ_120MHZ)
+Q(CPUFREQ_144MHZ)
+Q(CPUFREQ_168MHZ)
+Q(CPUFREQ_192MHZ)
+Q(CPUFREQ_216MHZ)
+Q(get_frequency)
+Q(set_frequency)
