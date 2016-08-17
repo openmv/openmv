@@ -43,12 +43,18 @@ static int run_cascade_classifier(cascade_t* cascade, point_t pt)
 {
     int win_w = cascade->window.w;
     int win_h = cascade->window.h;
-    int32_t n = (win_w * win_h);
-    int32_t i_s = imlib_integral_mw_lookup (cascade->sum, pt.x, 0, win_w, win_h);
-    int32_t i_sq = imlib_integral_mw_lookup(cascade->ssq, pt.x, 0, win_w, win_h);
-    int32_t v = i_sq*n-(i_s*i_s);
-    cascade->std = fast_sqrtf(fast_fabsf(v));
+    uint32_t n = (win_w * win_h);
+    uint32_t i_s = imlib_integral_mw_lookup (cascade->sum, pt.x, 0, win_w, win_h);
+    uint32_t i_sq = imlib_integral_mw_lookup(cascade->ssq, pt.x, 0, win_w, win_h);
+    uint32_t m = i_s/n;
+    uint32_t v = i_sq/n-(m*m);
 
+    // Skip homogeneous regions.
+    if (v<(50*50)) {
+        return 0;
+    }
+
+    cascade->std = fast_sqrtf(i_sq*n-(i_s*i_s));
     for (int i=0, w_idx=0, r_idx=0, t_idx=0; i<cascade->n_stages; i++) {
         int stage_sum = 0;
         for (int j=0; j<cascade->stages_array[i]; j++, t_idx++) {
@@ -59,7 +65,7 @@ static int run_cascade_classifier(cascade_t* cascade, point_t pt)
         }
         // If the sum is below the stage threshold, no objects were detected
         if (stage_sum < (cascade->threshold * cascade->stages_thresh_array[i])) {
-            return -i;
+            return 0;
         }
     }
     return 1;
@@ -131,8 +137,8 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade, rectangle_t *r
                 // If an object is detected, record the coordinates of the filter window
                 if (run_cascade_classifier(cascade, p) > 0) {
                     array_push_back(objects,
-                                rectangle_alloc(fast_roundf(x*factor) + roi->x, fast_roundf(y*factor) + roi->y,
-                                fast_roundf(cascade->window.w*factor), fast_roundf(cascade->window.h*factor)));
+                        rectangle_alloc(fast_roundf(x*factor) + roi->x, fast_roundf(y*factor) + roi->y,
+                        fast_roundf(cascade->window.w*factor), fast_roundf(cascade->window.h*factor)));
                 }
             }
 
