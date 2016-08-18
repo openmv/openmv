@@ -208,6 +208,18 @@ static mp_obj_t py_fir_deinit()
     return mp_const_none;
 }
 
+/*
+Allows the refresh rate to be set in the range 1 Hz and 48 Hz, in powers of 2. (48 Hz default)
+The MLX90621 sensor is capable of a larger range but these extreme values are probably not useful with OpenMV.
+
+Allows the ADC precision to be set in the range of 15 to 18 bits. (18 bit default). Lower ADC precision
+allows a large maximum temperature within the scene without sensor overflow.
+ADC 18-bits: max scene temperature ~450C, 15-bits: max scene temperature ~950C
+
+calling:
+ fir.init()
+ fir.init(refresh, resolution, type=1)
+*/
 mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_fir_deinit();
@@ -220,6 +232,29 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             height = 4;
             type = FIR_SHIELD;
             soft_i2c_init();
+
+            // process user specified refresh rate and ADC resolution
+            if (n_args >= 3) {
+                int refresh = mp_obj_get_int(args[1]);
+                if (refresh > 48) { refresh = 48;
+                } else if (refresh <=1) then { refresh = 1; }
+
+                int power2 = 0;
+                while (refresh >>= 1) power2++;
+
+                uint8_t IR_refresh_rate = 14 - power2;
+
+                int resolution = mp_obj_get_int(args[2]);
+                if (resolution > 18) { resolution = 18;
+                } else if (resolution <=15) { resolution = 15; }
+
+                uint8_t ADC_resolution = (resolution-15);
+
+            } else {
+            //set defaults
+                uint8_t IR_refresh_rate = 0x8; // 64 Hz
+                uint8_t ADC_resolution = 0x3; // 18-bits
+            }
 
             a_ij = xalloc(64 * sizeof(*a_ij));
             b_ij = xalloc(64 * sizeof(*b_ij));
@@ -239,8 +274,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                 (uint8_t)(0x00-0xAA), 0x00}, 5, true);
 
             // Write device configuration value.
-            uint8_t IR_refresh_rate = 0x8; // 64 Hz
-            uint8_t ADC_resolution = 0x3; // 18-bits
+            // assignment of IR_refresh_rate and ADC_resolution now done above
             uint8_t lsb = (ADC_resolution << 4) | IR_refresh_rate;
             // Normal Operation Mode - Continuous Measurment Mode
             // ADC set to 18 bit resolution - IR Refresh rate = 64 Hz
