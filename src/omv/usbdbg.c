@@ -93,16 +93,17 @@ void usbdbg_data_in(void *buffer, int length)
 
         case USBDBG_FRAME_SIZE:
             ((uint32_t*)buffer)[0] = 0;
-            // Try to lock FB
+            // Try to lock FB. If header size == 0 frame is not ready
             if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_IDE)) {
-                // Return header w, h and size/bpp
-                ((uint32_t*)buffer)[0] = JPEG_FB()->w;
-                ((uint32_t*)buffer)[1] = JPEG_FB()->h;
-                ((uint32_t*)buffer)[2] = JPEG_FB()->size;
                 // If header size == 0 frame is not ready
                 if (JPEG_FB()->size == 0) {
                     // unlock FB
                     mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+                } else {
+                    // Return header w, h and size/bpp
+                    ((uint32_t*)buffer)[0] = JPEG_FB()->w;
+                    ((uint32_t*)buffer)[1] = JPEG_FB()->h;
+                    ((uint32_t*)buffer)[2] = JPEG_FB()->size;
                 }
             }
             cmd = USBDBG_NONE;
@@ -114,6 +115,7 @@ void usbdbg_data_in(void *buffer, int length)
                 xfer_bytes += length;
                 if (xfer_bytes == xfer_length) {
                     cmd = USBDBG_NONE;
+                    JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
                     mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
                 }
             }
