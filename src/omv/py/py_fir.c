@@ -209,16 +209,16 @@ static mp_obj_t py_fir_deinit()
 }
 
 /*
-Allows the refresh rate to be set in the range 1 Hz and 48 Hz, in powers of 2. (48 Hz default)
+Allows the refresh rate to be set in the range 1Hz and 512Hz, in powers of 2. (64Hz default)
 The MLX90621 sensor is capable of a larger range but these extreme values are probably not useful with OpenMV.
 
-Allows the ADC precision to be set in the range of 15 to 18 bits. (18 bit default). Lower ADC precision
-allows a large maximum temperature within the scene without sensor overflow.
+Allows the ADC precision to be set in the range of 15 to 18 bits. (18 bit default).
+Lower ADC precision allows a large maximum temperature within the scene without sensor overflow.
 ADC 18-bits: max scene temperature ~450C, 15-bits: max scene temperature ~950C
 
 calling:
  fir.init()
- fir.init(refresh, resolution, type=1)
+ fir.init(type=1, refresh=64, resolution=18)
 */
 mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -233,28 +233,13 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             type = FIR_SHIELD;
             soft_i2c_init();
 
-            // process user specified refresh rate and ADC resolution
-            if (n_args >= 3) {
-                int refresh = mp_obj_get_int(args[1]);
-                if (refresh > 48) { refresh = 48;
-                } else if (refresh <=1) then { refresh = 1; }
+            // pasre refresh rate and ADC resolution
+            uint32_t IR_refresh_rate = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 64);     // 64Hz
+            uint32_t ADC_resolution  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 18);  // 18-bits
 
-                int power2 = 0;
-                while (refresh >>= 1) power2++;
-
-                uint8_t IR_refresh_rate = 14 - power2;
-
-                int resolution = mp_obj_get_int(args[2]);
-                if (resolution > 18) { resolution = 18;
-                } else if (resolution <=15) { resolution = 15; }
-
-                uint8_t ADC_resolution = (resolution-15);
-
-            } else {
-            //set defaults
-                uint8_t IR_refresh_rate = 0x8; // 64 Hz
-                uint8_t ADC_resolution = 0x3; // 18-bits
-            }
+            // sanitize values
+            ADC_resolution  = ((ADC_resolution > 18)? 18:(ADC_resolution < 15)? 15:ADC_resolution) - 15;
+            IR_refresh_rate = 14 - __CLZ(__RBIT((IR_refresh_rate > 512) ? 512:(IR_refresh_rate < 1)? 1:IR_refresh_rate));
 
             a_ij = xalloc(64 * sizeof(*a_ij));
             b_ij = xalloc(64 * sizeof(*b_ij));
