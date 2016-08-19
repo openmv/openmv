@@ -108,6 +108,8 @@ Q(draw_ta)
 Q(draw_ir)
 Q(alpha)
 Q(scale)
+Q(refresh)
+Q(resolution)
 
 // Gif module
 Q(gif)
