@@ -29,7 +29,7 @@ ENTRY(Reset_Handler)
     
     // Located in main memory region
     #define STACK_SIZE      (3K)
-    #define HEAP_SIZE       (53K)
+    #define HEAP_SIZE       (54K)
 
     // Located in FB memory 
     #define FB_SIZE         (151K)  // FB memory: header + QVGA/GS image
