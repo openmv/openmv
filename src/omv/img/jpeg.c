@@ -540,7 +540,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 
     jpeg_subsample_t jpeg_subsample;
 
-    if (quality > 60) {
+    if (quality >= 60) {
          jpeg_subsample = JPEG_SUBSAMPLE_1x1;
     } else if (quality > 35) {
          jpeg_subsample = JPEG_SUBSAMPLE_2x1;

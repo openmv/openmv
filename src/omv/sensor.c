@@ -28,7 +28,7 @@
 #define MAX_XFER_SIZE (0xFFFC)
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
-#define JPEG_QUALITY_THRESH     (160*120*1)
+#define JPEG_QUALITY_THRESH     (160*120*2)
 
 sensor_t sensor;
 TIM_HandleTypeDef  TIMHandle;
