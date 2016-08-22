@@ -53,7 +53,8 @@
 #include "extint.h"
 #include "spi.h"
 
-static SPI_HandleTypeDef SPI_HANDLE;
+extern SPI_HandleTypeDef SPIHandle2;
+#define SPI_HANDLE      (SPIHandle2)
 
 #define NM_BUS_MAX_TRX_SZ 4096
 
