@@ -53,7 +53,7 @@ static const uint8_t default_regs[][2] = {
     {DBSTEP,        0x03},
     {AEW,           0x96},
     {AEB,           0x64},
-    {VPT,           0xD4},
+    {VPT,           0xA1},
     {EXHCL,         0x00},
     {AWB_CTRL3,     0xAA},
     {COM8,          0xFF},
