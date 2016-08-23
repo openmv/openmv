@@ -231,6 +231,8 @@
 #define DSP_CTRL3_SCAL1_PWDN    0x04 /* Scaling module power down control 1     */
 #define DSP_CTRL3_SCAL2_PWDN    0x02 /* Scaling module power down control 2     */
 #define DSP_CTRL3_INTRP_PWDN    0x01 /* Interpolation module power down control */
+#define DSP_CTRL3_SET_CBAR(r, x)    ((r&0xDF)|((x&1)<<5))
+
 
 #define DSP_CTRL4               0x67 /* DSP Control Byte 4          */
 #define DSP_CTRL4_YUV_RGB       0x00 /* Output selection YUV or RGB */

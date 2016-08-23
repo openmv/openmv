@@ -291,17 +291,24 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 
 static int set_colorbar(sensor_t *sensor, int enable)
 {
-    // Read register COM3
-    uint8_t reg = SCCB_Read(sensor->slv_addr, COM3);
+    int ret=0;
+    uint8_t reg;
 
-    // Set color bar on/off
+    // Read reg COM3
+    reg = SCCB_Read(sensor->slv_addr, COM3);
+    // Enable colorbar test pattern output
     reg = COM3_SET_CBAR(reg, enable);
+    // Write back COM3
+    ret |= SCCB_Write(sensor->slv_addr, COM3, reg);
 
-    // Set mirror on/off to pass self-tests
-    reg = COM3_SET_MIRROR(reg, enable);
+    // Read reg DSP_CTRL3
+    reg = SCCB_Read(sensor->slv_addr, DSP_CTRL3);
+    // Enable DSP colorbar output
+    reg = DSP_CTRL3_SET_CBAR(reg, enable);
+    // Write back DSP_CTRL3
+    ret |= SCCB_Write(sensor->slv_addr, DSP_CTRL3, reg);
 
-    // Write back register COM3
-    return SCCB_Write(sensor->slv_addr, COM3, reg);
+    return ret;
 }
 
 static int set_whitebal(sensor_t *sensor, int enable)
