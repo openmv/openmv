@@ -1,4 +1,13 @@
 # Change Log
+## [1.7](https://github.com/openmv/openmv/releases/tag/v1.7) (2016-08-25)
+Firmware:
+* Update CMSIS, DSP lib and HAL.
+* Adaptive JPEG quality based on JPEG frame size.
+* Improved self-tests on OV7725.
+* New CPU frequency scaling Python module.
+* Allow setting MLX refresh rate and ADC resolution.
+* Use a dedicated JPEG buffer (improves IDE FPS).
+
 ## [1.6](https://github.com/openmv/openmv/releases/tag/v1.6) (2016-07-27)
 IDE:
 * Add checkbox to disable the framebuffer update

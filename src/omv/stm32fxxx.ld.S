@@ -29,22 +29,22 @@ ENTRY(Reset_Handler)
     
     // Located in main memory region
     #define STACK_SIZE      (3K)
-    #define HEAP_SIZE       (53K)
+    #define HEAP_SIZE       (54K)
 
     // Located in FB memory 
     #define FB_SIZE         (151K)  // FB memory: header + QVGA/GS image
 
     // fb alloc memory is dynamic = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp)
     // Note this overwrites the 2KBs line buf when not reading a frame.
-    #define FB_ALLOC_SIZE   (20K)   // minimum fb alloc size
+    #define FB_ALLOC_SIZE   (14K)   // minimum fb alloc size
 
     // Located in DMA memory 
     #define LINE_BUF_SIZE   (2K)    // Image line buffer round(320 * 2BPP * 2 buffers).
     #define MSC_BUF_SIZE    (2K)    // USB MSC bot data
     #define VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
-    #define FFS_BUF_SIZE    (4K)    // Flash filesystem cache
+    #define FFS_BUF_SIZE    (16K)   // Flash filesystem cache
     // TODO Set OMV_JPEG_BUF_SIZE if you change this
-    #define JPEG_BUF_SIZE   (14K)   // IDE JPEG buffer
+    #define JPEG_BUF_SIZE   (8K)    // IDE JPEG buffer
 
     #define FLASH_ORIGIN    0x08000000
     #define FLASH_LENGTH    1024K
@@ -56,10 +56,10 @@ ENTRY(Reset_Handler)
     #define CCM_LENGTH      64K
 
     #define SRAM1_ORIGIN    0x20000000
-    #define SRAM1_LENGTH    169K
+    #define SRAM1_LENGTH    163K
 
-    #define SRAM2_ORIGIN    0x2002A400
-    #define SRAM2_LENGTH    23K
+    #define SRAM2_ORIGIN    0x20028C00
+    #define SRAM2_LENGTH    29K
 
 #elif defined(OPENMV7)
     #define FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
