@@ -55,6 +55,11 @@ typedef struct {
     struct sockaddr_in addr;
 } recv_from_t;
 
+typedef struct {
+    int sock;
+    struct sockaddr_in addr;
+} accept_t;
+
 /**
  * DNS Callback.
  *
@@ -121,15 +126,15 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 
         // Connect accept.
         case SOCKET_MSG_ACCEPT: {
+            accept_t *acpt = (accept_t*) async_request_data;
             tstrSocketAcceptMsg *pstrAccept = (tstrSocketAcceptMsg *)msg;
-            if (pstrAccept) {
-                //tcp_client_socket = pstrAccept->sock;
-                *((int*) async_request_data) = pstrAccept->sock;
-                printf("socket_callback: accept success.\n");
+            if(pstrAccept->sock >= 0) {
+                acpt->sock = pstrAccept->sock;
+				acpt->addr.sin_port = pstrAccept->strAddr.sin_port;
+				acpt->addr.sin_addr = pstrAccept->strAddr.sin_addr;
+                printf("socket_callback: accept success %d.\n", pstrAccept->sock);
             } else {
-                //WINC1500_EXPORT(close)(tcp_server_socket);
-                //tcp_server_socket = -1;
-                *((int*) async_request_data) = -1;
+                acpt->sock = pstrAccept->sock;
                 printf("socket_callback: accept error!\n");
             }
             async_request_done = true;
@@ -447,13 +452,16 @@ static int winc_socket_listen(mod_network_socket_obj_t *socket, mp_int_t backlog
 
 static int winc_socket_accept(mod_network_socket_obj_t *socket, mod_network_socket_obj_t *socket2, byte *ip, mp_uint_t *port, int *_errno)
 {
+    // Call accept and check HIF errors.
     int ret = WINC1500_EXPORT(accept)(socket->fd, NULL, 0);
     if (ret != SOCK_ERR_NO_ERROR) {
-        *_errno = ret;
+        *_errno = -ret;
         return -1;
     }
 
-    async_request_data = &ret;
+    accept_t acpt;
+    // Do async request.
+    async_request_data = &acpt;
     async_request_done = false;
 
     // Wait for async request to finish.
@@ -462,8 +470,18 @@ static int winc_socket_accept(mod_network_socket_obj_t *socket, mod_network_sock
         m2m_wifi_handle_events(NULL);
     }
 
-    // store state in new socket object
-    socket2->fd = ret;
+    // Check async request status.
+    if (acpt.sock >= 0) {
+        // Store state in new socket object
+        socket2->fd = acpt.sock;
+
+        // Set ip and port
+        UNPACK_SOCKADDR(((struct sockaddr*) &acpt.addr), ip, *port);
+    } else {
+        *_errno = -ret;
+        return -1;
+    }
+
     return 0;
 }
 
