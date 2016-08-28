@@ -96,10 +96,10 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             tstrSocketBindMsg *pstrBind = (tstrSocketBindMsg *)msg;
             if (pstrBind->status == 0) {
                 *((int*) async_request_data) = 0;
-                printf("socket_callback: bind success.\r\n");
+                printf("socket_callback: bind success.\n");
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: bind error!\r\n");
+                printf("socket_callback: bind error!\n");
             }
             async_request_done = true;
             break;
@@ -110,10 +110,10 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             tstrSocketListenMsg *pstrListen = (tstrSocketListenMsg *)msg;
             if (pstrListen->status == 0) {
                 *((int*) async_request_data) = 0;
-                printf("socket_callback: listen success.\r\n");
+                printf("socket_callback: listen success.\n");
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: listen error!\r\n");
+                printf("socket_callback: listen error!\n");
             }
             async_request_done = true;
             break;
@@ -125,12 +125,12 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             if (pstrAccept) {
                 //tcp_client_socket = pstrAccept->sock;
                 *((int*) async_request_data) = pstrAccept->sock;
-                printf("socket_callback: accept success.\r\n");
+                printf("socket_callback: accept success.\n");
             } else {
                 //WINC1500_EXPORT(close)(tcp_server_socket);
                 //tcp_server_socket = -1;
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: accept error!\r\n");
+                printf("socket_callback: accept error!\n");
             }
             async_request_done = true;
             break;
@@ -141,10 +141,10 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)msg;
             if (pstrConnect->s8Error == 0) {
                 *((int*) async_request_data) = 0;
-                printf("socket_callback: connect success.\r\n");
+                printf("socket_callback: connect success.\n");
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: connect error!\r\n");
+                printf("socket_callback: connect error!\n");
             }
             async_request_done = true;
             break;
@@ -164,10 +164,10 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)msg;
             if (pstrRecv->s16BufferSize > 0) {
                 *((int*) async_request_data) = pstrRecv->s16BufferSize;
-                printf("socket_callback: recv %d\r\n", pstrRecv->s16BufferSize);
+                printf("socket_callback: recv %d\n", pstrRecv->s16BufferSize);
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: recv error! %d\r\n", pstrRecv->s16BufferSize);
+                printf("socket_callback: recv error! %d\n", pstrRecv->s16BufferSize);
             }
             async_request_done = true;
             break;
