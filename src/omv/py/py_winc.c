@@ -153,6 +153,8 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         // Message send.
         case SOCKET_MSG_SEND:
         case SOCKET_MSG_SENDTO: {
+            // Sent bytes set in msg.
+            *((int*) async_request_data) = *((int16_t*) msg);
             async_request_done = true;
             break;
         }
@@ -491,20 +493,29 @@ static mp_uint_t winc_socket_send(mod_network_socket_obj_t *socket, const byte *
     while (bytes < len) {
         int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
 
-        // do the send
+        // Send chunk and check HIF errors.
         int ret = WINC1500_EXPORT(send)(socket->fd, (uint8_t*)buf + bytes, n, socket->timeout);
         if (ret != SOCK_ERR_NO_ERROR) {
-            *_errno = ret;
+            *_errno = -ret;
             return -1;
         }
 
+        // Do async request.
+        async_request_data = &ret;
         async_request_done = false;
         // Wait for async request to finish.
         while (async_request_done == false) {
             // Handle pending events from network controller.
             m2m_wifi_handle_events(NULL);
         }
-        bytes += n;
+
+        // Check sent bytes returned from async request.
+        if (ret <= 0) {
+            *_errno = -ret;
+            return -1;
+        }
+
+        bytes += ret;
     }
 
     return bytes;
