@@ -4,12 +4,12 @@
 # (IE and Chrome do not work). Just input your network SSID and KEY and then
 # connect to the IP address/port printed out from ifconfig.
 
-import sensor, image, time, network, usocket
+import sensor, image, time, network, usocket, sys
 
 SSID=''     # Network SSID
 KEY=''      # Network key
 HOST = ''   # Use first available interface
-PORT = 8000 # Arbitrary non-privileged port
+PORT = 8080 # Arbitrary non-privileged port
 
 # Reset sensor
 sensor.reset()
@@ -19,7 +19,7 @@ sensor.set_contrast(1)
 sensor.set_brightness(1)
 sensor.set_saturation(1)
 sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.QVGA)
+sensor.set_framesize(sensor.QQVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Init wlan module and connect to network
@@ -40,32 +40,40 @@ s.listen(5)
 # Set timeout to 1s
 s.settimeout(1.0)
 
-print ('Waiting for connections..')
-client, addr = s.accept()
-print ('Connected to ' + addr[0] + ':' + str(addr[1]))
+def start_streaming(s):
+    print ('Waiting for connections..')
+    client, addr = s.accept()
+    print ('Connected to ' + addr[0] + ':' + str(addr[1]))
 
-# Read request from client
-data = client.recv(1024)
+    # Read request from client
+    data = client.recv(1024)
+    # Should parse client request here
 
-# Should parse client request here
+    # Send multipart header
+    client.send("HTTP/1.1 200 OK\r\n" \
+                "Server: OpenMV\r\n" \
+                "Content-Type: multipart/x-mixed-replace;boundary=openmv\r\n" \
+                "Cache-Control: no-cache\r\n" \
+                "Pragma: no-cache\r\n\r\n")
 
-# Send multipart header
-client.send("HTTP/1.1 200 OK\r\n" \
-            "Server: OpenMV\r\n" \
-            "Content-Type: multipart/x-mixed-replace;boundary=openmv\r\n" \
-            "Cache-Control: no-cache\r\n" \
-            "Pragma: no-cache\r\n\r\n")
+    # FPS clock
+    clock = time.clock()
 
-# FPS clock
-clock = time.clock()
-# Start streaming images
+    # Start streaming images
+    # NOTE: Disable IDE preview to increase streaming FPS.
+    while (True):
+        clock.tick() # Track elapsed milliseconds between snapshots().
+        frame = sensor.snapshot()
+        cframe = frame.compressed(quality=35)
+        header = "\r\n--openmv\r\n" \
+                 "Content-Type: image/jpeg\r\n"\
+                 "Content-Length:"+str(cframe.size())+"\r\n\r\n"
+        client.send(header)
+        client.send(cframe)
+
 while (True):
-    clock.tick() # Track elapsed milliseconds between snapshots().
-    frame = sensor.snapshot()
-    cframe = frame.compressed(quality=90)
-    client.send("\r\n--openmv\r\n" \
-                "Content-Type: image/jpeg\r\n"\
-                "Content-Length:"+str(cframe.size())+"\r\n\r\n")
-    client.send(cframe)
-    print(clock.fps())
-client.close()
+    try:
+        start_streaming(s)
+    except OSError as e:
+        print("socket error: ", e)
+        #sys.print_exception(e)
