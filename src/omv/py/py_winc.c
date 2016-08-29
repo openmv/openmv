@@ -349,7 +349,7 @@ static void wifi_callback(uint8_t msg_type, void *msg)
     }
 }
 
-static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout, int *_errno)
+static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout)
 {
     // Do async request.
     async_request_data = ret;
@@ -362,25 +362,23 @@ static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout, int
         // Handle pending events from network controller.
         m2m_wifi_handle_events(NULL);
         if (timeout && ((HAL_GetTick() - tick_start) >= timeout)) {
-            *_errno = ETIMEDOUT;
-            return -1;
+            return ETIMEDOUT;
         }
     }
 
-    return 0;
+    return SOCK_ERR_NO_ERROR;
 }
 
 static int winc_gethostbyname(mp_obj_t nic, const char *name, mp_uint_t len, uint8_t *out_ip)
 {
     int ret;
-    int _errno;
     uint32_t ip=0;
     ret = WINC1500_EXPORT(gethostbyname)((uint8_t*) name);
-    if (ret != SOCK_ERR_NO_ERROR) {
-        return -1;
+    if (ret == SOCK_ERR_NO_ERROR) {
+        ret = winc_async_request(0, &ip, 1000);
     }
 
-    if (winc_async_request(0, &ip, 1000, &_errno) < 0) {
+    if (ret != SOCK_ERR_NO_ERROR) {
         return -1;
     }
 
@@ -434,39 +432,42 @@ static int winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
 
 static void winc_socket_close(mod_network_socket_obj_t *socket)
 {
-    WINC1500_EXPORT(close)(socket->fd);
+    if (socket->fd >= 0) {
+        WINC1500_EXPORT(close)(socket->fd);
+        socket->fd = -1; // Mark socket FD as invalid
+    }
 }
 
 static int winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
+    // Call bind and check HIF errors.
     int ret = WINC1500_EXPORT(bind)(socket->fd, &addr, sizeof(addr));
+    if (ret == SOCK_ERR_NO_ERROR) {
+        // Do async request
+        ret = winc_async_request(SOCKET_MSG_BIND, &ret, 100);
+    }
+
     if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
-        return -1;
+        winc_socket_close(socket);
     }
-
-    // Do async request
-    if (winc_async_request(SOCKET_MSG_BIND, &ret, 100, _errno) < 0) {
-        return -1;
-    }
-
     return ret;
 }
 
 static int winc_socket_listen(mod_network_socket_obj_t *socket, mp_int_t backlog, int *_errno)
 {
+    // Call listen and check HIF errors.
     int ret = WINC1500_EXPORT(listen)(socket->fd, backlog);
+    if (ret == SOCK_ERR_NO_ERROR) {
+        // Do async request
+        ret = winc_async_request(SOCKET_MSG_LISTEN, &ret, 100);
+    }
+
     if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
-        return -1;
+        winc_socket_close(socket);
     }
-
-    // Do async request
-    if (winc_async_request(SOCKET_MSG_LISTEN, &ret, 100, _errno) < 0) {
-        return -1;
-    }
-
     return ret;
 }
 
@@ -474,78 +475,65 @@ static int winc_socket_accept(mod_network_socket_obj_t *socket, mod_network_sock
 {
     // Call accept and check HIF errors.
     int ret = WINC1500_EXPORT(accept)(socket->fd, NULL, 0);
+    if (ret == SOCK_ERR_NO_ERROR) {
+        // Do async request
+        accept_t acpt;
+        ret = winc_async_request(SOCKET_MSG_ACCEPT, &acpt, 0);
+
+        // Check async request status.
+        if (ret == SOCK_ERR_NO_ERROR && acpt.sock >= 0) {
+            // Set socket state 
+            socket2->fd = acpt.sock;
+            socket2->timeout = 0;
+            // Set ip and port
+            UNPACK_SOCKADDR(((struct sockaddr*) &acpt.addr), ip, *port);
+        }
+    }
+
     if (ret != SOCK_ERR_NO_ERROR) {
-        *_errno = -ret;
-        return -1;
+        *_errno = ret;
+        winc_socket_close(socket);
     }
-
-    // Do async request
-    accept_t acpt;
-    if (winc_async_request(SOCKET_MSG_ACCEPT, &acpt, 0, _errno) < 0) {
-        return -1;
-    }
-
-    // Check async request status.
-    if (acpt.sock >= 0) {
-        // Store state in new socket object
-        socket2->fd = acpt.sock;
-        socket2->timeout = 0;
-
-        // Set ip and port
-        UNPACK_SOCKADDR(((struct sockaddr*) &acpt.addr), ip, *port);
-    } else {
-        *_errno = -ret;
-        return -1;
-    }
-
-    return 0;
+    return ret;
 }
 
 static int winc_socket_connect(mod_network_socket_obj_t *socket, byte *ip, mp_uint_t port, int *_errno)
 {
     MAKE_SOCKADDR(addr, ip, port)
     int ret = WINC1500_EXPORT(connect)(socket->fd, &addr, sizeof(addr));
+    if (ret == SOCK_ERR_NO_ERROR) {
+        // Do async request
+        ret = winc_async_request(SOCKET_MSG_CONNECT, &ret, 1000);
+    }
+
     if (ret != SOCK_ERR_NO_ERROR) {
-        *_errno = -ret;
-        return -1;
+        *_errno = ret;
+        winc_socket_close(socket);
     }
-
-    // Do async request
-    if (winc_async_request(SOCKET_MSG_CONNECT, &ret, 1000, _errno) < 0) {
-        return -1;
-    }
-
     return ret;
 }
 
 static mp_uint_t winc_socket_send(mod_network_socket_obj_t *socket, const byte *buf, mp_uint_t len, int *_errno)
 {
     mp_int_t bytes = 0;
-    // Split the packet into smaller ones.
+
     while (bytes < len) {
-        // Send chunk and check HIF errors.
-        int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
+        // Split the packet into smaller ones.
+        int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH); 
         int ret = WINC1500_EXPORT(send)(socket->fd, (uint8_t*)buf + bytes, n, socket->timeout);
-        if (ret != SOCK_ERR_NO_ERROR) {
-            printf("fail 1 %d %d %d\n",socket->fd, n, socket->timeout);
-            *_errno = -ret;
-            return -1;
-        }
 
-        // Do async request
-        if (winc_async_request(SOCKET_MSG_SEND, &ret, 1000, _errno) < 0) {
-            printf("fail 2 %d %d %d\n",socket->fd, n, socket->timeout);
-            return -1;
-        }
+        if (ret == SOCK_ERR_NO_ERROR) {
+            // Do async request
+            ret = winc_async_request(SOCKET_MSG_SEND, &n, 1000);
 
-        // Check sent bytes returned from async request.
-        if (ret <= 0) {
-            printf("fail 3 %d %d %d\n",socket->fd, n, socket->timeout);
-            *_errno = -ret;
-            return -1;
+            // Check sent bytes returned from async request.
+            if (ret != SOCK_ERR_NO_ERROR || n <= 0) {
+                *_errno = (n <= 0)? n : ret;
+                winc_socket_close(socket);
+                return -1;
+            }
         }
-
-        bytes += ret;
+        bytes += n;
     }
 
     return bytes;
@@ -558,16 +546,15 @@ static mp_uint_t winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, m
 
     // do the recv
     int ret = WINC1500_EXPORT(recv)(socket->fd, buf, len, socket->timeout);
+    if (ret == SOCK_ERR_NO_ERROR) {
+        // Do async request
+        ret = winc_async_request(SOCKET_MSG_RECV, &ret, 1000);
+    }
+
     if (ret != SOCK_ERR_NO_ERROR) {
-        *_errno = -ret;
-        return -1;
+        *_errno = ret;
+        winc_socket_close(socket);
     }
-
-    // Do async request
-    if (winc_async_request(SOCKET_MSG_RECV, &ret, 1000, _errno) < 0) {
-        return -1;
-    }
-
     return ret;
 }
 
@@ -576,16 +563,15 @@ static mp_uint_t winc_socket_sendto(mod_network_socket_obj_t *socket,
 {
     MAKE_SOCKADDR(addr, ip, port)
     int ret = WINC1500_EXPORT(sendto)(socket->fd, (byte*)buf, len, 0, (struct sockaddr*)&addr, sizeof(addr));
+    if (ret == SOCK_ERR_NO_ERROR) {
+        // Do async request
+        ret = winc_async_request(SOCKET_MSG_SENDTO, &ret, 1000);
+    }
+
     if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
-        return -1;
+        winc_socket_close(socket);
     }
-
-    // Do async request
-    if (winc_async_request(SOCKET_MSG_SENDTO, &ret, 1000, _errno) < 0) {
-        return -1;
-    }
-
     return ret;
 }
 
@@ -594,29 +580,31 @@ static mp_uint_t winc_socket_recvfrom(mod_network_socket_obj_t *socket,
 {
     recv_from_t rfrom;
     int ret = WINC1500_EXPORT(recvfrom)(socket->fd, buf, len, socket->timeout);
+    if (ret == SOCK_ERR_NO_ERROR) {
+        // Do async request
+        ret = winc_async_request(SOCKET_MSG_RECVFROM, &rfrom, 1000);
+    }
+
     if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
-        return -1;
+        winc_socket_close(socket);
+    } else {
+        UNPACK_SOCKADDR(((struct sockaddr*) &rfrom.addr), ip, *port);
+        ret = rfrom.size;
     }
 
-    // Do async request
-    if (winc_async_request(SOCKET_MSG_RECVFROM, &rfrom, 1000, _errno) < 0) {
-        return -1;
-    }
-
-    UNPACK_SOCKADDR(((struct sockaddr*) &rfrom.addr), ip, *port);
-    return rfrom.size;
+    return ret;
 }
 
 static int winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
         level, mp_uint_t opt, const void *optval, mp_uint_t optlen, int *_errno)
 {
     int ret = WINC1500_EXPORT(setsockopt)(socket->fd, level, opt, optval, optlen);
-    if (ret < 0) {
+    if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
-        return -1;
+        winc_socket_close(socket);
     }
-    return 0;
+    return ret;
 }
 
 static int winc_socket_settimeout(mod_network_socket_obj_t *socket, mp_uint_t timeout_ms, int *_errno)
