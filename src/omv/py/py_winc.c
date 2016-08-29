@@ -48,6 +48,7 @@ static volatile bool ip_obtained = false;
 static volatile bool wlan_connected = false;
 
 static void *async_request_data;
+static uint8_t async_request_type=0;
 static volatile bool async_request_done = false;
 
 typedef struct {
@@ -128,6 +129,10 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         case SOCKET_MSG_ACCEPT: {
             accept_t *acpt = (accept_t*) async_request_data;
             tstrSocketAcceptMsg *pstrAccept = (tstrSocketAcceptMsg *)msg;
+            if (async_request_type != SOCKET_MSG_ACCEPT) {
+                printf("spurious message: accept sock %d \n", *((int16_t*) msg));
+                break;
+            }
             if(pstrAccept->sock >= 0) {
                 acpt->sock = pstrAccept->sock;
 				acpt->addr.sin_port = pstrAccept->strAddr.sin_port;
@@ -197,8 +202,8 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             break;
         }
 
-
         default:
+            printf("socket_callback: Unknown message type: %d\n", msg_type);
             break;
     }
 }
@@ -339,23 +344,45 @@ static void wifi_callback(uint8_t msg_type, void *msg)
         }
 
         default:
+            printf("wifi_callback: Unknown message type: %d\n", msg_type);
             break;
     }
 }
 
+static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout, int *_errno)
+{
+    // Do async request.
+    async_request_data = ret;
+    async_request_done = false;
+    async_request_type = msg_type;
+    uint32_t tick_start = HAL_GetTick();
+
+    // Wait for async request to finish.
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
+        if (timeout && ((HAL_GetTick() - tick_start) >= timeout)) {
+            *_errno = ETIMEDOUT;
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 static int winc_gethostbyname(mp_obj_t nic, const char *name, mp_uint_t len, uint8_t *out_ip)
 {
+    int ret;
+    int _errno;
     uint32_t ip=0;
+    ret = WINC1500_EXPORT(gethostbyname)((uint8_t*) name);
+    if (ret != SOCK_ERR_NO_ERROR) {
+        return -1;
+    }
 
-    async_request_done = false;
-    async_request_data = &ip;
-
-    WINC1500_EXPORT(gethostbyname)((uint8_t*) name);
-
-    while (async_request_done == false) {
-		// Handle pending events from network controller.
-		m2m_wifi_handle_events(NULL);
-	}
+    if (winc_async_request(0, &ip, 1000, &_errno) < 0) {
+        return -1;
+    }
 
     if (ip == 0) {
         // unknown host
@@ -419,14 +446,11 @@ static int winc_socket_bind(mod_network_socket_obj_t *socket, byte *ip, mp_uint_
         return -1;
     }
 
-    async_request_data = &ret;
-    async_request_done = false;
-
-    // Wait for async request to finish.
-    while (async_request_done == false) {
-        // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+    // Do async request
+    if (winc_async_request(SOCKET_MSG_BIND, &ret, 100, _errno) < 0) {
+        return -1;
     }
+
     return ret;
 }
 
@@ -438,13 +462,9 @@ static int winc_socket_listen(mod_network_socket_obj_t *socket, mp_int_t backlog
         return -1;
     }
 
-    async_request_data = &ret;
-    async_request_done = false;
-
-    // Wait for async request to finish.
-    while (async_request_done == false) {
-        // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+    // Do async request
+    if (winc_async_request(SOCKET_MSG_LISTEN, &ret, 100, _errno) < 0) {
+        return -1;
     }
 
     return ret;
@@ -459,21 +479,17 @@ static int winc_socket_accept(mod_network_socket_obj_t *socket, mod_network_sock
         return -1;
     }
 
+    // Do async request
     accept_t acpt;
-    // Do async request.
-    async_request_data = &acpt;
-    async_request_done = false;
-
-    // Wait for async request to finish.
-    while (async_request_done == false) {
-        // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+    if (winc_async_request(SOCKET_MSG_ACCEPT, &acpt, 0, _errno) < 0) {
+        return -1;
     }
 
     // Check async request status.
     if (acpt.sock >= 0) {
         // Store state in new socket object
         socket2->fd = acpt.sock;
+        socket2->timeout = 0;
 
         // Set ip and port
         UNPACK_SOCKADDR(((struct sockaddr*) &acpt.addr), ip, *port);
@@ -489,18 +505,16 @@ static int winc_socket_connect(mod_network_socket_obj_t *socket, byte *ip, mp_ui
 {
     MAKE_SOCKADDR(addr, ip, port)
     int ret = WINC1500_EXPORT(connect)(socket->fd, &addr, sizeof(addr));
-
-    if (ret == 0) {
-        async_request_done = false;
-        async_request_data = &ret;
-
-        while (async_request_done == false) {
-            // Handle pending events from network controller.
-            m2m_wifi_handle_events(NULL);
-        }
+    if (ret != SOCK_ERR_NO_ERROR) {
+        *_errno = -ret;
+        return -1;
     }
 
-    *_errno = ret;
+    // Do async request
+    if (winc_async_request(SOCKET_MSG_CONNECT, &ret, 1000, _errno) < 0) {
+        return -1;
+    }
+
     return ret;
 }
 
@@ -509,26 +523,24 @@ static mp_uint_t winc_socket_send(mod_network_socket_obj_t *socket, const byte *
     mp_int_t bytes = 0;
     // Split the packet into smaller ones.
     while (bytes < len) {
-        int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
-
         // Send chunk and check HIF errors.
+        int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
         int ret = WINC1500_EXPORT(send)(socket->fd, (uint8_t*)buf + bytes, n, socket->timeout);
         if (ret != SOCK_ERR_NO_ERROR) {
+            printf("fail 1 %d %d %d\n",socket->fd, n, socket->timeout);
             *_errno = -ret;
             return -1;
         }
 
-        // Do async request.
-        async_request_data = &ret;
-        async_request_done = false;
-        // Wait for async request to finish.
-        while (async_request_done == false) {
-            // Handle pending events from network controller.
-            m2m_wifi_handle_events(NULL);
+        // Do async request
+        if (winc_async_request(SOCKET_MSG_SEND, &ret, 1000, _errno) < 0) {
+            printf("fail 2 %d %d %d\n",socket->fd, n, socket->timeout);
+            return -1;
         }
 
         // Check sent bytes returned from async request.
         if (ret <= 0) {
+            printf("fail 3 %d %d %d\n",socket->fd, n, socket->timeout);
             *_errno = -ret;
             return -1;
         }
@@ -546,19 +558,16 @@ static mp_uint_t winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, m
 
     // do the recv
     int ret = WINC1500_EXPORT(recv)(socket->fd, buf, len, socket->timeout);
-    if (ret == SOCK_ERR_NO_ERROR) {
-        async_request_done = false;
-        async_request_data = &ret;
-
-        // Wait for async request to finish.
-        while (async_request_done == false) {
-            // Handle pending events from network controller.
-            m2m_wifi_handle_events(NULL);
-        }
-    } else {
-        *_errno = ret;
+    if (ret != SOCK_ERR_NO_ERROR) {
+        *_errno = -ret;
         return -1;
     }
+
+    // Do async request
+    if (winc_async_request(SOCKET_MSG_RECV, &ret, 1000, _errno) < 0) {
+        return -1;
+    }
+
     return ret;
 }
 
@@ -572,11 +581,9 @@ static mp_uint_t winc_socket_sendto(mod_network_socket_obj_t *socket,
         return -1;
     }
 
-    async_request_done = false;
-    // Wait for async request to finish.
-    while (async_request_done == false) {
-        // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+    // Do async request
+    if (winc_async_request(SOCKET_MSG_SENDTO, &ret, 1000, _errno) < 0) {
+        return -1;
     }
 
     return ret;
@@ -585,20 +592,16 @@ static mp_uint_t winc_socket_sendto(mod_network_socket_obj_t *socket,
 static mp_uint_t winc_socket_recvfrom(mod_network_socket_obj_t *socket,
         byte *buf, mp_uint_t len, byte *ip, mp_uint_t *port, int *_errno)
 {
+    recv_from_t rfrom;
     int ret = WINC1500_EXPORT(recvfrom)(socket->fd, buf, len, socket->timeout);
     if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
         return -1;
     }
 
-    recv_from_t rfrom;
-    async_request_done = false;
-    async_request_data = &rfrom;
-
-    // Wait for async request to finish.
-    while (async_request_done == false) {
-        // Handle pending events from network controller.
-        m2m_wifi_handle_events(NULL);
+    // Do async request
+    if (winc_async_request(SOCKET_MSG_RECVFROM, &rfrom, 1000, _errno) < 0) {
+        return -1;
     }
 
     UNPACK_SOCKADDR(((struct sockaddr*) &rfrom.addr), ip, *port);
