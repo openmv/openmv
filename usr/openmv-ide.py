@@ -446,7 +446,7 @@ class OMVGtk:
         self.drawingarea = self.builder.get_object("drawingarea")
         self.da_menu = self.builder.get_object("da_menu")
 
-        self.fb_enabled = True
+        self.fb_enabled = False
 
         # selection coords
         self.sel_ended=False
@@ -632,7 +632,9 @@ class OMVGtk:
             openmv.stop_script()
 
             # Enable Framebuffer
-            openmv.enable_fb(True)
+            enable_fb_check = self.builder.get_object("enable_fb_check")
+            self.fb_enabled = enable_fb_check.get_active()
+            openmv.enable_fb(self.fb_enabled)
 
         # Disable connect button
         self.connect_button.set_sensitive(False)
