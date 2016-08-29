@@ -144,7 +144,7 @@ sint8 nm_bus_init(void *pvinit)
     SPI_HANDLE.Init.CLKPolarity       = SPI_POLARITY_LOW;
     SPI_HANDLE.Init.CLKPhase          = SPI_PHASE_1EDGE;
     SPI_HANDLE.Init.NSS               = SPI_NSS_SOFT;
-    SPI_HANDLE.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+    SPI_HANDLE.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
     SPI_HANDLE.Init.FirstBit          = SPI_FIRSTBIT_MSB;
     SPI_HANDLE.Init.TIMode            = SPI_TIMODE_DISABLED;
     SPI_HANDLE.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLED;
