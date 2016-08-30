@@ -99,7 +99,7 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 {
     if (async_request_type != msg_type) {
         debug_printf("spurious message received!"
-                "expected (%d) got (%d)\n", async_request_type, msg_type);
+                " expected: (%d) received: (%d)\n", async_request_type, msg_type);
         return;
     }
 
