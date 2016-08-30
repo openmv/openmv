@@ -106,7 +106,7 @@ static const uint8_t default_regs[][2] = {
     {LC_COEFB,      0x14},
     {LC_COEFR,      0x17},
     {LC_CTR,        0x05},
-    {COM5,          0xF5}, //0x65
+    {COM5,          0xD5},
 
     {0x00,          0x00},
 };
