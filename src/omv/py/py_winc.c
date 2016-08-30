@@ -20,6 +20,7 @@
 #include "genhdr/pins.h"
 #include "spi.h"
 #include "pybioctl.h"
+#include "common.h"
 
 // WINC's includes
 #include "driver/include/nmasic.h"
@@ -96,16 +97,22 @@ static void resolve_callback(uint8_t *host, uint32_t ip)
  */
 static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 {
+    if (async_request_type != msg_type) {
+        debug_printf("spurious message received!"
+                "expected (%d) got (%d)\n", async_request_type, msg_type);
+        return;
+    }
+
     switch (msg_type) {
         // Socket bind.
         case SOCKET_MSG_BIND: {
             tstrSocketBindMsg *pstrBind = (tstrSocketBindMsg *)msg;
             if (pstrBind->status == 0) {
                 *((int*) async_request_data) = 0;
-                printf("socket_callback: bind success.\n");
+                debug_printf("bind success.\n");
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: bind error!\n");
+                debug_printf("bind error!\n");
             }
             async_request_done = true;
             break;
@@ -116,10 +123,10 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             tstrSocketListenMsg *pstrListen = (tstrSocketListenMsg *)msg;
             if (pstrListen->status == 0) {
                 *((int*) async_request_data) = 0;
-                printf("socket_callback: listen success.\n");
+                debug_printf("listen success.\n");
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: listen error!\n");
+                debug_printf("listen error!\n");
             }
             async_request_done = true;
             break;
@@ -129,18 +136,14 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
         case SOCKET_MSG_ACCEPT: {
             accept_t *acpt = (accept_t*) async_request_data;
             tstrSocketAcceptMsg *pstrAccept = (tstrSocketAcceptMsg *)msg;
-            if (async_request_type != SOCKET_MSG_ACCEPT) {
-                printf("spurious message: accept sock %d \n", *((int16_t*) msg));
-                break;
-            }
             if(pstrAccept->sock >= 0) {
                 acpt->sock = pstrAccept->sock;
 				acpt->addr.sin_port = pstrAccept->strAddr.sin_port;
 				acpt->addr.sin_addr = pstrAccept->strAddr.sin_addr;
-                printf("socket_callback: accept success %d.\n", pstrAccept->sock);
+                debug_printf("accept success %d.\n", pstrAccept->sock);
             } else {
                 acpt->sock = pstrAccept->sock;
-                printf("socket_callback: accept error!\n");
+                debug_printf("accept error!\n");
             }
             async_request_done = true;
             break;
@@ -151,10 +154,10 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)msg;
             if (pstrConnect->s8Error == 0) {
                 *((int*) async_request_data) = 0;
-                printf("socket_callback: connect success.\n");
+                debug_printf("connect success.\n");
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: connect error!\n");
+                debug_printf("connect error!\n");
             }
             async_request_done = true;
             break;
@@ -174,10 +177,10 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
             tstrSocketRecvMsg *pstrRecv = (tstrSocketRecvMsg *)msg;
             if (pstrRecv->s16BufferSize > 0) {
                 *((int*) async_request_data) = pstrRecv->s16BufferSize;
-                printf("socket_callback: recv %d\n", pstrRecv->s16BufferSize);
+                debug_printf("recv %d\n", pstrRecv->s16BufferSize);
             } else {
                 *((int*) async_request_data) = -1;
-                printf("socket_callback: recv error! %d\n", pstrRecv->s16BufferSize);
+                debug_printf("recv error! %d\n", pstrRecv->s16BufferSize);
             }
             async_request_done = true;
             break;
@@ -192,18 +195,18 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
                 rfrom->size = pstrRecv->s16BufferSize;
 				rfrom->addr.sin_port = pstrRecv->strRemoteAddr.sin_port;
 				rfrom->addr.sin_addr = pstrRecv->strRemoteAddr.sin_addr;
-				printf("socket_callback: recvfrom: size: %d addr:%lu port:%d\n",
+				debug_printf("recvfrom size: %d addr:%lu port:%d\n",
                         pstrRecv->s16BufferSize, rfrom->addr.sin_addr.s_addr, rfrom->addr.sin_port);
 			} else {
                 rfrom->size = -1;
-				printf("socket_callback: recvfrom error:%d\n", pstrRecv->s16BufferSize);
+				debug_printf("recvfrom error:%d\n", pstrRecv->s16BufferSize);
 			}
             async_request_done = true;
             break;
         }
 
         default:
-            printf("socket_callback: Unknown message type: %d\n", msg_type);
+            debug_printf("Unknown message type: %d\n", msg_type);
             break;
     }
 }
@@ -344,7 +347,7 @@ static void wifi_callback(uint8_t msg_type, void *msg)
         }
 
         default:
-            printf("wifi_callback: Unknown message type: %d\n", msg_type);
+            debug_printf("Unknown message type: %d\n", msg_type);
             break;
     }
 }
