@@ -7,10 +7,10 @@
  *
  */
 #include <string.h>
-#include "mdefs.h"
 #include "fb_alloc.h"
 #include "xalloc.h"
 #include "imlib.h"
+#include "common.h"
 
 ALWAYS_INLINE static uint8_t *init_mask(rectangle_t *roi)
 {

@@ -6,8 +6,8 @@
  * Fast 9 and 25 bin sort.
  *
  */
-#include "mdefs.h"
 #include "fsort.h"
+#include "common.h"
 // http://pages.ripco.net/~jgamble/nw.html
 
 ALWAYS_INLINE static void cmpswp(uint8_t *a, uint8_t *b)

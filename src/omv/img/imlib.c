@@ -16,7 +16,7 @@
 #include "fb_alloc.h"
 #include "xalloc.h"
 #include "imlib.h"
-#include "mdefs.h"
+#include "common.h"
 
 // Gamma uncompress
 extern const float xyz_table[256];

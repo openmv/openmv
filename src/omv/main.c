@@ -33,7 +33,6 @@
 #include "storage.h"
 #include "sdcard.h"
 #include "ff.h"
-#include "mdefs.h"
 #include "modnetwork.h"
 
 #include "lib/utils/pyexec.h"

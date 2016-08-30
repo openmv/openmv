@@ -7,7 +7,7 @@
  *
  */
 #include <mp.h>
-#include "mdefs.h"
+#include "common.h"
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
 #define FF_MIN(x,y) (((x)<(y))?(x):(y))
