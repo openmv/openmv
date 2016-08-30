@@ -54,6 +54,10 @@ else
 CFLAGS += -O2 -ggdb3 -DNDEBUG
 endif
 
+ifeq ($(DEBUG_PRINTF), 1)
+CFLAGS += -DDEBUG_PRINTF
+endif
+
 # Compiler Flags
 include $(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/omv_boardconfig.mk
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
