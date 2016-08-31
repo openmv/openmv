@@ -31,7 +31,7 @@ FIRMWARE_VERSION_MAJOR  = 1
 FIRMWARE_VERSION_MINOR  = 8
 FIRMWARE_VERSION_PATCH  = 0
 
-RELEASE_TAG_NAME = 'v1.7'
+RELEASE_TAG_NAME = 'v1.8'
 RELEASE_URL = 'https://api.github.com/repos/openmv/openmv/releases/latest'
 
 SCALE =1
