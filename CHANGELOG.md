@@ -1,4 +1,9 @@
 # Change Log
+## [1.8](https://github.com/openmv/openmv/releases/tag/v1.8) (2016-08-31)
+Firmware:
+* Mainly WiFi driver fixes, more stable streaming, timeouts and better error handling.
+* Fixed FPS slow down in dark images (max FPS reduction is 30FPS)
+
 ## [1.7](https://github.com/openmv/openmv/releases/tag/v1.7) (2016-08-25)
 Firmware:
 * Update CMSIS, DSP lib and HAL.
