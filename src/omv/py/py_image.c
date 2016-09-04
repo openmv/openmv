@@ -863,7 +863,7 @@ static mp_obj_t py_image_histeq(mp_obj_t img_obj)
             "Operation not supported on JPEG");
 
     imlib_histeq(arg_img);
-    return mp_const_none;
+    return img_obj;
 }
 
 static bool py_image_find_blobs_f_fun(void *fun_obj, void *img_obj, color_blob_t *cb)
