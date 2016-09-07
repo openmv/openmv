@@ -502,8 +502,7 @@ int freak_save_descriptor(FIL *fp, array_t *kpts);
 int freak_load_descriptor(FIL *fp, array_t *kpts);
 
 /* LBP Operator */
-void imlib_lbp_desc(image_t *image, int div, uint8_t *desc, rectangle_t *roi);
-uint8_t *imlib_lbp_cascade(image_t *image, rectangle_t *roi);
+uint8_t *imlib_lbp_desc(image_t *image, rectangle_t *roi);
 int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1);
 int imlib_lbp_desc_save(FIL *fp, uint8_t *desc);
 int imlib_lbp_desc_load(FIL *fp, uint8_t **desc);

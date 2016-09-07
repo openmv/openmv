@@ -1298,7 +1298,7 @@ static mp_obj_t py_image_find_lbp(mp_obj_t img_obj, mp_obj_t roi_obj)
 
     py_lbp_obj_t *lbp_obj = m_new_obj(py_lbp_obj_t);
     lbp_obj->base.type = &py_lbp_type;
-    lbp_obj->hist = imlib_lbp_cascade(arg_img, &roi);
+    lbp_obj->hist = imlib_lbp_desc(arg_img, &roi);
     return lbp_obj;
 }
 
