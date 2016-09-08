@@ -854,6 +854,23 @@ void imlib_histeq(image_t *img)
     fb_free();
 }
 
+void imlib_mask_ellipse(image_t *img)
+{
+    int h = img->w/2;
+    int v = img->h/2;
+    int a = h * h;
+    int b = v * v;
+    uint8_t *pixels = img->pixels;
+
+    for (int y=0; y<img->h; y++) {
+        for (int x=0; x<img->w; x++) {
+            if ((((x-h)*(x-h)*100) / a + ((y-v)*(y-v)*100) / b) > 100) {
+                pixels[y*img->w+x] = 0;
+            }
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 int imlib_image_mean(image_t *src)

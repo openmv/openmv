@@ -451,6 +451,7 @@ void imlib_mean_filter(image_t *img, const int ksize);
 void imlib_mode_filter(image_t *img, const int ksize);
 void imlib_median_filter(image_t *img, const int ksize, const int percentile);
 void imlib_histeq(image_t *img);
+void imlib_mask_ellipse(image_t *img);
 
 /* Color Tracking */
 array_t *imlib_find_blobs(image_t *img,
