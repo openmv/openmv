@@ -20,4 +20,6 @@ float fast_cbrtf(float d);
 float fast_fabsf(float d);
 float fast_log(float x);
 float fast_log2(float x);
+extern const float cos_table[360];
+extern const float sin_table[360];
 #endif // __FMATH_H__
