@@ -13,7 +13,7 @@
 #include "fft.h"
 // http://processors.wiki.ti.com/index.php/Efficient_FFT_Computation_of_Real_Input
 
-const static float cos_table[512] = {
+const static float fft_cos_table[512] = {
      1.000000f,  0.999981f,  0.999925f,  0.999831f,  0.999699f,  0.999529f,  0.999322f,  0.999078f,
      0.998795f,  0.998476f,  0.998118f,  0.997723f,  0.997290f,  0.996820f,  0.996313f,  0.995767f,
      0.995185f,  0.994565f,  0.993907f,  0.993212f,  0.992480f,  0.991710f,  0.990903f,  0.990058f,
@@ -82,7 +82,7 @@ const static float cos_table[512] = {
 
 ALWAYS_INLINE static float get_cos(int k, int N_pow2) // N=512 -> N=pow2=9
 {
-    return cos_table[k << (9 - N_pow2)];
+    return fft_cos_table[k << (9 - N_pow2)];
 }
 
 ALWAYS_INLINE static float get_ai(int k, int N_pow2) // N=512 -> N=pow2=9
@@ -117,7 +117,7 @@ ALWAYS_INLINE static float get_b_star_i(int k, int N_pow2) // N=512 -> N=pow2=9
 //    return 0.5 * (1 - get_cos((2 << N_pow2) - k - 1, N_pow2));
 //}
 
-const static float sin_table[512] = {
+const static float fft_sin_table[512] = {
      0.000000f,  0.006136f,  0.012272f,  0.018407f,  0.024541f,  0.030675f,  0.036807f,  0.042938f,
      0.049068f,  0.055195f,  0.061321f,  0.067444f,  0.073565f,  0.079682f,  0.085797f,  0.091909f,
      0.098017f,  0.104122f,  0.110222f,  0.116319f,  0.122411f,  0.128498f,  0.134581f,  0.140658f,
@@ -186,7 +186,7 @@ const static float sin_table[512] = {
 
 ALWAYS_INLINE static float get_sin(int k, int N_pow2) // N=512 -> N=pow2=9
 {
-    return sin_table[k << (9 - N_pow2)];
+    return fft_sin_table[k << (9 - N_pow2)];
 }
 
 ALWAYS_INLINE static float get_ar(int k, int N_pow2) // N=512 -> N=pow2=9
