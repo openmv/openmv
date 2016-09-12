@@ -12,6 +12,7 @@
 #include "imlib.h"
 int py_helper_lookup_int(mp_map_t *kw_args, mp_obj_t kw, int default_val);
 float py_helper_lookup_float(mp_map_t *kw_args, mp_obj_t kw, float default_val);
+void py_helper_lookup_int_array(mp_map_t *kw_args, mp_obj_t kw, int *x, int size);
 int py_helper_lookup_color(mp_map_t *kw_args, int default_color);
 void py_helper_lookup_offset(mp_map_t *kw_args, image_t *img, point_t *p);
 void py_helper_lookup_rectangle(mp_map_t *kw_args, image_t *img, rectangle_t *r);
