@@ -52,6 +52,7 @@ SRCS += $(addprefix img/,   \
 	jpeg.c                  \
 	lbp.c                   \
 	eye.c                   \
+	hough.c                 \
 	sincos_tab.c            \
    )
 

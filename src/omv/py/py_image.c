@@ -1342,6 +1342,35 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     return mp_const_none;
 }
 
+static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *img = py_image_cobj(args[0]);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(img), "This function is only supported on GRAYSCALE images");
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, img, &roi);
+    int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 50);
+
+    rectangle_t rect;
+    if (!rectangle_subimg(img, &roi, &rect)) {
+        return mp_const_none;
+    }
+
+    mp_obj_t lines_list = mp_obj_new_list(0, NULL);
+    array_t *lines = imlib_find_lines(img, &roi, threshold);
+    for (int i=0; i<array_length(lines); i++) {
+        line_t *l = (line_t *) array_at(lines, i);
+        mp_obj_t line_obj[4] = {
+            mp_obj_new_int(l->x1),
+            mp_obj_new_int(l->y1),
+            mp_obj_new_int(l->x2),
+            mp_obj_new_int(l->y2),
+        };
+        mp_obj_list_append(lines_list, mp_obj_new_tuple(4, line_obj));
+    }
+    return lines_list;
+}
+
 /* Image file functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_to_fb_obj, 1, py_image_copy_to_fb);
@@ -1404,6 +1433,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_f
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eye_obj, py_image_find_eye);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
 static const mp_map_elem_t locals_dict_table[] = {
     /* Image file functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_copy),                (mp_obj_t)&py_image_copy_obj},
@@ -1467,6 +1497,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_eye),            (mp_obj_t)&py_image_find_eye_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lbp),            (mp_obj_t)&py_image_find_lbp_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_lines),          (mp_obj_t)&py_image_find_lines_obj},
     { NULL, NULL },
 };
 STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);

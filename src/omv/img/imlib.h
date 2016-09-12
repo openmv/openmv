@@ -183,6 +183,13 @@ typedef struct point {
     int16_t y;
 } point_t;
 
+typedef struct line {
+    int16_t x1;
+    int16_t y1;
+    int16_t x2;
+    int16_t y2;
+} line_t;
+
 typedef struct rectangle {
     int16_t x;
     int16_t y;
@@ -515,4 +522,6 @@ void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi);
 void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 
+// Lines
+array_t *imlib_find_lines(image_t *src, rectangle_t *roi, int threshold);
 #endif //__IMLIB_H__
