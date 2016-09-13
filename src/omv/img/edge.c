@@ -36,24 +36,24 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
     imlib_morph(src, 2, kernel_gauss_55, 1.0f/159.0f, 0.0f);
 
     //2. Finding Image Gradients
-    for (int y=roi->y; y<roi->y+roi->h-3; y++) {
-        for (int x=roi->x; x<roi->x+roi->w-3; x++) {
+    for (int y=roi->y+1; y<roi->y+roi->h-1; y++) {
+        for (int x=roi->x+1; x<roi->x+roi->w-1; x++) {
             int vx=0, vy=0;
             // sobel kernel in the horizontal direction
-            vx  = src->data[(y+0)*w+x+0]
-                - src->data[(y+0)*w+x+2]
-                + (src->data[(y+1)*w+x+0]<<1)
-                - (src->data[(y+1)*w+x+2]<<1)
-                + src->data[(y+2)*w+x+0]
-                - src->data[(y+2)*w+x+2];
+            vx  = src->data [(y-1)*w+x-1]
+                - src->data [(y-1)*w+x+1]
+                + (src->data[(y+0)*w+x-1]<<1)
+                - (src->data[(y+0)*w+x+1]<<1)
+                + src->data [(y+1)*w+x-1]
+                - src->data [(y+1)*w+x+1];
 
             // sobel kernel in the vertical direction
-            vy  = src->data[(y+0)*w+x+0]
-                + (src->data[(y+0)*w+x+1]<<1)
-                + src->data[(y+0)*w+x+2]
-                - src->data[(y+2)*w+x+0]
-                - (src->data[(y+2)*w+x+1]<<1)
-                - src->data[(y+2)*w+x+2];
+            vy  = src->data [(y-1)*w+x-1]
+                + (src->data[(y-1)*w+x+0]<<1)
+                + src->data [(y-1)*w+x+1]
+                - src->data [(y+1)*w+x-1]
+                - (src->data[(y+1)*w+x+0]<<1)
+                - src->data [(y+1)*w+x+1];
 
             // Find magnitude
             int g = (int) fast_sqrtf(vx*vx + vy*vy);
@@ -71,28 +71,27 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
                 t = 0;
             }
 
-            gm[(y+1)*w+(x+1)].t = t;
-            gm[(y+1)*w+(x+1)].g = g;
+            gm[(y)*w+(x)].t = t;
+            gm[(y)*w+(x)].g = g;
         }
     }
 
     // 3. Hysteresis Thresholding
-    for (int y=roi->y; y<roi->y+roi->h-3; y++) {
-        for (int x=roi->x; x<roi->x+roi->w-3; x++) {
-            int i = (y+1)*w+(x+1);
-            gvec_t *vc = &gm[i];
+    for (int y=roi->y+1; y<roi->y+roi->h-1; y++) {
+        for (int x=roi->x+1; x<roi->x+roi->w-1; x++) {
+            gvec_t *vc = &gm[y*w+x];
             if (vc->g >= high_thresh) {
                 vc->g = vc->g;
             } else if (vc->g < low_thresh) {
                 vc->g = 0;
-            } else if (gm[(y+0)*w+(x+0)].g >= high_thresh ||
+            } else if (gm[(y-1)*w+(x-1)].g >= high_thresh ||
+                       gm[(y-1)*w+(x+0)].g >= high_thresh ||
+                       gm[(y-1)*w+(x+1)].g >= high_thresh ||
+                       gm[(y+0)*w+(x-1)].g >= high_thresh ||
                        gm[(y+0)*w+(x+1)].g >= high_thresh ||
-                       gm[(y+0)*w+(x+2)].g >= high_thresh ||
+                       gm[(y+1)*w+(x-1)].g >= high_thresh ||
                        gm[(y+1)*w+(x+0)].g >= high_thresh ||
-                       gm[(y+1)*w+(x+2)].g >= high_thresh ||
-                       gm[(y+2)*w+(x+0)].g >= high_thresh ||
-                       gm[(y+2)*w+(x+1)].g >= high_thresh ||
-                       gm[(y+2)*w+(x+2)].g >= high_thresh) {
+                       gm[(y+1)*w+(x+1)].g >= high_thresh) {
                 vc->g = vc->g;
             } else {
                 vc->g = 0;
@@ -100,45 +99,48 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
         }
     }
 
-    // Clear image data
-    memset(src->data, 0, src->w*src->h);
-
-    // 4. Non-maximum Suppression
-    for (int y=roi->y; y<roi->y+roi->h-3; y++) {
-        for (int x=roi->x; x<roi->x+roi->w-3; x++) {
-            int i = (y+1)*w+(x+1);
+    // 4. Non-maximum Suppression and output
+    for (int y=roi->y; y<roi->y+roi->h; y++) {
+        for (int x=roi->x; x<roi->x+roi->w; x++) {
+            int i = y*w+x;
             gvec_t *va=NULL, *vb=NULL, *vc = &gm[i];
+
+            if (y < (roi->y+2) || y > (roi->y+roi->h-3) ||
+                x < (roi->x+2) || x > (roi->x+roi->w-3)) {
+                src->data[i] = 0;
+                continue;
+            }
 
             switch (vc->t) {
                 case 0: {
-                    va = &gm[(y+1)*w+(x+0)];
-                    vb = &gm[(y+1)*w+(x+2)];
-                    break;
-                }
-
-                case 45: {
-                    va = &gm[(y+2)*w+(x+0)];
-                    vb = &gm[(y+0)*w+(x+2)];
-                    break;
-                }
-
-                case 90: {
-                    va = &gm[(y+2)*w+(x+1)];
+                    va = &gm[(y+0)*w+(x-1)];
                     vb = &gm[(y+0)*w+(x+1)];
                     break;
                 }
 
+                case 45: {
+                    va = &gm[(y+1)*w+(x-1)];
+                    vb = &gm[(y-1)*w+(x+1)];
+                    break;
+                }
+
+                case 90: {
+                    va = &gm[(y+1)*w+(x+0)];
+                    vb = &gm[(y-1)*w+(x+0)];
+                    break;
+                }
+
                 case 135: {
-                    va = &gm[(y+2)*w+(x+2)];
-                    vb = &gm[(y+0)*w+(x+0)];
+                    va = &gm[(y+1)*w+(x+1)];
+                    vb = &gm[(y-1)*w+(x-1)];
                     break;
                 }
             }
 
-            if (vc->g > va->g && vc->g > vb->g) {
-                src->data[i] = 255;
-            } else {
+            if (!(vc->g > va->g && vc->g > vb->g)) {
                 src->data[i] = 0;
+            } else {
+                src->data[i] = 255;
             }
         }
     }
