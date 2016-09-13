@@ -353,6 +353,10 @@ typedef enum descriptor_type {
     DESC_FREAK,
 } descriptor_t;
 
+typedef enum edge_detector_type {
+   EDGE_CANNY,
+} edge_detector_t;
+
 typedef enum template_match {
     SEARCH_EX,  // Exhaustive search
     SEARCH_DS,  // Diamond search
@@ -524,4 +528,7 @@ void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 
 // Lines
 array_t *imlib_find_lines(image_t *src, rectangle_t *roi, int threshold);
+
+// Edge detection
+void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh);
 #endif //__IMLIB_H__

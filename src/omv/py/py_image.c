@@ -1371,6 +1371,28 @@ static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t 
     return lines_list;
 }
 
+static mp_obj_t py_image_find_edges(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *img = py_image_cobj(args[0]);
+    edge_detector_t edge_type = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(img), "This function is only supported on GRAYSCALE images");
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, img, &roi);
+
+    int thresh[2] = {100, 200};
+    py_helper_lookup_int_array(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), thresh, 2);
+
+    switch (edge_type) {
+        case EDGE_CANNY: {
+            // Sanity checks
+            imlib_edge_canny(img, &roi, thresh[0], thresh[1]);
+            break;
+        }
+    }
+
+    return mp_const_true;
+}
 /* Image file functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_to_fb_obj, 1, py_image_copy_to_fb);
@@ -1434,6 +1456,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eye_obj, py_image_find_eye);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_edges_obj, 2, py_image_find_edges);
 static const mp_map_elem_t locals_dict_table[] = {
     /* Image file functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_copy),                (mp_obj_t)&py_image_copy_obj},
@@ -1498,6 +1521,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lbp),            (mp_obj_t)&py_image_find_lbp_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lines),          (mp_obj_t)&py_image_find_lines_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_edges),          (mp_obj_t)&py_image_find_edges_obj},
     { NULL, NULL },
 };
 STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
@@ -1805,6 +1829,7 @@ static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),               MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_EX),           MP_OBJ_NEW_SMALL_INT(SEARCH_EX)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_DS),           MP_OBJ_NEW_SMALL_INT(SEARCH_DS)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_EDGE_CANNY),          MP_OBJ_NEW_SMALL_INT(EDGE_CANNY)},
     /* Color space functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_rgb_to_lab),          (mp_obj_t)&py_image_rgb_to_lab_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_lab_to_rgb),          (mp_obj_t)&py_image_lab_to_rgb_obj},
