@@ -59,22 +59,51 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
             int g = (int) fast_sqrtf(vx*vx + vy*vy);
             // Find the direction and round angle to 0, 45, 90 or 135
             int t = (int) fast_fabsf((atan2f(vy, vx)*180.0f/M_PI));
-            if (t < 20) {
+            if (t < 22) {
                 t = 0;
-            } else if (t<65) {
+            } else if (t < 67) {
                 t = 45;
-            } else if (t < 110) {
+            } else if (t < 112) {
                 t = 90;
-            } else { 
+            } else if (t < 160) {
                 t = 135;
+            } else if (t <= 180) {
+                t = 0;
             }
- 
+
             gm[(y+1)*w+(x+1)].t = t;
             gm[(y+1)*w+(x+1)].g = g;
         }
     }
 
-    // 3. Non-maximum Suppression
+    // 3. Hysteresis Thresholding
+    for (int y=roi->y; y<roi->y+roi->h-3; y++) {
+        for (int x=roi->x; x<roi->x+roi->w-3; x++) {
+            int i = (y+1)*w+(x+1);
+            gvec_t *vc = &gm[i];
+            if (vc->g >= high_thresh) {
+                vc->g = vc->g;
+            } else if (vc->g < low_thresh) {
+                vc->g = 0;
+            } else if (gm[(y+0)*w+(x+0)].g >= high_thresh ||
+                       gm[(y+0)*w+(x+1)].g >= high_thresh ||
+                       gm[(y+0)*w+(x+2)].g >= high_thresh ||
+                       gm[(y+1)*w+(x+0)].g >= high_thresh ||
+                       gm[(y+1)*w+(x+2)].g >= high_thresh ||
+                       gm[(y+2)*w+(x+0)].g >= high_thresh ||
+                       gm[(y+2)*w+(x+1)].g >= high_thresh ||
+                       gm[(y+2)*w+(x+2)].g >= high_thresh) {
+                vc->g = vc->g;
+            } else {
+                vc->g = 0;
+            }
+        }
+    }
+
+    // Clear image data
+    memset(src->data, 0, src->w*src->h);
+
+    // 4. Non-maximum Suppression
     for (int y=roi->y; y<roi->y+roi->h-3; y++) {
         for (int x=roi->x; x<roi->x+roi->w-3; x++) {
             int i = (y+1)*w+(x+1);
@@ -106,40 +135,11 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
                 }
             }
 
-            if ( (vc->g > va->g && vc->g < vb->g) ||
-                 (vc->g > vb->g && vc->g < va->g)) {
-                vc->g = vc->g;
-            } else {
-                vc->g = 0;
-            }
-        }
-    }
-
-    // Clear image data
-    memset(src->data, 0, src->w*src->h);
-
-    // 4. Hysteresis Thresholding
-    for (int y=roi->y; y<roi->y+roi->h-3; y++) {
-        for (int x=roi->x; x<roi->x+roi->w-3; x++) {
-            int i = (y+1)*w+(x+1);
-            gvec_t *vc = &gm[i];
-            if (vc->g >= high_thresh) {
-                src->data[i] = 255;
-            } else if (vc->g < low_thresh) {
-                src->data[i] = 0;
-            } else if (gm[(y+0)*w+(x+0)].g >= high_thresh ||
-                       gm[(y+0)*w+(x+1)].g >= high_thresh ||
-                       gm[(y+0)*w+(x+2)].g >= high_thresh ||
-                       gm[(y+1)*w+(x+0)].g >= high_thresh ||
-                       gm[(y+1)*w+(x+2)].g >= high_thresh ||
-                       gm[(y+2)*w+(x+0)].g >= high_thresh ||
-                       gm[(y+2)*w+(x+1)].g >= high_thresh ||
-                       gm[(y+2)*w+(x+2)].g >= high_thresh) {
+            if (vc->g > va->g && vc->g > vb->g) {
                 src->data[i] = 255;
             } else {
                 src->data[i] = 0;
             }
-
         }
     }
 
