@@ -13,5 +13,8 @@ clock = time.clock() # Tracks FPS.
 while(True):
     clock.tick() # Track elapsed milliseconds between snapshots().
     img = sensor.snapshot() # Take a picture and return the image.
-    img.find_edges(image.EDGE_CANNY, threshold=(50, 100))
+    # Use Canny edge detector
+    img.find_edges(image.EDGE_CANNY, threshold=(50, 80))
+    # Faster simpler edge detection
+    #img.find_edges(image.EDGE_SIMPLE, threshold=(100, 255))
     print(clock.fps()) # Note: Your OpenMV Cam runs about half as fast while

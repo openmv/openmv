@@ -17,6 +17,12 @@ typedef struct gvec {
     uint16_t g;
 } gvec_t;
 
+static const int8_t kernel_high_pass_33[] = {
+    -1, -1, -1,
+    -1, +8, -1,
+    -1, -1, -1
+};
+
 static const int8_t kernel_gauss_55[] = {
     2, 4,  5,  4,  2,
     4, 9,  12, 9,  4,
@@ -25,6 +31,15 @@ static const int8_t kernel_gauss_55[] = {
     2, 4,  5,  4,  2,
 };
 
+
+void imlib_edge_simple(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh)
+{
+    imlib_morph(src, 1, kernel_high_pass_33, 1.0f, 0.0f);
+    simple_color_t lt = {.G=low_thresh};
+    simple_color_t ht = {.G=high_thresh};
+    imlib_binary(src, 1, &lt, &ht, false);
+    imlib_erode(src, 1, 2);
+}
 
 void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh)
 {

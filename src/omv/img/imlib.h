@@ -355,6 +355,7 @@ typedef enum descriptor_type {
 
 typedef enum edge_detector_type {
    EDGE_CANNY,
+   EDGE_SIMPLE,
 } edge_detector_t;
 
 typedef enum template_match {
@@ -530,5 +531,6 @@ void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 array_t *imlib_find_lines(image_t *src, rectangle_t *roi, int threshold);
 
 // Edge detection
+void imlib_edge_simple(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh);
 void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh);
 #endif //__IMLIB_H__

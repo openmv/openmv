@@ -1384,11 +1384,15 @@ static mp_obj_t py_image_find_edges(uint n_args, const mp_obj_t *args, mp_map_t 
     py_helper_lookup_int_array(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), thresh, 2);
 
     switch (edge_type) {
+        case EDGE_SIMPLE: {
+            imlib_edge_simple(img, &roi, thresh[0], thresh[1]);
+            break;
+        }
         case EDGE_CANNY: {
-            // Sanity checks
             imlib_edge_canny(img, &roi, thresh[0], thresh[1]);
             break;
         }
+
     }
 
     return mp_const_true;
@@ -1830,6 +1834,7 @@ static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_EX),           MP_OBJ_NEW_SMALL_INT(SEARCH_EX)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_DS),           MP_OBJ_NEW_SMALL_INT(SEARCH_DS)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_EDGE_CANNY),          MP_OBJ_NEW_SMALL_INT(EDGE_CANNY)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_EDGE_SIMPLE),         MP_OBJ_NEW_SMALL_INT(EDGE_SIMPLE)},
     /* Color space functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_rgb_to_lab),          (mp_obj_t)&py_image_rgb_to_lab_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_lab_to_rgb),          (mp_obj_t)&py_image_lab_to_rgb_obj},
