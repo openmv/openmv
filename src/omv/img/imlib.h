@@ -281,9 +281,12 @@ typedef struct _vector {
 } vec_t;
 
 typedef struct cluster {
+    int x, y, w, h;
     array_t *points;
-    point_t centroid;
 } cluster_t;
+
+// Return the distance between a cluster centroid and some object.
+typedef float (*cluster_dist_t)(int cx, int cy, void *obj);
 
 /* FAST/FREAK Keypoint */
 typedef struct kp {
@@ -481,7 +484,7 @@ float imlib_template_match_ex(image_t *image, image_t *template, rectangle_t *ro
 void imlib_phasecorrelate(image_t *img0, image_t *img1, float *x_offset, float *y_offset, float *response);
 
 /* Clustering functions */
-array_t *cluster_kmeans(array_t *points, int k);
+array_t *cluster_kmeans(array_t *points, int k, cluster_dist_t dist_func);
 
 /* Integral image functions */
 void imlib_integral_image_alloc(struct integral_image *sum, int w, int h);
