@@ -1,4 +1,16 @@
 # Change Log
+## [1.9](https://github.com/openmv/openmv/releases/tag/v1.8) (2016-09-20)
+Firmware:
+* Initialize RNG when calling randint.
+
+Image processing:
+* Fix and update Kmeans code.
+* Add ellipse masking function.
+* Add face recognition code and example script.
+* Add Hough Transform code and example script.
+* Add Canny edge code and example script.
+* Add Gaussian function for quick testing.
+
 ## [1.8](https://github.com/openmv/openmv/releases/tag/v1.8) (2016-08-31)
 Firmware:
 * Mainly WiFi driver fixes, more stable streaming, timeouts and better error handling.
