@@ -17,8 +17,8 @@
   * Note: incrementing the major version will require a fw upgrade,
   * the IDE will Not connect if the major version number is different.
   */
-#define FIRMWARE_VERSION_MAJOR      (1)
-#define FIRMWARE_VERSION_MINOR      (9)
+#define FIRMWARE_VERSION_MAJOR      (2)
+#define FIRMWARE_VERSION_MINOR      (0)
 #define FIRMWARE_VERSION_PATCH      (0)
 
 /**
