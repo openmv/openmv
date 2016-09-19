@@ -856,6 +856,23 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     return mp_const_none;
 }
 
+static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
+
+    int arg_ksize = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG((arg_ksize == 3 || arg_ksize == 5), "Kernel Size must be 3 or 5");
+
+    if (arg_ksize == 3) {
+        imlib_morph(arg_img, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
+    } else if (arg_ksize == 5) {
+        imlib_morph(arg_img, 2, kernel_gauss_5, 1.0f/159.0f, 0.0f);
+    }
+
+    return arg_img;
+}
+
 static mp_obj_t py_image_histeq(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
@@ -1442,6 +1459,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_obj, 2, py_image_midpoint);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mean_obj, py_image_mean);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mode_obj, py_image_mode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gaussian_obj, 1, py_image_gaussian);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_mask_ellipse_obj, py_image_mask_ellipse);
 /* Color Tracking */
@@ -1507,6 +1525,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_mean),                (mp_obj_t)&py_image_mean_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_mode),                (mp_obj_t)&py_image_mode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_gaussian),            (mp_obj_t)&py_image_gaussian_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_mask_ellipse),        (mp_obj_t)&py_image_mask_ellipse_obj},
     /* Color Tracking */
