@@ -24,6 +24,33 @@ extern const float xyz_table[256];
 // RGB565 to YUV conversion
 extern const int8_t yuv_table[196608];
 
+const int8_t kernel_gauss_3[3*3] = {
+     9,  12,  9,
+    12,  15, 12,
+     9,  12,  9,
+};
+
+const int8_t kernel_gauss_5[5*5] = {
+    2,  4,   5,  4,  2,
+    4,  9,  12,  9,  4,
+    5, 12,  15, 12,  5,
+    4,  9,  12,  9,  4,
+    2,  4,   5,  4,  2,
+};
+
+const int8_t kernel_laplacian_3[3*3] = {
+     -1, -1, -1,
+     -1,  8, -1,
+     -1, -1, -1
+};
+
+const int8_t kernel_high_pass_3[3*3] = {
+    -1, -1, -1,
+    -1, +8, -1,
+    -1, -1, -1
+};
+
+
 // USE THE LUT FOR RGB->LAB CONVERSION - NOT THIS FUNCTION!
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab)
 {

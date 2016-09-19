@@ -84,6 +84,12 @@ extern const uint8_t g826_table[256];
 // RGB565 to LAB conversion
 extern const int8_t lab_table[196608];
 
+// Image kernels
+extern const int8_t kernel_gauss_3[9];
+extern const int8_t kernel_gauss_5[25];
+extern const int8_t kernel_laplacian_3[9];
+extern const int8_t kernel_high_pass_3[9];
+
 #define IM_RGB5652L(p) \
     ({ __typeof__ (p) _p = (p); \
        lab_table[_p * 3]; })
