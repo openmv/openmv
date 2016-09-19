@@ -516,6 +516,7 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
 int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold);
 int freak_save_descriptor(FIL *fp, array_t *kpts);
 int freak_load_descriptor(FIL *fp, array_t *kpts);
+float freak_cluster_dist(int cx, int cy, void *kp);
 
 /* LBP Operator */
 uint8_t *imlib_lbp_desc(image_t *image, rectangle_t *roi);

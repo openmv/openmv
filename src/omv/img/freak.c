@@ -491,3 +491,13 @@ int freak_load_descriptor(FIL *fp, array_t *kpts)
 error:
     return res;
 }
+
+float freak_cluster_dist(int cx, int cy, void *kp_in)
+{
+    float sum=0.0f;
+    kp_t *kp = kp_in;
+    sum += (cx - kp->x) * (cx - kp->x);
+    sum += (cy - kp->y) * (cy - kp->y);
+    return fast_sqrtf(sum);
+
+}
