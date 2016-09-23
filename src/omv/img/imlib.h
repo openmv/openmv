@@ -542,4 +542,7 @@ array_t *imlib_find_lines(image_t *src, rectangle_t *roi, int threshold);
 // Edge detection
 void imlib_edge_simple(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh);
 void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh);
+
+// Lens correction
+void imlib_lens_corr(image_t *src, float strength);
 #endif //__IMLIB_H__
