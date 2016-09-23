@@ -870,7 +870,7 @@ static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
         imlib_morph(arg_img, 2, kernel_gauss_5, 1.0f/159.0f, 0.0f);
     }
 
-    return arg_img;
+    return args[0];
 }
 
 static mp_obj_t py_image_histeq(mp_obj_t img_obj)
