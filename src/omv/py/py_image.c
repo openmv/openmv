@@ -1789,17 +1789,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
             int match=0, cx=0, cy=0;
             // Match the two keypoint sets
             // Returns the number of matches
-            match = freak_match_keypoints(kpts1->kpts, kpts2->kpts, threshold);
-
-            if (match) {
-                for (int i=0; i<array_length(kpts1->kpts); i++) {
-                    kp_t *kp = array_at(kpts1->kpts, i);
-                    if (kp->match != NULL) {
-                        cx += kp->match->x;
-                        cy += kp->match->y;
-                    }
-                }
-            }
+            match = freak_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &cx, &cy);
 
             mp_obj_t rec_obj[3] = {
                 mp_obj_new_int(cx/match),

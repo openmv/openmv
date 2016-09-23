@@ -73,7 +73,7 @@
 #define SCALE_FACTOR        (1.0f)                      // SCALE_STEP ^ SCALE_IDX
 #define PATTERN_SCALE       (22)
 
-#define MAX_KP_DIST         (512)
+#define MAX_KP_DIST         (kNB_PAIRS)
 #define KPT_DESC_SIZE       (kNB_PAIRS/8)
 
 // number of points on each concentric circle (from outer to inner)
@@ -312,7 +312,7 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
                 }
 
                 // Estimate orientation
-                float angle = fast_atan2f((float)direction1, (float)direction0) * (180.0f/PI);
+                float angle = atan2f((float)direction1, (float)direction0) * (180.0f/PI);
                 thetaIdx = (int)(kNB_ORIENTATION * angle * (1.0f/360.0f) + 0.5f);
 
                 if (thetaIdx < 0) {
@@ -340,17 +340,11 @@ array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, re
     return keypoints;
 }
 
-int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
+int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, int *cx, int *cy)
 {
     int matches=0;
     int kpts1_size = array_length(kpts1);
     int kpts2_size = array_length(kpts2);
-
-    // Reset the second set of keypoints.
-    // Note: The first set will be cleared when matching.
-    for (int x=0; x<kpts2_size; x++) {
-        ((kp_t*)array_at(kpts2, x))->match = NULL;
-    }
 
     // Match keypoints
     for (int x=0; x<kpts1_size; x++) {
@@ -362,11 +356,6 @@ int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
         for (int y=0; y<kpts2_size; y++) {
             int dist = 0;
             kp_t *kp2 = array_at(kpts2, y);
-
-            // If keypoint was matched skip it
-            if (kp2->match != NULL) {
-                continue;
-            }
 
             // Check the first 128 bits of the descriptor
             for (int m=0; m<4; m++) { //128 bits
@@ -383,7 +372,7 @@ int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
                 continue;
             }
 
-            for (int m=4; m<16; m++) {
+            for (int m=4; m<(kNB_PAIRS/32); m++) {
                 uint32_t v = ((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m];
                 while (v) {
                     dist++;
@@ -397,13 +386,10 @@ int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold)
             }
         }
 
-        if ((((MAX_KP_DIST-min_dist)*100/MAX_KP_DIST)) < threshold) {
-            kp1->match = NULL;
-            // No match
-        } else {
+        if ((((MAX_KP_DIST-min_dist)*100/MAX_KP_DIST)) > threshold) {
             matches++;
-            kp1->match = min_kp;
-            min_kp->match = kp1;
+            *cx += min_kp->x;
+            *cy += min_kp->y;
         }
     }
     return matches;

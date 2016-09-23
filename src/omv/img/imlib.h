@@ -298,7 +298,6 @@ typedef float (*cluster_dist_t)(int cx, int cy, void *obj);
 typedef struct kp {
     uint16_t x;
     uint16_t y;
-    struct kp *match;
     uint8_t desc[64];
 } kp_t;
 
@@ -519,7 +518,7 @@ array_t *imlib_detect_objects(struct image *image, struct cascade *cascade, stru
 /* FAST/FREAK Feature Extractor */
 void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi);
 array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, rectangle_t *roi);
-int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold);
+int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, int *cx, int *cy);
 int freak_save_descriptor(FIL *fp, array_t *kpts);
 int freak_load_descriptor(FIL *fp, array_t *kpts);
 float freak_cluster_dist(int cx, int cy, void *kp);
