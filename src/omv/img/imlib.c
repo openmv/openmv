@@ -942,3 +942,34 @@ int imlib_image_std(image_t *src)
     /* std */
     return fast_sqrtf(v);
 }
+
+// Simple lens correction function.
+// See http://www.tannerhelland.com/4743/simple-algorithm-correcting-lens-distortion/
+void imlib_lens_corr(image_t *src, float strength)
+{
+    float zoom = 1.0f;
+    int halfWidth = src->w / 2;
+    int halfHeight = src->h / 2;
+    float corr_radius = strength / fast_sqrtf(src->w*src->w + src->h*src->h);
+    image_t dst = {.w = src->w, .h = src->h, .data = fb_alloc(src->w*src->h)};
+
+    for (int y=0; y<src->h; y++) {
+        for (int x=0; x<src->w; x++) {
+            int newX = x - halfWidth;
+            int newY = y - halfHeight;
+
+            float r = corr_radius * fast_sqrtf(newX*newX + newY*newY);
+            float theta = (abs(r) < 1e-6f) ? (atanf(r)/r) : 1.0f;
+
+            int sourceX = (int) (newX * theta * zoom + halfWidth );
+            int sourceY = (int) (newY * theta * zoom + halfHeight);
+            if (sourceX >= 0 && sourceX < src->w && sourceY >= 0 && sourceY < src->h) {
+                dst.data[y * dst.w + x] = src->data[sourceY * src->w + sourceX];
+            } else {
+                dst.data[y * dst.w + x] = src->data[y * dst.w + x];
+            }
+        }
+    }
+    memcpy(src->data, dst.data, src->w * src->h);
+    fb_free();
+}

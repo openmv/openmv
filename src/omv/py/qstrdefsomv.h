@@ -97,6 +97,7 @@ Q(percentile)
 Q(feature_filter)
 Q(margin)
 Q(normalized)
+Q(lens_corr)
 
 // Lcd Module
 Q(lcd)
