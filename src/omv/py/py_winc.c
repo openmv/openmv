@@ -551,14 +551,15 @@ static mp_uint_t winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, m
     int ret = WINC1500_EXPORT(recv)(socket->fd, buf, len, socket->timeout);
     if (ret == SOCK_ERR_NO_ERROR) {
         // Do async request
-        ret = winc_async_request(SOCKET_MSG_RECV, &ret, 1000);
+        ret = winc_async_request(SOCKET_MSG_RECV, &len, 1000);
     }
 
     if (ret != SOCK_ERR_NO_ERROR) {
         *_errno = ret;
         winc_socket_close(socket);
+        return -1;
     }
-    return ret;
+    return len;
 }
 
 static mp_uint_t winc_socket_sendto(mod_network_socket_obj_t *socket,
