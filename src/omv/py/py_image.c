@@ -329,6 +329,13 @@ static mp_obj_t py_image_size(mp_obj_t img_obj)
     }
 }
 
+static mp_obj_t py_image_clear(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    memset(arg_img->pixels, 0, arg_img->w * arg_img->h * arg_img->bpp);
+    return img_obj;
+}
+
 static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
@@ -1455,6 +1462,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_width_obj, py_image_width);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_height_obj, py_image_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_format_obj, py_image_format);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_clear_obj, py_image_clear);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_get_pixel_obj, py_image_get_pixel);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_set_pixel_obj, 4, 4, py_image_set_pixel);
 /* Drawing functions */
@@ -1523,6 +1531,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_height),              (mp_obj_t)&py_image_height_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_format),              (mp_obj_t)&py_image_format_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_size),                (mp_obj_t)&py_image_size_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_clear),               (mp_obj_t)&py_image_clear_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_get_pixel),           (mp_obj_t)&py_image_get_pixel_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_set_pixel),           (mp_obj_t)&py_image_set_pixel_obj},
     /* Drawing functions */
