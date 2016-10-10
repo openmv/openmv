@@ -180,7 +180,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_gif.o                                \
 	py_mjpeg.o                              \
 	py_winc.o                               \
-	py_tof.o                                \
 	py_cpufreq.o                            \
 	)
 

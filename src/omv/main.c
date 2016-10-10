@@ -65,7 +65,6 @@
 #include "py_image.h"
 #include "py_lcd.h"
 #include "py_fir.h"
-#include "py_tof.h"
 
 int errno;
 extern char _vfs_buf;
@@ -341,7 +340,6 @@ soft_reset:
     file_buffer_init0();
     py_lcd_init0();
     py_fir_init0();
-    py_tof_init0();
 
 #if MICROPY_HW_ENABLE_RTC
     if (first_soft_reset) {
