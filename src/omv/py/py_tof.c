@@ -208,29 +208,40 @@ mp_obj_t py_tof_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x81, 0x01, 0x00, 0x00}, 4, true);
 
     // Internal illumination
-    // Step = 5ma, Curr = 20 steps, Bias = 00 steps (100mA on, 0mA off)
-    i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x39, 0x00, 0x00, 0x00}, 4, true);
-    i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x3B, 0x00, 0x40, 0xFA}, 4, true);
+    // Step = 5ma, Curr = 20xsteps, Bias = 10xsteps (150mA on, 50mA off)
+    //i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x39, 0xA0, 0x00, 0x00}, 4, true);
+    //i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x3B, 0x00, 0x40, 0x0A}, 4, true);
+
+    // Step = 5ma, Curr = 30xsteps, Bias = 0xsteps (150mA on, 0mA off)
+    //i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x39, 0x00, 0x00, 0x00}, 4, true);
+    //i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x3B, 0x00, 0x40, 0x0F}, 4, true);
+
+    // Step = 5ma, Curr = 15xsteps, Bias = 15xsteps (150mA on, 75mA off)
+    i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x39, 0xF0, 0x00, 0x00}, 4, true);
+    i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x3B, 0x00, 0xC0, 0x07}, 4, true);
 
     // Enable dyn power, Re-arrange data
     i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x5C, 0x00, 0x10, 0x34}, 4, true);
 
     // Enable shutter and easy conf
-    //i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x5B, 0x00, 0x00, 0xC0}, 4, true);
+    i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x5B, 0x00, 0x00, 0xC0}, 4, true);
+
+    // De-Aliasing
+    //i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0xFB, 0x09, 0xE8, 0x01}, 4, true);
 
     // Enable test pattern
     //i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x6C, 0x44, 0xA4, 0x00}, 4, true);
     //i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0xD9, 0x0C, 0x40, 0x00}, 4, true);
 
     // OP Mode: 1-lane SSI, OP_CLK(second byte) 24MHz = 0x00, 12MHz = 0x02, 6MHz = 0x04, 3MHz = 0x06
-    i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0xDE, 0x10, 0x00, 0x00}, 4, true);
+    i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0xDE, 0x10, 0x02, 0x00}, 4, true);
 
     // Enable timing generator
     i2c_write_bytes(TOF_SLAVE_ADDR, (uint8_t [4]){0x80, 0x01, 0x00, 0x00}, 4, true);
 
-    //uint8_t buf[3];
-    //i2c_read_bytes(TOF_SLAVE_ADDR, 0x6C, buf, 3, true);
-    //printf("buf: %x %x %x\n", buf[0], buf[1], buf[2]);
+    uint8_t buf[3];
+    i2c_read_bytes(TOF_SLAVE_ADDR, 0x6C, buf, 3, true);
+    printf("buf: %x %x %x\n", buf[0], buf[1], buf[2]);
     return mp_const_none;
 }
 
@@ -251,25 +262,27 @@ static mp_obj_t py_tof_write_reg(mp_obj_t addr, mp_obj_t vals_obj) {
 
 static void read_frame(uint8_t *buf, uint32_t buf_size)
 {
+    __disable_irq();
     // Pulse VDIN
     GPIO_HIGH(TOF_VDIN_PORT, TOF_VDIN_PIN);
-    systick_sleep(1);
-    GPIO_HIGH(TOF_VDIN_PORT, TOF_VDIN_PIN);
-    
-    __disable_irq();
-    //do {
-    //    if (HAL_SPI_Receive(&SPIHandle, buf, 1, 100000) != HAL_OK) {
-    //        nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "ToF error reading frame!!"));
-    //    }
-    //} while (buf[0] != 0xFF);
+    GPIO_LOW(TOF_VDIN_PORT, TOF_VDIN_PIN);
 
     do {
-        if (HAL_SPI_Receive(&SPIHandle, buf, 1, 100000) != HAL_OK) {
+        if (HAL_SPI_Receive(&SPIHandle, buf, 1, 1000) != HAL_OK) {
+            __enable_irq();
+            nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "ToF error reading frame!!"));
+        }
+    } while (buf[0] != 0xFF);
+
+    do {
+        if (HAL_SPI_Receive(&SPIHandle, buf, 1, 1000) != HAL_OK) {
+            __enable_irq();
             nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "ToF error reading frame!!"));
         }
     } while (buf[0] == 0xFF);
 
-    if (HAL_SPI_Receive(&SPIHandle, buf+1, buf_size-1, 100000) != HAL_OK) {
+    if (HAL_SPI_Receive(&SPIHandle, buf+1, buf_size-1, 1000) != HAL_OK) {
+        __enable_irq();
         nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "ToF error reading frame!!"));
     }
 
@@ -304,7 +317,7 @@ mp_obj_t py_tof_draw_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
-    int draw_phase = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_phase), 0);
+    //int draw_phase = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_phase), 0);
 
     read_frame(buf, buf_size);
 
@@ -313,16 +326,15 @@ mp_obj_t py_tof_draw_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         for (int x=0; x<80; x++, pix+=2) {
             // Phase
             uint32_t p;
-            
-            if (draw_phase) {
-                p = (uint32_t)pix[1] & 0xFFF;
-            } else {
-                p = (uint32_t)pix[0] & 0xFFF;
-            }
+            // Amplitude
+            p = (uint32_t)(pix[0]&0x0FFF);
             IM_SET_GS_PIXEL(arg_img, x, y, (p*255)/4095);
-
+            // Phase
+            p = (uint32_t)(pix[1]&0x0FFF);
+            IM_SET_GS_PIXEL(arg_img, x+80, y, ((p*255)/4095));
             // Ambient
-            //IM_SET_GS_PIXEL(arg_img, x, y, (buf[3]>>4)*255/15);
+            p = ((uint32_t)pix[0]&0xF000) >> 12;
+            IM_SET_GS_PIXEL(arg_img, x, y+60, p*255/15);
         }
     }
     fb_free();
