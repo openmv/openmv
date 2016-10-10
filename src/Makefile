@@ -168,6 +168,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	hough.o                                 \
 	sincos_tab.o                            \
 	edge.o                                  \
+	hog.o                                   \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \

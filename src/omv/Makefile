@@ -55,6 +55,7 @@ SRCS += $(addprefix img/,   \
 	hough.c                 \
 	sincos_tab.c            \
 	edge.c                  \
+	hog.c                   \
    )
 
 SRCS += $(addprefix py/, \

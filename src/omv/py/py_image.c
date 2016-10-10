@@ -1424,6 +1424,26 @@ static mp_obj_t py_image_find_edges(uint n_args, const mp_obj_t *args, mp_map_t 
 
     return mp_const_true;
 }
+
+static mp_obj_t py_image_find_hog(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img), "This function is only supported on GRAYSCALE images");
+
+    rectangle_t arg_r;
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
+
+    rectangle_t rect;
+    if (!rectangle_subimg(arg_img, &arg_r, &rect)) {
+        return mp_const_none;
+    }
+
+    int size = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 8);
+    imlib_find_hog(arg_img, &rect, size);
+
+    return mp_const_none;
+}
+
 /* Image file functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_to_fb_obj, 1, py_image_copy_to_fb);
@@ -1490,6 +1510,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_edges_obj, 2, py_image_find_edges);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_hog_obj, 1, py_image_find_hog);
 static const mp_map_elem_t locals_dict_table[] = {
     /* Image file functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_copy),                (mp_obj_t)&py_image_copy_obj},
@@ -1557,6 +1578,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lines),          (mp_obj_t)&py_image_find_lines_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_edges),          (mp_obj_t)&py_image_find_edges_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_hog),            (mp_obj_t)&py_image_find_hog_obj},
     { NULL, NULL },
 };
 STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
