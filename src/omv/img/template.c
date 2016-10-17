@@ -238,8 +238,8 @@ float imlib_template_match_ex(image_t *f, image_t *t, rectangle_t *roi, int step
         den_b += c*c;
     }
 
-    for (int v=roi->y; v < roi->y + roi->h - t->h; v+=step) {
-    for (int u=roi->x; u < roi->x + roi->w - t->w; u+=step) {
+    for (int v=roi->y; v<=(roi->y+roi->h-t->h); v+=step) {
+    for (int u=roi->x; u<=(roi->x+roi->w-t->w); u+=step) {
         int num = 0;
         // The mean of the current patch
         uint32_t f_sum = imlib_integral_lookup(&sum, u, v, t->w, t->h);
@@ -247,8 +247,8 @@ float imlib_template_match_ex(image_t *f, image_t *t, rectangle_t *roi, int step
         uint32_t f_mean = f_sum / (float) (t->w*t->h);
 
         // Normalized sum of squares of the image
-        for (int y=v; y<t->h+v; y++) {
-            for (int x=u; x<t->w+u; x++) {
+        for (int y=v; y<(v+t->h); y++) {
+            for (int x=u; x<(u+t->w); x++) {
                 int a = (int)f->data[y*f->w+x]-f_mean;
                 int b = (int)t->data[(y-v)*t->w+(x-u)]-t_mean;
                 num += a*b;
