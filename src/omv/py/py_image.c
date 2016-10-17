@@ -549,7 +549,7 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 
     int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), 0);
     imlib_binary(arg_img, arg_t_len, l_t, u_t, arg_invert ? 1 : 0);
-    return mp_const_none;
+    return args[0];
 }
 
 static mp_obj_t py_image_invert(mp_obj_t img_obj)
@@ -559,7 +559,7 @@ static mp_obj_t py_image_invert(mp_obj_t img_obj)
             "Operation not supported on JPEG");
 
     imlib_invert(arg_img);
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_and(mp_obj_t img_obj, mp_obj_t other_obj)
@@ -574,7 +574,7 @@ static mp_obj_t py_image_and(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_and(arg_img, NULL, arg_other);
     }
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_nand(mp_obj_t img_obj, mp_obj_t other_obj)
@@ -589,7 +589,7 @@ static mp_obj_t py_image_nand(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_nand(arg_img, NULL, arg_other);
     }
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_or(mp_obj_t img_obj, mp_obj_t other_obj)
@@ -604,7 +604,7 @@ static mp_obj_t py_image_or(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_or(arg_img, NULL, arg_other);
     }
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_nor(mp_obj_t img_obj, mp_obj_t other_obj)
@@ -619,7 +619,7 @@ static mp_obj_t py_image_nor(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_nor(arg_img, NULL, arg_other);
     }
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_xor(mp_obj_t img_obj, mp_obj_t other_obj)
@@ -634,7 +634,7 @@ static mp_obj_t py_image_xor(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_xor(arg_img, NULL, arg_other);
     }
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
@@ -649,7 +649,7 @@ static mp_obj_t py_image_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_xnor(arg_img, NULL, arg_other);
     }
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -663,7 +663,7 @@ static mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     imlib_erode(arg_img, arg_ksize,
             py_helper_lookup_int(kw_args,
             MP_OBJ_NEW_QSTR(MP_QSTR_threshold), ((arg_ksize*2)+1)*((arg_ksize*2)+1)-1));
-    return mp_const_none;
+    return args[0];
 }
 
 static mp_obj_t py_image_dilate(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -677,7 +677,7 @@ static mp_obj_t py_image_dilate(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     imlib_dilate(arg_img, arg_ksize,
             py_helper_lookup_int(kw_args,
             MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0));
-    return mp_const_none;
+    return args[0];
 }
 
 static mp_obj_t py_image_negate(mp_obj_t img_obj)
@@ -687,7 +687,7 @@ static mp_obj_t py_image_negate(mp_obj_t img_obj)
             "Operation not supported on JPEG");
 
     imlib_negate(arg_img);
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
@@ -702,7 +702,7 @@ static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_difference(arg_img, NULL, arg_other);
     }
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_replace(mp_obj_t img_obj, mp_obj_t other_obj)
@@ -717,7 +717,7 @@ static mp_obj_t py_image_replace(mp_obj_t img_obj, mp_obj_t other_obj)
         image_t *arg_other = py_image_cobj(other_obj);
         imlib_replace(arg_img, NULL, arg_other);
     }
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_blend(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -735,7 +735,7 @@ static mp_obj_t py_image_blend(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         image_t *arg_other = py_image_cobj(args[1]);
         imlib_blend(arg_img, NULL, arg_other, alpha);
     }
-    return mp_const_none;
+    return args[0];
 }
 
 static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -770,7 +770,7 @@ static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
                     MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0 / ((float) arg_m)),
             py_helper_lookup_int(kw_args,
                     MP_OBJ_NEW_QSTR(MP_QSTR_add), 0));
-    return mp_const_none;
+    return args[0];
 }
 
 static mp_obj_t py_image_statistics(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -818,7 +818,7 @@ static mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
 
     int bias = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
     imlib_midpoint_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(bias, 0), 256));
-    return mp_const_none;
+    return args[0];
 }
 
 static mp_obj_t py_image_mean(mp_obj_t img_obj, mp_obj_t k_obj)
@@ -831,7 +831,7 @@ static mp_obj_t py_image_mean(mp_obj_t img_obj, mp_obj_t k_obj)
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
 
     imlib_mean_filter(arg_img, arg_ksize);
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_mode(mp_obj_t img_obj, mp_obj_t k_obj)
@@ -844,7 +844,7 @@ static mp_obj_t py_image_mode(mp_obj_t img_obj, mp_obj_t k_obj)
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
 
     imlib_mode_filter(arg_img, arg_ksize);
-    return mp_const_none;
+    return img_obj;
 }
 
 static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -860,7 +860,7 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     int n = ((arg_ksize*2)+1)*((arg_ksize*2)+1);
     int percentile = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_percentile), 0.5) * n;
     imlib_median_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(percentile, 0), n-1));
-    return mp_const_none;
+    return args[0];
 }
 
 static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -1157,7 +1157,8 @@ static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_
         fb->w = out_img.w;
         fb->h = out_img.h;
     }
-    return mp_const_none;
+
+    return img_obj;
 }
 
 static mp_obj_t py_image_mean_pooled(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_t y_div_obj)
