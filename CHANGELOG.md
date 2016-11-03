@@ -1,5 +1,17 @@
 # Change Log
-## [1.9](https://github.com/openmv/openmv/releases/tag/v1.8) (2016-09-20)
+## [2.0](https://github.com/openmv/openmv/releases/tag/v2.0) (2016-11-04)
+Firmware:
+* WiFi driver fixes.
+
+Image processing:
+* Add HoG (not used yet).
+* Add lens correction function.
+* Add clear image for quick testing.
+* Fix template ROI.
+* Switch to FAST-12.
+* Misc fixes to image library.
+
+## [1.9](https://github.com/openmv/openmv/releases/tag/v1.9) (2016-09-20)
 Firmware:
 * Initialize RNG when calling randint.
 
