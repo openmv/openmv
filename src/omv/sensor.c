@@ -310,7 +310,6 @@ int sensor_reset()
     sensor.framerate=0xFF;
     sensor.gainceiling=0xFF;
 
-
     // Reset image filter
     sensor_set_line_filter(NULL, NULL);
 
@@ -702,11 +701,6 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
 
     // Disable DMA IRQ
     HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
-
-    // TODO on M4 we get an extra call
-    //if (line != fb->h) {
-    //    printf("lines %d\n", line);
-    //}
 
     // Fix the BPP
     switch (sensor.pixformat) {

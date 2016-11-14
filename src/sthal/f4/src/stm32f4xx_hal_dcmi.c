@@ -534,6 +534,9 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
   {
     if(__HAL_DCMI_GET_IT_SOURCE(hdcmi, DCMI_IT_LINE) != RESET)
     {
+      /* Disable the LINE interrupt */
+      __HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_LINE);
+
       /* Clear the Line interrupt flag */  
       __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_LINERI);
 
