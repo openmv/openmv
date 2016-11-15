@@ -465,9 +465,6 @@ soft_reset:
     while (!usbdbg_script_ready()) {
         nlr_buf_t nlr;
 
-        // Re-enable FS IRQ (disabled in usbdbg)
-        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
-
         if (nlr_push(&nlr) == 0) {
             // enable IDE interrupt
             usbdbg_set_irq_enabled(true);
@@ -482,12 +479,11 @@ soft_reset:
     if (usbdbg_script_ready()) {
         nlr_buf_t nlr;
 
-        // Re-enable FS IRQ (disabled in usbdbg)
-        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
-
         // execute the script
         if (nlr_push(&nlr) == 0) {
-            // parse, compile and execute script
+            // enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
+
             pyexec_str(usbdbg_get_script());
             nlr_pop();
         } else {
