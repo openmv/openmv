@@ -21,6 +21,18 @@ void __attribute__((noreturn)) __fatal_error()
     }
 }
 
+#ifdef STACK_PROTECTOR
+uint32_t __stack_chk_guard=0xDEADBEEF;
+
+void __attribute__((noreturn)) __stack_chk_fail(void)
+{
+    __asm__ volatile ("BKPT");
+    while (1) {
+        __flash_led();
+    }
+}
+#endif
+
 int main()
 {
     // Override main app interrupt vector offset (set in system_stm32fxxx.c)

@@ -54,8 +54,14 @@ else
 CFLAGS += -O2 -ggdb3 -DNDEBUG
 endif
 
+# Enable debug printf
 ifeq ($(DEBUG_PRINTF), 1)
 CFLAGS += -DDEBUG_PRINTF
+endif
+
+# Enable stack protection
+ifeq ($(STACK_PROTECTOR), 1)
+CFLAGS += -fstack-protector-all -DSTACK_PROTECTOR
 endif
 
 # Compiler Flags

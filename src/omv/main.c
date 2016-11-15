@@ -279,6 +279,17 @@ static void make_flash_fs()
     led_state(LED_RED, 0);
 }
 
+#ifdef STACK_PROTECTOR
+uint32_t __stack_chk_guard=0xDEADBEEF;
+
+void NORETURN __stack_chk_fail(void)
+{
+    while (1) {
+        flash_error(100);
+    }
+}
+#endif
+
 int main(void)
 {
     FRESULT f_res;
