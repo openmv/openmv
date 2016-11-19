@@ -37,12 +37,14 @@ s = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
 s.bind([HOST, PORT])
 s.listen(5)
 
-# Set timeout to 1s
-s.settimeout(1.0)
+# Set server socket to non-blocking
+s.settimeout(0)
 
 def start_streaming(s):
     print ('Waiting for connections..')
     client, addr = s.accept()
+    # set client socket timeout to 2s
+    client.settimeout(2.0)
     print ('Connected to ' + addr[0] + ':' + str(addr[1]))
 
     # Read request from client
@@ -70,6 +72,7 @@ def start_streaming(s):
                  "Content-Length:"+str(cframe.size())+"\r\n\r\n"
         client.send(header)
         client.send(cframe)
+        print(clock.fps())
 
 while (True):
     try:
