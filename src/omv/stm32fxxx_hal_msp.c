@@ -36,7 +36,7 @@ void SystemClock_Config(void);
 
 void HAL_MspInit(void)
 {
-    #if defined(STM32F769xx)
+    #if defined(STM32F765xx) || defined(STM32F769xx)
     // Invalidate each cache before enabling it
     SCB_InvalidateICache();
     SCB_InvalidateDCache();
@@ -59,7 +59,7 @@ void HAL_MspInit(void)
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
 
-#if defined (STM32F769xx)
+#if defined(STM32F765xx) || defined(STM32F769xx)
     __GPIOF_CLK_ENABLE();
     __GPIOG_CLK_ENABLE();
     __GPIOH_CLK_ENABLE();

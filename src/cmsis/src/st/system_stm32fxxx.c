@@ -559,7 +559,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLN = 384;
   RCC_OscInitStruct.PLL.PLLQ = 8;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-#elif defined (STM32F769xx)// 216MHz/48MHz
+#elif defined (STM32F765xx)// 216MHz/48MHz
   flash_latency = FLASH_LATENCY_7;
   RCC_OscInitStruct.PLL.PLLM = 12;
   RCC_OscInitStruct.PLL.PLLN = 432;
@@ -573,7 +573,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-#if defined(STM32F427xx) || defined(STM32F429xx) || defined(STM32F769xx)
+#if defined(STM32F427xx) || defined(STM32F429xx) || defined(STM32F765xx)
   if(HAL_PWREx_ActivateOverDrive() != HAL_OK) {
     /* Initialization Error */
     Error_Handler();

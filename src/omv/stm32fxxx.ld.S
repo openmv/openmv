@@ -61,7 +61,7 @@ ENTRY(Reset_Handler)
     #define SRAM2_ORIGIN    0x20028C00
     #define SRAM2_LENGTH    29K
 
-#elif defined(OPENMV7)
+#elif defined(OPENMV3)
     #define FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
     #define MAIN_MEMORY     SRAM2   // data, bss, stack and heap
     #define DMA_MEMORY      CCM     // Misc DMA buffers

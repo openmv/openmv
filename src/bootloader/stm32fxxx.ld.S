@@ -34,7 +34,7 @@ ENTRY(Reset_Handler)
     
     #define CCM_ORIGIN      0x10000000
     #define CCM_LENGTH      64K
-#elif defined(OPENMV7)
+#elif defined(OPENMV3)
     #define FLASH_ORIGIN    0x08000000
     #define FLASH_LENGTH    1920K
     

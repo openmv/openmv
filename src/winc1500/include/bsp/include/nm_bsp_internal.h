@@ -107,8 +107,8 @@
 #include "nm_bsp_openmv1.h"
 #elif defined(OPENMV2)
 #include "nm_bsp_openmv2.h"
-#elif defined(OPENMV7)
-#include "nm_bsp_openmv7.h"
+#elif defined(OPENMV3)
+#include "nm_bsp_openmv3.h"
 #endif
 
 #endif //_NM_BSP_INTERNAL_H_
