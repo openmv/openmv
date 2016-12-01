@@ -4,14 +4,14 @@
 
 import sensor, image, time
 
-sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
-sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
-sensor.skip_frames(10) # Let new settings take affect.
-clock = time.clock() # Tracks FPS.
+sensor.reset()                      # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QVGA)   # Set frame size to QVGA (320x240)
+sensor.skip_frames(10)              # Wait for settings take effect.
+clock = time.clock()                # Create a clock object to track the FPS.
 
 while(True):
-    clock.tick() # Track elapsed milliseconds between snapshots().
-    img = sensor.snapshot() # Take a picture and return the image.
-    print(clock.fps()) # Note: Your OpenMV Cam runs about half as fast while
-    # connected to your computer. The FPS should increase once disconnected.
+    clock.tick()                    # Update the FPS clock.
+    img = sensor.snapshot()         # Take a picture and return the image.
+    print(clock.fps())              # Note: OpenMV Cam runs about half as fast when connected
+                                    # to the IDE. The FPS should increase once disconnected.
