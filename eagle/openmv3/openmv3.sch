@@ -1775,12 +1775,6 @@ Standard schematic elements and footprints for 5mm, 3mm, 1206, and 0603 sized LE
 <wire x1="2.54" y1="2.54" x2="-2.54" y2="2.54" width="0.254" layer="94"/>
 <wire x1="-2.54" y1="2.54" x2="-2.54" y2="-2.54" width="0.254" layer="94"/>
 </symbol>
-<symbol name="VBUS">
-<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
-<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
-<text x="-1.016" y="3.556" size="1.778" layer="96">&gt;VALUE</text>
-<pin name="VBUS" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
-</symbol>
 <symbol name="BD33IA">
 <wire x1="-10.16" y1="-10.16" x2="10.16" y2="-10.16" width="0.4064" layer="94"/>
 <wire x1="10.16" y1="-10.16" x2="10.16" y2="5.08" width="0.4064" layer="94"/>
@@ -1887,18 +1881,6 @@ Various standard crystals. Proven footprints. Spark Fun Electronics SKU : COM-00
 <connect gate="G$1" pin="P$1" pad="2"/>
 <connect gate="G$1" pin="P$2" pad="4"/>
 </connects>
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="VBUS">
-<gates>
-<gate name="G$1" symbol="VBUS" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
 <technologies>
 <technology name=""/>
 </technologies>
@@ -2585,12 +2567,6 @@ Various standard crystals. Proven footprints. Spark Fun Electronics SKU : COM-00
 <wire x1="4.6199" y1="5.1267" x2="4.8997" y2="4.4959" width="0.254" layer="94" curve="-19.303177"/>
 <wire x1="4.9045" y1="3.5472" x2="4.6484" y2="2.8689" width="0.254" layer="94" curve="-20.344696"/>
 </symbol>
-<symbol name="VBUS">
-<wire x1="0.762" y1="1.27" x2="0" y2="2.54" width="0.254" layer="94"/>
-<wire x1="0" y1="2.54" x2="-0.762" y2="1.27" width="0.254" layer="94"/>
-<text x="-1.016" y="3.556" size="1.778" layer="96">&gt;VALUE</text>
-<pin name="VBUS" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
-</symbol>
 </symbols>
 <devicesets>
 <deviceset name="VIN" prefix="P+">
@@ -2660,18 +2636,6 @@ Various standard crystals. Proven footprints. Spark Fun Electronics SKU : COM-00
 </technologies>
 </device>
 <device name="X0070-NT" package="OSHW_FILLX70_NOTEXT">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="VBUS">
-<gates>
-<gate name="G$1" symbol="VBUS" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
 <technologies>
 <technology name=""/>
 </technologies>
@@ -5165,6 +5129,32 @@ Source: Fairchild .. BAT54.pdf</description>
 </deviceset>
 </devicesets>
 </library>
+<library name="supply">
+<packages>
+</packages>
+<symbols>
+<symbol name="VBUS">
+<wire x1="1.27" y1="0.635" x2="0" y2="2.54" width="0.254" layer="94"/>
+<wire x1="0" y1="2.54" x2="-1.27" y2="0.635" width="0.254" layer="94"/>
+<text x="-2.54" y="-2.54" size="1.778" layer="96" rot="R90">&gt;VALUE</text>
+<pin name="VBUS" x="0" y="0" visible="off" length="short" direction="sup" rot="R90"/>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="VBUS" prefix="VBUS">
+<gates>
+<gate name="G$1" symbol="VBUS" x="0" y="0"/>
+</gates>
+<devices>
+<device name="">
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -5175,7 +5165,7 @@ Source: Fairchild .. BAT54.pdf</description>
 </class>
 </classes>
 <parts>
-<part name="H6" library="holes" deviceset="MOUNT-PAD-ROUND" device="2.8"/>
+<part name="H2" library="holes" deviceset="MOUNT-PAD-ROUND" device="2.8"/>
 <part name="GND16" library="sfe" deviceset="GND" device=""/>
 <part name="C40" library="sfe" deviceset="CAP" device="0603-CAP" value="12pF"/>
 <part name="C41" library="sfe" deviceset="CAP" device="0603-CAP" value="12pF"/>
@@ -5196,7 +5186,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="C18" library="sfe" deviceset="CAP" device="0603-CAP" value="0.1uF"/>
 <part name="GND17" library="SparkFun" deviceset="GND" device=""/>
 <part name="GND19" library="SparkFun" deviceset="GND" device=""/>
-<part name="L3" library="sfe" deviceset="INDUCTOR" device="0603"/>
+<part name="L3" library="sfe" deviceset="INDUCTOR" device="0603" value="MPZ1608S181ATAH0"/>
 <part name="C19" library="sfe" deviceset="CAP" device="0603-CAP" value="0.1uF"/>
 <part name="C20" library="sfe" deviceset="CAP" device="0603-CAP" value="4.7uF"/>
 <part name="GND21" library="SparkFun" deviceset="GND" device=""/>
@@ -5211,7 +5201,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="P+3" library="SparkFun" deviceset="VCC" device=""/>
 <part name="GND13" library="SparkFun" deviceset="GND" device=""/>
 <part name="LM1" library="omnivision" deviceset="LENSMOUNT" device="20MM"/>
-<part name="H2" library="holes" deviceset="MOUNT-PAD-ROUND" device="2.8"/>
+<part name="H1" library="holes" deviceset="MOUNT-PAD-ROUND" device="2.8"/>
 <part name="GND10" library="supply1" deviceset="GND" device=""/>
 <part name="P+5" library="supply1" deviceset="VCC" device=""/>
 <part name="RN6" library="resistor-dil" deviceset="4R-N" device="EXBV8V" value="10K">
@@ -5226,7 +5216,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <attribute name="OC_FARNELL" value="unknown"/>
 <attribute name="OC_NEWARK" value="unknown"/>
 </part>
-<part name="L1" library="sfe" deviceset="INDUCTOR" device="0603"/>
+<part name="L1" library="sfe" deviceset="INDUCTOR" device="0603" value="MPZ1608S181ATAH0"/>
 <part name="P+8" library="supply1" deviceset="VCC" device=""/>
 <part name="C15" library="sfe" deviceset="CAP" device="0603-CAP" value="0.1uF"/>
 <part name="GND12" library="SparkFun" deviceset="GND" device=""/>
@@ -5235,7 +5225,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="RN7" library="resistor-dil" deviceset="2R-N" device="EXBV4V" value="10K"/>
 <part name="LED1" library="sfe" deviceset="LED-TRICOLOR" device="" value="LED-TRICOLOR"/>
 <part name="P+11" library="SparkFun" deviceset="VCC" device=""/>
-<part name="Y1" library="mux" deviceset="CRYSTAL" device="2.5X2.0"/>
+<part name="Y1" library="mux" deviceset="CRYSTAL" device="2.5X2.0" value="7S-12.000MAHE-T"/>
 <part name="LOGO1" library="iofault" deviceset="OSHW_LOGO_FILL" device="X0100-NT"/>
 <part name="FRAME1" library="frames" deviceset="DINA3_L" device=""/>
 <part name="GND39" library="sfe" deviceset="GND" device=""/>
@@ -5244,11 +5234,10 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="GND41" library="sfe" deviceset="GND" device=""/>
 <part name="GND42" library="sfe" deviceset="GND" device=""/>
 <part name="GND45" library="sfe" deviceset="GND" device=""/>
-<part name="U$8" library="mux" deviceset="VBUS" device=""/>
 <part name="JP1" library="pinhead" deviceset="PINHD-1X8" device=""/>
 <part name="JP2" library="pinhead" deviceset="PINHD-1X8" device=""/>
 <part name="GND3" library="sfe" deviceset="GND" device=""/>
-<part name="L2" library="sfe" deviceset="INDUCTOR" device="0603"/>
+<part name="L2" library="sfe" deviceset="INDUCTOR" device="0603" value="MPZ1608S181ATAH0"/>
 <part name="P+7" library="iofault" deviceset="VIN" device=""/>
 <part name="C1" library="sfe" deviceset="CAP" device="0805" value="22uF"/>
 <part name="GND5" library="SparkFun" deviceset="GND" device=""/>
@@ -5269,10 +5258,9 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="D1" library="diode" deviceset="BAT54C" device="" value="PMEG2005CT"/>
 <part name="P+4" library="supply1" deviceset="VCC" device=""/>
 <part name="U2" library="omnivision" deviceset="OV7725" device=""/>
-<part name="VBUS" library="iofault" deviceset="VBUS" device=""/>
 <part name="U1" library="stm32" deviceset="STM32F746" device="LQFP100" value="STM32F765VGT6"/>
 <part name="P+12" library="SparkFun" deviceset="VCC" device=""/>
-<part name="X2" library="MF_Connectors" deviceset="USB" device="_MICRO_RIGHT"/>
+<part name="X2" library="MF_Connectors" deviceset="USB" device="_MICRO_RIGHT" value="MICROUSB-RIGHT"/>
 <part name="JP3" library="pinhead" deviceset="PINHD-1X5" device=""/>
 <part name="GND22" library="SparkFun" deviceset="GND" device=""/>
 <part name="R3" library="sfe" deviceset="RESISTOR" device="0603-RES" value="10k"/>
@@ -5286,6 +5274,8 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="LED2" library="sfe" deviceset="LED" device="1206" value="VSMY12850"/>
 <part name="LED3" library="sfe" deviceset="LED" device="1206" value="VSMY12850"/>
 <part name="P+13" library="mux" deviceset="VCC" device=""/>
+<part name="VBUS2" library="supply" deviceset="VBUS" device=""/>
+<part name="VBUS1" library="supply" deviceset="VBUS" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -5306,7 +5296,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <text x="447.04" y="-40.64" size="2.54" layer="94" ratio="12">2</text>
 </plain>
 <instances>
-<instance part="H6" gate="G$1" x="312.42" y="-10.16"/>
+<instance part="H2" gate="G$1" x="312.42" y="-10.16"/>
 <instance part="GND16" gate="1" x="33.02" y="129.54"/>
 <instance part="C40" gate="G$1" x="27.94" y="144.78" rot="MR180"/>
 <instance part="C41" gate="G$1" x="38.1" y="144.78" rot="MR180"/>
@@ -5381,7 +5371,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <instance part="P+3" gate="1" x="368.3" y="205.74"/>
 <instance part="GND13" gate="1" x="360.68" y="152.4" rot="MR0"/>
 <instance part="LM1" gate="G$1" x="276.86" y="-17.78" rot="R180"/>
-<instance part="H2" gate="G$1" x="312.42" y="-17.78"/>
+<instance part="H1" gate="G$1" x="312.42" y="-17.78"/>
 <instance part="GND10" gate="1" x="322.58" y="238.76"/>
 <instance part="P+5" gate="VCC" x="414.02" y="109.22"/>
 <instance part="RN6" gate="A" x="375.92" y="193.04" smashed="yes">
@@ -5444,9 +5434,6 @@ Source: Fairchild .. BAT54.pdf</description>
 <instance part="GND41" gate="1" x="40.64" y="38.1"/>
 <instance part="GND42" gate="1" x="33.02" y="38.1"/>
 <instance part="GND45" gate="1" x="22.86" y="129.54"/>
-<instance part="U$8" gate="G$1" x="45.72" y="149.86" smashed="yes" rot="MR0">
-<attribute name="VALUE" x="47.244" y="153.924" size="1.778" layer="96" rot="MR180"/>
-</instance>
 <instance part="JP1" gate="A" x="370.84" y="299.72"/>
 <instance part="JP2" gate="A" x="416.56" y="299.72"/>
 <instance part="GND3" gate="1" x="304.8" y="276.86" rot="MR0"/>
@@ -5483,7 +5470,6 @@ Source: Fairchild .. BAT54.pdf</description>
 <instance part="D1" gate="G$1" x="332.74" y="294.64" rot="MR0"/>
 <instance part="P+4" gate="VCC" x="294.64" y="116.84"/>
 <instance part="U2" gate="G$1" x="358.14" y="63.5"/>
-<instance part="VBUS" gate="G$1" x="304.8" y="312.42"/>
 <instance part="U1" gate="G$1" x="129.54" y="119.38" smashed="yes">
 <attribute name="NAME" x="68.58" y="195.58" size="5.08" layer="95" ratio="16"/>
 <attribute name="VALUE" x="160.02" y="33.02" size="5.08" layer="95" ratio="16"/>
@@ -5514,6 +5500,8 @@ Source: Fairchild .. BAT54.pdf</description>
 <instance part="LED2" gate="G$1" x="340.36" y="162.56" rot="R270"/>
 <instance part="LED3" gate="G$1" x="327.66" y="162.56" rot="R270"/>
 <instance part="P+13" gate="1" x="391.16" y="274.32"/>
+<instance part="VBUS2" gate="G$1" x="45.72" y="149.86"/>
+<instance part="VBUS1" gate="G$1" x="304.8" y="312.42"/>
 </instances>
 <busses>
 </busses>
@@ -5801,10 +5789,10 @@ Source: Fairchild .. BAT54.pdf</description>
 </net>
 <net name="VBUS" class="0">
 <segment>
-<pinref part="U$8" gate="G$1" pin="VBUS"/>
 <wire x1="63.5" y1="127" x2="45.72" y2="127" width="0.1524" layer="91"/>
 <wire x1="45.72" y1="127" x2="45.72" y2="149.86" width="0.1524" layer="91"/>
 <pinref part="U1" gate="G$1" pin="PA9/USART1_TX/TIM1_CH2/I2C3_SMBA/DCMI_D0/OTG_FS_VBUS"/>
+<pinref part="VBUS2" gate="G$1" pin="VBUS"/>
 </segment>
 <segment>
 <pinref part="L2" gate="G$1" pin="2"/>
@@ -5812,7 +5800,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <wire x1="304.8" y1="294.64" x2="304.8" y2="312.42" width="0.1524" layer="91"/>
 <junction x="304.8" y="294.64"/>
 <pinref part="D1" gate="G$1" pin="A2"/>
-<pinref part="VBUS" gate="G$1" pin="VBUS"/>
+<pinref part="VBUS1" gate="G$1" pin="VBUS"/>
 </segment>
 </net>
 <net name="VIN" class="0">

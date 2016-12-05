@@ -3949,7 +3949,7 @@ design rules under a new name.</description>
 </pass>
 </autorouter>
 <elements>
-<element name="H6" library="holes" package="2,8-PAD" value="MOUNT-PAD-ROUND2.8" x="32.258" y="41.148" smashed="yes" rot="R270"/>
+<element name="H2" library="holes" package="2,8-PAD" value="MOUNT-PAD-ROUND2.8" x="32.258" y="41.148" smashed="yes" rot="R270"/>
 <element name="C40" library="sfe" package="0603-CAP" value="12pF" x="5.842" y="13.97" smashed="yes">
 <attribute name="NAME" x="4.4232125" y="12.7943125" size="0.4064" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="4.762496875" y="12.826996875" size="0.4064" layer="27"/>
@@ -3998,7 +3998,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="21.28" y="33.81" size="0.4064" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="20.857" y="33.2795" size="0.4064" layer="27" rot="R270"/>
 </element>
-<element name="L3" library="sfe" package="0603" value="" x="23.7" y="32.2" smashed="yes" rot="R270">
+<element name="L3" library="sfe" package="0603" value="MPZ1608S181ATAH0" x="23.7" y="32.2" smashed="yes" rot="R270">
 <attribute name="NAME" x="23" y="33.8" size="0.4064" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="22.557" y="33.2795" size="0.4064" layer="27" rot="R270"/>
 </element>
@@ -4019,7 +4019,7 @@ design rules under a new name.</description>
 <attribute name="VALUE" x="35.179" y="22.352" size="0.4064" layer="27" font="vector" ratio="20" rot="R90"/>
 </element>
 <element name="LM1" library="omnivision" package="LENSMOUNT-20MM" value="LENSMOUNT20MM" x="17.78" y="36.068" smashed="yes"/>
-<element name="H2" library="holes" package="2,8-PAD" value="MOUNT-PAD-ROUND2.8" x="3.302" y="41.148" smashed="yes" rot="R90"/>
+<element name="H1" library="holes" package="2,8-PAD" value="MOUNT-PAD-ROUND2.8" x="3.302" y="41.148" smashed="yes" rot="R90"/>
 <element name="RN6" library="resistor-dil" package="EXBV8V" value="10K" x="28.067" y="30.734" smashed="yes" rot="R270">
 <attribute name="OC_NEWARK" value="unknown" x="28.067" y="30.734" size="1.778" layer="27" rot="R270" display="off"/>
 <attribute name="MPN" value="" x="28.067" y="30.734" size="1.778" layer="27" rot="R270" display="off"/>
@@ -4036,7 +4036,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="26.924" y="21.082" size="0.4064" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="29.337" y="25.146" size="0.4064" layer="27" font="vector" ratio="20" rot="R270"/>
 </element>
-<element name="L1" library="sfe" package="0603" value="" x="4.953" y="10.414" smashed="yes" rot="R270">
+<element name="L1" library="sfe" package="0603" value="MPZ1608S181ATAH0" x="4.953" y="10.414" smashed="yes" rot="R270">
 <attribute name="NAME" x="4.953" y="12.065" size="0.4064" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="3.81" y="11.4935" size="0.4064" layer="27" rot="R270"/>
 </element>
@@ -4060,7 +4060,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="1.524" y="32.385" size="0.4064" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="0.40201875" y="30.4100125" size="0.4064" layer="27" font="vector" ratio="20"/>
 </element>
-<element name="Y1" library="mux" package="CRYSTAL-2.5X2.0" value="" x="5.969" y="16.764" smashed="yes" rot="SR270">
+<element name="Y1" library="mux" package="CRYSTAL-2.5X2.0" value="7S-12.000MAHE-T" x="5.969" y="16.764" smashed="yes" rot="SR270">
 <attribute name="NAME" x="7.84891875" y="17.6273875" size="0.4064" layer="25" font="vector" ratio="20" rot="SR90"/>
 <attribute name="VALUE" x="3.693" y="16.74200625" size="0.4064" layer="25" rot="SR270"/>
 </element>
@@ -4081,7 +4081,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="0.9398" y="20.8788" size="0.6096" layer="49" font="vector" ratio="20"/>
 <attribute name="VALUE" x="-1.524" y="20.574" size="1.27" layer="27" rot="R270"/>
 </element>
-<element name="L2" library="sfe" package="0603" value="" x="22.987" y="6.477" smashed="yes" rot="R180">
+<element name="L2" library="sfe" package="0603" value="MPZ1608S181ATAH0" x="22.987" y="6.477" smashed="yes" rot="R180">
 <attribute name="NAME" x="21.463" y="7.366" size="0.4064" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="24.0665" y="7.62" size="0.4064" layer="27" rot="R180"/>
 </element>
@@ -4135,7 +4135,7 @@ design rules under a new name.</description>
 <attribute name="NAME" x="11.605" y="25.003" size="0.4064" layer="25" font="vector" ratio="20"/>
 <attribute name="VALUE" x="12.645" y="15.288" size="1.27" layer="27"/>
 </element>
-<element name="X2" library="MF_Connectors" package="MICROUSB-RIGHT" value="" x="26.67" y="2.8575" smashed="yes">
+<element name="X2" library="MF_Connectors" package="MICROUSB-RIGHT" value="MICROUSB-RIGHT" x="26.67" y="2.8575" smashed="yes">
 <attribute name="NAME" x="21.7475" y="4.318" size="0.508" layer="25" font="vector" ratio="16" rot="R90"/>
 </element>
 <element name="JP3" library="pinhead" package="1X05" value="" x="30.099" y="11.684" smashed="yes" rot="R270">
