@@ -59,23 +59,21 @@ void HAL_MspInit(void)
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
 
-#if defined(STM32F765xx) || defined(STM32F769xx)
+#if defined(STM32F769xx)
     __GPIOF_CLK_ENABLE();
     __GPIOG_CLK_ENABLE();
     __GPIOH_CLK_ENABLE();
     __GPIOI_CLK_ENABLE();
     __GPIOJ_CLK_ENABLE();
     __GPIOK_CLK_ENABLE();
+
+    /* Enable JPEG clock */
+    __HAL_RCC_JPEG_CLK_ENABLE();
 #endif
 
     /* Enable DMA clocks */
     __DMA1_CLK_ENABLE();
     __DMA2_CLK_ENABLE();
-
-#if defined (STM32F769xx)
-    /* Enable JPEG clock */
-    __HAL_RCC_JPEG_CLK_ENABLE();
-#endif
 
     /* Configure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;
