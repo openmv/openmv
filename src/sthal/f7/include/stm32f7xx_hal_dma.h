@@ -119,12 +119,18 @@ typedef struct
   */
 typedef enum
 {
-  HAL_DMA_STATE_RESET             = 0x00U,  /*!< DMA not yet initialized or disabled */
-  HAL_DMA_STATE_READY             = 0x01U,  /*!< DMA initialized and ready for use   */
-  HAL_DMA_STATE_BUSY              = 0x02U,  /*!< DMA process is ongoing              */
-  HAL_DMA_STATE_TIMEOUT           = 0x03U,  /*!< DMA timeout state                   */
-  HAL_DMA_STATE_ERROR             = 0x04U,  /*!< DMA error state                     */
-  HAL_DMA_STATE_ABORT             = 0x05U,  /*!< DMA Abort state                     */
+  HAL_DMA_STATE_RESET             = 0x00,  /*!< DMA not yet initialized or disabled */
+  HAL_DMA_STATE_READY             = 0x01,  /*!< DMA initialized and ready for use   */
+  HAL_DMA_STATE_READY_MEM0        = 0x11,  /*!< DMA Mem0 process success            */
+  HAL_DMA_STATE_READY_MEM1        = 0x21,  /*!< DMA Mem1 process success            */
+  HAL_DMA_STATE_READY_HALF_MEM0   = 0x31,  /*!< DMA Mem0 Half process success       */
+  HAL_DMA_STATE_READY_HALF_MEM1   = 0x41,  /*!< DMA Mem1 Half process success       */
+  HAL_DMA_STATE_BUSY              = 0x02,  /*!< DMA process is ongoing              */
+  HAL_DMA_STATE_BUSY_MEM0         = 0x12,  /*!< DMA Mem0 process is ongoing         */
+  HAL_DMA_STATE_BUSY_MEM1         = 0x22,  /*!< DMA Mem1 process is ongoing         */
+  HAL_DMA_STATE_TIMEOUT           = 0x03,  /*!< DMA timeout state                   */
+  HAL_DMA_STATE_ERROR             = 0x04,  /*!< DMA error state                     */
+
 }HAL_DMA_StateTypeDef;
 
 /** 
@@ -656,7 +662,7 @@ HAL_StatusTypeDef HAL_DMA_Start (DMA_HandleTypeDef *hdma, uint32_t SrcAddress, u
 HAL_StatusTypeDef HAL_DMA_Start_IT(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t DataLength);
 HAL_StatusTypeDef HAL_DMA_Abort(DMA_HandleTypeDef *hdma);
 HAL_StatusTypeDef HAL_DMA_Abort_IT(DMA_HandleTypeDef *hdma);
-HAL_StatusTypeDef HAL_DMA_PollForTransfer(DMA_HandleTypeDef *hdma, HAL_DMA_LevelCompleteTypeDef CompleteLevel, uint32_t Timeout);
+HAL_StatusTypeDef HAL_DMA_PollForTransfer(DMA_HandleTypeDef *hdma, uint32_t CompleteLevel, uint32_t Timeout);
 void              HAL_DMA_IRQHandler(DMA_HandleTypeDef *hdma);
 HAL_StatusTypeDef HAL_DMA_CleanCallbacks(DMA_HandleTypeDef *hdma);
 HAL_StatusTypeDef HAL_DMA_RegisterCallback(DMA_HandleTypeDef *hdma, HAL_DMA_CallbackIDTypeDef CallbackID, void (* pCallback)(DMA_HandleTypeDef *_hdma));
