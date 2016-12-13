@@ -686,6 +686,9 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
 
     // Wait for frame
     while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
+        // Wait for interrupt
+        __WFI();
+
         if ((HAL_GetTick() - tick_start) >= 3000) {
             // Sensor timeout, most likely a HW issue.
             // Abort the DMA request.
