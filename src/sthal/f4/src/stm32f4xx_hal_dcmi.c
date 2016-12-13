@@ -185,9 +185,6 @@ HAL_StatusTypeDef HAL_DCMI_Init(DCMI_HandleTypeDef *hdcmi)
                   ((uint32_t)hdcmi->Init.SyncroCode.FrameEndCode << 24));
   }
 
-  /* Enable the Line interrupt */
-  __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_LINE);
-
   /* Enable the VSYNC interrupt */
   __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_VSYNC);
 

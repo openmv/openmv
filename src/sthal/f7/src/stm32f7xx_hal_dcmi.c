@@ -202,7 +202,7 @@ HAL_StatusTypeDef HAL_DCMI_Init(DCMI_HandleTypeDef *hdcmi)
   }
 
   /* Enable the Line, Vsync, Error and Overrun interrupts */
-  __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_LINE | DCMI_IT_VSYNC | DCMI_IT_ERR | DCMI_IT_OVR);
+  __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_VSYNC | DCMI_IT_ERR | DCMI_IT_OVR);
 
   /* Update error code */
   hdcmi->ErrorCode = HAL_DCMI_ERROR_NONE;
