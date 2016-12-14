@@ -225,6 +225,7 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     return mp_const_none;
 }
 
+// TODO fix FB_JPEG_OFFS_SIZE
 static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1681,11 +1682,24 @@ mp_obj_t py_image_grayscale_to_rgb(mp_obj_t not_tuple)
              mp_obj_new_int(rgb_color.blue)});
 }
 
-mp_obj_t py_image_load_image(mp_obj_t path_obj)
+mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    mp_obj_t image_obj = py_image(0, 0, 0, 0);
-    imlib_load_image(py_image_cobj(image_obj), mp_obj_str_get_str(path_obj));
-    return image_obj;
+    image_t image = {0};
+    const char *path = mp_obj_str_get_str(args[0]);
+    int copy_to_fb = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), false);
+
+    if (copy_to_fb) {
+       image.pixels = MAIN_FB()->pixels;
+    }
+
+    imlib_load_image(&image, path);
+
+    if (copy_to_fb) {
+        fb->w   = image.w;
+        fb->h   = image.h;
+        fb->bpp = image.bpp;
+    }
+    return py_image_from_struct(&image);
 }
 
 mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -1875,7 +1889,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_lab_to_rgb_obj, py_image_lab_to_rgb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_rgb_to_grayscale_obj, py_image_rgb_to_grayscale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_grayscale_to_rgb_obj, py_image_grayscale_to_rgb);
 /* Image Module Functions */
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_load_image_obj, py_image_load_image);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_image_obj, 1, py_image_load_image);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 2, py_image_load_descriptor);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 3, py_image_save_descriptor);
