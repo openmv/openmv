@@ -15,10 +15,10 @@ sensor.set_framesize(sensor.QQVGA)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load image
-img = image.Image("/image.pgm")
+img = image.Image("/image.pgm", copy_to_fb=True)
 
-# Copy image to framebuffer
-img.copy_to_fb()
+# Add drawing code here.
+# img.draw_line(...)
 
-# Update drawing
+# Flush FB
 sensor.snapshot()
