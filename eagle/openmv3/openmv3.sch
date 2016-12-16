@@ -6,36 +6,36 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="yes" altdistance="0.025" altunitdist="inch" altunit="inch"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
-<layer number="1" name="Top" color="4" fill="1" visible="yes" active="no"/>
-<layer number="2" name="Route2" color="1" fill="1" visible="yes" active="no"/>
-<layer number="3" name="Route3" color="4" fill="3" visible="yes" active="no"/>
-<layer number="4" name="Route4" color="1" fill="4" visible="yes" active="no"/>
-<layer number="5" name="Route5" color="4" fill="4" visible="yes" active="no"/>
-<layer number="6" name="Route6" color="1" fill="8" visible="yes" active="no"/>
-<layer number="7" name="Route7" color="4" fill="8" visible="yes" active="no"/>
-<layer number="8" name="Route8" color="1" fill="2" visible="yes" active="no"/>
-<layer number="9" name="Route9" color="4" fill="2" visible="yes" active="no"/>
-<layer number="10" name="Route10" color="1" fill="7" visible="yes" active="no"/>
-<layer number="11" name="Route11" color="4" fill="7" visible="yes" active="no"/>
-<layer number="12" name="Route12" color="1" fill="5" visible="yes" active="no"/>
-<layer number="13" name="Route13" color="4" fill="5" visible="yes" active="no"/>
-<layer number="14" name="Route14" color="1" fill="6" visible="yes" active="no"/>
-<layer number="15" name="Route15" color="4" fill="1" visible="yes" active="no"/>
-<layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="no"/>
-<layer number="17" name="Pads" color="2" fill="1" visible="yes" active="no"/>
-<layer number="18" name="Vias" color="2" fill="1" visible="yes" active="no"/>
-<layer number="19" name="Unrouted" color="6" fill="1" visible="yes" active="no"/>
-<layer number="20" name="Dimension" color="14" fill="1" visible="yes" active="no"/>
-<layer number="21" name="tPlace" color="7" fill="1" visible="yes" active="no"/>
-<layer number="22" name="bPlace" color="7" fill="1" visible="yes" active="no"/>
-<layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="no"/>
-<layer number="24" name="bOrigins" color="15" fill="1" visible="yes" active="no"/>
-<layer number="25" name="tNames" color="7" fill="1" visible="yes" active="no"/>
-<layer number="26" name="bNames" color="7" fill="1" visible="yes" active="no"/>
-<layer number="27" name="tValues" color="7" fill="1" visible="yes" active="no"/>
-<layer number="28" name="bValues" color="7" fill="1" visible="yes" active="no"/>
+<layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
+<layer number="2" name="Route2" color="1" fill="1" visible="no" active="no"/>
+<layer number="3" name="Route3" color="4" fill="3" visible="no" active="no"/>
+<layer number="4" name="Route4" color="1" fill="4" visible="no" active="no"/>
+<layer number="5" name="Route5" color="4" fill="4" visible="no" active="no"/>
+<layer number="6" name="Route6" color="1" fill="8" visible="no" active="no"/>
+<layer number="7" name="Route7" color="4" fill="8" visible="no" active="no"/>
+<layer number="8" name="Route8" color="1" fill="2" visible="no" active="no"/>
+<layer number="9" name="Route9" color="4" fill="2" visible="no" active="no"/>
+<layer number="10" name="Route10" color="1" fill="7" visible="no" active="no"/>
+<layer number="11" name="Route11" color="4" fill="7" visible="no" active="no"/>
+<layer number="12" name="Route12" color="1" fill="5" visible="no" active="no"/>
+<layer number="13" name="Route13" color="4" fill="5" visible="no" active="no"/>
+<layer number="14" name="Route14" color="1" fill="6" visible="no" active="no"/>
+<layer number="15" name="Route15" color="4" fill="1" visible="no" active="no"/>
+<layer number="16" name="Bottom" color="1" fill="1" visible="no" active="no"/>
+<layer number="17" name="Pads" color="2" fill="1" visible="no" active="no"/>
+<layer number="18" name="Vias" color="2" fill="1" visible="no" active="no"/>
+<layer number="19" name="Unrouted" color="6" fill="1" visible="no" active="no"/>
+<layer number="20" name="Dimension" color="14" fill="1" visible="no" active="no"/>
+<layer number="21" name="tPlace" color="7" fill="1" visible="no" active="no"/>
+<layer number="22" name="bPlace" color="7" fill="1" visible="no" active="no"/>
+<layer number="23" name="tOrigins" color="15" fill="1" visible="no" active="no"/>
+<layer number="24" name="bOrigins" color="15" fill="1" visible="no" active="no"/>
+<layer number="25" name="tNames" color="7" fill="1" visible="no" active="no"/>
+<layer number="26" name="bNames" color="7" fill="1" visible="no" active="no"/>
+<layer number="27" name="tValues" color="7" fill="1" visible="no" active="no"/>
+<layer number="28" name="bValues" color="7" fill="1" visible="no" active="no"/>
 <layer number="29" name="tStop" color="7" fill="3" visible="no" active="no"/>
 <layer number="30" name="bStop" color="7" fill="6" visible="no" active="no"/>
 <layer number="31" name="tCream" color="7" fill="4" visible="no" active="no"/>
@@ -44,8 +44,8 @@
 <layer number="34" name="bFinish" color="6" fill="6" visible="no" active="no"/>
 <layer number="35" name="tGlue" color="7" fill="4" visible="no" active="no"/>
 <layer number="36" name="bGlue" color="7" fill="5" visible="no" active="no"/>
-<layer number="37" name="tTest" color="7" fill="1" visible="yes" active="no"/>
-<layer number="38" name="bTest" color="7" fill="1" visible="yes" active="no"/>
+<layer number="37" name="tTest" color="7" fill="1" visible="no" active="no"/>
+<layer number="38" name="bTest" color="7" fill="1" visible="no" active="no"/>
 <layer number="39" name="tKeepout" color="4" fill="11" visible="no" active="no"/>
 <layer number="40" name="bKeepout" color="1" fill="11" visible="no" active="no"/>
 <layer number="41" name="tRestrict" color="4" fill="10" visible="no" active="no"/>
@@ -53,19 +53,19 @@
 <layer number="43" name="vRestrict" color="2" fill="10" visible="no" active="no"/>
 <layer number="44" name="Drills" color="7" fill="1" visible="no" active="no"/>
 <layer number="45" name="Holes" color="7" fill="1" visible="no" active="no"/>
-<layer number="46" name="Milling" color="3" fill="1" visible="yes" active="no"/>
-<layer number="47" name="Measures" color="7" fill="1" visible="yes" active="no"/>
-<layer number="48" name="Document" color="7" fill="1" visible="yes" active="no"/>
-<layer number="49" name="Reference" color="7" fill="1" visible="yes" active="no"/>
-<layer number="50" name="dxf" color="7" fill="1" visible="yes" active="no"/>
-<layer number="51" name="tDocu" color="7" fill="1" visible="yes" active="no"/>
-<layer number="52" name="bDocu" color="7" fill="1" visible="yes" active="no"/>
-<layer number="53" name="tGND_GNDA" color="7" fill="9" visible="yes" active="no"/>
-<layer number="54" name="bGND_GNDA" color="1" fill="9" visible="yes" active="no"/>
-<layer number="56" name="wert" color="7" fill="1" visible="yes" active="no"/>
-<layer number="57" name="tCAD" color="7" fill="1" visible="yes" active="no"/>
-<layer number="59" name="Invisible" color="7" fill="1" visible="yes" active="no"/>
-<layer number="61" name="stand" color="7" fill="1" visible="yes" active="no"/>
+<layer number="46" name="Milling" color="3" fill="1" visible="no" active="no"/>
+<layer number="47" name="Measures" color="7" fill="1" visible="no" active="no"/>
+<layer number="48" name="Document" color="7" fill="1" visible="no" active="no"/>
+<layer number="49" name="Reference" color="7" fill="1" visible="no" active="no"/>
+<layer number="50" name="dxf" color="7" fill="1" visible="no" active="no"/>
+<layer number="51" name="tDocu" color="7" fill="1" visible="no" active="no"/>
+<layer number="52" name="bDocu" color="7" fill="1" visible="no" active="no"/>
+<layer number="53" name="tGND_GNDA" color="7" fill="9" visible="no" active="no"/>
+<layer number="54" name="bGND_GNDA" color="1" fill="9" visible="no" active="no"/>
+<layer number="56" name="wert" color="7" fill="1" visible="no" active="no"/>
+<layer number="57" name="tCAD" color="7" fill="1" visible="no" active="no"/>
+<layer number="59" name="Invisible" color="7" fill="1" visible="no" active="no"/>
+<layer number="61" name="stand" color="7" fill="1" visible="no" active="no"/>
 <layer number="91" name="Nets" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="92" name="Busses" color="1" fill="1" visible="yes" active="yes"/>
 <layer number="93" name="Pins" color="2" fill="1" visible="no" active="yes"/>
@@ -5652,13 +5652,13 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="H1" library="holes" deviceset="MOUNT-PAD-ROUND" device="2.8"/>
 <part name="GND10" library="supply1" deviceset="GND" device=""/>
 <part name="P+5" library="supply1" deviceset="VCC" device=""/>
-<part name="RN6" library="resistor-dil" deviceset="4R-N" device="EXBV8V" value="10K">
+<part name="RN3" library="resistor-dil" deviceset="4R-N" device="EXBV8V" value="10K">
 <attribute name="MF" value=""/>
 <attribute name="MPN" value=""/>
 <attribute name="OC_FARNELL" value="unknown"/>
 <attribute name="OC_NEWARK" value="unknown"/>
 </part>
-<part name="RN5" library="resistor-dil" deviceset="4R-N" device="EXBV8V" value="10K">
+<part name="RN2" library="resistor-dil" deviceset="4R-N" device="EXBV8V" value="10K">
 <attribute name="MF" value=""/>
 <attribute name="MPN" value=""/>
 <attribute name="OC_FARNELL" value="unknown"/>
@@ -5670,7 +5670,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="GND12" library="SparkFun" deviceset="GND" device=""/>
 <part name="Q1" library="sfe" deviceset="MOSFET-NCHANNEL" device="SMD" value="MOSFET"/>
 <part name="GND36" library="iofault" deviceset="GND" device=""/>
-<part name="RN7" library="resistor-dil" deviceset="2R-N" device="EXBV4V" value="10K"/>
+<part name="RN4" library="resistor-dil" deviceset="2R-N" device="EXBV4V" value="4.7K"/>
 <part name="LED1" library="sfe" deviceset="LED-TRICOLOR" device="" value="LED-TRICOLOR"/>
 <part name="P+11" library="SparkFun" deviceset="VCC" device=""/>
 <part name="Y1" library="mux" deviceset="CRYSTAL" device="2.5X2.0" value="7S-12.000MAHE-T"/>
@@ -5690,7 +5690,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="C1" library="sfe" deviceset="CAP" device="0805" value="22uF"/>
 <part name="GND5" library="SparkFun" deviceset="GND" device=""/>
 <part name="P+2" library="supply1" deviceset="VCC" device=""/>
-<part name="R1" library="sfe" deviceset="RESISTOR" device="0603-RES" value="5ohm"/>
+<part name="R1" library="sfe" deviceset="RESISTOR" device="0603-RES" value="10R"/>
 <part name="P+6" library="mux" deviceset="VCC" device=""/>
 <part name="C2" library="sfe" deviceset="CAP" device="0805" value="22uF"/>
 <part name="F4" library="sfe" deviceset="FIDUCIAL" device="1X2"/>
@@ -5706,7 +5706,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <part name="U2" library="omnivision" deviceset="OV7725" device=""/>
 <part name="U1" library="stm32" deviceset="STM32F746" device="LQFP100" value="STM32F765VGT6"/>
 <part name="P+12" library="SparkFun" deviceset="VCC" device=""/>
-<part name="X2" library="MF_Connectors" deviceset="USB" device="_MICRO_RIGHT" value="MICROUSB-RIGHT"/>
+<part name="X2" library="MF_Connectors" deviceset="USB" device="_MICRO_RIGHT" value="MF-CON-MICROUSB-RIGHT"/>
 <part name="JP3" library="pinhead" deviceset="PINHD-1X5" device=""/>
 <part name="GND22" library="SparkFun" deviceset="GND" device=""/>
 <part name="R3" library="sfe" deviceset="RESISTOR" device="0603-RES" value="10k"/>
@@ -5824,35 +5824,35 @@ Source: Fairchild .. BAT54.pdf</description>
 <instance part="H1" gate="G$1" x="312.42" y="-17.78"/>
 <instance part="GND10" gate="1" x="322.58" y="238.76"/>
 <instance part="P+5" gate="VCC" x="414.02" y="109.22"/>
-<instance part="RN6" gate="A" x="375.92" y="193.04" smashed="yes">
+<instance part="RN3" gate="A" x="375.92" y="193.04" smashed="yes">
 <attribute name="VALUE" x="378.46" y="189.992" size="1.778" layer="96"/>
 <attribute name="NAME" x="374.015" y="192.532" size="1.016" layer="95"/>
 </instance>
-<instance part="RN6" gate="B" x="375.92" y="177.8" smashed="yes">
+<instance part="RN3" gate="B" x="375.92" y="177.8" smashed="yes">
 <attribute name="VALUE" x="378.46" y="174.752" size="1.778" layer="96"/>
 <attribute name="NAME" x="374.015" y="177.292" size="1.016" layer="95"/>
 </instance>
-<instance part="RN6" gate="C" x="375.92" y="175.26" smashed="yes">
+<instance part="RN3" gate="C" x="375.92" y="175.26" smashed="yes">
 <attribute name="VALUE" x="378.46" y="172.212" size="1.778" layer="96"/>
 <attribute name="NAME" x="374.015" y="174.752" size="1.016" layer="95"/>
 </instance>
-<instance part="RN6" gate="D" x="375.92" y="187.96" smashed="yes">
+<instance part="RN3" gate="D" x="375.92" y="187.96" smashed="yes">
 <attribute name="VALUE" x="378.46" y="184.912" size="1.778" layer="96"/>
 <attribute name="NAME" x="374.015" y="187.452" size="1.016" layer="95"/>
 </instance>
-<instance part="RN5" gate="A" x="50.8" y="205.74" smashed="yes" rot="R270">
+<instance part="RN2" gate="A" x="50.8" y="205.74" smashed="yes" rot="R270">
 <attribute name="VALUE" x="47.752" y="203.2" size="1.778" layer="96" rot="R270"/>
 <attribute name="NAME" x="50.292" y="207.645" size="1.016" layer="95" rot="R270"/>
 </instance>
-<instance part="RN5" gate="B" x="22.86" y="154.94" smashed="yes" rot="R90">
+<instance part="RN2" gate="B" x="22.86" y="154.94" smashed="yes" rot="R90">
 <attribute name="VALUE" x="25.908" y="157.48" size="1.778" layer="96" rot="R90"/>
 <attribute name="NAME" x="23.368" y="153.035" size="1.016" layer="95" rot="R90"/>
 </instance>
-<instance part="RN5" gate="C" x="375.92" y="182.88" smashed="yes">
+<instance part="RN2" gate="C" x="375.92" y="182.88" smashed="yes">
 <attribute name="VALUE" x="378.46" y="179.832" size="1.778" layer="96"/>
 <attribute name="NAME" x="374.015" y="182.372" size="1.016" layer="95"/>
 </instance>
-<instance part="RN5" gate="D" x="375.92" y="180.34" smashed="yes">
+<instance part="RN2" gate="D" x="375.92" y="180.34" smashed="yes">
 <attribute name="VALUE" x="378.46" y="177.292" size="1.778" layer="96"/>
 <attribute name="NAME" x="374.015" y="179.832" size="1.016" layer="95"/>
 </instance>
@@ -5865,8 +5865,8 @@ Source: Fairchild .. BAT54.pdf</description>
 <instance part="GND12" gate="1" x="309.88" y="30.48"/>
 <instance part="Q1" gate="G$1" x="297.18" y="162.56" rot="R270"/>
 <instance part="GND36" gate="1" x="287.02" y="147.32"/>
-<instance part="RN7" gate="A" x="406.4" y="73.66"/>
-<instance part="RN7" gate="B" x="406.4" y="78.74"/>
+<instance part="RN4" gate="A" x="406.4" y="73.66"/>
+<instance part="RN4" gate="B" x="406.4" y="78.74"/>
 <instance part="LED1" gate="G$1" x="317.5" y="200.66"/>
 <instance part="P+11" gate="1" x="345.44" y="205.74"/>
 <instance part="Y1" gate="G$1" x="33.02" y="149.86"/>
@@ -6179,7 +6179,7 @@ Source: Fairchild .. BAT54.pdf</description>
 </segment>
 <segment>
 <pinref part="GND45" gate="1" pin="GND"/>
-<pinref part="RN5" gate="B" pin="1"/>
+<pinref part="RN2" gate="B" pin="1"/>
 <wire x1="22.86" y1="149.86" x2="22.86" y2="132.08" width="0.1524" layer="91"/>
 </segment>
 <segment>
@@ -6199,7 +6199,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <wire x1="50.8" y1="165.1" x2="63.5" y2="165.1" width="0.1524" layer="91"/>
 <label x="53.34" y="165.1" size="1.778" layer="95"/>
 <pinref part="U1" gate="G$1" pin="NRST"/>
-<pinref part="RN5" gate="A" pin="2"/>
+<pinref part="RN2" gate="A" pin="2"/>
 <wire x1="50.8" y1="165.1" x2="50.8" y2="200.66" width="0.1524" layer="91"/>
 </segment>
 <segment>
@@ -6242,7 +6242,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <wire x1="63.5" y1="162.56" x2="22.86" y2="162.56" width="0.1524" layer="91"/>
 <label x="53.34" y="162.56" size="1.778" layer="95"/>
 <pinref part="U1" gate="G$1" pin="BOOT0"/>
-<pinref part="RN5" gate="B" pin="2"/>
+<pinref part="RN2" gate="B" pin="2"/>
 <wire x1="22.86" y1="162.56" x2="22.86" y2="160.02" width="0.1524" layer="91"/>
 </segment>
 <segment>
@@ -6367,18 +6367,18 @@ Source: Fairchild .. BAT54.pdf</description>
 <wire x1="368.3" y1="182.88" x2="368.3" y2="175.26" width="0.1524" layer="91"/>
 <wire x1="368.3" y1="175.26" x2="368.3" y2="167.64" width="0.1524" layer="91"/>
 <junction x="368.3" y="175.26"/>
-<pinref part="RN6" gate="A" pin="1"/>
-<pinref part="RN6" gate="B" pin="1"/>
-<pinref part="RN6" gate="C" pin="1"/>
-<pinref part="RN6" gate="D" pin="1"/>
-<pinref part="RN5" gate="D" pin="1"/>
+<pinref part="RN3" gate="A" pin="1"/>
+<pinref part="RN3" gate="B" pin="1"/>
+<pinref part="RN3" gate="C" pin="1"/>
+<pinref part="RN3" gate="D" pin="1"/>
+<pinref part="RN2" gate="D" pin="1"/>
 <wire x1="360.68" y1="198.12" x2="360.68" y2="167.64" width="0.1524" layer="91"/>
 <pinref part="X1" gate="G$1" pin="VDD"/>
 <wire x1="396.24" y1="198.12" x2="368.3" y2="198.12" width="0.1524" layer="91"/>
 <wire x1="368.3" y1="198.12" x2="360.68" y2="198.12" width="0.1524" layer="91"/>
 <junction x="368.3" y="193.04"/>
 <pinref part="C1" gate="G$1" pin="1"/>
-<pinref part="RN5" gate="C" pin="1"/>
+<pinref part="RN2" gate="C" pin="1"/>
 </segment>
 <segment>
 <wire x1="411.48" y1="73.66" x2="414.02" y2="73.66" width="0.1524" layer="91"/>
@@ -6387,8 +6387,8 @@ Source: Fairchild .. BAT54.pdf</description>
 <wire x1="411.48" y1="78.74" x2="414.02" y2="78.74" width="0.1524" layer="91"/>
 <pinref part="P+5" gate="VCC" pin="VCC"/>
 <junction x="414.02" y="78.74"/>
-<pinref part="RN7" gate="B" pin="2"/>
-<pinref part="RN7" gate="A" pin="2"/>
+<pinref part="RN4" gate="B" pin="2"/>
+<pinref part="RN4" gate="A" pin="2"/>
 </segment>
 <segment>
 <pinref part="L1" gate="G$1" pin="2"/>
@@ -6437,7 +6437,7 @@ Source: Fairchild .. BAT54.pdf</description>
 </segment>
 <segment>
 <pinref part="P+2" gate="VCC" pin="VCC"/>
-<pinref part="RN5" gate="A" pin="1"/>
+<pinref part="RN2" gate="A" pin="1"/>
 <wire x1="50.8" y1="210.82" x2="50.8" y2="220.98" width="0.1524" layer="91"/>
 </segment>
 <segment>
@@ -6658,7 +6658,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <pinref part="X1" gate="G$1" pin="CD"/>
 <wire x1="396.24" y1="193.04" x2="381" y2="193.04" width="0.1524" layer="91"/>
 <label x="383.54" y="193.04" size="1.778" layer="95"/>
-<pinref part="RN6" gate="A" pin="2"/>
+<pinref part="RN3" gate="A" pin="2"/>
 </segment>
 <segment>
 <wire x1="63.5" y1="111.76" x2="48.26" y2="111.76" width="0.1524" layer="91"/>
@@ -6671,7 +6671,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <pinref part="X1" gate="G$1" pin="DAT0"/>
 <wire x1="396.24" y1="182.88" x2="381" y2="182.88" width="0.1524" layer="91"/>
 <label x="383.54" y="182.88" size="1.778" layer="95"/>
-<pinref part="RN5" gate="C" pin="2"/>
+<pinref part="RN2" gate="C" pin="2"/>
 </segment>
 <segment>
 <wire x1="203.2" y1="172.72" x2="218.44" y2="172.72" width="0.1524" layer="91"/>
@@ -6684,7 +6684,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <pinref part="X1" gate="G$1" pin="DAT1"/>
 <wire x1="396.24" y1="180.34" x2="381" y2="180.34" width="0.1524" layer="91"/>
 <label x="383.54" y="180.34" size="1.778" layer="95"/>
-<pinref part="RN5" gate="D" pin="2"/>
+<pinref part="RN2" gate="D" pin="2"/>
 </segment>
 <segment>
 <wire x1="203.2" y1="170.18" x2="218.44" y2="170.18" width="0.1524" layer="91"/>
@@ -6697,7 +6697,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <pinref part="X1" gate="G$1" pin="DAT2"/>
 <wire x1="396.24" y1="177.8" x2="381" y2="177.8" width="0.1524" layer="91"/>
 <label x="383.54" y="177.8" size="1.778" layer="95"/>
-<pinref part="RN6" gate="B" pin="2"/>
+<pinref part="RN3" gate="B" pin="2"/>
 </segment>
 <segment>
 <wire x1="203.2" y1="167.64" x2="218.44" y2="167.64" width="0.1524" layer="91"/>
@@ -6722,7 +6722,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <pinref part="X1" gate="G$1" pin="CMD"/>
 <wire x1="396.24" y1="187.96" x2="381" y2="187.96" width="0.1524" layer="91"/>
 <label x="383.54" y="187.96" size="1.778" layer="95"/>
-<pinref part="RN6" gate="D" pin="2"/>
+<pinref part="RN3" gate="D" pin="2"/>
 </segment>
 <segment>
 <wire x1="203.2" y1="144.78" x2="218.44" y2="144.78" width="0.1524" layer="91"/>
@@ -6795,7 +6795,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <pinref part="X1" gate="G$1" pin="DAT3/CD"/>
 <wire x1="396.24" y1="175.26" x2="381" y2="175.26" width="0.1524" layer="91"/>
 <label x="383.54" y="175.26" size="1.778" layer="95"/>
-<pinref part="RN6" gate="C" pin="2"/>
+<pinref part="RN3" gate="C" pin="2"/>
 </segment>
 <segment>
 <wire x1="203.2" y1="165.1" x2="218.44" y2="165.1" width="0.1524" layer="91"/>
@@ -6913,7 +6913,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <segment>
 <wire x1="381" y1="78.74" x2="401.32" y2="78.74" width="0.1524" layer="91"/>
 <label x="386.08" y="78.74" size="1.778" layer="95"/>
-<pinref part="RN7" gate="B" pin="1"/>
+<pinref part="RN4" gate="B" pin="1"/>
 <pinref part="U2" gate="G$1" pin="SCL"/>
 </segment>
 </net>
@@ -6926,7 +6926,7 @@ Source: Fairchild .. BAT54.pdf</description>
 <segment>
 <wire x1="381" y1="73.66" x2="401.32" y2="73.66" width="0.1524" layer="91"/>
 <label x="386.08" y="73.66" size="1.778" layer="95"/>
-<pinref part="RN7" gate="A" pin="1"/>
+<pinref part="RN4" gate="A" pin="1"/>
 <pinref part="U2" gate="G$1" pin="SDA"/>
 </segment>
 </net>
