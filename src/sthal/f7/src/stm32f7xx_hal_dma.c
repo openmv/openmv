@@ -440,6 +440,19 @@ HAL_StatusTypeDef HAL_DMA_Start_IT(DMA_HandleTypeDef *hdma, uint32_t SrcAddress,
   /* Configure the source, destination address and the data length */
   DMA_SetConfig(hdma, SrcAddress, DstAddress, DataLength);
 
+  #define CACHEABLE_BUF(addr) (addr >= 0x20020000)
+  // Clean cache on M7
+  // Note: I think for the DMA_MEMORY_TO_MEMORY case an invalidate is needed after the DMA transfer,
+  // also the code can be smarter and check if the src/dst is aligned to cache line and flush using the address and size.
+  if (hdma->Init.Direction == DMA_PERIPH_TO_MEMORY) {
+    if (CACHEABLE_BUF(DstAddress)) {
+      SCB_CleanInvalidateDCache();
+    }
+  } else if (CACHEABLE_BUF(SrcAddress)) {
+      //DMA_MEMORY_TO_PERIPH || DMA_MEMORY_TO_MEMORY
+    SCB_CleanDCache();
+  }
+
   /* Enable the transfer complete interrupt */
   __HAL_DMA_ENABLE_IT(hdma, DMA_IT_TC);
 
