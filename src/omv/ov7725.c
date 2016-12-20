@@ -50,7 +50,7 @@ static const uint8_t default_regs[][2] = {
     {COM6,          0xC5},
     {COM9,          0x21},
     {BDBASE,        0x7F},
-    {DBSTEP,        0x03},
+    {BDSTEP,        0x03},
     {AEW,           0x96},
     {AEB,           0x64},
     {VPT,           0xA1},
@@ -98,7 +98,7 @@ static const uint8_t default_regs[][2] = {
     {DM_LNL,        0x00},
     {DM_LNH,        0x00},
     {BDBASE,        0x7F},
-    {DBSTEP,        0x03},
+    {BDSTEP,        0x03},
 
     // Lens Correction, should be tuned with real camera module
     {LC_RADI,       0x10},

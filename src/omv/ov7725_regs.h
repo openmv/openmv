@@ -137,7 +137,7 @@
 #define COM11_SNGL_XFR_TRIG     0x01 /* Single frame transfer trigger */
 
 #define BDBASE                  0x22 /* Banding Filter Minimum AEC Value */
-#define DBSTEP                  0x23 /* Banding Filter Maximum Step */
+#define BDSTEP                  0x23 /* Banding Filter Maximum Step */
 #define AEW                     0x24 /* AGC/AEC - Stable Operating Region (Upper Limit) */
 #define AEB                     0x25 /* AGC/AEC - Stable Operating Region (Lower Limit) */
 #define VPT                     0x26 /* AGC/AEC Fast Mode Operating Region */
