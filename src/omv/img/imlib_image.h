@@ -232,10 +232,10 @@ void imlib_image_intersected(imlib_image_t *ptr, utils_rectangle_t *rect);
 #define IMLIB_IMAGE_COMPUTE_TARGET_SIZE_SCALE_FACTOR(target_size, source_rect) \
 typeof (target_size) _target_size = (target_size); \
 typeof (source_rect) _source_rect = (source_rect); \
-size_t IMLIB_IMAGE_X_SOURCE_OFFSET = _source_rect->p.x; \
-size_t IMLIB_IMAGE_Y_SOURCE_OFFSET = _source_rect->p.y; \
-size_t IMLIB_IMAGE_X_TARGET_OFFSET = 0; \
-size_t IMLIB_IMAGE_Y_TARGET_OFFSET = 0; \
+int IMLIB_IMAGE_X_SOURCE_OFFSET = _source_rect->p.x; \
+int IMLIB_IMAGE_Y_SOURCE_OFFSET = _source_rect->p.y; \
+int IMLIB_IMAGE_X_TARGET_OFFSET = 0; \
+int IMLIB_IMAGE_Y_TARGET_OFFSET = 0; \
 float IMLIB_IMAGE_X_RATIO = ((float) _source_rect->s.w) / ((float) _target_size->w); \
 float IMLIB_IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_size->h); \
 ({ 0; })
@@ -243,10 +243,10 @@ float IMLIB_IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_size-
 #define IMLIB_IMAGE_COMPUTE_TARGET_RECT_SCALE_FACTOR(target_rect, source_rect) \
 typeof (target_rect) _target_rect = (target_rect); \
 typeof (source_rect) _source_rect = (source_rect); \
-size_t IMLIB_IMAGE_X_SOURCE_OFFSET = _source_rect->p.x; \
-size_t IMLIB_IMAGE_Y_SOURCE_OFFSET = _source_rect->p.y; \
-size_t IMLIB_IMAGE_X_TARGET_OFFSET = _target_rect->p.x; \
-size_t IMLIB_IMAGE_Y_TARGET_OFFSET = _target_rect->p.y; \
+int IMLIB_IMAGE_X_SOURCE_OFFSET = _source_rect->p.x; \
+int IMLIB_IMAGE_Y_SOURCE_OFFSET = _source_rect->p.y; \
+int IMLIB_IMAGE_X_TARGET_OFFSET = _target_rect->p.x; \
+int IMLIB_IMAGE_Y_TARGET_OFFSET = _target_rect->p.y; \
 float IMLIB_IMAGE_X_RATIO = ((float) _source_rect->s.w) / ((float) _target_rect->s.w); \
 float IMLIB_IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h); \
 ({ 0; })
@@ -406,5 +406,9 @@ float IMLIB_IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect-
 })
 
 #define IMLIB_IMAGE_GET_SCALED_RGB565_PIXEL_FAST(row_ptr, x) IMLIB_IMAGE_GET_RGB565_PIXEL_FAST((row_ptr), ((size_t) ((IMLIB_IMAGE_X_RATIO * ((x) - IMLIB_IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMLIB_IMAGE_X_SOURCE_OFFSET)
+
+// for utils_bitmap //
+#define COMPUTE_BITMAP_ROW_INDEX(image, y) (((image)->geometry.w)*(y))
+#define COMPTUE_BITMAP_INDEX(row_index, x) ((row_index)+(x))
 
 #endif /* __IMLIB_IMAGE_H__ */

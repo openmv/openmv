@@ -15,14 +15,14 @@ typedef struct utils_rectangle
 }
 utils_rectangle_t;
 
-void utils_rectangle_init(utils_rectangle_t *ptr, unsigned int x, unsigned int y, unsigned int w, unsigned int h);
+void utils_rectangle_init(utils_rectangle_t *ptr, int x, int y, unsigned int w, unsigned int h);
 void utils_rectangle_copy(utils_rectangle_t *dst, utils_rectangle_t *src);
-unsigned int utils_rectangle_get_x(utils_rectangle_t *ptr);
-unsigned int utils_rectangle_get_y(utils_rectangle_t *ptr);
+int utils_rectangle_get_x(utils_rectangle_t *ptr);
+int utils_rectangle_get_y(utils_rectangle_t *ptr);
 unsigned int utils_rectangle_get_w(utils_rectangle_t *ptr);
 unsigned int utils_rectangle_get_h(utils_rectangle_t *ptr);
-void utils_rectangle_set_x(utils_rectangle_t *ptr, unsigned int x);
-void utils_rectangle_set_y(utils_rectangle_t *ptr, unsigned int y);
+void utils_rectangle_set_x(utils_rectangle_t *ptr, int x);
+void utils_rectangle_set_y(utils_rectangle_t *ptr, int y);
 void utils_rectangle_set_w(utils_rectangle_t *ptr, unsigned int w);
 void utils_rectangle_set_h(utils_rectangle_t *ptr, unsigned int h);
 bool utils_rectangle_equal(utils_rectangle_t *ptr0, utils_rectangle_t *ptr1);

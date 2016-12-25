@@ -24,6 +24,8 @@ void utils_bitmap_bit_set_known_clear(utils_bitmap_t *ptr, size_t index); // No 
 void utils_bitmap_bit_clear(utils_bitmap_t *ptr, size_t index); // No out-of-bounds protection.
 void utils_bitmap_bit_clear_known_set(utils_bitmap_t *ptr, size_t index); // No out-of-bounds protection.
 void utils_bitmap_bit_put(utils_bitmap_t *ptr, size_t index, bool value); // No out-of-bounds protection.
+void utils_bitmap_bit_put_known_clear(utils_bitmap_t *ptr, size_t index, bool value); // No out-of-bounds protection.
+void utils_bitmap_bit_put_known_set(utils_bitmap_t *ptr, size_t index, bool value); // No out-of-bounds protection.
 bool utils_bitmap_bit_get(utils_bitmap_t *ptr, size_t index); // No out-of-bounds protection.
 
 #endif /* __UTILS_BITMAP_H__ */

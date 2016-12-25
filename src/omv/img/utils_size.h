@@ -7,6 +7,8 @@
 #define __UTILS_SIZE_H__
 #include <stdbool.h>
 #include <stdint.h>
+#define UINT16_T_MAX_VALUE 65535
+#define UINT16_T_MIN_VALUE 0
 
 typedef struct utils_size
 {

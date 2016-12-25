@@ -69,11 +69,11 @@ void find_qrcodes(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_
 
         if(quirc_decode(code, data) == QUIRC_SUCCESS) {
             find_qrcodes_linkedlist_lnk_data_t lnk_data;
-            utils_rectangle_init(&(lnk_data.rect), code->corners[0].x, code->corners[0].y, 1, 1);
+            utils_rectangle_init(&(lnk_data.rect), code->corners[0].x, code->corners[0].y, 0, 0);
 
             for (size_t k = 1; k < (sizeof(code->corners) / sizeof(code->corners[0])); k++) {
                 utils_rectangle_t temp;
-                utils_rectangle_init(&temp, code->corners[k].x, code->corners[k].y, 1, 1);
+                utils_rectangle_init(&temp, code->corners[k].x, code->corners[k].y, 0, 0);
                 utils_rectangle_united(&(lnk_data.rect), &temp);
             }
 

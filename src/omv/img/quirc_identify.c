@@ -179,7 +179,7 @@ typedef void (*span_func_t)(void *user_data, int y, int left, int right);
 
 typedef struct xylf
 {
-    uint16_t x, y, l, r;
+    int16_t x, y, l, r;
 }
 xylf_t;
 
@@ -187,7 +187,7 @@ static void flood_fill_seed(struct quirc *q, int x, int y, int from, int to,
                             span_func_t func, void *user_data,
                             int depth)
 {
-    size_t lifo_len = (q->w > 1) ? (((q->w - 1) * 2) + (q->h * 2)) : q->h; // use perimeter...
+    size_t lifo_len = (q->w * 2) + (q->h * 2); // Use the perimeter as the flood fill max depth.
     utils_lifo_t lifo;
     utils_lifo_alloc(&lifo, lifo_len, sizeof(xylf_t));
 

@@ -37,6 +37,20 @@ imlib_color_thresholds_linkedlist_lnk_data_t;
 #define IMLIB_COLOR_B8_MIN 0
 #define IMLIB_COLOR_B8_MAX 255
 
+#define IMLIB_COLOR_L_MIN 0
+#define IMLIB_COLOR_L_MAX 100
+#define IMLIB_COLOR_A_MIN -128
+#define IMLIB_COLOR_A_MAX 127
+#define IMLIB_COLOR_B_MIN -128
+#define IMLIB_COLOR_B_MAX 127
+
+#define IMLIB_COLOR_Y_MIN 0
+#define IMLIB_COLOR_Y_MAX 240
+#define IMLIB_COLOR_U_MIN -128
+#define IMLIB_COLOR_V_MAX 127
+#define IMLIB_COLOR_U_MIN -128
+#define IMLIB_COLOR_V_MAX 127
+
 extern const uint8_t imlib_color_r5_to_r8_table[32];
 extern const uint8_t imlib_color_g6_to_g8_table[64];
 #define imlib_color_b5_to_b8_table imlib_color_r5_to_r8_table
@@ -49,9 +63,9 @@ extern const uint8_t imlib_color_r8_to_r5_table[256];
 extern const uint8_t imlib_color_g8_to_g6_table[256];
 #define imlib_color_b8_to_b5_table imlib_color_r8_to_r5_table
 
-#define IMLIB_COLOR_R8_TO_R5(color) imlib_color_r8_to_r5_table[_color]
-#define IMLIB_COLOR_G8_TO_G6(color) imlib_color_g8_to_g6_table[_color]
-#define IMLIB_COLOR_B8_TO_B5(color) imlib_color_b8_to_b5_table[_color]
+#define IMLIB_COLOR_R8_TO_R5(color) imlib_color_r8_to_r5_table[color]
+#define IMLIB_COLOR_G8_TO_G6(color) imlib_color_g8_to_g6_table[color]
+#define IMLIB_COLOR_B8_TO_B5(color) imlib_color_b8_to_b5_table[color]
 
 // RGB565 Stuff //
 
@@ -91,9 +105,9 @@ extern const int8_t yuv_table[196608];
 
 #define IMLIB_COLOR_LAB_TO_RGB565(l, a, b) \
 ({ \
-    typeof(l) _l = (l); \
-    typeof(a) _a = (a); \
-    typeof(b) _b = (b); \
+    typeof (l) _l = (l); \
+    typeof (a) _a = (a); \
+    typeof (b) _b = (b); \
     float _x = ((_l + 16) * 0.008621f) + (_a * 0.002f); \
     float _y = ((_l + 16) * 0.008621f); \
     float _z = ((_l + 16) * 0.008621f) - (_b * 0.005f); \
@@ -116,12 +130,12 @@ extern const int8_t yuv_table[196608];
 
 #define IMLIB_COLOR_YUV_TO_RGB565(y, u, v) \
 ({ \
-    typeof(y) _y = (y); \
-    typeof(u) _u = (u); \
-    typeof(v) _v = (v); \
-    unsigned int _r = OTHER_MAX(OTHER_MIN(128 + _y + ((uint32_t((1.402000 * 65536) + 0.5) * _v) >> 16), IMLIB_COLOR_R8_MAX), IMLIB_COLOR_R8_MIN); \
-    unsigned int _g = OTHER_MAX(OTHER_MIN(128 + _y - (((uint32_t((0.344136 * 65536) + 0.5) * _u) + (uint32_t((0.714136 * 65536) + 0.5) * _v)) >> 16), IMLIB_COLOR_G8_MAX), IMLIB_COLOR_G8_MIN); \
-    unsigned int _b = OTHER_MAX(OTHER_MIN(128 + _y + ((uint32_t((1.772000 * 65536) + 0.5) * _u) >> 16), IMLIB_COLOR_B8_MAX), IMLIB_COLOR_B8_MIN); \
+    typeof (y) _y = (y); \
+    typeof (u) _u = (u); \
+    typeof (v) _v = (v); \
+    unsigned int _r = OTHER_MAX(OTHER_MIN(128 + _y + ((((uint32_t) ((1.402000 * 65536) + 0.5)) * _v) >> 16), IMLIB_COLOR_R8_MAX), IMLIB_COLOR_R8_MIN); \
+    unsigned int _g = OTHER_MAX(OTHER_MIN(128 + _y - (((((uint32_t) ((0.344136 * 65536) + 0.5)) * _u) + (((uint32_t) ((0.714136 * 65536) + 0.5)) * _v)) >> 16), IMLIB_COLOR_G8_MAX), IMLIB_COLOR_G8_MIN); \
+    unsigned int _b = OTHER_MAX(OTHER_MIN(128 + _y + ((((uint32_t) ((1.772000 * 65536) + 0.5)) * _u) >> 16), IMLIB_COLOR_B8_MAX), IMLIB_COLOR_B8_MIN); \
     IMLIB_COLOR_R8_G8_B8_TO_RGB565(_r, _g, _b); \
 })
 
@@ -135,18 +149,18 @@ extern const int8_t yuv_table[196608];
 #define IMLIB_COLOR_THRESHOLD_BINARY(pixel, threshold, invert) ((pixel) ^ (invert))
 #define IMLIB_COLOR_THRESHOLD_GRAYSCALE(pixel, threshold, invert) \
 ({ \
-    typeof(pixel) _pixel = (pixel); \
-    typeof(threshold) _threshold = (threshold); \
-    typeof(invert) _invert = (invert); \
+    typeof (pixel) _pixel = (pixel); \
+    typeof (threshold) _threshold = (threshold); \
+    typeof (invert) _invert = (invert); \
     ((_threshold->LMin <= _pixel) && (_pixel <= _threshold->LMax)) ^ _invert; \
 })
 
 #define IMLIB_COLOR_THRESHOLD_RGB565(pixel, threshold, invert) \
 ({ \
-    typeof(pixel) _pixel = (pixel); \
-    typeof(threshold) _threshold = (threshold); \
-    typeof(invert) _invert = (invert); \
-    uint8_t _l = IMLIB_COLOR_RGB565_TO_L(_pixel); \
+    typeof (pixel) _pixel = (pixel); \
+    typeof (threshold) _threshold = (threshold); \
+    typeof (invert) _invert = (invert); \
+    int8_t _l = IMLIB_COLOR_RGB565_TO_L(_pixel); \
     int8_t _a = IMLIB_COLOR_RGB565_TO_A(_pixel); \
     int8_t _b = IMLIB_COLOR_RGB565_TO_B(_pixel); \
     ((_threshold->LMin <= _l) && (_l <= _threshold->LMax) && (_threshold->AMin <= _a) && (_a <= _threshold->AMax) && (_threshold->BMin <= _b) && (_b <= _threshold->BMax)) ^ _invert; \

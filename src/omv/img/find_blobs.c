@@ -10,18 +10,15 @@
 #include "utils_lifo.h"
 #include "find_blobs.h"
 
-#define COMPUTE_BITMAP_ROW_INDEX(image, y) (((image)->geometry.h)*(y))
-#define COMPTUE_BITMAP_INDEX(row_index, x) ((row_index)+(x))
-
 typedef struct xylf
 {
-    uint16_t x, y, l, r;
+    int16_t x, y, l, r;
 }
 xylf_t;
 
 void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t *roi,
-                utils_linkedlist_t *thresholds, bool invert, unsigned int pixels_threshold,
-                bool merge, int l_margin, int t_margin, int r_margin, int b_margin)
+                utils_linkedlist_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
+                bool merge, int margin)
 {
     utils_size_check(&(roi->s));
     imlib_image_check_overlap(ptr, roi);
@@ -31,10 +28,10 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
     imlib_image_intersected(ptr, &rect);
     utils_size_check(&(rect.s));
 
-    utils_bitmap_t bitmap;
+    utils_bitmap_t bitmap; // Same size as the image so we don't have to translate.
     utils_bitmap_alloc(&bitmap, ptr->geometry.w * ptr->geometry.h);
 
-    size_t lifo_len = (ptr->geometry.w > 1) ? (((ptr->geometry.w- 1) * 2) + (ptr->geometry.h * 2)) : ptr->geometry.h; // use perimeter...
+    size_t lifo_len = (rect.s.w * 2) + (rect.s.h * 2); // Use the perimeter as the flood fill max depth.
     utils_lifo_t lifo;
     utils_lifo_alloc(&lifo, lifo_len, sizeof(xylf_t));
 
@@ -54,17 +51,18 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                         if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(row_index, x)))
                         && IMLIB_COLOR_THRESHOLD_BINARY(IMLIB_IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
+                            int old_y = y;
 
-                            unsigned int blob_x1 = x;
-                            unsigned int blob_y1 = y;
-                            unsigned int blob_x2 = x;
-                            unsigned int blob_y2 = y;
-                            unsigned int blob_pixels = 0;
-                            unsigned long blob_cx = 0;
-                            unsigned long blob_cy = 0;
-                            unsigned long long blob_a = 0; // (x - mx) * (x - mx)
-                            unsigned long long blob_b = 0; // (x - mx) * (y - my)
-                            unsigned long long blob_c = 0; // (y - my) * (y - my)
+                            int blob_x1 = x;
+                            int blob_y1 = y;
+                            int blob_x2 = x;
+                            int blob_y2 = y;
+                            int blob_pixels = 0;
+                            int blob_cx = 0;
+                            int blob_cy = 0;
+                            long long blob_a = 0;
+                            long long blob_b = 0;
+                            long long blob_c = 0;
 
                             // Scanline Flood Fill Algorithm //
 
@@ -108,7 +106,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                             index = COMPUTE_BITMAP_ROW_INDEX(ptr, y - 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++)
+                                            for (int i = left; i <= right; i++) {
                                                 if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(index, i)))
                                                 && IMLIB_COLOR_THRESHOLD_BINARY(IMLIB_IMAGE_GET_BINARY_PIXEL_FAST(row, i), &lnk_data, invert)) {
                                                     xylf_t context;
@@ -122,6 +120,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                                     recurse = true;
                                                     break;
                                                 }
+                                            }
                                             if (recurse) {
                                                 break;
                                             }
@@ -132,7 +131,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                             index = COMPUTE_BITMAP_ROW_INDEX(ptr, y + 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++)
+                                            for (int i = left; i <= right; i++) {
                                                 if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(index, i)))
                                                 && IMLIB_COLOR_THRESHOLD_BINARY(IMLIB_IMAGE_GET_BINARY_PIXEL_FAST(row, i), &lnk_data, invert)) {
                                                     xylf_t context;
@@ -146,6 +145,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                                     recurse = true;
                                                     break;
                                                 }
+                                            }
                                             if (recurse) {
                                                 break;
                                             }
@@ -170,16 +170,25 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                 }
                             }
 
-                            unsigned int mx = blob_cx / blob_pixels; // x centroid
-                            unsigned int my = blob_cy / blob_pixels; // y centroid
                             // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                             // https://www.strchr.com/standard_deviation_in_one_pass
-                            blob_a -= 2 * mx * blob_cx;
-                            blob_a += blob_pixels * mx * mx;
-                            blob_b -= (mx * blob_cy) + (my * blob_cx);
-                            blob_b += blob_pixels * mx * my;
-                            blob_c -= 2 * my * blob_cy;
-                            blob_c += blob_pixels * my * my;
+                            //
+                            // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
+                            // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
+                            // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
+                            //
+                            // blob_a = sigma(x*x)
+                            // blob_b = sigma(x*y)
+                            // blob_c = sigma(y*y)
+                            // blob_cx = sigma(x)
+                            // blob_cy = sigma(y)
+                            // blob_pixels = sigma()
+
+                            int mx = blob_cx / blob_pixels; // x centroid
+                            int my = blob_cy / blob_pixels; // y centroid
+                            int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
+                            int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
+                            int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                             find_blobs_linkedlist_lnk_data_t lnk_blob;
                             lnk_blob.rect.p.x = blob_x1;
@@ -189,15 +198,16 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                             lnk_blob.pixels = blob_pixels;
                             lnk_blob.centroid.x = mx;
                             lnk_blob.centroid.y = my;
-                            lnk_blob.rotation = (blob_a != blob_c) ? (fast_atan2f(2 * blob_b, blob_a - blob_c) / 2.0f) : 0.0f;
+                            lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
 
-                            if (blob_pixels >= pixels_threshold) {
+                            if (((lnk_blob.rect.s.w * lnk_blob.rect.s.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)) {
                                 utils_linkedlist_push_back(list, &lnk_blob);
                             }
 
                             x = old_x;
+                            y = old_y;
                         }
                     }
                 }
@@ -211,17 +221,18 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                         if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(row_index, x)))
                         && IMLIB_COLOR_THRESHOLD_GRAYSCALE(IMLIB_IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
+                            int old_y = y;
 
-                            unsigned int blob_x1 = x;
-                            unsigned int blob_y1 = y;
-                            unsigned int blob_x2 = x;
-                            unsigned int blob_y2 = y;
-                            unsigned int blob_pixels = 0;
-                            unsigned long blob_cx = 0;
-                            unsigned long blob_cy = 0;
-                            unsigned long long blob_a = 0; // (x - mx) * (x - mx)
-                            unsigned long long blob_b = 0; // (x - mx) * (y - my)
-                            unsigned long long blob_c = 0; // (y - my) * (y - my)
+                            int blob_x1 = x;
+                            int blob_y1 = y;
+                            int blob_x2 = x;
+                            int blob_y2 = y;
+                            int blob_pixels = 0;
+                            int blob_cx = 0;
+                            int blob_cy = 0;
+                            long long blob_a = 0;
+                            long long blob_b = 0;
+                            long long blob_c = 0;
 
                             // Scanline Flood Fill Algorithm //
 
@@ -265,7 +276,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                             index = COMPUTE_BITMAP_ROW_INDEX(ptr, y - 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++)
+                                            for (int i = left; i <= right; i++) {
                                                 if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(index, i)))
                                                 && IMLIB_COLOR_THRESHOLD_GRAYSCALE(IMLIB_IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i), &lnk_data, invert)) {
                                                     xylf_t context;
@@ -279,6 +290,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                                     recurse = true;
                                                     break;
                                                 }
+                                            }
                                             if (recurse) {
                                                 break;
                                             }
@@ -289,7 +301,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                             index = COMPUTE_BITMAP_ROW_INDEX(ptr, y + 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++)
+                                            for (int i = left; i <= right; i++) {
                                                 if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(index, i)))
                                                 && IMLIB_COLOR_THRESHOLD_GRAYSCALE(IMLIB_IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i), &lnk_data, invert)) {
                                                     xylf_t context;
@@ -303,6 +315,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                                     recurse = true;
                                                     break;
                                                 }
+                                            }
                                             if (recurse) {
                                                 break;
                                             }
@@ -327,16 +340,25 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                 }
                             }
 
-                            unsigned int mx = blob_cx / blob_pixels; // x centroid
-                            unsigned int my = blob_cy / blob_pixels; // y centroid
                             // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                             // https://www.strchr.com/standard_deviation_in_one_pass
-                            blob_a -= 2 * mx * blob_cx;
-                            blob_a += blob_pixels * mx * mx;
-                            blob_b -= (mx * blob_cy) + (my * blob_cx);
-                            blob_b += blob_pixels * mx * my;
-                            blob_c -= 2 * my * blob_cy;
-                            blob_c += blob_pixels * my * my;
+                            //
+                            // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
+                            // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
+                            // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
+                            //
+                            // blob_a = sigma(x*x)
+                            // blob_b = sigma(x*y)
+                            // blob_c = sigma(y*y)
+                            // blob_cx = sigma(x)
+                            // blob_cy = sigma(y)
+                            // blob_pixels = sigma()
+
+                            int mx = blob_cx / blob_pixels; // x centroid
+                            int my = blob_cy / blob_pixels; // y centroid
+                            int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
+                            int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
+                            int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                             find_blobs_linkedlist_lnk_data_t lnk_blob;
                             lnk_blob.rect.p.x = blob_x1;
@@ -346,15 +368,16 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                             lnk_blob.pixels = blob_pixels;
                             lnk_blob.centroid.x = mx;
                             lnk_blob.centroid.y = my;
-                            lnk_blob.rotation = (blob_a != blob_c) ? (fast_atan2f(2 * blob_b, blob_a - blob_c) / 2.0f) : 0.0f;
+                            lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
 
-                            if (blob_pixels >= pixels_threshold) {
+                            if (((lnk_blob.rect.s.w * lnk_blob.rect.s.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)) {
                                 utils_linkedlist_push_back(list, &lnk_blob);
                             }
 
                             x = old_x;
+                            y = old_y;
                         }
                     }
                 }
@@ -368,17 +391,18 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                         if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(row_index, x)))
                         && IMLIB_COLOR_THRESHOLD_RGB565(IMLIB_IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
+                            int old_y = y;
 
-                            unsigned int blob_x1 = x;
-                            unsigned int blob_y1 = y;
-                            unsigned int blob_x2 = x;
-                            unsigned int blob_y2 = y;
-                            unsigned int blob_pixels = 0;
-                            unsigned long blob_cx = 0;
-                            unsigned long blob_cy = 0;
-                            unsigned long long blob_a = 0; // (x - mx) * (x - mx)
-                            unsigned long long blob_b = 0; // (x - mx) * (y - my)
-                            unsigned long long blob_c = 0; // (y - my) * (y - my)
+                            int blob_x1 = x;
+                            int blob_y1 = y;
+                            int blob_x2 = x;
+                            int blob_y2 = y;
+                            int blob_pixels = 0;
+                            int blob_cx = 0;
+                            int blob_cy = 0;
+                            long long blob_a = 0;
+                            long long blob_b = 0;
+                            long long blob_c = 0;
 
                             // Scanline Flood Fill Algorithm //
 
@@ -422,7 +446,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                             index = COMPUTE_BITMAP_ROW_INDEX(ptr, y - 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++)
+                                            for (int i = left; i <= right; i++) {
                                                 if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(index, i)))
                                                 && IMLIB_COLOR_THRESHOLD_RGB565(IMLIB_IMAGE_GET_RGB565_PIXEL_FAST(row, i), &lnk_data, invert)) {
                                                     xylf_t context;
@@ -436,6 +460,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                                     recurse = true;
                                                     break;
                                                 }
+                                            }
                                             if (recurse) {
                                                 break;
                                             }
@@ -446,7 +471,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                             index = COMPUTE_BITMAP_ROW_INDEX(ptr, y + 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++)
+                                            for (int i = left; i <= right; i++) {
                                                 if ((!utils_bitmap_bit_get(&bitmap, COMPTUE_BITMAP_INDEX(index, i)))
                                                 && IMLIB_COLOR_THRESHOLD_RGB565(IMLIB_IMAGE_GET_RGB565_PIXEL_FAST(row, i), &lnk_data, invert)) {
                                                     xylf_t context;
@@ -460,6 +485,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                                     recurse = true;
                                                     break;
                                                 }
+                                            }
                                             if (recurse) {
                                                 break;
                                             }
@@ -484,16 +510,25 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                                 }
                             }
 
-                            unsigned int mx = blob_cx / blob_pixels; // x centroid
-                            unsigned int my = blob_cy / blob_pixels; // y centroid
                             // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                             // https://www.strchr.com/standard_deviation_in_one_pass
-                            blob_a -= 2 * mx * blob_cx;
-                            blob_a += blob_pixels * mx * mx;
-                            blob_b -= (mx * blob_cy) + (my * blob_cx);
-                            blob_b += blob_pixels * mx * my;
-                            blob_c -= 2 * my * blob_cy;
-                            blob_c += blob_pixels * my * my;
+                            //
+                            // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
+                            // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
+                            // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
+                            //
+                            // blob_a = sigma(x*x)
+                            // blob_b = sigma(x*y)
+                            // blob_c = sigma(y*y)
+                            // blob_cx = sigma(x)
+                            // blob_cy = sigma(y)
+                            // blob_pixels = sigma()
+
+                            int mx = blob_cx / blob_pixels; // x centroid
+                            int my = blob_cy / blob_pixels; // y centroid
+                            int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
+                            int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
+                            int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                             find_blobs_linkedlist_lnk_data_t lnk_blob;
                             lnk_blob.rect.p.x = blob_x1;
@@ -503,15 +538,16 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                             lnk_blob.pixels = blob_pixels;
                             lnk_blob.centroid.x = mx;
                             lnk_blob.centroid.y = my;
-                            lnk_blob.rotation = (blob_a != blob_c) ? (fast_atan2f(2 * blob_b, blob_a - blob_c) / 2.0f) : 0.0f;
+                            lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
 
-                            if (blob_pixels >= pixels_threshold) {
+                            if (((lnk_blob.rect.s.w * lnk_blob.rect.s.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)) {
                                 utils_linkedlist_push_back(list, &lnk_blob);
                             }
 
                             x = old_x;
+                            y = old_y;
                         }
                     }
                 }
@@ -521,6 +557,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                 break;
             }
         }
+
         code += 1;
     }
 
@@ -528,9 +565,8 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
     utils_bitmap_free(&bitmap);
 
     if (merge) {
-        bool merge_occured = false;
-
-        do {
+        for(;;) {
+            bool merge_occured = false;
             utils_linkedlist_t temp;
             utils_linkedlist_alloc(&temp, sizeof(find_blobs_linkedlist_lnk_data_t));
 
@@ -543,10 +579,10 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                     utils_linkedlist_pop_front(list, &other_blob);
 
                     utils_rectangle_t temp;
-                    temp.p.x = other_blob.rect.p.x - l_margin;
-                    temp.p.y = other_blob.rect.p.y - t_margin;
-                    temp.s.w = other_blob.rect.s.w + l_margin + r_margin;
-                    temp.s.h = other_blob.rect.s.h + t_margin + b_margin;
+                    temp.p.x = OTHER_MAX(OTHER_MIN(other_blob.rect.p.x - margin, INT16_T_MAX_VALUE), INT16_T_MIN_VALUE);
+                    temp.p.y = OTHER_MAX(OTHER_MIN(other_blob.rect.p.y - margin, INT16_T_MAX_VALUE), INT16_T_MIN_VALUE);
+                    temp.s.w = OTHER_MAX(OTHER_MIN(other_blob.rect.s.w + (margin * 2), UINT16_T_MAX_VALUE), UINT16_T_MIN_VALUE);
+                    temp.s.h = OTHER_MAX(OTHER_MIN(other_blob.rect.s.h + (margin * 2), UINT16_T_MAX_VALUE), UINT16_T_MIN_VALUE);
 
                     if (utils_rectangle_overlap(&(lnk_blob.rect), &temp)) {
                         utils_rectangle_united(&(lnk_blob.rect), &(other_blob.rect));
@@ -555,7 +591,7 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                         lnk_blob.rotation = ((lnk_blob.rotation * lnk_blob.pixels) + (other_blob.rotation * other_blob.pixels)) / (lnk_blob.pixels + other_blob.pixels);
                         lnk_blob.pixels += other_blob.pixels;
                         lnk_blob.code |= other_blob.code;
-                        lnk_blob.count += other_blob.count;
+                        lnk_blob.count = OTHER_MAX(OTHER_MIN(lnk_blob.count + other_blob.count, UINT16_T_MAX_VALUE), UINT16_T_MIN_VALUE);
                         merge_occured = true;
                     } else {
                         utils_linkedlist_push_back(list, &other_blob);
@@ -565,7 +601,11 @@ void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t 
                 utils_linkedlist_push_back(&temp, &lnk_blob);
             }
 
-            memcpy(&list, &temp, sizeof(utils_linkedlist_t));
-        } while(!merge_occured);
+            memcpy(list, &temp, sizeof(utils_linkedlist_t));
+
+            if (!merge_occured) {
+                break;
+            }
+        }
     }
 }

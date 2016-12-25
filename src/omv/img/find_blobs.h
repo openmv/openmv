@@ -19,7 +19,7 @@ typedef struct find_blobs_linkedlist_lnk_data
 find_blobs_linkedlist_lnk_data_t;
 
 void find_blobs(utils_linkedlist_t *list, imlib_image_t *ptr, utils_rectangle_t *roi,
-                utils_linkedlist_t *thresholds, bool invert, unsigned int pixels_threshold,
-                bool merge, int l_margin, int t_margin, int r_margin, int b_margin);
+                utils_linkedlist_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
+                bool merge, int margin);
 
 #endif /* __FIND_BLOBS_H__ */

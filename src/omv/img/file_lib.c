@@ -30,7 +30,7 @@ static bool is_bmp(const char *path_null_terminator, size_t length)
     );
 }
 
-static bool is_pnm(const char *path_null_terminator, size_t length)
+static bool is_pbm(const char *path_null_terminator, size_t length)
 {
     return
     (
@@ -39,24 +39,36 @@ static bool is_pnm(const char *path_null_terminator, size_t length)
         && ((path_null_terminator[-2] == 'b') || (path_null_terminator[-2] == 'B'))
         && ((path_null_terminator[-3] == 'p') || (path_null_terminator[-3] == 'P'))
         && ((path_null_terminator[-4] == '.') || (path_null_terminator[-4] == '.'))
-    )
-    ||
+    );
+}
+
+static bool is_pgm(const char *path_null_terminator, size_t length)
+{
+    return
     (
         (length >= 4)
         && ((path_null_terminator[-1] == 'm') || (path_null_terminator[-1] == 'M'))
         && ((path_null_terminator[-2] == 'g') || (path_null_terminator[-2] == 'G'))
         && ((path_null_terminator[-3] == 'p') || (path_null_terminator[-3] == 'P'))
         && ((path_null_terminator[-4] == '.') || (path_null_terminator[-4] == '.'))
-    )
-    ||
+    );
+}
+
+static bool is_ppm(const char *path_null_terminator, size_t length)
+{
+    return
     (
         (length >= 4)
         && ((path_null_terminator[-1] == 'm') || (path_null_terminator[-1] == 'M'))
         && ((path_null_terminator[-2] == 'p') || (path_null_terminator[-2] == 'P'))
         && ((path_null_terminator[-3] == 'p') || (path_null_terminator[-3] == 'P'))
         && ((path_null_terminator[-4] == '.') || (path_null_terminator[-4] == '.'))
-    )
-    ||
+    );
+}
+
+static bool is_pnm(const char *path_null_terminator, size_t length)
+{
+    return
     (
         (length >= 4)
         && ((path_null_terminator[-1] == 'm') || (path_null_terminator[-1] == 'M'))
@@ -128,20 +140,26 @@ void file_lib_save(imlib_image_t *ptr, const char *path, utils_rectangle_t *roi,
     if (IMLIB_IMAGE_GET_IMAGE_IS_JPG(ptr)) { // JPG Default
         if (is_jpg(path_null_terminator, length)) {
             // file_jpg_save(ptr, new_path, quality);
-        } else {
+        } else { // JPG Default
             // const char *new_path = strcat(strcpy(fb_alloc(length + 5), path), ".jpg");
             // file_jpg_save(ptr, new_path, quality);
             // fb_free();
         }
     } else if (is_bmp(path_null_terminator, length)) {
-        file_bmp_save(ptr, path, roi, res);
+        file_bmp_save(ptr, path, FILE_BMP_BEST, roi, res);
+    } else if (is_pbm(path_null_terminator, length)) {
+        file_pnm_save(ptr, path, FILE_PNM_BINARY, roi, res);
+    } else if (is_pgm(path_null_terminator, length)) {
+        file_pnm_save(ptr, path, FILE_PNM_GRAYSCALE, roi, res);
+    } else if (is_ppm(path_null_terminator, length)) {
+        file_pnm_save(ptr, path, FILE_PNM_RGB565, roi, res);
     } else if (is_pnm(path_null_terminator, length)) {
-        file_pnm_save(ptr, path, roi, res);
+        file_pnm_save(ptr, path, FILE_PNM_BEST, roi, res);
     } else if (is_jpg(path_null_terminator, length)) {
         // file_jpg_save(ptr, new_path, quality);
     } else { // BMP Default
         const char *new_path = strcat(strcpy(fb_alloc(length + 5), path), ".bmp");
-        file_bmp_save(ptr, new_path, roi, res);
+        file_bmp_save(ptr, new_path, FILE_BMP_BEST, roi, res);
         fb_free();
     }
 }

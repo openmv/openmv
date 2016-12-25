@@ -16,7 +16,7 @@ void utils_bitmap_alloc(utils_bitmap_t *ptr, size_t size)
 {
     ptr->len = 0;
     ptr->size = size;
-    ptr->data = (size_t *) fb_alloc(((size + SIZE_T_MASK) >> SIZE_T_SHIFT) * sizeof(size_t));
+    ptr->data = (size_t *) fb_alloc0(((size + SIZE_T_MASK) >> SIZE_T_SHIFT) * sizeof(size_t));
 }
 
 void utils_bitmap_free(utils_bitmap_t *ptr)
@@ -76,6 +76,24 @@ void utils_bitmap_bit_put(utils_bitmap_t *ptr, size_t index, bool value)
     } else {
         ptr->len -= (ptr->data[temp_shift] >> temp_mask) & 1;
     }
+    ptr->data[temp_shift] = (ptr->data[temp_shift] & (~(1 << temp_mask))) | (value << temp_mask);
+}
+
+void utils_bitmap_bit_put_known_clear(utils_bitmap_t *ptr, size_t index, bool value)
+{
+    value &= 1;
+    size_t temp_mask = index & SIZE_T_MASK;
+    size_t temp_shift = index >> SIZE_T_SHIFT;
+    ptr->len += value;
+    ptr->data[temp_shift] = (ptr->data[temp_shift] & (~(1 << temp_mask))) | (value << temp_mask);
+}
+
+void utils_bitmap_bit_put_known_set(utils_bitmap_t *ptr, size_t index, bool value)
+{
+    value &= 1;
+    size_t temp_mask = index & SIZE_T_MASK;
+    size_t temp_shift = index >> SIZE_T_SHIFT;
+    ptr->len -= !value;
     ptr->data[temp_shift] = (ptr->data[temp_shift] & (~(1 << temp_mask))) | (value << temp_mask);
 }
 

@@ -3,10 +3,11 @@
  * This work is licensed under the MIT license, see the file LICENSE for details.
  */
 
+#include "imlib_color.h"
 #include "file_fatfs.h"
 #include "file_bmp.h"
 
-void file_bmp_save(imlib_image_t *ptr, const char *path, utils_rectangle_t *roi, utils_size_t *res)
+void file_bmp_save(imlib_image_t *ptr, const char *path, file_bmp_save_type_t type, utils_rectangle_t *roi, utils_size_t *res)
 {
     utils_size_check(&(roi->s));
     utils_size_check(res);
@@ -20,8 +21,18 @@ void file_bmp_save(imlib_image_t *ptr, const char *path, utils_rectangle_t *roi,
     file_fatfs_file_t file;
     file_fatfs_write_open(&file, path, true);
 
-    switch(ptr->type) {
-        case IMLIB_IMAGE_TYPE_BINARY: {
+    if (type == FILE_BMP_BEST) {
+        if (IMLIB_IMAGE_GET_IMAGE_IS_BINARY(ptr)) {
+            type = FILE_BMP_BINARY;
+        } else if (IMLIB_IMAGE_GET_IMAGE_IS_GRAYSCALE(ptr)) {
+            type = FILE_BMP_GRAYSCALE;
+        } else if (IMLIB_IMAGE_GET_IMAGE_IS_RGB565(ptr)) {
+            type = FILE_BMP_RGB565;
+        }
+    }
+
+    switch(type) {
+        case FILE_BMP_BINARY: {
             size_t row_bytes = ((res->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sizeof(uint32_t);
             size_t data_size = row_bytes * res->h;
             // File Header (14 bytes)
@@ -48,28 +59,80 @@ void file_bmp_save(imlib_image_t *ptr, const char *path, utils_rectangle_t *roi,
             file_fatfs_write_long(&file, 0xFFFFFF);
             // File Data
             IMLIB_IMAGE_COMPUTE_TARGET_SIZE_SCALE_FACTOR(res, &rect);
-            for (size_t i = 0; i < res->h; i++) {
-                uint32_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_BINARY_PIXEL_ROW_PTR(ptr, i);
-                uint32_t pixels = 0;
-                size_t number = 0;
-                for (size_t j = 0; j < res->w; j++) {
-                    pixels |= IMLIB_IMAGE_GET_SCALED_BINARY_PIXEL_FAST(row_ptr, j) << (j & UINT32_T_MASK);
-                    number += 1;
-                    if (number == UINT32_T_BITS) {
-                        file_fatfs_write_long(&file, pixels);
-                        pixels = 0;
-                        number = 0;
+            switch(ptr->type) {
+                case IMLIB_IMAGE_TYPE_BINARY: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint32_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_BINARY_PIXEL_ROW_PTR(ptr, i);
+                        uint32_t pixels = 0;
+                        size_t number = 0;
+                        for (size_t j = 0; j < res->w; j++) {
+                            pixels |= IMLIB_IMAGE_GET_SCALED_BINARY_PIXEL_FAST(row_ptr, j) << (j & UINT32_T_MASK);
+                            number += 1;
+                            if (number == UINT32_T_BITS) {
+                                file_fatfs_write_long(&file, pixels);
+                                pixels = 0;
+                                number = 0;
+                            }
+                        }
+                        if (number) {
+                            file_fatfs_write_long(&file, pixels);
+                            pixels = 0;
+                            number = 0;
+                        }
                     }
+                    break;
                 }
-                if (number) {
-                    file_fatfs_write_long(&file, pixels);
-                    pixels = 0;
-                    number = 0;
+                case IMLIB_IMAGE_TYPE_GRAYSCALE: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint8_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_GRAYSCALE_PIXEL_ROW_PTR(ptr, i);
+                        uint32_t pixels = 0;
+                        size_t number = 0;
+                        for (size_t j = 0; j < res->w; j++) {
+                            pixels |= IMLIB_COLOR_GRAYSCALE_TO_BINARY(IMLIB_IMAGE_GET_SCALED_GRAYSCALE_PIXEL_FAST(row_ptr, j)) << (j & UINT32_T_MASK);
+                            number += 1;
+                            if (number == UINT32_T_BITS) {
+                                file_fatfs_write_long(&file, pixels);
+                                pixels = 0;
+                                number = 0;
+                            }
+                        }
+                        if (number) {
+                            file_fatfs_write_long(&file, pixels);
+                            pixels = 0;
+                            number = 0;
+                        }
+                    }
+                    break;
+                }
+                case IMLIB_IMAGE_TYPE_RGB565: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint16_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_RGB565_PIXEL_ROW_PTR(ptr, i);
+                        uint32_t pixels = 0;
+                        size_t number = 0;
+                        for (size_t j = 0; j < res->w; j++) {
+                            pixels |= IMLIB_COLOR_RGB565_TO_BINARY(IMLIB_IMAGE_GET_SCALED_RGB565_PIXEL_FAST(row_ptr, j)) << (j & UINT32_T_MASK);
+                            number += 1;
+                            if (number == UINT32_T_BITS) {
+                                file_fatfs_write_long(&file, pixels);
+                                pixels = 0;
+                                number = 0;
+                            }
+                        }
+                        if (number) {
+                            file_fatfs_write_long(&file, pixels);
+                            pixels = 0;
+                            number = 0;
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break; // empty image
                 }
             }
             break;
         }
-        case IMLIB_IMAGE_TYPE_GRAYSCALE: {
+        case FILE_BMP_GRAYSCALE: {
             size_t row_bytes = (((res->w * UINT8_T_BITS) + UINT32_T_MASK) >> UINT32_T_SHIFT) * sizeof(uint32_t);
             size_t data_size = row_bytes * res->h;
             size_t row_waste = (row_bytes >> (OTHER_LOG2(sizeof(uint8_t)) - 1)) - res->w;
@@ -98,18 +161,50 @@ void file_bmp_save(imlib_image_t *ptr, const char *path, utils_rectangle_t *roi,
             }
             // File Data
             IMLIB_IMAGE_COMPUTE_TARGET_SIZE_SCALE_FACTOR(res, &rect);
-            for (size_t i = 0; i < res->h; i++) {
-                uint8_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_GRAYSCALE_PIXEL_ROW_PTR(ptr, i);
-                for (size_t j = 0; j < res->w; j++) {
-                    file_fatfs_write_byte(&file, IMLIB_IMAGE_GET_SCALED_GRAYSCALE_PIXEL_FAST(row_ptr, j));
+            switch(ptr->type) {
+                case IMLIB_IMAGE_TYPE_BINARY: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint32_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_BINARY_PIXEL_ROW_PTR(ptr, i);
+                        for (size_t j = 0; j < res->w; j++) {
+                            file_fatfs_write_byte(&file, IMLIB_COLOR_BINARY_TO_GRAYSCALE(IMLIB_IMAGE_GET_SCALED_BINARY_PIXEL_FAST(row_ptr, j)));
+                        }
+                        for (size_t j = 0; j < row_waste; j++) {
+                            file_fatfs_write_byte(&file, 0);
+                        }
+                    }
+                    break;
                 }
-                for (size_t j = 0; j < row_waste; j++) {
-                    file_fatfs_write_byte(&file, 0);
+                case IMLIB_IMAGE_TYPE_GRAYSCALE: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint8_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_GRAYSCALE_PIXEL_ROW_PTR(ptr, i);
+                        for (size_t j = 0; j < res->w; j++) {
+                            file_fatfs_write_byte(&file, IMLIB_IMAGE_GET_SCALED_GRAYSCALE_PIXEL_FAST(row_ptr, j));
+                        }
+                        for (size_t j = 0; j < row_waste; j++) {
+                            file_fatfs_write_byte(&file, 0);
+                        }
+                    }
+                    break;
+                }
+                case IMLIB_IMAGE_TYPE_RGB565: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint16_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_RGB565_PIXEL_ROW_PTR(ptr, i);
+                        for (size_t j = 0; j < res->w; j++) {
+                            file_fatfs_write_byte(&file, IMLIB_COLOR_RGB565_TO_GRAYSCALE(IMLIB_IMAGE_GET_SCALED_RGB565_PIXEL_FAST(row_ptr, j)));
+                        }
+                        for (size_t j = 0; j < row_waste; j++) {
+                            file_fatfs_write_byte(&file, 0);
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break; // empty image
                 }
             }
             break;
         }
-        case IMLIB_IMAGE_TYPE_RGB565: {
+        case FILE_BMP_RGB565: {
             size_t row_bytes = (((res->w * UINT16_T_BITS) + UINT32_T_MASK) >> UINT32_T_SHIFT) * sizeof(uint32_t);
             size_t data_size = row_bytes * res->h;
             size_t row_waste = (row_bytes >> (OTHER_LOG2(sizeof(uint16_t)) - 1)) - res->w;
@@ -138,20 +233,51 @@ void file_bmp_save(imlib_image_t *ptr, const char *path, utils_rectangle_t *roi,
             file_fatfs_write_long(&file, 0x001F); // B5
             // File Data
             IMLIB_IMAGE_COMPUTE_TARGET_SIZE_SCALE_FACTOR(res, &rect);
-            for (size_t i = 0; i < res->h; i++) {
-                uint16_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_RGB565_PIXEL_ROW_PTR(ptr, i);
-                for (size_t j = 0; j < res->w; j++) {
-                    file_fatfs_write_word(&file, IMLIB_IMAGE_REV_RGB565_PIXEL(IMLIB_IMAGE_GET_SCALED_RGB565_PIXEL_FAST(row_ptr, j)));
+            switch(ptr->type) {
+                case IMLIB_IMAGE_TYPE_BINARY: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint32_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_BINARY_PIXEL_ROW_PTR(ptr, i);
+                        for (size_t j = 0; j < res->w; j++) {
+                            file_fatfs_write_word(&file, IMLIB_IMAGE_REV_RGB565_PIXEL(IMLIB_COLOR_BINARY_TO_RGB565(IMLIB_IMAGE_GET_SCALED_BINARY_PIXEL_FAST(row_ptr, j))));
+                        }
+                        for (size_t j = 0; j < row_waste; j++) {
+                            file_fatfs_write_word(&file, 0);
+                        }
+                    }
+                    break;
                 }
-                for (size_t j = 0; j < row_waste; j++) {
-                    file_fatfs_write_word(&file, 0);
+                case IMLIB_IMAGE_TYPE_GRAYSCALE: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint8_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_GRAYSCALE_PIXEL_ROW_PTR(ptr, i);
+                        for (size_t j = 0; j < res->w; j++) {
+                            file_fatfs_write_word(&file, IMLIB_IMAGE_REV_RGB565_PIXEL(IMLIB_COLOR_GRAYSCALE_TO_RGB565(IMLIB_IMAGE_GET_SCALED_GRAYSCALE_PIXEL_FAST(row_ptr, j))));
+                        }
+                        for (size_t j = 0; j < row_waste; j++) {
+                            file_fatfs_write_word(&file, 0);
+                        }
+                    }
+                    break;
+                }
+                case IMLIB_IMAGE_TYPE_RGB565: {
+                    for (size_t i = 0; i < res->h; i++) {
+                        uint16_t *row_ptr = IMLIB_IMAGE_COMPUTE_SCALED_RGB565_PIXEL_ROW_PTR(ptr, i);
+                        for (size_t j = 0; j < res->w; j++) {
+                            file_fatfs_write_word(&file, IMLIB_IMAGE_REV_RGB565_PIXEL(IMLIB_IMAGE_GET_SCALED_RGB565_PIXEL_FAST(row_ptr, j)));
+                        }
+                        for (size_t j = 0; j < row_waste; j++) {
+                            file_fatfs_write_word(&file, 0);
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break; // empty image
                 }
             }
             break;
         }
         default: {
-            // Empty File.
-            break;
+            break; // empty image
         }
     }
 
