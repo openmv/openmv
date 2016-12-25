@@ -563,6 +563,18 @@ int sensor_set_special_effect(sde_t sde)
     return 0;
 }
 
+int sensor_set_lens_correction(int enable, int radi, int coef)
+{
+    /* call the sensor specific function */
+    if (sensor.set_lens_correction == NULL
+        || sensor.set_lens_correction(&sensor, enable, radi, coef) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+
+    return 0;
+}
+
 int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_args)
 {
     // Set line pre-processing function and args

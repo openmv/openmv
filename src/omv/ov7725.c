@@ -101,11 +101,11 @@ static const uint8_t default_regs[][2] = {
     {BDSTEP,        0x03},
 
     // Lens Correction, should be tuned with real camera module
-    {LC_RADI,       0x10},
-    {LC_COEF,       0x10},
-    {LC_COEFB,      0x14},
-    {LC_COEFR,      0x17},
-    {LC_CTR,        0x05},
+    {LC_CTR,        0x01}, // Enable LC and use 1 coefficient for all 3 channels
+    {LC_RADI,       0x30}, // The radius of the circle where no compensation applies
+    {LC_COEF,       0x30}, // RGB Lens correction coefficient
+
+    // Frame reduction in night mode.
     {COM5,          0xD5},
 
     {0x00,          0x00},
@@ -388,8 +388,19 @@ static int set_special_effect(sensor_t *sensor, sde_t sde)
             return -1;
     }
 
-    return 0;
+    return ret;
 }
+
+static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
+{
+    int ret=0;
+
+    ret |= SCCB_Write(sensor->slv_addr, LC_CTR, (enable&0x01));
+    ret |= SCCB_Write(sensor->slv_addr, LC_RADI, radi);
+    ret |= SCCB_Write(sensor->slv_addr, LC_COEF, coef);
+    return ret;
+}
+
 
 int ov7725_init(sensor_t *sensor)
 {
@@ -409,6 +420,7 @@ int ov7725_init(sensor_t *sensor)
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
     sensor->set_special_effect = set_special_effect;
+    sensor->set_lens_correction = set_lens_correction;
 
     // Set sensor flags
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);

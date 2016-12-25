@@ -203,6 +203,7 @@ Q(set_exposure_ctrl)
 Q(set_hmirror)
 Q(set_vflip)
 Q(set_special_effect)
+Q(set_lens_correction)
 Q(__write_reg)
 Q(__read_reg)
 

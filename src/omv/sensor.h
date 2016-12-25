@@ -128,6 +128,7 @@ typedef struct _sensor {
     int  (*set_hmirror)         (sensor_t *sensor, int enable);
     int  (*set_vflip)           (sensor_t *sensor, int enable);
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
+    int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
 } sensor_t;
 
 // Resolution table
@@ -199,6 +200,9 @@ int sensor_set_vflip(int enable);
 
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);
+
+// Set lens shading correction
+int sensor_set_lens_correction(int enable, int radi, int coef);
 
 // Set filter function.
 int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_args);
