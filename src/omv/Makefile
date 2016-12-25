@@ -17,6 +17,25 @@ SRCS += $(addprefix ,   \
    )
 
 SRCS += $(addprefix img/,   \
+	file_bmp.c              \
+	file_fatfs.c            \
+	file_lib.c              \
+	file_pnm.c              \
+	find_blobs.c            \
+	find_qrcodes.c          \
+	imlib_color.c           \
+	imlib_image.c           \
+	quirc_decode.c          \
+	quirc_identify.c        \
+	quirc_quirc.c           \
+	quirc_version_db.c      \
+	utils_bitmap.c          \
+	utils_fifo.c            \
+	utils_lifo.c            \
+	utils_linkedlist.c      \
+	utils_point.c           \
+	utils_rectangle.c       \
+	utils_size.c            \
 	blob.c                  \
 	fmath.c                 \
 	fsort.c                 \
