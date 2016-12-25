@@ -135,6 +135,25 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
+	file_bmp.o                              \
+	file_fatfs.o                            \
+	file_lib.o                              \
+	file_pnm.o                              \
+	find_blobs.o                            \
+	find_qrcodes.o                          \
+	imlib_color.o                           \
+	imlib_image.o                           \
+	quirc_decode.o                          \
+	quirc_identify.o                        \
+	quirc_quirc.o                           \
+	quirc_version_db.o                      \
+	utils_bitmap.o                          \
+	utils_fifo.o                            \
+	utils_lifo.o                            \
+	utils_linkedlist.o                      \
+	utils_point.o                           \
+	utils_rectangle.o                       \
+	utils_size.o                            \
 	blob.o                                  \
 	fmath.o                                 \
 	fsort.o                                 \

@@ -18,6 +18,11 @@
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
+#include "imlib_color.h"
+#include "find_blobs.h"
+#include "find_qrcodes.h"
+#include "objlist.h"
+#include "objstr.h"
 
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
@@ -910,7 +915,7 @@ static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
     imlib_mask_ellipse(arg_img);
     return img_obj;
 }
-
+/*
 static bool py_image_find_blobs_f_fun(void *fun_obj, void *img_obj, color_blob_t *cb)
 {
     mp_obj_t blob_obj[10] = {
@@ -1078,6 +1083,386 @@ static mp_obj_t py_image_find_markers(uint n_args, const mp_obj_t *args, mp_map_
         mp_obj_list_append(objects_list, mp_obj_new_tuple(10, blob_obj));
     }
     array_free(blobs_list_ret);
+    return objects_list;
+}
+*/
+// Blob Object //
+#define py_blob_obj_size 10
+typedef struct py_blob_obj {
+    mp_obj_base_t base;
+    mp_obj_t x, y, w, h, pixels, cx, cy, rotation, code, count;
+} py_blob_obj_t;
+
+static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_blob_obj_t *self = self_in;
+    mp_printf(print,
+              "{x:%d, y:%d, w:%d, h:%d, pixels:%d, cx:%d, cy:%d, rotation:%f, code:%d, count:%d}",
+              mp_obj_get_int(self->x),
+              mp_obj_get_int(self->y),
+              mp_obj_get_int(self->w),
+              mp_obj_get_int(self->h),
+              mp_obj_get_int(self->pixels),
+              mp_obj_get_int(self->cx),
+              mp_obj_get_int(self->cy),
+              (double) mp_obj_get_float(self->rotation),
+              mp_obj_get_int(self->code),
+              mp_obj_get_int(self->count));
+}
+
+static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_blob_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_blob_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_blob_obj_size, index, false)) {
+            case 0: return self->x;
+            case 1: return self->y;
+            case 2: return self->w;
+            case 3: return self->h;
+            case 4: return self->pixels;
+            case 5: return self->cx;
+            case 6: return self->cy;
+            case 7: return self->rotation;
+            case 8: return self->code;
+            case 9: return self->count;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_blob_rect(mp_obj_t self_in)
+{
+    return mp_obj_new_tuple(4, (mp_obj_t []) {((py_blob_obj_t *) self_in)->x,
+                                              ((py_blob_obj_t *) self_in)->y,
+                                              ((py_blob_obj_t *) self_in)->w,
+                                              ((py_blob_obj_t *) self_in)->h});
+}
+
+mp_obj_t py_blob_x(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x; }
+mp_obj_t py_blob_y(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y; }
+mp_obj_t py_blob_w(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->w; }
+mp_obj_t py_blob_h(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->h; }
+mp_obj_t py_blob_pixels(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->pixels; }
+mp_obj_t py_blob_cx(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cx; }
+mp_obj_t py_blob_cy(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cy; }
+mp_obj_t py_blob_rotation(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->rotation; }
+mp_obj_t py_blob_code(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->code; }
+mp_obj_t py_blob_count(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->count; }
+mp_obj_t py_blob_area(mp_obj_t self_in) {
+    return mp_obj_new_int(mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h));
+}
+mp_obj_t py_blob_density(mp_obj_t self_in) {
+    int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
+    if (area) return mp_obj_new_float(mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels) / area);
+    return mp_obj_new_float(0.0f);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rect_obj, py_blob_rect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_obj, py_blob_x);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_obj, py_blob_y);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_w_obj, py_blob_w);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_h_obj, py_blob_h);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_pixels_obj, py_blob_pixels);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cx_obj, py_blob_cx);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cy_obj, py_blob_cy);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
+
+STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_blob_rect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_blob_x_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_blob_y_obj) },
+    { MP_ROM_QSTR(MP_QSTR_w), MP_ROM_PTR(&py_blob_w_obj) },
+    { MP_ROM_QSTR(MP_QSTR_h), MP_ROM_PTR(&py_blob_h_obj) },
+    { MP_ROM_QSTR(MP_QSTR_pixels), MP_ROM_PTR(&py_blob_pixels_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cx), MP_ROM_PTR(&py_blob_cx_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cy), MP_ROM_PTR(&py_blob_cy_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_blob_rotation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_code), MP_ROM_PTR(&py_blob_code_obj) },
+    { MP_ROM_QSTR(MP_QSTR_count), MP_ROM_PTR(&py_blob_count_obj) },
+    { MP_ROM_QSTR(MP_QSTR_area), MP_ROM_PTR(&py_blob_area_obj) } ,
+    { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_blob_locals_dict, py_blob_locals_dict_table);
+
+static const mp_obj_type_t py_blob_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_blob,
+    .print = py_blob_print,
+    .subscr = py_blob_subscr,
+    .locals_dict = (mp_obj_t) &py_blob_locals_dict,
+};
+
+static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    // Transfer to new image type.
+    utils_size_t utils_size;
+    utils_size_init(&utils_size, arg_img->w, arg_img->h);
+    imlib_image_t imlib_image;
+    imlib_image_init(&imlib_image, (arg_img->bpp == 2) ? IMLIB_IMAGE_TYPE_RGB565 : IMLIB_IMAGE_TYPE_GRAYSCALE, &utils_size);
+    IMLIB_IMAGE_SET_IMAGE_SIZE(&imlib_image, arg_img->bpp * arg_img->w * arg_img->h);
+    IMLIB_IMAGE_SET_IMAGE_DATA(&imlib_image, arg_img->pixels);
+
+    rectangle_t arg_r;
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
+
+    // Transfer to new rectangle type.
+    utils_rectangle_t utils_rectangle;
+    utils_rectangle_init(&utils_rectangle, arg_r.x, arg_r.y, arg_r.w, arg_r.h);
+
+    mp_uint_t arg_thresholds_len;
+    mp_obj_t *arg_thresholds;
+    mp_obj_get_array(args[1], &arg_thresholds_len, &arg_thresholds);
+    if (!arg_thresholds_len) {
+        return mp_obj_new_list(0, NULL);
+    }
+
+    utils_linkedlist_t thresholds;
+    utils_linkedlist_alloc(&thresholds, sizeof(imlib_color_thresholds_linkedlist_lnk_data_t));
+
+    for(mp_uint_t i = 0; i < arg_thresholds_len; i++) {
+        mp_uint_t arg_threshold_len;
+        mp_obj_t *arg_threshold;
+        mp_obj_get_array(arg_thresholds[i], &arg_threshold_len, &arg_threshold);
+        if (arg_threshold_len) {
+            imlib_color_thresholds_linkedlist_lnk_data_t lnk_data;
+            lnk_data.LMin = (arg_threshold_len > 0) ? OTHER_MAX(OTHER_MIN(mp_obj_get_int(arg_threshold[0]), OTHER_MAX(IMLIB_COLOR_L_MAX, IMLIB_COLOR_GRAYSCALE_MAX)), OTHER_MIN(IMLIB_COLOR_L_MIN, IMLIB_COLOR_GRAYSCALE_MIN)) : 0;
+            lnk_data.LMax = (arg_threshold_len > 1) ? OTHER_MAX(OTHER_MIN(mp_obj_get_int(arg_threshold[1]), OTHER_MAX(IMLIB_COLOR_L_MAX, IMLIB_COLOR_GRAYSCALE_MAX)), OTHER_MIN(IMLIB_COLOR_L_MIN, IMLIB_COLOR_GRAYSCALE_MIN)) : 0;
+            lnk_data.AMin = (arg_threshold_len > 2) ? OTHER_MAX(OTHER_MIN(mp_obj_get_int(arg_threshold[2]), IMLIB_COLOR_A_MAX), IMLIB_COLOR_A_MIN) : 0;
+            lnk_data.AMax = (arg_threshold_len > 3) ? OTHER_MAX(OTHER_MIN(mp_obj_get_int(arg_threshold[3]), IMLIB_COLOR_A_MAX), IMLIB_COLOR_A_MIN) : 0;
+            lnk_data.BMin = (arg_threshold_len > 4) ? OTHER_MAX(OTHER_MIN(mp_obj_get_int(arg_threshold[4]), IMLIB_COLOR_B_MAX), IMLIB_COLOR_B_MIN) : 0;
+            lnk_data.BMax = (arg_threshold_len > 5) ? OTHER_MAX(OTHER_MIN(mp_obj_get_int(arg_threshold[5]), IMLIB_COLOR_B_MAX), IMLIB_COLOR_B_MIN) : 0;
+            imlib_color_thresholds_linkedlist_lnk_data_t lnk_data_tmp;
+            memcpy(&lnk_data_tmp, &lnk_data, sizeof(imlib_color_thresholds_linkedlist_lnk_data_t));
+            lnk_data.LMin = OTHER_MIN(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
+            lnk_data.LMax = OTHER_MAX(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
+            lnk_data.AMin = OTHER_MIN(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
+            lnk_data.AMax = OTHER_MAX(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
+            lnk_data.BMin = OTHER_MIN(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
+            lnk_data.BMax = OTHER_MAX(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
+            utils_linkedlist_push_back(&thresholds, &lnk_data);
+        }
+    }
+
+    bool invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    unsigned int area_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_area_threshold), 10);
+    unsigned int pixels_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixels_threshold), 10);
+    bool merge = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge), false);
+    int margin = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 0);
+
+    // TODO: Need to set fb_alloc trap here to recover from any exception...
+    utils_linkedlist_t list;
+    find_blobs(&list, &imlib_image, &utils_rectangle, &thresholds, invert, area_threshold, pixels_threshold, merge, margin);
+    utils_linkedlist_free(&thresholds);
+    mp_obj_list_t *objects_list = mp_obj_new_list(utils_linkedlist_size(&list), NULL);
+
+    for (size_t i = 0; utils_linkedlist_size(&list); i++) {
+        find_blobs_linkedlist_lnk_data_t lnk_data;
+        utils_linkedlist_pop_front(&list, &lnk_data);
+
+        py_blob_obj_t *o = m_new_obj(py_blob_obj_t);
+        o->base.type = &py_blob_type;
+        o->x = mp_obj_new_int(lnk_data.rect.p.x);
+        o->y = mp_obj_new_int(lnk_data.rect.p.y);
+        o->w = mp_obj_new_int(lnk_data.rect.s.w);
+        o->h = mp_obj_new_int(lnk_data.rect.s.h);
+        o->pixels = mp_obj_new_int(lnk_data.pixels);
+        o->cx = mp_obj_new_int(lnk_data.centroid.x);
+        o->cy = mp_obj_new_int(lnk_data.centroid.y);
+        o->rotation = mp_obj_new_float(lnk_data.rotation);
+        o->code = mp_obj_new_int(lnk_data.code);
+        o->count = mp_obj_new_int(lnk_data.count);
+
+        objects_list->items[i] = o;
+    }
+
+    return objects_list;
+}
+
+// QRCode Object //
+#define py_qrcode_obj_size 10
+typedef struct py_qrcode_obj {
+    mp_obj_base_t base;
+    mp_obj_t x, y, w, h, payload, version, ecc_level, mask, data_type, eci;
+} py_qrcode_obj_t;
+
+static void py_qrcode_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_qrcode_obj_t *self = self_in;
+    mp_printf(print,
+              "{x:%d, y:%d, w:%d, h:%d, payload:\"%s\", version:%d, ecc_level:%d, mask:%d, data_type:%d, eci:%d}",
+              mp_obj_get_int(self->x),
+              mp_obj_get_int(self->y),
+              mp_obj_get_int(self->w),
+              mp_obj_get_int(self->h),
+              mp_obj_str_get_str(self->payload),
+              mp_obj_get_int(self->version),
+              mp_obj_get_int(self->ecc_level),
+              mp_obj_get_int(self->mask),
+              mp_obj_get_int(self->data_type),
+              mp_obj_get_int(self->eci));
+}
+
+static mp_obj_t py_qrcode_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_qrcode_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_qrcode_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_qrcode_obj_size, index, false)) {
+            case 0: return self->x;
+            case 1: return self->y;
+            case 2: return self->w;
+            case 3: return self->h;
+            case 4: return self->payload;
+            case 5: return self->version;
+            case 6: return self->ecc_level;
+            case 7: return self->mask;
+            case 8: return self->data_type;
+            case 9: return self->eci;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_qrcode_rect(mp_obj_t self_in)
+{
+    return mp_obj_new_tuple(4, (mp_obj_t []) {((py_qrcode_obj_t *) self_in)->x,
+                                              ((py_qrcode_obj_t *) self_in)->y,
+                                              ((py_qrcode_obj_t *) self_in)->w,
+                                              ((py_qrcode_obj_t *) self_in)->h});
+}
+
+mp_obj_t py_qrcode_x(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->x; }
+mp_obj_t py_qrcode_y(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->y; }
+mp_obj_t py_qrcode_w(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->w; }
+mp_obj_t py_qrcode_h(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->h; }
+mp_obj_t py_qrcode_payload(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->payload; }
+mp_obj_t py_qrcode_version(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->version; }
+mp_obj_t py_qrcode_ecc_level(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->ecc_level; }
+mp_obj_t py_qrcode_mask(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->mask; }
+mp_obj_t py_qrcode_data_type(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->data_type; }
+mp_obj_t py_qrcode_eci(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->eci; }
+mp_obj_t py_qrcode_is_numeric(mp_obj_t self_in) { return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 1); }
+mp_obj_t py_qrcode_is_alphanumeric(mp_obj_t self_in) { return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 2); }
+mp_obj_t py_qrcode_is_binary(mp_obj_t self_in) { return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 4); }
+mp_obj_t py_qrcode_is_kanji(mp_obj_t self_in) { return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 8); }
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_rect_obj, py_qrcode_rect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_x_obj, py_qrcode_x);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_y_obj, py_qrcode_y);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_w_obj, py_qrcode_w);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_h_obj, py_qrcode_h);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_payload_obj, py_qrcode_payload);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_version_obj, py_qrcode_version);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_ecc_level_obj, py_qrcode_ecc_level);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_mask_obj, py_qrcode_mask);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_data_type_obj, py_qrcode_data_type);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_eci_obj, py_qrcode_eci);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_numeric_obj, py_qrcode_is_numeric);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_alphanumeric_obj, py_qrcode_is_alphanumeric);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_binary_obj, py_qrcode_is_binary);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_kanji_obj, py_qrcode_is_kanji);
+
+STATIC const mp_rom_map_elem_t py_qrcode_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_qrcode_rect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_qrcode_x_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_qrcode_y_obj) },
+    { MP_ROM_QSTR(MP_QSTR_w), MP_ROM_PTR(&py_qrcode_w_obj) },
+    { MP_ROM_QSTR(MP_QSTR_h), MP_ROM_PTR(&py_qrcode_h_obj) },
+    { MP_ROM_QSTR(MP_QSTR_payload), MP_ROM_PTR(&py_qrcode_payload_obj) },
+    { MP_ROM_QSTR(MP_QSTR_version), MP_ROM_PTR(&py_qrcode_version_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ecc_level), MP_ROM_PTR(&py_qrcode_ecc_level_obj) },
+    { MP_ROM_QSTR(MP_QSTR_mask), MP_ROM_PTR(&py_qrcode_mask_obj) },
+    { MP_ROM_QSTR(MP_QSTR_data_type), MP_ROM_PTR(&py_qrcode_data_type_obj) },
+    { MP_ROM_QSTR(MP_QSTR_eci), MP_ROM_PTR(&py_qrcode_eci_obj) },
+    { MP_ROM_QSTR(MP_QSTR_is_numeric), MP_ROM_PTR(&py_qrcode_is_numeric_obj) },
+    { MP_ROM_QSTR(MP_QSTR_is_alphanumeric), MP_ROM_PTR(&py_qrcode_is_alphanumeric_obj) },
+    { MP_ROM_QSTR(MP_QSTR_is_binary), MP_ROM_PTR(&py_qrcode_is_binary_obj) },
+    { MP_ROM_QSTR(MP_QSTR_is_kanji), MP_ROM_PTR(&py_qrcode_is_kanji_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_qrcode_locals_dict, py_qrcode_locals_dict_table);
+
+static const mp_obj_type_t py_qrcode_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_qrcode,
+    .print = py_qrcode_print,
+    .subscr = py_qrcode_subscr,
+    .locals_dict = (mp_obj_t) &py_qrcode_locals_dict,
+};
+
+static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
+
+    // Transfer to new image type.
+    utils_size_t utils_size;
+    utils_size_init(&utils_size, arg_img->w, arg_img->h);
+    imlib_image_t imlib_image;
+    imlib_image_init(&imlib_image, (arg_img->bpp == 2) ? IMLIB_IMAGE_TYPE_RGB565 : IMLIB_IMAGE_TYPE_GRAYSCALE, &utils_size);
+    IMLIB_IMAGE_SET_IMAGE_SIZE(&imlib_image, arg_img->bpp * arg_img->w * arg_img->h);
+    IMLIB_IMAGE_SET_IMAGE_DATA(&imlib_image, arg_img->pixels);
+
+    rectangle_t arg_r;
+    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
+
+    // Transfer to new rectangle type.
+    utils_rectangle_t utils_rectangle;
+    utils_rectangle_init(&utils_rectangle, arg_r.x, arg_r.y, arg_r.w, arg_r.h);
+
+    // TODO: Need to set fb_alloc trap here to recover from any exception...
+    utils_linkedlist_t list;
+    find_qrcodes(&list, &imlib_image, &utils_rectangle);
+    mp_obj_list_t *objects_list = mp_obj_new_list(utils_linkedlist_size(&list), NULL);
+
+    for (size_t i = 0; utils_linkedlist_size(&list); i++) {
+        find_qrcodes_linkedlist_lnk_data_t lnk_data;
+        utils_linkedlist_pop_front(&list, &lnk_data);
+
+        py_qrcode_obj_t *o = m_new_obj(py_qrcode_obj_t);
+        o->base.type = &py_qrcode_type;
+        o->x = mp_obj_new_int(lnk_data.rect.p.x);
+        o->y = mp_obj_new_int(lnk_data.rect.p.y);
+        o->w = mp_obj_new_int(lnk_data.rect.s.w);
+        o->h = mp_obj_new_int(lnk_data.rect.s.h);
+        o->payload = mp_obj_new_str(lnk_data.payload, lnk_data.payload_len, false);
+        o->version = mp_obj_new_int(lnk_data.version);
+        o->ecc_level = mp_obj_new_int(lnk_data.ecc_level);
+        o->mask = mp_obj_new_int(lnk_data.mask);
+        o->data_type = mp_obj_new_int(lnk_data.data_type);
+        o->eci = mp_obj_new_int(lnk_data.eci);
+
+        objects_list->items[i] = o;
+        xfree(lnk_data.payload);
+    }
+
     return objects_list;
 }
 
@@ -1505,7 +1890,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_lens_corr_obj, py_image_lens_corr);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_mask_ellipse_obj, py_image_mask_ellipse);
 /* Color Tracking */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_markers_obj, 2, py_image_find_markers);
+/* Code Detection */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_qrcodes_obj, 1, py_image_find_qrcodes);
 /* Template Matching */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pool_obj, 3, py_image_midpoint_pool);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
@@ -1574,7 +1960,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_mask_ellipse),        (mp_obj_t)&py_image_mask_ellipse_obj},
     /* Color Tracking */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_markers),        (mp_obj_t)&py_image_find_markers_obj},
+    /* Code Detection */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_qrcodes),        (mp_obj_t)&py_image_find_qrcodes_obj},
     /* Template Matching */
     {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint_pool),       (mp_obj_t)&py_image_midpoint_pool_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint_pooled),     (mp_obj_t)&py_image_midpoint_pooled_obj},
