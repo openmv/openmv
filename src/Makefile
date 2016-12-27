@@ -141,6 +141,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	fft.o                                   \
 	haar.o                                  \
 	imlib.o                                 \
+	collections.o                           \
 	stats.o                                 \
 	morph.o                                 \
 	integral.o                              \

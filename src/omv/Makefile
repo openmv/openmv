@@ -23,6 +23,7 @@ SRCS += $(addprefix img/,   \
 	fft.c                   \
 	haar.c                  \
 	imlib.c                 \
+	collections.c           \
 	stats.c                 \
 	morph.c                 \
 	integral.c              \
