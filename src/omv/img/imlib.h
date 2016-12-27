@@ -15,48 +15,49 @@
 #include "xalloc.h"
 #include "array.h"
 #include "fmath.h"
+#include "imlib_collections.h"
 
-#define IM_LOG2_2(x)     (((x) &                0x2ULL) ? ( 2                        ) :             1) // NO ({ ... }) !
-#define IM_LOG2_4(x)     (((x) &                0xCULL) ? ( 2 +  IM_LOG2_2((x) >>  2)) :  IM_LOG2_2(x)) // NO ({ ... }) !
-#define IM_LOG2_8(x)     (((x) &               0xF0ULL) ? ( 4 +  IM_LOG2_4((x) >>  4)) :  IM_LOG2_4(x)) // NO ({ ... }) !
-#define IM_LOG2_16(x)    (((x) &             0xFF00ULL) ? ( 8 +  IM_LOG2_8((x) >>  8)) :  IM_LOG2_8(x)) // NO ({ ... }) !
-#define IM_LOG2_32(x)    (((x) &         0xFFFF0000ULL) ? (16 + IM_LOG2_16((x) >> 16)) : IM_LOG2_16(x)) // NO ({ ... }) !
-#define IM_LOG2(x)       (((x) & 0xFFFFFFFF00000000ULL) ? (32 + IM_LOG2_32((x) >> 32)) : IM_LOG2_32(x)) // NO ({ ... }) !
+#define IM_LOG2_2(x)        (((x) &                0x2ULL) ? ( 2                        ) :             1) // NO ({ ... }) !
+#define IM_LOG2_4(x)        (((x) &                0xCULL) ? ( 2 +  IM_LOG2_2((x) >>  2)) :  IM_LOG2_2(x)) // NO ({ ... }) !
+#define IM_LOG2_8(x)        (((x) &               0xF0ULL) ? ( 4 +  IM_LOG2_4((x) >>  4)) :  IM_LOG2_4(x)) // NO ({ ... }) !
+#define IM_LOG2_16(x)       (((x) &             0xFF00ULL) ? ( 8 +  IM_LOG2_8((x) >>  8)) :  IM_LOG2_8(x)) // NO ({ ... }) !
+#define IM_LOG2_32(x)       (((x) &         0xFFFF0000ULL) ? (16 + IM_LOG2_16((x) >> 16)) : IM_LOG2_16(x)) // NO ({ ... }) !
+#define IM_LOG2(x)          (((x) & 0xFFFFFFFF00000000ULL) ? (32 + IM_LOG2_32((x) >> 32)) : IM_LOG2_32(x)) // NO ({ ... }) !
 
-#define IM_MAX(a,b)      ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a > _b ? _a : _b; })
-#define IM_MIN(a,b)      ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
+#define IM_MAX(a,b)         ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a > _b ? _a : _b; })
+#define IM_MIN(a,b)         ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
 
-#define INT8_T_BITS     (sizeof(int8_t) * 8)
-#define INT8_T_MASK     (INT8_T_BITS - 1)
-#define INT8_T_SHIFT    IM_LOG2(INT8_T_MASK)
+#define IM_INT8_T_BITS      (sizeof(int8_t) * 8)
+#define IM_INT8_T_MASK      (IM_INT8_T_BITS - 1)
+#define IM_INT8_T_SHIFT     IM_LOG2(IM_INT8_T_MASK)
 
-#define INT16_T_BITS    (sizeof(int16_t) * 8)
-#define INT16_T_MASK    (INT16_T_BITS - 1)
-#define INT16_T_SHIFT   IM_LOG2(INT16_T_MASK)
+#define IM_INT16_T_BITS     (sizeof(int16_t) * 8)
+#define IM_INT16_T_MASK     (IM_INT16_T_BITS - 1)
+#define IM_INT16_T_SHIFT    IM_LOG2(IM_INT16_T_MASK)
 
-#define INT32_T_BITS    (sizeof(int32_t) * 8)
-#define INT32_T_MASK    (INT32_T_BITS - 1)
-#define INT32_T_SHIFT   IM_LOG2(INT32_T_MASK)
+#define IM_INT32_T_BITS     (sizeof(int32_t) * 8)
+#define IM_INT32_T_MASK     (IM_INT32_T_BITS - 1)
+#define IM_INT32_T_SHIFT    IM_LOG2(IM_INT32_T_MASK)
 
-#define INT64_T_BITS    (sizeof(int64_t) * 8)
-#define INT64_T_MASK    (INT64_T_BITS - 1)
-#define INT64_T_SHIFT   IM_LOG2(INT64_T_MASK)
+#define IM_INT64_T_BITS     (sizeof(int64_t) * 8)
+#define IM_INT64_T_MASK     (IM_INT64_T_BITS - 1)
+#define IM_INT64_T_SHIFT    IM_LOG2(IM_INT64_T_MASK)
 
-#define UINT8_T_BITS    (sizeof(uint8_t) * 8)
-#define UINT8_T_MASK    (UINT8_T_BITS - 1)
-#define UINT8_T_SHIFT   IM_LOG2(UINT8_T_MASK)
+#define IM_UINT8_T_BITS     (sizeof(uint8_t) * 8)
+#define IM_UINT8_T_MASK     (IM_UINT8_T_BITS - 1)
+#define IM_UINT8_T_SHIFT    IM_LOG2(IM_UINT8_T_MASK)
 
-#define UINT16_T_BITS   (sizeof(uint16_t) * 8)
-#define UINT16_T_MASK   (UINT16_T_BITS - 1)
-#define UINT16_T_SHIFT  IM_LOG2(UINT16_T_MASK)
+#define IM_UINT16_T_BITS    (sizeof(uint16_t) * 8)
+#define IM_UINT16_T_MASK    (IM_UINT16_T_BITS - 1)
+#define IM_UINT16_T_SHIFT   IM_LOG2(IM_UINT16_T_MASK)
 
-#define UINT32_T_BITS   (sizeof(uint32_t) * 8)
-#define UINT32_T_MASK   (UINT32_T_BITS - 1)
-#define UINT32_T_SHIFT  IM_LOG2(UINT32_T_MASK)
+#define IM_UINT32_T_BITS    (sizeof(uint32_t) * 8)
+#define IM_UINT32_T_MASK    (IM_UINT32_T_BITS - 1)
+#define IM_UINT32_T_SHIFT   IM_LOG2(IM_UINT32_T_MASK)
 
-#define UINT64_T_BITS   (sizeof(uint64_t) * 8)
-#define UINT64_T_MASK   (UINT64_T_BITS - 1)
-#define UINT64_T_SHIFT  IM_LOG2(UINT64_T_MASK)
+#define IM_UINT64_T_BITS    (sizeof(uint64_t) * 8)
+#define IM_UINT64_T_MASK    (IM_UINT64_T_BITS - 1)
+#define IM_UINT64_T_SHIFT   IM_LOG2(IM_UINT64_T_MASK)
 
 //////////////////////
 // Dimensions Stuff //
@@ -308,7 +309,7 @@ void image_intersected(new_image_t *ptr, rectangle_t *rect);
     __typeof__ (image) _image = (image); \
     __typeof__ (x) _x = (x); \
     __typeof__ (y) _y = (y); \
-    (((uint32_t *) _image->data)[(((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y) + (_x >> UINT32_T_SHIFT)] >> (_x & UINT32_T_MASK)) & 1; \
+    (((uint32_t *) _image->data)[(((_image->w + IM_UINT32_T_MASK) >> IM_UINT32_T_SHIFT) * _y) + (_x >> IM_UINT32_T_SHIFT)] >> (_x & IM_UINT32_T_MASK)) & 1; \
 })
 
 #define IMAGE_PUT_BINARY_PIXEL(image, x, y, v) \
@@ -317,8 +318,8 @@ void image_intersected(new_image_t *ptr, rectangle_t *rect);
     __typeof__ (x) _x = (x); \
     __typeof__ (y) _y = (y); \
     __typeof__ (v) _v = (v); \
-    size_t _i = (((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y) + (_x >> UINT32_T_SHIFT); \
-    size_t _j = _x & UINT32_T_MASK; \
+    size_t _i = (((_image->w + IM_UINT32_T_MASK) >> IM_UINT32_T_SHIFT) * _y) + (_x >> IM_UINT32_T_SHIFT); \
+    size_t _j = _x & IM_UINT32_T_MASK; \
     ((uint32_t *) _image->data)[_i] = (((uint32_t *) _image->data)[_i] & (~(1 << _j))) | ((_v & 1) << _j); \
 })
 
@@ -327,7 +328,7 @@ void image_intersected(new_image_t *ptr, rectangle_t *rect);
     __typeof__ (image) _image = (image); \
     __typeof__ (x) _x = (x); \
     __typeof__ (y) _y = (y); \
-    ((uint32_t *) _image->data)[(((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y) + (_x >> UINT32_T_SHIFT)] &= ~(1 << (_x & UINT32_T_MASK)); \
+    ((uint32_t *) _image->data)[(((_image->w + IM_UINT32_T_MASK) >> IM_UINT32_T_SHIFT) * _y) + (_x >> IM_UINT32_T_SHIFT)] &= ~(1 << (_x & IM_UINT32_T_MASK)); \
 })
 
 #define IMAGE_SET_BINARY_PIXEL(image, x, y) \
@@ -335,7 +336,7 @@ void image_intersected(new_image_t *ptr, rectangle_t *rect);
     __typeof__ (image) _image = (image); \
     __typeof__ (x) _x = (x); \
     __typeof__ (y) _y = (y); \
-    ((uint32_t *) _image->data)[(((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y) + (_x >> UINT32_T_SHIFT)] |= 1 << (_x & UINT32_T_MASK); \
+    ((uint32_t *) _image->data)[(((_image->w + IM_UINT32_T_MASK) >> IM_UINT32_T_SHIFT) * _y) + (_x >> IM_UINT32_T_SHIFT)] |= 1 << (_x & IM_UINT32_T_MASK); \
 })
 
 #define IMAGE_GET_GRAYSCALE_PIXEL(image, x, y) \
@@ -438,21 +439,21 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
 ({ \
     __typeof__ (image) _image = (image); \
     __typeof__ (y) _y = (y); \
-    ((uint32_t *) _image->data) + (((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y); \
+    ((uint32_t *) _image->data) + (((_image->w + IM_UINT32_T_MASK) >> IM_UINT32_T_SHIFT) * _y); \
 })
 
 #define IMAGE_INC_BINARY_PIXEL_ROW_PTR(row_ptr, image) \
 ({ \
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
     __typeof__ (image) _image = (image); \
-    _row_ptr + ((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT); \
+    _row_ptr + ((_image->w + IM_UINT32_T_MASK) >> IM_UINT32_T_SHIFT); \
 })
 
 #define IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) \
 ({ \
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
     __typeof__ (x) _x = (x); \
-    (_row_ptr[_x >> UINT32_T_SHIFT] >> (_x & UINT32_T_MASK)) & 1; \
+    (_row_ptr[_x >> IM_UINT32_T_SHIFT] >> (_x & IM_UINT32_T_MASK)) & 1; \
 })
 
 #define IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, v) \
@@ -460,8 +461,8 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
     __typeof__ (x) _x = (x); \
     __typeof__ (v) _v = (v); \
-    size_t _i = _x >> UINT32_T_SHIFT \
-    size_t _j = _x & UINT32_T_MASK; \
+    size_t _i = _x >> IM_UINT32_T_SHIFT \
+    size_t _j = _x & IM_UINT32_T_MASK; \
     _row_ptr[_i] = (_row_ptr[_i] & (~(1 << _j))) | ((_v & 1) << _j); \
 })
 
@@ -469,14 +470,14 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
 ({ \
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
     __typeof__ (x) _x = (x); \
-    _row_ptr[_x >> UINT32_T_SHIFT] &= ~(1 << (_x & UINT32_T_MASK)); \
+    _row_ptr[_x >> IM_UINT32_T_SHIFT] &= ~(1 << (_x & IM_UINT32_T_MASK)); \
 })
 
 #define IMAGE_SET_BINARY_PIXEL_FAST(row_ptr, x) \
 ({ \
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
     __typeof__ (x) _x = (x); \
-    _row_ptr[_x >> UINT32_T_SHIFT] |= 1 << (_x & UINT32_T_MASK); \
+    _row_ptr[_x >> IM_UINT32_T_SHIFT] |= 1 << (_x & IM_UINT32_T_MASK); \
 })
 
 #define IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(image, y) \
@@ -541,7 +542,7 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
 ({ \
     __typeof__ (image) _image = (image); \
     __typeof__ (y) _y = (y); \
-    ((uint32_t *) _image->data) + (((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * (((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET)); \
+    ((uint32_t *) _image->data) + (((_image->w + IM_UINT32_T_MASK) >> IM_UINT32_T_SHIFT) * (((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET)); \
 })
 
 #define IMAGE_GET_SCALED_BINARY_PIXEL_FAST(row_ptr, x) IMAGE_GET_BINARY_PIXEL_FAST((row_ptr), ((size_t) ((IMAGE_X_RATIO * ((x) - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET)
