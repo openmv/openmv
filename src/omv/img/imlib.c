@@ -7,22 +7,164 @@
  *
  */
 #include <stdlib.h>
-#include <string.h>
-#include <arm_math.h>
 #include <mp.h>
 #include "font.h"
 #include "array.h"
 #include "ff_wrapper.h"
-#include "fb_alloc.h"
-#include "xalloc.h"
 #include "imlib.h"
 #include "common.h"
 
+//////////////////////
+// Dimensions Stuff //
+//////////////////////
+
+void dimensions_init(dimensions_t *ptr, int w, int h)
+{
+    ptr->w = w;
+    ptr->h = h;
+}
+
+void dimensions_copy(dimensions_t *dst, dimensions_t *src)
+{
+    memcpy(dst, src, sizeof(dimensions_t));
+}
+
+bool dimensions_equal_fast(dimensions_t *ptr0, dimensions_t *ptr1)
+{
+    return !memcmp(ptr0, ptr1, sizeof(dimensions_t));
+}
+
+bool dimensions_check(dimensions_t *ptr)
+{
+    return ptr->w && ptr->h;
+}
+
+/////////////////
+// Point Stuff //
+/////////////////
+
+void point_init(point_t *ptr, int x, int y)
+{
+    ptr->x = x;
+    ptr->y = y;
+}
+
+void point_copy(point_t *dst, point_t *src)
+{
+    memcpy(dst, src, sizeof(point_t));
+}
+
+bool point_equal_fast(point_t *ptr0, point_t *ptr1)
+{
+    return !memcmp(ptr0, ptr1, sizeof(point_t));
+}
+
+int point_quadrance(point_t *ptr0, point_t *ptr1)
+{
+    int delta_x = ptr0->x - ptr1->x;
+    int delta_y = ptr0->y - ptr1->y;
+    return (delta_x * delta_x) + (delta_y * delta_y);
+}
+
+/////////////////////
+// Rectangle Stuff //
+/////////////////////
+
+void rectangle_init(rectangle_t *ptr, int x, int y, int w, int h)
+{
+    ptr->x = x;
+    ptr->y = y;
+    ptr->w = w;
+    ptr->h = h;
+}
+
+void rectangle_copy(rectangle_t *dst, rectangle_t *src)
+{
+    memcpy(dst, src, sizeof(rectangle_t));
+}
+
+bool rectangle_equal_fast(rectangle_t *ptr0, rectangle_t *ptr1)
+{
+    return !memcmp(ptr0, ptr1, sizeof(rectangle_t));
+}
+
+bool rectangle_overlap(rectangle_t *ptr0, rectangle_t *ptr1)
+{
+    int x0 = ptr0->x;
+    int y0 = ptr0->y;
+    int w0 = ptr0->w;
+    int h0 = ptr0->h;
+    int x1 = ptr1->x;
+    int y1 = ptr1->y;
+    int w1 = ptr1->w;
+    int h1 = ptr1->h;
+    return (x0 < (x1 + w1)) && (y0 < (y1 + h1)) && (x1 < (x0 + w0)) && (y1 < (y0 + h0));
+}
+
+void rectangle_intersected(rectangle_t *dst, rectangle_t *src)
+{
+    int leftX = IM_MAX(dst->x, src->x);
+    int topY = IM_MAX(dst->y, src->y);
+    int rightX = IM_MIN(dst->x + dst->w, src->x + src->w);
+    int bottomY = IM_MIN(dst->y + dst->h, src->y + src->h);
+    dst->x = leftX;
+    dst->y = topY;
+    dst->w = rightX - leftX;
+    dst->h = bottomY - topY;
+}
+
+void rectangle_united(rectangle_t *dst, rectangle_t *src)
+{
+    int leftX = IM_MIN(dst->x, src->x);
+    int topY = IM_MIN(dst->y, src->y);
+    int rightX = IM_MAX(dst->x + dst->w, src->x + src->w);
+    int bottomY = IM_MAX(dst->y + dst->h, src->y + src->h);
+    dst->x = leftX;
+    dst->y = topY;
+    dst->w = rightX - leftX;
+    dst->h = bottomY - topY;
+}
+
+/////////////////
+// Image Stuff //
+/////////////////
+
+void image_init(new_image_t *ptr, new_image_type_t type, dimensions_t *dimensions)
+{
+    ptr->w = dimensions->w;
+    ptr->h = dimensions->h;
+    ptr->type = type;
+    ptr->size = 0;
+    ptr->data = NULL;
+}
+
+void image_copy(new_image_t *dst, new_image_t *src)
+{
+    memcpy(dst, src, sizeof(new_image_t));
+}
+
+bool image_check_overlap(new_image_t *ptr, rectangle_t *rect)
+{
+    rectangle_t temp;
+    temp.x = 0;
+    temp.y = 0;
+    temp.w = ptr->w;
+    temp.h = ptr->h;
+    return rectangle_overlap(rect, &temp);
+}
+
+void image_intersected(new_image_t *ptr, rectangle_t *rect)
+{
+    rectangle_t temp;
+    temp.x = 0;
+    temp.y = 0;
+    temp.w = ptr->w;
+    temp.h = ptr->h;
+    rectangle_intersected(rect, &temp);
+}
+
 // Gamma uncompress
 extern const float xyz_table[256];
-
-// RGB565 to YUV conversion
-extern const int8_t yuv_table[196608];
 
 const int8_t kernel_gauss_3[3*3] = {
      9,  12,  9,
@@ -49,7 +191,6 @@ const int8_t kernel_high_pass_3[3*3] = {
     -1, +8, -1,
     -1, -1, -1
 };
-
 
 // USE THE LUT FOR RGB->LAB CONVERSION - NOT THIS FUNCTION!
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab)

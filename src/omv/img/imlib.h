@@ -1,31 +1,573 @@
-/*
- * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+/* This file is part of the OpenMV project.
+ * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
  * This work is licensed under the MIT license, see the file LICENSE for details.
- *
- * Image library.
- *
  */
+
 #ifndef __IMLIB_H__
 #define __IMLIB_H__
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <string.h>
+#include <arm_math.h>
 #include <ff.h>
+#include "fb_alloc.h"
+#include "xalloc.h"
 #include "array.h"
 #include "fmath.h"
 
+#define IM_LOG2_2(x)     (((x) &                0x2ULL) ? ( 2                        ) :             1) // NO ({ ... }) !
+#define IM_LOG2_4(x)     (((x) &                0xCULL) ? ( 2 +  IM_LOG2_2((x) >>  2)) :  IM_LOG2_2(x)) // NO ({ ... }) !
+#define IM_LOG2_8(x)     (((x) &               0xF0ULL) ? ( 4 +  IM_LOG2_4((x) >>  4)) :  IM_LOG2_4(x)) // NO ({ ... }) !
+#define IM_LOG2_16(x)    (((x) &             0xFF00ULL) ? ( 8 +  IM_LOG2_8((x) >>  8)) :  IM_LOG2_8(x)) // NO ({ ... }) !
+#define IM_LOG2_32(x)    (((x) &         0xFFFF0000ULL) ? (16 + IM_LOG2_16((x) >> 16)) : IM_LOG2_16(x)) // NO ({ ... }) !
+#define IM_LOG2(x)       (((x) & 0xFFFFFFFF00000000ULL) ? (32 + IM_LOG2_32((x) >> 32)) : IM_LOG2_32(x)) // NO ({ ... }) !
+
+#define IM_MAX(a,b)      ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a > _b ? _a : _b; })
+#define IM_MIN(a,b)      ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
+
+#define INT8_T_BITS     (sizeof(int8_t) * 8)
+#define INT8_T_MASK     (INT8_T_BITS - 1)
+#define INT8_T_SHIFT    IM_LOG2(INT8_T_MASK)
+
+#define INT16_T_BITS    (sizeof(int16_t) * 8)
+#define INT16_T_MASK    (INT16_T_BITS - 1)
+#define INT16_T_SHIFT   IM_LOG2(INT16_T_MASK)
+
+#define INT32_T_BITS    (sizeof(int32_t) * 8)
+#define INT32_T_MASK    (INT32_T_BITS - 1)
+#define INT32_T_SHIFT   IM_LOG2(INT32_T_MASK)
+
+#define INT64_T_BITS    (sizeof(int64_t) * 8)
+#define INT64_T_MASK    (INT64_T_BITS - 1)
+#define INT64_T_SHIFT   IM_LOG2(INT64_T_MASK)
+
+#define UINT8_T_BITS    (sizeof(uint8_t) * 8)
+#define UINT8_T_MASK    (UINT8_T_BITS - 1)
+#define UINT8_T_SHIFT   IM_LOG2(UINT8_T_MASK)
+
+#define UINT16_T_BITS   (sizeof(uint16_t) * 8)
+#define UINT16_T_MASK   (UINT16_T_BITS - 1)
+#define UINT16_T_SHIFT  IM_LOG2(UINT16_T_MASK)
+
+#define UINT32_T_BITS   (sizeof(uint32_t) * 8)
+#define UINT32_T_MASK   (UINT32_T_BITS - 1)
+#define UINT32_T_SHIFT  IM_LOG2(UINT32_T_MASK)
+
+#define UINT64_T_BITS   (sizeof(uint64_t) * 8)
+#define UINT64_T_MASK   (UINT64_T_BITS - 1)
+#define UINT64_T_SHIFT  IM_LOG2(UINT64_T_MASK)
+
+//////////////////////
+// Dimensions Stuff //
+//////////////////////
+
+typedef struct dimensions {
+    int16_t w;
+    int16_t h;
+} dimensions_t;
+
+void size_init(size_t *ptr, int w, int h);
+void size_copy(size_t *dst, size_t *src);
+bool size_equal_fast(size_t *ptr0, size_t *ptr1);
+bool size_check(size_t *ptr);
+
+/////////////////
+// Point Stuff //
+/////////////////
+
+typedef struct point {
+    int16_t x;
+    int16_t y;
+} point_t;
+
+void point_init(point_t *ptr, int x, int y);
+void point_copy(point_t *dst, point_t *src);
+bool point_equal_fast(point_t *ptr0, point_t *ptr1);
+int point_quadrance(point_t *ptr0, point_t *ptr1);
+
+////////////////
+// Line Stuff //
+////////////////
+
+typedef struct line {
+    int16_t x1;
+    int16_t y1;
+    int16_t x2;
+    int16_t y2;
+} line_t;
+
+/////////////////////
+// Rectangle Stuff //
+/////////////////////
+
+typedef struct rectangle {
+    int16_t x;
+    int16_t y;
+    int16_t w;
+    int16_t h;
+} rectangle_t;
+
+void rectangle_init(rectangle_t *ptr, int x, int y, int w, int h);
+void rectangle_copy(rectangle_t *dst, rectangle_t *src);
+bool rectangle_equal(rectangle_t *ptr0, rectangle_t *ptr1);
+bool rectangle_overlap(rectangle_t *ptr0, rectangle_t *ptr1);
+void rectangle_intersected(rectangle_t *dst, rectangle_t *src);
+void rectangle_united(rectangle_t *dst, rectangle_t *src);
+
+/////////////////
+// Color Stuff //
+/////////////////
+
+typedef struct color_thresholds_list_lnk_data
+{
+    uint8_t LMin, LMax; // or grayscale
+    int8_t AMin, AMax;
+    int8_t BMin, BMax;
+}
+color_thresholds_list_lnk_data_t;
+
+#define COLOR_THRESHOLD_BINARY(pixel, threshold, invert) ((pixel) ^ (invert))
+
+#define COLOR_THRESHOLD_GRAYSCALE(pixel, threshold, invert) \
+({ \
+    __typeof__ (pixel) _pixel = (pixel); \
+    __typeof__ (threshold) _threshold = (threshold); \
+    __typeof__ (invert) _invert = (invert); \
+    ((_threshold->LMin <= _pixel) && (_pixel <= _threshold->LMax)) ^ _invert; \
+})
+
+#define COLOR_THRESHOLD_RGB565(pixel, threshold, invert) \
+({ \
+    __typeof__ (pixel) _pixel = (pixel); \
+    __typeof__ (threshold) _threshold = (threshold); \
+    __typeof__ (invert) _invert = (invert); \
+    uint8_t _l = COLOR_RGB565_TO_L(_pixel); \
+    int8_t _a = COLOR_RGB565_TO_A(_pixel); \
+    int8_t _b = COLOR_RGB565_TO_B(_pixel); \
+    ((_threshold->LMin <= _l) && (_l <= _threshold->LMax) && (_threshold->AMin <= _a) && (_a <= _threshold->AMax) && (_threshold->BMin <= _b) && (_b <= _threshold->BMax)) ^ _invert; \
+})
+
+#define COLOR_BINARY_MIN 0
+#define COLOR_BINARY_MAX 1
+
+#define COLOR_GRAYSCALE_MIN 0
+#define COLOR_GRAYSCALE_MAX 255
+
+#define COLOR_R5_MIN 0
+#define COLOR_R5_MAX 31
+#define COLOR_G6_MIN 0
+#define COLOR_G6_MAX 63
+#define COLOR_B5_MIN 0
+#define COLOR_B5_MAX 31
+
+#define COLOR_R8_MIN 0
+#define COLOR_R8_MAX 255
+#define COLOR_G8_MIN 0
+#define COLOR_G8_MAX 255
+#define COLOR_B8_MIN 0
+#define COLOR_B8_MAX 255
+
+#define COLOR_L_MIN 0
+#define COLOR_L_MAX 100
+#define COLOR_A_MIN -128
+#define COLOR_A_MAX 127
+#define COLOR_B_MIN -128
+#define COLOR_B_MAX 127
+
+#define COLOR_Y_MIN -128
+#define COLOR_Y_MAX 127
+#define COLOR_U_MIN -128
+#define COLOR_V_MAX 127
+#define COLOR_U_MIN -128
+#define COLOR_V_MAX 127
+
+extern const uint8_t rb528_table[32];
+extern const uint8_t g628_table[64];
+
+#define COLOR_R5_TO_R8(color) rb528_table[color]
+#define COLOR_G6_TO_G8(color) g628_table[color]
+#define COLOR_B5_TO_B8(color) rb528_table[color]
+
+extern const uint8_t rb825_table[256];
+extern const uint8_t g826_table[256];
+
+#define COLOR_R8_TO_R5(color) rb825_table[color]
+#define COLOR_G8_TO_G6(color) g826_table[color]
+#define COLOR_B8_TO_B5(color) rb825_table[color]
+
+// RGB565 Stuff //
+
+#define COLOR_RGB565_TO_R5(pixel) (((pixel) >> 3) & 0x1F)
+#define COLOR_RGB565_TO_G6(pixel) \
+({ \
+    __typeof__ (pixel) _pixel = (pixel); \
+    ((_pixel & 0x07) << 3) | (_pixel >> 13); \
+})
+#define COLOR_RGB565_TO_B5(pixel) (((pixel) >> 8) & 0x1F)
+#define COLOR_RGB565_TO_R8(pixel) COLOR_R5_TO_R8(COLOR_RGB565_TO_R5(pixel))
+#define COLOR_RGB565_TO_G8(pixel) COLOR_G6_TO_G8(COLOR_RGB565_TO_G6(pixel))
+#define COLOR_RGB565_TO_B8(pixel) COLOR_B5_TO_B8(COLOR_RGB565_TO_B5(pixel))
+
+#define COLOR_R5_G6_B5_TO_RGB565(r5, g6, b5) \
+({ \
+    __typeof__ (r5) _r5 = (r5); \
+    __typeof__ (g6) _g6 = (g6); \
+    __typeof__ (b5) _b5 = (b5); \
+    (_r5 << 3) | (_g6 >> 3) | (_g6 << 13) | (_b5 << 8); \
+})
+
+#define COLOR_R8_G8_B8_TO_RGB565(r8, g8, b8) COLOR_R5_G6_B5_TO_RGB565(COLOR_R8_TO_R5(r8), COLOR_G8_TO_G6(g8), COLOR_B8_TO_B5(b8))
+
+extern const int8_t lab_table[196608];
+extern const int8_t yuv_table[196608];
+
+#define COLOR_RGB565_TO_L(pixel) lab_table[(pixel) * 3]
+#define COLOR_RGB565_TO_A(pixel) lab_table[((pixel) * 3) + 1]
+#define COLOR_RGB565_TO_B(pixel) lab_table[((pixel) * 3) + 2]
+#define COLOR_RGB565_TO_Y(pixel) yuv_table[(pixel) * 3]
+#define COLOR_RGB565_TO_U(pixel) yuv_table[((pixel) * 3) + 1]
+#define COLOR_RGB565_TO_V(pixel) yuv_table[((pixel) * 3) + 2]
+
+// https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
+// https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
+
+#define COLOR_LAB_TO_RGB565(l, a, b) \
+({ \
+    __typeof__ (l) _l = (l); \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    float _x = ((_l + 16) * 0.008621f) + (_a * 0.002f); \
+    float _y = ((_l + 16) * 0.008621f); \
+    float _z = ((_l + 16) * 0.008621f) - (_b * 0.005f); \
+    _x = ((_x > 0.206897f) ? (_x * _x * _x) : ((0.128419f * _x) - 0.017713f)) * 095.047f; \
+    _y = ((_y > 0.206897f) ? (_y * _y * _y) : ((0.128419f * _y) - 0.017713f)) * 100.000f; \
+    _z = ((_z > 0.206897f) ? (_z * _z * _z) : ((0.128419f * _z) - 0.017713f)) * 108.883f; \
+    float _r_lin = ((_x * +3.2406f) + (_y * -1.5372f) + (_z * -0.4986f)) / 100.0f; \
+    float _g_lin = ((_x * -0.9689f) + (_y * +1.8758f) + (_z * +0.0415f)) / 100.0f; \
+    float _b_lin = ((_x * +0.0557f) + (_y * -0.2040f) + (_z * +1.0570f)) / 100.0f; \
+    _r_lin = (_r_lin > 0.0031308f) ? ((1.055f * powf(_r_lin, 0.416666f)) - 0.055f) : (_r_lin * 12.92f); \
+    _g_lin = (_g_lin > 0.0031308f) ? ((1.055f * powf(_g_lin, 0.416666f)) - 0.055f) : (_g_lin * 12.92f); \
+    _b_lin = (_b_lin > 0.0031308f) ? ((1.055f * powf(_b_lin, 0.416666f)) - 0.055f) : (_b_lin * 12.92f); \
+    unsigned int _r = IM_MAX(IM_MIN(roundf(_r_lin * COLOR_R5_MAX), COLOR_R5_MAX), COLOR_R5_MIN); \
+    unsigned int _g = IM_MAX(IM_MIN(roundf(_g_lin * COLOR_G6_MAX), COLOR_G6_MAX), COLOR_G6_MIN); \
+    unsigned int _b = IM_MAX(IM_MIN(roundf(_b_lin * COLOR_B5_MAX), COLOR_B5_MAX), COLOR_B5_MIN); \
+    COLOR_R5_G6_B5_TO_RGB565(_r, _g, _b); \
+})
+
+// https://en.wikipedia.org/wiki/YCbCr -> JPEG Conversion
+
+#define COLOR_YUV_TO_RGB565(y, u, v) \
+({ \
+    __typeof__ (y) _y = (y); \
+    __typeof__ (u) _u = (u); \
+    __typeof__ (v) _v = (v); \
+    unsigned int _r = IM_MAX(IM_MIN(128 + _y + ((((uint32_t) ((1.402000 * 65536) + 0.5)) * _v) >> 16), COLOR_R8_MAX), COLOR_R8_MIN); \
+    unsigned int _g = IM_MAX(IM_MIN(128 + _y - (((((uint32_t) ((0.344136 * 65536) + 0.5)) * _u) + (((uint32_t) ((0.714136 * 65536) + 0.5)) * _v)) >> 16), COLOR_G8_MAX), COLOR_G8_MIN); \
+    unsigned int _b = IM_MAX(IM_MIN(128 + _y + ((((uint32_t) ((1.772000 * 65536) + 0.5)) * _u) >> 16), COLOR_B8_MAX), COLOR_B8_MIN); \
+    COLOR_R8_G8_B8_TO_RGB565(_r, _g, _b); \
+})
+
+#define COLOR_BINARY_TO_GRAYSCALE(pixel) ((pixel) * COLOR_GRAYSCALE_MAX)
+#define COLOR_BINARY_TO_RGB565(pixel) COLOR_YUV_TO_RGB565((pixel) * 127, 0, 0)
+#define COLOR_RGB565_TO_BINARY(pixel) (COLOR_RGB565_TO_Y(pixel) == 127)
+#define COLOR_RGB565_TO_GRAYSCALE(pixel) (COLOR_RGB565_TO_Y(pixel) + 128)
+#define COLOR_GRAYSCALE_TO_BINARY(pixel) ((pixel) == COLOR_GRAYSCALE_MAX)
+#define COLOR_GRAYSCALE_TO_RGB565(pixel) COLOR_YUV_TO_RGB565((pixel) - 128, 0, 0)
+
+/////////////////
+// Image Stuff //
+/////////////////
+
+typedef enum new_image_type
+{
+    IMAGE_TYPE_BINARY,
+    IMAGE_TYPE_GRAYSCALE,
+    IMAGE_TYPE_RGB565,
+    IMAGE_TYPE_JPG
+}
+new_image_type_t;
+
+typedef struct new_image
+{
+    new_image_type_t type;
+    int16_t w;
+    int16_t h;
+    size_t size;
+    void *data;
+}
+new_image_t;
+
+void image_init(new_image_t *ptr, new_image_type_t type, dimensions_t *dimensions);
+void image_copy(new_image_t *dst, new_image_t *src);
+bool image_check_overlap(new_image_t *ptr, rectangle_t *rect);
+void image_intersected(new_image_t *ptr, rectangle_t *rect);
+
+#define IMAGE_GET_BINARY_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    (((uint32_t *) _image->data)[(((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y) + (_x >> UINT32_T_SHIFT)] >> (_x & UINT32_T_MASK)) & 1; \
+})
+
+#define IMAGE_PUT_BINARY_PIXEL(image, x, y, v) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    __typeof__ (v) _v = (v); \
+    size_t _i = (((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y) + (_x >> UINT32_T_SHIFT); \
+    size_t _j = _x & UINT32_T_MASK; \
+    ((uint32_t *) _image->data)[_i] = (((uint32_t *) _image->data)[_i] & (~(1 << _j))) | ((_v & 1) << _j); \
+})
+
+#define IMAGE_CLEAR_BINARY_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    ((uint32_t *) _image->data)[(((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y) + (_x >> UINT32_T_SHIFT)] &= ~(1 << (_x & UINT32_T_MASK)); \
+})
+
+#define IMAGE_SET_BINARY_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    ((uint32_t *) _image->data)[(((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y) + (_x >> UINT32_T_SHIFT)] |= 1 << (_x & UINT32_T_MASK); \
+})
+
+#define IMAGE_GET_GRAYSCALE_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    ((uint8_t *) _image->data)[(_image->w * _y) + _x]; \
+})
+
+#define IMAGE_PUT_GRAYSCALE_PIXEL(image, x, y, v) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    __typeof__ (v) _v = (v); \
+    ((uint8_t *) _image->data)[(_image->w * _y) + _x] = _v; \
+})
+
+#define IMAGE_GET_RGB565_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    ((uint16_t *) _image->data)[(_image->w * _y) + _x]; \
+})
+
+#define IMAGE_PUT_RGB565_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    __typeof__ (v) _v = (v); \
+    ((uint16_t *) _image->data)[(_image->w * _y) + _x] = _v; \
+})
+
+#ifdef __arm__
+    #define IMAGE_REV_RGB565_PIXEL(pixel) \
+    ({ \
+        __typeof__ (pixel) _pixel = (pixel); \
+        __REV16(_pixel); \
+    })
+#else
+    #define IMAGE_REV_RGB565_PIXEL(pixel) \
+    ({ \
+        __typeof__ (pixel) _pixel = (pixel); \
+        ((_pixel >> 8) | (_pixel << 8)) & 0xFFFF; \
+    })
+#endif
+
+#define IMAGE_COMPUTE_TARGET_SIZE_SCALE_FACTOR(target_size, source_rect) \
+__typeof__ (target_size) _target_size = (target_size); \
+__typeof__ (source_rect) _source_rect = (source_rect); \
+int IMAGE_X_SOURCE_OFFSET = _source_rect->p.x; \
+int IMAGE_Y_SOURCE_OFFSET = _source_rect->p.y; \
+int IMAGE_X_TARGET_OFFSET = 0; \
+int IMAGE_Y_TARGET_OFFSET = 0; \
+float IMAGE_X_RATIO = ((float) _source_rect->s.w) / ((float) _target_size->w); \
+float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_size->h); \
+({ 0; })
+
+#define IMAGE_COMPUTE_TARGET_RECT_SCALE_FACTOR(target_rect, source_rect) \
+__typeof__ (target_rect) _target_rect = (target_rect); \
+__typeof__ (source_rect) _source_rect = (source_rect); \
+int IMAGE_X_SOURCE_OFFSET = _source_rect->p.x; \
+int IMAGE_Y_SOURCE_OFFSET = _source_rect->p.y; \
+int IMAGE_X_TARGET_OFFSET = _target_rect->p.x; \
+int IMAGE_Y_TARGET_OFFSET = _target_rect->p.y; \
+float IMAGE_X_RATIO = ((float) _source_rect->s.w) / ((float) _target_rect->s.w); \
+float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h); \
+({ 0; })
+
+#define IMAGE_GET_SCALED_BINARY_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    IMAGE_GET_BINARY_PIXEL(_image, ((size_t) ((IMAGE_X_RATIO * (_x - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET, ((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET); \
+})
+
+#define IMAGE_GET_SCALED_GRAYSCALE_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    IMAGE_GET_GRAYSCALE_PIXEL(_image, ((size_t) ((IMAGE_X_RATIO * (_x - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET, ((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET); \
+})
+
+#define IMAGE_GET_SCALED_RGB565_PIXEL(image, x, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (y) _y = (y); \
+    IMAGE_GET_RGB565_PIXEL(_image, ((size_t) ((IMAGE_X_RATIO * (_x - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET, ((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET); \
+})
+
+// Fast Stuff //
+
+#define IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(image, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (y) _y = (y); \
+    ((uint32_t *) _image->data) + (((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y); \
+})
+
+#define IMAGE_INC_BINARY_PIXEL_ROW_PTR(row_ptr, image) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (image) _image = (image); \
+    _row_ptr + ((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT); \
+})
+
+#define IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (x) _x = (x); \
+    (_row_ptr[_x >> UINT32_T_SHIFT] >> (_x & UINT32_T_MASK)) & 1; \
+})
+
+#define IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, v) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (v) _v = (v); \
+    size_t _i = _x >> UINT32_T_SHIFT \
+    size_t _j = _x & UINT32_T_MASK; \
+    _row_ptr[_i] = (_row_ptr[_i] & (~(1 << _j))) | ((_v & 1) << _j); \
+})
+
+#define IMAGE_CLEAR_BINARY_PIXEL_FAST(row_ptr, x) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (x) _x = (x); \
+    _row_ptr[_x >> UINT32_T_SHIFT] &= ~(1 << (_x & UINT32_T_MASK)); \
+})
+
+#define IMAGE_SET_BINARY_PIXEL_FAST(row_ptr, x) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (x) _x = (x); \
+    _row_ptr[_x >> UINT32_T_SHIFT] |= 1 << (_x & UINT32_T_MASK); \
+})
+
+#define IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(image, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (y) _y = (y); \
+    ((uint8_t *) _image->data) + (_image->w * _y); \
+})
+
+#define IMAGE_INC_GRAYSCALE_PIXEL_ROW_PTR(row_ptr, image) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (image) _image = (image); \
+    row_ptr + _image->w; \
+})
+
+#define IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (x) _x = (x); \
+    _row_ptr[_x]; \
+})
+
+#define IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, v) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (v) _v = (v); \
+    _row_ptr[_x] = _v; \
+})
+
+#define IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(image, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (y) _y = (y); \
+    ((uint16_t *) _image->data) + (_image->w * _y); \
+})
+
+#define IMAGE_INC_RGB565_PIXEL_ROW_PTR(row_ptr, image) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (image) _image = (image); \
+    row_ptr + _image->w; \
+})
+
+#define IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (x) _x = (x); \
+    _row_ptr[_x]; \
+})
+
+#define IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, v) \
+({ \
+    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
+    __typeof__ (x) _x = (x); \
+    __typeof__ (v) _v = (v); \
+    _row_ptr[_x] = _v; \
+})
+
+#define IMAGE_COMPUTE_SCALED_BINARY_PIXEL_ROW_PTR(image, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (y) _y = (y); \
+    ((uint32_t *) _image->data) + (((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * (((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET)); \
+})
+
+#define IMAGE_GET_SCALED_BINARY_PIXEL_FAST(row_ptr, x) IMAGE_GET_BINARY_PIXEL_FAST((row_ptr), ((size_t) ((IMAGE_X_RATIO * ((x) - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET)
+
+#define IMAGE_COMPUTE_SCALED_GRAYSCALE_PIXEL_ROW_PTR(image, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (y) _y = (y); \
+    ((uint8_t *) _image->data) + (_image->w * (((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET)); \
+})
+
+#define IMAGE_GET_SCALED_GRAYSCALE_PIXEL_FAST(row_ptr, x) IMAGE_GET_GRAYSCALE_PIXEL_FAST((row_ptr), ((size_t) ((IMAGE_X_RATIO * ((x) - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET)
+
+#define IMAGE_COMPUTE_SCALED_RGB565_PIXEL_ROW_PTR(image, y) \
+({ \
+    __typeof__ (image) _image = (image); \
+    __typeof__ (y) _y = (y); \
+    ((uint16_t *) _image->data) + (_image->w * (((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET)); \
+})
+
+#define IMAGE_GET_SCALED_RGB565_PIXEL_FAST(row_ptr, x) IMAGE_GET_RGB565_PIXEL_FAST((row_ptr), ((size_t) ((IMAGE_X_RATIO * ((x) - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET)
+
+// Old Image Macros - Will be refactor and removed. But, only after making sure through testing new macros work.
+
 #define IM_SWAP16(x) __REV16(x) // Swap bottom two chars in short.
 #define IM_SWAP32(x) __REV32(x) // Swap bottom two shorts in long.
-
-#define IM_MIN(a,b) \
-    ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-       _a < _b ? _a : _b; })
-
-#define IM_MAX(a,b) \
-    ({ __typeof__ (a) _a = (a); \
-       __typeof__ (b) _b = (b); \
-       _a > _b ? _a : _b; })
 
 // RGB565 to RGB888 conversion.
 extern const uint8_t rb528_table[32];
@@ -80,9 +622,6 @@ extern const uint8_t g826_table[256];
        __typeof__ (g) _g = (g); \
        __typeof__ (b) _b = (b); \
        ((_r)<<3)|((_g)>>3)|((_g)<<13)|((_b)<<8); })
-
-// RGB565 to LAB conversion
-extern const int8_t lab_table[196608];
 
 // Image kernels
 extern const int8_t kernel_gauss_3[9];
@@ -178,30 +717,6 @@ extern const int8_t kernel_high_pass_3[9];
     ({ __typeof__ (img0) _img0 = (img0); \
        __typeof__ (img1) _img1 = (img1); \
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
-
-typedef struct size {
-    int w;
-    int h;
-} wsize_t;
-
-typedef struct point {
-    int16_t x;
-    int16_t y;
-} point_t;
-
-typedef struct line {
-    int16_t x1;
-    int16_t y1;
-    int16_t x2;
-    int16_t y2;
-} line_t;
-
-typedef struct rectangle {
-    int16_t x;
-    int16_t y;
-    int16_t w;
-    int16_t h;
-} rectangle_t;
 
 typedef struct simple_color {
     uint8_t G;
@@ -300,6 +815,11 @@ typedef struct kp {
     uint16_t y;
     uint8_t desc[64];
 } kp_t;
+
+typedef struct size {
+    int w;
+    int h;
+} wsize_t;
 
 /* Haar cascade struct */
 typedef struct cascade {
@@ -548,4 +1068,5 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
 // Lens correction
 void imlib_lens_corr(image_t *src, float strength);
+
 #endif //__IMLIB_H__
