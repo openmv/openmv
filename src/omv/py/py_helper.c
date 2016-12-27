@@ -93,5 +93,25 @@ void py_helper_lookup_rectangle(mp_map_t *kw_args, image_t *img, rectangle_t *r)
         r->y = mp_obj_get_int(arg_rectangle[1]);
         r->w = mp_obj_get_int(arg_rectangle[2]);
         r->h = mp_obj_get_int(arg_rectangle[3]);
+
+        if ((r->w <= 0) || (r->h <= 0)) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_AssertionError, "Invalid ROI dimensions!"));
+        }
+
+        rectangle_t tmp;
+        tmp.x = 0;
+        tmp.y = 0;
+        tmp.w = img->w;
+        tmp.h = img->h;
+
+        if (!rectangle_overlap(r, &tmp)) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_AssertionError, "ROI does not overlap the image!"));
+        }
+
+        rectangle_intersected(r, &tmp);
+    }
+
+    if ((r->w <= 0) || (r->h <= 0)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_AssertionError, "Invalid ROI dimensions!"));
     }
 }

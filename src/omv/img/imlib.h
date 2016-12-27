@@ -7,8 +7,10 @@
 #define __IMLIB_H__
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 #include <arm_math.h>
 #include <ff.h>
 #include "fb_alloc.h"
@@ -58,20 +60,6 @@
 #define UINT64_T_BITS   (sizeof(uint64_t) * 8)
 #define UINT64_T_MASK   (UINT64_T_BITS - 1)
 #define UINT64_T_SHIFT  IM_LOG2(UINT64_T_MASK)
-
-//////////////////////
-// Dimensions Stuff //
-//////////////////////
-
-typedef struct dimensions {
-    int16_t w;
-    int16_t h;
-} dimensions_t;
-
-void size_init(size_t *ptr, int w, int h);
-void size_copy(size_t *dst, size_t *src);
-bool size_equal_fast(size_t *ptr0, size_t *ptr1);
-bool size_check(size_t *ptr);
 
 /////////////////
 // Point Stuff //
@@ -299,10 +287,8 @@ typedef struct new_image
 }
 new_image_t;
 
-void image_init(new_image_t *ptr, new_image_type_t type, dimensions_t *dimensions);
+void image_init(new_image_t *ptr, new_image_type_t type, int w, int h);
 void image_copy(new_image_t *dst, new_image_t *src);
-bool image_check_overlap(new_image_t *ptr, rectangle_t *rect);
-void image_intersected(new_image_t *ptr, rectangle_t *rect);
 
 #define IMAGE_GET_BINARY_PIXEL(image, x, y) \
 ({ \
@@ -898,6 +884,15 @@ typedef enum  jpeg_subsample {
     JPEG_SUBSAMPLE_2x2 = 0x22,  // 2x2 chroma subsampling
 } jpeg_subsample_t;
 
+typedef struct find_qrcodes_list_lnk_data
+{
+    rectangle_t rect;
+    size_t payload_len;
+    char *payload;
+    uint8_t version, ecc_level, mask, data_type;
+    uint32_t eci;
+}
+find_qrcodes_list_lnk_data_t;
 
 /* Color space functions */
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
@@ -1069,5 +1064,8 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
 // Lens correction
 void imlib_lens_corr(image_t *src, float strength);
+
+// Codes
+void imlib_find_qrcodes(list_t *out, new_image_t *ptr, rectangle_t *roi);
 
 #endif //__IMLIB_H__

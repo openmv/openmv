@@ -18,6 +18,7 @@ SRCS += $(addprefix ,   \
 
 SRCS += $(addprefix img/,   \
 	blob.c                  \
+	qrcode.c                \
 	fmath.c                 \
 	fsort.c                 \
 	fft.c                   \
