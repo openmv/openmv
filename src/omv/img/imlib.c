@@ -14,31 +14,6 @@
 #include "imlib.h"
 #include "common.h"
 
-//////////////////////
-// Dimensions Stuff //
-//////////////////////
-
-void dimensions_init(dimensions_t *ptr, int w, int h)
-{
-    ptr->w = w;
-    ptr->h = h;
-}
-
-void dimensions_copy(dimensions_t *dst, dimensions_t *src)
-{
-    memcpy(dst, src, sizeof(dimensions_t));
-}
-
-bool dimensions_equal_fast(dimensions_t *ptr0, dimensions_t *ptr1)
-{
-    return !memcmp(ptr0, ptr1, sizeof(dimensions_t));
-}
-
-bool dimensions_check(dimensions_t *ptr)
-{
-    return ptr->w && ptr->h;
-}
-
 /////////////////
 // Point Stuff //
 /////////////////
@@ -129,11 +104,11 @@ void rectangle_united(rectangle_t *dst, rectangle_t *src)
 // Image Stuff //
 /////////////////
 
-void image_init(new_image_t *ptr, new_image_type_t type, dimensions_t *dimensions)
+void image_init(new_image_t *ptr, new_image_type_t type, int w, int h)
 {
-    ptr->w = dimensions->w;
-    ptr->h = dimensions->h;
     ptr->type = type;
+    ptr->w = w;
+    ptr->h = h;
     ptr->size = 0;
     ptr->data = NULL;
 }
@@ -141,26 +116,6 @@ void image_init(new_image_t *ptr, new_image_type_t type, dimensions_t *dimension
 void image_copy(new_image_t *dst, new_image_t *src)
 {
     memcpy(dst, src, sizeof(new_image_t));
-}
-
-bool image_check_overlap(new_image_t *ptr, rectangle_t *rect)
-{
-    rectangle_t temp;
-    temp.x = 0;
-    temp.y = 0;
-    temp.w = ptr->w;
-    temp.h = ptr->h;
-    return rectangle_overlap(rect, &temp);
-}
-
-void image_intersected(new_image_t *ptr, rectangle_t *rect)
-{
-    rectangle_t temp;
-    temp.x = 0;
-    temp.y = 0;
-    temp.w = ptr->w;
-    temp.h = ptr->h;
-    rectangle_intersected(rect, &temp);
 }
 
 // Gamma uncompress
