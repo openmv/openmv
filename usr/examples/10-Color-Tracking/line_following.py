@@ -43,9 +43,7 @@ while(True):
 
     centroid_sum = 0
     for r in ROIS:
-        blobs = img.find_blobs(GRAYSCALE_THRESHOLD, roi=r[0:4]) # r[0:4] is roi tuple.
-        merged_blobs = img.find_markers(blobs) # merge overlapping blobs
-
+        merged_blobs = img.find_blobs(GRAYSCALE_THRESHOLD, roi=r[0:4], merge=True) # r[0:4] is roi tuple.
         if merged_blobs:
             # Find the index of the blob with the most pixels.
             most_pixels = 0

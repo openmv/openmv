@@ -33,15 +33,13 @@ while(True):
     clock.tick() # Track elapsed milliseconds between snapshots().
     img = sensor.snapshot() # Take a picture and return the image.
 
-    blobs = img.find_blobs([red_threshold, blue_threshold])
-    merged_blobs = img.find_markers(blobs)
-    if merged_blobs:
-        for b in merged_blobs:
-            # Draw a rect around the blob.
-            img.draw_rectangle(b[0:4]) # rect
-            img.draw_cross(b[5], b[6]) # cx, cy
-            # Draw the color label. b[8] is the color label.
-            img.draw_string(b[0]+2, b[1]+2, "%d" % b[8])
+    # margin=2 means blobs can be 2 pixels away from each other to merge
+    for b in  img.find_blobs([red_threshold, blue_threshold], area_threshold=30, pixels_threhsold=30, merge=True, margin=2):
+        # Draw a rect around the blob.
+        img.draw_rectangle(b[0:4]) # rect
+        img.draw_cross(b[5], b[6]) # cx, cy
+        # Draw the color label. b[8] is the color label.
+        img.draw_string(b[0]+2, b[1]+2, "%d" % b[8])
 
     print(clock.fps()) # Note: Your OpenMV Cam runs about half as fast while
     # connected to your computer. The FPS should increase once disconnected.

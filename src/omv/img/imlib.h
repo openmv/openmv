@@ -884,6 +884,16 @@ typedef enum  jpeg_subsample {
     JPEG_SUBSAMPLE_2x2 = 0x22,  // 2x2 chroma subsampling
 } jpeg_subsample_t;
 
+typedef struct find_blobs_list_lnk_data
+{
+    rectangle_t rect;
+    uint32_t pixels;
+    point_t centroid;
+    float rotation;
+    uint16_t code, count;
+}
+find_blobs_list_lnk_data_t;
+
 typedef struct find_qrcodes_list_lnk_data
 {
     rectangle_t rect;
@@ -989,14 +999,6 @@ void imlib_median_filter(image_t *img, const int ksize, const int percentile);
 void imlib_histeq(image_t *img);
 void imlib_mask_ellipse(image_t *img);
 
-/* Color Tracking */
-array_t *imlib_find_blobs(image_t *img,
-                          int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds,
-                          bool invert, rectangle_t *r,
-                          bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1);
-array_t *imlib_find_markers(array_t *blobs_list, int margin,
-                            bool (*f_fun)(void*,void*,color_blob_t*), void *f_fun_arg_0, void *f_fun_arg_1);
-
 /* Template Matching */
 void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, const int bias);
 void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div);
@@ -1065,6 +1067,10 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 // Lens correction
 void imlib_lens_corr(image_t *src, float strength);
 
+// Color Tracking
+void imlib_find_blobs(list_t *out, new_image_t *ptr, rectangle_t *roi,
+                      list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
+                      bool merge, int margin);
 // Codes
 void imlib_find_qrcodes(list_t *out, new_image_t *ptr, rectangle_t *roi);
 
