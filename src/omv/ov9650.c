@@ -343,18 +343,7 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
     return 0;
 }
 
-static int set_whitebal(sensor_t *sensor, int enable)
-{
-   uint8_t val;
-   val = SCCB_Read(sensor->slv_addr, REG_COM8);
-
-   SCCB_Write(sensor->slv_addr, REG_COM8,
-              enable ? (val | REG_COM8_AWB) : (val & ~REG_COM8_AWB));
-
-   return 0;
-}
-
-static int set_gain_ctrl(sensor_t *sensor, int enable)
+static int set_auto_gain(sensor_t *sensor, int enable, int gain)
 {
    uint8_t val;
    val = SCCB_Read(sensor->slv_addr, REG_COM8);
@@ -365,13 +354,24 @@ static int set_gain_ctrl(sensor_t *sensor, int enable)
    return 0;
 }
 
-static int set_exposure_ctrl(sensor_t *sensor, int enable)
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure)
 {
    uint8_t val;
    val = SCCB_Read(sensor->slv_addr, REG_COM8);
 
    SCCB_Write(sensor->slv_addr, REG_COM8,
               enable ? (val | REG_COM8_AEC) : (val & ~REG_COM8_AEC));
+
+   return 0;
+}
+
+static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain)
+{
+   uint8_t val;
+   val = SCCB_Read(sensor->slv_addr, REG_COM8);
+
+   SCCB_Write(sensor->slv_addr, REG_COM8,
+              enable ? (val | REG_COM8_AWB) : (val & ~REG_COM8_AWB));
 
    return 0;
 }
@@ -407,9 +407,9 @@ int ov9650_init(sensor_t *sensor)
     sensor->set_framerate = set_framerate;
     sensor->set_brightness= set_brightness;
     sensor->set_gainceiling = set_gainceiling;
-    sensor->set_whitebal = set_whitebal;
-    sensor->set_gain_ctrl = set_gain_ctrl;
-    sensor->set_exposure_ctrl = set_exposure_ctrl;
+    sensor->set_auto_gain = set_auto_gain;
+    sensor->set_auto_exposure = set_auto_exposure;
+    sensor->set_auto_whitebal = set_auto_whitebal;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
 

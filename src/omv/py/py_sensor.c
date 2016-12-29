@@ -237,22 +237,29 @@ static mp_obj_t py_sensor_set_colorbar(mp_obj_t enable) {
     return mp_const_true;
 }
 
-static mp_obj_t py_sensor_set_whitebal(mp_obj_t enable) {
-    if (sensor_set_whitebal(mp_obj_is_true(enable)) != 0) {
+static mp_obj_t py_sensor_set_auto_gain(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    int enable = mp_obj_get_int(args[0]);
+    int value = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_value), -1);
+    if (sensor_set_auto_gain(enable, value) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
 }
 
-static mp_obj_t py_sensor_set_gain_ctrl(mp_obj_t enable) {
-    if (sensor_set_gain_ctrl(mp_obj_is_true(enable)) != 0) {
+static mp_obj_t py_sensor_set_auto_exposure(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    int enable = mp_obj_get_int(args[0]);
+    int value = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_value), -1);
+    if (sensor_set_auto_exposure(enable, value) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
 }
 
-static mp_obj_t py_sensor_set_exposure_ctrl(mp_obj_t enable) {
-    if (sensor_set_exposure_ctrl(mp_obj_is_true(enable)) != 0) {
+static mp_obj_t py_sensor_set_auto_whitebal(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    int enable = mp_obj_get_int(args[0]);
+    int value[3] = {-1, -1, -1};
+    py_helper_lookup_int_array(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_value), value, 3);
+    if (sensor_set_auto_whitebal(enable, value[0], value[1], value[2]) != 0) {
         return mp_const_false;
     }
     return mp_const_true;
@@ -315,9 +322,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,      py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_saturation_obj,      py_sensor_set_saturation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_quality_obj,         py_sensor_set_quality);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_colorbar_obj,        py_sensor_set_colorbar);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_whitebal_obj,        py_sensor_set_whitebal);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gain_ctrl_obj,       py_sensor_set_gain_ctrl);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_exposure_ctrl_obj,   py_sensor_set_exposure_ctrl);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_gain_obj,    1,py_sensor_set_auto_gain);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_exposure_obj,1,py_sensor_set_auto_exposure);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_whitebal_obj,1,py_sensor_set_auto_whitebal);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_hmirror_obj,         py_sensor_set_hmirror);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vflip_obj,           py_sensor_set_vflip);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
@@ -372,9 +379,9 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_saturation),      (mp_obj_t)&py_sensor_set_saturation_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_quality),         (mp_obj_t)&py_sensor_set_quality_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_colorbar),        (mp_obj_t)&py_sensor_set_colorbar_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_set_whitebal),        (mp_obj_t)&py_sensor_set_whitebal_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_set_gain_ctrl),       (mp_obj_t)&py_sensor_set_gain_ctrl_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_set_exposure_ctrl),   (mp_obj_t)&py_sensor_set_exposure_ctrl_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_gain),       (mp_obj_t)&py_sensor_set_auto_gain_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_exposure),   (mp_obj_t)&py_sensor_set_auto_exposure_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_whitebal),   (mp_obj_t)&py_sensor_set_auto_whitebal_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_hmirror),         (mp_obj_t)&py_sensor_set_hmirror_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vflip),           (mp_obj_t)&py_sensor_set_vflip_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },

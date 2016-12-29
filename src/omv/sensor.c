@@ -490,33 +490,33 @@ int sensor_set_colorbar(int enable)
     return 0;
 }
 
-int sensor_set_whitebal(int enable)
+int sensor_set_auto_gain(int enable, int gain)
 {
     /* call the sensor specific function */
-    if (sensor.set_whitebal == NULL
-        || sensor.set_whitebal(&sensor, enable) != 0) {
+    if (sensor.set_auto_gain == NULL
+        || sensor.set_auto_gain(&sensor, enable, gain) != 0) {
         /* operation not supported */
         return -1;
     }
     return 0;
 }
 
-int sensor_set_gain_ctrl(int enable)
+int sensor_set_auto_exposure(int enable, int exposure)
 {
     /* call the sensor specific function */
-    if (sensor.set_gain_ctrl == NULL
-        || sensor.set_gain_ctrl(&sensor, enable) != 0) {
+    if (sensor.set_auto_exposure == NULL
+        || sensor.set_auto_exposure(&sensor, enable, exposure) != 0) {
         /* operation not supported */
         return -1;
     }
     return 0;
 }
 
-int sensor_set_exposure_ctrl(int enable)
+int sensor_set_auto_whitebal(int enable, int r_gain, int g_gain, int b_gain)
 {
     /* call the sensor specific function */
-    if (sensor.set_exposure_ctrl == NULL
-        || sensor.set_exposure_ctrl(&sensor, enable) != 0) {
+    if (sensor.set_auto_whitebal == NULL
+        || sensor.set_auto_whitebal(&sensor, enable, r_gain, g_gain, b_gain) != 0) {
         /* operation not supported */
         return -1;
     }

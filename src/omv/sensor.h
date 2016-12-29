@@ -122,9 +122,9 @@ typedef struct _sensor {
     int  (*set_gainceiling)     (sensor_t *sensor, gainceiling_t gainceiling);
     int  (*set_quality)         (sensor_t *sensor, int quality);
     int  (*set_colorbar)        (sensor_t *sensor, int enable);
-    int  (*set_whitebal)        (sensor_t *sensor, int enable);
-    int  (*set_gain_ctrl)       (sensor_t *sensor, int enable);
-    int  (*set_exposure_ctrl)   (sensor_t *sensor, int enable);
+    int  (*set_auto_gain)       (sensor_t *sensor, int enable, int gain);
+    int  (*set_auto_exposure)   (sensor_t *sensor, int enable, int exposure);
+    int  (*set_auto_whitebal)   (sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain);
     int  (*set_hmirror)         (sensor_t *sensor, int enable);
     int  (*set_vflip)           (sensor_t *sensor, int enable);
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
@@ -183,14 +183,14 @@ int sensor_set_quality(int qs);
 // Enable/disable the colorbar mode.
 int sensor_set_colorbar(int enable);
 
-// Enable/disable the whitebal mode.
-int sensor_set_whitebal(int enable);
+// Enable auto gain or set value manually.
+int sensor_set_auto_gain(int enable, int gain);
 
-// Enable/disable the agc mode.
-int sensor_set_gain_ctrl(int enable);
+// Enable auto exposure or set value manually.
+int sensor_set_auto_exposure(int enable, int exposure);
 
-// Enable/disable the aec mode.
-int sensor_set_exposure_ctrl(int enable);
+// Enable auto white balance or set value manually.
+int sensor_set_auto_whitebal(int enable, int r_gain, int g_gain, int b_gain);
 
 // Enable/disable the hmirror mode.
 int sensor_set_hmirror(int enable);

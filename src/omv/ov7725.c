@@ -311,40 +311,69 @@ static int set_colorbar(sensor_t *sensor, int enable)
     return ret;
 }
 
-static int set_whitebal(sensor_t *sensor, int enable)
+static int set_auto_gain(sensor_t *sensor, int enable, int gain)
 {
+    int ret=0;
     // Read register COM8
     uint8_t reg = SCCB_Read(sensor->slv_addr, COM8);
 
-    // Set white bal on/off
-    reg = COM8_SET_AWB(reg, enable);
-
-    // Write back register COM8
-    return SCCB_Write(sensor->slv_addr, COM8, reg);
-}
-
-static int set_gain_ctrl(sensor_t *sensor, int enable)
-{
-    // Read register COM8
-    uint8_t reg = SCCB_Read(sensor->slv_addr, COM8);
-
-    // Set white bal on/off
+    // Set AGC on/off
     reg = COM8_SET_AGC(reg, enable);
 
     // Write back register COM8
-    return SCCB_Write(sensor->slv_addr, COM8, reg);
+    ret |= SCCB_Write(sensor->slv_addr, COM8, reg);
+
+    if (enable == 0 && gain >= 0) {
+        // Set value manually.
+        ret |= SCCB_Write(sensor->slv_addr, GAIN, gain);
+    }
+
+    return ret;
 }
 
-static int set_exposure_ctrl(sensor_t *sensor, int enable)
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure)
 {
+    int ret=0;
     // Read register COM8
     uint8_t reg = SCCB_Read(sensor->slv_addr, COM8);
 
-    // Set white bal on/off
+    // Set AEC on/off
     reg = COM8_SET_AEC(reg, enable);
 
     // Write back register COM8
-    return SCCB_Write(sensor->slv_addr, COM8, reg);
+    ret |= SCCB_Write(sensor->slv_addr, COM8, reg);
+
+    if (enable == 0 && exposure >= 0) {
+        // Set value manually.
+        ret |= SCCB_Write(sensor->slv_addr, AEC, (exposure&0xFF));
+        ret |= SCCB_Write(sensor->slv_addr, AECH, ((exposure>>8)&0xFF));
+    }
+
+    return ret;
+
+}
+
+static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain)
+{
+    int ret=0;
+
+    // Read register COM8
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM8);
+
+    // Set AWB on/off
+    reg = COM8_SET_AWB(reg, enable);
+
+    // Write back register COM8
+    ret |= SCCB_Write(sensor->slv_addr, COM8, reg);
+
+    if (enable == 0 && r_gain >= 0 && g_gain >=0 && b_gain >=0) {
+        // Set value manually.
+        ret |= SCCB_Write(sensor->slv_addr, RED, r_gain);
+        ret |= SCCB_Write(sensor->slv_addr, GREEN, g_gain);
+        ret |= SCCB_Write(sensor->slv_addr, BLUE, b_gain);
+    }
+
+    return ret;
 }
 
 static int set_hmirror(sensor_t *sensor, int enable)
@@ -414,9 +443,9 @@ int ov7725_init(sensor_t *sensor)
     sensor->set_saturation= set_saturation;
     sensor->set_gainceiling = set_gainceiling;
     sensor->set_colorbar = set_colorbar;
-    sensor->set_whitebal = set_whitebal;
-    sensor->set_gain_ctrl = set_gain_ctrl;
-    sensor->set_exposure_ctrl = set_exposure_ctrl;
+    sensor->set_auto_gain = set_auto_gain;
+    sensor->set_auto_exposure = set_auto_exposure;
+    sensor->set_auto_whitebal = set_auto_whitebal;
     sensor->set_hmirror = set_hmirror;
     sensor->set_vflip = set_vflip;
     sensor->set_special_effect = set_special_effect;
