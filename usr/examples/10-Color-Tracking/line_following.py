@@ -34,7 +34,7 @@ sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # use grayscale.
 sensor.set_framesize(sensor.QQVGA) # use QQVGA for speed.
 sensor.skip_frames(10) # Let new settings take affect.
-sensor.set_whitebal(False) # turn this off.
+sensor.set_auto_whitebal(False) # turn this off.
 clock = time.clock() # Tracks FPS.
 
 while(True):

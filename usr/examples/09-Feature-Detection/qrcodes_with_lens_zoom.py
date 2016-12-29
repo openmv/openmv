@@ -18,7 +18,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA)
 sensor.set_windowing((640//2 - 200//2, 480//2 - 200//2, 200, 200))
 sensor.skip_frames(10)
-sensor.set_gain_ctrl(False)
+sensor.set_auto_gain(False)
 clock = time.clock()
 
 while(True):
