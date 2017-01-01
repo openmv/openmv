@@ -1047,9 +1047,15 @@ void imlib_lens_corr(image_t *src, float strength)
     int halfWidth = src->w / 2;
     int halfHeight = src->h / 2;
     float corr_radius = strength / fast_sqrtf(src->w*src->w + src->h*src->h);
-    image_t dst = {.w = src->w, .h = src->h, .data = fb_alloc(src->w*src->h)};
+
+    int buff_size = src->w * src->h / 2;
+    uint8_t *buff = fb_alloc(buff_size);
 
     for (int y=0; y<src->h; y++) {
+        if (y == src->h/2) {
+            // Flush the first half of the image
+            memcpy(src->data, buff, buff_size);
+        }
         for (int x=0; x<src->w; x++) {
             int newX = x - halfWidth;
             int newY = y - halfHeight;
@@ -1057,15 +1063,16 @@ void imlib_lens_corr(image_t *src, float strength)
             float r = corr_radius * fast_sqrtf(newX*newX + newY*newY);
             float theta = (abs(r) < 1e-6f) ? (atanf(r)/r) : 1.0f;
 
-            int sourceX = (int) (newX * theta * zoom + halfWidth );
-            int sourceY = (int) (newY * theta * zoom + halfHeight);
-            if (sourceX >= 0 && sourceX < src->w && sourceY >= 0 && sourceY < src->h) {
-                dst.data[y * dst.w + x] = src->data[sourceY * src->w + sourceX];
+            newX = (int) (newX * theta * zoom + halfWidth );
+            newY = (int) (newY * theta * zoom + halfHeight);
+            if (newX >= 0 && newX < src->w && newY >= 0 && newY < src->h) {
+                buff[(y %(src->h/2)) * src->w + x] = src->data[newY * src->w + newX];
             } else {
-                dst.data[y * dst.w + x] = src->data[y * dst.w + x];
+                buff[(y %(src->h/2)) * src->w + x] = src->data[y * src->w + x];
             }
         }
     }
-    memcpy(src->data, dst.data, src->w * src->h);
+    // Flush the second half of the image
+    memcpy(src->data + buff_size, buff, buff_size);
     fb_free();
 }
