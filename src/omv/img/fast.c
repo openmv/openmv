@@ -4,14 +4,15 @@
 #include "fb_alloc.h"
 #include "gc.h"
 
+#define MAX_ROW         (480)
 #define PATTERN_SCALE   (22)
-#define MAX_CORNERS     (1500)  // allocated on fb
+#define MAX_KEYPOINTS   (150)
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {
     uint16_t x;
     uint16_t y;
-    uint8_t score;
+    uint16_t score;
 } corner_t;
 
 static int pixel[16];
@@ -62,6 +63,7 @@ void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t 
         // Non-max suppression
         nonmax_suppression(corners, num_corners, keypoints);
     }
+
     // Free corners;
     fb_free();
 }
@@ -71,7 +73,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     gc_info_t info;
 
 	int last_row;
-	int* row_start;
+	int16_t row_start[MAX_ROW+1];
 	const int sz = num_corners;
 
 	/* Point above points (roughly) to the pixel above
@@ -82,7 +84,6 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
 	/* Find where each row begins (the corners are output in raster scan order).
        A beginning of -1 signifies that there are no corners on that row. */
 	last_row  = corners[sz-1].y;
-	row_start = (int*) fb_alloc((last_row+1)*sizeof(int));
 
 	for(int i=0; i<last_row+1; i++) {
 		row_start[i] = -1;
@@ -96,7 +97,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
         }
     }
 
-    for(int i=0; i<sz; i++) {
+    for(int i=0, n_kpts=0; i<sz; i++) {
         corner_t pos = corners[i];
         uint8_t score = pos.score;
 
@@ -162,11 +163,12 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
         }
         #undef MIN_MEM
         array_push_back(keypoints, alloc_keypoint(pos.x, pos.y));
+        if (++n_kpts==MAX_KEYPOINTS) {
+            break;
+        }
         nonmax:
         ;
     }
-
-    fb_free();
 }
 
 /* Auto-generated code*/
@@ -1723,8 +1725,9 @@ static void fast12_score(image_t *image, corner_t *corners, int num_corners, int
 
 static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners, int b)
 {
-    int num_corners=0;
-    corner_t *corners = (corner_t*) fb_alloc(sizeof(corner_t)*MAX_CORNERS);
+    int num_corners = 0;
+    int max_corners = fb_avail()/sizeof(corner_t);
+    corner_t *corners = (corner_t*) fb_alloc(max_corners * sizeof(corner_t));
 
     for(int y=roi->y+PATTERN_SCALE; y < roi->y+roi->h-PATTERN_SCALE; y++) {
             const uint8_t *r = image->pixels + y*image->w;
@@ -3251,7 +3254,7 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
             corners[num_corners].x = x;
             corners[num_corners].y = y;
 
-            if (++num_corners == MAX_CORNERS) {
+            if (++num_corners == max_corners) {
                 goto done;
             }
 		}
