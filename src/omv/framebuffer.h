@@ -40,7 +40,5 @@ static struct jpegbuffer {
 #define FB_JPEG_OFFS_SIZE  (1024)
 
 // Use this macro to get a pointer to the free SRAM area located after the framebuffer.
-// If JPEG is enabled, this macro returns pixels + the JPEG image size (usually stored in bpp).
-// TODO: FIX this, is main FB still used for JPEG ?
-#define FB_PIXELS() ((MAIN_FB()->bpp > 2)? (MAIN_FB()->pixels+MAIN_FB()->bpp) : (MAIN_FB()->pixels+MAIN_FB_SIZE()))
+#define FB_PIXELS() (MAIN_FB()->pixels+MAIN_FB_SIZE())
 #endif /* __FRAMEBUFFER_H__ */
