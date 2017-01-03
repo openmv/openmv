@@ -925,6 +925,7 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path);
 void jpeg_read_pixels(FIL *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
 void jpeg_write(image_t *img, const char *path, int quality);
+bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs);
 void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op);
 void imlib_load_image(image_t *img, const char *path);
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality);
