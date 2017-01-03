@@ -5,8 +5,7 @@
 #include "gc.h"
 
 #define MAX_ROW         (480)
-#define PATTERN_SCALE   (22)
-#define MAX_KEYPOINTS   (150)
+#define MAX_KEYPOINTS   (250)
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {
@@ -16,38 +15,38 @@ typedef struct {
 } corner_t;
 
 static int pixel[16];
-static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners, int b);
-static void fast12_score(image_t *image, corner_t *corners, int num_corners, int b);
+static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, int b);
+static void fast9_score(image_t *image, corner_t *corners, int num_corners, int b);
 static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints);
 
-static kp_t *alloc_keypoint(uint16_t x, uint16_t y)
+static kp_t *alloc_keypoint(uint16_t x, uint16_t y, float score)
 {
     // Note must set keypoint descriptor to zeros
     kp_t *kpt = xalloc0(sizeof*kpt);
     kpt->x = x;
     kpt->y = y;
+    kpt->score = score;
     return kpt;
 }
 
 static void make_offsets(int pixel[], int row_stride)
 {
-    static const int r = 3;
-    pixel[0]  =  0 + row_stride *  r;
-    pixel[1]  =  1 + row_stride *  r;
-    pixel[2]  =  2 + row_stride *  2;
-    pixel[3]  =  r + row_stride *  1;
-    pixel[4]  =  r + row_stride *  0;
-    pixel[5]  =  r + row_stride * -1;
-    pixel[6]  =  2 + row_stride * -2;
-    pixel[7]  =  1 + row_stride * -r;
-    pixel[8]  =  0 + row_stride * -r;
-    pixel[9]  = -1 + row_stride * -r;
-    pixel[10] = -2 + row_stride * -2;
-    pixel[11] = -r + row_stride * -1;
-    pixel[12] = -r + row_stride *  0;
-    pixel[13] = -r + row_stride *  1;
-    pixel[14] = -2 + row_stride *  2;
-    pixel[15] = -1 + row_stride *  r;
+        pixel[0] = 0 + row_stride * 3;
+        pixel[1] = 1 + row_stride * 3;
+        pixel[2] = 2 + row_stride * 2;
+        pixel[3] = 3 + row_stride * 1;
+        pixel[4] = 3 + row_stride * 0;
+        pixel[5] = 3 + row_stride * -1;
+        pixel[6] = 2 + row_stride * -2;
+        pixel[7] = 1 + row_stride * -3;
+        pixel[8] = 0 + row_stride * -3;
+        pixel[9] = -1 + row_stride * -3;
+        pixel[10] = -2 + row_stride * -2;
+        pixel[11] = -3 + row_stride * -1;
+        pixel[12] = -3 + row_stride * 0;
+        pixel[13] = -3 + row_stride * 1;
+        pixel[14] = -2 + row_stride * 2;
+        pixel[15] = -1 + row_stride * 3;
 }
 
 void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi)
@@ -56,16 +55,22 @@ void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t 
     make_offsets(pixel, image->w);
 
     // Find corners
-    corner_t *corners = fast12_detect(image, roi, &num_corners, threshold);
+    corner_t *corners = fast9_detect(image, roi, &num_corners, threshold);
     if (num_corners) {
         // Score corners
-        fast12_score(image, corners, num_corners, threshold);
+        fast9_score(image, corners, num_corners, threshold);
         // Non-max suppression
         nonmax_suppression(corners, num_corners, keypoints);
     }
 
     // Free corners;
     fb_free();
+}
+
+static int kpt_comp(const kp_t *kp1, const kp_t *kp2)
+{
+    // Descending order
+    return kp2->score - kp1->score;
 }
 
 static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints)
@@ -97,9 +102,9 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
         }
     }
 
-    for(int i=0, n_kpts=0; i<sz; i++) {
+    for(int i=0; i<sz; i++) {
         corner_t pos = corners[i];
-        uint8_t score = pos.score;
+        uint16_t score = pos.score;
 
         /*Check left */
         if (i > 0) {
@@ -150,7 +155,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
         }
 
         gc_info(&info);
-        #define MIN_MEM (2*1024)
+        #define MIN_MEM (10*1024)
         // Allocate keypoints until we're almost out of memory
         if (info.free < MIN_MEM) {
             // Try collecting memory
@@ -161,18 +166,23 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
                 break;
             }
         }
+
         #undef MIN_MEM
-        array_push_back(keypoints, alloc_keypoint(pos.x, pos.y));
-        if (++n_kpts==MAX_KEYPOINTS) {
-            break;
-        }
+        array_push_back(keypoints, alloc_keypoint(pos.x, pos.y, pos.score));
         nonmax:
         ;
     }
+
+    (void) kpt_comp;
+    // Sort keypoints by score and return top n keypoints
+    array_sort(keypoints, (array_comp_t) kpt_comp);
+    if (array_length(keypoints) > MAX_KEYPOINTS) {
+        array_resize (keypoints, MAX_KEYPOINTS);
+    }
+
 }
 
-/* Auto-generated code*/
-static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
+static int fast9_corner_score(const byte* p, int bstart)
 {    
     int bmin = bstart;
     int bmax = 255;
@@ -194,73 +204,33 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
               if( p[pixel[6]] > cb)
                if( p[pixel[7]] > cb)
                 if( p[pixel[8]] > cb)
-                 if( p[pixel[9]] > cb)
-                  if( p[pixel[10]] > cb)
-                   if( p[pixel[11]] > cb)
-                    goto is_a_corner;
-                   else
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                  else
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                 else
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
+                 goto is_a_corner;
                 else
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
                  else
                   goto is_not_a_corner;
-               else
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
+               else if( p[pixel[7]] < c_b)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
                  else
                   goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-              else
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
+                else if( p[pixel[14]] < c_b)
+                 if( p[pixel[8]] < c_b)
+                  if( p[pixel[9]] < c_b)
+                   if( p[pixel[10]] < c_b)
+                    if( p[pixel[11]] < c_b)
+                     if( p[pixel[12]] < c_b)
+                      if( p[pixel[13]] < c_b)
+                       if( p[pixel[15]] < c_b)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
                     else
                      goto is_not_a_corner;
                    else
@@ -272,16 +242,35 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
                 else
                  goto is_not_a_corner;
                else
-                goto is_not_a_corner;
-             else
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else if( p[pixel[6]] < c_b)
+               if( p[pixel[15]] > cb)
+                if( p[pixel[13]] > cb)
+                 if( p[pixel[14]] > cb)
+                  goto is_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else if( p[pixel[13]] < c_b)
+                 if( p[pixel[7]] < c_b)
+                  if( p[pixel[8]] < c_b)
+                   if( p[pixel[9]] < c_b)
+                    if( p[pixel[10]] < c_b)
+                     if( p[pixel[11]] < c_b)
+                      if( p[pixel[12]] < c_b)
+                       if( p[pixel[14]] < c_b)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
                     else
                      goto is_not_a_corner;
                    else
@@ -293,42 +282,47 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
                 else
                  goto is_not_a_corner;
                else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-            else if( p[pixel[4]] < c_b)
-             if( p[pixel[8]] > cb)
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else if( p[pixel[8]] < c_b)
-              if( p[pixel[5]] < c_b)
-               if( p[pixel[6]] < c_b)
                 if( p[pixel[7]] < c_b)
-                 if( p[pixel[9]] < c_b)
-                  if( p[pixel[10]] < c_b)
-                   if( p[pixel[11]] < c_b)
-                    if( p[pixel[12]] < c_b)
-                     if( p[pixel[13]] < c_b)
+                 if( p[pixel[8]] < c_b)
+                  if( p[pixel[9]] < c_b)
+                   if( p[pixel[10]] < c_b)
+                    if( p[pixel[11]] < c_b)
+                     if( p[pixel[12]] < c_b)
+                      if( p[pixel[13]] < c_b)
+                       if( p[pixel[14]] < c_b)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else if( p[pixel[13]] < c_b)
+                if( p[pixel[7]] < c_b)
+                 if( p[pixel[8]] < c_b)
+                  if( p[pixel[9]] < c_b)
+                   if( p[pixel[10]] < c_b)
+                    if( p[pixel[11]] < c_b)
+                     if( p[pixel[12]] < c_b)
                       if( p[pixel[14]] < c_b)
                        if( p[pixel[15]] < c_b)
                         goto is_a_corner;
@@ -350,377 +344,42 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
                  goto is_not_a_corner;
                else
                 goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             if( p[pixel[8]] > cb)
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
+             else if( p[pixel[5]] < c_b)
+              if( p[pixel[14]] > cb)
+               if( p[pixel[12]] > cb)
+                if( p[pixel[13]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      if( p[pixel[10]] > cb)
+                       if( p[pixel[11]] > cb)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
                     else
                      goto is_not_a_corner;
                    else
                     goto is_not_a_corner;
                   else
                    goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
                 else
                  goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-           else if( p[pixel[3]] < c_b)
-            if( p[pixel[15]] > cb)
-             if( p[pixel[7]] > cb)
-              if( p[pixel[8]] > cb)
-               if( p[pixel[9]] > cb)
-                if( p[pixel[10]] > cb)
-                 if( p[pixel[11]] > cb)
-                  if( p[pixel[12]] > cb)
-                   if( p[pixel[13]] > cb)
-                    if( p[pixel[14]] > cb)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else if( p[pixel[7]] < c_b)
-              if( p[pixel[4]] < c_b)
-               if( p[pixel[5]] < c_b)
+               else if( p[pixel[12]] < c_b)
                 if( p[pixel[6]] < c_b)
-                 if( p[pixel[8]] < c_b)
-                  if( p[pixel[9]] < c_b)
-                   if( p[pixel[10]] < c_b)
-                    if( p[pixel[11]] < c_b)
-                     if( p[pixel[12]] < c_b)
+                 if( p[pixel[7]] < c_b)
+                  if( p[pixel[8]] < c_b)
+                   if( p[pixel[9]] < c_b)
+                    if( p[pixel[10]] < c_b)
+                     if( p[pixel[11]] < c_b)
                       if( p[pixel[13]] < c_b)
-                       if( p[pixel[14]] < c_b)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             if( p[pixel[4]] < c_b)
-              if( p[pixel[5]] < c_b)
-               if( p[pixel[6]] < c_b)
-                if( p[pixel[7]] < c_b)
-                 if( p[pixel[8]] < c_b)
-                  if( p[pixel[9]] < c_b)
-                   if( p[pixel[10]] < c_b)
-                    if( p[pixel[11]] < c_b)
-                     if( p[pixel[12]] < c_b)
-                      if( p[pixel[13]] < c_b)
-                       if( p[pixel[14]] < c_b)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-           else
-            if( p[pixel[7]] > cb)
-             if( p[pixel[8]] > cb)
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else if( p[pixel[7]] < c_b)
-             if( p[pixel[4]] < c_b)
-              if( p[pixel[5]] < c_b)
-               if( p[pixel[6]] < c_b)
-                if( p[pixel[8]] < c_b)
-                 if( p[pixel[9]] < c_b)
-                  if( p[pixel[10]] < c_b)
-                   if( p[pixel[11]] < c_b)
-                    if( p[pixel[12]] < c_b)
-                     if( p[pixel[13]] < c_b)
-                      if( p[pixel[14]] < c_b)
-                       if( p[pixel[15]] < c_b)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-          else if( p[pixel[2]] < c_b)
-           if( p[pixel[6]] > cb)
-            if( p[pixel[7]] > cb)
-             if( p[pixel[8]] > cb)
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[3]] > cb)
-                      if( p[pixel[4]] > cb)
-                       if( p[pixel[5]] > cb)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else if( p[pixel[6]] < c_b)
-            if( p[pixel[4]] < c_b)
-             if( p[pixel[5]] < c_b)
-              if( p[pixel[7]] < c_b)
-               if( p[pixel[8]] < c_b)
-                if( p[pixel[9]] < c_b)
-                 if( p[pixel[10]] < c_b)
-                  if( p[pixel[11]] < c_b)
-                   if( p[pixel[12]] < c_b)
-                    if( p[pixel[13]] < c_b)
-                     if( p[pixel[3]] < c_b)
-                      goto is_a_corner;
-                     else
-                      if( p[pixel[14]] < c_b)
-                       if( p[pixel[15]] < c_b)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else
-           if( p[pixel[6]] > cb)
-            if( p[pixel[7]] > cb)
-             if( p[pixel[8]] > cb)
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[3]] > cb)
-                      if( p[pixel[4]] > cb)
-                       if( p[pixel[5]] > cb)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else if( p[pixel[6]] < c_b)
-            if( p[pixel[4]] < c_b)
-             if( p[pixel[5]] < c_b)
-              if( p[pixel[7]] < c_b)
-               if( p[pixel[8]] < c_b)
-                if( p[pixel[9]] < c_b)
-                 if( p[pixel[10]] < c_b)
-                  if( p[pixel[11]] < c_b)
-                   if( p[pixel[12]] < c_b)
-                    if( p[pixel[13]] < c_b)
-                     if( p[pixel[14]] < c_b)
-                      if( p[pixel[3]] < c_b)
-                       goto is_a_corner;
-                      else
-                       if( p[pixel[15]] < c_b)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-         else if( p[pixel[1]] < c_b)
-          if( p[pixel[5]] > cb)
-           if( p[pixel[6]] > cb)
-            if( p[pixel[7]] > cb)
-             if( p[pixel[8]] > cb)
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[3]] > cb)
-                      if( p[pixel[4]] > cb)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    if( p[pixel[2]] > cb)
-                     if( p[pixel[3]] > cb)
-                      if( p[pixel[4]] > cb)
                        goto is_a_corner;
                       else
                        goto is_not_a_corner;
@@ -728,145 +387,6 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
                       goto is_not_a_corner;
                     else
                      goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else if( p[pixel[5]] < c_b)
-           if( p[pixel[4]] < c_b)
-            if( p[pixel[6]] < c_b)
-             if( p[pixel[7]] < c_b)
-              if( p[pixel[8]] < c_b)
-               if( p[pixel[9]] < c_b)
-                if( p[pixel[10]] < c_b)
-                 if( p[pixel[11]] < c_b)
-                  if( p[pixel[12]] < c_b)
-                   if( p[pixel[3]] < c_b)
-                    if( p[pixel[2]] < c_b)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[13]] < c_b)
-                      if( p[pixel[14]] < c_b)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    if( p[pixel[13]] < c_b)
-                     if( p[pixel[14]] < c_b)
-                      if( p[pixel[15]] < c_b)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else
-           goto is_not_a_corner;
-         else
-          if( p[pixel[5]] > cb)
-           if( p[pixel[6]] > cb)
-            if( p[pixel[7]] > cb)
-             if( p[pixel[8]] > cb)
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[13]] > cb)
-                   if( p[pixel[14]] > cb)
-                    if( p[pixel[15]] > cb)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[3]] > cb)
-                      if( p[pixel[4]] > cb)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    if( p[pixel[2]] > cb)
-                     if( p[pixel[3]] > cb)
-                      if( p[pixel[4]] > cb)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else if( p[pixel[5]] < c_b)
-           if( p[pixel[4]] < c_b)
-            if( p[pixel[6]] < c_b)
-             if( p[pixel[7]] < c_b)
-              if( p[pixel[8]] < c_b)
-               if( p[pixel[9]] < c_b)
-                if( p[pixel[10]] < c_b)
-                 if( p[pixel[11]] < c_b)
-                  if( p[pixel[12]] < c_b)
-                   if( p[pixel[13]] < c_b)
-                    if( p[pixel[3]] < c_b)
-                     if( p[pixel[2]] < c_b)
-                      goto is_a_corner;
-                     else
-                      if( p[pixel[14]] < c_b)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                    else
-                     if( p[pixel[14]] < c_b)
-                      if( p[pixel[15]] < c_b)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
                    else
                     goto is_not_a_corner;
                   else
@@ -877,749 +397,423 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
                  goto is_not_a_corner;
                else
                 goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else
-           goto is_not_a_corner;
-        else if( p[pixel[0]] < c_b)
-         if( p[pixel[1]] > cb)
-          if( p[pixel[5]] > cb)
-           if( p[pixel[4]] > cb)
-            if( p[pixel[6]] > cb)
-             if( p[pixel[7]] > cb)
-              if( p[pixel[8]] > cb)
-               if( p[pixel[9]] > cb)
-                if( p[pixel[10]] > cb)
-                 if( p[pixel[11]] > cb)
-                  if( p[pixel[12]] > cb)
-                   if( p[pixel[3]] > cb)
-                    if( p[pixel[2]] > cb)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[13]] > cb)
-                      if( p[pixel[14]] > cb)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    if( p[pixel[13]] > cb)
-                     if( p[pixel[14]] > cb)
-                      if( p[pixel[15]] > cb)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else if( p[pixel[5]] < c_b)
-           if( p[pixel[6]] < c_b)
-            if( p[pixel[7]] < c_b)
-             if( p[pixel[8]] < c_b)
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[3]] < c_b)
-                      if( p[pixel[4]] < c_b)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    if( p[pixel[2]] < c_b)
-                     if( p[pixel[3]] < c_b)
-                      if( p[pixel[4]] < c_b)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else
-           goto is_not_a_corner;
-         else if( p[pixel[1]] < c_b)
-          if( p[pixel[2]] > cb)
-           if( p[pixel[6]] > cb)
-            if( p[pixel[4]] > cb)
-             if( p[pixel[5]] > cb)
-              if( p[pixel[7]] > cb)
-               if( p[pixel[8]] > cb)
-                if( p[pixel[9]] > cb)
-                 if( p[pixel[10]] > cb)
-                  if( p[pixel[11]] > cb)
-                   if( p[pixel[12]] > cb)
-                    if( p[pixel[13]] > cb)
-                     if( p[pixel[3]] > cb)
-                      goto is_a_corner;
-                     else
-                      if( p[pixel[14]] > cb)
-                       if( p[pixel[15]] > cb)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else if( p[pixel[6]] < c_b)
-            if( p[pixel[7]] < c_b)
-             if( p[pixel[8]] < c_b)
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[3]] < c_b)
-                      if( p[pixel[4]] < c_b)
-                       if( p[pixel[5]] < c_b)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else if( p[pixel[2]] < c_b)
-           if( p[pixel[3]] > cb)
-            if( p[pixel[15]] < c_b)
-             if( p[pixel[7]] > cb)
-              if( p[pixel[4]] > cb)
-               if( p[pixel[5]] > cb)
-                if( p[pixel[6]] > cb)
-                 if( p[pixel[8]] > cb)
-                  if( p[pixel[9]] > cb)
-                   if( p[pixel[10]] > cb)
-                    if( p[pixel[11]] > cb)
-                     if( p[pixel[12]] > cb)
-                      if( p[pixel[13]] > cb)
-                       if( p[pixel[14]] > cb)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else if( p[pixel[7]] < c_b)
-              if( p[pixel[8]] < c_b)
-               if( p[pixel[9]] < c_b)
-                if( p[pixel[10]] < c_b)
-                 if( p[pixel[11]] < c_b)
-                  if( p[pixel[12]] < c_b)
-                   if( p[pixel[13]] < c_b)
-                    if( p[pixel[14]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             if( p[pixel[4]] > cb)
-              if( p[pixel[5]] > cb)
-               if( p[pixel[6]] > cb)
-                if( p[pixel[7]] > cb)
-                 if( p[pixel[8]] > cb)
-                  if( p[pixel[9]] > cb)
-                   if( p[pixel[10]] > cb)
-                    if( p[pixel[11]] > cb)
-                     if( p[pixel[12]] > cb)
-                      if( p[pixel[13]] > cb)
-                       if( p[pixel[14]] > cb)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-           else if( p[pixel[3]] < c_b)
-            if( p[pixel[4]] > cb)
-             if( p[pixel[8]] > cb)
-              if( p[pixel[5]] > cb)
-               if( p[pixel[6]] > cb)
-                if( p[pixel[7]] > cb)
-                 if( p[pixel[9]] > cb)
-                  if( p[pixel[10]] > cb)
-                   if( p[pixel[11]] > cb)
-                    if( p[pixel[12]] > cb)
-                     if( p[pixel[13]] > cb)
-                      if( p[pixel[14]] > cb)
-                       if( p[pixel[15]] > cb)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else if( p[pixel[8]] < c_b)
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else if( p[pixel[4]] < c_b)
-             if( p[pixel[5]] < c_b)
-              if( p[pixel[6]] < c_b)
+              else if( p[pixel[14]] < c_b)
                if( p[pixel[7]] < c_b)
                 if( p[pixel[8]] < c_b)
                  if( p[pixel[9]] < c_b)
                   if( p[pixel[10]] < c_b)
                    if( p[pixel[11]] < c_b)
+                    if( p[pixel[12]] < c_b)
+                     if( p[pixel[13]] < c_b)
+                      if( p[pixel[6]] < c_b)
+                       goto is_a_corner;
+                      else
+                       if( p[pixel[15]] < c_b)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               if( p[pixel[6]] < c_b)
+                if( p[pixel[7]] < c_b)
+                 if( p[pixel[8]] < c_b)
+                  if( p[pixel[9]] < c_b)
+                   if( p[pixel[10]] < c_b)
+                    if( p[pixel[11]] < c_b)
+                     if( p[pixel[12]] < c_b)
+                      if( p[pixel[13]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[12]] > cb)
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      if( p[pixel[10]] > cb)
+                       if( p[pixel[11]] > cb)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else if( p[pixel[12]] < c_b)
+               if( p[pixel[7]] < c_b)
+                if( p[pixel[8]] < c_b)
+                 if( p[pixel[9]] < c_b)
+                  if( p[pixel[10]] < c_b)
+                   if( p[pixel[11]] < c_b)
+                    if( p[pixel[13]] < c_b)
+                     if( p[pixel[14]] < c_b)
+                      if( p[pixel[6]] < c_b)
+                       goto is_a_corner;
+                      else
+                       if( p[pixel[15]] < c_b)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else if( p[pixel[4]] < c_b)
+             if( p[pixel[13]] > cb)
+              if( p[pixel[11]] > cb)
+               if( p[pixel[12]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      if( p[pixel[10]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      if( p[pixel[10]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else if( p[pixel[11]] < c_b)
+               if( p[pixel[5]] < c_b)
+                if( p[pixel[6]] < c_b)
+                 if( p[pixel[7]] < c_b)
+                  if( p[pixel[8]] < c_b)
+                   if( p[pixel[9]] < c_b)
+                    if( p[pixel[10]] < c_b)
+                     if( p[pixel[12]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else if( p[pixel[13]] < c_b)
+              if( p[pixel[7]] < c_b)
+               if( p[pixel[8]] < c_b)
+                if( p[pixel[9]] < c_b)
+                 if( p[pixel[10]] < c_b)
+                  if( p[pixel[11]] < c_b)
+                   if( p[pixel[12]] < c_b)
+                    if( p[pixel[6]] < c_b)
+                     if( p[pixel[5]] < c_b)
+                      goto is_a_corner;
+                     else
+                      if( p[pixel[14]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                    else
+                     if( p[pixel[14]] < c_b)
+                      if( p[pixel[15]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              if( p[pixel[5]] < c_b)
+               if( p[pixel[6]] < c_b)
+                if( p[pixel[7]] < c_b)
+                 if( p[pixel[8]] < c_b)
+                  if( p[pixel[9]] < c_b)
+                   if( p[pixel[10]] < c_b)
+                    if( p[pixel[11]] < c_b)
+                     if( p[pixel[12]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             if( p[pixel[11]] > cb)
+              if( p[pixel[12]] > cb)
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      if( p[pixel[10]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      if( p[pixel[10]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else if( p[pixel[11]] < c_b)
+              if( p[pixel[7]] < c_b)
+               if( p[pixel[8]] < c_b)
+                if( p[pixel[9]] < c_b)
+                 if( p[pixel[10]] < c_b)
+                  if( p[pixel[12]] < c_b)
+                   if( p[pixel[13]] < c_b)
+                    if( p[pixel[6]] < c_b)
+                     if( p[pixel[5]] < c_b)
+                      goto is_a_corner;
+                     else
+                      if( p[pixel[14]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                    else
+                     if( p[pixel[14]] < c_b)
+                      if( p[pixel[15]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+           else if( p[pixel[3]] < c_b)
+            if( p[pixel[10]] > cb)
+             if( p[pixel[11]] > cb)
+              if( p[pixel[12]] > cb)
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else if( p[pixel[10]] < c_b)
+             if( p[pixel[7]] < c_b)
+              if( p[pixel[8]] < c_b)
+               if( p[pixel[9]] < c_b)
+                if( p[pixel[11]] < c_b)
+                 if( p[pixel[6]] < c_b)
+                  if( p[pixel[5]] < c_b)
+                   if( p[pixel[4]] < c_b)
                     goto is_a_corner;
                    else
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                  else
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                 else
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                else
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-               else
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-              else
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-             else
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-            else
-             if( p[pixel[8]] < c_b)
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-           else
-            if( p[pixel[7]] > cb)
-             if( p[pixel[4]] > cb)
-              if( p[pixel[5]] > cb)
-               if( p[pixel[6]] > cb)
-                if( p[pixel[8]] > cb)
-                 if( p[pixel[9]] > cb)
-                  if( p[pixel[10]] > cb)
-                   if( p[pixel[11]] > cb)
-                    if( p[pixel[12]] > cb)
-                     if( p[pixel[13]] > cb)
-                      if( p[pixel[14]] > cb)
-                       if( p[pixel[15]] > cb)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else if( p[pixel[7]] < c_b)
-             if( p[pixel[8]] < c_b)
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-          else
-           if( p[pixel[6]] > cb)
-            if( p[pixel[4]] > cb)
-             if( p[pixel[5]] > cb)
-              if( p[pixel[7]] > cb)
-               if( p[pixel[8]] > cb)
-                if( p[pixel[9]] > cb)
-                 if( p[pixel[10]] > cb)
-                  if( p[pixel[11]] > cb)
-                   if( p[pixel[12]] > cb)
-                    if( p[pixel[13]] > cb)
-                     if( p[pixel[14]] > cb)
-                      if( p[pixel[3]] > cb)
-                       goto is_a_corner;
-                      else
-                       if( p[pixel[15]] > cb)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else if( p[pixel[6]] < c_b)
-            if( p[pixel[7]] < c_b)
-             if( p[pixel[8]] < c_b)
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[3]] < c_b)
-                      if( p[pixel[4]] < c_b)
-                       if( p[pixel[5]] < c_b)
-                        goto is_a_corner;
-                       else
-                        goto is_not_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-         else
-          if( p[pixel[5]] > cb)
-           if( p[pixel[4]] > cb)
-            if( p[pixel[6]] > cb)
-             if( p[pixel[7]] > cb)
-              if( p[pixel[8]] > cb)
-               if( p[pixel[9]] > cb)
-                if( p[pixel[10]] > cb)
-                 if( p[pixel[11]] > cb)
-                  if( p[pixel[12]] > cb)
-                   if( p[pixel[13]] > cb)
-                    if( p[pixel[3]] > cb)
-                     if( p[pixel[2]] > cb)
-                      goto is_a_corner;
-                     else
-                      if( p[pixel[14]] > cb)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                    else
-                     if( p[pixel[14]] > cb)
-                      if( p[pixel[15]] > cb)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else if( p[pixel[5]] < c_b)
-           if( p[pixel[6]] < c_b)
-            if( p[pixel[7]] < c_b)
-             if( p[pixel[8]] < c_b)
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
-                if( p[pixel[11]] < c_b)
-                 if( p[pixel[12]] < c_b)
-                  if( p[pixel[13]] < c_b)
-                   if( p[pixel[14]] < c_b)
-                    if( p[pixel[15]] < c_b)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[3]] < c_b)
-                      if( p[pixel[4]] < c_b)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    if( p[pixel[2]] < c_b)
-                     if( p[pixel[3]] < c_b)
-                      if( p[pixel[4]] < c_b)
-                       goto is_a_corner;
-                      else
-                       goto is_not_a_corner;
-                     else
-                      goto is_not_a_corner;
-                    else
-                     goto is_not_a_corner;
-                  else
-                   goto is_not_a_corner;
-                 else
-                  goto is_not_a_corner;
-                else
-                 goto is_not_a_corner;
-               else
-                goto is_not_a_corner;
-              else
-               goto is_not_a_corner;
-             else
-              goto is_not_a_corner;
-            else
-             goto is_not_a_corner;
-           else
-            goto is_not_a_corner;
-          else
-           goto is_not_a_corner;
-        else
-         if( p[pixel[4]] > cb)
-          if( p[pixel[5]] > cb)
-           if( p[pixel[6]] > cb)
-            if( p[pixel[7]] > cb)
-             if( p[pixel[8]] > cb)
-              if( p[pixel[9]] > cb)
-               if( p[pixel[10]] > cb)
-                if( p[pixel[11]] > cb)
-                 if( p[pixel[12]] > cb)
-                  if( p[pixel[3]] > cb)
-                   if( p[pixel[2]] > cb)
-                    if( p[pixel[1]] > cb)
-                     goto is_a_corner;
-                    else
-                     if( p[pixel[13]] > cb)
-                      goto is_a_corner;
-                     else
-                      goto is_not_a_corner;
-                   else
-                    if( p[pixel[13]] > cb)
-                     if( p[pixel[14]] > cb)
+                    if( p[pixel[12]] < c_b)
+                     if( p[pixel[13]] < c_b)
                       goto is_a_corner;
                      else
                       goto is_not_a_corner;
                     else
                      goto is_not_a_corner;
                   else
-                   if( p[pixel[13]] > cb)
-                    if( p[pixel[14]] > cb)
-                     if( p[pixel[15]] > cb)
+                   if( p[pixel[12]] < c_b)
+                    if( p[pixel[13]] < c_b)
+                     if( p[pixel[14]] < c_b)
                       goto is_a_corner;
                      else
                       goto is_not_a_corner;
@@ -1628,7 +822,19 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
                    else
                     goto is_not_a_corner;
                  else
-                  goto is_not_a_corner;
+                  if( p[pixel[12]] < c_b)
+                   if( p[pixel[13]] < c_b)
+                    if( p[pixel[14]] < c_b)
+                     if( p[pixel[15]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
                 else
                  goto is_not_a_corner;
                else
@@ -1640,21 +846,77 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
             else
              goto is_not_a_corner;
            else
-            goto is_not_a_corner;
-          else
-           goto is_not_a_corner;
-         else if( p[pixel[4]] < c_b)
-          if( p[pixel[5]] < c_b)
-           if( p[pixel[6]] < c_b)
-            if( p[pixel[7]] < c_b)
-             if( p[pixel[8]] < c_b)
-              if( p[pixel[9]] < c_b)
-               if( p[pixel[10]] < c_b)
+            if( p[pixel[10]] > cb)
+             if( p[pixel[11]] > cb)
+              if( p[pixel[12]] > cb)
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     if( p[pixel[9]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else if( p[pixel[10]] < c_b)
+             if( p[pixel[7]] < c_b)
+              if( p[pixel[8]] < c_b)
+               if( p[pixel[9]] < c_b)
                 if( p[pixel[11]] < c_b)
                  if( p[pixel[12]] < c_b)
-                  if( p[pixel[3]] < c_b)
-                   if( p[pixel[2]] < c_b)
-                    if( p[pixel[1]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[5]] < c_b)
+                    if( p[pixel[4]] < c_b)
                      goto is_a_corner;
                     else
                      if( p[pixel[13]] < c_b)
@@ -1692,6 +954,2142 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
               goto is_not_a_corner;
             else
              goto is_not_a_corner;
+          else if( p[pixel[2]] < c_b)
+           if( p[pixel[9]] > cb)
+            if( p[pixel[10]] > cb)
+             if( p[pixel[11]] > cb)
+              if( p[pixel[12]] > cb)
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[3]] > cb)
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else if( p[pixel[9]] < c_b)
+            if( p[pixel[7]] < c_b)
+             if( p[pixel[8]] < c_b)
+              if( p[pixel[10]] < c_b)
+               if( p[pixel[6]] < c_b)
+                if( p[pixel[5]] < c_b)
+                 if( p[pixel[4]] < c_b)
+                  if( p[pixel[3]] < c_b)
+                   goto is_a_corner;
+                  else
+                   if( p[pixel[11]] < c_b)
+                    if( p[pixel[12]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                 else
+                  if( p[pixel[11]] < c_b)
+                   if( p[pixel[12]] < c_b)
+                    if( p[pixel[13]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[11]] < c_b)
+                  if( p[pixel[12]] < c_b)
+                   if( p[pixel[13]] < c_b)
+                    if( p[pixel[14]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[11]] < c_b)
+                 if( p[pixel[12]] < c_b)
+                  if( p[pixel[13]] < c_b)
+                   if( p[pixel[14]] < c_b)
+                    if( p[pixel[15]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else
+           if( p[pixel[9]] > cb)
+            if( p[pixel[10]] > cb)
+             if( p[pixel[11]] > cb)
+              if( p[pixel[12]] > cb)
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[3]] > cb)
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    if( p[pixel[8]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else if( p[pixel[9]] < c_b)
+            if( p[pixel[7]] < c_b)
+             if( p[pixel[8]] < c_b)
+              if( p[pixel[10]] < c_b)
+               if( p[pixel[11]] < c_b)
+                if( p[pixel[6]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[4]] < c_b)
+                   if( p[pixel[3]] < c_b)
+                    goto is_a_corner;
+                   else
+                    if( p[pixel[12]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                  else
+                   if( p[pixel[12]] < c_b)
+                    if( p[pixel[13]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                 else
+                  if( p[pixel[12]] < c_b)
+                   if( p[pixel[13]] < c_b)
+                    if( p[pixel[14]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[12]] < c_b)
+                  if( p[pixel[13]] < c_b)
+                   if( p[pixel[14]] < c_b)
+                    if( p[pixel[15]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+         else if( p[pixel[1]] < c_b)
+          if( p[pixel[8]] > cb)
+           if( p[pixel[9]] > cb)
+            if( p[pixel[10]] > cb)
+             if( p[pixel[11]] > cb)
+              if( p[pixel[12]] > cb)
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[3]] > cb)
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[2]] > cb)
+               if( p[pixel[3]] > cb)
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else if( p[pixel[8]] < c_b)
+           if( p[pixel[7]] < c_b)
+            if( p[pixel[9]] < c_b)
+             if( p[pixel[6]] < c_b)
+              if( p[pixel[5]] < c_b)
+               if( p[pixel[4]] < c_b)
+                if( p[pixel[3]] < c_b)
+                 if( p[pixel[2]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[10]] < c_b)
+                   if( p[pixel[11]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[10]] < c_b)
+                  if( p[pixel[11]] < c_b)
+                   if( p[pixel[12]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[10]] < c_b)
+                 if( p[pixel[11]] < c_b)
+                  if( p[pixel[12]] < c_b)
+                   if( p[pixel[13]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[10]] < c_b)
+                if( p[pixel[11]] < c_b)
+                 if( p[pixel[12]] < c_b)
+                  if( p[pixel[13]] < c_b)
+                   if( p[pixel[14]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[10]] < c_b)
+               if( p[pixel[11]] < c_b)
+                if( p[pixel[12]] < c_b)
+                 if( p[pixel[13]] < c_b)
+                  if( p[pixel[14]] < c_b)
+                   if( p[pixel[15]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else
+           goto is_not_a_corner;
+         else
+          if( p[pixel[8]] > cb)
+           if( p[pixel[9]] > cb)
+            if( p[pixel[10]] > cb)
+             if( p[pixel[11]] > cb)
+              if( p[pixel[12]] > cb)
+               if( p[pixel[13]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[15]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[3]] > cb)
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[2]] > cb)
+               if( p[pixel[3]] > cb)
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[7]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else if( p[pixel[8]] < c_b)
+           if( p[pixel[7]] < c_b)
+            if( p[pixel[9]] < c_b)
+             if( p[pixel[10]] < c_b)
+              if( p[pixel[6]] < c_b)
+               if( p[pixel[5]] < c_b)
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[3]] < c_b)
+                  if( p[pixel[2]] < c_b)
+                   goto is_a_corner;
+                  else
+                   if( p[pixel[11]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                 else
+                  if( p[pixel[11]] < c_b)
+                   if( p[pixel[12]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[11]] < c_b)
+                  if( p[pixel[12]] < c_b)
+                   if( p[pixel[13]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[11]] < c_b)
+                 if( p[pixel[12]] < c_b)
+                  if( p[pixel[13]] < c_b)
+                   if( p[pixel[14]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[11]] < c_b)
+                if( p[pixel[12]] < c_b)
+                 if( p[pixel[13]] < c_b)
+                  if( p[pixel[14]] < c_b)
+                   if( p[pixel[15]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else
+           goto is_not_a_corner;
+        else if( p[pixel[0]] < c_b)
+         if( p[pixel[1]] > cb)
+          if( p[pixel[8]] > cb)
+           if( p[pixel[7]] > cb)
+            if( p[pixel[9]] > cb)
+             if( p[pixel[6]] > cb)
+              if( p[pixel[5]] > cb)
+               if( p[pixel[4]] > cb)
+                if( p[pixel[3]] > cb)
+                 if( p[pixel[2]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[10]] > cb)
+                   if( p[pixel[11]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[10]] > cb)
+                  if( p[pixel[11]] > cb)
+                   if( p[pixel[12]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[10]] > cb)
+                 if( p[pixel[11]] > cb)
+                  if( p[pixel[12]] > cb)
+                   if( p[pixel[13]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[10]] > cb)
+                if( p[pixel[11]] > cb)
+                 if( p[pixel[12]] > cb)
+                  if( p[pixel[13]] > cb)
+                   if( p[pixel[14]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[10]] > cb)
+               if( p[pixel[11]] > cb)
+                if( p[pixel[12]] > cb)
+                 if( p[pixel[13]] > cb)
+                  if( p[pixel[14]] > cb)
+                   if( p[pixel[15]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else if( p[pixel[8]] < c_b)
+           if( p[pixel[9]] < c_b)
+            if( p[pixel[10]] < c_b)
+             if( p[pixel[11]] < c_b)
+              if( p[pixel[12]] < c_b)
+               if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[3]] < c_b)
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[2]] < c_b)
+               if( p[pixel[3]] < c_b)
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else
+           goto is_not_a_corner;
+         else if( p[pixel[1]] < c_b)
+          if( p[pixel[2]] > cb)
+           if( p[pixel[9]] > cb)
+            if( p[pixel[7]] > cb)
+             if( p[pixel[8]] > cb)
+              if( p[pixel[10]] > cb)
+               if( p[pixel[6]] > cb)
+                if( p[pixel[5]] > cb)
+                 if( p[pixel[4]] > cb)
+                  if( p[pixel[3]] > cb)
+                   goto is_a_corner;
+                  else
+                   if( p[pixel[11]] > cb)
+                    if( p[pixel[12]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                 else
+                  if( p[pixel[11]] > cb)
+                   if( p[pixel[12]] > cb)
+                    if( p[pixel[13]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[11]] > cb)
+                  if( p[pixel[12]] > cb)
+                   if( p[pixel[13]] > cb)
+                    if( p[pixel[14]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[11]] > cb)
+                 if( p[pixel[12]] > cb)
+                  if( p[pixel[13]] > cb)
+                   if( p[pixel[14]] > cb)
+                    if( p[pixel[15]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else if( p[pixel[9]] < c_b)
+            if( p[pixel[10]] < c_b)
+             if( p[pixel[11]] < c_b)
+              if( p[pixel[12]] < c_b)
+               if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[3]] < c_b)
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else if( p[pixel[2]] < c_b)
+           if( p[pixel[3]] > cb)
+            if( p[pixel[10]] > cb)
+             if( p[pixel[7]] > cb)
+              if( p[pixel[8]] > cb)
+               if( p[pixel[9]] > cb)
+                if( p[pixel[11]] > cb)
+                 if( p[pixel[6]] > cb)
+                  if( p[pixel[5]] > cb)
+                   if( p[pixel[4]] > cb)
+                    goto is_a_corner;
+                   else
+                    if( p[pixel[12]] > cb)
+                     if( p[pixel[13]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                  else
+                   if( p[pixel[12]] > cb)
+                    if( p[pixel[13]] > cb)
+                     if( p[pixel[14]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                 else
+                  if( p[pixel[12]] > cb)
+                   if( p[pixel[13]] > cb)
+                    if( p[pixel[14]] > cb)
+                     if( p[pixel[15]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else if( p[pixel[10]] < c_b)
+             if( p[pixel[11]] < c_b)
+              if( p[pixel[12]] < c_b)
+               if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else if( p[pixel[3]] < c_b)
+            if( p[pixel[4]] > cb)
+             if( p[pixel[13]] > cb)
+              if( p[pixel[7]] > cb)
+               if( p[pixel[8]] > cb)
+                if( p[pixel[9]] > cb)
+                 if( p[pixel[10]] > cb)
+                  if( p[pixel[11]] > cb)
+                   if( p[pixel[12]] > cb)
+                    if( p[pixel[6]] > cb)
+                     if( p[pixel[5]] > cb)
+                      goto is_a_corner;
+                     else
+                      if( p[pixel[14]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                    else
+                     if( p[pixel[14]] > cb)
+                      if( p[pixel[15]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else if( p[pixel[13]] < c_b)
+              if( p[pixel[11]] > cb)
+               if( p[pixel[5]] > cb)
+                if( p[pixel[6]] > cb)
+                 if( p[pixel[7]] > cb)
+                  if( p[pixel[8]] > cb)
+                   if( p[pixel[9]] > cb)
+                    if( p[pixel[10]] > cb)
+                     if( p[pixel[12]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else if( p[pixel[11]] < c_b)
+               if( p[pixel[12]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      if( p[pixel[10]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      if( p[pixel[10]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              if( p[pixel[5]] > cb)
+               if( p[pixel[6]] > cb)
+                if( p[pixel[7]] > cb)
+                 if( p[pixel[8]] > cb)
+                  if( p[pixel[9]] > cb)
+                   if( p[pixel[10]] > cb)
+                    if( p[pixel[11]] > cb)
+                     if( p[pixel[12]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else if( p[pixel[4]] < c_b)
+             if( p[pixel[5]] > cb)
+              if( p[pixel[14]] > cb)
+               if( p[pixel[7]] > cb)
+                if( p[pixel[8]] > cb)
+                 if( p[pixel[9]] > cb)
+                  if( p[pixel[10]] > cb)
+                   if( p[pixel[11]] > cb)
+                    if( p[pixel[12]] > cb)
+                     if( p[pixel[13]] > cb)
+                      if( p[pixel[6]] > cb)
+                       goto is_a_corner;
+                      else
+                       if( p[pixel[15]] > cb)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else if( p[pixel[14]] < c_b)
+               if( p[pixel[12]] > cb)
+                if( p[pixel[6]] > cb)
+                 if( p[pixel[7]] > cb)
+                  if( p[pixel[8]] > cb)
+                   if( p[pixel[9]] > cb)
+                    if( p[pixel[10]] > cb)
+                     if( p[pixel[11]] > cb)
+                      if( p[pixel[13]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else if( p[pixel[12]] < c_b)
+                if( p[pixel[13]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      if( p[pixel[10]] < c_b)
+                       if( p[pixel[11]] < c_b)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               if( p[pixel[6]] > cb)
+                if( p[pixel[7]] > cb)
+                 if( p[pixel[8]] > cb)
+                  if( p[pixel[9]] > cb)
+                   if( p[pixel[10]] > cb)
+                    if( p[pixel[11]] > cb)
+                     if( p[pixel[12]] > cb)
+                      if( p[pixel[13]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else if( p[pixel[5]] < c_b)
+              if( p[pixel[6]] > cb)
+               if( p[pixel[15]] < c_b)
+                if( p[pixel[13]] > cb)
+                 if( p[pixel[7]] > cb)
+                  if( p[pixel[8]] > cb)
+                   if( p[pixel[9]] > cb)
+                    if( p[pixel[10]] > cb)
+                     if( p[pixel[11]] > cb)
+                      if( p[pixel[12]] > cb)
+                       if( p[pixel[14]] > cb)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else if( p[pixel[13]] < c_b)
+                 if( p[pixel[14]] < c_b)
+                  goto is_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                if( p[pixel[7]] > cb)
+                 if( p[pixel[8]] > cb)
+                  if( p[pixel[9]] > cb)
+                   if( p[pixel[10]] > cb)
+                    if( p[pixel[11]] > cb)
+                     if( p[pixel[12]] > cb)
+                      if( p[pixel[13]] > cb)
+                       if( p[pixel[14]] > cb)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else if( p[pixel[6]] < c_b)
+               if( p[pixel[7]] > cb)
+                if( p[pixel[14]] > cb)
+                 if( p[pixel[8]] > cb)
+                  if( p[pixel[9]] > cb)
+                   if( p[pixel[10]] > cb)
+                    if( p[pixel[11]] > cb)
+                     if( p[pixel[12]] > cb)
+                      if( p[pixel[13]] > cb)
+                       if( p[pixel[15]] > cb)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else if( p[pixel[7]] < c_b)
+                if( p[pixel[8]] < c_b)
+                 goto is_a_corner;
+                else
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[13]] > cb)
+                if( p[pixel[7]] > cb)
+                 if( p[pixel[8]] > cb)
+                  if( p[pixel[9]] > cb)
+                   if( p[pixel[10]] > cb)
+                    if( p[pixel[11]] > cb)
+                     if( p[pixel[12]] > cb)
+                      if( p[pixel[14]] > cb)
+                       if( p[pixel[15]] > cb)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[12]] > cb)
+               if( p[pixel[7]] > cb)
+                if( p[pixel[8]] > cb)
+                 if( p[pixel[9]] > cb)
+                  if( p[pixel[10]] > cb)
+                   if( p[pixel[11]] > cb)
+                    if( p[pixel[13]] > cb)
+                     if( p[pixel[14]] > cb)
+                      if( p[pixel[6]] > cb)
+                       goto is_a_corner;
+                      else
+                       if( p[pixel[15]] > cb)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else if( p[pixel[12]] < c_b)
+               if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      if( p[pixel[10]] < c_b)
+                       if( p[pixel[11]] < c_b)
+                        goto is_a_corner;
+                       else
+                        goto is_not_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             if( p[pixel[11]] > cb)
+              if( p[pixel[7]] > cb)
+               if( p[pixel[8]] > cb)
+                if( p[pixel[9]] > cb)
+                 if( p[pixel[10]] > cb)
+                  if( p[pixel[12]] > cb)
+                   if( p[pixel[13]] > cb)
+                    if( p[pixel[6]] > cb)
+                     if( p[pixel[5]] > cb)
+                      goto is_a_corner;
+                     else
+                      if( p[pixel[14]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                    else
+                     if( p[pixel[14]] > cb)
+                      if( p[pixel[15]] > cb)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else if( p[pixel[11]] < c_b)
+              if( p[pixel[12]] < c_b)
+               if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      if( p[pixel[10]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      if( p[pixel[10]] < c_b)
+                       goto is_a_corner;
+                      else
+                       goto is_not_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+           else
+            if( p[pixel[10]] > cb)
+             if( p[pixel[7]] > cb)
+              if( p[pixel[8]] > cb)
+               if( p[pixel[9]] > cb)
+                if( p[pixel[11]] > cb)
+                 if( p[pixel[12]] > cb)
+                  if( p[pixel[6]] > cb)
+                   if( p[pixel[5]] > cb)
+                    if( p[pixel[4]] > cb)
+                     goto is_a_corner;
+                    else
+                     if( p[pixel[13]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                   else
+                    if( p[pixel[13]] > cb)
+                     if( p[pixel[14]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                  else
+                   if( p[pixel[13]] > cb)
+                    if( p[pixel[14]] > cb)
+                     if( p[pixel[15]] > cb)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else if( p[pixel[10]] < c_b)
+             if( p[pixel[11]] < c_b)
+              if( p[pixel[12]] < c_b)
+               if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     if( p[pixel[9]] < c_b)
+                      goto is_a_corner;
+                     else
+                      goto is_not_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+          else
+           if( p[pixel[9]] > cb)
+            if( p[pixel[7]] > cb)
+             if( p[pixel[8]] > cb)
+              if( p[pixel[10]] > cb)
+               if( p[pixel[11]] > cb)
+                if( p[pixel[6]] > cb)
+                 if( p[pixel[5]] > cb)
+                  if( p[pixel[4]] > cb)
+                   if( p[pixel[3]] > cb)
+                    goto is_a_corner;
+                   else
+                    if( p[pixel[12]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                  else
+                   if( p[pixel[12]] > cb)
+                    if( p[pixel[13]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                 else
+                  if( p[pixel[12]] > cb)
+                   if( p[pixel[13]] > cb)
+                    if( p[pixel[14]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[12]] > cb)
+                  if( p[pixel[13]] > cb)
+                   if( p[pixel[14]] > cb)
+                    if( p[pixel[15]] > cb)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else if( p[pixel[9]] < c_b)
+            if( p[pixel[10]] < c_b)
+             if( p[pixel[11]] < c_b)
+              if( p[pixel[12]] < c_b)
+               if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[3]] < c_b)
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    if( p[pixel[8]] < c_b)
+                     goto is_a_corner;
+                    else
+                     goto is_not_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+         else
+          if( p[pixel[8]] > cb)
+           if( p[pixel[7]] > cb)
+            if( p[pixel[9]] > cb)
+             if( p[pixel[10]] > cb)
+              if( p[pixel[6]] > cb)
+               if( p[pixel[5]] > cb)
+                if( p[pixel[4]] > cb)
+                 if( p[pixel[3]] > cb)
+                  if( p[pixel[2]] > cb)
+                   goto is_a_corner;
+                  else
+                   if( p[pixel[11]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                 else
+                  if( p[pixel[11]] > cb)
+                   if( p[pixel[12]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[11]] > cb)
+                  if( p[pixel[12]] > cb)
+                   if( p[pixel[13]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[11]] > cb)
+                 if( p[pixel[12]] > cb)
+                  if( p[pixel[13]] > cb)
+                   if( p[pixel[14]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[11]] > cb)
+                if( p[pixel[12]] > cb)
+                 if( p[pixel[13]] > cb)
+                  if( p[pixel[14]] > cb)
+                   if( p[pixel[15]] > cb)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else if( p[pixel[8]] < c_b)
+           if( p[pixel[9]] < c_b)
+            if( p[pixel[10]] < c_b)
+             if( p[pixel[11]] < c_b)
+              if( p[pixel[12]] < c_b)
+               if( p[pixel[13]] < c_b)
+                if( p[pixel[14]] < c_b)
+                 if( p[pixel[15]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[3]] < c_b)
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[2]] < c_b)
+               if( p[pixel[3]] < c_b)
+                if( p[pixel[4]] < c_b)
+                 if( p[pixel[5]] < c_b)
+                  if( p[pixel[6]] < c_b)
+                   if( p[pixel[7]] < c_b)
+                    goto is_a_corner;
+                   else
+                    goto is_not_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else
+           goto is_not_a_corner;
+        else
+         if( p[pixel[7]] > cb)
+          if( p[pixel[8]] > cb)
+           if( p[pixel[9]] > cb)
+            if( p[pixel[6]] > cb)
+             if( p[pixel[5]] > cb)
+              if( p[pixel[4]] > cb)
+               if( p[pixel[3]] > cb)
+                if( p[pixel[2]] > cb)
+                 if( p[pixel[1]] > cb)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[10]] > cb)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[10]] > cb)
+                  if( p[pixel[11]] > cb)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[10]] > cb)
+                 if( p[pixel[11]] > cb)
+                  if( p[pixel[12]] > cb)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[10]] > cb)
+                if( p[pixel[11]] > cb)
+                 if( p[pixel[12]] > cb)
+                  if( p[pixel[13]] > cb)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[10]] > cb)
+               if( p[pixel[11]] > cb)
+                if( p[pixel[12]] > cb)
+                 if( p[pixel[13]] > cb)
+                  if( p[pixel[14]] > cb)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             if( p[pixel[10]] > cb)
+              if( p[pixel[11]] > cb)
+               if( p[pixel[12]] > cb)
+                if( p[pixel[13]] > cb)
+                 if( p[pixel[14]] > cb)
+                  if( p[pixel[15]] > cb)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
+           else
+            goto is_not_a_corner;
+          else
+           goto is_not_a_corner;
+         else if( p[pixel[7]] < c_b)
+          if( p[pixel[8]] < c_b)
+           if( p[pixel[9]] < c_b)
+            if( p[pixel[6]] < c_b)
+             if( p[pixel[5]] < c_b)
+              if( p[pixel[4]] < c_b)
+               if( p[pixel[3]] < c_b)
+                if( p[pixel[2]] < c_b)
+                 if( p[pixel[1]] < c_b)
+                  goto is_a_corner;
+                 else
+                  if( p[pixel[10]] < c_b)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                else
+                 if( p[pixel[10]] < c_b)
+                  if( p[pixel[11]] < c_b)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+               else
+                if( p[pixel[10]] < c_b)
+                 if( p[pixel[11]] < c_b)
+                  if( p[pixel[12]] < c_b)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+              else
+               if( p[pixel[10]] < c_b)
+                if( p[pixel[11]] < c_b)
+                 if( p[pixel[12]] < c_b)
+                  if( p[pixel[13]] < c_b)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+             else
+              if( p[pixel[10]] < c_b)
+               if( p[pixel[11]] < c_b)
+                if( p[pixel[12]] < c_b)
+                 if( p[pixel[13]] < c_b)
+                  if( p[pixel[14]] < c_b)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+            else
+             if( p[pixel[10]] < c_b)
+              if( p[pixel[11]] < c_b)
+               if( p[pixel[12]] < c_b)
+                if( p[pixel[13]] < c_b)
+                 if( p[pixel[14]] < c_b)
+                  if( p[pixel[15]] < c_b)
+                   goto is_a_corner;
+                  else
+                   goto is_not_a_corner;
+                 else
+                  goto is_not_a_corner;
+                else
+                 goto is_not_a_corner;
+               else
+                goto is_not_a_corner;
+              else
+               goto is_not_a_corner;
+             else
+              goto is_not_a_corner;
            else
             goto is_not_a_corner;
           else
@@ -1715,27 +3113,26 @@ static uint8_t fast12_corner_score(const uint8_t* p, int bstart)
     }
 }
 
-static void fast12_score(image_t *image, corner_t *corners, int num_corners, int b)
+static void fast9_score(image_t *image, corner_t *corners, int num_corners, int b)
 {
     for (int i=0; i<num_corners; i++) {
         corner_t *c = &corners[i];
-        c->score = fast12_corner_score(image->pixels + c->y*image->w + c->x, b);
+        c->score = fast9_corner_score(image->pixels + c->y*image->w + c->x, b);
     }
 }
 
-static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners, int b)
+static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, int b)
 {
     int num_corners = 0;
-    int max_corners = fb_avail()/sizeof(corner_t);
+    //int max_corners = fb_avail()/sizeof(corner_t);
+    int max_corners = 20000;
     corner_t *corners = (corner_t*) fb_alloc(max_corners * sizeof(corner_t));
 
-    for(int y=roi->y+PATTERN_SCALE; y < roi->y+roi->h-PATTERN_SCALE; y++) {
-            const uint8_t *r = image->pixels + y*image->w;
-        for(int x=roi->x+PATTERN_SCALE; x < roi->x+roi->w-PATTERN_SCALE; x++) {
-            const uint8_t *p = r + x;
-            int cb = *p + b;
-            int c_b= *p - b;
-
+    for(int y=roi->y+3; y<roi->y+roi->h-3; y++) {
+        for(int x=roi->x+3; x<roi->x+roi->w-3; x++) {
+            const uint8_t *p = image->pixels+(y * image->w + x);
+			int cb = *p + b;
+			int c_b= *p - b;
             if(p[pixel[0]] > cb)
              if(p[pixel[1]] > cb)
               if(p[pixel[2]] > cb)
@@ -1745,73 +3142,33 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                   if(p[pixel[6]] > cb)
                    if(p[pixel[7]] > cb)
                     if(p[pixel[8]] > cb)
-                     if(p[pixel[9]] > cb)
-                      if(p[pixel[10]] > cb)
-                       if(p[pixel[11]] > cb)
-                        {}
-                       else
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         continue;
-                      else
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                     else
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
+                     {}
                     else
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
+                     if(p[pixel[15]] > cb)
+                      {}
                      else
                       continue;
-                   else
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
+                   else if(p[pixel[7]] < c_b)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
                      else
                       continue;
-                    else
-                     continue;
-                  else
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
+                    else if(p[pixel[14]] < c_b)
+                     if(p[pixel[8]] < c_b)
+                      if(p[pixel[9]] < c_b)
+                       if(p[pixel[10]] < c_b)
+                        if(p[pixel[11]] < c_b)
+                         if(p[pixel[12]] < c_b)
+                          if(p[pixel[13]] < c_b)
+                           if(p[pixel[15]] < c_b)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
                         else
                          continue;
                        else
@@ -1823,16 +3180,35 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                     else
                      continue;
                    else
-                    continue;
-                 else
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      continue;
+                    else
+                     continue;
+                  else if(p[pixel[6]] < c_b)
+                   if(p[pixel[15]] > cb)
+                    if(p[pixel[13]] > cb)
+                     if(p[pixel[14]] > cb)
+                      {}
+                     else
+                      continue;
+                    else if(p[pixel[13]] < c_b)
+                     if(p[pixel[7]] < c_b)
+                      if(p[pixel[8]] < c_b)
+                       if(p[pixel[9]] < c_b)
+                        if(p[pixel[10]] < c_b)
+                         if(p[pixel[11]] < c_b)
+                          if(p[pixel[12]] < c_b)
+                           if(p[pixel[14]] < c_b)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
                         else
                          continue;
                        else
@@ -1844,42 +3220,47 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                     else
                      continue;
                    else
-                    continue;
-                  else
-                   continue;
-                else if(p[pixel[4]] < c_b)
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else if(p[pixel[8]] < c_b)
-                  if(p[pixel[5]] < c_b)
-                   if(p[pixel[6]] < c_b)
                     if(p[pixel[7]] < c_b)
-                     if(p[pixel[9]] < c_b)
-                      if(p[pixel[10]] < c_b)
-                       if(p[pixel[11]] < c_b)
-                        if(p[pixel[12]] < c_b)
-                         if(p[pixel[13]] < c_b)
+                     if(p[pixel[8]] < c_b)
+                      if(p[pixel[9]] < c_b)
+                       if(p[pixel[10]] < c_b)
+                        if(p[pixel[11]] < c_b)
+                         if(p[pixel[12]] < c_b)
+                          if(p[pixel[13]] < c_b)
+                           if(p[pixel[14]] < c_b)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      continue;
+                    else
+                     continue;
+                   else if(p[pixel[13]] < c_b)
+                    if(p[pixel[7]] < c_b)
+                     if(p[pixel[8]] < c_b)
+                      if(p[pixel[9]] < c_b)
+                       if(p[pixel[10]] < c_b)
+                        if(p[pixel[11]] < c_b)
+                         if(p[pixel[12]] < c_b)
                           if(p[pixel[14]] < c_b)
                            if(p[pixel[15]] < c_b)
                             {}
@@ -1901,377 +3282,42 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                      continue;
                    else
                     continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
+                 else if(p[pixel[5]] < c_b)
+                  if(p[pixel[14]] > cb)
+                   if(p[pixel[12]] > cb)
+                    if(p[pixel[13]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          if(p[pixel[10]] > cb)
+                           if(p[pixel[11]] > cb)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
                         else
                          continue;
                        else
                         continue;
                       else
                        continue;
-                     else
-                      continue;
                     else
                      continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-               else if(p[pixel[3]] < c_b)
-                if(p[pixel[15]] > cb)
-                 if(p[pixel[7]] > cb)
-                  if(p[pixel[8]] > cb)
-                   if(p[pixel[9]] > cb)
-                    if(p[pixel[10]] > cb)
-                     if(p[pixel[11]] > cb)
-                      if(p[pixel[12]] > cb)
-                       if(p[pixel[13]] > cb)
-                        if(p[pixel[14]] > cb)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else if(p[pixel[7]] < c_b)
-                  if(p[pixel[4]] < c_b)
-                   if(p[pixel[5]] < c_b)
+                   else if(p[pixel[12]] < c_b)
                     if(p[pixel[6]] < c_b)
-                     if(p[pixel[8]] < c_b)
-                      if(p[pixel[9]] < c_b)
-                       if(p[pixel[10]] < c_b)
-                        if(p[pixel[11]] < c_b)
-                         if(p[pixel[12]] < c_b)
+                     if(p[pixel[7]] < c_b)
+                      if(p[pixel[8]] < c_b)
+                       if(p[pixel[9]] < c_b)
+                        if(p[pixel[10]] < c_b)
+                         if(p[pixel[11]] < c_b)
                           if(p[pixel[13]] < c_b)
-                           if(p[pixel[14]] < c_b)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 if(p[pixel[4]] < c_b)
-                  if(p[pixel[5]] < c_b)
-                   if(p[pixel[6]] < c_b)
-                    if(p[pixel[7]] < c_b)
-                     if(p[pixel[8]] < c_b)
-                      if(p[pixel[9]] < c_b)
-                       if(p[pixel[10]] < c_b)
-                        if(p[pixel[11]] < c_b)
-                         if(p[pixel[12]] < c_b)
-                          if(p[pixel[13]] < c_b)
-                           if(p[pixel[14]] < c_b)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-               else
-                if(p[pixel[7]] > cb)
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else if(p[pixel[7]] < c_b)
-                 if(p[pixel[4]] < c_b)
-                  if(p[pixel[5]] < c_b)
-                   if(p[pixel[6]] < c_b)
-                    if(p[pixel[8]] < c_b)
-                     if(p[pixel[9]] < c_b)
-                      if(p[pixel[10]] < c_b)
-                       if(p[pixel[11]] < c_b)
-                        if(p[pixel[12]] < c_b)
-                         if(p[pixel[13]] < c_b)
-                          if(p[pixel[14]] < c_b)
-                           if(p[pixel[15]] < c_b)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-              else if(p[pixel[2]] < c_b)
-               if(p[pixel[6]] > cb)
-                if(p[pixel[7]] > cb)
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         if(p[pixel[3]] > cb)
-                          if(p[pixel[4]] > cb)
-                           if(p[pixel[5]] > cb)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else if(p[pixel[6]] < c_b)
-                if(p[pixel[4]] < c_b)
-                 if(p[pixel[5]] < c_b)
-                  if(p[pixel[7]] < c_b)
-                   if(p[pixel[8]] < c_b)
-                    if(p[pixel[9]] < c_b)
-                     if(p[pixel[10]] < c_b)
-                      if(p[pixel[11]] < c_b)
-                       if(p[pixel[12]] < c_b)
-                        if(p[pixel[13]] < c_b)
-                         if(p[pixel[3]] < c_b)
-                          {}
-                         else
-                          if(p[pixel[14]] < c_b)
-                           if(p[pixel[15]] < c_b)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else
-               if(p[pixel[6]] > cb)
-                if(p[pixel[7]] > cb)
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         if(p[pixel[3]] > cb)
-                          if(p[pixel[4]] > cb)
-                           if(p[pixel[5]] > cb)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else if(p[pixel[6]] < c_b)
-                if(p[pixel[4]] < c_b)
-                 if(p[pixel[5]] < c_b)
-                  if(p[pixel[7]] < c_b)
-                   if(p[pixel[8]] < c_b)
-                    if(p[pixel[9]] < c_b)
-                     if(p[pixel[10]] < c_b)
-                      if(p[pixel[11]] < c_b)
-                       if(p[pixel[12]] < c_b)
-                        if(p[pixel[13]] < c_b)
-                         if(p[pixel[14]] < c_b)
-                          if(p[pixel[3]] < c_b)
-                           {}
-                          else
-                           if(p[pixel[15]] < c_b)
-                            {}
-                           else
-                            continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-             else if(p[pixel[1]] < c_b)
-              if(p[pixel[5]] > cb)
-               if(p[pixel[6]] > cb)
-                if(p[pixel[7]] > cb)
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         if(p[pixel[3]] > cb)
-                          if(p[pixel[4]] > cb)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        if(p[pixel[2]] > cb)
-                         if(p[pixel[3]] > cb)
-                          if(p[pixel[4]] > cb)
                            {}
                           else
                            continue;
@@ -2279,145 +3325,6 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                           continue;
                         else
                          continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else if(p[pixel[5]] < c_b)
-               if(p[pixel[4]] < c_b)
-                if(p[pixel[6]] < c_b)
-                 if(p[pixel[7]] < c_b)
-                  if(p[pixel[8]] < c_b)
-                   if(p[pixel[9]] < c_b)
-                    if(p[pixel[10]] < c_b)
-                     if(p[pixel[11]] < c_b)
-                      if(p[pixel[12]] < c_b)
-                       if(p[pixel[3]] < c_b)
-                        if(p[pixel[2]] < c_b)
-                         {}
-                        else
-                         if(p[pixel[13]] < c_b)
-                          if(p[pixel[14]] < c_b)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        if(p[pixel[13]] < c_b)
-                         if(p[pixel[14]] < c_b)
-                          if(p[pixel[15]] < c_b)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else
-               continue;
-             else
-              if(p[pixel[5]] > cb)
-               if(p[pixel[6]] > cb)
-                if(p[pixel[7]] > cb)
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[13]] > cb)
-                       if(p[pixel[14]] > cb)
-                        if(p[pixel[15]] > cb)
-                         {}
-                        else
-                         if(p[pixel[3]] > cb)
-                          if(p[pixel[4]] > cb)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        if(p[pixel[2]] > cb)
-                         if(p[pixel[3]] > cb)
-                          if(p[pixel[4]] > cb)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else if(p[pixel[5]] < c_b)
-               if(p[pixel[4]] < c_b)
-                if(p[pixel[6]] < c_b)
-                 if(p[pixel[7]] < c_b)
-                  if(p[pixel[8]] < c_b)
-                   if(p[pixel[9]] < c_b)
-                    if(p[pixel[10]] < c_b)
-                     if(p[pixel[11]] < c_b)
-                      if(p[pixel[12]] < c_b)
-                       if(p[pixel[13]] < c_b)
-                        if(p[pixel[3]] < c_b)
-                         if(p[pixel[2]] < c_b)
-                          {}
-                         else
-                          if(p[pixel[14]] < c_b)
-                           {}
-                          else
-                           continue;
-                        else
-                         if(p[pixel[14]] < c_b)
-                          if(p[pixel[15]] < c_b)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
                        else
                         continue;
                       else
@@ -2428,749 +3335,423 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                      continue;
                    else
                     continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else
-               continue;
-            else if(p[pixel[0]] < c_b)
-             if(p[pixel[1]] > cb)
-              if(p[pixel[5]] > cb)
-               if(p[pixel[4]] > cb)
-                if(p[pixel[6]] > cb)
-                 if(p[pixel[7]] > cb)
-                  if(p[pixel[8]] > cb)
-                   if(p[pixel[9]] > cb)
-                    if(p[pixel[10]] > cb)
-                     if(p[pixel[11]] > cb)
-                      if(p[pixel[12]] > cb)
-                       if(p[pixel[3]] > cb)
-                        if(p[pixel[2]] > cb)
-                         {}
-                        else
-                         if(p[pixel[13]] > cb)
-                          if(p[pixel[14]] > cb)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        if(p[pixel[13]] > cb)
-                         if(p[pixel[14]] > cb)
-                          if(p[pixel[15]] > cb)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else if(p[pixel[5]] < c_b)
-               if(p[pixel[6]] < c_b)
-                if(p[pixel[7]] < c_b)
-                 if(p[pixel[8]] < c_b)
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         if(p[pixel[3]] < c_b)
-                          if(p[pixel[4]] < c_b)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        if(p[pixel[2]] < c_b)
-                         if(p[pixel[3]] < c_b)
-                          if(p[pixel[4]] < c_b)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else
-               continue;
-             else if(p[pixel[1]] < c_b)
-              if(p[pixel[2]] > cb)
-               if(p[pixel[6]] > cb)
-                if(p[pixel[4]] > cb)
-                 if(p[pixel[5]] > cb)
-                  if(p[pixel[7]] > cb)
-                   if(p[pixel[8]] > cb)
-                    if(p[pixel[9]] > cb)
-                     if(p[pixel[10]] > cb)
-                      if(p[pixel[11]] > cb)
-                       if(p[pixel[12]] > cb)
-                        if(p[pixel[13]] > cb)
-                         if(p[pixel[3]] > cb)
-                          {}
-                         else
-                          if(p[pixel[14]] > cb)
-                           if(p[pixel[15]] > cb)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else if(p[pixel[6]] < c_b)
-                if(p[pixel[7]] < c_b)
-                 if(p[pixel[8]] < c_b)
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         if(p[pixel[3]] < c_b)
-                          if(p[pixel[4]] < c_b)
-                           if(p[pixel[5]] < c_b)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else if(p[pixel[2]] < c_b)
-               if(p[pixel[3]] > cb)
-                if(p[pixel[15]] < c_b)
-                 if(p[pixel[7]] > cb)
-                  if(p[pixel[4]] > cb)
-                   if(p[pixel[5]] > cb)
-                    if(p[pixel[6]] > cb)
-                     if(p[pixel[8]] > cb)
-                      if(p[pixel[9]] > cb)
-                       if(p[pixel[10]] > cb)
-                        if(p[pixel[11]] > cb)
-                         if(p[pixel[12]] > cb)
-                          if(p[pixel[13]] > cb)
-                           if(p[pixel[14]] > cb)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else if(p[pixel[7]] < c_b)
-                  if(p[pixel[8]] < c_b)
-                   if(p[pixel[9]] < c_b)
-                    if(p[pixel[10]] < c_b)
-                     if(p[pixel[11]] < c_b)
-                      if(p[pixel[12]] < c_b)
-                       if(p[pixel[13]] < c_b)
-                        if(p[pixel[14]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 if(p[pixel[4]] > cb)
-                  if(p[pixel[5]] > cb)
-                   if(p[pixel[6]] > cb)
-                    if(p[pixel[7]] > cb)
-                     if(p[pixel[8]] > cb)
-                      if(p[pixel[9]] > cb)
-                       if(p[pixel[10]] > cb)
-                        if(p[pixel[11]] > cb)
-                         if(p[pixel[12]] > cb)
-                          if(p[pixel[13]] > cb)
-                           if(p[pixel[14]] > cb)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-               else if(p[pixel[3]] < c_b)
-                if(p[pixel[4]] > cb)
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[5]] > cb)
-                   if(p[pixel[6]] > cb)
-                    if(p[pixel[7]] > cb)
-                     if(p[pixel[9]] > cb)
-                      if(p[pixel[10]] > cb)
-                       if(p[pixel[11]] > cb)
-                        if(p[pixel[12]] > cb)
-                         if(p[pixel[13]] > cb)
-                          if(p[pixel[14]] > cb)
-                           if(p[pixel[15]] > cb)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else if(p[pixel[8]] < c_b)
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else if(p[pixel[4]] < c_b)
-                 if(p[pixel[5]] < c_b)
-                  if(p[pixel[6]] < c_b)
+                  else if(p[pixel[14]] < c_b)
                    if(p[pixel[7]] < c_b)
                     if(p[pixel[8]] < c_b)
                      if(p[pixel[9]] < c_b)
                       if(p[pixel[10]] < c_b)
                        if(p[pixel[11]] < c_b)
+                        if(p[pixel[12]] < c_b)
+                         if(p[pixel[13]] < c_b)
+                          if(p[pixel[6]] < c_b)
+                           {}
+                          else
+                           if(p[pixel[15]] < c_b)
+                            {}
+                           else
+                            continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   if(p[pixel[6]] < c_b)
+                    if(p[pixel[7]] < c_b)
+                     if(p[pixel[8]] < c_b)
+                      if(p[pixel[9]] < c_b)
+                       if(p[pixel[10]] < c_b)
+                        if(p[pixel[11]] < c_b)
+                         if(p[pixel[12]] < c_b)
+                          if(p[pixel[13]] < c_b)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          if(p[pixel[10]] > cb)
+                           if(p[pixel[11]] > cb)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else if(p[pixel[12]] < c_b)
+                   if(p[pixel[7]] < c_b)
+                    if(p[pixel[8]] < c_b)
+                     if(p[pixel[9]] < c_b)
+                      if(p[pixel[10]] < c_b)
+                       if(p[pixel[11]] < c_b)
+                        if(p[pixel[13]] < c_b)
+                         if(p[pixel[14]] < c_b)
+                          if(p[pixel[6]] < c_b)
+                           {}
+                          else
+                           if(p[pixel[15]] < c_b)
+                            {}
+                           else
+                            continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else if(p[pixel[4]] < c_b)
+                 if(p[pixel[13]] > cb)
+                  if(p[pixel[11]] > cb)
+                   if(p[pixel[12]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          if(p[pixel[10]] > cb)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          if(p[pixel[10]] > cb)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    continue;
+                  else if(p[pixel[11]] < c_b)
+                   if(p[pixel[5]] < c_b)
+                    if(p[pixel[6]] < c_b)
+                     if(p[pixel[7]] < c_b)
+                      if(p[pixel[8]] < c_b)
+                       if(p[pixel[9]] < c_b)
+                        if(p[pixel[10]] < c_b)
+                         if(p[pixel[12]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else if(p[pixel[13]] < c_b)
+                  if(p[pixel[7]] < c_b)
+                   if(p[pixel[8]] < c_b)
+                    if(p[pixel[9]] < c_b)
+                     if(p[pixel[10]] < c_b)
+                      if(p[pixel[11]] < c_b)
+                       if(p[pixel[12]] < c_b)
+                        if(p[pixel[6]] < c_b)
+                         if(p[pixel[5]] < c_b)
+                          {}
+                         else
+                          if(p[pixel[14]] < c_b)
+                           {}
+                          else
+                           continue;
+                        else
+                         if(p[pixel[14]] < c_b)
+                          if(p[pixel[15]] < c_b)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  if(p[pixel[5]] < c_b)
+                   if(p[pixel[6]] < c_b)
+                    if(p[pixel[7]] < c_b)
+                     if(p[pixel[8]] < c_b)
+                      if(p[pixel[9]] < c_b)
+                       if(p[pixel[10]] < c_b)
+                        if(p[pixel[11]] < c_b)
+                         if(p[pixel[12]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 if(p[pixel[11]] > cb)
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          if(p[pixel[10]] > cb)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          if(p[pixel[10]] > cb)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else if(p[pixel[11]] < c_b)
+                  if(p[pixel[7]] < c_b)
+                   if(p[pixel[8]] < c_b)
+                    if(p[pixel[9]] < c_b)
+                     if(p[pixel[10]] < c_b)
+                      if(p[pixel[12]] < c_b)
+                       if(p[pixel[13]] < c_b)
+                        if(p[pixel[6]] < c_b)
+                         if(p[pixel[5]] < c_b)
+                          {}
+                         else
+                          if(p[pixel[14]] < c_b)
+                           {}
+                          else
+                           continue;
+                        else
+                         if(p[pixel[14]] < c_b)
+                          if(p[pixel[15]] < c_b)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  continue;
+               else if(p[pixel[3]] < c_b)
+                if(p[pixel[10]] > cb)
+                 if(p[pixel[11]] > cb)
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else if(p[pixel[10]] < c_b)
+                 if(p[pixel[7]] < c_b)
+                  if(p[pixel[8]] < c_b)
+                   if(p[pixel[9]] < c_b)
+                    if(p[pixel[11]] < c_b)
+                     if(p[pixel[6]] < c_b)
+                      if(p[pixel[5]] < c_b)
+                       if(p[pixel[4]] < c_b)
                         {}
                        else
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                      else
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                     else
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                    else
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                   else
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                  else
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                 else
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                else
-                 if(p[pixel[8]] < c_b)
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-               else
-                if(p[pixel[7]] > cb)
-                 if(p[pixel[4]] > cb)
-                  if(p[pixel[5]] > cb)
-                   if(p[pixel[6]] > cb)
-                    if(p[pixel[8]] > cb)
-                     if(p[pixel[9]] > cb)
-                      if(p[pixel[10]] > cb)
-                       if(p[pixel[11]] > cb)
-                        if(p[pixel[12]] > cb)
-                         if(p[pixel[13]] > cb)
-                          if(p[pixel[14]] > cb)
-                           if(p[pixel[15]] > cb)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else if(p[pixel[7]] < c_b)
-                 if(p[pixel[8]] < c_b)
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-              else
-               if(p[pixel[6]] > cb)
-                if(p[pixel[4]] > cb)
-                 if(p[pixel[5]] > cb)
-                  if(p[pixel[7]] > cb)
-                   if(p[pixel[8]] > cb)
-                    if(p[pixel[9]] > cb)
-                     if(p[pixel[10]] > cb)
-                      if(p[pixel[11]] > cb)
-                       if(p[pixel[12]] > cb)
-                        if(p[pixel[13]] > cb)
-                         if(p[pixel[14]] > cb)
-                          if(p[pixel[3]] > cb)
-                           {}
-                          else
-                           if(p[pixel[15]] > cb)
-                            {}
-                           else
-                            continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else if(p[pixel[6]] < c_b)
-                if(p[pixel[7]] < c_b)
-                 if(p[pixel[8]] < c_b)
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         if(p[pixel[3]] < c_b)
-                          if(p[pixel[4]] < c_b)
-                           if(p[pixel[5]] < c_b)
-                            {}
-                           else
-                            continue;
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-             else
-              if(p[pixel[5]] > cb)
-               if(p[pixel[4]] > cb)
-                if(p[pixel[6]] > cb)
-                 if(p[pixel[7]] > cb)
-                  if(p[pixel[8]] > cb)
-                   if(p[pixel[9]] > cb)
-                    if(p[pixel[10]] > cb)
-                     if(p[pixel[11]] > cb)
-                      if(p[pixel[12]] > cb)
-                       if(p[pixel[13]] > cb)
-                        if(p[pixel[3]] > cb)
-                         if(p[pixel[2]] > cb)
-                          {}
-                         else
-                          if(p[pixel[14]] > cb)
-                           {}
-                          else
-                           continue;
-                        else
-                         if(p[pixel[14]] > cb)
-                          if(p[pixel[15]] > cb)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else if(p[pixel[5]] < c_b)
-               if(p[pixel[6]] < c_b)
-                if(p[pixel[7]] < c_b)
-                 if(p[pixel[8]] < c_b)
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
-                    if(p[pixel[11]] < c_b)
-                     if(p[pixel[12]] < c_b)
-                      if(p[pixel[13]] < c_b)
-                       if(p[pixel[14]] < c_b)
-                        if(p[pixel[15]] < c_b)
-                         {}
-                        else
-                         if(p[pixel[3]] < c_b)
-                          if(p[pixel[4]] < c_b)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                       else
-                        if(p[pixel[2]] < c_b)
-                         if(p[pixel[3]] < c_b)
-                          if(p[pixel[4]] < c_b)
-                           {}
-                          else
-                           continue;
-                         else
-                          continue;
-                        else
-                         continue;
-                      else
-                       continue;
-                     else
-                      continue;
-                    else
-                     continue;
-                   else
-                    continue;
-                  else
-                   continue;
-                 else
-                  continue;
-                else
-                 continue;
-               else
-                continue;
-              else
-               continue;
-            else
-             if(p[pixel[4]] > cb)
-              if(p[pixel[5]] > cb)
-               if(p[pixel[6]] > cb)
-                if(p[pixel[7]] > cb)
-                 if(p[pixel[8]] > cb)
-                  if(p[pixel[9]] > cb)
-                   if(p[pixel[10]] > cb)
-                    if(p[pixel[11]] > cb)
-                     if(p[pixel[12]] > cb)
-                      if(p[pixel[3]] > cb)
-                       if(p[pixel[2]] > cb)
-                        if(p[pixel[1]] > cb)
-                         {}
-                        else
-                         if(p[pixel[13]] > cb)
-                          {}
-                         else
-                          continue;
-                       else
-                        if(p[pixel[13]] > cb)
-                         if(p[pixel[14]] > cb)
+                        if(p[pixel[12]] < c_b)
+                         if(p[pixel[13]] < c_b)
                           {}
                          else
                           continue;
                         else
                          continue;
                       else
-                       if(p[pixel[13]] > cb)
-                        if(p[pixel[14]] > cb)
-                         if(p[pixel[15]] > cb)
+                       if(p[pixel[12]] < c_b)
+                        if(p[pixel[13]] < c_b)
+                         if(p[pixel[14]] < c_b)
                           {}
                          else
                           continue;
@@ -3179,7 +3760,19 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                        else
                         continue;
                      else
-                      continue;
+                      if(p[pixel[12]] < c_b)
+                       if(p[pixel[13]] < c_b)
+                        if(p[pixel[14]] < c_b)
+                         if(p[pixel[15]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
                     else
                      continue;
                    else
@@ -3191,21 +3784,77 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                 else
                  continue;
                else
-                continue;
-              else
-               continue;
-             else if(p[pixel[4]] < c_b)
-              if(p[pixel[5]] < c_b)
-               if(p[pixel[6]] < c_b)
-                if(p[pixel[7]] < c_b)
-                 if(p[pixel[8]] < c_b)
-                  if(p[pixel[9]] < c_b)
-                   if(p[pixel[10]] < c_b)
+                if(p[pixel[10]] > cb)
+                 if(p[pixel[11]] > cb)
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         if(p[pixel[9]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else if(p[pixel[10]] < c_b)
+                 if(p[pixel[7]] < c_b)
+                  if(p[pixel[8]] < c_b)
+                   if(p[pixel[9]] < c_b)
                     if(p[pixel[11]] < c_b)
                      if(p[pixel[12]] < c_b)
-                      if(p[pixel[3]] < c_b)
-                       if(p[pixel[2]] < c_b)
-                        if(p[pixel[1]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[5]] < c_b)
+                        if(p[pixel[4]] < c_b)
                          {}
                         else
                          if(p[pixel[13]] < c_b)
@@ -3243,6 +3892,2142 @@ static corner_t *fast12_detect(image_t *image, rectangle_t *roi, int *n_corners,
                   continue;
                 else
                  continue;
+              else if(p[pixel[2]] < c_b)
+               if(p[pixel[9]] > cb)
+                if(p[pixel[10]] > cb)
+                 if(p[pixel[11]] > cb)
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[3]] > cb)
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else if(p[pixel[9]] < c_b)
+                if(p[pixel[7]] < c_b)
+                 if(p[pixel[8]] < c_b)
+                  if(p[pixel[10]] < c_b)
+                   if(p[pixel[6]] < c_b)
+                    if(p[pixel[5]] < c_b)
+                     if(p[pixel[4]] < c_b)
+                      if(p[pixel[3]] < c_b)
+                       {}
+                      else
+                       if(p[pixel[11]] < c_b)
+                        if(p[pixel[12]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                     else
+                      if(p[pixel[11]] < c_b)
+                       if(p[pixel[12]] < c_b)
+                        if(p[pixel[13]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[11]] < c_b)
+                      if(p[pixel[12]] < c_b)
+                       if(p[pixel[13]] < c_b)
+                        if(p[pixel[14]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[11]] < c_b)
+                     if(p[pixel[12]] < c_b)
+                      if(p[pixel[13]] < c_b)
+                       if(p[pixel[14]] < c_b)
+                        if(p[pixel[15]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else
+                continue;
+              else
+               if(p[pixel[9]] > cb)
+                if(p[pixel[10]] > cb)
+                 if(p[pixel[11]] > cb)
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[3]] > cb)
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        if(p[pixel[8]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else if(p[pixel[9]] < c_b)
+                if(p[pixel[7]] < c_b)
+                 if(p[pixel[8]] < c_b)
+                  if(p[pixel[10]] < c_b)
+                   if(p[pixel[11]] < c_b)
+                    if(p[pixel[6]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[4]] < c_b)
+                       if(p[pixel[3]] < c_b)
+                        {}
+                       else
+                        if(p[pixel[12]] < c_b)
+                         {}
+                        else
+                         continue;
+                      else
+                       if(p[pixel[12]] < c_b)
+                        if(p[pixel[13]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                     else
+                      if(p[pixel[12]] < c_b)
+                       if(p[pixel[13]] < c_b)
+                        if(p[pixel[14]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[12]] < c_b)
+                      if(p[pixel[13]] < c_b)
+                       if(p[pixel[14]] < c_b)
+                        if(p[pixel[15]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else
+                continue;
+             else if(p[pixel[1]] < c_b)
+              if(p[pixel[8]] > cb)
+               if(p[pixel[9]] > cb)
+                if(p[pixel[10]] > cb)
+                 if(p[pixel[11]] > cb)
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[3]] > cb)
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[2]] > cb)
+                   if(p[pixel[3]] > cb)
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 continue;
+               else
+                continue;
+              else if(p[pixel[8]] < c_b)
+               if(p[pixel[7]] < c_b)
+                if(p[pixel[9]] < c_b)
+                 if(p[pixel[6]] < c_b)
+                  if(p[pixel[5]] < c_b)
+                   if(p[pixel[4]] < c_b)
+                    if(p[pixel[3]] < c_b)
+                     if(p[pixel[2]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[10]] < c_b)
+                       if(p[pixel[11]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[10]] < c_b)
+                      if(p[pixel[11]] < c_b)
+                       if(p[pixel[12]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[10]] < c_b)
+                     if(p[pixel[11]] < c_b)
+                      if(p[pixel[12]] < c_b)
+                       if(p[pixel[13]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[10]] < c_b)
+                    if(p[pixel[11]] < c_b)
+                     if(p[pixel[12]] < c_b)
+                      if(p[pixel[13]] < c_b)
+                       if(p[pixel[14]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[10]] < c_b)
+                   if(p[pixel[11]] < c_b)
+                    if(p[pixel[12]] < c_b)
+                     if(p[pixel[13]] < c_b)
+                      if(p[pixel[14]] < c_b)
+                       if(p[pixel[15]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 continue;
+               else
+                continue;
+              else
+               continue;
+             else
+              if(p[pixel[8]] > cb)
+               if(p[pixel[9]] > cb)
+                if(p[pixel[10]] > cb)
+                 if(p[pixel[11]] > cb)
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[15]] > cb)
+                      {}
+                     else
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[3]] > cb)
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[2]] > cb)
+                   if(p[pixel[3]] > cb)
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[7]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 continue;
+               else
+                continue;
+              else if(p[pixel[8]] < c_b)
+               if(p[pixel[7]] < c_b)
+                if(p[pixel[9]] < c_b)
+                 if(p[pixel[10]] < c_b)
+                  if(p[pixel[6]] < c_b)
+                   if(p[pixel[5]] < c_b)
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[3]] < c_b)
+                      if(p[pixel[2]] < c_b)
+                       {}
+                      else
+                       if(p[pixel[11]] < c_b)
+                        {}
+                       else
+                        continue;
+                     else
+                      if(p[pixel[11]] < c_b)
+                       if(p[pixel[12]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[11]] < c_b)
+                      if(p[pixel[12]] < c_b)
+                       if(p[pixel[13]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[11]] < c_b)
+                     if(p[pixel[12]] < c_b)
+                      if(p[pixel[13]] < c_b)
+                       if(p[pixel[14]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[11]] < c_b)
+                    if(p[pixel[12]] < c_b)
+                     if(p[pixel[13]] < c_b)
+                      if(p[pixel[14]] < c_b)
+                       if(p[pixel[15]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else
+                continue;
+              else
+               continue;
+            else if(p[pixel[0]] < c_b)
+             if(p[pixel[1]] > cb)
+              if(p[pixel[8]] > cb)
+               if(p[pixel[7]] > cb)
+                if(p[pixel[9]] > cb)
+                 if(p[pixel[6]] > cb)
+                  if(p[pixel[5]] > cb)
+                   if(p[pixel[4]] > cb)
+                    if(p[pixel[3]] > cb)
+                     if(p[pixel[2]] > cb)
+                      {}
+                     else
+                      if(p[pixel[10]] > cb)
+                       if(p[pixel[11]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[10]] > cb)
+                      if(p[pixel[11]] > cb)
+                       if(p[pixel[12]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[10]] > cb)
+                     if(p[pixel[11]] > cb)
+                      if(p[pixel[12]] > cb)
+                       if(p[pixel[13]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[10]] > cb)
+                    if(p[pixel[11]] > cb)
+                     if(p[pixel[12]] > cb)
+                      if(p[pixel[13]] > cb)
+                       if(p[pixel[14]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[10]] > cb)
+                   if(p[pixel[11]] > cb)
+                    if(p[pixel[12]] > cb)
+                     if(p[pixel[13]] > cb)
+                      if(p[pixel[14]] > cb)
+                       if(p[pixel[15]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 continue;
+               else
+                continue;
+              else if(p[pixel[8]] < c_b)
+               if(p[pixel[9]] < c_b)
+                if(p[pixel[10]] < c_b)
+                 if(p[pixel[11]] < c_b)
+                  if(p[pixel[12]] < c_b)
+                   if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[3]] < c_b)
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[2]] < c_b)
+                   if(p[pixel[3]] < c_b)
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 continue;
+               else
+                continue;
+              else
+               continue;
+             else if(p[pixel[1]] < c_b)
+              if(p[pixel[2]] > cb)
+               if(p[pixel[9]] > cb)
+                if(p[pixel[7]] > cb)
+                 if(p[pixel[8]] > cb)
+                  if(p[pixel[10]] > cb)
+                   if(p[pixel[6]] > cb)
+                    if(p[pixel[5]] > cb)
+                     if(p[pixel[4]] > cb)
+                      if(p[pixel[3]] > cb)
+                       {}
+                      else
+                       if(p[pixel[11]] > cb)
+                        if(p[pixel[12]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                     else
+                      if(p[pixel[11]] > cb)
+                       if(p[pixel[12]] > cb)
+                        if(p[pixel[13]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[11]] > cb)
+                      if(p[pixel[12]] > cb)
+                       if(p[pixel[13]] > cb)
+                        if(p[pixel[14]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[11]] > cb)
+                     if(p[pixel[12]] > cb)
+                      if(p[pixel[13]] > cb)
+                       if(p[pixel[14]] > cb)
+                        if(p[pixel[15]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else if(p[pixel[9]] < c_b)
+                if(p[pixel[10]] < c_b)
+                 if(p[pixel[11]] < c_b)
+                  if(p[pixel[12]] < c_b)
+                   if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[3]] < c_b)
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else
+                continue;
+              else if(p[pixel[2]] < c_b)
+               if(p[pixel[3]] > cb)
+                if(p[pixel[10]] > cb)
+                 if(p[pixel[7]] > cb)
+                  if(p[pixel[8]] > cb)
+                   if(p[pixel[9]] > cb)
+                    if(p[pixel[11]] > cb)
+                     if(p[pixel[6]] > cb)
+                      if(p[pixel[5]] > cb)
+                       if(p[pixel[4]] > cb)
+                        {}
+                       else
+                        if(p[pixel[12]] > cb)
+                         if(p[pixel[13]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                      else
+                       if(p[pixel[12]] > cb)
+                        if(p[pixel[13]] > cb)
+                         if(p[pixel[14]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                     else
+                      if(p[pixel[12]] > cb)
+                       if(p[pixel[13]] > cb)
+                        if(p[pixel[14]] > cb)
+                         if(p[pixel[15]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else if(p[pixel[10]] < c_b)
+                 if(p[pixel[11]] < c_b)
+                  if(p[pixel[12]] < c_b)
+                   if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else if(p[pixel[3]] < c_b)
+                if(p[pixel[4]] > cb)
+                 if(p[pixel[13]] > cb)
+                  if(p[pixel[7]] > cb)
+                   if(p[pixel[8]] > cb)
+                    if(p[pixel[9]] > cb)
+                     if(p[pixel[10]] > cb)
+                      if(p[pixel[11]] > cb)
+                       if(p[pixel[12]] > cb)
+                        if(p[pixel[6]] > cb)
+                         if(p[pixel[5]] > cb)
+                          {}
+                         else
+                          if(p[pixel[14]] > cb)
+                           {}
+                          else
+                           continue;
+                        else
+                         if(p[pixel[14]] > cb)
+                          if(p[pixel[15]] > cb)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else if(p[pixel[13]] < c_b)
+                  if(p[pixel[11]] > cb)
+                   if(p[pixel[5]] > cb)
+                    if(p[pixel[6]] > cb)
+                     if(p[pixel[7]] > cb)
+                      if(p[pixel[8]] > cb)
+                       if(p[pixel[9]] > cb)
+                        if(p[pixel[10]] > cb)
+                         if(p[pixel[12]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else if(p[pixel[11]] < c_b)
+                   if(p[pixel[12]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          if(p[pixel[10]] < c_b)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          if(p[pixel[10]] < c_b)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  if(p[pixel[5]] > cb)
+                   if(p[pixel[6]] > cb)
+                    if(p[pixel[7]] > cb)
+                     if(p[pixel[8]] > cb)
+                      if(p[pixel[9]] > cb)
+                       if(p[pixel[10]] > cb)
+                        if(p[pixel[11]] > cb)
+                         if(p[pixel[12]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else if(p[pixel[4]] < c_b)
+                 if(p[pixel[5]] > cb)
+                  if(p[pixel[14]] > cb)
+                   if(p[pixel[7]] > cb)
+                    if(p[pixel[8]] > cb)
+                     if(p[pixel[9]] > cb)
+                      if(p[pixel[10]] > cb)
+                       if(p[pixel[11]] > cb)
+                        if(p[pixel[12]] > cb)
+                         if(p[pixel[13]] > cb)
+                          if(p[pixel[6]] > cb)
+                           {}
+                          else
+                           if(p[pixel[15]] > cb)
+                            {}
+                           else
+                            continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else if(p[pixel[14]] < c_b)
+                   if(p[pixel[12]] > cb)
+                    if(p[pixel[6]] > cb)
+                     if(p[pixel[7]] > cb)
+                      if(p[pixel[8]] > cb)
+                       if(p[pixel[9]] > cb)
+                        if(p[pixel[10]] > cb)
+                         if(p[pixel[11]] > cb)
+                          if(p[pixel[13]] > cb)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else if(p[pixel[12]] < c_b)
+                    if(p[pixel[13]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          if(p[pixel[10]] < c_b)
+                           if(p[pixel[11]] < c_b)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   if(p[pixel[6]] > cb)
+                    if(p[pixel[7]] > cb)
+                     if(p[pixel[8]] > cb)
+                      if(p[pixel[9]] > cb)
+                       if(p[pixel[10]] > cb)
+                        if(p[pixel[11]] > cb)
+                         if(p[pixel[12]] > cb)
+                          if(p[pixel[13]] > cb)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else if(p[pixel[5]] < c_b)
+                  if(p[pixel[6]] > cb)
+                   if(p[pixel[15]] < c_b)
+                    if(p[pixel[13]] > cb)
+                     if(p[pixel[7]] > cb)
+                      if(p[pixel[8]] > cb)
+                       if(p[pixel[9]] > cb)
+                        if(p[pixel[10]] > cb)
+                         if(p[pixel[11]] > cb)
+                          if(p[pixel[12]] > cb)
+                           if(p[pixel[14]] > cb)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else if(p[pixel[13]] < c_b)
+                     if(p[pixel[14]] < c_b)
+                      {}
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    if(p[pixel[7]] > cb)
+                     if(p[pixel[8]] > cb)
+                      if(p[pixel[9]] > cb)
+                       if(p[pixel[10]] > cb)
+                        if(p[pixel[11]] > cb)
+                         if(p[pixel[12]] > cb)
+                          if(p[pixel[13]] > cb)
+                           if(p[pixel[14]] > cb)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else if(p[pixel[6]] < c_b)
+                   if(p[pixel[7]] > cb)
+                    if(p[pixel[14]] > cb)
+                     if(p[pixel[8]] > cb)
+                      if(p[pixel[9]] > cb)
+                       if(p[pixel[10]] > cb)
+                        if(p[pixel[11]] > cb)
+                         if(p[pixel[12]] > cb)
+                          if(p[pixel[13]] > cb)
+                           if(p[pixel[15]] > cb)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      continue;
+                    else
+                     continue;
+                   else if(p[pixel[7]] < c_b)
+                    if(p[pixel[8]] < c_b)
+                     {}
+                    else
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      continue;
+                   else
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[13]] > cb)
+                    if(p[pixel[7]] > cb)
+                     if(p[pixel[8]] > cb)
+                      if(p[pixel[9]] > cb)
+                       if(p[pixel[10]] > cb)
+                        if(p[pixel[11]] > cb)
+                         if(p[pixel[12]] > cb)
+                          if(p[pixel[14]] > cb)
+                           if(p[pixel[15]] > cb)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[12]] > cb)
+                   if(p[pixel[7]] > cb)
+                    if(p[pixel[8]] > cb)
+                     if(p[pixel[9]] > cb)
+                      if(p[pixel[10]] > cb)
+                       if(p[pixel[11]] > cb)
+                        if(p[pixel[13]] > cb)
+                         if(p[pixel[14]] > cb)
+                          if(p[pixel[6]] > cb)
+                           {}
+                          else
+                           if(p[pixel[15]] > cb)
+                            {}
+                           else
+                            continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else if(p[pixel[12]] < c_b)
+                   if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          if(p[pixel[10]] < c_b)
+                           if(p[pixel[11]] < c_b)
+                            {}
+                           else
+                            continue;
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 if(p[pixel[11]] > cb)
+                  if(p[pixel[7]] > cb)
+                   if(p[pixel[8]] > cb)
+                    if(p[pixel[9]] > cb)
+                     if(p[pixel[10]] > cb)
+                      if(p[pixel[12]] > cb)
+                       if(p[pixel[13]] > cb)
+                        if(p[pixel[6]] > cb)
+                         if(p[pixel[5]] > cb)
+                          {}
+                         else
+                          if(p[pixel[14]] > cb)
+                           {}
+                          else
+                           continue;
+                        else
+                         if(p[pixel[14]] > cb)
+                          if(p[pixel[15]] > cb)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else if(p[pixel[11]] < c_b)
+                  if(p[pixel[12]] < c_b)
+                   if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          if(p[pixel[10]] < c_b)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          if(p[pixel[10]] < c_b)
+                           {}
+                          else
+                           continue;
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  continue;
+               else
+                if(p[pixel[10]] > cb)
+                 if(p[pixel[7]] > cb)
+                  if(p[pixel[8]] > cb)
+                   if(p[pixel[9]] > cb)
+                    if(p[pixel[11]] > cb)
+                     if(p[pixel[12]] > cb)
+                      if(p[pixel[6]] > cb)
+                       if(p[pixel[5]] > cb)
+                        if(p[pixel[4]] > cb)
+                         {}
+                        else
+                         if(p[pixel[13]] > cb)
+                          {}
+                         else
+                          continue;
+                       else
+                        if(p[pixel[13]] > cb)
+                         if(p[pixel[14]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                      else
+                       if(p[pixel[13]] > cb)
+                        if(p[pixel[14]] > cb)
+                         if(p[pixel[15]] > cb)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else if(p[pixel[10]] < c_b)
+                 if(p[pixel[11]] < c_b)
+                  if(p[pixel[12]] < c_b)
+                   if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         if(p[pixel[9]] < c_b)
+                          {}
+                         else
+                          continue;
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else
+                 continue;
+              else
+               if(p[pixel[9]] > cb)
+                if(p[pixel[7]] > cb)
+                 if(p[pixel[8]] > cb)
+                  if(p[pixel[10]] > cb)
+                   if(p[pixel[11]] > cb)
+                    if(p[pixel[6]] > cb)
+                     if(p[pixel[5]] > cb)
+                      if(p[pixel[4]] > cb)
+                       if(p[pixel[3]] > cb)
+                        {}
+                       else
+                        if(p[pixel[12]] > cb)
+                         {}
+                        else
+                         continue;
+                      else
+                       if(p[pixel[12]] > cb)
+                        if(p[pixel[13]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                     else
+                      if(p[pixel[12]] > cb)
+                       if(p[pixel[13]] > cb)
+                        if(p[pixel[14]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[12]] > cb)
+                      if(p[pixel[13]] > cb)
+                       if(p[pixel[14]] > cb)
+                        if(p[pixel[15]] > cb)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else if(p[pixel[9]] < c_b)
+                if(p[pixel[10]] < c_b)
+                 if(p[pixel[11]] < c_b)
+                  if(p[pixel[12]] < c_b)
+                   if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[3]] < c_b)
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        if(p[pixel[8]] < c_b)
+                         {}
+                        else
+                         continue;
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else
+                continue;
+             else
+              if(p[pixel[8]] > cb)
+               if(p[pixel[7]] > cb)
+                if(p[pixel[9]] > cb)
+                 if(p[pixel[10]] > cb)
+                  if(p[pixel[6]] > cb)
+                   if(p[pixel[5]] > cb)
+                    if(p[pixel[4]] > cb)
+                     if(p[pixel[3]] > cb)
+                      if(p[pixel[2]] > cb)
+                       {}
+                      else
+                       if(p[pixel[11]] > cb)
+                        {}
+                       else
+                        continue;
+                     else
+                      if(p[pixel[11]] > cb)
+                       if(p[pixel[12]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[11]] > cb)
+                      if(p[pixel[12]] > cb)
+                       if(p[pixel[13]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[11]] > cb)
+                     if(p[pixel[12]] > cb)
+                      if(p[pixel[13]] > cb)
+                       if(p[pixel[14]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[11]] > cb)
+                    if(p[pixel[12]] > cb)
+                     if(p[pixel[13]] > cb)
+                      if(p[pixel[14]] > cb)
+                       if(p[pixel[15]] > cb)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  continue;
+                else
+                 continue;
+               else
+                continue;
+              else if(p[pixel[8]] < c_b)
+               if(p[pixel[9]] < c_b)
+                if(p[pixel[10]] < c_b)
+                 if(p[pixel[11]] < c_b)
+                  if(p[pixel[12]] < c_b)
+                   if(p[pixel[13]] < c_b)
+                    if(p[pixel[14]] < c_b)
+                     if(p[pixel[15]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                    else
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[3]] < c_b)
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[2]] < c_b)
+                   if(p[pixel[3]] < c_b)
+                    if(p[pixel[4]] < c_b)
+                     if(p[pixel[5]] < c_b)
+                      if(p[pixel[6]] < c_b)
+                       if(p[pixel[7]] < c_b)
+                        {}
+                       else
+                        continue;
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 continue;
+               else
+                continue;
+              else
+               continue;
+            else
+             if(p[pixel[7]] > cb)
+              if(p[pixel[8]] > cb)
+               if(p[pixel[9]] > cb)
+                if(p[pixel[6]] > cb)
+                 if(p[pixel[5]] > cb)
+                  if(p[pixel[4]] > cb)
+                   if(p[pixel[3]] > cb)
+                    if(p[pixel[2]] > cb)
+                     if(p[pixel[1]] > cb)
+                      {}
+                     else
+                      if(p[pixel[10]] > cb)
+                       {}
+                      else
+                       continue;
+                    else
+                     if(p[pixel[10]] > cb)
+                      if(p[pixel[11]] > cb)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[10]] > cb)
+                     if(p[pixel[11]] > cb)
+                      if(p[pixel[12]] > cb)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[10]] > cb)
+                    if(p[pixel[11]] > cb)
+                     if(p[pixel[12]] > cb)
+                      if(p[pixel[13]] > cb)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[10]] > cb)
+                   if(p[pixel[11]] > cb)
+                    if(p[pixel[12]] > cb)
+                     if(p[pixel[13]] > cb)
+                      if(p[pixel[14]] > cb)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 if(p[pixel[10]] > cb)
+                  if(p[pixel[11]] > cb)
+                   if(p[pixel[12]] > cb)
+                    if(p[pixel[13]] > cb)
+                     if(p[pixel[14]] > cb)
+                      if(p[pixel[15]] > cb)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  continue;
+               else
+                continue;
+              else
+               continue;
+             else if(p[pixel[7]] < c_b)
+              if(p[pixel[8]] < c_b)
+               if(p[pixel[9]] < c_b)
+                if(p[pixel[6]] < c_b)
+                 if(p[pixel[5]] < c_b)
+                  if(p[pixel[4]] < c_b)
+                   if(p[pixel[3]] < c_b)
+                    if(p[pixel[2]] < c_b)
+                     if(p[pixel[1]] < c_b)
+                      {}
+                     else
+                      if(p[pixel[10]] < c_b)
+                       {}
+                      else
+                       continue;
+                    else
+                     if(p[pixel[10]] < c_b)
+                      if(p[pixel[11]] < c_b)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                   else
+                    if(p[pixel[10]] < c_b)
+                     if(p[pixel[11]] < c_b)
+                      if(p[pixel[12]] < c_b)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                  else
+                   if(p[pixel[10]] < c_b)
+                    if(p[pixel[11]] < c_b)
+                     if(p[pixel[12]] < c_b)
+                      if(p[pixel[13]] < c_b)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                 else
+                  if(p[pixel[10]] < c_b)
+                   if(p[pixel[11]] < c_b)
+                    if(p[pixel[12]] < c_b)
+                     if(p[pixel[13]] < c_b)
+                      if(p[pixel[14]] < c_b)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                else
+                 if(p[pixel[10]] < c_b)
+                  if(p[pixel[11]] < c_b)
+                   if(p[pixel[12]] < c_b)
+                    if(p[pixel[13]] < c_b)
+                     if(p[pixel[14]] < c_b)
+                      if(p[pixel[15]] < c_b)
+                       {}
+                      else
+                       continue;
+                     else
+                      continue;
+                    else
+                     continue;
+                   else
+                    continue;
+                  else
+                   continue;
+                 else
+                  continue;
                else
                 continue;
               else
