@@ -47,6 +47,7 @@ SRCS += $(addprefix img/,   \
 	gif.c                   \
 	mjpeg.c                 \
 	fast.c                  \
+	agast.c                 \
 	freak.c                 \
 	template.c              \
 	phasecorrelation.c      \

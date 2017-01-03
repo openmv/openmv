@@ -165,6 +165,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	gif.o                                   \
 	mjpeg.o                                 \
 	fast.o                                  \
+	agast.o                                 \
 	freak.o                                 \
 	template.o                              \
 	phasecorrelation.o                      \
