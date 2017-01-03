@@ -277,7 +277,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
     return FORMAT_DONT_CARE;
 }
 
-static bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs)
+bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs)
 {
     file_read_open(fp, path);
     char magic[2];

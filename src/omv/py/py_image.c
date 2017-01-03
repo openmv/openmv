@@ -11,7 +11,7 @@
 #include "imlib.h"
 #include "array.h"
 #include "sensor.h"
-#include "ff.h"
+#include "ff_wrapper.h"
 #include "xalloc.h"
 #include "fb_alloc.h"
 #include "framebuffer.h"
@@ -1889,16 +1889,21 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     int copy_to_fb = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), false);
 
     if (copy_to_fb) {
+       fb->w   = 4; // non-zero init value
+       fb->h   = 4; // non-zero init value
+       fb->bpp = 1; // non-zero init value
        image.pixels = MAIN_FB()->pixels;
+       FIL fp;
+       img_read_settings_t rs;
+       imlib_read_geometry(&fp, &image, path, &rs);
+       file_buffer_off(&fp);
+       file_close(&fp);
+       fb->w   = image.w;
+       fb->h   = image.h;
+       fb->bpp = image.bpp;
     }
 
     imlib_load_image(&image, path);
-
-    if (copy_to_fb) {
-        fb->w   = image.w;
-        fb->h   = image.h;
-        fb->bpp = image.bpp;
-    }
     return py_image_from_struct(&image);
 }
 
