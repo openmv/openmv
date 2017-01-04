@@ -796,12 +796,13 @@ typedef struct cluster {
 // Return the distance between a cluster centroid and some object.
 typedef float (*cluster_dist_t)(int cx, int cy, void *obj);
 
-/* FAST/FREAK Keypoint */
+/* Keypoint */
 typedef struct kp {
     uint16_t x;
     uint16_t y;
     uint16_t score;
-    uint8_t desc[64];
+    uint16_t octave;
+    uint8_t desc[32];
 } kp_t;
 
 typedef struct size {
@@ -866,7 +867,7 @@ typedef void (*line_op_t)(image_t*, int, uint8_t*);
 
 typedef enum descriptor_type {
     DESC_LBP,
-    DESC_FREAK,
+    DESC_ORB,
 } descriptor_t;
 
 typedef enum edge_detector_type {
@@ -1035,14 +1036,16 @@ long imlib_integral_mw_lookup(mw_image_t *sum, int x, int y, int w, int h);
 int imlib_load_cascade(struct cascade* cascade, const char *path);
 array_t *imlib_detect_objects(struct image *image, struct cascade *cascade, struct rectangle *roi);
 
-/* FAST/FREAK Feature Extractor */
+/* Corner detectors */
 void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi);
 void agast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t *roi);
-array_t *freak_find_keypoints(image_t *image, bool normalized, int threshold, rectangle_t *roi);
-int freak_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, int *cx, int *cy);
-int freak_save_descriptor(FIL *fp, array_t *kpts);
-int freak_load_descriptor(FIL *fp, array_t *kpts);
-float freak_cluster_dist(int cx, int cy, void *kp);
+
+/* ORB descriptor */
+array_t *orb_find_keypoints(image_t *image, bool normalized, int threshold, rectangle_t *roi);
+int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle_t *ret);
+int orb_save_descriptor(FIL *fp, array_t *kpts);
+int orb_load_descriptor(FIL *fp, array_t *kpts);
+float orb_cluster_dist(int cx, int cy, void *kp);
 
 /* LBP Operator */
 uint8_t *imlib_lbp_desc(image_t *image, rectangle_t *roi);

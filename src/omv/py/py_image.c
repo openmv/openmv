@@ -500,7 +500,7 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
         PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
         for (int i=0; i<array_length(kpts_obj->kpts); i++) {
             kp_t *kp = array_at(kpts_obj->kpts, i);
-            imlib_draw_circle(arg_img, kp->x, kp->y, (arg_s-2)/2, arg_c);
+            imlib_draw_circle(arg_img, kp->x*kp->octave, kp->y*kp->octave, (arg_s/2)/kp->octave, arg_c);
         }
     }
     return mp_const_none;
@@ -1563,7 +1563,7 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 32);
     bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_normalized), false);
 
-    array_t *kpts = freak_find_keypoints(arg_img, normalized, threshold, &rect);
+    array_t *kpts = orb_find_keypoints(arg_img, normalized, threshold, &rect);
 
     if (array_length(kpts)) {
         py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
@@ -1954,11 +1954,11 @@ mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
                 break;
             }
 
-            case DESC_FREAK: {
+            case DESC_ORB: {
                 array_t *kpts = NULL;
                 array_alloc(&kpts, xfree);
 
-                res = freak_load_descriptor(&fp, kpts);
+                res = orb_load_descriptor(&fp, kpts);
                 if (res == FR_OK) {
                     // Return keypoints MP object
                     py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
@@ -2003,9 +2003,9 @@ mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
                 break;
             }
 
-            case DESC_FREAK: {
+            case DESC_ORB: {
                 py_kp_obj_t *kpts = ((py_kp_obj_t*)args[2]);
-                res = freak_save_descriptor(&fp, kpts->kpts);
+                res = orb_save_descriptor(&fp, kpts->kpts);
                 break;
             }
         }
@@ -2039,27 +2039,30 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
             break;
         }
 
-        case DESC_FREAK: {
+        case DESC_ORB: {
             py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
             py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
-            int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 60);
+            int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 20);
 
             // Sanity checks
             PY_ASSERT_TYPE(kpts1, &py_kp_type);
             PY_ASSERT_TYPE(kpts2, &py_kp_type);
             PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
-            int match=0, cx=0, cy=0;
+            int match=0;
+            rectangle_t ret;
             // Match the two keypoint sets
             // Returns the number of matches
-            match = freak_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &cx, &cy);
+            match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &ret);
 
-            mp_obj_t rec_obj[3] = {
-                mp_obj_new_int(cx/match),
-                mp_obj_new_int(cy/match),
+            mp_obj_t rec_obj[5] = {
+                mp_obj_new_int(ret.x),
+                mp_obj_new_int(ret.y),
+                mp_obj_new_int(ret.w),
+                mp_obj_new_int(ret.h),
                 mp_obj_new_int(match*100/IM_MAX(array_length(kpts1->kpts), 1))
             };
-            match_obj = mp_obj_new_tuple(3, rec_obj);
+            match_obj = mp_obj_new_tuple(5, rec_obj);
         }
     }
 
@@ -2072,12 +2075,12 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
     FRESULT res = FR_OK;
 
     printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
-    array_t *kpts = freak_find_keypoints(img, false, 10, roi);
+    array_t *kpts = orb_find_keypoints(img, false, 10, roi);
     printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
 
     if (array_length(kpts)) {
         if ((res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
-            res = freak_save_descriptor(&fp, kpts);
+            res = orb_save_descriptor(&fp, kpts);
             f_close(&fp);
         }
         // File open/write error
@@ -2102,7 +2105,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 3, py_image_mat
 static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_LBP),                 MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_FREAK),               MP_OBJ_NEW_SMALL_INT(DESC_FREAK)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_ORB),                 MP_OBJ_NEW_SMALL_INT(DESC_ORB)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_EX),           MP_OBJ_NEW_SMALL_INT(SEARCH_EX)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_DS),           MP_OBJ_NEW_SMALL_INT(SEARCH_DS)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_EDGE_CANNY),          MP_OBJ_NEW_SMALL_INT(EDGE_CANNY)},
