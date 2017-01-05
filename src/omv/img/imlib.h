@@ -959,6 +959,7 @@ bool rectangle_equal(rectangle_t *r1, rectangle_t *r2);
 bool rectangle_intersects(rectangle_t *r1, rectangle_t *r2);
 bool rectangle_subimg(image_t *img, rectangle_t *r, rectangle_t *r_out);
 array_t *rectangle_merge(array_t *rectangles);
+void rectangle_expand(rectangle_t *r, int x, int y);
 
 /* Drawing functions */
 void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c);

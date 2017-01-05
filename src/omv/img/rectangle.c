@@ -103,3 +103,21 @@ array_t *rectangle_merge(array_t *rectangles)
     array_free(overlap);
     return objects;
 }
+
+// Expands a bounding box with a point.
+// After adding all points sub x from w and y from h.
+void rectangle_expand(rectangle_t *r, int x, int y)
+{
+    if (x < r->x) {
+        r->x = x;
+    }
+    if (y < r->y) {
+        r->y = y;
+    }
+    if (x > r->w) {
+        r->w = x;
+    }
+    if (y > r->h) {
+        r->h = y;
+    }
+}
