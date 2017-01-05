@@ -513,26 +513,12 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
             kp_t *kp2 = find_best_match(min_kp, kpts1, &min_dist);
 
             if (kp1 == kp2) {
+                int x, y;
                 matches++;
                 min_kp->matched = 1;
-                int x = (min_kp->x*min_kp->octave);
-                int y = (min_kp->y*min_kp->octave);
-
-                cx += x;
-                cy += y;
-
-                if (x < r->x) {
-                    r->x = x;
-                }
-                if (y < r->y) {
-                    r->y = y;
-                }
-                if (x > r->w) {
-                    r->w = x;
-                }
-                if (y > r->h) {
-                    r->h = y;
-                }
+                cx += x = (min_kp->x*min_kp->octave);
+                cy += y = (min_kp->y*min_kp->octave);
+                rectangle_expand(r, x, y);
             }
         }
     }
@@ -547,7 +533,6 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
     return matches;
 }
 
-// TODO optimize
 int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
 {
     int matches=0;
@@ -556,6 +541,8 @@ int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
 
     r->w = r->h = 0;
     r->x = r->y = 20000;
+
+    float *kpts_dist = fb_alloc(kpts_size * sizeof(float));
 
     // Find centroid 
     for (int i=0; i<kpts_size; i++) {
@@ -576,7 +563,8 @@ int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
     for (int i=0; i<kpts_size; i++) {
         kp_t *kp = array_at(kpts, i);
         if (kp->matched) {
-            mdist += orb_cluster_dist(cx, cy, kp);
+            kpts_dist[i] = orb_cluster_dist(cx, cy, kp);
+            mdist += kpts_dist[i];
         }
     }
     // Mean distance from centroid
@@ -587,55 +575,45 @@ int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
     for (int i=0; i<kpts_size; i++) {
         kp_t *kp = array_at(kpts, i);
         if (kp->matched) {
-            float dist = orb_cluster_dist(cx, cy, kp);
+            float dist = kpts_dist[i];
             var += (mdist - dist) * (mdist - dist);
         }
     }
 
     // Find standard deviation
     float stdist = fast_sqrtf(var/matches);
-    c->x = c->y = 0;
+    
+    // Reset centroid
+    matches = 0;
+    cx = cy = 0;
 
-    // Remove outliers
+    // Remove outliers and get new centroid
     for (int i=0; i<kpts_size; i++) {
         kp_t *kp = array_at(kpts, i);
         if (kp->matched) {
-            float dist = fabs(mdist - orb_cluster_dist(cx, cy, kp));
-            if (dist <= stdist) {
-                int x = (kp->x*kp->octave);
-                int y = (kp->y*kp->octave);
-
-                c->x += x;
-                c->y += y;
-
-                if (x < r->x) {
-                    r->x = x;
-                }
-                if (y < r->y) {
-                    r->y = y;
-                }
-                if (x > r->w) {
-                    r->w = x;
-                }
-                if (y > r->h) {
-                    r->h = y;
-                }
-
-            } else {
-                matches --;
+            float dist = fabs(mdist - kpts_dist[i]);
+            if (dist > stdist) {
                 kp->matched = 0;
+            } else {
+                int x, y;
+                matches++;
+                cx += x = (kp->x*kp->octave);
+                cy += y = (kp->y*kp->octave);
+                rectangle_expand(r, x, y);
             }
         }
     }
 
     // Fix centroid x/y
-    c->x /= matches;
-    c->y /= matches;
+    c->x = cx/matches;
+    c->y = cy/matches;
 
     // Fix rectangle w/h
     r->w = r->w - r->x;
     r->h = r->h - r->y;
 
+    // Free distance array
+    fb_free();
     return matches;
 }
 
