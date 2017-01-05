@@ -490,15 +490,14 @@ static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out)
     return min_kp;
 }
 
-int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle_t *ret)
+int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle_t *r, point_t *c)
 {
     int matches=0;
+    int cx = 0, cy = 0;
     int kpts1_size = array_length(kpts1);
 
-    ret->x = 20000;
-    ret->y = 20000;
-    ret->w = 0;
-    ret->h = 0;
+    r->w = r->h = 0;
+    r->x = r->y = 20000;
 
     // Match keypoints
     for (int i=0; i<kpts1_size; i++) {
@@ -515,29 +514,129 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
 
             if (kp1 == kp2) {
                 matches++;
-                int cx = (min_kp->x*min_kp->octave);
-                int cy = (min_kp->y*min_kp->octave);
-                if (cx < ret->x) {
-                    ret->x = cx;
+                min_kp->matched = 1;
+                int x = (min_kp->x*min_kp->octave);
+                int y = (min_kp->y*min_kp->octave);
+
+                cx += x;
+                cy += y;
+
+                if (x < r->x) {
+                    r->x = x;
                 }
-                if (cy < ret->y) {
-                    ret->y = cy;
+                if (y < r->y) {
+                    r->y = y;
                 }
-                if (cx > ret->w) {
-                    ret->w = cx;
+                if (x > r->w) {
+                    r->w = x;
                 }
-                if (cy > ret->h) {
-                    ret->h = cy;
+                if (y > r->h) {
+                    r->h = y;
                 }
             }
         }
     }
 
-    // Fix rectangle w/h
-    ret->w = ret->w - ret->x;
-    ret->h = ret->h - ret->y;
-    return matches;
+    // Fix centroid x/y
+    c->x = cx/matches;
+    c->y = cy/matches;
 
+    // Fix rectangle w/h
+    r->w = r->w - r->x;
+    r->h = r->h - r->y;
+    return matches;
+}
+
+// TODO optimize
+int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
+{
+    int matches=0;
+    int cx = 0, cy = 0;
+    int kpts_size = array_length(kpts);
+
+    r->w = r->h = 0;
+    r->x = r->y = 20000;
+
+    // Find centroid 
+    for (int i=0; i<kpts_size; i++) {
+        kp_t *kp = array_at(kpts, i);
+        if (kp->matched) {
+            matches ++;
+            cx += (kp->x*kp->octave);
+            cy += (kp->y*kp->octave);
+        }
+    }
+
+    // Centroid
+    cx /= matches;
+    cy /= matches;
+
+    // Find mean distance from centroid
+    float mdist = 0.0f;
+    for (int i=0; i<kpts_size; i++) {
+        kp_t *kp = array_at(kpts, i);
+        if (kp->matched) {
+            mdist += orb_cluster_dist(cx, cy, kp);
+        }
+    }
+    // Mean distance from centroid
+    mdist /= matches;
+
+    // Find variance
+    float var = 0.0f;
+    for (int i=0; i<kpts_size; i++) {
+        kp_t *kp = array_at(kpts, i);
+        if (kp->matched) {
+            float dist = orb_cluster_dist(cx, cy, kp);
+            var += (mdist - dist) * (mdist - dist);
+        }
+    }
+
+    // Find standard deviation
+    float stdist = fast_sqrtf(var/matches);
+    c->x = c->y = 0;
+
+    // Remove outliers
+    for (int i=0; i<kpts_size; i++) {
+        kp_t *kp = array_at(kpts, i);
+        if (kp->matched) {
+            float dist = fabs(mdist - orb_cluster_dist(cx, cy, kp));
+            if (dist <= stdist) {
+                int x = (kp->x*kp->octave);
+                int y = (kp->y*kp->octave);
+
+                c->x += x;
+                c->y += y;
+
+                if (x < r->x) {
+                    r->x = x;
+                }
+                if (y < r->y) {
+                    r->y = y;
+                }
+                if (x > r->w) {
+                    r->w = x;
+                }
+                if (y > r->h) {
+                    r->h = y;
+                }
+
+            } else {
+                matches --;
+                kp->matched = 0;
+            }
+        }
+    }
+
+    // Fix centroid x/y
+    c->x /= matches;
+    c->y /= matches;
+
+    // Fix rectangle w/h
+    r->w = r->w - r->x;
+    r->h = r->h - r->y;
+
+    return matches;
 }
 
 int orb_save_descriptor(FIL *fp, array_t *kpts)

@@ -2043,26 +2043,33 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
             py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
             py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
             int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 20);
+            int filter_outliers = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_filter_outliers), false);
 
             // Sanity checks
             PY_ASSERT_TYPE(kpts1, &py_kp_type);
             PY_ASSERT_TYPE(kpts2, &py_kp_type);
             PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
-            int match=0;
-            rectangle_t ret;
-            // Match the two keypoint sets
-            // Returns the number of matches
-            match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &ret);
+            point_t c;      // Centroid
+            rectangle_t r;  // Bounding rectangle
 
-            mp_obj_t rec_obj[5] = {
-                mp_obj_new_int(ret.x),
-                mp_obj_new_int(ret.y),
-                mp_obj_new_int(ret.w),
-                mp_obj_new_int(ret.h),
+            // Match the two keypoint sets
+            int match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c);
+
+            if (filter_outliers == true) {
+                match = orb_filter_keypoints(kpts2->kpts, &r, &c);
+            }
+
+            mp_obj_t ret_obj[7] = {
+                mp_obj_new_int(c.x),
+                mp_obj_new_int(c.y),
+                mp_obj_new_int(r.x),
+                mp_obj_new_int(r.y),
+                mp_obj_new_int(r.w),
+                mp_obj_new_int(r.h),
                 mp_obj_new_int(match*100/IM_MAX(array_length(kpts1->kpts), 1))
             };
-            match_obj = mp_obj_new_tuple(5, rec_obj);
+            match_obj = mp_obj_new_tuple(7, ret_obj);
         }
     }
 

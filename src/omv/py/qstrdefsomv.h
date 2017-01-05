@@ -95,6 +95,7 @@ Q(bias)
 Q(percentile)
 Q(normalized)
 Q(lens_corr)
+Q(filter_outliers)
 
 // Lcd Module
 Q(lcd)
