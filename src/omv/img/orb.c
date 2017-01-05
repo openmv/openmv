@@ -651,8 +651,8 @@ float orb_cluster_dist(int cx, int cy, void *kp_in)
 {
     float sum=0.0f;
     kp_t *kp = kp_in;
-    sum += (cx - kp->x) * (cx - kp->x);
-    sum += (cy - kp->y) * (cy - kp->y);
+    sum += (cx - kp->x * kp->octave) * (cx - kp->x * kp->octave);
+    sum += (cy - kp->y * kp->octave) * (cy - kp->y * kp->octave);
     return fast_sqrtf(sum);
 
 }
