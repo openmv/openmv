@@ -19,7 +19,7 @@ static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, 
 static void fast9_score(image_t *image, corner_t *corners, int num_corners, int b);
 static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints);
 
-static kp_t *alloc_keypoint(uint16_t x, uint16_t y, float score)
+static kp_t *alloc_keypoint(uint16_t x, uint16_t y, uint16_t score)
 {
     // Note must set keypoint descriptor to zeros
     kp_t *kpt = xalloc0(sizeof*kpt);
