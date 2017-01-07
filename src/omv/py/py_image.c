@@ -63,7 +63,7 @@ typedef struct _py_kp_obj_t {
 static void py_kp_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_kp_obj_t *self = self_in;
-    mp_printf(print, "size:%d threshold:%d normalized:%d\n", array_length(self->kpts), self->threshold, self->normalized);
+    mp_printf(print, "size:%d threshold:%d normalized:%d", array_length(self->kpts), self->threshold, self->normalized);
 }
 
 static const mp_obj_type_t py_kp_type = {
@@ -476,32 +476,20 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
+    py_kp_obj_t *kpts_obj = ((py_kp_obj_t*)args[1]);
     int arg_c = py_helper_lookup_color(kw_args, -1); // white
     int arg_s = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
 
-    if (MP_OBJ_IS_TYPE(args[1],&mp_type_tuple)||(MP_OBJ_IS_TYPE(args[1],&mp_type_list))) {
-        mp_uint_t arg_vec_len;
-        mp_obj_t *arg_vec;
-        mp_obj_get_array(args[1], &arg_vec_len, &arg_vec);
-        if (!arg_vec_len) return mp_const_none;
-        for (int i=0; i<arg_vec_len; i++) {
-            mp_obj_t *arg_keypoint;
-            mp_obj_get_array_fixed_n(arg_vec[i], 3, &arg_keypoint);
-            int x = mp_obj_get_int(arg_keypoint[0]);
-            int y = mp_obj_get_int(arg_keypoint[1]);
-            float angle = mp_obj_get_float(arg_keypoint[2]);
-            float co = arm_cos_f32(angle);
-            float si = arm_sin_f32(angle);
-            imlib_draw_line(arg_img, x, y, x+(co*arg_s), y+(si*arg_s), arg_c);
-            imlib_draw_circle(arg_img, x, y, (arg_s-2)/2, arg_c);
-        }
-    } else {
-        py_kp_obj_t *kpts_obj = ((py_kp_obj_t*)args[1]);
-        PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
-        for (int i=0; i<array_length(kpts_obj->kpts); i++) {
-            kp_t *kp = array_at(kpts_obj->kpts, i);
-            imlib_draw_circle(arg_img, kp->x*kp->octave, kp->y*kp->octave, (arg_s/2)/kp->octave, arg_c);
-        }
+    PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
+    for (int i=0; i<array_length(kpts_obj->kpts); i++) {
+        kp_t *kp = array_at(kpts_obj->kpts, i);
+        int cx = kp->x*kp->octave;
+        int cy = kp->y*kp->octave;
+        int size = (arg_s/2)/kp->octave;
+        float si = sin_table[kp->angle] * size;
+        float co = cos_table[kp->angle] * size;
+        imlib_draw_line(arg_img, cx, cy, cx+co, cy+si, arg_c);
+        imlib_draw_circle(arg_img, cx+co, cy+si, size, arg_c);
     }
     return mp_const_none;
 }
@@ -2067,7 +2055,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
                 mp_obj_new_int(r.y),
                 mp_obj_new_int(r.w),
                 mp_obj_new_int(r.h),
-                mp_obj_new_int(match*100/IM_MAX(array_length(kpts1->kpts), 1))
+                mp_obj_new_int(match)
             };
             match_obj = mp_obj_new_tuple(7, ret_obj);
         }
