@@ -483,8 +483,8 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
     for (int i=0; i<array_length(kpts_obj->kpts); i++) {
         kp_t *kp = array_at(kpts_obj->kpts, i);
-        int cx = kp->x*kp->octave;
-        int cy = kp->y*kp->octave;
+        int cx = kp->x;
+        int cy = kp->y;
         int size = (arg_s/2)/kp->octave;
         float si = sin_table[kp->angle] * size;
         float co = cos_table[kp->angle] * size;
