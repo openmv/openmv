@@ -285,7 +285,7 @@ const static int sample_pattern[256*4] = {
     -1,-6, 0,-11/*mean (0.127148), correlation (0.547401)*/
 };
 
-static void comp_angle(image_t *img, kp_t *kp, int *u_max, float *a, float *b)
+static int comp_angle(image_t *img, kp_t *kp, int *u_max, float *a, float *b)
 {
     int step = img->w;
     int half_k = 31/2;
@@ -314,15 +314,22 @@ static void comp_angle(image_t *img, kp_t *kp, int *u_max, float *a, float *b)
     if (angle < 0) {
         angle += 360;
     }
+
     *a = cos_table[angle];
     *b = sin_table[angle];
+    return angle;
 }
 
-static void image_scale(image_t *src, image_t *dst, int f)
+static void image_scale(image_t *src, image_t *dst)
 {
+    int x_ratio = (int)((src->w<<16)/dst->w) +1;
+    int y_ratio = (int)((src->h<<16)/dst->h) +1;
+
 	for (int y=0; y<dst->h; y++) {
+        int sy = (y*y_ratio)>>16;
 		for (int x=0; x<dst->w; x++) {
-			dst->pixels[y*dst->w+x] = src->pixels[(y*f)*src->w+(x*f)];
+            int sx = (x*x_ratio)>>16;
+			dst->pixels[y*dst->w+x] = src->pixels[sy*src->w+sx];
 		}
 	}
 }
@@ -351,37 +358,34 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
         ++v0;
     }
 
+    int octave = 1;
     rectangle_t roi_scaled;
-    for (int octave = 4; octave > 0; octave--) {
+    for(float scale=1.0f, scale_factor = 1.25f; ; scale*=scale_factor, octave++) {
         image_t img_scaled = {
             .bpp = 1,
-            .w = (int) roundf(img->w/octave),
-            .h = (int) roundf(img->h/octave),
+            .w = (int) roundf(img->w/scale),
+            .h = (int) roundf(img->h/scale),
             .pixels = NULL 
         };
  
-        if (img_scaled.w <= (PATCH_SIZE*2)
-                || img_scaled.h <= (PATCH_SIZE*2)) {
-            continue;
+        if (img_scaled.w <= (PATCH_SIZE*2) ||
+            img_scaled.h <= (PATCH_SIZE*2)) {
+            break;
         }
 
-        if (octave > 1) {
-            img_scaled.pixels = fb_alloc(img_scaled.w* img_scaled.h);
-            // Down scale image
-	    	image_scale(img, &img_scaled, octave);
-        } else {
-            img_scaled.pixels = img->pixels;
-        }
+        img_scaled.pixels = fb_alloc(img_scaled.w * img_scaled.h);
+        // Down scale image
+        image_scale(img, &img_scaled);
 
         imlib_morph(&img_scaled, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
         //imlib_morph(&img_scaled, 2, kernel_gauss_5, 1.0f/159.0f, 0.0f);
 
         // Set ROI
         // Add offset for patch size
-        roi_scaled.x = roi->x/octave + PATCH_SIZE;
-        roi_scaled.y = roi->y/octave + PATCH_SIZE;
-		roi_scaled.w = roi->w/octave - PATCH_SIZE;
-		roi_scaled.h = roi->h/octave - PATCH_SIZE;
+        roi_scaled.x = (int) roundf(roi->x/scale) + PATCH_SIZE;
+        roi_scaled.y = (int) roundf(roi->y/scale) + PATCH_SIZE;
+		roi_scaled.w = (int) roundf(roi->w/scale) - (PATCH_SIZE*2);
+		roi_scaled.h = (int) roundf(roi->h/scale) - (PATCH_SIZE*2);
 
         // Alloc octave keypoints
         array_t *kpts_octave;
@@ -398,8 +402,8 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
 
             int x, y;
             float a, b;
-            comp_angle(&img_scaled, kpt, umax, &a, &b);
             sample_point_t *pattern = (sample_point_t*) sample_pattern;
+            kpt->angle = comp_angle(&img_scaled, kpt, umax, &a, &b);
             #if 1
             #define GET_VALUE(idx) \
                    (x = (int) roundf(pattern[idx].x*a - pattern[idx].y*b), \
@@ -447,14 +451,14 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
                 kpt->desc[i] = (uint8_t) val;
             }
 
+            kpt->x = (int)(kpt->x * scale);
+            kpt->y = (int)(kpt->y * scale);
+
             // Add keypoint to main array
             array_push_back(kpts, kpt);
         }
 
-        if (octave > 1) {
-            // Free scaled image.
-            fb_free();
-        }
+        fb_free();
 
         // Free octave keypoints
         array_free(kpts_octave);
@@ -463,10 +467,11 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
 	return kpts;
 }
 
-static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out)
+static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out1, int *dist_out2)
 {
     kp_t *min_kp=NULL;
-    int min_dist = MAX_KP_DIST;
+    int min_dist1 = MAX_KP_DIST;
+    int min_dist2 = MAX_KP_DIST;
     int kpts_size = array_length(kpts);
 
     for (int i=0; i<kpts_size; i++) {
@@ -484,14 +489,16 @@ static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out)
                 }
             }
 
-            if (dist < min_dist) {
+            if (dist < min_dist1) {
                 min_kp = kp2;
-                min_dist = dist;
+                min_dist2 = min_dist1;
+                min_dist1 = dist;
             }
         }
     }
 
-    *dist_out = min_dist;
+    *dist_out1 = min_dist1;
+    *dist_out2 = min_dist2;
     return min_kp;
 }
 
@@ -506,25 +513,33 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
 
     // Match keypoints
     for (int i=0; i<kpts1_size; i++) {
-        int min_dist = 0;
+        int min_dist1 = 0;
+        int min_dist2 = 0;
         kp_t *min_kp = NULL;
         kp_t *kp1 = array_at(kpts1, i);
 
         // Find the best match in second set
-        min_kp = find_best_match(kp1, kpts2, &min_dist);
+        min_kp = find_best_match(kp1, kpts2, &min_dist1, &min_dist2);
+        // NN test
+        if ((min_dist1*100/min_dist2) > threshold) {
+            continue;
+        }
 
-        if (min_kp && ((((MAX_KP_DIST-min_dist)*100/MAX_KP_DIST)) > threshold)) {
-            // Cross-match the keypoint in the first set
-            kp_t *kp2 = find_best_match(min_kp, kpts1, &min_dist);
+        // Cross-match the keypoint in the first set
+        kp_t *kp2 = find_best_match(min_kp, kpts1, &min_dist1, &min_dist2);
+        // NN test
+        if ((min_dist1*100/min_dist2) > threshold) {
+            continue;
+        }
 
-            if (kp1 == kp2) {
-                int x, y;
-                matches++;
-                min_kp->matched = 1;
-                cx += x = (min_kp->x*min_kp->octave);
-                cy += y = (min_kp->y*min_kp->octave);
-                rectangle_expand(r, x, y);
-            }
+        // Cross-match test
+        if (kp1 == kp2) {
+            int x, y;
+            matches++;
+            min_kp->matched = 1;
+            cx += x = min_kp->x;
+            cy += y = min_kp->y;
+            rectangle_expand(r, x, y);
         }
     }
 
@@ -554,8 +569,8 @@ int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
         kp_t *kp = array_at(kpts, i);
         if (kp->matched) {
             matches ++;
-            cx += (kp->x*kp->octave);
-            cy += (kp->y*kp->octave);
+            cx += kp->x;
+            cy += kp->y;
         }
     }
 
@@ -602,8 +617,8 @@ int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
             } else {
                 int x, y;
                 matches++;
-                cx += x = (kp->x*kp->octave);
-                cy += y = (kp->y*kp->octave);
+                cx += x = kp->x;
+                cy += y = kp->y;
                 rectangle_expand(r, x, y);
             }
         }
@@ -733,8 +748,8 @@ float orb_cluster_dist(int cx, int cy, void *kp_in)
 {
     float sum=0.0f;
     kp_t *kp = kp_in;
-    sum += (cx - kp->x * kp->octave) * (cx - kp->x * kp->octave);
-    sum += (cy - kp->y * kp->octave) * (cy - kp->y * kp->octave);
+    sum += (cx - kp->x) * (cx - kp->x);
+    sum += (cy - kp->y) * (cy - kp->y);
     return fast_sqrtf(sum);
 
 }
