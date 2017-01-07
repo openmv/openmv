@@ -473,19 +473,21 @@ static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out)
         int dist = 0;
         kp_t *kp2 = array_at(kpts, i);
 
-        for (int m=0; m<(KDESC_SIZE/4); m++) {
-            uint32_t v = ((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m];
-            while (v) {
-                if (v  & 0x3) {
-                    dist++;
+        if (kp2->matched == 0) {
+            for (int m=0; m<(KDESC_SIZE/4); m++) {
+                uint32_t v = ((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m];
+                while (v) {
+                    if (v  & 0x3) {
+                        dist++;
+                    }
+                    v >>= 2;
                 }
-                v >>= 2;
             }
-        }
 
-        if (dist < min_dist) {
-            min_kp = kp2;
-            min_dist = dist;
+            if (dist < min_dist) {
+                min_kp = kp2;
+                min_dist = dist;
+            }
         }
     }
 
