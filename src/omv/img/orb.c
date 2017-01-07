@@ -310,9 +310,12 @@ static void comp_angle(image_t *img, kp_t *kp, int *u_max, float *a, float *b)
         m_01 += v * v_sum;
     }
 
-    float angle = atan2f((float)m_01, (float)m_10) * (PI/180.0f);
-    *a = cosf(angle);
-    *b = sinf(angle);
+    int angle = (int) (atan2f((float)m_01, (float)m_10) * (180.0f/M_PI));
+    if (angle < 0) {
+        angle += 360;
+    }
+    *a = cos_table[angle];
+    *b = sin_table[angle];
 }
 
 static void image_scale(image_t *src, image_t *dst, int f)
