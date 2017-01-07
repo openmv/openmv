@@ -678,6 +678,12 @@ int orb_save_descriptor(FIL *fp, array_t *kpts)
             goto error;
         }
 
+        // Write Angle
+        res = f_write(fp, &kp->angle, sizeof(kp->angle), &bytes);
+        if (res != FR_OK || bytes != sizeof(kp->angle)) {
+            goto error;
+        }
+
         // Write descriptor
         res = f_write(fp, kp->desc, KDESC_SIZE, &bytes);
         if (res != FR_OK || bytes != KDESC_SIZE) {
@@ -727,6 +733,12 @@ int orb_load_descriptor(FIL *fp, array_t *kpts)
         // Read Octave
         res = f_read(fp, &kp->octave, sizeof(kp->octave), &bytes);
         if (res != FR_OK || bytes != sizeof(kp->octave)) {
+            goto error;
+        }
+
+        // Read Angle
+        res = f_read(fp, &kp->angle, sizeof(kp->angle), &bytes);
+        if (res != FR_OK || bytes != sizeof(kp->angle)) {
             goto error;
         }
 
