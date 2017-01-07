@@ -801,7 +801,6 @@ typedef struct kp {
     uint16_t x;
     uint16_t y;
     uint16_t score;
-    uint16_t dist;
     uint16_t octave;
     uint16_t angle;
     uint16_t matched;
