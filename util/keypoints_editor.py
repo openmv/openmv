@@ -4,19 +4,21 @@ import time
 import struct
 import pygame
 import sys
+from math import sin, cos, radians
 
-SCALE = 2
+SCALE = 3
+RED   = (255,0,0)
 GREEN = (0,255,0)
 GRAY  = (127, 127, 127)
-KEYPOINTS_SIZE = 16
+KEYPOINTS_SIZE = 24
 
 def load_keypoints(path):
     kpts = []
     with open(path, "rb") as f:
         size = struct.unpack("<I", f.read(4))[0]
         for i in range(0, size):
-            x, y, score, octave = struct.unpack("<HHHH", f.read(8))
-            kpts.append([x, y, score, octave, False, f.read(32)])
+            x, y, score, octave, angle = struct.unpack("<HHHHH", f.read(10))
+            kpts.append([x, y, score, octave, angle, False, f.read(32)])
     return kpts
 
 if __name__ == '__main__':
@@ -65,23 +67,30 @@ if __name__ == '__main__':
             pygame.draw.rect(screen, RED, rect, 1)
     
         for kp in kpts:
-            x, y, score, octave, selected, desc = kp
-            x = x*octave*SCALE
-            y = y*octave*SCALE
-            kp[4] = selected = rect.collidepoint((x, y)) 
+            x, y, score, octave, angle, selected, desc = kp
+            x1 = x*SCALE
+            y1 = y*SCALE
+            angle = radians(angle)
+
+            size = KEYPOINTS_SIZE/octave
+            x2 = x1 + sin(angle) * size
+            y2 = y1 + cos(angle) * size
+
+            kp[5] = selected = rect.collidepoint((x1, y1)) 
             color = GREEN if selected else GRAY
-            pygame.draw.circle(screen, color, (x, y), KEYPOINTS_SIZE/octave, 1)
+            pygame.draw.circle(screen, color, (x1, y1), size, 1)
+            pygame.draw.line(screen, color, (x1, y1), (x2, y2))
     
         if save_selected == True:
             kpts_sel = []  
             for kp in kpts:
-                if (kp[4]): kpts_sel.append(kp) 
+                if (kp[5]): kpts_sel.append(kp) 
     
             with open("desc_out.orb", "wb") as f:
                 f.write(struct.pack("<I", len(kpts_sel)))
                 for kp in kpts_sel:
-                    x, y, score, octave, selected, desc = kp
-                    f.write(struct.pack("<HHHH", x, y, score, octave))
+                    x, y, score, octave, angle, selected, desc = kp
+                    f.write(struct.pack("<HHHHH", x, y, score, octave, angle))
                     f.write(desc)
             break
     
