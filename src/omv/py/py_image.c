@@ -2127,7 +2127,7 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
 
     cascade_t *cascade = py_cascade_cobj(args[1]);
     cascade->threshold = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.5f);
-    cascade->scale_factor = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1.5f);
+    cascade->scale_factor = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale_factor), 1.5f);
 
     rectangle_t arg_r;
     py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);

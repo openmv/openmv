@@ -50,7 +50,7 @@ while (kpts1 == None):
     img = sensor.snapshot()
     img.draw_string(0, 0, "Looking for a face...")
     # Find faces
-    objects = img.find_features(face_cascade, threshold=0.5, scale=1.5)
+    objects = img.find_features(face_cascade, threshold=0.5, scale_factor=1.5)
     if objects:
         # Expand the ROI by 11 pixels in each direction (half the pattern scale)
         face = (objects[0][0]-22, objects[0][1]-22,objects[0][2]+22*2, objects[0][3]+22*2)

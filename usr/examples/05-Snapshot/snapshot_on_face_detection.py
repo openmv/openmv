@@ -39,7 +39,7 @@ while(True):
         # Threshold can be between 0.0 and 1.0. A higher threshold results in a
         # higher detection rate with more false positives. The scale value
         # controls the matching scale allowing you to detect smaller faces.
-        faces = img.find_features(face_cascade, threshold=0.5, scale=1.5)
+        faces = img.find_features(face_cascade, threshold=0.5, scale_factor=1.5)
 
         if faces:
             diff -= 1

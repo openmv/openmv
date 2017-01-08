@@ -38,7 +38,7 @@ while (True):
     clock.tick()
     img = sensor.snapshot()
 
-    objects = img.find_features(face_cascade, threshold=0.5, scale=1.25)
+    objects = img.find_features(face_cascade, threshold=0.5, scale_factor=1.25)
     if objects:
         face = objects[0]
         d1 = img.find_lbp(face)
