@@ -5,7 +5,6 @@
 #include "gc.h"
 
 #define MAX_ROW         (480)
-#define MAX_KEYPOINTS   (250)
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {
@@ -65,12 +64,6 @@ void fast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t 
 
     // Free corners;
     fb_free();
-}
-
-static int kpt_comp(const kp_t *kp1, const kp_t *kp2)
-{
-    // Descending order
-    return kp2->score - kp1->score;
 }
 
 static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keypoints)
@@ -172,14 +165,6 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
         nonmax:
         ;
     }
-
-    (void) kpt_comp;
-    // Sort keypoints by score and return top n keypoints
-    array_sort(keypoints, (array_comp_t) kpt_comp);
-    if (array_length(keypoints) > MAX_KEYPOINTS) {
-        array_resize (keypoints, MAX_KEYPOINTS);
-    }
-
 }
 
 static int fast9_corner_score(const byte* p, int bstart)

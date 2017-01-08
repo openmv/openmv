@@ -290,6 +290,12 @@ const static int sample_pattern[256*4] = {
     -1,-6, 0,-11/*mean (0.127148), correlation (0.547401)*/
 };
 
+static int kpt_comp(const kp_t *kp1, const kp_t *kp2)
+{
+    // Descending order
+    return kp2->score - kp1->score;
+}
+
 static int comp_angle(image_t *img, kp_t *kp, float *a, float *b)
 {
     int step = img->w;
@@ -461,6 +467,12 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, float 
 
         // Free octave keypoints
         array_free(kpts_octave);
+    }
+
+    // Sort keypoints by score and return top n keypoints
+    array_sort(kpts, (array_comp_t) kpt_comp);
+    if (array_length(kpts) > max_keypoints) {
+        array_resize(kpts, max_keypoints);
     }
 
 	return kpts;
