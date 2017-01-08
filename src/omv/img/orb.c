@@ -355,6 +355,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
 	array_alloc(&kpts, xfree);
 
     int octave = 1;
+    int kpts_index = 0;
     rectangle_t roi_scaled;
 
     // Gaussian smooth the image before extracting keypoints
@@ -390,21 +391,16 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
 		roi_scaled.w = (int) roundf(roi->w/scale) - (PATCH_SIZE*2);
 		roi_scaled.h = (int) roundf(roi->h/scale) - (PATCH_SIZE*2);
 
-        // Alloc octave keypoints
-        array_t *kpts_octave;
-        // Note keypoints are not free'd
-        array_alloc(&kpts_octave, NULL);
-
 		// Find kpts
         if (corner_detector == CORNER_FAST) {
-            fast_detect(&img_scaled, kpts_octave, threshold, &roi_scaled);
+            fast_detect(&img_scaled, kpts, threshold, &roi_scaled);
         } else {
-            agast_detect(&img_scaled, kpts_octave, threshold, &roi_scaled);
+            agast_detect(&img_scaled, kpts, threshold, &roi_scaled);
         }
 
-        for (int k=0; k<array_length(kpts_octave); k++) {
+        for (int k=kpts_index; k<array_length(kpts); k++, kpts_index++) {
             // Set keypoint octave/scale
-            kp_t *kpt = array_at(kpts_octave, k);
+            kp_t *kpt = array_at(kpts, k);
             kpt->octave = octave;
 
             int x, y;
@@ -461,17 +457,11 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
 
             kpt->x = (int)(kpt->x * scale);
             kpt->y = (int)(kpt->y * scale);
-
-            // Add keypoint to main array
-            array_push_back(kpts, kpt);
         }
 
         if (octave > 1) {
             fb_free();
         }
-
-        // Free octave keypoints
-        array_free(kpts_octave);
     }
 
     // Sort keypoints by score and return top n keypoints
