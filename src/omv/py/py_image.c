@@ -2218,21 +2218,18 @@ static mp_obj_t py_image_find_lbp(mp_obj_t img_obj, mp_obj_t roi_obj)
 static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img),
-            "This function is only supported on GRAYSCALE images");
+    PY_ASSERT_TRUE_MSG(IM_IS_GS(arg_img), "This function is only supported on GRAYSCALE images");
 
-    rectangle_t arg_r;
-    py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);
-
-    rectangle_t rect;
-    if (!rectangle_subimg(arg_img, &arg_r, &rect)) {
-        return mp_const_none;
-    }
-
-    int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 32);
+    // Lookup args
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+    int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 20);
     bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_normalized), false);
+    float scale_factor = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale_factor), 1.5f);
+    int max_keypoints = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max_keypoints), 200);
 
-    array_t *kpts = orb_find_keypoints(arg_img, normalized, threshold, &rect);
+    // Find keypoints
+    array_t *kpts = orb_find_keypoints(arg_img, normalized, threshold, scale_factor, max_keypoints, &roi);
 
     if (array_length(kpts)) {
         py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
@@ -2757,7 +2754,7 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
     FRESULT res = FR_OK;
 
     printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
-    array_t *kpts = orb_find_keypoints(img, false, 10, roi);
+    array_t *kpts = orb_find_keypoints(img, false, 20, 1.5f, 200, roi);
     printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
 
     if (array_length(kpts)) {

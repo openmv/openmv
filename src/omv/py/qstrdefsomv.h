@@ -95,6 +95,8 @@ Q(percentile)
 Q(normalized)
 Q(lens_corr)
 Q(filter_outliers)
+Q(scale_factor)
+Q(max_keypoints)
 
 // Lcd Module
 Q(lcd)

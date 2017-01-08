@@ -26,7 +26,7 @@ typedef struct {
     int y;
 } sample_point_t;
 
-static const int u_max[] = {
+const static int u_max[] = {
     15, 15, 15, 15, 14, 14, 14, 13,
     13, 12, 11, 10, 9, 8, 6, 3, 0
 };
@@ -342,7 +342,7 @@ static void image_scale(image_t *src, image_t *dst)
 	}
 }
 
-array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectangle_t *roi)
+array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, float scale_factor, int max_keypoints, rectangle_t *roi)
 {
 	array_t *kpts;
 	array_alloc(&kpts, xfree);
@@ -353,7 +353,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
     // Gaussian smooth the image before extracting keypoints
     imlib_morph(img, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
 
-    for(float scale=1.0f, scale_factor = 1.25f; ; scale*=scale_factor, octave++) {
+    for(float scale=1.0f; ; scale*=scale_factor, octave++) {
         image_t img_scaled = {
             .bpp = 1,
             .w = (int) roundf(img->w/scale),
@@ -377,8 +377,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
             image_scale(img, &img_scaled);
         }
 
-        // Set ROI
-        // Add offset for patch size
+        // Add patch size to ROI
         roi_scaled.x = (int) roundf(roi->x/scale) + PATCH_SIZE;
         roi_scaled.y = (int) roundf(roi->y/scale) + PATCH_SIZE;
 		roi_scaled.w = (int) roundf(roi->w/scale) - (PATCH_SIZE*2);
@@ -401,6 +400,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
             float a, b;
             sample_point_t *pattern = (sample_point_t*) sample_pattern;
             kpt->angle = comp_angle(&img_scaled, kpt, &a, &b);
+
             #if 1
             #define GET_VALUE(idx) \
                    (x = (int) roundf(pattern[idx].x*a - pattern[idx].y*b), \
