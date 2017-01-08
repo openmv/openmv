@@ -363,6 +363,10 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
 
     int octave = 1;
     rectangle_t roi_scaled;
+
+    // Gaussian smooth the image before extracting keypoints
+    imlib_morph(img, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
+
     for(float scale=1.0f, scale_factor = 1.25f; ; scale*=scale_factor, octave++) {
         image_t img_scaled = {
             .bpp = 1,
@@ -380,8 +384,6 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
         // Down scale image
         image_scale(img, &img_scaled);
 
-        imlib_morph(&img_scaled, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
-        //imlib_morph(&img_scaled, 2, kernel_gauss_5, 1.0f/159.0f, 0.0f);
 
         // Set ROI
         // Add offset for patch size
