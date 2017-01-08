@@ -1,221 +1,427 @@
-/*
- * This file is part of the OpenMV project.
- * Copyright (c) 2013-2016 Kwabena W. Agyeman <kwagyeman@openmv.io>
+/* This file is part of the OpenMV project.
+ * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
  * This work is licensed under the MIT license, see the file LICENSE for details.
- *
- * Generic image statistics functions.
- *
  */
-#include <string.h>
-#include "imlib.h"
-#include "fb_alloc.h"
 
-int32_t *imlib_histogram(image_t *img, rectangle_t *r)
+#include "imlib.h"
+
+void imlib_get_histogram(histogram_t *out, new_image_t *ptr, rectangle_t *roi)
 {
-    rectangle_t rect;
-    if (!rectangle_subimg(img, r, &rect)) {
-        return NULL;
-    }
-    int32_t *histogram;
-    if (IM_IS_GS(img)) {
-        histogram = fb_alloc0(IM_G_HIST_SIZE * sizeof(int32_t));
-    } else {
-        histogram = fb_alloc0((IM_L_HIST_SIZE * sizeof(int32_t)) +
-                              (IM_A_HIST_SIZE * sizeof(int32_t)) +
-                              (IM_B_HIST_SIZE * sizeof(int32_t)));
-    }
-    if (IM_IS_GS(img)) {
-        for (int i = 0; i < rect.h; i++) {
-            for (int j = 0; j < rect.w; j++) {
-                int x = (rect.x + j);
-                int y = (rect.y + i);
-                histogram[IM_GET_GS_PIXEL(img, x, y)]++;
+    switch(ptr->type) {
+        case IMAGE_TYPE_BINARY: {
+            memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
+
+            float mult = (out->LBinCount - 1) / ((float) (COLOR_BINARY_MAX - COLOR_BINARY_MIN));
+
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
+                    ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_BINARY_MIN) * mult)]++;
+                }
             }
-        }
-    } else {
-        for (int i = 0; i < rect.h; i++) {
-            for (int j = 0; j < rect.w; j++) {
-                int x = (rect.x + j);
-                int y = (rect.y + i);
-                const int pixel = IM_GET_RGB565_PIXEL(img, x, y);
-                histogram[IM_RGB5652L(pixel) + IM_L_HIST_OFFSET + 128]++;
-                histogram[IM_RGB5652A(pixel) + IM_A_HIST_OFFSET + 128]++;
-                histogram[IM_RGB5652B(pixel) + IM_B_HIST_OFFSET + 128]++;
+
+            float pixels = roi->w * roi->h;
+
+            for (int i = 0, j = out->LBinCount; i < j; i++) {
+                out->LBins[i] = ((uint32_t *) out->LBins)[i] / pixels;
             }
+
+            break;
+        }
+        case IMAGE_TYPE_GRAYSCALE: {
+            memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
+
+            float mult = (out->LBinCount - 1) / ((float) (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN));
+
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+                    ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_GRAYSCALE_MIN) * mult)]++;
+                }
+            }
+
+            float pixels = roi->w * roi->h;
+
+            for (int i = 0, j = out->LBinCount; i < j; i++) {
+                out->LBins[i] = ((uint32_t *) out->LBins)[i] / pixels;
+            }
+
+            break;
+        }
+        case IMAGE_TYPE_RGB565: {
+            memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
+            memset(out->ABins, 0, out->ABinCount * sizeof(uint32_t));
+            memset(out->BBins, 0, out->BBinCount * sizeof(uint32_t));
+
+            float l_mult = (out->LBinCount - 1) / ((float) (COLOR_L_MAX - COLOR_L_MIN));
+            float a_mult = (out->ABinCount - 1) / ((float) (COLOR_A_MAX - COLOR_A_MIN));
+            float b_mult = (out->BBinCount - 1) / ((float) (COLOR_B_MAX - COLOR_B_MIN));
+
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                    ((uint32_t *) out->LBins)[fast_roundf((COLOR_RGB565_TO_L(pixel) - COLOR_L_MIN) * l_mult)]++;
+                    ((uint32_t *) out->ABins)[fast_roundf((COLOR_RGB565_TO_A(pixel) - COLOR_A_MIN) * a_mult)]++;
+                    ((uint32_t *) out->BBins)[fast_roundf((COLOR_RGB565_TO_B(pixel) - COLOR_B_MIN) * b_mult)]++;
+                }
+            }
+
+            float pixels = roi->w * roi->h;
+
+            for (int i = 0, j = out->LBinCount; i < j; i++) {
+                out->LBins[i] = ((uint32_t *) out->LBins)[i] / pixels;
+            }
+
+            for (int i = 0, j = out->ABinCount; i < j; i++) {
+                out->ABins[i] = ((uint32_t *) out->ABins)[i] / pixels;
+            }
+
+            for (int i = 0, j = out->BBinCount; i < j; i++) {
+                out->BBins[i] = ((uint32_t *) out->BBins)[i] / pixels;
+            }
+
+            break;
+        }
+        default: {
+            break;
         }
     }
-    return histogram;
 }
 
-void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out)
+void imlib_get_percentile(percentile_t *out, new_image_type_t type, histogram_t *ptr, float percentile)
+{
+    memset(out, 0, sizeof(percentile_t));
+    switch(type) {
+        case IMAGE_TYPE_BINARY: {
+            float mult = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) (ptr->LBinCount - 1));
+            float median_count = 0;
+
+            for (int i = 0, j = ptr->LBinCount; i < j; i++) {
+                if ((median_count < percentile) && (percentile <= (median_count + ptr->LBins[i]))) {
+                    out->LValue = fast_roundf((i * mult) + COLOR_BINARY_MIN);
+                    break;
+                }
+
+                median_count += ptr->LBins[i];
+            }
+            break;
+        }
+        case IMAGE_TYPE_GRAYSCALE: {
+            float mult = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) (ptr->LBinCount - 1));
+            float median_count = 0;
+
+            for (int i = 0, j = ptr->LBinCount; i < j; i++) {
+                if ((median_count < percentile) && (percentile <= (median_count + ptr->LBins[i]))) {
+                    out->LValue = fast_roundf((i * mult) + COLOR_GRAYSCALE_MIN);
+                    break;
+                }
+
+                median_count += ptr->LBins[i];
+            }
+            break;
+        }
+        case IMAGE_TYPE_RGB565: {
+            {
+                float mult = (COLOR_L_MAX - COLOR_L_MIN) / ((float) (ptr->LBinCount - 1));
+                float median_count = 0;
+
+                for (int i = 0, j = ptr->LBinCount; i < j; i++) {
+                    if ((median_count < percentile) && (percentile <= (median_count + ptr->LBins[i]))) {
+                        out->LValue = fast_roundf((i * mult) + COLOR_L_MIN);
+                        break;
+                    }
+
+                    median_count += ptr->LBins[i];
+                }
+            }
+            {
+                float mult = (COLOR_A_MAX - COLOR_A_MIN) / ((float) (ptr->ABinCount - 1));
+                float median_count = 0;
+
+                for (int i = 0, j = ptr->ABinCount; i < j; i++) {
+                    if ((median_count < percentile) && (percentile <= (median_count + ptr->ABins[i]))) {
+                        out->AValue = fast_roundf((i * mult) + COLOR_A_MIN);
+                        break;
+                    }
+
+                    median_count += ptr->ABins[i];
+                }
+            }
+            {
+                float mult = (COLOR_B_MAX - COLOR_B_MIN) / ((float) (ptr->BBinCount - 1));
+                float median_count = 0;
+
+                for (int i = 0, j = ptr->BBinCount; i < j; i++) {
+                    if ((median_count < percentile) && (percentile <= (median_count + ptr->BBins[i]))) {
+                        out->BValue = fast_roundf((i * mult) + COLOR_A_MIN);
+                        break;
+                    }
+
+                    median_count += ptr->BBins[i];
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
+void imlib_get_statistics(statistics_t *out, new_image_type_t type, histogram_t *ptr)
 {
     memset(out, 0, sizeof(statistics_t));
-    int32_t *histogram = imlib_histogram(img, r);
-    if (!histogram) {
-        return;
+    switch(type) {
+        case IMAGE_TYPE_BINARY: {
+            float mult = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) (ptr->LBinCount - 1));
+
+            float avg = 0;
+            float stdev = 0;
+            float median_count = 0;
+            float mode_count = 0;
+            bool min_flag = false;
+
+            for (int i = 0, j = ptr->LBinCount; i < j; i++) {
+                float value_f = (i * mult) + COLOR_BINARY_MIN;
+                int value = fast_roundf(value_f);
+
+                avg += value_f * ptr->LBins[i];
+                stdev += value_f * value_f * ptr->LBins[i];
+
+                if ((median_count < 0.25f) && (0.25f <= (median_count + ptr->LBins[i]))) {
+                    out->LLQ = value;
+                }
+
+                if ((median_count < 0.5f) && (0.5f <= (median_count + ptr->LBins[i]))) {
+                    out->LMedian = value;
+                }
+
+                if ((median_count < 0.75f) && (0.75f <= (median_count + ptr->LBins[i]))) {
+                    out->LUQ = value;
+                }
+
+                if (ptr->LBins[i] > mode_count) {
+                    mode_count = ptr->LBins[i];
+                    out->LMode = value;
+                }
+
+                if ((ptr->LBins[i] > 0.0f) && (!min_flag)) {
+                    min_flag = true;
+                    out->LMin = value;
+                }
+
+                if (ptr->LBins[i] > 0.0f) {
+                    out->LMax = value;
+                }
+
+                median_count += ptr->LBins[i];
+            }
+
+            out->LMean = fast_roundf(avg);
+            out->LSTDev = fast_roundf(fast_sqrtf(stdev - (avg * avg)));
+            break;
+        }
+        case IMAGE_TYPE_GRAYSCALE: {
+            float mult = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) (ptr->LBinCount - 1));
+
+            float avg = 0;
+            float stdev = 0;
+            float median_count = 0;
+            float mode_count = 0;
+            bool min_flag = false;
+
+            for (int i = 0, j = ptr->LBinCount; i < j; i++) {
+                float value_f = (i * mult) + COLOR_GRAYSCALE_MIN;
+                int value = fast_roundf(value_f);
+
+                avg += value_f * ptr->LBins[i];
+                stdev += value_f * value_f * ptr->LBins[i];
+
+                if ((median_count < 0.25f) && (0.25f <= (median_count + ptr->LBins[i]))) {
+                    out->LLQ = value;
+                }
+
+                if ((median_count < 0.5f) && (0.5f <= (median_count + ptr->LBins[i]))) {
+                    out->LMedian = value;
+                }
+
+                if ((median_count < 0.75f) && (0.75f <= (median_count + ptr->LBins[i]))) {
+                    out->LUQ = value;
+                }
+
+                if (ptr->LBins[i] > mode_count) {
+                    mode_count = ptr->LBins[i];
+                    out->LMode = value;
+                }
+
+                if ((ptr->LBins[i] > 0.0f) && (!min_flag)) {
+                    min_flag = true;
+                    out->LMin = value;
+                }
+
+                if (ptr->LBins[i] > 0.0f) {
+                    out->LMax = value;
+                }
+
+                median_count += ptr->LBins[i];
+            }
+
+            out->LMean = fast_roundf(avg);
+            out->LSTDev = fast_roundf(fast_sqrtf(stdev - (avg * avg)));
+            break;
+        }
+        case IMAGE_TYPE_RGB565: {
+            {
+                float mult = (COLOR_L_MAX - COLOR_L_MIN) / ((float) (ptr->LBinCount - 1));
+
+                float avg = 0;
+                float stdev = 0;
+                float median_count = 0;
+                float mode_count = 0;
+                bool min_flag = false;
+
+                for (int i = 0, j = ptr->LBinCount; i < j; i++) {
+                    float value_f = (i * mult) + COLOR_L_MIN;
+                    int value = fast_roundf(value_f);
+
+                    avg += value_f * ptr->LBins[i];
+                    stdev += value_f * value_f * ptr->LBins[i];
+
+                    if ((median_count < 0.25f) && (0.25f <= (median_count + ptr->LBins[i]))) {
+                        out->LLQ = value;
+                    }
+
+                    if ((median_count < 0.5f) && (0.5f <= (median_count + ptr->LBins[i]))) {
+                        out->LMedian = value;
+                    }
+
+                    if ((median_count < 0.75f) && (0.75f <= (median_count + ptr->LBins[i]))) {
+                        out->LUQ = value;
+                    }
+
+                    if (ptr->LBins[i] > mode_count) {
+                        mode_count = ptr->LBins[i];
+                        out->LMode = value;
+                    }
+
+                    if ((ptr->LBins[i] > 0.0f) && (!min_flag)) {
+                        min_flag = true;
+                        out->LMin = value;
+                    }
+
+                    if (ptr->LBins[i] > 0.0f) {
+                        out->LMax = value;
+                    }
+
+                    median_count += ptr->LBins[i];
+                }
+
+                out->LMean = fast_roundf(avg);
+                out->LSTDev = fast_roundf(fast_sqrtf(stdev - (avg * avg)));
+            }
+            {
+                float mult = (COLOR_A_MAX - COLOR_A_MIN) / ((float) (ptr->ABinCount - 1));
+
+                float avg = 0;
+                float stdev = 0;
+                float median_count = 0;
+                float mode_count = 0;
+                bool min_flag = false;
+
+                for (int i = 0, j = ptr->ABinCount; i < j; i++) {
+                    float value_f = (i * mult) + COLOR_A_MIN;
+                    int value = fast_roundf(value_f);
+
+                    avg += value_f * ptr->ABins[i];
+                    stdev += value_f * value_f * ptr->ABins[i];
+
+                    if ((median_count < 0.25f) && (0.25f <= (median_count + ptr->ABins[i]))) {
+                        out->ALQ = value;
+                    }
+
+                    if ((median_count < 0.5f) && (0.5f <= (median_count + ptr->ABins[i]))) {
+                        out->AMedian = value;
+                    }
+
+                    if ((median_count < 0.75f) && (0.75f <= (median_count + ptr->ABins[i]))) {
+                        out->AUQ = value;
+                    }
+
+                    if (ptr->ABins[i] > mode_count) {
+                        mode_count = ptr->ABins[i];
+                        out->AMode = value;
+                    }
+
+                    if ((ptr->ABins[i] > 0.0f) && (!min_flag)) {
+                        min_flag = true;
+                        out->AMin = value;
+                    }
+
+                    if (ptr->ABins[i] > 0.0f) {
+                        out->AMax = value;
+                    }
+
+                    median_count += ptr->ABins[i];
+                }
+
+                out->AMean = fast_roundf(avg);
+                out->ASTDev = fast_roundf(fast_sqrtf(stdev - (avg * avg)));
+            }
+            {
+                float mult = (COLOR_B_MAX - COLOR_B_MIN) / ((float) (ptr->BBinCount - 1));
+
+                float avg = 0;
+                float stdev = 0;
+                float median_count = 0;
+                float mode_count = 0;
+                bool min_flag = false;
+
+                for (int i = 0, j = ptr->BBinCount; i < j; i++) {
+                    float value_f = (i * mult) + COLOR_B_MIN;
+                    int value = fast_roundf(value_f);
+
+                    avg += value_f * ptr->BBins[i];
+                    stdev += value_f * value_f * ptr->BBins[i];
+
+                    if ((median_count < 0.25f) && (0.25f <= (median_count + ptr->BBins[i]))) {
+                        out->BLQ = value;
+                    }
+
+                    if ((median_count < 0.5f) && (0.5f <= (median_count + ptr->BBins[i]))) {
+                        out->BMedian = value;
+                    }
+
+                    if ((median_count < 0.75f) && (0.75f <= (median_count + ptr->BBins[i]))) {
+                        out->BUQ = value;
+                    }
+
+                    if (ptr->BBins[i] > mode_count) {
+                        mode_count = ptr->BBins[i];
+                        out->BMode = value;
+                    }
+
+                    if ((ptr->BBins[i] > 0.0f) && (!min_flag)) {
+                        min_flag = true;
+                        out->BMin = value;
+                    }
+
+                    if (ptr->BBins[i] > 0.0f) {
+                        out->BMax = value;
+                    }
+
+                    median_count += ptr->BBins[i];
+                }
+
+                out->BMean = fast_roundf(avg);
+                out->BSTDev = fast_roundf(fast_sqrtf(stdev - (avg * avg)));
+            }
+            break;
+        }
+        default: {
+            break;
+        }
     }
-    if (IM_IS_GS(img)) {
-        int sum = 0, avg = 0;
-        int mode_count = -1;
-        bool min_flag = false;
-        for (int i = IM_G_HIST_OFFSET; i < (IM_G_HIST_OFFSET + IM_G_HIST_SIZE); i++) {
-            sum += histogram[i];
-            avg += (i-IM_G_HIST_OFFSET) * histogram[i];
-            if (histogram[i] > mode_count) {
-                mode_count = histogram[i];
-                out->g_mode = (i-IM_G_HIST_OFFSET);
-            }
-            if (histogram[i] && (!min_flag)) {
-                min_flag = true;
-                out->g_min = (i-IM_G_HIST_OFFSET);
-            }
-            if (histogram[i]) {
-                out->g_max = (i-IM_G_HIST_OFFSET);
-            }
-        }
-        out->g_mean = avg / sum;
-        // lower_q = 1/4th, median = 1/2, upper_q = 3/4th
-        int lq = (sum+3)/4, mid = (sum+1)/2, uq = ((sum*3)+3)/4;
-        int st_dev_count = 0, median_count = 0;
-        for (int i = IM_G_HIST_OFFSET; i < (IM_G_HIST_OFFSET + IM_G_HIST_SIZE); i++) {
-            st_dev_count += histogram[i] *
-                    ((i-IM_G_HIST_OFFSET)-out->g_mean) *
-                    ((i-IM_G_HIST_OFFSET)-out->g_mean);
-            if ((median_count<lq) && (lq<=(median_count+histogram[i]))) {
-                out->g_lower_q = (i-IM_G_HIST_OFFSET);
-            }
-            if ((median_count<mid) && (mid<=(median_count+histogram[i]))) {
-                out->g_median = (i-IM_G_HIST_OFFSET);
-            }
-            if ((median_count<uq) && (uq<=(median_count+histogram[i]))) {
-                out->g_upper_q = (i-IM_G_HIST_OFFSET);
-            }
-            median_count += histogram[i];
-        }
-        out->g_st_dev = fast_sqrtf(st_dev_count / sum);
-    } else {
-        {
-            int sum = 0, avg = 0;
-            int mode_count = -1;
-            bool min_flag = false;
-            for (int i = IM_L_HIST_OFFSET; i < (IM_L_HIST_OFFSET + IM_L_HIST_SIZE); i++) {
-                sum += histogram[i];
-                avg += (i-IM_L_HIST_OFFSET-128) * histogram[i];
-                if (histogram[i] > mode_count) {
-                    mode_count = histogram[i];
-                    out->l_mode = (i-IM_L_HIST_OFFSET-128);
-                }
-                if (histogram[i] && (!min_flag)) {
-                    min_flag = true;
-                    out->l_min = (i-IM_L_HIST_OFFSET-128);
-                }
-                if (histogram[i]) {
-                    out->l_max = (i-IM_L_HIST_OFFSET-128);
-                }
-            }
-            out->l_mean = avg / sum;
-            // lower_q = 1/4th, median = 1/2, upper_q = 3/4th
-            int lq = (sum+3)/4, mid = (sum+1)/2, uq = ((sum*3)+3)/4;
-            int st_dev_count = 0, median_count = 0;
-            for (int i = IM_L_HIST_OFFSET; i < (IM_L_HIST_OFFSET + IM_L_HIST_SIZE); i++) {
-                st_dev_count += histogram[i] *
-                        ((i-IM_L_HIST_OFFSET-128)-out->l_mean) *
-                        ((i-IM_L_HIST_OFFSET-128)-out->l_mean);
-                if ((median_count<lq) && (lq<=(median_count+histogram[i]))) {
-                    out->l_lower_q = (i-IM_L_HIST_OFFSET-128);
-                }
-                if ((median_count<mid) && (mid<=(median_count+histogram[i]))) {
-                    out->l_median = (i-IM_L_HIST_OFFSET-128);
-                }
-                if ((median_count<uq) && (uq<=(median_count+histogram[i]))) {
-                    out->l_upper_q = (i-IM_L_HIST_OFFSET-128);
-                }
-                median_count += histogram[i];
-            }
-            out->l_st_dev = fast_sqrtf(st_dev_count / sum);
-        }
-        ////////////////////////////////////////////////////////////////////////
-        {
-            int sum = 0, avg = 0;
-            int mode_count = -1;
-            bool min_flag = false;
-            for (int i = IM_A_HIST_OFFSET; i < (IM_A_HIST_OFFSET + IM_A_HIST_SIZE); i++) {
-                sum += histogram[i];
-                avg += (i-IM_A_HIST_OFFSET-128) * histogram[i];
-                if (histogram[i] > mode_count) {
-                    mode_count = histogram[i];
-                    out->a_mode = (i-IM_A_HIST_OFFSET-128);
-                }
-                if (histogram[i] && (!min_flag)) {
-                    min_flag = true;
-                    out->a_min = (i-IM_A_HIST_OFFSET-128);
-                }
-                if (histogram[i]) {
-                    out->a_max = (i-IM_A_HIST_OFFSET-128);
-                }
-            }
-            out->a_mean = avg / sum;
-            // lower_q = 1/4th, median = 1/2, upper_q = 3/4th
-            int lq = (sum+3)/4, mid = (sum+1)/2, uq = ((sum*3)+3)/4;
-            int st_dev_count = 0, median_count = 0;
-            for (int i = IM_A_HIST_OFFSET; i < (IM_A_HIST_OFFSET + IM_A_HIST_SIZE); i++) {
-                st_dev_count += histogram[i] *
-                        ((i-IM_A_HIST_OFFSET-128)-out->l_mean) *
-                        ((i-IM_A_HIST_OFFSET-128)-out->l_mean);
-                if ((median_count<lq) && (lq<=(median_count+histogram[i]))) {
-                    out->a_lower_q = (i-IM_A_HIST_OFFSET-128);
-                }
-                if ((median_count<mid) && (mid<=(median_count+histogram[i]))) {
-                    out->a_median = (i-IM_A_HIST_OFFSET-128);
-                }
-                if ((median_count<uq) && (uq<=(median_count+histogram[i]))) {
-                    out->a_upper_q = (i-IM_A_HIST_OFFSET-128);
-                }
-                median_count += histogram[i];
-            }
-            out->a_st_dev = fast_sqrtf(st_dev_count / sum);
-        }
-        ////////////////////////////////////////////////////////////////////////
-        {
-            int sum = 0, avg = 0;
-            int mode_count = -1;
-            bool min_flag = false;
-            for (int i = IM_B_HIST_OFFSET; i < (IM_B_HIST_OFFSET + IM_B_HIST_SIZE); i++) {
-                sum += histogram[i];
-                avg += (i-IM_B_HIST_OFFSET-128) * histogram[i];
-                if (histogram[i] > mode_count) {
-                    mode_count = histogram[i];
-                    out->b_mode = (i-IM_B_HIST_OFFSET-128);
-                }
-                if (histogram[i] && (!min_flag)) {
-                    min_flag = true;
-                    out->b_min = (i-IM_B_HIST_OFFSET-128);
-                }
-                if (histogram[i]) {
-                    out->b_max = (i-IM_B_HIST_OFFSET-128);
-                }
-            }
-            out->b_mean = avg / sum;
-            // lower_q = 1/4th, median = 1/2, upper_q = 3/4th
-            int lq = (sum+3)/4, mid = (sum+1)/2, uq = ((sum*3)+3)/4;
-            int st_dev_count = 0, median_count = 0;
-            for (int i = IM_B_HIST_OFFSET; i < (IM_B_HIST_OFFSET + IM_B_HIST_SIZE); i++) {
-                st_dev_count += histogram[i] *
-                        ((i-IM_B_HIST_OFFSET-128)-out->l_mean) *
-                        ((i-IM_B_HIST_OFFSET-128)-out->l_mean);
-                if ((median_count<lq) && (lq<=(median_count+histogram[i]))) {
-                    out->b_lower_q = (i-IM_B_HIST_OFFSET-128);
-                }
-                if ((median_count<mid) && (mid<=(median_count+histogram[i]))) {
-                    out->b_median = (i-IM_B_HIST_OFFSET-128);
-                }
-                if ((median_count<uq) && (uq<=(median_count+histogram[i]))) {
-                    out->b_upper_q = (i-IM_B_HIST_OFFSET-128);
-                }
-                median_count += histogram[i];
-            }
-            out->b_st_dev = fast_sqrtf(st_dev_count / sum);
-        }
-    }
-    fb_free();
 }
