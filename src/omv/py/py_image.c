@@ -2225,7 +2225,7 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 20);
     bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_normalized), false);
     float scale_factor = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale_factor), 1.5f);
-    int max_keypoints = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max_keypoints), 200);
+    int max_keypoints = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max_keypoints), 100);
     corner_detector_t corner_detector =  py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_corner_detector), CORNER_AGAST);
 
     // Find keypoints
@@ -2754,7 +2754,7 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
     FRESULT res = FR_OK;
 
     printf("Save Descriptor: ROI(%d %d %d %d)\n", roi->x, roi->y, roi->w, roi->h);
-    array_t *kpts = orb_find_keypoints(img, false, 20, 1.5f, 200, CORNER_AGAST, roi);
+    array_t *kpts = orb_find_keypoints(img, false, 20, 1.5f, 100, CORNER_AGAST, roi);
     printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
 
     if (array_length(kpts)) {
