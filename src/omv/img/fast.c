@@ -5,6 +5,7 @@
 #include "gc.h"
 
 #define MAX_ROW         (480)
+#define MAX_CORNERS     (2000)
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {
@@ -3109,8 +3110,8 @@ static void fast9_score(image_t *image, corner_t *corners, int num_corners, int 
 static corner_t *fast9_detect(image_t *image, rectangle_t *roi, int *n_corners, int b)
 {
     int num_corners = 0;
-    //int max_corners = fb_avail()/sizeof(corner_t);
-    int max_corners = 20000;
+    // Try to alloc MAX_CORNERS or the actual max corners we can alloc.
+    int max_corners = IM_MIN(MAX_CORNERS, (fb_avail() / sizeof(corner_t)));
     corner_t *corners = (corner_t*) fb_alloc(max_corners * sizeof(corner_t));
 
     for(int y=roi->y+3; y<roi->y+roi->h-3; y++) {

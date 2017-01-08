@@ -6,6 +6,7 @@
 #include "gc.h"
 
 #define MAX_ROW         (480)
+#define MAX_CORNERS     (2000)
 #define Compare(X, Y) ((X)>=(Y))
 
 typedef struct {
@@ -195,8 +196,8 @@ static corner_t *agast58_detect(image_t *img, int b, int* num_corners, rectangle
 	offset7=s_offset7;
 	width=s_width;
 
-    //int max_corners = fb_avail()/sizeof(corner_t);
-    int max_corners = 5000;
+    // Try to alloc MAX_CORNERS or the actual max corners we can alloc.
+    int max_corners = IM_MIN(MAX_CORNERS, (fb_avail() / sizeof(corner_t)));
     corner_t *corners = (corner_t*) fb_alloc(max_corners * sizeof(corner_t));
 
 	for(y=roi->y+1; y < ysizeB; y++)
