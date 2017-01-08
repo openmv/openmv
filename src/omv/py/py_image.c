@@ -2225,8 +2225,8 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 20);
     bool normalized = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_normalized), false);
     float scale_factor = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale_factor), 1.5f);
-    int max_keypoints = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max_keypoints), 100);
-    corner_detector_t corner_detector =  py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_corner_detector), CORNER_AGAST);
+    int max_keypoints = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max_keypoints), 100);
+    corner_detector_t corner_detector =  py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_corner_detector), CORNER_AGAST);
 
     // Find keypoints
     array_t *kpts = orb_find_keypoints(arg_img, normalized, threshold, scale_factor, max_keypoints, corner_detector, &roi);
