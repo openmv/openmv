@@ -722,39 +722,6 @@ typedef struct simple_color {
 }
 simple_color_t;
 
-typedef struct statistics {
-    uint8_t g_mean;
-    int8_t l_mean, a_mean, b_mean;
-    uint8_t g_median;
-    int8_t l_median, a_median, b_median;
-    uint8_t g_mode;
-    int8_t l_mode, a_mode, b_mode;
-    uint8_t g_st_dev;
-    int8_t l_st_dev, a_st_dev, b_st_dev;
-    uint8_t g_min;
-    int8_t l_min, a_min, b_min;
-    uint8_t g_max;
-    int8_t l_max, a_max, b_max;
-    uint8_t g_lower_q;
-    int8_t l_lower_q, a_lower_q, b_lower_q;
-    uint8_t g_upper_q;
-    int8_t l_upper_q, a_upper_q, b_upper_q;
-} statistics_t;
-
-typedef struct color_blob { // organized this way to pack it...
-    int16_t x; // rect - 0
-    int16_t y; // rect - 1
-    int16_t w; // rect - 2
-    int16_t h; // rect - 3
-    int16_t cx; // centroid - 5
-    int16_t cy; // centroid - 6
-    float rotation; // rotation - 7
-    uint16_t pixels; // number of pixels in merged blobs - 4
-    uint16_t count; // number of blobs merged into this blob - 9
-    uint32_t code; // color code index bits of merged blobs - 8
-}
-color_blob_t;
-
 typedef struct image {
     int w;
     int h;
@@ -888,6 +855,27 @@ typedef enum  jpeg_subsample {
     JPEG_SUBSAMPLE_2x2 = 0x22,  // 2x2 chroma subsampling
 } jpeg_subsample_t;
 
+typedef struct histogram {
+    int LBinCount;
+    float *LBins;
+    int ABinCount;
+    float *ABins;
+    int BBinCount;
+    float *BBins;
+} histogram_t;
+
+typedef struct percentile {
+    uint8_t LValue;
+    int8_t AValue;
+    int8_t BValue;
+} percentile_t;
+
+typedef struct statistics {
+    uint8_t LMean, LMedian, LMode, LSTDev, LMin, LMax, LLQ, LUQ;
+    int8_t AMean, AMedian, AMode, ASTDev, AMin, AMax, ALQ, AUQ;
+    int8_t BMean, BMedian, BMode, BSTDev, BMin, BMax, BLQ, BUQ;
+} statistics_t;
+
 typedef struct find_blobs_list_lnk_data
 {
     rectangle_t rect;
@@ -992,8 +980,6 @@ void imlib_blend(image_t *img, const char *path, image_t *other, int alpha);
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
 
 /* Image Statistics */
-int32_t *imlib_histogram(image_t *img, rectangle_t *r);
-void imlib_statistics(image_t *img, rectangle_t *r, statistics_t *out);
 int imlib_image_mean(image_t *src); // grayscale only
 int imlib_image_std(image_t *src); // grayscale only
 
@@ -1077,6 +1063,10 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 // Lens correction
 void imlib_lens_corr(image_t *src, float strength);
 
+// Stats
+void imlib_get_histogram(histogram_t *out, new_image_t *ptr, rectangle_t *roi);
+void imlib_get_percentile(percentile_t *out, new_image_type_t type, histogram_t *ptr, float percentile);
+void imlib_get_statistics(statistics_t *out, new_image_type_t type, histogram_t *ptr);
 // Color Tracking
 void imlib_find_blobs(list_t *out, new_image_t *ptr, rectangle_t *roi,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
