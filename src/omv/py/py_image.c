@@ -473,23 +473,22 @@ static mp_obj_t py_image_draw_cross(uint n_args, const mp_obj_t *args, mp_map_t 
 static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
 
     py_kp_obj_t *kpts_obj = ((py_kp_obj_t*)args[1]);
     int arg_c = py_helper_lookup_color(kw_args, -1); // white
-    int arg_s = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
+    int arg_s = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), arg_img->w*10/100);
 
     PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
     for (int i=0; i<array_length(kpts_obj->kpts); i++) {
         kp_t *kp = array_at(kpts_obj->kpts, i);
         int cx = kp->x;
         int cy = kp->y;
-        int size = (arg_s/2)/kp->octave;
+        int size = arg_s/2;
         float si = sin_table[kp->angle] * size;
         float co = cos_table[kp->angle] * size;
         imlib_draw_line(arg_img, cx, cy, cx+co, cy+si, arg_c);
-        imlib_draw_circle(arg_img, cx+co, cy+si, size, arg_c);
+        imlib_draw_circle(arg_img, cx, cy, size, arg_c);
     }
     return mp_const_none;
 }
