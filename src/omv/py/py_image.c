@@ -2722,7 +2722,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
             PY_ASSERT_TYPE(kpts2, &py_kp_type);
             PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
-            int t;          // estimated angle of rotation
+            int t=0;        // Estimated angle of rotation
             point_t c;      // Centroid
             rectangle_t r;  // Bounding rectangle
 
