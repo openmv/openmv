@@ -508,10 +508,11 @@ static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out1, int *dist
     return min_kp;
 }
 
-int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle_t *r, point_t *c)
+int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle_t *r, point_t *c, int *angle)
 {
     int matches=0;
     int cx = 0, cy = 0;
+    uint16_t angles[360]={0};
     int kpts1_size = array_length(kpts1);
 
     r->w = r->h = 0;
@@ -548,6 +549,10 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
             cx += x = min_kp->x;
             cy += y = min_kp->y;
             rectangle_expand(r, x, y);
+            int angle = (int) abs(min_kp->angle-kp1->angle);
+            if (angle >= 0 && angle <= 360) {
+                angles[angle]++;
+            }
         }
     }
 
@@ -558,6 +563,15 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
     // Fix rectangle w/h
     r->w = r->w - r->x;
     r->h = r->h - r->y;
+
+    int max_angle = 0;
+    for (int i=0; i<360; i++) {
+        if (angles[i] > max_angle) {
+            max_angle = angles[i];
+            *angle = i;
+        }
+    }
+
     return matches;
 }
 

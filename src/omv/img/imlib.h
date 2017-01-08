@@ -1037,7 +1037,7 @@ void agast_detect(image_t *image, array_t *keypoints, int threshold, rectangle_t
 /* ORB descriptor */
 array_t *orb_find_keypoints(image_t *image, bool normalized, int threshold,
         float scale_factor, int max_keypoints, corner_detector_t corner_detector, rectangle_t *roi);
-int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle_t *r, point_t *c);
+int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle_t *r, point_t *c, int *angle);
 int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c);
 int orb_save_descriptor(FIL *fp, array_t *kpts);
 int orb_load_descriptor(FIL *fp, array_t *kpts);

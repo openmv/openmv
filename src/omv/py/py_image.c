@@ -2722,26 +2722,28 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
             PY_ASSERT_TYPE(kpts2, &py_kp_type);
             PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
+            int t;          // estimated angle of rotation
             point_t c;      // Centroid
             rectangle_t r;  // Bounding rectangle
 
             // Match the two keypoint sets
-            int match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c);
+            int match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c, &t);
 
             if (filter_outliers == true) {
                 match = orb_filter_keypoints(kpts2->kpts, &r, &c);
             }
 
-            mp_obj_t ret_obj[7] = {
+            mp_obj_t ret_obj[8] = {
                 mp_obj_new_int(c.x),
                 mp_obj_new_int(c.y),
                 mp_obj_new_int(r.x),
                 mp_obj_new_int(r.y),
                 mp_obj_new_int(r.w),
                 mp_obj_new_int(r.h),
-                mp_obj_new_int(match)
+                mp_obj_new_int(match),
+                mp_obj_new_int(t)
             };
-            match_obj = mp_obj_new_tuple(7, ret_obj);
+            match_obj = mp_obj_new_tuple(8, ret_obj);
         }
     }
 
