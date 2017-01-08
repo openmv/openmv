@@ -315,6 +315,9 @@ static int comp_angle(image_t *img, kp_t *kp, int *u_max, float *a, float *b)
         angle += 360;
     }
 
+    // Quantize angle to 15 degrees
+    angle = angle - (angle % 15);
+
     *a = cos_table[angle];
     *b = sin_table[angle];
     return angle;
@@ -407,7 +410,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
             #if 1
             #define GET_VALUE(idx) \
                    (x = (int) roundf(pattern[idx].x*a - pattern[idx].y*b), \
-                    y = (int) roundf(pattern[idx].x*b - pattern[idx].y*a), \
+                    y = (int) roundf(pattern[idx].x*b + pattern[idx].y*a), \
                     img_scaled.pixels[((kpt->y+y)*img_scaled.w)+(kpt->x+x)])
             #else
             #define GET_VALUE(idx) \
