@@ -348,7 +348,8 @@ static void image_scale(image_t *src, image_t *dst)
 	}
 }
 
-array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, float scale_factor, int max_keypoints, rectangle_t *roi)
+array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
+        float scale_factor, int max_keypoints, corner_detector_t corner_detector, rectangle_t *roi)
 {
 	array_t *kpts;
 	array_alloc(&kpts, xfree);
@@ -395,7 +396,11 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, float 
         array_alloc(&kpts_octave, NULL);
 
 		// Find kpts
-        agast_detect(&img_scaled, kpts_octave, threshold, &roi_scaled);
+        if (corner_detector == CORNER_FAST) {
+            fast_detect(&img_scaled, kpts_octave, threshold, &roi_scaled);
+        } else {
+            agast_detect(&img_scaled, kpts_octave, threshold, &roi_scaled);
+        }
 
         for (int k=0; k<array_length(kpts_octave); k++) {
             // Set keypoint octave/scale
