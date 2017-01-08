@@ -380,10 +380,16 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
             break;
         }
 
-        img_scaled.pixels = fb_alloc(img_scaled.w * img_scaled.h);
-        // Down scale image
-        image_scale(img, &img_scaled);
-
+        if (octave == 1) {
+            // Don't have to copy and scale the first octave
+            img_scaled.w = img->w;
+            img_scaled.h = img->h;
+            img_scaled.pixels = img->pixels;
+        } else {
+            img_scaled.pixels = fb_alloc(img_scaled.w * img_scaled.h);
+            // Down scale image
+            image_scale(img, &img_scaled);
+        }
 
         // Set ROI
         // Add offset for patch size
@@ -463,7 +469,9 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
             array_push_back(kpts, kpt);
         }
 
-        fb_free();
+        if (octave > 1) {
+            fb_free();
+        }
 
         // Free octave keypoints
         array_free(kpts_octave);
