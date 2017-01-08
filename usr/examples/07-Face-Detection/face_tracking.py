@@ -5,22 +5,8 @@
 # script finds a face in the image using the frontalface Haar Cascade.
 # After which the script uses the keypoints feature to automatically learn your
 # face and track it. Keypoints can be used to automatically track anything.
-#
-# NOTE: LOTS OF KEYPOINTS MAY CAUSE THE SYSTEM TO RUN OUT OF MEMORY!
 
 import sensor, time, image
-
-# Normalized keypoints are not rotation invariant...
-NORMALIZED=False
-# Keypoint extractor threshold, range from 0 to any number.
-# This threshold is used when extracting keypoints, the lower
-# the threshold the higher the number of keypoints extracted.
-KEYPOINTS_THRESH=32
-# Keypoint-level threshold, range from 0 to 100.
-# This threshold is used when matching two keypoint descriptors, it's the
-# percentage of the distance between two descriptors to the max distance.
-# In other words, the minimum matching percentage between 2 keypoints.
-MATCHING_THRESH=80
 
 # Reset sensor
 sensor.reset()
@@ -50,12 +36,12 @@ while (kpts1 == None):
     img = sensor.snapshot()
     img.draw_string(0, 0, "Looking for a face...")
     # Find faces
-    objects = img.find_features(face_cascade, threshold=0.5, scale_factor=1.5)
+    objects = img.find_features(face_cascade, threshold=0.5, scale=1.5)
     if objects:
-        # Expand the ROI by 11 pixels in each direction (half the pattern scale)
-        face = (objects[0][0]-22, objects[0][1]-22,objects[0][2]+22*2, objects[0][3]+22*2)
+        # Expand the ROI by 31 pixels in every direction
+        face = (objects[0][0]-31, objects[0][1]-31,objects[0][2]+31*2, objects[0][3]+31*2)
         # Extract keypoints using the detect face size as the ROI
-        kpts1 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED, roi=face)
+        kpts1 = img.find_keypoints(scale_factor=1.2, max_keypoints=100, roi=face)
         # Draw a rectangle around the first face
         img.draw_rectangle(objects[0])
 
@@ -71,15 +57,16 @@ while (True):
     clock.tick()
     img = sensor.snapshot()
     # Extract keypoints using the detect face size as the ROI
-    kpts2 = img.find_keypoints(threshold=KEYPOINTS_THRESH, normalized=NORMALIZED)
+    kpts2 = img.find_keypoints(scale_factor=1.2, max_keypoints=100)
 
     if (kpts2):
         # Match the first set of keypoints with the second one
-        c=image.match_descriptor(image.FREAK, kpts1, kpts2, threshold=MATCHING_THRESH)
-        # If more than 10% of the keypoints match draw the matching set
-        if (c[2]>25):
-            img.draw_cross(c[0], c[1], size=5)
-            img.draw_string(0, 10, "Match %d%%"%(c[2]))
+        c=image.match_descriptor(image.ORB, kpts1, kpts2)
+        match = c[6] # C[6] contains the number of matches.
+        if (match>2):
+            img.draw_rectangle(c[2:6])
+            img.draw_cross(c[0], c[1], size=10)
+            print(kpts2, "matched:%d dt:%d"%(match, c[7]))
 
     # Draw FPS
     img.draw_string(0, 0, "FPS:%.2f"%(clock.fps()))
