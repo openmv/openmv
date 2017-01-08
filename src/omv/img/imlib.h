@@ -855,6 +855,11 @@ typedef enum  jpeg_subsample {
     JPEG_SUBSAMPLE_2x2 = 0x22,  // 2x2 chroma subsampling
 } jpeg_subsample_t;
 
+typedef enum corner_detector_type {
+    CORNER_FAST,
+    CORNER_AGAST
+} corner_detector_t;
+
 typedef struct histogram {
     int LBinCount;
     float *LBins;
