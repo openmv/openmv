@@ -510,7 +510,9 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
     r->w = r->h = 0;
     r->x = r->y = 20000;
 
-    // Match keypoints
+    // Match keypoints and find "good matches" This runs 2/3 tests found in the RobustMatcher from the OpenCV programming cookbook.
+    // The first test is based on the distance ratio between the two best matches for a feature, to remove ambiguous matches.
+    // Second test is the symmetry test (corss-matching) both points in a match must be the best matching feature of each other.
     for (int i=0; i<kpts1_size; i++) {
         int min_dist1 = 0;
         int min_dist2 = 0;
@@ -519,14 +521,14 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
 
         // Find the best match in second set
         min_kp = find_best_match(kp1, kpts2, &min_dist1, &min_dist2);
-        // NN test
+        // Test the distance ratio between the best two matches
         if ((min_dist1*100/min_dist2) > threshold) {
             continue;
         }
 
         // Cross-match the keypoint in the first set
         kp_t *kp2 = find_best_match(min_kp, kpts1, &min_dist1, &min_dist2);
-        // NN test
+        // Test the distance ratio between the best two matches
         if ((min_dist1*100/min_dist2) > threshold) {
             continue;
         }
