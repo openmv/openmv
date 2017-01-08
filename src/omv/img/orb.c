@@ -26,6 +26,11 @@ typedef struct {
     int y;
 } sample_point_t;
 
+static const int u_max[] = {
+    15, 15, 15, 15, 14, 14, 14, 13,
+    13, 12, 11, 10, 9, 8, 6, 3, 0
+};
+
 const static int sample_pattern[256*4] = {
     8,-3, 9,5/*mean (0), correlation (0)*/,
     4,2, 7,-12/*mean (1.12461e-05), correlation (0.0437584)*/,
@@ -285,7 +290,7 @@ const static int sample_pattern[256*4] = {
     -1,-6, 0,-11/*mean (0.127148), correlation (0.547401)*/
 };
 
-static int comp_angle(image_t *img, kp_t *kp, int *u_max, float *a, float *b)
+static int comp_angle(image_t *img, kp_t *kp, float *a, float *b)
 {
     int step = img->w;
     int half_k = 31/2;
@@ -342,25 +347,6 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
 	array_t *kpts;
 	array_alloc(&kpts, xfree);
 
-    // TODO pre-compute this
-    // pre-compute the end of a row in a circular patch
-    int halfPatchSize = 31 / 2;
-    int umax[halfPatchSize + 2];
-    int v, v0, vmax = (int) floorf(halfPatchSize * fast_sqrtf(2.0f) / 2 + 1);
-    int vmin = (int) ceilf(halfPatchSize * fast_sqrtf(2.0f) / 2);
-    for (v = 0; v <= vmax; ++v) {
-        umax[v] = (int) roundf(fast_sqrtf((float)halfPatchSize * halfPatchSize - v * v));
-    }
-
-    // Make sure we are symmetric
-    for (v = halfPatchSize, v0 = 0; v >= vmin; --v) {
-        while (umax[v0] == umax[v0 + 1]) {
-            ++v0;
-        }
-        umax[v] = v0;
-        ++v0;
-    }
-
     int octave = 1;
     rectangle_t roi_scaled;
 
@@ -414,7 +400,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold, rectan
             int x, y;
             float a, b;
             sample_point_t *pattern = (sample_point_t*) sample_pattern;
-            kpt->angle = comp_angle(&img_scaled, kpt, umax, &a, &b);
+            kpt->angle = comp_angle(&img_scaled, kpt, &a, &b);
             #if 1
             #define GET_VALUE(idx) \
                    (x = (int) roundf(pattern[idx].x*a - pattern[idx].y*b), \
