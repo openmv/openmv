@@ -3,6 +3,8 @@
 #include "usbd_desc.h"
 #include "omv_boardconfig.h"
 
+#define IDE_TIMEOUT     (1000)
+#define CONFIG_TIMEOUT  (2000)
 USBD_HandleTypeDef  USBD_Device;
 extern USBD_CDC_ItfTypeDef  USBD_CDC_fops;
 
@@ -52,15 +54,32 @@ int main()
     /* Start Device Process */
     USBD_Start(&USBD_Device);
 
-    // Wait for IDE to connect
-    uint32_t start = HAL_GetTick();
-    while (!USBD_IDE_Connected() && (HAL_GetTick() - start) < 500) {
-        __flash_led();
-    }
+    // Note: The SRQINT interrupt is triggered when VBUS is in the valid range, I assume it's safe
+    // to use it to detect if USB is connected or not. The dev_connection_status is set in usbd_conf.c
+    // It wasn't used anywhere else, so again assuming it's safe to use it for connection status.
+    if (USBD_Device.dev_connection_status) {
+        uint32_t start = HAL_GetTick();
+        // Wait for device to be configured
+        while (USBD_Device.dev_state != USBD_STATE_CONFIGURED
+                // We still have to timeout because the camera
+                // might be connected to a power bank or charger
+                && (HAL_GetTick() - start) < CONFIG_TIMEOUT) {
+            __flash_led();
+        }
 
-    // Wait for new firmware image
-    while (USBD_IDE_Connected()) {
-        __flash_led();
+        // If the device is configured, wait for IDE to connect or timeout
+        if (USBD_Device.dev_state == USBD_STATE_CONFIGURED) {
+            uint32_t start = HAL_GetTick();
+            while (!USBD_IDE_Connected()
+                    && (HAL_GetTick() - start) < IDE_TIMEOUT) {
+                __flash_led();
+            }
+
+            // Wait for new firmware image if the IDE is connected
+            while (USBD_IDE_Connected()) {
+                __flash_led();
+            }
+        }
     }
 
     // Deinit USB
