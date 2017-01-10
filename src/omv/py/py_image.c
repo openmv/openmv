@@ -2714,7 +2714,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
         case DESC_ORB: {
             py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
             py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
-            int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 70);
+            int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 85);
             int filter_outliers = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_filter_outliers), false);
 
             // Sanity checks
