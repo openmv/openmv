@@ -11,7 +11,7 @@ typedef struct xylf
 }
 xylf_t;
 
-void imlib_find_blobs(list_t *out, new_image_t *ptr, rectangle_t *roi,
+void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi,
                      list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                      bool merge, int margin)
 {
@@ -29,8 +29,8 @@ void imlib_find_blobs(list_t *out, new_image_t *ptr, rectangle_t *roi,
         color_thresholds_list_lnk_data_t lnk_data;
         iterator_get(thresholds, it, &lnk_data);
 
-        switch(ptr->type) {
-            case IMAGE_TYPE_BINARY: {
+        switch(ptr->bpp) {
+            case IMAGE_BPP_BINARY: {
                 for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                     size_t row_index = BITMAP_COMPUTE_ROW_INDEX(ptr, y);
@@ -200,7 +200,7 @@ void imlib_find_blobs(list_t *out, new_image_t *ptr, rectangle_t *roi,
                 }
                 break;
             }
-            case IMAGE_TYPE_GRAYSCALE: {
+            case IMAGE_BPP_GRAYSCALE: {
                 for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                     size_t row_index = BITMAP_COMPUTE_ROW_INDEX(ptr, y);
@@ -370,7 +370,7 @@ void imlib_find_blobs(list_t *out, new_image_t *ptr, rectangle_t *roi,
                 }
                 break;
             }
-            case IMAGE_TYPE_RGB565: {
+            case IMAGE_BPP_RGB565: {
                 for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                     uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                     size_t row_index = BITMAP_COMPUTE_ROW_INDEX(ptr, y);
