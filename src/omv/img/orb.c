@@ -473,6 +473,16 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
 	return kpts;
 }
 
+// This is a modifed popcount that counts every 2 different bits as 1.
+// This is what should actually be used with wta_k == 3 or 4.
+static inline uint32_t popcount(uint32_t i)
+{
+     i = i - ((i >> 1) & 0x55555555);
+     i = ((i & 0xAAAAAAAA)>>1) | (i & 0x55555555);
+     i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+     return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+}
+
 static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out1, int *dist_out2)
 {
     kp_t *min_kp=NULL;
@@ -486,13 +496,7 @@ static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out1, int *dist
 
         if (kp2->matched == 0) {
             for (int m=0; m<(KDESC_SIZE/4); m++) {
-                uint32_t v = ((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m];
-                while (v) {
-                    if (v  & 0x3) {
-                        dist++;
-                    }
-                    v >>= 2;
-                }
+                dist += popcount(((uint32_t*)(kp1->desc))[m] ^ ((uint32_t*)(kp2->desc))[m]);
             }
 
             if (dist < min_dist1) {
