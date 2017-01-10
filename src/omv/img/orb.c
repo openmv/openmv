@@ -358,9 +358,6 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
     int kpts_index = 0;
     rectangle_t roi_scaled;
 
-    // Gaussian smooth the image before extracting keypoints
-    imlib_morph(img, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
-
     for(float scale=1.0f; ; scale*=scale_factor, octave++) {
         image_t img_scaled = {
             .bpp = 1,
@@ -369,27 +366,23 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
             .pixels = NULL 
         };
  
-        if (img_scaled.w <= (PATCH_SIZE*2) ||
-            img_scaled.h <= (PATCH_SIZE*2)) {
+        // Add patch size to ROI
+        roi_scaled.x = (int) roundf(roi->x/scale) + (PATCH_SIZE/2);
+        roi_scaled.y = (int) roundf(roi->y/scale) + (PATCH_SIZE/2);
+        roi_scaled.w = (int) roundf(roi->w/scale) - (PATCH_SIZE);
+        roi_scaled.h = (int) roundf(roi->h/scale) - (PATCH_SIZE);
+
+        if (roi_scaled.w <= (PATCH_SIZE*2) ||
+            roi_scaled.h <= (PATCH_SIZE*2)) {
             break;
         }
 
-        if (octave == 1) {
-            // Don't have to copy and scale the first octave
-            img_scaled.w = img->w;
-            img_scaled.h = img->h;
-            img_scaled.pixels = img->pixels;
-        } else {
-            img_scaled.pixels = fb_alloc(img_scaled.w * img_scaled.h);
-            // Down scale image
-            image_scale(img, &img_scaled);
-        }
+        img_scaled.pixels = fb_alloc(img_scaled.w * img_scaled.h);
+        // Down scale image
+        image_scale(img, &img_scaled);
 
-        // Add patch size to ROI
-        roi_scaled.x = (int) roundf(roi->x/scale) + PATCH_SIZE;
-        roi_scaled.y = (int) roundf(roi->y/scale) + PATCH_SIZE;
-		roi_scaled.w = (int) roundf(roi->w/scale) - (PATCH_SIZE*2);
-		roi_scaled.h = (int) roundf(roi->h/scale) - (PATCH_SIZE*2);
+        // Gaussian smooth the image before extracting keypoints
+        imlib_morph(&img_scaled, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
 
 		// Find kpts
         if (corner_detector == CORNER_FAST) {
@@ -459,9 +452,8 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
             kpt->y = (int)(kpt->y * scale);
         }
 
-        if (octave > 1) {
-            fb_free();
-        }
+        // Free current scale
+        fb_free();
     }
 
     // Sort keypoints by score and return top n keypoints
