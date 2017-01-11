@@ -868,7 +868,7 @@ static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
 #define py_histogram_obj_size 6
 typedef struct py_histogram_obj {
     mp_obj_base_t base;
-    new_image_type_t type;
+    image_bpp_t bpp;
     mp_obj_t LBinCount, LBins, ABinCount, ABins, BBinCount, BBins;
 } py_histogram_obj_t;
 
@@ -876,7 +876,7 @@ typedef struct py_histogram_obj {
 #define py_percentile_obj_size 3
 typedef struct py_percentile_obj {
     mp_obj_base_t base;
-    new_image_type_t type;
+    image_bpp_t bpp;
     mp_obj_t LValue, AValue, BValue;
 } py_percentile_obj_t;
 
@@ -884,27 +884,27 @@ typedef struct py_percentile_obj {
 #define py_statistics_obj_size 24
 typedef struct py_statistics_obj {
     mp_obj_base_t base;
-    new_image_type_t type;
+    image_bpp_t bpp;
     mp_obj_t LMean, LMedian, LMode, LSTDev, LMin, LMax, LLQ, LUQ, AMean, AMedian, AMode, ASTDev, AMin, AMax, ALQ, AUQ, BMean, BMedian, BMode, BSTDev, BMin, BMax, BLQ, BUQ;
 } py_statistics_obj_t;
 
 static void py_histogram_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_histogram_obj_t *self = self_in;
-    switch(self->type) {
-        case IMAGE_TYPE_BINARY: {
+    switch(self->bpp) {
+        case IMAGE_BPP_BINARY: {
             mp_printf(print, "{bin_count:%d, bins:", mp_obj_get_int(self->LBinCount));
             mp_obj_print_helper(print, self->LBins, kind);
             mp_printf(print, "}");
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
+        case IMAGE_BPP_GRAYSCALE: {
             mp_printf(print, "{bin_count:%d, bins:", mp_obj_get_int(self->LBinCount));
             mp_obj_print_helper(print, self->LBins, kind);
             mp_printf(print, "}");
             break;
         }
-        case IMAGE_TYPE_RGB565: {
+        case IMAGE_BPP_RGB565: {
             mp_printf(print, "{l_bin_count:%d, l_bins:", mp_obj_get_int(self->LBinCount));
             mp_obj_print_helper(print, self->LBins, kind);
             mp_printf(print, ", a_bin_count:%d, a_bins:", mp_obj_get_int(self->ABinCount));
@@ -978,13 +978,13 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile)
     }
 
     percentile_t p;
-    imlib_get_percentile(&p, ((py_histogram_obj_t *) self_in)->type, &hist, mp_obj_get_float(percentile));
+    imlib_get_percentile(&p, ((py_histogram_obj_t *) self_in)->bpp, &hist, mp_obj_get_float(percentile));
     if (hist.BBinCount) fb_free();
     if (hist.ABinCount) fb_free();
     if (hist.LBinCount) fb_free();
 
     py_percentile_obj_t *o = m_new_obj(py_percentile_obj_t);
-    o->type = ((py_histogram_obj_t *) self_in)->type;
+    o->bpp = ((py_histogram_obj_t *) self_in)->bpp;
 
     o->LValue = mp_obj_new_int(p.LValue);
     o->AValue = mp_obj_new_int(p.AValue);
@@ -1016,13 +1016,13 @@ mp_obj_t py_histogram_get_statistics(mp_obj_t self_in)
     }
 
     statistics_t stats;
-    imlib_get_statistics(&stats, ((py_histogram_obj_t *) self_in)->type, &hist);
+    imlib_get_statistics(&stats, ((py_histogram_obj_t *) self_in)->bpp, &hist);
     if (hist.BBinCount) fb_free();
     if (hist.ABinCount) fb_free();
     if (hist.LBinCount) fb_free();
 
     py_statistics_obj_t *o = m_new_obj(py_statistics_obj_t);
-    o->type = ((py_histogram_obj_t *) self_in)->type;
+    o->bpp = ((py_histogram_obj_t *) self_in)->bpp;
 
     o->LMean = mp_obj_new_int(stats.LMean);
     o->LMedian = mp_obj_new_int(stats.LMedian);
@@ -1091,16 +1091,16 @@ static const mp_obj_type_t py_histogram_type = {
 static void py_percentile_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_percentile_obj_t *self = self_in;
-    switch(self->type) {
-        case IMAGE_TYPE_BINARY: {
+    switch(self->bpp) {
+        case IMAGE_BPP_BINARY: {
             mp_printf(print, "{value:%d}", mp_obj_get_int(self->LValue));
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
+        case IMAGE_BPP_GRAYSCALE: {
             mp_printf(print, "{value:%d}", mp_obj_get_int(self->LValue));
             break;
         }
-        case IMAGE_TYPE_RGB565: {
+        case IMAGE_BPP_RGB565: {
             mp_printf(print, "{l_value:%d, a_value:%d, b_value:%d}", mp_obj_get_int(self->LValue), mp_obj_get_int(self->AValue), mp_obj_get_int(self->BValue));
             break;
         }
@@ -1163,8 +1163,8 @@ static const mp_obj_type_t py_percentile_type = {
 static void py_statistics_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_statistics_obj_t *self = self_in;
-    switch(self->type) {
-        case IMAGE_TYPE_BINARY: {
+    switch(self->bpp) {
+        case IMAGE_BPP_BINARY: {
             mp_printf(print, "{mean:%d, median:%d, mode:%d, stdev:%d, min:%d, max:%d, lq:%d, uq:%d}",
                       mp_obj_get_int(self->LMean),
                       mp_obj_get_int(self->LMedian),
@@ -1176,7 +1176,7 @@ static void py_statistics_print(const mp_print_t *print, mp_obj_t self_in, mp_pr
                       mp_obj_get_int(self->LUQ));
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
+        case IMAGE_BPP_GRAYSCALE: {
             mp_printf(print, "{mean:%d, median:%d, mode:%d, stdev:%d, min:%d, max:%d, lq:%d, uq:%d}",
                       mp_obj_get_int(self->LMean),
                       mp_obj_get_int(self->LMedian),
@@ -1188,7 +1188,7 @@ static void py_statistics_print(const mp_print_t *print, mp_obj_t self_in, mp_pr
                       mp_obj_get_int(self->LUQ));
             break;
         }
-        case IMAGE_TYPE_RGB565: {
+        case IMAGE_BPP_RGB565: {
             mp_printf(print, "{l_mean:%d, l_median:%d, l_mode:%d, l_stdev:%d, l_min:%d, l_max:%d, l_lq:%d, l_uq:%d,"
                              " a_mean:%d, a_median:%d, a_mode:%d, a_stdev:%d, a_min:%d, a_max:%d, a_lq:%d, a_uq:%d,"
                              " b_mean:%d, b_median:%d, b_mode:%d, b_stdev:%d, b_min:%d, b_max:%d, b_lq:%d, b_uq:%d}",
@@ -1385,19 +1385,13 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    // Transfer to new image type.
-    new_image_t image;
-    image_init(&image, (arg_img->bpp == 2) ? IMAGE_TYPE_RGB565 : IMAGE_TYPE_GRAYSCALE, arg_img->w, arg_img->h);
-    image.size = arg_img->bpp * arg_img->w * arg_img->h;
-    image.data = arg_img->pixels;
-
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
     // TODO: Need to set fb_alloc trap here to recover from any exception...
     histogram_t hist;
-    switch(image.type) {
-        case IMAGE_TYPE_BINARY: {
+    switch(arg_img->bpp) {
+        case IMAGE_BPP_BINARY: {
             int bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_BINARY_MAX-COLOR_BINARY_MIN+1));
             PY_ASSERT_TRUE_MSG(bin_count >= 2, "bin_count must be >= 2");
             hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), bin_count);
@@ -1407,10 +1401,10 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, &image, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi);
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
+        case IMAGE_BPP_GRAYSCALE: {
             int bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1));
             PY_ASSERT_TRUE_MSG(bin_count >= 2, "bin_count must be >= 2");
             hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), bin_count);
@@ -1420,10 +1414,10 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, &image, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi);
             break;
         }
-        case IMAGE_TYPE_RGB565: {
+        case IMAGE_BPP_RGB565: {
             int l_bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_L_MAX-COLOR_L_MIN+1));
             PY_ASSERT_TRUE_MSG(l_bin_count >= 2, "bin_count must be >= 2");
             hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), l_bin_count);
@@ -1439,7 +1433,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
-            imlib_get_histogram(&hist, &image, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi);
             break;
         }
         default: {
@@ -1448,7 +1442,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     }
 
     py_histogram_obj_t *o = m_new_obj(py_histogram_obj_t);
-    o->type = image.type;
+    o->bpp = arg_img->bpp;
 
     o->LBinCount = mp_obj_new_int(hist.LBinCount);
     o->LBins = hist.LBinCount ? mp_obj_new_list(hist.LBinCount, NULL) : MP_OBJ_NULL;
@@ -1480,19 +1474,13 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    // Transfer to new image type.
-    new_image_t image;
-    image_init(&image, (arg_img->bpp == 2) ? IMAGE_TYPE_RGB565 : IMAGE_TYPE_GRAYSCALE, arg_img->w, arg_img->h);
-    image.size = arg_img->bpp * arg_img->w * arg_img->h;
-    image.data = arg_img->pixels;
-
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
     // TODO: Need to set fb_alloc trap here to recover from any exception...
     histogram_t hist;
-    switch(image.type) {
-        case IMAGE_TYPE_BINARY: {
+    switch(arg_img->bpp) {
+        case IMAGE_BPP_BINARY: {
             int bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_BINARY_MAX-COLOR_BINARY_MIN+1));
             PY_ASSERT_TRUE_MSG(bin_count >= 2, "bin_count must be >= 2");
             hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), bin_count);
@@ -1502,10 +1490,10 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, &image, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi);
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
+        case IMAGE_BPP_GRAYSCALE: {
             int bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1));
             PY_ASSERT_TRUE_MSG(bin_count >= 2, "bin_count must be >= 2");
             hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), bin_count);
@@ -1515,10 +1503,10 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, &image, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi);
             break;
         }
-        case IMAGE_TYPE_RGB565: {
+        case IMAGE_BPP_RGB565: {
             int l_bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_L_MAX-COLOR_L_MIN+1));
             PY_ASSERT_TRUE_MSG(l_bin_count >= 2, "bin_count must be >= 2");
             hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), l_bin_count);
@@ -1534,7 +1522,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
-            imlib_get_histogram(&hist, &image, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi);
             break;
         }
         default: {
@@ -1543,13 +1531,13 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     }
 
     statistics_t stats;
-    imlib_get_statistics(&stats, image.type, &hist);
+    imlib_get_statistics(&stats, arg_img->bpp, &hist);
     if (hist.BBinCount) fb_free();
     if (hist.ABinCount) fb_free();
     if (hist.LBinCount) fb_free();
 
     py_statistics_obj_t *o = m_new_obj(py_statistics_obj_t);
-    o->type = image.type;
+    o->bpp = arg_img->bpp;
 
     o->LMean = mp_obj_new_int(stats.LMean);
     o->LMedian = mp_obj_new_int(stats.LMedian);
@@ -1705,12 +1693,6 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    // Transfer to new image type.
-    new_image_t image;
-    image_init(&image, (arg_img->bpp == 2) ? IMAGE_TYPE_RGB565 : IMAGE_TYPE_GRAYSCALE, arg_img->w, arg_img->h);
-    image.size = arg_img->bpp * arg_img->w * arg_img->h;
-    image.data = arg_img->pixels;
-
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
@@ -1756,7 +1738,7 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
 
     // TODO: Need to set fb_alloc trap here to recover from any exception...
     list_t out;
-    imlib_find_blobs(&out, &image, &roi, &thresholds, invert, area_threshold, pixels_threshold, merge, margin);
+    imlib_find_blobs(&out, arg_img, &roi, &thresholds, invert, area_threshold, pixels_threshold, merge, margin);
     list_free(&thresholds);
     mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
 
@@ -1909,18 +1891,12 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
             "Operation not supported on JPEG");
 
-    // Transfer to new image type.
-    new_image_t image;
-    image_init(&image, (arg_img->bpp == 2) ? IMAGE_TYPE_RGB565 : IMAGE_TYPE_GRAYSCALE, arg_img->w, arg_img->h);
-    image.size = arg_img->bpp * arg_img->w * arg_img->h;
-    image.data = arg_img->pixels;
-
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
     // TODO: Need to set fb_alloc trap here to recover from any exception...
     list_t out;
-    imlib_find_qrcodes(&out, &image, &roi);
+    imlib_find_qrcodes(&out, arg_img, &roi);
     mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
 
     for (size_t i = 0; list_size(&out); i++) {

@@ -2913,44 +2913,42 @@ const char *quirc_strerror(quirc_decode_error_t err)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void imlib_find_qrcodes(list_t *out, new_image_t *ptr, rectangle_t *roi)
+void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 {
     struct quirc *controller = quirc_new();
     quirc_resize(controller, roi->w, roi->h);
+    uint8_t *grayscale_image = quirc_begin(controller, NULL, NULL);
 
-    int w, h;
-    uint8_t *grayscale_image = quirc_begin(controller, &w, &h);
-
-    switch(ptr->type) {
-        case IMAGE_TYPE_BINARY: {
-            for (int y = roi->y, yy = roi->y + h; y < yy; y++) {
+    switch(ptr->bpp) {
+        case IMAGE_BPP_BINARY: {
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + w; x < xx; x++) {
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
                     *(grayscale_image++) = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
                 }
             }
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
-            for (int y = roi->y, yy = roi->y + h; y < yy; y++) {
+        case IMAGE_BPP_GRAYSCALE: {
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + w; x < xx; x++) {
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
                     *(grayscale_image++) = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
                 }
             }
             break;
         }
-        case IMAGE_TYPE_RGB565: {
-            for (int y = roi->y, yy = roi->y + h; y < yy; y++) {
+        case IMAGE_BPP_RGB565: {
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + w; x < xx; x++) {
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
                     *(grayscale_image++) = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                 }
             }
             break;
         }
         default: {
-            memset(grayscale_image, 0, w * h);
+            memset(grayscale_image, 0, roi->w * roi->h);
             break;
         }
     }
@@ -2967,7 +2965,7 @@ void imlib_find_qrcodes(list_t *out, new_image_t *ptr, rectangle_t *roi)
             find_qrcodes_list_lnk_data_t lnk_data;
             rectangle_init(&(lnk_data.rect), code->corners[0].x, code->corners[0].y, 0, 0);
 
-            for (size_t k = 1; k < (sizeof(code->corners) / sizeof(code->corners[0])); k++) {
+            for (size_t k = 1, l = (sizeof(code->corners) / sizeof(code->corners[0])); k < l; k++) {
                 rectangle_t temp;
                 rectangle_init(&temp, code->corners[k].x, code->corners[k].y, 0, 0);
                 rectangle_united(&(lnk_data.rect), &temp);

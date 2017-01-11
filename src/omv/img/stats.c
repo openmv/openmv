@@ -5,10 +5,10 @@
 
 #include "imlib.h"
 
-void imlib_get_histogram(histogram_t *out, new_image_t *ptr, rectangle_t *roi)
+void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi)
 {
-    switch(ptr->type) {
-        case IMAGE_TYPE_BINARY: {
+    switch(ptr->bpp) {
+        case IMAGE_BPP_BINARY: {
             memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
 
             float mult = (out->LBinCount - 1) / ((float) (COLOR_BINARY_MAX - COLOR_BINARY_MIN));
@@ -29,7 +29,7 @@ void imlib_get_histogram(histogram_t *out, new_image_t *ptr, rectangle_t *roi)
 
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
+        case IMAGE_BPP_GRAYSCALE: {
             memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
 
             float mult = (out->LBinCount - 1) / ((float) (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN));
@@ -50,7 +50,7 @@ void imlib_get_histogram(histogram_t *out, new_image_t *ptr, rectangle_t *roi)
 
             break;
         }
-        case IMAGE_TYPE_RGB565: {
+        case IMAGE_BPP_RGB565: {
             memset(out->LBins, 0, out->LBinCount * sizeof(uint32_t));
             memset(out->ABins, 0, out->ABinCount * sizeof(uint32_t));
             memset(out->BBins, 0, out->BBinCount * sizeof(uint32_t));
@@ -91,11 +91,11 @@ void imlib_get_histogram(histogram_t *out, new_image_t *ptr, rectangle_t *roi)
     }
 }
 
-void imlib_get_percentile(percentile_t *out, new_image_type_t type, histogram_t *ptr, float percentile)
+void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile)
 {
     memset(out, 0, sizeof(percentile_t));
-    switch(type) {
-        case IMAGE_TYPE_BINARY: {
+    switch(bpp) {
+        case IMAGE_BPP_BINARY: {
             float mult = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) (ptr->LBinCount - 1));
             float median_count = 0;
 
@@ -109,7 +109,7 @@ void imlib_get_percentile(percentile_t *out, new_image_type_t type, histogram_t 
             }
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
+        case IMAGE_BPP_GRAYSCALE: {
             float mult = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) (ptr->LBinCount - 1));
             float median_count = 0;
 
@@ -123,7 +123,7 @@ void imlib_get_percentile(percentile_t *out, new_image_type_t type, histogram_t 
             }
             break;
         }
-        case IMAGE_TYPE_RGB565: {
+        case IMAGE_BPP_RGB565: {
             {
                 float mult = (COLOR_L_MAX - COLOR_L_MIN) / ((float) (ptr->LBinCount - 1));
                 float median_count = 0;
@@ -171,11 +171,11 @@ void imlib_get_percentile(percentile_t *out, new_image_type_t type, histogram_t 
     }
 }
 
-void imlib_get_statistics(statistics_t *out, new_image_type_t type, histogram_t *ptr)
+void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr)
 {
     memset(out, 0, sizeof(statistics_t));
-    switch(type) {
-        case IMAGE_TYPE_BINARY: {
+    switch(bpp) {
+        case IMAGE_BPP_BINARY: {
             float mult = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) (ptr->LBinCount - 1));
 
             float avg = 0;
@@ -224,7 +224,7 @@ void imlib_get_statistics(statistics_t *out, new_image_type_t type, histogram_t 
             out->LSTDev = fast_roundf(fast_sqrtf(stdev - (avg * avg)));
             break;
         }
-        case IMAGE_TYPE_GRAYSCALE: {
+        case IMAGE_BPP_GRAYSCALE: {
             float mult = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) (ptr->LBinCount - 1));
 
             float avg = 0;
@@ -273,7 +273,7 @@ void imlib_get_statistics(statistics_t *out, new_image_type_t type, histogram_t 
             out->LSTDev = fast_roundf(fast_sqrtf(stdev - (avg * avg)));
             break;
         }
-        case IMAGE_TYPE_RGB565: {
+        case IMAGE_BPP_RGB565: {
             {
                 float mult = (COLOR_L_MAX - COLOR_L_MIN) / ((float) (ptr->LBinCount - 1));
 

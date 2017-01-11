@@ -104,18 +104,17 @@ void rectangle_united(rectangle_t *dst, rectangle_t *src)
 // Image Stuff //
 /////////////////
 
-void image_init(new_image_t *ptr, new_image_type_t type, int w, int h)
+void image_init(image_t *ptr, int w, int h, int bpp, void *data)
 {
-    ptr->type = type;
     ptr->w = w;
     ptr->h = h;
-    ptr->size = 0;
-    ptr->data = NULL;
+    ptr->bpp = bpp;
+    ptr->data = data;
 }
 
-void image_copy(new_image_t *dst, new_image_t *src)
+void image_copy(image_t *dst, image_t *src)
 {
-    memcpy(dst, src, sizeof(new_image_t));
+    memcpy(dst, src, sizeof(image_t));
 }
 
 // Gamma uncompress

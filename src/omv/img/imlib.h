@@ -99,7 +99,7 @@ typedef struct rectangle {
 
 void rectangle_init(rectangle_t *ptr, int x, int y, int w, int h);
 void rectangle_copy(rectangle_t *dst, rectangle_t *src);
-bool rectangle_equal(rectangle_t *ptr0, rectangle_t *ptr1);
+bool rectangle_equal_fast(rectangle_t *ptr0, rectangle_t *ptr1);
 bool rectangle_overlap(rectangle_t *ptr0, rectangle_t *ptr1);
 void rectangle_intersected(rectangle_t *dst, rectangle_t *src);
 void rectangle_united(rectangle_t *dst, rectangle_t *src);
@@ -268,27 +268,27 @@ extern const int8_t yuv_table[196608];
 // Image Stuff //
 /////////////////
 
-typedef enum new_image_type
+typedef enum image_bpp
 {
-    IMAGE_TYPE_BINARY,
-    IMAGE_TYPE_GRAYSCALE,
-    IMAGE_TYPE_RGB565,
-    IMAGE_TYPE_JPG
+    IMAGE_BPP_BINARY, // bpp = 0
+    IMAGE_BPP_GRAYSCALE, // bpp = 1
+    IMAGE_BPP_RGB565, // bpp = 2
+    IMAGE_BPP_JPEG // bpp != 0 && bpp != 1 && bpp != 2
 }
-new_image_type_t;
+image_bpp_t;
 
-typedef struct new_image
-{
-    new_image_type_t type;
-    int16_t w;
-    int16_t h;
-    size_t size;
-    void *data;
-}
-new_image_t;
+typedef struct image {
+    int w;
+    int h;
+    int bpp;
+    union {
+        uint8_t *pixels;
+        uint8_t *data;
+    };
+} image_t;
 
-void image_init(new_image_t *ptr, new_image_type_t type, int w, int h);
-void image_copy(new_image_t *dst, new_image_t *src);
+void image_init(image_t *ptr, int w, int h, int bpp, void *data);
+void image_copy(image_t *dst, image_t *src);
 
 #define IMAGE_GET_BINARY_PIXEL(image, x, y) \
 ({ \
@@ -722,16 +722,6 @@ typedef struct simple_color {
 }
 simple_color_t;
 
-typedef struct image {
-    int w;
-    int h;
-    int bpp;
-    union {
-        uint8_t *pixels;
-        uint8_t *data;
-    };
-} image_t;
-
 typedef struct integral_image {
     int w;
     int h;
@@ -1069,15 +1059,15 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 // Lens correction
 void imlib_lens_corr(image_t *src, float strength);
 
-// Stats
-void imlib_get_histogram(histogram_t *out, new_image_t *ptr, rectangle_t *roi);
-void imlib_get_percentile(percentile_t *out, new_image_type_t type, histogram_t *ptr, float percentile);
-void imlib_get_statistics(statistics_t *out, new_image_type_t type, histogram_t *ptr);
+// Statistics
+void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi);
+void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
+void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr);
 // Color Tracking
-void imlib_find_blobs(list_t *out, new_image_t *ptr, rectangle_t *roi,
+void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                       bool merge, int margin);
-// Codes
-void imlib_find_qrcodes(list_t *out, new_image_t *ptr, rectangle_t *roi);
+// 1/2D Bar Codes
+void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 
 #endif //__IMLIB_H__
