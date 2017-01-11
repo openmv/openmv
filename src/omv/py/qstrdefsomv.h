@@ -375,6 +375,8 @@ Q(b_uq)
 
 // Find Blobs
 Q(find_blobs)
+Q(x_stride)
+Q(y_stride)
 Q(area_threshold)
 Q(pixels_threshold)
 Q(merge)

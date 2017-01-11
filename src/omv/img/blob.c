@@ -11,16 +11,16 @@ typedef struct xylf
 }
 xylf_t;
 
-void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi,
+void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                      list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                      bool merge, int margin)
 {
     bitmap_t bitmap; // Same size as the image so we don't have to translate.
     bitmap_alloc(&bitmap, ptr->w * ptr->h);
 
-    size_t lifo_len = (roi->w * 2) + (roi->h * 2); // Use the perimeter as the flood fill max depth.
     lifo_t lifo;
-    lifo_alloc(&lifo, lifo_len, sizeof(xylf_t));
+    size_t lifo_len;
+    lifo_alloc_all(&lifo, &lifo_len, sizeof(xylf_t));
 
     list_init(out, sizeof(find_blobs_list_lnk_data_t));
 
@@ -31,10 +31,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi,
 
         switch(ptr->bpp) {
             case IMAGE_BPP_BINARY: {
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                     size_t row_index = BITMAP_COMPUTE_ROW_INDEX(ptr, y);
-                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                         if ((!bitmap_bit_get(&bitmap, BITMAP_COMPUTE_INDEX(row_index, x)))
                         && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
@@ -201,10 +201,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi,
                 break;
             }
             case IMAGE_BPP_GRAYSCALE: {
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                     size_t row_index = BITMAP_COMPUTE_ROW_INDEX(ptr, y);
-                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                         if ((!bitmap_bit_get(&bitmap, BITMAP_COMPUTE_INDEX(row_index, x)))
                         && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
@@ -371,10 +371,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi,
                 break;
             }
             case IMAGE_BPP_RGB565: {
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
                     uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                     size_t row_index = BITMAP_COMPUTE_ROW_INDEX(ptr, y);
-                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                         if ((!bitmap_bit_get(&bitmap, BITMAP_COMPUTE_INDEX(row_index, x)))
                         && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
