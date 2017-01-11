@@ -837,9 +837,11 @@ static void flood_fill_seed(struct quirc *q, int x, int y, int from, int to,
                             span_func_t func, void *user_data,
                             int depth)
 {
-    size_t lifo_len = (q->w * 2) + (q->h * 2); // Use the perimeter as the flood fill max depth.
+    (void) depth; // unused
+
     lifo_t lifo;
-    lifo_alloc(&lifo, lifo_len, sizeof(xylf_t));
+    size_t lifo_len;
+    lifo_alloc_all(&lifo, &lifo_len, sizeof(xylf_t));
 
     for(;;) {
         int left = x;

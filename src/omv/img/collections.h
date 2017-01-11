@@ -39,6 +39,7 @@ typedef struct lifo
 lifo_t;
 
 void lifo_alloc(lifo_t *ptr, size_t size, size_t data_len);
+void lifo_alloc_all(lifo_t *ptr, size_t *size, size_t data_len);
 void lifo_free(lifo_t *ptr);
 void lifo_clear(lifo_t *ptr);
 size_t lifo_size(lifo_t *ptr);
@@ -61,6 +62,7 @@ typedef struct fifo
 fifo_t;
 
 void fifo_alloc(fifo_t *ptr, size_t size, size_t data_len);
+void fifo_alloc_all(fifo_t *ptr, size_t *size, size_t data_len);
 void fifo_free(fifo_t *ptr);
 void fifo_clear(fifo_t *ptr);
 size_t fifo_size(fifo_t *ptr);
