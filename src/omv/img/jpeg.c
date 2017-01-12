@@ -185,7 +185,7 @@ static const uint16_t UVAC_HT[256][2] = {
 
 static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
 {
-    if (jpeg_buf->idx == jpeg_buf->length) {
+    if ((jpeg_buf->idx+1) >= jpeg_buf->length) {
         if (jpeg_buf->realloc == false) {
             // Can't realloc buffer
             jpeg_buf->overflow = true;
@@ -200,7 +200,7 @@ static void jpeg_put_char(jpeg_buf_t *jpeg_buf, char c)
 
 static void jpeg_put_bytes(jpeg_buf_t *jpeg_buf, const void *data, int size)
 {
-    if (jpeg_buf->idx+size >= jpeg_buf->length) {
+    if ((jpeg_buf->idx+size) >= jpeg_buf->length) {
         if (jpeg_buf->realloc == false) {
             // Can't realloc buffer
             jpeg_buf->overflow = true;
