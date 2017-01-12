@@ -491,8 +491,8 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
         int cx = kp->x;
         int cy = kp->y;
         int size = arg_s/2;
-        float si = sin_table[kp->angle] * size;
-        float co = cos_table[kp->angle] * size;
+        int si = (int) (sin_table[kp->angle] * size);
+        int co = (int) (cos_table[kp->angle] * size);
         imlib_draw_line(arg_img, cx, cy, cx+co, cy+si, arg_c);
         imlib_draw_circle(arg_img, cx, cy, size, arg_c);
     }
