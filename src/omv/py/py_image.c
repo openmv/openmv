@@ -2688,15 +2688,18 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
             PY_ASSERT_TYPE(kpts2, &py_kp_type);
             PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
-            int t=0;        // Estimated angle of rotation
-            point_t c;      // Centroid
-            rectangle_t r;  // Bounding rectangle
+            int t = 0;          // Estimated angle of rotation
+            int match = 0;      // Number of matches
+            point_t c = {0};    // Centroid
+            rectangle_t r = {0};// Bounding rectangle
 
-            // Match the two keypoint sets
-            int match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c, &t);
+            if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
+                // Match the two keypoint sets
+                match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c, &t);
 
-            if (filter_outliers == true) {
-                match = orb_filter_keypoints(kpts2->kpts, &r, &c);
+                if (filter_outliers == true) {
+                    match = orb_filter_keypoints(kpts2->kpts, &r, &c);
+                }
             }
 
             mp_obj_t ret_obj[8] = {
