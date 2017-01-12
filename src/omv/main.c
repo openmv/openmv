@@ -296,6 +296,10 @@ int main(void)
     int sensor_init_ret = 0;
     bool first_soft_reset = true;
 
+    // Uncomment to disable write buffer to get precise faults.
+    // NOTE: Cache should be disabled on M7.
+    //SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
+
     // STM32F4xx HAL library initialization:
     //  - Set NVIC Group Priority to 4
     //  - Configure the Flash prefetch, instruction and Data caches
