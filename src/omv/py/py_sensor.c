@@ -147,13 +147,25 @@ static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
 }
 
 static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj) {
+    mp_uint_t array_len;
     mp_obj_t *array;
-    mp_obj_get_array_fixed_n(roi_obj, 4, &array);
+    mp_obj_get_array(roi_obj, &array_len, &array);
+    int x, y, w, h;
 
-    int x = mp_obj_get_int(array[0]);
-    int y = mp_obj_get_int(array[1]);
-    int w = mp_obj_get_int(array[2]);
-    int h = mp_obj_get_int(array[3]);
+    if (array_len == 4) {
+        x = mp_obj_get_int(array[0]);
+        y = mp_obj_get_int(array[1]);
+        w = mp_obj_get_int(array[2]);
+        h = mp_obj_get_int(array[3]);
+    } else if (array_len == 2) {
+        w = mp_obj_get_int(array[0]);
+        h = mp_obj_get_int(array[1]);
+        x = (resolution[sensor.framesize][0] / 2) - (w / 2);
+        y = (resolution[sensor.framesize][1] / 2) - (h / 2);
+    } else {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+            "tuple/list must either be (x, y, w, h) or (w, h)"));
+    }
 
     if (sensor_set_windowing(x, y, w, h) != 0) {
         return mp_const_false;
