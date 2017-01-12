@@ -40,8 +40,8 @@
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_2)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
-// JPEG buffer size
-#define OMV_JPEG_BUF_SIZE       (64*1024)
+// JPEG buffer size (header + data)
+#define OMV_JPEG_BUF_SIZE       (23000)
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
