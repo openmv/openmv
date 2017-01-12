@@ -546,10 +546,15 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
             cy += y = min_kp->y;
             rectangle_expand(r, x, y);
             int angle = (int) abs(min_kp->angle-kp1->angle);
-            if (angle >= 0 && angle <= 360) {
+            if (angle >= 0 && angle < 360) {
                 angles[angle]++;
             }
         }
+    }
+
+    if (matches == 0) {
+        r->x = r->y = 0;
+        return 0;
     }
 
     // Fix centroid x/y
