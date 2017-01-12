@@ -63,21 +63,21 @@ ENTRY(Reset_Handler)
 
 #elif defined(OPENMV3)
     #define FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
-    #define MAIN_MEMORY     SRAM2   // data, bss, stack and heap
+    #define MAIN_MEMORY     CCM     // data, bss, stack and heap
     #define DMA_MEMORY      CCM     // Misc DMA buffers
 
     #define FB_SIZE         (301K)  // FB memory: header + VGA/GS image
-    #define FB_ALLOC_SIZE   (14K)   // minimum fb alloc size
+    #define FB_ALLOC_SIZE   (83K)   // minimum fb alloc size
 
     #define STACK_SIZE      (4K)
-    #define HEAP_SIZE       (58K)
+    #define HEAP_SIZE       (56K)
 
     #define LINE_BUF_SIZE   (3K)    // Image line buffer round(640 * 2BPP * 2 buffers).
     #define MSC_BUF_SIZE    (2K)    // USB MSC bot data
     #define VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
     #define FFS_BUF_SIZE    (32K)   // Flash filesystem cache
     // TODO Set OMV_JPEG_BUF_SIZE if you change this
-    #define JPEG_BUF_SIZE   (64K)   // IDE JPEG buffer
+    #define JPEG_BUF_SIZE   (23K)   // IDE JPEG buffer
 
     #define FLASH_ORIGIN    0x08000000
     #define FLASH_LENGTH    2048K
@@ -90,10 +90,10 @@ ENTRY(Reset_Handler)
     #define CCM_LENGTH      128K
 
     #define SRAM1_ORIGIN    0x20020000
-    #define SRAM1_LENGTH    315K
+    #define SRAM1_LENGTH    368K
 
-    #define SRAM2_ORIGIN    0x2006EC00
-    #define SRAM2_LENGTH    69K
+    #define SRAM2_ORIGIN    0x2007C000
+    #define SRAM2_LENGTH    16K
 #endif
 
 /* Specify the memory areas */
@@ -136,6 +136,34 @@ SECTIONS
 
   /* used by the startup to initialize data */
   _sidata = .;
+
+  /* Non-cacheable DMA buffers */
+  .dma_buffers (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _line_buf = .; // Image line buffer.
+    . = . + LINE_BUF_SIZE;
+
+    . = ALIGN(4);
+    _msc_buf  = .; // USB MSC bot data (2K)
+    . = . + MSC_BUF_SIZE;
+
+    . = ALIGN(4);
+    _vfs_buf  = .; // VFS sturct + FATFS file buffer  (around 624 bytes)
+    . = . + VFS_BUF_SIZE;
+
+    . = ALIGN(4);
+    _ffs_cache = .; // Flash filesystem cache
+    . = . + FFS_BUF_SIZE;
+
+    . = ALIGN(4);
+    _jpeg_buf = .; // IDE JPEG buffer
+    . = . + JPEG_BUF_SIZE;
+
+    . = ALIGN(4);
+    *(.dma_buffer)
+
+  } >DMA_MEMORY
 
   /* Initialized data sections goes into ram, load LMA copy after code */
   .data : AT ( _sidata )
@@ -184,34 +212,6 @@ SECTIONS
     . = . + _stack_size;
     . = ALIGN(4);
   } >MAIN_MEMORY
-
-  /* Non-cacheable DMA buffers */
-  .dma_buffers (NOLOAD) :
-  {
-    . = ALIGN(4);
-    _line_buf = .; // Image line buffer.
-    . = . + LINE_BUF_SIZE;
-
-    . = ALIGN(4);
-    _msc_buf  = .; // USB MSC bot data (2K)
-    . = . + MSC_BUF_SIZE;
- 
-    . = ALIGN(4);
-    _vfs_buf  = .; // VFS sturct + FATFS file buffer  (around 624 bytes)
-    . = . + VFS_BUF_SIZE;
- 
-    . = ALIGN(4);
-    _ffs_cache = .; // Flash filesystem cache
-    . = . + FFS_BUF_SIZE;
- 
-    . = ALIGN(4);
-    _jpeg_buf = .; // IDE JPEG buffer
-    . = . + JPEG_BUF_SIZE;
-
-    . = ALIGN(4);
-    *(.dma_buffer)
-
-  } >DMA_MEMORY
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
