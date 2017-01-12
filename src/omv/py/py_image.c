@@ -225,45 +225,44 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     return mp_const_none;
 }
 
-// TODO fix FB_JPEG_OFFS_SIZE
 static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
-
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
-    arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
+    PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
 
-    // Check if this image is the one in the frame buffer...
-    if (fb->pixels == arg_img->pixels) {
-        // We do not allow shallow copies so this is okay...
-        image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,  .pixels=fb->pixels};
-        image_t dst = {.w=fb->w, .h=fb->h, .bpp=128*1024, .pixels=fb->pixels+FB_JPEG_OFFS_SIZE};
-        jpeg_compress(&src, &dst, arg_q, false);
-        fb->bpp = dst.bpp;
-        arg_img->bpp = dst.bpp;
-        arg_img->pixels = dst.pixels;
-    } else {
-        // Use fb_alloc to compress and then copy image over into old image...
-        uint32_t size;
-        uint8_t *buffer = fb_alloc_all(&size);
-        image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .pixels=buffer };
-        // When jpeg_compress needs more memory than in currently allocated it
-        // will try to realloc. MP will detect that the pointer is outside of
-        // the heap and return NULL which will cause an out of memory error.
-        jpeg_compress(arg_img, &out, arg_q, true);
-        if (out.bpp <= (arg_img->w * arg_img->h * arg_img->bpp)) {
-            memcpy(arg_img->pixels, out.pixels, out.bpp);
-            arg_img->bpp = out.bpp;
-        } else {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Won't fit!"));
+    // TODO: Need to set fb_alloc trap here to recover from any exception...
+
+    uint32_t size;
+    uint8_t *buffer = fb_alloc_all(&size);
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
+    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
+
+    switch(arg_img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            PY_ASSERT_TRUE_MSG(out.bpp <= (((arg_img->w * arg_img->h) + UINT32_T_MASK) >> UINT32_T_SHIFT), "Can't compress in place!");
+            break;
         }
-        fb_free();
-        // Double check this was not the fb.
-        // (happens in non-JPEG mode)...
-        if (fb->pixels == arg_img->pixels) {
-            fb->bpp = arg_img->bpp;
+        case IMAGE_BPP_GRAYSCALE: {
+            PY_ASSERT_TRUE_MSG(out.bpp <= ((arg_img->w * arg_img->h) * sizeof(uint8_t)), "Can't compress in place!");
+            break;
         }
+        case IMAGE_BPP_RGB565: {
+            PY_ASSERT_TRUE_MSG(out.bpp <= ((arg_img->w * arg_img->h) * sizeof(uint16_t)), "Can't compress in place!");
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    memcpy(arg_img->data, out.data, out.bpp);
+    arg_img->bpp = out.bpp;
+    fb_free();
+
+    if (fb->pixels == arg_img->data) {
+        fb->bpp = arg_img->bpp;
     }
 
     return mp_const_none;
@@ -273,24 +272,18 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
-
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
-    arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
+    PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
 
-    // We use fb_alloc here versus xalloc to avoid huge memory hole issues while
-    // JPEG compression is running. We don't want to try to compress using the
-    // heap because of the massive memory requirement until we are done...
+     // TODO: Need to set fb_alloc trap here to recover from any exception...
 
     uint32_t size;
     uint8_t *buffer = fb_alloc_all(&size);
-    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .pixels=buffer };
-    // When jpeg_compress needs more memory than in currently allocated it
-    // will try to realloc. MP will detect that the pointer is outside of
-    // the heap and return NULL which will cause an out of memory error.
-    jpeg_compress(arg_img, &out, arg_q, false);
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
+    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     uint8_t *temp = xalloc(out.bpp);
-    memcpy(temp, out.pixels, out.bpp);
-    out.pixels = temp;
+    memcpy(temp, out.data, out.bpp);
+    out.data = temp;
     fb_free();
 
     return py_image_from_struct(&out);
