@@ -229,19 +229,23 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
+
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
-
-    // TODO: Need to set fb_alloc trap here to recover from any exception...
 
     uint32_t size;
     uint8_t *buffer = fb_alloc_all(&size);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
-    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
+
+    if (jpeg_compress(arg_img, &out, arg_q, false)) { // JPEG overflow
+        fb_free();
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!!"));
+    }
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG(out.bpp <= (((arg_img->w * arg_img->h) + UINT32_T_MASK) >> UINT32_T_SHIFT), "Can't compress in place!");
+            PY_ASSERT_TRUE_MSG(out.bpp <= (((arg_img->w * arg_img->h)
+                            + UINT32_T_MASK) >> UINT32_T_SHIFT), "Can't compress in place!");
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -272,16 +276,25 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
+
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
-
-     // TODO: Need to set fb_alloc trap here to recover from any exception...
 
     uint32_t size;
     uint8_t *buffer = fb_alloc_all(&size);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
-    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    uint8_t *temp = xalloc(out.bpp);
+
+    if (jpeg_compress(arg_img, &out, arg_q, false)) { // JPEG overflow
+        fb_free();
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!!"));
+    }
+
+    uint8_t *temp = xalloc_try_alloc(out.bpp);
+    if (temp == NULL) {
+        fb_free();
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!!"));
+    }
+
     memcpy(temp, out.data, out.bpp);
     out.data = temp;
     fb_free();
