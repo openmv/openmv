@@ -448,8 +448,8 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
                 kpt->desc[i] = (uint8_t) val;
             }
 
-            kpt->x = (int)(kpt->x * scale);
-            kpt->y = (int)(kpt->y * scale);
+            kpt->x = (int)floorf(kpt->x * scale);
+            kpt->y = (int)floorf(kpt->y * scale);
         }
 
         // Free current scale
