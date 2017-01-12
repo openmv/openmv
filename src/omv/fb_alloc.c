@@ -30,6 +30,31 @@ uint32_t fb_avail()
     return (temp < sizeof(uint32_t)) ? 0 : temp;
 }
 
+void fb_alloc_mark()
+{
+    char *new_pointer = pointer - sizeof(uint32_t);
+
+    // Check if allocation overwrites the framebuffer pixels
+    if (new_pointer < (char *) FB_PIXELS()) {
+        fb_alloc_fail();
+    }
+
+    // fb_alloc does not allow regions which are a size of 0 to be alloced,
+    // meaning that the value below is always 8 or more but never 4. So,
+    // we will use a size value of 4 as a marker in the alloc stack.
+    *((uint32_t *) new_pointer) = sizeof(uint32_t); // Save size.
+    pointer = new_pointer;
+}
+
+void fb_alloc_free_till_mark()
+{
+    while (pointer < &_fballoc) {
+        int size = *((uint32_t *) pointer);
+        pointer += size; // Get size and pop.
+        if (size == sizeof(uint32_t)) break; // Break on first marker.
+    }
+}
+
 // returns null pointer without error if size==0
 void *fb_alloc(uint32_t size)
 {
@@ -46,6 +71,7 @@ void *fb_alloc(uint32_t size)
         fb_alloc_fail();
     }
 
+    // size is always 4/8/12/etc. so the value below must be 8 or more.
     *((uint32_t *) new_pointer) = size + sizeof(uint32_t); // Save size.
     pointer = new_pointer;
     return result;
@@ -72,6 +98,7 @@ void *fb_alloc_all(uint32_t *size)
     char *result = pointer - *size;
     char *new_pointer = result - sizeof(uint32_t);
 
+    // size is always 4/8/12/etc. so the value below must be 8 or more.
     *((uint32_t *) new_pointer) = *size + sizeof(uint32_t); // Save size.
     pointer = new_pointer;
     return result;
