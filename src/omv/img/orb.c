@@ -367,10 +367,10 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
         };
  
         // Add patch size to ROI
-        roi_scaled.x = (int) roundf(roi->x/scale) + (PATCH_SIZE/2);
-        roi_scaled.y = (int) roundf(roi->y/scale) + (PATCH_SIZE/2);
-        roi_scaled.w = (int) roundf(roi->w/scale) - (PATCH_SIZE);
-        roi_scaled.h = (int) roundf(roi->h/scale) - (PATCH_SIZE);
+        roi_scaled.x = (int) roundf(roi->x/scale) + (PATCH_SIZE);
+        roi_scaled.y = (int) roundf(roi->y/scale) + (PATCH_SIZE);
+        roi_scaled.w = (int) roundf(roi->w/scale) - (PATCH_SIZE*2);
+        roi_scaled.h = (int) roundf(roi->h/scale) - (PATCH_SIZE*2);
 
         if (roi_scaled.w <= (PATCH_SIZE*2) ||
             roi_scaled.h <= (PATCH_SIZE*2)) {
