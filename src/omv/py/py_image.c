@@ -2573,13 +2573,21 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     FIL fp;
+    UINT bytes;
     FRESULT res;
 
+    uint32_t desc_type;
     mp_obj_t desc = mp_const_none;
-    descriptor_t desc_type = mp_obj_get_int(args[0]);
-    const char *path = mp_obj_str_get_str(args[1]);
+    const char *path = mp_obj_str_get_str(args[0]);
 
     if ((res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING)) == FR_OK) {
+        // Read descriptor type
+        res = f_read(&fp, &desc_type, sizeof(desc_type), &bytes);
+        if (res != FR_OK || bytes  != sizeof(desc_type)) {
+            goto error;
+        }
+
+        // Load descriptor
         switch (desc_type) {
             case DESC_LBP: {
                 py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
@@ -2613,6 +2621,7 @@ mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
         f_close(&fp);
     }
 
+error:
     // File open or write error
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
@@ -2628,30 +2637,46 @@ mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
 mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     FIL fp;
+    UINT bytes;
     FRESULT res;
 
-    descriptor_t desc_type = mp_obj_get_int(args[0]);
+    uint32_t desc_type;
     const char *path = mp_obj_str_get_str(args[1]);
 
     if ((res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
+        // Find descriptor type
+        mp_obj_type_t *desc_obj_type = mp_obj_get_type(args[0]);
+        if (desc_obj_type ==  &py_lbp_type) {
+            desc_type = DESC_LBP;
+        } else if (desc_obj_type ==  &py_kp_type) {
+            desc_type = DESC_ORB;
+        }
+
+        // Write descriptor type
+        res = f_write(&fp, &desc_type, sizeof(desc_type), &bytes);
+        if (res != FR_OK || bytes  !=  sizeof(desc_type)) {
+            goto error;
+        }
+
+        // Write descriptor
         switch (desc_type) {
             case DESC_LBP: {
-                py_lbp_obj_t *lbp = ((py_lbp_obj_t*)args[2]);
+                py_lbp_obj_t *lbp = ((py_lbp_obj_t*)args[0]);
                 res = imlib_lbp_desc_save(&fp, lbp->hist);
                 break;
             }
 
             case DESC_ORB: {
-                py_kp_obj_t *kpts = ((py_kp_obj_t*)args[2]);
+                py_kp_obj_t *kpts = ((py_kp_obj_t*)args[0]);
                 res = orb_save_descriptor(&fp, kpts->kpts);
                 break;
             }
         }
         // ignore unsupported descriptors when saving
-
         f_close(&fp);
     }
 
+error:
     // File open or read error
     if (res != FR_OK) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
@@ -2662,59 +2687,60 @@ mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
 static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     mp_obj_t match_obj = mp_const_none;
-    descriptor_t desc_type = mp_obj_get_int(args[0]);
+    mp_obj_type_t *desc1_type = mp_obj_get_type(args[0]);
+    mp_obj_type_t *desc2_type = mp_obj_get_type(args[1]);
+    PY_ASSERT_TRUE_MSG((desc1_type == desc2_type), "Descriptors have different types!");
 
-    switch (desc_type) {
-        case DESC_LBP: {
-            py_lbp_obj_t *lbp1 = ((py_lbp_obj_t*)args[1]);
-            py_lbp_obj_t *lbp2 = ((py_lbp_obj_t*)args[2]);
+    if (desc1_type ==  &py_lbp_type) {
+        py_lbp_obj_t *lbp1 = ((py_lbp_obj_t*)args[0]);
+        py_lbp_obj_t *lbp2 = ((py_lbp_obj_t*)args[1]);
 
-            // Sanity checks
-            PY_ASSERT_TYPE(lbp1, &py_lbp_type);
-            PY_ASSERT_TYPE(lbp2, &py_lbp_type);
+        // Sanity checks
+        PY_ASSERT_TYPE(lbp1, &py_lbp_type);
+        PY_ASSERT_TYPE(lbp2, &py_lbp_type);
 
-            match_obj = mp_obj_new_int(imlib_lbp_desc_distance(lbp1->hist, lbp2->hist));
-            break;
-        }
+        // Match descriptors
+        match_obj = mp_obj_new_int(imlib_lbp_desc_distance(lbp1->hist, lbp2->hist));
+    } else if (desc1_type == &py_kp_type) {
+        py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[0]);
+        py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[1]);
+        int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 85);
+        int filter_outliers = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_filter_outliers), false);
 
-        case DESC_ORB: {
-            py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[1]);
-            py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[2]);
-            int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 85);
-            int filter_outliers = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_filter_outliers), false);
+        // Sanity checks
+        PY_ASSERT_TYPE(kpts1, &py_kp_type);
+        PY_ASSERT_TYPE(kpts2, &py_kp_type);
+        PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
-            // Sanity checks
-            PY_ASSERT_TYPE(kpts1, &py_kp_type);
-            PY_ASSERT_TYPE(kpts2, &py_kp_type);
-            PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
+        int t = 0;          // Estimated angle of rotation
+        int match = 0;      // Number of matches
+        point_t c = {0};    // Centroid
+        rectangle_t r = {0};// Bounding rectangle
 
-            int t = 0;          // Estimated angle of rotation
-            int match = 0;      // Number of matches
-            point_t c = {0};    // Centroid
-            rectangle_t r = {0};// Bounding rectangle
+        if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
+            // Match the two keypoint sets
+            match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c, &t);
 
-            if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
-                // Match the two keypoint sets
-                match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c, &t);
-
-                if (filter_outliers == true) {
-                    match = orb_filter_keypoints(kpts2->kpts, &r, &c);
-                }
+            if (filter_outliers == true) {
+                match = orb_filter_keypoints(kpts2->kpts, &r, &c);
             }
-
-            mp_obj_t ret_obj[8] = {
-                mp_obj_new_int(c.x),
-                mp_obj_new_int(c.y),
-                mp_obj_new_int(r.x),
-                mp_obj_new_int(r.y),
-                mp_obj_new_int(r.w),
-                mp_obj_new_int(r.h),
-                mp_obj_new_int(match),
-                mp_obj_new_int(t)
-            };
-            match_obj = mp_obj_new_tuple(8, ret_obj);
         }
+
+        mp_obj_t ret_obj[8] = {
+            mp_obj_new_int(c.x),
+            mp_obj_new_int(c.y),
+            mp_obj_new_int(r.x),
+            mp_obj_new_int(r.y),
+            mp_obj_new_int(r.w),
+            mp_obj_new_int(r.h),
+            mp_obj_new_int(match),
+            mp_obj_new_int(t)
+        };
+        match_obj = mp_obj_new_tuple(8, ret_obj);
+    } else {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
     }
+
 
     return match_obj;
 }
@@ -2749,13 +2775,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_grayscale_to_rgb_obj, py_image_graysca
 /* Image Module Functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_image_obj, 1, py_image_load_image);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 2, py_image_load_descriptor);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 3, py_image_save_descriptor);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 3, py_image_match_descriptor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_descriptor_obj, 1, py_image_load_descriptor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 2, py_image_save_descriptor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 2, py_image_match_descriptor);
 static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_LBP),                 MP_OBJ_NEW_SMALL_INT(DESC_LBP)},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_ORB),                 MP_OBJ_NEW_SMALL_INT(DESC_ORB)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_EX),           MP_OBJ_NEW_SMALL_INT(SEARCH_EX)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_SEARCH_DS),           MP_OBJ_NEW_SMALL_INT(SEARCH_DS)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_EDGE_CANNY),          MP_OBJ_NEW_SMALL_INT(EDGE_CANNY)},
