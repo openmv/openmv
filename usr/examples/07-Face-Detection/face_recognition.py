@@ -21,5 +21,5 @@ for s in range(1, NUM_SUBJECTS+1):
     for i in range(2, NUM_SUBJECTS_IMGS+1):
         img = image.Image("orl_faces/s%d/%d.pgm"%(s, i)).mask_ellipse()
         d1 = img.find_lbp((0, 0, img.width(), img.height()))
-        dist += image.match_descriptor(image.LBP, d0, d1)
+        dist += image.match_descriptor(d0, d1)
     print("Average dist for subject %d: %d"%(s, dist/NUM_SUBJECTS_IMGS))

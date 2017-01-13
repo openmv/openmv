@@ -61,7 +61,7 @@ while (True):
 
     if (kpts2):
         # Match the first set of keypoints with the second one
-        c=image.match_descriptor(image.ORB, kpts1, kpts2)
+        c=image.match_descriptor(kpts1, kpts2)
         match = c[6] # C[6] contains the number of matches.
         if (match>5):
             img.draw_rectangle(c[2:6])

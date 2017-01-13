@@ -23,7 +23,7 @@ img = sensor.snapshot()
 # NOTE: See the docs for other arguments
 kpts = img.find_keypoints(scale_factor=1.2)
 
-image.save_descriptor(image.ORB, "/%s.orb"%(FILE_NAME), kpts)
+image.save_descriptor(kpts, "/%s.orb"%(FILE_NAME))
 img.save("/%s.pgm"%(FILE_NAME))
 
 img.draw_keypoints(kpts)

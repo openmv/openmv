@@ -31,7 +31,7 @@ for i in range(0, 30):
     img.draw_string(0, 0, "Please wait...")
 
 d0 = None
-#d0 = image.load_descriptor(image.LBP, "/desc.lbp")
+#d0 = image.load_descriptor("/desc.lbp")
 clock = time.clock()
 
 while (True):
@@ -45,7 +45,7 @@ while (True):
         if (d0 == None):
             d0 = d1
         else:
-            dist = image.match_descriptor(image.LBP, d0, d1)
+            dist = image.match_descriptor(d0, d1)
             img.draw_string(0, 10, "Match %d%%"%(dist))
 
         img.draw_rectangle(face)

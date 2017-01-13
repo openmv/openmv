@@ -24,7 +24,7 @@ def draw_keypoints(img, kpts):
 
 kpts1 = None
 # NOTE: uncomment to load a keypoints descriptor from file
-#kpts1 = image.load_descriptor(image.ORB, "/desc.orb")
+#kpts1 = image.load_descriptor("/desc.orb")
 #img = sensor.snapshot()
 #draw_keypoints(img, kpts1)
 
@@ -39,7 +39,7 @@ while (True):
         kpts1 = kpts2
         draw_keypoints(img, kpts1)
     elif kpts2:
-        c = image.match_descriptor(image.ORB, kpts1, kpts2, threshold=85)
+        c = image.match_descriptor(kpts1, kpts2, threshold=85)
         match = c[6] # C[6] contains the number of matches.
         if (match>5):
             img.draw_rectangle(c[2:6])
