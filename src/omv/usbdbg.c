@@ -51,6 +51,11 @@ vstr_t *usbdbg_get_script()
     return &script_buf;
 }
 
+void usbdbg_set_script_running(bool running)
+{
+    script_running = running;
+}
+
 inline void usbdbg_set_irq_enabled(bool enabled)
 {
     if (enabled) {

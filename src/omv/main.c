@@ -464,10 +464,19 @@ soft_reset:
     if (first_soft_reset && f_res == FR_OK) {
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
+            // Enable IDE interrupt
+            usbdbg_set_irq_enabled(true);
+            // Allow the IDE to interrupt main.py
+            usbdbg_set_script_running(true);
+
             // Parse, compile and execute the main script.
             pyexec_file("main.py");
             nlr_pop();
         } else {
+            // Disable IDE interrupt and clear script running
+            usbdbg_set_irq_enabled(false);
+            usbdbg_set_script_running(false);
+
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
             if (nlr_push(&nlr) == 0) {
                 flash_error(3);
@@ -475,6 +484,10 @@ soft_reset:
             }// if this gets interrupted again ignore it.
         }
     }
+
+    // Disable IDE interrupt and clear script running
+    usbdbg_set_irq_enabled(false);
+    usbdbg_set_script_running(false);
 
     // If there's no script ready, just re-exec REPL
     while (!usbdbg_script_ready()) {
