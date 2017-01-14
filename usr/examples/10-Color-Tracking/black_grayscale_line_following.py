@@ -1,7 +1,7 @@
-# Line Following Example
+# Black Grayscale Line Following Example
 #
 # Making a line following robot requires a lot of effort. This example script
-# shows how to do the computer vision part of the line following robot. You
+# shows how to do the machine vision part of the line following robot. You
 # can use the output from this script to drive a differential drive robot to
 # follow a line. This script just generates a single turn value that tells
 # your robot to go left or right.
@@ -12,8 +12,8 @@
 
 import sensor, image, time, math
 
-# Tracks a white line. Use [(0, 64)] for a tracking a black line.
-GRAYSCALE_THRESHOLD = [(128, 255)]
+# Tracks a black line. Use [(128, 255)] for a tracking a white line.
+GRAYSCALE_THRESHOLD = [(0, 64)]
 
 # Each roi is (x, y, w, h). The line detection algorithm will try to find the
 # centroid of the largest blob in each roi. The x position of the centroids
@@ -25,16 +25,17 @@ ROIS = [ # [ROI, weight]
         (0, 000, 160, 20, 0.1)
        ]
 
-# Compute the weight divisor
+# Compute the weight divisor (we're computing this so you don't have to make weights add to 1).
 weight_sum = 0
-for r in ROIS: weight_sum += r[4]
+for r in ROIS: weight_sum += r[4] # r[4] is the roi weight.
 
 # Camera setup...
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # use grayscale.
 sensor.set_framesize(sensor.QQVGA) # use QQVGA for speed.
-sensor.skip_frames(10) # Let new settings take affect.
-sensor.set_auto_whitebal(False) # turn this off.
+sensor.skip_frames(30) # Let new settings take affect.
+sensor.set_auto_gain(False) # must be turned off for color tracking
+sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock() # Tracks FPS.
 
 while(True):
@@ -43,23 +44,22 @@ while(True):
 
     centroid_sum = 0
     for r in ROIS:
-        merged_blobs = img.find_blobs(GRAYSCALE_THRESHOLD, roi=r[0:4], merge=True) # r[0:4] is roi tuple.
-        if merged_blobs:
+        blobs = img.find_blobs(GRAYSCALE_THRESHOLD, roi=r[0:4], merge=True) # r[0:4] is roi tuple.
+        if blobs:
             # Find the index of the blob with the most pixels.
             most_pixels = 0
             largest_blob = 0
-            for i in range(len(merged_blobs)):
-                if merged_blobs[i][4] > most_pixels:
-                    most_pixels = merged_blobs[i][4] # [4] is pixels.
+            for i in range(len(blobs)):
+                if blobs[i].pixels() > most_pixels:
+                    most_pixels = blobs[i].pixels()
                     largest_blob = i
 
             # Draw a rect around the blob.
-            img.draw_rectangle(merged_blobs[largest_blob][0:4]) # rect
-            img.draw_cross(merged_blobs[largest_blob][5], # cx
-                           merged_blobs[largest_blob][6]) # cy
+            img.draw_rectangle(blobs[largest_blob].rect())
+            img.draw_cross(blobs[largest_blob].cx(),
+                           blobs[largest_blob].cy())
 
-            # [5] of the blob is the x centroid - r[4] is the weight.
-            centroid_sum += merged_blobs[largest_blob][5] * r[4]
+            centroid_sum += blobs[largest_blob].cx() * r[4] # r[4] is the roi weight.
 
     center_pos = (centroid_sum / weight_sum) # Determine center of line.
 
