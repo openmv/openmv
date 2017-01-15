@@ -21,7 +21,7 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi)
                 }
             }
 
-            float pixels = 1 / (roi->w * roi->h);
+            float pixels = 1 / ((float) (roi->w * roi->h));
 
             for (int i = 0, j = out->LBinCount; i < j; i++) {
                 out->LBins[i] = ((uint32_t *) out->LBins)[i] * pixels;
@@ -42,7 +42,7 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi)
                 }
             }
 
-            float pixels = 1 / (roi->w * roi->h);
+            float pixels = 1 / ((float) (roi->w * roi->h));
 
             for (int i = 0, j = out->LBinCount; i < j; i++) {
                 out->LBins[i] = ((uint32_t *) out->LBins)[i] * pixels;
@@ -69,7 +69,7 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi)
                 }
             }
 
-            float pixels = 1 / (roi->w * roi->h);
+            float pixels = 1 / ((float) (roi->w * roi->h));
 
             for (int i = 0, j = out->LBinCount; i < j; i++) {
                 out->LBins[i] = ((uint32_t *) out->LBins)[i] * pixels;
