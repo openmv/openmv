@@ -870,22 +870,6 @@ static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
     return img_obj;
 }
 
-// Histogram Object //
-#define py_histogram_obj_size 3
-typedef struct py_histogram_obj {
-    mp_obj_base_t base;
-    image_bpp_t bpp;
-    mp_obj_t LBins, ABins, BBins;
-} py_histogram_obj_t;
-
-// Percentile Object //
-#define py_percentile_obj_size 3
-typedef struct py_percentile_obj {
-    mp_obj_base_t base;
-    image_bpp_t bpp;
-    mp_obj_t LValue, AValue, BValue;
-} py_percentile_obj_t;
-
 // Statistics Object //
 #define py_statistics_obj_size 24
 typedef struct py_statistics_obj {
@@ -893,263 +877,6 @@ typedef struct py_statistics_obj {
     image_bpp_t bpp;
     mp_obj_t LMean, LMedian, LMode, LSTDev, LMin, LMax, LLQ, LUQ, AMean, AMedian, AMode, ASTDev, AMin, AMax, ALQ, AUQ, BMean, BMedian, BMode, BSTDev, BMin, BMax, BLQ, BUQ;
 } py_statistics_obj_t;
-
-static void py_histogram_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
-{
-    py_histogram_obj_t *self = self_in;
-    switch(self->bpp) {
-        case IMAGE_BPP_BINARY: {
-            mp_printf(print, "{bins:");
-            mp_obj_print_helper(print, self->LBins, kind);
-            mp_printf(print, "}");
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            mp_printf(print, "{bins:");
-            mp_obj_print_helper(print, self->LBins, kind);
-            mp_printf(print, "}");
-            break;
-        }
-        case IMAGE_BPP_RGB565: {
-            mp_printf(print, "{l_bins:");
-            mp_obj_print_helper(print, self->LBins, kind);
-            mp_printf(print, ", a_bins:");
-            mp_obj_print_helper(print, self->ABins, kind);
-            mp_printf(print, ", b_bins:");
-            mp_obj_print_helper(print, self->BBins, kind);
-            mp_printf(print, "}");
-            break;
-        }
-        default: {
-            mp_printf(print, "{}");
-            break;
-        }
-    }
-}
-
-static mp_obj_t py_histogram_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
-{
-    if (value == MP_OBJ_SENTINEL) { // load
-        py_histogram_obj_t *self = self_in;
-        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
-            mp_bound_slice_t slice;
-            if (!mp_seq_get_fast_slice_indexes(py_histogram_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
-            }
-            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
-            mp_seq_copy(result->items, &(self->LBins) + slice.start, result->len, mp_obj_t);
-            return result;
-        }
-        switch (mp_get_index(self->base.type, py_histogram_obj_size, index, false)) {
-            case 0: return self->LBins;
-            case 1: return self->ABins;
-            case 2: return self->BBins;
-        }
-    }
-    return MP_OBJ_NULL; // op not supported
-}
-
-mp_obj_t py_histogram_bins(mp_obj_t self_in) { return ((py_histogram_obj_t *) self_in)->LBins; }
-mp_obj_t py_histogram_l_bins(mp_obj_t self_in) { return ((py_histogram_obj_t *) self_in)->LBins; }
-mp_obj_t py_histogram_a_bins(mp_obj_t self_in) { return ((py_histogram_obj_t *) self_in)->ABins; }
-mp_obj_t py_histogram_b_bins(mp_obj_t self_in) { return ((py_histogram_obj_t *) self_in)->BBins; }
-
-mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile)
-{
-    histogram_t hist;
-    hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
-    hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
-    hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
-
-    for (int i = 0; i < hist.LBinCount; i++) {
-        hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
-    }
-
-    for (int i = 0; i < hist.ABinCount; i++) {
-        hist.ABins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->items[i]);
-    }
-
-    for (int i = 0; i < hist.BBinCount; i++) {
-        hist.BBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->items[i]);
-    }
-
-    percentile_t p;
-    imlib_get_percentile(&p, ((py_histogram_obj_t *) self_in)->bpp, &hist, mp_obj_get_float(percentile));
-    if (hist.BBinCount) fb_free();
-    if (hist.ABinCount) fb_free();
-    if (hist.LBinCount) fb_free();
-
-    py_percentile_obj_t *o = m_new_obj(py_percentile_obj_t);
-    o->bpp = ((py_histogram_obj_t *) self_in)->bpp;
-
-    o->LValue = mp_obj_new_int(p.LValue);
-    o->AValue = mp_obj_new_int(p.AValue);
-    o->BValue = mp_obj_new_int(p.BValue);
-
-    return o;
-}
-
-mp_obj_t py_histogram_get_statistics(mp_obj_t self_in)
-{
-    histogram_t hist;
-    hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
-    hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
-    hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
-
-    for (int i = 0; i < hist.LBinCount; i++) {
-        hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
-    }
-
-    for (int i = 0; i < hist.ABinCount; i++) {
-        hist.ABins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->items[i]);
-    }
-
-    for (int i = 0; i < hist.BBinCount; i++) {
-        hist.BBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->items[i]);
-    }
-
-    statistics_t stats;
-    imlib_get_statistics(&stats, ((py_histogram_obj_t *) self_in)->bpp, &hist);
-    if (hist.BBinCount) fb_free();
-    if (hist.ABinCount) fb_free();
-    if (hist.LBinCount) fb_free();
-
-    py_statistics_obj_t *o = m_new_obj(py_statistics_obj_t);
-    o->bpp = ((py_histogram_obj_t *) self_in)->bpp;
-
-    o->LMean = mp_obj_new_int(stats.LMean);
-    o->LMedian = mp_obj_new_int(stats.LMedian);
-    o->LMode= mp_obj_new_int(stats.LMode);
-    o->LSTDev = mp_obj_new_int(stats.LSTDev);
-    o->LMin = mp_obj_new_int(stats.LMin);
-    o->LMax = mp_obj_new_int(stats.LMax);
-    o->LLQ = mp_obj_new_int(stats.LLQ);
-    o->LUQ = mp_obj_new_int(stats.LUQ);
-    o->AMean = mp_obj_new_int(stats.AMean);
-    o->AMedian = mp_obj_new_int(stats.AMedian);
-    o->AMode= mp_obj_new_int(stats.AMode);
-    o->ASTDev = mp_obj_new_int(stats.ASTDev);
-    o->AMin = mp_obj_new_int(stats.AMin);
-    o->AMax = mp_obj_new_int(stats.AMax);
-    o->ALQ = mp_obj_new_int(stats.ALQ);
-    o->AUQ = mp_obj_new_int(stats.AUQ);
-    o->BMean = mp_obj_new_int(stats.BMean);
-    o->BMedian = mp_obj_new_int(stats.BMedian);
-    o->BMode= mp_obj_new_int(stats.BMode);
-    o->BSTDev = mp_obj_new_int(stats.BSTDev);
-    o->BMin = mp_obj_new_int(stats.BMin);
-    o->BMax = mp_obj_new_int(stats.BMax);
-    o->BLQ = mp_obj_new_int(stats.BLQ);
-    o->BUQ = mp_obj_new_int(stats.BUQ);
-
-    return o;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_bins_obj, py_histogram_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_l_bins_obj, py_histogram_l_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_a_bins_obj, py_histogram_a_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_b_bins_obj, py_histogram_b_bins);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_histogram_get_percentile_obj, py_histogram_get_percentile);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_get_statistics_obj, py_histogram_get_statistics);
-
-STATIC const mp_rom_map_elem_t py_histogram_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_bins), MP_ROM_PTR(&py_histogram_bins_obj) },
-    { MP_ROM_QSTR(MP_QSTR_l_bins), MP_ROM_PTR(&py_histogram_l_bins_obj) },
-    { MP_ROM_QSTR(MP_QSTR_a_bins), MP_ROM_PTR(&py_histogram_a_bins_obj) },
-    { MP_ROM_QSTR(MP_QSTR_b_bins), MP_ROM_PTR(&py_histogram_b_bins_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_percentile), MP_ROM_PTR(&py_histogram_get_percentile_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_stats), MP_ROM_PTR(&py_histogram_get_statistics_obj) },
-    { MP_ROM_QSTR(MP_QSTR_get_statistics), MP_ROM_PTR(&py_histogram_get_statistics_obj) },
-    { MP_ROM_QSTR(MP_QSTR_statistics), MP_ROM_PTR(&py_histogram_get_statistics_obj) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(py_histogram_locals_dict, py_histogram_locals_dict_table);
-
-static const mp_obj_type_t py_histogram_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_histogram,
-    .print = py_histogram_print,
-    .subscr = py_histogram_subscr,
-    .locals_dict = (mp_obj_t) &py_histogram_locals_dict,
-};
-
-static void py_percentile_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
-{
-    py_percentile_obj_t *self = self_in;
-    switch(self->bpp) {
-        case IMAGE_BPP_BINARY: {
-            mp_printf(print, "{value:%d}", mp_obj_get_int(self->LValue));
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            mp_printf(print, "{value:%d}", mp_obj_get_int(self->LValue));
-            break;
-        }
-        case IMAGE_BPP_RGB565: {
-            mp_printf(print, "{l_value:%d, a_value:%d, b_value:%d}", mp_obj_get_int(self->LValue), mp_obj_get_int(self->AValue), mp_obj_get_int(self->BValue));
-            break;
-        }
-        default: {
-            mp_printf(print, "{}");
-            break;
-        }
-    }
-}
-
-static mp_obj_t py_percentile_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
-{
-    if (value == MP_OBJ_SENTINEL) { // load
-        py_percentile_obj_t *self = self_in;
-        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
-            mp_bound_slice_t slice;
-            if (!mp_seq_get_fast_slice_indexes(py_percentile_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
-            }
-            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
-            mp_seq_copy(result->items, &(self->LValue) + slice.start, result->len, mp_obj_t);
-            return result;
-        }
-        switch (mp_get_index(self->base.type, py_percentile_obj_size, index, false)) {
-            case 0: return self->LValue;
-            case 1: return self->AValue;
-            case 2: return self->BValue;
-        }
-    }
-    return MP_OBJ_NULL; // op not supported
-}
-
-mp_obj_t py_percentile_value(mp_obj_t self_in) { return ((py_percentile_obj_t *) self_in)->LValue; }
-mp_obj_t py_percentile_l_value(mp_obj_t self_in) { return ((py_percentile_obj_t *) self_in)->LValue; }
-mp_obj_t py_percentile_a_value(mp_obj_t self_in) { return ((py_percentile_obj_t *) self_in)->AValue; }
-mp_obj_t py_percentile_b_value(mp_obj_t self_in) { return ((py_percentile_obj_t *) self_in)->BValue; }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_value_obj, py_percentile_value);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_l_value_obj, py_percentile_l_value);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_a_value_obj, py_percentile_a_value);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_b_value_obj, py_percentile_b_value);
-
-STATIC const mp_rom_map_elem_t py_percentile_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_value), MP_ROM_PTR(&py_percentile_value_obj) },
-    { MP_ROM_QSTR(MP_QSTR_l_value), MP_ROM_PTR(&py_percentile_l_value_obj) },
-    { MP_ROM_QSTR(MP_QSTR_a_value), MP_ROM_PTR(&py_percentile_a_value_obj) },
-    { MP_ROM_QSTR(MP_QSTR_b_value), MP_ROM_PTR(&py_percentile_b_value_obj) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(py_percentile_locals_dict, py_percentile_locals_dict_table);
-
-static const mp_obj_type_t py_percentile_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_percentile,
-    .print = py_percentile_print,
-    .subscr = py_percentile_subscr,
-    .locals_dict = (mp_obj_t) &py_percentile_locals_dict,
-};
 
 static void py_statistics_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
@@ -1370,6 +1097,281 @@ static const mp_obj_type_t py_statistics_type = {
     .locals_dict = (mp_obj_t) &py_statistics_locals_dict,
 };
 
+// Percentile Object //
+#define py_percentile_obj_size 3
+typedef struct py_percentile_obj {
+    mp_obj_base_t base;
+    image_bpp_t bpp;
+    mp_obj_t LValue, AValue, BValue;
+} py_percentile_obj_t;
+
+static void py_percentile_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_percentile_obj_t *self = self_in;
+    switch(self->bpp) {
+        case IMAGE_BPP_BINARY: {
+            mp_printf(print, "{value:%d}", mp_obj_get_int(self->LValue));
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            mp_printf(print, "{value:%d}", mp_obj_get_int(self->LValue));
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            mp_printf(print, "{l_value:%d, a_value:%d, b_value:%d}", mp_obj_get_int(self->LValue), mp_obj_get_int(self->AValue), mp_obj_get_int(self->BValue));
+            break;
+        }
+        default: {
+            mp_printf(print, "{}");
+            break;
+        }
+    }
+}
+
+static mp_obj_t py_percentile_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_percentile_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_percentile_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->LValue) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_percentile_obj_size, index, false)) {
+            case 0: return self->LValue;
+            case 1: return self->AValue;
+            case 2: return self->BValue;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_percentile_value(mp_obj_t self_in) { return ((py_percentile_obj_t *) self_in)->LValue; }
+mp_obj_t py_percentile_l_value(mp_obj_t self_in) { return ((py_percentile_obj_t *) self_in)->LValue; }
+mp_obj_t py_percentile_a_value(mp_obj_t self_in) { return ((py_percentile_obj_t *) self_in)->AValue; }
+mp_obj_t py_percentile_b_value(mp_obj_t self_in) { return ((py_percentile_obj_t *) self_in)->BValue; }
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_value_obj, py_percentile_value);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_l_value_obj, py_percentile_l_value);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_a_value_obj, py_percentile_a_value);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_percentile_b_value_obj, py_percentile_b_value);
+
+STATIC const mp_rom_map_elem_t py_percentile_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_value), MP_ROM_PTR(&py_percentile_value_obj) },
+    { MP_ROM_QSTR(MP_QSTR_l_value), MP_ROM_PTR(&py_percentile_l_value_obj) },
+    { MP_ROM_QSTR(MP_QSTR_a_value), MP_ROM_PTR(&py_percentile_a_value_obj) },
+    { MP_ROM_QSTR(MP_QSTR_b_value), MP_ROM_PTR(&py_percentile_b_value_obj) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_percentile_locals_dict, py_percentile_locals_dict_table);
+
+static const mp_obj_type_t py_percentile_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_percentile,
+    .print = py_percentile_print,
+    .subscr = py_percentile_subscr,
+    .locals_dict = (mp_obj_t) &py_percentile_locals_dict,
+};
+
+// Histogram Object //
+#define py_histogram_obj_size 3
+typedef struct py_histogram_obj {
+    mp_obj_base_t base;
+    image_bpp_t bpp;
+    mp_obj_t LBins, ABins, BBins;
+} py_histogram_obj_t;
+
+static void py_histogram_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_histogram_obj_t *self = self_in;
+    switch(self->bpp) {
+        case IMAGE_BPP_BINARY: {
+            mp_printf(print, "{bins:");
+            mp_obj_print_helper(print, self->LBins, kind);
+            mp_printf(print, "}");
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            mp_printf(print, "{bins:");
+            mp_obj_print_helper(print, self->LBins, kind);
+            mp_printf(print, "}");
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            mp_printf(print, "{l_bins:");
+            mp_obj_print_helper(print, self->LBins, kind);
+            mp_printf(print, ", a_bins:");
+            mp_obj_print_helper(print, self->ABins, kind);
+            mp_printf(print, ", b_bins:");
+            mp_obj_print_helper(print, self->BBins, kind);
+            mp_printf(print, "}");
+            break;
+        }
+        default: {
+            mp_printf(print, "{}");
+            break;
+        }
+    }
+}
+
+static mp_obj_t py_histogram_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_histogram_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_histogram_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->LBins) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_histogram_obj_size, index, false)) {
+            case 0: return self->LBins;
+            case 1: return self->ABins;
+            case 2: return self->BBins;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_histogram_bins(mp_obj_t self_in) { return ((py_histogram_obj_t *) self_in)->LBins; }
+mp_obj_t py_histogram_l_bins(mp_obj_t self_in) { return ((py_histogram_obj_t *) self_in)->LBins; }
+mp_obj_t py_histogram_a_bins(mp_obj_t self_in) { return ((py_histogram_obj_t *) self_in)->ABins; }
+mp_obj_t py_histogram_b_bins(mp_obj_t self_in) { return ((py_histogram_obj_t *) self_in)->BBins; }
+
+mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile)
+{
+    histogram_t hist;
+    hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
+    hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
+    hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+
+    for (int i = 0; i < hist.LBinCount; i++) {
+        hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
+    }
+
+    for (int i = 0; i < hist.ABinCount; i++) {
+        hist.ABins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->items[i]);
+    }
+
+    for (int i = 0; i < hist.BBinCount; i++) {
+        hist.BBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->items[i]);
+    }
+
+    percentile_t p;
+    imlib_get_percentile(&p, ((py_histogram_obj_t *) self_in)->bpp, &hist, mp_obj_get_float(percentile));
+    if (hist.BBinCount) fb_free();
+    if (hist.ABinCount) fb_free();
+    if (hist.LBinCount) fb_free();
+
+    py_percentile_obj_t *o = m_new_obj(py_percentile_obj_t);
+    o->base.type = &py_percentile_type;
+    o->bpp = ((py_histogram_obj_t *) self_in)->bpp;
+
+    o->LValue = mp_obj_new_int(p.LValue);
+    o->AValue = mp_obj_new_int(p.AValue);
+    o->BValue = mp_obj_new_int(p.BValue);
+
+    return o;
+}
+
+mp_obj_t py_histogram_get_statistics(mp_obj_t self_in)
+{
+    histogram_t hist;
+    hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
+    hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
+    hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+
+    for (int i = 0; i < hist.LBinCount; i++) {
+        hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
+    }
+
+    for (int i = 0; i < hist.ABinCount; i++) {
+        hist.ABins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->items[i]);
+    }
+
+    for (int i = 0; i < hist.BBinCount; i++) {
+        hist.BBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->items[i]);
+    }
+
+    statistics_t stats;
+    imlib_get_statistics(&stats, ((py_histogram_obj_t *) self_in)->bpp, &hist);
+    if (hist.BBinCount) fb_free();
+    if (hist.ABinCount) fb_free();
+    if (hist.LBinCount) fb_free();
+
+    py_statistics_obj_t *o = m_new_obj(py_statistics_obj_t);
+    o->base.type = &py_statistics_type;
+    o->bpp = ((py_histogram_obj_t *) self_in)->bpp;
+
+    o->LMean = mp_obj_new_int(stats.LMean);
+    o->LMedian = mp_obj_new_int(stats.LMedian);
+    o->LMode= mp_obj_new_int(stats.LMode);
+    o->LSTDev = mp_obj_new_int(stats.LSTDev);
+    o->LMin = mp_obj_new_int(stats.LMin);
+    o->LMax = mp_obj_new_int(stats.LMax);
+    o->LLQ = mp_obj_new_int(stats.LLQ);
+    o->LUQ = mp_obj_new_int(stats.LUQ);
+    o->AMean = mp_obj_new_int(stats.AMean);
+    o->AMedian = mp_obj_new_int(stats.AMedian);
+    o->AMode= mp_obj_new_int(stats.AMode);
+    o->ASTDev = mp_obj_new_int(stats.ASTDev);
+    o->AMin = mp_obj_new_int(stats.AMin);
+    o->AMax = mp_obj_new_int(stats.AMax);
+    o->ALQ = mp_obj_new_int(stats.ALQ);
+    o->AUQ = mp_obj_new_int(stats.AUQ);
+    o->BMean = mp_obj_new_int(stats.BMean);
+    o->BMedian = mp_obj_new_int(stats.BMedian);
+    o->BMode= mp_obj_new_int(stats.BMode);
+    o->BSTDev = mp_obj_new_int(stats.BSTDev);
+    o->BMin = mp_obj_new_int(stats.BMin);
+    o->BMax = mp_obj_new_int(stats.BMax);
+    o->BLQ = mp_obj_new_int(stats.BLQ);
+    o->BUQ = mp_obj_new_int(stats.BUQ);
+
+    return o;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_bins_obj, py_histogram_bins);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_l_bins_obj, py_histogram_l_bins);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_a_bins_obj, py_histogram_a_bins);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_b_bins_obj, py_histogram_b_bins);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_histogram_get_percentile_obj, py_histogram_get_percentile);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_get_statistics_obj, py_histogram_get_statistics);
+
+STATIC const mp_rom_map_elem_t py_histogram_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_bins), MP_ROM_PTR(&py_histogram_bins_obj) },
+    { MP_ROM_QSTR(MP_QSTR_l_bins), MP_ROM_PTR(&py_histogram_l_bins_obj) },
+    { MP_ROM_QSTR(MP_QSTR_a_bins), MP_ROM_PTR(&py_histogram_a_bins_obj) },
+    { MP_ROM_QSTR(MP_QSTR_b_bins), MP_ROM_PTR(&py_histogram_b_bins_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_percentile), MP_ROM_PTR(&py_histogram_get_percentile_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_stats), MP_ROM_PTR(&py_histogram_get_statistics_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_statistics), MP_ROM_PTR(&py_histogram_get_statistics_obj) },
+    { MP_ROM_QSTR(MP_QSTR_statistics), MP_ROM_PTR(&py_histogram_get_statistics_obj) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_histogram_locals_dict, py_histogram_locals_dict_table);
+
+static const mp_obj_type_t py_histogram_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_histogram,
+    .print = py_histogram_print,
+    .subscr = py_histogram_subscr,
+    .locals_dict = (mp_obj_t) &py_histogram_locals_dict,
+};
+
 static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1383,10 +1385,10 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     histogram_t hist;
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            int bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_BINARY_MAX-COLOR_BINARY_MIN+1));
-            PY_ASSERT_TRUE_MSG(bin_count >= 2, "bin_count must be >= 2");
-            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), bin_count);
-            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bin_count must be >= 2");
+            int bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_BINARY_MAX-COLOR_BINARY_MIN+1));
+            PY_ASSERT_TRUE_MSG(bins >= 2, "bins must be >= 2");
+            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bins), bins);
+            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
@@ -1396,10 +1398,10 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            int bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1));
-            PY_ASSERT_TRUE_MSG(bin_count >= 2, "bin_count must be >= 2");
-            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), bin_count);
-            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bin_count must be >= 2");
+            int bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1));
+            PY_ASSERT_TRUE_MSG(bins >= 2, "bins must be >= 2");
+            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bins), bins);
+            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
@@ -1409,18 +1411,18 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             break;
         }
         case IMAGE_BPP_RGB565: {
-            int l_bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_L_MAX-COLOR_L_MIN+1));
-            PY_ASSERT_TRUE_MSG(l_bin_count >= 2, "bin_count must be >= 2");
-            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), l_bin_count);
-            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bin_count must be >= 2");
-            int a_bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_A_MAX-COLOR_A_MIN+1));
-            PY_ASSERT_TRUE_MSG(a_bin_count >= 2, "bin_count must be >= 2");
-            hist.ABinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_a_bin_count), a_bin_count);
-            PY_ASSERT_TRUE_MSG(hist.ABinCount >= 2, "a_bin_count must be >= 2");
-            int b_bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_B_MAX-COLOR_B_MIN+1));
-            PY_ASSERT_TRUE_MSG(b_bin_count >= 2, "bin_count must be >= 2");
-            hist.BBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bin_count), b_bin_count);
-            PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bin_count must be >= 2");
+            int l_bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_L_MAX-COLOR_L_MIN+1));
+            PY_ASSERT_TRUE_MSG(l_bins >= 2, "bins must be >= 2");
+            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bins), l_bins);
+            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
+            int a_bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_A_MAX-COLOR_A_MIN+1));
+            PY_ASSERT_TRUE_MSG(a_bins >= 2, "bins must be >= 2");
+            hist.ABinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_a_bins), a_bins);
+            PY_ASSERT_TRUE_MSG(hist.ABinCount >= 2, "a_bins must be >= 2");
+            int b_bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_B_MAX-COLOR_B_MIN+1));
+            PY_ASSERT_TRUE_MSG(b_bins >= 2, "bins must be >= 2");
+            hist.BBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
+            PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
@@ -1433,19 +1435,21 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     }
 
     py_histogram_obj_t *o = m_new_obj(py_histogram_obj_t);
+    o->base.type = &py_histogram_type;
     o->bpp = arg_img->bpp;
 
     o->LBins = mp_obj_new_list(hist.LBinCount, NULL);
+    o->ABins = mp_obj_new_list(hist.ABinCount, NULL);
+    o->BBins = mp_obj_new_list(hist.BBinCount, NULL);
+
     for (int i = 0; i < hist.LBinCount; i++) {
         ((mp_obj_list_t *) o->LBins)->items[i] = mp_obj_new_float(hist.LBins[i]);
     }
 
-    o->ABins = mp_obj_new_list(hist.ABinCount, NULL);
     for (int i = 0; i < hist.ABinCount; i++) {
         ((mp_obj_list_t *) o->ABins)->items[i] = mp_obj_new_float(hist.ABins[i]);
     }
 
-    o->BBins = mp_obj_new_list(hist.BBinCount, NULL);
     for (int i = 0; i < hist.BBinCount; i++) {
         ((mp_obj_list_t *) o->BBins)->items[i] = mp_obj_new_float(hist.BBins[i]);
     }
@@ -1453,6 +1457,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     if (hist.BBinCount) fb_free();
     if (hist.ABinCount) fb_free();
     if (hist.LBinCount) fb_free();
+
     return o;
 }
 
@@ -1469,10 +1474,10 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     histogram_t hist;
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            int bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_BINARY_MAX-COLOR_BINARY_MIN+1));
-            PY_ASSERT_TRUE_MSG(bin_count >= 2, "bin_count must be >= 2");
-            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), bin_count);
-            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bin_count must be >= 2");
+            int bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_BINARY_MAX-COLOR_BINARY_MIN+1));
+            PY_ASSERT_TRUE_MSG(bins >= 2, "bins must be >= 2");
+            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bins), bins);
+            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
@@ -1482,10 +1487,10 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            int bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1));
-            PY_ASSERT_TRUE_MSG(bin_count >= 2, "bin_count must be >= 2");
-            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), bin_count);
-            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bin_count must be >= 2");
+            int bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1));
+            PY_ASSERT_TRUE_MSG(bins >= 2, "bins must be >= 2");
+            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bins), bins);
+            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
@@ -1495,18 +1500,18 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             break;
         }
         case IMAGE_BPP_RGB565: {
-            int l_bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_L_MAX-COLOR_L_MIN+1));
-            PY_ASSERT_TRUE_MSG(l_bin_count >= 2, "bin_count must be >= 2");
-            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bin_count), l_bin_count);
-            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bin_count must be >= 2");
-            int a_bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_A_MAX-COLOR_A_MIN+1));
-            PY_ASSERT_TRUE_MSG(a_bin_count >= 2, "bin_count must be >= 2");
-            hist.ABinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_a_bin_count), a_bin_count);
-            PY_ASSERT_TRUE_MSG(hist.ABinCount >= 2, "a_bin_count must be >= 2");
-            int b_bin_count = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bin_count), (COLOR_B_MAX-COLOR_B_MIN+1));
-            PY_ASSERT_TRUE_MSG(b_bin_count >= 2, "bin_count must be >= 2");
-            hist.BBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bin_count), b_bin_count);
-            PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bin_count must be >= 2");
+            int l_bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_L_MAX-COLOR_L_MIN+1));
+            PY_ASSERT_TRUE_MSG(l_bins >= 2, "bins must be >= 2");
+            hist.LBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_l_bins), l_bins);
+            PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
+            int a_bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_A_MAX-COLOR_A_MIN+1));
+            PY_ASSERT_TRUE_MSG(a_bins >= 2, "bins must be >= 2");
+            hist.ABinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_a_bins), a_bins);
+            PY_ASSERT_TRUE_MSG(hist.ABinCount >= 2, "a_bins must be >= 2");
+            int b_bins = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bins), (COLOR_B_MAX-COLOR_B_MIN+1));
+            PY_ASSERT_TRUE_MSG(b_bins >= 2, "bins must be >= 2");
+            hist.BBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
+            PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
@@ -1525,6 +1530,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     if (hist.LBinCount) fb_free();
 
     py_statistics_obj_t *o = m_new_obj(py_statistics_obj_t);
+    o->base.type = &py_statistics_type;
     o->bpp = arg_img->bpp;
 
     o->LMean = mp_obj_new_int(stats.LMean);
