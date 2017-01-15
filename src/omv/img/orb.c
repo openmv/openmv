@@ -454,6 +454,10 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
 
         // Free current scale
         fb_free();
+
+        if (normalized) {
+            break;
+        }
     }
 
     // Sort keypoints by score and return top n keypoints
