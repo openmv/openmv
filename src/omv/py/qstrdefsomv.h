@@ -93,7 +93,6 @@ Q(add)
 Q(bias)
 Q(percentile)
 Q(normalized)
-Q(lens_corr)
 Q(filter_outliers)
 Q(scale_factor)
 Q(max_keypoints)
@@ -308,6 +307,11 @@ Q(CPUFREQ_192MHZ)
 Q(CPUFREQ_216MHZ)
 Q(get_frequency)
 Q(set_frequency)
+
+// Lens Correction
+Q(lens_corr)
+Q(strength)
+Q(zoom)
 
 // Get Histogram
 Q(get_hist)
