@@ -976,6 +976,118 @@ void imlib_histeq(image_t *img)
     fb_free();
 }
 
+// A simple algorithm for correcting lens distortion.
+// See http://www.tannerhelland.com/4743/simple-algorithm-correcting-lens-distortion/
+void imlib_lens_corr(image_t *img, float strength, float zoom)
+{
+    zoom = 1 / zoom;
+    int halfWidth = img->w / 2;
+    int halfHeight = img->h / 2;
+    float lens_corr_radius = strength / fast_sqrtf((img->w * img->w) + (img->h * img->h));
+
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            // Create a temp copy of the image to pull pixels from.
+            uint32_t *tmp = fb_alloc(((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+            memcpy(tmp, img->data, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                int newY = y - halfHeight;
+                int newY2 = newY * newY;
+                float zoomedY = newY * zoom;
+
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    int newX = x - halfWidth;
+                    int newX2 = newX * newX;
+                    float zoomedX = newX * zoom;
+
+                    float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
+                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
+                    int sourceX = halfWidth + fast_roundf(theta * zoomedX);
+                    int sourceY = halfHeight + fast_roundf(theta * zoomedY);
+
+                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                        uint32_t *ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                        int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                    }
+                }
+            }
+
+            fb_free();
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            // Create a temp copy of the image to pull pixels from.
+            uint8_t *tmp = fb_alloc(img->w * img->h * sizeof(uint8_t));
+            memcpy(tmp, img->data, img->w * img->h * sizeof(uint8_t));
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                int newY = y - halfHeight;
+                int newY2 = newY * newY;
+                float zoomedY = newY * zoom;
+
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    int newX = x - halfWidth;
+                    int newX2 = newX * newX;
+                    float zoomedX = newX * zoom;
+
+                    float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
+                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
+                    int sourceX = halfWidth + fast_roundf(theta * zoomedX);
+                    int sourceY = halfHeight + fast_roundf(theta * zoomedY);
+
+                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                        uint8_t *ptr = tmp + (img->w * sourceY);
+                        int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX);
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
+                    }
+                }
+            }
+
+            fb_free();
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            // Create a temp copy of the image to pull pixels from.
+            uint16_t *tmp = fb_alloc(img->w * img->h * sizeof(uint16_t));
+            memcpy(tmp, img->data, img->w * img->h * sizeof(uint16_t));
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                int newY = y - halfHeight;
+                int newY2 = newY * newY;
+                float zoomedY = newY * zoom;
+
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    int newX = x - halfWidth;
+                    int newX2 = newX * newX;
+                    float zoomedX = newX * zoom;
+
+                    float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
+                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
+                    int sourceX = halfWidth + fast_roundf(theta * zoomedX);
+                    int sourceY = halfHeight + fast_roundf(theta * zoomedY);
+
+                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                        uint16_t *ptr = tmp + (img->w * sourceY);
+                        int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX);
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
+                    }
+                }
+            }
+
+            fb_free();
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
 void imlib_mask_ellipse(image_t *img)
 {
     int h = img->w/2;
@@ -1036,42 +1148,4 @@ int imlib_image_std(image_t *src)
 
     /* std */
     return fast_sqrtf(v);
-}
-
-// Simple lens correction function.
-// See http://www.tannerhelland.com/4743/simple-algorithm-correcting-lens-distortion/
-void imlib_lens_corr(image_t *src, float strength)
-{
-    float zoom = 1.0f;
-    int halfWidth = src->w / 2;
-    int halfHeight = src->h / 2;
-    float corr_radius = strength / fast_sqrtf(src->w*src->w + src->h*src->h);
-
-    int buff_size = src->w * src->h / 2;
-    uint8_t *buff = fb_alloc(buff_size);
-
-    for (int y=0; y<src->h; y++) {
-        if (y == src->h/2) {
-            // Flush the first half of the image
-            memcpy(src->data, buff, buff_size);
-        }
-        for (int x=0; x<src->w; x++) {
-            int newX = x - halfWidth;
-            int newY = y - halfHeight;
-
-            float r = corr_radius * fast_sqrtf(newX*newX + newY*newY);
-            float theta = (abs(r) < 1e-6f) ? (atanf(r)/r) : 1.0f;
-
-            newX = (int) (newX * theta * zoom + halfWidth );
-            newY = (int) (newY * theta * zoom + halfHeight);
-            if (newX >= 0 && newX < src->w && newY >= 0 && newY < src->h) {
-                buff[(y %(src->h/2)) * src->w + x] = src->data[newY * src->w + newX];
-            } else {
-                buff[(y %(src->h/2)) * src->w + x] = src->data[y * src->w + x];
-            }
-        }
-    }
-    // Flush the second half of the image
-    memcpy(src->data + buff_size, buff, buff_size);
-    fb_free();
 }

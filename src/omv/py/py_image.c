@@ -850,15 +850,22 @@ static mp_obj_t py_image_histeq(mp_obj_t img_obj)
     return img_obj;
 }
 
-static mp_obj_t py_image_lens_corr(mp_obj_t img_obj, mp_obj_t s_obj)
+static mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
+            "Operation not supported on JPEG");
 
-    imlib_lens_corr(arg_img, mp_obj_get_float(s_obj));
-    return img_obj;
+    float strength = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_strength),
+                                            (n_args > 1) ? mp_obj_get_float(args[1]) : 1.8);
+    PY_ASSERT_TRUE_MSG(strength >= 0.0, "strength must be > 0");
+    float zoom = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom),
+                                        (n_args > 2) ? mp_obj_get_float(args[2]) : 1.0);
+    PY_ASSERT_TRUE_MSG(zoom >= 1.0, "zoom must be > 1");
+
+    imlib_lens_corr(arg_img, strength, zoom);
+    return args[0];
 }
-
 
 static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
 {
@@ -2329,7 +2336,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mode_obj, py_image_mode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gaussian_obj, 1, py_image_gaussian);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_lens_corr_obj, py_image_lens_corr);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_lens_corr_obj, 1, py_image_lens_corr);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_mask_ellipse_obj, py_image_mask_ellipse);
 /* Image Statistics */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_histogram_obj, 1, py_image_get_histogram);

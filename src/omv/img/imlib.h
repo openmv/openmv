@@ -447,7 +447,7 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
     __typeof__ (x) _x = (x); \
     __typeof__ (v) _v = (v); \
-    size_t _i = _x >> UINT32_T_SHIFT \
+    size_t _i = _x >> UINT32_T_SHIFT; \
     size_t _j = _x & UINT32_T_MASK; \
     _row_ptr[_i] = (_row_ptr[_i] & (~(1 << _j))) | ((_v & 1) << _j); \
 })
@@ -1057,8 +1057,7 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
 // Lens correction
-void imlib_lens_corr(image_t *src, float strength);
-
+void imlib_lens_corr(image_t *img, float strength, float zoom);
 // Statistics
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
