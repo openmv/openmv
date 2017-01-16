@@ -13,11 +13,14 @@ sensor.set_auto_gain(False) # must be turned off for color tracking
 sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
 
-print("Auto algorithms done. Hold the object you want to track in front of the camera.")
-sensor.skip_frames(60)
-
 # Capture the color thresholds for whatever was in the center of the image.
-r = [(320//2)-(80//2), (240//2)-(60//2), 80, 60] # 80x60 center of QVGA.
+r = [(320//2)-(50//2), (240//2)-(50//2), 50, 50] # 50x50 center of QVGA.
+
+print("Auto algorithms done. Hold the object you want to track in front of the camera in the box.")
+print("MAKE SURE THE COLOR OF THE OBJECT YOU WANT TO TRACK IS FULLY ENCLOSED BY THE BOX!")
+for i in range(60):
+    img = sensor.snapshot()
+    img.draw_rectangle(r)
 
 print("Learning thresholds...")
 threshold = [128, 128] # Middle grayscale values.
@@ -32,6 +35,7 @@ for i in range(60):
     for blob in img.find_blobs([threshold], pixels_threshold=100, area_threshold=100, merge=True, margin=10):
         img.draw_rectangle(blob.rect())
         img.draw_cross(blob.cx(), blob.cy())
+        img.draw_rectangle(r)
 
 print("Thresholds learned...")
 print("Tracking colors...")
