@@ -229,23 +229,18 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
-
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
 
     uint32_t size;
+    fb_alloc_mark();
     uint8_t *buffer = fb_alloc_all(&size);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
-
-    if (jpeg_compress(arg_img, &out, arg_q, false)) { // JPEG overflow
-        fb_free();
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!!"));
-    }
+    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG(out.bpp <= (((arg_img->w * arg_img->h)
-                            + UINT32_T_MASK) >> UINT32_T_SHIFT), "Can't compress in place!");
+            PY_ASSERT_TRUE_MSG(out.bpp <= (((arg_img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * arg_img->h), "Can't compress in place!");
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -264,6 +259,7 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
     memcpy(arg_img->data, out.data, out.bpp);
     arg_img->bpp = out.bpp;
     fb_free();
+    fb_alloc_free_till_mark();
 
     if (fb->pixels == arg_img->data) {
         fb->bpp = arg_img->bpp;
@@ -276,28 +272,19 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG");
-
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
 
     uint32_t size;
+    fb_alloc_mark();
     uint8_t *buffer = fb_alloc_all(&size);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
-
-    if (jpeg_compress(arg_img, &out, arg_q, false)) { // JPEG overflow
-        fb_free();
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!!"));
-    }
-
-    uint8_t *temp = xalloc_try_alloc(out.bpp);
-    if (temp == NULL) {
-        fb_free();
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!!"));
-    }
-
+    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
+    uint8_t *temp = xalloc(out.bpp);
     memcpy(temp, out.data, out.bpp);
     out.data = temp;
     fb_free();
+    fb_alloc_free_till_mark();
 
     return py_image_from_struct(&out);
 }
@@ -863,7 +850,9 @@ static mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *
                                         (n_args > 2) ? mp_obj_get_float(args[2]) : 1.0);
     PY_ASSERT_TRUE_MSG(zoom >= 1.0, "zoom must be > 1");
 
+    fb_alloc_mark();
     imlib_lens_corr(arg_img, strength, zoom);
+    fb_alloc_free_till_mark();
     return args[0];
 }
 
@@ -1258,6 +1247,7 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile)
     hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
+    fb_alloc_mark();
     hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
     hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
     hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
@@ -1279,6 +1269,7 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile)
     if (hist.BBinCount) fb_free();
     if (hist.ABinCount) fb_free();
     if (hist.LBinCount) fb_free();
+    fb_alloc_free_till_mark();
 
     py_percentile_obj_t *o = m_new_obj(py_percentile_obj_t);
     o->base.type = &py_percentile_type;
@@ -1297,6 +1288,7 @@ mp_obj_t py_histogram_get_statistics(mp_obj_t self_in)
     hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
+    fb_alloc_mark();
     hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
     hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
     hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
@@ -1318,6 +1310,7 @@ mp_obj_t py_histogram_get_statistics(mp_obj_t self_in)
     if (hist.BBinCount) fb_free();
     if (hist.ABinCount) fb_free();
     if (hist.LBinCount) fb_free();
+    fb_alloc_free_till_mark();
 
     py_statistics_obj_t *o = m_new_obj(py_statistics_obj_t);
     o->base.type = &py_statistics_type;
@@ -1388,7 +1381,6 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
-    // TODO: Need to set fb_alloc trap here to recover from any exception...
     histogram_t hist;
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -1398,6 +1390,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
+            fb_alloc_mark();
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
@@ -1411,6 +1404,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
+            fb_alloc_mark();
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
@@ -1430,6 +1424,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             PY_ASSERT_TRUE_MSG(b_bins >= 2, "bins must be >= 2");
             hist.BBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
             PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
+            fb_alloc_mark();
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
@@ -1464,6 +1459,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     if (hist.BBinCount) fb_free();
     if (hist.ABinCount) fb_free();
     if (hist.LBinCount) fb_free();
+    fb_alloc_free_till_mark();
 
     return o;
 }
@@ -1477,7 +1473,6 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
-    // TODO: Need to set fb_alloc trap here to recover from any exception...
     histogram_t hist;
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -1487,6 +1482,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
+            fb_alloc_mark();
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
@@ -1500,6 +1496,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             PY_ASSERT_TRUE_MSG(hist.LBinCount >= 2, "l_bins must be >= 2");
             hist.ABinCount = 0;
             hist.BBinCount = 0;
+            fb_alloc_mark();
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
@@ -1519,6 +1516,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             PY_ASSERT_TRUE_MSG(b_bins >= 2, "bins must be >= 2");
             hist.BBinCount = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
             PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
+            fb_alloc_mark();
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
@@ -1535,6 +1533,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     if (hist.BBinCount) fb_free();
     if (hist.ABinCount) fb_free();
     if (hist.LBinCount) fb_free();
+    fb_alloc_free_till_mark();
 
     py_statistics_obj_t *o = m_new_obj(py_statistics_obj_t);
     o->base.type = &py_statistics_type;
@@ -1739,12 +1738,13 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     bool merge = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge), false);
     int margin = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 0);
 
-    // TODO: Need to set fb_alloc trap here to recover from any exception...
     list_t out;
+    fb_alloc_mark();
     imlib_find_blobs(&out, arg_img, &roi, x_stride, y_stride, &thresholds, invert, area_threshold, pixels_threshold, merge, margin);
+    fb_alloc_free_till_mark();
     list_free(&thresholds);
-    mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
 
+    mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
     for (size_t i = 0; list_size(&out); i++) {
         find_blobs_list_lnk_data_t lnk_data;
         list_pop_front(&out, &lnk_data);
@@ -1897,11 +1897,12 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
-    // TODO: Need to set fb_alloc trap here to recover from any exception...
     list_t out;
+    fb_alloc_mark();
     imlib_find_qrcodes(&out, arg_img, &roi);
-    mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
+    fb_alloc_free_till_mark();
 
+    mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
     for (size_t i = 0; list_size(&out); i++) {
         find_qrcodes_list_lnk_data_t lnk_data;
         list_pop_front(&out, &lnk_data);

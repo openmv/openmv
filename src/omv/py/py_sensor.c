@@ -66,7 +66,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
     }
 
     if (sensor_snapshot((struct image*) py_image_cobj(image), line_filter_func, line_filter_args)==-1) {
-        nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         return mp_const_false;
     }
 
@@ -77,7 +77,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args) {
     int frames = (n_args == 1) ? mp_obj_get_int(args[0]) : 10; // OV Recommended.
     for (int i = 0; i < frames; i++) {
         if (sensor_snapshot(NULL, NULL, NULL) == -1) {
-            nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         }
     }
     return mp_const_none;
@@ -129,7 +129,7 @@ static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
             fr = FRAMERATE_60FPS;
             break;
         default:
-            nlr_jump(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid framerate"));
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid framerate"));
             break;
     }
 
@@ -199,7 +199,7 @@ static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling) {
             gain = GAINCEILING_128X;
             break;
         default:
-            nlr_jump(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid gainceiling"));
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid gainceiling"));
             break;
     }
 
