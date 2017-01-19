@@ -11,6 +11,8 @@
 #include <stdint.h>
 void fb_alloc_init0();
 uint32_t fb_avail();
+void fb_alloc_mark();
+void fb_alloc_free_till_mark();
 void *fb_alloc(uint32_t size);
 void *fb_alloc0(uint32_t size);
 void *fb_alloc_all(uint32_t *size); // returns pointer and sets size
