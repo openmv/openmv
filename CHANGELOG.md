@@ -1,4 +1,18 @@
 # Change Log
+## [2.1](https://github.com/openmv/openmv/releases/tag/v2.1) (2017-01-21)
+* New keypoints descriptor (ORB).
+* QR decoding via quirc library (https://github.com/dlbeer/quirc)
+* Support load to FB directly in copy_to_fb.
+* Export lens shading function.
+* Add AGAST corner detector.
+* Implement set_gain/exposure/whitebalance functions.
+* Various optimizations and speedups
+* Fix uSD cache issues on M7.
+* Fix broken ADC on M4 and M7.
+* Fix image compress and compressed.
+* Fix ff_wrapper bug.
+* Fix OMV3 LEDs pinout
+
 ## [2.0](https://github.com/openmv/openmv/releases/tag/v2.0) (2016-11-04)
 Firmware:
 * WiFi driver fixes.
