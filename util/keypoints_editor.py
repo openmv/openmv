@@ -3,36 +3,47 @@
 import time
 import struct
 import pygame
-import sys
+import sys, os
 from math import sin, cos, radians
 
 SCALE = 3
 RED   = (255,0,0)
 GREEN = (0,255,0)
+WHITE = (255,255,255)
 GRAY  = (127, 127, 127)
 KEYPOINTS_SIZE = 24
 
 def load_keypoints(path):
     kpts = []
+    max_octave = 0
     with open(path, "rb") as f:
+        desc = struct.unpack("<I", f.read(4))[0]
         size = struct.unpack("<I", f.read(4))[0]
         for i in range(0, size):
             x, y, score, octave, angle = struct.unpack("<HHHHH", f.read(10))
             kpts.append([x, y, score, octave, angle, False, f.read(32)])
-    return kpts
+            if (octave > max_octave):
+                max_octave = octave
+    print("size: %d max octave: %d" %(len(kpts), max_octave))
+    return (kpts, max_octave)
 
 if __name__ == '__main__':
-    if len(sys.argv)!= 3:
-        print "usage: kpts_editor.py [image] [descriptor]"
+    if len(sys.argv)!= 2:
+        print "usage: kpts_editor.py [descriptor]"
         sys.exit(1)
 
     selection = False
     save_selected = False
     rect = pygame.Rect(0, 0, 0, 0)
-    clock = pygame.time.Clock() 
+    clock = pygame.time.Clock()
 
-    kpts = load_keypoints(sys.argv[2])
-    img = pygame.image.load(sys.argv[1])
+    desc_path = sys.argv[1]
+    img_path = os.path.splitext(desc_path)[0] + '.pgm'
+    desc_out = os.path.splitext(desc_path)[0] + '_out.orb'
+
+    kpts, max_octave = load_keypoints(desc_path)
+    curr_octave = max_octave
+    img = pygame.image.load(img_path)
     img = pygame.transform.scale(img, (img.get_width()*SCALE, img.get_height()*SCALE))
     screen = pygame.display.set_mode((img.get_width(), img.get_height()))
     pygame.mouse.set_visible(True)
@@ -45,6 +56,13 @@ if __name__ == '__main__':
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_s:
                 save_selected = True
+            elif event.key == pygame.K_1:
+                if (curr_octave > 1):
+                    curr_octave = curr_octave - 1
+            elif event.key == pygame.K_2:
+                if (curr_octave < max_octave):
+                    curr_octave = curr_octave + 1
+
         elif event.type == pygame.MOUSEBUTTONDOWN:
             selection = True
             rect = pygame.Rect(0, 0, 0, 0)
@@ -68,6 +86,9 @@ if __name__ == '__main__':
     
         for kp in kpts:
             x, y, score, octave, angle, selected, desc = kp
+            if (octave > curr_octave):
+                continue
+
             x1 = x*SCALE
             y1 = y*SCALE
             angle = radians(angle)
@@ -76,17 +97,18 @@ if __name__ == '__main__':
             x2 = x1 + sin(angle) * size
             y2 = y1 + cos(angle) * size
 
-            kp[5] = selected = rect.collidepoint((x1, y1)) 
-            color = GREEN if selected else GRAY
+            kp[5] = selected = rect.collidepoint((x1, y1))
+            color = GREEN if selected else WHITE
             pygame.draw.circle(screen, color, (x1, y1), size, 1)
             pygame.draw.line(screen, color, (x1, y1), (x2, y2))
     
         if save_selected == True:
-            kpts_sel = []  
+            kpts_sel = []
             for kp in kpts:
-                if (kp[5]): kpts_sel.append(kp) 
+                if (kp[5]): kpts_sel.append(kp)
     
-            with open("desc_out.orb", "wb") as f:
+            with open(desc_out, "wb") as f:
+                f.write(struct.pack("<I", 1))
                 f.write(struct.pack("<I", len(kpts_sel)))
                 for kp in kpts_sel:
                     x, y, score, octave, angle, selected, desc = kp
