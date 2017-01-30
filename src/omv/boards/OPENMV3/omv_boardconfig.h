@@ -37,7 +37,7 @@
 #define OMV_MAX_BLOB_FRAME_STR  "VGA"
 
 // Bootloader LED GPIO port/pin
-#define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_2)
+#define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
 // JPEG buffer size (header + data)
