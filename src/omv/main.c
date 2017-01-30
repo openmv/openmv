@@ -66,6 +66,8 @@
 #include "py_lcd.h"
 #include "py_fir.h"
 
+#include "framebuffer.h"
+
 int errno;
 extern char _vfs_buf;
 extern char _stack_size;
@@ -457,6 +459,8 @@ soft_reset:
         // Success: remove self tests script and flush cache
         f_unlink("selftest.py");
         storage_flush();
+        // Set flag for SWD debugger (main.py does not use the frame buffer).
+        MAIN_FB()->bpp = 0xDEADBEEF;
     }
 
     // Run the main script from the current directory.
