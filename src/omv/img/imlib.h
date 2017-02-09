@@ -891,6 +891,26 @@ typedef struct find_qrcodes_list_lnk_data
 }
 find_qrcodes_list_lnk_data_t;
 
+typedef enum apriltag_families
+{
+    TAG16H5 = 1,
+    TAG25H7 = 2,
+    TAG25H9 = 4,
+    TAG36H10 = 8,
+    TAG36H11 = 16,
+    ARTOOLKIT = 32
+}
+apriltag_families_t;
+
+typedef struct find_apriltags_list_lnk_data
+{
+    rectangle_t rect;
+    uint16_t family, id;
+    point_t centroid;
+    float rotation, decision_margin;
+}
+find_apriltags_list_lnk_data_t;
+
 /* Color space functions */
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
 void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
@@ -1068,5 +1088,6 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                       bool merge, int margin);
 // 1/2D Bar Codes
 void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
+void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families);
 
 #endif //__IMLIB_H__

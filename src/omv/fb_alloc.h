@@ -9,6 +9,7 @@
 #ifndef __FB_ALLOC_H__
 #define __FB_ALLOC_H__
 #include <stdint.h>
+void fb_alloc_fail();
 void fb_alloc_init0();
 uint32_t fb_avail();
 void fb_alloc_mark();
