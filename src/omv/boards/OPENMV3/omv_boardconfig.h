@@ -36,6 +36,9 @@
 #define OMV_MAX_BLOB_FRAME      FRAMESIZE_VGA
 #define OMV_MAX_BLOB_FRAME_STR  "VGA"
 
+// Enable AprilTags (64 KB).
+#define OMV_ENABLE_APRILTAGS
+
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
