@@ -802,8 +802,8 @@ static void perspective_map(const float *c,
     float x = (c[0]*u + c[1]*v + c[2]) / den;
     float y = (c[3]*u + c[4]*v + c[5]) / den;
 
-    ret->x = roundf(x);
-    ret->y = roundf(y);
+    ret->x = fast_roundf(x);
+    ret->y = fast_roundf(y);
 }
 
 static void perspective_unmap(const float *c,
@@ -1762,7 +1762,7 @@ static void test_neighbours(struct quirc *q, int i,
         for (k = 0; k < vlist->count; k++) {
             const struct neighbour *hn = &hlist->n[j];
             const struct neighbour *vn = &vlist->n[k];
-            float score = fabs(1.0 - hn->distance / vn->distance);
+            float score = fast_fabsf(1.0 - hn->distance / vn->distance);
 
             if (score > 2.5)
                 continue;
@@ -1805,8 +1805,8 @@ static void test_grouping(struct quirc *q, int i)
 
         perspective_unmap(c1->c, &c2->center, &u, &v);
 
-        u = fabs(u - 3.5);
-        v = fabs(v - 3.5);
+        u = fast_fabsf(u - 3.5);
+        v = fast_fabsf(v - 3.5);
 
         if (u < 0.2 * v) {
             struct neighbour *n = &hlist.n[hlist.count++];
@@ -2965,11 +2965,11 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 
         if(quirc_decode(code, data) == QUIRC_SUCCESS) {
             find_qrcodes_list_lnk_data_t lnk_data;
-            rectangle_init(&(lnk_data.rect), code->corners[0].x, code->corners[0].y, 0, 0);
+            rectangle_init(&(lnk_data.rect), code->corners[0].x + roi->x, code->corners[0].y + roi->y, 0, 0);
 
             for (size_t k = 1, l = (sizeof(code->corners) / sizeof(code->corners[0])); k < l; k++) {
                 rectangle_t temp;
-                rectangle_init(&temp, code->corners[k].x, code->corners[k].y, 0, 0);
+                rectangle_init(&temp, code->corners[k].x + roi->x, code->corners[k].y + roi->y, 0, 0);
                 rectangle_united(&(lnk_data.rect), &temp);
             }
 
