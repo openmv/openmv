@@ -179,7 +179,7 @@ UMM_H_ATTPACKPRE typedef struct umm_block_t {
   } header;
   union {
     umm_ptr free;
-    unsigned char data[4];
+    unsigned char data[16];
   } body;
 } UMM_H_ATTPACKSUF umm_block;
 
@@ -299,8 +299,8 @@ static unsigned short int umm_assimilate_down( unsigned short int c, unsigned sh
 
 /* ------------------------------------------------------------------------- */
 
-void umm_init( void ) {
-  uint32_t UMM_MALLOC_CFG_HEAP_SIZE = ((fb_avail() / 2) / sizeof(size_t)) * sizeof(size_t);
+void umm_init_x( int w, int h ) {
+  uint32_t UMM_MALLOC_CFG_HEAP_SIZE = ((w * h * (8 + 1)) / sizeof(size_t)) * sizeof(size_t);
   if (UMM_MALLOC_CFG_HEAP_SIZE < (sizeof(umm_block) * 128)) fb_alloc_fail();
   if (UMM_MALLOC_CFG_HEAP_SIZE > (sizeof(umm_block) * 32768)) UMM_MALLOC_CFG_HEAP_SIZE = sizeof(umm_block) * 32768;
   void *UMM_MALLOC_CFG_HEAP_ADDR = fb_alloc(UMM_MALLOC_CFG_HEAP_SIZE);
@@ -357,6 +357,10 @@ void umm_init( void ) {
     UMM_NBLOCK(block_last) = 0;
     UMM_PBLOCK(block_last) = block_1th;
   }
+}
+
+void umm_init( void ) {
+    umm_init_x(0, 0);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -992,6 +996,20 @@ static inline zarray_t *zarray_create(size_t el_sz)
 }
 
 /**
+ * Creates and returns a variable array structure capable of holding elements of
+ * the specified size. It is the caller's responsibility to call zarray_destroy()
+ * on the returned array when it is no longer needed.
+ */
+static inline zarray_t *zarray_create_fail_ok(size_t el_sz)
+{
+    assert(el_sz > 0);
+
+    zarray_t *za = (zarray_t*) umm_calloc(1, sizeof(zarray_t));
+    if(za) za->el_sz = el_sz;
+    return za;
+}
+
+/**
  * Frees all resources associated with the variable array structure which was
  * created by zarray_create(). After calling, 'za' will no longer be valid for storage.
  */
@@ -1091,7 +1109,7 @@ static inline void zarray_ensure_capacity(zarray_t *za, int capacity)
         return;
 
     while (za->alloc < capacity) {
-        za->alloc *= 2;
+        za->alloc += 8; // use less memory // *= 2;
         if (za->alloc < 8)
             za->alloc = 8;
     }
@@ -1110,6 +1128,38 @@ static inline void zarray_add(zarray_t *za, const void *p)
     assert(p != NULL);
 
     zarray_ensure_capacity(za, za->size + 1);
+
+    memcpy(&za->data[za->size*za->el_sz], p, za->el_sz);
+    za->size++;
+}
+
+/**
+ * Adds a new element to the end of the supplied array, and sets its value
+ * (by copying) from the data pointed to by the supplied pointer 'p'.
+ * Automatically ensures that enough storage space is available for the new element.
+ */
+static inline void zarray_add_fail_ok(zarray_t *za, const void *p)
+{
+    assert(za != NULL);
+    assert(p != NULL);
+
+    if (za->size + 1 > za->alloc)
+    {
+        while (za->alloc < za->size + 1) {
+            za->alloc += 8; // use less memory // *= 2;
+            if (za->alloc < 8)
+                za->alloc = 8;
+        }
+
+        za->data = (char*) umm_realloc(za->data, za->alloc * za->el_sz);
+
+        if (!za->data) {
+            // reset the zarray...
+            za->size = 0;
+            za->alloc = 0;
+            return;
+        }
+    }
 
     memcpy(&za->data[za->size*za->el_sz], p, za->el_sz);
     za->size++;
@@ -11266,7 +11316,7 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
             if (1) {                                                    \
                 uint8_t v1 = threshim->buf[y*ts + dy*ts + x + dx];      \
                                                                         \
-                if (v0 + v1 == 255) {                                   \
+                while (v0 + v1 == 255) {                                   \
                     uint64_t rep1 = unionfind_get_representative(uf, y*w + dy*w + x + dx); \
                     uint64_t clusterid;                                 \
                     if (rep0 < rep1)                                    \
@@ -11282,15 +11332,21 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
                     }                                                   \
                                                                         \
                     if (!entry) {                                       \
-                        entry = calloc(1, sizeof(struct uint64_zarray_entry)); \
+                        entry = umm_calloc(1, sizeof(struct uint64_zarray_entry)); \
+                        if (!entry) break;                              \
                         entry->id = clusterid;                          \
-                        entry->cluster = zarray_create(sizeof(struct pt)); \
+                        entry->cluster = zarray_create_fail_ok(sizeof(struct pt)); \
+                        if (!entry->cluster) {                          \
+                            free(entry);                                \
+                            break;                                      \
+                        }                                               \
                         entry->next = clustermap[clustermap_bucket];    \
                         clustermap[clustermap_bucket] = entry;          \
                     }                                                   \
                                                                         \
                     struct pt p = { .x = 2*x + dx, .y = 2*y + dy, .gx = dx*((int) v1-v0), .gy = dy*((int) v1-v0)}; \
-                    zarray_add(entry->cluster, &p);                     \
+                    zarray_add_fail_ok(entry->cluster, &p);             \
+                    break;                                              \
                 }                                                       \
             }
 
@@ -12435,7 +12491,7 @@ void apriltag_detections_destroy(zarray_t *detections)
 
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families)
 {
-    umm_init();
+    umm_init_x(roi->w, roi->h);
     apriltag_detector_t *td = apriltag_detector_create();
 
     if (families & TAG16H5) {
@@ -12550,28 +12606,24 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
         lnk_data.centroid.x = fast_roundf(det->c[0]) + roi->x;
         lnk_data.centroid.y = fast_roundf(det->c[1]) + roi->y;
 
-        // http://stackoverflow.com/questions/15420693/how-to-get-rotation-translation-shear-from-a-3x3-homography-matrix-in-c-sharp
+        float fx = (2.8 / 3.984) * 656; // 2.8mm Focal Length w/ OV7725 sensor for reference.
+        float fy = (2.8 / 2.952) * 488; // 2.8mm Focal Length w/ OV7725 sensor for reference.
+        float cx = ptr->w / 0.5; // Use the image versus the roi here since the image should be projected from the camera center.
+        float cy = ptr->h / 0.5; // Use the image versus the roi here since the image should be projected from the camera center.
 
-        float a = MATD_EL(det->H, 0, 0);
-        float b = MATD_EL(det->H, 0, 1);
-        float c = MATD_EL(det->H, 0, 2);
-        float d = MATD_EL(det->H, 1, 0);
-        float e = MATD_EL(det->H, 1, 1);
-        float f = MATD_EL(det->H, 1, 2);
+        matd_t *pose = homography_to_pose(det->H, -fx, fy, cx, cy);
 
-        float p = fast_sqrtf((a * a) + (b * b));
-        float r = ((a * e) - (b * d)) / p;
-        float q = ((a * d) + (b * e)) / ((a * e) - (b * d));
+        float transX = MATD_EL(pose, 0, 3);
+        float transY = MATD_EL(pose, 1, 3);
+        float transZ = MATD_EL(pose, 2, 3);
+        float phetaX = fast_atan2f(MATD_EL(pose, 2, 1), MATD_EL(pose, 2, 2));
+        float phetaY = fast_atan2f(-MATD_EL(pose, 2, 0), fast_sqrtf(sq(MATD_EL(pose, 2, 1)) + sq(MATD_EL(pose, 2, 2))));
+        float phetaZ = fast_atan2f(MATD_EL(pose, 1, 0), MATD_EL(pose, 0, 0));
 
-        float translation_x = c;
-        float translation_y = f;
-        float scale_x = p;
-        float scale_y = r;
-        float shear = q;
-        float rotation = fast_atan2f(b, a);
+        matd_destroy(pose);
 
-        lnk_data.rotation = rotation;
-        lnk_data.decision_margin = det->decision_margin;
+        lnk_data.rotation = phetaZ; // since we only use phetaZ above the scale of fx/fy/cx/cy don't matter and just need to be good ratios
+        lnk_data.decision_margin = det->decision_margin / 255.0; // scale to [0:1]
 
         list_push_back(out, &lnk_data);
     }
