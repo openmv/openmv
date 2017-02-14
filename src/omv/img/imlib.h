@@ -905,9 +905,12 @@ apriltag_families_t;
 typedef struct find_apriltags_list_lnk_data
 {
     rectangle_t rect;
-    uint16_t family, id;
+    uint16_t id;
+    uint8_t family, hamming;
     point_t centroid;
-    float rotation, decision_margin;
+    float goodness, decision_margin;
+    float x_translation, y_translation, z_translation;
+    float x_rotation, y_rotation, z_rotation;
 }
 find_apriltags_list_lnk_data_t;
 
@@ -1088,6 +1091,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                       bool merge, int margin);
 // 1/2D Bar Codes
 void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
-void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families);
+void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
+                          float fx, float fy, float cx, float cy);
 
 #endif //__IMLIB_H__

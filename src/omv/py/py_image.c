@@ -1929,17 +1929,21 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
 }
 
 // AprilTag Object //
-#define py_apriltag_obj_size 10
+#define py_apriltag_obj_size 18
 typedef struct py_apriltag_obj {
     mp_obj_base_t base;
-    mp_obj_t x, y, w, h, id, family, cx, cy, rotation, decision_margin;
+    mp_obj_t x, y, w, h, id, family, cx, cy, rotation, decision_margin, hamming, goodness;
+    mp_obj_t x_translation, y_translation, z_translation;
+    mp_obj_t x_rotation, y_rotation, z_rotation;
 } py_apriltag_obj_t;
 
 static void py_apriltag_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_apriltag_obj_t *self = self_in;
     mp_printf(print,
-              "{x:%d, y:%d, w:%d, h:%d, id:%d, family:%d, cx:%d, cy:%d, rotation:%f, decision_margin:%f}",
+              "{x:%d, y:%d, w:%d, h:%d, id:%d, family:%d, cx:%d, cy:%d, rotation:%f, decision_margin:%f, hamming:%d, goodness:%f,"
+              " x_translation:%f, y_translation:%f, z_translation:%f,"
+              " x_rotation:%f, y_rotation:%f, z_rotation:%f}",
               mp_obj_get_int(self->x),
               mp_obj_get_int(self->y),
               mp_obj_get_int(self->w),
@@ -1949,7 +1953,15 @@ static void py_apriltag_print(const mp_print_t *print, mp_obj_t self_in, mp_prin
               mp_obj_get_int(self->cx),
               mp_obj_get_int(self->cy),
               (double) mp_obj_get_float(self->rotation),
-              (double) mp_obj_get_float(self->decision_margin));
+              (double) mp_obj_get_float(self->decision_margin),
+              mp_obj_get_int(self->hamming),
+              (double) mp_obj_get_float(self->goodness),
+              (double) mp_obj_get_float(self->x_translation),
+              (double) mp_obj_get_float(self->y_translation),
+              (double) mp_obj_get_float(self->z_translation),
+              (double) mp_obj_get_float(self->x_rotation),
+              (double) mp_obj_get_float(self->y_rotation),
+              (double) mp_obj_get_float(self->z_rotation));
 }
 
 static mp_obj_t py_apriltag_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
@@ -1976,6 +1988,14 @@ static mp_obj_t py_apriltag_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t va
             case 7: return self->cy;
             case 8: return self->rotation;
             case 9: return self->decision_margin;
+            case 10: return self->hamming;
+            case 11: return self->goodness;
+            case 12: return self->x_translation;
+            case 13: return self->y_translation;
+            case 14: return self->z_translation;
+            case 15: return self->x_rotation;
+            case 16: return self->y_rotation;
+            case 17: return self->z_rotation;
         }
     }
     return MP_OBJ_NULL; // op not supported
@@ -1999,6 +2019,14 @@ mp_obj_t py_apriltag_cx(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_i
 mp_obj_t py_apriltag_cy(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->cy; }
 mp_obj_t py_apriltag_rotation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->rotation; }
 mp_obj_t py_apriltag_decision_margin(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->decision_margin; }
+mp_obj_t py_apriltag_hamming(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->hamming; }
+mp_obj_t py_apriltag_goodness(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->goodness; }
+mp_obj_t py_apriltag_x_translation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->x_translation; }
+mp_obj_t py_apriltag_y_translation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->y_translation; }
+mp_obj_t py_apriltag_z_translation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->z_translation; }
+mp_obj_t py_apriltag_x_rotation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->x_rotation; }
+mp_obj_t py_apriltag_y_rotation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->y_rotation; }
+mp_obj_t py_apriltag_z_rotation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->z_rotation; }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rect_obj, py_apriltag_rect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_obj, py_apriltag_x);
@@ -2011,6 +2039,14 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cx_obj, py_apriltag_cx);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_cy_obj, py_apriltag_cy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rotation_obj, py_apriltag_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_decision_margin_obj, py_apriltag_decision_margin);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_hamming_obj, py_apriltag_hamming);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_goodness_obj, py_apriltag_goodness);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_translation_obj, py_apriltag_x_translation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_translation_obj, py_apriltag_y_translation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_z_translation_obj, py_apriltag_z_translation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_rotation_obj, py_apriltag_x_rotation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_rotation_obj, py_apriltag_y_rotation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_z_rotation_obj, py_apriltag_z_rotation);
 
 STATIC const mp_rom_map_elem_t py_apriltag_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_apriltag_rect_obj) },
@@ -2024,6 +2060,14 @@ STATIC const mp_rom_map_elem_t py_apriltag_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_cy), MP_ROM_PTR(&py_apriltag_cy_obj) },
     { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_apriltag_rotation_obj) },
     { MP_ROM_QSTR(MP_QSTR_decision_margin), MP_ROM_PTR(&py_apriltag_decision_margin_obj) },
+    { MP_ROM_QSTR(MP_QSTR_hamming), MP_ROM_PTR(&py_apriltag_hamming_obj) },
+    { MP_ROM_QSTR(MP_QSTR_goodness), MP_ROM_PTR(&py_apriltag_goodness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x_translation), MP_ROM_PTR(&py_apriltag_x_translation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y_translation), MP_ROM_PTR(&py_apriltag_y_translation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_z_translation), MP_ROM_PTR(&py_apriltag_z_translation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x_rotation), MP_ROM_PTR(&py_apriltag_x_rotation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y_rotation), MP_ROM_PTR(&py_apriltag_y_rotation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_z_rotation), MP_ROM_PTR(&py_apriltag_z_rotation_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(py_apriltag_locals_dict, py_apriltag_locals_dict_table);
@@ -2045,9 +2089,19 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
+    apriltag_families_t families = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_families), TAG36H11);
+    // 2.8mm Focal Length w/ OV7725 sensor for reference.
+    float fx = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fx), (2.8 / 3.984) * 656);
+    // 2.8mm Focal Length w/ OV7725 sensor for reference.
+    float fy = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fy), (2.8 / 2.952) * 488);
+    // Use the image versus the roi here since the image should be projected from the camera center.
+    float cx = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_cx), arg_img->w * 0.5);
+    // Use the image versus the roi here since the image should be projected from the camera center.
+    float cy = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_cy), arg_img->h * 0.5);
+
     list_t out;
     fb_alloc_mark();
-    imlib_find_apriltags(&out, arg_img, &roi, py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_families), TAG36H11));
+    imlib_find_apriltags(&out, arg_img, &roi, families, fx, fy, cx, cy);
     fb_alloc_free_till_mark();
 
     mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
@@ -2065,8 +2119,16 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
         o->family = mp_obj_new_int(lnk_data.family);
         o->cx = mp_obj_new_int(lnk_data.centroid.x);
         o->cy = mp_obj_new_int(lnk_data.centroid.y);
-        o->rotation = mp_obj_new_float(lnk_data.rotation);
+        o->rotation = mp_obj_new_float(lnk_data.z_rotation);
         o->decision_margin = mp_obj_new_float(lnk_data.decision_margin);
+        o->hamming = mp_obj_new_int(lnk_data.hamming);
+        o->goodness = mp_obj_new_float(lnk_data.goodness);
+        o->x_translation = mp_obj_new_float(lnk_data.x_translation);
+        o->y_translation = mp_obj_new_float(lnk_data.y_translation);
+        o->z_translation = mp_obj_new_float(lnk_data.z_translation);
+        o->x_rotation = mp_obj_new_float(lnk_data.x_rotation);
+        o->y_rotation = mp_obj_new_float(lnk_data.y_rotation);
+        o->z_rotation = mp_obj_new_float(lnk_data.z_rotation);
 
         objects_list->items[i] = o;
     }
