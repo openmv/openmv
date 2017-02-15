@@ -29,5 +29,5 @@ while(True):
         img.draw_rectangle(tag.rect(), color = (255, 0, 0))
         img.draw_cross(tag.cx(), tag.cy(), color = (0, 255, 0))
         print_args = (tag.id(), (180 * tag.rotation()) / math.pi)
-        print("Tag Family TAG36H11, Tag ID %d - rotation %f (degrees)" % print_args)
+        print("Tag Family TAG36H11, Tag ID %d, rotation %f (degrees)" % print_args)
     print(clock.fps())

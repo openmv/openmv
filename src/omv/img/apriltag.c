@@ -11363,22 +11363,32 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
 
     ////////////////////////////////////////////////////////
     // step 3. process each connected component.
-    zarray_t *clusters = zarray_create(sizeof(zarray_t*)); //, uint64_zarray_hash_size(clustermap));
-    if (1) {
+    zarray_t *clusters = zarray_create_fail_ok(sizeof(zarray_t*)); //, uint64_zarray_hash_size(clustermap));
+    if (clusters) {
         for (int i = 0; i < nclustermap; i++) {
 
             for (struct uint64_zarray_entry *entry = clustermap[i]; entry; entry = entry->next) {
                 // XXX reject clusters here?
-                zarray_add(clusters, &entry->cluster);
+                zarray_add_fail_ok(clusters, &entry->cluster);
             }
         }
     }
 
 
+    int sz = clusters ? zarray_size(clusters) : 0;
+
     if (1) {
       for (int i = 0; i < nclustermap; i++) {
         struct uint64_zarray_entry *entry = clustermap[i];
         while (entry) {
+          // free any leaked cluster (zarray_add_fail_ok)
+          bool leaked = true;
+          for (int j = 0; j < sz; j++) {
+              zarray_t *cluster;
+              zarray_get(clusters, j, &cluster);
+              leaked &= entry->cluster != cluster;
+          }
+          if (leaked) free(entry->cluster);
           struct uint64_zarray_entry *tmp = entry->next;
           free(entry);
           entry = tmp;
@@ -11392,48 +11402,52 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
     fb_free(); // threshim->buf
     fb_free(); // threshim
 
-    zarray_t *quads = zarray_create(sizeof(struct quad));
+    zarray_t *quads = zarray_create_fail_ok(sizeof(struct quad));
 
-    int sz = zarray_size(clusters);
+    if (quads) {
+        for (int i = 0; i < sz; i++) {
 
-    for (int i = 0; i < sz; i++) {
+            zarray_t *cluster;
+            zarray_get(clusters, i, &cluster);
 
-        zarray_t *cluster;
-        zarray_get(clusters, i, &cluster);
+            if (zarray_size(cluster) < td->qtp.min_cluster_pixels)
+                continue;
 
-        if (zarray_size(cluster) < td->qtp.min_cluster_pixels)
-            continue;
+            // a cluster should contain only boundary points around the
+            // tag. it cannot be bigger than the whole screen. (Reject
+            // large connected blobs that will be prohibitively slow to
+            // fit quads to.) A typical point along an edge is added three
+            // times (because it has 3 neighbors). The maximum perimeter
+            // is 2w+2h.
+            if (zarray_size(cluster) > 3*(2*w+2*h)) {
+                continue;
+            }
 
-        // a cluster should contain only boundary points around the
-        // tag. it cannot be bigger than the whole screen. (Reject
-        // large connected blobs that will be prohibitively slow to
-        // fit quads to.) A typical point along an edge is added three
-        // times (because it has 3 neighbors). The maximum perimeter
-        // is 2w+2h.
-        if (zarray_size(cluster) > 3*(2*w+2*h)) {
-            continue;
-        }
+            struct quad quad;
+            memset(&quad, 0, sizeof(struct quad));
 
-        struct quad quad;
-        memset(&quad, 0, sizeof(struct quad));
+            if (fit_quad(td, im, cluster, &quad)) {
 
-        if (fit_quad(td, im, cluster, &quad)) {
-
-            zarray_add(quads, &quad);
+                zarray_add_fail_ok(quads, &quad);
+            }
         }
     }
 
     //        printf("  %d %d %d %d\n", indices[0], indices[1], indices[2], indices[3]);
 
-    for (int i = 0; i < zarray_size(clusters); i++) {
+    for (int i = 0; i < sz; i++) {
         zarray_t *cluster;
         zarray_get(clusters, i, &cluster);
         zarray_destroy(cluster);
     }
 
-    zarray_destroy(clusters);
+    if (clusters) zarray_destroy(clusters);
 
 
+    if (!quads) {
+        // we should have enough memory now
+        quads = zarray_create(sizeof(struct quad));
+    }
     return quads;
 }
 
@@ -11608,11 +11622,13 @@ int popcount64c(uint64_t x)
 static void quick_decode_codeword(apriltag_family_t *tf, uint64_t rcode,
                                   struct quick_decode_entry *entry)
 {
+    int threshold = imax(tf->h - tf->d - 1, 0);
+
     for (int ridx = 0; ridx < 4; ridx++) {
 
         for (int i = 0, j = tf->ncodes; i < j; i++) {
             int hamming = popcount64c(tf->codes[i] ^ rcode);
-            if(hamming <= 2) {
+            if(hamming <= threshold) {
                 entry->rcode = rcode;
                 entry->id = i;
                 entry->hamming = hamming;
@@ -12489,7 +12505,8 @@ void apriltag_detections_destroy(zarray_t *detections)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families)
+void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
+                          float fx, float fy, float cx, float cy)
 {
     umm_init_x(roi->w, roi->h);
     apriltag_detector_t *td = apriltag_detector_create();
@@ -12576,6 +12593,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
             rectangle_united(&(lnk_data.rect), &temp);
         }
 
+        lnk_data.id = det->id;
         lnk_data.family = 0;
 
         if(det->family == &tag16h5) {
@@ -12602,28 +12620,22 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
             lnk_data.family |= ARTOOLKIT;
         }
 
-        lnk_data.id = det->id;
+        lnk_data.hamming = det->hamming;
         lnk_data.centroid.x = fast_roundf(det->c[0]) + roi->x;
         lnk_data.centroid.y = fast_roundf(det->c[1]) + roi->y;
-
-        float fx = (2.8 / 3.984) * 656; // 2.8mm Focal Length w/ OV7725 sensor for reference.
-        float fy = (2.8 / 2.952) * 488; // 2.8mm Focal Length w/ OV7725 sensor for reference.
-        float cx = ptr->w / 0.5; // Use the image versus the roi here since the image should be projected from the camera center.
-        float cy = ptr->h / 0.5; // Use the image versus the roi here since the image should be projected from the camera center.
+        lnk_data.goodness = det->goodness / 255.0; // scale to [0:1]
+        lnk_data.decision_margin = det->decision_margin / 255.0; // scale to [0:1]
 
         matd_t *pose = homography_to_pose(det->H, -fx, fy, cx, cy);
 
-        float transX = MATD_EL(pose, 0, 3);
-        float transY = MATD_EL(pose, 1, 3);
-        float transZ = MATD_EL(pose, 2, 3);
-        float phetaX = fast_atan2f(MATD_EL(pose, 2, 1), MATD_EL(pose, 2, 2));
-        float phetaY = fast_atan2f(-MATD_EL(pose, 2, 0), fast_sqrtf(sq(MATD_EL(pose, 2, 1)) + sq(MATD_EL(pose, 2, 2))));
-        float phetaZ = fast_atan2f(MATD_EL(pose, 1, 0), MATD_EL(pose, 0, 0));
+        lnk_data.x_translation = MATD_EL(pose, 0, 3);
+        lnk_data.y_translation = MATD_EL(pose, 1, 3);
+        lnk_data.z_translation = MATD_EL(pose, 2, 3);
+        lnk_data.x_rotation = fast_atan2f(MATD_EL(pose, 2, 1), MATD_EL(pose, 2, 2));
+        lnk_data.y_rotation = fast_atan2f(-MATD_EL(pose, 2, 0), fast_sqrtf(sq(MATD_EL(pose, 2, 1)) + sq(MATD_EL(pose, 2, 2))));
+        lnk_data.z_rotation = fast_atan2f(MATD_EL(pose, 1, 0), MATD_EL(pose, 0, 0));
 
         matd_destroy(pose);
-
-        lnk_data.rotation = phetaZ; // since we only use phetaZ above the scale of fx/fy/cx/cy don't matter and just need to be good ratios
-        lnk_data.decision_margin = det->decision_margin / 255.0; // scale to [0:1]
 
         list_push_back(out, &lnk_data);
     }

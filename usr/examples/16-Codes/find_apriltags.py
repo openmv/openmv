@@ -3,7 +3,7 @@
 # This example shows the power of the OpenMV Cam to detect April Tags
 # on the OpenMV Cam M7. The M4 versions cannot detect April Tags.
 
-import sensor, image, time
+import sensor, image, time, math
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -17,6 +17,7 @@ clock = time.clock()
 
 # The apriltag code supports up to 6 tag families which can be processed at the same time.
 # Returned tag objects will have their tag family and id within the tag family.
+
 tag_families = 0
 tag_families |= image.TAG16H5 # comment out to disable this family
 tag_families |= image.TAG25H7 # comment out to disable this family
@@ -51,5 +52,6 @@ while(True):
     for tag in img.find_apriltags(families=tag_families): # defaults to TAG36H11 without "families".
         img.draw_rectangle(tag.rect(), color = (255, 0, 0))
         img.draw_cross(tag.cx(), tag.cy(), color = (0, 255, 0))
-        print("Tag Family %s, Tag ID %d" % (family_name(tag), tag.id()))
+        print_args = (family_name(tag), tag.id(), (180 * tag.rotation()) / math.pi)
+        print("Tag Family %s, Tag ID %d, rotation %f (degrees)" % print_args)
     print(clock.fps())
