@@ -379,6 +379,8 @@ Q(area_threshold)
 Q(pixels_threshold)
 Q(merge)
 Q(margin)
+Q(threshold_cb)
+Q(merge_cb)
 // duplicate Q(roi)
 // Blob Object
 Q(blob)
