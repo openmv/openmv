@@ -1688,6 +1688,55 @@ static const mp_obj_type_t py_blob_type = {
     .locals_dict = (mp_obj_t) &py_blob_locals_dict,
 };
 
+static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_data_t *blob)
+{
+    py_blob_obj_t *o = m_new_obj(py_blob_obj_t);
+    o->base.type = &py_blob_type;
+    o->x = mp_obj_new_int(blob->rect.x);
+    o->y = mp_obj_new_int(blob->rect.y);
+    o->w = mp_obj_new_int(blob->rect.w);
+    o->h = mp_obj_new_int(blob->rect.h);
+    o->pixels = mp_obj_new_int(blob->pixels);
+    o->cx = mp_obj_new_int(blob->centroid.x);
+    o->cy = mp_obj_new_int(blob->centroid.y);
+    o->rotation = mp_obj_new_float(blob->rotation);
+    o->code = mp_obj_new_int(blob->code);
+    o->count = mp_obj_new_int(blob->count);
+
+    return mp_obj_is_true(mp_call_function_1(fun_obj, o));
+}
+
+static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data_t *blob0, find_blobs_list_lnk_data_t *blob1)
+{
+    py_blob_obj_t *o0 = m_new_obj(py_blob_obj_t);
+    o0->base.type = &py_blob_type;
+    o0->x = mp_obj_new_int(blob0->rect.x);
+    o0->y = mp_obj_new_int(blob0->rect.y);
+    o0->w = mp_obj_new_int(blob0->rect.w);
+    o0->h = mp_obj_new_int(blob0->rect.h);
+    o0->pixels = mp_obj_new_int(blob0->pixels);
+    o0->cx = mp_obj_new_int(blob0->centroid.x);
+    o0->cy = mp_obj_new_int(blob0->centroid.y);
+    o0->rotation = mp_obj_new_float(blob0->rotation);
+    o0->code = mp_obj_new_int(blob0->code);
+    o0->count = mp_obj_new_int(blob0->count);
+
+    py_blob_obj_t *o1 = m_new_obj(py_blob_obj_t);
+    o1->base.type = &py_blob_type;
+    o1->x = mp_obj_new_int(blob1->rect.x);
+    o1->y = mp_obj_new_int(blob1->rect.y);
+    o1->w = mp_obj_new_int(blob1->rect.w);
+    o1->h = mp_obj_new_int(blob1->rect.h);
+    o1->pixels = mp_obj_new_int(blob1->pixels);
+    o1->cx = mp_obj_new_int(blob1->centroid.x);
+    o1->cy = mp_obj_new_int(blob1->centroid.y);
+    o1->rotation = mp_obj_new_float(blob1->rotation);
+    o1->code = mp_obj_new_int(blob1->code);
+    o1->count = mp_obj_new_int(blob1->count);
+
+    return mp_obj_is_true(mp_call_function_2(fun_obj, o0, o1));
+}
+
 static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1739,9 +1788,17 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     bool merge = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge), false);
     int margin = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 0);
 
+    mp_map_elem_t *threshold_cb_kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold_cb), MP_MAP_LOOKUP);
+    mp_obj_t threshold_cb_kw_val = (threshold_cb_kw_arg != NULL) ? threshold_cb_kw_arg->value : NULL;
+
+    mp_map_elem_t *merge_cb_kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge_cb), MP_MAP_LOOKUP);
+    mp_obj_t merge_cb_kw_val = (merge_cb_kw_arg != NULL) ? merge_cb_kw_arg->value : NULL;
+
     list_t out;
     fb_alloc_mark();
-    imlib_find_blobs(&out, arg_img, &roi, x_stride, y_stride, &thresholds, invert, area_threshold, pixels_threshold, merge, margin);
+    imlib_find_blobs(&out, arg_img, &roi, x_stride, y_stride, &thresholds, invert, area_threshold, pixels_threshold, merge, margin,
+                     py_image_find_blobs_threshold_cb, threshold_cb_kw_val,
+                     py_image_find_blobs_merge_cb, merge_cb_kw_val);
     fb_alloc_free_till_mark();
     list_free(&thresholds);
 
