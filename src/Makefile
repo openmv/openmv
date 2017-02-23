@@ -307,6 +307,12 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
+	modujson.o          \
+	modure.o            \
+	moduzlib.o          \
+	moduhashlib.o       \
+	modubinascii.o      \
+	modurandom.o        \
 	fsusermount.o       \
 	vfs_fat.o           \
 	vfs_fat_ffconf.o    \
