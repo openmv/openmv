@@ -504,7 +504,15 @@ soft_reset:
             usbdbg_set_irq_enabled(true);
 
             // run REPL
-            pyexec_friendly_repl();
+            if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
+                if (pyexec_raw_repl() != 0) {
+                    break;
+                }
+            } else {
+                if (pyexec_friendly_repl() != 0) {
+                    break;
+                }
+            }
 
             nlr_pop();
         }
