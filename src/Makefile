@@ -230,6 +230,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	systick.o               \
 	i2c.o                   \
 	spi.o                   \
+	can.o                   \
 	pin.o                   \
 	pin_defs_stmhal.o       \
 	pin_named_pins.o        \

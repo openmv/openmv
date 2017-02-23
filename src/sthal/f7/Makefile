@@ -29,6 +29,7 @@ stm32f7xx_hal_rtc_ex.c\
 stm32f7xx_hal_sd.c\
 stm32f7xx_hal_sdram.c\
 stm32f7xx_hal_spi.c\
+stm32f7xx_hal_can.c\
 stm32f7xx_hal_tim.c\
 stm32f7xx_hal_tim_ex.c\
 stm32f7xx_hal_uart.c\
