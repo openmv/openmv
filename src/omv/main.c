@@ -46,6 +46,7 @@
 #include "i2c.h"
 #include "uart.h"
 #include "dac.h"
+#include "can.h"
 #include "extint.h"
 #include "servo.h"
 
@@ -346,6 +347,7 @@ soft_reset:
     pin_init0();
     extint_init0();
     timer_init0();
+    can_init0();
     rng_init0();
     i2c_init0();
     spi_init0();
@@ -531,6 +533,7 @@ soft_reset:
     storage_flush();
     timer_deinit();
     uart_deinit();
+    can_deinit();
 
     first_soft_reset = false;
     goto soft_reset;
