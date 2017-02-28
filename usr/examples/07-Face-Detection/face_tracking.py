@@ -5,23 +5,18 @@
 # script finds a face in the image using the frontalface Haar Cascade.
 # After which the script uses the keypoints feature to automatically learn your
 # face and track it. Keypoints can be used to automatically track anything.
-
 import sensor, time, image
 
 # Reset sensor
 sensor.reset()
-
-# Sensor settings
-sensor.set_contrast(1)
+sensor.set_contrast(3)
 sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.QQVGA)
+sensor.set_framesize(sensor.VGA)
+sensor.set_windowing((320, 240))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Skip a few frames to allow the sensor settle down
-# Note: This takes more time when exec from the IDE.
-for i in range(0, 10):
-    img = sensor.snapshot()
-    img.draw_string(0, 0, "Please wait...")
+sensor.skip_frames(60)
 
 # Load Haar Cascade
 # By default this will use all stages, lower satges is faster but less accurate.
@@ -36,19 +31,20 @@ while (kpts1 == None):
     img = sensor.snapshot()
     img.draw_string(0, 0, "Looking for a face...")
     # Find faces
-    objects = img.find_features(face_cascade, threshold=0.5, scale=1.5)
+    objects = img.find_features(face_cascade, threshold=0.5, scale=1.25)
     if objects:
         # Expand the ROI by 31 pixels in every direction
         face = (objects[0][0]-31, objects[0][1]-31,objects[0][2]+31*2, objects[0][3]+31*2)
         # Extract keypoints using the detect face size as the ROI
-        kpts1 = img.find_keypoints(scale_factor=1.2, max_keypoints=100, roi=face)
+        kpts1 = img.find_keypoints(threshold=10, scale_factor=1.1, max_keypoints=100, roi=face)
         # Draw a rectangle around the first face
         img.draw_rectangle(objects[0])
 
 # Draw keypoints
 print(kpts1)
-img.draw_keypoints(kpts1, size=12)
-time.sleep(1000)
+img.draw_keypoints(kpts1, size=24)
+img = sensor.snapshot()
+time.sleep(2000)
 
 # FPS clock
 clock = time.clock()
@@ -56,12 +52,12 @@ clock = time.clock()
 while (True):
     clock.tick()
     img = sensor.snapshot()
-    # Extract keypoints using the detect face size as the ROI
-    kpts2 = img.find_keypoints(scale_factor=1.2, max_keypoints=100)
+    # Extract keypoints from the whole frame
+    kpts2 = img.find_keypoints(threshold=10, scale_factor=1.1, max_keypoints=100, normalized=True)
 
     if (kpts2):
         # Match the first set of keypoints with the second one
-        c=image.match_descriptor(kpts1, kpts2)
+        c=image.match_descriptor(kpts1, kpts2, threshold=85)
         match = c[6] # C[6] contains the number of matches.
         if (match>5):
             img.draw_rectangle(c[2:6])
