@@ -94,9 +94,9 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade, rectangle_t *r
     // Start with a step of 5% of the image width and reduce at each scaling step
     cascade->step = (roi->w*50)/1000;
 
-    // Make sure step is less than feature height + 1
-    if (cascade->step > cascade->window.w) {
-        cascade->step = cascade->window.w;
+    // Make sure step is less than window height + 1
+    if (cascade->step > cascade->window.h) {
+        cascade->step = cascade->window.h;
     }
 
     // Allocate integral images
