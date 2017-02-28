@@ -1,4 +1,12 @@
 # Change Log
+## [2.2](https://github.com/openmv/openmv/releases/tag/v2.2) (2017-02-28)
+* Add Apriltags support
+* Fix OMV3 bootloader LED pins
+* Enable CAN
+* Enable extra MP modules (json, re, zlib, hashlib, binascii, random)
+* Add Pixy emulation.
+* QR Code bug fixes
+
 ## [2.1](https://github.com/openmv/openmv/releases/tag/v2.1) (2017-01-21)
 * New keypoints descriptor (ORB).
 * QR decoding via quirc library (https://github.com/dlbeer/quirc)
