@@ -40,7 +40,7 @@ while (True):
     # Find objects.
     # Note: Lower scale factor scales-down the image more and detects smaller objects.
     # Higher threshold results in a higher detection rate, with more false positives.
-    objects = img.find_features(face_cascade, threshold=0.75, scale_factor=1.35)
+    objects = img.find_features(face_cascade, threshold=0.75, scale_factor=1.25)
 
     # Draw objects
     for r in objects:
