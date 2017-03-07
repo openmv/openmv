@@ -10,18 +10,23 @@ import sensor, time, image
 sensor.reset()
 
 # Sensor settings
-sensor.set_contrast(1)
+sensor.set_contrast(3)
 sensor.set_gainceiling(16)
-sensor.set_framesize(sensor.QCIF)
+sensor.set_framesize(sensor.VGA)
+sensor.set_windowing((320, 240))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
-sensor.set_auto_gain(False, value=100)
 sensor.skip_frames(30)
+sensor.set_auto_gain(False, value=100)
 
 FILE_NAME = "desc"
 img = sensor.snapshot()
 # NOTE: See the docs for other arguments
-kpts = img.find_keypoints(scale_factor=1.2)
+# NOTE: By default find_keypoints returns multi-scale keypoints extracted from an image pyramid.
+kpts = img.find_keypoints(max_keypoints=150, threshold=10, scale_factor=1.2)
+
+if (kpts == None):
+    raise(Exception("Couldn't find any keypoints!"))
 
 image.save_descriptor(kpts, "/%s.orb"%(FILE_NAME))
 img.save("/%s.pgm"%(FILE_NAME))
@@ -29,3 +34,4 @@ img.save("/%s.pgm"%(FILE_NAME))
 img.draw_keypoints(kpts)
 sensor.snapshot()
 time.sleep(1000)
+raise(Exception("Done! Please reset the camera"))

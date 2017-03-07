@@ -8,14 +8,14 @@ import sensor, time, image
 sensor.reset()
 
 # Sensor settings
-sensor.set_contrast(1)
+sensor.set_contrast(3)
 sensor.set_gainceiling(16)
 sensor.set_framesize(sensor.VGA)
-sensor.set_windowing((240, 240))
+sensor.set_windowing((320, 240))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
-sensor.set_auto_gain(False, value=100)
 sensor.skip_frames(30)
+sensor.set_auto_gain(False, value=100)
 
 def draw_keypoints(img, kpts):
     print(kpts)
@@ -35,16 +35,16 @@ while (True):
     img = sensor.snapshot()
     if (kpts1 == None):
         # NOTE: By default find_keypoints returns multi-scale keypoints extracted from an image pyramid.
-        kpts1 = img.find_keypoints(max_keypoints=150, threshold=20, scale_factor=1.1)
+        kpts1 = img.find_keypoints(max_keypoints=150, threshold=10, scale_factor=1.2)
         draw_keypoints(img, kpts1)
     else:
         # NOTE: When extracting keypoints to match the first descriptor, we use normalized=True to extract
         # keypoints from the first scale only, which will match one of the scales in the first descriptor.
-        kpts2 = img.find_keypoints(max_keypoints=150, threshold=20, normalized=True)
+        kpts2 = img.find_keypoints(max_keypoints=150, threshold=10, normalized=True)
         if (kpts2):
-            c = image.match_descriptor(kpts1, kpts2, threshold=80)
+            c = image.match_descriptor(kpts1, kpts2, threshold=85)
             match = c[6] # C[6] contains the number of matches.
-            if (match>5):
+            if (match>10):
                 img.draw_rectangle(c[2:6])
                 img.draw_cross(c[0], c[1], size=10)
 
