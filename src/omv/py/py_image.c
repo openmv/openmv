@@ -820,9 +820,9 @@ static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
     PY_ASSERT_TRUE_MSG((arg_ksize == 3 || arg_ksize == 5), "Kernel Size must be 3 or 5");
 
     if (arg_ksize == 3) {
-        imlib_morph(arg_img, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
+        imlib_morph(arg_img, 1, kernel_gauss_3, 1.0f/16.0f, 0.0f);
     } else if (arg_ksize == 5) {
-        imlib_morph(arg_img, 2, kernel_gauss_5, 1.0f/159.0f, 0.0f);
+        imlib_morph(arg_img, 2, kernel_gauss_5, 1.0f/256.0f, 0.0f);
     }
 
     return args[0];

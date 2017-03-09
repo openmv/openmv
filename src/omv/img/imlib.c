@@ -121,17 +121,17 @@ void image_copy(image_t *dst, image_t *src)
 extern const float xyz_table[256];
 
 const int8_t kernel_gauss_3[3*3] = {
-     9,  12,  9,
-    12,  15, 12,
-     9,  12,  9,
+     1, 2, 1,
+     2, 4, 2,
+     1, 2, 1,
 };
 
 const int8_t kernel_gauss_5[5*5] = {
-    2,  4,   5,  4,  2,
-    4,  9,  12,  9,  4,
-    5, 12,  15, 12,  5,
-    4,  9,  12,  9,  4,
-    2,  4,   5,  4,  2,
+    1,  4,  6,  4, 1,
+    4, 16, 24, 16, 4,
+    6, 24, 36, 24, 6,
+    4, 16, 24, 16, 4,
+    1,  4,  6,  4, 1
 };
 
 const int8_t kernel_laplacian_3[3*3] = {
