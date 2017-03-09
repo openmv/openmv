@@ -997,6 +997,9 @@ void imlib_blend(image_t *img, const char *path, image_t *other, int alpha);
 /* Image Morphing */
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
 
+/* Separable 2D convolution */
+void imlib_sepconv3(image_t *img, const int8_t *krn, const float m, const int b);
+
 /* Image Statistics */
 int imlib_image_mean(image_t *src); // grayscale only
 int imlib_image_std(image_t *src); // grayscale only
