@@ -28,6 +28,4 @@
 #include "readline.h"
 #include "extint.h"
 #include "usb.h"
-#include "storage.h"
-#include "sdcard.h"
 #endif // __MP_H__
