@@ -382,7 +382,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
         image_scale(img, &img_scaled);
 
         // Gaussian smooth the image before extracting keypoints
-        imlib_morph(&img_scaled, 1, kernel_gauss_3, 1.0f/99.0f, 0.0f);
+        imlib_sepconv3(&img_scaled, kernel_gauss_3, 1.0f/16.0f, 0.0f);
 
 		// Find kpts
         if (corner_detector == CORNER_FAST) {
