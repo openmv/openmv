@@ -1152,6 +1152,7 @@ int imlib_image_std(image_t *src)
 
 void imlib_sepconv3(image_t *img, const int8_t *krn, const float m, const int b)
 {
+    int ksize = 3;
     // TODO: Support RGB
     int *buffer = fb_alloc(img->w * 2 * sizeof(*buffer));
 
