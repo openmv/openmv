@@ -1,15 +1,15 @@
 # MJPEG Streaming
 #
 # This example shows off how to do MJPEG streaming to a FIREFOX webrowser
-# (IE and Chrome do not work). Just input your network SSID and KEY and then
-# connect to the IP address/port printed out from ifconfig.
+# Chrome, Firefox and MJpegViewer App on Android have been tested.
+# Connect to the IP address/port printed out from ifconfig to view the stream.
 
 import sensor, image, time, network, usocket, sys
 
-SSID=''     # Network SSID
-KEY=''      # Network key
-HOST = ''   # Use first available interface
-PORT = 8080 # Arbitrary non-privileged port
+SSID =''     # Network SSID
+KEY  =''     # Network key
+HOST =''     # Use first available interface
+PORT = 8080  # Arbitrary non-privileged port
 
 # Reset sensor
 sensor.reset()
