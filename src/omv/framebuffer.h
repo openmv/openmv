@@ -34,11 +34,6 @@ static struct jpegbuffer {
 // Returns MAIN FB size
 #define MAIN_FB_SIZE()  (MAIN_FB()->w*MAIN_FB()->h*MAIN_FB()->bpp)
 
-// The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
-// The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
-// overwrite image pixels before they are compressed.
-#define FB_JPEG_OFFS_SIZE  (1024)
-
 // Use this macro to get a pointer to the free SRAM area located after the framebuffer.
 #define FB_PIXELS() (MAIN_FB()->pixels+MAIN_FB_SIZE())
 #endif /* __FRAMEBUFFER_H__ */
