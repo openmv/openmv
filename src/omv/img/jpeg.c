@@ -412,7 +412,6 @@ static void jpeg_init(int quality)
 
 static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg_subsample_t jpeg_subsample)
 {
-
     // Number of components (1 or 3)
     uint8_t nr_comp = (bpp == 1)? 1 : 3;
 
@@ -516,6 +515,67 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     jpeg_put_bytes(jpeg_buf, (uint8_t [3]){0x00, 0x3F, 0x0}, 3);
 }
 
+
+void bayer_blk_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf)
+{
+    int r, g, b;
+    for (int y=yoffs; y<yoffs+h; y++) {
+        for (int x=xoffs; x<xoffs+w; x++) {
+            if ((y % 2) == 0) { // Even row
+                if ((x % 2) == 0) { // Even col
+                    r = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x-1, y+1)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
+
+                    g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x, y+1)  +
+                         IM_GET_RAW_PIXEL(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
+
+                    b = IM_GET_RAW_PIXEL(img,  x, y);
+                } else { // Odd col
+                    r = (IM_GET_RAW_PIXEL(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
+
+                    b = (IM_GET_RAW_PIXEL(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
+
+                    g =  IM_GET_RAW_PIXEL(img, x, y);
+                }
+            } else { // Odd row
+                if ((x % 2) == 0) { // Even Col
+                    r = (IM_GET_RAW_PIXEL(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
+
+                    g =  IM_GET_RAW_PIXEL(img, x, y);
+
+                    b = (IM_GET_RAW_PIXEL(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
+                } else { // Odd col
+                    r = IM_GET_RAW_PIXEL(img,  x, y);
+
+                    g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x, y+1)  +
+                         IM_GET_RAW_PIXEL(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
+
+                    b = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x-1, y+1)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
+                }
+
+            }
+            r = IM_R825(r);
+            g = IM_G826(g);
+            b = IM_B825(b);
+            *rgbbuf++ = IM_RGB565(r, g, b);
+        }
+    }
+}
+
+
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 {
     int DCY=0, DCU=0, DCV=0;
@@ -541,15 +601,20 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     jpeg_subsample_t jpeg_subsample;
 
     if (quality >= 60) {
-         jpeg_subsample = JPEG_SUBSAMPLE_1x1;
+        jpeg_subsample = JPEG_SUBSAMPLE_1x1;
     } else if (quality > 35) {
-         jpeg_subsample = JPEG_SUBSAMPLE_2x1;
+        jpeg_subsample = JPEG_SUBSAMPLE_2x1;
     } else { // <= 35
-         jpeg_subsample = JPEG_SUBSAMPLE_2x2;
+        jpeg_subsample = JPEG_SUBSAMPLE_2x2;
     }
 
     // Write JPEG headers
-    jpeg_write_headers(&jpeg_buf, src->w, src->h, src->bpp, jpeg_subsample);
+    if (src->bpp == 3) { // BAYER
+        // Will be converted to RGB565
+        jpeg_write_headers(&jpeg_buf, src->w, src->h, 2, jpeg_subsample);
+    } else {
+        jpeg_write_headers(&jpeg_buf, src->w, src->h, src->bpp, jpeg_subsample);
+    }
 
     // Encode 8x8 macroblocks
     if (src->bpp == 1) {
@@ -766,7 +831,198 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                 break;
             }
         }
+    } else if (src->bpp == 3) { //RAW/BAYER
+        switch (jpeg_subsample) {
+            case JPEG_SUBSAMPLE_1x1: {
+                int8_t YDU[64], UDU[64], VDU[64];
+                uint16_t rgbbuf[64];
+                for (int y=1; y<src->h-1; y+=8) {
+                    for (int x=1; x<src->w-1; x+=8) {
+                        bayer_blk_to_rgb565(src, 8, 8, x, y, rgbbuf);
+                        for (int r=0, idx=0; r<8; r++, idx+=8) {
+                            YDU[idx + 0] = yuv_table[rgbbuf[idx + 0] * 3 + 0];
+                            UDU[idx + 0] = yuv_table[rgbbuf[idx + 0] * 3 + 1];
+                            VDU[idx + 0] = yuv_table[rgbbuf[idx + 0] * 3 + 2];
+
+                            YDU[idx + 1] = yuv_table[rgbbuf[idx + 1] * 3 + 0];
+                            UDU[idx + 1] = yuv_table[rgbbuf[idx + 1] * 3 + 1];
+                            VDU[idx + 1] = yuv_table[rgbbuf[idx + 1] * 3 + 2];
+
+                            YDU[idx + 2] = yuv_table[rgbbuf[idx + 2] * 3 + 0];
+                            UDU[idx + 2] = yuv_table[rgbbuf[idx + 2] * 3 + 1];
+                            VDU[idx + 2] = yuv_table[rgbbuf[idx + 2] * 3 + 2];
+
+                            YDU[idx + 3] = yuv_table[rgbbuf[idx + 3] * 3 + 0];
+                            UDU[idx + 3] = yuv_table[rgbbuf[idx + 3] * 3 + 1];
+                            VDU[idx + 3] = yuv_table[rgbbuf[idx + 3] * 3 + 2];
+
+                            YDU[idx + 4] = yuv_table[rgbbuf[idx + 4] * 3 + 0];
+                            UDU[idx + 4] = yuv_table[rgbbuf[idx + 4] * 3 + 1];
+                            VDU[idx + 4] = yuv_table[rgbbuf[idx + 4] * 3 + 2];
+
+                            YDU[idx + 5] = yuv_table[rgbbuf[idx + 5] * 3 + 0];
+                            UDU[idx + 5] = yuv_table[rgbbuf[idx + 5] * 3 + 1];
+                            VDU[idx + 5] = yuv_table[rgbbuf[idx + 5] * 3 + 2];
+
+                            YDU[idx + 6] = yuv_table[rgbbuf[idx + 6] * 3 + 0];
+                            UDU[idx + 6] = yuv_table[rgbbuf[idx + 6] * 3 + 1];
+                            VDU[idx + 6] = yuv_table[rgbbuf[idx + 6] * 3 + 2];
+
+                            YDU[idx + 7] = yuv_table[rgbbuf[idx + 7] * 3 + 0];
+                            UDU[idx + 7] = yuv_table[rgbbuf[idx + 7] * 3 + 1];
+                            VDU[idx + 7] = yuv_table[rgbbuf[idx + 7] * 3 + 2];
+                        }
+
+                        DCY = jpeg_processDU(&jpeg_buf, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                        DCU = jpeg_processDU(&jpeg_buf, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                        DCV = jpeg_processDU(&jpeg_buf, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                    }
+                    if (jpeg_buf.overflow) {
+                        goto jpeg_overflow;
+                    }
+                }
+                break;
+            }
+            case JPEG_SUBSAMPLE_2x1: {
+                uint16_t rgbbuf[128];
+                int8_t YDU[128], UDU[64], VDU[64];
+
+                for (int y=1; y<src->h-1; y+=8) {
+                    for (int x=1; x<src->w-1; x+=16) {
+                        bayer_blk_to_rgb565(src, 16, 8, x, y, rgbbuf);
+                        for (int r=0, idx=0, ofs=0; r<8; r++, idx+=8, ofs+=16) {
+                            YDU[idx + 0]      = yuv_table[rgbbuf[ofs + 0] * 3 + 0];
+                            YDU[idx + 1]      = yuv_table[rgbbuf[ofs + 1] * 3 + 0];
+                            YDU[idx + 2]      = yuv_table[rgbbuf[ofs + 2] * 3 + 0];
+                            YDU[idx + 3]      = yuv_table[rgbbuf[ofs + 3] * 3 + 0];
+                            YDU[idx + 4]      = yuv_table[rgbbuf[ofs + 4] * 3 + 0];
+                            YDU[idx + 5]      = yuv_table[rgbbuf[ofs + 5] * 3 + 0];
+                            YDU[idx + 6]      = yuv_table[rgbbuf[ofs + 6] * 3 + 0];
+                            YDU[idx + 7]      = yuv_table[rgbbuf[ofs + 7] * 3 + 0];
+
+                            YDU[idx + 0 + 64] = yuv_table[rgbbuf[ofs + 8] * 3 + 0];
+                            YDU[idx + 1 + 64] = yuv_table[rgbbuf[ofs + 9] * 3 + 0];
+                            YDU[idx + 2 + 64] = yuv_table[rgbbuf[ofs +10] * 3 + 0];
+                            YDU[idx + 3 + 64] = yuv_table[rgbbuf[ofs +11] * 3 + 0];
+                            YDU[idx + 4 + 64] = yuv_table[rgbbuf[ofs +12] * 3 + 0];
+                            YDU[idx + 5 + 64] = yuv_table[rgbbuf[ofs +13] * 3 + 0];
+                            YDU[idx + 6 + 64] = yuv_table[rgbbuf[ofs +14] * 3 + 0];
+                            YDU[idx + 7 + 64] = yuv_table[rgbbuf[ofs +15] * 3 + 0];
+
+                            // Just toss the old UV pixels (could average for better quality)
+                            UDU[idx + 0]      = yuv_table[rgbbuf[ofs + 0] * 3 + 1];
+                            UDU[idx + 1]      = yuv_table[rgbbuf[ofs + 2] * 3 + 1];
+                            UDU[idx + 2]      = yuv_table[rgbbuf[ofs + 4] * 3 + 1];
+                            UDU[idx + 3]      = yuv_table[rgbbuf[ofs + 6] * 3 + 1];
+                            UDU[idx + 4]      = yuv_table[rgbbuf[ofs + 8] * 3 + 1];
+                            UDU[idx + 5]      = yuv_table[rgbbuf[ofs +10] * 3 + 1];
+                            UDU[idx + 6]      = yuv_table[rgbbuf[ofs +12] * 3 + 1];
+                            UDU[idx + 7]      = yuv_table[rgbbuf[ofs +14] * 3 + 1];
+
+                            VDU[idx + 0]      = yuv_table[rgbbuf[ofs + 0] * 3 + 2];
+                            VDU[idx + 1]      = yuv_table[rgbbuf[ofs + 2] * 3 + 2];
+                            VDU[idx + 2]      = yuv_table[rgbbuf[ofs + 4] * 3 + 2];
+                            VDU[idx + 3]      = yuv_table[rgbbuf[ofs + 6] * 3 + 2];
+                            VDU[idx + 4]      = yuv_table[rgbbuf[ofs + 8] * 3 + 2];
+                            VDU[idx + 5]      = yuv_table[rgbbuf[ofs +10] * 3 + 2];
+                            VDU[idx + 6]      = yuv_table[rgbbuf[ofs +12] * 3 + 2];
+                            VDU[idx + 7]      = yuv_table[rgbbuf[ofs +14] * 3 + 2];
+                        }
+
+                        DCY = jpeg_processDU(&jpeg_buf, YDU,    fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                        DCY = jpeg_processDU(&jpeg_buf, YDU+64, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                        DCU = jpeg_processDU(&jpeg_buf, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                        DCV = jpeg_processDU(&jpeg_buf, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                    }
+                    if (jpeg_buf.overflow) {
+                        goto jpeg_overflow;
+                    }
+                }
+                break;
+            }
+            case JPEG_SUBSAMPLE_2x2: {
+                uint16_t rgbbuf[256];
+                int8_t YDU[256], UDU[64], VDU[64];
+
+                for (int y=1; y<src->h-1; y+=16) {
+                    for (int x=1; x<src->w-1; x+=16) {
+                        bayer_blk_to_rgb565(src, 16, 16, x, y, rgbbuf);
+                        for (int r=0, idx=0; r<8; r++, idx+=8) {
+                            int ofs = r*16;
+                            YDU[idx + 0]       = yuv_table[rgbbuf[ofs + 0] * 3 + 0];
+                            YDU[idx + 1]       = yuv_table[rgbbuf[ofs + 1] * 3 + 0];
+                            YDU[idx + 2]       = yuv_table[rgbbuf[ofs + 2] * 3 + 0];
+                            YDU[idx + 3]       = yuv_table[rgbbuf[ofs + 3] * 3 + 0];
+                            YDU[idx + 4]       = yuv_table[rgbbuf[ofs + 4] * 3 + 0];
+                            YDU[idx + 5]       = yuv_table[rgbbuf[ofs + 5] * 3 + 0];
+                            YDU[idx + 6]       = yuv_table[rgbbuf[ofs + 6] * 3 + 0];
+                            YDU[idx + 7]       = yuv_table[rgbbuf[ofs + 7] * 3 + 0];
+
+                            YDU[idx + 0 + 64]  = yuv_table[rgbbuf[ofs + 8] * 3 + 0];
+                            YDU[idx + 1 + 64]  = yuv_table[rgbbuf[ofs + 9] * 3 + 0];
+                            YDU[idx + 2 + 64]  = yuv_table[rgbbuf[ofs +10] * 3 + 0];
+                            YDU[idx + 3 + 64]  = yuv_table[rgbbuf[ofs +11] * 3 + 0];
+                            YDU[idx + 4 + 64]  = yuv_table[rgbbuf[ofs +12] * 3 + 0];
+                            YDU[idx + 5 + 64]  = yuv_table[rgbbuf[ofs +13] * 3 + 0];
+                            YDU[idx + 6 + 64]  = yuv_table[rgbbuf[ofs +14] * 3 + 0];
+                            YDU[idx + 7 + 64]  = yuv_table[rgbbuf[ofs +15] * 3 + 0];
+
+                            ofs = (r+8)*16;
+                            YDU[idx + 0 + 128] = yuv_table[rgbbuf[ofs + 0] * 3 + 0];
+                            YDU[idx + 1 + 128] = yuv_table[rgbbuf[ofs + 1] * 3 + 0];
+                            YDU[idx + 2 + 128] = yuv_table[rgbbuf[ofs + 2] * 3 + 0];
+                            YDU[idx + 3 + 128] = yuv_table[rgbbuf[ofs + 3] * 3 + 0];
+                            YDU[idx + 4 + 128] = yuv_table[rgbbuf[ofs + 4] * 3 + 0];
+                            YDU[idx + 5 + 128] = yuv_table[rgbbuf[ofs + 5] * 3 + 0];
+                            YDU[idx + 6 + 128] = yuv_table[rgbbuf[ofs + 6] * 3 + 0];
+                            YDU[idx + 7 + 128] = yuv_table[rgbbuf[ofs + 7] * 3 + 0];
+
+                            YDU[idx + 0 + 192] = yuv_table[rgbbuf[ofs + 8] * 3 + 0];
+                            YDU[idx + 1 + 192] = yuv_table[rgbbuf[ofs + 9] * 3 + 0];
+                            YDU[idx + 2 + 192] = yuv_table[rgbbuf[ofs +10] * 3 + 0];
+                            YDU[idx + 3 + 192] = yuv_table[rgbbuf[ofs +11] * 3 + 0];
+                            YDU[idx + 4 + 192] = yuv_table[rgbbuf[ofs +12] * 3 + 0];
+                            YDU[idx + 5 + 192] = yuv_table[rgbbuf[ofs +13] * 3 + 0];
+                            YDU[idx + 6 + 192] = yuv_table[rgbbuf[ofs +14] * 3 + 0];
+                            YDU[idx + 7 + 192] = yuv_table[rgbbuf[ofs +15] * 3 + 0];
+
+                            ofs = (r*2)*16;
+                            // Just toss the odd U/V pixels (could average for better quality)
+                            UDU[idx + 0]       = yuv_table[rgbbuf[ofs + 0] * 3 + 1];
+                            UDU[idx + 1]       = yuv_table[rgbbuf[ofs + 2] * 3 + 1];
+                            UDU[idx + 2]       = yuv_table[rgbbuf[ofs + 4] * 3 + 1];
+                            UDU[idx + 3]       = yuv_table[rgbbuf[ofs + 6] * 3 + 1];
+                            UDU[idx + 4]       = yuv_table[rgbbuf[ofs + 8] * 3 + 1];
+                            UDU[idx + 5]       = yuv_table[rgbbuf[ofs +10] * 3 + 1];
+                            UDU[idx + 6]       = yuv_table[rgbbuf[ofs +12] * 3 + 1];
+                            UDU[idx + 7]       = yuv_table[rgbbuf[ofs +14] * 3 + 1];
+
+                            VDU[idx + 0]       = yuv_table[rgbbuf[ofs + 0] * 3 + 2];
+                            VDU[idx + 1]       = yuv_table[rgbbuf[ofs + 2] * 3 + 2];
+                            VDU[idx + 2]       = yuv_table[rgbbuf[ofs + 4] * 3 + 2];
+                            VDU[idx + 3]       = yuv_table[rgbbuf[ofs + 6] * 3 + 2];
+                            VDU[idx + 4]       = yuv_table[rgbbuf[ofs + 8] * 3 + 2];
+                            VDU[idx + 5]       = yuv_table[rgbbuf[ofs +10] * 3 + 2];
+                            VDU[idx + 6]       = yuv_table[rgbbuf[ofs +12] * 3 + 2];
+                            VDU[idx + 7]       = yuv_table[rgbbuf[ofs +14] * 3 + 2];
+                        }
+
+                        DCY = jpeg_processDU(&jpeg_buf, YDU,     fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                        DCY = jpeg_processDU(&jpeg_buf, YDU+64,  fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                        DCY = jpeg_processDU(&jpeg_buf, YDU+128, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                        DCY = jpeg_processDU(&jpeg_buf, YDU+192, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+                        DCU = jpeg_processDU(&jpeg_buf, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                        DCV = jpeg_processDU(&jpeg_buf, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+                    }
+                    if (jpeg_buf.overflow) {
+                        goto jpeg_overflow;
+                    }
+                }
+                break;
+            }
+        }
     }
+
 
     // Do the bit alignment of the EOI marker
     static const uint16_t fillBits[] = {0x7F, 7};
