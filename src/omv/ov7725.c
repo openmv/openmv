@@ -180,18 +180,25 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 
     switch (pixformat) {
         case PIXFORMAT_RGB565:
-            reg =  COM7_SET_FMT(reg, COM7_FMT_RGB);
+            reg = COM7_SET_FMT(reg, COM7_FMT_RGB);
+            ret = SCCB_Write(sensor->slv_addr, DSP_CTRL4, 0);
             break;
         case PIXFORMAT_YUV422:
         case PIXFORMAT_GRAYSCALE:
-            reg =  COM7_SET_FMT(reg, COM7_FMT_YUV);
+            reg = COM7_SET_FMT(reg, COM7_FMT_YUV);
+            ret = SCCB_Write(sensor->slv_addr, DSP_CTRL4, 0);
             break;
+        case PIXFORMAT_BAYER:
+            reg = COM7_SET_FMT(reg, COM7_FMT_P_BAYER);
+            ret = SCCB_Write(sensor->slv_addr, DSP_CTRL4, DSP_CTRL4_RAW8);
+            break;
+
         default:
             return -1;
     }
 
     // Write back register COM7
-    ret = SCCB_Write(sensor->slv_addr, COM7, reg);
+    ret |= SCCB_Write(sensor->slv_addr, COM7, reg);
 
     // Delay
     systick_sleep(30);
