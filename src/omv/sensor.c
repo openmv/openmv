@@ -345,13 +345,6 @@ int sensor_set_pixformat(pixformat_t pixformat)
         return 0;
     }
 
-    // Switch to BAYER if the frame is too big to fit in RAM.
-    if (pixformat == PIXFORMAT_RGB565
-            && sensor.framesize < 0xFF
-            && sensor.framesize > OMV_MAX_RGB_FRAME) {
-        pixformat = PIXFORMAT_BAYER;
-    }
-
     if (sensor.set_pixformat == NULL
         || sensor.set_pixformat(&sensor, pixformat) != 0) {
         // Operation not supported
@@ -391,22 +384,9 @@ int sensor_set_framesize(framesize_t framesize)
 
     // Skip the first frame.
     fb->bpp = 0;
-
-    if (sensor.pixformat == PIXFORMAT_GRAYSCALE
-            && sensor.framesize > OMV_MAX_GS_FRAME) {
-        // Crop higher GS resolutions to QVGA
-        sensor_set_windowing(190, 120, 320, 240);
-    } else {
-        // Switch to BAYER if the frame is too big to fit in RAM.
-        if (sensor.pixformat == PIXFORMAT_RGB565
-                && sensor.framesize < 0xFF
-                && sensor.framesize > OMV_MAX_RGB_FRAME) {
-            sensor_set_pixformat(PIXFORMAT_BAYER);
-        }
-        fb->w = resolution[framesize][0];
-        fb->h = resolution[framesize][1];
-        HAL_DCMI_DisableCROP(&DCMIHandle);
-    }
+    fb->w = resolution[framesize][0];
+    fb->h = resolution[framesize][1];
+    HAL_DCMI_DisableCROP(&DCMIHandle);
 
     return 0;
 }
@@ -643,6 +623,34 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
     }
 }
 
+static void sensor_check_bufsize()
+{
+    int bpp=0;
+    switch (sensor.pixformat) {
+        case PIXFORMAT_BAYER:
+        case PIXFORMAT_GRAYSCALE:
+            bpp = 1;
+            break;
+        case PIXFORMAT_YUV422:
+        case PIXFORMAT_RGB565:
+            bpp = 2;
+            break;
+        default:
+            break;
+    }
+
+    if ((fb->w * fb->h * bpp) > OMV_RAW_BUF_SIZE) {
+        if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
+            // Crop higher GS resolutions to QVGA
+            sensor_set_windowing(190, 120, 320, 240);
+        } else if (sensor.pixformat == PIXFORMAT_RGB565) {
+            // Switch to BAYER if the frame is too big to fit in RAM.
+            sensor_set_pixformat(PIXFORMAT_BAYER);
+        }
+    }
+
+}
+
 // The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
 // The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
 // overwrite image pixels before they are compressed.
@@ -653,6 +661,10 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
 
     // Set line filter
     sensor_set_line_filter(line_filter_func, line_filter_args);
+
+    // Make sure the raw frame fits FB. If it doesn't it will be cropped
+    // for GS, or the sensor pixel format will be swicthed to bayer for RGB.
+    sensor_check_bufsize();
 
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.

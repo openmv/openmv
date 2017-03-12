@@ -28,23 +28,15 @@
 #define OMV_MAX_INT_FRAME       FRAMESIZE_VGA
 #define OMV_MAX_INT_FRAME_STR   "VGA"
 
-// Max GS/RGB565/YUV422/Binary image.
-#define OMV_MAX_GS_FRAME        FRAMESIZE_VGA
-#define OMV_MAX_GS_FRAME_STR    "VGA"
-
-#define OMV_MAX_RGB_FRAME       FRAMESIZE_QVGA
-#define OMV_MAX_RGB_FRAME_STR   "QVGA"
-
-// Max raw (RGB565/YUV422) image for blob detection.
-#define OMV_MAX_BLOB_FRAME      FRAMESIZE_VGA
-#define OMV_MAX_BLOB_FRAME_STR  "VGA"
-
 // Enable AprilTags (64 KB).
 #define OMV_ENABLE_APRILTAGS
 
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
+
+// RAW buffer size
+#define OMV_RAW_BUF_SIZE        (307200)
 
 // JPEG buffer size (header + data)
 #define OMV_JPEG_BUF_SIZE       (23000)

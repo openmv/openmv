@@ -24,24 +24,12 @@
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
 
-// Max integral image.
-#define OMV_MAX_INT_FRAME       FRAMESIZE_QVGA
-#define OMV_MAX_INT_FRAME_STR   "QVGA"
-
-// Max GS/RGB565/YUV422/Binary image.
-#define OMV_MAX_GS_FRAME        FRAMESIZE_QVGA
-#define OMV_MAX_GS_FRAME_STR    "QVGA"
-
-#define OMV_MAX_RGB_FRAME       FRAMESIZE_QVGA
-#define OMV_MAX_RGB_FRAME_STR   "QVGA"
-
-// Max raw (RGB565/YUV422) image for blob detection.
-#define OMV_MAX_BLOB_FRAME      FRAMESIZE_QVGA
-#define OMV_MAX_BLOB_FRAME_STR  "QVGA"
-
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_2)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
+
+// RAW buffer size
+#define OMV_RAW_BUF_SIZE        (153600)
 
 // JPEG buffer size (header + data)
 #define OMV_JPEG_BUF_SIZE       (8000)
