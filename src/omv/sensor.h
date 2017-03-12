@@ -23,6 +23,7 @@ typedef struct {
 } sensor_id_t;
 
 typedef enum {
+    PIXFORMAT_BAYER,     // 1BPP/RAW
     PIXFORMAT_RGB565,    // 2BPP/RGB565
     PIXFORMAT_YUV422,    // 2BPP/YUV422
     PIXFORMAT_GRAYSCALE, // 1BPP/GRAYSCALE

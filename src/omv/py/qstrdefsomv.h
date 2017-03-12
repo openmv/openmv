@@ -152,6 +152,7 @@ Q(avg)
 
 //Sensor Module
 Q(sensor)
+Q(BAYER)
 Q(RGB565)
 Q(YUV422)
 Q(GRAYSCALE)
