@@ -680,6 +680,12 @@ extern const int8_t kernel_high_pass_3[9];
        __typeof__ (y) _y = (y); \
        ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
 
+#define IM_GET_RAW_PIXEL(img, x, y) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       __typeof__ (y) _y = (y); \
+       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
+
 #define IM_GET_RGB565_PIXEL(img, x, y) \
     ({ __typeof__ (img) _img = (img); \
        __typeof__ (x) _x = (x); \
