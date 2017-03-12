@@ -159,10 +159,20 @@ static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo,
     image_t *arg_img = py_image_cobj(self_in);
     if (flags == MP_BUFFER_READ) {
         bufinfo->buf = arg_img->pixels;
-        if (IM_IS_JPEG(arg_img)) {
-            bufinfo->len = arg_img->bpp;
-        } else {
-            bufinfo->len = arg_img->w*arg_img->h*arg_img->bpp;
+        switch (arg_img->bpp) {
+            case 1: // GS
+            case 2: // RGB/YUV
+                // 1 or 2 BPP
+                bufinfo->len = arg_img->w * arg_img->h * arg_img->bpp;
+                break;
+            case 3: // BAYER
+                // It's actually 1BPP
+                bufinfo->len = arg_img->w * arg_img->h *  1;
+                break;
+            default: // JPEG
+                // Size is set in bpp
+                bufinfo->len = arg_img->bpp;
+                break;
         }
         bufinfo->typecode = 'b';
         return 0;
