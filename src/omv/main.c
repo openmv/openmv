@@ -462,7 +462,7 @@ soft_reset:
         f_unlink("selftest.py");
         storage_flush();
         // Set flag for SWD debugger (main.py does not use the frame buffer).
-        MAIN_FB()->bpp = 0xDEADBEEF;
+        *((volatile int *) &(MAIN_FB()->bpp)) = 0xDEADBEEF;
     }
 
     // Run the main script from the current directory.
