@@ -24,10 +24,6 @@
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
 
-// Max integral image.
-#define OMV_MAX_INT_FRAME       FRAMESIZE_VGA
-#define OMV_MAX_INT_FRAME_STR   "VGA"
-
 // Enable AprilTags (64 KB).
 #define OMV_ENABLE_APRILTAGS
 
