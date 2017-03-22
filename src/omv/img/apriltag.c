@@ -12633,7 +12633,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
         lnk_data.z_translation = MATD_EL(pose, 2, 3);
         lnk_data.x_rotation = fast_atan2f(MATD_EL(pose, 2, 1), MATD_EL(pose, 2, 2));
         lnk_data.y_rotation = fast_atan2f(-MATD_EL(pose, 2, 0), fast_sqrtf(sq(MATD_EL(pose, 2, 1)) + sq(MATD_EL(pose, 2, 2))));
-        lnk_data.z_rotation = fast_atan2f(MATD_EL(pose, 1, 0), MATD_EL(pose, 0, 0));
+        lnk_data.z_rotation = -fast_atan2f(MATD_EL(pose, 1, 0), MATD_EL(pose, 0, 0));
 
         matd_destroy(pose);
 
