@@ -2126,9 +2126,9 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
 
     apriltag_families_t families = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_families), TAG36H11);
     // 2.8mm Focal Length w/ OV7725 sensor for reference.
-    float fx = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fx), (2.8 / 3.984) * 656);
+    float fx = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fx), (2.8 / 3.984) * arg_img->w);
     // 2.8mm Focal Length w/ OV7725 sensor for reference.
-    float fy = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fy), (2.8 / 2.952) * 488);
+    float fy = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fy), (2.8 / 2.952) * arg_img->h);
     // Use the image versus the roi here since the image should be projected from the camera center.
     float cx = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_cx), arg_img->w * 0.5);
     // Use the image versus the roi here since the image should be projected from the camera center.
