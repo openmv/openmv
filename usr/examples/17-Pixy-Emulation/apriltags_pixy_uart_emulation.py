@@ -93,10 +93,10 @@ def write(data):
     uart.write(data)
 
 def available():
-    return 0 # Not implemented as there is no way for the us to be ready to receive the data.
+    return uart.any()
 
 def read_byte():
-    return 0 # Not implemented as there is no way for the us to be ready to receive the data.
+    return uart.readchar()
 
 # Helper Stuff
 
