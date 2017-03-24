@@ -2171,6 +2171,140 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
     return objects_list;
 }
 
+// BarCode Object //
+#define py_barcode_obj_size 8
+typedef struct py_barcode_obj {
+    mp_obj_base_t base;
+    mp_obj_t x, y, w, h, payload, type, rotation, quality;
+} py_barcode_obj_t;
+
+static void py_barcode_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_barcode_obj_t *self = self_in;
+    mp_printf(print,
+              "{x:%d, y:%d, w:%d, h:%d, payload:\"%s\", type:%d, rotation:%f, quality:%d}",
+              mp_obj_get_int(self->x),
+              mp_obj_get_int(self->y),
+              mp_obj_get_int(self->w),
+              mp_obj_get_int(self->h),
+              mp_obj_str_get_str(self->payload),
+              mp_obj_get_int(self->type),
+              (double) mp_obj_get_float(self->rotation),
+              mp_obj_get_int(self->quality));
+}
+
+static mp_obj_t py_barcode_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_barcode_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_barcode_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_barcode_obj_size, index, false)) {
+            case 0: return self->x;
+            case 1: return self->y;
+            case 2: return self->w;
+            case 3: return self->h;
+            case 4: return self->payload;
+            case 5: return self->type;
+            case 6: return self->rotation;
+            case 7: return self->quality;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_barcode_rect(mp_obj_t self_in)
+{
+    return mp_obj_new_tuple(4, (mp_obj_t []) {((py_barcode_obj_t *) self_in)->x,
+                                              ((py_barcode_obj_t *) self_in)->y,
+                                              ((py_barcode_obj_t *) self_in)->w,
+                                              ((py_barcode_obj_t *) self_in)->h});
+}
+
+mp_obj_t py_barcode_x(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->x; }
+mp_obj_t py_barcode_y(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->y; }
+mp_obj_t py_barcode_w(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->w; }
+mp_obj_t py_barcode_h(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->h; }
+mp_obj_t py_barcode_payload_fun(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->payload; }
+mp_obj_t py_barcode_type_fun(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->type; }
+mp_obj_t py_barcode_rotation_fun(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->rotation; }
+mp_obj_t py_barcode_quality_fun(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->quality; }
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_rect_obj, py_barcode_rect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_x_obj, py_barcode_x);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_y_obj, py_barcode_y);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_w_obj, py_barcode_w);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_h_obj, py_barcode_h);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_payload_fun_obj, py_barcode_payload_fun);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_type_fun_obj, py_barcode_type_fun);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_rotation_fun_obj, py_barcode_rotation_fun);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_quality_fun_obj, py_barcode_quality_fun);
+
+STATIC const mp_rom_map_elem_t py_barcode_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_barcode_rect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_barcode_x_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_barcode_y_obj) },
+    { MP_ROM_QSTR(MP_QSTR_w), MP_ROM_PTR(&py_barcode_w_obj) },
+    { MP_ROM_QSTR(MP_QSTR_h), MP_ROM_PTR(&py_barcode_h_obj) },
+    { MP_ROM_QSTR(MP_QSTR_payload), MP_ROM_PTR(&py_barcode_payload_fun_obj) },
+    { MP_ROM_QSTR(MP_QSTR_type), MP_ROM_PTR(&py_barcode_type_fun_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_barcode_rotation_fun_obj) },
+    { MP_ROM_QSTR(MP_QSTR_quality), MP_ROM_PTR(&py_barcode_quality_fun_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_barcode_locals_dict, py_barcode_locals_dict_table);
+
+static const mp_obj_type_t py_barcode_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_barcode,
+    .print = py_barcode_print,
+    .subscr = py_barcode_subscr,
+    .locals_dict = (mp_obj_t) &py_barcode_locals_dict,
+};
+
+static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    list_t out;
+    fb_alloc_mark();
+    imlib_find_barcodes(&out, arg_img, &roi);
+    fb_alloc_free_till_mark();
+
+    mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
+    for (size_t i = 0; list_size(&out); i++) {
+        find_barcodes_list_lnk_data_t lnk_data;
+        list_pop_front(&out, &lnk_data);
+
+        py_barcode_obj_t *o = m_new_obj(py_barcode_obj_t);
+        o->base.type = &py_barcode_type;
+        o->x = mp_obj_new_int(lnk_data.rect.x);
+        o->y = mp_obj_new_int(lnk_data.rect.y);
+        o->w = mp_obj_new_int(lnk_data.rect.w);
+        o->h = mp_obj_new_int(lnk_data.rect.h);
+        o->payload = mp_obj_new_str(lnk_data.payload, lnk_data.payload_len, false);
+        o->type = mp_obj_new_int(lnk_data.type);
+        o->rotation = mp_obj_new_float((lnk_data.rotation * PI) / 180);
+        o->quality = mp_obj_new_int(lnk_data.quality);
+
+        objects_list->items[i] = o;
+        xfree(lnk_data.payload);
+    }
+
+    return objects_list;
+}
+
 static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -2591,6 +2725,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blob
 /* Code Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_qrcodes_obj, 1, py_image_find_qrcodes);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_apriltags_obj, 1, py_image_find_apriltags);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_barcodes_obj, 1, py_image_find_barcodes);
 /* Template Matching */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pool_obj, 3, py_image_midpoint_pool);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
@@ -2668,6 +2803,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_qrcodes),        (mp_obj_t)&py_image_find_qrcodes_obj},
 #ifdef OMV_ENABLE_APRILTAGS
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_apriltags),      (mp_obj_t)&py_image_find_apriltags_obj},
+#endif
+#ifdef OMV_ENABLE_BARCODES
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_barcodes),       (mp_obj_t)&py_image_find_barcodes_obj},
 #endif
     /* Template Matching */
     {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint_pool),       (mp_obj_t)&py_image_midpoint_pool_obj},
@@ -3049,6 +3187,24 @@ static const mp_map_elem_t globals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_TAG36H10),            MP_OBJ_NEW_SMALL_INT(TAG36H10)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_TAG36H11),            MP_OBJ_NEW_SMALL_INT(TAG36H11)},
     {MP_OBJ_NEW_QSTR(MP_QSTR_ARTOOLKIT),           MP_OBJ_NEW_SMALL_INT(ARTOOLKIT)},
+#endif
+#ifdef OMV_ENABLE_BARCODES
+    {MP_OBJ_NEW_QSTR(MP_QSTR_EAN2),                MP_OBJ_NEW_SMALL_INT(BARCODE_EAN2)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_EAN5),                MP_OBJ_NEW_SMALL_INT(BARCODE_EAN5)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_EAN8),                MP_OBJ_NEW_SMALL_INT(BARCODE_EAN8)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_UPCE),                MP_OBJ_NEW_SMALL_INT(BARCODE_UPCE)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_ISBN10),              MP_OBJ_NEW_SMALL_INT(BARCODE_ISBN10)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_UPCA),                MP_OBJ_NEW_SMALL_INT(BARCODE_UPCA)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_EAN13),               MP_OBJ_NEW_SMALL_INT(BARCODE_EAN13)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_ISBN13),              MP_OBJ_NEW_SMALL_INT(BARCODE_ISBN13)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_I25),                 MP_OBJ_NEW_SMALL_INT(BARCODE_I25)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_DATABAR),             MP_OBJ_NEW_SMALL_INT(BARCODE_DATABAR)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_DATABAR_EXP),         MP_OBJ_NEW_SMALL_INT(BARCODE_DATABAR_EXP)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_CODABAR),             MP_OBJ_NEW_SMALL_INT(BARCODE_CODABAR)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_CODE39),              MP_OBJ_NEW_SMALL_INT(BARCODE_CODE39)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_PDF417),              MP_OBJ_NEW_SMALL_INT(BARCODE_PDF417)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_CODE93),              MP_OBJ_NEW_SMALL_INT(BARCODE_CODE93)},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_CODE128),             MP_OBJ_NEW_SMALL_INT(BARCODE_CODE128)},
 #endif
 
     /* Color space functions */

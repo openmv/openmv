@@ -920,6 +920,37 @@ typedef struct find_apriltags_list_lnk_data
 }
 find_apriltags_list_lnk_data_t;
 
+typedef enum barcodes
+{
+    BARCODE_EAN2,
+    BARCODE_EAN5,
+    BARCODE_EAN8,
+    BARCODE_UPCE,
+    BARCODE_ISBN10,
+    BARCODE_UPCA,
+    BARCODE_EAN13,
+    BARCODE_ISBN13,
+    BARCODE_I25,
+    BARCODE_DATABAR,
+    BARCODE_DATABAR_EXP,
+    BARCODE_CODABAR,
+    BARCODE_CODE39,
+    BARCODE_PDF417,
+    BARCODE_CODE93,
+    BARCODE_CODE128
+}
+barcodes_t;
+
+typedef struct find_barcodes_list_lnk_data
+{
+    rectangle_t rect;
+    size_t payload_len;
+    char *payload;
+    uint16_t type, rotation;
+    int quality;
+}
+find_barcodes_list_lnk_data_t;
+
 /* Color space functions */
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
 void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
@@ -1104,5 +1135,6 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
                           float fx, float fy, float cx, float cy);
+void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 
 #endif //__IMLIB_H__
