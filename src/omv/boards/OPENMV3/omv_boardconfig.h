@@ -27,6 +27,9 @@
 // Enable AprilTags (64 KB).
 #define OMV_ENABLE_APRILTAGS
 
+// Enable Barcodes (42 KB).
+#define OMV_ENABLE_BARCODES
+
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)

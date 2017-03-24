@@ -138,6 +138,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	blob.o                                  \
 	qrcode.o                                \
 	apriltag.o                              \
+	zbar.o                                  \
 	fmath.o                                 \
 	fsort.o                                 \
 	fft.o                                   \
