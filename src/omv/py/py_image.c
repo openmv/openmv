@@ -107,7 +107,36 @@ void *py_image_cobj(mp_obj_t img_obj)
 static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_image_obj_t *self = self_in;
-    mp_printf(print, "<image width:%d height:%d bpp:%d>", self->_cobj.w, self->_cobj.h, self->_cobj.bpp);
+    switch(self->_cobj.bpp) {
+        case IMAGE_BPP_BINARY: {
+            mp_printf(print, "{w:%d, h:%d, type=\"binary\", size:%d}",
+                      self->_cobj.w, self->_cobj.h, 
+                      ((self->_cobj.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * self->_cobj.h);
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            mp_printf(print, "{w:%d, h:%d, type=\"grayscale\", size:%d}",
+                      self->_cobj.w, self->_cobj.h, 
+                      (self->_cobj.w * self->_cobj.h) * sizeof(uint8_t));
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            mp_printf(print, "{w:%d, h:%d, type=\"rgb565\", size:%d}",
+                      self->_cobj.w, self->_cobj.h, 
+                      (self->_cobj.w * self->_cobj.h) * sizeof(uint16_t));
+            break;
+        }
+        default: {
+            if((self->_cobj.data[0] == 0xFE) && (self->_cobj.data[self->_cobj.bpp-1] == 0xFE)) { // for ide
+                print->print_strn(print->data, (const char *) self->_cobj.data, self->_cobj.bpp);
+            } else { // not for ide
+                mp_printf(print, "{w:%d, h:%d, type=\"jpeg\", size:%d}",
+                          self->_cobj.w, self->_cobj.h, 
+                          self->_cobj.bpp);
+            }
+            break;
+        }
+    }
 }
 
 static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
@@ -276,7 +305,89 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
         fb->bpp = arg_img->bpp;
     }
 
-    return mp_const_none;
+    return args[0];
+}
+
+static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
+    PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
+
+    uint32_t size;
+    fb_alloc_mark();
+    uint8_t *buffer = fb_alloc_all(&size);
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
+    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
+
+    switch(arg_img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            PY_ASSERT_TRUE_MSG(((((out.bpp * 8) + 5) / 6) + 2) <=
+                               (((arg_img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * arg_img->h),
+                               "Can't compress in place!");
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            PY_ASSERT_TRUE_MSG(((((out.bpp * 8) + 5) / 6) + 2) <=
+                               ((arg_img->w * arg_img->h) * sizeof(uint8_t)),
+                               "Can't compress in place!");
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            PY_ASSERT_TRUE_MSG(((((out.bpp * 8) + 5) / 6) + 2) <=
+                               ((arg_img->w * arg_img->h) * sizeof(uint16_t)),
+                               "Can't compress in place!");
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    uint8_t *ptr = arg_img->data;
+
+    *ptr++ = 0xFE;
+
+    for(int i = 0, j = (out.bpp / 3) * 3; i < j; i += 3) {
+        int x = 0;
+        x |= out.data[i + 0] << 0;
+        x |= out.data[i + 1] << 8;
+        x |= out.data[i + 2] << 16;
+        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 18) & 0x3F);
+    }
+
+    if((out.bpp % 3) == 2) { // 2 bytes -> 16-bits -> 24-bits sent
+        int x = 0;
+        x |= out.data[out.bpp - 2] << 0;
+        x |= out.data[out.bpp - 1] << 8;
+        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
+    }
+
+    if((out.bpp % 3) == 1) { // 1 byte -> 8-bits -> 16-bits sent
+        int x = 0;
+        x |= out.data[out.bpp - 1] << 0;
+        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
+    }
+
+    *ptr++ = 0xFE;
+
+    out.bpp = ((out.bpp * 8) + 5) / 6;
+    arg_img->bpp = out.bpp;
+    fb_free();
+    fb_alloc_free_till_mark();
+
+    if (fb->pixels == arg_img->data) {
+        fb->bpp = arg_img->bpp;
+    }
+
+    return args[0];
 }
 
 static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -293,6 +404,60 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     uint8_t *temp = xalloc(out.bpp);
     memcpy(temp, out.data, out.bpp);
+    out.data = temp;
+    fb_free();
+    fb_alloc_free_till_mark();
+
+    return py_image_from_struct(&out);
+}
+
+static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
+    PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
+
+    uint32_t size;
+    fb_alloc_mark();
+    uint8_t *buffer = fb_alloc_all(&size);
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
+    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
+    uint8_t *temp = xalloc((((out.bpp * 8) + 5) / 6) + 2);
+    uint8_t *ptr = temp;
+
+    *ptr++ = 0xFE;
+
+    for(int i = 0, j = (out.bpp / 3) * 3; i < j; i += 3) {
+        int x = 0;
+        x |= out.data[i + 0] << 0;
+        x |= out.data[i + 1] << 8;
+        x |= out.data[i + 2] << 16;
+        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 18) & 0x3F);
+    }
+
+    if((out.bpp % 3) == 2) { // 2 bytes -> 16-bits -> 24-bits sent
+        int x = 0;
+        x |= out.data[out.bpp - 2] << 0;
+        x |= out.data[out.bpp - 1] << 8;
+        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 12) & 0x0F);
+    }
+
+    if((out.bpp % 3) == 1) { // 1 byte -> 8-bits -> 16-bits sent
+        int x = 0;
+        x |= out.data[out.bpp - 1] << 0;
+        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
+        *ptr++ = 0x80 | ((x >> 6) & 0x03);
+    }
+
+    *ptr++ = 0xFE;
+
+    out.bpp = (((out.bpp * 8) + 5) / 6) + 2;
     out.data = temp;
     fb_free();
     fb_alloc_free_till_mark();
@@ -2674,7 +2839,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_to_fb_obj, 1, py_image_copy_to_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_obj, 1, py_image_compress);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_for_ide_obj, 1, py_image_compress_for_ide);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_obj, 1, py_image_compressed);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_for_ide_obj, 1, py_image_compressed_for_ide);
 /* Basic image functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_width_obj, py_image_width);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_height_obj, py_image_height);
@@ -2747,7 +2914,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb),          (mp_obj_t)&py_image_copy_to_fb_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_compress_for_ide),    (mp_obj_t)&py_image_compress_for_ide_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compressed),          (mp_obj_t)&py_image_compressed_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_compressed_for_ide),  (mp_obj_t)&py_image_compressed_for_ide_obj},
     /* Basic image functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_width),               (mp_obj_t)&py_image_width_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_height),              (mp_obj_t)&py_image_height_obj},
