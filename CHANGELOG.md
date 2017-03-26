@@ -1,4 +1,10 @@
 # Change Log
+## [2.3](https://github.com/openmv/openmv/releases/tag/v2.3) (2017-03-26)
+* Support WiFi Access Point mode.
+* New BAYER/RAW pixel format.
+* Support RGB VGA frames.
+* 1D barcode support using (zbar).
+
 ## [2.2](https://github.com/openmv/openmv/releases/tag/v2.2) (2017-02-28)
 * Add Apriltags support
 * Fix OMV3 bootloader LED pins
