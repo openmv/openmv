@@ -4097,7 +4097,7 @@ static inline zbar_symbol_type_t ean_part_end4 (ean_pass_t *pass,
         /* invalid parity combination */
         return(ZBAR_NONE);
 
-    if(!par == fwd) {
+    if(par != fwd) {
         /* reverse sampled digits */
         unsigned char tmp = pass->raw[1];
         pass->state |= STATE_REV;
@@ -4183,7 +4183,7 @@ static inline zbar_symbol_type_t ean_part_end7 (ean_decoder_t *ean,
         /* invalid parity combination */
         return(ZBAR_NONE);
 
-    if(!par == fwd) {
+    if(par != fwd) {
         unsigned char i;
         pass->state |= STATE_REV;
         /* reverse sampled digits */
