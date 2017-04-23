@@ -206,9 +206,6 @@ static const uint8_t default_regs[][2] = {
     { 0x00,     0x00 }
 };
 
-static const uint8_t cif_regs[][2] = {
-};
-
 static const uint8_t svga_regs[][2] = {
         { BANK_SEL, BANK_SEL_SENSOR },
         /* DSP input image resoultion and window size control */

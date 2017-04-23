@@ -99,7 +99,11 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size)
                     // Sort and draw bins
                     for (int i=hog_index; i<hog_index+N_BINS; i++) {
                         int m = (int)(hog[i]*255);
-                        if (m > 255) m = 255; if (m < 0) m = 0;
+                        if (m > 255) {
+                            m = 255;
+                        } else if (m < 0) {
+                            m = 0;
+                        }
                         bin_t *bin = array_at(gds, (i%N_BINS));
                         bin->m = m;
                         bin->d = ((i%N_BINS)*20);
