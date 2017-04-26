@@ -123,7 +123,7 @@ struct quirc_code {
      * is a bitmask giving the actual values of cells. If the cell
      * at (x, y) is black, then the following bit is set:
      *
-     *      cell_bitmap[i << 3] & (1 << (i & 7))
+     *      cell_bitmap[i >> 3] & (1 << (i & 7))
      *
      * where i = (y * size) + x.
      */
@@ -1526,7 +1526,7 @@ static int fitness_all(const struct quirc *q, int index)
 
     /* Check alignment patterns */
     ap_count = 0;
-    while (info->apat[ap_count])
+    while ((ap_count < QUIRC_MAX_ALIGNMENT) && info->apat[ap_count])
         ap_count++;
 
     for (i = 1; i + 1 < ap_count; i++) {
