@@ -11802,15 +11802,13 @@ void apriltag_detections_destroy(zarray_t *detections)
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
                           float fx, float fy, float cx, float cy)
 {
-    // Frame Buffer Memory Usage for M7:
-    // -> RGB565 (160x120) FB Image = 38400 Bytes
-    // -> Heap (160x120) * 9 = 172800 Bytes
-    // -> GRAYSCALE (160x120) Input Image = 38400 Bytes
-    // -> GRAYSCALE (160x120) Threhsolded Image = 38400 Bytes
-    // -> UnionFind (160x120) * 4 = 76800 Bytes
-    // == 364800 Bytes out of 393216 Bytes
-    // 28416 left -> used for hash table
-    umm_init_x(roi->w * roi->h * 9);
+    // Frame Buffer Memory Usage...
+    // -> GRAYSCALE Input Image = w*h*1
+    // -> GRAYSCALE Threhsolded Image = w*h*1
+    // -> UnionFind = w*h*4 (+w*h*2 for hash table)
+    size_t resolution = roi->w * roi->h;
+    size_t fb_alloc_need = resolution * (1 + 1 + 4 + 2); // read above...
+    umm_init_x(((fb_avail() - fb_alloc_need) / resolution) * resolution);
     apriltag_detector_t *td = apriltag_detector_create();
 
     if (families & TAG16H5) {
