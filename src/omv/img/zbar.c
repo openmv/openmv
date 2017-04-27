@@ -8862,7 +8862,7 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
     }
 
     zbar_image_scanner_destroy(scanner);
-    fb_free(); // umm_init();
+    fb_free(); // umm_init_x();
     if (ptr->bpp != IMAGE_BPP_GRAYSCALE) fb_free(); // grayscale_image;
 }
 
