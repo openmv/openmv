@@ -11943,7 +11943,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     apriltag_detections_destroy(detections);
     fb_free(); // grayscale_image;
     apriltag_detector_destroy(td);
-    fb_free(); // umm_init();
+    fb_free(); // umm_init_x();
 }
 
 #pragma GCC diagnostic pop
