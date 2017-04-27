@@ -121,6 +121,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	main.o                                  \
 	xalloc.o                                \
 	fb_alloc.o                              \
+	umm_malloc.o                            \
 	ff_wrapper.o                            \
 	array.o                                 \
 	usbdbg.o                                \
