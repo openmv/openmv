@@ -1,6 +1,6 @@
 ### OpenMV (Open Machine Vision Module)
 
-![简体中文版](README_CN.md )
+[简体中文版](README_CN.md )
 
 OpenMV is an open-source tiny machine vision module based on the STM32F4xx ARM Cortex-M4 MCU and the OV2640 JPEG sensor.
 
