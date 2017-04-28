@@ -265,6 +265,21 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     return mp_const_none;
 }
 
+static mp_obj_t py_image_raw(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG.");
+    byte *data = arg_img->pixels;
+    int len = arg_img->w * arg_img->h * arg_img->bpp;
+    printf("%d\n", len);
+    mp_obj_str_t *o = m_new_obj(mp_obj_str_t);
+    o->base.type = &mp_type_bytes;
+    o->hash = qstr_compute_hash(data, len);
+    o->len = len;
+    o->data = data;
+    return MP_OBJ_FROM_PTR(o);
+}
+
 static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -2838,6 +2853,7 @@ static mp_obj_t py_image_find_hog(uint n_args, const mp_obj_t *args, mp_map_t *k
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_to_fb_obj, 1, py_image_copy_to_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_raw_obj, py_image_raw);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_obj, 1, py_image_compress);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_for_ide_obj, 1, py_image_compress_for_ide);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_obj, 1, py_image_compressed);
@@ -2913,6 +2929,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_copy),                (mp_obj_t)&py_image_copy_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb),          (mp_obj_t)&py_image_copy_to_fb_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_save),                (mp_obj_t)&py_image_save_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_raw),                 (mp_obj_t)&py_image_raw_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compress),            (mp_obj_t)&py_image_compress_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compress_for_ide),    (mp_obj_t)&py_image_compress_for_ide_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_compressed),          (mp_obj_t)&py_image_compressed_obj},
