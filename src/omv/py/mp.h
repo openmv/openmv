@@ -21,7 +21,6 @@
 #include "parse.h"
 #include "obj.h"
 #include "objtuple.h"
-#include "objstr.h"
 #include "runtime.h"
 #include "stream.h"
 #include "gc.h"
