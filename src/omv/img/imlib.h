@@ -921,6 +921,15 @@ typedef struct find_apriltags_list_lnk_data
 }
 find_apriltags_list_lnk_data_t;
 
+typedef struct find_datamatrices_list_lnk_data {
+    rectangle_t rect;
+    size_t payload_len;
+    char *payload;
+    uint16_t rotation;
+    uint8_t rows, columns;
+    uint16_t capacity, padding;
+} find_datamatrices_list_lnk_data_t;
+
 typedef enum barcodes
 {
     BARCODE_EAN2,
@@ -1136,6 +1145,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
                           float fx, float fy, float cx, float cy);
+void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int effort);
 void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 
 #endif //__IMLIB_H__

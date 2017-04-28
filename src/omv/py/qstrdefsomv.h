@@ -465,6 +465,24 @@ Q(TAG36H10)
 Q(TAG36H11)
 Q(ARTOOLKIT)
 
+// Find DataMatrices
+Q(find_datamatrices)
+// duplicate Q(roi)
+Q(effort)
+// DataMatrix Object
+Q(datamatrix)
+// duplicate Q(rect)
+// duplicate Q(x)
+// duplicate Q(y)
+// duplicate Q(w)
+// duplicate Q(h)
+// duplicate Q(payload)
+// duplicate Q(rotation)
+Q(rows)
+Q(columns)
+Q(capacity)
+Q(padding)
+
 // Find BarCodes
 Q(find_barcodes)
 // duplicate Q(roi)
