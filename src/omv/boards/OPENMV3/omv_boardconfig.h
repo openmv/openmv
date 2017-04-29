@@ -27,6 +27,9 @@
 // Enable AprilTags (64 KB).
 #define OMV_ENABLE_APRILTAGS
 
+// Enable DataMatrices (26 KB).
+#define OMV_ENABLE_DATAMATRICES
+
 // Enable Barcodes (42 KB).
 #define OMV_ENABLE_BARCODES
 
