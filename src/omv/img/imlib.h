@@ -351,7 +351,7 @@ void image_copy(image_t *dst, image_t *src);
     ((uint16_t *) _image->data)[(_image->w * _y) + _x]; \
 })
 
-#define IMAGE_PUT_RGB565_PIXEL(image, x, y) \
+#define IMAGE_PUT_RGB565_PIXEL(image, x, y, v) \
 ({ \
     __typeof__ (image) _image = (image); \
     __typeof__ (x) _x = (x); \
