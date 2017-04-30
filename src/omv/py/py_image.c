@@ -141,72 +141,233 @@ static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
 
 static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
 {
-    py_image_obj_t *o = self_in;
-    image_t *arg_img = py_image_cobj(self_in);
-    if (value == MP_OBJ_NULL) {
-        // delete
-        // not supported
-        return MP_OBJ_NULL;
-    } else if (value == MP_OBJ_SENTINEL) {
-        // load
-        if (IM_IS_GS(arg_img)) {
-            int i = mp_get_index(o->base.type, arg_img->w*arg_img->h, index, false);
-            int x = (i % arg_img->w);
-            int y = (i / arg_img->w);
-            return mp_obj_new_int(IM_GET_GS_PIXEL(arg_img, x, y));
-        } else if (IM_IS_RGB565(arg_img)) {
-            int i = mp_get_index(o->base.type, arg_img->w*arg_img->h, index, false);
-            int x = (i % arg_img->w);
-            int y = (i / arg_img->w);
-            return mp_obj_new_int(IM_GET_RGB565_PIXEL(arg_img, x, y));
-        } else {
-            int i = mp_get_index(o->base.type, arg_img->bpp, index, false);
-            return mp_obj_new_int(arg_img->pixels[i]); // JPEG
+    py_image_obj_t *self = self_in;
+    if (value == MP_OBJ_NULL) { // delete
+    } else if (value == MP_OBJ_SENTINEL) { // load
+        switch (self->_cobj.bpp) {
+            case IMAGE_BPP_BINARY: {
+                if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+                    mp_bound_slice_t slice;
+                    if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
+                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                    }
+                    mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+                    for (mp_uint_t i = 0; i < result->len; i++) {
+                        result->items[i] = mp_obj_new_int(IMAGE_GET_BINARY_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w));
+                    }
+                    return result;
+                }
+                mp_uint_t i = mp_get_index(self->base.type, self->_cobj.w * self->_cobj.h, index, false);
+                return mp_obj_new_int(IMAGE_GET_BINARY_PIXEL(&(self->_cobj), i % self->_cobj.w, i / self->_cobj.w));
+            }
+            case 3: // BAYER
+            case IMAGE_BPP_GRAYSCALE: {
+                if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+                    mp_bound_slice_t slice;
+                    if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
+                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                    }
+                    mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+                    for (mp_uint_t i = 0; i < result->len; i++) {
+                        uint8_t p = IMAGE_GET_GRAYSCALE_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w);
+                        result->items[i] = mp_obj_new_int(p);
+                    }
+                    return result;
+                }
+                mp_uint_t i = mp_get_index(self->base.type, self->_cobj.w * self->_cobj.h, index, false);
+                uint8_t p = IMAGE_GET_GRAYSCALE_PIXEL(&(self->_cobj), i % self->_cobj.w, i / self->_cobj.w);
+                return mp_obj_new_int(p);
+            }
+            case IMAGE_BPP_RGB565: {
+                if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+                    mp_bound_slice_t slice;
+                    if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
+                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                    }
+                    mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+                    for (mp_uint_t i = 0; i < result->len; i++) {
+                        uint16_t p = IMAGE_GET_RGB565_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w);
+                        result->items[i] = mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(COLOR_RGB565_TO_R8(p)),
+                                                                              mp_obj_new_int(COLOR_RGB565_TO_G8(p)),
+                                                                              mp_obj_new_int(COLOR_RGB565_TO_B8(p))});
+                    }
+                    return result;
+                }
+                mp_uint_t i = mp_get_index(self->base.type, self->_cobj.w * self->_cobj.h, index, false);
+                uint16_t p = IMAGE_GET_RGB565_PIXEL(&(self->_cobj), i % self->_cobj.w, i / self->_cobj.w);
+                return mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(COLOR_RGB565_TO_R8(p)),
+                                                          mp_obj_new_int(COLOR_RGB565_TO_G8(p)),
+                                                          mp_obj_new_int(COLOR_RGB565_TO_B8(p))});
+            }
+            default: {
+                if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+                    mp_bound_slice_t slice;
+                    if (!mp_seq_get_fast_slice_indexes(self->_cobj.bpp, index, &slice)) {
+                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                    }
+                    mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+                    for (mp_uint_t i = 0; i < result->len; i++) {
+                        result->items[i] = mp_obj_new_int(self->_cobj.data[slice.start + i]);
+                    }
+                    return result;
+                }
+                mp_uint_t i = mp_get_index(self->base.type, self->_cobj.bpp, index, false);
+                return mp_obj_new_int(self->_cobj.data[i]);
+            }
         }
-    } else {
-        // store
-        if (IM_IS_GS(arg_img)) {
-            int i = mp_get_index(o->base.type, arg_img->w*arg_img->h, index, false);
-            int x = (i % arg_img->w);
-            int y = (i / arg_img->w);
-            IM_SET_GS_PIXEL(arg_img, x, y, mp_obj_get_int(value));
-        } else if (IM_IS_RGB565(arg_img)) {
-            int i = mp_get_index(o->base.type, arg_img->w*arg_img->h, index, false);
-            int x = (i % arg_img->w);
-            int y = (i / arg_img->w);
-            IM_SET_RGB565_PIXEL(arg_img, x, y, mp_obj_get_int(value));
-        } else {
-            int i = mp_get_index(o->base.type, arg_img->bpp, index, false);
-            arg_img->pixels[i] = mp_obj_get_int(value); // JPEG
+    } else { // store
+        switch (self->_cobj.bpp) {
+            case IMAGE_BPP_BINARY: {
+                if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+                    mp_bound_slice_t slice;
+                    if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
+                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                    }
+                    if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
+                        mp_uint_t value_l_len;
+                        mp_obj_t *value_l;
+                        mp_obj_get_array(value, &value_l_len, &value_l);
+                        PY_ASSERT_TRUE_MSG(value_l_len == (slice.stop - slice.start), "cannot grow or shrink image");
+                        for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
+                            IMAGE_PUT_BINARY_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w, mp_obj_get_int(value_l[i]));
+                        }
+                    } else {
+                        mp_int_t v = mp_obj_get_int(value);
+                        for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
+                            IMAGE_PUT_BINARY_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w, v);
+                        }
+                    }
+                    return mp_const_none;
+                }
+                mp_uint_t i = mp_get_index(self->base.type, self->_cobj.w * self->_cobj.h, index, false);
+                IMAGE_PUT_BINARY_PIXEL(&(self->_cobj), i % self->_cobj.w, i / self->_cobj.w, mp_obj_get_int(value));
+                return mp_const_none;
+            }
+            case 3: // BAYER
+            case IMAGE_BPP_GRAYSCALE: {
+                if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+                    mp_bound_slice_t slice;
+                    if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
+                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                    }
+                    if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
+                        mp_uint_t value_l_len;
+                        mp_obj_t *value_l;
+                        mp_obj_get_array(value, &value_l_len, &value_l);
+                        PY_ASSERT_TRUE_MSG(value_l_len == (slice.stop - slice.start), "cannot grow or shrink image");
+                        for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
+                            uint8_t p = mp_obj_get_int(value_l[i]);
+                            IMAGE_PUT_GRAYSCALE_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w, p);
+                        }
+                    } else {
+                        uint8_t p = mp_obj_get_int(value);
+                        for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
+                            IMAGE_PUT_GRAYSCALE_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w, p);
+                        }
+                    }
+                    return mp_const_none;
+                }
+                mp_uint_t i = mp_get_index(self->base.type, self->_cobj.w * self->_cobj.h, index, false);
+                uint8_t p = mp_obj_get_int(value);
+                IMAGE_PUT_GRAYSCALE_PIXEL(&(self->_cobj), i % self->_cobj.w, i / self->_cobj.w, p);
+                return mp_const_none;
+            }
+            case IMAGE_BPP_RGB565: {
+                if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+                    mp_bound_slice_t slice;
+                    if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
+                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                    }
+                    if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
+                        mp_uint_t value_l_len;
+                        mp_obj_t *value_l;
+                        mp_obj_get_array(value, &value_l_len, &value_l);
+                        PY_ASSERT_TRUE_MSG(value_l_len == (slice.stop - slice.start), "cannot grow or shrink image");
+                        for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
+                            mp_obj_t *value_2;
+                            mp_obj_get_array_fixed_n(value_l[i], 3, &value_2);
+                            uint16_t p = COLOR_R8_G8_B8_TO_RGB565(mp_obj_get_int(value_2[0]), mp_obj_get_int(value_2[1]), mp_obj_get_int(value_2[2]));
+                            IMAGE_PUT_RGB565_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w, p);
+                        }
+                    } else {
+                        mp_obj_t *value_2;
+                        mp_obj_get_array_fixed_n(value, 3, &value_2);
+                        uint16_t p = COLOR_R8_G8_B8_TO_RGB565(mp_obj_get_int(value_2[0]), mp_obj_get_int(value_2[1]), mp_obj_get_int(value_2[2]));
+                        for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
+                            IMAGE_PUT_RGB565_PIXEL(&(self->_cobj), (slice.start + i) % self->_cobj.w, (slice.start + i) / self->_cobj.w, p);
+                        }
+                    }
+                    return mp_const_none;
+                }
+                mp_uint_t i = mp_get_index(self->base.type, self->_cobj.w * self->_cobj.h, index, false);
+                mp_obj_t *value_2;
+                mp_obj_get_array_fixed_n(value, 3, &value_2);
+                uint16_t p = COLOR_R8_G8_B8_TO_RGB565(mp_obj_get_int(value_2[0]), mp_obj_get_int(value_2[1]), mp_obj_get_int(value_2[2]));
+                IMAGE_PUT_RGB565_PIXEL(&(self->_cobj), i % self->_cobj.w, i / self->_cobj.w, p);
+                return mp_const_none;
+            }
+            default: {
+                if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+                    mp_bound_slice_t slice;
+                    if (!mp_seq_get_fast_slice_indexes(self->_cobj.bpp, index, &slice)) {
+                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                    }
+                    if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
+                        mp_uint_t value_l_len;
+                        mp_obj_t *value_l;
+                        mp_obj_get_array(value, &value_l_len, &value_l);
+                        PY_ASSERT_TRUE_MSG(value_l_len == (slice.stop - slice.start), "cannot grow or shrink image");
+                        for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
+                            self->_cobj.data[slice.start + i] = mp_obj_get_int(value_l[i]);
+                        }
+                    } else {
+                        mp_int_t v = mp_obj_get_int(value);
+                        for (mp_uint_t i = 0; i < (slice.stop - slice.start); i++) {
+                            self->_cobj.data[slice.start + i] = v;
+                        }
+                    }
+                    return mp_const_none;
+                }
+                mp_uint_t i = mp_get_index(self->base.type, self->_cobj.bpp, index, false);
+                self->_cobj.data[i] = mp_obj_get_int(value);
+                return mp_const_none;
+            }
         }
     }
-    return mp_const_none;
+    return MP_OBJ_NULL; // op not supported
 }
 
 static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo, mp_uint_t flags)
 {
-    image_t *arg_img = py_image_cobj(self_in);
+    py_image_obj_t *self = self_in;
     if (flags == MP_BUFFER_READ) {
-        bufinfo->buf = arg_img->pixels;
-        switch (arg_img->bpp) {
-            case 1: // GS
-            case 2: // RGB/YUV
-                // 1 or 2 BPP
-                bufinfo->len = arg_img->w * arg_img->h * arg_img->bpp;
+        bufinfo->buf = self->_cobj.data;
+        switch (self->_cobj.bpp) {
+            case IMAGE_BPP_BINARY: {
+                bufinfo->len = ((self->_cobj.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * self->_cobj.h;
                 break;
-            case 3: // BAYER
-                // It's actually 1BPP
-                bufinfo->len = arg_img->w * arg_img->h *  1;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                bufinfo->len = (self->_cobj.w * self->_cobj.h) * sizeof(uint8_t);
                 break;
-            default: // JPEG
-                // Size is set in bpp
-                bufinfo->len = arg_img->bpp;
+            }
+            case IMAGE_BPP_RGB565: {
+                bufinfo->len = (self->_cobj.w * self->_cobj.h) * sizeof(uint16_t);
                 break;
+            }
+            case 3: { // BAYER
+                bufinfo->len = self->_cobj.w * self->_cobj.h;
+                break;
+            }
+            default: { // JPEG
+                bufinfo->len = self->_cobj.bpp;
+                break;
+            }
         }
         bufinfo->typecode = 'b';
         return 0;
     } else {
-        // not supported
+        // can't write to an image
         bufinfo->buf = NULL;
         bufinfo->len = 0;
         bufinfo->typecode = -1;
