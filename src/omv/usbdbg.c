@@ -126,9 +126,9 @@ void usbdbg_data_in(void *buffer, int length)
             break;
 
         case USBDBG_ARCH_STR: {
-            int len = IM_MIN(64, (strlen(OMV_ARCH_STR)+1));
-            ((char *)buffer)[len-1] = 0;
-            memcpy(buffer, OMV_ARCH_STR, len);
+            snprintf((char *) buffer, 64, "%s [%s:%08X%08X%08X]", OMV_ARCH_STR, OMV_BOARD_TYPE, *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 8)),
+                                                                                                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 4)),
+                                                                                                *((unsigned int *) (OMV_UNIQUE_ID_ADDR + 0)));
             cmd = USBDBG_NONE;
             break;
         }

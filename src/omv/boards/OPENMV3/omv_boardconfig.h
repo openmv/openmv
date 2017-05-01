@@ -10,7 +10,9 @@
 #define __OMV_BOARDCONFIG_H__
 
 // Architecture info
-#define OMV_ARCH_STR            "OMV3 F7 512"
+#define OMV_ARCH_STR            "OMV3 F7 512" // 33 chars max
+#define OMV_BOARD_TYPE          "M7"
+#define OMV_UNIQUE_ID_ADDR      0x1FF0F420
 
 #define OMV_XCLK_MCO            (0U)
 #define OMV_XCLK_TIM            (1U)
