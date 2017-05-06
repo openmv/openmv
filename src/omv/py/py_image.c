@@ -2132,6 +2132,140 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     return objects_list;
 }
 
+// Line Object //
+#define py_line_obj_size 7
+typedef struct py_line_obj {
+    mp_obj_base_t base;
+    mp_obj_t x1, y1, x2, y2, magnitude, theta, rho;
+} py_line_obj_t;
+
+static void py_line_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_line_obj_t *self = self_in;
+    mp_printf(print,
+              "{x1:%d, y1:%d, x2:%d, y2:%d, magnitude:%f, theta:%d, rho:%d}",
+              mp_obj_get_int(self->x1),
+              mp_obj_get_int(self->y1),
+              mp_obj_get_int(self->x2),
+              mp_obj_get_int(self->y2),
+              (double) mp_obj_get_float(self->magnitude),
+              mp_obj_get_int(self->theta),
+              mp_obj_get_int(self->rho));
+}
+
+static mp_obj_t py_line_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_line_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_line_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->x1) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_line_obj_size, index, false)) {
+            case 0: return self->x1;
+            case 1: return self->y1;
+            case 2: return self->x2;
+            case 3: return self->y2;
+            case 4: return self->magnitude;
+            case 5: return self->theta;
+            case 6: return self->rho;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_line_line(mp_obj_t self_in)
+{
+    return mp_obj_new_tuple(4, (mp_obj_t []) {((py_line_obj_t *) self_in)->x1,
+                                              ((py_line_obj_t *) self_in)->y1,
+                                              ((py_line_obj_t *) self_in)->x2,
+                                              ((py_line_obj_t *) self_in)->y2});
+}
+
+mp_obj_t py_line_x1(mp_obj_t self_in) { return ((py_line_obj_t *) self_in)->x1; }
+mp_obj_t py_line_y1(mp_obj_t self_in) { return ((py_line_obj_t *) self_in)->y1; }
+mp_obj_t py_line_x2(mp_obj_t self_in) { return ((py_line_obj_t *) self_in)->x2; }
+mp_obj_t py_line_y2(mp_obj_t self_in) { return ((py_line_obj_t *) self_in)->y2; }
+mp_obj_t py_line_magnitude(mp_obj_t self_in) { return ((py_line_obj_t *) self_in)->magnitude; }
+mp_obj_t py_line_theta(mp_obj_t self_in) { return ((py_line_obj_t *) self_in)->theta; }
+mp_obj_t py_line_rho(mp_obj_t self_in) { return ((py_line_obj_t *) self_in)->rho; }
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_line_obj, py_line_line);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_x1_obj, py_line_x1);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_y1_obj, py_line_y1);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_x2_obj, py_line_x2);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_y2_obj, py_line_y2);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_magnitude_obj, py_line_magnitude);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_theta_obj, py_line_theta);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_line_rho_obj, py_line_rho);
+
+STATIC const mp_rom_map_elem_t py_line_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_line), MP_ROM_PTR(&py_line_line_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x1), MP_ROM_PTR(&py_line_x1_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y1), MP_ROM_PTR(&py_line_y1_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x2), MP_ROM_PTR(&py_line_x2_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y2), MP_ROM_PTR(&py_line_y2_obj) },
+    { MP_ROM_QSTR(MP_QSTR_magnitude), MP_ROM_PTR(&py_line_magnitude_obj) },
+    { MP_ROM_QSTR(MP_QSTR_theta), MP_ROM_PTR(&py_line_theta_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rho), MP_ROM_PTR(&py_line_rho_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_line_locals_dict, py_line_locals_dict_table);
+
+static const mp_obj_type_t py_line_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_line,
+    .print = py_line_print,
+    .subscr = py_line_subscr,
+    .locals_dict = (mp_obj_t) &py_line_locals_dict,
+};
+
+static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    unsigned int x_stride = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_stride), 2);
+    PY_ASSERT_TRUE_MSG(x_stride > 0, "x_stride must not be zero.");
+    unsigned int y_stride = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_stride), 1);
+    PY_ASSERT_TRUE_MSG(y_stride > 0, "y_stride must not be zero.");
+
+    list_t out;
+    fb_alloc_mark();
+    imlib_find_lines(&out, arg_img, &roi, x_stride, y_stride, py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.25),
+                                                              py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_theta_margin), 25),
+                                                              py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rho_margin), 25));
+    fb_alloc_free_till_mark();
+
+    mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
+    for (size_t i = 0; list_size(&out); i++) {
+        find_lines_list_lnk_data_t lnk_data;
+        list_pop_front(&out, &lnk_data);
+
+        py_line_obj_t *o = m_new_obj(py_line_obj_t);
+        o->base.type = &py_line_type;
+        o->x1 = mp_obj_new_int(lnk_data.line.x1);
+        o->y1 = mp_obj_new_int(lnk_data.line.y1);
+        o->x2 = mp_obj_new_int(lnk_data.line.x2);
+        o->y2 = mp_obj_new_int(lnk_data.line.y2);
+        o->magnitude = mp_obj_new_float(lnk_data.magnitude);
+        o->theta = mp_obj_new_int(lnk_data.theta);
+        o->rho = mp_obj_new_int(lnk_data.rho);
+
+        objects_list->items[i] = o;
+    }
+
+    return objects_list;
+}
+
 // QRCode Object //
 #define py_qrcode_obj_size 10
 typedef struct py_qrcode_obj {
@@ -3066,35 +3200,6 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     return mp_const_none;
 }
 
-static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *img = py_image_cobj(args[0]);
-    PY_ASSERT_TRUE_MSG(IM_IS_GS(img), "This function is only supported on GRAYSCALE images");
-
-    rectangle_t roi;
-    py_helper_lookup_rectangle(kw_args, img, &roi);
-    int threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 50);
-
-    rectangle_t rect;
-    if (!rectangle_subimg(img, &roi, &rect)) {
-        return mp_const_none;
-    }
-
-    mp_obj_t lines_list = mp_obj_new_list(0, NULL);
-    array_t *lines = imlib_find_lines(img, &roi, threshold);
-    for (int i=0; i<array_length(lines); i++) {
-        line_t *l = (line_t *) array_at(lines, i);
-        mp_obj_t line_obj[4] = {
-            mp_obj_new_int(l->x1),
-            mp_obj_new_int(l->y1),
-            mp_obj_new_int(l->x2),
-            mp_obj_new_int(l->y2),
-        };
-        mp_obj_list_append(lines_list, mp_obj_new_tuple(4, line_obj));
-    }
-    return lines_list;
-}
-
 static mp_obj_t py_image_find_edges(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *img = py_image_cobj(args[0]);
@@ -3196,6 +3301,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_histogram_obj, 1, py_image_get_hi
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_statistics_obj, 1, py_image_get_statistics);
 /* Color Tracking */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
+/* Shape Detection */
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
 /* Code Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_qrcodes_obj, 1, py_image_find_qrcodes);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_apriltags_obj, 1, py_image_find_apriltags);
@@ -3213,7 +3320,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_features_obj, 2, py_image_find_f
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_eye_obj, py_image_find_eye);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_find_lbp_obj, py_image_find_lbp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_edges_obj, 2, py_image_find_edges);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_hog_obj, 1, py_image_find_hog);
 static const mp_map_elem_t locals_dict_table[] = {
@@ -3276,6 +3382,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_statistics),          (mp_obj_t)&py_image_get_statistics_obj},
     /* Color Tracking */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
+    /* Shape Detection */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_lines),          (mp_obj_t)&py_image_find_lines_obj},
     /* Code Detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_qrcodes),        (mp_obj_t)&py_image_find_qrcodes_obj},
 #ifdef OMV_ENABLE_APRILTAGS
@@ -3299,7 +3407,6 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_eye),            (mp_obj_t)&py_image_find_eye_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lbp),            (mp_obj_t)&py_image_find_lbp_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_keypoints),      (mp_obj_t)&py_image_find_keypoints_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_lines),          (mp_obj_t)&py_image_find_lines_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_edges),          (mp_obj_t)&py_image_find_edges_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_hog),            (mp_obj_t)&py_image_find_hog_obj},
     { NULL, NULL },

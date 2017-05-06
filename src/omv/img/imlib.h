@@ -888,6 +888,12 @@ typedef struct find_blobs_list_lnk_data
 }
 find_blobs_list_lnk_data_t;
 
+typedef struct find_lines_list_lnk_data {
+    line_t line;
+    float magnitude;
+    int16_t theta, rho;
+} find_lines_list_lnk_data_t;
+
 typedef struct find_qrcodes_list_lnk_data
 {
     rectangle_t rect;
@@ -1119,9 +1125,6 @@ void imlib_find_iris(image_t *src, point_t *iris, rectangle_t *roi);
 void im_filter_bw(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 void im_filter_skin(uint8_t *src, uint8_t *dst, int size, int bpp, void *args);
 
-// Lines
-array_t *imlib_find_lines(image_t *src, rectangle_t *roi, int threshold);
-
 // Edge detection
 void imlib_edge_simple(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh);
 void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_thresh);
@@ -1141,6 +1144,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                       bool merge, int margin,
                       bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
                       bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg);
+// Shape Detection
+void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, int x_stride, int y_stride, float threshold, int theta_margin, int rho_margin);
 // 1/2D Bar Codes
 void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
