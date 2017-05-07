@@ -2424,6 +2424,7 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
     return objects_list;
 }
 
+#ifdef OMV_ENABLE_APRILTAGS
 // AprilTag Object //
 #define py_apriltag_obj_size 18
 typedef struct py_apriltag_obj {
@@ -2630,7 +2631,9 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
 
     return objects_list;
 }
+#endif // OMV_ENABLE_APRILTAGS
 
+#ifdef OMV_ENABLE_DATAMATRICES
 // DataMatrix Object //
 #define py_datamatrix_obj_size 10
 typedef struct py_datamatrix_obj {
@@ -2776,7 +2779,9 @@ static mp_obj_t py_image_find_datamatrices(uint n_args, const mp_obj_t *args, mp
 
     return objects_list;
 }
+#endif // OMV_ENABLE_DATAMATRICES
 
+#ifdef OMV_ENABLE_BARCODES
 // BarCode Object //
 #define py_barcode_obj_size 8
 typedef struct py_barcode_obj {
@@ -2910,6 +2915,7 @@ static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map
 
     return objects_list;
 }
+#endif // OMV_ENABLE_BARCODES
 
 static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -3305,9 +3311,15 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blob
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
 /* Code Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_qrcodes_obj, 1, py_image_find_qrcodes);
+#ifdef OMV_ENABLE_APRILTAGS
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_apriltags_obj, 1, py_image_find_apriltags);
+#endif
+#ifdef OMV_ENABLE_DATAMATRICES
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_datamatrices_obj, 1, py_image_find_datamatrices);
+#endif
+#ifdef OMV_ENABLE_BARCODES
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_barcodes_obj, 1, py_image_find_barcodes);
+#endif
 /* Template Matching */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pool_obj, 3, py_image_midpoint_pool);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
