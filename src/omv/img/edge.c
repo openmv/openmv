@@ -32,8 +32,8 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 
     gvec_t *gm = fb_alloc0(src->w*src->h*sizeof*gm);
 
-    //1. Noise Reduction with a 5x5 Gaussian filter
-    imlib_morph(src, 2, kernel_gauss_5, 1.0f/159.0f, 0.0f);
+    //1. Noise Reduction with a Gaussian filter
+    imlib_sepconv3(src, kernel_gauss_3, 1.0f/16.0f, 0.0f);
 
     //2. Finding Image Gradients
     for (int y=roi->y+1; y<roi->y+roi->h-1; y++) {
@@ -77,14 +77,26 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
     }
 
     // 3. Hysteresis Thresholding
-    for (int y=roi->y+1; y<roi->y+roi->h-1; y++) {
-        for (int x=roi->x+1; x<roi->x+roi->w-1; x++) {
-            gvec_t *vc = &gm[y*w+x];
-            if (vc->g >= high_thresh) {
-                vc->g = vc->g;
-            } else if (vc->g < low_thresh) {
-                vc->g = 0;
-            } else if (gm[(y-1)*w+(x-1)].g >= high_thresh ||
+    // 4. Non-maximum Suppression and output
+    for (int y=roi->y; y<roi->y+roi->h; y++) {
+        for (int x=roi->x; x<roi->x+roi->w; x++) {
+            int i = y*w+x;
+            gvec_t *va=NULL, *vb=NULL, *vc = &gm[i];
+
+            // Clear the borders
+            if (y == (roi->y) || y == (roi->y+roi->h-1) ||
+                x == (roi->x) || x == (roi->x+roi->w-1)) {
+                src->data[i] = 0;
+                continue;
+            }
+
+            if (vc->g < low_thresh) {
+                // Not an edge
+                src->data[i] = 0;
+                continue;
+            // Check if strong or weak edge
+            } else if (vc->g >= high_thresh ||
+                       gm[(y-1)*w+(x-1)].g >= high_thresh ||
                        gm[(y-1)*w+(x+0)].g >= high_thresh ||
                        gm[(y-1)*w+(x+1)].g >= high_thresh ||
                        gm[(y+0)*w+(x-1)].g >= high_thresh ||
@@ -93,20 +105,7 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
                        gm[(y+1)*w+(x+0)].g >= high_thresh ||
                        gm[(y+1)*w+(x+1)].g >= high_thresh) {
                 vc->g = vc->g;
-            } else {
-                vc->g = 0;
-            }
-        }
-    }
-
-    // 4. Non-maximum Suppression and output
-    for (int y=roi->y; y<roi->y+roi->h; y++) {
-        for (int x=roi->x; x<roi->x+roi->w; x++) {
-            int i = y*w+x;
-            gvec_t *va=NULL, *vb=NULL, *vc = &gm[i];
-
-            if (y < (roi->y+2) || y > (roi->y+roi->h-3) ||
-                x < (roi->x+2) || x > (roi->x+roi->w-3)) {
+            } else { // Not an edge
                 src->data[i] = 0;
                 continue;
             }
