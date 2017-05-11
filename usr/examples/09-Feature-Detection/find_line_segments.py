@@ -1,15 +1,13 @@
-# Find Lines Example
+# Find Line Segments Example
 #
-# This example shows off how to find lines in the image. For each line object
+# This example shows off how to find line segments in the image. For each line object
 # found in the image a line object is returned which includes the line's rotation.
 
 # Note: Line detection is done by using the Hough Transform:
 # http://en.wikipedia.org/wiki/Hough_transform
 # Please read about it above for more information on what `theta` and `rho` are.
 
-# find_lines() finds infinite length lines. Use find_line_segments() to find non-infinite lines.
-
-enable_lens_corr = False # turn on for straighter lines...
+enable_lens_corr = True # turn on for straighter lines...
 
 import sensor, image, time
 
@@ -18,12 +16,6 @@ sensor.set_pixformat(sensor.RGB565) # grayscale is faster
 sensor.set_framesize(sensor.QQVGA)
 sensor.skip_frames(30)
 clock = time.clock()
-
-# All line objects have a `theta()` method to get their rotation angle in degrees.
-# You can filter lines based on their rotation angle.
-
-min_degree = 0
-max_degree = 179
 
 # All lines also have `x1()`, `y1()`, `x2()`, and `y2()` methods to get their end-points
 # and a `line()` method to get all the above as one 4 value tuple for `draw_line()`.
@@ -45,13 +37,19 @@ while(True):
     # `theta_margin` and `rho_margin` control merging similar lines. If two lines
     # theta and rho value differences are less than the margins then they are merged.
 
-    for l in img.find_lines(threshold = 1000, theta_margin = 25, rho_margin = 25):
-        if (min_degree <= l.theta()) and (l.theta() <= max_degree):
-            img.draw_line(l.line(), color = (255, 0, 0))
-            # print(l)
+    # Setting both the above to zero will greatly increase segment detection at the
+    # cost of a lot of FPS. This is because when less lines are merged more pixels
+    # are tested... which takes longer but covers more possibilities...
+
+    # `segment_threshold` controls line segment extraction. It's a threshold on the
+    # magnitude response per pixel under an infinite line. Pixels with a magnitude
+    # above threshold are added to the line segment.
+
+    # `find_line_segments` merges detected lines that are no more than 5 pixels apart
+    # and no more than 15 degrees different to create nice continous line segments.
+
+    for l in img.find_line_segments(threshold = 1000, theta_margin = 15, rho_margin = 15, segment_threshold = 100):
+        img.draw_line(l.line(), color = (255, 0, 0))
+        # print(l)
 
     print("FPS %f" % clock.fps())
-
-# About negative rho values:
-#
-# A [theta+0:-rho] tuple is the same as [theta+180:+rho].

@@ -422,9 +422,20 @@ Q(x1)
 Q(y1)
 Q(x2)
 Q(y2)
+Q(length)
 Q(magnitude)
 Q(theta)
 Q(rho)
+
+// Find Line Segments
+Q(find_line_segments)
+// duplicate Q(roi)
+// duplicate Q(x_stride)
+// duplicate Q(y_stride)
+// duplicate Q(threshold)
+// duplicate Q(theta_margin)
+// duplicate Q(rho_margin)
+Q(segment_threshold)
 
 // Find QRCodes
 Q(find_qrcodes)
