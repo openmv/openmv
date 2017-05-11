@@ -41,6 +41,59 @@ int point_quadrance(point_t *ptr0, point_t *ptr1)
     return (delta_x * delta_x) + (delta_y * delta_y);
 }
 
+////////////////
+// Line Stuff //
+////////////////
+
+// http://www.skytopia.com/project/articles/compsci/clipping.html
+bool lb_clip_line(line_t *l, int x, int y, int w, int h) // line is drawn if this returns true
+{
+    int xdelta = l->x2 - l->x1, ydelta = l->y2 - l->y1, p[4], q[4];
+    float umin = 0, umax = 1;
+
+    p[0] = -(xdelta);
+    p[1] = +(xdelta);
+    p[2] = -(ydelta);
+    p[3] = +(ydelta);
+
+    q[0] = l->x1 - (x);
+    q[1] = (x + w - 1) - l->x1;
+    q[2] = l->y1 - (y);
+    q[3] = (y + h - 1) - l->y1;
+
+    for (int i = 0; i < 4; i++) {
+        if (p[i]) {
+            float u = ((float) q[i]) / ((float) p[i]);
+
+            if (p[i] < 0) { // outside to inside
+                if (u > umax) return false;
+                if (u > umin) umin = u;
+            }
+
+            if (p[i] > 0) { // inside to outside
+                if (u < umin) return false;
+                if (u < umax) umax = u;
+            }
+
+        } else if (q[i] < 0) {
+            return false;
+        }
+    }
+
+    if (umax < umin) return false;
+
+    int x1_c = l->x1 + (xdelta * umin);
+    int y1_c = l->y1 + (ydelta * umin);
+    int x2_c = l->x1 + (xdelta * umax);
+    int y2_c = l->y1 + (ydelta * umax);
+    l->x1 = x1_c;
+    l->y1 = y1_c;
+    l->x2 = x2_c;
+    l->y2 = y2_c;
+
+    return true;
+}
+
 /////////////////////
 // Rectangle Stuff //
 /////////////////////

@@ -87,6 +87,8 @@ typedef struct line {
     int16_t y2;
 } line_t;
 
+bool lb_clip_line(line_t *l, int x, int y, int w, int h);
+
 /////////////////////
 // Rectangle Stuff //
 /////////////////////
@@ -890,7 +892,7 @@ find_blobs_list_lnk_data_t;
 
 typedef struct find_lines_list_lnk_data {
     line_t line;
-    float magnitude;
+    uint32_t magnitude;
     int16_t theta, rho;
 } find_lines_list_lnk_data_t;
 
@@ -1145,7 +1147,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                       bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
                       bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg);
 // Shape Detection
-void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, int x_stride, int y_stride, float threshold, int theta_margin, int rho_margin);
+void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
+                      uint32_t threshold, unsigned int theta_margin, unsigned int rho_margin);
+void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
+                              uint32_t threshold, unsigned int theta_margin, unsigned int rho_margin,
+                              uint32_t segment_threshold);
 // 1/2D Bar Codes
 void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
