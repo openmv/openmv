@@ -82,6 +82,7 @@
 #define COM7_FMT_RGB            0x02 /* Output format RGB        */
 #define COM7_FMT_R_BAYER        0x03 /* Output format Bayer RAW  */
 #define COM7_SET_FMT(r, x)      ((r&0xFC)|((x&0x3)<<0))
+#define COM7_SET_RES(r, x)      ((r&0xBF)|(x))
 
 #define COM8                    0x13 /* Common Control 8                */
 #define COM8_FAST_AUTO          0x80 /* Enable fast AGC/AEC algorithm   */
