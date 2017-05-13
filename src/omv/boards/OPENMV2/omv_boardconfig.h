@@ -21,7 +21,7 @@
 #define OMV_XCLK_SOURCE         (OMV_XCLK_TIM)
 
 // Sensor external clock timer frequency.
-#define OMV_XCLK_FREQUENCY      (8000000)
+#define OMV_XCLK_FREQUENCY      (5000000)
 
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
