@@ -220,9 +220,33 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= SCCB_Write(sensor->slv_addr, EXHCH, ((w&0x3) | ((h&0x1) << 2)));
 
     if (framesize < FRAMESIZE_VGA) {
+        // Set QVGA Resolution
+        uint8_t reg = SCCB_Read(sensor->slv_addr, COM7);
+        reg = COM7_SET_RES(reg, COM7_RES_QVGA);
+        ret |= SCCB_Write(sensor->slv_addr, COM7, reg);
+
+        // Set QVGA Window Size
+        ret |= SCCB_Write(sensor->slv_addr, HSTART, 0x3F);
+        ret |= SCCB_Write(sensor->slv_addr, HSIZE,  0x50);
+        ret |= SCCB_Write(sensor->slv_addr, VSTART, 0x03);
+        ret |= SCCB_Write(sensor->slv_addr, VSIZE,  0x78);
+        ret |= SCCB_Write(sensor->slv_addr, HREF,   0x00);
+
         // Enable auto-scaling/zooming factors
         ret |= SCCB_Write(sensor->slv_addr, DSPAUTO, 0xFF);
     } else {
+        // Set VGA Resolution
+        uint8_t reg = SCCB_Read(sensor->slv_addr, COM7);
+        reg = COM7_SET_RES(reg, COM7_RES_VGA);
+        ret |= SCCB_Write(sensor->slv_addr, COM7, reg);
+
+        // Set VGA Window Size
+        ret |= SCCB_Write(sensor->slv_addr, HSTART, 0x23);
+        ret |= SCCB_Write(sensor->slv_addr, HSIZE,  0xA0);
+        ret |= SCCB_Write(sensor->slv_addr, VSTART, 0x07);
+        ret |= SCCB_Write(sensor->slv_addr, VSIZE,  0xF0);
+        ret |= SCCB_Write(sensor->slv_addr, HREF,   0x00);
+
         // Disable auto-scaling/zooming factors
         ret |= SCCB_Write(sensor->slv_addr, DSPAUTO, 0xF3);
 
