@@ -22,7 +22,7 @@ int SCCB_Init()
     I2CHandle.Instance             = SCCB_I2C;
     I2CHandle.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
     #if defined(STM32F765xx) ||  defined(STM32F769xx)
-    I2CHandle.Init.Timing          = 0x20404768; // 10KHz
+    I2CHandle.Init.Timing          = 0x40912732; // 100KHz
     #else
     I2CHandle.Init.ClockSpeed      = SCCB_FREQ;
     I2CHandle.Init.DutyCycle       = I2C_DUTYCYCLE_2;
