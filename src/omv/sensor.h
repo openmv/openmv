@@ -98,6 +98,8 @@ typedef struct _sensor {
     sensor_id_t id;             // Sensor ID.
     uint8_t  slv_addr;          // Sensor I2C slave address.
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
+    uint32_t vsync_pin;
+    GPIO_TypeDef *vsync_gpio;
 
     // Line pre-processing function and args
     void *line_filter_args;
@@ -207,6 +209,9 @@ int sensor_set_lens_correction(int enable, int radi, int coef);
 
 // Set filter function.
 int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_args);
+
+// Set vsync output pin
+int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
 
 // Capture a Snapshot.
 int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_filter_args);

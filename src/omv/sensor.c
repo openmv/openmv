@@ -297,6 +297,9 @@ int sensor_init()
         return -5;
     }
 
+    // Disable VSYNC EXTI IRQ
+    HAL_NVIC_DisableIRQ(DCMI_VSYNC_IRQN);
+
     /* All good! */
     return 0;
 }
@@ -309,6 +312,7 @@ int sensor_reset()
     sensor.framesize=0xFF;
     sensor.framerate=0xFF;
     sensor.gainceiling=0xFF;
+    sensor.vsync_gpio  = NULL;
 
     // Reset image filter
     sensor_set_line_filter(NULL, NULL);
@@ -318,6 +322,9 @@ int sensor_reset()
 
     // Just in case there's a running DMA request.
     HAL_DMA_Abort(&DMAHandle);
+
+    // Disable VSYNC EXTI IRQ
+    HAL_NVIC_DisableIRQ(DCMI_VSYNC_IRQN);
     return 0;
 }
 
@@ -575,6 +582,25 @@ int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_arg
     sensor.line_filter_func = line_filter_func;
     sensor.line_filter_args = line_filter_args;
     return 0;
+}
+
+int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin)
+{
+    sensor.vsync_pin  = pin;
+    sensor.vsync_gpio = gpio;
+    // Enable VSYNC EXTI IRQ
+    HAL_NVIC_SetPriority(DCMI_VSYNC_IRQN, IRQ_PRI_EXTINT, IRQ_SUBPRI_EXTINT);
+    HAL_NVIC_EnableIRQ(DCMI_VSYNC_IRQN);
+    return 0;
+}
+
+void DCMI_VsyncExtiCallback()
+{
+    __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_IRQ_LINE);
+    if (sensor.vsync_gpio != NULL) {
+        HAL_GPIO_WritePin(sensor.vsync_gpio, sensor.vsync_pin,
+                !HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
+    }
 }
 
 // This function is called back after each line transfer is complete,

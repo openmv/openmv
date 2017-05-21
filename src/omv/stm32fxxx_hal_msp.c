@@ -147,9 +147,15 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull      = GPIO_PULLDOWN;
     GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
-    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
     GPIO_InitStructure.Alternate = GPIO_AF13_DCMI;
 
+    /* Enable VSYNC EXTI */
+    GPIO_InitStructure.Mode = GPIO_MODE_IT_RISING_FALLING;
+    GPIO_InitStructure.Pin  = DCMI_VSYNC_PIN;
+    HAL_GPIO_Init(DCMI_VSYNC_PORT, &GPIO_InitStructure);
+
+    /* Configure DCMI pins */
+    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
     for (int i=0; i<NUM_DCMI_PINS; i++) {
         GPIO_InitStructure.Pin = dcmi_pins[i].pin;
         HAL_GPIO_Init(dcmi_pins[i].port, &GPIO_InitStructure);
