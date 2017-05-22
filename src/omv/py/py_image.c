@@ -91,6 +91,97 @@ static const mp_obj_type_t py_lbp_type = {
     .print = py_lbp_print,
 };
 
+// Keypoints match object /////////////////////////////////////////////////////
+#define kptmatch_obj_size 8
+typedef struct _py_kptmatch_obj_t {
+    mp_obj_base_t base;
+    mp_obj_t cx, cy;
+    mp_obj_t x, y, w, h;
+    mp_obj_t count, theta;
+} py_kptmatch_obj_t;
+
+static void py_kptmatch_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_kptmatch_obj_t *self = self_in;
+    mp_printf(print, "<keypoints match object> {cx:%d, cy:%d, x:%d, y:%d, w:%d, h:%d, count:%d, theta:%d}",
+              mp_obj_get_int(self->cx), mp_obj_get_int(self->cy), mp_obj_get_int(self->x), mp_obj_get_int(self->y),
+              mp_obj_get_int(self->w),  mp_obj_get_int(self->h),  mp_obj_get_int(self->count), mp_obj_get_int(self->theta));
+}
+
+static mp_obj_t py_kptmatch_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_kptmatch_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(kptmatch_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, kptmatch_obj_size, index, false)) {
+            case 0: return self->cx;
+            case 1: return self->cy;
+            case 2: return self->x;
+            case 3: return self->y;
+            case 4: return self->w;
+            case 5: return self->h;
+            case 6: return self->count;
+            case 7: return self->theta;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_kptmatch_cx(mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->cx;    }
+mp_obj_t py_kptmatch_cy(mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->cy;    }
+mp_obj_t py_kptmatch_x (mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->x;     }
+mp_obj_t py_kptmatch_y (mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->y;     }
+mp_obj_t py_kptmatch_w (mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->w;     }
+mp_obj_t py_kptmatch_h (mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->h;     }
+mp_obj_t py_kptmatch_count(mp_obj_t self_in) { return ((py_kptmatch_obj_t *) self_in)->count; }
+mp_obj_t py_kptmatch_theta(mp_obj_t self_in) { return ((py_kptmatch_obj_t *) self_in)->theta; }
+mp_obj_t py_kptmatch_rect(mp_obj_t  self_in)  {
+    return mp_obj_new_tuple(4, (mp_obj_t []) {((py_kptmatch_obj_t *) self_in)->x,
+                                              ((py_kptmatch_obj_t *) self_in)->y,
+                                              ((py_kptmatch_obj_t *) self_in)->w,
+                                              ((py_kptmatch_obj_t *) self_in)->h});
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cx_obj,       py_kptmatch_cx);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cy_obj,       py_kptmatch_cy);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_x_obj,        py_kptmatch_x);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_y_obj,        py_kptmatch_y);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_w_obj,        py_kptmatch_w);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_h_obj,        py_kptmatch_h);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_count_obj,    py_kptmatch_count);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_theta_obj,    py_kptmatch_theta);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_rect_obj,     py_kptmatch_rect);
+
+STATIC const mp_rom_map_elem_t py_kptmatch_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_cx),      MP_ROM_PTR(&py_kptmatch_cx_obj)      },
+    { MP_ROM_QSTR(MP_QSTR_cy),      MP_ROM_PTR(&py_kptmatch_cy_obj)      },
+    { MP_ROM_QSTR(MP_QSTR_x),       MP_ROM_PTR(&py_kptmatch_x_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_y),       MP_ROM_PTR(&py_kptmatch_y_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_w),       MP_ROM_PTR(&py_kptmatch_w_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_h),       MP_ROM_PTR(&py_kptmatch_h_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_count),   MP_ROM_PTR(&py_kptmatch_count_obj)   },
+    { MP_ROM_QSTR(MP_QSTR_theta),   MP_ROM_PTR(&py_kptmatch_theta_obj)   },
+    { MP_ROM_QSTR(MP_QSTR_rect),    MP_ROM_PTR(&py_kptmatch_rect_obj)    },
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_kptmatch_locals_dict, py_kptmatch_locals_dict_table);
+
+static const mp_obj_type_t py_kptmatch_type = {
+    { &mp_type_type },
+    .name   = MP_QSTR_kptmatch,
+    .print  = py_kptmatch_print,
+    .subscr = py_kptmatch_subscr,
+    .locals_dict = (mp_obj_t) &py_kptmatch_locals_dict,
+};
+
 // Image //////////////////////////////////////////////////////////////////////
 
 typedef struct _py_image_obj_t {
@@ -3760,35 +3851,34 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
         PY_ASSERT_TYPE(kpts2, &py_kp_type);
         PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
-        int t = 0;          // Estimated angle of rotation
+        int theta = 0;          // Estimated angle of rotation
         int match = 0;      // Number of matches
         point_t c = {0};    // Centroid
         rectangle_t r = {0};// Bounding rectangle
 
         if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
             // Match the two keypoint sets
-            match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c, &t);
+            match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c, &theta);
 
             if (filter_outliers == true) {
                 match = orb_filter_keypoints(kpts2->kpts, &r, &c);
             }
         }
 
-        mp_obj_t ret_obj[8] = {
-            mp_obj_new_int(c.x),
-            mp_obj_new_int(c.y),
-            mp_obj_new_int(r.x),
-            mp_obj_new_int(r.y),
-            mp_obj_new_int(r.w),
-            mp_obj_new_int(r.h),
-            mp_obj_new_int(match),
-            mp_obj_new_int(t)
-        };
-        match_obj = mp_obj_new_tuple(8, ret_obj);
+        py_kptmatch_obj_t *o = m_new_obj(py_kptmatch_obj_t);
+        o->base.type = &py_kptmatch_type;
+        o->cx = mp_obj_new_int(c.x);
+        o->cy = mp_obj_new_int(c.y);
+        o->x  = mp_obj_new_int(r.x);
+        o->y  = mp_obj_new_int(r.y);
+        o->w  = mp_obj_new_int(r.w);
+        o->h  = mp_obj_new_int(r.h);
+        o->count = mp_obj_new_int(match);
+        o->theta = mp_obj_new_int(theta);
+        match_obj = o;
     } else {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
     }
-
 
     return match_obj;
 }
