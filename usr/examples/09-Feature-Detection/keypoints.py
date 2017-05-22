@@ -42,13 +42,14 @@ while (True):
         # keypoints from the first scale only, which will match one of the scales in the first descriptor.
         kpts2 = img.find_keypoints(max_keypoints=150, threshold=10, normalized=True)
         if (kpts2):
-            c = image.match_descriptor(kpts1, kpts2, threshold=85)
-            match = c[6] # C[6] contains the number of matches.
-            if (match>10):
-                img.draw_rectangle(c[2:6])
-                img.draw_cross(c[0], c[1], size=10)
+            match = image.match_descriptor(kpts1, kpts2, threshold=85)
+            if (match.count()>10):
+                # If we have at least n "good matches"
+                # Draw bounding rectangle and cross.
+                img.draw_rectangle(match.rect())
+                img.draw_cross(match.cx(), match.cy(), size=10)
 
-            print(kpts2, "matched:%d dt:%d"%(match, c[7]))
+            print(kpts2, "matched:%d dt:%d"%(match.count(), match.theta()))
             # NOTE: uncomment if you want to draw the keypoints
             #img.draw_keypoints(kpts2, size=KEYPOINTS_SIZE, matched=True)
 
