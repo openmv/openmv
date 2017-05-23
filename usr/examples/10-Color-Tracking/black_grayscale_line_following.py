@@ -21,8 +21,8 @@ GRAYSCALE_THRESHOLD = [(0, 64)]
 # to the roi near the bottom of the image and less to the next roi and so on.
 ROIS = [ # [ROI, weight]
         (0, 100, 160, 20, 0.7), # You'll need to tweak the weights for your app
-        (0, 050, 160, 20, 0.3), # depending on how your robot is setup.
-        (0, 000, 160, 20, 0.1)
+        (0,  50, 160, 20, 0.3), # depending on how your robot is setup.
+        (0,   0, 160, 20, 0.1)
        ]
 
 # Compute the weight divisor (we're computing this so you don't have to make weights add to 1).
