@@ -20,9 +20,9 @@ GRAYSCALE_THRESHOLD = [(0, 64)]
 # will then be averaged with different weights where the most weight is assigned
 # to the roi near the bottom of the image and less to the next roi and so on.
 ROIS = [ # [ROI, weight]
-        (0, 100, 160, 20, 0.7), # You'll need to tweak the weights for you app
-        (0, 050, 160, 20, 0.3), # depending on how your robot is setup.
-        (0, 000, 160, 20, 0.1)
+        (0, 100, 160, 20, 0.7), # You'll need to tweak the weights for your app
+        (0,  50, 160, 20, 0.3), # depending on how your robot is setup.
+        (0,   0, 160, 20, 0.1)
        ]
 
 # Compute the weight divisor (we're computing this so you don't have to make weights add to 1).
@@ -46,20 +46,15 @@ while(True):
     for r in ROIS:
         blobs = img.find_blobs(GRAYSCALE_THRESHOLD, roi=r[0:4], merge=True) # r[0:4] is roi tuple.
         if blobs:
-            # Find the index of the blob with the most pixels.
-            most_pixels = 0
-            largest_blob = 0
-            for i in range(len(blobs)):
-                if blobs[i].pixels() > most_pixels:
-                    most_pixels = blobs[i].pixels()
-                    largest_blob = i
+            # Find the blob with the most pixels.
+            largest_blob = max(blobs, key=lambda b: b.pixels())
 
             # Draw a rect around the blob.
-            img.draw_rectangle(blobs[largest_blob].rect())
-            img.draw_cross(blobs[largest_blob].cx(),
-                           blobs[largest_blob].cy())
+            img.draw_rectangle(largest_blob.rect())
+            img.draw_cross(largest_blob.cx(),
+                           largest_blob.cy())
 
-            centroid_sum += blobs[largest_blob].cx() * r[4] # r[4] is the roi weight.
+            centroid_sum += largest_blob.cx() * r[4] # r[4] is the roi weight.
 
     center_pos = (centroid_sum / weight_sum) # Determine center of line.
 
