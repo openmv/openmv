@@ -46,20 +46,15 @@ while(True):
     for r in ROIS:
         blobs = img.find_blobs(GRAYSCALE_THRESHOLD, roi=r[0:4], merge=True) # r[0:4] is roi tuple.
         if blobs:
-            # Find the index of the blob with the most pixels.
-            most_pixels = 0
-            largest_blob = 0
-            for i in range(len(blobs)):
-                if blobs[i].pixels() > most_pixels:
-                    most_pixels = blobs[i].pixels()
-                    largest_blob = i
+            # Find the blob with the most pixels.
+            largest_blob = max(blobs, key=lambda b: b.pixels())
 
             # Draw a rect around the blob.
-            img.draw_rectangle(blobs[largest_blob].rect())
-            img.draw_cross(blobs[largest_blob].cx(),
-                           blobs[largest_blob].cy())
+            img.draw_rectangle(largest_blob.rect())
+            img.draw_cross(largest_blob.cx(),
+                           largest_blob.cy())
 
-            centroid_sum += blobs[largest_blob].cx() * r[4] # r[4] is the roi weight.
+            centroid_sum += largest_blob.cx() * r[4] # r[4] is the roi weight.
 
     center_pos = (centroid_sum / weight_sum) # Determine center of line.
 
