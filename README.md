@@ -3,7 +3,8 @@
 <p align="center">
 <img src="https://raw.githubusercontent.com/openmv/openmv-media/master/boards/openmv-cam/v3/web-new-cam-v3-angle.jpg" width="320" height="320" border="10">
 </p>
-The OpenMV project aims at making machine vision more accessible to hobbyists and makers by making open-source, low-cost machine vision cameras. The OpenMV project was successfully funded via Kickstarter back in 2013. The first generation of OpenMV cameras is based the STM's STM32F ARM Cortex-M MCUs and Omnivision OV7725 sensors.
+
+The OpenMV project aims at making machine vision more accessible to hobbyists and makers by making open-source, low-cost machine vision cameras. The OpenMV project was successfully funded via Kickstarter back in 2015. The first generation of OpenMV cameras is based the STM's STM32F ARM Cortex-M MCUs and Omnivision OV7725 sensors.
 
 OpenMV cameras are programmable in Python3 and come with an extensive set of image processing functions such as face detection and tracking, keypoints descriptor, color blob tracking, QR and Bar codes support, GIF and MJPEG recording and much more.
 
