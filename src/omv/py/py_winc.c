@@ -653,15 +653,14 @@ static mp_uint_t winc_socket_recvfrom(mod_network_socket_obj_t *socket,
         ret = winc_async_request(SOCKET_MSG_RECVFROM, &rfrom, socket->timeout);
     }
 
-    if (ret != SOCK_ERR_NO_ERROR) {
-        *_errno = ret;
+    if (ret != SOCK_ERR_NO_ERROR || rfrom.size <= 0) {
+        *_errno = (rfrom.size <= 0)? rfrom.size : ret;
         winc_socket_close(socket);
     } else {
         UNPACK_SOCKADDR(((struct sockaddr*) &rfrom.addr), ip, *port);
-        ret = rfrom.size;
     }
 
-    return ret;
+    return rfrom.size;
 }
 
 static int winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
