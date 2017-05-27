@@ -9,7 +9,7 @@ sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA)
 sensor.set_windowing((240, 240)) # look at center 240x240 pixels of the VGA resolution.
-sensor.skip_frames(30)
+sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must turn this off to prevent image washout...
 clock = time.clock()
 

@@ -39,7 +39,7 @@ valid_tag_ids = {
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(60)
+sensor.skip_frames(time = 2000)
 
 x_res = 160 # QQVGA
 y_res = 120 # QQVGA

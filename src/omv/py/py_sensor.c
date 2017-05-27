@@ -18,6 +18,7 @@
 #include "omv_boardconfig.h"
 #include "py_helper.h"
 #include "framebuffer.h"
+#include "systick.h"
 
 extern sensor_t sensor;
 
@@ -74,13 +75,35 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
     return image;
 }
 
-static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args) {
-    int frames = (n_args == 1) ? mp_obj_get_int(args[0]) : 10; // OV Recommended.
-    for (int i = 0; i < frames; i++) {
-        if (sensor_snapshot(NULL, NULL, NULL) == -1) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
+static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_time), MP_MAP_LOOKUP);
+    mp_int_t time = 300; // OV Recommended.
+
+    if (kw_arg != NULL) {
+        time = mp_obj_get_int(kw_arg->value);
+    }
+
+    uint32_t millis = systick_current_millis();
+
+    if (!n_args) {
+        while ((systick_current_millis() - millis) < time) { // 32-bit math handles wrap arrounds...
+            if (sensor_snapshot(NULL, NULL, NULL) == -1) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
+            }
+        }
+    } else {
+        for (int i = 0, j = mp_obj_get_int(args[0]); i < j; i++) {
+            if ((kw_arg != NULL) && ((systick_current_millis() - millis) >= time)) {
+                break;
+            }
+
+            if (sensor_snapshot(NULL, NULL, NULL) == -1) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
+            }
         }
     }
+
     return mp_const_none;
 }
 
@@ -329,7 +352,7 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,               py_sensor_reset);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_snapshot_obj, 0,        py_sensor_snapshot);
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_skip_frames_obj, 0, 1, py_sensor_skip_frames);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_skip_frames_obj, 0, py_sensor_skip_frames);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_fb_obj,              py_sensor_get_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,              py_sensor_get_id);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_set_pixformat);

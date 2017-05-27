@@ -33,7 +33,7 @@ for r in ROIS: weight_sum += r[4] # r[4] is the roi weight.
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # use grayscale.
 sensor.set_framesize(sensor.QQVGA) # use QQVGA for speed.
-sensor.skip_frames(30) # Let new settings take affect.
+sensor.skip_frames(time = 2000) # Let new settings take affect.
 sensor.set_auto_gain(False) # must be turned off for color tracking
 sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock() # Tracks FPS.
@@ -43,8 +43,10 @@ while(True):
     img = sensor.snapshot() # Take a picture and return the image.
 
     centroid_sum = 0
+
     for r in ROIS:
         blobs = img.find_blobs(GRAYSCALE_THRESHOLD, roi=r[0:4], merge=True) # r[0:4] is roi tuple.
+
         if blobs:
             # Find the blob with the most pixels.
             largest_blob = max(blobs, key=lambda b: b.pixels())
@@ -63,6 +65,7 @@ while(True):
     # are. Non-linear operations are good to use on the output of algorithms
     # like this to cause a response "trigger".
     deflection_angle = 0
+
     # The 80 is from half the X res, the 60 is from half the Y res. The
     # equation below is just computing the angle of a triangle where the
     # opposite side of the triangle is the deviation of the center position

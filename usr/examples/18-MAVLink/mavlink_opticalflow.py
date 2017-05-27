@@ -22,7 +22,7 @@ MAV_OPTICAL_FLOW_confidence_threshold = 0.2
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(60)
+sensor.skip_frames(time = 2000)
 
 # Link Setup
 

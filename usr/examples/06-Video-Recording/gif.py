@@ -14,11 +14,11 @@ BLUE_LED_PIN = 3
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.QQVGA) # or sensor.QVGA (or others)
-sensor.skip_frames(10) # Let new settings take affect.
+sensor.skip_frames(time = 2000) # Let new settings take affect.
 clock = time.clock() # Tracks FPS.
 
 pyb.LED(RED_LED_PIN).on()
-sensor.skip_frames(30) # Give the user time to get ready.
+sensor.skip_frames(time = 2000) # Give the user time to get ready.
 
 pyb.LED(RED_LED_PIN).off()
 pyb.LED(BLUE_LED_PIN).on()

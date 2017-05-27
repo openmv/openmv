@@ -16,7 +16,7 @@ sensor.set_windowing((320, 240))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Skip a few frames to allow the sensor settle down
-sensor.skip_frames(60)
+sensor.skip_frames(time = 2000)
 
 # Load Haar Cascade
 # By default this will use all stages, lower satges is faster but less accurate.
