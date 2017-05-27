@@ -16,7 +16,7 @@ thresholds = [(100, 255)] # grayscale thresholds
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.RGB565
 sensor.set_framesize(sensor.QQVGA) # or sensor.QVGA (or others)
-sensor.skip_frames(10) # Let new settings take affect.
+sensor.skip_frames(time = 2000) # Let new settings take affect.
 clock = time.clock() # Tracks FPS.
 
 # On the OV7725 sensor, edge detection can be enhanced

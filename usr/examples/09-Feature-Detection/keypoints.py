@@ -14,7 +14,7 @@ sensor.set_framesize(sensor.VGA)
 sensor.set_windowing((320, 240))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
-sensor.skip_frames(30)
+sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False, value=100)
 
 def draw_keypoints(img, kpts):

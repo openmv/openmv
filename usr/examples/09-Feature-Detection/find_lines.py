@@ -16,7 +16,7 @@ import sensor, image, time
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565) # grayscale is faster
 sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(30)
+sensor.skip_frames(time = 2000)
 clock = time.clock()
 
 # All line objects have a `theta()` method to get their rotation angle in degrees.

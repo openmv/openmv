@@ -44,7 +44,7 @@ import image, math, pyb, sensor, struct, time
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(60)
+sensor.skip_frames(time = 2000)
 
 # LED Setup
 

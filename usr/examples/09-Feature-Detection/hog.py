@@ -12,10 +12,10 @@ sensor.reset()
 sensor.set_contrast(1)
 sensor.set_gainceiling(8)
 sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(30)
+sensor.skip_frames(time = 2000)
 sensor.set_pixformat(sensor.GRAYSCALE)
 
-clock = time.clock() # Tracks FPS.                
+clock = time.clock() # Tracks FPS.
 while (True):
     clock.tick()
     img = sensor.snapshot()
@@ -24,5 +24,5 @@ while (True):
     # Uncomment to save raw FB to file and exit the loop
     #img.save("/hog.pgm")
     #break
-    
+
     print(clock.fps())

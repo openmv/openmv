@@ -10,7 +10,7 @@ import sensor, image, time
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.RGB565
 sensor.set_framesize(sensor.QQVGA) # or sensor.QVGA (or others)
-sensor.skip_frames(10) # Let new settings take affect.
+sensor.skip_frames(time = 2000) # Let new settings take affect.
 clock = time.clock() # Tracks FPS.
 
 while(True):
