@@ -219,7 +219,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     // Write LSBs
     ret |= SCCB_Write(sensor->slv_addr, EXHCH, ((w&0x3) | ((h&0x1) << 2)));
 
-    if (framesize < FRAMESIZE_VGA) {
+    if ((w <= 320) && (h <= 240)) {
         // Set QVGA Resolution
         uint8_t reg = SCCB_Read(sensor->slv_addr, COM7);
         reg = COM7_SET_RES(reg, COM7_RES_QVGA);
