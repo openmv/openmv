@@ -17,5 +17,6 @@ while(True):
     clock.tick()
     img = sensor.snapshot()
     for code in img.find_qrcodes():
+        img.draw_rectangle(code.rect(), color = 127)
         print(code)
     print(clock.fps())
