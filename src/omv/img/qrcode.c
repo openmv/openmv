@@ -1180,7 +1180,7 @@ static void finder_scan(struct quirc *q, int y)
 {
     quirc_pixel_t *row = q->pixels + y * q->w;
     int x;
-    int last_color;
+    int last_color = 0;
     int run_length = 0;
     int run_count = 0;
     int pb[5];
@@ -2784,37 +2784,37 @@ quirc_decode_error_t quirc_decode(const struct quirc_code *code,
                                   struct quirc_data *data)
 {
     quirc_decode_error_t err;
-    struct datastream ds;
+    struct datastream *ds = fb_alloc(sizeof(struct datastream));
 
     if ((code->size - 17) % 4)
-        return QUIRC_ERROR_INVALID_GRID_SIZE;
+        { fb_free(); return QUIRC_ERROR_INVALID_GRID_SIZE; }
 
     memset(data, 0, sizeof(*data));
-    memset(&ds, 0, sizeof(ds));
+    memset(ds, 0, sizeof(*ds));
 
     data->version = (code->size - 17) / 4;
 
     if (data->version < 1 ||
         data->version > QUIRC_MAX_VERSION)
-        return QUIRC_ERROR_INVALID_VERSION;
+        { fb_free(); return QUIRC_ERROR_INVALID_VERSION; }
 
     /* Read format information -- try both locations */
     err = read_format(code, data, 0);
     if (err)
         err = read_format(code, data, 1);
     if (err)
-        return err;
+        { fb_free(); return err; }
 
-    read_data(code, data, &ds);
-    err = codestream_ecc(data, &ds);
+    read_data(code, data, ds);
+    err = codestream_ecc(data, ds);
     if (err)
-        return err;
+        { fb_free(); return err; }
 
-    err = decode_payload(data, &ds);
+    err = decode_payload(data, ds);
     if (err)
-        return err;
+        { fb_free(); return err; }
 
-    return QUIRC_SUCCESS;
+    fb_free(); return QUIRC_SUCCESS;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2875,8 +2875,10 @@ int quirc_resize(struct quirc *q, int w, int h)
         size_t new_size = w * h * sizeof(quirc_pixel_t);
         if (q->pixels) fb_free();
         quirc_pixel_t *new_pixels = fb_alloc(new_size);
-        if (!new_pixels)
+        if (!new_pixels) {
+            fb_free();
             return -1;
+        }
         q->pixels = new_pixels;
     }
 
