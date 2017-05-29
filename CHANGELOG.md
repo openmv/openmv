@@ -1,4 +1,16 @@
 # Change Log
+## [2.4](https://github.com/openmv/openmv/releases/tag/v2.4) (2017-05-30)
+* Implement faster line detection algorithm.
+* Support line segments detection.
+* Support higher FPS on OpenMV 2 and 3.
+* Add data matrix support.
+* Add more small resolutions.
+* Enable UART1 on OpenMV3/M7
+* Enable VSYNC output on IO pin.
+* Fix QR Code bug.
+* Fix UDP recvfrom bug.
+* Minor fixes, typos and docs updates.
+
 ## [2.3](https://github.com/openmv/openmv/releases/tag/v2.3) (2017-03-26)
 * Support WiFi Access Point mode.
 * New BAYER/RAW pixel format.
