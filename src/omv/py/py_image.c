@@ -630,7 +630,7 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
 
     *ptr++ = 0xFE;
 
-    out.bpp = ((out.bpp * 8) + 5) / 6;
+    out.bpp = (((out.bpp * 8) + 5) / 6) + 2;
     arg_img->bpp = out.bpp;
     fb_free();
     fb_alloc_free_till_mark();
