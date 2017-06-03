@@ -658,7 +658,7 @@ void imlib_invert(image_t *img)
     }
 }
 
-static void imlib_and_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_and_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
@@ -673,12 +673,12 @@ static void imlib_and_line_op(image_t *img, int line, uint8_t *other)
     }
 }
 
-void imlib_and(image_t *img, const char *path, image_t *other)
+void imlib_b_and(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_and_line_op);
+    imlib_image_operation(img, path, other, imlib_b_and_line_op);
 }
 
-static void imlib_nand_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_nand_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
@@ -693,12 +693,12 @@ static void imlib_nand_line_op(image_t *img, int line, uint8_t *other)
     }
 }
 
-void imlib_nand(image_t *img, const char *path, image_t *other)
+void imlib_b_nand(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_nand_line_op);
+    imlib_image_operation(img, path, other, imlib_b_nand_line_op);
 }
 
-static void imlib_or_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_or_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
@@ -713,12 +713,12 @@ static void imlib_or_line_op(image_t *img, int line, uint8_t *other)
     }
 }
 
-void imlib_or(image_t *img, const char *path, image_t *other)
+void imlib_b_or(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_or_line_op);
+    imlib_image_operation(img, path, other, imlib_b_or_line_op);
 }
 
-static void imlib_nor_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_nor_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
@@ -733,12 +733,12 @@ static void imlib_nor_line_op(image_t *img, int line, uint8_t *other)
     }
 }
 
-void imlib_nor(image_t *img, const char *path, image_t *other)
+void imlib_b_nor(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_nor_line_op);
+    imlib_image_operation(img, path, other, imlib_b_nor_line_op);
 }
 
-static void imlib_xor_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_xor_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
@@ -753,12 +753,12 @@ static void imlib_xor_line_op(image_t *img, int line, uint8_t *other)
     }
 }
 
-void imlib_xor(image_t *img, const char *path, image_t *other)
+void imlib_b_xor(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_xor_line_op);
+    imlib_image_operation(img, path, other, imlib_b_xor_line_op);
 }
 
-static void imlib_xnor_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_xnor_line_op(image_t *img, int line, uint8_t *other)
 {
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
@@ -773,9 +773,9 @@ static void imlib_xnor_line_op(image_t *img, int line, uint8_t *other)
     }
 }
 
-void imlib_xnor(image_t *img, const char *path, image_t *other)
+void imlib_b_xnor(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_xnor_line_op);
+    imlib_image_operation(img, path, other, imlib_b_xnor_line_op);
 }
 
 static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_d)
