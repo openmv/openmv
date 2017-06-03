@@ -1034,12 +1034,12 @@ void imlib_binary(image_t *img,
                   int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds,
                   bool invert);
 void imlib_invert(image_t *img);
-void imlib_and(image_t *img, const char *path, image_t *other);
-void imlib_nand(image_t *img, const char *path, image_t *other);
-void imlib_or(image_t *img, const char *path, image_t *other);
-void imlib_nor(image_t *img, const char *path, image_t *other);
-void imlib_xor(image_t *img, const char *path, image_t *other);
-void imlib_xnor(image_t *img, const char *path, image_t *other);
+void imlib_b_and(image_t *img, const char *path, image_t *other);
+void imlib_b_nand(image_t *img, const char *path, image_t *other);
+void imlib_b_or(image_t *img, const char *path, image_t *other);
+void imlib_b_nor(image_t *img, const char *path, image_t *other);
+void imlib_b_xor(image_t *img, const char *path, image_t *other);
+void imlib_b_xnor(image_t *img, const char *path, image_t *other);
 void imlib_erode(image_t *img, int ksize, int threshold);
 void imlib_dilate(image_t *img, int ksize, int threshold);
 

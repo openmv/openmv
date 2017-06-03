@@ -962,86 +962,86 @@ static mp_obj_t py_image_invert(mp_obj_t img_obj)
     return img_obj;
 }
 
-static mp_obj_t py_image_and(mp_obj_t img_obj, mp_obj_t other_obj)
+static mp_obj_t py_image_b_and(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
-        imlib_and(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        imlib_b_and(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        imlib_and(arg_img, NULL, arg_other);
+        imlib_b_and(arg_img, NULL, arg_other);
     }
     return img_obj;
 }
 
-static mp_obj_t py_image_nand(mp_obj_t img_obj, mp_obj_t other_obj)
+static mp_obj_t py_image_b_nand(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
-        imlib_nand(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        imlib_b_nand(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        imlib_nand(arg_img, NULL, arg_other);
+        imlib_b_nand(arg_img, NULL, arg_other);
     }
     return img_obj;
 }
 
-static mp_obj_t py_image_or(mp_obj_t img_obj, mp_obj_t other_obj)
+static mp_obj_t py_image_b_or(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
-        imlib_or(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        imlib_b_or(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        imlib_or(arg_img, NULL, arg_other);
+        imlib_b_or(arg_img, NULL, arg_other);
     }
     return img_obj;
 }
 
-static mp_obj_t py_image_nor(mp_obj_t img_obj, mp_obj_t other_obj)
+static mp_obj_t py_image_b_nor(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
-        imlib_nor(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        imlib_b_nor(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        imlib_nor(arg_img, NULL, arg_other);
+        imlib_b_nor(arg_img, NULL, arg_other);
     }
     return img_obj;
 }
 
-static mp_obj_t py_image_xor(mp_obj_t img_obj, mp_obj_t other_obj)
+static mp_obj_t py_image_b_xor(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
-        imlib_xor(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        imlib_b_xor(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        imlib_xor(arg_img, NULL, arg_other);
+        imlib_b_xor(arg_img, NULL, arg_other);
     }
     return img_obj;
 }
 
-static mp_obj_t py_image_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
+static mp_obj_t py_image_b_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
-        imlib_xnor(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        imlib_b_xnor(arg_img, mp_obj_str_get_str(other_obj), NULL);
     } else {
         image_t *arg_other = py_image_cobj(other_obj);
-        imlib_xnor(arg_img, NULL, arg_other);
+        imlib_b_xnor(arg_img, NULL, arg_other);
     }
     return img_obj;
 }
@@ -3422,12 +3422,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_keypoints_obj, 2, py_image_draw_
 /* Binary functions */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_binary_obj, 2, py_image_binary);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_invert_obj, py_image_invert);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_and_obj, py_image_and);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_nand_obj, py_image_nand);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_or_obj, py_image_or);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_nor_obj, py_image_nor);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_xor_obj, py_image_xor);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_xnor_obj, py_image_xnor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_b_and_obj, py_image_b_and);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_b_nand_obj, py_image_b_nand);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_b_or_obj, py_image_b_or);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_b_nor_obj, py_image_b_nor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_b_xor_obj, py_image_b_xor);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_b_xnor_obj, py_image_b_xnor);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_erode_obj, 2, py_image_erode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_dilate_obj, 2, py_image_dilate);
 /* Background Subtraction (Frame Differencing) functions */
@@ -3506,12 +3506,18 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* Binary functions */
     {MP_OBJ_NEW_QSTR(MP_QSTR_binary),              (mp_obj_t)&py_image_binary_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_invert),              (mp_obj_t)&py_image_invert_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_and),                 (mp_obj_t)&py_image_and_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_nand),                (mp_obj_t)&py_image_nand_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_or),                  (mp_obj_t)&py_image_or_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_nor),                 (mp_obj_t)&py_image_nor_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_xor),                 (mp_obj_t)&py_image_xor_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_xnor),                (mp_obj_t)&py_image_xnor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_and),                 (mp_obj_t)&py_image_b_and_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_b_and),               (mp_obj_t)&py_image_b_and_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_nand),                (mp_obj_t)&py_image_b_nand_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_b_nand),              (mp_obj_t)&py_image_b_nand_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_or),                  (mp_obj_t)&py_image_b_or_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_b_or),                (mp_obj_t)&py_image_b_or_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_nor),                 (mp_obj_t)&py_image_b_nor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_b_nor),               (mp_obj_t)&py_image_b_nor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_xor),                 (mp_obj_t)&py_image_b_xor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_b_xor),               (mp_obj_t)&py_image_b_xor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_xnor),                (mp_obj_t)&py_image_b_xnor_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_b_xnor),              (mp_obj_t)&py_image_b_xnor_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_erode),               (mp_obj_t)&py_image_erode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_dilate),              (mp_obj_t)&py_image_dilate_obj},
     /* Background Subtraction (Frame Differencing) functions */
