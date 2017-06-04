@@ -1,4 +1,9 @@
 # Change Log
+## [2.4.1](https://github.com/openmv/openmv/releases/tag/v2.4.1) (2017-06-04)
+* Upstream Kanji fix.
+* Upstream MP SCSI fix.
+* Fix binary ops names.
+
 ## [2.4](https://github.com/openmv/openmv/releases/tag/v2.4) (2017-05-30)
 * Implement faster line detection algorithm.
 * Support line segments detection.
