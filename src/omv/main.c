@@ -362,7 +362,7 @@ soft_reset:
 
 #if MICROPY_HW_ENABLE_RTC
     if (first_soft_reset) {
-        rtc_init();
+        rtc_init_start(false);
     }
 #endif
 
