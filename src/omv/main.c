@@ -91,18 +91,19 @@ static const char fresh_main_py[] =
 ;
 
 static const char fresh_readme_txt[] =
-"This is a Micro Python board\r\n"
+"Thank you for supporting the OpenMV project!\r\n"
 "\r\n"
-"You can get started right away by writing your Python code in 'main.py'.\r\n"
+"To download the IDE, please visit:\r\n"
+"https://openmv.io/pages/download\r\n"
 "\r\n"
-"For a serial prompt:\r\n"
-" - Windows: you need to go to 'Device manager', right click on the unknown device,\r\n"
-"   then update the driver software, using the 'openmv.inf' file found on this drive.\r\n"
-"   Then use a terminal program like Hyperterminal or putty.\r\n"
-" - Mac OS X: use the command: screen /dev/tty.usbmodem*\r\n"
-" - Linux: use the command: screen /dev/ttyACM0\r\n"
+"For tutorials and documentation, please visit:\r\n"
+"http://docs.openmv.io/\r\n"
 "\r\n"
-"Please visit https://openmv.io/ or http://micropython.org/help/ for further help.\r\n"
+"For technical support and projects, please visit the forums:\r\n"
+"http://forums.openmv.io/\r\n"
+"\r\n"
+"Please use github to report bugs and issues:\r\n"
+"https://github.com/openmv/openmv\r\n"
 ;
 
 #ifdef OPENMV1
