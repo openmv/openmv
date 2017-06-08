@@ -90,10 +90,6 @@ static const char fresh_main_py[] =
 "   time.sleep(600)\n"
 ;
 
-static const char fresh_openmv_inf[] =
-#include "genhdr/openmv_inf.h"
-;
-
 static const char fresh_readme_txt[] =
 "This is a Micro Python board\r\n"
 "\r\n"
@@ -262,11 +258,6 @@ static void make_flash_fs()
     // create default main.py
     f_open(&fp, "main.py", FA_WRITE | FA_CREATE_ALWAYS);
     f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
-    f_close(&fp);
-
-    // create .inf driver file
-    f_open(&fp, "openmv.inf", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_openmv_inf, sizeof(fresh_openmv_inf) - 1 /* don't count null terminator */, &n);
     f_close(&fp);
 
     // create readme file
