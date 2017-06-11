@@ -123,6 +123,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	fb_alloc.o                              \
 	umm_malloc.o                            \
 	ff_wrapper.o                            \
+	framebuffer.o                           \
 	array.o                                 \
 	usbdbg.o                                \
 	sccb.o                                  \
