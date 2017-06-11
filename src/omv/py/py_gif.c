@@ -28,9 +28,9 @@ typedef struct py_gif_obj {
 static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_gif_obj_t *gif = m_new_obj(py_gif_obj_t);
-    gif->width  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), fb->w);
-    gif->height = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), fb->h);
-    gif->color  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color), fb->bpp>=2);
+    gif->width  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), MAIN_FB()->w);
+    gif->height = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), MAIN_FB()->h);
+    gif->color  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color), MAIN_FB()->bpp>=2);
     gif->loop   = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_loop), true);
     gif->base.type = &py_gif_type;
 

@@ -28,8 +28,8 @@ typedef struct py_mjpeg_obj {
 static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_mjpeg_obj_t *mjpeg = m_new_obj(py_mjpeg_obj_t);
-    mjpeg->width  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), fb->w);
-    mjpeg->height = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), fb->h);
+    mjpeg->width  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), MAIN_FB()->w);
+    mjpeg->height = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), MAIN_FB()->h);
     mjpeg->frames = 0; // private
     mjpeg->bytes = 0; // private
     mjpeg->base.type = &py_mjpeg_type;

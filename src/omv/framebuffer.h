@@ -17,7 +17,7 @@ typedef struct framebuffer {
     uint8_t pixels[];
 } framebuffer_t;
 
-extern framebuffer_t *fb;
+extern framebuffer_t *fb_framebuffer;
 
 typedef struct jpegbuffer {
     int w,h;
@@ -28,11 +28,12 @@ typedef struct jpegbuffer {
     uint8_t pixels[];
 } jpegbuffer_t;
 
-extern jpegbuffer_t *jpeg_fb;
+extern jpegbuffer_t *jpeg_fb_framebuffer;
 
 // Use these macros to get a pointer to main or JPEG framebuffer.
-#define MAIN_FB()       (fb)
-#define JPEG_FB()       (jpeg_fb)
+#define MAIN_FB()       (fb_framebuffer)
+#define JPEG_FB()       (jpeg_fb_framebuffer)
+
 // Returns MAIN FB size
 #define MAIN_FB_SIZE()  (MAIN_FB()->w*MAIN_FB()->h*MAIN_FB()->bpp)
 
@@ -40,6 +41,6 @@ extern jpegbuffer_t *jpeg_fb;
 #define FB_PIXELS() (MAIN_FB()->pixels+MAIN_FB_SIZE())
 
 // Transfers the frame buffer to the jpeg frame buffer if not locked.
-void copy_fb_to_jpeg_fb();
+void fb_update_jpeg_buffer();
 
 #endif /* __FRAMEBUFFER_H__ */
