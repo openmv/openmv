@@ -86,6 +86,18 @@ void file_seek(FIL *fp, UINT offset)
     if (res != FR_OK) ff_fail(fp, res);
 }
 
+void file_truncate(FIL *fp)
+{
+    FRESULT res = f_truncate(fp);
+    if (res != FR_OK) ff_fail(fp, res);
+}
+
+void file_sync(FIL *fp)
+{
+    FRESULT res = f_sync(fp);
+    if (res != FR_OK) ff_fail(fp, res);
+}
+
 // When a sector boundary is encountered while writing a file and there are
 // more than 512 bytes left to write FatFs will detect that it can bypass
 // its internal write buffer and pass the data buffer passed to it directly
