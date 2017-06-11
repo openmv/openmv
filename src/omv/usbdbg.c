@@ -180,10 +180,10 @@ void usbdbg_data_out(void *buffer, int length)
 
         case USBDBG_TEMPLATE_SAVE: {
             image_t image ={
-                .w = fb->w,
-                .h = fb->h,
-                .bpp = fb->bpp,
-                .pixels = fb->pixels
+                .w = MAIN_FB()->w,
+                .h = MAIN_FB()->h,
+                .bpp = MAIN_FB()->bpp,
+                .pixels = MAIN_FB()->pixels
             };
 
             // null terminate the path
@@ -201,10 +201,10 @@ void usbdbg_data_out(void *buffer, int length)
 
         case USBDBG_DESCRIPTOR_SAVE: {
             image_t image ={
-                .w = fb->w,
-                .h = fb->h,
-                .bpp = fb->bpp,
-                .pixels = fb->pixels
+                .w = MAIN_FB()->w,
+                .h = MAIN_FB()->h,
+                .bpp = MAIN_FB()->bpp,
+                .pixels = MAIN_FB()->pixels
             };
 
             // null terminate the path

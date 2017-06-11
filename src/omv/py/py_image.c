@@ -486,9 +486,9 @@ static mp_obj_t py_image_copy_to_fb(uint n_args, const mp_obj_t *args, mp_map_t 
     image_t *arg_img = py_image_cobj(args[0]);
     py_helper_lookup_offset(kw_args, arg_img, &arg_offs);
 
-    fb->w = arg_img->w;
-    fb->h = arg_img->h;
-    fb->bpp = arg_img->bpp;
+    MAIN_FB()->w = arg_img->w;
+    MAIN_FB()->h = arg_img->h;
+    MAIN_FB()->bpp = arg_img->bpp;
 
     int yoffs = arg_offs.y;
     int xoffs = arg_offs.x * arg_img->bpp;
@@ -496,7 +496,7 @@ static mp_obj_t py_image_copy_to_fb(uint n_args, const mp_obj_t *args, mp_map_t 
 
     for (int y=yoffs; y<arg_img->h; y++) {
         for (int x=xoffs; x<stride; x++) {
-            fb->pixels[y*stride+x] = arg_img->pixels[y*stride+x];
+            MAIN_FB()->pixels[y*stride+x] = arg_img->pixels[y*stride+x];
         }
     }
     return mp_const_true;
@@ -553,8 +553,8 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
     fb_free();
     fb_alloc_free_till_mark();
 
-    if (fb->pixels == arg_img->data) {
-        fb->bpp = arg_img->bpp;
+    if (MAIN_FB()->pixels == arg_img->data) {
+        MAIN_FB()->bpp = arg_img->bpp;
     }
 
     return args[0];
@@ -635,8 +635,8 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
     fb_free();
     fb_alloc_free_till_mark();
 
-    if (fb->pixels == arg_img->data) {
-        fb->bpp = arg_img->bpp;
+    if (MAIN_FB()->pixels == arg_img->data) {
+        MAIN_FB()->bpp = arg_img->bpp;
     }
 
     return args[0];
@@ -3131,9 +3131,9 @@ static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_
     arg_img->w = out_img.w;
     arg_img->h = out_img.h;
     // Check if this image is the one in the frame buffer...
-    if ((fb->pixels == arg_img->pixels) || (fb->pixels == arg_img->pixels)) {
-        fb->w = out_img.w;
-        fb->h = out_img.h;
+    if ((MAIN_FB()->pixels == arg_img->pixels) || (MAIN_FB()->pixels == arg_img->pixels)) {
+        MAIN_FB()->w = out_img.w;
+        MAIN_FB()->h = out_img.h;
     }
 
     return img_obj;
@@ -3672,18 +3672,18 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     int copy_to_fb = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), false);
 
     if (copy_to_fb) {
-       fb->w   = 4; // non-zero init value
-       fb->h   = 4; // non-zero init value
-       fb->bpp = 1; // non-zero init value
+       MAIN_FB()->w   = 4; // non-zero init value
+       MAIN_FB()->h   = 4; // non-zero init value
+       MAIN_FB()->bpp = 1; // non-zero init value
        image.pixels = MAIN_FB()->pixels;
        FIL fp;
        img_read_settings_t rs;
        imlib_read_geometry(&fp, &image, path, &rs);
        file_buffer_off(&fp);
        file_close(&fp);
-       fb->w   = image.w;
-       fb->h   = image.h;
-       fb->bpp = image.bpp;
+       MAIN_FB()->w   = image.w;
+       MAIN_FB()->h   = image.h;
+       MAIN_FB()->bpp = image.bpp;
     }
 
     imlib_load_image(&image, path);

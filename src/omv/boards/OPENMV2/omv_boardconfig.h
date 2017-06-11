@@ -36,6 +36,10 @@
 // JPEG buffer size (header + data)
 #define OMV_JPEG_BUF_SIZE       (8000)
 
+// If buffer size is bigger than this threshold, the quality is reduced.
+// This is only used for JPEG images sent to the IDE not normal compression.
+#define JPEG_QUALITY_THRESH     (160*120*2)
+
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
 #define SCCB_AF                 (GPIO_AF4_I2C1)

@@ -26,9 +26,6 @@
 #define REG_MIDL       0x1D
 
 #define MAX_XFER_SIZE (0xFFFC)
-// If buffer size is bigger than this threshold, the quality is reduced.
-// This is only used for JPEG images sent to the IDE not normal compression.
-#define JPEG_QUALITY_THRESH     (160*120*2)
 
 sensor_t sensor;
 TIM_HandleTypeDef  TIMHandle;
@@ -384,7 +381,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
     }
 
     // Skip the first frame.
-    fb->bpp = 0;
+    MAIN_FB()->bpp = 0;
 
     return dcmi_config(jpeg_mode);
 }
@@ -407,9 +404,9 @@ int sensor_set_framesize(framesize_t framesize)
     sensor.framesize = framesize;
 
     // Skip the first frame.
-    fb->bpp = 0;
-    fb->w = resolution[framesize][0];
-    fb->h = resolution[framesize][1];
+    MAIN_FB()->bpp = 0;
+    MAIN_FB()->w = resolution[framesize][0];
+    MAIN_FB()->h = resolution[framesize][1];
     HAL_DCMI_DisableCROP(&DCMIHandle);
 
     return 0;
@@ -437,8 +434,8 @@ int sensor_set_framerate(framerate_t framerate)
 
 int sensor_set_windowing(int x, int y, int w, int h)
 {
-    fb->w = w;
-    fb->h = h;
+    MAIN_FB()->w = w;
+    MAIN_FB()->h = h;
     HAL_DCMI_ConfigCROP(&DCMIHandle, x*2, y, w*2-1, h-1);
     HAL_DCMI_EnableCROP(&DCMIHandle);
     return 0;
@@ -627,34 +624,34 @@ void DCMI_VsyncExtiCallback()
 void DCMI_DMAConvCpltUser(uint32_t addr)
 {
     uint8_t *src = (uint8_t*) addr;
-    uint8_t *dst = fb->pixels;
+    uint8_t *dst = MAIN_FB()->pixels;
 
     if (sensor.line_filter_func && sensor.line_filter_args) {
         int bpp = ((sensor.pixformat == PIXFORMAT_GRAYSCALE) ? 1:2);
-        dst += line++ * fb->w * bpp;
+        dst += line++ * MAIN_FB()->w * bpp;
         // If there's an image filter installed call it.
         // Note: BPP is the target BPP, not the line bpp (the line is always 2 bytes per pixel) if the target BPP is 1
         // it means the image currently being read is going to be Grayscale, and the function needs to output w * 1BPP.
-        sensor.line_filter_func(src, fb->w * 2 , dst, fb->w * bpp, sensor.line_filter_args);
+        sensor.line_filter_func(src, MAIN_FB()->w * 2 , dst, MAIN_FB()->w * bpp, sensor.line_filter_args);
     } else {
         switch (sensor.pixformat) {
             case PIXFORMAT_BAYER:
-                dst += line++ * fb->w;
-                for (int i=0; i<fb->w; i++) {
+                dst += line++ * MAIN_FB()->w;
+                for (int i=0; i<MAIN_FB()->w; i++) {
                     dst[i] = src[i];
                 }
                 break;
             case PIXFORMAT_GRAYSCALE:
-                dst += line++ * fb->w;
+                dst += line++ * MAIN_FB()->w;
                 // If GRAYSCALE extract Y channel from YUV
-                for (int i=0; i<fb->w; i++) {
+                for (int i=0; i<MAIN_FB()->w; i++) {
                     dst[i] = src[i<<1];
                 }
                 break;
             case PIXFORMAT_YUV422:
             case PIXFORMAT_RGB565:
-                dst += line++ * fb->w * 2;
-                for (int i=0; i<fb->w * 2; i++) {
+                dst += line++ * MAIN_FB()->w * 2;
+                for (int i=0; i<MAIN_FB()->w * 2; i++) {
                     dst[i] = src[i];
                 }
                 break;
@@ -682,7 +679,7 @@ static void sensor_check_bufsize()
             break;
     }
 
-    if ((fb->w * fb->h * bpp) > OMV_RAW_BUF_SIZE) {
+    if ((MAIN_FB()->w * MAIN_FB()->h * bpp) > OMV_RAW_BUF_SIZE) {
         if (sensor.pixformat == PIXFORMAT_GRAYSCALE) {
             // Crop higher GS resolutions to QVGA
             sensor_set_windowing(190, 120, 320, 240);
@@ -699,7 +696,6 @@ static void sensor_check_bufsize()
 // overwrite image pixels before they are compressed.
 int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_filter_args)
 {
-    static int overflow_count = 0;
     uint32_t addr, length, tick_start;
 
     // Set line filter
@@ -712,55 +708,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
     // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
-    if ((fb->bpp > 3) && JPEG_FB()->enabled && sensor.pixformat != PIXFORMAT_JPEG) {
-        // Lock FB
-        if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
-            if(OMV_JPEG_BUF_SIZE < fb->bpp) {
-                // image won't fit. so don't copy.
-                JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
-            } else {
-                memcpy(JPEG_FB()->pixels, fb->pixels, fb->bpp);
-                JPEG_FB()->w = fb->w; JPEG_FB()->h = fb->h; JPEG_FB()->size = fb->bpp;
-            }
-
-            // Unlock the framebuffer mutex
-            mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
-        }
-    } else if ((fb->bpp > 0) && JPEG_FB()->enabled && sensor.pixformat != PIXFORMAT_JPEG) {
-        // Lock FB
-        if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
-            // Set JPEG src and dst images.
-            image_t src = {.w=fb->w, .h=fb->h, .bpp=fb->bpp,            .pixels=fb->pixels};
-            image_t dst = {.w=fb->w, .h=fb->h, .bpp=OMV_JPEG_BUF_SIZE,  .pixels=JPEG_FB()->pixels};
-
-            // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
-            bool overflow = jpeg_compress(&src, &dst, JPEG_FB()->quality, false);
-            if (overflow == true) {
-                // JPEG buffer overflowed, reduce JPEG quality for the next frame
-                // and skip the current frame. The IDE doesn't receive this frame.
-                if (JPEG_FB()->quality > 1) {
-                    // Keep this quality for the next n frames
-                    overflow_count = 60;
-                    JPEG_FB()->quality = IM_MAX(1, (JPEG_FB()->quality/2));
-                }
-                JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
-            } else {
-                if (overflow_count) {
-                    overflow_count--;
-                }
-                // No buffer overflow, increase quality up to max quality based on frame size
-                if (overflow_count == 0 &&
-                        JPEG_FB()->quality < ((MAIN_FB_SIZE() > JPEG_QUALITY_THRESH) ? 35:60)) {
-                    JPEG_FB()->quality++;
-                }
-                // Set FB from JPEG image
-                JPEG_FB()->w = dst.w; JPEG_FB()->h = dst.h; JPEG_FB()->size = dst.bpp;
-            }
-
-            // Unlock the framebuffer mutex
-            mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
-        }
-    }
+    fb_update_jpeg_buffer();
 
     // Setup the size and address of the transfer
     switch (sensor.pixformat) {
@@ -768,18 +716,18 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             // RGB, YUV and GS read 2 bytes per pixel.
-            length =(fb->w * fb->h * 2)/4;
+            length =(MAIN_FB()->w * MAIN_FB()->h * 2)/4;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_BAYER:
             // BAYER/RAW: 1 byte per pixel
-            length =(fb->w * fb->h * 1)/4;
+            length =(MAIN_FB()->w * MAIN_FB()->h * 1)/4;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_JPEG:
             // Sensor has hardware JPEG set max frame size.
             length = MAX_XFER_SIZE;
-            addr = (uint32_t) (fb->pixels);
+            addr = (uint32_t) (MAIN_FB()->pixels);
             break;
         default:
             return -1;
@@ -801,7 +749,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     } else {
         // Start a multibuffer transfer (line by line)
         HAL_DCMI_Start_DMA_MB(&DCMIHandle,
-                DCMI_MODE_SNAPSHOT, addr, length, fb->h);
+                DCMI_MODE_SNAPSHOT, addr, length, MAIN_FB()->h);
     }
 
     // Wait for frame
@@ -828,27 +776,27 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     // Fix the BPP
     switch (sensor.pixformat) {
         case PIXFORMAT_GRAYSCALE:
-            fb->bpp = 1;
+            MAIN_FB()->bpp = 1;
             break;
         case PIXFORMAT_YUV422:
         case PIXFORMAT_RGB565:
-            fb->bpp = 2;
+            MAIN_FB()->bpp = 2;
             break;
         case PIXFORMAT_BAYER:
-            fb->bpp = 3;
+            MAIN_FB()->bpp = 3;
             break;
         case PIXFORMAT_JPEG:
             // Read the number of data items transferred
-            fb->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
+            MAIN_FB()->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
             break;
     }
 
     // Set the user image.
     if (image != NULL) {
-        image->w = fb->w;
-        image->h = fb->h;
-        image->bpp = fb->bpp;
-        image->pixels = fb->pixels;
+        image->w = MAIN_FB()->w;
+        image->h = MAIN_FB()->h;
+        image->bpp = MAIN_FB()->bpp;
+        image->pixels = MAIN_FB()->pixels;
     }
 
     return 0;
