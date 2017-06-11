@@ -568,3 +568,21 @@ Q(CODE39)
 Q(PDF417)
 Q(CODE93)
 Q(CODE128)
+
+// Image Writer
+Q(ImageWriter)
+// Image Writer Object
+Q(imagewriter)
+// duplicate Q(size)
+// duplicate Q(add_frame)
+// duplicate Q(close)
+
+// Image Reader
+Q(ImageReader)
+// Image Reader Object
+Q(imagereader)
+// duplicate Q(size)
+Q(next_frame)
+// duplicate Q(copy_to_fb)
+// duplicate Q(loop)
+// duplicate Q(close)
