@@ -3612,39 +3612,40 @@ mp_obj_t py_imagewriter_add_frame(mp_obj_t self_in, mp_obj_t img_obj)
     PY_ASSERT_TYPE(img_obj, &py_image_type);
     image_t *arg_img = &((py_image_obj_t *) img_obj)->_cobj;
 
+    uint32_t ms = systick_current_millis(); // Write out elapsed ms.
+    write_long(fp, ms - ((py_imagewriter_obj_t *) self_in)->ms);
+    ((py_imagewriter_obj_t *) self_in)->ms = ms;
+
     write_long(fp, arg_img->w);
     write_long(fp, arg_img->h);
     write_long(fp, arg_img->bpp);
 
+    uint32_t size;
     switch (arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            write_data(fp, arg_img->data, ((arg_img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * arg_img->h);
+            size = ((arg_img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * arg_img->h;
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            write_data(fp, arg_img->data, (arg_img->w * arg_img->h) * sizeof(uint8_t));
+            size = (arg_img->w * arg_img->h) * sizeof(uint8_t);
             break;
         }
         case IMAGE_BPP_RGB565: {
-            write_data(fp, arg_img->data, (arg_img->w * arg_img->h) * sizeof(uint16_t));
+            size = (arg_img->w * arg_img->h) * sizeof(uint16_t);
             break;
         }
         case 3: { // BAYER
-            write_data(fp, arg_img->data, arg_img->w * arg_img->h);
+            size = arg_img->w * arg_img->h;
             break;
         }
         default: { // JPEG
-            write_data(fp, arg_img->data, arg_img->bpp);
+            size = arg_img->bpp;
             break;
         }
     }
 
-    // Write out elapsed ms.
-    uint32_t ms = systick_current_millis();
-    write_long(fp, ms - ((py_imagewriter_obj_t *) self_in)->ms);
-    ((py_imagewriter_obj_t *) self_in)->ms = ms;
-
-    // Causes too many hiccups to use. // file_sync(fp);
+    write_data(fp, arg_img->data, size);
+    if (size % 16) write_data(fp, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16 - (size % 16)); // Pad to multiple of 16 bytes.
     return mp_const_none;
 }
 
@@ -3722,69 +3723,16 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
         }
 
         file_seek(fp, 16); // skip past the header
-    }
 
-    read_long(fp, (uint32_t *) &image.w);
-    read_long(fp, (uint32_t *) &image.h);
-    read_long(fp, (uint32_t *) &image.bpp);
-
-    if (copy_to_fb) {
-        image.data = MAIN_FB()->pixels;
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-    } else {
-        switch(image.bpp) {
-            case IMAGE_BPP_BINARY: {
-                image.data = xalloc(((image.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * image.h);
-                break;
-            }
-            case IMAGE_BPP_GRAYSCALE: {
-                image.data = xalloc((image.w * image.h) * sizeof(uint8_t));
-                break;
-            }
-            case IMAGE_BPP_RGB565: {
-                image.data = xalloc((image.w * image.h) * sizeof(uint16_t));
-                break;
-            }
-            case 3: { // BAYER
-                image.data = xalloc(image.w * image.h);
-                break;
-            }
-            default: { // JPEG
-                image.data = xalloc(image.bpp);
-                break;
-            }
+        if (f_eof(fp)) { // empty file
+            return mp_const_none;
         }
     }
 
-    switch (image.bpp) {
-        case IMAGE_BPP_BINARY: {
-            read_data(fp, image.data, ((image.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * image.h);
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            read_data(fp, image.data, (image.w * image.h) * sizeof(uint8_t));
-            break;
-        }
-        case IMAGE_BPP_RGB565: {
-            read_data(fp, image.data, (image.w * image.h) * sizeof(uint16_t));
-            break;
-        }
-        case 3: { // BAYER
-            read_data(fp, image.data, image.w * image.h);
-            break;
-        }
-        default: { // JPEG
-            read_data(fp, image.data, image.bpp);
-            break;
-        }
-    }
-
-    uint32_t ms_tmp, ms;
+    uint32_t ms_tmp;
     read_long(fp, &ms_tmp);
 
-    // Wait for elapsed ms.
+    uint32_t ms; // Wait for elapsed ms.
     for (ms = systick_current_millis();
          ((ms - ((py_imagewriter_obj_t *) args[0])->ms) < ms_tmp);
          ms = systick_current_millis()) {
@@ -3792,6 +3740,48 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     }
 
     ((py_imagewriter_obj_t *) args[0])->ms = ms;
+
+    read_long(fp, (uint32_t *) &image.w);
+    read_long(fp, (uint32_t *) &image.h);
+    read_long(fp, (uint32_t *) &image.bpp);
+
+    uint32_t size;
+    switch (image.bpp) {
+        case IMAGE_BPP_BINARY: {
+            size = ((image.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * image.h;
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            size = (image.w * image.h) * sizeof(uint8_t);
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            size = (image.w * image.h) * sizeof(uint16_t);
+            break;
+        }
+        case 3: { // BAYER
+            size = image.w * image.h;
+            break;
+        }
+        default: { // JPEG
+            size = image.bpp;
+            break;
+        }
+    }
+
+    if (copy_to_fb) {
+        PY_ASSERT_TRUE_MSG((size <= OMV_RAW_BUF_SIZE), "FB Overflow!");
+        image.data = MAIN_FB()->pixels;
+        MAIN_FB()->w = image.w;
+        MAIN_FB()->h = image.h;
+        MAIN_FB()->bpp = image.bpp;
+    } else {
+        image.data = xalloc(size);
+    }
+
+    char ignore[15];
+    read_data(fp, image.data, size);
+    if (size % 16) read_data(fp, ignore, 16 - (size % 16)); // Read in to multiple of 16 bytes.
 
     return py_image_from_struct(&image);
 }
