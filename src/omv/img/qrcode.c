@@ -2981,6 +2981,16 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
                 rectangle_united(&(lnk_data.rect), &temp);
             }
 
+            // Add corners...
+            lnk_data.corners[0].x = fast_roundf(code->corners[0].x) + roi->x; // top-left
+            lnk_data.corners[0].y = fast_roundf(code->corners[0].y) + roi->y; // top-left
+            lnk_data.corners[1].x = fast_roundf(code->corners[1].x) + roi->x; // top-right
+            lnk_data.corners[1].y = fast_roundf(code->corners[1].y) + roi->y; // top-right
+            lnk_data.corners[2].x = fast_roundf(code->corners[2].x) + roi->x; // bottom-right
+            lnk_data.corners[2].y = fast_roundf(code->corners[2].y) + roi->y; // bottom-right
+            lnk_data.corners[3].x = fast_roundf(code->corners[3].x) + roi->x; // bottom-left
+            lnk_data.corners[3].y = fast_roundf(code->corners[3].y) + roi->y; // bottom-left
+
             // Payload is already null terminated.
             lnk_data.payload_len = data->payload_len;
             lnk_data.payload = xalloc(data->payload_len);
