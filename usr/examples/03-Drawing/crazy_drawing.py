@@ -66,6 +66,7 @@ while(True):
             w = (pyb.rng() % img.width())
             h = (pyb.rng() % img.height())
             img.draw_rectangle([x, y, w, h])
+
     # Test Draw Circle
     sensor.set_pixformat(sensor.GRAYSCALE)
     for i in range(10):
@@ -115,21 +116,3 @@ while(True):
             x = (pyb.rng() % (2*img.width())) - (img.width()//2)
             y = (pyb.rng() % (2*img.height())) - (img.height()//2)
             img.draw_cross(x, y)
-
-    # Test Draw Keypoints
-    sensor.set_pixformat(sensor.GRAYSCALE)
-    for i in range(10):
-        img = sensor.snapshot()
-        for j in range(100):
-            x = (pyb.rng() % (2*img.width())) - (img.width()//2)
-            y = (pyb.rng() % (2*img.height())) - (img.height()//2)
-            a = (pyb.rng() % (2*math.pi))
-            img.draw_keypoints([(x, y, a)])
-    sensor.set_pixformat(sensor.RGB565)
-    for i in range(10):
-        img = sensor.snapshot()
-        for j in range(100):
-            x = (pyb.rng() % (2*img.width())) - (img.width()//2)
-            y = (pyb.rng() % (2*img.height())) - (img.height()//2)
-            a = (pyb.rng() % (2*math.pi))
-            img.draw_keypoints([(x, y, a)])
