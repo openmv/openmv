@@ -2414,6 +2414,7 @@ static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, m
 #define py_qrcode_obj_size 10
 typedef struct py_qrcode_obj {
     mp_obj_base_t base;
+    mp_obj_t corners;
     mp_obj_t x, y, w, h, payload, version, ecc_level, mask, data_type, eci;
 } py_qrcode_obj_t;
 
@@ -2463,6 +2464,7 @@ static mp_obj_t py_qrcode_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t valu
     return MP_OBJ_NULL; // op not supported
 }
 
+mp_obj_t py_qrcode_corners(mp_obj_t self_in) { return ((py_qrcode_obj_t *) self_in)->corners; }
 mp_obj_t py_qrcode_rect(mp_obj_t self_in)
 {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_qrcode_obj_t *) self_in)->x,
@@ -2486,6 +2488,7 @@ mp_obj_t py_qrcode_is_alphanumeric(mp_obj_t self_in) { return mp_obj_new_bool(mp
 mp_obj_t py_qrcode_is_binary(mp_obj_t self_in) { return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 4); }
 mp_obj_t py_qrcode_is_kanji(mp_obj_t self_in) { return mp_obj_new_bool(mp_obj_get_int(((py_qrcode_obj_t *) self_in)->data_type) == 8); }
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_corners_obj, py_qrcode_corners);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_rect_obj, py_qrcode_rect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_x_obj, py_qrcode_x);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_y_obj, py_qrcode_y);
@@ -2503,6 +2506,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_binary_obj, py_qrcode_is_binary);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_qrcode_is_kanji_obj, py_qrcode_is_kanji);
 
 STATIC const mp_rom_map_elem_t py_qrcode_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_corners), MP_ROM_PTR(&py_qrcode_corners_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_qrcode_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_qrcode_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_qrcode_y_obj) },
@@ -2550,6 +2554,11 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
 
         py_qrcode_obj_t *o = m_new_obj(py_qrcode_obj_t);
         o->base.type = &py_qrcode_type;
+        o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[0].x), mp_obj_new_int(lnk_data.corners[0].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[1].x), mp_obj_new_int(lnk_data.corners[1].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[2].x), mp_obj_new_int(lnk_data.corners[2].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[3].x), mp_obj_new_int(lnk_data.corners[3].y)})});
         o->x = mp_obj_new_int(lnk_data.rect.x);
         o->y = mp_obj_new_int(lnk_data.rect.y);
         o->w = mp_obj_new_int(lnk_data.rect.w);
@@ -2573,6 +2582,7 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
 #define py_apriltag_obj_size 18
 typedef struct py_apriltag_obj {
     mp_obj_base_t base;
+    mp_obj_t corners;
     mp_obj_t x, y, w, h, id, family, cx, cy, rotation, decision_margin, hamming, goodness;
     mp_obj_t x_translation, y_translation, z_translation;
     mp_obj_t x_rotation, y_rotation, z_rotation;
@@ -2642,6 +2652,7 @@ static mp_obj_t py_apriltag_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t va
     return MP_OBJ_NULL; // op not supported
 }
 
+mp_obj_t py_apriltag_corners(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->corners; }
 mp_obj_t py_apriltag_rect(mp_obj_t self_in)
 {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_apriltag_obj_t *) self_in)->x,
@@ -2669,6 +2680,7 @@ mp_obj_t py_apriltag_x_rotation(mp_obj_t self_in) { return ((py_apriltag_obj_t *
 mp_obj_t py_apriltag_y_rotation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->y_rotation; }
 mp_obj_t py_apriltag_z_rotation(mp_obj_t self_in) { return ((py_apriltag_obj_t *) self_in)->z_rotation; }
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_corners_obj, py_apriltag_corners);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_rect_obj, py_apriltag_rect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_x_obj, py_apriltag_x);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_obj, py_apriltag_y);
@@ -2690,6 +2702,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_y_rotation_obj, py_apriltag_y_rotat
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_apriltag_z_rotation_obj, py_apriltag_z_rotation);
 
 STATIC const mp_rom_map_elem_t py_apriltag_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_corners), MP_ROM_PTR(&py_apriltag_corners_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_apriltag_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_apriltag_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_apriltag_y_obj) },
@@ -2751,6 +2764,11 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
 
         py_apriltag_obj_t *o = m_new_obj(py_apriltag_obj_t);
         o->base.type = &py_apriltag_type;
+        o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[0].x), mp_obj_new_int(lnk_data.corners[0].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[1].x), mp_obj_new_int(lnk_data.corners[1].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[2].x), mp_obj_new_int(lnk_data.corners[2].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[3].x), mp_obj_new_int(lnk_data.corners[3].y)})});
         o->x = mp_obj_new_int(lnk_data.rect.x);
         o->y = mp_obj_new_int(lnk_data.rect.y);
         o->w = mp_obj_new_int(lnk_data.rect.w);
@@ -2782,6 +2800,7 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
 #define py_datamatrix_obj_size 10
 typedef struct py_datamatrix_obj {
     mp_obj_base_t base;
+    mp_obj_t corners;
     mp_obj_t x, y, w, h, payload, rotation, rows, columns, capacity, padding;
 } py_datamatrix_obj_t;
 
@@ -2831,6 +2850,7 @@ static mp_obj_t py_datamatrix_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t 
     return MP_OBJ_NULL; // op not supported
 }
 
+mp_obj_t py_datamatrix_corners(mp_obj_t self_in) { return ((py_datamatrix_obj_t *) self_in)->corners; }
 mp_obj_t py_datamatrix_rect(mp_obj_t self_in)
 {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_datamatrix_obj_t *) self_in)->x,
@@ -2850,6 +2870,7 @@ mp_obj_t py_datamatrix_columns(mp_obj_t self_in) { return ((py_datamatrix_obj_t 
 mp_obj_t py_datamatrix_capacity(mp_obj_t self_in) { return ((py_datamatrix_obj_t *) self_in)->capacity; }
 mp_obj_t py_datamatrix_padding(mp_obj_t self_in) { return ((py_datamatrix_obj_t *) self_in)->padding; }
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_corners_obj, py_datamatrix_corners);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_rect_obj, py_datamatrix_rect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_x_obj, py_datamatrix_x);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_y_obj, py_datamatrix_y);
@@ -2863,6 +2884,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_capacity_obj, py_datamatrix_capac
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_datamatrix_padding_obj, py_datamatrix_padding);
 
 STATIC const mp_rom_map_elem_t py_datamatrix_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_corners), MP_ROM_PTR(&py_datamatrix_corners_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_datamatrix_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_datamatrix_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_datamatrix_y_obj) },
@@ -2906,6 +2928,11 @@ static mp_obj_t py_image_find_datamatrices(uint n_args, const mp_obj_t *args, mp
 
         py_datamatrix_obj_t *o = m_new_obj(py_datamatrix_obj_t);
         o->base.type = &py_datamatrix_type;
+        o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[0].x), mp_obj_new_int(lnk_data.corners[0].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[1].x), mp_obj_new_int(lnk_data.corners[1].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[2].x), mp_obj_new_int(lnk_data.corners[2].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[3].x), mp_obj_new_int(lnk_data.corners[3].y)})});
         o->x = mp_obj_new_int(lnk_data.rect.x);
         o->y = mp_obj_new_int(lnk_data.rect.y);
         o->w = mp_obj_new_int(lnk_data.rect.w);
@@ -2930,6 +2957,7 @@ static mp_obj_t py_image_find_datamatrices(uint n_args, const mp_obj_t *args, mp
 #define py_barcode_obj_size 8
 typedef struct py_barcode_obj {
     mp_obj_base_t base;
+    mp_obj_t corners;
     mp_obj_t x, y, w, h, payload, type, rotation, quality;
 } py_barcode_obj_t;
 
@@ -2975,6 +3003,7 @@ static mp_obj_t py_barcode_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t val
     return MP_OBJ_NULL; // op not supported
 }
 
+mp_obj_t py_barcode_corners(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->corners; }
 mp_obj_t py_barcode_rect(mp_obj_t self_in)
 {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_barcode_obj_t *) self_in)->x,
@@ -2992,6 +3021,7 @@ mp_obj_t py_barcode_type_fun(mp_obj_t self_in) { return ((py_barcode_obj_t *) se
 mp_obj_t py_barcode_rotation_fun(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->rotation; }
 mp_obj_t py_barcode_quality_fun(mp_obj_t self_in) { return ((py_barcode_obj_t *) self_in)->quality; }
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_corners_obj, py_barcode_corners);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_rect_obj, py_barcode_rect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_x_obj, py_barcode_x);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_y_obj, py_barcode_y);
@@ -3003,6 +3033,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_rotation_fun_obj, py_barcode_rotatio
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_barcode_quality_fun_obj, py_barcode_quality_fun);
 
 STATIC const mp_rom_map_elem_t py_barcode_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_corners), MP_ROM_PTR(&py_barcode_corners_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_barcode_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_barcode_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_barcode_y_obj) },
@@ -3044,6 +3075,11 @@ static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map
 
         py_barcode_obj_t *o = m_new_obj(py_barcode_obj_t);
         o->base.type = &py_barcode_type;
+        o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[0].x), mp_obj_new_int(lnk_data.corners[0].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[1].x), mp_obj_new_int(lnk_data.corners[1].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[2].x), mp_obj_new_int(lnk_data.corners[2].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[3].x), mp_obj_new_int(lnk_data.corners[3].y)})});
         o->x = mp_obj_new_int(lnk_data.rect.x);
         o->y = mp_obj_new_int(lnk_data.rect.y);
         o->w = mp_obj_new_int(lnk_data.rect.w);

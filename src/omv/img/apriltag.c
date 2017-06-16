@@ -11893,6 +11893,16 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
             rectangle_united(&(lnk_data.rect), &temp);
         }
 
+        // Add corners...
+        lnk_data.corners[0].x = fast_roundf(det->p[3][0]) + roi->x; // top-left
+        lnk_data.corners[0].y = fast_roundf(det->p[3][1]) + roi->y; // top-left
+        lnk_data.corners[1].x = fast_roundf(det->p[2][0]) + roi->x; // top-right
+        lnk_data.corners[1].y = fast_roundf(det->p[2][1]) + roi->y; // top-right
+        lnk_data.corners[2].x = fast_roundf(det->p[1][0]) + roi->x; // bottom-right
+        lnk_data.corners[2].y = fast_roundf(det->p[1][1]) + roi->y; // bottom-right
+        lnk_data.corners[3].x = fast_roundf(det->p[0][0]) + roi->x; // bottom-left
+        lnk_data.corners[3].y = fast_roundf(det->p[0][1]) + roi->y; // bottom-left
+
         lnk_data.id = det->id;
         lnk_data.family = 0;
 

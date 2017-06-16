@@ -8778,6 +8778,16 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
                     rectangle_united(&(lnk_data.rect), &temp);
                 }
 
+                // Add corners...
+                lnk_data.corners[0].x = lnk_data.rect.x;                   // top-left
+                lnk_data.corners[0].y = lnk_data.rect.y;                   // top-left
+                lnk_data.corners[1].x = lnk_data.rect.x + lnk_data.rect.w; // top-right
+                lnk_data.corners[1].y = lnk_data.rect.y;                   // top-right
+                lnk_data.corners[2].x = lnk_data.rect.x + lnk_data.rect.w; // bottom-right
+                lnk_data.corners[2].y = lnk_data.rect.y + lnk_data.rect.h; // bottom-right
+                lnk_data.corners[3].x = lnk_data.rect.x;                   // bottom-left
+                lnk_data.corners[3].y = lnk_data.rect.y + lnk_data.rect.h; // bottom-left
+
                 // Payload is already null terminated.
                 lnk_data.payload_len = zbar_symbol_get_data_length(symbol);
                 lnk_data.payload = xalloc(zbar_symbol_get_data_length(symbol));

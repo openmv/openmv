@@ -880,15 +880,13 @@ typedef struct statistics {
     int8_t BMean, BMedian, BMode, BSTDev, BMin, BMax, BLQ, BUQ;
 } statistics_t;
 
-typedef struct find_blobs_list_lnk_data
-{
+typedef struct find_blobs_list_lnk_data {
     rectangle_t rect;
     uint32_t pixels;
     point_t centroid;
     float rotation;
     uint16_t code, count;
-}
-find_blobs_list_lnk_data_t;
+} find_blobs_list_lnk_data_t;
 
 typedef struct find_lines_list_lnk_data {
     line_t line;
@@ -896,29 +894,26 @@ typedef struct find_lines_list_lnk_data {
     int16_t theta, rho;
 } find_lines_list_lnk_data_t;
 
-typedef struct find_qrcodes_list_lnk_data
-{
+typedef struct find_qrcodes_list_lnk_data {
+    point_t corners[4];
     rectangle_t rect;
     size_t payload_len;
     char *payload;
     uint8_t version, ecc_level, mask, data_type;
     uint32_t eci;
-}
-find_qrcodes_list_lnk_data_t;
+} find_qrcodes_list_lnk_data_t;
 
-typedef enum apriltag_families
-{
+typedef enum apriltag_families {
     TAG16H5 = 1,
     TAG25H7 = 2,
     TAG25H9 = 4,
     TAG36H10 = 8,
     TAG36H11 = 16,
     ARTOOLKIT = 32
-}
-apriltag_families_t;
+} apriltag_families_t;
 
-typedef struct find_apriltags_list_lnk_data
-{
+typedef struct find_apriltags_list_lnk_data {
+    point_t corners[4];
     rectangle_t rect;
     uint16_t id;
     uint8_t family, hamming;
@@ -926,10 +921,10 @@ typedef struct find_apriltags_list_lnk_data
     float goodness, decision_margin;
     float x_translation, y_translation, z_translation;
     float x_rotation, y_rotation, z_rotation;
-}
-find_apriltags_list_lnk_data_t;
+} find_apriltags_list_lnk_data_t;
 
 typedef struct find_datamatrices_list_lnk_data {
+    point_t corners[4];
     rectangle_t rect;
     size_t payload_len;
     char *payload;
@@ -938,8 +933,7 @@ typedef struct find_datamatrices_list_lnk_data {
     uint16_t capacity, padding;
 } find_datamatrices_list_lnk_data_t;
 
-typedef enum barcodes
-{
+typedef enum barcodes {
     BARCODE_EAN2,
     BARCODE_EAN5,
     BARCODE_EAN8,
@@ -956,18 +950,16 @@ typedef enum barcodes
     BARCODE_PDF417,
     BARCODE_CODE93,
     BARCODE_CODE128
-}
-barcodes_t;
+} barcodes_t;
 
-typedef struct find_barcodes_list_lnk_data
-{
+typedef struct find_barcodes_list_lnk_data {
+    point_t corners[4];
     rectangle_t rect;
     size_t payload_len;
     char *payload;
     uint16_t type, rotation;
     int quality;
-}
-find_barcodes_list_lnk_data_t;
+} find_barcodes_list_lnk_data_t;
 
 /* Color space functions */
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);

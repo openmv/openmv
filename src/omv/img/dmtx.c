@@ -6347,6 +6347,16 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
                 rectangle_united(&(lnk_data.rect), &temp);
             }
 
+            // Add corners...
+            lnk_data.corners[0].x =              fast_roundf(p[3].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x); // top-left
+            lnk_data.corners[0].y = height - 1 - fast_roundf(p[3].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y); // top-left
+            lnk_data.corners[1].x =              fast_roundf(p[2].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x); // top-right
+            lnk_data.corners[1].y = height - 1 - fast_roundf(p[2].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y); // top-right
+            lnk_data.corners[2].x =              fast_roundf(p[1].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x); // bottom-right
+            lnk_data.corners[2].y = height - 1 - fast_roundf(p[1].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y); // bottom-right
+            lnk_data.corners[3].x =              fast_roundf(p[0].X) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->x); // bottom-left
+            lnk_data.corners[3].y = height - 1 - fast_roundf(p[0].Y) + ((ptr->bpp == IMAGE_BPP_GRAYSCALE) ? 0 : roi->y); // bottom-left
+
             // Payload is NOT already null terminated.
             lnk_data.payload_len = message->outputIdx;
             lnk_data.payload = xalloc(message->outputIdx);
