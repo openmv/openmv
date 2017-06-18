@@ -3943,22 +3943,51 @@ mp_obj_t py_image_grayscale_to_rgb(mp_obj_t not_tuple)
 
 mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t image = {0};
+    bool copy_to_fb = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), false);
+    if (copy_to_fb) fb_update_jpeg_buffer();
+
     const char *path = mp_obj_str_get_str(args[0]);
-    int copy_to_fb = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), false);
+    image_t image = {0};
 
     if (copy_to_fb) {
-       MAIN_FB()->w   = 4; // non-zero init value
-       MAIN_FB()->h   = 4; // non-zero init value
-       MAIN_FB()->bpp = 1; // non-zero init value
-       image.pixels = MAIN_FB()->pixels;
+       MAIN_FB()->w = 4; // Need to make sure these are initialized size the file buffer
+       MAIN_FB()->h = 4; // gets turned on which expects these values to be valid.
+       MAIN_FB()->bpp = 1;
+
        FIL fp;
        img_read_settings_t rs;
        imlib_read_geometry(&fp, &image, path, &rs);
        file_buffer_off(&fp);
        file_close(&fp);
-       MAIN_FB()->w   = image.w;
-       MAIN_FB()->h   = image.h;
+
+       uint32_t size;
+       switch (image.bpp) {
+           case IMAGE_BPP_BINARY: {
+               size = ((image.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * image.h;
+               break;
+           }
+           case IMAGE_BPP_GRAYSCALE: {
+               size = (image.w * image.h) * sizeof(uint8_t);
+               break;
+           }
+           case IMAGE_BPP_RGB565: {
+               size = (image.w * image.h) * sizeof(uint16_t);
+               break;
+           }
+           case 3: { // BAYER
+               size = image.w * image.h;
+               break;
+           }
+           default: { // JPEG
+               size = image.bpp;
+               break;
+           }
+       }
+
+       PY_ASSERT_TRUE_MSG((size <= OMV_RAW_BUF_SIZE), "FB Overflow!");
+       image.pixels = MAIN_FB()->pixels;
+       MAIN_FB()->w = image.w;
+       MAIN_FB()->h = image.h;
        MAIN_FB()->bpp = image.bpp;
     }
 
