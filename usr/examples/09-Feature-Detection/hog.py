@@ -12,8 +12,8 @@ sensor.reset()
 sensor.set_contrast(1)
 sensor.set_gainceiling(8)
 sensor.set_framesize(sensor.QVGA)
-sensor.skip_frames(time = 2000)
 sensor.set_pixformat(sensor.GRAYSCALE)
+sensor.skip_frames(time = 2000)
 
 clock = time.clock() # Tracks FPS.
 while (True):
