@@ -251,7 +251,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 mp_uint_t i = mp_get_index(self->base.type, self->_cobj.w * self->_cobj.h, index, false);
                 return mp_obj_new_int(IMAGE_GET_BINARY_PIXEL(&(self->_cobj), i % self->_cobj.w, i / self->_cobj.w));
             }
-            case 3: // BAYER
+            case IMAGE_BPP_BAYER:
             case IMAGE_BPP_GRAYSCALE: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
@@ -334,7 +334,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 IMAGE_PUT_BINARY_PIXEL(&(self->_cobj), i % self->_cobj.w, i / self->_cobj.w, mp_obj_get_int(value));
                 return mp_const_none;
             }
-            case 3: // BAYER
+            case IMAGE_BPP_BAYER:
             case IMAGE_BPP_GRAYSCALE: {
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
@@ -446,7 +446,7 @@ static mp_int_t py_image_get_buffer(mp_obj_t self_in, mp_buffer_info_t *bufinfo,
                 bufinfo->len = (self->_cobj.w * self->_cobj.h) * sizeof(uint16_t);
                 break;
             }
-            case 3: { // BAYER
+            case IMAGE_BPP_BAYER: {
                 bufinfo->len = self->_cobj.w * self->_cobj.h;
                 break;
             }
@@ -3670,7 +3670,7 @@ mp_obj_t py_imagewriter_add_frame(mp_obj_t self_in, mp_obj_t img_obj)
             size = (arg_img->w * arg_img->h) * sizeof(uint16_t);
             break;
         }
-        case 3: { // BAYER
+        case IMAGE_BPP_BAYER: {
             size = arg_img->w * arg_img->h;
             break;
         }
@@ -3795,7 +3795,7 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
             size = (image.w * image.h) * sizeof(uint16_t);
             break;
         }
-        case 3: { // BAYER
+        case IMAGE_BPP_BAYER: {
             size = image.w * image.h;
             break;
         }
@@ -3974,7 +3974,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
                size = (image.w * image.h) * sizeof(uint16_t);
                break;
            }
-           case 3: { // BAYER
+           case IMAGE_BPP_BAYER: {
                size = image.w * image.h;
                break;
            }
