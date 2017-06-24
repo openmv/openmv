@@ -3906,9 +3906,9 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     image_t image = {0};
 
     if (copy_to_fb) {
-       MAIN_FB()->w = 4; // Need to make sure these are initialized size the file buffer
-       MAIN_FB()->h = 4; // gets turned on which expects these values to be valid.
-       MAIN_FB()->bpp = 1;
+       MAIN_FB()->w = 0;
+       MAIN_FB()->h = 0;
+       MAIN_FB()->bpp = 0;
 
        FIL fp;
        img_read_settings_t rs;
