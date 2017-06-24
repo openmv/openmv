@@ -30,15 +30,23 @@ typedef struct jpegbuffer {
 
 extern jpegbuffer_t *jpeg_fb_framebuffer;
 
-// Use these macros to get a pointer to main or JPEG framebuffer.
-#define MAIN_FB()       (fb_framebuffer)
-#define JPEG_FB()       (jpeg_fb_framebuffer)
+uint32_t main_fb_image_size();
 
-// Returns MAIN FB size
-#define MAIN_FB_SIZE()  (MAIN_FB()->w*MAIN_FB()->h*MAIN_FB()->bpp)
+// Use these macros to get a pointer to main or JPEG framebuffer.
+#define MAIN_FB()           (fb_framebuffer)
+#define JPEG_FB()           (jpeg_fb_framebuffer)
+
+// Returns MAIN FB size.
+#define MAIN_FB_SIZE()      (main_fb_image_size())
 
 // Use this macro to get a pointer to the free SRAM area located after the framebuffer.
-#define FB_PIXELS() (MAIN_FB()->pixels+MAIN_FB_SIZE())
+#define MAIN_FB_PIXELS()    (MAIN_FB()->pixels+4+MAIN_FB_SIZE())
+
+// Returns JPEG FB size.
+#define JPEG_FB_SIZE()      (JPEG_FB()->size)
+
+// Use this macro to get a pointer to the free SRAM area located after the framebuffer.
+#define JPEG_FB_PIXELS()    (JPEG_FB()->pixels+4+JPEG_FB_SIZE())
 
 // Transfers the frame buffer to the jpeg frame buffer if not locked.
 void fb_update_jpeg_buffer();
