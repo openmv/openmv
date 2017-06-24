@@ -3656,29 +3656,7 @@ mp_obj_t py_imagewriter_add_frame(mp_obj_t self_in, mp_obj_t img_obj)
     write_long(fp, arg_img->h);
     write_long(fp, arg_img->bpp);
 
-    uint32_t size;
-    switch (arg_img->bpp) {
-        case IMAGE_BPP_BINARY: {
-            size = ((arg_img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * arg_img->h;
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            size = (arg_img->w * arg_img->h) * sizeof(uint8_t);
-            break;
-        }
-        case IMAGE_BPP_RGB565: {
-            size = (arg_img->w * arg_img->h) * sizeof(uint16_t);
-            break;
-        }
-        case IMAGE_BPP_BAYER: {
-            size = arg_img->w * arg_img->h;
-            break;
-        }
-        default: { // JPEG
-            size = arg_img->bpp;
-            break;
-        }
-    }
+    uint32_t size = image_size(arg_img);
 
     write_data(fp, arg_img->data, size);
     if (size % 16) write_data(fp, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16 - (size % 16)); // Pad to multiple of 16 bytes.
@@ -3781,29 +3759,7 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     read_long(fp, (uint32_t *) &image.h);
     read_long(fp, (uint32_t *) &image.bpp);
 
-    uint32_t size;
-    switch (image.bpp) {
-        case IMAGE_BPP_BINARY: {
-            size = ((image.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * image.h;
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            size = (image.w * image.h) * sizeof(uint8_t);
-            break;
-        }
-        case IMAGE_BPP_RGB565: {
-            size = (image.w * image.h) * sizeof(uint16_t);
-            break;
-        }
-        case IMAGE_BPP_BAYER: {
-            size = image.w * image.h;
-            break;
-        }
-        default: { // JPEG
-            size = image.bpp;
-            break;
-        }
-    }
+    uint32_t size = image_size(&image);
 
     if (copy_to_fb) {
         PY_ASSERT_TRUE_MSG((size <= OMV_RAW_BUF_SIZE), "FB Overflow!");
@@ -3960,29 +3916,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
        file_buffer_off(&fp);
        file_close(&fp);
 
-       uint32_t size;
-       switch (image.bpp) {
-           case IMAGE_BPP_BINARY: {
-               size = ((image.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * image.h;
-               break;
-           }
-           case IMAGE_BPP_GRAYSCALE: {
-               size = (image.w * image.h) * sizeof(uint8_t);
-               break;
-           }
-           case IMAGE_BPP_RGB565: {
-               size = (image.w * image.h) * sizeof(uint16_t);
-               break;
-           }
-           case IMAGE_BPP_BAYER: {
-               size = image.w * image.h;
-               break;
-           }
-           default: { // JPEG
-               size = image.bpp;
-               break;
-           }
-       }
+       uint32_t size = image_size(&image);
 
        PY_ASSERT_TRUE_MSG((size <= OMV_RAW_BUF_SIZE), "FB Overflow!");
        image.pixels = MAIN_FB()->pixels;
