@@ -16,7 +16,7 @@ framebuffer_t *fb_framebuffer = (framebuffer_t *) &_fb_base;
 extern char _jpeg_buf;
 jpegbuffer_t *jpeg_fb_framebuffer = (jpegbuffer_t *) &_jpeg_buf;
 
-uint32_t main_fb_image_size()
+uint32_t fb_buffer_size()
 {
     switch (MAIN_FB()->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -79,7 +79,7 @@ void fb_update_jpeg_buffer()
                 }
                 // No buffer overflow, increase quality up to max quality based on frame size
                 if (overflow_count == 0 &&
-                        JPEG_FB()->quality < ((main_fb_image_size() > JPEG_QUALITY_THRESH) ? 35:60)) {
+                        JPEG_FB()->quality < ((fb_buffer_size() > JPEG_QUALITY_THRESH) ? 35:60)) {
                     JPEG_FB()->quality++;
                 }
                 // Set FB from JPEG image
