@@ -36,17 +36,11 @@ uint32_t main_fb_image_size();
 #define MAIN_FB()           (fb_framebuffer)
 #define JPEG_FB()           (jpeg_fb_framebuffer)
 
-// Returns MAIN FB size.
-#define MAIN_FB_SIZE()      (main_fb_image_size())
+// Use this macro to get a pointer to the free SRAM area located after the framebuffer.
+#define MAIN_FB_PIXELS()    (MAIN_FB()->pixels + main_fb_image_size())
 
 // Use this macro to get a pointer to the free SRAM area located after the framebuffer.
-#define MAIN_FB_PIXELS()    (MAIN_FB()->pixels + MAIN_FB_SIZE())
-
-// Returns JPEG FB size.
-#define JPEG_FB_SIZE()      (JPEG_FB()->size)
-
-// Use this macro to get a pointer to the free SRAM area located after the framebuffer.
-#define JPEG_FB_PIXELS()    (JPEG_FB()->pixels + JPEG_FB_SIZE())
+#define JPEG_FB_PIXELS()    (JPEG_FB()->pixels + JPEG_FB()->size)
 
 // Transfers the frame buffer to the jpeg frame buffer if not locked.
 void fb_update_jpeg_buffer();
