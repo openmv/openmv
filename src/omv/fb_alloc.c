@@ -25,7 +25,7 @@ void fb_alloc_init0()
 
 uint32_t fb_avail()
 {
-    int32_t temp = pointer - ((char *) FB_PIXELS()) - sizeof(uint32_t);
+    int32_t temp = pointer - ((char *) MAIN_FB_PIXELS()) - sizeof(uint32_t);
 
     return (temp < sizeof(uint32_t)) ? 0 : temp;
 }
@@ -35,7 +35,7 @@ void fb_alloc_mark()
     char *new_pointer = pointer - sizeof(uint32_t);
 
     // Check if allocation overwrites the framebuffer pixels
-    if (new_pointer < (char *) FB_PIXELS()) {
+    if (new_pointer < (char *) MAIN_FB_PIXELS()) {
         nlr_raise_for_fb_alloc_mark(mp_obj_new_exception_msg(&mp_type_MemoryError, "FB Alloc Collision!!!"));
     }
 
@@ -67,7 +67,7 @@ void *fb_alloc(uint32_t size)
     char *new_pointer = result - sizeof(uint32_t);
 
     // Check if allocation overwrites the framebuffer pixels
-    if (new_pointer < (char *) FB_PIXELS()) {
+    if (new_pointer < (char *) MAIN_FB_PIXELS()) {
         fb_alloc_fail();
     }
 
@@ -87,7 +87,7 @@ void *fb_alloc0(uint32_t size)
 
 void *fb_alloc_all(uint32_t *size)
 {
-    int32_t temp = pointer - ((char *) FB_PIXELS()) - sizeof(uint32_t);
+    int32_t temp = pointer - ((char *) MAIN_FB_PIXELS()) - sizeof(uint32_t);
 
     if (temp < sizeof(uint32_t)) {
         *size = 0;

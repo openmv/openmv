@@ -170,6 +170,27 @@ void image_copy(image_t *dst, image_t *src)
     memcpy(dst, src, sizeof(image_t));
 }
 
+uint32_t image_size(image_t *ptr)
+{
+    switch (ptr->bpp) {
+        case IMAGE_BPP_BINARY: {
+            return ((ptr->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * ptr->h;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return (ptr->w * ptr->h) * sizeof(uint8_t);
+        }
+        case IMAGE_BPP_RGB565: {
+            return (ptr->w * ptr->h) * sizeof(uint16_t);
+        }
+        case IMAGE_BPP_BAYER: {
+            return ptr->w * ptr->h;
+        }
+        default: { // JPEG
+            return ptr->bpp;
+        }
+    }
+}
+
 // Gamma uncompress
 extern const float xyz_table[256];
 

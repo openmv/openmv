@@ -16,6 +16,27 @@ framebuffer_t *fb_framebuffer = (framebuffer_t *) &_fb_base;
 extern char _jpeg_buf;
 jpegbuffer_t *jpeg_fb_framebuffer = (jpegbuffer_t *) &_jpeg_buf;
 
+uint32_t main_fb_image_size()
+{
+    switch (MAIN_FB()->bpp) {
+        case IMAGE_BPP_BINARY: {
+            return ((MAIN_FB()->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * MAIN_FB()->h;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return (MAIN_FB()->w * MAIN_FB()->h) * sizeof(uint8_t);
+        }
+        case IMAGE_BPP_RGB565: {
+            return (MAIN_FB()->w * MAIN_FB()->h) * sizeof(uint16_t);
+        }
+        case IMAGE_BPP_BAYER: {
+            return MAIN_FB()->w * MAIN_FB()->h;
+        }
+        default: { // JPEG
+            return MAIN_FB()->bpp;
+        }
+    }
+}
+
 void fb_update_jpeg_buffer()
 {
     static int overflow_count = 0;

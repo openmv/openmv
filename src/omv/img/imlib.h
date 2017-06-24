@@ -293,6 +293,7 @@ typedef struct image {
 
 void image_init(image_t *ptr, int w, int h, int bpp, void *data);
 void image_copy(image_t *dst, image_t *src);
+uint32_t image_size(image_t *ptr);
 
 #define IMAGE_GET_BINARY_PIXEL(image, x, y) \
 ({ \
