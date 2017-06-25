@@ -208,6 +208,7 @@ Q(NORMAL)
 Q(NEGATIVE)
 
 Q(reset)
+Q(flush)
 Q(snapshot)
 Q(skip_frames)
 Q(get_fb)
