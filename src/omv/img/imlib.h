@@ -1134,6 +1134,8 @@ void imlib_lens_corr(image_t *img, float strength, float zoom);
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
 void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr);
+bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
+                          list_t *thresholds, bool invert, bool robust);
 // Color Tracking
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
