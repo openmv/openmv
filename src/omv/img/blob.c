@@ -582,7 +582,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
                         lnk_blob.centroid.x = ((lnk_blob.centroid.x * lnk_blob.pixels) + (tmp_blob.centroid.x * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         lnk_blob.centroid.y = ((lnk_blob.centroid.y * lnk_blob.pixels) + (tmp_blob.centroid.y * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
-                        lnk_blob.rotation = ((lnk_blob.rotation * lnk_blob.pixels) + (tmp_blob.rotation * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
+                        float sin_mean = ((sinf(lnk_blob.rotation) * lnk_blob.pixels) + (sinf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
+                        float cos_mean = ((cosf(lnk_blob.rotation) * lnk_blob.pixels) + (cosf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
+                        lnk_blob.rotation = fast_atan2f(sin_mean, cos_mean);
                         lnk_blob.pixels += tmp_blob.pixels; // won't overflow
                         lnk_blob.code |= tmp_blob.code;
                         lnk_blob.count = IM_MAX(IM_MIN(lnk_blob.count + tmp_blob.count, UINT16_MAX), 0);
