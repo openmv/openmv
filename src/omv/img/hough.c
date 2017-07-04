@@ -851,3 +851,331 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
     fb_free(); // mag_buffer
     fb_free(); // theta_buffer
 }
+
+void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
+                        uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin)
+{
+    uint16_t *theta_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h);
+    uint16_t *magnitude_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h);
+
+    switch (ptr->bpp) {
+        case IMAGE_BPP_BINARY: {
+            for (int y = roi->y + 1, yy = roi->y + roi->h - 1; y < yy; y += y_stride) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x + (y % x_stride) + 1, xx = roi->x + roi->w - 1; x < xx; x += x_stride) {
+                    int pixel; // Sobel Algorithm Below
+                    int x_acc = 0;
+                    int y_acc = 0;
+
+                    row_ptr -= ((ptr->w + UINT32_T_MASK) >> UINT32_T_SHIFT);
+
+                    pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x - 1));
+                    x_acc += pixel * +1; // x[0,0] -> pixel * +1
+                    y_acc += pixel * +1; // y[0,0] -> pixel * +1
+
+                    pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                                         // x[0,1] -> pixel * 0
+                    y_acc += pixel * +2; // y[0,1] -> pixel * +2
+
+                    pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x + 1));
+                    x_acc += pixel * -1; // x[0,2] -> pixel * -1
+                    y_acc += pixel * +1; // y[0,2] -> pixel * +1
+
+                    row_ptr += ((ptr->w + UINT32_T_MASK) >> UINT32_T_SHIFT);
+
+                    pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x - 1));
+                    x_acc += pixel * +2; // x[1,0] -> pixel * +2
+                                         // y[1,0] -> pixel * 0
+
+                    // pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                    // x[1,1] -> pixel * 0
+                    // y[1,1] -> pixel * 0
+
+                    pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x + 1));
+                    x_acc += pixel * -2; // x[1,2] -> pixel * -2
+                                         // y[1,2] -> pixel * 0
+
+                    row_ptr += ((ptr->w + UINT32_T_MASK) >> UINT32_T_SHIFT);
+
+                    pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x - 1));
+                    x_acc += pixel * +1; // x[2,0] -> pixel * +1
+                    y_acc += pixel * -1; // y[2,0] -> pixel * -1
+
+                    pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                                         // x[2,1] -> pixel * 0
+                    y_acc += pixel * -2; // y[2,1] -> pixel * -2
+
+                    pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x + 1));
+                    x_acc += pixel * -1; // x[2,2] -> pixel * -1
+                    y_acc += pixel * -1; // y[2,2] -> pixel * -1
+
+                    row_ptr -= ((ptr->w + UINT32_T_MASK) >> UINT32_T_SHIFT);
+
+                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 360; // * (180 / PI)
+                    if (theta < 0) theta += 360;
+                    int magnitude = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
+                    int index = (roi->w * (y - roi->y)) + (x - roi->x);
+
+                    theta_acc[index] = theta;
+                    magnitude_acc[index] = magnitude;
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            for (int y = roi->y + 1, yy = roi->y + roi->h - 1; y < yy; y += y_stride) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x + (y % x_stride) + 1, xx = roi->x + roi->w - 1; x < xx; x += x_stride) {
+                    int pixel; // Sobel Algorithm Below
+                    int x_acc = 0;
+                    int y_acc = 0;
+
+                    row_ptr -= ptr->w;
+
+                    pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x - 1);
+                    x_acc += pixel * +1; // x[0,0] -> pixel * +1
+                    y_acc += pixel * +1; // y[0,0] -> pixel * +1
+
+                    pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+                                         // x[0,1] -> pixel * 0
+                    y_acc += pixel * +2; // y[0,1] -> pixel * +2
+
+                    pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x + 1);
+                    x_acc += pixel * -1; // x[0,2] -> pixel * -1
+                    y_acc += pixel * +1; // y[0,2] -> pixel * +1
+
+                    row_ptr += ptr->w;
+
+                    pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x - 1);
+                    x_acc += pixel * +2; // x[1,0] -> pixel * +2
+                                         // y[1,0] -> pixel * 0
+
+                    // pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+                    // x[1,1] -> pixel * 0
+                    // y[1,1] -> pixel * 0
+
+                    pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x + 1);
+                    x_acc += pixel * -2; // x[1,2] -> pixel * -2
+                                         // y[1,2] -> pixel * 0
+
+                    row_ptr += ptr->w;
+
+                    pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x - 1);
+                    x_acc += pixel * +1; // x[2,0] -> pixel * +1
+                    y_acc += pixel * -1; // y[2,0] -> pixel * -1
+
+                    pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+                                         // x[2,1] -> pixel * 0
+                    y_acc += pixel * -2; // y[2,1] -> pixel * -2
+
+                    pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x + 1);
+                    x_acc += pixel * -1; // x[2,2] -> pixel * -1
+                    y_acc += pixel * -1; // y[2,2] -> pixel * -1
+
+                    row_ptr -= ptr->w;
+
+                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 360; // * (180 / PI)
+                    if (theta < 0) theta += 360;
+                    int magnitude = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
+                    int index = (roi->w * (y - roi->y)) + (x - roi->x);
+
+                    theta_acc[index] = theta;
+                    magnitude_acc[index] = magnitude;
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = roi->y + 1, yy = roi->y + roi->h - 1; y < yy; y += y_stride) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x + (y % x_stride) + 1, xx = roi->x + roi->w - 1; x < xx; x += x_stride) {
+                    int pixel; // Sobel Algorithm Below
+                    int x_acc = 0;
+                    int y_acc = 0;
+
+                    row_ptr -= ptr->w;
+
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    x_acc += pixel * +1; // x[0,0] -> pixel * +1
+                    y_acc += pixel * +1; // y[0,0] -> pixel * +1
+
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                                         // x[0,1] -> pixel * 0
+                    y_acc += pixel * +2; // y[0,1] -> pixel * +2
+
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    x_acc += pixel * -1; // x[0,2] -> pixel * -1
+                    y_acc += pixel * +1; // y[0,2] -> pixel * +1
+
+                    row_ptr += ptr->w;
+
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    x_acc += pixel * +2; // x[1,0] -> pixel * +2
+                                         // y[1,0] -> pixel * 0
+
+                    // pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    // x[1,1] -> pixel * 0
+                    // y[1,1] -> pixel * 0
+
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    x_acc += pixel * -2; // x[1,2] -> pixel * -2
+                                         // y[1,2] -> pixel * 0
+
+                    row_ptr += ptr->w;
+
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    x_acc += pixel * +1; // x[2,0] -> pixel * +1
+                    y_acc += pixel * -1; // y[2,0] -> pixel * -1
+
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                                         // x[2,1] -> pixel * 0
+                    y_acc += pixel * -2; // y[2,1] -> pixel * -2
+
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    x_acc += pixel * -1; // x[2,2] -> pixel * -1
+                    y_acc += pixel * -1; // y[2,2] -> pixel * -1
+
+                    row_ptr -= ptr->w;
+
+                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 360; // * (180 / PI)
+                    if (theta < 0) theta += 360;
+                    int magnitude = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
+                    int index = (roi->w * (y - roi->y)) + (x - roi->x);
+
+                    theta_acc[index] = theta;
+                    magnitude_acc[index] = magnitude;
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    // Theta Direction (% 180)
+    //
+    // 0,0         X_MAX
+    //
+    //     090
+    // 000     000
+    //     090
+    //
+    // Y_MAX
+
+    // Theta Direction (% 360)
+    //
+    // 0,0         X_MAX
+    //
+    //     090
+    // 000     180
+    //     270
+    //
+    // Y_MAX
+
+    list_init(out, sizeof(find_circles_list_lnk_data_t));
+
+    for (int r = 2, rr = IM_MIN((roi->w / 2), (roi->h / 2)); r < rr; r += 2) { // ignore r = 0/1
+        int a_size, b_size, hough_divide = 1; // divides a and b accumulators
+        int w_size = roi->w - (2 * r);
+        int h_size = roi->h - (2 * r);
+
+        for (;;) { // shrink to fit...
+            a_size = 1 + ((w_size + hough_divide - 1) / hough_divide) + 1; // left & right padding
+            b_size = 1 + ((h_size + hough_divide - 1) / hough_divide) + 1; // top & bottom padding
+            if ((sizeof(uint32_t) * a_size * b_size) <= fb_avail()) break;
+            hough_divide = hough_divide << 1; // powers of 2...
+            if (hough_divide > 4) fb_alloc_fail(); // support 1, 2, 4
+        }
+
+        uint32_t *acc = fb_alloc0(sizeof(uint32_t) * a_size * b_size);
+
+        for (int y = 0, yy = roi->h; y < yy; y++) {
+            for (int x = 0, xx = roi->w; x < xx; x++) {
+                int index = (roi->w * y) + x;
+                int theta = theta_acc[index];
+                int magnitude = magnitude_acc[index];
+                if (!magnitude) continue;
+
+                int a = fast_roundf(x + (r * cos_table[theta])) - r;
+                if ((a < 0) || (w_size <= a)) continue; // circle doesn't fit in the window
+                int b = fast_roundf(y + (r * sin_table[theta])) - r;
+                if ((b < 0) || (h_size <= b)) continue; // circle doesn't fit in the window
+                int acc_index = (((b / hough_divide) + 1) * a_size) + ((a / hough_divide) + 1); // add offset
+
+                int acc_value = acc[acc_index] += magnitude;
+                acc[acc_index] = acc_value;
+            }
+        }
+
+        for (int y = 1, yy = b_size - 1; y < yy; y++) {
+            uint32_t *row_ptr = acc + (a_size * y);
+
+            for (int x = 1, xx = a_size - 1; x < xx; x++) {
+                if ((row_ptr[x] >= threshold)
+                &&  (row_ptr[x] >= row_ptr[x-a_size-1])
+                &&  (row_ptr[x] >= row_ptr[x-a_size])
+                &&  (row_ptr[x] >= row_ptr[x-a_size+1])
+                &&  (row_ptr[x] >= row_ptr[x-1])
+                &&  (row_ptr[x] >= row_ptr[x+1])
+                &&  (row_ptr[x] >= row_ptr[x+a_size-1])
+                &&  (row_ptr[x] >= row_ptr[x+a_size])
+                &&  (row_ptr[x] >= row_ptr[x+a_size+1])) {
+
+                    find_circles_list_lnk_data_t lnk_data;
+                    lnk_data.magnitude = row_ptr[x];
+                    lnk_data.p.x = ((x - 1) * hough_divide) + r + roi->x; // remove offset
+                    lnk_data.p.y = ((y - 1) * hough_divide) + r + roi->y; // remove offset
+                    lnk_data.r = r;
+
+                    list_push_back(out, &lnk_data);
+                }
+            }
+        }
+
+        fb_free(); // acc
+    }
+
+    fb_free(); // magnitude_acc
+    fb_free(); // theta_acc
+
+    for (;;) { // Merge overlapping.
+        bool merge_occured = false;
+
+        list_t out_temp;
+        list_init(&out_temp, sizeof(find_circles_list_lnk_data_t));
+
+        while (list_size(out)) {
+            find_circles_list_lnk_data_t lnk_data;
+            list_pop_front(out, &lnk_data);
+
+            for (size_t k = 0, l = list_size(out); k < l; k++) {
+                find_circles_list_lnk_data_t tmp_data;
+                list_pop_front(out, &tmp_data);
+
+                bool x_diff_ok = abs(lnk_data.p.x - tmp_data.p.x) < x_margin;
+                bool y_diff_ok = abs(lnk_data.p.y - tmp_data.p.y) < y_margin;
+                bool r_diff_ok = abs(lnk_data.r - tmp_data.r) < r_margin;
+
+                if (x_diff_ok && y_diff_ok && r_diff_ok) {
+                    uint32_t magnitude = lnk_data.magnitude + tmp_data.magnitude;
+                    lnk_data.p.x = ((lnk_data.p.x * lnk_data.magnitude) + (tmp_data.p.x * tmp_data.magnitude)) / magnitude;
+                    lnk_data.p.y = ((lnk_data.p.y * lnk_data.magnitude) + (tmp_data.p.y * tmp_data.magnitude)) / magnitude;
+                    lnk_data.r = ((lnk_data.r * lnk_data.magnitude) + (tmp_data.r * tmp_data.magnitude)) / magnitude;
+                    lnk_data.magnitude = magnitude / 2;
+                    merge_occured = true;
+                } else {
+                    list_push_back(out, &tmp_data);
+                }
+            }
+
+            list_push_back(&out_temp, &lnk_data);
+        }
+
+        list_copy(out, &out_temp);
+
+        if (!merge_occured) {
+            break;
+        }
+    }
+}

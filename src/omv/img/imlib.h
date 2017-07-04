@@ -896,6 +896,12 @@ typedef struct find_lines_list_lnk_data {
     int16_t theta, rho;
 } find_lines_list_lnk_data_t;
 
+typedef struct find_circles_list_lnk_data {
+    point_t p;
+    int r;
+    uint32_t magnitude;
+} find_circles_list_lnk_data_t;
+
 typedef struct find_qrcodes_list_lnk_data {
     point_t corners[4];
     rectangle_t rect;
@@ -1148,6 +1154,8 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                               uint32_t threshold, unsigned int theta_margin, unsigned int rho_margin,
                               uint32_t segment_threshold);
+void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
+                        uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin);
 // 1/2D Bar Codes
 void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,
