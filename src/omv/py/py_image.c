@@ -201,19 +201,19 @@ static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
     switch(self->_cobj.bpp) {
         case IMAGE_BPP_BINARY: {
             mp_printf(print, "{w:%d, h:%d, type=\"binary\", size:%d}",
-                      self->_cobj.w, self->_cobj.h, 
+                      self->_cobj.w, self->_cobj.h,
                       ((self->_cobj.w + UINT32_T_MASK) >> UINT32_T_SHIFT) * self->_cobj.h);
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
             mp_printf(print, "{w:%d, h:%d, type=\"grayscale\", size:%d}",
-                      self->_cobj.w, self->_cobj.h, 
+                      self->_cobj.w, self->_cobj.h,
                       (self->_cobj.w * self->_cobj.h) * sizeof(uint8_t));
             break;
         }
         case IMAGE_BPP_RGB565: {
             mp_printf(print, "{w:%d, h:%d, type=\"rgb565\", size:%d}",
-                      self->_cobj.w, self->_cobj.h, 
+                      self->_cobj.w, self->_cobj.h,
                       (self->_cobj.w * self->_cobj.h) * sizeof(uint16_t));
             break;
         }
@@ -222,7 +222,7 @@ static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
                 print->print_strn(print->data, (const char *) self->_cobj.data, self->_cobj.bpp);
             } else { // not for ide
                 mp_printf(print, "{w:%d, h:%d, type=\"jpeg\", size:%d}",
-                          self->_cobj.w, self->_cobj.h, 
+                          self->_cobj.w, self->_cobj.h,
                           self->_cobj.bpp);
             }
             break;
@@ -2481,6 +2481,124 @@ static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, m
     return objects_list;
 }
 
+#ifdef OMV_ENABLE_FIND_CIRCLES
+// Circle Object //
+#define py_circle_obj_size 4
+typedef struct py_circle_obj {
+    mp_obj_base_t base;
+    mp_obj_t x, y, r, magnitude;
+} py_circle_obj_t;
+
+static void py_circle_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_circle_obj_t *self = self_in;
+    mp_printf(print,
+              "{x:%d, y:%d, r:%d, magnitude:%d}",
+              mp_obj_get_int(self->x),
+              mp_obj_get_int(self->y),
+              mp_obj_get_int(self->r),
+              mp_obj_get_int(self->magnitude));
+}
+
+static mp_obj_t py_circle_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_circle_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_circle_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_circle_obj_size, index, false)) {
+            case 0: return self->x;
+            case 1: return self->y;
+            case 2: return self->r;
+            case 3: return self->magnitude;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_circle_circle(mp_obj_t self_in)
+{
+    return mp_obj_new_tuple(3, (mp_obj_t []) {((py_circle_obj_t *) self_in)->x,
+                                              ((py_circle_obj_t *) self_in)->y,
+                                              ((py_circle_obj_t *) self_in)->r});
+}
+
+mp_obj_t py_circle_x(mp_obj_t self_in) { return ((py_circle_obj_t *) self_in)->x; }
+mp_obj_t py_circle_y(mp_obj_t self_in) { return ((py_circle_obj_t *) self_in)->y; }
+mp_obj_t py_circle_r(mp_obj_t self_in) { return ((py_circle_obj_t *) self_in)->r; }
+mp_obj_t py_circle_magnitude(mp_obj_t self_in) { return ((py_circle_obj_t *) self_in)->magnitude; }
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_circle_obj, py_circle_circle);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_x_obj, py_circle_x);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_y_obj, py_circle_y);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_r_obj, py_circle_r);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_circle_magnitude_obj, py_circle_magnitude);
+
+STATIC const mp_rom_map_elem_t py_circle_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_circle), MP_ROM_PTR(&py_circle_circle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_circle_x_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_circle_y_obj) },
+    { MP_ROM_QSTR(MP_QSTR_r), MP_ROM_PTR(&py_circle_r_obj) },
+    { MP_ROM_QSTR(MP_QSTR_magnitude), MP_ROM_PTR(&py_circle_magnitude_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_circle_locals_dict, py_circle_locals_dict_table);
+
+static const mp_obj_type_t py_circle_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_circle,
+    .print = py_circle_print,
+    .subscr = py_circle_subscr,
+    .locals_dict = (mp_obj_t) &py_circle_locals_dict,
+};
+
+static mp_obj_t py_image_find_circles(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    unsigned int x_stride = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_stride), 2);
+    PY_ASSERT_TRUE_MSG(x_stride > 0, "x_stride must not be zero.");
+    unsigned int y_stride = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_stride), 1);
+    PY_ASSERT_TRUE_MSG(y_stride > 0, "y_stride must not be zero.");
+
+    list_t out;
+    fb_alloc_mark();
+    imlib_find_circles(&out, arg_img, &roi, x_stride, y_stride, py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 1600),
+                                                                py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_margin), 10),
+                                                                py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_margin), 10),
+                                                                py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_r_margin), 10));
+    fb_alloc_free_till_mark();
+
+    mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
+    for (size_t i = 0; list_size(&out); i++) {
+        find_circles_list_lnk_data_t lnk_data;
+        list_pop_front(&out, &lnk_data);
+
+        py_circle_obj_t *o = m_new_obj(py_circle_obj_t);
+        o->base.type = &py_circle_type;
+        o->x = mp_obj_new_int(lnk_data.p.x);
+        o->y = mp_obj_new_int(lnk_data.p.y);
+        o->r = mp_obj_new_int(lnk_data.r);
+        o->magnitude = mp_obj_new_int(lnk_data.magnitude);
+
+        objects_list->items[i] = o;
+    }
+
+    return objects_list;
+}
+#endif // OMV_ENABLE_FIND_CIRCLES
+
 // QRCode Object //
 #define py_qrcode_obj_size 10
 typedef struct py_qrcode_obj {
@@ -3562,6 +3680,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blob
 /* Shape Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_line_segments_obj, 1, py_image_find_line_segments);
+#ifdef OMV_ENABLE_FIND_CIRCLES
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_circles_obj, 1, py_image_find_circles);
+#endif
 /* Code Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_qrcodes_obj, 1, py_image_find_qrcodes);
 #ifdef OMV_ENABLE_APRILTAGS
@@ -3657,6 +3778,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* Shape Detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lines),          (mp_obj_t)&py_image_find_lines_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_line_segments),  (mp_obj_t)&py_image_find_line_segments_obj},
+#ifdef OMV_ENABLE_FIND_CIRCLES
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_circles),        (mp_obj_t)&py_image_find_circles_obj},
+#endif
     /* Code Detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_qrcodes),        (mp_obj_t)&py_image_find_qrcodes_obj},
 #ifdef OMV_ENABLE_APRILTAGS
