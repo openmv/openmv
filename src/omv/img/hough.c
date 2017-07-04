@@ -290,7 +290,7 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                     lnk_line.theta = fast_roundf(fast_atan2f(sin_mean, cos_mean) * 57.295780) % 360; // * (180 / PI)
                     if (lnk_line.theta < 0) lnk_line.theta += 360;
                     lnk_line.rho = fast_roundf(((rho_0_temp * lnk_line.magnitude) + (rho_1_temp * tmp_line.magnitude)) / magnitude);
-                    lnk_line.magnitude = magnitude;
+                    lnk_line.magnitude = magnitude / 2;
 
                     if (lnk_line.theta >= 180) {
                         lnk_line.rho = -lnk_line.rho;
