@@ -2113,9 +2113,12 @@ static mp_obj_t py_image_get_regression(uint n_args, const mp_obj_t *args, mp_ma
 
     find_lines_list_lnk_data_t out;
     fb_alloc_mark();
-    if (!imlib_get_regression(&out, arg_img, &roi, x_stride, y_stride, &thresholds, invert, robust)) return mp_const_none;
+    bool result = imlib_get_regression(&out, arg_img, &roi, x_stride, y_stride, &thresholds, invert, robust);
     fb_alloc_free_till_mark();
     list_free(&thresholds);
+    if (!result) {
+        return mp_const_none;
+    }
 
     py_line_obj_t *o = m_new_obj(py_line_obj_t);
     o->base.type = &py_line_type;
