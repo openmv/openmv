@@ -738,6 +738,7 @@ int orb_load_descriptor(FIL *fp, array_t *kpts)
     // Read keypoints
     for (int i=0; i<kpts_size; i++) {
         kp_t *kp = xalloc(sizeof(*kp));
+        kp->matched = 0;
 
         // Read X
         res = f_read(fp, &kp->x, sizeof(kp->x), &bytes);
