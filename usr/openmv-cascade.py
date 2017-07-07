@@ -4,6 +4,9 @@ import struct
 import argparse
 from xml.dom import minidom
 
+def dump(obj):
+    for attr in dir(obj):
+        print "obj.%s = %s" % (attr, getattr(obj, attr))
 
 def cascade_info(path):
     #parse xml file
@@ -46,8 +49,7 @@ def cascade_binary(path, n_stages, name):
     #parse xml file
     xmldoc = minidom.parse(path)
 
-    trees = xmldoc.getElementsByTagName('trees')
-    max_stages = len(trees)
+    max_stages = int(xmldoc.getElementsByTagName('stageNum')[0].childNodes[0].nodeValue)
     if n_stages > max_stages:
         raise Exception("The max number of stages is: %d"%(max_stages))
 
@@ -55,24 +57,35 @@ def cascade_binary(path, n_stages, name):
         n_stages = max_stages
 
     # read stages
-    stages = [len(t.childNodes)/2 for t in trees][0:n_stages]
-    stage_threshold = xmldoc.getElementsByTagName('stage_threshold')[0:n_stages]
+    stagesElements = xmldoc.getElementsByTagName('stages')
+    stages = []
+    for node in stagesElements[0].childNodes:
+        if node.nodeType is 1:
+            stages.append(int(node.getElementsByTagName('maxWeakCount')[0].childNodes[0].nodeValue))
+
+    stage_threshold = xmldoc.getElementsByTagName('stageThreshold')[0:n_stages]
 
     # total number of features
     n_features = sum(stages)
 
     # read features threshold
-    threshold = xmldoc.getElementsByTagName('threshold')[0:n_features]
+    threshold = xmldoc.getElementsByTagName('internalNodes')[0:n_features]
 
     # theres one of each per feature
-    alpha1 = xmldoc.getElementsByTagName('left_val')[0:n_features]
-    alpha2 = xmldoc.getElementsByTagName('right_val')[0:n_features]
+    leafValues = xmldoc.getElementsByTagName('leafValues')[0:n_features]
+
+    alpha1 = []
+    alpha2 = []
+    for val in leafValues:
+        if val.nodeValue is not None:
+            alpha1.append(val.nodeValue.split()[0])
+            alpha2.append(val.nodeValue.split()[1])
 
     # read rectangles
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
     # read cascade size
-    size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
+    size = [int(xmldoc.getElementsByTagName('width')[0].childNodes[0].nodeValue), int(xmldoc.getElementsByTagName('height')[0].childNodes[0].nodeValue)]
 
     # open output file with the specified name or xml file name
     if not name:
@@ -101,15 +114,15 @@ def cascade_binary(path, n_stages, name):
 
     # write features threshold 1 per feature
     for t in threshold:
-        fout.write(struct.pack('h', int(float(t.childNodes[0].nodeValue)*4096))) #int16_t
+        fout.write(struct.pack('h', int(float(t.childNodes[0].nodeValue.split()[3])*4096))) #int16_t
 
     # write alpha1 1 per feature
     for a in alpha1:
-        fout.write(struct.pack('h', int(float(a.childNodes[0].nodeValue)*256))) #int16_t
+        fout.write(struct.pack('h', int(float(a)*256))) #int16_t
 
     # write alpha2 1 per feature
     for a in alpha2:
-        fout.write(struct.pack('h', int(float(a.childNodes[0].nodeValue)*256))) #int16_t
+        fout.write(struct.pack('h', int(float(a)*256))) #int16_t
 
     # write num_rects per feature
     for f in feature:
