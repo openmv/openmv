@@ -293,10 +293,6 @@ const static int sample_pattern[256*4] = {
 static int kpt_comp(const kp_t *kp1, const kp_t *kp2)
 {
     // Descending order
-    if (kp2->score == kp1->score) {
-        // Yes because MP qsort is Not stable
-        return (uint32_t) kp2 - (uint32_t) kp1;
-    }
     return kp2->score - kp1->score;
 }
 
