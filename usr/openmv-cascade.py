@@ -62,7 +62,7 @@ def cascade_binary(path, n_stages, name):
     for node in stagesElements[0].childNodes:
         if node.nodeType is 1:
             stages.append(int(node.getElementsByTagName('maxWeakCount')[0].childNodes[0].nodeValue))
-
+    print(stages)
     stage_threshold = xmldoc.getElementsByTagName('stageThreshold')[0:n_stages]
 
     # total number of features
@@ -77,9 +77,8 @@ def cascade_binary(path, n_stages, name):
     alpha1 = []
     alpha2 = []
     for val in leafValues:
-        if val.nodeValue is not None:
-            alpha1.append(val.nodeValue.split()[0])
-            alpha2.append(val.nodeValue.split()[1])
+        alpha1.append(val.childNodes[0].nodeValue.split()[0])
+        alpha2.append(val.childNodes[0].nodeValue.split()[1])
 
     # read rectangles
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
@@ -104,21 +103,34 @@ def cascade_binary(path, n_stages, name):
     # write num stages
     fout.write(struct.pack('i', len(stages)))
 
+    count = 0
     # write num feat in stages
     for s in stages:
         fout.write(struct.pack('B', s)) # uint8_t
+        count+=1
+    print("Stage count (num feats): %d"%count)
+    count = 0
 
     # write stages thresholds
     for t in stage_threshold:
         fout.write(struct.pack('h', int(float(t.childNodes[0].nodeValue)*256))) #int16_t
+        count+=1
+    print("Stage count (threshold): %d"%count)
+    count = 0
 
     # write features threshold 1 per feature
     for t in threshold:
         fout.write(struct.pack('h', int(float(t.childNodes[0].nodeValue.split()[3])*4096))) #int16_t
+        count+=1
+    print("Feature count (threshold): %d"%count)
+    count = 0
 
     # write alpha1 1 per feature
     for a in alpha1:
         fout.write(struct.pack('h', int(float(a)*256))) #int16_t
+        count+=1
+    print("Feature count (left/right): %d"%count)
+    count = 0
 
     # write alpha2 1 per feature
     for a in alpha2:
@@ -128,6 +140,9 @@ def cascade_binary(path, n_stages, name):
     for f in feature:
         rects = f.getElementsByTagName('_')
         fout.write(struct.pack('B', len(rects))) # uint8_t
+        count+=1
+    print("Feature count (rects): %d"%count)
+    count = 0
 
     # write rects weights 1 per rectangle
     for f in feature:
@@ -142,6 +157,9 @@ def cascade_binary(path, n_stages, name):
         for r in rects:
             l = map(int, r.childNodes[0].nodeValue[:-1].split())
             fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
+            count+=1
+    print("Rects count: %d"%count)
+    count = 0
 
     # print cascade info
     print("size:%dx%d"%(size[0], size[1]))
