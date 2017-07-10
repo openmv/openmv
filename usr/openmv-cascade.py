@@ -184,30 +184,20 @@ def cascade_binary(path, n_stages, name):
     for a in alpha2:
         fout.write(struct.pack('h', int(float(a)*256))) #int16_t
 
-    # write num_rects per feature
-    for f in feature:
-        rects = f.getElementsByTagName('_')
-        fout.write(struct.pack('B', len(rects))) # uint8_t
-        count+=1
-    print("Feature count (rects): %d"%count)
-    count = 0
+    # write num_rects per feature TODO: FROM internalNodes!
+    for f in threshold:
+        idx = int(f.childNodes[0].nodeValue.split()[2])
+        write_rect_num(feature, fout, idx)
 
     # write rects weights 1 per rectangle
-    for f in feature:
-        rects = f.getElementsByTagName('_')
-        for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
-            fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
+    for f in threshold:
+        idx = int(f.childNodes[0].nodeValue.split()[2])
+        write_rect_weight(feature, fout, idx)
 
     # write rects
-    for f in feature:
-        rects = f.getElementsByTagName('_')
-        for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
-            fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
-            count+=1
-    print("Rect count: %d"%count)
-    count = 0
+    for f in threshold:
+        idx = int(f.childNodes[0].nodeValue.split()[2])
+        write_rect(feature, fout, idx)
 
     # print cascade info
     print("size:%dx%d"%(size[0], size[1]))
@@ -215,6 +205,35 @@ def cascade_binary(path, n_stages, name):
     print("features:%d"%n_features)
     print("rectangles:%d"%n_rectangles)
     print("binary cascade generated")
+
+
+def write_rect_num(feature, fout, index):
+    count = 0
+    for f in feature:
+        if count == index:
+            rects = f.getElementsByTagName('_')
+            fout.write(struct.pack('B', len(rects))) # uint8_t
+        count+=1
+
+def write_rect_weight(feature, fout, index):
+    count = 0
+    for f in feature:
+        if count == index:
+            rects = f.getElementsByTagName('_')
+            for r in rects:
+                l = map(int, r.childNodes[0].nodeValue[:-1].split())
+                fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
+        count+=1
+
+def write_rect(feature, fout, index):
+    count = 0
+    for f in feature:
+        if count == index:
+            rects = f.getElementsByTagName('_')
+            for r in rects:
+                l = map(int, r.childNodes[0].nodeValue[:-1].split())
+                fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
+        count+=1
 
 def cascade_binary_old(path, n_stages, name):
     #parse xml file
