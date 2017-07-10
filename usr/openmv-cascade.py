@@ -117,7 +117,7 @@ def cascade_binary(path, n_stages, name):
     n_features = sum(stages)
 
     # read features threshold
-    threshold = xmldoc.getElementsByTagName('internalNodes')[0:n_features]
+    internal_nodes = xmldoc.getElementsByTagName('internalNodes')[0:n_features]
 
     # theres one of each per feature
     leaf_values = xmldoc.getElementsByTagName('leafValues')[0:n_features]
@@ -160,7 +160,7 @@ def cascade_binary(path, n_stages, name):
         fout.write(struct.pack('h', int(float(t.childNodes[0].nodeValue)*256))) #int16_t
 
     # write features threshold 1 per feature
-    for t in threshold:
+    for t in internal_nodes:
         fout.write(struct.pack('h', int(float(t.childNodes[0].nodeValue.split()[3])*4096))) #int16_t
 
     # write alpha1 1 per feature
@@ -172,19 +172,26 @@ def cascade_binary(path, n_stages, name):
         fout.write(struct.pack('h', int(float(a)*256))) #int16_t
 
     # write num_rects per feature
-    for f in threshold:
+    for f in internal_nodes:
         idx = int(f.childNodes[0].nodeValue.split()[2])
-        write_rect_num(feature, fout, idx)
+        rects = feature[idx].getElementsByTagName('_')
+        fout.write(struct.pack('B', len(rects))) # uint8_t
 
     # write rects weights 1 per rectangle
-    for f in threshold:
+    for f in internal_nodes:
         idx = int(f.childNodes[0].nodeValue.split()[2])
-        write_rect_weight(feature, fout, idx)
+        rects = feature[idx].getElementsByTagName('_')
+        for r in rects:
+            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
 
     # write rects
-    for f in threshold:
+    for f in internal_nodes:
         idx = int(f.childNodes[0].nodeValue.split()[2])
-        write_rect(feature, fout, idx)
+        rects = feature[idx].getElementsByTagName('_')
+        for r in rects:
+            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
 
     # print cascade info
     print("size:%dx%d"%(size[0], size[1]))
@@ -193,34 +200,6 @@ def cascade_binary(path, n_stages, name):
     print("rectangles:%d"%n_rectangles)
     print("binary cascade generated")
 
-
-def write_rect_num(feature, fout, index):
-    count = 0
-    for f in feature:
-        if count == index:
-            rects = f.getElementsByTagName('_')
-            fout.write(struct.pack('B', len(rects))) # uint8_t
-        count+=1
-
-def write_rect_weight(feature, fout, index):
-    count = 0
-    for f in feature:
-        if count == index:
-            rects = f.getElementsByTagName('_')
-            for r in rects:
-                l = map(int, r.childNodes[0].nodeValue[:-1].split())
-                fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
-        count+=1
-
-def write_rect(feature, fout, index):
-    count = 0
-    for f in feature:
-        if count == index:
-            rects = f.getElementsByTagName('_')
-            for r in rects:
-                l = map(int, r.childNodes[0].nodeValue[:-1].split())
-                fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
-        count+=1
 
 def cascade_binary_old(path, n_stages, name):
     #parse xml file
