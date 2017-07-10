@@ -151,40 +151,27 @@ def cascade_binary(path, n_stages, name):
     # write num stages
     fout.write(struct.pack('i', len(stages)))
 
-    count = 0
     # write num feat in stages
     for s in stages:
         fout.write(struct.pack('B', s)) # uint8_t
-        count+=1
-    print("Stage count (num feats): %d"%count)
-    count = 0
 
     # write stages thresholds
     for t in stage_threshold:
         fout.write(struct.pack('h', int(float(t.childNodes[0].nodeValue)*256))) #int16_t
-        count+=1
-    print("Stage count (threshold): %d"%count)
-    count = 0
 
     # write features threshold 1 per feature
     for t in threshold:
         fout.write(struct.pack('h', int(float(t.childNodes[0].nodeValue.split()[3])*4096))) #int16_t
-        count+=1
-    print("Feature count (threshold): %d"%count)
-    count = 0
 
     # write alpha1 1 per feature
     for a in alpha1:
         fout.write(struct.pack('h', int(float(a)*256))) #int16_t
-        count+=1
-    print("Feature count (left/right): %d"%count)
-    count = 0
 
     # write alpha2 1 per feature
     for a in alpha2:
         fout.write(struct.pack('h', int(float(a)*256))) #int16_t
 
-    # write num_rects per feature TODO: FROM internalNodes!
+    # write num_rects per feature
     for f in threshold:
         idx = int(f.childNodes[0].nodeValue.split()[2])
         write_rect_num(feature, fout, idx)
