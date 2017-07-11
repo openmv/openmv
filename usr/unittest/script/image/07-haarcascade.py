@@ -1,7 +1,7 @@
 def unittest(data_path, temp_path):
     import image
     # Load Haar Cascade
-    cascade = image.HaarCascade("/"+data_path+"/frontalface.cascade")
+    cascade = image.HaarCascade(data_path+"/frontalface.cascade")
 
     # Load image and find keypoints
     img = image.Image(data_path+"/dennis.pgm", copy_to_fb=True)
