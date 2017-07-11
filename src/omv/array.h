@@ -31,4 +31,5 @@ void *array_take(array_t *array, int idx);
 void array_erase(array_t *array, int idx);
 void array_resize(array_t *array, int num);
 void array_sort(array_t *array, array_comp_t comp);
+void array_isort(array_t *array, array_comp_t comp);
 #endif //__ARRAY_H__

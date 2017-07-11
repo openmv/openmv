@@ -158,3 +158,18 @@ void array_sort(array_t *array, array_comp_t comp)
         quicksort(array->data, array->data + array->index - 1, comp);
     }
 }
+
+void array_isort(array_t *array, array_comp_t comp)
+{
+    if (array->index > 1) {
+        for (int i = 1; i < array->index; i++) {
+            int j = i-1;
+            void *t = array->data[i];
+            while (j >= 0 && comp(array->data[j], t)) {
+                array->data[j+1] = array->data[j];
+                j--;
+            }
+            array->data[j+1] = t;
+        }
+    }
+}
