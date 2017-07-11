@@ -26,8 +26,8 @@ for module in sorted(os.listdir(SCRIPT_DIR)):
             test_passed = True
             test_path = "/".join((mod_path, test))
             try:
-                gc.collect()
                 exec(open(test_path).read())
+                gc.collect()
                 if unittest(DATA_DIR, TEMP_DIR) == False:
                     raise Exception()
             except Exception as e:
