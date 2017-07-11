@@ -247,10 +247,9 @@ error:
     return res;
 }
 
-int imlib_load_cascade_from_flash(cascade_t *cascade, const char *path)
+int imlib_load_cascade(cascade_t *cascade, const char *path)
 {
-    FRESULT res=FR_OK;
-
+    // built-in cascade
     if (strcmp(path, "frontalface") == 0) {
         cascade->window.w            = frontalface_window_w;
         cascade->window.h            = frontalface_window_h;
@@ -276,32 +275,19 @@ int imlib_load_cascade_from_flash(cascade_t *cascade, const char *path)
         cascade->weights_array       = (int8_t  *)eye_weights_array;
         cascade->rectangles_array    = (int8_t  *)eye_rectangles_array;
     } else {
-        res = FR_NO_FILE;
-    }
-
-    if (res == FR_OK) {
-        int i;
-        // sum the number of features in all stages
-        for (i=0, cascade->n_features=0; i<cascade->n_stages; i++) {
-            cascade->n_features += cascade->stages_array[i];
-        }
-
-        // sum the number of recatngles in all features
-        for (i=0, cascade->n_rectangles=0; i<cascade->n_features; i++) {
-            cascade->n_rectangles += cascade->num_rectangles_array[i];
-        }
-    }
-
-    return res;
-}
-
-int imlib_load_cascade(cascade_t *cascade, const char *path)
-{
-    if (path[0] != '/') {
-        // built-in cascade
-        return imlib_load_cascade_from_flash(cascade, path);
-    } else {
         // xml cascade
         return imlib_load_cascade_from_file(cascade, path);
     }
+
+    int i;
+    // sum the number of features in all stages
+    for (i=0, cascade->n_features=0; i<cascade->n_stages; i++) {
+        cascade->n_features += cascade->stages_array[i];
+    }
+
+    // sum the number of recatngles in all features
+    for (i=0, cascade->n_rectangles=0; i<cascade->n_features; i++) {
+        cascade->n_rectangles += cascade->num_rectangles_array[i];
+    }
+    return FR_OK;
 }
