@@ -182,6 +182,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	sincos_tab.o                            \
 	edge.o                                  \
 	hog.o                                   \
+	lenet.o                                 \
+	lenet_model_num.o                       \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \

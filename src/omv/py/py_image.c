@@ -3289,6 +3289,28 @@ static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map
 }
 #endif // OMV_ENABLE_BARCODES
 
+#ifdef OMV_ENABLE_LENET
+static mp_obj_t py_image_find_number(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    int r = 0;
+    float c = 0.0f;
+    lenet5_t *lenet = (lenet5_t*) lenet_model_num;
+
+    r = lenet_predict(lenet, arg_img, &c);
+    mp_obj_t ret_obj[2] = {
+        mp_obj_new_int(r),
+        mp_obj_new_float(c),
+    };
+    return mp_obj_new_tuple(2, ret_obj);
+}
+#endif //OMV_ENABLE_LENET
+
 static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -3697,6 +3719,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_datamatrices_obj, 1, py_image_fi
 #ifdef OMV_ENABLE_BARCODES
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_barcodes_obj, 1, py_image_find_barcodes);
 #endif
+#ifdef OMV_ENABLE_LENET
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_number_obj, 1, py_image_find_number);
+#endif
 /* Template Matching */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pool_obj, 3, py_image_midpoint_pool);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
@@ -3794,6 +3819,9 @@ static const mp_map_elem_t locals_dict_table[] = {
 #endif
 #ifdef OMV_ENABLE_BARCODES
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_barcodes),       (mp_obj_t)&py_image_find_barcodes_obj},
+#endif
+#ifdef OMV_ENABLE_LENET
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_number),         (mp_obj_t)&py_image_find_number_obj},
 #endif
     /* Template Matching */
     {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint_pool),       (mp_obj_t)&py_image_midpoint_pool_obj},

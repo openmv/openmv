@@ -609,6 +609,9 @@ Q(PDF417)
 Q(CODE93)
 Q(CODE128)
 
+// LENET
+Q(find_number)
+
 // Image Writer
 Q(ImageWriter)
 // Image Writer Object

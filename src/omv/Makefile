@@ -64,6 +64,8 @@ SRCS += $(addprefix img/,   \
 	sincos_tab.c            \
 	edge.c                  \
 	hog.c                   \
+	lenet.c                 \
+	lenet_model_num.c       \
    )
 
 SRCS += $(addprefix py/, \

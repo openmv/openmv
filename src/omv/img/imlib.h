@@ -1163,4 +1163,53 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
 void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int effort);
 void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 
+
+// LeNet (CNN for character recognition)
+#define LENGTH_KERNEL	5
+#define LENGTH_FEATURE0	32
+#define LENGTH_FEATURE1	(LENGTH_FEATURE0 - LENGTH_KERNEL + 1)
+#define LENGTH_FEATURE2	(LENGTH_FEATURE1 >> 1)
+#define LENGTH_FEATURE3	(LENGTH_FEATURE2 - LENGTH_KERNEL + 1)
+#define	LENGTH_FEATURE4	(LENGTH_FEATURE3 >> 1)
+#define LENGTH_FEATURE5	(LENGTH_FEATURE4 - LENGTH_KERNEL + 1)
+
+#define INPUT			1
+#define LAYER1			6
+#define LAYER2			6
+#define LAYER3			16
+#define LAYER4			16
+#define LAYER5			120
+
+#define LENET_OUTPUT_SIZE   (10)
+#define LENET_PADDING_SIZE  (2)
+#define LENET_MODEL_SIZE    (51902)
+
+typedef struct lenet5 {
+	float weight0_1[INPUT][LAYER1][LENGTH_KERNEL][LENGTH_KERNEL];
+	float weight2_3[LAYER2][LAYER3][LENGTH_KERNEL][LENGTH_KERNEL];
+	float weight4_5[LAYER4][LAYER5][LENGTH_KERNEL][LENGTH_KERNEL];
+	float weight5_6[LAYER5 * LENGTH_FEATURE5 * LENGTH_FEATURE5][LENET_OUTPUT_SIZE];
+
+	float bias0_1[LAYER1];
+	float bias2_3[LAYER3];
+	float bias4_5[LAYER5];
+	float bias5_6[LENET_OUTPUT_SIZE];
+
+} lenet5_t;
+
+typedef struct lenet5_feature {
+	float input[INPUT][LENGTH_FEATURE0][LENGTH_FEATURE0];
+	float layer1[LAYER1][LENGTH_FEATURE1][LENGTH_FEATURE1];
+	float layer2[LAYER2][LENGTH_FEATURE2][LENGTH_FEATURE2];
+	float layer3[LAYER3][LENGTH_FEATURE3][LENGTH_FEATURE3];
+	float layer4[LAYER4][LENGTH_FEATURE4][LENGTH_FEATURE4];
+	float layer5[LAYER5][LENGTH_FEATURE5][LENGTH_FEATURE5];
+	float output[LENET_OUTPUT_SIZE];
+} lenet5_feature_t;
+
+
+// LeNet pretrained models.
+extern const float lenet_model_num[LENET_MODEL_SIZE];
+
+uint8_t lenet_predict(lenet5_t *lenet, image_t *src, float *conf);
 #endif //__IMLIB_H__

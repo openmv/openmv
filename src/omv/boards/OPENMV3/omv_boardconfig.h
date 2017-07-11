@@ -38,6 +38,9 @@
 // Enable Barcodes (42 KB).
 #define OMV_ENABLE_BARCODES
 
+// Enable LENET (200+ KB).
+#define OMV_ENABLE_LENET
+
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
