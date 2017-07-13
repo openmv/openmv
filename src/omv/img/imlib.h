@@ -898,9 +898,14 @@ typedef struct find_lines_list_lnk_data {
 
 typedef struct find_circles_list_lnk_data {
     point_t p;
-    int r;
-    uint32_t magnitude;
+    uint32_t r, magnitude;
 } find_circles_list_lnk_data_t;
+
+typedef struct find_rects_list_lnk_data {
+    point_t corners[4];
+    rectangle_t rect;
+    uint32_t magnitude;
+} find_rects_list_lnk_data_t;
 
 typedef struct find_qrcodes_list_lnk_data {
     point_t corners[4];
@@ -1149,6 +1154,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                       bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
                       bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg);
 // Shape Detection
+void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *mag); // helper/internal
+size_t trace_line(image_t *ptr, line_t *l, int *theta_buffer, uint32_t *mag_buffer, point_t *point_buffer); // helper/internal
 void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       uint32_t threshold, unsigned int theta_margin, unsigned int rho_margin);
 void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
@@ -1156,6 +1163,8 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
                               uint32_t segment_threshold);
 void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                         uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin);
+void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi,
+                      uint32_t threshold);
 // 1/2D Bar Codes
 void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_families_t families,

@@ -2602,6 +2602,132 @@ static mp_obj_t py_image_find_circles(uint n_args, const mp_obj_t *args, mp_map_
 }
 #endif // OMV_ENABLE_FIND_CIRCLES
 
+#ifdef OMV_ENABLE_FIND_RECTS
+// Rect Object //
+#define py_rect_obj_size 5
+typedef struct py_rect_obj {
+    mp_obj_base_t base;
+    mp_obj_t corners;
+    mp_obj_t x, y, w, h, magnitude;
+} py_rect_obj_t;
+
+static void py_rect_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_rect_obj_t *self = self_in;
+    mp_printf(print,
+              "{x:%d, y:%d, w:%d, h:%d, magnitude:%d}",
+              mp_obj_get_int(self->x),
+              mp_obj_get_int(self->y),
+              mp_obj_get_int(self->w),
+              mp_obj_get_int(self->h),
+              mp_obj_get_int(self->magnitude));
+}
+
+static mp_obj_t py_rect_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_rect_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_rect_obj_size, index, &slice)) {
+                mp_not_implemented("only slices with step=1 (aka None) are supported");
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_rect_obj_size, index, false)) {
+            case 0: return self->x;
+            case 1: return self->y;
+            case 2: return self->w;
+            case 3: return self->h;
+            case 4: return self->magnitude;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_rect_corners(mp_obj_t self_in) { return ((py_rect_obj_t *) self_in)->corners; }
+mp_obj_t py_rect_rect(mp_obj_t self_in)
+{
+    return mp_obj_new_tuple(4, (mp_obj_t []) {((py_rect_obj_t *) self_in)->x,
+                                              ((py_rect_obj_t *) self_in)->y,
+                                              ((py_rect_obj_t *) self_in)->w,
+                                              ((py_rect_obj_t *) self_in)->h});
+}
+
+mp_obj_t py_rect_x(mp_obj_t self_in) { return ((py_rect_obj_t *) self_in)->x; }
+mp_obj_t py_rect_y(mp_obj_t self_in) { return ((py_rect_obj_t *) self_in)->y; }
+mp_obj_t py_rect_w(mp_obj_t self_in) { return ((py_rect_obj_t *) self_in)->w; }
+mp_obj_t py_rect_h(mp_obj_t self_in) { return ((py_rect_obj_t *) self_in)->h; }
+mp_obj_t py_rect_magnitude(mp_obj_t self_in) { return ((py_rect_obj_t *) self_in)->magnitude; }
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_corners_obj, py_rect_corners);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_rect_obj, py_rect_rect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_x_obj, py_rect_x);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_y_obj, py_rect_y);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_w_obj, py_rect_w);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_h_obj, py_rect_h);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rect_magnitude_obj, py_rect_magnitude);
+
+STATIC const mp_rom_map_elem_t py_rect_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_corners), MP_ROM_PTR(&py_rect_corners_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_rect_rect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_rect_x_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_rect_y_obj) },
+    { MP_ROM_QSTR(MP_QSTR_w), MP_ROM_PTR(&py_rect_w_obj) },
+    { MP_ROM_QSTR(MP_QSTR_h), MP_ROM_PTR(&py_rect_h_obj) },
+    { MP_ROM_QSTR(MP_QSTR_magnitude), MP_ROM_PTR(&py_rect_magnitude_obj) },
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_rect_locals_dict, py_rect_locals_dict_table);
+
+static const mp_obj_type_t py_rect_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_rect,
+    .print = py_rect_print,
+    .subscr = py_rect_subscr,
+    .locals_dict = (mp_obj_t) &py_rect_locals_dict,
+};
+
+static mp_obj_t py_image_find_rects(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    list_t out;
+    fb_alloc_mark();
+    imlib_find_rects(&out, arg_img, &roi, py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 1000));
+    fb_alloc_free_till_mark();
+
+    mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
+    for (size_t i = 0; list_size(&out); i++) {
+        find_rects_list_lnk_data_t lnk_data;
+        list_pop_front(&out, &lnk_data);
+
+        py_rect_obj_t *o = m_new_obj(py_rect_obj_t);
+        o->base.type = &py_rect_type;
+        o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[0].x), mp_obj_new_int(lnk_data.corners[0].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[1].x), mp_obj_new_int(lnk_data.corners[1].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[2].x), mp_obj_new_int(lnk_data.corners[2].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[3].x), mp_obj_new_int(lnk_data.corners[3].y)})});
+        o->x = mp_obj_new_int(lnk_data.rect.x);
+        o->y = mp_obj_new_int(lnk_data.rect.y);
+        o->w = mp_obj_new_int(lnk_data.rect.w);
+        o->h = mp_obj_new_int(lnk_data.rect.h);
+        o->magnitude = mp_obj_new_int(lnk_data.magnitude);
+
+        objects_list->items[i] = o;
+    }
+
+    return objects_list;
+}
+#endif
+
 // QRCode Object //
 #define py_qrcode_obj_size 10
 typedef struct py_qrcode_obj {
@@ -3708,6 +3834,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_line_segments_obj, 1, py_image_f
 #ifdef OMV_ENABLE_FIND_CIRCLES
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_circles_obj, 1, py_image_find_circles);
 #endif
+#ifdef OMV_ENABLE_FIND_RECTS
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_rects_obj, 1, py_image_find_rects);
+#endif
 /* Code Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_qrcodes_obj, 1, py_image_find_qrcodes);
 #ifdef OMV_ENABLE_APRILTAGS
@@ -3808,6 +3937,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_line_segments),  (mp_obj_t)&py_image_find_line_segments_obj},
 #ifdef OMV_ENABLE_FIND_CIRCLES
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_circles),        (mp_obj_t)&py_image_find_circles_obj},
+#endif
+#ifdef OMV_ENABLE_FIND_RECTS
+    {MP_OBJ_NEW_QSTR(MP_QSTR_find_rects),          (mp_obj_t)&py_image_find_rects_obj},
 #endif
     /* Code Detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_qrcodes),        (mp_obj_t)&py_image_find_qrcodes_obj},

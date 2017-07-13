@@ -9882,7 +9882,7 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
 }
 
 // return 1 if the quad looks okay, 0 if it should be discarded
-int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct quad *quad)
+int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct quad *quad, bool overrideMode)
 {
     int res = 0;
 
@@ -9934,7 +9934,7 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
     }
 
     // Ensure that the black border is inside the white border.
-    if (dot < 0)
+    if ((!overrideMode) && (dot < 0))
         return 0;
 
     // we now sort the points according to theta. This is a prepatory
@@ -10552,7 +10552,7 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
     return threshim;
 }
 
-zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
+zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool overrideMode)
 {
     ////////////////////////////////////////////////////////
     // step 1. threshold the image, creating the edge image.
@@ -10720,7 +10720,7 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im)
             struct quad quad;
             memset(&quad, 0, sizeof(struct quad));
 
-            if (fit_quad(td, im, cluster, &quad)) {
+            if (fit_quad(td, im, cluster, &quad, overrideMode)) {
 
                 zarray_add_fail_ok(quads, &quad);
             }
@@ -11581,7 +11581,7 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
     // and blurring parameters.
 
 //    zarray_t *quads = apriltag_quad_gradient(td, im_orig);
-    zarray_t *quads = apriltag_quad_thresh(td, im_orig);
+    zarray_t *quads = apriltag_quad_thresh(td, im_orig, false);
 
     zarray_t *detections = zarray_create(sizeof(apriltag_detection_t*));
 
@@ -11951,6 +11951,230 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     }
 
     apriltag_detections_destroy(detections);
+    fb_free(); // grayscale_image;
+    apriltag_detector_destroy(td);
+    fb_free(); // umm_init_x();
+}
+
+void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi,
+                      uint32_t threshold)
+{
+    // Frame Buffer Memory Usage...
+    // -> GRAYSCALE Input Image = w*h*1
+    // -> GRAYSCALE Threhsolded Image = w*h*1
+    // -> UnionFind = w*h*4 (+w*h*2 for hash table)
+    size_t resolution = roi->w * roi->h;
+    size_t fb_alloc_need = resolution * (1 + 1 + 4 + 2); // read above...
+    umm_init_x(((fb_avail() - fb_alloc_need) / resolution) * resolution);
+    apriltag_detector_t *td = apriltag_detector_create();
+
+    uint8_t *grayscale_image = fb_alloc(roi->w * roi->h);
+
+    image_u8_t im;
+    im.width = roi->w;
+    im.height = roi->h;
+    im.stride = roi->w;
+    im.buf = grayscale_image;
+
+    switch(ptr->bpp) {
+        case IMAGE_BPP_BINARY: {
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    *(grayscale_image++) = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    *(grayscale_image++) = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
+                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                    *(grayscale_image++) = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                }
+            }
+            break;
+        }
+        default: {
+            memset(grayscale_image, 0, roi->w * roi->h);
+            break;
+        }
+    }
+
+    ///////////////////////////////////////////////////////////
+    // Detect quads according to requested image decimation
+    // and blurring parameters.
+
+//    zarray_t *detections = apriltag_quad_gradient(td, &im, true);
+    zarray_t *detections = apriltag_quad_thresh(td, &im, true);
+
+    td->nquads = zarray_size(detections);
+
+    ////////////////////////////////////////////////////////////////
+    // Decode tags from each quad.
+    if (1) {
+        for (int i = 0; i < zarray_size(detections); i++) {
+            struct quad *quad_original;
+            zarray_get_volatile(detections, i, &quad_original);
+
+            // refine edges is not dependent upon the tag family, thus
+            // apply this optimization BEFORE the other work.
+            //if (td->quad_decimate > 1 && td->refine_edges) {
+            if (td->refine_edges) {
+                refine_edges(td, &im, quad_original);
+            }
+
+            // make sure the homographies are computed...
+            if (quad_update_homographies(quad_original))
+                continue;
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////
+    // Reconcile detections--- don't report the same tag more
+    // than once. (Allow non-overlapping duplicate detections.)
+    if (1) {
+        zarray_t *poly0 = g2d_polygon_create_zeros(4);
+        zarray_t *poly1 = g2d_polygon_create_zeros(4);
+
+        for (int i0 = 0; i0 < zarray_size(detections); i0++) {
+
+            struct quad *det0;
+            zarray_get_volatile(detections, i0, &det0);
+
+            for (int k = 0; k < 4; k++)
+                zarray_set(poly0, k, det0->p[k], NULL);
+
+            for (int i1 = i0+1; i1 < zarray_size(detections); i1++) {
+
+                struct quad *det1;
+                zarray_get_volatile(detections, i1, &det1);
+
+                for (int k = 0; k < 4; k++)
+                    zarray_set(poly1, k, det1->p[k], NULL);
+
+                if (g2d_polygon_overlaps_polygon(poly0, poly1)) {
+                    // the tags overlap. Delete one, keep the other.
+
+                    int pref = 0; // 0 means undecided which one we'll keep.
+
+                    // if we STILL don't prefer one detection over the other, then pick
+                    // any deterministic criterion.
+                    for (int i = 0; i < 4; i++) {
+                        pref = prefer_smaller(pref, det0->p[i][0], det1->p[i][0]);
+                        pref = prefer_smaller(pref, det0->p[i][1], det1->p[i][1]);
+                    }
+
+                    if (pref == 0) {
+                        // at this point, we should only be undecided if the tag detections
+                        // are *exactly* the same. How would that happen?
+                        printf("uh oh, no preference for overlappingdetection\n");
+                    }
+
+                    if (pref < 0) {
+                        // keep det0, destroy det1
+                        matd_destroy(det1->H);
+                        matd_destroy(det1->Hinv);
+                        zarray_remove_index(detections, i1, 1);
+                        i1--; // retry the same index
+                        goto retry1;
+                    } else {
+                        // keep det1, destroy det0
+                        matd_destroy(det0->H);
+                        matd_destroy(det0->Hinv);
+                        zarray_remove_index(detections, i0, 1);
+                        i0--; // retry the same index.
+                        goto retry0;
+                    }
+                }
+
+              retry1: ;
+            }
+
+          retry0: ;
+        }
+
+        zarray_destroy(poly0);
+        zarray_destroy(poly1);
+    }
+
+    list_init(out, sizeof(find_rects_list_lnk_data_t));
+
+    const int r_diag_len = fast_roundf(fast_sqrtf((roi->w * roi->w) + (roi->h * roi->h))) * 2;
+    int *theta_buffer = fb_alloc(sizeof(int) * r_diag_len);
+    uint32_t *mag_buffer = fb_alloc(sizeof(uint32_t) * r_diag_len);
+    point_t *point_buffer = fb_alloc(sizeof(point_t) * r_diag_len);
+
+    for (int i = 0, j = zarray_size(detections); i < j; i++) {
+        struct quad *det;
+        zarray_get_volatile(detections, i, &det);
+
+        line_t lines[4];
+        lines[0].x1 = fast_roundf(det->p[0][0]) + roi->x; lines[0].y1 = fast_roundf(det->p[0][1]) + roi->y;
+        lines[0].x2 = fast_roundf(det->p[1][0]) + roi->x; lines[0].y2 = fast_roundf(det->p[1][1]) + roi->y;
+        lines[1].x1 = fast_roundf(det->p[1][0]) + roi->x; lines[1].y1 = fast_roundf(det->p[1][1]) + roi->y;
+        lines[1].x2 = fast_roundf(det->p[2][0]) + roi->x; lines[1].y2 = fast_roundf(det->p[2][1]) + roi->y;
+        lines[2].x1 = fast_roundf(det->p[2][0]) + roi->x; lines[2].y1 = fast_roundf(det->p[2][1]) + roi->y;
+        lines[2].x2 = fast_roundf(det->p[3][0]) + roi->x; lines[2].y2 = fast_roundf(det->p[3][1]) + roi->y;
+        lines[3].x1 = fast_roundf(det->p[3][0]) + roi->x; lines[3].y1 = fast_roundf(det->p[3][1]) + roi->y;
+        lines[3].x2 = fast_roundf(det->p[0][0]) + roi->x; lines[3].y2 = fast_roundf(det->p[0][1]) + roi->y;
+
+        uint32_t magnitude = 0;
+
+        for (int i = 0; i < 4; i++) {
+            if(!lb_clip_line(&lines[i], 0, 0, ptr->w, ptr->h)) {
+                continue;
+            }
+
+            size_t index = trace_line(ptr, &lines[i], theta_buffer, mag_buffer, point_buffer);
+
+            for (int j = 0; j < index; j++) {
+                magnitude += mag_buffer[j];
+            }
+        }
+
+        if (magnitude < threshold) {
+            continue;
+        }
+
+        find_rects_list_lnk_data_t lnk_data;
+        rectangle_init(&(lnk_data.rect), fast_roundf(det->p[0][0]) + roi->x, fast_roundf(det->p[0][1]) + roi->y, 0, 0);
+
+        for (size_t k = 1, l = (sizeof(det->p) / sizeof(det->p[0])); k < l; k++) {
+            rectangle_t temp;
+            rectangle_init(&temp, fast_roundf(det->p[k][0]) + roi->x, fast_roundf(det->p[k][1]) + roi->y, 0, 0);
+            rectangle_united(&(lnk_data.rect), &temp);
+        }
+
+        // Add corners...
+        lnk_data.corners[0].x = fast_roundf(det->p[3][0]) + roi->x; // top-left
+        lnk_data.corners[0].y = fast_roundf(det->p[3][1]) + roi->y; // top-left
+        lnk_data.corners[1].x = fast_roundf(det->p[2][0]) + roi->x; // top-right
+        lnk_data.corners[1].y = fast_roundf(det->p[2][1]) + roi->y; // top-right
+        lnk_data.corners[2].x = fast_roundf(det->p[1][0]) + roi->x; // bottom-right
+        lnk_data.corners[2].y = fast_roundf(det->p[1][1]) + roi->y; // bottom-right
+        lnk_data.corners[3].x = fast_roundf(det->p[0][0]) + roi->x; // bottom-left
+        lnk_data.corners[3].y = fast_roundf(det->p[0][1]) + roi->y; // bottom-left
+
+        lnk_data.magnitude = magnitude;
+
+        list_push_back(out, &lnk_data);
+    }
+
+    fb_free(); // point_buffer
+    fb_free(); // mag_buffer
+    fb_free(); // theta_buffer
+
+    zarray_destroy(detections);
     fb_free(); // grayscale_image;
     apriltag_detector_destroy(td);
     fb_free(); // umm_init_x();
