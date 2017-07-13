@@ -342,7 +342,7 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
     }
 }
 
-static void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *mag)
+void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *mag)
 {
     switch (ptr->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -518,7 +518,7 @@ static void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *ma
 
 // http://www.brackeen.com/vga/source/djgpp20/lines.c.html
 // http://www.brackeen.com/vga/source/bc31/lines.c.html
-static size_t trace_line(image_t *ptr, line_t *l, int *theta_buffer, uint32_t *mag_buffer, point_t *point_buffer)
+size_t trace_line(image_t *ptr, line_t *l, int *theta_buffer, uint32_t *mag_buffer, point_t *point_buffer)
 {
     int dx = l->x2 - l->x1; // the horizontal distance of the line
     int dy = l->y2 - l->y1; // the vertical distance of the line

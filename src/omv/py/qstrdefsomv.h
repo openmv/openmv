@@ -499,12 +499,26 @@ Q(circle)
 Q(r)
 // duplicate Q(magnitude)
 
+// Find Rects
+Q(find_rects)
+// duplicate Q(roi)
+// duplicate Q(threshold)
+// Rect Object
+// duplicate Q(rect)
+Q(corners)
+// duplicate Q(rect)
+// duplicate Q(x)
+// duplicate Q(y)
+// duplicate Q(w)
+// duplicate Q(h)
+// duplicate Q(magnitude)
+
 // Find QRCodes
 Q(find_qrcodes)
 // duplicate Q(roi)
 // QRCode Object
 Q(qrcode)
-Q(corners)
+// duplicate Q(corners)
 // duplicate Q(rect)
 // duplicate Q(x)
 // duplicate Q(y)
