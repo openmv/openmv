@@ -18,22 +18,19 @@ def print_result(test, passed):
     padding = "."*(60-len(s))
     print(s + padding + ("PASSED" if passed == True else "FAILED"))
 
-for module in sorted(os.listdir(SCRIPT_DIR)):
-    mod_path = "/".join((SCRIPT_DIR, module))
-
-    for test in sorted(os.listdir(mod_path)):
-        if test.endswith(".py"):
-            test_passed = True
-            test_path = "/".join((mod_path, test))
-            try:
-                exec(open(test_path).read())
-                gc.collect()
-                if unittest(DATA_DIR, TEMP_DIR) == False:
-                    raise Exception()
-            except Exception as e:
-                test_failed = True
-                test_passed = False
-            print_result(test, test_passed)
+for test in sorted(os.listdir(SCRIPT_DIR)):
+    if test.endswith(".py"):
+        test_passed = True
+        test_path = "/".join((SCRIPT_DIR, test))
+        try:
+            exec(open(test_path).read())
+            gc.collect()
+            if unittest(DATA_DIR, TEMP_DIR) == False:
+                raise Exception()
+        except Exception as e:
+            test_failed = True
+            test_passed = False
+        print_result(test, test_passed)
 
 if test_failed:
     print("\nSome tests have FAILED!!!\n\n")
