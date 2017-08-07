@@ -2577,7 +2577,7 @@ static mp_obj_t py_image_find_circles(uint n_args, const mp_obj_t *args, mp_map_
 
     list_t out;
     fb_alloc_mark();
-    imlib_find_circles(&out, arg_img, &roi, x_stride, y_stride, py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 1600),
+    imlib_find_circles(&out, arg_img, &roi, x_stride, y_stride, py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 2000),
                                                                 py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_margin), 10),
                                                                 py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_margin), 10),
                                                                 py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_r_margin), 10));
