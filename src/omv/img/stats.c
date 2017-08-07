@@ -581,6 +581,8 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                 out->line.y1 += roi->y;
                 out->line.x2 += roi->x;
                 out->line.y2 += roi->y;
+                // Move rho too.
+                out->rho += fast_roundf((roi->x * cos_table[out->theta]) + (roi->y * sin_table[out->theta]));
                 result = true;
             } else {
                 memset(out, 0, sizeof(find_lines_list_lnk_data_t));
@@ -712,6 +714,8 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                     out->line.y1 += roi->y;
                     out->line.x2 += roi->x;
                     out->line.y2 += roi->y;
+                    // Move rho too.
+                    out->rho += fast_roundf((roi->x * cos_table[out->theta]) + (roi->y * sin_table[out->theta]));
                     result = true;
                 } else {
                     memset(out, 0, sizeof(find_lines_list_lnk_data_t));
