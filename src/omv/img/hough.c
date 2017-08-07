@@ -75,7 +75,7 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                     row_ptr -= ((ptr->w + UINT32_T_MASK) >> UINT32_T_SHIFT);
 
-                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 180; // * (180 / PI)
+                    int theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 180; // * (180 / PI)
                     if (theta < 0) theta += 180;
                     int rho = (fast_roundf(((x - roi->x) * cos_table[theta]) + ((y - roi->y) * sin_table[theta])) / hough_divide) + r_diag_len_div;
                     int acc_index = (rho * theta_size) + ((theta / hough_divide) + 1); // add offset
@@ -138,7 +138,7 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                     row_ptr -= ptr->w;
 
-                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 180; // * (180 / PI)
+                    int theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 180; // * (180 / PI)
                     if (theta < 0) theta += 180;
                     int rho = (fast_roundf(((x - roi->x) * cos_table[theta]) + ((y - roi->y) * sin_table[theta])) / hough_divide) + r_diag_len_div;
                     int acc_index = (rho * theta_size) + ((theta / hough_divide) + 1); // add offset
@@ -201,7 +201,7 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                     row_ptr -= ptr->w;
 
-                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 180; // * (180 / PI)
+                    int theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 180; // * (180 / PI)
                     if (theta < 0) theta += 180;
                     int rho = (fast_roundf(((x - roi->x) * cos_table[theta]) + ((y - roi->y) * sin_table[theta])) / hough_divide) + r_diag_len_div;
                     int acc_index = (rho * theta_size) + ((theta / hough_divide) + 1); // add offset
@@ -337,6 +337,8 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
             lnk_line.line.x2 += roi->x;
             lnk_line.line.y2 += roi->y;
 
+            // Move rho too.
+            lnk_line.rho += fast_roundf((roi->x * cos_table[lnk_line.theta]) + (roi->y * sin_table[lnk_line.theta]));
             list_push_back(out, &lnk_line);
         }
     }
@@ -395,7 +397,7 @@ void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *mag)
 
             if (y != (ptr->h - 1)) row_ptr -= ((ptr->w + UINT32_T_MASK) >> UINT32_T_SHIFT);
 
-            *theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 180; // * (180 / PI)
+            *theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 180; // * (180 / PI)
             if (*theta < 0) *theta += 180;
             *mag = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
             break;
@@ -450,7 +452,7 @@ void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *mag)
 
             if (y != (ptr->h - 1)) row_ptr -= ptr->w;
 
-            *theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 180; // * (180 / PI)
+            *theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 180; // * (180 / PI)
             if (*theta < 0) *theta += 180;
             *mag = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
             break;
@@ -505,7 +507,7 @@ void pixel_magnitude(image_t *ptr, int x, int y, int *theta, uint32_t *mag)
 
             if (y != (ptr->h - 1)) row_ptr -= ptr->w;
 
-            *theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 180; // * (180 / PI)
+            *theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 180; // * (180 / PI)
             if (*theta < 0) *theta += 180;
             *mag = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
             break;
@@ -911,7 +913,7 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
                     row_ptr -= ((ptr->w + UINT32_T_MASK) >> UINT32_T_SHIFT);
 
-                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 360; // * (180 / PI)
+                    int theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 360; // * (180 / PI)
                     if (theta < 0) theta += 360;
                     int magnitude = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
                     int index = (roi->w * (y - roi->y)) + (x - roi->x);
@@ -974,7 +976,7 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
                     row_ptr -= ptr->w;
 
-                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 360; // * (180 / PI)
+                    int theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 360; // * (180 / PI)
                     if (theta < 0) theta += 360;
                     int magnitude = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
                     int index = (roi->w * (y - roi->y)) + (x - roi->x);
@@ -1037,7 +1039,7 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
                     row_ptr -= ptr->w;
 
-                    int theta = fast_roundf(fast_atan2f(y_acc, x_acc) * 57.295780) % 360; // * (180 / PI)
+                    int theta = fast_roundf((x_acc ? fast_atan2f(y_acc, x_acc) : 1.570796f) * 57.295780) % 360; // * (180 / PI)
                     if (theta < 0) theta += 360;
                     int magnitude = fast_roundf(fast_sqrtf((x_acc * x_acc) + (y_acc * y_acc)));
                     int index = (roi->w * (y - roi->y)) + (x - roi->x);
