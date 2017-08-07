@@ -1099,14 +1099,32 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                 int magnitude = magnitude_acc[index];
                 if (!magnitude) continue;
 
-                int a = fast_roundf(x + (r * cos_table[theta])) - r;
-                if ((a < 0) || (w_size <= a)) continue; // circle doesn't fit in the window
-                int b = fast_roundf(y + (r * sin_table[theta])) - r;
-                if ((b < 0) || (h_size <= b)) continue; // circle doesn't fit in the window
-                int acc_index = (((b / hough_divide) + 1) * a_size) + ((a / hough_divide) + 1); // add offset
+                // We have to do the below step twice because the gradient may be pointing inside or outside the circle.
+                // Only graidents pointing inside of the circle sum up to produce a large magnitude.
 
-                int acc_value = acc[acc_index] += magnitude;
-                acc[acc_index] = acc_value;
+                for (;;) { // Hi to lo edge direction
+                    int a = fast_roundf(x + (r * cos_table[theta])) - r;
+                    if ((a < 0) || (w_size <= a)) break; // circle doesn't fit in the window
+                    int b = fast_roundf(y + (r * sin_table[theta])) - r;
+                    if ((b < 0) || (h_size <= b)) break; // circle doesn't fit in the window
+                    int acc_index = (((b / hough_divide) + 1) * a_size) + ((a / hough_divide) + 1); // add offset
+
+                    int acc_value = acc[acc_index] += magnitude;
+                    acc[acc_index] = acc_value;
+                    break;
+                }
+
+                for (;;) { // Lo to hi edge direction
+                    int a = fast_roundf(x + (r * cos_table[(theta + 180) % 360])) - r;
+                    if ((a < 0) || (w_size <= a)) break; // circle doesn't fit in the window
+                    int b = fast_roundf(y + (r * sin_table[(theta + 180) % 360])) - r;
+                    if ((b < 0) || (h_size <= b)) break; // circle doesn't fit in the window
+                    int acc_index = (((b / hough_divide) + 1) * a_size) + ((a / hough_divide) + 1); // add offset
+
+                    int acc_value = acc[acc_index] += magnitude;
+                    acc[acc_index] = acc_value;
+                    break;
+                }
             }
         }
 
