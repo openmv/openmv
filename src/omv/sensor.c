@@ -314,6 +314,10 @@ int sensor_init()
     // Disable VSYNC EXTI IRQ
     HAL_NVIC_DisableIRQ(DCMI_VSYNC_IRQN);
 
+    // Clear fb_enabled flag
+    // This is executed only once to initialize the FB enabled flag.
+    JPEG_FB()->enabled = 0;
+
     /* All good! */
     return 0;
 }
