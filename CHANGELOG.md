@@ -1,4 +1,21 @@
 # Change Log
+## [2.5](https://github.com/openmv/openmv/releases/tag/v2.5) (2017-08-10)
+* Fix UART timeout when using slow baudrate.
+* Enable RTC.
+* Remove openmv.inf and update Readme.
+* Support recording and viewing raw videos.
+* Add linear regression.
+* Add find_rectangles and find_circles.
+* Improve find_lines merging.
+* Fix bug in ORB matching descriptor loaded from file.
+* Support new OpenCV Haar format.
+* Fix bug in Haar cascades loading.
+* Add initial LeNet port.
+* Add unit-tests.
+* Fix uninitialized FB enabled bug.
+* Fix Servo(3).
+* Fix MJPEG/GIF BAYER support.
+
 ## [2.4.1](https://github.com/openmv/openmv/releases/tag/v2.4.1) (2017-06-04)
 * Upstream Kanji fix.
 * Upstream MP SCSI fix.
