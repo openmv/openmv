@@ -73,12 +73,11 @@ static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw
 {
     py_gif_obj_t *arg_gif = args[0];
     image_t *arg_img = py_image_cobj(args[1]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
-    PY_ASSERT_FALSE_MSG((arg_gif->width != arg_img->w)
-                     || (arg_gif->height != arg_img->h)
-                     || (arg_gif->color != IM_IS_RGB565(arg_img)),
-            "Unexpected image geometry");
+    PY_ASSERT_FALSE_MSG((arg_img->bpp >= IMAGE_BPP_JPEG),   "Operation not supported on JPEG images.");
+    PY_ASSERT_FALSE_MSG((arg_img->bpp == IMAGE_BPP_BINARY), "Operation not supported on binary images.");
+    PY_ASSERT_FALSE_MSG((arg_gif->width != arg_img->w) ||
+            (arg_gif->height != arg_img->h), "Unexpected image geometry!");
+
     int delay = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_delay), 10);
 
     gif_add_frame(&arg_gif->fp, arg_img, delay);

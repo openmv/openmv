@@ -72,7 +72,7 @@ void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
                 write_byte(fp, img->pixels[(y*BLOCK_SIZE)+x]>>1);
             }
         }
-    } else {
+    } else if (IM_IS_RGB565(img)) {
         for (int y=0; y<blocks; y++) {
             int block_size = IM_MIN(BLOCK_SIZE, bytes - (y*BLOCK_SIZE));
             write_byte(fp, 1 + block_size);
@@ -85,7 +85,24 @@ void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
                 write_byte(fp, (red<<5) | (green<<2) | blue);
             }
         }
+    } else if (IM_IS_BAYER(img)) {
+        for (int y=0; y<blocks; y++) {
+            int block_size = IM_MIN(BLOCK_SIZE, bytes - (y*BLOCK_SIZE));
+            write_byte(fp, 1 + block_size);
+            write_byte(fp, 0x80); // clear code
+            for (int x=0; x<block_size; x++) {
+                int r=0, g=0, b=0;
+                int x_offs = ((y*BLOCK_SIZE) + x) % img->w;
+                int y_offs = (y*BLOCK_SIZE) / img->w;
+                if (x_offs > 0 && y_offs > 0 && x_offs < img->w-1 && y_offs < img->h-1) {
+                    COLOR_BAYER_TO_RGB565(img, x_offs, y_offs, r, g, b);
+                }
+                r >>=3; g >>=3; b >>=3;
+                write_byte(fp, (r<<5) | (g<<2) | b);
+            }
+        }
     }
+
 
     write_data(fp, (uint8_t []) {0x01, 0x81, 0x00}, 3); // end code
 

@@ -260,6 +260,60 @@ extern const int8_t yuv_table[196608];
     COLOR_R8_G8_B8_TO_RGB565(_r, _g, _b); \
 })
 
+#define COLOR_BAYER_TO_RGB565(img, x, y, r, g, b)            \
+({                                                           \
+    __typeof__ (x) __x = (x);                                \
+    __typeof__ (y) __y = (y);                                \
+    if ((__y % 2) == 0) {                                    \
+        if ((__x % 2) == 0) {                                \
+            r = (IM_GET_RAW_PIXEL(img, __x-1, __y-1)  +      \
+                 IM_GET_RAW_PIXEL(img, __x+1, __y-1)  +      \
+                 IM_GET_RAW_PIXEL(img, __x-1, __y+1)  +      \
+                 IM_GET_RAW_PIXEL(img, __x+1, __y+1)) >> 2;  \
+                                                             \
+            g = (IM_GET_RAW_PIXEL(img, __x,   __y-1)  +      \
+                 IM_GET_RAW_PIXEL(img, __x,   __y+1)  +      \
+                 IM_GET_RAW_PIXEL(img, __x-1, __y)    +      \
+                 IM_GET_RAW_PIXEL(img, __x+1, __y))   >> 2;  \
+                                                             \
+            b = IM_GET_RAW_PIXEL(img,  __x, __y);            \
+        } else {                                             \
+            r = (IM_GET_RAW_PIXEL(img, __x, __y-1)  +        \
+                 IM_GET_RAW_PIXEL(img, __x, __y+1)) >> 1;    \
+                                                             \
+            b = (IM_GET_RAW_PIXEL(img, __x-1, __y)  +        \
+                 IM_GET_RAW_PIXEL(img, __x+1, __y)) >> 1;    \
+                                                             \
+            g =  IM_GET_RAW_PIXEL(img, __x, __y);            \
+        }                                                    \
+    } else {                                                 \
+        if ((__x % 2) == 0) {                                \
+            r = (IM_GET_RAW_PIXEL(img, __x-1, __y)  +        \
+                 IM_GET_RAW_PIXEL(img, __x+1, __y)) >> 1;    \
+                                                             \
+            g =  IM_GET_RAW_PIXEL(img, __x, __y);            \
+                                                             \
+            b = (IM_GET_RAW_PIXEL(img, __x, __y-1)  +        \
+                 IM_GET_RAW_PIXEL(img, __x, __y+1)) >> 1;    \
+        } else {                                             \
+            r = IM_GET_RAW_PIXEL(img,  __x, __y);            \
+                                                             \
+            g = (IM_GET_RAW_PIXEL(img, __x, __y-1)    +      \
+                 IM_GET_RAW_PIXEL(img, __x, __y+1)    +      \
+                 IM_GET_RAW_PIXEL(img, __x-1, __y)    +      \
+                 IM_GET_RAW_PIXEL(img, __x+1, __y))   >> 2;  \
+                                                             \
+            b = (IM_GET_RAW_PIXEL(img, __x-1, __y-1)  +      \
+                 IM_GET_RAW_PIXEL(img, __x+1, __y-1)  +      \
+                 IM_GET_RAW_PIXEL(img, __x-1, __y+1)  +      \
+                 IM_GET_RAW_PIXEL(img, __x+1, __y+1)) >> 2;  \
+        }                                                    \
+    }                                                        \
+    r  = IM_R825(r);                                         \
+    g  = IM_G826(g);                                         \
+    b  = IM_B825(b);                                         \
+})
+
 #define COLOR_BINARY_TO_GRAYSCALE(pixel) ((pixel) * COLOR_GRAYSCALE_MAX)
 #define COLOR_BINARY_TO_RGB565(pixel) COLOR_YUV_TO_RGB565((pixel) * 127, 0, 0)
 #define COLOR_RGB565_TO_BINARY(pixel) (COLOR_RGB565_TO_Y(pixel) == 127)
@@ -664,6 +718,10 @@ extern const int8_t kernel_high_pass_3[9];
 #define IM_IS_RGB565(img) \
     ({ __typeof__ (img) _img = (img); \
        _img->bpp == 2; })
+
+#define IM_IS_BAYER(img) \
+    ({ __typeof__ (img) _img = (img); \
+       _img->bpp == 3; })
 
 #define IM_IS_JPEG(img) \
     ({ __typeof__ (img) _img = (img); \
