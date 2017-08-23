@@ -1,24 +1,47 @@
 #!/usr/bin/env python
 import sys
-import usb.core
-import usb.util
+# import usb.core
+# import usb.util
 import numpy as np
 import pygame
 import openmv
 from time import sleep
 
+script = """
+# Hello World Example
+#
+# Welcome to the OpenMV IDE! Click on the green run arrow button below to run the script!
+
+import sensor, image, time
+
+sensor.reset()                      # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.QVGA)   # Set frame size to QVGA (320x240)
+sensor.skip_frames(time = 2000)     # Wait for settings take effect.
+clock = time.clock()                # Create a clock object to track the FPS.
+
+while(True):
+    img = sensor.snapshot()         # Take a picture and return the image.
+    sensor.flush()
+"""
+
 # init pygame
 pygame.init()
 
 # init openmv
-openmv.init()
+if 'darwin' in sys.platform:
+    portname = "/dev/cu.usbmodem14221"
+else:
+    portname = "/dev/openmvcam"
+openmv.init(portname)
+openmv.exec_script(script)
 
 # init screen
 running = True
 Clock = pygame.time.Clock()
 font = pygame.font.SysFont("monospace", 15)
 while running:
-    Clock.tick(60)
+    Clock.tick(100)
 
     # read framebuffer
     fb = openmv.fb_dump()
@@ -31,9 +54,13 @@ while running:
     # TODO check if res changed
     screen = pygame.display.set_mode((fb[0], fb[1]), pygame.DOUBLEBUF, 32)
 
+    fps = Clock.get_fps()
+    if fps < 50.0:
+        sys.stderr.write("WARNING: fps drop\n")
+
     # blit stuff
     screen.blit(image, (0, 0))
-    screen.blit(font.render("FPS %.2f"%(Clock.get_fps()), 1, (255, 0, 0)), (0, 0))
+    screen.blit(font.render("FPS %.2f"%(fps), 1, (255, 0, 0)), (0, 0))
 
     # update display
     pygame.display.flip()
@@ -49,5 +76,4 @@ while running:
 
 
 pygame.quit()
-openmv.release()
-
+openmv.stop_script()
