@@ -322,7 +322,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
                &&  ((p[-2] == 'm') || (p[-2] == 'M'))
                &&  ((p[-3] == 'b') || (p[-3] == 'B'))
                &&  ((p[-4] == '.') || (p[-4] == '.'))) {
-                    if (IM_IS_JPEG(img)) {
+                    if (IM_IS_JPEG(img) || IM_IS_BAYER(img)) {
                         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
                         "Image is not BMP!"));
                     }
@@ -470,7 +470,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
 {
     switch (imblib_parse_extension(img, path)) {
         case FORMAT_DONT_CARE:
-            if (IM_IS_JPEG(img)) {
+            if (IM_IS_JPEG(img) || IM_IS_BAYER(img)) {
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
                 jpeg_write(img, new_path, quality);
                 fb_free();

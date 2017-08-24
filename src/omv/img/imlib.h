@@ -725,7 +725,7 @@ extern const int8_t kernel_high_pass_3[9];
 
 #define IM_IS_JPEG(img) \
     ({ __typeof__ (img) _img = (img); \
-       _img->bpp >= 3; })
+       _img->bpp >= 4; })
 
 #define IM_X_INSIDE(img, x) \
     ({ __typeof__ (img) _img = (img); \
