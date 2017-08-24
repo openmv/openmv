@@ -520,7 +520,7 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
 
@@ -563,7 +563,7 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
 static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
 
@@ -645,7 +645,7 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
 static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
 
@@ -666,7 +666,7 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
 static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
     int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), " 1 <= quality <= 100");
 
@@ -761,7 +761,7 @@ static mp_obj_t py_image_clear(mp_obj_t img_obj)
 static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_x = mp_obj_get_int(x_obj);
     int arg_y = mp_obj_get_int(y_obj);
@@ -784,7 +784,7 @@ static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_
 static mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_x = mp_obj_get_int(args[1]);
     int arg_y = mp_obj_get_int(args[2]);
@@ -808,7 +808,7 @@ static mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args)
 static mp_obj_t py_image_draw_line(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     mp_obj_t *arg_vec;
     mp_obj_get_array_fixed_n(args[1], 4, &arg_vec);
@@ -826,7 +826,7 @@ static mp_obj_t py_image_draw_line(uint n_args, const mp_obj_t *args, mp_map_t *
 static mp_obj_t py_image_draw_rectangle(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     mp_obj_t *arg_vec;
     mp_obj_get_array_fixed_n(args[1], 4, &arg_vec);
@@ -844,7 +844,7 @@ static mp_obj_t py_image_draw_rectangle(uint n_args, const mp_obj_t *args, mp_ma
 static mp_obj_t py_image_draw_circle(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_cx = mp_obj_get_int(args[1]);
     int arg_cy = mp_obj_get_int(args[2]);
@@ -858,7 +858,7 @@ static mp_obj_t py_image_draw_circle(uint n_args, const mp_obj_t *args, mp_map_t
 static mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_x_off       = mp_obj_get_int(args[1]);
     int arg_y_off       = mp_obj_get_int(args[2]);
@@ -872,7 +872,7 @@ static mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t
 static mp_obj_t py_image_draw_cross(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_x = mp_obj_get_int(args[1]);
     int arg_y = mp_obj_get_int(args[2]);
@@ -887,7 +887,7 @@ static mp_obj_t py_image_draw_cross(uint n_args, const mp_obj_t *args, mp_map_t 
 static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     py_kp_obj_t *kpts_obj = ((py_kp_obj_t*)args[1]);
     int arg_c = py_helper_lookup_color(kw_args, -1); // white
@@ -910,7 +910,7 @@ static mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
 static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     mp_uint_t arg_t_len;
     mp_obj_t *arg_t;
@@ -956,7 +956,7 @@ static mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 static mp_obj_t py_image_invert(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     imlib_invert(arg_img);
     return img_obj;
@@ -965,7 +965,7 @@ static mp_obj_t py_image_invert(mp_obj_t img_obj)
 static mp_obj_t py_image_b_and(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
         imlib_b_and(arg_img, mp_obj_str_get_str(other_obj), NULL);
@@ -979,7 +979,7 @@ static mp_obj_t py_image_b_and(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_b_nand(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
         imlib_b_nand(arg_img, mp_obj_str_get_str(other_obj), NULL);
@@ -993,7 +993,7 @@ static mp_obj_t py_image_b_nand(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_b_or(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
         imlib_b_or(arg_img, mp_obj_str_get_str(other_obj), NULL);
@@ -1007,7 +1007,7 @@ static mp_obj_t py_image_b_or(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_b_nor(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
         imlib_b_nor(arg_img, mp_obj_str_get_str(other_obj), NULL);
@@ -1021,7 +1021,7 @@ static mp_obj_t py_image_b_nor(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_b_xor(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
         imlib_b_xor(arg_img, mp_obj_str_get_str(other_obj), NULL);
@@ -1035,7 +1035,7 @@ static mp_obj_t py_image_b_xor(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_b_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
         imlib_b_xnor(arg_img, mp_obj_str_get_str(other_obj), NULL);
@@ -1049,7 +1049,7 @@ static mp_obj_t py_image_b_xnor(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
@@ -1062,7 +1062,7 @@ static mp_obj_t py_image_erode(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 static mp_obj_t py_image_dilate(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
@@ -1075,7 +1075,7 @@ static mp_obj_t py_image_dilate(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 static mp_obj_t py_image_negate(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     imlib_negate(arg_img);
     return img_obj;
@@ -1084,7 +1084,7 @@ static mp_obj_t py_image_negate(mp_obj_t img_obj)
 static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
         imlib_difference(arg_img, mp_obj_str_get_str(other_obj), NULL);
@@ -1098,7 +1098,7 @@ static mp_obj_t py_image_difference(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_replace(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     if (MP_OBJ_IS_STR(other_obj)) {
         imlib_replace(arg_img, mp_obj_str_get_str(other_obj), NULL);
@@ -1112,7 +1112,7 @@ static mp_obj_t py_image_replace(mp_obj_t img_obj, mp_obj_t other_obj)
 static mp_obj_t py_image_blend(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int alpha = IM_MIN(IM_MAX(py_helper_lookup_int(kw_args,
         MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 256);
@@ -1129,7 +1129,7 @@ static mp_obj_t py_image_blend(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
@@ -1163,7 +1163,7 @@ static mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 static mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
@@ -1176,7 +1176,7 @@ static mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
 static mp_obj_t py_image_mean(mp_obj_t img_obj, mp_obj_t k_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_ksize = mp_obj_get_int(k_obj);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
@@ -1188,7 +1188,7 @@ static mp_obj_t py_image_mean(mp_obj_t img_obj, mp_obj_t k_obj)
 static mp_obj_t py_image_mode(mp_obj_t img_obj, mp_obj_t k_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_ksize = mp_obj_get_int(k_obj);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
@@ -1200,7 +1200,7 @@ static mp_obj_t py_image_mode(mp_obj_t img_obj, mp_obj_t k_obj)
 static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
@@ -1215,7 +1215,7 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG((arg_ksize == 3 || arg_ksize == 5), "Kernel Size must be 3 or 5");
@@ -1232,7 +1232,7 @@ static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
 static mp_obj_t py_image_histeq(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     imlib_histeq(arg_img);
     return img_obj;
@@ -1241,7 +1241,7 @@ static mp_obj_t py_image_histeq(mp_obj_t img_obj)
 static mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     float strength = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_strength),
                                             (n_args > 1) ? mp_obj_get_float(args[1]) : 1.8);
@@ -1259,7 +1259,7 @@ static mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *
 static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     imlib_mask_ellipse(arg_img);
     return img_obj;
@@ -1774,7 +1774,7 @@ static const mp_obj_type_t py_histogram_type = {
 static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -1865,7 +1865,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
 static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -2065,7 +2065,7 @@ static const mp_obj_type_t py_line_type = {
 static mp_obj_t py_image_get_regression(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -2308,7 +2308,7 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
 static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -2398,7 +2398,7 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
 static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -2442,7 +2442,7 @@ static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t 
 static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -2565,7 +2565,7 @@ static const mp_obj_type_t py_circle_type = {
 static mp_obj_t py_image_find_circles(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -2693,7 +2693,7 @@ static const mp_obj_type_t py_rect_type = {
 static mp_obj_t py_image_find_rects(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -2855,7 +2855,7 @@ static const mp_obj_type_t py_qrcode_type = {
 static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -3055,7 +3055,7 @@ static const mp_obj_type_t py_apriltag_type = {
 static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -3229,7 +3229,7 @@ static const mp_obj_type_t py_datamatrix_type = {
 static mp_obj_t py_image_find_datamatrices(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -3376,7 +3376,7 @@ static const mp_obj_type_t py_barcode_type = {
 static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -3419,7 +3419,7 @@ static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map
 static mp_obj_t py_image_find_number(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
@@ -3440,7 +3440,7 @@ static mp_obj_t py_image_find_number(uint n_args, const mp_obj_t *args, mp_map_t
 static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int x_div = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
@@ -3465,7 +3465,7 @@ static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map
 static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int x_div = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
@@ -3488,7 +3488,7 @@ static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_m
 static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_t y_div_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int x_div = mp_obj_get_int(x_div_obj);
     PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
@@ -3518,7 +3518,7 @@ static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_
 static mp_obj_t py_image_mean_pooled(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_t y_div_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     int x_div = mp_obj_get_int(x_div_obj);
     PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
@@ -3587,10 +3587,10 @@ static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map
 static mp_obj_t py_image_find_displacement(mp_obj_t img_obj, mp_obj_t template_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     image_t *arg_template = py_image_cobj(template_obj);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_template), "Operation not supported on JPEG or RAW frames.");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_template), "Operation not supported on JPEG or RAW frames.");
 
     PY_ASSERT_FALSE_MSG((arg_img->w != arg_template->w)
                      || (arg_img->h != arg_template->h),

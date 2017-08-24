@@ -276,8 +276,7 @@ static mp_obj_t py_lcd_get_backlight()
 static mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     rectangle_t arg_r;
     py_helper_lookup_rectangle(kw_args, arg_img, &arg_r);

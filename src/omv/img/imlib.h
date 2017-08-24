@@ -727,6 +727,10 @@ extern const int8_t kernel_high_pass_3[9];
     ({ __typeof__ (img) _img = (img); \
        _img->bpp >= 4; })
 
+#define IM_IS_MUTABLE(img) \
+    ({ __typeof__ (img) _img = (img); \
+       (_img->bpp == 1 || _img->bpp == 2); })
+
 #define IM_X_INSIDE(img, x) \
     ({ __typeof__ (img) _img = (img); \
        __typeof__ (x) _x = (x); \

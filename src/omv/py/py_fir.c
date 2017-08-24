@@ -389,8 +389,7 @@ mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (type == FIR_NONE) return mp_const_none;
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     float Ta = mp_obj_get_float(args[1]);
     float min = -17.7778, max = 37.7778; // 0F to 100F
@@ -438,8 +437,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (type == FIR_NONE) return mp_const_none;
     image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),
-            "Operation not supported on JPEG");
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
     mp_obj_t *arg_To;
     mp_obj_get_array_fixed_n(args[1], 64, &arg_To);
