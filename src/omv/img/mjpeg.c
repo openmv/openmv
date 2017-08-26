@@ -93,7 +93,7 @@ void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, i
 {
     write_data(fp, "00dc", 4); // FOURCC fcc;
     *frames += 1;
-    if (img->bpp >= IMAGE_BPP_JPEG) {
+    if (IM_IS_JPEG(img)) {
         int pad = (((img->bpp + 3) / 4) * 4) - img->bpp;
         write_long(fp, img->bpp + pad); // DWORD cb;
         write_data(fp, img->pixels, img->bpp + pad); // reading past okay

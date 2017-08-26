@@ -73,8 +73,8 @@ static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw
 {
     py_gif_obj_t *arg_gif = args[0];
     image_t *arg_img = py_image_cobj(args[1]);
-    PY_ASSERT_FALSE_MSG((arg_img->bpp >= IMAGE_BPP_JPEG),   "Operation not supported on JPEG images.");
-    PY_ASSERT_FALSE_MSG((arg_img->bpp == IMAGE_BPP_BINARY), "Operation not supported on binary images.");
+    PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),   "Operation not supported on JPEG images.");
+    PY_ASSERT_FALSE_MSG(IM_IS_BINARY(arg_img), "Operation not supported on binary images.");
     PY_ASSERT_FALSE_MSG((arg_gif->width != arg_img->w) ||
             (arg_gif->height != arg_img->h), "Unexpected image geometry!");
 
