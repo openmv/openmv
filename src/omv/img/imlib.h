@@ -883,7 +883,8 @@ typedef enum save_image_format {
     FORMAT_DONT_CARE,
     FORMAT_BMP,
     FORMAT_PNM,
-    FORMAT_JPG
+    FORMAT_JPG,
+    FORMAT_RAW,
 } save_image_format_t;
 
 typedef struct img_read_settings {

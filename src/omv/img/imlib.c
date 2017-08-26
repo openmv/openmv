@@ -323,8 +323,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
                &&  ((p[-3] == 'b') || (p[-3] == 'B'))
                &&  ((p[-4] == '.') || (p[-4] == '.'))) {
                     if (IM_IS_JPEG(img) || IM_IS_BAYER(img)) {
-                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
-                        "Image is not BMP!"));
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image is not BMP!"));
                     }
                     return FORMAT_BMP;
         } else if (((p[-1] == 'm') || (p[-1] == 'M'))
@@ -332,8 +331,7 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
                &&  ((p[-3] == 'p') || (p[-3] == 'P'))
                &&  ((p[-4] == '.') || (p[-4] == '.'))) {
                     if (!IM_IS_RGB565(img)) {
-                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
-                        "Image is not PPM!"));
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image is not PPM!"));
                     }
                     return FORMAT_PNM;
         } else if (((p[-1] == 'm') || (p[-1] == 'M'))
@@ -341,11 +339,19 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
                &&  ((p[-3] == 'p') || (p[-3] == 'P'))
                &&  ((p[-4] == '.') || (p[-4] == '.'))) {
                     if (!IM_IS_GS(img)) {
-                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError,
-                        "Image is not PGM!"));
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image is not PGM!"));
                     }
                     return FORMAT_PNM;
+        } else if (((p[-1] == 'w') || (p[-1] == 'W'))
+               &&  ((p[-2] == 'a') || (p[-2] == 'A'))
+               &&  ((p[-3] == 'r') || (p[-3] == 'R'))
+               &&  ((p[-4] == '.') || (p[-4] == '.'))) {
+                    if (!IM_IS_BAYER(img)) {
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image is not BAYER!"));
+                    }
+                    return FORMAT_RAW;
         }
+
     }
     return FORMAT_DONT_CARE;
 }
@@ -380,15 +386,13 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
 static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
 {
     switch (rs->format) {
-        case FORMAT_DONT_CARE: // won't happen
-            break;
         case FORMAT_BMP:
             bmp_read_pixels(fp, img, line_start, line_end, &rs->bmp_rs);
             break;
         case FORMAT_PNM:
             ppm_read_pixels(fp, img, line_start, line_end, &rs->ppm_rs);
             break;
-        case FORMAT_JPG: // won't happen
+        default: // won't happen
             break;
     }
 }
@@ -469,6 +473,19 @@ void imlib_load_image(image_t *img, const char *path)
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality)
 {
     switch (imblib_parse_extension(img, path)) {
+        case FORMAT_BMP:
+            bmp_write_subimg(img, path, roi);
+            break;
+        case FORMAT_PNM:
+            ppm_write_subimg(img, path, roi);
+            break;
+        case FORMAT_RAW: {
+            FIL fp;
+            file_write_open(&fp, path);
+            write_data(&fp, img->pixels, img->w * img->h);
+            break;
+        }
+        case FORMAT_JPG:
         case FORMAT_DONT_CARE:
             if (IM_IS_JPEG(img) || IM_IS_BAYER(img)) {
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
@@ -479,15 +496,6 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
                 bmp_write_subimg(img, new_path, roi);
                 fb_free();
             }
-            break;
-        case FORMAT_BMP:
-            bmp_write_subimg(img, path, roi);
-            break;
-        case FORMAT_PNM:
-            ppm_write_subimg(img, path, roi);
-            break;
-        case FORMAT_JPG:
-            jpeg_write(img, path, quality);
             break;
     }
 }
