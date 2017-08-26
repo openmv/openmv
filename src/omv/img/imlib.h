@@ -707,9 +707,9 @@ extern const int8_t kernel_high_pass_3[9];
 #define IM_B_HIST_SIZE (256)
 #define IM_B_HIST_OFFSET (512)
 
-#define IM_IS_NULL(img) \
+#define IM_IS_BINARY(img) \
     ({ __typeof__ (img) _img = (img); \
-       _img->bpp <= 0; })
+       _img->bpp == 0; })
 
 #define IM_IS_GS(img) \
     ({ __typeof__ (img) _img = (img); \
