@@ -32,13 +32,9 @@ typedef enum {
 
 typedef enum {
     // C/SIF Resolutions
-    FRAMESIZE_QQQQCIF,  // 22x18
-    FRAMESIZE_QQQCIF,   // 44x36
     FRAMESIZE_QQCIF,    // 88x72
     FRAMESIZE_QCIF,     // 176x144
     FRAMESIZE_CIF,      // 352x288
-    FRAMESIZE_QQQQSIF,  // 22x15
-    FRAMESIZE_QQQSIF,   // 44x30
     FRAMESIZE_QQSIF,    // 88x60
     FRAMESIZE_QSIF,     // 176x120
     FRAMESIZE_SIF,      // 352x240
@@ -48,11 +44,9 @@ typedef enum {
     FRAMESIZE_QQVGA,    // 160x120
     FRAMESIZE_QVGA,     // 320x240
     FRAMESIZE_VGA,      // 640x480
-    FRAMESIZE_HQQQQVGA, // 30x20
     FRAMESIZE_HQQQVGA,  // 60x40
     FRAMESIZE_HQQVGA,   // 120x80
     FRAMESIZE_HQVGA,    // 240x160
-    FRAMESIZE_HVGA,     // 480x320
     // Other
     FRAMESIZE_LCD,      // 128x160
     FRAMESIZE_QQVGA2,   // 128x160

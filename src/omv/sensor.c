@@ -37,13 +37,9 @@ extern uint8_t _line_buf;
 
 const int resolution[][2] = {
     // C/SIF Resolutions
-    {22,   18  },    /* QQQQCIF   */
-    {44,   36  },    /* QQQCIF    */
     {88,   72  },    /* QQCIF     */
     {176,  144 },    /* QCIF      */
     {352,  288 },    /* CIF       */
-    {22,   15  },    /* QQQQSIF   */
-    {44,   30  },    /* QQQSIF    */
     {88,   60  },    /* QQSIF     */
     {176,  120 },    /* QSIF      */
     {352,  240 },    /* SIF       */
@@ -53,11 +49,9 @@ const int resolution[][2] = {
     {160,  120 },    /* QQVGA     */
     {320,  240 },    /* QVGA      */
     {640,  480 },    /* VGA       */
-    {30,   20  },    /* HQQQQVGA  */
     {60,   40  },    /* HQQQVGA   */
     {120,  80  },    /* HQQVGA    */
     {240,  160 },    /* HQVGA     */
-    {480,  320 },    /* HVGA      */
     // Other
     {128,  160 },    /* LCD       */
     {128,  160 },    /* QQVGA2    */
