@@ -2728,6 +2728,7 @@ static mp_obj_t py_image_find_rects(uint n_args, const mp_obj_t *args, mp_map_t 
 }
 #endif
 
+#ifdef OMV_ENABLE_QRCODES
 // QRCode Object //
 #define py_qrcode_obj_size 10
 typedef struct py_qrcode_obj {
@@ -2894,6 +2895,7 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
 
     return objects_list;
 }
+#endif
 
 #ifdef OMV_ENABLE_APRILTAGS
 // AprilTag Object //
@@ -3838,7 +3840,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_circles_obj, 1, py_image_find_ci
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_rects_obj, 1, py_image_find_rects);
 #endif
 /* Code Detection */
+#ifdef OMV_ENABLE_QRCODES
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_qrcodes_obj, 1, py_image_find_qrcodes);
+#endif
 #ifdef OMV_ENABLE_APRILTAGS
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_apriltags_obj, 1, py_image_find_apriltags);
 #endif
@@ -3942,7 +3946,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_rects),          (mp_obj_t)&py_image_find_rects_obj},
 #endif
     /* Code Detection */
+#ifdef OMV_ENABLE_QRCODES
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_qrcodes),        (mp_obj_t)&py_image_find_qrcodes_obj},
+#endif
 #ifdef OMV_ENABLE_APRILTAGS
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_apriltags),      (mp_obj_t)&py_image_find_apriltags_obj},
 #endif

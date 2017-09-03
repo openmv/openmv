@@ -32,6 +32,9 @@
 // Enable Find_Rects
 #define OMV_ENABLE_FIND_RECTS
 
+// Enable QRCodes (14 KB)
+#define OMV_ENABLE_QRCODES
+
 // Enable AprilTags (64 KB).
 #define OMV_ENABLE_APRILTAGS
 
