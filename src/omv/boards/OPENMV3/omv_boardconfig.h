@@ -23,6 +23,9 @@
 // Sensor external clock timer frequency.
 #define OMV_XCLK_FREQUENCY      (9000000)
 
+// Sensor PLL register value.
+#define OMV_OV7725_PLL_CONFIG   (0x81)  // x6
+
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
 

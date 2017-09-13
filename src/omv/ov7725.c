@@ -14,12 +14,13 @@
 #include "ov7725.h"
 #include "systick.h"
 #include "ov7725_regs.h"
+#include "omv_boardconfig.h"
 
 static const uint8_t default_regs[][2] = {
     {COM3,          COM3_SWAP_YUV},
     {COM7,          COM7_RES_VGA | COM7_FMT_RGB565 | COM7_FMT_RGB},
 
-    {COM4,          0x81}, /* PLL x6 */
+    {COM4,          OMV_OV7725_PLL_CONFIG},
     {CLKRC,         0xC0}, /* Res/Bypass pre-scalar */
 
     // VGA Window Size
