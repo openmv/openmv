@@ -469,12 +469,8 @@ Q(rho_margin)
 // Find Line Segments
 Q(find_line_segments)
 // duplicate Q(roi)
-// duplicate Q(x_stride)
-// duplicate Q(y_stride)
-// duplicate Q(threshold)
-// duplicate Q(theta_margin)
-// duplicate Q(rho_margin)
-Q(segment_threshold)
+Q(merge_distance)
+Q(max_theta_diff)
 
 // Find Circles
 Q(find_circles)

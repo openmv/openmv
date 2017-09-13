@@ -573,7 +573,7 @@ size_t trace_line(image_t *ptr, line_t *l, int *theta_buffer, uint32_t *mag_buff
 
 // http://www.brackeen.com/vga/source/djgpp20/lines.c.html
 // http://www.brackeen.com/vga/source/bc31/lines.c.html
-static bool merge_line(line_t *big, line_t *small, unsigned int threshold)
+bool merge_line(line_t *big, line_t *small, unsigned int threshold)
 {
     int dx = big->x2 - big->x1; // the horizontal distance of the line
     int dy = big->y2 - big->y1; // the vertical distance of the line
@@ -634,7 +634,7 @@ static bool merge_line(line_t *big, line_t *small, unsigned int threshold)
     return false;
 }
 
-static void merge_alot(list_t *out, int threshold, int theta_threshold)
+void merge_alot(list_t *out, int threshold, int theta_threshold)
 {
     for (;;) {
         bool merge_occured = false;

@@ -2447,17 +2447,11 @@ static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, m
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
-    unsigned int x_stride = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_stride), 2);
-    PY_ASSERT_TRUE_MSG(x_stride > 0, "x_stride must not be zero.");
-    unsigned int y_stride = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_stride), 1);
-    PY_ASSERT_TRUE_MSG(y_stride > 0, "y_stride must not be zero.");
-
     list_t out;
     fb_alloc_mark();
-    imlib_find_line_segments(&out, arg_img, &roi, x_stride, y_stride, py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 1000),
-                                                                      py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_theta_margin), 25),
-                                                                      py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rho_margin), 25),
-                                                                      py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_segment_threshold), 100));
+    imlib_lsd_find_line_segments(&out, arg_img, &roi,
+                                 py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge_distance), 0),
+                                 py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_max_theta_diff), 15));
     fb_alloc_free_till_mark();
 
     mp_obj_list_t *objects_list = mp_obj_new_list(list_size(&out), NULL);
@@ -2728,6 +2722,7 @@ static mp_obj_t py_image_find_rects(uint n_args, const mp_obj_t *args, mp_map_t 
 }
 #endif
 
+#ifdef OMV_ENABLE_QRCODES
 // QRCode Object //
 #define py_qrcode_obj_size 10
 typedef struct py_qrcode_obj {
@@ -2894,6 +2889,7 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
 
     return objects_list;
 }
+#endif
 
 #ifdef OMV_ENABLE_APRILTAGS
 // AprilTag Object //
@@ -3838,7 +3834,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_circles_obj, 1, py_image_find_ci
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_rects_obj, 1, py_image_find_rects);
 #endif
 /* Code Detection */
+#ifdef OMV_ENABLE_QRCODES
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_qrcodes_obj, 1, py_image_find_qrcodes);
+#endif
 #ifdef OMV_ENABLE_APRILTAGS
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_apriltags_obj, 1, py_image_find_apriltags);
 #endif
@@ -3942,7 +3940,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_rects),          (mp_obj_t)&py_image_find_rects_obj},
 #endif
     /* Code Detection */
+#ifdef OMV_ENABLE_QRCODES
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_qrcodes),        (mp_obj_t)&py_image_find_qrcodes_obj},
+#endif
 #ifdef OMV_ENABLE_APRILTAGS
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_apriltags),      (mp_obj_t)&py_image_find_apriltags_obj},
 #endif

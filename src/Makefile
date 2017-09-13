@@ -179,6 +179,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	lbp.o                                   \
 	eye.o                                   \
 	hough.o                                 \
+	lsd.o                                   \
 	sincos_tab.o                            \
 	edge.o                                  \
 	hog.o                                   \
