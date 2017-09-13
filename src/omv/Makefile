@@ -61,6 +61,7 @@ SRCS += $(addprefix img/,   \
 	lbp.c                   \
 	eye.c                   \
 	hough.c                 \
+	lsd.c                   \
 	sincos_tab.c            \
 	edge.c                  \
 	hog.c                   \
