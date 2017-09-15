@@ -4,9 +4,9 @@
 <img src="https://raw.githubusercontent.com/openmv/openmv-media/master/boards/openmv-cam/v3/web-new-cam-v3-angle.jpg" width="320" height="320" border="10">
 </p>
 
-The OpenMV project aims at making machine vision more accessible to hobbyists and makers, by developing open-source, low-cost machine vision cameras. The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then. The first generation of OpenMV cameras is based the STM's STM32F ARM Cortex-M MCUs and Omnivision OV7725 sensors.
+The OpenMV project aims at making machine vision more accessible to makers by developing open-source, low-cost machine vision cameras. The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then.
 
-OpenMV cameras are programmable in Python3 and come with an extensive set of image processing functions such as face detection and tracking, keypoints descriptor, color blobs tracking, QR and Bar codes support, AprilTags, GIF and MJPEG recording and much more.
+The first generation of OpenMV cameras is based on STM's STM32F ARM Cortex-M Digital Signal Controllers (DSCs) and Omnivision sensors. OpenMV cameras are programmable in Python3 and come with an extensive set of image processing functions such as face detection and tracking, keypoints descriptor, color blobs tracking, QR and Bar codes support, AprilTags, GIF and MJPEG recording and much more.
 
 The OpenMV camera board has built-in RGB and IR LEDs, USB FS for programming and video streaming, uSD socket and I/O headers breaking out PWM, UARTs, SPI and I2C. Additionally, OpenMV supports extension modules (shields) using the I/O headers such as WiFi, BLE, Thermal (FIR) and LCD shields.
 
