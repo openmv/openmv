@@ -28,4 +28,6 @@
 #include "readline.h"
 #include "extint.h"
 #include "usb.h"
+#include "extmod/vfs.h"
+#include "extmod/vfs_fat.h"
 #endif // __MP_H__
