@@ -34,7 +34,6 @@ TOP_DIR=$(shell pwd)
 BUILD=$(TOP_DIR)/build
 CMSIS_DIR=cmsis
 STUSB_DIR=stusb
-FATFS_DIR=fatfs
 MICROPY_DIR=micropython
 OMV_DIR=omv
 WINC1500_DIR=winc1500
@@ -68,20 +67,19 @@ endif
 include $(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/omv_boardconfig.mk
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
 CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard
-CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000 -D$(TARGET) -DSTM32_HAL_H=$(HAL_INC) \
-          -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(MAIN_APP_ADDR)
+CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000 -D$(TARGET) -DSTM32_HAL_H=$(HAL_INC) -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(MAIN_APP_ADDR)
 
 CFLAGS += -I. -Iinclude
 CFLAGS += -I$(TOP_DIR)/$(BOOT_DIR)/include/
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/st
 CFLAGS += -I$(TOP_DIR)/$(STHAL_DIR)/include/
-CFLAGS += -I$(TOP_DIR)/$(FATFS_DIR)/include/
 
 CFLAGS += -I$(BUILD)/$(MICROPY_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/py/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/mp-readline
+CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/oofatfs
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/core/inc/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/class/inc/
@@ -112,8 +110,6 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
 #FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
 #FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/TransformFunctions/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/*.o)
-FIRM_OBJ += $(wildcard $(BUILD)/$(FATFS_DIR)/src/option/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
@@ -185,7 +181,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	hog.o                                   \
 	lenet.o                                 \
 	lenet_model_num.o                       \
-   )
+	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_helper.o                             \
@@ -215,6 +211,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usbd_conf.o             \
 	usbd_desc.o             \
 	usbd_cdc_interface.o    \
+	usbd_hid_interface.o    \
 	usbd_msc_storage.o      \
 	pendsv.o                \
 	bufhelper.o             \
@@ -224,8 +221,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pybstdio.o              \
 	help.o                  \
 	input.o                 \
-	import.o                \
-	lexerfatfs.o            \
 	flash.o                 \
 	storage.o               \
 	rtc.o                   \
@@ -246,30 +241,31 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	servo.o                 \
 	rng.o                   \
 	led.o                   \
+	wdt.o                   \
 	mphalport.o             \
 	sdcard.o                \
 	fatfs_port.o            \
-	builtin_open.o          \
 	extint.o                \
 	modpyb.o                \
 	modstm.o                \
 	moduos.o                \
 	modutime.o              \
-	moduselect.o            \
 	modusocket.o            \
 	modnetwork.o            \
 	modmachine.o            \
-    )
+	machine_i2c.o           \
+	frozen_mpy.o            \
+	)
 
 #------------- MicroPy Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	utils/pyexec.o          \
-	utils/pyhelp.o          \
 	utils/printf.o          \
+	utils/interrupt_char.o  \
 	libc/string0.o          \
 	netutils/netutils.o     \
 	timeutils/timeutils.o   \
-    )
+	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	math.o          \
@@ -297,11 +293,12 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	sf_erf.o        \
 	wf_lgamma.o     \
 	wf_tgamma.o     \
-    )
+	nearbyintf.o    \
+	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
 	readline.o               \
-    )
+	)
 
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
@@ -321,17 +318,29 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	moduhashlib.o       \
 	modubinascii.o      \
 	modurandom.o        \
-	fsusermount.o       \
+	moduselect.o        \
+	modutimeq.o         \
+	moduheapq.o         \
+	vfs.o               \
 	vfs_fat.o           \
-	vfs_fat_ffconf.o    \
-	vfs_fat_diskio.o    \
 	vfs_fat_file.o      \
-	vfs_fat_lexer.o     \
 	vfs_fat_misc.o      \
+	vfs_reader.o        \
+	vfs_fat_diskio.o    \
+	virtpin.o           \
 	machine_mem.o       \
 	machine_i2c.o       \
-    )
+	machine_spi.o       \
+	machine_pulse.o     \
+	machine_signal.o    \
+	machine_pinbase.o   \
+	utime_mphal.o       \
+	)
 
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
+	ff.o                \
+	option/unicode.o    \
+	)
 
 # Bootloader object files
 BOOT_OBJ += $(wildcard $(BUILD)/$(BOOT_DIR)/src/*.o)
@@ -378,7 +387,6 @@ BOOTLOADER_OBJS: FIRMWARE_OBJS
 FIRMWARE_OBJS:
 	$(MAKE)  -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR) CFLAGS="$(CFLAGS) -fno-strict-aliasing"
 	$(MAKE)  -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)
-	$(MAKE)  -C $(FATFS_DIR)          BUILD=$(BUILD)/$(FATFS_DIR)
 	$(MAKE)  -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR) BOARD=$(TARGET) QSTR_DEFS=$(OMV_QSTR_DEFS)
 	$(MAKE)  -C $(WINC1500_DIR)       BUILD=$(BUILD)/$(WINC1500_DIR)
 	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)
