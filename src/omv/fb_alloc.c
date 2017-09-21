@@ -36,7 +36,7 @@ void fb_alloc_mark()
 
     // Check if allocation overwrites the framebuffer pixels
     if (new_pointer < (char *) MAIN_FB_PIXELS()) {
-        nlr_raise_for_fb_alloc_mark(mp_obj_new_exception_msg(&mp_type_MemoryError, "FB Alloc Collision!!!"));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "FB Alloc Collision!!!"));
     }
 
     // fb_alloc does not allow regions which are a size of 0 to be alloced,
