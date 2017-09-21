@@ -262,7 +262,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
                 // interrupt running code by raising an exception
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-                pendsv_nlr_jump(mp_const_ide_interrupt);
+                pendsv_nlr_jump_hard(mp_const_ide_interrupt);
             }
             cmd = USBDBG_NONE;
             break;
