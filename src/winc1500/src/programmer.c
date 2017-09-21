@@ -1,4 +1,4 @@
-#include <ff.h>
+#include <ff_wrapper.h>
 #include <stdio.h>
 #include "fb_alloc.h"
 
@@ -28,7 +28,7 @@ int burn_firmware()
     int ret = M2M_ERR_FAIL;
     uint8_t	*buf = fb_alloc(FLASH_SECTOR_SZ);
 
-    if (f_open(&fp, FW_PATH, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
+    if (f_open_helper(&fp, FW_PATH, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
     }
 
@@ -75,7 +75,7 @@ int verify_firmware()
     uint8_t	*file_buf = fb_alloc(FLASH_SECTOR_SZ);
     uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ);
 
-    if (f_open(&fp, FW_PATH, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
+    if (f_open_helper(&fp, FW_PATH, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
     }
 
@@ -129,7 +129,7 @@ int dump_firmware()
     int ret = M2M_ERR_FAIL;
     uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ);
 
-    if (f_open(&fp, FW_DUMP_PATH, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+    if (f_open_helper(&fp, FW_DUMP_PATH, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
         goto error;
     }
 

@@ -14,7 +14,7 @@ static const pin_obj_t *PIN_CS  = &(WINC_PIN_CS);
 static const pin_obj_t *PIN_EN  = &(WINC_PIN_EN);
 static const pin_obj_t *PIN_RST = &(WINC_PIN_RST);
 static const pin_obj_t *PIN_IRQ = &(WINC_PIN_IRQ);
-static const mp_obj_fun_builtin_t irq_callback_obj;
+static const mp_obj_fun_builtin_fixed_t irq_callback_obj;
 
 /*
 *	@fn		nm_bsp_init
