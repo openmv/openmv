@@ -64,13 +64,13 @@ NORETURN void ff_no_intersection(FIL *fp)
 
 void file_read_open(FIL *fp, const char *path)
 {
-    FRESULT res = f_open(fp, path, FA_READ|FA_OPEN_EXISTING);
+    FRESULT res = f_open_helper(fp, path, FA_READ|FA_OPEN_EXISTING);
     if (res != FR_OK) ff_fail(fp, res);
 }
 
 void file_write_open(FIL *fp, const char *path)
 {
-    FRESULT res = f_open(fp, path, FA_WRITE|FA_CREATE_ALWAYS);
+    FRESULT res = f_open_helper(fp, path, FA_WRITE|FA_CREATE_ALWAYS);
     if (res != FR_OK) ff_fail(fp, res);
 }
 
@@ -98,6 +98,72 @@ void file_sync(FIL *fp)
     if (res != FR_OK) ff_fail(fp, res);
 }
 
+// These wrapper functions are used for backward compatibility with
+// OpenMV code using vanilla FatFS. Note: Extracted from cc3200 ftp.c
+
+STATIC FATFS *lookup_path(const TCHAR **path) {
+    mp_vfs_mount_t *fs = mp_vfs_lookup_path(*path, path);
+    if (fs == MP_VFS_NONE || fs == MP_VFS_ROOT) {
+        return NULL;
+    }
+    // here we assume that the mounted device is FATFS
+    return &((fs_user_mount_t*)MP_OBJ_TO_PTR(fs->obj))->fatfs;
+}
+
+FRESULT f_open_helper(FIL *fp, const TCHAR *path, BYTE mode) {
+    FATFS *fs = lookup_path(&path);
+    if (fs == NULL) {
+        return FR_NO_PATH;
+    }
+    return f_open(fs, fp, path, mode);
+}
+
+FRESULT f_opendir_helper(FF_DIR *dp, const TCHAR *path) {
+    FATFS *fs = lookup_path(&path);
+    if (fs == NULL) {
+        return FR_NO_PATH;
+    }
+    return f_opendir(fs, dp, path);
+}
+
+FRESULT f_stat_helper(const TCHAR *path, FILINFO *fno) {
+    FATFS *fs = lookup_path(&path);
+    if (fs == NULL) {
+        return FR_NO_PATH;
+    }
+    return f_stat(fs, path, fno);
+}
+
+FRESULT f_mkdir_helper(const TCHAR *path) {
+    FATFS *fs = lookup_path(&path);
+    if (fs == NULL) {
+        return FR_NO_PATH;
+    }
+    return f_mkdir(fs, path);
+}
+
+FRESULT f_unlink_helper(const TCHAR *path) {
+    FATFS *fs = lookup_path(&path);
+    if (fs == NULL) {
+        return FR_NO_PATH;
+    }
+    return f_unlink(fs, path);
+}
+
+FRESULT f_rename_helper(const TCHAR *path_old, const TCHAR *path_new) {
+    FATFS *fs_old = lookup_path(&path_old);
+    if (fs_old == NULL) {
+        return FR_NO_PATH;
+    }
+    FATFS *fs_new = lookup_path(&path_new);
+    if (fs_new == NULL) {
+        return FR_NO_PATH;
+    }
+    if (fs_old != fs_new) {
+        return FR_NO_PATH;
+    }
+    return f_rename(fs_new, path_old, path_new);
+}
 // When a sector boundary is encountered while writing a file and there are
 // more than 512 bytes left to write FatFs will detect that it can bypass
 // its internal write buffer and pass the data buffer passed to it directly

@@ -10,6 +10,14 @@
 #define __FF_WRAPPER_H__
 #include <stdint.h>
 #include <ff.h>
+//OOFATFS wrappers
+FRESULT f_open_helper(FIL *fp, const TCHAR *path, BYTE mode);
+FRESULT f_opendir_helper(FF_DIR *dp, const TCHAR *path);
+FRESULT f_stat_helper(const TCHAR *path, FILINFO *fno);
+FRESULT f_mkdir_helper(const TCHAR *path);
+FRESULT f_unlink_helper(const TCHAR *path);
+FRESULT f_rename_helper(const TCHAR *path_old, const TCHAR *path_new);
+
 void ff_unsupported_format(FIL *fp);
 void ff_file_corrupted(FIL *fp);
 void ff_not_equal(FIL *fp);
@@ -20,6 +28,7 @@ void file_close(FIL *fp);
 void file_seek(FIL *fp, UINT offset);
 void file_truncate(FIL *fp);
 void file_sync(FIL *fp);
+
 // File buffer functions.
 void file_buffer_init0();
 void file_buffer_on(FIL *fp); // does fb_alloc_all
