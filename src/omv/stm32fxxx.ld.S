@@ -70,7 +70,7 @@ ENTRY(Reset_Handler)
     #define FB_ALLOC_SIZE   (83K)   // minimum fb alloc size
 
     #define STACK_SIZE      (4K)
-    #define HEAP_SIZE       (56K)
+    #define HEAP_SIZE       (55K)
 
     #define LINE_BUF_SIZE   (3K)    // Image line buffer round(640 * 2BPP * 2 buffers).
     #define MSC_BUF_SIZE    (2K)    // USB MSC bot data
