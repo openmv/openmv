@@ -116,6 +116,5 @@ STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t mjpeg_module = {
     .base = { &mp_type_module },
-    .name = MP_QSTR_mjpeg,
     .globals = (mp_obj_t)&globals_dict,
 };

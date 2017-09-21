@@ -20,7 +20,6 @@
 #include "pin.h"
 #include "genhdr/pins.h"
 #include "spi.h"
-#include "pybioctl.h"
 #include "common.h"
 #include "py_helper.h"
 

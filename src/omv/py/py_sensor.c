@@ -471,6 +471,5 @@ STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t sensor_module = {
     .base = { &mp_type_module },
-    .name = MP_QSTR_sensor,
     .globals = (mp_obj_t)&globals_dict,
 };

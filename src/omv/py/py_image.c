@@ -4324,7 +4324,7 @@ mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
     mp_obj_t desc = mp_const_none;
     const char *path = mp_obj_str_get_str(args[0]);
 
-    if ((res = f_open(&fp, path, FA_READ|FA_OPEN_EXISTING)) == FR_OK) {
+    if ((res = f_open_helper(&fp, path, FA_READ|FA_OPEN_EXISTING)) == FR_OK) {
         // Read descriptor type
         res = f_read(&fp, &desc_type, sizeof(desc_type), &bytes);
         if (res != FR_OK || bytes  != sizeof(desc_type)) {
@@ -4387,7 +4387,7 @@ mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
     uint32_t desc_type;
     const char *path = mp_obj_str_get_str(args[1]);
 
-    if ((res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
+    if ((res = f_open_helper(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
         // Find descriptor type
         mp_obj_type_t *desc_obj_type = mp_obj_get_type(args[0]);
         if (desc_obj_type ==  &py_lbp_type) {
@@ -4498,7 +4498,7 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
     printf("Save Descriptor: KPTS(%d)\n", array_length(kpts));
 
     if (array_length(kpts)) {
-        if ((res = f_open(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
+        if ((res = f_open_helper(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
             res = orb_save_descriptor(&fp, kpts);
             f_close(&fp);
         }
@@ -4575,6 +4575,5 @@ STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t image_module = {
     .base = { &mp_type_module },
-    .name = MP_QSTR_image,
     .globals = (mp_obj_t)&globals_dict,
 };
