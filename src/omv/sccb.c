@@ -42,19 +42,17 @@ int SCCB_Init()
 
 uint8_t SCCB_Probe()
 {
-    uint8_t reg = 0x00;
-    uint8_t slv_addr = 0x00;
-
+    uint8_t reg = 0;
     for (int i=0; i<127; i++) {
+        __disable_irq();
         if (HAL_I2C_Master_Transmit(&I2CHandle, i, &reg, 1, TIMEOUT) == HAL_OK) {
-            slv_addr = i;
-            break;
+            __enable_irq();
+            return i;
         }
-        if (i!=126) {
-            systick_sleep(1); // Necessary for OV7725 camera (not for OV2640).
-        }
+        __enable_irq();
+        systick_sleep(1);
     }
-    return slv_addr;
+    return 0;
 }
 
 uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
