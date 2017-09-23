@@ -308,14 +308,17 @@ int main(void)
     //  NOTE: The bootloader enables the CCM/DTCM memory.
     HAL_Init();
 
-    // Stack limit should be less than real stack size, so we have a chance
-    // to recover from limit hit.  (Limit is measured in bytes.)
+    // Stack limit should be less than real stack size, so we have a
+    // chance to recover from limit hit. (Limit is measured in bytes)
     mp_stack_set_top(&_ram_end);
     mp_stack_set_limit((char*)&_ram_end - (char*)&_heap_end - 1024);
 
     // Basic sub-system init
     led_init();
     pendsv_init();
+
+    // Disable all IRQs except Systick
+    irq_set_base_priority(1);
 
     // Re-enable IRQs (disabled by bootloader)
     __enable_irq();
@@ -357,9 +360,6 @@ soft_reset:
     servo_init();
     usbdbg_init();
 
-    //TODO
-    //mod_network_init();
-
     if (first_soft_reset) {
         rtc_init_start(false);
     }
@@ -369,6 +369,8 @@ soft_reset:
     if (first_soft_reset) {
         sensor_init_ret = sensor_init();
     }
+
+    mod_network_init();
 
     // Remove the BASEPRI masking (if any)
     irq_set_base_priority(0);
@@ -548,5 +550,4 @@ soft_reset:
 
     first_soft_reset = false;
     goto soft_reset;
-
 }
