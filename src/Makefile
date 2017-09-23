@@ -48,7 +48,7 @@ FW_DIR=$(TOP_DIR)/../firmware/$(TARGET)
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
-CFLAGS += -O0 -ggdb3
+CFLAGS += -O0 -ggdb3 -DPENDSV_DEBUG
 else
 CFLAGS += -O2 -ggdb3 -DNDEBUG
 endif
