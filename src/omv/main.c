@@ -200,7 +200,10 @@ void NORETURN __fatal_error(const char *msg) {
     FIL fp;
     if (f_open(&vfs_fat->fatfs, &fp, "ERROR.LOG",
                FA_WRITE|FA_CREATE_ALWAYS) == FR_OK) {
-        //f_printf(&fp, "\nFATAL ERROR:\n%s\n", msg);
+        UINT bytes;
+        const char *hdr = "FATAL ERROR:\n";
+        f_write(&fp, hdr, strlen(hdr), &bytes);
+        f_write(&fp, msg, strlen(msg), &bytes);
     }
     f_close(&fp);
     storage_flush();
@@ -411,7 +414,7 @@ soft_reset:
     // we allocate this structure on the heap because vfs->next is a root pointer.
     mp_vfs_mount_t *vfs = m_new_obj_maybe(mp_vfs_mount_t);
     if (vfs == NULL) {
-        // TODO
+        __fatal_error("Failed to alloc memory for vfs mount\n");
     }
 
     vfs->str = "/";
@@ -424,6 +427,11 @@ soft_reset:
     // It is set to the internal flash filesystem by default.
     MP_STATE_PORT(vfs_cur) = vfs;
 
+    // Init USB device to default setting if it was not already configured
+    if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
+        pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
+    }
+
     // check sensor init result
     if (first_soft_reset && sensor_init_ret != 0) {
         char buf[512];
@@ -435,11 +443,6 @@ soft_reset:
     led_state(LED_RED, 0);
     led_state(LED_GREEN, 0);
     led_state(LED_BLUE, 0);
-
-    // Init USB device to default setting if it was not already configured
-    if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
-        pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
-    }
 
     // Run self tests the first time only
     //f_res = f_stat_helper("/selftest.py", NULL);
