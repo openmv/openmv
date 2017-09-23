@@ -72,9 +72,8 @@
 
 int errno;
 // Not sure why MP doesn't like vfs stored here anymore.
-//extern char _vfs_buf;
-//static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
-static fs_user_mount_t _vfs_fat, *vfs_fat = &_vfs_fat;
+extern char _vfs_buf;
+static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
@@ -183,6 +182,7 @@ static const char fresh_selftest_py[] =
 "    print('')\n"
 "    test_int_adc()\n"
 "    test_color_bars()\n"
+"\n"
 ;
 #endif
 
@@ -317,9 +317,6 @@ int main(void)
     led_init();
     pendsv_init();
 
-    // Disable all IRQs except Systick
-    irq_set_base_priority(1);
-
     // Re-enable IRQs (disabled by bootloader)
     __enable_irq();
 
@@ -404,6 +401,8 @@ soft_reset:
         if (res == FR_NO_FILESYSTEM) {
             // Create a fresh fs
             make_flash_fs();
+            // Flush storage
+            storage_flush();
         } else if (res != FR_OK) {
             __fatal_error("Could not access LFS\n");
         }
@@ -424,15 +423,10 @@ soft_reset:
     vfs->obj = MP_OBJ_FROM_PTR(vfs_fat);
     vfs->next = NULL;
     MP_STATE_VM(vfs_mount_table) = vfs;
-
-    // The current directory is used as the boot up directory.
-    // It is set to the internal flash filesystem by default.
     MP_STATE_PORT(vfs_cur) = vfs;
 
     // Init USB device to default setting if it was not already configured
-    if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
-        pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
-    }
+    pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
 
     // check sensor init result
     if (first_soft_reset && sensor_init_ret != 0) {
@@ -447,31 +441,35 @@ soft_reset:
     led_state(LED_BLUE, 0);
 
     // Run self tests the first time only
-    //f_res = f_stat_helper("/selftest.py", NULL);
-    //if (first_soft_reset && f_res == FR_OK) {
-    //    nlr_buf_t nlr;
-    //    if (nlr_push(&nlr) == 0) {
-    //        // Parse, compile and execute the self-tests script.
-    //        pyexec_file("/selftest.py");
-    //        nlr_pop();
-    //    } else {
-    //        // Get the exception message. TODO: might be a hack.
-    //        mp_obj_str_t *str = mp_obj_exception_get_value((mp_obj_t)nlr.ret_val);
-    //        // If any of the self-tests fail log the exception message
-    //        // and loop forever. Note: IDE exceptions will not be caught.
-    //        __fatal_error((const char*) str->data);
-    //    }
+    f_res = f_stat(&vfs_fat->fatfs, "/selftest.py", NULL);
+    if (first_soft_reset && f_res == FR_OK) {
+        nlr_buf_t nlr;
+        if (nlr_push(&nlr) == 0) {
+            // Parse, compile and execute the self-tests script.
+            pyexec_file("/selftest.py");
+            nlr_pop();
+        } else {
+            // Get the exception message. TODO: might be a hack.
+            mp_obj_str_t *str = mp_obj_exception_get_value((mp_obj_t)nlr.ret_val);
+            // If any of the self-tests fail log the exception message
+            // and loop forever. Note: IDE exceptions will not be caught.
+            __fatal_error((const char*) str->data);
+        }
 
-    //    // Success: remove self tests script and flush cache
-    //    f_unlink_helper("/selftest.py");
-    //    storage_flush();
+        // Success: remove self tests script and flush cache
+        f_unlink(&vfs_fat->fatfs, "/selftest.py");
+        storage_flush();
 
-    //    // Set flag for SWD debugger (main.py does not use the frame buffer).
-    //    MAIN_FB()->bpp = 0xDEADBEEF;
-    //}
+        // Set flag for SWD debugger (main.py does not use the frame buffer).
+        MAIN_FB()->bpp = 0xDEADBEEF;
+    }
 
     // Run the main script
-    f_res = f_stat_helper("/main.py", NULL);
+    f_res = f_stat(&vfs_fat->fatfs, "/main.py", NULL);
+    if (f_res != FR_OK) {
+        led_state(LED_GREEN, 1);
+    }
+
     if (first_soft_reset && f_res == FR_OK) {
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
