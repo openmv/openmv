@@ -466,10 +466,6 @@ soft_reset:
 
     // Run the main script
     f_res = f_stat(&vfs_fat->fatfs, "/main.py", NULL);
-    if (f_res != FR_OK) {
-        led_state(LED_GREEN, 1);
-    }
-
     if (first_soft_reset && f_res == FR_OK) {
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
