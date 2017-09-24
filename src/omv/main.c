@@ -229,27 +229,6 @@ void __attribute__((weak))
 }
 #endif
 
-STATIC mp_obj_t pyb_config_source_dir = MP_OBJ_NULL;
-STATIC mp_obj_t pyb_config_main = MP_OBJ_NULL;
-
-STATIC mp_obj_t pyb_source_dir(mp_obj_t source_dir) {
-    if (MP_OBJ_IS_STR(source_dir)) {
-        pyb_config_source_dir = source_dir;
-    }
-    return mp_const_none;
-}
-
-MP_DEFINE_CONST_FUN_OBJ_1(pyb_source_dir_obj, pyb_source_dir);
-
-STATIC mp_obj_t pyb_main(mp_obj_t main) {
-    if (MP_OBJ_IS_STR(main)) {
-        pyb_config_main = main;
-    }
-    return mp_const_none;
-}
-
-MP_DEFINE_CONST_FUN_OBJ_1(pyb_main_obj, pyb_main);
-
 void make_flash_fs()
 {
     FIL fp;
@@ -333,7 +312,7 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
     }
 
     if (selftest && f_res == FR_OK) {
-        // Success: remove self tests script and flush cache
+        // Remove self tests script and flush cache
         f_unlink(&vfs_fat->fatfs, path);
         storage_flush();
 
