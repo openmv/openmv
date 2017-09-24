@@ -291,9 +291,62 @@ void NORETURN __stack_chk_fail(void)
 }
 #endif
 
+FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
+{
+    nlr_buf_t nlr;
+    bool interrupted = false;
+    FRESULT f_res = f_stat(&vfs_fat->fatfs, path, NULL);
+
+    if (f_res == FR_OK) {
+        if (nlr_push(&nlr) == 0) {
+            // Enable IDE interrupts if allowed
+            if (interruptible) {
+                usbdbg_set_irq_enabled(true);
+                usbdbg_set_script_running(true);
+            }
+            // Parse, compile and execute the main script.
+            pyexec_file(path);
+            nlr_pop();
+        } else {
+            interrupted = true;
+        }
+    }
+
+    // Disable IDE interrupts
+    usbdbg_set_irq_enabled(false);
+    usbdbg_set_script_running(false);
+
+    if (interrupted) {
+        if (selftest) {
+            // Get the exception message. TODO: might be a hack.
+            mp_obj_str_t *str = mp_obj_exception_get_value((mp_obj_t)nlr.ret_val);
+            // If any of the self-tests fail log the exception message
+            // and loop forever. Note: IDE exceptions will not be caught.
+            __fatal_error((const char*) str->data);
+        } else {
+            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
+            if (nlr_push(&nlr) == 0) {
+                flash_error(3);
+                nlr_pop();
+            }// If this gets interrupted again ignore it.
+        }
+    }
+
+    if (selftest && f_res == FR_OK) {
+        // Success: remove self tests script and flush cache
+        f_unlink(&vfs_fat->fatfs, path);
+        storage_flush();
+
+        // Set flag for SWD debugger.
+        // Note: main.py does not use the frame buffer.
+        MAIN_FB()->bpp = 0xDEADBEEF;
+    }
+
+    return f_res;
+}
+
 int main(void)
 {
-    FRESULT f_res;
     int sensor_init_ret = 0;
     bool first_soft_reset = true;
 
@@ -440,59 +493,11 @@ soft_reset:
     led_state(LED_GREEN, 0);
     led_state(LED_BLUE, 0);
 
-    // Run self tests the first time only
-    f_res = f_stat(&vfs_fat->fatfs, "/selftest.py", NULL);
-    if (first_soft_reset && f_res == FR_OK) {
-        nlr_buf_t nlr;
-        if (nlr_push(&nlr) == 0) {
-            // Parse, compile and execute the self-tests script.
-            pyexec_file("/selftest.py");
-            nlr_pop();
-        } else {
-            // Get the exception message. TODO: might be a hack.
-            mp_obj_str_t *str = mp_obj_exception_get_value((mp_obj_t)nlr.ret_val);
-            // If any of the self-tests fail log the exception message
-            // and loop forever. Note: IDE exceptions will not be caught.
-            __fatal_error((const char*) str->data);
-        }
-
-        // Success: remove self tests script and flush cache
-        f_unlink(&vfs_fat->fatfs, "/selftest.py");
-        storage_flush();
-
-        // Set flag for SWD debugger (main.py does not use the frame buffer).
-        MAIN_FB()->bpp = 0xDEADBEEF;
+    // Run boot script(s)
+    if (first_soft_reset) {
+        exec_boot_script("/selftest.py", true, false);
+        exec_boot_script("/main.py", false, true);
     }
-
-    // Run the main script
-    f_res = f_stat(&vfs_fat->fatfs, "/main.py", NULL);
-    if (first_soft_reset && f_res == FR_OK) {
-        nlr_buf_t nlr;
-        if (nlr_push(&nlr) == 0) {
-            // Enable IDE interrupt
-            usbdbg_set_irq_enabled(true);
-            // Allow the IDE to interrupt main.py
-            usbdbg_set_script_running(true);
-
-            // Parse, compile and execute the main script.
-            pyexec_file("/main.py");
-            nlr_pop();
-        } else {
-            // Disable IDE interrupt and clear script running
-            usbdbg_set_irq_enabled(false);
-            usbdbg_set_script_running(false);
-
-            mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
-            if (nlr_push(&nlr) == 0) {
-                flash_error(3);
-                nlr_pop();
-            }// if this gets interrupted again ignore it.
-        }
-    }
-
-    // Disable IDE interrupt and clear script running
-    usbdbg_set_irq_enabled(false);
-    usbdbg_set_script_running(false);
 
     // If there's no script ready, just re-exec REPL
     while (!usbdbg_script_ready()) {
