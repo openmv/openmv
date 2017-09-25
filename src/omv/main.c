@@ -71,7 +71,6 @@
 #include "framebuffer.h"
 
 int errno;
-// Not sure why MP doesn't like vfs stored here anymore.
 extern char _vfs_buf;
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
 
