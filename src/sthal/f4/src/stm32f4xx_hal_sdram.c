@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_sdram.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    19-June-2014
+  * @version V1.5.2
+  * @date    22-September-2016
   * @brief   SDRAM HAL module driver.
   *          This file provides a generic firmware to drive SDRAM memories mounted 
   *          as external device.
@@ -63,7 +63,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2014 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -97,26 +97,25 @@
   * @{
   */
 
-/** @defgroup SDRAM 
+/** @defgroup SDRAM SDRAM
   * @brief SDRAM driver modules
   * @{
   */
 #ifdef HAL_SDRAM_MODULE_ENABLED
-#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx)
+#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx) ||\
+    defined(STM32F446xx) || defined(STM32F469xx) || defined(STM32F479xx)
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/    
 /* Private variables ---------------------------------------------------------*/
-/* Private function prototypes -----------------------------------------------*/
-
 /* Private functions ---------------------------------------------------------*/
-
-/** @defgroup SDRAM_Private_Functions
+/* Exported functions --------------------------------------------------------*/
+/** @defgroup SDRAM_Exported_Functions SDRAM Exported Functions
   * @{
   */
-
-/** @defgroup SDRAM_Group1 Initialization and de-initialization functions 
+  
+/** @defgroup SDRAM_Exported_Functions_Group1 Initialization and de-initialization functions 
   * @brief    Initialization and Configuration functions 
   *
   @verbatim    
@@ -148,6 +147,8 @@ HAL_StatusTypeDef HAL_SDRAM_Init(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_TimingTy
   
   if(hsdram->State == HAL_SDRAM_STATE_RESET)
   {  
+    /* Allocate lock resource and initialize it */
+    hsdram->Lock = HAL_UNLOCKED;
     /* Initialize the low level hardware (MSP) */
     HAL_SDRAM_MspInit(hsdram);
   }
@@ -198,6 +199,8 @@ HAL_StatusTypeDef HAL_SDRAM_DeInit(SDRAM_HandleTypeDef *hsdram)
   */
 __weak void HAL_SDRAM_MspInit(SDRAM_HandleTypeDef *hsdram)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hsdram);
   /* NOTE: This function Should not be modified, when the callback is needed,
             the HAL_SDRAM_MspInit could be implemented in the user file
    */ 
@@ -211,6 +214,8 @@ __weak void HAL_SDRAM_MspInit(SDRAM_HandleTypeDef *hsdram)
   */
 __weak void HAL_SDRAM_MspDeInit(SDRAM_HandleTypeDef *hsdram)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hsdram);
   /* NOTE: This function Should not be modified, when the callback is needed,
             the HAL_SDRAM_MspDeInit could be implemented in the user file
    */ 
@@ -243,6 +248,8 @@ void HAL_SDRAM_IRQHandler(SDRAM_HandleTypeDef *hsdram)
   */
 __weak void HAL_SDRAM_RefreshErrorCallback(SDRAM_HandleTypeDef *hsdram)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hsdram);
   /* NOTE: This function Should not be modified, when the callback is needed,
             the HAL_SDRAM_RefreshErrorCallback could be implemented in the user file
    */ 
@@ -256,6 +263,8 @@ __weak void HAL_SDRAM_RefreshErrorCallback(SDRAM_HandleTypeDef *hsdram)
   */
 __weak void HAL_SDRAM_DMA_XferCpltCallback(DMA_HandleTypeDef *hdma)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hdma);
   /* NOTE: This function Should not be modified, when the callback is needed,
             the HAL_SDRAM_DMA_XferCpltCallback could be implemented in the user file
    */ 
@@ -268,16 +277,17 @@ __weak void HAL_SDRAM_DMA_XferCpltCallback(DMA_HandleTypeDef *hdma)
   */
 __weak void HAL_SDRAM_DMA_XferErrorCallback(DMA_HandleTypeDef *hdma)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hdma);
   /* NOTE: This function Should not be modified, when the callback is needed,
             the HAL_SDRAM_DMA_XferErrorCallback could be implemented in the user file
    */ 
 }
-
 /**
   * @}
   */
 
-/** @defgroup SDRAM_Group2 Input and Output functions 
+/** @defgroup SDRAM_Exported_Functions_Group2 Input and Output functions 
   * @brief    Input Output and memory control functions 
   *
   @verbatim    
@@ -318,7 +328,7 @@ HAL_StatusTypeDef HAL_SDRAM_Read_8b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddr
   }  
   
   /* Read data from source */
-  for(; BufferSize != 0; BufferSize--)
+  for(; BufferSize != 0U; BufferSize--)
   {
     *pDstBuffer = *(__IO uint8_t *)pSdramAddress;  
     pDstBuffer++;
@@ -330,8 +340,7 @@ HAL_StatusTypeDef HAL_SDRAM_Read_8b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddr
   
   return HAL_OK; 
 }
-
-
+ 
 /**
   * @brief  Writes 8-bit data buffer to SDRAM memory.
   * @param  hsdram: pointer to a SDRAM_HandleTypeDef structure that contains
@@ -344,7 +353,7 @@ HAL_StatusTypeDef HAL_SDRAM_Read_8b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddr
 HAL_StatusTypeDef HAL_SDRAM_Write_8b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint8_t *pSrcBuffer, uint32_t BufferSize)
 {
   __IO uint8_t *pSdramAddress = (uint8_t *)pAddress;
-  uint32_t tmp = 0;
+  uint32_t tmp = 0U;
   
   /* Process Locked */
   __HAL_LOCK(hsdram);
@@ -362,7 +371,7 @@ HAL_StatusTypeDef HAL_SDRAM_Write_8b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAdd
   }
   
   /* Write data to memory */
-  for(; BufferSize != 0; BufferSize--)
+  for(; BufferSize != 0U; BufferSize--)
   {
     *(__IO uint8_t *)pSdramAddress = *pSrcBuffer;
     pSrcBuffer++;
@@ -374,7 +383,6 @@ HAL_StatusTypeDef HAL_SDRAM_Write_8b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAdd
   
   return HAL_OK;   
 }
-
 
 /**
   * @brief  Reads 16-bit data buffer from the SDRAM memory. 
@@ -403,7 +411,7 @@ HAL_StatusTypeDef HAL_SDRAM_Read_16b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAdd
   }  
   
   /* Read data from source */
-  for(; BufferSize != 0; BufferSize--)
+  for(; BufferSize != 0U; BufferSize--)
   {
     *pDstBuffer = *(__IO uint16_t *)pSdramAddress;  
     pDstBuffer++;
@@ -428,7 +436,7 @@ HAL_StatusTypeDef HAL_SDRAM_Read_16b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAdd
 HAL_StatusTypeDef HAL_SDRAM_Write_16b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint16_t *pSrcBuffer, uint32_t BufferSize)
 {
   __IO uint16_t *pSdramAddress = (uint16_t *)pAddress;
-  uint32_t tmp = 0;
+  uint32_t tmp = 0U;
   
   /* Process Locked */
   __HAL_LOCK(hsdram);
@@ -446,7 +454,7 @@ HAL_StatusTypeDef HAL_SDRAM_Write_16b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAd
   }
   
   /* Write data to memory */
-  for(; BufferSize != 0; BufferSize--)
+  for(; BufferSize != 0U; BufferSize--)
   {
     *(__IO uint16_t *)pSdramAddress = *pSrcBuffer;
     pSrcBuffer++;
@@ -486,7 +494,7 @@ HAL_StatusTypeDef HAL_SDRAM_Read_32b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAdd
   }  
   
   /* Read data from source */
-  for(; BufferSize != 0; BufferSize--)
+  for(; BufferSize != 0U; BufferSize--)
   {
     *pDstBuffer = *(__IO uint32_t *)pSdramAddress;  
     pDstBuffer++;
@@ -511,7 +519,7 @@ HAL_StatusTypeDef HAL_SDRAM_Read_32b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAdd
 HAL_StatusTypeDef HAL_SDRAM_Write_32b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint32_t *pSrcBuffer, uint32_t BufferSize)
 {
   __IO uint32_t *pSdramAddress = (uint32_t *)pAddress;
-  uint32_t tmp = 0;
+  uint32_t tmp = 0U;
   
   /* Process Locked */
   __HAL_LOCK(hsdram);
@@ -529,7 +537,7 @@ HAL_StatusTypeDef HAL_SDRAM_Write_32b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAd
   }
   
   /* Write data to memory */
-  for(; BufferSize != 0; BufferSize--)
+  for(; BufferSize != 0U; BufferSize--)
   {
     *(__IO uint32_t *)pSdramAddress = *pSrcBuffer;
     pSrcBuffer++;
@@ -553,7 +561,7 @@ HAL_StatusTypeDef HAL_SDRAM_Write_32b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAd
   */
 HAL_StatusTypeDef HAL_SDRAM_Read_DMA(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint32_t *pDstBuffer, uint32_t BufferSize)
 {
-  uint32_t tmp = 0;
+  uint32_t tmp = 0U;
     
   /* Process Locked */
   __HAL_LOCK(hsdram);
@@ -594,7 +602,7 @@ HAL_StatusTypeDef HAL_SDRAM_Read_DMA(SDRAM_HandleTypeDef *hsdram, uint32_t *pAdd
   */
 HAL_StatusTypeDef HAL_SDRAM_Write_DMA(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint32_t *pSrcBuffer, uint32_t BufferSize)
 {
-  uint32_t tmp = 0;
+  uint32_t tmp = 0U;
   
   /* Process Locked */
   __HAL_LOCK(hsdram);
@@ -623,12 +631,11 @@ HAL_StatusTypeDef HAL_SDRAM_Write_DMA(SDRAM_HandleTypeDef *hsdram, uint32_t *pAd
   
   return HAL_OK;
 }
-
 /**
   * @}
   */
   
-/** @defgroup SDRAM_Group3 Control functions 
+/** @defgroup SDRAM_Exported_Functions_Group3 Control functions 
  *  @brief   management functions 
  *
 @verbatim   
@@ -717,7 +724,7 @@ HAL_StatusTypeDef HAL_SDRAM_SendCommand(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_C
   /* Send SDRAM command */
   FMC_SDRAM_SendCommand(hsdram->Instance, Command, Timeout);
   
-  /* Update the SDRAM controller state state */
+  /* Update the SDRAM controller state */
   if(Command->CommandMode == FMC_SDRAM_CMD_PALL)
   {
     hsdram->State = HAL_SDRAM_STATE_PRECHARGED;
@@ -800,7 +807,7 @@ uint32_t HAL_SDRAM_GetModeStatus(SDRAM_HandleTypeDef *hsdram)
   * @}
   */
   
-/** @defgroup SDRAM_Group4 State functions 
+/** @defgroup SDRAM_Exported_Functions_Group4 State functions 
  *  @brief   Peripheral State functions 
  *
 @verbatim   
@@ -833,7 +840,7 @@ HAL_SDRAM_StateTypeDef HAL_SDRAM_GetState(SDRAM_HandleTypeDef *hsdram)
 /**
   * @}
   */
-#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx */
+#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx || STM32F446xx || STM32F469xx || STM32F479xx */
 #endif /* HAL_SDRAM_MODULE_ENABLED */
 /**
   * @}

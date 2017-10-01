@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_cryp.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    19-June-2014
+  * @version V1.5.2
+  * @date    22-September-2016
   * @brief   CRYP HAL module driver.
   *          This file provides firmware functions to manage the following 
   *          functionalities of the Cryptography (CRYP) peripheral:
@@ -23,7 +23,7 @@
       The CRYP HAL driver can be used as follows:
 
       (#)Initialize the CRYP low level resources by implementing the HAL_CRYP_MspInit():
-         (##) Enable the CRYP interface clock using __CRYP_CLK_ENABLE()
+         (##) Enable the CRYP interface clock using __HAL_RCC_CRYP_CLK_ENABLE()
          (##) In case of using interrupts (e.g. HAL_CRYP_AESECB_Encrypt_IT())
              (+++) Configure the CRYP interrupt priority using HAL_NVIC_SetPriority()
              (+++) Enable the CRYP IRQ handler using HAL_NVIC_EnableIRQ()
@@ -33,7 +33,7 @@
              (+++) Configure and enable two DMA streams one for managing data transfer from
                  memory to peripheral (input stream) and another stream for managing data
                  transfer from peripheral to memory (output stream)
-             (+++) Associate the initilalized DMA handle to the CRYP DMA handle
+             (+++) Associate the initialized DMA handle to the CRYP DMA handle
                  using  __HAL_LINKDMA()
              (+++) Configure the priority and enable the NVIC for the transfer complete
                  interrupt on the two DMA Streams. The output stream should have higher
@@ -70,7 +70,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2014 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -104,21 +104,31 @@
   * @{
   */
 
-/** @defgroup CRYP 
+/** @defgroup CRYP CRYP
   * @brief CRYP HAL module driver.
   * @{
   */
 
 #ifdef HAL_CRYP_MODULE_ENABLED
 
-#if defined(STM32F415xx) || defined(STM32F417xx) || defined(STM32F437xx) || defined(STM32F439xx)
+#if defined(STM32F415xx) || defined(STM32F417xx) || defined(STM32F437xx) || defined(STM32F439xx) || defined(STM32F479xx)
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
-#define CRYP_TIMEOUT_VALUE  1
+/** @addtogroup CRYP_Private_define
+  * @{
+  */
+#define CRYP_TIMEOUT_VALUE  1U
+/**
+  * @}
+  */ 
+  
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
+/** @addtogroup CRYP_Private_Functions_prototypes
+  * @{
+  */  
 static void CRYP_SetInitVector(CRYP_HandleTypeDef *hcryp, uint8_t *InitVector, uint32_t IVSize);
 static void CRYP_SetKey(CRYP_HandleTypeDef *hcryp, uint8_t *Key, uint32_t KeySize);
 static HAL_StatusTypeDef CRYP_ProcessData(CRYP_HandleTypeDef *hcryp, uint8_t* Input, uint16_t Ilength, uint8_t* Output, uint32_t Timeout);
@@ -131,14 +141,448 @@ static void CRYP_SetTDESECBMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction);
 static void CRYP_SetTDESCBCMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction);
 static void CRYP_SetDESECBMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction);
 static void CRYP_SetDESCBCMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction);
-
+/**
+  * @}
+  */ 
+  
+  
 /* Private functions ---------------------------------------------------------*/
 
-/** @defgroup CRYP_Private_Functions
+/** @addtogroup CRYP_Private_Functions
   * @{
   */
 
-/** @defgroup CRYP_Group1 Initialization and de-initialization functions 
+
+/**
+  * @brief  DMA CRYP Input Data process complete callback.
+  * @param  hdma: DMA handle
+  * @retval None
+  */
+static void CRYP_DMAInCplt(DMA_HandleTypeDef *hdma)  
+{
+  CRYP_HandleTypeDef* hcryp = (CRYP_HandleTypeDef*)((DMA_HandleTypeDef*)hdma)->Parent;
+  
+  /* Disable the DMA transfer for input FIFO request by resetting the DIEN bit
+     in the DMACR register */
+  hcryp->Instance->DMACR &= (uint32_t)(~CRYP_DMACR_DIEN);
+  
+  /* Call input data transfer complete callback */
+  HAL_CRYP_InCpltCallback(hcryp);
+}
+
+/**
+  * @brief  DMA CRYP Output Data process complete callback.
+  * @param  hdma: DMA handle
+  * @retval None
+  */
+static void CRYP_DMAOutCplt(DMA_HandleTypeDef *hdma)
+{
+  CRYP_HandleTypeDef* hcryp = (CRYP_HandleTypeDef*)((DMA_HandleTypeDef*)hdma)->Parent;
+  
+  /* Disable the DMA transfer for output FIFO request by resetting the DOEN bit
+     in the DMACR register */
+  hcryp->Instance->DMACR &= (uint32_t)(~CRYP_DMACR_DOEN);
+  
+  /* Disable CRYP */
+  __HAL_CRYP_DISABLE(hcryp);
+  
+  /* Change the CRYP state to ready */
+  hcryp->State = HAL_CRYP_STATE_READY;
+  
+  /* Call output data transfer complete callback */
+  HAL_CRYP_OutCpltCallback(hcryp);
+}
+
+/**
+  * @brief  DMA CRYP communication error callback. 
+  * @param  hdma: DMA handle
+  * @retval None
+  */
+static void CRYP_DMAError(DMA_HandleTypeDef *hdma)
+{
+  CRYP_HandleTypeDef* hcryp = (CRYP_HandleTypeDef*)((DMA_HandleTypeDef*)hdma)->Parent;
+  hcryp->State= HAL_CRYP_STATE_READY;
+  HAL_CRYP_ErrorCallback(hcryp);
+}
+
+/**
+  * @brief  Writes the Key in Key registers. 
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  Key: Pointer to Key buffer
+  * @param  KeySize: Size of Key
+  * @retval None
+  */
+static void CRYP_SetKey(CRYP_HandleTypeDef *hcryp, uint8_t *Key, uint32_t KeySize)
+{
+  uint32_t keyaddr = (uint32_t)Key;
+  
+  switch(KeySize)
+  {
+  case CRYP_KEYSIZE_256B:
+    /* Key Initialisation */
+    hcryp->Instance->K0LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K0RR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K1LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K1RR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K2LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K2RR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K3LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K3RR = __REV(*(uint32_t*)(keyaddr));
+    break;
+  case CRYP_KEYSIZE_192B:
+    hcryp->Instance->K1LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K1RR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K2LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K2RR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K3LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K3RR = __REV(*(uint32_t*)(keyaddr));
+    break;
+  case CRYP_KEYSIZE_128B:       
+    hcryp->Instance->K2LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K2RR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K3LR = __REV(*(uint32_t*)(keyaddr));
+    keyaddr+=4U;
+    hcryp->Instance->K3RR = __REV(*(uint32_t*)(keyaddr));
+    break;
+  default:
+    break;
+  }
+}
+
+/**
+  * @brief  Writes the InitVector/InitCounter in IV registers. 
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  InitVector: Pointer to InitVector/InitCounter buffer
+  * @param  IVSize: Size of the InitVector/InitCounter
+  * @retval None
+  */
+static void CRYP_SetInitVector(CRYP_HandleTypeDef *hcryp, uint8_t *InitVector, uint32_t IVSize)
+{
+  uint32_t ivaddr = (uint32_t)InitVector;
+  
+  switch(IVSize)
+  {
+  case CRYP_KEYSIZE_128B:
+    hcryp->Instance->IV0LR = __REV(*(uint32_t*)(ivaddr));
+    ivaddr+=4U;
+    hcryp->Instance->IV0RR = __REV(*(uint32_t*)(ivaddr));
+    ivaddr+=4U;
+    hcryp->Instance->IV1LR = __REV(*(uint32_t*)(ivaddr));
+    ivaddr+=4U;
+    hcryp->Instance->IV1RR = __REV(*(uint32_t*)(ivaddr));
+    break;
+    /* Whatever key size 192 or 256, Init vector is written in IV0LR and IV0RR */
+  case CRYP_KEYSIZE_192B:
+    hcryp->Instance->IV0LR = __REV(*(uint32_t*)(ivaddr));
+    ivaddr+=4U;
+    hcryp->Instance->IV0RR = __REV(*(uint32_t*)(ivaddr));
+    break;
+  case CRYP_KEYSIZE_256B:
+    hcryp->Instance->IV0LR = __REV(*(uint32_t*)(ivaddr));
+    ivaddr+=4U;
+    hcryp->Instance->IV0RR = __REV(*(uint32_t*)(ivaddr));
+    break;
+  default:
+    break;
+  }
+}
+
+/**
+  * @brief  Process Data: Writes Input data in polling mode and read the output data
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  Input: Pointer to the Input buffer
+  * @param  Ilength: Length of the Input buffer, must be a multiple of 16.
+  * @param  Output: Pointer to the returned buffer
+  * @param  Timeout: Timeout value
+  * @retval None
+  */
+static HAL_StatusTypeDef CRYP_ProcessData(CRYP_HandleTypeDef *hcryp, uint8_t* Input, uint16_t Ilength, uint8_t* Output, uint32_t Timeout)
+{
+  uint32_t tickstart = 0U;
+  
+  uint32_t i = 0U;
+  uint32_t inputaddr  = (uint32_t)Input;
+  uint32_t outputaddr = (uint32_t)Output;
+  
+  for(i=0U; (i < Ilength); i+=16U)
+  {
+    /* Write the Input block in the IN FIFO */
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR  = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    
+    /* Get tick */
+    tickstart = HAL_GetTick();
+
+    while(HAL_IS_BIT_CLR(hcryp->Instance->SR, CRYP_FLAG_OFNE))
+    {    
+      /* Check for the Timeout */
+      if(Timeout != HAL_MAX_DELAY)
+      {
+        if((Timeout == 0U)||((HAL_GetTick() - tickstart ) > Timeout))
+        {
+          /* Change state */
+          hcryp->State = HAL_CRYP_STATE_TIMEOUT;
+          
+          /* Process Unlocked */
+          __HAL_UNLOCK(hcryp);
+        
+          return HAL_TIMEOUT;
+        }
+      }
+    }
+    /* Read the Output block from the Output FIFO */
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+  }
+  /* Return function status */
+  return HAL_OK;
+}
+
+/**
+  * @brief  Process Data: Write Input data in polling mode. 
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  Input: Pointer to the Input buffer
+  * @param  Ilength: Length of the Input buffer, must be a multiple of 8
+  * @param  Output: Pointer to the returned buffer
+  * @param  Timeout: Specify Timeout value  
+  * @retval None
+  */
+static HAL_StatusTypeDef CRYP_ProcessData2Words(CRYP_HandleTypeDef *hcryp, uint8_t* Input, uint16_t Ilength, uint8_t* Output, uint32_t Timeout)
+{
+  uint32_t tickstart = 0U;   
+  
+  uint32_t i = 0U;
+  uint32_t inputaddr  = (uint32_t)Input;
+  uint32_t outputaddr = (uint32_t)Output;
+  
+  for(i=0U; (i < Ilength); i+=8U)
+  {
+    /* Write the Input block in the IN FIFO */
+    hcryp->Instance->DR  = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    
+    /* Get tick */
+    tickstart = HAL_GetTick();
+    
+    while(HAL_IS_BIT_CLR(hcryp->Instance->SR, CRYP_FLAG_OFNE))
+    {
+      /* Check for the Timeout */
+      if(Timeout != HAL_MAX_DELAY)
+      {
+        if((Timeout == 0U)||((HAL_GetTick() - tickstart ) > Timeout))
+        {
+          /* Change state */
+          hcryp->State = HAL_CRYP_STATE_TIMEOUT;
+          
+          /* Process Unlocked */          
+          __HAL_UNLOCK(hcryp);
+          
+          return HAL_TIMEOUT;
+        }
+      }
+    }
+    /* Read the Output block from the Output FIFO */
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+  }
+  /* Return function status */
+  return HAL_OK;
+}
+
+/**
+  * @brief  Set the DMA configuration and start the DMA transfer
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  inputaddr: address of the Input buffer
+  * @param  Size: Size of the Input buffer, must be a multiple of 16.
+  * @param  outputaddr: address of the Output buffer
+  * @retval None
+  */
+static void CRYP_SetDMAConfig(CRYP_HandleTypeDef *hcryp, uint32_t inputaddr, uint16_t Size, uint32_t outputaddr)
+{
+  /* Set the CRYP DMA transfer complete callback */
+  hcryp->hdmain->XferCpltCallback = CRYP_DMAInCplt;
+  /* Set the DMA error callback */
+  hcryp->hdmain->XferErrorCallback = CRYP_DMAError;
+  
+  /* Set the CRYP DMA transfer complete callback */
+  hcryp->hdmaout->XferCpltCallback = CRYP_DMAOutCplt;
+  /* Set the DMA error callback */
+  hcryp->hdmaout->XferErrorCallback = CRYP_DMAError;
+  
+  /* Enable CRYP */
+  __HAL_CRYP_ENABLE(hcryp);
+  
+  /* Enable the DMA In DMA Stream */
+  HAL_DMA_Start_IT(hcryp->hdmain, inputaddr, (uint32_t)&hcryp->Instance->DR, Size/4U);
+  
+  /* Enable In DMA request */
+  hcryp->Instance->DMACR = (CRYP_DMACR_DIEN);
+  
+  /* Enable the DMA Out DMA Stream */
+  HAL_DMA_Start_IT(hcryp->hdmaout, (uint32_t)&hcryp->Instance->DOUT, outputaddr, Size/4U);
+  
+  /* Enable Out DMA request */
+  hcryp->Instance->DMACR |= CRYP_DMACR_DOEN;
+ 
+}
+
+/**
+  * @brief  Sets the CRYP peripheral in DES ECB mode.
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  Direction: Encryption or decryption
+  * @retval None
+  */
+static void CRYP_SetDESECBMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction)
+{
+  /* Check if initialization phase has already been performed */
+  if(hcryp->Phase == HAL_CRYP_PHASE_READY)
+  {
+    /* Set the CRYP peripheral in AES ECB mode */
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_DES_ECB | Direction);
+    
+    /* Set the key */
+    hcryp->Instance->K1LR = __REV(*(uint32_t*)(hcryp->Init.pKey));
+    hcryp->Instance->K1RR = __REV(*(uint32_t*)(hcryp->Init.pKey+4U));
+    
+    /* Flush FIFO */
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
+    
+    /* Set the phase */
+    hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
+  }
+}
+
+/**
+  * @brief  Sets the CRYP peripheral in DES CBC mode.
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  Direction: Encryption or decryption
+  * @retval None
+  */
+static void CRYP_SetDESCBCMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction)
+{
+  /* Check if initialization phase has already been performed */
+  if(hcryp->Phase == HAL_CRYP_PHASE_READY)
+  {
+    /* Set the CRYP peripheral in AES ECB mode */
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_DES_CBC | Direction);
+    
+    /* Set the key */
+    hcryp->Instance->K1LR = __REV(*(uint32_t*)(hcryp->Init.pKey));
+    hcryp->Instance->K1RR = __REV(*(uint32_t*)(hcryp->Init.pKey+4U));
+    
+    /* Set the Initialization Vector */
+    CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_256B);
+    
+    /* Flush FIFO */
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
+    
+    /* Set the phase */
+    hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
+  }
+}
+
+/**
+  * @brief  Sets the CRYP peripheral in TDES ECB mode.
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  Direction: Encryption or decryption
+  * @retval None
+  */
+static void CRYP_SetTDESECBMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction)
+{
+  /* Check if initialization phase has already been performed */
+  if(hcryp->Phase == HAL_CRYP_PHASE_READY)
+  {
+    /* Set the CRYP peripheral in AES ECB mode */
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_TDES_ECB | Direction);
+    
+    /* Set the key */
+    CRYP_SetKey(hcryp, hcryp->Init.pKey, CRYP_KEYSIZE_192B);
+    
+    /* Flush FIFO */
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
+    
+    /* Set the phase */
+    hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
+  }
+}
+
+/**
+  * @brief  Sets the CRYP peripheral in TDES CBC mode
+  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
+  *         the configuration information for CRYP module
+  * @param  Direction: Encryption or decryption
+  * @retval None
+  */
+static void CRYP_SetTDESCBCMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction)
+{
+  /* Check if initialization phase has already been performed */
+  if(hcryp->Phase == HAL_CRYP_PHASE_READY)
+  {
+    /* Set the CRYP peripheral in AES CBC mode */
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_TDES_CBC | Direction);
+    
+    /* Set the key */
+    CRYP_SetKey(hcryp, hcryp->Init.pKey, CRYP_KEYSIZE_192B);
+    
+    /* Set the Initialization Vector */
+    CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_256B);
+    
+    /* Flush FIFO */
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
+    
+    /* Set the phase */
+    hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
+  }
+}
+
+/**
+  * @}
+  */ 
+  
+ /* Exported functions --------------------------------------------------------*/
+/** @addtogroup CRYP_Exported_Functions
+  * @{
+  */ 
+  
+/** @defgroup CRYP_Exported_Functions_Group1 Initialization and de-initialization functions 
  *  @brief    Initialization and Configuration functions. 
  *
 @verbatim    
@@ -177,6 +621,8 @@ HAL_StatusTypeDef HAL_CRYP_Init(CRYP_HandleTypeDef *hcryp)
     
   if(hcryp->State == HAL_CRYP_STATE_RESET)
   {
+    /* Allocate lock resource and initialize it */
+    hcryp->Lock = HAL_UNLOCKED;
     /* Init the low level hardware */
     HAL_CRYP_MspInit(hcryp);
   }
@@ -188,8 +634,8 @@ HAL_StatusTypeDef HAL_CRYP_Init(CRYP_HandleTypeDef *hcryp)
   CRYP->CR = (uint32_t) (hcryp->Init.KeySize | hcryp->Init.DataType);
   
   /* Reset CrypInCount and CrypOutCount */
-  hcryp->CrypInCount = 0;
-  hcryp->CrypOutCount = 0;
+  hcryp->CrypInCount = 0U;
+  hcryp->CrypOutCount = 0U;
   
   /* Change the CRYP state */
   hcryp->State = HAL_CRYP_STATE_READY;
@@ -222,11 +668,11 @@ HAL_StatusTypeDef HAL_CRYP_DeInit(CRYP_HandleTypeDef *hcryp)
   hcryp->Phase = HAL_CRYP_PHASE_READY;
   
   /* Reset CrypInCount and CrypOutCount */
-  hcryp->CrypInCount = 0;
-  hcryp->CrypOutCount = 0;
+  hcryp->CrypInCount = 0U;
+  hcryp->CrypOutCount = 0U;
   
   /* Disable the CRYP Peripheral Clock */
-  __HAL_CRYP_DISABLE();
+  __HAL_CRYP_DISABLE(hcryp);
   
   /* DeInit the low level hardware: CLOCK, NVIC.*/
   HAL_CRYP_MspDeInit(hcryp);
@@ -249,6 +695,8 @@ HAL_StatusTypeDef HAL_CRYP_DeInit(CRYP_HandleTypeDef *hcryp)
   */
 __weak void HAL_CRYP_MspInit(CRYP_HandleTypeDef *hcryp)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hcryp);
   /* NOTE : This function Should not be modified, when the callback is needed,
             the HAL_CRYP_MspInit could be implemented in the user file
    */
@@ -262,6 +710,8 @@ __weak void HAL_CRYP_MspInit(CRYP_HandleTypeDef *hcryp)
   */
 __weak void HAL_CRYP_MspDeInit(CRYP_HandleTypeDef *hcryp)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hcryp);
   /* NOTE : This function Should not be modified, when the callback is needed,
             the HAL_CRYP_MspDeInit could be implemented in the user file
    */
@@ -271,7 +721,7 @@ __weak void HAL_CRYP_MspDeInit(CRYP_HandleTypeDef *hcryp)
   * @}
   */
 
-/** @defgroup CRYP_Group2 AES processing functions 
+/** @defgroup CRYP_Exported_Functions_Group2 AES processing functions 
  *  @brief   processing functions. 
  *
 @verbatim   
@@ -316,20 +766,20 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
     CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
     
     /* Set the CRYP peripheral in AES ECB mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_ECB);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_ECB);
     
     /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Set the phase */
     hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
   }
   
     /* Write Plain Data and Get Cypher Data */
-    if(CRYP_ProcessData(hcryp,pPlainData, Size, pCypherData, Timeout) != HAL_OK)
+    if(CRYP_ProcessData(hcryp, pPlainData, Size, pCypherData, Timeout) != HAL_OK)
     {
       return HAL_TIMEOUT;
     }
@@ -370,16 +820,16 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
     CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
     
     /* Set the CRYP peripheral in AES ECB mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CBC);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CBC);
     
     /* Set the Initialization Vector */
     CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
     
     /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Set the phase */
     hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -427,16 +877,16 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
     CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
     
     /* Set the CRYP peripheral in AES ECB mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CTR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CTR);
     
     /* Set the Initialization Vector */
     CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
     
     /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Set the phase */
     hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -473,7 +923,7 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
   */
 HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData, uint32_t Timeout)
 {
-   uint32_t tickstart = 0;
+   uint32_t tickstart = 0U;
   
   /* Process Locked */
   __HAL_LOCK(hcryp);
@@ -488,20 +938,20 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pC
     CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
     
     /* Set the CRYP peripheral in AES Key mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Get tick */ 
     tickstart = HAL_GetTick();
 
-    while(HAL_IS_BIT_SET(CRYP->SR, CRYP_FLAG_BUSY))
+    while(HAL_IS_BIT_SET(hcryp->Instance->SR, CRYP_FLAG_BUSY))
     {
       /* Check for the Timeout */
       if(Timeout != HAL_MAX_DELAY)
       {
-        if((Timeout == 0)||((HAL_GetTick() - tickstart ) > Timeout))
+        if((Timeout == 0U)||((HAL_GetTick() - tickstart ) > Timeout))
         {
           /* Change state */
           hcryp->State = HAL_CRYP_STATE_TIMEOUT;
@@ -515,18 +965,18 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pC
     }
     
     /* Disable CRYP */
-    __HAL_CRYP_DISABLE();
+    __HAL_CRYP_DISABLE(hcryp);
     
     /* Reset the ALGOMODE bits*/
     CRYP->CR &= (uint32_t)(~CRYP_CR_ALGOMODE);
     
     /* Set the CRYP peripheral in AES ECB decryption mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_ECB | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_ECB | CRYP_CR_ALGODIR);
     /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Set the phase */
     hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -561,7 +1011,7 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pC
   */
 HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData, uint32_t Timeout)
 {
-  uint32_t tickstart = 0;
+  uint32_t tickstart = 0U;
   
   /* Process Locked */
   __HAL_LOCK(hcryp);
@@ -576,20 +1026,20 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pC
     CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
     
     /* Set the CRYP peripheral in AES Key mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Get tick */ 
     tickstart = HAL_GetTick();
 
-    while(HAL_IS_BIT_SET(CRYP->SR, CRYP_FLAG_BUSY))
+    while(HAL_IS_BIT_SET(hcryp->Instance->SR, CRYP_FLAG_BUSY))
     {
       /* Check for the Timeout */
       if(Timeout != HAL_MAX_DELAY)
       {
-        if((Timeout == 0)||((HAL_GetTick() - tickstart ) > Timeout))
+        if((Timeout == 0U)||((HAL_GetTick() - tickstart ) > Timeout))
         {
           /* Change state */
           hcryp->State = HAL_CRYP_STATE_TIMEOUT;
@@ -606,16 +1056,16 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pC
     CRYP->CR &= (uint32_t)(~CRYP_CR_ALGOMODE);
     
     /* Set the CRYP peripheral in AES CBC decryption mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CBC | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CBC | CRYP_CR_ALGODIR);
     
     /* Set the Initialization Vector */
     CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
     
     /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Set the phase */
     hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -663,16 +1113,16 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pC
     CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
     
     /* Set the CRYP peripheral in AES CTR mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CTR | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CTR | CRYP_CR_ALGODIR);
     
     /* Set the Initialization Vector */
     CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
     
     /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Set the phase */
     hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -728,60 +1178,60 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES ECB mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_ECB);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_ECB);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
      /* Set the phase */
      hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
     }
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR  = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    hcryp->pCrypInBuffPtr += 16;
-    hcryp->CrypInCount -= 16;
-    if(hcryp->CrypInCount == 0)
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR  = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    hcryp->pCrypInBuffPtr += 16U;
+    hcryp->CrypInCount -= 16U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    hcryp->pCrypOutBuffPtr += 16;
-    hcryp->CrypOutCount -= 16;
-    if(hcryp->CrypOutCount == 0)
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    hcryp->pCrypOutBuffPtr += 16U;
+    hcryp->CrypOutCount -= 16U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Process Locked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -829,62 +1279,62 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES CBC mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CBC);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CBC);
       
       /* Set the Initialization Vector */
       CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
      /* Set the phase */
      hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
     }
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR  = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    hcryp->pCrypInBuffPtr += 16;
-    hcryp->CrypInCount -= 16;
-    if(hcryp->CrypInCount == 0)
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR  = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    hcryp->pCrypInBuffPtr += 16U;
+    hcryp->CrypInCount -= 16U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    hcryp->pCrypOutBuffPtr += 16;
-    hcryp->CrypOutCount -= 16;
-    if(hcryp->CrypOutCount == 0)
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    hcryp->pCrypOutBuffPtr += 16U;
+    hcryp->CrypOutCount -= 16U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Process Locked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -932,62 +1382,62 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES CTR mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CTR);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CTR);
       
       /* Set the Initialization Vector */
       CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
      /* Set the phase */
      hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
     }
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR  = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    hcryp->pCrypInBuffPtr += 16;
-    hcryp->CrypInCount -= 16;
-    if(hcryp->CrypInCount == 0)
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR  = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    hcryp->pCrypInBuffPtr += 16U;
+    hcryp->CrypInCount -= 16U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    hcryp->pCrypOutBuffPtr += 16;
-    hcryp->CrypOutCount -= 16;
-    if(hcryp->CrypOutCount == 0)
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    hcryp->pCrypOutBuffPtr += 16U;
+    hcryp->CrypOutCount -= 16U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -1013,7 +1463,7 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
   */
 HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData)
 {
-  uint32_t tickstart = 0;
+  uint32_t tickstart = 0U;
 
   uint32_t inputaddr;
   uint32_t outputaddr;
@@ -1038,14 +1488,14 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
     CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
     
     /* Set the CRYP peripheral in AES Key mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Get tick */ 
     tickstart = HAL_GetTick();
 
-    while(HAL_IS_BIT_SET(CRYP->SR, CRYP_FLAG_BUSY))
+    while(HAL_IS_BIT_SET(hcryp->Instance->SR, CRYP_FLAG_BUSY))
     {
       /* Check for the Timeout */
       if((HAL_GetTick() - tickstart ) > CRYP_TIMEOUT_VALUE)
@@ -1064,60 +1514,60 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
     CRYP->CR &= (uint32_t)(~CRYP_CR_ALGOMODE);
     
     /* Set the CRYP peripheral in AES ECB decryption mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_ECB | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_ECB | CRYP_CR_ALGODIR);
     
     /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
     
      /* Set the phase */
      hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
   }
      
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR  = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    hcryp->pCrypInBuffPtr += 16;
-    hcryp->CrypInCount -= 16;
-    if(hcryp->CrypInCount == 0)
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR  = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    hcryp->pCrypInBuffPtr += 16U;
+    hcryp->CrypInCount -= 16U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    hcryp->pCrypOutBuffPtr += 16;
-    hcryp->CrypOutCount -= 16;
-    if(hcryp->CrypOutCount == 0)
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    hcryp->pCrypOutBuffPtr += 16U;
+    hcryp->CrypOutCount -= 16U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -1143,7 +1593,7 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
 HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData)
 {
 
-  uint32_t tickstart = 0;   
+  uint32_t tickstart = 0U;   
   uint32_t inputaddr;
   uint32_t outputaddr;
   
@@ -1168,15 +1618,15 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES Key mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
       
       /* Enable CRYP */
-      __HAL_CRYP_ENABLE();
+      __HAL_CRYP_ENABLE(hcryp);
       
     /* Get tick */
     tickstart = HAL_GetTick();
 
-    while(HAL_IS_BIT_SET(CRYP->SR, CRYP_FLAG_BUSY))
+    while(HAL_IS_BIT_SET(hcryp->Instance->SR, CRYP_FLAG_BUSY))
     {
       /* Check for the Timeout */
       if((HAL_GetTick() - tickstart ) > CRYP_TIMEOUT_VALUE)
@@ -1195,66 +1645,66 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
       CRYP->CR &= (uint32_t)(~CRYP_CR_ALGOMODE);
     
       /* Set the CRYP peripheral in AES CBC decryption mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CBC | CRYP_CR_ALGODIR);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CBC | CRYP_CR_ALGODIR);
     
       /* Set the Initialization Vector */
       CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
     
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
     
       /* Enable CRYP */
-      __HAL_CRYP_ENABLE();
+      __HAL_CRYP_ENABLE(hcryp);
       
       /* Set the phase */
       hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
     }
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR  = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    hcryp->pCrypInBuffPtr += 16;
-    hcryp->CrypInCount -= 16;
-    if(hcryp->CrypInCount == 0)
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR  = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    hcryp->pCrypInBuffPtr += 16U;
+    hcryp->CrypInCount -= 16U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    hcryp->pCrypOutBuffPtr += 16;
-    hcryp->CrypOutCount -= 16;
-    if(hcryp->CrypOutCount == 0)
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    hcryp->pCrypOutBuffPtr += 16U;
+    hcryp->CrypOutCount -= 16U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -1303,63 +1753,63 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES CTR mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CTR | CRYP_CR_ALGODIR);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CTR | CRYP_CR_ALGODIR);
       
       /* Set the Initialization Vector */
       CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
       /* Set the phase */
       hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
     }
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR  = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    hcryp->pCrypInBuffPtr += 16;
-    hcryp->CrypInCount -= 16;
-    if(hcryp->CrypInCount == 0)
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR  = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    hcryp->pCrypInBuffPtr += 16U;
+    hcryp->CrypInCount -= 16U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    hcryp->pCrypOutBuffPtr += 16;
-    hcryp->CrypOutCount -= 16;
-    if(hcryp->CrypOutCount == 0)
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    hcryp->pCrypOutBuffPtr += 16U;
+    hcryp->CrypOutCount -= 16U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -1405,10 +1855,10 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES ECB mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_ECB);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_ECB);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
      /* Set the phase */
      hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -1460,13 +1910,13 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES ECB mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CBC);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CBC);
       
       /* Set the Initialization Vector */
       CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
        /* Set the phase */
        hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -1518,13 +1968,13 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES ECB mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CTR);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CTR);
       
       /* Set the Initialization Vector */
       CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
        /* Set the phase */
        hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -1556,7 +2006,7 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
   */
 HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData)
 {
-  uint32_t tickstart = 0;   
+  uint32_t tickstart = 0U;   
   uint32_t inputaddr;
   uint32_t outputaddr;
   
@@ -1578,15 +2028,15 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
     CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
     
     /* Set the CRYP peripheral in AES Key mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Get tick */
     tickstart = HAL_GetTick();
     
-    while(HAL_IS_BIT_SET(CRYP->SR, CRYP_FLAG_BUSY))
+    while(HAL_IS_BIT_SET(hcryp->Instance->SR, CRYP_FLAG_BUSY))
     {
       /* Check for the Timeout */
       if((HAL_GetTick() - tickstart ) > CRYP_TIMEOUT_VALUE)
@@ -1605,10 +2055,10 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
     CRYP->CR &= (uint32_t)(~CRYP_CR_ALGOMODE);
     
     /* Set the CRYP peripheral in AES ECB decryption mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_ECB | CRYP_CR_ALGODIR);
+    __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_ECB | CRYP_CR_ALGODIR);
     
     /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
+    __HAL_CRYP_FIFO_FLUSH(hcryp);
     
      /* Set the phase */
      hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -1640,7 +2090,7 @@ HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
   */
 HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData)
 {
-  uint32_t tickstart = 0;   
+  uint32_t tickstart = 0U;   
   uint32_t inputaddr;
   uint32_t outputaddr;
   
@@ -1662,15 +2112,15 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES Key mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_KEY | CRYP_CR_ALGODIR);
       
       /* Enable CRYP */
-      __HAL_CRYP_ENABLE();
+      __HAL_CRYP_ENABLE(hcryp);
       
       /* Get tick */
       tickstart = HAL_GetTick();
 
-      while(HAL_IS_BIT_SET(CRYP->SR, CRYP_FLAG_BUSY))
+      while(HAL_IS_BIT_SET(hcryp->Instance->SR, CRYP_FLAG_BUSY))
       {
         /* Check for the Timeout */
         if((HAL_GetTick() - tickstart ) > CRYP_TIMEOUT_VALUE)
@@ -1689,13 +2139,13 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
       CRYP->CR &= (uint32_t)(~CRYP_CR_ALGOMODE);
       
       /* Set the CRYP peripheral in AES CBC decryption mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CBC | CRYP_CR_ALGODIR);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CBC | CRYP_CR_ALGODIR);
       
       /* Set the Initialization Vector */
       CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
       /* Set the phase */
       hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -1748,13 +2198,13 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
       CRYP_SetKey(hcryp, hcryp->Init.pKey, hcryp->Init.KeySize);
       
       /* Set the CRYP peripheral in AES CTR mode */
-      __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_AES_CTR | CRYP_CR_ALGODIR);
+      __HAL_CRYP_SET_MODE(hcryp, CRYP_CR_ALGOMODE_AES_CTR | CRYP_CR_ALGODIR);
       
       /* Set the Initialization Vector */
       CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_128B);
       
       /* Flush FIFO */
-      __HAL_CRYP_FIFO_FLUSH();
+      __HAL_CRYP_FIFO_FLUSH(hcryp);
       
       /* Set the phase */
       hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
@@ -1779,7 +2229,8 @@ HAL_StatusTypeDef HAL_CRYP_AESCTR_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
 /**
   * @}
   */
-/** @defgroup CRYP_Group3 DES processing functions 
+  
+/** @defgroup CRYP_Exported_Functions_Group3 DES processing functions 
  *  @brief   processing functions. 
  *
 @verbatim   
@@ -1817,10 +2268,10 @@ HAL_StatusTypeDef HAL_CRYP_DESECB_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
   hcryp->State = HAL_CRYP_STATE_BUSY;
   
   /* Set CRYP peripheral in DES ECB encryption mode */
-  CRYP_SetDESECBMode(hcryp, 0);
+  CRYP_SetDESECBMode(hcryp, 0U);
   
   /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
+  __HAL_CRYP_ENABLE(hcryp);
   
   /* Write Plain Data and Get Cypher Data */
   if(CRYP_ProcessData2Words(hcryp, pPlainData, Size, pCypherData, Timeout) != HAL_OK)
@@ -1842,13 +2293,13 @@ HAL_StatusTypeDef HAL_CRYP_DESECB_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
   * @brief  Initializes the CRYP peripheral in DES ECB decryption mode.
   * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
   *         the configuration information for CRYP module
-  * @param  pPlainData: Pointer to the plaintext buffer
-  * @param  Size: Length of the plaintext buffer, must be a multiple of 8
   * @param  pCypherData: Pointer to the cyphertext buffer
+  * @param  Size: Length of the plaintext buffer, must be a multiple of 8
+  * @param  pPlainData: Pointer to the plaintext buffer
   * @param  Timeout: Specify Timeout value  
   * @retval HAL status
   */
-HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout)
+HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData, uint32_t Timeout)
 {
   /* Process Locked */
   __HAL_LOCK(hcryp);
@@ -1860,10 +2311,10 @@ HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
   CRYP_SetDESECBMode(hcryp, CRYP_CR_ALGODIR);
   
   /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
+  __HAL_CRYP_ENABLE(hcryp);
   
   /* Write Plain Data and Get Cypher Data */
-  if(CRYP_ProcessData2Words(hcryp, pPlainData, Size, pCypherData, Timeout) != HAL_OK)
+  if(CRYP_ProcessData2Words(hcryp, pCypherData, Size, pPlainData, Timeout) != HAL_OK)
   {
     return HAL_TIMEOUT;
   }
@@ -1897,10 +2348,10 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
   hcryp->State = HAL_CRYP_STATE_BUSY;
   
   /* Set CRYP peripheral in DES CBC encryption mode */
-  CRYP_SetDESCBCMode(hcryp, 0);
+  CRYP_SetDESCBCMode(hcryp, 0U);
   
   /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
+  __HAL_CRYP_ENABLE(hcryp);
   
   /* Write Plain Data and Get Cypher Data */
   if(CRYP_ProcessData2Words(hcryp, pPlainData, Size, pCypherData, Timeout) != HAL_OK)
@@ -1922,13 +2373,13 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
   * @brief  Initializes the CRYP peripheral in DES ECB decryption mode.
   * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
   *         the configuration information for CRYP module
-  * @param  pPlainData: Pointer to the plaintext buffer
-  * @param  Size: Length of the plaintext buffer, must be a multiple of 8
   * @param  pCypherData: Pointer to the cyphertext buffer
+  * @param  Size: Length of the plaintext buffer, must be a multiple of 8
+  * @param  pPlainData: Pointer to the plaintext buffer
   * @param  Timeout: Specify Timeout value  
   * @retval HAL status
   */
-HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout)
+HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData, uint32_t Timeout)
 {
   /* Process Locked */
   __HAL_LOCK(hcryp);
@@ -1940,10 +2391,10 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pP
   CRYP_SetDESCBCMode(hcryp, CRYP_CR_ALGODIR);
   
   /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
+  __HAL_CRYP_ENABLE(hcryp);
   
   /* Write Plain Data and Get Cypher Data */
-  if(CRYP_ProcessData2Words(hcryp, pPlainData, Size, pCypherData, Timeout) != HAL_OK)
+  if(CRYP_ProcessData2Words(hcryp, pCypherData, Size, pPlainData, Timeout) != HAL_OK)
   {
     return HAL_TIMEOUT;
   }
@@ -1986,50 +2437,50 @@ HAL_StatusTypeDef HAL_CRYP_DESECB_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
     hcryp->State = HAL_CRYP_STATE_BUSY;
     
     /* Set CRYP peripheral in DES ECB encryption mode */
-    CRYP_SetDESECBMode(hcryp, 0);
+    CRYP_SetDESECBMode(hcryp, 0U);
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
     
-    hcryp->pCrypInBuffPtr += 8;
-    hcryp->CrypInCount -= 8;
-    if(hcryp->CrypInCount == 0)
+    hcryp->pCrypInBuffPtr += 8U;
+    hcryp->CrypInCount -= 8U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
     
-    hcryp->pCrypOutBuffPtr += 8;
-    hcryp->CrypOutCount -= 8;
-    if(hcryp->CrypOutCount == 0)
+    hcryp->pCrypOutBuffPtr += 8U;
+    hcryp->CrypOutCount -= 8U;
+    if(hcryp->CrypOutCount == 0U)
     {
       /* Disable IT */
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Disable CRYP */
-      __HAL_CRYP_DISABLE();
+      __HAL_CRYP_DISABLE(hcryp);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -2071,51 +2522,51 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
     hcryp->State = HAL_CRYP_STATE_BUSY;
     
     /* Set CRYP peripheral in DES CBC encryption mode */
-    CRYP_SetDESCBCMode(hcryp, 0);
+    CRYP_SetDESCBCMode(hcryp, 0U);
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
   
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
 
-    hcryp->pCrypInBuffPtr += 8;
-    hcryp->CrypInCount -= 8;
-    if(hcryp->CrypInCount == 0)
+    hcryp->pCrypInBuffPtr += 8U;
+    hcryp->CrypInCount -= 8U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
 
-    hcryp->pCrypOutBuffPtr += 8;
-    hcryp->CrypOutCount -= 8;
-    if(hcryp->CrypOutCount == 0)
+    hcryp->pCrypOutBuffPtr += 8U;
+    hcryp->CrypOutCount -= 8U;
+    if(hcryp->CrypOutCount == 0U)
     {
       /* Disable IT */
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Disable CRYP */
-      __HAL_CRYP_DISABLE();
+      __HAL_CRYP_DISABLE(hcryp);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -2160,47 +2611,47 @@ HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
     CRYP_SetDESECBMode(hcryp, CRYP_CR_ALGODIR);
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
     
-    hcryp->pCrypInBuffPtr += 8;
-    hcryp->CrypInCount -= 8;
-    if(hcryp->CrypInCount == 0)
+    hcryp->pCrypInBuffPtr += 8U;
+    hcryp->CrypInCount -= 8U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
 
-    hcryp->pCrypOutBuffPtr += 8;
-    hcryp->CrypOutCount -= 8;
-    if(hcryp->CrypOutCount == 0)
+    hcryp->pCrypOutBuffPtr += 8U;
+    hcryp->CrypOutCount -= 8U;
+    if(hcryp->CrypOutCount == 0U)
     {
       /* Disable IT */
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Disable CRYP */
-      __HAL_CRYP_DISABLE();
+      __HAL_CRYP_DISABLE(hcryp);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -2245,47 +2696,47 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
     CRYP_SetDESCBCMode(hcryp, CRYP_CR_ALGODIR);
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
 
-    hcryp->pCrypInBuffPtr += 8;
-    hcryp->CrypInCount -= 8;
-    if(hcryp->CrypInCount == 0)
+    hcryp->pCrypInBuffPtr += 8U;
+    hcryp->CrypInCount -= 8U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
 
-    hcryp->pCrypOutBuffPtr += 8;
-    hcryp->CrypOutCount -= 8;
-    if(hcryp->CrypOutCount == 0)
+    hcryp->pCrypOutBuffPtr += 8U;
+    hcryp->CrypOutCount -= 8U;
+    if(hcryp->CrypOutCount == 0U)
     {
       /* Disable IT */
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Disable CRYP */
-      __HAL_CRYP_DISABLE();
+      __HAL_CRYP_DISABLE(hcryp);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -2325,7 +2776,7 @@ HAL_StatusTypeDef HAL_CRYP_DESECB_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
     hcryp->State = HAL_CRYP_STATE_BUSY;
     
     /* Set CRYP peripheral in DES ECB encryption mode */
-    CRYP_SetDESECBMode(hcryp, 0);
+    CRYP_SetDESECBMode(hcryp, 0U);
     
     /* Set the input and output addresses and start DMA transfer */ 
     CRYP_SetDMAConfig(hcryp, inputaddr, Size, outputaddr);
@@ -2368,7 +2819,7 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
     hcryp->State = HAL_CRYP_STATE_BUSY;
     
     /* Set CRYP peripheral in DES CBC encryption mode */
-    CRYP_SetDESCBCMode(hcryp, 0);
+    CRYP_SetDESCBCMode(hcryp, 0U);
     
     /* Set the input and output addresses and start DMA transfer */ 
     CRYP_SetDMAConfig(hcryp, inputaddr, Size, outputaddr);
@@ -2394,7 +2845,7 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
   * @param  pCypherData: Pointer to the cyphertext buffer
   * @retval HAL status
   */
-HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData)
+HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData)
 {
   uint32_t inputaddr;
   uint32_t outputaddr;
@@ -2475,7 +2926,7 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
   * @}
   */
 
-/** @defgroup CRYP_Group4 TDES processing functions 
+/** @defgroup CRYP_Exported_Functions_Group4 TDES processing functions 
  *  @brief   processing functions. 
  *
 @verbatim   
@@ -2514,10 +2965,10 @@ HAL_StatusTypeDef HAL_CRYP_TDESECB_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *p
   hcryp->State = HAL_CRYP_STATE_BUSY;
   
   /* Set CRYP peripheral in TDES ECB encryption mode */
-  CRYP_SetTDESECBMode(hcryp, 0);
+  CRYP_SetTDESECBMode(hcryp, 0U);
   
   /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
+  __HAL_CRYP_ENABLE(hcryp);
   
   /* Write Plain Data and Get Cypher Data */
   if(CRYP_ProcessData2Words(hcryp, pPlainData, Size, pCypherData, Timeout) != HAL_OK)
@@ -2558,7 +3009,7 @@ HAL_StatusTypeDef HAL_CRYP_TDESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *p
   CRYP_SetTDESECBMode(hcryp, CRYP_CR_ALGODIR);
   
   /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
+  __HAL_CRYP_ENABLE(hcryp);
   
   /* Write Cypher Data and Get Plain Data */
   if(CRYP_ProcessData2Words(hcryp, pCypherData, Size, pPlainData, Timeout) != HAL_OK)
@@ -2596,10 +3047,10 @@ HAL_StatusTypeDef HAL_CRYP_TDESCBC_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *p
   hcryp->State = HAL_CRYP_STATE_BUSY;
   
   /* Set CRYP peripheral in TDES CBC encryption mode */
-  CRYP_SetTDESCBCMode(hcryp, 0);
+  CRYP_SetTDESCBCMode(hcryp, 0U);
   
   /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
+  __HAL_CRYP_ENABLE(hcryp);
   
   /* Write Plain Data and Get Cypher Data */
   if(CRYP_ProcessData2Words(hcryp, pPlainData, Size, pCypherData, Timeout) != HAL_OK)
@@ -2640,7 +3091,7 @@ HAL_StatusTypeDef HAL_CRYP_TDESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *p
   CRYP_SetTDESCBCMode(hcryp, CRYP_CR_ALGODIR);
   
   /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
+  __HAL_CRYP_ENABLE(hcryp);
   
   /* Write Cypher Data and Get Plain Data */
   if(CRYP_ProcessData2Words(hcryp, pCypherData, Size, pPlainData, Timeout) != HAL_OK)
@@ -2686,50 +3137,50 @@ HAL_StatusTypeDef HAL_CRYP_TDESECB_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t
     hcryp->State = HAL_CRYP_STATE_BUSY;
     
     /* Set CRYP peripheral in TDES ECB encryption mode */
-    CRYP_SetTDESECBMode(hcryp, 0);
+    CRYP_SetTDESECBMode(hcryp, 0U);
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
 
-    hcryp->pCrypInBuffPtr += 8;
-    hcryp->CrypInCount -= 8;
-    if(hcryp->CrypInCount == 0)
+    hcryp->pCrypInBuffPtr += 8U;
+    hcryp->CrypInCount -= 8U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
 
-    hcryp->pCrypOutBuffPtr += 8;
-    hcryp->CrypOutCount -= 8;
-    if(hcryp->CrypOutCount == 0)
+    hcryp->pCrypOutBuffPtr += 8U;
+    hcryp->CrypOutCount -= 8U;
+    if(hcryp->CrypOutCount == 0U)
     {
       /* Disable IT */
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Disable CRYP */
-      __HAL_CRYP_DISABLE();
+      __HAL_CRYP_DISABLE(hcryp);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -2771,49 +3222,49 @@ HAL_StatusTypeDef HAL_CRYP_TDESCBC_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t
     hcryp->State = HAL_CRYP_STATE_BUSY;
     
     /* Set CRYP peripheral in TDES CBC encryption mode */
-    CRYP_SetTDESCBCMode(hcryp, 0);
+    CRYP_SetTDESCBCMode(hcryp, 0U);
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
 
-    hcryp->pCrypInBuffPtr += 8;
-    hcryp->CrypInCount -= 8;
-    if(hcryp->CrypInCount == 0)
+    hcryp->pCrypInBuffPtr += 8U;
+    hcryp->CrypInCount -= 8U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
         
-    hcryp->pCrypOutBuffPtr += 8;
-    hcryp->CrypOutCount -= 8;
-    if(hcryp->CrypOutCount == 0)
+    hcryp->pCrypOutBuffPtr += 8U;
+    hcryp->CrypOutCount -= 8U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Disable CRYP */
-      __HAL_CRYP_DISABLE();
+      __HAL_CRYP_DISABLE(hcryp);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -2858,46 +3309,46 @@ HAL_StatusTypeDef HAL_CRYP_TDESECB_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t
     CRYP_SetTDESECBMode(hcryp, CRYP_CR_ALGODIR);
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
 
-    hcryp->pCrypInBuffPtr += 8;
-    hcryp->CrypInCount -= 8;
-    if(hcryp->CrypInCount == 0)
+    hcryp->pCrypInBuffPtr += 8U;
+    hcryp->CrypInCount -= 8U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
 
-    hcryp->pCrypOutBuffPtr += 8;
-    hcryp->CrypOutCount -= 8;
-    if(hcryp->CrypOutCount == 0)
+    hcryp->pCrypOutBuffPtr += 8U;
+    hcryp->CrypOutCount -= 8U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Disable CRYP */
-      __HAL_CRYP_DISABLE();
+      __HAL_CRYP_DISABLE(hcryp);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -2942,46 +3393,46 @@ HAL_StatusTypeDef HAL_CRYP_TDESCBC_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t
     CRYP_SetTDESCBCMode(hcryp, CRYP_CR_ALGODIR);
     
     /* Enable Interrupts */
-    __HAL_CRYP_ENABLE_IT(CRYP_IT_INI | CRYP_IT_OUTI);
+    __HAL_CRYP_ENABLE_IT(hcryp, CRYP_IT_INI | CRYP_IT_OUTI);
     
     /* Enable CRYP */
-    __HAL_CRYP_ENABLE();
+    __HAL_CRYP_ENABLE(hcryp);
     
     /* Return function status */
     return HAL_OK;
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_INI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_INI))
   {
     inputaddr = (uint32_t)hcryp->pCrypInBuffPtr;
     /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
+    inputaddr+=4U;
+    hcryp->Instance->DR = *(uint32_t*)(inputaddr);
 
-    hcryp->pCrypInBuffPtr += 8;
-    hcryp->CrypInCount -= 8;
-    if(hcryp->CrypInCount == 0)
+    hcryp->pCrypInBuffPtr += 8U;
+    hcryp->CrypInCount -= 8U;
+    if(hcryp->CrypInCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_INI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_INI);
       /* Call the Input data transfer complete callback */
       HAL_CRYP_InCpltCallback(hcryp);
     }
   }
-  else if(__HAL_CRYP_GET_IT(CRYP_IT_OUTI))
+  else if(__HAL_CRYP_GET_IT(hcryp, CRYP_IT_OUTI))
   {
     outputaddr = (uint32_t)hcryp->pCrypOutBuffPtr;
     /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
+    outputaddr+=4U;
+    *(uint32_t*)(outputaddr) = hcryp->Instance->DOUT;
 
-    hcryp->pCrypOutBuffPtr += 8;
-    hcryp->CrypOutCount -= 8;
-    if(hcryp->CrypOutCount == 0)
+    hcryp->pCrypOutBuffPtr += 8U;
+    hcryp->CrypOutCount -= 8U;
+    if(hcryp->CrypOutCount == 0U)
     {
-      __HAL_CRYP_DISABLE_IT(CRYP_IT_OUTI);
+      __HAL_CRYP_DISABLE_IT(hcryp, CRYP_IT_OUTI);
       /* Disable CRYP */
-      __HAL_CRYP_DISABLE();
+      __HAL_CRYP_DISABLE(hcryp);
       /* Process Unlocked */
       __HAL_UNLOCK(hcryp);
       /* Change the CRYP state */
@@ -3021,7 +3472,7 @@ HAL_StatusTypeDef HAL_CRYP_TDESECB_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_
     hcryp->State = HAL_CRYP_STATE_BUSY;
     
     /* Set CRYP peripheral in TDES ECB encryption mode */
-    CRYP_SetTDESECBMode(hcryp, 0);
+    CRYP_SetTDESECBMode(hcryp, 0U);
     
     /* Set the input and output addresses and start DMA transfer */ 
     CRYP_SetDMAConfig(hcryp, inputaddr, Size, outputaddr);
@@ -3064,7 +3515,7 @@ HAL_StatusTypeDef HAL_CRYP_TDESCBC_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_
     hcryp->State = HAL_CRYP_STATE_BUSY;
     
     /* Set CRYP peripheral in TDES CBC encryption mode */
-    CRYP_SetTDESCBCMode(hcryp, 0);
+    CRYP_SetTDESCBCMode(hcryp, 0U);
     
     /* Set the input and output addresses and start DMA transfer */ 
     CRYP_SetDMAConfig(hcryp, inputaddr, Size, outputaddr);
@@ -3171,7 +3622,7 @@ HAL_StatusTypeDef HAL_CRYP_TDESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_
   * @}
   */
 
-/** @defgroup CRYP_Group5 DMA callback functions 
+/** @defgroup CRYP_Exported_Functions_Group5 DMA callback functions 
  *  @brief   DMA callback functions. 
  *
 @verbatim   
@@ -3195,6 +3646,8 @@ HAL_StatusTypeDef HAL_CRYP_TDESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_
   */
 __weak void HAL_CRYP_InCpltCallback(CRYP_HandleTypeDef *hcryp)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hcryp);
   /* NOTE : This function Should not be modified, when the callback is needed,
             the HAL_CRYP_InCpltCallback could be implemented in the user file
    */ 
@@ -3208,6 +3661,8 @@ __weak void HAL_CRYP_InCpltCallback(CRYP_HandleTypeDef *hcryp)
   */
 __weak void HAL_CRYP_OutCpltCallback(CRYP_HandleTypeDef *hcryp)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hcryp);
   /* NOTE : This function Should not be modified, when the callback is needed,
             the HAL_CRYP_OutCpltCallback could be implemented in the user file
    */
@@ -3221,6 +3676,8 @@ __weak void HAL_CRYP_OutCpltCallback(CRYP_HandleTypeDef *hcryp)
   */
  __weak void HAL_CRYP_ErrorCallback(CRYP_HandleTypeDef *hcryp)
 {
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hcryp);
   /* NOTE : This function Should not be modified, when the callback is needed,
             the HAL_CRYP_ErrorCallback could be implemented in the user file
    */ 
@@ -3230,7 +3687,7 @@ __weak void HAL_CRYP_OutCpltCallback(CRYP_HandleTypeDef *hcryp)
   * @}
   */
 
-/** @defgroup CRYP_Group6 CRYP IRQ handler management  
+/** @defgroup CRYP_Exported_Functions_Group6 CRYP IRQ handler management  
  *  @brief   CRYP IRQ handler.
  *
 @verbatim   
@@ -3254,59 +3711,59 @@ void HAL_CRYP_IRQHandler(CRYP_HandleTypeDef *hcryp)
   switch(CRYP->CR & CRYP_CR_ALGOMODE_DIRECTION)
   {
   case CRYP_CR_ALGOMODE_TDES_ECB_ENCRYPT:
-    HAL_CRYP_TDESECB_Encrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_TDESECB_Encrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_TDES_ECB_DECRYPT:
-    HAL_CRYP_TDESECB_Decrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_TDESECB_Decrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_TDES_CBC_ENCRYPT:
-    HAL_CRYP_TDESCBC_Encrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_TDESCBC_Encrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_TDES_CBC_DECRYPT:
-    HAL_CRYP_TDESCBC_Decrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_TDESCBC_Decrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_DES_ECB_ENCRYPT:
-    HAL_CRYP_DESECB_Encrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_DESECB_Encrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_DES_ECB_DECRYPT:
-    HAL_CRYP_DESECB_Decrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_DESECB_Decrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_DES_CBC_ENCRYPT:
-    HAL_CRYP_DESCBC_Encrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_DESCBC_Encrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_DES_CBC_DECRYPT:
-    HAL_CRYP_DESCBC_Decrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_DESCBC_Decrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_AES_ECB_ENCRYPT:
-    HAL_CRYP_AESECB_Encrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_AESECB_Encrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_AES_ECB_DECRYPT:
-    HAL_CRYP_AESECB_Decrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_AESECB_Decrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_AES_CBC_ENCRYPT:
-    HAL_CRYP_AESCBC_Encrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_AESCBC_Encrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_AES_CBC_DECRYPT:
-    HAL_CRYP_AESCBC_Decrypt_IT(hcryp, NULL, 0, NULL);
+    HAL_CRYP_AESCBC_Decrypt_IT(hcryp, NULL, 0U, NULL);
     break;
     
   case CRYP_CR_ALGOMODE_AES_CTR_ENCRYPT:
-    HAL_CRYP_AESCTR_Encrypt_IT(hcryp, NULL, 0, NULL);       
+    HAL_CRYP_AESCTR_Encrypt_IT(hcryp, NULL, 0U, NULL);       
     break;
     
   case CRYP_CR_ALGOMODE_AES_CTR_DECRYPT:
-    HAL_CRYP_AESCTR_Decrypt_IT(hcryp, NULL, 0, NULL);        
+    HAL_CRYP_AESCTR_Decrypt_IT(hcryp, NULL, 0U, NULL);        
     break;
     
   default:
@@ -3318,7 +3775,7 @@ void HAL_CRYP_IRQHandler(CRYP_HandleTypeDef *hcryp)
   * @}
   */
 
-/** @defgroup CRYP_Group7 Peripheral State functions 
+/** @defgroup CRYP_Exported_Functions_Group7 Peripheral State functions 
  *  @brief   Peripheral State functions. 
  *
 @verbatim   
@@ -3347,430 +3804,12 @@ HAL_CRYP_STATETypeDef HAL_CRYP_GetState(CRYP_HandleTypeDef *hcryp)
   * @}
   */
 
-/**
-  * @brief  DMA CRYP Input Data process complete callback.
-  * @param  hdma: DMA handle
-  * @retval None
-  */
-static void CRYP_DMAInCplt(DMA_HandleTypeDef *hdma)  
-{
-  CRYP_HandleTypeDef* hcryp = (CRYP_HandleTypeDef*)((DMA_HandleTypeDef*)hdma)->Parent;
-  
-  /* Disable the DMA transfer for input FIFO request by resetting the DIEN bit
-     in the DMACR register */
-  CRYP->DMACR &= (uint32_t)(~CRYP_DMACR_DIEN);
-  
-  /* Call input data transfer complete callback */
-  HAL_CRYP_InCpltCallback(hcryp);
-}
-
-/**
-  * @brief  DMA CRYP Output Data process complete callback.
-  * @param  hdma: DMA handle
-  * @retval None
-  */
-static void CRYP_DMAOutCplt(DMA_HandleTypeDef *hdma)
-{
-  CRYP_HandleTypeDef* hcryp = (CRYP_HandleTypeDef*)((DMA_HandleTypeDef*)hdma)->Parent;
-  
-  /* Disable the DMA transfer for output FIFO request by resetting the DOEN bit
-     in the DMACR register */
-  CRYP->DMACR &= (uint32_t)(~CRYP_DMACR_DOEN);
-  
-  /* Disable CRYP */
-  __HAL_CRYP_DISABLE();
-  
-  /* Change the CRYP state to ready */
-  hcryp->State = HAL_CRYP_STATE_READY;
-  
-  /* Call output data transfer complete callback */
-  HAL_CRYP_OutCpltCallback(hcryp);
-}
-
-/**
-  * @brief  DMA CRYP communication error callback. 
-  * @param  hdma: DMA handle
-  * @retval None
-  */
-static void CRYP_DMAError(DMA_HandleTypeDef *hdma)
-{
-  CRYP_HandleTypeDef* hcryp = (CRYP_HandleTypeDef*)((DMA_HandleTypeDef*)hdma)->Parent;
-  hcryp->State= HAL_CRYP_STATE_READY;
-  HAL_CRYP_ErrorCallback(hcryp);
-}
-
-/**
-  * @brief  Writes the Key in Key registers. 
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  Key: Pointer to Key buffer
-  * @param  KeySize: Size of Key
-  * @retval None
-  */
-static void CRYP_SetKey(CRYP_HandleTypeDef *hcryp, uint8_t *Key, uint32_t KeySize)
-{
-  uint32_t keyaddr = (uint32_t)Key;
-  
-  switch(KeySize)
-  {
-  case CRYP_KEYSIZE_256B:
-    /* Key Initialisation */
-    CRYP->K0LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K0RR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K1LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K1RR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K2LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K2RR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K3LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K3RR = __REV(*(uint32_t*)(keyaddr));
-    break;
-  case CRYP_KEYSIZE_192B:
-    CRYP->K1LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K1RR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K2LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K2RR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K3LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K3RR = __REV(*(uint32_t*)(keyaddr));
-    break;
-  case CRYP_KEYSIZE_128B:       
-    CRYP->K2LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K2RR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K3LR = __REV(*(uint32_t*)(keyaddr));
-    keyaddr+=4;
-    CRYP->K3RR = __REV(*(uint32_t*)(keyaddr));
-    break;
-  default:
-    break;
-  }
-}
-
-/**
-  * @brief  Writes the InitVector/InitCounter in IV registers. 
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  InitVector: Pointer to InitVector/InitCounter buffer
-  * @param  IVSize: Size of the InitVector/InitCounter
-  * @retval None
-  */
-static void CRYP_SetInitVector(CRYP_HandleTypeDef *hcryp, uint8_t *InitVector, uint32_t IVSize)
-{
-  uint32_t ivaddr = (uint32_t)InitVector;
-  
-  switch(IVSize)
-  {
-  case CRYP_KEYSIZE_128B:
-    CRYP->IV0LR = __REV(*(uint32_t*)(ivaddr));
-    ivaddr+=4;
-    CRYP->IV0RR = __REV(*(uint32_t*)(ivaddr));
-    ivaddr+=4;
-    CRYP->IV1LR = __REV(*(uint32_t*)(ivaddr));
-    ivaddr+=4;
-    CRYP->IV1RR = __REV(*(uint32_t*)(ivaddr));
-    break;
-    /* Whatever key size 192 or 256, Init vector is written in IV0LR and IV0RR */
-  case CRYP_KEYSIZE_192B:
-    CRYP->IV0LR = __REV(*(uint32_t*)(ivaddr));
-    ivaddr+=4;
-    CRYP->IV0RR = __REV(*(uint32_t*)(ivaddr));
-    break;
-  case CRYP_KEYSIZE_256B:
-    CRYP->IV0LR = __REV(*(uint32_t*)(ivaddr));
-    ivaddr+=4;
-    CRYP->IV0RR = __REV(*(uint32_t*)(ivaddr));
-    break;
-  default:
-    break;
-  }
-}
-
-/**
-  * @brief  Process Data: Writes Input data in polling mode and read the output data
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  Input: Pointer to the Input buffer
-  * @param  Ilength: Length of the Input buffer, must be a multiple of 16.
-  * @param  Output: Pointer to the returned buffer
-  * @retval None
-  */
-static HAL_StatusTypeDef CRYP_ProcessData(CRYP_HandleTypeDef *hcryp, uint8_t* Input, uint16_t Ilength, uint8_t* Output, uint32_t Timeout)
-{
-  uint32_t tickstart = 0;
-  
-  uint32_t i = 0;
-  uint32_t inputaddr  = (uint32_t)Input;
-  uint32_t outputaddr = (uint32_t)Output;
-  
-  for(i=0; (i < Ilength); i+=16)
-  {
-    /* Write the Input block in the IN FIFO */
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR  = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    
-    /* Get tick */
-    tickstart = HAL_GetTick();
-
-    while(HAL_IS_BIT_CLR(CRYP->SR, CRYP_FLAG_OFNE))
-    {    
-      /* Check for the Timeout */
-      if(Timeout != HAL_MAX_DELAY)
-      {
-        if((Timeout == 0)||((HAL_GetTick() - tickstart ) > Timeout))
-        {
-          /* Change state */
-          hcryp->State = HAL_CRYP_STATE_TIMEOUT;
-          
-          /* Process Unlocked */
-          __HAL_UNLOCK(hcryp);
-        
-          return HAL_TIMEOUT;
-        }
-      }
-    }
-    /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-  }
-  /* Return function status */
-  return HAL_OK;
-}
-
-/**
-  * @brief  Process Data: Write Input data in polling mode. 
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  Input: Pointer to the Input buffer
-  * @param  Ilength: Length of the Input buffer, must be a multiple of 8
-  * @param  Output: Pointer to the returned buffer
-  * @param  Timeout: Specify Timeout value  
-  * @retval None
-  */
-static HAL_StatusTypeDef CRYP_ProcessData2Words(CRYP_HandleTypeDef *hcryp, uint8_t* Input, uint16_t Ilength, uint8_t* Output, uint32_t Timeout)
-{
-  uint32_t tickstart = 0;   
-  
-  uint32_t i = 0;
-  uint32_t inputaddr  = (uint32_t)Input;
-  uint32_t outputaddr = (uint32_t)Output;
-  
-  for(i=0; (i < Ilength); i+=8)
-  {
-    /* Write the Input block in the IN FIFO */
-    CRYP->DR  = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    CRYP->DR = *(uint32_t*)(inputaddr);
-    inputaddr+=4;
-    
-    /* Get tick */
-    tickstart = HAL_GetTick();
-    
-    while(HAL_IS_BIT_CLR(CRYP->SR, CRYP_FLAG_OFNE))
-    {
-      /* Check for the Timeout */
-      if(Timeout != HAL_MAX_DELAY)
-      {
-        if((Timeout == 0)||((HAL_GetTick() - tickstart ) > Timeout))
-        {
-          /* Change state */
-          hcryp->State = HAL_CRYP_STATE_TIMEOUT;
-          
-          /* Process Unlocked */          
-          __HAL_UNLOCK(hcryp);
-          
-          return HAL_TIMEOUT;
-        }
-      }
-    }
-    /* Read the Output block from the Output FIFO */
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-    *(uint32_t*)(outputaddr) = CRYP->DOUT;
-    outputaddr+=4;
-  }
-  /* Return function status */
-  return HAL_OK;
-}
-
-/**
-  * @brief  Set the DMA configuration and start the DMA transfer
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  inputaddr: address of the Input buffer
-  * @param  Size: Size of the Input buffer, must be a multiple of 16.
-  * @param  outputaddr: address of the Output buffer
-  * @retval None
-  */
-static void CRYP_SetDMAConfig(CRYP_HandleTypeDef *hcryp, uint32_t inputaddr, uint16_t Size, uint32_t outputaddr)
-{
-  /* Set the CRYP DMA transfer complete callback */
-  hcryp->hdmain->XferCpltCallback = CRYP_DMAInCplt;
-  /* Set the DMA error callback */
-  hcryp->hdmain->XferErrorCallback = CRYP_DMAError;
-  
-  /* Set the CRYP DMA transfer complete callback */
-  hcryp->hdmaout->XferCpltCallback = CRYP_DMAOutCplt;
-  /* Set the DMA error callback */
-  hcryp->hdmaout->XferErrorCallback = CRYP_DMAError;
-  
-  /* Enable CRYP */
-  __HAL_CRYP_ENABLE();
-  
-  /* Enable the DMA In DMA Stream */
-  HAL_DMA_Start_IT(hcryp->hdmain, inputaddr, (uint32_t)&CRYP->DR, Size/4);
-  
-  /* Enable In DMA request */
-  CRYP->DMACR = (CRYP_DMACR_DIEN);
-  
-  /* Enable the DMA Out DMA Stream */
-  HAL_DMA_Start_IT(hcryp->hdmaout, (uint32_t)&CRYP->DOUT, outputaddr, Size/4);
-  
-  /* Enable Out DMA request */
-  CRYP->DMACR |= CRYP_DMACR_DOEN;
- 
-}
-
-/**
-  * @brief  Sets the CRYP peripheral in DES ECB mode.
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  Direction: Encryption or decryption
-  * @retval None
-  */
-static void CRYP_SetDESECBMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction)
-{
-  /* Check if initialization phase has already been performed */
-  if(hcryp->Phase == HAL_CRYP_PHASE_READY)
-  {
-    /* Set the CRYP peripheral in AES ECB mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_DES_ECB | Direction);
-    
-    /* Set the key */
-    CRYP->K1LR = __REV(*(uint32_t*)(hcryp->Init.pKey));
-    CRYP->K1RR = __REV(*(uint32_t*)(hcryp->Init.pKey+4));
-    
-    /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
-    
-    /* Set the phase */
-    hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
-  }
-}
-
-/**
-  * @brief  Sets the CRYP peripheral in DES CBC mode.
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  Direction: Encryption or decryption
-  * @retval None
-  */
-static void CRYP_SetDESCBCMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction)
-{
-  /* Check if initialization phase has already been performed */
-  if(hcryp->Phase == HAL_CRYP_PHASE_READY)
-  {
-    /* Set the CRYP peripheral in AES ECB mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_DES_CBC | Direction);
-    
-    /* Set the key */
-    CRYP->K1LR = __REV(*(uint32_t*)(hcryp->Init.pKey));
-    CRYP->K1RR = __REV(*(uint32_t*)(hcryp->Init.pKey+4));
-    
-    /* Set the Initialization Vector */
-    CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_256B);
-    
-    /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
-    
-    /* Set the phase */
-    hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
-  }
-}
-
-/**
-  * @brief  Sets the CRYP peripheral in TDES ECB mode.
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  Direction: Encryption or decryption
-  * @retval None
-  */
-static void CRYP_SetTDESECBMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction)
-{
-  /* Check if initialization phase has already been performed */
-  if(hcryp->Phase == HAL_CRYP_PHASE_READY)
-  {
-    /* Set the CRYP peripheral in AES ECB mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_TDES_ECB | Direction);
-    
-    /* Set the key */
-    CRYP_SetKey(hcryp, hcryp->Init.pKey, CRYP_KEYSIZE_192B);
-    
-    /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
-    
-    /* Set the phase */
-    hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
-  }
-}
-
-/**
-  * @brief  Sets the CRYP peripheral in TDES CBC mode
-  * @param  hcryp: pointer to a CRYP_HandleTypeDef structure that contains
-  *         the configuration information for CRYP module
-  * @param  Direction: Encryption or decryption
-  * @retval None
-  */
-static void CRYP_SetTDESCBCMode(CRYP_HandleTypeDef *hcryp, uint32_t Direction)
-{
-  /* Check if initialization phase has already been performed */
-  if(hcryp->Phase == HAL_CRYP_PHASE_READY)
-  {
-    /* Set the CRYP peripheral in AES CBC mode */
-    __HAL_CRYP_SET_MODE(CRYP_CR_ALGOMODE_TDES_CBC | Direction);
-    
-    /* Set the key */
-    CRYP_SetKey(hcryp, hcryp->Init.pKey, CRYP_KEYSIZE_192B);
-    
-    /* Set the Initialization Vector */
-    CRYP_SetInitVector(hcryp, hcryp->Init.pInitVect, CRYP_KEYSIZE_256B);
-    
-    /* Flush FIFO */
-    __HAL_CRYP_FIFO_FLUSH();
-    
-    /* Set the phase */
-    hcryp->Phase = HAL_CRYP_PHASE_PROCESS;
-  }
-}
 
 /**
   * @}
   */
 
-#endif /* STM32F415xx || STM32F417xx || STM32F437xx || STM32F439xx */
+#endif /* STM32F415xx || STM32F417xx || STM32F437xx || STM32F439xx || STM32F479xx */
 
 #endif /* HAL_CRYP_MODULE_ENABLED */
 /**

@@ -2,13 +2,13 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_cryp.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    19-June-2014
+  * @version V1.5.2
+  * @date    22-September-2016
   * @brief   Header file of CRYP HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2014 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -43,7 +43,7 @@
  extern "C" {
 #endif
 
-#if defined(STM32F415xx) || defined(STM32F417xx) || defined(STM32F437xx) || defined(STM32F439xx)
+#if defined(STM32F415xx) || defined(STM32F417xx) || defined(STM32F437xx) || defined(STM32F439xx) || defined(STM32F479xx)
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal_def.h"
 
@@ -57,9 +57,14 @@
 
 /* Exported types ------------------------------------------------------------*/
 
-/** 
-  * @brief  CRYP Configuration Structure definition
+/** @defgroup CRYP_Exported_Types CRYP Exported Types
+  * @{
   */
+
+/** @defgroup CRYP_Exported_Types_Group1 CRYP Configuration Structure definition
+  * @{
+  */
+
 typedef struct
 {
   uint32_t DataType;    /*!< 32-bit data, 16-bit data, 8-bit data or 1-bit string.
@@ -83,40 +88,59 @@ typedef struct
 
   uint8_t* Header;      /*!< The header used in GCM and CCM modes */
 
-  uint16_t HeaderSize;  /*!< The size of header buffer in bytes */
+  uint32_t HeaderSize;  /*!< The size of header buffer in bytes */
 
   uint8_t* pScratch;    /*!< Scratch buffer used to append the header. It's size must be equal to header size + 21 bytes.
                              This parameter is used only in AES-128/192/256 encryption/decryption CCM mode */
 }CRYP_InitTypeDef;
 
 /** 
-  * @brief HAL CRYP State structures definition
+  * @}
   */
+
+/** @defgroup CRYP_Exported_Types_Group2 CRYP State structures definition
+  * @{
+  */
+    
+
 typedef enum
 {
-  HAL_CRYP_STATE_RESET             = 0x00,  /*!< CRYP not yet initialized or disabled  */
-  HAL_CRYP_STATE_READY             = 0x01,  /*!< CRYP initialized and ready for use    */
-  HAL_CRYP_STATE_BUSY              = 0x02,  /*!< CRYP internal processing is ongoing   */
-  HAL_CRYP_STATE_TIMEOUT           = 0x03,  /*!< CRYP timeout state                    */
-  HAL_CRYP_STATE_ERROR             = 0x04   /*!< CRYP error state                      */
+  HAL_CRYP_STATE_RESET             = 0x00U,  /*!< CRYP not yet initialized or disabled  */
+  HAL_CRYP_STATE_READY             = 0x01U,  /*!< CRYP initialized and ready for use    */
+  HAL_CRYP_STATE_BUSY              = 0x02U,  /*!< CRYP internal processing is ongoing   */
+  HAL_CRYP_STATE_TIMEOUT           = 0x03U,  /*!< CRYP timeout state                    */
+  HAL_CRYP_STATE_ERROR             = 0x04U   /*!< CRYP error state                      */
 }HAL_CRYP_STATETypeDef;
 
 /** 
-  * @brief HAL CRYP phase structures definition
+  * @}
   */
+  
+/** @defgroup CRYP_Exported_Types_Group3 CRYP phase structures definition
+  * @{
+  */
+    
+
 typedef enum
 {
-  HAL_CRYP_PHASE_READY             = 0x01,    /*!< CRYP peripheral is ready for initialization. */
-  HAL_CRYP_PHASE_PROCESS           = 0x02,    /*!< CRYP peripheral is in processing phase */
-  HAL_CRYP_PHASE_FINAL             = 0x03     /*!< CRYP peripheral is in final phase
+  HAL_CRYP_PHASE_READY             = 0x01U,    /*!< CRYP peripheral is ready for initialization. */
+  HAL_CRYP_PHASE_PROCESS           = 0x02U,    /*!< CRYP peripheral is in processing phase */
+  HAL_CRYP_PHASE_FINAL             = 0x03U     /*!< CRYP peripheral is in final phase
                                                    This is relevant only with CCM and GCM modes */
 }HAL_PhaseTypeDef;
 
 /** 
-  * @brief  CRYP handle Structure definition
-  */ 
+  * @}
+  */
+  
+/** @defgroup CRYP_Exported_Types_Group4 CRYP handle Structure definition
+  * @{
+  */
+  
 typedef struct
 {
+      CRYP_TypeDef             *Instance;        /*!< CRYP registers base address */
+
       CRYP_InitTypeDef         Init;             /*!< CRYP required parameters */
 
       uint8_t                  *pCrypInBuffPtr;  /*!< Pointer to CRYP processing (encryption, decryption,...) buffer */
@@ -125,7 +149,7 @@ typedef struct
 
       __IO uint16_t            CrypInCount;      /*!< Counter of inputed data */
 
-      __IO uint16_t            CrypOutCount;     /*!< Counter of outputed data */
+      __IO uint16_t            CrypOutCount;     /*!< Counter of output data */
 
       HAL_StatusTypeDef        Status;           /*!< CRYP peripheral status */
 
@@ -140,65 +164,63 @@ typedef struct
    __IO  HAL_CRYP_STATETypeDef State;            /*!< CRYP peripheral state */
 }CRYP_HandleTypeDef;
 
+/** 
+  * @}
+  */
+
+/** 
+  * @}
+  */
+    
 /* Exported constants --------------------------------------------------------*/
-
-/** @defgroup CRYP_Exported_Constants
+/** @defgroup CRYP_Exported_Constants CRYP Exported Constants
   * @{
   */
 
-/** @defgroup CRYP_Key_Size 
+/** @defgroup CRYP_Key_Size CRYP Key Size
   * @{
   */
-#define CRYP_KEYSIZE_128B         ((uint32_t)0x00000000)
+#define CRYP_KEYSIZE_128B         ((uint32_t)0x00000000U)
 #define CRYP_KEYSIZE_192B         CRYP_CR_KEYSIZE_0
 #define CRYP_KEYSIZE_256B         CRYP_CR_KEYSIZE_1
-
-#define IS_CRYP_KEYSIZE(KEYSIZE)  (((KEYSIZE) == CRYP_KEYSIZE_128B)  || \
-                                   ((KEYSIZE) == CRYP_KEYSIZE_192B)  || \
-                                   ((KEYSIZE) == CRYP_KEYSIZE_256B))
 /**
   * @}
   */
 
-/** @defgroup CRYP_Data_Type 
+/** @defgroup CRYP_Data_Type CRYP Data Type
   * @{
   */
-#define CRYP_DATATYPE_32B         ((uint32_t)0x00000000)
+#define CRYP_DATATYPE_32B         ((uint32_t)0x00000000U)
 #define CRYP_DATATYPE_16B         CRYP_CR_DATATYPE_0
 #define CRYP_DATATYPE_8B          CRYP_CR_DATATYPE_1
 #define CRYP_DATATYPE_1B          CRYP_CR_DATATYPE
-
-#define IS_CRYP_DATATYPE(DATATYPE) (((DATATYPE) == CRYP_DATATYPE_32B) || \
-                                    ((DATATYPE) == CRYP_DATATYPE_16B) || \
-                                    ((DATATYPE) == CRYP_DATATYPE_8B)  || \
-                                    ((DATATYPE) == CRYP_DATATYPE_1B))  
 /**
   * @}
   */
 
-/** @defgroup CRYP_AlgoModeDirection
+/** @defgroup CRYP_Exported_Constants_Group3 CRYP CRYP_AlgoModeDirection
   * @{
-  */ 
-#define CRYP_CR_ALGOMODE_DIRECTION         ((uint32_t)0x0008003C)
-#define CRYP_CR_ALGOMODE_TDES_ECB_ENCRYPT  ((uint32_t)0x00000000)
-#define CRYP_CR_ALGOMODE_TDES_ECB_DECRYPT  ((uint32_t)0x00000004)
-#define CRYP_CR_ALGOMODE_TDES_CBC_ENCRYPT  ((uint32_t)0x00000008)
-#define CRYP_CR_ALGOMODE_TDES_CBC_DECRYPT  ((uint32_t)0x0000000C)
-#define CRYP_CR_ALGOMODE_DES_ECB_ENCRYPT   ((uint32_t)0x00000010)
-#define CRYP_CR_ALGOMODE_DES_ECB_DECRYPT   ((uint32_t)0x00000014)
-#define CRYP_CR_ALGOMODE_DES_CBC_ENCRYPT   ((uint32_t)0x00000018)
-#define CRYP_CR_ALGOMODE_DES_CBC_DECRYPT   ((uint32_t)0x0000001C)
-#define CRYP_CR_ALGOMODE_AES_ECB_ENCRYPT   ((uint32_t)0x00000020)
-#define CRYP_CR_ALGOMODE_AES_ECB_DECRYPT   ((uint32_t)0x00000024)
-#define CRYP_CR_ALGOMODE_AES_CBC_ENCRYPT   ((uint32_t)0x00000028)
-#define CRYP_CR_ALGOMODE_AES_CBC_DECRYPT   ((uint32_t)0x0000002C)
-#define CRYP_CR_ALGOMODE_AES_CTR_ENCRYPT   ((uint32_t)0x00000030)
-#define CRYP_CR_ALGOMODE_AES_CTR_DECRYPT   ((uint32_t)0x00000034)
+  */
+#define CRYP_CR_ALGOMODE_DIRECTION         ((uint32_t)0x0008003CU)
+#define CRYP_CR_ALGOMODE_TDES_ECB_ENCRYPT  ((uint32_t)0x00000000U)
+#define CRYP_CR_ALGOMODE_TDES_ECB_DECRYPT  ((uint32_t)0x00000004U)
+#define CRYP_CR_ALGOMODE_TDES_CBC_ENCRYPT  ((uint32_t)0x00000008U)
+#define CRYP_CR_ALGOMODE_TDES_CBC_DECRYPT  ((uint32_t)0x0000000CU)
+#define CRYP_CR_ALGOMODE_DES_ECB_ENCRYPT   ((uint32_t)0x00000010U)
+#define CRYP_CR_ALGOMODE_DES_ECB_DECRYPT   ((uint32_t)0x00000014U)
+#define CRYP_CR_ALGOMODE_DES_CBC_ENCRYPT   ((uint32_t)0x00000018U)
+#define CRYP_CR_ALGOMODE_DES_CBC_DECRYPT   ((uint32_t)0x0000001CU)
+#define CRYP_CR_ALGOMODE_AES_ECB_ENCRYPT   ((uint32_t)0x00000020U)
+#define CRYP_CR_ALGOMODE_AES_ECB_DECRYPT   ((uint32_t)0x00000024U)
+#define CRYP_CR_ALGOMODE_AES_CBC_ENCRYPT   ((uint32_t)0x00000028U)
+#define CRYP_CR_ALGOMODE_AES_CBC_DECRYPT   ((uint32_t)0x0000002CU)
+#define CRYP_CR_ALGOMODE_AES_CTR_ENCRYPT   ((uint32_t)0x00000030U)
+#define CRYP_CR_ALGOMODE_AES_CTR_DECRYPT   ((uint32_t)0x00000034U)
 /**
   * @}
   */
   
-/** @defgroup CRYP_Interrupt
+/** @defgroup CRYP_Exported_Constants_Group4 CRYP CRYP_Interrupt
   * @{
   */
 #define CRYP_IT_INI               ((uint32_t)CRYP_IMSCR_INIM)   /*!< Input FIFO Interrupt */
@@ -207,21 +229,20 @@ typedef struct
   * @}
   */
 
-/** @defgroup CRYP_Flags 
+/** @defgroup CRYP_Exported_Constants_Group5 CRYP CRYP_Flags
   * @{
   */
-
-#define CRYP_FLAG_BUSY   ((uint32_t)0x00000010)  /*!< The CRYP core is currently 
+#define CRYP_FLAG_BUSY   ((uint32_t)0x00000010U)  /*!< The CRYP core is currently 
                                                      processing a block of data 
                                                      or a key preparation (for 
                                                      AES decryption). */
-#define CRYP_FLAG_IFEM   ((uint32_t)0x00000001)  /*!< Input FIFO is empty */
-#define CRYP_FLAG_IFNF   ((uint32_t)0x00000002)  /*!< Input FIFO is not Full */
-#define CRYP_FLAG_OFNE   ((uint32_t)0x00000004)  /*!< Output FIFO is not empty */
-#define CRYP_FLAG_OFFU   ((uint32_t)0x00000008)  /*!< Output FIFO is Full */
-#define CRYP_FLAG_OUTRIS ((uint32_t)0x01000002)  /*!< Output FIFO service raw 
+#define CRYP_FLAG_IFEM   ((uint32_t)0x00000001U)  /*!< Input FIFO is empty */
+#define CRYP_FLAG_IFNF   ((uint32_t)0x00000002U)  /*!< Input FIFO is not Full */
+#define CRYP_FLAG_OFNE   ((uint32_t)0x00000004U)  /*!< Output FIFO is not empty */
+#define CRYP_FLAG_OFFU   ((uint32_t)0x00000008U)  /*!< Output FIFO is Full */
+#define CRYP_FLAG_OUTRIS ((uint32_t)0x01000002U)  /*!< Output FIFO service raw 
                                                       interrupt status */
-#define CRYP_FLAG_INRIS  ((uint32_t)0x01000001)  /*!< Input FIFO service raw 
+#define CRYP_FLAG_INRIS  ((uint32_t)0x01000001U)  /*!< Input FIFO service raw 
                                                       interrupt status */
 /**
   * @}
@@ -232,7 +253,10 @@ typedef struct
   */
 
 /* Exported macro ------------------------------------------------------------*/
-
+/** @defgroup CRYP_Exported_Macros CRYP Exported Macros
+  * @{
+  */
+  
 /** @brief Reset CRYP handle state
   * @param  __HANDLE__: specifies the CRYP handle.
   * @retval None
@@ -241,27 +265,29 @@ typedef struct
 
 /**
   * @brief  Enable/Disable the CRYP peripheral.
-  * @param  None
+  * @param  __HANDLE__: specifies the CRYP handle.
   * @retval None
   */
-#define __HAL_CRYP_ENABLE()  (CRYP->CR |=  CRYP_CR_CRYPEN)
-#define __HAL_CRYP_DISABLE() (CRYP->CR &=  ~CRYP_CR_CRYPEN)
+#define __HAL_CRYP_ENABLE(__HANDLE__)  ((__HANDLE__)->Instance->CR |=  CRYP_CR_CRYPEN)
+#define __HAL_CRYP_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->CR &=  ~CRYP_CR_CRYPEN)
 
 /**
   * @brief  Flush the data FIFO.
-  * @param  None
+  * @param  __HANDLE__: specifies the CRYP handle.
   * @retval None
   */
-#define __HAL_CRYP_FIFO_FLUSH() (CRYP->CR |=  CRYP_CR_FFLUSH)
+#define __HAL_CRYP_FIFO_FLUSH(__HANDLE__) ((__HANDLE__)->Instance->CR |=  CRYP_CR_FFLUSH)
 
 /**
   * @brief  Set the algorithm mode: AES-ECB, AES-CBC, AES-CTR, DES-ECB, DES-CBC.
+  * @param  __HANDLE__: specifies the CRYP handle.
   * @param  MODE: The algorithm mode.
   * @retval None
   */
-#define __HAL_CRYP_SET_MODE(MODE)  CRYP->CR |= (uint32_t)(MODE)
+#define __HAL_CRYP_SET_MODE(__HANDLE__, MODE)  ((__HANDLE__)->Instance->CR |= (uint32_t)(MODE))
 
 /** @brief  Check whether the specified CRYP flag is set or not.
+  * @param  __HANDLE__: specifies the CRYP handle.
   * @param  __FLAG__: specifies the flag to check.
   *         This parameter can be one of the following values:
   *            @arg CRYP_FLAG_BUSY: The CRYP core is currently processing a block of data 
@@ -274,41 +300,62 @@ typedef struct
   *            @arg CRYP_FLAG_OUTRIS: Input FIFO service raw interrupt is pending
   * @retval The new state of __FLAG__ (TRUE or FALSE).
   */
-#define CRYP_FLAG_MASK  ((uint32_t)0x0000001F)
-#define __HAL_CRYP_GET_FLAG(__FLAG__) ((((uint8_t)((__FLAG__) >> 24)) == 0x01)?(((CRYP->RISR) & ((__FLAG__) & CRYP_FLAG_MASK)) == ((__FLAG__) & CRYP_FLAG_MASK)): \
-                                                 (((CRYP->RISR) & ((__FLAG__) & CRYP_FLAG_MASK)) == ((__FLAG__) & CRYP_FLAG_MASK)))
+
+#define __HAL_CRYP_GET_FLAG(__HANDLE__, __FLAG__) ((((uint8_t)((__FLAG__) >> 24U)) == 0x01U)?((((__HANDLE__)->Instance->RISR) & ((__FLAG__) & CRYP_FLAG_MASK)) == ((__FLAG__) & CRYP_FLAG_MASK)): \
+                                                 ((((__HANDLE__)->Instance->RISR) & ((__FLAG__) & CRYP_FLAG_MASK)) == ((__FLAG__) & CRYP_FLAG_MASK)))
 
 /** @brief  Check whether the specified CRYP interrupt is set or not.
+  * @param  __HANDLE__: specifies the CRYP handle.
   * @param  __INTERRUPT__: specifies the interrupt to check.
   *         This parameter can be one of the following values:
   *            @arg CRYP_IT_INRIS: Input FIFO service raw interrupt is pending
   *            @arg CRYP_IT_OUTRIS: Output FIFO service raw interrupt is pending
   * @retval The new state of __INTERRUPT__ (TRUE or FALSE).
   */
-#define __HAL_CRYP_GET_IT(__INTERRUPT__) ((CRYP->MISR & (__INTERRUPT__)) == (__INTERRUPT__))
+#define __HAL_CRYP_GET_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->MISR & (__INTERRUPT__)) == (__INTERRUPT__))
 
 /**
   * @brief  Enable the CRYP interrupt.
+  * @param  __HANDLE__: specifies the CRYP handle.
   * @param  __INTERRUPT__: CRYP Interrupt.
   * @retval None
   */
-#define __HAL_CRYP_ENABLE_IT(__INTERRUPT__) ((CRYP->IMSCR) |= (__INTERRUPT__))
+#define __HAL_CRYP_ENABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->IMSCR) |= (__INTERRUPT__))
 
 /**
   * @brief  Disable the CRYP interrupt.
+  * @param  __HANDLE__: specifies the CRYP handle.
   * @param  __INTERRUPT__: CRYP interrupt.
   * @retval None
   */
-#define __HAL_CRYP_DISABLE_IT(__INTERRUPT__) ((CRYP->IMSCR) &= ~(__INTERRUPT__))
+#define __HAL_CRYP_DISABLE_IT(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->IMSCR) &= ~(__INTERRUPT__))
 
+/**
+  * @}
+  */ 
+  
 /* Include CRYP HAL Extension module */
 #include "stm32f4xx_hal_cryp_ex.h"
 
 /* Exported functions --------------------------------------------------------*/
-/* Initialization/de-initialization functions  ********************************/
+/** @defgroup CRYP_Exported_Functions CRYP Exported Functions
+  * @{
+  */
+
+/** @addtogroup CRYP_Exported_Functions_Group1
+  * @{
+  */    
 HAL_StatusTypeDef HAL_CRYP_Init(CRYP_HandleTypeDef *hcryp);
 HAL_StatusTypeDef HAL_CRYP_DeInit(CRYP_HandleTypeDef *hcryp);
+void HAL_CRYP_MspInit(CRYP_HandleTypeDef *hcryp);
+void HAL_CRYP_MspDeInit(CRYP_HandleTypeDef *hcryp);
+/**
+  * @}
+  */ 
 
+/** @addtogroup CRYP_Exported_Functions_Group2
+  * @{
+  */  
 /* AES encryption/decryption using polling  ***********************************/
 HAL_StatusTypeDef HAL_CRYP_AESECB_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout);
 HAL_StatusTypeDef HAL_CRYP_AESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData, uint32_t Timeout);
@@ -332,12 +379,18 @@ HAL_StatusTypeDef HAL_CRYP_AESCBC_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t
 HAL_StatusTypeDef HAL_CRYP_AESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData);
 HAL_StatusTypeDef HAL_CRYP_AESCTR_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData);
 HAL_StatusTypeDef HAL_CRYP_AESCTR_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData);
+/**
+  * @}
+  */ 
 
+/** @addtogroup CRYP_Exported_Functions_Group3
+  * @{
+  */  
 /* DES encryption/decryption using polling  ***********************************/
 HAL_StatusTypeDef HAL_CRYP_DESECB_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout);
 HAL_StatusTypeDef HAL_CRYP_DESCBC_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout);
-HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout);
-HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout);
+HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData, uint32_t Timeout);
+HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData, uint32_t Timeout);
 
 /* DES encryption/decryption using interrupt  *********************************/
 HAL_StatusTypeDef HAL_CRYP_DESECB_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData);
@@ -347,10 +400,16 @@ HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint8_t 
 
 /* DES encryption/decryption using DMA  ***************************************/
 HAL_StatusTypeDef HAL_CRYP_DESECB_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData);
-HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData);
+HAL_StatusTypeDef HAL_CRYP_DESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData);
 HAL_StatusTypeDef HAL_CRYP_DESCBC_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData);
 HAL_StatusTypeDef HAL_CRYP_DESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData);
+/**
+  * @}
+  */ 
 
+/** @addtogroup CRYP_Exported_Functions_Group4
+  * @{
+  */  
 /* TDES encryption/decryption using polling  **********************************/
 HAL_StatusTypeDef HAL_CRYP_TDESECB_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout);
 HAL_StatusTypeDef HAL_CRYP_TDESCBC_Encrypt(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData, uint32_t Timeout);
@@ -368,23 +427,97 @@ HAL_StatusTypeDef HAL_CRYP_TDESECB_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_
 HAL_StatusTypeDef HAL_CRYP_TDESECB_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData);
 HAL_StatusTypeDef HAL_CRYP_TDESCBC_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pPlainData, uint16_t Size, uint8_t *pCypherData);
 HAL_StatusTypeDef HAL_CRYP_TDESCBC_Decrypt_DMA(CRYP_HandleTypeDef *hcryp, uint8_t *pCypherData, uint16_t Size, uint8_t *pPlainData);
+/**
+  * @}
+  */ 
 
-/* Processing functions  ******************************************************/
-void HAL_CRYP_IRQHandler(CRYP_HandleTypeDef *hcryp);
-
-/* Peripheral State functions  ************************************************/
-HAL_CRYP_STATETypeDef HAL_CRYP_GetState(CRYP_HandleTypeDef *hcryp);
-
-/* MSP functions  *************************************************************/
-void HAL_CRYP_MspInit(CRYP_HandleTypeDef *hcryp);
-void HAL_CRYP_MspDeInit(CRYP_HandleTypeDef *hcryp);
-
-/* CallBack functions  ********************************************************/
+/** @addtogroup CRYP_Exported_Functions_Group5
+  * @{
+  */  
 void HAL_CRYP_InCpltCallback(CRYP_HandleTypeDef *hcryp);
 void HAL_CRYP_OutCpltCallback(CRYP_HandleTypeDef *hcryp);
 void HAL_CRYP_ErrorCallback(CRYP_HandleTypeDef *hcryp);
+/**
+  * @}
+  */ 
 
-#endif /* STM32F415xx || STM32F417xx || STM32F437xx || STM32F439xx */
+/** @addtogroup CRYP_Exported_Functions_Group6
+  * @{
+  */  
+void HAL_CRYP_IRQHandler(CRYP_HandleTypeDef *hcryp);
+/**
+  * @}
+  */ 
+
+/** @addtogroup CRYP_Exported_Functions_Group7
+  * @{
+  */  
+HAL_CRYP_STATETypeDef HAL_CRYP_GetState(CRYP_HandleTypeDef *hcryp);
+/**
+  * @}
+  */ 
+  
+/**
+  * @}
+  */
+
+/* Private types -------------------------------------------------------------*/
+/** @defgroup CRYP_Private_Types CRYP Private Types
+  * @{
+  */
+
+/**
+  * @}
+  */ 
+
+/* Private variables ---------------------------------------------------------*/
+/** @defgroup CRYP_Private_Variables CRYP Private Variables
+  * @{
+  */
+
+/**
+  * @}
+  */ 
+
+/* Private constants ---------------------------------------------------------*/
+/** @defgroup CRYP_Private_Constants CRYP Private Constants
+  * @{
+  */
+#define CRYP_FLAG_MASK  ((uint32_t)0x0000001FU)
+/**
+  * @}
+  */ 
+
+/* Private macros ------------------------------------------------------------*/
+/** @defgroup CRYP_Private_Macros CRYP Private Macros
+  * @{
+  */
+
+#define IS_CRYP_KEYSIZE(__KEYSIZE__)  (((__KEYSIZE__) == CRYP_KEYSIZE_128B)  || \
+                                       ((__KEYSIZE__) == CRYP_KEYSIZE_192B)  || \
+                                       ((__KEYSIZE__) == CRYP_KEYSIZE_256B))
+
+
+#define IS_CRYP_DATATYPE(__DATATYPE__) (((__DATATYPE__) == CRYP_DATATYPE_32B) || \
+                                        ((__DATATYPE__) == CRYP_DATATYPE_16B) || \
+                                        ((__DATATYPE__) == CRYP_DATATYPE_8B)  || \
+                                        ((__DATATYPE__) == CRYP_DATATYPE_1B))  
+
+
+ /**
+  * @}
+  */ 
+  
+/* Private functions ---------------------------------------------------------*/
+/** @defgroup CRYP_Private_Functions CRYP Private Functions
+  * @{
+  */
+
+/**
+  * @}
+  */
+     
+#endif /* STM32F415xx || STM32F417xx || STM32F437xx || STM32F439xx || STM32F479xx */
 
 /**
   * @}

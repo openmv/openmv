@@ -2,13 +2,13 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_sdram.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    19-June-2014
+  * @version V1.5.2
+  * @date    22-September-2016
   * @brief   Header file of SDRAM HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2014 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -43,7 +43,8 @@
  extern "C" {
 #endif
 
-#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx)
+#if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx) ||\
+    defined(STM32F446xx) || defined(STM32F469xx) || defined(STM32F479xx)
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_ll_fmc.h"
@@ -57,18 +58,21 @@
   */ 
 
 /* Exported typedef ----------------------------------------------------------*/   
+/** @defgroup SDRAM_Exported_Types SDRAM Exported Types
+  * @{
+  */
 
 /** 
   * @brief  HAL SDRAM State structure definition  
   */ 
 typedef enum
 {
-  HAL_SDRAM_STATE_RESET             = 0x00,  /*!< SDRAM not yet initialized or disabled */
-  HAL_SDRAM_STATE_READY             = 0x01,  /*!< SDRAM initialized and ready for use   */
-  HAL_SDRAM_STATE_BUSY              = 0x02,  /*!< SDRAM internal process is ongoing     */
-  HAL_SDRAM_STATE_ERROR             = 0x03,  /*!< SDRAM error state                     */
-  HAL_SDRAM_STATE_WRITE_PROTECTED   = 0x04,  /*!< SDRAM device write protected          */
-  HAL_SDRAM_STATE_PRECHARGED        = 0x05   /*!< SDRAM device precharged               */
+  HAL_SDRAM_STATE_RESET             = 0x00U,  /*!< SDRAM not yet initialized or disabled */
+  HAL_SDRAM_STATE_READY             = 0x01U,  /*!< SDRAM initialized and ready for use   */
+  HAL_SDRAM_STATE_BUSY              = 0x02U,  /*!< SDRAM internal process is ongoing     */
+  HAL_SDRAM_STATE_ERROR             = 0x03U,  /*!< SDRAM error state                     */
+  HAL_SDRAM_STATE_WRITE_PROTECTED   = 0x04U,  /*!< SDRAM device write protected          */
+  HAL_SDRAM_STATE_PRECHARGED        = 0x05U   /*!< SDRAM device precharged               */
   
 }HAL_SDRAM_StateTypeDef;
 
@@ -88,19 +92,35 @@ typedef struct
   DMA_HandleTypeDef             *hdma;      /*!< Pointer DMA handler                   */
   
 }SDRAM_HandleTypeDef;
-         
-/* Exported types ------------------------------------------------------------*/
+/**
+  * @}
+  */
+
+/* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
+/** @defgroup SDRAM_Exported_Macros SDRAM Exported Macros
+  * @{
+  */
 
 /** @brief Reset SDRAM handle state
   * @param  __HANDLE__: specifies the SDRAM handle.
   * @retval None
   */
 #define __HAL_SDRAM_RESET_HANDLE_STATE(__HANDLE__) ((__HANDLE__)->State = HAL_SDRAM_STATE_RESET)
+/**
+  * @}
+  */
 
 /* Exported functions --------------------------------------------------------*/
+/** @addtogroup SDRAM_Exported_Functions SDRAM Exported Functions
+  * @{
+  */
 
-/* Initialization/de-initialization functions  **********************************/
+/** @addtogroup SDRAM_Exported_Functions_Group1 
+  * @{
+  */
+
+/* Initialization/de-initialization functions *********************************/
 HAL_StatusTypeDef HAL_SDRAM_Init(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_TimingTypeDef *Timing);
 HAL_StatusTypeDef HAL_SDRAM_DeInit(SDRAM_HandleTypeDef *hsdram);
 void HAL_SDRAM_MspInit(SDRAM_HandleTypeDef *hsdram);
@@ -110,8 +130,14 @@ void HAL_SDRAM_IRQHandler(SDRAM_HandleTypeDef *hsdram);
 void HAL_SDRAM_RefreshErrorCallback(SDRAM_HandleTypeDef *hsdram);
 void HAL_SDRAM_DMA_XferCpltCallback(DMA_HandleTypeDef *hdma);
 void HAL_SDRAM_DMA_XferErrorCallback(DMA_HandleTypeDef *hdma);
+/**
+  * @}
+  */
 
-/* I/O operation functions  *****************************************************/
+/** @addtogroup SDRAM_Exported_Functions_Group2 
+  * @{
+  */
+/* I/O operation functions ****************************************************/
 HAL_StatusTypeDef HAL_SDRAM_Read_8b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint8_t *pDstBuffer, uint32_t BufferSize);
 HAL_StatusTypeDef HAL_SDRAM_Write_8b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint8_t *pSrcBuffer, uint32_t BufferSize);
 HAL_StatusTypeDef HAL_SDRAM_Read_16b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint16_t *pDstBuffer, uint32_t BufferSize);
@@ -121,7 +147,13 @@ HAL_StatusTypeDef HAL_SDRAM_Write_32b(SDRAM_HandleTypeDef *hsdram, uint32_t *pAd
 
 HAL_StatusTypeDef HAL_SDRAM_Read_DMA(SDRAM_HandleTypeDef *hsdram, uint32_t * pAddress, uint32_t *pDstBuffer, uint32_t BufferSize);
 HAL_StatusTypeDef HAL_SDRAM_Write_DMA(SDRAM_HandleTypeDef *hsdram, uint32_t *pAddress, uint32_t *pSrcBuffer, uint32_t BufferSize);
-
+/**
+  * @}
+  */
+  
+/** @addtogroup SDRAM_Exported_Functions_Group3 
+  * @{
+  */
 /* SDRAM Control functions  *****************************************************/
 HAL_StatusTypeDef HAL_SDRAM_WriteProtection_Enable(SDRAM_HandleTypeDef *hsdram);
 HAL_StatusTypeDef HAL_SDRAM_WriteProtection_Disable(SDRAM_HandleTypeDef *hsdram);
@@ -129,14 +161,28 @@ HAL_StatusTypeDef HAL_SDRAM_SendCommand(SDRAM_HandleTypeDef *hsdram, FMC_SDRAM_C
 HAL_StatusTypeDef HAL_SDRAM_ProgramRefreshRate(SDRAM_HandleTypeDef *hsdram, uint32_t RefreshRate);
 HAL_StatusTypeDef HAL_SDRAM_SetAutoRefreshNumber(SDRAM_HandleTypeDef *hsdram, uint32_t AutoRefreshNumber);
 uint32_t          HAL_SDRAM_GetModeStatus(SDRAM_HandleTypeDef *hsdram);
-
-/* SDRAM State functions ********************************************************/
-HAL_SDRAM_StateTypeDef  HAL_SDRAM_GetState(SDRAM_HandleTypeDef *hsdram);
-
-#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx */
 /**
   * @}
-  */ 
+  */
+
+/** @addtogroup SDRAM_Exported_Functions_Group4 
+  * @{
+  */
+/* SDRAM State functions ********************************************************/
+HAL_SDRAM_StateTypeDef  HAL_SDRAM_GetState(SDRAM_HandleTypeDef *hsdram);
+/**
+  * @}
+  */
+
+/**
+  * @}
+  */
+
+/**
+  * @}
+  */
+
+#endif /* STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx || STM32F446xx || STM32F469xx || STM32F479xx */
 
 /**
   * @}
