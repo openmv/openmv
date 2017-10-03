@@ -2439,6 +2439,7 @@ static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t 
     return objects_list;
 }
 
+#ifdef OMV_ENABLE_FIND_LINE_SEGMENTS
 static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -2477,6 +2478,7 @@ static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, m
 
     return objects_list;
 }
+#endif
 
 #ifdef OMV_ENABLE_FIND_CIRCLES
 // Circle Object //
@@ -3826,7 +3828,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_regression_obj, 2, py_image_get_r
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
 /* Shape Detection */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
+#ifdef OMV_ENABLE_FIND_LINE_SEGMENTS
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_line_segments_obj, 1, py_image_find_line_segments);
+#endif
 #ifdef OMV_ENABLE_FIND_CIRCLES
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_circles_obj, 1, py_image_find_circles);
 #endif
@@ -3932,7 +3936,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
     /* Shape Detection */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lines),          (mp_obj_t)&py_image_find_lines_obj},
+#ifdef OMV_ENABLE_FIND_LINE_SEGMENTS
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_line_segments),  (mp_obj_t)&py_image_find_line_segments_obj},
+#endif
 #ifdef OMV_ENABLE_FIND_CIRCLES
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_circles),        (mp_obj_t)&py_image_find_circles_obj},
 #endif
