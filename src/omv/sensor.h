@@ -127,6 +127,7 @@ typedef struct _sensor {
 
     // Sensor function pointers
     int  (*reset)               (sensor_t *sensor);
+    int  (*sleep)               (sensor_t *sensor, int enable);
     int  (*set_pixformat)       (sensor_t *sensor, pixformat_t pixformat);
     int  (*set_framesize)       (sensor_t *sensor, framesize_t framesize);
     int  (*set_framerate)       (sensor_t *sensor, framerate_t framerate);
@@ -159,6 +160,9 @@ int sensor_reset();
 
 // Return sensor PID.
 int sensor_get_id();
+
+// Sleep mode.
+int sensor_sleep(int enable);
 
 // Read a sensor register.
 int sensor_read_reg(uint8_t reg);

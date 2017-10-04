@@ -345,6 +345,16 @@ int sensor_get_id()
     return sensor.id.PID;
 }
 
+int sensor_sleep(int enable)
+{
+    if (sensor.sleep == NULL
+        || sensor.sleep(&sensor, enable) != 0) {
+        // Operation not supported
+        return -1;
+    }
+    return 0;
+}
+
 int sensor_read_reg(uint8_t reg)
 {
     return SCCB_Read(sensor.slv_addr, reg);

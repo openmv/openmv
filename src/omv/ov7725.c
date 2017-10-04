@@ -173,6 +173,24 @@ static int reset(sensor_t *sensor)
     return 0;
 }
 
+static int sleep(sensor_t *sensor, int enable)
+{
+    int ret=0;
+    // Read register
+    uint8_t reg = SCCB_Read(sensor->slv_addr, COM2);
+
+    if (enable) {
+        reg |= COM2_SOFT_SLEEP;
+    } else {
+        reg &= ~COM2_SOFT_SLEEP;
+    }
+
+    // Write back register
+    ret |= SCCB_Write(sensor->slv_addr, COM2, reg);
+
+    return ret;
+}
+
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
     int ret=0;
@@ -467,6 +485,7 @@ int ov7725_init(sensor_t *sensor)
 {
     // Set function pointers
     sensor->reset = reset;
+    sensor->sleep = sleep;
     sensor->set_pixformat = set_pixformat;
     sensor->set_framesize = set_framesize;
     sensor->set_framerate = set_framerate;
