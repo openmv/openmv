@@ -2212,7 +2212,7 @@ mp_obj_t py_blob_area(mp_obj_t self_in) {
 }
 mp_obj_t py_blob_density(mp_obj_t self_in) {
     int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
-    if (area) return mp_obj_new_float(mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels) / area);
+    if (area) return mp_obj_new_float(mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels) / (float) area);
     return mp_obj_new_float(0.0f);
 }
 
