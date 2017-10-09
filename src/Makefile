@@ -224,9 +224,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usb.o                   \
 	gchelper.o              \
 	gccollect.o             \
-	pybstdio.o              \
 	help.o                  \
-	input.o                 \
 	flash.o                 \
 	storage.o               \
 	rtc.o                   \
@@ -267,6 +265,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	utils/pyexec.o          \
 	utils/printf.o          \
 	utils/interrupt_char.o  \
+	utils/sys_stdio_mphal.o \
 	libc/string0.o          \
 	netutils/netutils.o     \
 	timeutils/timeutils.o   \
@@ -278,7 +277,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	atanf.o         \
 	atan2f.o        \
 	fmodf.o         \
-	roundf.o        \
 	log1pf.o        \
 	acoshf.o        \
 	asinhf.o        \
@@ -340,6 +338,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	machine_signal.o    \
 	machine_pinbase.o   \
 	utime_mphal.o       \
+	modonewire.o        \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\

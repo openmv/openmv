@@ -115,7 +115,7 @@ static mp_obj_t py_kptmatch_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t va
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(kptmatch_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
@@ -240,7 +240,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
-                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
                     }
                     mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
                     for (mp_uint_t i = 0; i < result->len; i++) {
@@ -256,7 +256,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
-                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
                     }
                     mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
                     for (mp_uint_t i = 0; i < result->len; i++) {
@@ -273,7 +273,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
-                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
                     }
                     mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
                     for (mp_uint_t i = 0; i < result->len; i++) {
@@ -294,7 +294,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(self->_cobj.bpp, index, &slice)) {
-                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
                     }
                     mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
                     for (mp_uint_t i = 0; i < result->len; i++) {
@@ -312,7 +312,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
-                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
                     }
                     if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
                         mp_uint_t value_l_len;
@@ -339,7 +339,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
-                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
                     }
                     if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
                         mp_uint_t value_l_len;
@@ -367,7 +367,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(self->_cobj.w * self->_cobj.h, index, &slice)) {
-                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
                     }
                     if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
                         mp_uint_t value_l_len;
@@ -401,7 +401,7 @@ static mp_obj_t py_image_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value
                 if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
                     mp_bound_slice_t slice;
                     if (!mp_seq_get_fast_slice_indexes(self->_cobj.bpp, index, &slice)) {
-                        mp_not_implemented("only slices with step=1 (aka None) are supported");
+                        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
                     }
                     if (MP_OBJ_IS_TYPE(value, &mp_type_list)) {
                         mp_uint_t value_l_len;
@@ -1345,7 +1345,7 @@ static mp_obj_t py_statistics_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t 
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_statistics_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->LMean) + slice.start, result->len, mp_obj_t);
@@ -1530,7 +1530,7 @@ static mp_obj_t py_percentile_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t 
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_percentile_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->LValue) + slice.start, result->len, mp_obj_t);
@@ -1620,7 +1620,7 @@ static mp_obj_t py_histogram_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t v
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_histogram_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->LBins) + slice.start, result->len, mp_obj_t);
@@ -1993,7 +1993,7 @@ static mp_obj_t py_line_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_line_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x1) + slice.start, result->len, mp_obj_t);
@@ -2167,7 +2167,7 @@ static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_blob_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
@@ -2506,7 +2506,7 @@ static mp_obj_t py_circle_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t valu
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_circle_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
@@ -2626,7 +2626,7 @@ static mp_obj_t py_rect_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_rect_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
@@ -2757,7 +2757,7 @@ static mp_obj_t py_qrcode_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t valu
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_qrcode_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
@@ -2938,7 +2938,7 @@ static mp_obj_t py_apriltag_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t va
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_apriltag_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
@@ -3144,7 +3144,7 @@ static mp_obj_t py_datamatrix_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t 
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_datamatrix_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
@@ -3299,7 +3299,7 @@ static mp_obj_t py_barcode_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t val
         if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
             mp_bound_slice_t slice;
             if (!mp_seq_get_fast_slice_indexes(py_barcode_obj_size, index, &slice)) {
-                mp_not_implemented("only slices with step=1 (aka None) are supported");
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
             mp_seq_copy(result->items, &(self->x) + slice.start, result->len, mp_obj_t);
