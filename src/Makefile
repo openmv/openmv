@@ -273,6 +273,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	math.o          \
+	roundf.o        \
 	asinfacosf.o    \
 	atanf.o         \
 	atan2f.o        \
