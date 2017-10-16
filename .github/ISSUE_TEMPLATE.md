@@ -3,7 +3,7 @@ Thanks for reporting issues back to OpenMV!
 
 For technical questions and projects please post a question to the [Forums](http://forums.openmv.io/index.php).
 
-To make it possible for us to help you please fill out below information carefully. 
+To make it possible for us to help you please fill out below information carefully.
 -->
 
 ### Steps to reproduce
@@ -19,8 +19,14 @@ Tell us what happens instead
 
 ### Describe your setup
 
-**Operating system**:
+**IDE version:**
 
-**OpenMV IDE version:**
+**Firmware version:**
 
-**OpenMV firmware version:**
+**Operating system:**
+
+### For developers
+
+**GCC version:**
+
+**Build target:**
