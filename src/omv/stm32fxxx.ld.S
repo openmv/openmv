@@ -94,6 +94,39 @@ ENTRY(Reset_Handler)
 
     #define SRAM2_ORIGIN    0x2007C000
     #define SRAM2_LENGTH    16K
+#elif defined(OPENMV4)
+    #define FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
+    #define MAIN_MEMORY     CCM     // data, bss, stack and heap
+    #define DMA_MEMORY      CCM     // Misc DMA buffers
+
+    #define FB_SIZE         (301K)  // FB memory: header + VGA/GS image
+    #define FB_ALLOC_SIZE   (83K)   // minimum fb alloc size
+
+    #define STACK_SIZE      (4K)
+    #define HEAP_SIZE       (55K)
+
+    #define LINE_BUF_SIZE   (3K)    // Image line buffer round(640 * 2BPP * 2 buffers).
+    #define MSC_BUF_SIZE    (2K)    // USB MSC bot data
+    #define VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
+    #define FFS_BUF_SIZE    (32K)   // Flash filesystem cache
+    // TODO Set OMV_JPEG_BUF_SIZE if you change this
+    #define JPEG_BUF_SIZE   (23K)   // IDE JPEG buffer
+
+    #define FLASH_ORIGIN    0x08000000
+    #define FLASH_LENGTH    2048K
+
+    #define TEXT_ORIGIN     0x08020000
+    #define TEXT_LENGTH     1920K
+
+    // Note DTCM/ITCM memory is not cacheable on M7
+    #define CCM_ORIGIN      0x20000000
+    #define CCM_LENGTH      128K
+
+    #define SRAM1_ORIGIN    0x20020000
+    #define SRAM1_LENGTH    368K
+
+    #define SRAM2_ORIGIN    0x2007C000
+    #define SRAM2_LENGTH    16K
 #endif
 
 /* Specify the memory areas */

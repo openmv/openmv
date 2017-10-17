@@ -109,6 +109,8 @@
 #include "nm_bsp_openmv2.h"
 #elif defined(OPENMV3)
 #include "nm_bsp_openmv3.h"
+#elif defined(OPENMV4)
+#include "nm_bsp_openmv4.h"
 #endif
 
 #endif //_NM_BSP_INTERNAL_H_

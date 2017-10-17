@@ -45,7 +45,19 @@ ENTRY(Reset_Handler)
     #define CCM_LENGTH      128K
 
     #define RAM_ORIGIN      0x20020000
-    #define RAM_LENGTH      384K    
+    #define RAM_LENGTH      384K
+#elif defined(OPENMV4)
+    #define FLASH_ORIGIN    0x08000000
+    #define FLASH_LENGTH    1920K
+
+    #define TEXT_ORIGIN     0x08000000
+    #define TEXT_LENGTH     32K
+
+    #define CCM_ORIGIN      0x20000000
+    #define CCM_LENGTH      128K
+
+    #define RAM_ORIGIN      0x20020000
+    #define RAM_LENGTH      384K
 #endif //OPENMV1
 
 /* Specify the memory areas */
