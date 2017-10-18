@@ -8,7 +8,6 @@
  */
 #include "mp.h"
 #include "pin.h"
-#include "sccb.h"
 #include "sensor.h"
 #include "imlib.h"
 #include "xalloc.h"

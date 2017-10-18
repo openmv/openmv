@@ -128,7 +128,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	framebuffer.o                           \
 	array.o                                 \
 	usbdbg.o                                \
-	sccb.o                                  \
+	cambus.o                                \
 	ov9650.o                                \
 	ov2640.o                                \
 	ov7725.o                                \

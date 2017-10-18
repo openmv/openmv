@@ -10,7 +10,7 @@
 #include <string.h>
 #include "mp.h"
 #include "irq.h"
-#include "sccb.h"
+#include "cambus.h"
 #include "ov9650.h"
 #include "ov2640.h"
 #include "ov7725.h"
@@ -201,8 +201,8 @@ int sensor_init()
     DCMI_PWDN_LOW();
     systick_sleep(10);
 
-    /* Initialize the SCCB interface */
-    SCCB_Init();
+    /* Initialize the camera bus */
+    cambus_init();
     systick_sleep(10);
 
     // Configure the sensor external clock (XCLK) to XCLK_FREQ.
@@ -239,7 +239,7 @@ int sensor_init()
     memset(&sensor, 0, sizeof(sensor_t));
 
     /* Some sensors have different reset polarities, and we can't know which sensor
-       is connected before initializing SCCB and probing the sensor, which in turn
+       is connected before initializing cambus and probing the sensor, which in turn
        requires pulling the sensor out of the reset state. So we try to probe the
        sensor with both polarities to determine line state. */
     sensor.reset_pol = ACTIVE_HIGH;
@@ -252,7 +252,7 @@ int sensor_init()
     systick_sleep(10);
 
     /* Probe the sensor */
-    sensor.slv_addr = SCCB_Probe();
+    sensor.slv_addr = cambus_scan();
     if (sensor.slv_addr == 0) {
         /* Sensor has been held in reset,
            so the reset line is active low */
@@ -263,7 +263,7 @@ int sensor_init()
         systick_sleep(10);
 
         /* Probe again to set the slave addr */
-        sensor.slv_addr = SCCB_Probe();
+        sensor.slv_addr = cambus_scan();
         if (sensor.slv_addr == 0)  {
             // Probe failed
             return -2;
@@ -271,10 +271,10 @@ int sensor_init()
     }
 
     /* Read the sensor information */
-    sensor.id.PID  = SCCB_Read(sensor.slv_addr, REG_PID);
-    sensor.id.VER  = SCCB_Read(sensor.slv_addr, REG_VER);
-    sensor.id.MIDL = SCCB_Read(sensor.slv_addr, REG_MIDL);
-    sensor.id.MIDH = SCCB_Read(sensor.slv_addr, REG_MIDH);
+    cambus_readb(sensor.slv_addr, REG_PID,  &sensor.id.PID);
+    cambus_readb(sensor.slv_addr, REG_VER,  &sensor.id.VER);
+    cambus_readb(sensor.slv_addr, REG_MIDL, &sensor.id.MIDL);
+    cambus_readb(sensor.slv_addr, REG_MIDH, &sensor.id.MIDH);
 
     /* Call the sensor-specific init function */
     switch (sensor.id.PID) {
@@ -288,8 +288,8 @@ int sensor_init()
             ov7725_init(&sensor);
             break;
         default:
-            /* Sensor not supported */
-            return -3;
+            // Sensor is not supported.
+            return -1;
     }
 
     /* Configure the DCMI DMA Stream */
@@ -355,14 +355,18 @@ int sensor_sleep(int enable)
     return 0;
 }
 
-int sensor_read_reg(uint8_t reg)
+int sensor_read_reg(uint8_t reg_addr)
 {
-    return SCCB_Read(sensor.slv_addr, reg);
+    uint8_t reg_data;
+    if (cambus_readb(sensor.slv_addr, reg_addr, &reg_data) != 0) {
+        return -1;
+    }
+    return reg_data;
 }
 
-int sensor_write_reg(uint8_t reg, uint8_t val)
+int sensor_write_reg(uint8_t reg_addr, uint8_t reg_data)
 {
-    return SCCB_Write(sensor.slv_addr, reg, val);
+    return cambus_writeb(sensor.slv_addr, reg_addr, reg_data);
 }
 
 int sensor_set_pixformat(pixformat_t pixformat)
