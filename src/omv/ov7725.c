@@ -188,6 +188,20 @@ static int sleep(sensor_t *sensor, int enable)
     return cambus_writeb(sensor->slv_addr, COM2, reg) | ret;
 }
 
+static int read_reg(sensor_t *sensor, uint8_t reg_addr)
+{
+    uint8_t reg_data;
+    if (cambus_readb(sensor->slv_addr, reg_addr, &reg_data) != 0) {
+        return -1;
+    }
+    return reg_data;
+}
+
+static int write_reg(sensor_t *sensor, uint8_t reg_addr, uint16_t reg_data)
+{
+    return cambus_writeb(sensor->slv_addr, reg_addr, reg_data);
+}
+
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
     uint8_t reg;
@@ -446,23 +460,26 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 
 int ov7725_init(sensor_t *sensor)
 {
-    // Set function pointers
-    sensor->reset = reset;
-    sensor->sleep = sleep;
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->set_framerate = set_framerate;
-    sensor->set_contrast  = set_contrast;
-    sensor->set_brightness= set_brightness;
-    sensor->set_saturation= set_saturation;
-    sensor->set_gainceiling = set_gainceiling;
-    sensor->set_colorbar = set_colorbar;
-    sensor->set_auto_gain = set_auto_gain;
-    sensor->set_auto_exposure = set_auto_exposure;
-    sensor->set_auto_whitebal = set_auto_whitebal;
-    sensor->set_hmirror = set_hmirror;
-    sensor->set_vflip = set_vflip;
-    sensor->set_special_effect = set_special_effect;
+    // Initialize sensor structure.
+    sensor->gs_bpp              = 2;
+    sensor->reset               = reset;
+    sensor->sleep               = sleep;
+    sensor->read_reg            = read_reg;
+    sensor->write_reg           = write_reg;
+    sensor->set_pixformat       = set_pixformat;
+    sensor->set_framesize       = set_framesize;
+    sensor->set_framerate       = set_framerate;
+    sensor->set_contrast        = set_contrast;
+    sensor->set_brightness      = set_brightness;
+    sensor->set_saturation      = set_saturation;
+    sensor->set_gainceiling     = set_gainceiling;
+    sensor->set_colorbar        = set_colorbar;
+    sensor->set_auto_gain       = set_auto_gain;
+    sensor->set_auto_exposure   = set_auto_exposure;
+    sensor->set_auto_whitebal   = set_auto_whitebal;
+    sensor->set_hmirror         = set_hmirror;
+    sensor->set_vflip           = set_vflip;
+    sensor->set_special_effect  = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
 
     // Set sensor flags

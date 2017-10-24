@@ -14,17 +14,14 @@
 #include "ov9650.h"
 #include "ov2640.h"
 #include "ov7725.h"
+#include "mt9v034.h"
 #include "sensor.h"
 #include "systick.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-#define REG_PID        0x0A
-#define REG_VER        0x0B
-
-#define REG_MIDH       0x1C
-#define REG_MIDL       0x1D
-
+#define OV_CHIP_ID      (0x0A)
+#define ON_CHIP_ID      (0x00)
 #define MAX_XFER_SIZE (0xFFFC)
 
 sensor_t sensor;
@@ -201,7 +198,7 @@ int sensor_init()
     DCMI_PWDN_LOW();
     systick_sleep(10);
 
-    /* Initialize the camera bus */
+    // Initialize the camera bus.
     cambus_init();
     systick_sleep(10);
 
@@ -270,26 +267,33 @@ int sensor_init()
         }
     }
 
-    /* Read the sensor information */
-    cambus_readb(sensor.slv_addr, REG_PID,  &sensor.id.PID);
-    cambus_readb(sensor.slv_addr, REG_VER,  &sensor.id.VER);
-    cambus_readb(sensor.slv_addr, REG_MIDL, &sensor.id.MIDL);
-    cambus_readb(sensor.slv_addr, REG_MIDH, &sensor.id.MIDH);
+    // Clear sensor chip ID.
+    sensor.chip_id = 0;
 
-    /* Call the sensor-specific init function */
-    switch (sensor.id.PID) {
-        case OV9650_PID:
-            ov9650_init(&sensor);
-            break;
-        case OV2640_PID:
-            ov2640_init(&sensor);
-            break;
-        case OV7725_PID:
-            ov7725_init(&sensor);
-            break;
-        default:
-            // Sensor is not supported.
-            return -1;
+    // Read ON semi sensor ID.
+    cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
+    if (sensor.chip_id == MT9V034_ID) {
+        // On/Aptina MT requires 13-27MHz clock.
+        extclk_config(27000000);
+        // Only the MT9V034 is currently supported.
+        mt9v034_init(&sensor);
+    } else { // Read OV sensor ID.
+        cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+        // Initialize sensor struct.
+        switch (sensor.chip_id) {
+            case OV9650_ID:
+                ov9650_init(&sensor);
+                break;
+            case OV2640_ID:
+                ov2640_init(&sensor);
+                break;
+            case OV7725_ID:
+                ov7725_init(&sensor);
+                break;
+            default:
+                // Sensor is not supported.
+                return -3;
+        }
     }
 
     /* Configure the DCMI DMA Stream */
@@ -319,12 +323,12 @@ int sensor_init()
 int sensor_reset()
 {
     // Reset the sesnor state
-    sensor.sde = 0xFF;
-    sensor.pixformat=0xFF;
-    sensor.framesize=0xFF;
-    sensor.framerate=0xFF;
-    sensor.gainceiling=0xFF;
-    sensor.vsync_gpio  = NULL;
+    sensor.sde          = 0xFF;
+    sensor.pixformat    = 0xFF;
+    sensor.framesize    = 0xFF;
+    sensor.framerate    = 0xFF;
+    sensor.gainceiling  = 0xFF;
+    sensor.vsync_gpio   = NULL;
 
     // Reset image filter
     sensor_set_line_filter(NULL, NULL);
@@ -342,7 +346,7 @@ int sensor_reset()
 
 int sensor_get_id()
 {
-    return sensor.id.PID;
+    return sensor.chip_id;
 }
 
 int sensor_sleep(int enable)
@@ -357,16 +361,20 @@ int sensor_sleep(int enable)
 
 int sensor_read_reg(uint8_t reg_addr)
 {
-    uint8_t reg_data;
-    if (cambus_readb(sensor.slv_addr, reg_addr, &reg_data) != 0) {
+    if (sensor.read_reg == NULL) {
+        // Operation not supported
         return -1;
     }
-    return reg_data;
+    return sensor.read_reg(&sensor, reg_addr);
 }
 
-int sensor_write_reg(uint8_t reg_addr, uint8_t reg_data)
+int sensor_write_reg(uint8_t reg_addr, uint16_t reg_data)
 {
-    return cambus_writeb(sensor.slv_addr, reg_addr, reg_data);
+    if (sensor.write_reg == NULL) {
+        // Operation not supported
+        return -1;
+    }
+    return sensor.write_reg(&sensor, reg_addr, reg_data);
 }
 
 int sensor_set_pixformat(pixformat_t pixformat)
@@ -655,9 +663,16 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                 break;
             case PIXFORMAT_GRAYSCALE:
                 dst += line++ * MAIN_FB()->w;
-                // If GRAYSCALE extract Y channel from YUV
-                for (int i=0; i<MAIN_FB()->w; i++) {
-                    dst[i] = src[i<<1];
+                if (sensor.gs_bpp == 1) {
+                    // 1BPP GRAYSCALE.
+                    for (int i=0; i<MAIN_FB()->w; i++) {
+                        dst[i] = src[i];
+                    }
+                } else {
+                    // Extract Y channel from YUV.
+                    for (int i=0; i<MAIN_FB()->w; i++) {
+                        dst[i] = src[i<<1];
+                    }
                 }
                 break;
             case PIXFORMAT_YUV422:
@@ -724,16 +739,20 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
 
     // Setup the size and address of the transfer
     switch (sensor.pixformat) {
-        case PIXFORMAT_GRAYSCALE:
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
-            // RGB, YUV and GS read 2 bytes per pixel.
-            length =(MAIN_FB()->w * MAIN_FB()->h * 2)/4;
+            // RGB/YUV read 2 bytes per pixel.
+            length = (MAIN_FB()->w * MAIN_FB()->h * 2)/4;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_BAYER:
             // BAYER/RAW: 1 byte per pixel
-            length =(MAIN_FB()->w * MAIN_FB()->h * 1)/4;
+            length = (MAIN_FB()->w * MAIN_FB()->h * 1)/4;
+            addr = (uint32_t) &_line_buf;
+            break;
+        case PIXFORMAT_GRAYSCALE:
+            // 1/2BPP Grayscale.
+            length = (MAIN_FB()->w * MAIN_FB()->h * sensor.gs_bpp)/4;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_JPEG:

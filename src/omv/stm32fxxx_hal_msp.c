@@ -130,7 +130,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
         GPIO_InitTypeDef  GPIO_InitStructure;
         GPIO_InitStructure.Pin       = DCMI_TIM_PIN;
         GPIO_InitStructure.Pull      = GPIO_NOPULL;
-        GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
         GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
         GPIO_InitStructure.Alternate = DCMI_TIM_AF;
         HAL_GPIO_Init(DCMI_TIM_PORT, &GPIO_InitStructure);
@@ -146,7 +146,7 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
     /* DCMI GPIOs configuration */
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull      = GPIO_PULLDOWN;
-    GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
     GPIO_InitStructure.Alternate = GPIO_AF13_DCMI;
 
     /* Enable VSYNC EXTI */

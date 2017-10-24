@@ -11,16 +11,10 @@
 #include <stdint.h>
 #include "imlib.h"
 
-#define OV9650_PID     (0x96)
-#define OV2640_PID     (0x26)
-#define OV7725_PID     (0x77)
-
-typedef struct {
-    uint8_t MIDH;
-    uint8_t MIDL;
-    uint8_t PID;
-    uint8_t VER;
-} sensor_id_t;
+#define OV9650_ID       (0x96)
+#define OV2640_ID       (0x26)
+#define OV7725_ID       (0x77)
+#define MT9V034_ID      (0x13)
 
 typedef enum {
     PIXFORMAT_BAYER,     // 1BPP/RAW
@@ -106,8 +100,9 @@ typedef void (*line_filter_t) (uint8_t *src, int src_stride, uint8_t *dst, int d
 
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
-    sensor_id_t id;             // Sensor ID.
+    uint8_t  chip_id;           // Sensor ID.
     uint8_t  slv_addr;          // Sensor I2C slave address.
+    uint16_t gs_bpp;            // Grayscale bytes per pixel.
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
     uint32_t vsync_pin;
     GPIO_TypeDef *vsync_gpio;
@@ -128,6 +123,8 @@ typedef struct _sensor {
     // Sensor function pointers
     int  (*reset)               (sensor_t *sensor);
     int  (*sleep)               (sensor_t *sensor, int enable);
+    int  (*read_reg)            (sensor_t *sensor, uint8_t reg_addr);
+    int  (*write_reg)           (sensor_t *sensor, uint8_t reg_addr, uint16_t reg_data);
     int  (*set_pixformat)       (sensor_t *sensor, pixformat_t pixformat);
     int  (*set_framesize)       (sensor_t *sensor, framesize_t framesize);
     int  (*set_framerate)       (sensor_t *sensor, framerate_t framerate);
@@ -165,10 +162,10 @@ int sensor_get_id();
 int sensor_sleep(int enable);
 
 // Read a sensor register.
-int sensor_read_reg(uint8_t reg);
+int sensor_read_reg(uint8_t reg_addr);
 
 // Write a sensor register.
-int sensor_write_reg(uint8_t reg, uint8_t val);
+int sensor_write_reg(uint8_t reg_addr, uint16_t reg_data);
 
 // Set the sensor pixel format.
 int sensor_set_pixformat(pixformat_t pixformat);

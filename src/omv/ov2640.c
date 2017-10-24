@@ -694,22 +694,23 @@ static int set_vflip(sensor_t *sensor, int enable)
 
 int ov2640_init(sensor_t *sensor)
 {
-    /* set function pointers */
-    sensor->reset = reset;
-    sensor->set_pixformat = set_pixformat;
-    sensor->set_framesize = set_framesize;
-    sensor->set_framerate = set_framerate;
-    sensor->set_contrast  = set_contrast;
-    sensor->set_brightness= set_brightness;
-    sensor->set_saturation= set_saturation;
-    sensor->set_gainceiling = set_gainceiling;
-    sensor->set_quality = set_quality;
-    sensor->set_colorbar = set_colorbar;
-    sensor->set_auto_gain = set_auto_gain;
-    sensor->set_auto_exposure = set_auto_exposure;
-    sensor->set_auto_whitebal = set_auto_whitebal;
-    sensor->set_hmirror = set_hmirror;
-    sensor->set_vflip = set_vflip;
+    // Initialize sensor structure.
+    sensor->gs_bpp              = 2;
+    sensor->reset               = reset;
+    sensor->set_pixformat       = set_pixformat;
+    sensor->set_framesize       = set_framesize;
+    sensor->set_framerate       = set_framerate;
+    sensor->set_contrast        = set_contrast;
+    sensor->set_brightness      = set_brightness;
+    sensor->set_saturation      = set_saturation;
+    sensor->set_gainceiling     = set_gainceiling;
+    sensor->set_quality         = set_quality;
+    sensor->set_colorbar        = set_colorbar;
+    sensor->set_auto_gain       = set_auto_gain;
+    sensor->set_auto_exposure   = set_auto_exposure;
+    sensor->set_auto_whitebal   = set_auto_whitebal;
+    sensor->set_hmirror         = set_hmirror;
+    sensor->set_vflip           = set_vflip;
 
     // Set sensor flags
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
