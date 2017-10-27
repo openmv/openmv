@@ -12180,4 +12180,150 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi,
     fb_free(); // umm_init_x();
 }
 
+// http://jepsonsblog.blogspot.com/2012/11/rotation-in-3d-using-opencvs.html
+void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float z_rotation,
+                         float x_translation, float y_translation,
+                         float zoom)
+{
+    umm_init_x(4000); // 200 20 byte heap blocks...
+
+    float fov = (M_PI_2 * 2) / 3; // 60 deg FOV
+    float fov_2 = fov / 2.0;
+    float d = fast_sqrtf((img->w * img->w) + (img->h * img->h));
+    float h = d / (2.0 * tanf(fov_2));
+    float h_z = h * zoom;
+
+    matd_t *A1 = matd_create(4, 3);
+    MATD_EL(A1, 0, 0) = 1;  MATD_EL(A1, 0, 1) = 0;  MATD_EL(A1, 0, 2) = -img->w / 2.0;
+    MATD_EL(A1, 1, 0) = 0;  MATD_EL(A1, 1, 1) = 1;  MATD_EL(A1, 1, 2) = -img->h / 2.0;
+    MATD_EL(A1, 2, 0) = 0;  MATD_EL(A1, 2, 1) = 0;  MATD_EL(A1, 2, 2) = 1;
+    MATD_EL(A1, 3, 0) = 0;  MATD_EL(A1, 3, 1) = 0;  MATD_EL(A1, 3, 2) = 1; // needed for h translation
+
+    matd_t *RX = matd_create(4, 4);
+    MATD_EL(RX, 0, 0) = 1;  MATD_EL(RX, 0, 1) = 0;                  MATD_EL(RX, 0, 2) = 0;                  MATD_EL(RX, 0, 3) = 0;
+    MATD_EL(RX, 1, 0) = 0;  MATD_EL(RX, 1, 1) = +cosf(x_rotation);  MATD_EL(RX, 1, 2) = -sinf(x_rotation);  MATD_EL(RX, 1, 3) = 0;
+    MATD_EL(RX, 2, 0) = 0;  MATD_EL(RX, 2, 1) = +sinf(x_rotation);  MATD_EL(RX, 2, 2) = +cosf(x_rotation);  MATD_EL(RX, 2, 3) = 0;
+    MATD_EL(RX, 3, 0) = 0;  MATD_EL(RX, 3, 1) = 0;                  MATD_EL(RX, 3, 2) = 0;                  MATD_EL(RX, 3, 3) = 1;
+
+    matd_t *RY = matd_create(4, 4);
+    MATD_EL(RY, 0, 0) = +cosf(y_rotation);  MATD_EL(RY, 0, 1) = 0;  MATD_EL(RY, 0, 2) = -sinf(y_rotation);  MATD_EL(RY, 0, 3) = 0;
+    MATD_EL(RY, 1, 0) = 0;                  MATD_EL(RY, 1, 1) = 1;  MATD_EL(RY, 1, 2) = 0;                  MATD_EL(RY, 1, 3) = 0;
+    MATD_EL(RY, 2, 0) = +sinf(y_rotation);  MATD_EL(RY, 2, 1) = 0;  MATD_EL(RY, 2, 2) = +cosf(y_rotation);  MATD_EL(RY, 2, 3) = 0;
+    MATD_EL(RY, 3, 0) = 0;                  MATD_EL(RY, 3, 1) = 0;  MATD_EL(RY, 3, 2) = 0;                  MATD_EL(RY, 3, 3) = 1;
+
+    matd_t *RZ = matd_create(4, 4);
+    MATD_EL(RZ, 0, 0) = +cosf(z_rotation);  MATD_EL(RZ, 0, 1) = -sinf(z_rotation);  MATD_EL(RZ, 0, 2) = 0;  MATD_EL(RZ, 0, 3) = 0;
+    MATD_EL(RZ, 1, 0) = +sinf(z_rotation);  MATD_EL(RZ, 1, 1) = +cosf(z_rotation);  MATD_EL(RZ, 1, 2) = 0;  MATD_EL(RZ, 1, 3) = 0;
+    MATD_EL(RZ, 2, 0) = 0;                  MATD_EL(RZ, 2, 1) = 0;                  MATD_EL(RZ, 2, 2) = 1;  MATD_EL(RZ, 2, 3) = 0;
+    MATD_EL(RZ, 3, 0) = 0;                  MATD_EL(RZ, 3, 1) = 0;                  MATD_EL(RZ, 3, 2) = 0;  MATD_EL(RZ, 3, 3) = 1;
+
+    matd_t *R = matd_op("M*M*M", RX, RY, RZ);
+
+    matd_t *T = matd_create(4, 4);
+    MATD_EL(T, 0, 0) = 1;   MATD_EL(T, 0, 1) = 0;   MATD_EL(T, 0, 2) = 0;   MATD_EL(T, 0, 3) = x_translation;
+    MATD_EL(T, 1, 0) = 0;   MATD_EL(T, 1, 1) = 1;   MATD_EL(T, 1, 2) = 0;   MATD_EL(T, 1, 3) = y_translation;
+    MATD_EL(T, 2, 0) = 0;   MATD_EL(T, 2, 1) = 0;   MATD_EL(T, 2, 2) = 1;   MATD_EL(T, 2, 3) = h;
+    MATD_EL(T, 3, 0) = 0;   MATD_EL(T, 3, 1) = 0;   MATD_EL(T, 3, 2) = 0;   MATD_EL(T, 3, 3) = 1;
+
+    matd_t *A2 = matd_create(3, 4);
+    MATD_EL(A2, 0, 0) = h_z;    MATD_EL(A2, 0, 1) = 0;      MATD_EL(A2, 0, 2) = img->w / 2.0;   MATD_EL(A2, 0, 3) = 0;
+    MATD_EL(A2, 1, 0) = 0;      MATD_EL(A2, 1, 1) = h_z;    MATD_EL(A2, 1, 2) = img->h / 2.0;   MATD_EL(A2, 1, 3) = 0;
+    MATD_EL(A2, 2, 0) = 0;      MATD_EL(A2, 2, 1) = 0;      MATD_EL(A2, 2, 2) = 1;              MATD_EL(A2, 2, 3) = 0;
+
+    matd_t *T1 = matd_op("M*M", R, A1);
+    matd_t *T2 = matd_op("M*M", T, T1);
+    matd_t *T3 = matd_op("(M*M)^-1", A2, T2);
+
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            // Create a temp copy of the image to pull pixels from.
+            uint32_t *tmp = fb_alloc(((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+            memcpy(tmp, img->data, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+            memset(img->data, 0, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    float sourceX, sourceY; homography_project(T3, x, y, &sourceX, &sourceY);
+                    int sourceX2 = round(sourceX);
+                    int sourceY2 = round(sourceY);
+
+                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                        uint32_t *ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY2);
+                        int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX2);
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                    }
+                }
+            }
+
+            fb_free();
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            // Create a temp copy of the image to pull pixels from.
+            uint8_t *tmp = fb_alloc(img->w * img->h * sizeof(uint8_t));
+            memcpy(tmp, img->data, img->w * img->h * sizeof(uint8_t));
+            memset(img->data, 0, img->w * img->h * sizeof(uint8_t));
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    float sourceX, sourceY; homography_project(T3, x, y, &sourceX, &sourceY);
+                    int sourceX2 = round(sourceX);
+                    int sourceY2 = round(sourceY);
+
+                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                        uint8_t *ptr = tmp + (img->w * sourceY2);
+                        int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX2);
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
+                    }
+                }
+            }
+
+            fb_free();
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            // Create a temp copy of the image to pull pixels from.
+            uint16_t *tmp = fb_alloc(img->w * img->h * sizeof(uint16_t));
+            memcpy(tmp, img->data, img->w * img->h * sizeof(uint16_t));
+            memset(img->data, 0, img->w * img->h * sizeof(uint16_t));
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    float sourceX, sourceY; homography_project(T3, x, y, &sourceX, &sourceY);
+                    int sourceX2 = round(sourceX);
+                    int sourceY2 = round(sourceY);
+
+                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                        uint16_t *ptr = tmp + (img->w * sourceY2);
+                        int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX2);
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
+                    }
+                }
+            }
+
+            fb_free();
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    matd_destroy(T3);
+    matd_destroy(T2);
+    matd_destroy(T1);
+    matd_destroy(A2);
+    matd_destroy(T);
+    matd_destroy(R);
+    matd_destroy(RZ);
+    matd_destroy(RY);
+    matd_destroy(RX);
+    matd_destroy(A1);
+
+    fb_free(); // umm_init_x();
+}
+
 #pragma GCC diagnostic pop

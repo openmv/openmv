@@ -29,6 +29,9 @@
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
 
+// Enable Rotation_Correction
+#define OMV_ENABLE_ROTATION_CORR
+
 // Enable Find_Line_Segments
 #define OMV_ENABLE_FIND_LINE_SEGMENTS
 
