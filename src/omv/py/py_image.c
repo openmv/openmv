@@ -1246,6 +1246,7 @@ static mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *
     float strength = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_strength),
                                             (n_args > 1) ? mp_obj_get_float(args[1]) : 1.8);
     PY_ASSERT_TRUE_MSG(strength >= 0.0, "strength must be > 0");
+
     float zoom = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom),
                                         (n_args > 2) ? mp_obj_get_float(args[2]) : 1.0);
     PY_ASSERT_TRUE_MSG(zoom >= 1.0, "zoom must be > 1");
@@ -1255,6 +1256,41 @@ static mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *
     fb_alloc_free_till_mark();
     return args[0];
 }
+
+#ifdef OMV_ENABLE_ROTATION_CORR
+static mp_obj_t py_image_rotation_corr(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
+
+    float x_rotation = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_rotation),
+                                              (n_args > 1) ? mp_obj_get_float(args[1]) : 0.0);
+    x_rotation = x_rotation * M_PI / 180;
+
+    float y_rotation = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_rotation),
+                                              (n_args > 2) ? mp_obj_get_float(args[2]) : 0.0);
+    y_rotation = y_rotation * M_PI / 180;
+
+    float z_rotation = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_z_rotation),
+                                              (n_args > 3) ? mp_obj_get_float(args[3]) : 0.0);
+    z_rotation = z_rotation * M_PI / 180;
+
+    float x_translation = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_translation),
+                                                 (n_args > 4) ? mp_obj_get_float(args[4]) : 0.0);
+
+    float y_translation = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_translation),
+                                                 (n_args > 5) ? mp_obj_get_float(args[5]) : 0.0);
+
+    float zoom = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom),
+                                        (n_args > 6) ? mp_obj_get_float(args[6]) : 1.0);
+    PY_ASSERT_TRUE_MSG(zoom >= 0.0, "zoom must be > 0");
+
+    fb_alloc_mark();
+    imlib_rotation_corr(arg_img, x_rotation, y_rotation, z_rotation, x_translation, y_translation, zoom);
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+#endif
 
 static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
 {
@@ -3819,6 +3855,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gaussian_obj, 1, py_image_gaussian);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_lens_corr_obj, 1, py_image_lens_corr);
+#ifdef OMV_ENABLE_ROTATION_CORR
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_rotation_corr_obj, 1, py_image_rotation_corr);
+#endif 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_mask_ellipse_obj, py_image_mask_ellipse);
 /* Image Statistics */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_histogram_obj, 1, py_image_get_histogram);
@@ -3923,6 +3962,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_gaussian),            (mp_obj_t)&py_image_gaussian_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_lens_corr),           (mp_obj_t)&py_image_lens_corr_obj},
+#ifdef OMV_ENABLE_ROTATION_CORR
+    {MP_OBJ_NEW_QSTR(MP_QSTR_rotation_corr),       (mp_obj_t)&py_image_rotation_corr_obj},
+#endif
     {MP_OBJ_NEW_QSTR(MP_QSTR_mask_ellipse),        (mp_obj_t)&py_image_mask_ellipse_obj},
     /* Image Statistics */
     {MP_OBJ_NEW_QSTR(MP_QSTR_get_hist),            (mp_obj_t)&py_image_get_histogram_obj},

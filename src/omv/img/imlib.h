@@ -1202,8 +1202,11 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 // HoG
 void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
-// Lens correction
+// Lens/Rotation Correction
 void imlib_lens_corr(image_t *img, float strength, float zoom);
+void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
+                         float z_rotation, float x_translation, float y_translation,
+                         float zoom);
 // Statistics
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
@@ -1237,7 +1240,6 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
                           float fx, float fy, float cx, float cy);
 void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int effort);
 void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi);
-
 
 // LeNet (CNN for character recognition)
 #define LENGTH_KERNEL	5
