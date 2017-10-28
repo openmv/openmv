@@ -1245,11 +1245,11 @@ static mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *
 
     float strength = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_strength),
                                             (n_args > 1) ? mp_obj_get_float(args[1]) : 1.8);
-    PY_ASSERT_TRUE_MSG(strength >= 0.0, "strength must be > 0");
+    PY_ASSERT_TRUE_MSG(strength > 0.0, "strength must be > 0");
 
     float zoom = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom),
                                         (n_args > 2) ? mp_obj_get_float(args[2]) : 1.0);
-    PY_ASSERT_TRUE_MSG(zoom >= 1.0, "zoom must be > 1");
+    PY_ASSERT_TRUE_MSG(zoom > 0.0, "zoom must be > 0");
 
     fb_alloc_mark();
     imlib_lens_corr(arg_img, strength, zoom);
@@ -1283,7 +1283,7 @@ static mp_obj_t py_image_rotation_corr(uint n_args, const mp_obj_t *args, mp_map
 
     float zoom = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom),
                                         (n_args > 6) ? mp_obj_get_float(args[6]) : 1.0);
-    PY_ASSERT_TRUE_MSG(zoom >= 0.0, "zoom must be > 0");
+    PY_ASSERT_TRUE_MSG(zoom > 0.0, "zoom must be > 0");
 
     fb_alloc_mark();
     imlib_rotation_corr(arg_img, x_rotation, y_rotation, z_rotation, x_translation, y_translation, zoom);
