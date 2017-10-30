@@ -1072,6 +1072,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
             // Create a temp copy of the image to pull pixels from.
             uint32_t *tmp = fb_alloc(((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
             memcpy(tmp, img->data, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+            memset(img->data, 0, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
@@ -1104,6 +1105,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
             // Create a temp copy of the image to pull pixels from.
             uint8_t *tmp = fb_alloc(img->w * img->h * sizeof(uint8_t));
             memcpy(tmp, img->data, img->w * img->h * sizeof(uint8_t));
+            memset(img->data, 0, img->w * img->h * sizeof(uint8_t));
 
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
@@ -1136,6 +1138,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
             // Create a temp copy of the image to pull pixels from.
             uint16_t *tmp = fb_alloc(img->w * img->h * sizeof(uint16_t));
             memcpy(tmp, img->data, img->w * img->h * sizeof(uint16_t));
+            memset(img->data, 0, img->w * img->h * sizeof(uint16_t));
 
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
