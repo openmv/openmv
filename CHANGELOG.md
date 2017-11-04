@@ -1,4 +1,12 @@
 # Change Log
+## [2.6](https://github.com/openmv/openmv/releases/tag/v2.6) (2017-11-04)
+* Update to MicroPython 1.9.2
+* Support saving bayer (raw) images.
+* Add perspective rotation correction code.
+* Fix blob density.
+* Fix color VGA image save.
+* Remove invalid resolutions. 
+
 ## [2.5](https://github.com/openmv/openmv/releases/tag/v2.5) (2017-08-10)
 * Fix UART timeout when using slow baudrate.
 * Enable RTC.
