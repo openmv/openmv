@@ -589,146 +589,148 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
             }
         }
     } else { // Theil-Sen Estimator
-        int blob_pixels = 0;
-
-        fifo_t fifo;
-        fifo_alloc(&fifo, roi->w * roi->h, sizeof(point_t));
         int *x_histogram = fb_alloc0(ptr->w * sizeof(int)); // Not roi so we don't have to adjust, we can burn the RAM.
         int *y_histogram = fb_alloc0(ptr->h * sizeof(int)); // Not roi so we don't have to adjust, we can burn the RAM.
 
-        for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
-            color_thresholds_list_lnk_data_t lnk_data;
-            iterator_get(thresholds, it, &lnk_data);
+        long long *x_delta_histogram = fb_alloc0((2 * ptr->w) * sizeof(long long)); // Not roi so we don't have to adjust, we can burn the RAM.
+        long long *y_delta_histogram = fb_alloc0((2 * ptr->h) * sizeof(long long)); // Not roi so we don't have to adjust, we can burn the RAM.
 
-            switch (ptr->bpp) {
-                case IMAGE_BPP_BINARY: {
-                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
-                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
-                        for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
-                            if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
-                                blob_pixels += 1;
-                                x_histogram[x]++;
-                                y_histogram[y]++;
+        uint32_t size;
+        point_t *points = (point_t *) fb_alloc_all(&size);
+        size_t points_max = size / sizeof(point_t);
+        size_t points_count = 0;
 
-                                point_t p;
-                                point_init(&p, x, y);
-                                fifo_enqueue(&fifo, &p);
+        if(points_max) {
+            int blob_pixels = 0;
+
+            for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
+                color_thresholds_list_lnk_data_t lnk_data;
+                iterator_get(thresholds, it, &lnk_data);
+
+                switch (ptr->bpp) {
+                    case IMAGE_BPP_BINARY: {
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
+                            uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
+                            for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
+                                if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                    blob_pixels += 1;
+                                    x_histogram[x]++;
+                                    y_histogram[y]++;
+
+                                    if(points_count < points_max) {
+                                        point_init(&points[points_count], x, y);
+                                        points_count += 1;
+                                    }
+                                }
                             }
                         }
+                        break;
                     }
-                    break;
-                }
-                case IMAGE_BPP_GRAYSCALE: {
-                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
-                        uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
-                        for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
-                            if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
-                                blob_pixels += 1;
-                                x_histogram[x]++;
-                                y_histogram[y]++;
+                    case IMAGE_BPP_GRAYSCALE: {
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
+                            uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
+                            for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
+                                if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                    blob_pixels += 1;
+                                    x_histogram[x]++;
+                                    y_histogram[y]++;
 
-                                point_t p;
-                                point_init(&p, x, y);
-                                fifo_enqueue(&fifo, &p);
+                                    if(points_count < points_max) {
+                                        point_init(&points[points_count], x, y);
+                                        points_count += 1;
+                                    }
+                                }
                             }
                         }
+                        break;
                     }
-                    break;
-                }
-                case IMAGE_BPP_RGB565: {
-                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
-                        uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
-                        for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
-                            if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
-                                blob_pixels += 1;
-                                x_histogram[x]++;
-                                y_histogram[y]++;
+                    case IMAGE_BPP_RGB565: {
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
+                            uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
+                            for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
+                                if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                    blob_pixels += 1;
+                                    x_histogram[x]++;
+                                    y_histogram[y]++;
 
-                                point_t p;
-                                point_init(&p, x, y);
-                                fifo_enqueue(&fifo, &p);
+                                    if(points_count < points_max) {
+                                        point_init(&points[points_count], x, y);
+                                        points_count += 1;
+                                    }
+                                }
                             }
                         }
+                        break;
                     }
-                    break;
+                    default: {
+                        break;
+                    }
                 }
-                default: {
-                    break;
+            }
+
+            if (blob_pixels) {
+                long long delta_sum = (points_count * (points_count - 1)) / 2;
+
+                if (delta_sum) {
+                    // The code below computes the average slope between all pairs of points.
+                    // This is a N^2 operation that can easily blow up if the image is not threshold carefully...
+
+                    for(int i = 0; i < points_count; i++) {
+                        point_t *p0 = &points[i];
+                        for(int j = i + 1; j < points_count; j++) {
+                            point_t *p1 = &points[j];
+                            x_delta_histogram[p0->x - p1->x + ptr->w]++; // Note we allocated 1 extra above so we can do ptr->w instead of (ptr->w-1).
+                            y_delta_histogram[p0->y - p1->y + ptr->h]++; // Note we allocated 1 extra above so we can do ptr->h instead of (ptr->h-1).
+                        }
+                    }
+
+                    int mx = get_median(x_histogram, blob_pixels, ptr->w); // Output doesn't need adjustment.
+                    int my = get_median(y_histogram, blob_pixels, ptr->h); // Output doesn't need adjustment.
+                    int mdx = get_median_l(x_delta_histogram, delta_sum, 2 * ptr->w) - ptr->w; // Fix offset.
+                    int mdy = get_median_l(y_delta_histogram, delta_sum, 2 * ptr->h) - ptr->h; // Fix offset.
+
+                    float rotation = (mdx ? fast_atan2f(mdy, mdx) : 1.570796f) + 1.570796f; // PI/2
+
+                    out->theta = fast_roundf(rotation * 57.295780) % 180; // * (180 / PI)
+                    if (out->theta < 0) out->theta += 180;
+                    out->rho = fast_roundf(((mx - roi->x) * cos_table[out->theta]) + ((my - roi->y) * sin_table[out->theta]));
+
+                    out->magnitude = fast_roundf(fast_sqrtf((mdx * mdx) + (mdy * mdy)));
+
+                    if ((45 <= out->theta) && (out->theta < 135)) {
+                        // y = (r - x cos(t)) / sin(t)
+                        out->line.x1 = 0;
+                        out->line.y1 = fast_roundf((out->rho - (out->line.x1 * cos_table[out->theta])) / sin_table[out->theta]);
+                        out->line.x2 = roi->w - 1;
+                        out->line.y2 = fast_roundf((out->rho - (out->line.x2 * cos_table[out->theta])) / sin_table[out->theta]);
+                    } else {
+                        // x = (r - y sin(t)) / cos(t);
+                        out->line.y1 = 0;
+                        out->line.x1 = fast_roundf((out->rho - (out->line.y1 * sin_table[out->theta])) / cos_table[out->theta]);
+                        out->line.y2 = roi->h - 1;
+                        out->line.x2 = fast_roundf((out->rho - (out->line.y2 * sin_table[out->theta])) / cos_table[out->theta]);
+                    }
+
+                    if(lb_clip_line(&out->line, 0, 0, roi->w, roi->h)) {
+                        out->line.x1 += roi->x;
+                        out->line.y1 += roi->y;
+                        out->line.x2 += roi->x;
+                        out->line.y2 += roi->y;
+                        // Move rho too.
+                        out->rho += fast_roundf((roi->x * cos_table[out->theta]) + (roi->y * sin_table[out->theta]));
+                        result = true;
+                    } else {
+                        memset(out, 0, sizeof(find_lines_list_lnk_data_t));
+                    }
                 }
             }
         }
 
-        if (blob_pixels) {
-            long long delta_sum = (fifo_size(&fifo) * (fifo_size(&fifo) - 1)) / 2;
-
-            if (delta_sum) {
-                // The code below computes the average slope between all pairs of points.
-                // This is a N^2 operation that can easily blow up if the image is not threshold carefully...
-                long long *x_delta_histogram = fb_alloc0((2 * ptr->w) * sizeof(long long)); // Not roi so we don't have to adjust, we can burn the RAM.
-                long long *y_delta_histogram = fb_alloc0((2 * ptr->h) * sizeof(long long)); // Not roi so we don't have to adjust, we can burn the RAM.
-
-                while (fifo_is_not_empty(&fifo)) {
-                    point_t p0;
-                    fifo_dequeue(&fifo, &p0);
-
-                    for (size_t i = 0, j = fifo_size(&fifo); i < j; i++) {
-                        point_t p1;
-                        fifo_dequeue(&fifo, &p1);
-
-                        x_delta_histogram[p0.x - p1.x + ptr->w]++; // Note we allocated 1 extra above so we can do ptr->w instead of (ptr->w-1).
-                        y_delta_histogram[p0.y - p1.y + ptr->h]++; // Note we allocated 1 extra above so we can do ptr->h instead of (ptr->h-1).
-
-                        fifo_enqueue(&fifo, &p1);
-                    }
-                }
-
-                int mx = get_median(x_histogram, blob_pixels, ptr->w); // Output doesn't need adjustment.
-                int my = get_median(y_histogram, blob_pixels, ptr->h); // Output doesn't need adjustment.
-                int mdx = get_median_l(x_delta_histogram, delta_sum, 2 * ptr->w) - ptr->w; // Fix offset.
-                int mdy = get_median_l(y_delta_histogram, delta_sum, 2 * ptr->h) - ptr->h; // Fix offset.
-
-                float rotation = (mdx ? fast_atan2f(mdy, mdx) : 1.570796f) + 1.570796f; // PI/2
-
-                out->theta = fast_roundf(rotation * 57.295780) % 180; // * (180 / PI)
-                if (out->theta < 0) out->theta += 180;
-                out->rho = fast_roundf(((mx - roi->x) * cos_table[out->theta]) + ((my - roi->y) * sin_table[out->theta]));
-
-                out->magnitude = fast_roundf(fast_sqrtf((mdx * mdx) + (mdy * mdy)));
-
-                if ((45 <= out->theta) && (out->theta < 135)) {
-                    // y = (r - x cos(t)) / sin(t)
-                    out->line.x1 = 0;
-                    out->line.y1 = fast_roundf((out->rho - (out->line.x1 * cos_table[out->theta])) / sin_table[out->theta]);
-                    out->line.x2 = roi->w - 1;
-                    out->line.y2 = fast_roundf((out->rho - (out->line.x2 * cos_table[out->theta])) / sin_table[out->theta]);
-                } else {
-                    // x = (r - y sin(t)) / cos(t);
-                    out->line.y1 = 0;
-                    out->line.x1 = fast_roundf((out->rho - (out->line.y1 * sin_table[out->theta])) / cos_table[out->theta]);
-                    out->line.y2 = roi->h - 1;
-                    out->line.x2 = fast_roundf((out->rho - (out->line.y2 * sin_table[out->theta])) / cos_table[out->theta]);
-                }
-
-                if(lb_clip_line(&out->line, 0, 0, roi->w, roi->h)) {
-                    out->line.x1 += roi->x;
-                    out->line.y1 += roi->y;
-                    out->line.x2 += roi->x;
-                    out->line.y2 += roi->y;
-                    // Move rho too.
-                    out->rho += fast_roundf((roi->x * cos_table[out->theta]) + (roi->y * sin_table[out->theta]));
-                    result = true;
-                } else {
-                    memset(out, 0, sizeof(find_lines_list_lnk_data_t));
-                }
-
-                fb_free(); // y_delta_histogram
-                fb_free(); // x_delta_histogram
-            }
-        }
-
+        fb_free(); // points
+        fb_free(); // y_delta_histogram
+        fb_free(); // x_delta_histogram
         fb_free(); // y_histogram
         fb_free(); // x_histogram
-        fifo_free(&fifo);
     }
 
     return result;
