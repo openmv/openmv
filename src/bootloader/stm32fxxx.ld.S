@@ -10,62 +10,14 @@
 /* Entry Point */
 ENTRY(Reset_Handler)
 
-#if   defined(OPENMV1)
-    #define FLASH_ORIGIN    0x08000000
-    #define FLASH_LENGTH    512K
-    
-    #define TEXT_ORIGIN     0x08000000
-    #define TEXT_LENGTH     16K
-    
-    #define RAM_ORIGIN      0x20000000
-    #define RAM_LENGTH      128K
-    
-    #define CCM_ORIGIN      0x10000000
-    #define CCM_LENGTH      64K
-#elif defined(OPENMV2)
-    #define FLASH_ORIGIN    0x08000000
-    #define FLASH_LENGTH    1024K
-    
-    #define TEXT_ORIGIN     0x08000000
-    #define TEXT_LENGTH     16K
-    
-    #define RAM_ORIGIN      0x20000000
-    #define RAM_LENGTH      192K
-    
-    #define CCM_ORIGIN      0x10000000
-    #define CCM_LENGTH      64K
-#elif defined(OPENMV3)
-    #define FLASH_ORIGIN    0x08000000
-    #define FLASH_LENGTH    1920K
-    
-    #define TEXT_ORIGIN     0x08000000
-    #define TEXT_LENGTH     32K
-    
-    #define CCM_ORIGIN      0x20000000
-    #define CCM_LENGTH      128K
-
-    #define RAM_ORIGIN      0x20020000
-    #define RAM_LENGTH      384K
-#elif defined(OPENMV4)
-    #define FLASH_ORIGIN    0x08000000
-    #define FLASH_LENGTH    1920K
-
-    #define TEXT_ORIGIN     0x08000000
-    #define TEXT_LENGTH     32K
-
-    #define CCM_ORIGIN      0x20000000
-    #define CCM_LENGTH      128K
-
-    #define RAM_ORIGIN      0x20020000
-    #define RAM_LENGTH      384K
-#endif //OPENMV1
+#include "omv_boardconfig.h"
 
 /* Specify the memory areas */
 MEMORY
 {
-  CCM (xrw)       : ORIGIN = CCM_ORIGIN,    LENGTH = CCM_LENGTH
-  RAM (xrw)       : ORIGIN = RAM_ORIGIN,    LENGTH = RAM_LENGTH
-  FLASH_TEXT (rx) : ORIGIN = TEXT_ORIGIN,   LENGTH = TEXT_LENGTH
+  CCM (xrw)       : ORIGIN = OMV_CCM_ORIGIN,    LENGTH = OMV_CCM_LENGTH
+  RAM (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,  LENGTH = OMV_SRAM1_LENGTH
+  FLASH_TEXT (rx) : ORIGIN = OMV_TEXT_ORIGIN,   LENGTH = OMV_TEXT_LENGTH
 }
 
 _estack     = ORIGIN(CCM) + LENGTH(CCM);

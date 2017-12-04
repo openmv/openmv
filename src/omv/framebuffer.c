@@ -44,7 +44,7 @@ void fb_update_jpeg_buffer()
     if ((MAIN_FB()->bpp > 3) && JPEG_FB()->enabled) {
         // Lock FB
         if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
-            if(OMV_JPEG_BUF_SIZE < MAIN_FB()->bpp) {
+            if((OMV_JPEG_BUF_SIZE-64) < MAIN_FB()->bpp) {
                 // image won't fit. so don't copy.
                 JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
             } else {
@@ -60,7 +60,7 @@ void fb_update_jpeg_buffer()
         if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
             // Set JPEG src and dst images.
             image_t src = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp,     .pixels=MAIN_FB()->pixels};
-            image_t dst = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=OMV_JPEG_BUF_SIZE,  .pixels=JPEG_FB()->pixels};
+            image_t dst = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=(OMV_JPEG_BUF_SIZE-64),  .pixels=JPEG_FB()->pixels};
 
             // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
             bool overflow = jpeg_compress(&src, &dst, JPEG_FB()->quality, false);

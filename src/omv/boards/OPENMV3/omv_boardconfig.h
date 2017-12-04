@@ -63,12 +63,38 @@
 // RAW buffer size
 #define OMV_RAW_BUF_SIZE        (307200)
 
-// JPEG buffer size (header + data)
-#define OMV_JPEG_BUF_SIZE       (23000)
-
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH     (160*120*2)
+
+// Linker script constants (see the linker script template stm32fxxx.ld.S).
+// Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
+// The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
+#define OMV_FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
+#define OMV_MAIN_MEMORY     CCM     // data, bss, stack and heap
+#define OMV_DMA_MEMORY      CCM     // Misc DMA buffers
+
+#define OMV_FB_SIZE         (301K)  // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE   (83K)   // minimum fb alloc size
+#define OMV_STACK_SIZE      (4K)
+#define OMV_HEAP_SIZE       (55K)
+
+#define OMV_LINE_BUF_SIZE   (3K)    // Image line buffer round(640 * 2BPP * 2 buffers).
+#define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
+#define OMV_VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
+#define OMV_FFS_BUF_SIZE    (32K)   // Flash filesystem cache
+#define OMV_JPEG_BUF_SIZE   (23 * 1024) // IDE JPEG buffer (header + data).
+
+#define OMV_FLASH_ORIGIN    0x08000000
+#define OMV_FLASH_LENGTH    2048K
+#define OMV_TEXT_ORIGIN     0x08020000
+#define OMV_TEXT_LENGTH     1920K
+#define OMV_CCM_ORIGIN      0x20000000
+#define OMV_CCM_LENGTH      128K    // Note DTCM/ITCM memory is not cacheable on M7
+#define OMV_SRAM1_ORIGIN    0x20020000
+#define OMV_SRAM1_LENGTH    368K
+#define OMV_SRAM2_ORIGIN    0x2007C000
+#define OMV_SRAM2_LENGTH    16K
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)

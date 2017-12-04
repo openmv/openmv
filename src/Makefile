@@ -43,8 +43,10 @@ BOOT_DIR=bootloader
 OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/py/qstrdefsomv.h
 
 # Target
-TARGET ?= OPENMV2
+TARGET ?= OPENMV3
 FW_DIR=$(TOP_DIR)/../firmware/$(TARGET)
+OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
+MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/stmhal/boards/$(TARGET)/
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -70,7 +72,7 @@ CFLAGS += -fstack-protector-all -DSTACK_PROTECTOR
 endif
 
 # Compiler Flags
-include $(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/omv_boardconfig.mk
+include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -mabi=aapcs-linux -fdata-sections -ffunction-sections
 CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard
 CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=12000000 -D$(TARGET) -DSTM32_HAL_H=$(HAL_INC) -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(MAIN_APP_ADDR)
@@ -89,12 +91,12 @@ CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/oofatfs
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/core/inc/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/class/inc/
-CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/boards/$(TARGET)/
+CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
-CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
+CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 
 # Linker Flags
@@ -399,7 +401,7 @@ FIRMWARE_OBJS:
 
 # This target generates the main/app firmware image located at 0x08010000
 $(FIRMWARE): FIRMWARE_OBJS
-	$(CPP) -P -E -D$(TARGET) $(OMV_DIR)/stm32fxxx.ld.S > $(BUILD)/stm32fxxx.lds
+	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(OMV_DIR)/stm32fxxx.ld.S > $(BUILD)/stm32fxxx.lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
@@ -408,7 +410,7 @@ $(FIRMWARE): FIRMWARE_OBJS
 # once without padding, to generate the bootloader.dfu file, and once with padding
 # up to the main fw image (MAIN_APP_ADDR), to generate a contiguous firmware.bin image.
 $(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
-	$(CPP) -P -E -D$(TARGET) $(BOOT_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32fxxx.lds
+	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(BOOT_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOT_DIR)/stm32fxxx.lds
 	$(CC) $(BOOT_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
