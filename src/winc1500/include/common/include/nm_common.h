@@ -4,7 +4,7 @@
  *
  * \brief WINC Driver Common API Declarations.
  *
- * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -69,8 +69,10 @@
 #define M2M_ERR_FAIL		((sint8)-12)
 #define M2M_ERR_FW_VER_MISMATCH         ((sint8)-13)
 #define M2M_ERR_SCAN_IN_PROGRESS         ((sint8)-14)
+/*
+Invalid argument
+*/
 #define M2M_ERR_INVALID_ARG				 ((sint8)-15)
-#define M2M_ERR_INVALID					((sint8)-16)
 
 /*i2c MAASTER ERR*/
 #define I2C_ERR_LARGE_ADDRESS 	  0xE1UL	/*the address exceed the max addressing mode in i2c flash*/

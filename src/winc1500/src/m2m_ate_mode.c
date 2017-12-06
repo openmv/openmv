@@ -4,7 +4,7 @@
  *
  * \brief NMC1500 Peripherials Application Interface.
  *
- * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -366,6 +366,7 @@ sint8 m2m_ate_start_tx(tstrM2mAteTx * strM2mAteTx)
 		(strM2mAteTx->duty_cycle > M2M_ATE_TX_DUTY_MIN_VALUE /*10*/ ) ||
 		(strM2mAteTx->dpd_ctrl < M2M_ATE_TX_DPD_DYNAMIC)	||
 		(strM2mAteTx->dpd_ctrl > M2M_ATE_TX_DPD_ENABLED)  ||
+		(strM2mAteTx->use_pmu < M2M_ATE_PMU_DISBLE)	||
 		(strM2mAteTx->use_pmu > M2M_ATE_PMU_ENABLE)	||
 		(strM2mAteTx->phy_burst_tx < M2M_ATE_TX_SRC_MAC) ||
 		(strM2mAteTx->phy_burst_tx > M2M_ATE_TX_SRC_PHY) ||
@@ -390,8 +391,6 @@ sint8 m2m_ate_start_tx(tstrM2mAteTx * strM2mAteTx)
 		s8Ret = M2M_ATE_ERR_VALIDATE;
 		goto __EXIT;
 	}
-	
-
 	
 	s8Ret += nm_write_reg(rBurstTx_NMI_USE_PMU, strM2mAteTx->use_pmu);
 	s8Ret += nm_write_reg(rBurstTx_NMI_TX_PHY_CONT, strM2mAteTx->phy_burst_tx);
@@ -507,6 +506,7 @@ sint8 m2m_ate_start_rx(tstrM2mAteRx * strM2mAteRxStr)
 	
 	if(	(strM2mAteRxStr->channel_num < M2M_ATE_CHANNEL_1) ||
 		(strM2mAteRxStr->channel_num > M2M_ATE_CHANNEL_14)||
+		(strM2mAteRxStr->use_pmu < M2M_ATE_PMU_DISBLE)	 ||
 		(strM2mAteRxStr->use_pmu > M2M_ATE_PMU_ENABLE)
 	)
 	{
@@ -672,35 +672,6 @@ sint8 m2m_ate_get_dig_gain(double * dGaindB)
 	*dGaindB = 20.0*log10((double)dGain / 1024.0);
 	
 	return M2M_SUCCESS;
-}
-/*!
-@fn	\
-	void m2m_ate_set_pa_gain(uint8 gain_db)
-
-@brief
-	This function is used to set the PA gain (18/15/12/9/6/3/0 only)
-
-@param [in]	uint8 gain_db
-		PA gain level allowed (18/15/12/9/6/3/0 only)
-
-*/
-void m2m_ate_set_pa_gain(uint8 gain_db)
-{
-	uint32 PA_1e9c;
-	uint8 aGain[] = {
-		/* "0 dB"  */ 0x00,
-		/* "3 dB"  */ 0x01,
-		/* "6 dB"  */ 0x03,
-		/* "9 dB"  */ 0x07,
-		/* "12 dB" */ 0x0f,
-		/* "15 dB" */ 0x1f,
-	/* "18 dB" */ 0x3f };
-	/* The variable PA gain is valid only for High power mode */
-	PA_1e9c = nm_read_reg(0x1e9c);
-	/* TX bank 0. */
-	PA_1e9c &= ~(0x3ful << 8);
-	PA_1e9c |= (((uint32)aGain[gain_db/3] & 0x3f) << 8);
-	nm_write_reg(0x1e9c, PA_1e9c);
 }
 /*!
 @fn	\

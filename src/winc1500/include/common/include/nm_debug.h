@@ -4,7 +4,7 @@
  *
  * \brief This module contains debug APIs declarations.
  *
- * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -58,7 +58,7 @@
 #define M2M_LOG_DBG										4
 
 #if (defined __APS3_CORTUS__)
-#define M2M_LOG_LEVEL									M2M_LOG_INFO
+#define M2M_LOG_LEVEL									M2M_LOG_ERROR
 #else
 #define M2M_LOG_LEVEL									M2M_LOG_REQ
 #endif
@@ -72,7 +72,7 @@
 
 #if (CONF_WINC_DEBUG == 1)
 #undef M2M_LOG_LEVEL
-#define M2M_LOG_LEVEL                                                  M2M_LOG_DBG
+#define M2M_LOG_LEVEL							M2M_LOG_DBG
 #undef M2M_PRINT
 #define M2M_PRINT(...)							do{CONF_WINC_PRINTF(__VA_ARGS__);CONF_WINC_PRINTF("\r");}while(0)
 #if (M2M_LOG_LEVEL >= M2M_LOG_ERROR)

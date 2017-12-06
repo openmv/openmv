@@ -4,7 +4,7 @@
  *
  * \brief WINC1500 SPI Flash.
  *
- * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2015 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -39,26 +39,8 @@
  *
  */
 
-#ifdef PROFILING
-#include "windows.h"
-#endif
 #include "spi_flash/include/spi_flash.h"
 #define DUMMY_REGISTER	(0x1084)
-
-#define TIMEOUT (-1) /*MS*/
-
-//#define DISABLE_UNSED_FLASH_FUNCTIONS
-
-#define FLASH_BLOCK_SIZE					(32UL * 1024)
-/*!<Block Size in Flash Memory
- */
-#define FLASH_SECTOR_SZ						(4 * 1024UL)
-/*!<Sector Size in Flash Memory
- */
-#define FLASH_PAGE_SZ						(256)
-/*!<Page Size in Flash Memory */
-
-
 #define HOST_SHARE_MEM_BASE		(0xd0000UL)
 #define CORTUS_SHARE_MEM_BASE	(0x60000000UL)
 #define NMI_SPI_FLASH_ADDR		(0x111c)
@@ -88,9 +70,6 @@ SPI Flash DMA
 *	@param[OUT]	val
 					value of status reg
 *	@return		Status of execution
-*	@note		Compatible with MX25L6465E
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static sint8 spi_flash_read_status_reg(uint8 * val)
 {
@@ -122,9 +101,6 @@ static sint8 spi_flash_read_status_reg(uint8 * val)
 *	@fn			spi_flash_read_security_reg
 *	@brief		Read security register
 *	@return		Security register value
-*	@note		Compatible with MX25L6465E
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static uint8 spi_flash_read_security_reg(void)
 {
@@ -153,9 +129,6 @@ static uint8 spi_flash_read_security_reg(void)
 /**
 *	@fn			spi_flash_gang_unblock
 *	@brief		Unblock all flash area
-*	@note		Compatible with MX25L6465E
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static sint8 spi_flash_gang_unblock(void)
 {
@@ -183,9 +156,6 @@ static sint8 spi_flash_gang_unblock(void)
 /**
 *	@fn			spi_flash_clear_security_flags
 *	@brief		Clear all security flags
-*	@note		Compatible with MX25L6465E
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static sint8 spi_flash_clear_security_flags(void)
 {
@@ -221,9 +191,6 @@ static sint8 spi_flash_clear_security_flags(void)
 *	@param[IN]	u32Sz
 *					Data size
 *	@return		Status of execution
-*	@note		Compatible with MX25L6465E and should be working with other types
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static sint8 spi_flash_load_to_cortus_mem(uint32 u32MemAdr, uint32 u32FlashAdr, uint32 u32Sz)
 {
@@ -259,9 +226,6 @@ static sint8 spi_flash_load_to_cortus_mem(uint32 u32MemAdr, uint32 u32FlashAdr, 
 *	@param[IN]	u32FlashAdr
 *					Any memory address within the sector
 *	@return		Status of execution
-*	@note		Compatible with MX25L6465E and should be working with other types
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static sint8 spi_flash_sector_erase(uint32 u32FlashAdr)
 {
@@ -293,9 +257,6 @@ static sint8 spi_flash_sector_erase(uint32 u32FlashAdr)
 *	@fn			spi_flash_write_enable
 *	@brief		Send write enable command to SPI flash
 *	@return		Status of execution
-*	@note		Compatible with MX25L6465E and should be working with other types
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static sint8 spi_flash_write_enable(void)
 {
@@ -323,9 +284,6 @@ static sint8 spi_flash_write_enable(void)
 /**
 *	@fn			spi_flash_write_disable
 *	@brief		Send write disable command to SPI flash
-*	@note		Compatible with MX25L6465E and should be working with other types
-*	@author		M. Abdelmawla
-*	@version	1.0
 */
 static sint8 spi_flash_write_disable(void)
 {
@@ -358,9 +316,6 @@ static sint8 spi_flash_write_disable(void)
 *					Address to write to at the SPI flash
 *	@param[IN]	u32Sz
 *					Data size
-*	@note		Compatible with MX25L6465E and should be working with other types
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static sint8 spi_flash_page_program(uint32 u32MemAdr, uint32 u32FlashAdr, uint32 u32Sz)
 {
@@ -397,9 +352,6 @@ static sint8 spi_flash_page_program(uint32 u32MemAdr, uint32 u32FlashAdr, uint32
 *					Address to read from at the SPI flash
 *	@param[IN]	u32Sz
 *					Data size
-*	@note		Data size must be < 64KB (limitation imposed by the bus wrapper)
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 static sint8 spi_flash_read_internal(uint8 *pu8Buf, uint32 u32Addr, uint32 u32Sz)
 {
@@ -422,8 +374,6 @@ ERR:
 *	@param[IN]	u32Sz
 *					Data size
 *	@return		Status of execution
-*	@author		M. Abdelmawla
-*	@version	1.0
 */
 static sint8 spi_flash_pp(uint32 u32Offset, uint8 *pu8Buf, uint16 u16Sz)
 {
@@ -448,8 +398,6 @@ ERR:
 *	@fn			spi_flash_rdid
 *	@brief		Read SPI Flash ID
 *	@return		SPI FLash ID
-*	@author		M.S.M
-*	@version	1.0
 */
 static uint32 spi_flash_rdid(void)
 {
@@ -484,8 +432,6 @@ static uint32 spi_flash_rdid(void)
 /**
 *	@fn			spi_flash_unlock
 *	@brief		Unlock SPI Flash
-*	@author		M.S.M
-*	@version	1.0
 */
 #if 0
 static void spi_flash_unlock(void)
@@ -534,8 +480,6 @@ static void spi_flash_leave_low_power_mode(void) {
 /**
  *	@fn		spi_flash_enable
  *	@brief	Enable spi flash operations
- *	@author	M. Abdelmawla
- *	@version	1.0
  */
 sint8 spi_flash_enable(uint8 enable)
 {
@@ -576,8 +520,6 @@ ERR1:
 *					Data size
 *	@return		Status of execution
 *	@note		Data size is limited by the SPI flash size only
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 sint8 spi_flash_read(uint8 *pu8Buf, uint32 u32offset, uint32 u32Sz)
 {
@@ -610,8 +552,6 @@ ERR:
 *	@param[IN]	u32Sz
 *					Data size
 *	@return		Status of execution
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 sint8 spi_flash_write(uint8* pu8Buf, uint32 u32Offset, uint32 u32Sz)
 {
@@ -687,8 +627,6 @@ ERR:
 *					Data size
 *	@return		Status of execution
 *	@note		Data size is limited by the SPI flash size only
-*	@author		M. Abdelmawla
-*	@version	1.0
 */ 
 sint8 spi_flash_erase(uint32 u32Offset, uint32 u32Sz)
 {
@@ -725,8 +663,6 @@ ERR:
 *	@fn			spi_flash_get_size
 *	@brief		Get size of SPI Flash
 *	@return		Size of Flash
-*	@author		M.S.M
-*	@version	1.0
 */
 uint32 spi_flash_get_size(void)
 {
