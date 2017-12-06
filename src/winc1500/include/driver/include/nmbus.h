@@ -4,7 +4,7 @@
  *
  * \brief This module contains NMC1000 bus APIs implementation.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -66,6 +66,14 @@ sint8 nm_bus_iface_init(void *);
 sint8 nm_bus_iface_deinit(void);
 
 /**
+*	@fn		nm_bus_reset
+*	@brief	reset bus interface
+*	@return	M2M_SUCCESS in case of success and M2M_ERR_BUS_FAIL in case of failure
+*	@version	1.0
+*/
+sint8 nm_bus_reset(void);
+
+/**
 *	@fn		nm_bus_iface_reconfigure
 *	@brief	reconfigure bus interface
 *	@return	M2M_SUCCESS in case of success and M2M_ERR_BUS_FAIL in case of failure
@@ -113,7 +121,7 @@ sint8 nm_write_reg(uint32 u32Addr, uint32 u32Val);
 *	@param [in]	u32Sz
 *				Number of bytes to read. The buffer size must be >= u32Sz
 *	@return	ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
-*/
+*/ 
 sint8 nm_read_block(uint32 u32Addr, uint8 *puBuf, uint32 u32Sz);
 
 /**
@@ -126,7 +134,7 @@ sint8 nm_read_block(uint32 u32Addr, uint8 *puBuf, uint32 u32Sz);
 *	@param [in]	u32Sz
 *				Number of bytes to write. The buffer size must be >= u32Sz
 *	@return	ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
-*/
+*/ 
 sint8 nm_write_block(uint32 u32Addr, uint8 *puBuf, uint32 u32Sz);
 
 

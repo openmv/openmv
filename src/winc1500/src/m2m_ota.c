@@ -4,7 +4,7 @@
  *
  * \brief NMC1500 IoT OTA Interface.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -163,7 +163,7 @@ NMI_API sint8  m2m_ota_notif_set_url(uint8 * u8Url)
 	/*Todo: we may change it to data pkt but we need to give it higer priority
 			but the priorty is not implemnted yet in data pkt
 	*/
-	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_START_UPDATE,u8Url,u16UrlSize,NULL,0,0);
+	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_NOTIF_SET_URL,u8Url,u16UrlSize,NULL,0,0);
 	return ret;
 
 }
@@ -226,7 +226,28 @@ NMI_API sint8 m2m_ota_start_update(uint8 * u8DownloadUrl)
 	/*Todo: we may change it to data pkt but we need to give it higer priority
 			but the priorty is not implemnted yet in data pkt
 	*/
-	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_START_UPDATE,u8DownloadUrl,u16DurlSize,NULL,0,0);
+	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_START_FW_UPDATE,u8DownloadUrl,u16DurlSize,NULL,0,0);
+	return ret;
+}
+/*!
+@fn	\
+	NMI_API sint8 m2m_ota_start_update_crt(uint8 * u8DownloadUrl);
+
+@brief
+	Request OTA start for the Cortus app image.
+
+@param [in]	u8DownloadUrl
+		The cortus application image url.
+
+@return
+	The function SHALL return 0 for success and a negative value otherwise.
+
+*/
+NMI_API sint8 m2m_ota_start_update_crt(uint8 * u8DownloadUrl)
+{
+	sint8 ret = M2M_SUCCESS;
+	uint16 u16DurlSize = m2m_strlen(u8DownloadUrl) + 1;
+	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_START_CRT_UPDATE,u8DownloadUrl,u16DurlSize,NULL,0,0);
 	return ret;
 }
 
@@ -244,7 +265,40 @@ NMI_API sint8 m2m_ota_start_update(uint8 * u8DownloadUrl)
 NMI_API sint8 m2m_ota_rollback(void)
 {
 	sint8 ret = M2M_SUCCESS;
-	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_ROLLBACK,NULL,0,NULL,0,0);
+	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_ROLLBACK_FW,NULL,0,NULL,0,0);
+	return ret;
+}
+/*!
+@fn	\
+	NMI_API sint8 m2m_ota_rollback_crt(void);
+
+@brief
+	Request Cortus application OTA Rollback image
+
+@return
+	The function SHALL return 0 for success and a negative value otherwise.
+*/
+NMI_API sint8 m2m_ota_rollback_crt(void)
+{
+	sint8 ret = M2M_SUCCESS;
+	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_ROLLBACK_CRT,NULL,0,NULL,0,0);
+	return ret;
+}
+
+/*!
+@fn	\
+	NMI_API sint8 m2m_ota_abort(void);
+
+@brief
+	Request OTA Abort
+
+@return
+	The function SHALL return 0 for success and a negative value otherwise.
+*/
+NMI_API sint8 m2m_ota_abort(void)
+{
+	sint8 ret = M2M_SUCCESS;
+	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_ABORT,NULL,0,NULL,0,0);
 	return ret;
 }
 
@@ -265,6 +319,23 @@ NMI_API sint8 m2m_ota_switch_firmware(void)
 	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_SWITCH_FIRMWARE,NULL,0,NULL,0,0);
 	return ret;
 }
+/*!
+@fn	\
+	NMI_API sint8 m2m_ota_switch_crt(void);
+
+@brief
+	Switch to the upgraded cortus application.
+
+@return
+	The function SHALL return 0 for success and a negative value otherwise.
+*/
+NMI_API sint8 m2m_ota_switch_crt(void)
+{
+	sint8 ret = M2M_SUCCESS;
+	ret = hif_send(M2M_REQ_GROUP_OTA,M2M_OTA_REQ_SWITCH_CRT_IMG,NULL,0,NULL,0,0);
+	return ret;
+}
+
 /*!
 @fn	\
 	NMI_API sint8 m2m_ota_get_firmware_version(tstrM2mRev * pstrRev);

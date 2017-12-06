@@ -4,7 +4,7 @@
  *
  * \brief WINC1500 SPI Flash.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -112,7 +112,6 @@
 #include "bus_wrapper/include/nm_bus_wrapper.h"
 #include "driver/include/nmbus.h"
 #include "driver/include/nmasic.h"
-#include "spi_flash/include/spi_flash_map.h"
 
 /**
  *	@fn		spi_flash_enable

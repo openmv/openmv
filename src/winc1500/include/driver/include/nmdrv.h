@@ -4,7 +4,7 @@
  *
  * \brief This module contains NMC1500 M2M driver APIs declarations.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -59,7 +59,19 @@ typedef struct {
 	uint8 BuildDate[sizeof(__DATE__)];
 	uint8 BuildTime[sizeof(__TIME__)];
 	uint8 _PAD8_;
+	uint16 u16FirmwareSvnNum;
+	uint16 _PAD16_[2];
 } tstrM2mRev;
+
+/**
+*  @struct		tstrM2mBinaryHeader
+*  @brief		Structure holding compatibility version info for firmware binaries
+*/
+typedef struct {
+	tstrM2mRev binVerInfo;
+    uint32	   flashOffset;
+	uint32     payloadSize;
+} tstrM2mBinaryHeader;
 
 #ifdef __cplusplus
      extern "C" {

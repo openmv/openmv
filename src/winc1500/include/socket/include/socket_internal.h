@@ -2,9 +2,9 @@
  *
  * \file
  *
- * \brief BSD alike socket interface internal types.
+ * \brief BSD compatible socket interface internal types.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *

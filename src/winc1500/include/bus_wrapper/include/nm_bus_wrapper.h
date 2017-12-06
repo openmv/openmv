@@ -4,7 +4,7 @@
  *
  * \brief This module contains NMC1000 bus wrapper APIs declarations.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -169,6 +169,7 @@ sint8 nm_bus_reinit(void *);
 */
 #ifdef CONF_WINC_USE_UART
 uint8 nm_bus_get_chip_type(void);
+sint8 nm_bus_break(void);
 #endif
 #ifdef __cplusplus
 	 }

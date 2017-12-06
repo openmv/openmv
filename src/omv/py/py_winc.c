@@ -969,7 +969,7 @@ static mp_obj_t winc_scan(mp_obj_t self_in)
 
 static mp_obj_t winc_rssi(mp_obj_t self_in)
 {
-    int rssi;
+    int rssi=0;
     async_request_done = false;
     async_request_data = &rssi;
 	
@@ -1018,7 +1018,7 @@ static mp_obj_t winc_fw_update(mp_obj_t self_in)
 {
     // Erase the WINC1500 flash.
     printf("Erasing flash...\n");
-    if (programmer_erase_all() != M2M_SUCCESS) {
+    if (programmer_eraseall() != M2M_SUCCESS) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to erase entire flash!"));
     }
 

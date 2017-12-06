@@ -4,7 +4,7 @@
  *
  * \brief WINC Crypto Application Interface.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -81,6 +81,9 @@ typedef struct sha256ctxt{
 
 @brief
 	RSA Signature status: pass or fail.
+	
+@see
+	m2m_crypto_rsa_sign_gen
 */
 typedef enum{
 	M2M_RSA_SIGN_OK,
@@ -91,14 +94,17 @@ typedef enum{
 @typedef \
 	tpfAppCryproCb
 
-@brief	
+@brief			Crypto Calback function receiving the crypto related messages
 @param [in]	u8MsgType
-				
+				Crypto command about which the notification is received.
+@param [in]	pvResp
+				A pointer to the result associated with the notification.  				
 @param [in]	pvMsg
 				A pointer to a buffer containing the notification parameters (if any). It should be
 				Casted to the correct data type corresponding to the notification type.
-
-
+@see
+	m2m_crypto_init
+	tenuM2mCryptoCmd
 */
 typedef void (*tpfAppCryproCb) (uint8 u8MsgType,void * pvResp, void * pvMsg);
 
@@ -114,10 +120,15 @@ FUNCTION PROTOTYPES
 @fn	\
 	sint8 m2m_crypto_init();
 	
-@brief	crypto initialization
+@brief	crypto initialization.
 
 @param[in]	pfAppCryproCb
-
+				Pointer to the Crypto Calback function receiving the crypto related messages.
+@see
+	tpfAppCryproCb
+	
+@return		
+	The function returns @ref M2M_SUCCESS for successful operation and a negative value otherwise.
 */
 sint8 m2m_crypto_init(tpfAppCryproCb pfAppCryproCb);
 /*!
@@ -127,7 +138,9 @@ sint8 m2m_crypto_init(tpfAppCryproCb pfAppCryproCb);
 @brief	SHA256 hash initialization
 
 @param[in]	psha256Ctxt
-				Pointer to a sha256 context allocated by the caller.
+				Pointer to a sha256 context allocated by the caller.				
+@return		
+	The function returns @ref M2M_SUCCESS for successful operation and a negative value otherwise.
 */
 sint8 m2m_crypto_sha256_hash_init(tstrM2mSha256Ctxt *psha256Ctxt);
 
@@ -146,6 +159,13 @@ sint8 m2m_crypto_sha256_hash_init(tstrM2mSha256Ctxt *psha256Ctxt);
 				
 @param [in]	u16DataLength
 				Size of the data bufefr in bytes.
+@pre SHA256 module should be initialized first through m2m_crypto_sha256_hash_init function.
+
+@see m2m_crypto_sha256_hash_init
+
+@return		
+	The function returns @ref M2M_SUCCESS for successful operation and a negative value otherwise.
+
 */
 sint8 m2m_crypto_sha256_hash_update(tstrM2mSha256Ctxt *psha256Ctxt, uint8 *pu8Data, uint16 u16DataLength);
 
@@ -161,10 +181,11 @@ sint8 m2m_crypto_sha256_hash_update(tstrM2mSha256Ctxt *psha256Ctxt, uint8 *pu8Da
 				
 @param [in] pu8Sha256Digest
 				Buffer allocated by the caller which will hold the resultant SHA256 Digest. It must be allocated no less than M2M_SHA256_DIGEST_LEN.
+				
+@return		
+	The function returns @ref M2M_SUCCESS for successful operation and a negative value otherwise.
 */
 sint8 m2m_crypto_sha256_hash_finish(tstrM2mSha256Ctxt *psha256Ctxt, uint8 *pu8Sha256Digest);
-
-
 
 
 /*!
@@ -198,6 +219,9 @@ sint8 m2m_crypto_sha256_hash_finish(tstrM2mSha256Ctxt *psha256Ctxt, uint8 *pu8Sh
 				
 @param[out] pu8RsaSignature
 				Signature value to be verified.
+				
+@return		
+	The function returns @ref M2M_SUCCESS for successful operation and a negative value otherwise.
 */
 sint8 m2m_crypto_rsa_sign_verify(uint8 *pu8N, uint16 u16NSize, uint8 *pu8E, uint16 u16ESize, uint8 *pu8SignedMsgHash, 
 						  uint16 u16HashLength, uint8 *pu8RsaSignature);
@@ -234,6 +258,9 @@ sint8 m2m_crypto_rsa_sign_verify(uint8 *pu8N, uint16 u16NSize, uint8 *pu8E, uint
 				
 @param[out] pu8RsaSignature
 				Pointer to a user buffer allocated by teh caller shall hold the generated signature.
+				
+@return		
+	The function returns @ref M2M_SUCCESS for successful operation and a negative value otherwise.
 */
 sint8 m2m_crypto_rsa_sign_gen(uint8 *pu8N, uint16 u16NSize, uint8 *pu8d, uint16 u16dSize, uint8 *pu8SignedMsgHash, 
 					   uint16 u16HashLength, uint8 *pu8RsaSignature);

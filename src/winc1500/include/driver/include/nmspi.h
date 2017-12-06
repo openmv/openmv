@@ -4,7 +4,7 @@
  *
  * \brief This module contains NMC1000 SPI protocol bus APIs implementation.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -54,12 +54,18 @@
 *	@return	ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
 */
 sint8 nm_spi_init(void);
+/**
+*	@fn		nm_spi_reset
+*	@brief	reset the SPI
+*	@return	ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
+*/
+sint8 nm_spi_reset(void);
 
 /**
 *	@fn		nm_spi_deinit
-*	@brief	DeInitialize the SPI
+*	@brief	DeInitialize the SPI 
 *	@return	ZERO in case of success and M2M_ERR_BUS_FAIL in case of failure
-*/
+*/ 
 sint8 nm_spi_deinit(void);
 
 /**

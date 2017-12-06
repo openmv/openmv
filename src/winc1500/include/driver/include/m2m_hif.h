@@ -4,7 +4,7 @@
  *
  * \brief This module contains M2M host interface APIs implementation.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2017 Atmel Corporation. All rights reserved.
  *
  * \asf_license_start
  *
@@ -171,6 +171,14 @@ NMI_API sint8 hif_register_cb(uint8 u8Grp,tpfHifCallBack fn);
 				The function shall return ZERO for successful operation and a negative value otherwise.
 */
 NMI_API sint8 hif_chip_sleep(void);
+/**
+*	@fn		NMI_API sint8 hif_chip_sleep_sc(void);
+*	@brief
+				To clear the chip count only but keep the chip awake
+*   @return
+				The function shall return ZERO for successful operation and a negative value otherwise.
+*/
+NMI_API sint8 hif_chip_sleep_sc(void);
 /**
 *	@fn		NMI_API sint8 hif_chip_wake(void);
 *	@brief
