@@ -7,9 +7,9 @@
 import network
 
 # Init wlan module in Download mode.
-wlan = network.WINC(True)
-#print("Firmware version:", wlan.fw_version())
+wlan = network.WINC(mode=network.WINC.MODE_FIRMWARE)
+print("Firmware version:", wlan.fw_version())
 
 # Start the firmware update process.
 wlan.fw_update()
-#print("Firmware version:", wlan.fw_version())
+print("Firmware version:", wlan.fw_version())
