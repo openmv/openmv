@@ -54,7 +54,7 @@
 #define	programmer_eraseall()                           programmer_erase(0, programmer_get_flash_size())
 #define	programmer_read(pu8Buf, u32Offset, u32Sz)       spi_flash_read(pu8Buf, u32Offset, u32Sz)	
 
-int burn_firmware(void);
-int verify_firmware(void);
-int dump_firmware(void);
+int burn_firmware(const char *path);
+int verify_firmware(const char *path);
+int dump_firmware(const char *path);
 #endif /* IMAGE_DOWNLOADER_H_INCLUDED */

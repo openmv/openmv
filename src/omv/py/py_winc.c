@@ -22,6 +22,7 @@
 #include "spi.h"
 #include "common.h"
 #include "py_helper.h"
+#include "ff_wrapper.h"
 
 // WINC's includes
 #include "driver/include/nmasic.h"
@@ -1003,19 +1004,29 @@ static mp_obj_t winc_fw_version(mp_obj_t self_in)
     return t_fwver;
 }
 
-static mp_obj_t winc_fw_dump(mp_obj_t self_in)
+static mp_obj_t winc_fw_dump(mp_obj_t self_in, mp_obj_t path_in)
 {
     // Erase the WINC1500 flash.
     printf("Dumping firmware...\n");
-    if (dump_firmware() != M2M_SUCCESS) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to erase entire flash!"));
+
+    const char *path = mp_obj_str_get_str(path_in);
+    if (dump_firmware(path) != M2M_SUCCESS) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to dump flash!"));
     }
 
     return mp_const_none;
 }
 
-static mp_obj_t winc_fw_update(mp_obj_t self_in)
+static mp_obj_t winc_fw_update(mp_obj_t self_in, mp_obj_t path_in)
 {
+    FRESULT res;
+    FILINFO fno;
+    const char *path = mp_obj_str_get_str(path_in);
+
+    if ((res = f_stat_helper(path, &fno)) != FR_OK) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    }
+
     // Erase the WINC1500 flash.
     printf("Erasing flash...\n");
     if (programmer_erase_all() != M2M_SUCCESS) {
@@ -1024,13 +1035,13 @@ static mp_obj_t winc_fw_update(mp_obj_t self_in)
 
     // Program the firmware on the WINC1500 flash.
     printf("Programming firmware...\n");
-    if (burn_firmware() != M2M_SUCCESS) {
+    if (burn_firmware(path) != M2M_SUCCESS) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Error while writing firmware!"));
     }
 
     // Verify the firmware on the WINC1500 flash.
     printf("Verifying firmware image...\n");
-    if (verify_firmware() != M2M_SUCCESS) {
+    if (verify_firmware(path) != M2M_SUCCESS) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to verify firmware section!"));
     }
 
@@ -1048,8 +1059,8 @@ static MP_DEFINE_CONST_FUN_OBJ_1(winc_ifconfig_obj,     winc_ifconfig);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_scan_obj,         winc_scan);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_rssi_obj,         winc_rssi);
 static MP_DEFINE_CONST_FUN_OBJ_1(winc_fw_version_obj,   winc_fw_version);
-static MP_DEFINE_CONST_FUN_OBJ_1(winc_fw_dump_obj,      winc_fw_dump);
-static MP_DEFINE_CONST_FUN_OBJ_1(winc_fw_update_obj,    winc_fw_update);
+static MP_DEFINE_CONST_FUN_OBJ_2(winc_fw_dump_obj,      winc_fw_dump);
+static MP_DEFINE_CONST_FUN_OBJ_2(winc_fw_update_obj,    winc_fw_update);
 
 static const mp_map_elem_t winc_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_connect),         (mp_obj_t)&winc_connect_obj },

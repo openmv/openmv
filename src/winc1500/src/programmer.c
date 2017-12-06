@@ -5,10 +5,6 @@
 #include "programmer/programmer.h"
 #include "spi_flash/include/spi_flash_map.h"
 
-// TODO pass file paths
-#define FW_PATH             "/firmware/m2m_aio_3a0.bin"
-#define FW_DUMP_PATH        "/firmware/fw_dump.bin"
-
 #define MIN(a,b) \
     ({ __typeof__ (a) _a = (a); \
      __typeof__ (b) _b = (b); \
@@ -19,7 +15,7 @@
  *
  * return M2M_SUCCESS on success, error code otherwise.
  */
-int burn_firmware()
+int burn_firmware(const char *path)
 {
     FIL fp;
     uint32_t offset = 0;
@@ -28,7 +24,7 @@ int burn_firmware()
     int ret = M2M_ERR_FAIL;
     uint8_t	*buf = fb_alloc(FLASH_SECTOR_SZ);
 
-    if (f_open_helper(&fp, FW_PATH, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
+    if (f_open_helper(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
     }
 
@@ -65,7 +61,7 @@ error:
  * Verify WINC1500 firmware 
  * return M2M_SUCCESS on success, error code otherwise.
  */
-int verify_firmware()
+int verify_firmware(const char *path)
 {
     FIL fp;
     uint32_t offset = 0;
@@ -75,7 +71,7 @@ int verify_firmware()
     uint8_t	*file_buf = fb_alloc(FLASH_SECTOR_SZ);
     uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ);
 
-    if (f_open_helper(&fp, FW_PATH, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
+    if (f_open_helper(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
     }
 
@@ -87,7 +83,7 @@ int verify_firmware()
         bytes = MIN(size, FLASH_SECTOR_SZ);
 
         if (f_read(&fp, file_buf, bytes, &bytes_out) != FR_OK || bytes_out != bytes) {
-            printf("burn_firmware: file read error!\n");
+            printf("verify_firmware: file read error!\n");
             goto error;
         }
 
@@ -120,7 +116,7 @@ error:
  * dump WINC1500 firmware
  * return M2M_SUCCESS on success, error code otherwise.
  */
-int dump_firmware()
+int dump_firmware(const char *path)
 {
     FIL fp;
     uint32_t offset = 0;
@@ -129,7 +125,7 @@ int dump_firmware()
     int ret = M2M_ERR_FAIL;
     uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ);
 
-    if (f_open_helper(&fp, FW_DUMP_PATH, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+    if (f_open_helper(&fp, path, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
         goto error;
     }
 
@@ -141,12 +137,12 @@ int dump_firmware()
         bytes = MIN(size, FLASH_SECTOR_SZ);
 
         if (programmer_read_firmware_image(flash_buf, offset, bytes) != M2M_SUCCESS) {
-            printf("verify_firmware: read access failed on firmware section!\r\n");
+            printf("dump_firmware: read access failed on firmware section!\r\n");
             goto error;
         }
 
         if (f_write(&fp, flash_buf, bytes, &bytes_out) != FR_OK || bytes_out != bytes) {
-            printf("burn_firmware: file read error!\n");
+            printf("dump_firmware: file write error!\n");
             goto error;
         }
 
