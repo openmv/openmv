@@ -69,6 +69,7 @@ typedef enum {
     WINC_MODE_STA,
     WINC_MODE_AP,
     WINC_MODE_P2P,
+    WINC_MODE_BSP,
     WINC_MODE_FIRMWARE,
 }winc_mode_t;
 
@@ -714,6 +715,11 @@ static mp_obj_t winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp_ui
 	nm_bsp_init();
 
     switch (winc_mode) {
+        case WINC_MODE_BSP: {
+	        // Initialize the BSP and return.
+            break;
+        }
+
         case WINC_MODE_FIRMWARE: {
             // Enter download mode.
             printf("Running in Firmware Upgrade mode...\n");
@@ -1083,7 +1089,8 @@ static const mp_map_elem_t winc_locals_dict_table[] = {
 
     { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_STA),        MP_OBJ_NEW_SMALL_INT(WINC_MODE_STA) },          // Start in Staion mode.
     { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_AP),         MP_OBJ_NEW_SMALL_INT(WINC_MODE_AP) },           // Start in Access Point mode.
-    { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_P2P),        MP_OBJ_NEW_SMALL_INT(WINC_MODE_P2P) },          // Start in Peer-to-Peer (WiFi Direct) mode.
+    { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_P2P),        MP_OBJ_NEW_SMALL_INT(WINC_MODE_P2P) },          // Start in P2P (WiFi Direct) mode.
+    { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_BSP),        MP_OBJ_NEW_SMALL_INT(WINC_MODE_BSP) },          // Init BSP.
     { MP_OBJ_NEW_QSTR(MP_QSTR_MODE_FIRMWARE),   MP_OBJ_NEW_SMALL_INT(WINC_MODE_FIRMWARE) },     // Start in Firmware Upgrade mode.
 };
 
