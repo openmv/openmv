@@ -12,8 +12,6 @@
 #include "ff_wrapper.h"
 #define FF_MIN(x,y) (((x)<(y))?(x):(y))
 
-extern const char *ffs_strerror(FRESULT res);
-
 NORETURN static void ff_fail(FIL *fp, FRESULT res)
 {
     if (fp) f_close(fp);
