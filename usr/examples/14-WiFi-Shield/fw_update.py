@@ -1,15 +1,17 @@
-# WINC Firmware Update Script
+# WINC Firmware Update Script.
 #
-# To start have a successful firmware update create a "firmware" folder on the
-# uSD card and but a bin file in it. The firmware update code will load that
-# new firmware onto the WINC module.
+# This script updates the ATWINC1500 WiFi module firmware.
+# Copy the firmware image to uSD card before running this script.
+# NOTE: Firmware version 19.5.2 does NOT support ATWINC1500-MR210PA.
 
 import network
 
 # Init wlan module in Download mode.
 wlan = network.WINC(mode=network.WINC.MODE_FIRMWARE)
-print("Firmware version:", wlan.fw_version())
 
 # Start the firmware update process.
-wlan.fw_update()
-print("Firmware version:", wlan.fw_version())
+# For ATWINC1500-MR210PA/B
+#wlan.fw_update("/winc_19_4_4.bin")
+
+# For ATWINC1500-MR210PB only.
+wlan.fw_update("/winc_19_5_2.bin")
