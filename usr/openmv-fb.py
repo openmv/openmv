@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 import sys
 # import usb.core
 # import usb.util
@@ -33,13 +33,38 @@ if 'darwin' in sys.platform:
     portname = "/dev/cu.usbmodem14221"
 else:
     portname = "/dev/openmvcam"
-openmv.init(portname)
+
+connected = False
+openmv.disconnect()
+for i in range(10):
+    try:
+        # opens CDC port.
+        # Set small timeout when connecting
+        openmv.init(portname, baudrate=921600, timeout=0.050)
+        connected = True
+        break
+    except Exception as e:
+        connected = False
+        sleep(0.100)
+
+if not connected:
+    print ( "Failed to connect to OpenMV's serial port.\n"
+            "Please install OpenMV's udev rules first:\n"
+            "sudo cp openmv/udev/50-openmv.rules /etc/udev/rules.d/\n"
+            "sudo udevadm control --reload-rules\n\n")
+    sys.exit(1)
+
+# Set higher timeout after connecting for lengthy transfers.
+openmv.set_timeout(1*2) # SD Cards can cause big hicups.
+openmv.stop_script()
+openmv.enable_fb(True)
 openmv.exec_script(script)
 
 # init screen
 running = True
 Clock = pygame.time.Clock()
 font = pygame.font.SysFont("monospace", 15)
+
 while running:
     Clock.tick(100)
 
