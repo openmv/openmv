@@ -26,8 +26,8 @@
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
-#define OMV_FLASH_ORIGIN    0x08000000
-#define OMV_FLASH_LENGTH    512K
+#define OMV_BOOT_ORIGIN     0x08000000
+#define OMV_BOOT_LENGTH     16K
 #define OMV_TEXT_ORIGIN     0x08010000
 #define OMV_TEXT_LENGTH     448K
 #define OMV_SRAM1_ORIGIN    0x20000000

@@ -59,8 +59,8 @@
 #define OMV_FFS_BUF_SIZE    (16K)   // Flash filesystem cache
 #define OMV_JPEG_BUF_SIZE   (8 * 1024)  // IDE JPEG buffer size (header + data).
 
-#define OMV_FLASH_ORIGIN    0x08000000
-#define OMV_FLASH_LENGTH    1024K
+#define OMV_BOOT_ORIGIN     0x08000000
+#define OMV_BOOT_LENGTH     16K
 #define OMV_TEXT_ORIGIN     0x08010000
 #define OMV_TEXT_LENGTH     960K
 #define OMV_CCM_ORIGIN      0x10000000
