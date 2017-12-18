@@ -1202,6 +1202,9 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 // HoG
 void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
+// Image Correction
+void imlib_chrominvar(image_t *img);
+void imlib_illuminvar(image_t *img);
 // Lens/Rotation Correction
 void imlib_lens_corr(image_t *img, float strength, float zoom);
 void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,

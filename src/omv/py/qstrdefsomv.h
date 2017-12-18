@@ -339,6 +339,12 @@ Q(CPUFREQ_216MHZ)
 Q(get_frequency)
 Q(set_frequency)
 
+// Chromination Invariant
+Q(chrominvar)
+
+// Illumination Invariant
+Q(illuminvar)
+
 // Lens Correction
 Q(lens_corr)
 Q(strength)
