@@ -1008,6 +1008,110 @@ void imlib_blend(image_t *img, const char *path, image_t *other, int alpha)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void imlib_chrominvar(image_t *img)
+{
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
+                    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
+                    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
+
+                    float lin_sum = r_lin + g_lin + b_lin;
+
+                    float r_lin_div = 0.0f;
+                    float g_lin_div = 0.0f;
+                    float b_lin_div = 0.0f;
+
+                    if (lin_sum > 0.0f) {
+                        lin_sum = 1.0f / lin_sum;
+                        r_lin_div = r_lin * lin_sum;
+                        g_lin_div = g_lin * lin_sum;
+                        b_lin_div = b_lin * lin_sum;
+                    }
+
+                    int r_lin_div_int = IM_MAX(IM_MIN(r_lin_div * 255.0f, COLOR_R8_MAX), COLOR_R8_MIN);
+                    int g_lin_div_int = IM_MAX(IM_MIN(g_lin_div * 255.0f, COLOR_G8_MAX), COLOR_G8_MIN);
+                    int b_lin_div_int = IM_MAX(IM_MIN(b_lin_div * 255.0f, COLOR_B8_MAX), COLOR_B8_MIN);
+
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, COLOR_R8_G8_B8_TO_RGB565(r_lin_div_int, g_lin_div_int, b_lin_div_int));
+                }
+            }
+
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
+// http://ai.stanford.edu/~alireza/publication/cic15.pdf
+void imlib_illuminvar(image_t *img)
+{
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
+                    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
+                    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
+
+                    float r_lin_sharp = (r_lin *  0.9968f) + (g_lin *  0.0228f) + (b_lin * 0.0015f);
+                    float g_lin_sharp = (r_lin * -0.0071f) + (g_lin *  0.9933f) + (b_lin * 0.0146f);
+                    float b_lin_sharp = (r_lin *  0.0103f) + (g_lin * -0.0161f) + (b_lin * 0.9839f);
+
+                    float lin_sharp_avg = r_lin_sharp * g_lin_sharp * b_lin_sharp;
+                    lin_sharp_avg = (lin_sharp_avg > 0.0f) ? fast_cbrtf(lin_sharp_avg) : 0.0f;
+
+                    float r_lin_sharp_div = 0.0f;
+                    float g_lin_sharp_div = 0.0f;
+                    float b_lin_sharp_div = 0.0f;
+
+                    if (lin_sharp_avg > 0.0f) {
+                        lin_sharp_avg = 1.0f / lin_sharp_avg;
+                        r_lin_sharp_div = r_lin_sharp * lin_sharp_avg;
+                        g_lin_sharp_div = g_lin_sharp * lin_sharp_avg;
+                        b_lin_sharp_div = b_lin_sharp * lin_sharp_avg;
+                    }
+
+                    float r_lin_sharp_div_log = (r_lin_sharp_div > 0.0f) ? fast_log(r_lin_sharp_div) : 0.0f;
+                    float g_lin_sharp_div_log = (g_lin_sharp_div > 0.0f) ? fast_log(g_lin_sharp_div) : 0.0f;
+                    float b_lin_sharp_div_log = (b_lin_sharp_div > 0.0f) ? fast_log(b_lin_sharp_div) : 0.0f;
+
+                    float chi_x = (r_lin_sharp_div_log * 0.7071f) + (g_lin_sharp_div_log * -0.7071f) + (b_lin_sharp_div_log *  0.0000f);
+                    float chi_y = (r_lin_sharp_div_log * 0.4082f) + (g_lin_sharp_div_log *  0.4082f) + (b_lin_sharp_div_log * -0.8164f);
+                    int chi_int = IM_MAX(IM_MIN(fast_roundf(fast_expf((chi_x * 0.9326f) + (chi_y * -0.3609f)) * 127.5f), COLOR_GRAYSCALE_MAX), COLOR_GRAYSCALE_MIN);
+
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, COLOR_R8_G8_B8_TO_RGB565(chi_int, chi_int, chi_int));
+                }
+            }
+
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
 void imlib_histeq(image_t *img)
 {
     int a = img->w * img->h;
