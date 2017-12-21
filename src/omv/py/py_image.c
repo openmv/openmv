@@ -124,12 +124,14 @@ static const mp_obj_type_t py_lbp_type = {
 };
 
 // Keypoints match object /////////////////////////////////////////////////////
-#define kptmatch_obj_size 8
+#define kptmatch_obj_size 9
 typedef struct _py_kptmatch_obj_t {
     mp_obj_base_t base;
     mp_obj_t cx, cy;
     mp_obj_t x, y, w, h;
-    mp_obj_t count, theta;
+    mp_obj_t count;
+    mp_obj_t theta;
+    mp_obj_t match;
 } py_kptmatch_obj_t;
 
 static void py_kptmatch_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
@@ -162,19 +164,21 @@ static mp_obj_t py_kptmatch_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t va
             case 5: return self->h;
             case 6: return self->count;
             case 7: return self->theta;
+            case 8: return self->match;
         }
     }
     return MP_OBJ_NULL; // op not supported
 }
 
-mp_obj_t py_kptmatch_cx(mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->cx;    }
-mp_obj_t py_kptmatch_cy(mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->cy;    }
-mp_obj_t py_kptmatch_x (mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->x;     }
-mp_obj_t py_kptmatch_y (mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->y;     }
-mp_obj_t py_kptmatch_w (mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->w;     }
-mp_obj_t py_kptmatch_h (mp_obj_t self_in)    { return ((py_kptmatch_obj_t *) self_in)->h;     }
-mp_obj_t py_kptmatch_count(mp_obj_t self_in) { return ((py_kptmatch_obj_t *) self_in)->count; }
-mp_obj_t py_kptmatch_theta(mp_obj_t self_in) { return ((py_kptmatch_obj_t *) self_in)->theta; }
+mp_obj_t py_kptmatch_cx(mp_obj_t self_in)     { return ((py_kptmatch_obj_t *) self_in)->cx;    }
+mp_obj_t py_kptmatch_cy(mp_obj_t self_in)     { return ((py_kptmatch_obj_t *) self_in)->cy;    }
+mp_obj_t py_kptmatch_x (mp_obj_t self_in)     { return ((py_kptmatch_obj_t *) self_in)->x;     }
+mp_obj_t py_kptmatch_y (mp_obj_t self_in)     { return ((py_kptmatch_obj_t *) self_in)->y;     }
+mp_obj_t py_kptmatch_w (mp_obj_t self_in)     { return ((py_kptmatch_obj_t *) self_in)->w;     }
+mp_obj_t py_kptmatch_h (mp_obj_t self_in)     { return ((py_kptmatch_obj_t *) self_in)->h;     }
+mp_obj_t py_kptmatch_count(mp_obj_t self_in)  { return ((py_kptmatch_obj_t *) self_in)->count; }
+mp_obj_t py_kptmatch_theta(mp_obj_t self_in)  { return ((py_kptmatch_obj_t *) self_in)->theta; }
+mp_obj_t py_kptmatch_match(mp_obj_t self_in)  { return ((py_kptmatch_obj_t *) self_in)->match; }
 mp_obj_t py_kptmatch_rect(mp_obj_t  self_in)  {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_kptmatch_obj_t *) self_in)->x,
                                               ((py_kptmatch_obj_t *) self_in)->y,
@@ -182,15 +186,16 @@ mp_obj_t py_kptmatch_rect(mp_obj_t  self_in)  {
                                               ((py_kptmatch_obj_t *) self_in)->h});
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cx_obj,       py_kptmatch_cx);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cy_obj,       py_kptmatch_cy);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_x_obj,        py_kptmatch_x);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_y_obj,        py_kptmatch_y);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_w_obj,        py_kptmatch_w);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_h_obj,        py_kptmatch_h);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_count_obj,    py_kptmatch_count);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_theta_obj,    py_kptmatch_theta);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_rect_obj,     py_kptmatch_rect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cx_obj,    py_kptmatch_cx);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_cy_obj,    py_kptmatch_cy);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_x_obj,     py_kptmatch_x);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_y_obj,     py_kptmatch_y);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_w_obj,     py_kptmatch_w);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_h_obj,     py_kptmatch_h);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_count_obj, py_kptmatch_count);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_theta_obj, py_kptmatch_theta);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_match_obj, py_kptmatch_match);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_kptmatch_rect_obj,  py_kptmatch_rect);
 
 STATIC const mp_rom_map_elem_t py_kptmatch_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_cx),      MP_ROM_PTR(&py_kptmatch_cx_obj)      },
@@ -201,6 +206,7 @@ STATIC const mp_rom_map_elem_t py_kptmatch_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_h),       MP_ROM_PTR(&py_kptmatch_h_obj)       },
     { MP_ROM_QSTR(MP_QSTR_count),   MP_ROM_PTR(&py_kptmatch_count_obj)   },
     { MP_ROM_QSTR(MP_QSTR_theta),   MP_ROM_PTR(&py_kptmatch_theta_obj)   },
+    { MP_ROM_QSTR(MP_QSTR_match),   MP_ROM_PTR(&py_kptmatch_match_obj)   },
     { MP_ROM_QSTR(MP_QSTR_rect),    MP_ROM_PTR(&py_kptmatch_rect_obj)    },
 };
 
@@ -4559,29 +4565,46 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
         PY_ASSERT_TRUE_MSG((threshold >=0 && threshold <= 100), "Expected threshold between 0 and 100");
 
         int theta = 0;          // Estimated angle of rotation
-        int match = 0;      // Number of matches
-        point_t c = {0};    // Centroid
-        rectangle_t r = {0};// Bounding rectangle
+        int count = 0;          // Number of matches
+        point_t c = {0};        // Centroid
+        rectangle_t r = {0};    // Bounding rectangle
+        // List of matching keypoints indices
+        mp_obj_t match_list = mp_obj_new_list(0, NULL);
 
         if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
+            int *match = fb_alloc(array_length(kpts1->kpts) * sizeof(int) * 2);
+
             // Match the two keypoint sets
-            match = orb_match_keypoints(kpts1->kpts, kpts2->kpts, threshold, &r, &c, &theta);
+            count = orb_match_keypoints(kpts1->kpts, kpts2->kpts, match, threshold, &r, &c, &theta);
+
+            // Add matching keypoints to Python list.
+            for (int i=0; i<count; i+=2) {
+                mp_obj_t index_obj[2] = {
+                    mp_obj_new_int(match[i+0]),
+                    mp_obj_new_int(match[i+1]),
+                };
+                mp_obj_list_append(match_list, mp_obj_new_tuple(2, index_obj));
+            }
+
+            // Free match list
+            fb_free();
 
             if (filter_outliers == true) {
-                match = orb_filter_keypoints(kpts2->kpts, &r, &c);
+                count = orb_filter_keypoints(kpts2->kpts, &r, &c);
             }
         }
 
         py_kptmatch_obj_t *o = m_new_obj(py_kptmatch_obj_t);
         o->base.type = &py_kptmatch_type;
-        o->cx = mp_obj_new_int(c.x);
-        o->cy = mp_obj_new_int(c.y);
-        o->x  = mp_obj_new_int(r.x);
-        o->y  = mp_obj_new_int(r.y);
-        o->w  = mp_obj_new_int(r.w);
-        o->h  = mp_obj_new_int(r.h);
-        o->count = mp_obj_new_int(match);
+        o->cx    = mp_obj_new_int(c.x);
+        o->cy    = mp_obj_new_int(c.y);
+        o->x     = mp_obj_new_int(r.x);
+        o->y     = mp_obj_new_int(r.y);
+        o->w     = mp_obj_new_int(r.w);
+        o->h     = mp_obj_new_int(r.h);
+        o->count = mp_obj_new_int(count);
         o->theta = mp_obj_new_int(theta);
+        o->match = match_list;
         match_obj = o;
     } else {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));

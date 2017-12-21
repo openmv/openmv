@@ -479,7 +479,7 @@ static inline uint32_t popcount(uint32_t i)
      return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 }
 
-static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out1, int *dist_out2)
+static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out1, int *dist_out2, int *index)
 {
     kp_t *min_kp=NULL;
     int min_dist1 = MAX_KP_DIST;
@@ -496,6 +496,7 @@ static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out1, int *dist
             }
 
             if (dist < min_dist1) {
+                *index = i;
                 min_kp = kp2;
                 min_dist2 = min_dist1;
                 min_dist1 = dist;
@@ -508,7 +509,7 @@ static kp_t *find_best_match(kp_t *kp1, array_t *kpts, int *dist_out1, int *dist
     return min_kp;
 }
 
-int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle_t *r, point_t *c, int *angle)
+int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int *match, int threshold, rectangle_t *r, point_t *c, int *angle)
 {
     int matches=0;
     int cx = 0, cy = 0;
@@ -522,20 +523,22 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
     // The first test is based on the distance ratio between the two best matches for a feature, to remove ambiguous matches.
     // Second test is the symmetry test (corss-matching) both points in a match must be the best matching feature of each other.
     for (int i=0; i<kpts1_size; i++) {
+        int kp_index1 = 0;
+        int kp_index2 = 0;
         int min_dist1 = 0;
         int min_dist2 = 0;
         kp_t *min_kp = NULL;
         kp_t *kp1 = array_at(kpts1, i);
 
         // Find the best match in second set
-        min_kp = find_best_match(kp1, kpts2, &min_dist1, &min_dist2);
+        min_kp = find_best_match(kp1, kpts2, &min_dist1, &min_dist2, &kp_index2);
         // Test the distance ratio between the best two matches
         if ((min_dist1*100/min_dist2) > threshold) {
             continue;
         }
 
         // Cross-match the keypoint in the first set
-        kp_t *kp2 = find_best_match(min_kp, kpts1, &min_dist1, &min_dist2);
+        kp_t *kp2 = find_best_match(min_kp, kpts1, &min_dist1, &min_dist2, &kp_index1);
         // Test the distance ratio between the best two matches
         if ((min_dist1*100/min_dist2) > threshold) {
             continue;
@@ -553,6 +556,8 @@ int orb_match_keypoints(array_t *kpts1, array_t *kpts2, int threshold, rectangle
             if (angle >= 0 && angle < 360) {
                 angles[angle]++;
             }
+            *match++ = kp_index1;
+            *match++ = kp_index2;
         }
     }
 
