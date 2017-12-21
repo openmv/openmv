@@ -19,6 +19,8 @@
 #include "py_helper.h"
 #include "py_image.h"
 #include "omv_boardconfig.h"
+#include "py/runtime0.h"
+#include "py/runtime.h"
 
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
@@ -67,10 +69,40 @@ static void py_kp_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind
     mp_printf(print, "size:%d threshold:%d normalized:%d", array_length(self->kpts), self->threshold, self->normalized);
 }
 
+mp_obj_t py_kp_unary_op(mp_uint_t op, mp_obj_t self_in) {
+    py_kp_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    switch (op) {
+        case MP_UNARY_OP_LEN:
+            return MP_OBJ_NEW_SMALL_INT(array_length(self->kpts));
+
+        default:
+            return MP_OBJ_NULL; // op not supported
+    }
+}
+
+static mp_obj_t py_kp_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_kp_obj_t *self = self_in;
+        int size = array_length(self->kpts);
+        int i = mp_get_index(self->base.type, size, index, false);
+        kp_t *kp = array_at(self->kpts, i);
+        return mp_obj_new_tuple(5, (mp_obj_t []) {mp_obj_new_int(kp->x),
+                                                  mp_obj_new_int(kp->y),
+                                                  mp_obj_new_int(kp->score),
+                                                  mp_obj_new_int(kp->octave),
+                                                  mp_obj_new_int(kp->angle)});
+    }
+
+    return MP_OBJ_NULL; // op not supported
+}
+
 static const mp_obj_type_t py_kp_type = {
     { &mp_type_type },
     .name  = MP_QSTR_kp_desc,
     .print = py_kp_print,
+    .subscr = py_kp_subscr,
+    .unary_op = py_kp_unary_op,
 };
 
 // LBP descriptor /////////////////////////////////////////////////////////////
