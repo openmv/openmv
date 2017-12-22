@@ -397,7 +397,7 @@ static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_en
     }
 }
 
-void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op)
+void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op, void *data)
 {
     if (path) {
         uint32_t size = fb_avail() / 2;
@@ -429,9 +429,9 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, line_
             imlib_read_pixels(&fp, &temp, 0, can_do, &rs);
             for (int j=0; j<can_do; j++) {
                 if (!vflipped) {
-                    op(img, i+j, temp.pixels+(temp.w*temp.bpp*j));
+                    op(img, i+j, temp.pixels+(temp.w*temp.bpp*j), data);
                 } else {
-                    op(img, (img->h-i-can_do)+j, temp.pixels+(temp.w*temp.bpp*j));
+                    op(img, (img->h-i-can_do)+j, temp.pixels+(temp.w*temp.bpp*j), data);
                 }
             }
         }
@@ -443,7 +443,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, line_
             ff_not_equal(NULL);
         }
         for (int i=0; i<img->h; i++) {
-            op(img, i, other->pixels + (img->w * img->bpp * i));
+            op(img, i, other->pixels + (img->w * img->bpp * i), data);
         }
     }
 }
@@ -687,8 +687,10 @@ void imlib_invert(image_t *img)
     }
 }
 
-static void imlib_b_and_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_and_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    data = data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         for (int i=0; i<img->w; i++) {
@@ -704,11 +706,13 @@ static void imlib_b_and_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_b_and(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_b_and_line_op);
+    imlib_image_operation(img, path, other, imlib_b_and_line_op, NULL);
 }
 
-static void imlib_b_nand_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_nand_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    data = data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         for (int i=0; i<img->w; i++) {
@@ -724,11 +728,13 @@ static void imlib_b_nand_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_b_nand(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_b_nand_line_op);
+    imlib_image_operation(img, path, other, imlib_b_nand_line_op, NULL);
 }
 
-static void imlib_b_or_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_or_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    data = data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         for (int i=0; i<img->w; i++) {
@@ -744,11 +750,13 @@ static void imlib_b_or_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_b_or(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_b_or_line_op);
+    imlib_image_operation(img, path, other, imlib_b_or_line_op, NULL);
 }
 
-static void imlib_b_nor_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_nor_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    data = data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         for (int i=0; i<img->w; i++) {
@@ -764,11 +772,13 @@ static void imlib_b_nor_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_b_nor(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_b_nor_line_op);
+    imlib_image_operation(img, path, other, imlib_b_nor_line_op, NULL);
 }
 
-static void imlib_b_xor_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_xor_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    data = data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         for (int i=0; i<img->w; i++) {
@@ -784,11 +794,13 @@ static void imlib_b_xor_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_b_xor(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_b_xor_line_op);
+    imlib_image_operation(img, path, other, imlib_b_xor_line_op, NULL);
 }
 
-static void imlib_b_xnor_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_b_xnor_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    data = data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         for (int i=0; i<img->w; i++) {
@@ -804,7 +816,7 @@ static void imlib_b_xnor_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_b_xnor(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_b_xnor_line_op);
+    imlib_image_operation(img, path, other, imlib_b_xnor_line_op, NULL);
 }
 
 static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_d)
@@ -936,8 +948,10 @@ void imlib_negate(image_t *img)
     }
 }
 
-static void imlib_difference_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_difference_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    data = data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         for (int i=0; i<img->w; i++) {
@@ -957,11 +971,13 @@ static void imlib_difference_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_difference(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_difference_line_op);
+    imlib_image_operation(img, path, other, imlib_difference_line_op, NULL);
 }
 
-static void imlib_replace_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_replace_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    data = data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         memcpy(pixels, other, img->w * sizeof(uint8_t));
@@ -973,17 +989,17 @@ static void imlib_replace_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_replace(image_t *img, const char *path, image_t *other)
 {
-    imlib_image_operation(img, path, other, imlib_replace_line_op);
+    imlib_image_operation(img, path, other, imlib_replace_line_op, NULL);
 }
 
-static uint32_t alpha_temp;
-
-static void imlib_blend_line_op(image_t *img, int line, uint8_t *other)
+static void imlib_blend_line_op(image_t *img, int line, uint8_t *other, void *data)
 {
+    uint32_t alpha = (uint32_t) data;
+
     if (IM_IS_GS(img)) {
         uint8_t *pixels = img->pixels + (img->w * line);
         for (int i=0; i<img->w; i++) {
-            pixels[i] = __SMUAD(alpha_temp,__PKHBT(pixels[i],other[i],16))>>8;
+            pixels[i] = __SMUAD(alpha,__PKHBT(pixels[i],other[i],16))>>8;
         }
     } else {
         uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
@@ -992,9 +1008,9 @@ static void imlib_blend_line_op(image_t *img, int line, uint8_t *other)
             uint32_t vr = __PKHBT(IM_R565(pixel), IM_R565(other_pixel), 16);
             uint32_t vg = __PKHBT(IM_G565(pixel), IM_G565(other_pixel), 16);
             uint32_t vb = __PKHBT(IM_B565(pixel), IM_B565(other_pixel), 16);
-            uint32_t r = __SMUAD(alpha_temp, vr)>>8;
-            uint32_t g = __SMUAD(alpha_temp, vg)>>8;
-            uint32_t b = __SMUAD(alpha_temp, vb)>>8;
+            uint32_t r = __SMUAD(alpha, vr)>>8;
+            uint32_t g = __SMUAD(alpha, vg)>>8;
+            uint32_t b = __SMUAD(alpha, vb)>>8;
             pixels[i] = IM_RGB565(r, g, b);
         }
     }
@@ -1002,8 +1018,7 @@ static void imlib_blend_line_op(image_t *img, int line, uint8_t *other)
 
 void imlib_blend(image_t *img, const char *path, image_t *other, int alpha)
 {
-    alpha_temp = __PKHBT((256-alpha), alpha, 16);
-    imlib_image_operation(img, path, other, imlib_blend_line_op);
+    imlib_image_operation(img, path, other, imlib_blend_line_op, (void *) __PKHBT((256-alpha), alpha, 16));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
