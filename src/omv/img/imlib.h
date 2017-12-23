@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <limits.h>
+#include <float.h>
 #include <math.h>
 #include <arm_math.h>
 #include <ff.h>
@@ -1211,6 +1213,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
                          float z_rotation, float x_translation, float y_translation,
                          float zoom);
 // Statistics
+void imlib_get_similarity(image_t *img, const char *path, image_t *other, float *avg, float *std, float *min, float *max);
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
 void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr);

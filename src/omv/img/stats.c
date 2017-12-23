@@ -5,6 +5,140 @@
 
 #include "imlib.h"
 
+typedef struct imlib_similatiry_line_op_state {
+    int *sumBucketsOfX, *sumBucketsOfY, *sum2BucketsOfX, *sum2BucketsOfY, *sum2Buckets;
+    float similarity_sum, similarity_sum_2, similarity_min, similarity_max;
+    int lines_processed;
+} imlib_similatiry_line_op_state_t;
+
+void imlib_similarity_line_op(image_t *img, int line, uint8_t *other, void *data)
+{
+    imlib_similatiry_line_op_state_t *state = (imlib_similatiry_line_op_state_t *) data;
+    float c1 = 0, c2 = 0;
+
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, line);
+            uint32_t *other_row_ptr = (uint32_t *) other;
+            for (int x = 0, xx = (img->w + 7) / 8; x < xx; x++) {
+                for (int i = 0, ii = IM_MIN((img->w - (x * 8)), 8); i < ii; i++) {
+                    int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x + i);
+                    int other_pixel = IMAGE_GET_BINARY_PIXEL_FAST(other_row_ptr, x + i);
+                    state->sumBucketsOfX[x] += pixel;
+                    state->sumBucketsOfY[x] += other_pixel;
+                    state->sum2BucketsOfX[x] += pixel * pixel;
+                    state->sum2BucketsOfY[x] += other_pixel * other_pixel;
+                    state->sum2Buckets[x] += pixel * other_pixel;
+                }
+            }
+            c1 = COLOR_BINARY_MAX * 0.01f;
+            c2 = COLOR_BINARY_MAX * 0.03f;
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, line);
+            uint8_t *other_row_ptr = (uint8_t *) other;
+            for (int x = 0, xx = (img->w + 7) / 8; x < xx; x++) {
+                for (int i = 0, ii = IM_MIN((img->w - (x * 8)), 8); i < ii; i++) {
+                    int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x + i);
+                    int other_pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(other_row_ptr, x + i);
+                    state->sumBucketsOfX[x] += pixel;
+                    state->sumBucketsOfY[x] += other_pixel;
+                    state->sum2BucketsOfX[x] += pixel * pixel;
+                    state->sum2BucketsOfY[x] += other_pixel * other_pixel;
+                    state->sum2Buckets[x] += pixel * other_pixel;
+                }
+            }
+            c1 = COLOR_GRAYSCALE_MAX * 0.01f;
+            c2 = COLOR_GRAYSCALE_MAX * 0.03f;
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, line);
+            uint16_t *other_row_ptr = (uint16_t *) other;
+            for (int x = 0, xx = (img->w + 7) / 8; x < xx; x++) {
+                for (int i = 0, ii = IM_MIN((img->w - (x * 8)), 8); i < ii; i++) {
+                    int pixel = COLOR_RGB565_TO_L(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + i));
+                    int other_pixel = COLOR_RGB565_TO_L(IMAGE_GET_RGB565_PIXEL_FAST(other_row_ptr, x + i));
+                    state->sumBucketsOfX[x] += pixel;
+                    state->sumBucketsOfY[x] += other_pixel;
+                    state->sum2BucketsOfX[x] += pixel * pixel;
+                    state->sum2BucketsOfY[x] += other_pixel * other_pixel;
+                    state->sum2Buckets[x] += pixel * other_pixel;
+                }
+            }
+            c1 = COLOR_L_MAX * 0.01f;
+            c2 = COLOR_L_MAX * 0.03f;
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    // https://en.wikipedia.org/wiki/Structural_similarity
+    if (((state->lines_processed + 1) == img->h) || (!((state->lines_processed + 1) % 8))) {
+        for (int x = 0, xx = (img->w + 7) / 8; x < xx; x++) {
+            int w = IM_MIN((img->w - (x * 8)), 8);
+            int h = IM_MIN((img->h - ((state->lines_processed / 8) * 8)), 8);
+            int size = w * h;
+
+            int mx = state->sumBucketsOfX[x] / size;
+            int my = state->sumBucketsOfY[x] / size;
+            int vx = state->sum2BucketsOfX[x] - ((mx * state->sumBucketsOfX[x]) + (mx * state->sumBucketsOfX[x])) + (size * mx * mx);
+            int vy = state->sum2BucketsOfY[x] - ((my * state->sumBucketsOfY[x]) + (my * state->sumBucketsOfY[x])) + (size * my * my);
+            int vxy = state->sum2Buckets[x] - ((mx * state->sumBucketsOfY[x]) + (my * state->sumBucketsOfX[x])) + (size * mx * my);
+
+            float ssim = ( ((2*mx*my) + c1) * ((2*vxy) + c2) ) / ( ((mx*mx) + (my*my) + c1) * (vx + vy + c2) );
+
+            state->similarity_sum += ssim;
+            state->similarity_sum_2 += ssim * ssim;
+            state->similarity_min = IM_MIN(state->similarity_min, ssim);
+            state->similarity_max = IM_MAX(state->similarity_max, ssim);
+
+            state->sumBucketsOfX[x] = 0;
+            state->sumBucketsOfY[x] = 0;
+            state->sum2BucketsOfX[x] = 0;
+            state->sum2BucketsOfY[x] = 0;
+            state->sum2Buckets[x] = 0;
+        }
+    }
+
+    state->lines_processed += 1;
+}
+
+void imlib_get_similarity(image_t *img, const char *path, image_t *other, float *avg, float *std, float *min, float *max)
+{
+    int h_blocks = (img->w + 7) / 8;
+    int v_blocks = (img->h + 7) / 8;
+    int blocks = h_blocks * v_blocks;
+
+    int int_h_blocks = h_blocks * sizeof(int);
+    imlib_similatiry_line_op_state_t state;
+    state.sumBucketsOfX = fb_alloc0(int_h_blocks);
+    state.sumBucketsOfY = fb_alloc0(int_h_blocks);
+    state.sum2BucketsOfX = fb_alloc0(int_h_blocks);
+    state.sum2BucketsOfY = fb_alloc0(int_h_blocks);
+    state.sum2Buckets = fb_alloc0(int_h_blocks);
+    state.similarity_sum = 0.0f;
+    state.similarity_sum_2 = 0.0f;
+    state.similarity_min = FLT_MAX;
+    state.similarity_max = FLT_MIN;
+    state.lines_processed = 0;
+
+    imlib_image_operation(img, path, other, imlib_similarity_line_op, (void *) &state);
+    *avg = state.similarity_sum / blocks;
+    *std = fast_sqrtf((state.similarity_sum_2 / blocks) - ((*avg) * (*avg)));
+    *min = state.similarity_min;
+    *max = state.similarity_max;
+
+    fb_free();
+    fb_free();
+    fb_free();
+    fb_free();
+    fb_free();
+}
+
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi)
 {
     switch(ptr->bpp) {
