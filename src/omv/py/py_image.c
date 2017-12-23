@@ -1357,6 +1357,101 @@ static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
     return img_obj;
 }
 
+// Similarity Object //
+#define py_similarity_obj_size 4
+typedef struct py_similarity_obj {
+    mp_obj_base_t base;
+    mp_obj_t avg, std, min, max;
+} py_similarity_obj_t;
+
+static void py_similarity_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_similarity_obj_t *self = self_in;
+    mp_printf(print,
+              "{mean:%f, stdev:%f, min:%f, max:%f}",
+              (double) mp_obj_get_float(self->avg),
+              (double) mp_obj_get_float(self->std),
+              (double) mp_obj_get_float(self->min),
+              (double) mp_obj_get_float(self->max));
+}
+
+static mp_obj_t py_similarity_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_similarity_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_similarity_obj_size, index, &slice)) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->avg) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_similarity_obj_size, index, false)) {
+            case 0: return self->avg;
+            case 1: return self->std;
+            case 2: return self->min;
+            case 3: return self->max;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_similarity_mean(mp_obj_t self_in) { return ((py_similarity_obj_t *) self_in)->avg; }
+mp_obj_t py_similarity_stdev(mp_obj_t self_in) { return ((py_similarity_obj_t *) self_in)->std; }
+mp_obj_t py_similarity_min(mp_obj_t self_in) { return ((py_similarity_obj_t *) self_in)->min; }
+mp_obj_t py_similarity_max(mp_obj_t self_in) { return ((py_similarity_obj_t *) self_in)->max; }
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_mean_obj, py_similarity_mean);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_stdev_obj, py_similarity_stdev);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_min_obj, py_similarity_min);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_similarity_max_obj, py_similarity_max);
+
+STATIC const mp_rom_map_elem_t py_similarity_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_mean), MP_ROM_PTR(&py_similarity_mean_obj) },
+    { MP_ROM_QSTR(MP_QSTR_stdev), MP_ROM_PTR(&py_similarity_stdev_obj) },
+    { MP_ROM_QSTR(MP_QSTR_min), MP_ROM_PTR(&py_similarity_min_obj) },
+    { MP_ROM_QSTR(MP_QSTR_max), MP_ROM_PTR(&py_similarity_max_obj) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_similarity_locals_dict, py_similarity_locals_dict_table);
+
+static const mp_obj_type_t py_similarity_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_similarity,
+    .print = py_similarity_print,
+    .subscr = py_similarity_subscr,
+    .locals_dict = (mp_obj_t) &py_similarity_locals_dict,
+};
+
+static mp_obj_t py_image_get_similarity(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
+
+    float avg, std, min, max;
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        fb_alloc_mark();
+        imlib_get_similarity(arg_img, mp_obj_str_get_str(other_obj), NULL, &avg, &std, &min, &max);
+        fb_alloc_mark();
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        fb_alloc_mark();
+        imlib_get_similarity(arg_img, NULL, arg_other, &avg, &std, &min, &max);
+        fb_alloc_free_till_mark();
+    }
+
+    py_similarity_obj_t *o = m_new_obj(py_similarity_obj_t);
+    o->base.type = &py_similarity_type;
+    o->avg = mp_obj_new_float(avg);
+    o->std = mp_obj_new_float(std);
+    o->min = mp_obj_new_float(min);
+    o->max = mp_obj_new_float(max);
+    return o;
+}
+
 // Statistics Object //
 #define py_statistics_obj_size 24
 typedef struct py_statistics_obj {
@@ -3918,6 +4013,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_rotation_corr_obj, 1, py_image_rotati
 #endif 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_mask_ellipse_obj, py_image_mask_ellipse);
 /* Image Statistics */
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_get_similarity_obj, py_image_get_similarity);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_histogram_obj, 1, py_image_get_histogram);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_statistics_obj, 1, py_image_get_statistics);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_regression_obj, 2, py_image_get_regression);
@@ -4027,6 +4123,7 @@ static const mp_map_elem_t locals_dict_table[] = {
 #endif
     {MP_OBJ_NEW_QSTR(MP_QSTR_mask_ellipse),        (mp_obj_t)&py_image_mask_ellipse_obj},
     /* Image Statistics */
+    {MP_OBJ_NEW_QSTR(MP_QSTR_get_similarity),      (mp_obj_t)&py_image_get_similarity_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_get_hist),            (mp_obj_t)&py_image_get_histogram_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_get_histogram),       (mp_obj_t)&py_image_get_histogram_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histogram),           (mp_obj_t)&py_image_get_histogram_obj},

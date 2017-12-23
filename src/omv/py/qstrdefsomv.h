@@ -360,6 +360,15 @@ Q(x_translation)
 Q(y_translation)
 // duplicate Q(zoom)
 
+// Structural Similarity
+Q(get_similarity)
+// Similarity Object
+Q(similarity)
+// duplicate Q(mean)
+Q(stdev)
+// duplicate Q(min)
+// duplicate Q(max)
+
 // Get Histogram
 Q(get_hist)
 Q(get_histogram)
@@ -398,7 +407,7 @@ Q(b_value)
 // duplicate Q(mean)
 // duplicate Q(median)
 // duplicate Q(mode)
-Q(stdev)
+// duplicate Q(stdev)
 // duplicate Q(min)
 // duplicate Q(max)
 Q(lq)
