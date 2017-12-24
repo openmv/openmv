@@ -13,6 +13,7 @@
 #include "ff_wrapper.h"
 #include "imlib.h"
 #include "common.h"
+#include "omv_boardconfig.h"
 
 /////////////////
 // Point Stuff //
@@ -1070,8 +1071,9 @@ void imlib_chrominvar(image_t *img)
     }
 }
 
-// http://ai.stanford.edu/~alireza/publication/cic15.pdf
-void imlib_illuminvar(image_t *img)
+extern const uint8_t invariant_table[65536];
+
+void imlib_illuminvar(image_t *img) // http://ai.stanford.edu/~alireza/publication/cic15.pdf
 {
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -1085,9 +1087,12 @@ void imlib_illuminvar(image_t *img)
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
-                    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
-                    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
-                    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
+#ifdef OMV_HAVE_INVARIANT_TABLE
+                    int chi_int = invariant_table[pixel];
+#else
+                    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)] + 1.0;
+                    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)] + 1.0;
+                    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)] + 1.0;
 
                     float r_lin_sharp = (r_lin *  0.9968f) + (g_lin *  0.0228f) + (b_lin * 0.0015f);
                     float g_lin_sharp = (r_lin * -0.0071f) + (g_lin *  0.9933f) + (b_lin * 0.0146f);
@@ -1113,8 +1118,8 @@ void imlib_illuminvar(image_t *img)
 
                     float chi_x = (r_lin_sharp_div_log * 0.7071f) + (g_lin_sharp_div_log * -0.7071f) + (b_lin_sharp_div_log *  0.0000f);
                     float chi_y = (r_lin_sharp_div_log * 0.4082f) + (g_lin_sharp_div_log *  0.4082f) + (b_lin_sharp_div_log * -0.8164f);
-                    int chi_int = IM_MAX(IM_MIN(fast_roundf(fast_expf((chi_x * 0.9326f) + (chi_y * -0.3609f)) * 127.5f), COLOR_GRAYSCALE_MAX), COLOR_GRAYSCALE_MIN);
-
+                    int chi_int = IM_MAX(IM_MIN(fast_roundf(fast_expf((chi_x * 0.9326f) + (chi_y * -0.3609f)) * 42.99f), COLOR_GRAYSCALE_MAX), COLOR_GRAYSCALE_MIN);
+#endif
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, COLOR_R8_G8_B8_TO_RGB565(chi_int, chi_int, chi_int));
                 }
             }
