@@ -10,9 +10,9 @@
 #define __OMV_BOARDCONFIG_H__
 
 // Architecture info
-#define OMV_ARCH_STR            "OMV3 F7 512" // 33 chars max
+#define OMV_ARCH_STR            "OMV4 H7 1024" // 33 chars max
 #define OMV_BOARD_TYPE          "M7"
-#define OMV_UNIQUE_ID_ADDR      0x1FF0F420
+#define OMV_UNIQUE_ID_ADDR      0x1FF1E800
 
 #define OMV_XCLK_MCO            (0U)
 #define OMV_XCLK_TIM            (1U)
@@ -83,15 +83,17 @@
 #define OMV_JPEG_BUF_SIZE   (23 * 1024) // IDE JPEG buffer (header + data).
 
 #define OMV_BOOT_ORIGIN     0x08000000
-#define OMV_BOOT_LENGTH     32K
-#define OMV_TEXT_ORIGIN     0x08020000
-#define OMV_TEXT_LENGTH     1920K
+#define OMV_BOOT_LENGTH     128K
+#define OMV_TEXT_ORIGIN     0x08040000
+#define OMV_TEXT_LENGTH     1792K
 #define OMV_CCM_ORIGIN      0x20000000
 #define OMV_CCM_LENGTH      128K    // Note DTCM/ITCM memory is not cacheable on M7
-#define OMV_SRAM1_ORIGIN    0x20020000
-#define OMV_SRAM1_LENGTH    368K
-#define OMV_SRAM2_ORIGIN    0x2007C000
-#define OMV_SRAM2_LENGTH    16K
+#define OMV_SRAM1_ORIGIN    0x24000000
+#define OMV_SRAM1_LENGTH    512K
+#define OMV_SRAM2_ORIGIN    0x30000000
+#define OMV_SRAM2_LENGTH    288K
+#define OMV_SRAM3_ORIGIN    0x38000000
+#define OMV_SRAM3_LENGTH    64K
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
