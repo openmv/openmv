@@ -360,12 +360,6 @@ BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 	system_stm32fxxx.o                          \
 	)
 
-BOOT_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
-	core/src/usbd_core.o                            \
-	core/src/usbd_ctlreq.o                          \
-	core/src/usbd_ioreq.o                           \
-	)
-
 ###################################################
 #Export Variables
 export Q
