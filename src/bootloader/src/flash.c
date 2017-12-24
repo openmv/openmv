@@ -27,8 +27,11 @@
 #include STM32_HAL_H
 #include "flash.h"
 
-#if defined(STM32F765xx) ||  defined(STM32F769xx)
-#define FLASH_FLAG_PGSERR (FLASH_FLAG_ERSERR)
+#if defined (STM32H743xx)
+#define FLASH_FLAG_PGAERR   (0)
+#define FLASH_FLAG_PGPERR   (0)
+#elif defined(STM32F765xx) ||  defined(STM32F769xx)
+#define FLASH_FLAG_PGSERR   (FLASH_FLAG_ERSERR)
 #endif
 
 extern void __fatal_error();
