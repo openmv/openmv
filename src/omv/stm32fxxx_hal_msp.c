@@ -36,7 +36,7 @@ void SystemClock_Config(void);
 
 void HAL_MspInit(void)
 {
-    #if defined(STM32F765xx) || defined(STM32F769xx)
+    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
     // Invalidate each cache before enabling it
     SCB_InvalidateICache();
     SCB_InvalidateDCache();
