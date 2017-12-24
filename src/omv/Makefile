@@ -41,6 +41,7 @@ SRCS += $(addprefix img/,   \
 	yuv_tab.c               \
 	rainbow_tab.c           \
 	rgb2rgb_tab.c           \
+	invariant_tab.c         \
 	midpoint.c              \
 	mean.c                  \
 	mode.c                  \

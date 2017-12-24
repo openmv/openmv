@@ -29,6 +29,9 @@
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
 
+// Have built-in invariant table.
+#define OMV_HAVE_INVARIANT_TABLE
+
 // Enable Rotation_Correction
 #define OMV_ENABLE_ROTATION_CORR
 

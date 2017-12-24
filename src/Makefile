@@ -163,6 +163,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	yuv_tab.o                               \
 	rainbow_tab.o                           \
 	rgb2rgb_tab.o                           \
+	invariant_tab.o                         \
 	midpoint.o                              \
 	mean.o                                  \
 	mode.o                                  \
