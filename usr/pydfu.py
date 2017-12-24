@@ -21,13 +21,14 @@ import usb.core
 import usb.util
 import zlib
 import os
+import time
 
 # VID/PID
 __VID = 0x0483
 __PID = 0xdf11
 
 # USB request __TIMEOUT
-__TIMEOUT = 4000
+__TIMEOUT = 5000
 
 # DFU commands
 __DFU_DETACH    = 0
@@ -51,8 +52,21 @@ __DFU_STATE_DFU_MANIFEST_WAIT_RESET  = 0x08
 __DFU_STATE_DFU_UPLOAD_IDLE          = 0x09
 __DFU_STATE_DFU_ERROR                = 0x0a
 
-_DFU_DESCRIPTOR_TYPE                 = 0x21
+__DFU_STATUS = [
+    "DFU_STATE_APP_IDLE",
+    "DFU_STATE_APP_DETACH",
+    "DFU_STATE_DFU_IDLE",
+    "DFU_STATE_DFU_DOWNLOAD_SYNC",
+    "DFU_STATE_DFU_DOWNLOAD_BUSY",
+    "DFU_STATE_DFU_DOWNLOAD_IDLE",
+    "DFU_STATE_DFU_MANIFEST_SYNC",
+    "DFU_STATE_DFU_MANIFEST",
+    "DFU_STATE_DFU_MANIFEST_WAIT_RESET",
+    "DFU_STATE_DFU_UPLOAD_IDLE",
+    "DFU_STATE_DFU_ERROR"
+]
 
+_DFU_DESCRIPTOR_TYPE                 = 0x21
 
 # USB device handle
 __dev = None
@@ -89,18 +103,17 @@ def init():
     # Clear status
     clr_status()
 
-
 def clr_status():
     """Clears any error status (perhaps left over from a previous session)."""
-    __dev.ctrl_transfer(0x21, __DFU_CLRSTATUS, 0, __DFU_INTERFACE,
-                        None, __TIMEOUT)
+    while (get_status() != __DFU_STATE_DFU_IDLE):
+        __dev.ctrl_transfer(0x21, __DFU_CLRSTATUS, 0, __DFU_INTERFACE, None, __TIMEOUT)
+        time.sleep(0.100)
 
 
 def get_status():
     """Get the status of the last operation."""
-    stat = __dev.ctrl_transfer(0xA1, __DFU_GETSTATUS, 0, __DFU_INTERFACE,
-                               6, 20000)
-    # print (__DFU_STAT[stat[4]], stat)
+    stat = __dev.ctrl_transfer(0xA1, __DFU_GETSTATUS, 0, __DFU_INTERFACE, 6, 20000)
+    #print ("DFU Status: ", __DFU_STATUS[stat[4]])
     return stat[4]
 
 
