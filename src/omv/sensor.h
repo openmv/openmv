@@ -106,6 +106,7 @@ typedef struct _sensor {
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
     uint32_t vsync_pin;
     GPIO_TypeDef *vsync_gpio;
+    int fb_w, fb_h;             // Backup for MAIN_FB().
 
     // Line pre-processing function and args
     void *line_filter_args;
