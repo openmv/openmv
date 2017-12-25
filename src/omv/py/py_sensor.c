@@ -148,6 +148,56 @@ static mp_obj_t py_sensor_get_id() {
     return mp_obj_new_int(sensor_get_id());
 }
 
+static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_t type_obj)
+{
+    int w = mp_obj_get_int(w_obj);
+    PY_ASSERT_TRUE_MSG(w > 0, "Width must be > 0");
+
+    int h = mp_obj_get_int(h_obj);
+    PY_ASSERT_TRUE_MSG(h > 0, "Height must be > 0");
+
+    image_t img = {
+        .w      = w,
+        .h      = h,
+        .bpp    = 0,
+        .pixels = 0
+    };
+
+    switch(mp_obj_get_int(type_obj)) {
+        // TODO: PIXFORMAT_BINARY
+        // case PIXFOTMAT_BINARY:
+        //    img.bpp = IMAGE_BPP_BINARY;
+        //    break;
+        // TODO: PIXFORMAT_BINARY
+        case PIXFORMAT_GRAYSCALE:
+            img.bpp = IMAGE_BPP_GRAYSCALE;
+            break;
+        case PIXFORMAT_RGB565:
+            img.bpp = IMAGE_BPP_RGB565;
+            break;
+        case PIXFORMAT_BAYER:
+            img.bpp = IMAGE_BPP_BAYER;
+            break;
+        case PIXFORMAT_JPEG:
+            img.bpp = IMAGE_BPP_JPEG;
+            break;
+        default:
+            PY_ASSERT_TRUE_MSG(false, "Unknown type");
+            break;
+    }
+
+    fb_alloc_mark();
+    img.pixels = fb_alloc0(image_size(&img));
+    return py_image_from_struct(&img);
+}
+
+static mp_obj_t py_sensor_dealloc_extra_fb()
+{
+    fb_free();
+    fb_alloc_free_till_mark();
+    return mp_const_none;
+}
+
 static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {
     if (sensor_set_pixformat(mp_obj_get_int(pixformat)) != 0) {
         PY_ASSERT_TRUE_MSG(0, "Pixel format is not supported!");
@@ -380,6 +430,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_width_obj,               py_sensor_wi
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_height_obj,              py_sensor_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_fb_obj,              py_sensor_get_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,              py_sensor_get_id);
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_alloc_extra_fb_obj,      py_sensor_alloc_extra_fb);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_dealloc_extra_fb_obj,    py_sensor_dealloc_extra_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_set_pixformat);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,       py_sensor_set_framerate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_set_framesize);
@@ -454,6 +506,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_height),              (mp_obj_t)&py_sensor_height_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_fb),              (mp_obj_t)&py_sensor_get_fb_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_id),              (mp_obj_t)&py_sensor_get_id_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_alloc_extra_fb),      (mp_obj_t)&py_sensor_alloc_extra_fb_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_dealloc_extra_fb),    (mp_obj_t)&py_sensor_dealloc_extra_fb_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_pixformat),       (mp_obj_t)&py_sensor_set_pixformat_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framerate),       (mp_obj_t)&py_sensor_set_framerate_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framesize),       (mp_obj_t)&py_sensor_set_framesize_obj },
