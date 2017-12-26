@@ -1134,7 +1134,6 @@ void imlib_midpoint_filter(image_t *img, const int ksize, const int bias);
 void imlib_mean_filter(image_t *img, const int ksize);
 void imlib_mode_filter(image_t *img, const int ksize);
 void imlib_median_filter(image_t *img, const int ksize, const int percentile);
-void imlib_histeq(image_t *img);
 void imlib_mask_ellipse(image_t *img);
 
 /* Template Matching */
@@ -1207,6 +1206,7 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 // Image Correction
 void imlib_chrominvar(image_t *img);
 void imlib_illuminvar(image_t *img);
+void imlib_histeq(image_t *img);
 // Lens/Rotation Correction
 void imlib_lens_corr(image_t *img, float strength, float zoom);
 void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,

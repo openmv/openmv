@@ -81,7 +81,6 @@ Q(find_displacement)
 Q(kp_desc)
 Q(lbp_desc)
 Q(Cascade)
-Q(histeq)
 Q(mask_ellipse)
 Q(find_features)
 Q(find_keypoints)
@@ -344,6 +343,9 @@ Q(chrominvar)
 
 // Illumination Invariant
 Q(illuminvar)
+
+// Histogram Equalization
+Q(histeq)
 
 // Lens Correction
 Q(lens_corr)
