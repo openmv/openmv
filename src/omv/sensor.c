@@ -425,8 +425,8 @@ int sensor_set_framesize(framesize_t framesize)
 
     // Skip the first frame.
     MAIN_FB()->bpp = 0;
-    MAIN_FB()->w = resolution[framesize][0];
-    MAIN_FB()->h = resolution[framesize][1];
+    MAIN_FB()->w = sensor.fb_w = resolution[framesize][0];
+    MAIN_FB()->h = sensor.fb_h = resolution[framesize][1];
     HAL_DCMI_DisableCROP(&DCMIHandle);
 
     return 0;
@@ -454,8 +454,8 @@ int sensor_set_framerate(framerate_t framerate)
 
 int sensor_set_windowing(int x, int y, int w, int h)
 {
-    MAIN_FB()->w = w;
-    MAIN_FB()->h = h;
+    MAIN_FB()->w = sensor.fb_w = w;
+    MAIN_FB()->h = sensor.fb_h = h;
     HAL_DCMI_ConfigCROP(&DCMIHandle, x*2, y, w*2-1, h-1);
     HAL_DCMI_EnableCROP(&DCMIHandle);
     return 0;
@@ -728,14 +728,21 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     // Set line filter
     sensor_set_line_filter(line_filter_func, line_filter_args);
 
-    // Make sure the raw frame fits FB. If it doesn't it will be cropped
-    // for GS, or the sensor pixel format will be swicthed to bayer for RGB.
-    sensor_check_bufsize();
-
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
     // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
     fb_update_jpeg_buffer();
+
+    // The user may have changed the MAIN_FB width or height on the last image so we need
+    // to restore that here. We don't have to restore bpp because that's taken care of
+    // already in the code below. Note that we do the JPEG compression above first to save
+    // the FB of whatever the user set it to and now we restore.
+    MAIN_FB()->w = sensor.fb_w;
+    MAIN_FB()->h = sensor.fb_h;
+
+    // Make sure the raw frame fits FB. If it doesn't it will be cropped
+    // for GS, or the sensor pixel format will be swicthed to bayer for RGB.
+    sensor_check_bufsize();
 
     // Setup the size and address of the transfer
     switch (sensor.pixformat) {
