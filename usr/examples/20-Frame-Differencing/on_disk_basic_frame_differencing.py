@@ -8,6 +8,8 @@
 
 import sensor, image, pyb, os, time
 
+TRIGGER_THRESHOLD = 5
+
 sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
@@ -29,5 +31,13 @@ while(True):
     # Replace the image with the "abs(NEW-OLD)" frame difference.
     img.difference("temp/bg.bmp")
 
-    print(clock.fps()) # Note: Your OpenMV Cam runs about half as fast while
+    hist = img.get_histogram()
+    # This code below works by comparing the 99th percentile value (e.g. the
+    # non-outlier max value against the 90th percentile value (e.g. a non-max
+    # value. The difference between the two values will grow as the difference
+    # image seems more pixels change.
+    diff = hist.get_percentile(0.99).l_value() - hist.get_percentile(0.90).l_value()
+    triggered = diff > TRIGGER_THRESHOLD
+
+    print(clock.fps(), triggered) # Note: Your OpenMV Cam runs about half as fast while
     # connected to your computer. The FPS should increase once disconnected.
