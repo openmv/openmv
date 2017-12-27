@@ -585,7 +585,9 @@ void SystemClock_Config(void)
     uint32_t flash_latency;
     RCC_ClkInitTypeDef RCC_ClkInitStruct;
     RCC_OscInitTypeDef RCC_OscInitStruct;
+#if defined(MCU_SERIES_H7)
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
+#endif
 
 #if defined (STM32H743xx)// 400MHz/48MHz
     /* Supply configuration update enable */
@@ -608,7 +610,9 @@ void SystemClock_Config(void)
     /* Enable HSE Oscillator and activate PLL with HSE as source */
     RCC_OscInitStruct.HSEState = RCC_HSE_ON;
     RCC_OscInitStruct.HSIState = RCC_HSI_OFF;
+#if defined(MCU_SERIES_H7)
     RCC_OscInitStruct.CSIState = RCC_CSI_OFF;
+#endif
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
