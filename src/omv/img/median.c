@@ -11,7 +11,7 @@
 #include "fb_alloc.h"
 #include "fsort.h"
 
-void imlib_median_filter(image_t *img, const int ksize, const int percentile)
+void imlib_median_filter(image_t *img, const int ksize, const int percentile, bool threshold, int offset, bool invert)
 {
     int n = ((ksize*2)+1)*((ksize*2)+1);
     int brows = ksize + 1;
@@ -34,7 +34,8 @@ void imlib_median_filter(image_t *img, const int ksize, const int percentile)
                 fsort(data, n);
                 int median = data[percentile];
                 // We're writing into the buffer like if it were a window.
-                buffer[((y%brows)*img->w)+x] = median;
+                uint8_t pixel = median;
+                buffer[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((pixel-offset)<IM_GET_GS_PIXEL(img, x, y))^invert) ? 255 : 0);
             }
             if (y>=ksize) {
                 memcpy(img->pixels+((y-ksize)*img->w),
@@ -77,7 +78,8 @@ void imlib_median_filter(image_t *img, const int ksize, const int percentile)
                 int g_median = g_data[percentile];
                 int b_median = b_data[percentile];
                 // We're writing into the buffer like if it were a window.
-                ((uint16_t *) buffer)[((y%brows)*img->w)+x] = IM_RGB565(r_median, g_median, b_median);
+                uint16_t pixel = IM_RGB565(r_median, g_median, b_median);
+                ((uint16_t *) buffer)[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((COLOR_RGB565_TO_Y(pixel)-offset)<COLOR_RGB565_TO_Y(IM_GET_RGB565_PIXEL(img, x, y)))^invert) ? 65535 : 0);
             }
             if (y>=ksize) {
                 memcpy(((uint16_t *) img->pixels)+((y-ksize)*img->w),
