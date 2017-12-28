@@ -15,7 +15,7 @@
 // ...
 // krn_s == n -> ((n*2)+1)x((n*2)+1) kernel
 
-void imlib_mode_filter(image_t *img, const int ksize)
+void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert)
 {
     int brows = ksize + 1;
     uint8_t *buffer = fb_alloc(img->w * brows * img->bpp);
@@ -38,7 +38,8 @@ void imlib_mode_filter(image_t *img, const int ksize)
                     }
                 }
                 // We're writing into the buffer like if it were a window.
-                buffer[((y%brows)*img->w)+x] = mode;
+                uint8_t pixel = mode;
+                buffer[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((pixel-offset)<IM_GET_GS_PIXEL(img, x, y))^invert) ? 255 : 0);
             }
             if (y>=ksize) {
                 memcpy(img->pixels+((y-ksize)*img->w),
@@ -90,7 +91,8 @@ void imlib_mode_filter(image_t *img, const int ksize)
                     }
                 }
                 // We're writing into the buffer like if it were a window.
-                ((uint16_t *) buffer)[((y%brows)*img->w)+x] = IM_RGB565(r_mode, g_mode, b_mode);
+                uint16_t pixel = IM_RGB565(r_mode, g_mode, b_mode);
+                ((uint16_t *) buffer)[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((COLOR_RGB565_TO_Y(pixel)-offset)<COLOR_RGB565_TO_Y(IM_GET_RGB565_PIXEL(img, x, y)))^invert) ? 65535 : 0);
             }
             if (y>=ksize) {
                 memcpy(((uint16_t *) img->pixels)+((y-ksize)*img->w),

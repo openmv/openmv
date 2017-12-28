@@ -1206,33 +1206,45 @@ static mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
     int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
 
+    int arg_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
+    int arg_offset = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
+    int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+
     int bias = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
-    imlib_midpoint_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(bias, 0), 256));
+    imlib_midpoint_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(bias, 0), 256), arg_threshold, arg_offset, arg_invert);
     return args[0];
 }
 
-static mp_obj_t py_image_mean(mp_obj_t img_obj, mp_obj_t k_obj)
+static mp_obj_t py_image_mean(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_image_cobj(img_obj);
+    image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
-    int arg_ksize = mp_obj_get_int(k_obj);
+    int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
 
-    imlib_mean_filter(arg_img, arg_ksize);
-    return img_obj;
+    int arg_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
+    int arg_offset = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
+    int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+
+    imlib_mean_filter(arg_img, arg_ksize, arg_threshold, arg_offset, arg_invert);
+    return args[0];
 }
 
-static mp_obj_t py_image_mode(mp_obj_t img_obj, mp_obj_t k_obj)
+static mp_obj_t py_image_mode(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_image_cobj(img_obj);
+    image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
 
-    int arg_ksize = mp_obj_get_int(k_obj);
+    int arg_ksize = mp_obj_get_int(args[1]);
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
 
-    imlib_mode_filter(arg_img, arg_ksize);
-    return img_obj;
+    int arg_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
+    int arg_offset = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
+    int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+
+    imlib_mode_filter(arg_img, arg_ksize, arg_threshold, arg_offset, arg_invert);
+    return args[0];
 }
 
 static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -1244,9 +1256,13 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     PY_ASSERT_TRUE_MSG(arg_ksize >= 0, "Kernel Size must be >= 0");
     PY_ASSERT_TRUE_MSG(arg_ksize <= 2, "Kernel Size must be <= 2");
 
+    int arg_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
+    int arg_offset = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
+    int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+
     int n = ((arg_ksize*2)+1)*((arg_ksize*2)+1);
     int percentile = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_percentile), 0.5) * n;
-    imlib_median_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(percentile, 0), n-1));
+    imlib_median_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(percentile, 0), n-1), arg_threshold, arg_offset, arg_invert);
     return args[0];
 }
 
@@ -4000,8 +4016,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_blend_obj, 2, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
 /* Image Filtering */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_obj, 2, py_image_midpoint);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mean_obj, py_image_mean);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_mode_obj, py_image_mode);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mean_obj, 2, py_image_mean);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mode_obj, 2, py_image_mode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gaussian_obj, 1, py_image_gaussian);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_chrominvar_obj, py_image_chrominvar);

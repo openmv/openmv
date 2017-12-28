@@ -17,7 +17,7 @@
 
 // bias == 0 to 256 -> 0.0 to 1.0 (0.0==min filter, 1.0==max filter)
 
-void imlib_midpoint_filter(image_t *img, const int ksize, const int bias)
+void imlib_midpoint_filter(image_t *img, const int ksize, const int bias, bool threshold, int offset, bool invert)
 {
     int min_bias = (256-bias);
     int max_bias = bias;
@@ -37,8 +37,8 @@ void imlib_midpoint_filter(image_t *img, const int ksize, const int bias)
                     }
                 }
                 // We're writing into the buffer like if it were a window.
-                buffer[((y%brows)*img->w)+x] =
-                    ((min*min_bias)+(max*max_bias))>>8;
+                int pixel = ((min*min_bias)+(max*max_bias))>>8;
+                buffer[((y%brows)*img->w)+x] =  (!threshold) ? pixel : ((((pixel-offset)<IM_GET_GS_PIXEL(img, x, y))^invert) ? 255 : 0);
             }
             if (y>=ksize) {
                 memcpy(img->pixels+((y-ksize)*img->w),
@@ -74,10 +74,10 @@ void imlib_midpoint_filter(image_t *img, const int ksize, const int bias)
                     }
                 }
                 // We're writing into the buffer like if it were a window.
-                ((uint16_t *) buffer)[((y%brows)*img->w)+x] =
-                    IM_RGB565(((r_min*min_bias)+(r_max*max_bias))>>8,
-                              ((g_min*min_bias)+(g_max*max_bias))>>8,
-                              ((b_min*min_bias)+(b_max*max_bias))>>8);
+                uint16_t pixel = IM_RGB565(((r_min*min_bias)+(r_max*max_bias))>>8,
+                                           ((g_min*min_bias)+(g_max*max_bias))>>8,
+                                           ((b_min*min_bias)+(b_max*max_bias))>>8);
+                ((uint16_t *) buffer)[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((COLOR_RGB565_TO_Y(pixel)-offset)<COLOR_RGB565_TO_Y(IM_GET_RGB565_PIXEL(img, x, y)))^invert) ? 65535 : 0);
             }
             if (y>=ksize) {
                 memcpy(((uint16_t *) img->pixels)+((y-ksize)*img->w),

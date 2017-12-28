@@ -1130,10 +1130,11 @@ int imlib_image_mean(image_t *src); // grayscale only
 int imlib_image_std(image_t *src); // grayscale only
 
 /* Image Filtering */
-void imlib_midpoint_filter(image_t *img, const int ksize, const int bias);
-void imlib_mean_filter(image_t *img, const int ksize);
-void imlib_mode_filter(image_t *img, const int ksize);
-void imlib_median_filter(image_t *img, const int ksize, const int percentile);
+void imlib_midpoint_filter(image_t *img, const int ksize, const int bias, bool threshold, int offset, bool invert);
+void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert);
+void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert);
+void imlib_median_filter(image_t *img, const int ksize, const int percentile, bool threshold, int offset, bool invert);
+void imlib_histeq(image_t *img);
 void imlib_mask_ellipse(image_t *img);
 
 /* Template Matching */
