@@ -14,6 +14,7 @@
 #include "ov2640.h"
 #include "systick.h"
 #include "ov2640_regs.h"
+#include "omv_boardconfig.h"
 
 #define SVGA_HSIZE     (800)
 #define SVGA_VSIZE     (600)
@@ -619,22 +620,96 @@ static int set_auto_gain(sensor_t *sensor, int enable, int gain)
     return cambus_writeb(sensor->slv_addr, COM8, reg) | ret;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure)
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
     uint8_t reg;
-    /* Switch to SENSOR register bank */
-    int ret = cambus_writeb(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
-
-    /* Update COM8 */
+    int ret = cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg | BANK_SEL_SENSOR);
     ret |= cambus_readb(sensor->slv_addr, COM8, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, COM8, COM8_SET_AEC(reg, (enable != 0)));
 
-    if (enable) {
-        reg |= COM8_AEC_EN;
-    } else {
-        reg &= ~COM8_AEC_EN;
+    if ((enable == 0) && (exposure_us >= 0)) {
+        ret |= cambus_readb(sensor->slv_addr, COM7, &reg);
+        int t_line = 0;
+
+        if (COM7_GET_RES(reg) == COM7_RES_UXGA) t_line = 1600 + 322;
+        if (COM7_GET_RES(reg) == COM7_RES_SVGA) t_line = 800 + 390;
+        if (COM7_GET_RES(reg) == COM7_RES_CIF) t_line = 400 + 195;
+
+        ret |= cambus_readb(sensor->slv_addr, CLKRC, &reg);
+        int pll_mult = (reg & CLKRC_DOUBLE) ? 2 : 1;
+        int clk_rc = (reg & CLKRC_DIVIDER_MASK) + 1;
+
+        ret |= cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg & (~BANK_SEL_SENSOR));
+        ret |= cambus_readb(sensor->slv_addr, IMAGE_MODE, &reg);
+        int t_pclk = 0;
+
+        if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_YUV422) t_pclk = 2;
+        if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_RAW10) t_pclk = 1;
+        if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_RGB565) t_pclk = 2;
+
+        int exposure = IM_MAX(IM_MIN(((exposure_us*(((OMV_XCLK_FREQUENCY/clk_rc)*pll_mult)/1000000))/t_pclk)/t_line,0xFFFF),0x0000);
+
+        ret |= cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg | BANK_SEL_SENSOR);
+
+        ret |= cambus_readb(sensor->slv_addr, REG04, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, REG04, (reg & 0xFC) | ((exposure >> 0) & 0x3));
+
+        ret |= cambus_readb(sensor->slv_addr, AEC, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, AEC, (reg & 0x00) | ((exposure >> 2) & 0xFF));
+
+        ret |= cambus_readb(sensor->slv_addr, REG04, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, REG04, (reg & 0xC0) | ((exposure >> 10) & 0x3F));
     }
 
-    return cambus_writeb(sensor->slv_addr, COM8, reg) | ret;
+    return ret;
+}
+
+static int get_exposure_us(sensor_t *sensor, int *exposure_us)
+{
+    uint8_t reg, aec_10, aec_92, aec_1510;
+    int ret = cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg | BANK_SEL_SENSOR);
+    ret |= cambus_readb(sensor->slv_addr, COM8, &reg);
+
+    if (reg & COM8_AEC_EN) {
+        ret |= cambus_writeb(sensor->slv_addr, COM8, reg & (~COM8_AEC_EN));
+    }
+
+    ret |= cambus_readb(sensor->slv_addr, REG04, &aec_10);
+    ret |= cambus_readb(sensor->slv_addr, AEC, &aec_92);
+    ret |= cambus_readb(sensor->slv_addr, REG45, &aec_1510);
+
+    if (reg & COM8_AEC_EN) {
+        ret |= cambus_writeb(sensor->slv_addr, COM8, reg | COM8_AEC_EN);
+    }
+
+    ret |= cambus_readb(sensor->slv_addr, COM7, &reg);
+    int t_line = 0;
+
+    if (COM7_GET_RES(reg) == COM7_RES_UXGA) t_line = 1600 + 322;
+    if (COM7_GET_RES(reg) == COM7_RES_SVGA) t_line = 800 + 390;
+    if (COM7_GET_RES(reg) == COM7_RES_CIF) t_line = 400 + 195;
+
+    ret |= cambus_readb(sensor->slv_addr, CLKRC, &reg);
+    int pll_mult = (reg & CLKRC_DOUBLE) ? 2 : 1;
+    int clk_rc = (reg & CLKRC_DIVIDER_MASK) + 1;
+
+    ret |= cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg & (~BANK_SEL_SENSOR));
+    ret |= cambus_readb(sensor->slv_addr, IMAGE_MODE, &reg);
+    int t_pclk = 0;
+
+    if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_YUV422) t_pclk = 2;
+    if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_RAW10) t_pclk = 1;
+    if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_RGB565) t_pclk = 2;
+
+    uint16_t exposure = ((aec_1510 & 0x3F) << 10) + ((aec_92 & 0xFF) << 2) + ((aec_10 & 0x3) << 0);
+    *exposure_us = (exposure*t_line*t_pclk)/(((OMV_XCLK_FREQUENCY/clk_rc)*pll_mult)/1000000);
+
+    return ret;
 }
 
 static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain)
@@ -708,6 +783,7 @@ int ov2640_init(sensor_t *sensor)
     sensor->set_colorbar        = set_colorbar;
     sensor->set_auto_gain       = set_auto_gain;
     sensor->set_auto_exposure   = set_auto_exposure;
+    sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
