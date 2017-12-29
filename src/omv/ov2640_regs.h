@@ -5,61 +5,64 @@
  *
  * OV2640 register definitions.
  */
+
 #ifndef __REG_REGS_H__
 #define __REG_REGS_H__
+
 /* DSP register bank FF=0x00*/
-#define QS                  0x44
-#define HSIZE               0x51
-#define VSIZE               0x52
-#define XOFFL               0x53
-#define YOFFL               0x54
-#define VHYX                0x55
-#define DPRP                0x56
-#define TEST                0x57
-#define ZMOW                0x5A
-#define ZMOH                0x5B
-#define ZMHH                0x5C
-#define BPADDR              0x7C
-#define BPDATA              0x7D
-#define SIZEL               0x8C
-#define HSIZE8              0xC0
-#define VSIZE8              0xC1
-#define CTRL1               0xC3
-#define MS_SP               0xF0
-#define SS_ID               0xF7
-#define SS_CTRL             0xF7
-#define MC_AL               0xFA
-#define MC_AH               0xFB
-#define MC_D                0xFC
-#define P_CMD               0xFD
-#define P_STATUS            0xFE
 
-#define CTRLI               0x50
-#define CTRLI_LP_DP         0x80
-#define CTRLI_ROUND         0x40
+#define QS                      0x44
+#define HSIZE                   0x51
+#define VSIZE                   0x52
+#define XOFFL                   0x53
+#define YOFFL                   0x54
+#define VHYX                    0x55
+#define DPRP                    0x56
+#define TEST                    0x57
+#define ZMOW                    0x5A
+#define ZMOH                    0x5B
+#define ZMHH                    0x5C
+#define BPADDR                  0x7C
+#define BPDATA                  0x7D
+#define SIZEL                   0x8C
+#define HSIZE8                  0xC0
+#define VSIZE8                  0xC1
+#define CTRL1                   0xC3
+#define MS_SP                   0xF0
+#define SS_ID                   0xF7
+#define SS_CTRL                 0xF7
+#define MC_AL                   0xFA
+#define MC_AH                   0xFB
+#define MC_D                    0xFC
+#define P_CMD                   0xFD
+#define P_STATUS                0xFE
 
-#define CTRL0               0xC2
-#define CTRL0_AEC_EN        0x80
-#define CTRL0_AEC_SEL       0x40
-#define CTRL0_STAT_SEL      0x20
-#define CTRL0_VFIRST        0x10
-#define CTRL0_YUV422        0x08
-#define CTRL0_YUV_EN        0x04
-#define CTRL0_RGB_EN        0x02
-#define CTRL0_RAW_EN        0x01
+#define CTRLI                   0x50
+#define CTRLI_LP_DP             0x80
+#define CTRLI_ROUND             0x40
 
-#define CTRL2               0x86
-#define CTRL2_DCW_EN        0x20
-#define CTRL2_SDE_EN        0x10
-#define CTRL2_UV_ADJ_EN     0x08
-#define CTRL2_UV_AVG_EN     0x04
-#define CTRL2_CMX_EN        0x01
+#define CTRL0                   0xC2
+#define CTRL0_AEC_EN            0x80
+#define CTRL0_AEC_SEL           0x40
+#define CTRL0_STAT_SEL          0x20
+#define CTRL0_VFIRST            0x10
+#define CTRL0_YUV422            0x08
+#define CTRL0_YUV_EN            0x04
+#define CTRL0_RGB_EN            0x02
+#define CTRL0_RAW_EN            0x01
 
-#define CTRL3               0x87
-#define CTRL3_BPC_EN        0x80
-#define CTRL3_WPC_EN        0x40
-#define R_DVP_SP            0xD3
-#define R_DVP_SP_AUTO_MODE  0x80
+#define CTRL2                   0x86
+#define CTRL2_DCW_EN            0x20
+#define CTRL2_SDE_EN            0x10
+#define CTRL2_UV_ADJ_EN         0x08
+#define CTRL2_UV_AVG_EN         0x04
+#define CTRL2_CMX_EN            0x01
+
+#define CTRL3                   0x87
+#define CTRL3_BPC_EN            0x80
+#define CTRL3_WPC_EN            0x40
+#define R_DVP_SP                0xD3
+#define R_DVP_SP_AUTO_MODE      0x80
 
 #define R_BYPASS                0x05
 #define R_BYPASS_DSP_EN         0x00
@@ -98,6 +101,7 @@
 #define BANK_SEL_SENSOR         0x01
 
 /* Sensor register bank FF=0x01*/
+
 #define GAIN                0x00
 #define COM1                0x03
 #define REG_PID             0x0A
@@ -196,4 +200,5 @@
 #define REG32_UXGA          0x36
 #define REG32_SVGA          0x09
 #define REG32_CIF           0x00
+
 #endif //__REG_REGS_H__
