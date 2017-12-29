@@ -53,6 +53,7 @@
 #define COM4_AEC_1_2            0x10 /* AEC evaluate 1/2 window  */
 #define COM4_AEC_1_4            0x20 /* AEC evaluate 1/4 window  */
 #define COM4_AEC_2_3            0x30 /* AEC evaluate 2/3 window  */
+#define COM4_GET_PLL(r)         (r&0xC0)
 
 #define COM5                    0x0E /* Common Control 5 */
 #define COM5_AFR                0x80 /* Auto frame rate control ON/OFF selection (night mode) */
@@ -72,6 +73,8 @@
 #define AEC                     0x10 /* AEC[7:0] (see register AECH for AEC[15:8]) */
 
 #define CLKRC                   0x11 /* Internal Clock */
+#define CLKRC_NO_PRESCALE       0x40 /* Use external clock directly */
+#define CLKRC_PRESCALER         0x3F /* Internal clock pre-scaler */
 
 #define COM7                    0x12 /* Common Control 7         */
 #define COM7_RESET              0x80 /* SCCB Register Reset      */
@@ -89,6 +92,7 @@
 #define COM7_FMT_R_BAYER        0x03 /* Output format Bayer RAW  */
 #define COM7_SET_FMT(r, x)      ((r&0xFC)|((x&0x3)<<0))
 #define COM7_SET_RES(r, x)      ((r&0xBF)|(x))
+#define COM7_GET_FMT(r)         (r&0x03)
 
 #define COM8                    0x13 /* Common Control 8              */
 #define COM8_FAST_AUTO          0x80 /* Enable fast AGC/AEC algorithm */

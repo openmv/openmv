@@ -536,11 +536,22 @@ int sensor_set_auto_gain(int enable, int gain)
     return 0;
 }
 
-int sensor_set_auto_exposure(int enable, int exposure)
+int sensor_set_auto_exposure(int enable, int exposure_us)
 {
     /* call the sensor specific function */
     if (sensor.set_auto_exposure == NULL
-        || sensor.set_auto_exposure(&sensor, enable, exposure) != 0) {
+        || sensor.set_auto_exposure(&sensor, enable, exposure_us) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
+
+int sensor_get_exposure_us(int *exposure_us)
+{
+    /* call the sensor specific function */
+    if (sensor.get_exposure_us == NULL
+        || sensor.get_exposure_us(&sensor, exposure_us) != 0) {
         /* operation not supported */
         return -1;
     }
