@@ -35,6 +35,8 @@ clock = time.clock()                # Create a clock object to track the FPS.
 # that you put in place...
 sensor.set_auto_gain(False)
 sensor.set_auto_whitebal(False)
+# Need to let the above settings get in...
+sensor.skip_frames(time = 500)
 
 current_exposure_time_in_microseconds = sensor.get_exposure_us()
 print("Current Exposure == %d" % current_exposure_time_in_microseconds)
