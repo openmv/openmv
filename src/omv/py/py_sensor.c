@@ -388,16 +388,16 @@ static mp_obj_t py_sensor_set_auto_whitebal(uint n_args, const mp_obj_t *args, m
 
 static mp_obj_t py_sensor_set_hmirror(mp_obj_t enable) {
     if (sensor_set_hmirror(mp_obj_is_true(enable)) != 0) {
-        return mp_const_false;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
     }
-    return mp_const_true;
+    return mp_const_none;
 }
 
 static mp_obj_t py_sensor_set_vflip(mp_obj_t enable) {
     if (sensor_set_vflip(mp_obj_is_true(enable)) != 0) {
-        return mp_const_false;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
     }
-    return mp_const_true;
+    return mp_const_none;
 }
 
 static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde) {

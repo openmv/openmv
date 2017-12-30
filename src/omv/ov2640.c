@@ -761,14 +761,11 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gai
     return cambus_writeb(sensor->slv_addr, CTRL1, reg) | ret;
 }
 
-
 static int set_hmirror(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    /* Switch to SENSOR register bank */
-    int ret = cambus_writeb(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
-
-    /* Update REG04 */
+    int ret = cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg | BANK_SEL_SENSOR);
     ret |= cambus_readb(sensor->slv_addr, REG04, &reg);
 
     if (enable) {
@@ -777,16 +774,16 @@ static int set_hmirror(sensor_t *sensor, int enable)
         reg &= ~REG04_HFLIP_IMG;
     }
 
-    return cambus_writeb(sensor->slv_addr, REG04, reg) | ret;
+    ret |= cambus_writeb(sensor->slv_addr, REG04, reg);
+
+    return ret;
 }
 
 static int set_vflip(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    /* Switch to SENSOR register bank */
-    int ret = cambus_writeb(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
-
-    /* Update REG04 */
+    int ret = cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg | BANK_SEL_SENSOR);
     ret |= cambus_readb(sensor->slv_addr, REG04, &reg);
 
     if (enable) {
@@ -795,7 +792,9 @@ static int set_vflip(sensor_t *sensor, int enable)
         reg &= ~REG04_VFLIP_IMG;
     }
 
-    return cambus_writeb(sensor->slv_addr, REG04, reg) | ret;
+    ret |= cambus_writeb(sensor->slv_addr, REG04, reg);
+
+    return ret;
 }
 
 int ov2640_init(sensor_t *sensor)
