@@ -95,6 +95,13 @@
 #define MT9V034_AGC_ENABLE                      (1 << 1)
 #define MT9V034_THERMAL_INFO                    (0xC1)
 
+#define MT9V034_WINDOW_HEIGHT_A                 (0x03)
+#define MT9V034_WINDOW_WIDTH_A                  (0x04)
+#define MT9V034_HORIZONTAL_BLANKING_A           (0x05)
+#define MT9V034_VERTICAL_BLANKING_A             (0x06)
+#define MT9V034_COARSE_SHUTTER_WIDTH_TOTAL_A    (0x0B)
+#define MT9V034_FINE_SHUTTER_WIDTH_TOTAL_A      (0xD5)
+
 static int reset(sensor_t *sensor)
 {
     // NOTE: TODO This doesn't reset register configuration.
@@ -199,9 +206,41 @@ static int set_auto_gain(sensor_t *sensor, int enable, int gain)
     return 0;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure)
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
-    return 0;
+    uint16_t reg, row_limit_0, row_limit_1, row_time_0, row_time_1;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, (reg & (~MT9V034_AEC_ENABLE)) | ((enable != 0) & MT9V034_AEC_ENABLE));
+
+    if ((enable == 0) && (exposure_us >= 0)) {
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_WINDOW_HEIGHT_A, &row_limit_0);
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_VERTICAL_BLANKING_A, &row_limit_1);
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_WINDOW_WIDTH_A, &row_time_0);
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING_A, &row_time_1);
+
+        int exposure = exposure_us * (27000000 / 1000000);
+        int row_time = row_time_0 + row_time_1;
+        int coarse_time = IM_MIN((exposure / row_time), (row_limit_0 + row_limit_1));
+        int fine_time = exposure % row_time;
+
+        ret |= cambus_writew(sensor->slv_addr, MT9V034_COARSE_SHUTTER_WIDTH_TOTAL_A, coarse_time);
+        ret |= cambus_writew(sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL_A, fine_time);
+    }
+
+    return ret;
+}
+
+static int get_exposure_us(sensor_t *sensor, int *exposure_us)
+{
+    uint16_t int_rows, int_pixels, row_time_0, row_time_1;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_COARSE_SHUTTER_WIDTH_TOTAL_A, &int_rows);
+    ret |= cambus_readw(sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL_A, &int_pixels);
+    ret |= cambus_readw(sensor->slv_addr, MT9V034_WINDOW_WIDTH_A, &row_time_0);
+    ret |= cambus_readw(sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING_A, &row_time_1);
+
+    *exposure_us = ((int_rows * (row_time_0 + row_time_1)) + int_pixels) / (27000000 / 1000000);
+
+    return ret;
 }
 
 static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain)
@@ -229,7 +268,6 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
-
 int mt9v034_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
@@ -248,6 +286,7 @@ int mt9v034_init(sensor_t *sensor)
     sensor->set_colorbar        = set_colorbar;
     sensor->set_auto_gain       = set_auto_gain;
     sensor->set_auto_exposure   = set_auto_exposure;
+    sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
