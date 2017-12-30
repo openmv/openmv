@@ -3,18 +3,20 @@
  * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * OV2640 register definitions.
+ * OV7725 register definitions.
  */
+
 #ifndef __REG_REGS_H__
 #define __REG_REGS_H__
-#define GAIN                    0x00 /* AGC – Gain control gain setting  */
-#define BLUE                    0x01 /* AWB – Blue channel gain setting  */
-#define RED                     0x02 /* AWB – Red channel gain setting   */
-#define GREEN                   0x03 /* AWB – Green channel gain setting */
-#define BAVG                    0x05 /* U/B Average Level   */
-#define GAVG                    0x06 /* Y/Gb Average Level  */
-#define RAVG                    0x07 /* V/R Average Level   */
-#define AECH                    0x08 /* Exposure Value – AEC MSBs */
+
+#define GAIN                    0x00 /* AGC - Gain control gain setting  */
+#define BLUE                    0x01 /* AWB - Blue channel gain setting  */
+#define RED                     0x02 /* AWB - Red channel gain setting   */
+#define GREEN                   0x03 /* AWB - Green channel gain setting */
+#define BAVG                    0x05 /* U/B Average Level  */
+#define GAVG                    0x06 /* Y/Gb Average Level */
+#define RAVG                    0x07 /* V/R Average Level  */
+#define AECH                    0x08 /* Exposure Value - AEC MSBs */
 
 #define COM2                    0x09 /* Common Control 2 */
 #define COM2_SOFT_SLEEP         0x10 /* Soft sleep mode  */
@@ -26,28 +28,32 @@
 #define PID                     0x0A /* Product ID Number MSB */
 #define VER                     0x0B /* Product ID Number LSB */
 
-#define COM3                    0x0C /* Common Control 3                                        */
-#define COM3_VFLIP              0x80 /* Vertical flip image ON/OFF selection                    */
-#define COM3_MIRROR             0x40 /* Horizontal mirror image ON/OFF selection                */
-#define COM3_SWAP_BR            0x20 /* Swap B/R output sequence in RGB output mode             */
-#define COM3_SWAP_YUV           0x10 /* Swap Y/UV output sequence in YUV output mode            */
-#define COM3_SWAP_MSB           0x08 /* Swap output MSB/LSB                                     */
-#define COM3_TRI_CLOCK          0x04 /* Tri-state option for output clock at power-down period  */
-#define COM3_TRI_DATA           0x02 /* Tri-state option for output data at power-down period   */
-#define COM3_COLOR_BAR          0x01 /* Sensor color bar test pattern output enable             */
+#define COM3                    0x0C /* Common Control 3                                       */
+#define COM3_VFLIP              0x80 /* Vertical flip image ON/OFF selection                   */
+#define COM3_MIRROR             0x40 /* Horizontal mirror image ON/OFF selection               */
+#define COM3_SWAP_BR            0x20 /* Swap B/R output sequence in RGB output mode            */
+#define COM3_SWAP_YUV           0x10 /* Swap Y/UV output sequence in YUV output mode           */
+#define COM3_SWAP_MSB           0x08 /* Swap output MSB/LSB                                    */
+#define COM3_TRI_CLOCK          0x04 /* Tri-state option for output clock at power-down period */
+#define COM3_TRI_DATA           0x02 /* Tri-state option for output data at power-down period  */
+#define COM3_COLOR_BAR          0x01 /* Sensor color bar test pattern output enable            */
 #define COM3_SET_CBAR(r, x)     ((r&0xFE)|((x&1)<<0))
 #define COM3_SET_MIRROR(r, x)   ((r&0xBF)|((x&1)<<6))
 #define COM3_SET_FLIP(r, x)     ((r&0x7F)|((x&1)<<7))
+#define COM3_GET_CBAR(r)        ((r>>0)&1)
+#define COM3_GET_MIRROR(r)      ((r>>6)&1)
+#define COM3_GET_FLIP(r)        ((r>>7)&1)
 
 #define COM4                    0x0D /* Common Control 4         */
 #define COM4_PLL_BYPASS         0x00 /* Bypass PLL               */
 #define COM4_PLL_4x             0x40 /* PLL frequency 4x         */
 #define COM4_PLL_6x             0x80 /* PLL frequency 6x         */
-#define COM4_PLL_8x             0xc0 /* PLL frequency 8x         */
+#define COM4_PLL_8x             0xC0 /* PLL frequency 8x         */
 #define COM4_AEC_FULL           0x00 /* AEC evaluate full window */
 #define COM4_AEC_1_2            0x10 /* AEC evaluate 1/2 window  */
 #define COM4_AEC_1_4            0x20 /* AEC evaluate 1/4 window  */
 #define COM4_AEC_2_3            0x30 /* AEC evaluate 2/3 window  */
+#define COM4_GET_PLL(r)         (r&0xC0)
 
 #define COM5                    0x0E /* Common Control 5 */
 #define COM5_AFR                0x80 /* Auto frame rate control ON/OFF selection (night mode) */
@@ -65,7 +71,10 @@
 #define COM6_AUTO_WINDOW        0x01 /* Auto window setting ON/OFF selection when format changes */
 
 #define AEC                     0x10 /* AEC[7:0] (see register AECH for AEC[15:8]) */
+
 #define CLKRC                   0x11 /* Internal Clock */
+#define CLKRC_NO_PRESCALE       0x40 /* Use external clock directly */
+#define CLKRC_PRESCALER         0x3F /* Internal clock pre-scaler */
 
 #define COM7                    0x12 /* Common Control 7         */
 #define COM7_RESET              0x80 /* SCCB Register Reset      */
@@ -83,9 +92,10 @@
 #define COM7_FMT_R_BAYER        0x03 /* Output format Bayer RAW  */
 #define COM7_SET_FMT(r, x)      ((r&0xFC)|((x&0x3)<<0))
 #define COM7_SET_RES(r, x)      ((r&0xBF)|(x))
+#define COM7_GET_FMT(r)         (r&0x03)
 
-#define COM8                    0x13 /* Common Control 8                */
-#define COM8_FAST_AUTO          0x80 /* Enable fast AGC/AEC algorithm   */
+#define COM8                    0x13 /* Common Control 8              */
+#define COM8_FAST_AUTO          0x80 /* Enable fast AGC/AEC algorithm */
 #define COM8_STEP_VSYNC         0x00 /* AEC - Step size limited to vertical blank */
 #define COM8_STEP_UNLIMIT       0x40 /* AEC - Step size unlimited step size       */
 #define COM8_BANDF_EN           0x20 /* Banding filter ON/OFF */
@@ -124,13 +134,14 @@
 
 #define REG16                   0x16 /* Register 16 */
 #define REG16_BIT_SHIFT         0x80 /* Bit shift test pattern options */
+
 #define HSTART                  0x17 /* Horizontal Frame (HREF column) Start 8 MSBs (2 LSBs are at HREF[5:4]) */
 #define HSIZE                   0x18 /* Horizontal Sensor Size (2 LSBs are at HREF[1:0]) */
 #define VSTART                  0x19 /* Vertical Frame (row) Start 8 MSBs (1 LSB is at HREF[6]) */
 #define VSIZE                   0x1A /* Vertical Sensor Size (1 LSB is at HREF[2]) */
 #define PSHFT                   0x1B /* Data Format - Pixel Delay Select */
-#define MIDH                    0x1C /* Manufacturer ID Byte – High */
-#define MIDL                    0x1D /* Manufacturer ID Byte – Low */
+#define MIDH                    0x1C /* Manufacturer ID Byte - High */
+#define MIDL                    0x1D /* Manufacturer ID Byte - Low */
 #define LAEC                    0x1F /* Fine AEC Value - defines exposure value less than one row period */
 
 #define COM11                   0x20 /* Common Control 11 */
@@ -146,8 +157,8 @@
 #define HOUTSIZE                0x29 /* Horizontal Data Output Size MSBs (2 LSBs at register EXHCH[1:0]) */
 #define EXHCH                   0x2A /* Dummy Pixel Insert MSB */
 #define EXHCL                   0x2B /* Dummy Pixel Insert LSB */
-#define VOUTSIZE                0x2C /* Vertical Data Output Size MSBs (LSB at register EXHCH[2])       */
-#define ADVFL                   0x2D /* LSB of Insert Dummy Rows in Vertical Sync (1 bit equals 1 row)  */
+#define VOUTSIZE                0x2C /* Vertical Data Output Size MSBs (LSB at register EXHCH[2])      */
+#define ADVFL                   0x2D /* LSB of Insert Dummy Rows in Vertical Sync (1 bit equals 1 row) */
 #define ADVFH                   0x2E /* MSB of Insert Dummy Rows in Vertical Sync */
 #define YAVE                    0x2F /* Y/G Channel Average Value */
 #define LUMHTH                  0x30 /* Histogram AEC/AGC Luminance High Level Threshold */
@@ -163,6 +174,7 @@
 #define OFF_R                   0x3A /* AD Offset Compensation Value for R Channel  */
 #define OFF_GB                  0x3B /* AD Offset Compensation Value for GB Channel */
 #define OFF_GR                  0x3C /* AD Offset Compensation Value for GR Channel */
+
 #define COM12                   0x3D /* DC offset compensation for analog process */
 
 #define COM13                   0x3E /* Common Control 13 */
@@ -174,10 +186,10 @@
 #define COM14                   0x3F /* Common Control 14 */
 #define COM15                   0x40 /* Common Control 15 */
 #define COM16                   0x41 /* Common Control 16 */
-#define TGT_B                   0x42 /* BLC Blue Channel Target Value   */
-#define TGT_R                   0x43 /* BLC Red Channel Target Value    */
-#define TGT_GB                  0x44 /* BLC Gb Channel Target Value     */
-#define TGT_GR                  0x45 /* BLC Gr Channel Target Value     */
+#define TGT_B                   0x42 /* BLC Blue Channel Target Value */
+#define TGT_R                   0x43 /* BLC Red Channel Target Value  */
+#define TGT_GB                  0x44 /* BLC Gb Channel Target Value   */
+#define TGT_GR                  0x45 /* BLC Gr Channel Target Value   */
 
 #define LC_CTR                  0x46 /* Lens Correction Control */
 #define LC_CTR_RGB_COMP_1       0x00 /* R, G, and B channel compensation coefficient is set by LC_COEF (0x49) */
@@ -219,11 +231,11 @@
 #define DSP_CTRL1_BLACK_EN      0x02 /* Black defect auto correction ON/OFF */
 #define DSP_CTRL1_WHITE_EN      0x01 /* White defect auto correction ON/OFF */
 
-#define DSP_CTRL2               0x65 /* DSP Control Byte 2          */
-#define DSP_CTRL2_VDCW_EN       0x08 /* Vertical DCW enable         */
-#define DSP_CTRL2_HDCW_EN       0x04 /* Horizontal DCW enable       */
-#define DSP_CTRL2_VZOOM_EN      0x02 /* Vertical zoom out enable    */
-#define DSP_CTRL2_HZOOM_EN      0x01 /* Horizontal zoom out enable  */
+#define DSP_CTRL2               0x65 /* DSP Control Byte 2         */
+#define DSP_CTRL2_VDCW_EN       0x08 /* Vertical DCW enable        */
+#define DSP_CTRL2_HDCW_EN       0x04 /* Horizontal DCW enable      */
+#define DSP_CTRL2_VZOOM_EN      0x02 /* Vertical zoom out enable   */
+#define DSP_CTRL2_HZOOM_EN      0x01 /* Horizontal zoom out enable */
 
 #define DSP_CTRL3               0x66 /* DSP Control Byte 3                      */
 #define DSP_CTRL3_UV_EN         0x80 /* UV output sequence option               */
@@ -234,12 +246,10 @@
 #define DSP_CTRL3_INTRP_PWDN    0x01 /* Interpolation module power down control */
 #define DSP_CTRL3_SET_CBAR(r, x)    ((r&0xDF)|((x&1)<<5))
 
-
 #define DSP_CTRL4               0x67 /* DSP Control Byte 4          */
 #define DSP_CTRL4_YUV_RGB       0x00 /* Output selection YUV or RGB */
 #define DSP_CTRL4_RAW8          0x02 /* Output selection RAW8       */
 #define DSP_CTRL4_RAW10         0x03 /* Output selection RAW10      */
-
 
 #define AWB_BIAS                0x68 /* AWB BLC Level Clip */
 #define AWB_CTRL1               0x69 /* AWB Control 1 */
@@ -309,14 +319,14 @@
 #define FIFODLYM                0xA3 /* FIFO Manual Mode Delay Control */
 #define FIFODLYA                0xA4 /* FIFO Auto Mode Delay Control */
 
-#define SDE                     0xA6 /* Special Digital Effect Control  */
-#define SDE_NEGATIVE_EN         0x40 /* Negative image enable           */
-#define SDE_GRAYSCALE_EN        0x20 /* Gray scale image enable         */
-#define SDE_V_FIXED_EN          0x10 /* V fixed value enable            */
-#define SDE_U_FIXED_EN          0x08 /* U fixed value enable            */
-#define SDE_CONT_BRIGHT_EN      0x04 /* Contrast/Brightness enable      */
-#define SDE_SATURATION_EN       0x02 /* Saturation enable               */
-#define SDE_HUE_EN              0x01 /* Hue enable                      */
+#define SDE                     0xA6 /* Special Digital Effect Control */
+#define SDE_NEGATIVE_EN         0x40 /* Negative image enable          */
+#define SDE_GRAYSCALE_EN        0x20 /* Gray scale image enable        */
+#define SDE_V_FIXED_EN          0x10 /* V fixed value enable           */
+#define SDE_U_FIXED_EN          0x08 /* U fixed value enable           */
+#define SDE_CONT_BRIGHT_EN      0x04 /* Contrast/Brightness enable     */
+#define SDE_SATURATION_EN       0x02 /* Saturation enable              */
+#define SDE_HUE_EN              0x01 /* Hue enable                     */
 
 #define USAT                    0xA7 /* U Component Saturation Gain     */
 #define VSAT                    0xA8 /* V Component Saturation Gain     */
@@ -330,6 +340,6 @@
 #define DSPAUTO_EDGE_EN         0x20 /* Sharpness (edge enhancement) auto strength control */
 #define DSPAUTO_UV_EN           0x10 /* UV adjust auto slope control */
 #define DSPAUTO_SCAL0_EN        0x08 /* Auto scaling factor control (register SCAL0 (0xA0)) */
-#define DSPAUTO_SCAL1_EN        0x04 /* Auto scaling factor control (registers SCAL1 (0xA1 and SCAL2 (0xA2))*/
-#define SET_REG(reg, x)         (##reg_DEFAULT|x)
+#define DSPAUTO_SCAL1_EN        0x04 /* Auto scaling factor control (registers SCAL1 (0xA1 and SCAL2 (0xA2)) */
+
 #endif //__REG_REGS_H__

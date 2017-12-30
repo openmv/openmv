@@ -136,7 +136,8 @@ typedef struct _sensor {
     int  (*set_quality)         (sensor_t *sensor, int quality);
     int  (*set_colorbar)        (sensor_t *sensor, int enable);
     int  (*set_auto_gain)       (sensor_t *sensor, int enable, int gain);
-    int  (*set_auto_exposure)   (sensor_t *sensor, int enable, int exposure);
+    int  (*set_auto_exposure)   (sensor_t *sensor, int enable, int exposure_us);
+    int  (*get_exposure_us)     (sensor_t *sensor, int *exposure_us);
     int  (*set_auto_whitebal)   (sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain);
     int  (*set_hmirror)         (sensor_t *sensor, int enable);
     int  (*set_vflip)           (sensor_t *sensor, int enable);
@@ -203,7 +204,10 @@ int sensor_set_colorbar(int enable);
 int sensor_set_auto_gain(int enable, int gain);
 
 // Enable auto exposure or set value manually.
-int sensor_set_auto_exposure(int enable, int exposure);
+int sensor_set_auto_exposure(int enable, int exposure_us);
+
+// Get the exposure value.
+int sensor_get_exposure_us(int *get_exposure_us);
 
 // Enable auto white balance or set value manually.
 int sensor_set_auto_whitebal(int enable, int r_gain, int g_gain, int b_gain);

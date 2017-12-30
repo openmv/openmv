@@ -369,20 +369,83 @@ static int set_auto_gain(sensor_t *sensor, int enable, int gain)
     return ret;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure)
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
     uint8_t reg;
     int ret = cambus_readb(sensor->slv_addr, COM8, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, COM8, COM8_SET_AEC(reg, (enable != 0)));
 
-    // Set AEC on/off
-    reg = COM8_SET_AEC(reg, enable);
-    ret |= cambus_writeb(sensor->slv_addr, COM8, reg);
+    if ((enable == 0) && (exposure_us >= 0)) {
+        ret |= cambus_readb(sensor->slv_addr, COM7, &reg);
 
-    if (enable == 0 && exposure >= 0) {
-        // Set value manually.
-        ret |= cambus_writeb(sensor->slv_addr, AEC, (exposure&0xFF));
-        ret |= cambus_writeb(sensor->slv_addr, AECH, ((exposure>>8)&0xFF));
+        int t_line = (reg & COM7_RES_QVGA) ? (320 + 256) : (640 + 144);
+        int t_pclk = (COM7_GET_FMT(reg) == COM7_FMT_P_BAYER) ? 1 : 2;
+
+        ret |= cambus_readb(sensor->slv_addr, COM4, &reg);
+        int pll_mult = 0;
+
+        if (COM4_GET_PLL(reg) == COM4_PLL_BYPASS) pll_mult = 1;
+        if (COM4_GET_PLL(reg) == COM4_PLL_4x) pll_mult = 4;
+        if (COM4_GET_PLL(reg) == COM4_PLL_6x) pll_mult = 6;
+        if (COM4_GET_PLL(reg) == COM4_PLL_8x) pll_mult = 8;
+
+        ret |= cambus_readb(sensor->slv_addr, CLKRC, &reg);
+        int clk_rc = 0;
+
+        if (reg & CLKRC_NO_PRESCALE) {
+            clk_rc = 1;
+        } else {
+            clk_rc = ((reg & CLKRC_PRESCALER) + 1) * 2;
+        }
+
+        int exposure = IM_MAX(IM_MIN(((exposure_us*(((OMV_XCLK_FREQUENCY/clk_rc)*pll_mult)/1000000))/t_pclk)/t_line,0xFFFF),0x0000);
+
+        ret |= cambus_writeb(sensor->slv_addr, AEC, ((exposure >> 0) & 0xFF));
+        ret |= cambus_writeb(sensor->slv_addr, AECH, ((exposure >> 8) & 0xFF));
     }
+
+    return ret;
+}
+
+static int get_exposure_us(sensor_t *sensor, int *exposure_us)
+{
+    uint8_t reg, aec_l, aec_h;
+    int ret = cambus_readb(sensor->slv_addr, COM8, &reg);
+
+    if (reg & COM8_AEC_EN) {
+        ret |= cambus_writeb(sensor->slv_addr, COM8, COM8_SET_AEC(reg, 0));
+    }
+
+    ret |= cambus_readb(sensor->slv_addr, AEC, &aec_l);
+    ret |= cambus_readb(sensor->slv_addr, AECH, &aec_h);
+
+    if (reg & COM8_AEC_EN) {
+        ret |= cambus_writeb(sensor->slv_addr, COM8, COM8_SET_AEC(reg, 1));
+    }
+
+    ret |= cambus_readb(sensor->slv_addr, COM7, &reg);
+
+    int t_line = (reg & COM7_RES_QVGA) ? (320 + 256) : (640 + 144);
+    int t_pclk = (COM7_GET_FMT(reg) == COM7_FMT_P_BAYER) ? 1 : 2;
+
+    ret |= cambus_readb(sensor->slv_addr, COM4, &reg);
+    int pll_mult = 0;
+
+    if (COM4_GET_PLL(reg) == COM4_PLL_BYPASS) pll_mult = 1;
+    if (COM4_GET_PLL(reg) == COM4_PLL_4x) pll_mult = 4;
+    if (COM4_GET_PLL(reg) == COM4_PLL_6x) pll_mult = 6;
+    if (COM4_GET_PLL(reg) == COM4_PLL_8x) pll_mult = 8;
+
+    ret |= cambus_readb(sensor->slv_addr, CLKRC, &reg);
+    int clk_rc = 0;
+
+    if (reg & CLKRC_NO_PRESCALE) {
+        clk_rc = 1;
+    } else {
+        clk_rc = ((reg & CLKRC_PRESCALER) + 1) * 2;
+    }
+
+    *exposure_us = (((aec_h<<8)+(aec_l<<0))*t_line*t_pclk)/(((OMV_XCLK_FREQUENCY/clk_rc)*pll_mult)/1000000);
 
     return ret;
 }
@@ -457,7 +520,6 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return ret;
 }
 
-
 int ov7725_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
@@ -476,6 +538,7 @@ int ov7725_init(sensor_t *sensor)
     sensor->set_colorbar        = set_colorbar;
     sensor->set_auto_gain       = set_auto_gain;
     sensor->set_auto_exposure   = set_auto_exposure;
+    sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;

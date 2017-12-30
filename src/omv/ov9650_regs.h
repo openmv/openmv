@@ -5,8 +5,10 @@
  *
  * OV9650 register definitions.
  */
+
 #ifndef __REG_REGS_H__
 #define __REG_REGS_H__
+
 #define REG_GAIN       0x00
 #define REG_BLUE       0x01
 #define REG_RED        0x02
@@ -110,7 +112,9 @@
 #define REG_COM26      0xA5
 #define REG_GGAIN      0xA6
 #define REG_VGAST      0xA7
+
 /* register bits */
+
 #define REG_COM1_QQCIF   (1<<5)
 #define REG_COM1_QQVGA   (1<<5)
 #define REG_COM1_SKIP2   (1<<2)
@@ -125,4 +129,7 @@
 #define REG_COM8_AEC     (1<<0)
 #define REG_MVFP_HMIRROR (1<<5)
 #define REG_MVFP_VFLIP   (1<<4)
+#define REG_CLKRC_DOUBLE (1<<8)
+#define REG_CLKRC_DIVIDER_MASK (0x3F)
+
 #endif //__REG_REGS_H__
