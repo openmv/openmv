@@ -100,6 +100,7 @@
 #define MT9V034_HORIZONTAL_BLANKING_A           (0x05)
 #define MT9V034_VERTICAL_BLANKING_A             (0x06)
 #define MT9V034_COARSE_SHUTTER_WIDTH_TOTAL_A    (0x0B)
+#define MT9V034_ANALOG_GAIN_CONTROL             (0x35)
 #define MT9V034_FINE_SHUTTER_WIDTH_TOTAL_A      (0xD5)
 
 static int reset(sensor_t *sensor)
@@ -201,16 +202,37 @@ static int set_colorbar(sensor_t *sensor, int enable)
     return 0;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, int gain)
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db)
 {
-    return 0;
+    uint16_t reg, agc_gain;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, (reg & (~MT9V034_AGC_ENABLE)) | ((enable != 0) ? MT9V034_AGC_ENABLE : 0));
+
+    if ((enable == 0) && (gain_db >= 0)) {
+        int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0) * fast_log(10.0)) * 16.0), 127), 0);
+
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, &agc_gain);
+        ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, (agc_gain & 0xFF80) | gain);
+    }
+
+    return ret;
+}
+
+static int get_gain_db(sensor_t *sensor, float *gain_db)
+{
+    uint16_t gain;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, &gain);
+
+    *gain_db = 20.0 * (fast_log((gain & 0x7F) / 16.0) / fast_log(10.0));
+
+    return ret;
 }
 
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
     uint16_t reg, row_limit_0, row_limit_1, row_time_0, row_time_1;
     int ret = cambus_readw(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, (reg & (~MT9V034_AEC_ENABLE)) | ((enable != 0) & MT9V034_AEC_ENABLE));
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, (reg & (~MT9V034_AEC_ENABLE)) | ((enable != 0) ? MT9V034_AEC_ENABLE : 0));
 
     if ((enable == 0) && (exposure_us >= 0)) {
         ret |= cambus_readw(sensor->slv_addr, MT9V034_WINDOW_HEIGHT_A, &row_limit_0);
@@ -285,6 +307,7 @@ int mt9v034_init(sensor_t *sensor)
     sensor->set_gainceiling     = set_gainceiling;
     sensor->set_colorbar        = set_colorbar;
     sensor->set_auto_gain       = set_auto_gain;
+    sensor->get_gain_db         = get_gain_db;
     sensor->set_auto_exposure   = set_auto_exposure;
     sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;

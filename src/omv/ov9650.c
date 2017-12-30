@@ -328,22 +328,60 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
     return 0;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, int gain)
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db)
 {
-   uint8_t val;
-   cambus_readb(sensor->slv_addr, REG_COM8, &val);
+    uint8_t reg;
+    int ret = cambus_readb(sensor->slv_addr, REG_COM8, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, REG_COM8, (reg & (~REG_COM8_AGC)) | ((enable != 0) ? REG_COM8_AGC : 0));
 
-   cambus_writeb(sensor->slv_addr, REG_COM8,
-              enable ? (val | REG_COM8_AGC) : (val & ~REG_COM8_AGC));
+    if ((enable == 0) && (gain_db >= 0)) {
+        float gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)), 128.0), 0.0);
 
-   return 0;
+        int gain_hi = 63;
+        for (; gain_hi >= 0; gain_hi--) {
+            if ((gain / (gain_hi + 1.0)) >= 1.0) break;
+        }
+
+        int gain_lo = 15;
+        for (; gain_lo >= 0; gain_lo--) {
+            if (((gain / (gain_hi + 1.0)) / (1.0 + (gain_lo / 16.0))) >= 1.0) break;
+        }
+
+        ret |= cambus_writeb(sensor->slv_addr, REG_GAIN, ((gain_hi & 0x0F) << 4) | (gain_lo << 0));
+        ret |= cambus_readb(sensor->slv_addr, REG_VREF, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, REG_VREF, ((gain_hi & 0x30) << 2) | (reg & 0x3F));
+    }
+
+    return ret;
+}
+
+static int get_gain_db(sensor_t *sensor, float *gain_db)
+{
+    uint8_t reg, gain_lo, gain_hi;
+    int ret = cambus_readb(sensor->slv_addr, REG_COM8, &reg);
+
+    if (reg & REG_COM8_AGC) {
+        ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg & (~REG_COM8_AGC));
+    }
+
+    ret |= cambus_readb(sensor->slv_addr, REG_GAIN, &gain_lo);
+    ret |= cambus_readb(sensor->slv_addr, REG_VREF, &gain_hi);
+
+    if (reg & REG_COM8_AGC) {
+        ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg | REG_COM8_AGC);
+    }
+
+    int gain = ((gain_hi & 0xC0) << 8) | gain_lo;
+    *gain_db = 20.0 * (fast_log((((gain >> 4) & 0x3F) + 1.0) * (1.0 + (((gain >> 0) & 0xF) / 16.0))) / fast_log(10.0));
+
+    return ret;
 }
 
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
     uint8_t reg;
     int ret = cambus_readb(sensor->slv_addr, REG_COM8, &reg);
-    ret |= cambus_writeb(sensor->slv_addr, REG_COM8, (reg & (~REG_COM8_AEC)) | ((enable != 0) & REG_COM8_AEC));
+    ret |= cambus_writeb(sensor->slv_addr, REG_COM8, (reg & (~REG_COM8_AEC)) | ((enable != 0) ? REG_COM8_AEC : 0));
 
     if ((enable == 0) && (exposure_us >= 0)) {
         ret |= cambus_readb(sensor->slv_addr, REG_COM7, &reg);
@@ -452,6 +490,7 @@ int ov9650_init(sensor_t *sensor)
     sensor->set_brightness      = set_brightness;
     sensor->set_gainceiling     = set_gainceiling;
     sensor->set_auto_gain       = set_auto_gain;
+    sensor->get_gain_db         = get_gain_db;
     sensor->set_auto_exposure   = set_auto_exposure;
     sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;
