@@ -272,12 +272,20 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gai
 
 static int set_hmirror(sensor_t *sensor, int enable)
 {
-    return 0;
+    uint16_t read_mode;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, (read_mode & (~MT9V034_READ_MODE_COL_FLIP)) | ((enable != 0) ? MT9V034_READ_MODE_COL_FLIP : 0));
+
+    return ret;
 }
 
 static int set_vflip(sensor_t *sensor, int enable)
 {
-    return 0;
+    uint16_t read_mode;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, (read_mode & (~MT9V034_READ_MODE_ROW_FLIP)) | ((enable != 0) ? MT9V034_READ_MODE_ROW_FLIP : 0));
+
+    return ret;
 }
 
 static int set_special_effect(sensor_t *sensor, sde_t sde)

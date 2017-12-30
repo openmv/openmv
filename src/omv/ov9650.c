@@ -460,23 +460,19 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gai
 static int set_hmirror(sensor_t *sensor, int enable)
 {
    uint8_t val;
-   cambus_readb(sensor->slv_addr, REG_MVFP, &val);
+   int ret = cambus_readb(sensor->slv_addr, REG_MVFP, &val);
+   ret |= cambus_writeb(sensor->slv_addr, REG_MVFP, enable ? (val | REG_MVFP_HMIRROR) : (val & (~REG_MVFP_HMIRROR)));
 
-   cambus_writeb(sensor->slv_addr, REG_MVFP,
-              enable ? (val | REG_MVFP_HMIRROR) : (val & ~REG_MVFP_HMIRROR));
-
-   return 0;
+   return ret;
 }
 
 static int set_vflip(sensor_t *sensor, int enable)
 {
    uint8_t val;
-   cambus_readb(sensor->slv_addr, REG_MVFP, &val);
+   int ret = cambus_readb(sensor->slv_addr, REG_MVFP, &val);
+   ret |= cambus_writeb(sensor->slv_addr, REG_MVFP, enable ? (val | REG_MVFP_VFLIP) : (val & (~REG_MVFP_VFLIP)));
 
-   cambus_writeb(sensor->slv_addr, REG_MVFP,
-              enable ? (val | REG_MVFP_VFLIP) : (val & ~REG_MVFP_VFLIP));
-
-   return 0;
+   return ret;
 }
 
 int ov9650_init(sensor_t *sensor)

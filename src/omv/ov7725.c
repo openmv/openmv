@@ -500,22 +500,18 @@ static int set_hmirror(sensor_t *sensor, int enable)
 {
     uint8_t reg;
     int ret = cambus_readb(sensor->slv_addr, COM3, &reg);
-    // Set mirror on/off
-    reg = COM3_SET_MIRROR(reg, enable);
+    ret |= cambus_writeb(sensor->slv_addr, COM3, COM3_SET_MIRROR(reg, enable)) ;
 
-    // Write back register COM3
-    return cambus_writeb(sensor->slv_addr, COM3, reg) | ret;
+    return ret;
 }
 
 static int set_vflip(sensor_t *sensor, int enable)
 {
     uint8_t reg;
     int ret = cambus_readb(sensor->slv_addr, COM3, &reg);
-    // Set mirror on/off
-    reg = COM3_SET_FLIP(reg, enable);
+    ret |= cambus_writeb(sensor->slv_addr, COM3, COM3_SET_FLIP(reg, enable));
 
-    // Write back register COM3
-    return cambus_writeb(sensor->slv_addr, COM3, reg) | ret;
+    return ret;
 }
 
 static int set_special_effect(sensor_t *sensor, sde_t sde)
