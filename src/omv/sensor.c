@@ -525,11 +525,22 @@ int sensor_set_colorbar(int enable)
     return 0;
 }
 
-int sensor_set_auto_gain(int enable, int gain)
+int sensor_set_auto_gain(int enable, float gain_db)
 {
     /* call the sensor specific function */
     if (sensor.set_auto_gain == NULL
-        || sensor.set_auto_gain(&sensor, enable, gain) != 0) {
+        || sensor.set_auto_gain(&sensor, enable, gain_db) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
+
+int sensor_get_gain_db(float *gain_db)
+{
+    /* call the sensor specific function */
+    if (sensor.get_gain_db == NULL
+        || sensor.get_gain_db(&sensor, gain_db) != 0) {
         /* operation not supported */
         return -1;
     }

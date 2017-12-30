@@ -602,22 +602,53 @@ static int set_colorbar(sensor_t *sensor, int enable)
     return cambus_writeb(sensor->slv_addr, COM7, reg) | ret;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, int gain)
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db)
 {
     uint8_t reg;
-    /* Switch to SENSOR register bank */
-    int ret = cambus_writeb(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
-
-    /* Update COM8 */
+    int ret = cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg | BANK_SEL_SENSOR);
     ret |= cambus_readb(sensor->slv_addr, COM8, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, COM8, (reg & (~COM8_AGC_EN)) | ((enable != 0) ? COM8_AGC_EN : 0));
 
-    if (enable) {
-        reg |= COM8_AGC_EN;
-    } else {
-        reg &= ~COM8_AGC_EN;
+    if ((enable == 0) && (gain_db >= 0)) {
+        float gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)), 32.0), 0.0);
+
+        int gain_hi = 15;
+        for (; gain_hi >= 0; gain_hi--) {
+            if ((gain / (gain_hi + 1.0)) >= 1.0) break;
+        }
+
+        int gain_lo = 15;
+        for (; gain_lo >= 0; gain_lo--) {
+            if (((gain / (gain_hi + 1.0)) / (1.0 + (gain_lo / 16.0))) >= 1.0) break;
+        }
+
+        ret |= cambus_writeb(sensor->slv_addr, GAIN, (gain_hi << 4) | (gain_lo << 0));
     }
 
-    return cambus_writeb(sensor->slv_addr, COM8, reg) | ret;
+    return ret;
+}
+
+static int get_gain_db(sensor_t *sensor, float *gain_db)
+{
+    uint8_t reg, gain;
+    int ret = cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg | BANK_SEL_SENSOR);
+    ret |= cambus_readb(sensor->slv_addr, COM8, &reg);
+
+    if (reg & COM8_AGC_EN) {
+        ret |= cambus_writeb(sensor->slv_addr, COM8, reg & (~COM8_AGC_EN));
+    }
+
+    ret |= cambus_readb(sensor->slv_addr, GAIN, &gain);
+
+    if (reg & COM8_AGC_EN) {
+        ret |= cambus_writeb(sensor->slv_addr, COM8, reg | COM8_AGC_EN);
+    }
+
+    *gain_db = 20.0 * (fast_log((((gain >> 4) & 0xF) + 1.0) * (1.0 + (((gain >> 0) & 0xF) / 16.0))) / fast_log(10.0));
+
+    return ret;
 }
 
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
@@ -782,6 +813,7 @@ int ov2640_init(sensor_t *sensor)
     sensor->set_quality         = set_quality;
     sensor->set_colorbar        = set_colorbar;
     sensor->set_auto_gain       = set_auto_gain;
+    sensor->get_gain_db         = get_gain_db;
     sensor->set_auto_exposure   = set_auto_exposure;
     sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;

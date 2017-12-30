@@ -3,6 +3,18 @@
 # This example shows off how to cotnrol the camera sensor's
 # exposure manually versus letting auto exposure control run.
 
+# What's the difference between gain and exposure control?
+#
+# Well, by increasing the exposure time for the image you're getting more
+# light on the camera. This gives you the best signal to noise ratio. You
+# in general always want to increase the expsoure time... except, when you
+# increase the exposure time you decrease the maximum possible frame rate
+# and if anything moves in the image it will start to blur more with a
+# higher exposure time. Gain control allows you to increase the output per
+# pixel using analog and digital multipliers... however, it also amplifies
+# noise. So, it's best to let the exposure increase as much as possible
+# and then use gain control to make up any remaining ground.
+
 import sensor, image, time
 
 # Change this value to adjust the exposure. Try 10.0/0.1/etc.
