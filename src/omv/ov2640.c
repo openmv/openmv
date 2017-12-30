@@ -638,7 +638,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 
         ret |= cambus_readb(sensor->slv_addr, CLKRC, &reg);
         int pll_mult = (reg & CLKRC_DOUBLE) ? 2 : 1;
-        int clk_rc = (reg & CLKRC_DIVIDER_MASK) + 1;
+        int clk_rc = ((reg & CLKRC_DIVIDER_MASK) + 1) * 2;
 
         ret |= cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
         ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg & (~BANK_SEL_SENSOR));
@@ -695,7 +695,7 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 
     ret |= cambus_readb(sensor->slv_addr, CLKRC, &reg);
     int pll_mult = (reg & CLKRC_DOUBLE) ? 2 : 1;
-    int clk_rc = (reg & CLKRC_DIVIDER_MASK) + 1;
+    int clk_rc = ((reg & CLKRC_DIVIDER_MASK) + 1) * 2;
 
     ret |= cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
     ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg & (~BANK_SEL_SENSOR));
