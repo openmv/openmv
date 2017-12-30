@@ -14,6 +14,7 @@
 #include "ov9650.h"
 #include "systick.h"
 #include "ov9650_regs.h"
+#include "omv_boardconfig.h"
 
 #define NUM_BR_LEVELS       7
 
@@ -320,23 +321,6 @@ static int set_brightness(sensor_t *sensor, int level)
     return 0;
 }
 
-//static int set_exposure(sensor_t *sensor, int exposure)
-//{
-//   uint8_t val;
-//   val = cambus_readb(sensor->slv_addr, REG_COM1);
-
-//   /* exposure [1:0] */
-//   cambus_writeb(sensor->slv_addr, REG_COM1, val | (exposure&0x03));
-
-//   /* exposure [9:2] */
-//   cambus_writeb(sensor->slv_addr, REG_AECH, ((exposure>>2)&0xFF));
-
-//   /* exposure [15:10] */
-//   cambus_writeb(sensor->slv_addr, REG_AECHM, ((exposure>>10)&0x3F));
-
-//   return 0;
-//}
-
 static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 {
     /* Write gain ceiling register */
@@ -355,15 +339,73 @@ static int set_auto_gain(sensor_t *sensor, int enable, int gain)
    return 0;
 }
 
-static int set_auto_exposure(sensor_t *sensor, int enable, int exposure)
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
-   uint8_t val;
-   cambus_readb(sensor->slv_addr, REG_COM8, &val);
+    uint8_t reg;
+    int ret = cambus_readb(sensor->slv_addr, REG_COM8, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, REG_COM8, (reg & (~REG_COM8_AEC)) | ((enable != 0) & REG_COM8_AEC));
 
-   cambus_writeb(sensor->slv_addr, REG_COM8,
-              enable ? (val | REG_COM8_AEC) : (val & ~REG_COM8_AEC));
+    if ((enable == 0) && (exposure_us >= 0)) {
+        ret |= cambus_readb(sensor->slv_addr, REG_COM7, &reg);
+        int t_line = 0, t_pclk = (reg & REG_COM7_RGB) ? 2 : 1;
+    
+        if (reg & REG_COM7_VGA) t_line = 640 + 160;
+        if (reg & REG_COM7_CIF) t_line = 352 + 168;
+        if (reg & REG_COM7_QVGA) t_line = 320 + 80;
+        if (reg & REG_COM7_QCIF) t_line = 176 + 84;
+    
+        ret |= cambus_readb(sensor->slv_addr, REG_CLKRC, &reg);
+        int pll_mult = (reg & REG_CLKRC_DOUBLE) ? 2 : 1;
+        int clk_rc = ((reg & REG_CLKRC_DIVIDER_MASK) + 1) * 2;
 
-   return 0;
+        int exposure = IM_MAX(IM_MIN(((exposure_us*(((OMV_XCLK_FREQUENCY/clk_rc)*pll_mult)/1000000))/t_pclk)/t_line,0xFFFF),0x0000);
+
+        ret |= cambus_readb(sensor->slv_addr, REG_COM1, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, REG_COM1, (reg & 0xFC) | ((exposure >> 0) & 0x3));
+
+        ret |= cambus_readb(sensor->slv_addr, REG_AECH, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, REG_AECH, (reg & 0x00) | ((exposure >> 2) & 0xFF));
+
+        ret |= cambus_readb(sensor->slv_addr, REG_AECHM, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, REG_AECHM, (reg & 0xC0) | ((exposure >> 10) & 0x3F));
+    }
+
+    return ret;
+}
+
+static int get_exposure_us(sensor_t *sensor, int *exposure_us)
+{
+    uint8_t reg, aec_10, aec_92, aec_1510;
+    int ret = cambus_readb(sensor->slv_addr, REG_COM8, &reg);
+
+    if (reg & REG_COM8_AEC) {
+        ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg & (~REG_COM8_AEC));
+    }
+
+    ret |= cambus_readb(sensor->slv_addr, REG_COM1, &aec_10);
+    ret |= cambus_readb(sensor->slv_addr, REG_AECH, &aec_92);
+    ret |= cambus_readb(sensor->slv_addr, REG_AECHM, &aec_1510);
+
+    if (reg & REG_COM8_AEC) {
+        ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg | REG_COM8_AEC);
+    }
+
+    ret |= cambus_readb(sensor->slv_addr, REG_COM7, &reg);
+    int t_line = 0, t_pclk = (reg & REG_COM7_RGB) ? 2 : 1;
+
+    if (reg & REG_COM7_VGA) t_line = 640 + 160;
+    if (reg & REG_COM7_CIF) t_line = 352 + 168;
+    if (reg & REG_COM7_QVGA) t_line = 320 + 80;
+    if (reg & REG_COM7_QCIF) t_line = 176 + 84;
+
+    ret |= cambus_readb(sensor->slv_addr, REG_CLKRC, &reg);
+    int pll_mult = (reg & REG_CLKRC_DOUBLE) ? 2 : 1;
+    int clk_rc = ((reg & REG_CLKRC_DIVIDER_MASK) + 1) * 2;
+
+    uint16_t exposure = ((aec_1510 & 0x3F) << 10) + ((aec_92 & 0xFF) << 2) + ((aec_10 & 0x3) << 0);
+    *exposure_us = (exposure*t_line*t_pclk)/(((OMV_XCLK_FREQUENCY/clk_rc)*pll_mult)/1000000);
+
+    return ret;
 }
 
 static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain)
@@ -411,6 +453,7 @@ int ov9650_init(sensor_t *sensor)
     sensor->set_gainceiling     = set_gainceiling;
     sensor->set_auto_gain       = set_auto_gain;
     sensor->set_auto_exposure   = set_auto_exposure;
+    sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;

@@ -129,5 +129,7 @@
 #define REG_COM8_AEC     (1<<0)
 #define REG_MVFP_HMIRROR (1<<5)
 #define REG_MVFP_VFLIP   (1<<4)
+#define REG_CLKRC_DOUBLE (1<<8)
+#define REG_CLKRC_DIVIDER_MASK (0x3F)
 
 #endif //__REG_REGS_H__
