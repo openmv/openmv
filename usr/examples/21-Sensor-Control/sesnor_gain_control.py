@@ -18,7 +18,7 @@
 import sensor, image, time
 
 # Change this value to adjust the gain. Try 10.0/0/0.1/etc.
-GAIN_SCALE = 1.00
+GAIN_SCALE = 1.0
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
