@@ -38,12 +38,8 @@ sensor.set_auto_gain(True, gain_db_ceiling = 16.0) # Default gain.
 sensor.skip_frames(time = 2000)     # Wait for settings take effect.
 clock = time.clock()                # Create a clock object to track the FPS.
 
-# Note! You can't read the gain/exposure values in the loop while AGC/AEC is on
-# since we have to disable the sensor auto control in order to read the values
-# (they are spread accross registers and can't be read atomically if the control is on).
-
 while(True):
     clock.tick()                    # Update the FPS clock.
     img = sensor.snapshot()         # Take a picture and return the image.
-    print(clock.fps())              # Note: OpenMV Cam runs about half as fast when connected
-                                    # to the IDE. The FPS should increase once disconnected.
+    print("FPS %f, Gain %f dB, Exposure %d us" % \
+        (clock.fps(), sensor.get_gain_db(), sensor.get_exposure_us()))

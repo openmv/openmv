@@ -351,7 +351,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
         ret |= cambus_readb(sensor->slv_addr, REG_VREF, &reg);
         ret |= cambus_writeb(sensor->slv_addr, REG_VREF, ((gain_hi & 0x30) << 2) | (reg & 0x3F));
     } else if ((enable != 0) && (gain_db_ceiling >= 0)) {
-        float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 128.0), 1.0);
+        float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 128.0), 2.0);
 
         ret |= cambus_readb(sensor->slv_addr, REG_COM9, &reg);
         ret |= cambus_writeb(sensor->slv_addr, REG_COM9, (reg & 0x8F) | ((fast_ceilf(fast_log2(gain_ceiling)) - 1) << 4));
@@ -365,18 +365,22 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
     uint8_t reg, gain_lo, gain_hi;
     int ret = cambus_readb(sensor->slv_addr, REG_COM8, &reg);
 
-    if (reg & REG_COM8_AGC) {
-        ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg & (~REG_COM8_AGC));
-    }
+    // DISABLED
+    // if (reg & REG_COM8_AGC) {
+    //     ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg & (~REG_COM8_AGC));
+    // }
+    // DISABLED
 
     ret |= cambus_readb(sensor->slv_addr, REG_GAIN, &gain_lo);
     ret |= cambus_readb(sensor->slv_addr, REG_VREF, &gain_hi);
 
-    if (reg & REG_COM8_AGC) {
-        ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg | REG_COM8_AGC);
-    }
+    // DISABLED
+    // if (reg & REG_COM8_AGC) {
+    //     ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg | REG_COM8_AGC);
+    // }
+    // DISABLED
 
-    int gain = ((gain_hi & 0xC0) << 8) | gain_lo;
+    int gain = ((gain_hi & 0xC0) << 2) | gain_lo;
     *gain_db = 20.0 * (fast_log((((gain >> 4) & 0x3F) + 1.0) * (1.0 + (((gain >> 0) & 0xF) / 16.0))) / fast_log(10.0));
 
     return ret;
@@ -421,17 +425,21 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     uint8_t reg, aec_10, aec_92, aec_1510;
     int ret = cambus_readb(sensor->slv_addr, REG_COM8, &reg);
 
-    if (reg & REG_COM8_AEC) {
-        ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg & (~REG_COM8_AEC));
-    }
+    // DISABLED
+    // if (reg & REG_COM8_AEC) {
+    //     ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg & (~REG_COM8_AEC));
+    // }
+    // DISABLED
 
     ret |= cambus_readb(sensor->slv_addr, REG_COM1, &aec_10);
     ret |= cambus_readb(sensor->slv_addr, REG_AECH, &aec_92);
     ret |= cambus_readb(sensor->slv_addr, REG_AECHM, &aec_1510);
 
-    if (reg & REG_COM8_AEC) {
-        ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg | REG_COM8_AEC);
-    }
+    // DISABLED
+    // if (reg & REG_COM8_AEC) {
+    //     ret |= cambus_writeb(sensor->slv_addr, REG_COM8, reg | REG_COM8_AEC);
+    // }
+    // DISABLED
 
     ret |= cambus_readb(sensor->slv_addr, REG_COM7, &reg);
     int t_line = 0, t_pclk = (reg & REG_COM7_RGB) ? 2 : 1;
