@@ -352,7 +352,7 @@ static int set_colorbar(sensor_t *sensor, int enable)
     return cambus_writeb(sensor->slv_addr, DSP_CTRL3, reg) | ret;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, float gain_db)
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
 {
     uint8_t reg;
     int ret = cambus_readb(sensor->slv_addr, COM8, &reg);
@@ -372,6 +372,11 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db)
         }
 
         ret |= cambus_writeb(sensor->slv_addr, GAIN, (gain_hi << 4) | (gain_lo << 0));
+    } else if ((enable != 0) && (gain_db_ceiling >= 0)) {
+        float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 32.0), 1.0);
+
+        ret |= cambus_readb(sensor->slv_addr, COM9, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, COM9, (reg & 0x8F) | ((fast_ceilf(fast_log2(gain_ceiling)) - 1) << 4));
     }
 
     return ret;

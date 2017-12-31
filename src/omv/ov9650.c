@@ -328,7 +328,7 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
     return 0;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, float gain_db)
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
 {
     uint8_t reg;
     int ret = cambus_readb(sensor->slv_addr, REG_COM8, &reg);
@@ -350,6 +350,11 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db)
         ret |= cambus_writeb(sensor->slv_addr, REG_GAIN, ((gain_hi & 0x0F) << 4) | (gain_lo << 0));
         ret |= cambus_readb(sensor->slv_addr, REG_VREF, &reg);
         ret |= cambus_writeb(sensor->slv_addr, REG_VREF, ((gain_hi & 0x30) << 2) | (reg & 0x3F));
+    } else if ((enable != 0) && (gain_db_ceiling >= 0)) {
+        float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 128.0), 1.0);
+
+        ret |= cambus_readb(sensor->slv_addr, REG_COM9, &reg);
+        ret |= cambus_writeb(sensor->slv_addr, REG_COM9, (reg & 0x8F) | ((fast_ceilf(fast_log2(gain_ceiling)) - 1) << 4));
     }
 
     return ret;

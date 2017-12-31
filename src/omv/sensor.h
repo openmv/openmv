@@ -135,7 +135,7 @@ typedef struct _sensor {
     int  (*set_gainceiling)     (sensor_t *sensor, gainceiling_t gainceiling);
     int  (*set_quality)         (sensor_t *sensor, int quality);
     int  (*set_colorbar)        (sensor_t *sensor, int enable);
-    int  (*set_auto_gain)       (sensor_t *sensor, int enable, float gain_db);
+    int  (*set_auto_gain)       (sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling);
     int  (*get_gain_db)         (sensor_t *sensor, float *gain_db);
     int  (*set_auto_exposure)   (sensor_t *sensor, int enable, int exposure_us);
     int  (*get_exposure_us)     (sensor_t *sensor, int *exposure_us);
@@ -202,7 +202,7 @@ int sensor_set_quality(int qs);
 int sensor_set_colorbar(int enable);
 
 // Enable auto gain or set value manually.
-int sensor_set_auto_gain(int enable, float gain_db);
+int sensor_set_auto_gain(int enable, float gain_db, float gain_db_ceiling);
 
 // Get the gain value.
 int sensor_get_gain_db(float *gain_db);

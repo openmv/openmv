@@ -101,6 +101,7 @@
 #define MT9V034_VERTICAL_BLANKING_A             (0x06)
 #define MT9V034_COARSE_SHUTTER_WIDTH_TOTAL_A    (0x0B)
 #define MT9V034_ANALOG_GAIN_CONTROL             (0x35)
+#define MT9V034_MAX_GAIN                        (0xAB)
 #define MT9V034_FINE_SHUTTER_WIDTH_TOTAL_A      (0xD5)
 
 static int reset(sensor_t *sensor)
@@ -202,17 +203,22 @@ static int set_colorbar(sensor_t *sensor, int enable)
     return 0;
 }
 
-static int set_auto_gain(sensor_t *sensor, int enable, float gain_db)
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
 {
-    uint16_t reg, agc_gain;
+    uint16_t reg;
     int ret = cambus_readw(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
     ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, (reg & (~MT9V034_AGC_ENABLE)) | ((enable != 0) ? MT9V034_AGC_ENABLE : 0));
 
     if ((enable == 0) && (gain_db >= 0)) {
         int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0) * fast_log(10.0)) * 16.0), 127), 0);
 
-        ret |= cambus_readw(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, &agc_gain);
-        ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, (agc_gain & 0xFF80) | gain);
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, &reg);
+        ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, (reg & 0xFF80) | gain);
+    } else if ((enable != 0) && (gain_db_ceiling >= 0)) {
+        int gain_ceiling = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)) * 16.0), 127), 16);
+
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_MAX_GAIN, &reg);
+        ret |= cambus_writew(sensor->slv_addr, MT9V034_MAX_GAIN, (reg & 0xFF80) | gain_ceiling);
     }
 
     return ret;
