@@ -207,7 +207,8 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
 {
     uint16_t reg;
     int ret = cambus_readw(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, (reg & (~MT9V034_AGC_ENABLE)) | ((enable != 0) ? MT9V034_AGC_ENABLE : 0));
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE,
+            (reg & (~MT9V034_AGC_ENABLE)) | ((enable != 0) ? MT9V034_AGC_ENABLE : 0));
 
     if ((enable == 0) && (gain_db >= 0)) {
         int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0) * fast_log(10.0)) * 16.0), 127), 0);
@@ -238,7 +239,8 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
     uint16_t reg, row_limit_0, row_limit_1, row_time_0, row_time_1;
     int ret = cambus_readw(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, (reg & (~MT9V034_AEC_ENABLE)) | ((enable != 0) ? MT9V034_AEC_ENABLE : 0));
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE,
+            (reg & (~MT9V034_AEC_ENABLE)) | ((enable != 0) ? MT9V034_AEC_ENABLE : 0));
 
     if ((enable == 0) && (exposure_us >= 0)) {
         ret |= cambus_readw(sensor->slv_addr, MT9V034_WINDOW_HEIGHT_A, &row_limit_0);
@@ -280,7 +282,8 @@ static int set_hmirror(sensor_t *sensor, int enable)
 {
     uint16_t read_mode;
     int ret = cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, (read_mode & (~MT9V034_READ_MODE_COL_FLIP)) | ((enable != 0) ? MT9V034_READ_MODE_COL_FLIP : 0));
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL,
+            (read_mode & (~MT9V034_READ_MODE_COL_FLIP)) | ((enable != 0) ? MT9V034_READ_MODE_COL_FLIP : 0));
 
     return ret;
 }
@@ -289,7 +292,8 @@ static int set_vflip(sensor_t *sensor, int enable)
 {
     uint16_t read_mode;
     int ret = cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, (read_mode & (~MT9V034_READ_MODE_ROW_FLIP)) | ((enable != 0) ? MT9V034_READ_MODE_ROW_FLIP : 0));
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL,
+            (read_mode & (~MT9V034_READ_MODE_ROW_FLIP)) | ((enable != 0) ? MT9V034_READ_MODE_ROW_FLIP : 0));
 
     return ret;
 }
