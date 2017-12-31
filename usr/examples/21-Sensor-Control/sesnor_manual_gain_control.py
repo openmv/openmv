@@ -1,4 +1,4 @@
-# Sensor Gain Control
+# Sensor Manual Gain Control
 #
 # This example shows off how to control the camera sensor's
 # gain manually versus letting auto gain control run.

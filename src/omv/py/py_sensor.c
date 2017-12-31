@@ -345,8 +345,10 @@ static mp_obj_t py_sensor_set_colorbar(mp_obj_t enable) {
 }
 
 static mp_obj_t py_sensor_set_auto_gain(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
+    int enable = mp_obj_get_int(args[0]);
     float gain_db = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), -1);
-    if (sensor_set_auto_gain(mp_obj_get_int(args[0]), gain_db) != 0) {
+    float gain_db_ceiling = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db_ceiling), -1);
+    if (sensor_set_auto_gain(enable, gain_db, gain_db_ceiling) != 0) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
     }
     return mp_const_none;
