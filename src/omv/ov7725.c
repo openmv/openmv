@@ -358,7 +358,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     int ret = cambus_readb(sensor->slv_addr, COM8, &reg);
     ret |= cambus_writeb(sensor->slv_addr, COM8, COM8_SET_AGC(reg, (enable != 0)));
 
-    if ((enable == 0) && (gain_db >= 0)) {
+    if ((enable == 0) && (!isnanf(gain_db))) {
         float gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)), 32.0), 0.0);
 
         int gain_hi = 15;
@@ -372,7 +372,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
         }
 
         ret |= cambus_writeb(sensor->slv_addr, GAIN, (gain_hi << 4) | (gain_lo << 0));
-    } else if ((enable != 0) && (gain_db_ceiling >= 0)) {
+    } else if ((enable != 0) && (!isnanf(gain_db_ceiling))) {
         float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 32.0), 2.0);
 
         ret |= cambus_readb(sensor->slv_addr, COM9, &reg);
@@ -491,20 +491,55 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     return ret;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain)
+static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
 {
     uint8_t reg;
     int ret = cambus_readb(sensor->slv_addr, COM8, &reg);
-    // Set AWB on/off
-    reg = COM8_SET_AWB(reg, enable);
-    ret |= cambus_writeb(sensor->slv_addr, COM8, reg);
+    ret |= cambus_writeb(sensor->slv_addr, COM8, COM8_SET_AWB(reg, (enable != 0)));
 
-    if (enable == 0 && r_gain >= 0 && g_gain >=0 && b_gain >=0) {
-        // Set value manually.
+    if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))) {
+        ret |= cambus_readb(sensor->slv_addr, AWB_CTRL1, &reg);
+        float gain_div = (reg & 0x2) ? 64.0 : 128.0;
+
+        int r_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((r_gain_db / 20.0) * fast_log(10.0)) * gain_div), 255), 0);
+        int g_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((g_gain_db / 20.0) * fast_log(10.0)) * gain_div), 255), 0);
+        int b_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((b_gain_db / 20.0) * fast_log(10.0)) * gain_div), 255), 0);
+
+        ret |= cambus_writeb(sensor->slv_addr, BLUE, b_gain);
         ret |= cambus_writeb(sensor->slv_addr, RED, r_gain);
         ret |= cambus_writeb(sensor->slv_addr, GREEN, g_gain);
-        ret |= cambus_writeb(sensor->slv_addr, BLUE, b_gain);
     }
+
+    return ret;
+}
+
+static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
+{
+    uint8_t reg, blue, red, green;
+    int ret = cambus_readb(sensor->slv_addr, COM8, &reg);
+
+    // DISABLED
+    // if (reg & COM8_AWB_EN) {
+    //     ret |= cambus_writeb(sensor->slv_addr, COM8, COM8_SET_AWB(reg, 0));
+    // }
+    // DISABLED
+
+    ret |= cambus_readb(sensor->slv_addr, BLUE, &blue);
+    ret |= cambus_readb(sensor->slv_addr, RED, &red);
+    ret |= cambus_readb(sensor->slv_addr, GREEN, &green);
+
+    // DISABLED
+    // if (reg & COM8_AWB_EN) {
+    //     ret |= cambus_writeb(sensor->slv_addr, COM8, COM8_SET_AWB(reg, 1));
+    // }
+    // DISABLED
+
+    ret |= cambus_readb(sensor->slv_addr, AWB_CTRL1, &reg);
+    float gain_div = (reg & 0x2) ? 64.0 : 128.0;
+
+    *r_gain_db = 20.0 * (fast_log(red / gain_div) / fast_log(10.0));
+    *g_gain_db = 20.0 * (fast_log(green / gain_div) / fast_log(10.0));
+    *b_gain_db = 20.0 * (fast_log(blue / gain_div) / fast_log(10.0));
 
     return ret;
 }
@@ -578,6 +613,7 @@ int ov7725_init(sensor_t *sensor)
     sensor->set_auto_exposure   = set_auto_exposure;
     sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;
+    sensor->get_rgb_gain_db     = get_rgb_gain_db;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
     sensor->set_special_effect  = set_special_effect;

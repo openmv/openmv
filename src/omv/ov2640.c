@@ -610,7 +610,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= cambus_readb(sensor->slv_addr, COM8, &reg);
     ret |= cambus_writeb(sensor->slv_addr, COM8, (reg & (~COM8_AGC_EN)) | ((enable != 0) ? COM8_AGC_EN : 0));
 
-    if ((enable == 0) && (gain_db >= 0)) {
+    if ((enable == 0) && (!isnanf(gain_db))) {
         float gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)), 32.0), 0.0);
 
         int gain_hi = 15;
@@ -624,7 +624,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
         }
 
         ret |= cambus_writeb(sensor->slv_addr, GAIN, (gain_hi << 4) | (gain_lo << 0));
-    } else if ((enable != 0) && (gain_db_ceiling >= 0)) {
+    } else if ((enable != 0) && (!isnanf(gain_db_ceiling))) {
         float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 128.0), 2.0);
 
         ret |= cambus_readb(sensor->slv_addr, COM9, &reg);
@@ -756,22 +756,40 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     return ret;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain)
+static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
 {
     uint8_t reg;
-    /* Switch to SENSOR register bank */
-    int ret = cambus_writeb(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
-
-    /* Update CTRL1 */
+    int ret = cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg & (~BANK_SEL_SENSOR));
     ret |= cambus_readb(sensor->slv_addr, CTRL1, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, CTRL1, (reg & (~CTRL1_AWB)) | ((enable != 0) ? CTRL1_AWB : 0));
 
-    if (enable) {
-        reg |= CTRL1_AWB;
-    } else {
-        reg &= ~CTRL1_AWB;
+    if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))) {
     }
 
-    return cambus_writeb(sensor->slv_addr, CTRL1, reg) | ret;
+    return ret;
+}
+
+static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
+{
+    uint8_t reg;
+    int ret = cambus_readb(sensor->slv_addr, BANK_SEL, &reg);
+    ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, reg & (~BANK_SEL_SENSOR));
+    ret |= cambus_readb(sensor->slv_addr, CTRL1, &reg);
+
+    // DISABLED
+    // if (reg & CTRL1_AWB) {
+    //     ret |= cambus_writeb(sensor->slv_addr, CTRL1, reg & (~CTRL1_AWB));
+    // }
+    // DISABLED
+
+    // DISABLED
+    // if (reg & CTRL1_AWB) {
+    //     ret |= cambus_writeb(sensor->slv_addr, CTRL1, reg | CTRL1_AWB);
+    // }
+    // DISABLED
+
+    return ret;
 }
 
 static int set_hmirror(sensor_t *sensor, int enable)
@@ -829,6 +847,7 @@ int ov2640_init(sensor_t *sensor)
     sensor->set_auto_exposure   = set_auto_exposure;
     sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;
+    sensor->get_rgb_gain_db     = get_rgb_gain_db;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
 

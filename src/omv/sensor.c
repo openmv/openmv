@@ -569,11 +569,22 @@ int sensor_get_exposure_us(int *exposure_us)
     return 0;
 }
 
-int sensor_set_auto_whitebal(int enable, int r_gain, int g_gain, int b_gain)
+int sensor_set_auto_whitebal(int enable, float r_gain_db, float g_gain_db, float b_gain_db)
 {
     /* call the sensor specific function */
     if (sensor.set_auto_whitebal == NULL
-        || sensor.set_auto_whitebal(&sensor, enable, r_gain, g_gain, b_gain) != 0) {
+        || sensor.set_auto_whitebal(&sensor, enable, r_gain_db, g_gain_db, b_gain_db) != 0) {
+        /* operation not supported */
+        return -1;
+    }
+    return 0;
+}
+
+int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db)
+{
+    /* call the sensor specific function */
+    if (sensor.get_rgb_gain_db == NULL
+        || sensor.get_rgb_gain_db(&sensor, r_gain_db, g_gain_db, b_gain_db) != 0) {
         /* operation not supported */
         return -1;
     }

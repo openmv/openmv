@@ -210,12 +210,12 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE,
             (reg & (~MT9V034_AGC_ENABLE)) | ((enable != 0) ? MT9V034_AGC_ENABLE : 0));
 
-    if ((enable == 0) && (gain_db >= 0)) {
+    if ((enable == 0) && (!isnanf(gain_db))) {
         int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0) * fast_log(10.0)) * 16.0), 127), 0);
 
         ret |= cambus_readw(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, &reg);
         ret |= cambus_writew(sensor->slv_addr, MT9V034_ANALOG_GAIN_CONTROL, (reg & 0xFF80) | gain);
-    } else if ((enable != 0) && (gain_db_ceiling >= 0)) {
+    } else if ((enable != 0) && (!isnanf(gain_db_ceiling))) {
         int gain_ceiling = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)) * 16.0), 127), 16);
 
         ret |= cambus_readw(sensor->slv_addr, MT9V034_MAX_GAIN, &reg);
@@ -273,7 +273,12 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     return ret;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain)
+static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
+{
+    return 0;
+}
+
+static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
 {
     return 0;
 }
@@ -329,6 +334,7 @@ int mt9v034_init(sensor_t *sensor)
     sensor->set_auto_exposure   = set_auto_exposure;
     sensor->get_exposure_us     = get_exposure_us;
     sensor->set_auto_whitebal   = set_auto_whitebal;
+    sensor->get_rgb_gain_db     = get_rgb_gain_db;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
     sensor->set_special_effect  = set_special_effect;
