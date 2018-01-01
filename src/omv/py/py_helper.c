@@ -41,6 +41,19 @@ void py_helper_lookup_int_array(mp_map_t *kw_args, mp_obj_t kw, int *x, int size
     }
 }
 
+void py_helper_lookup_float_array(mp_map_t *kw_args, mp_obj_t kw, float *x, int size)
+{
+    mp_map_elem_t *kw_array = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_array != NULL) {
+        mp_obj_t *arg_array;
+        mp_obj_get_array_fixed_n(kw_array->value, size, &arg_array);
+        for (int i=0; i<size; i++) {
+            x[i] = mp_obj_get_float(arg_array[i]);
+        }
+    }
+}
+
 int py_helper_lookup_color(mp_map_t *kw_args, int default_color)
 {
     mp_map_elem_t *kw_color = mp_map_lookup(kw_args,

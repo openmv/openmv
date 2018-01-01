@@ -139,7 +139,8 @@ typedef struct _sensor {
     int  (*get_gain_db)         (sensor_t *sensor, float *gain_db);
     int  (*set_auto_exposure)   (sensor_t *sensor, int enable, int exposure_us);
     int  (*get_exposure_us)     (sensor_t *sensor, int *exposure_us);
-    int  (*set_auto_whitebal)   (sensor_t *sensor, int enable, int r_gain, int g_gain, int b_gain);
+    int  (*set_auto_whitebal)   (sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db);
+    int  (*get_rgb_gain_db)     (sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db);
     int  (*set_hmirror)         (sensor_t *sensor, int enable);
     int  (*set_vflip)           (sensor_t *sensor, int enable);
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
@@ -214,7 +215,10 @@ int sensor_set_auto_exposure(int enable, int exposure_us);
 int sensor_get_exposure_us(int *get_exposure_us);
 
 // Enable auto white balance or set value manually.
-int sensor_set_auto_whitebal(int enable, int r_gain, int g_gain, int b_gain);
+int sensor_set_auto_whitebal(int enable, float r_gain_db, float g_gain_db, float b_gain_db);
+
+// Get the rgb gain values.
+int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db);
 
 // Enable/disable the hmirror mode.
 int sensor_set_hmirror(int enable);
