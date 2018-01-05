@@ -445,7 +445,7 @@ static int winc_gethostbyname(mp_obj_t nic, const char *name, mp_uint_t len, uin
     uint32_t ip=0;
     ret = WINC1500_EXPORT(gethostbyname)((uint8_t*) name);
     if (ret == SOCK_ERR_NO_ERROR) {
-        ret = winc_async_request(0, &ip, 1000);
+        ret = winc_async_request(0, &ip, 5000);
     } else {
         return -1;
     }
