@@ -1118,7 +1118,7 @@ void imlib_illuminvar(image_t *img) // http://ai.stanford.edu/~alireza/publicati
 
                     float chi_x = (r_lin_sharp_div_log * 0.7071f) + (g_lin_sharp_div_log * -0.7071f) + (b_lin_sharp_div_log *  0.0000f);
                     float chi_y = (r_lin_sharp_div_log * 0.4082f) + (g_lin_sharp_div_log *  0.4082f) + (b_lin_sharp_div_log * -0.8164f);
-                    int chi_int = IM_MAX(IM_MIN(fast_roundf(fast_expf((chi_x * 0.9326f) + (chi_y * -0.3609f)) * 42.99f), COLOR_GRAYSCALE_MAX), COLOR_GRAYSCALE_MIN);
+                    int chi_int = IM_MAX(IM_MIN(fast_roundf(fast_expf((chi_x * 0.9326f) + (chi_y * -0.3609f)) * 127.5f), COLOR_GRAYSCALE_MAX), COLOR_GRAYSCALE_MIN);
 #endif
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, COLOR_R8_G8_B8_TO_RGB565(chi_int, chi_int, chi_int));
                 }

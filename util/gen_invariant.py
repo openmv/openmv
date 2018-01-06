@@ -44,8 +44,7 @@ for i in range(65536):
 
     chi_x = (r_lin_sharp_div_log * 0.7071) + (g_lin_sharp_div_log * -0.7071) + (b_lin_sharp_div_log *  0.0000)
     chi_y = (r_lin_sharp_div_log * 0.4082) + (g_lin_sharp_div_log *  0.4082) + (b_lin_sharp_div_log * -0.8164)
-
-    chi_int = max(min(int(round(math.exp((chi_x * 0.9326) + (chi_y * -0.3609)) * 42.99)), 255), 0)
+    chi_int = max(min(int(round(math.exp((chi_x * 0.9326) + (chi_y * -0.3609)) * 127.5)), 255), 0)
 
     if not (i % 16):
         sys.stdout.write("    ")
@@ -56,4 +55,3 @@ for i in range(65536):
         sys.stdout.write(",\n")
     else:
         sys.stdout.write("\n};\n")
-
