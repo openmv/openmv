@@ -77,7 +77,6 @@ Q(midpoint_pooled)
 Q(mean_pool)
 Q(mean_pooled)
 Q(find_template)
-Q(find_displacement)
 Q(kp_desc)
 Q(lbp_desc)
 Q(Cascade)
@@ -187,12 +186,14 @@ Q(VGA)
 Q(HQQQVGA)
 Q(HQQVGA)
 Q(HQVGA)
+// FFT Resolutions
+Q(B64X32)
+Q(B64X64)
+Q(B128X64)
+Q(B128X128)
 // Other
 Q(LCD)
 Q(QQVGA2)
-Q(B40x30)
-Q(B64x32)
-Q(B64x64)
 Q(SVGA)
 Q(SXGA)
 Q(UXGA)
@@ -347,6 +348,14 @@ Q(CPUFREQ_192MHZ)
 Q(CPUFREQ_216MHZ)
 Q(get_frequency)
 Q(set_frequency)
+
+// Log Polar
+Q(linpolar)
+Q(reverse)
+
+// Log Polar
+Q(logpolar)
+// duplicate Q(reverse)
 
 // Chromination Invariant
 Q(chrominvar)
@@ -649,6 +658,24 @@ Q(CODE39)
 Q(PDF417)
 Q(CODE93)
 Q(CODE128)
+
+// Find Displacement
+Q(find_displacement)
+// duplicate Q(roi)
+Q(template_roi)
+Q(displacement)
+Q(x_offset)
+Q(y_offset)
+Q(response)
+
+// Find Rotation And Scale
+Q(find_rotscale)
+// duplicate Q(roi)
+// duplicate Q(template_roi)
+Q(rotscale)
+Q(rot_offset)
+Q(scale_offset)
+// duplicate Q(response)
 
 // LENET
 Q(find_number)

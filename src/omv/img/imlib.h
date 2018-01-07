@@ -1142,7 +1142,6 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
 void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div);
 float imlib_template_match_ds(image_t *image, image_t *template, rectangle_t *r);
 float imlib_template_match_ex(image_t *image, image_t *template, rectangle_t *roi, int step, rectangle_t *r);
-void imlib_phasecorrelate(image_t *img0, image_t *img1, float *x_offset, float *y_offset, float *response);
 
 /* Clustering functions */
 array_t *cluster_kmeans(array_t *points, int k, cluster_dist_t dist_func);
@@ -1205,6 +1204,8 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
 // Image Correction
+void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
+void imlib_logpolar(image_t *img, bool linear, bool reverse);
 void imlib_chrominvar(image_t *img);
 void imlib_illuminvar(image_t *img);
 void imlib_histeq(image_t *img);
@@ -1247,6 +1248,8 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
                           float fx, float fy, float cx, float cy);
 void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int effort);
 void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi);
+// Template Matching
+void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, rectangle_t *roi1, bool logpolar, float *x_offset, float *y_offset, float *response);
 
 // LeNet (CNN for character recognition)
 #define LENGTH_KERNEL	5
