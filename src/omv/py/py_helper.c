@@ -91,8 +91,12 @@ void py_helper_lookup_offset(mp_map_t *kw_args, image_t *img, point_t *p)
 
 void py_helper_lookup_rectangle(mp_map_t *kw_args, image_t *img, rectangle_t *r)
 {
-    mp_map_elem_t *kw_rectangle = mp_map_lookup(kw_args,
-            MP_OBJ_NEW_QSTR(MP_QSTR_roi), MP_MAP_LOOKUP);
+    py_helper_lookup_rectangle_2(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_roi), img, r);
+}
+
+void py_helper_lookup_rectangle_2(mp_map_t *kw_args, mp_obj_t kw, image_t *img, rectangle_t *r)
+{
+    mp_map_elem_t *kw_rectangle = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
 
     if (kw_rectangle == NULL) {
         r->x = 0;
