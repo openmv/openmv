@@ -141,26 +141,35 @@ void imlib_logpolar(image_t *img, bool linear, bool reverse)
 void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, rectangle_t *roi1, bool logpolar, float *x_offset, float *y_offset, float *response)
 {
     image_t img0alt, img1alt;
+    rectangle_t roi0alt, roi1alt;
 
     if (logpolar) {
 
         img0alt.w = roi0->w;
         img0alt.h = roi0->h;
         img0alt.bpp = img0->bpp;
-        img0alt.data = fb_alloc0(image_size(img0));
+        img0alt.data = fb_alloc0(image_size(&img0alt));
         imlib_logpolar_int(&img0alt, img0, roi0, false, false);
+        roi0alt.x = 0;
+        roi0alt.y = 0;
+        roi0alt.w = roi0->w;
+        roi0alt.h = roi0->h;
 
         img1alt.w = roi1->w;
         img1alt.h = roi1->h;
         img1alt.bpp = img1->bpp;
-        img1alt.data = fb_alloc0(image_size(img1));
+        img1alt.data = fb_alloc0(image_size(&img1alt));
         imlib_logpolar_int(&img1alt, img1, roi1, false, false);
+        roi1alt.x = 0;
+        roi1alt.y = 0;
+        roi1alt.w = roi1->w;
+        roi1alt.h = roi1->h;
     }
 
     fft2d_controller_t fft0, fft1;
 
-    fft2d_alloc(&fft0, logpolar ? &img0alt : img0, roi0);
-    fft2d_alloc(&fft1, logpolar ? &img1alt : img1, roi1);
+    fft2d_alloc(&fft0, logpolar ? &img0alt : img0, logpolar ? &roi0alt : roi0);
+    fft2d_alloc(&fft1, logpolar ? &img1alt : img1, logpolar ? &roi1alt : roi1);
 
     fft2d_run(&fft0);
     fft2d_run(&fft1);
@@ -174,10 +183,10 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
         float gb_i = -fft1.data[i+1]; // complex conjugate...
         float hp_r = (ga_r * gb_r) - (ga_i * gb_i); // hadamard product
         float hp_i = (ga_r * gb_i) + (ga_i * gb_r); // hadamard product
-        float mag = fast_sqrtf((hp_r*hp_r)+(hp_i*hp_i)); // magnitude
-        float mag_inv = mag ? (1 / mag) : 0;
-        fft0.data[i+0] = hp_r * mag_inv;
-        fft0.data[i+1] = hp_i * mag_inv;
+        float mag = 1 / fast_sqrtf((hp_r*hp_r)+(hp_i*hp_i)); // magnitude
+        // Replace first fft with phase correlation...
+        fft0.data[i+0] = hp_r * mag;
+        fft0.data[i+1] = hp_i * mag;
     }
 
     ifft2d_run(&fft0);
@@ -241,6 +250,21 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
         *y_offset = -(f_off_y - roi0->h);
     } else {
         *y_offset = -f_off_y;
+    }
+
+    if ((*x_offset < (-roi0->w/2))
+    || ((roi0->w/2) <= *x_offset)
+    || (*y_offset < (-roi0->h/2))
+    || ((roi0->h/2) <= *y_offset)
+    || isnanf(*x_offset)
+    || isinff(*x_offset)
+    || isnanf(*y_offset)
+    || isinff(*y_offset)
+    || isnanf(*response)
+    || isinff(*response)) { // Noise Filter
+        *x_offset = 0;
+        *y_offset = 0;
+        *response = 0;
     }
 
     fft2d_dealloc(); // fft1
