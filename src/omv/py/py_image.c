@@ -1287,7 +1287,8 @@ static mp_obj_t py_image_linpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_TRUE_MSG(IM_IS_RGB565(arg_img), "Image format is not supported.");
-    bool reverse = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse), false);
+    bool reverse = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse),
+                                        (n_args > 1) ? mp_obj_get_int(args[1]) : false);
 
     fb_alloc_mark();
     imlib_logpolar(arg_img, true, reverse);
@@ -1299,7 +1300,8 @@ static mp_obj_t py_image_logpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_TRUE_MSG(IM_IS_RGB565(arg_img), "Image format is not supported.");
-    bool reverse = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse), false);
+    bool reverse = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse),
+                                        (n_args > 1) ? mp_obj_get_int(args[1]) : false);
 
     fb_alloc_mark();
     imlib_logpolar(arg_img, false, reverse);
