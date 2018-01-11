@@ -15,6 +15,6 @@ while(True):
     # NOTE: Uncomment to detect dark numbers on white background
     # img.invert()
     out = img.find_number(roi=(img.width()//2-14, img.height()//2-14, 28, 28))
-    img.draw_rectangle((img.width()//2-15, img.height()//2-15, 30, 30), color=(255, 255, 255))
+    img.draw_rectangle((img.width()//2-15, img.height()//2-15, 30, 30))
     if out[1] > 5: # Confidence level
         print("Number: %d Confidence: %0.2f" %(out[0], out[1]))
