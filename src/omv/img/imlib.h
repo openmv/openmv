@@ -1267,6 +1267,8 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
 #define LAYER4			16
 #define LAYER5			120
 
+#define LENET_INPUT_W       (28)
+#define LENET_INPUT_H       (28)
 #define LENET_OUTPUT_SIZE   (10)
 #define LENET_PADDING_SIZE  (2)
 #define LENET_MODEL_SIZE    (51902)
@@ -1298,5 +1300,5 @@ typedef struct lenet5_feature {
 // LeNet pretrained models.
 extern const float lenet_model_num[LENET_MODEL_SIZE];
 
-uint8_t lenet_predict(lenet5_t *lenet, image_t *src, float *conf);
+uint8_t lenet_predict(lenet5_t *lenet, image_t *src, rectangle_t *roi, float *conf);
 #endif //__IMLIB_H__

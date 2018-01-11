@@ -86,24 +86,26 @@ static void forward(lenet5_t *lenet, lenet5_feature_t *features, float(*action)(
     DOT_PRODUCT_FORWARD(features->layer5, features->output, lenet->weight5_6, lenet->bias5_6, action);
 }
 
-static inline void load_input(lenet5_feature_t *features, image_t *src)
+static inline void load_input(lenet5_feature_t *features, image_t *src, rectangle_t *r)
 {
     float mean = 0, std = 0;
     float (*layer0)[LENGTH_FEATURE0][LENGTH_FEATURE0] = features->input;
-    for (int j=0; j<src->w; j++) {
-        for (int k=0; k<src->h; k++) {
-            mean += src->data[j*28 +k];
-            std += src->data[j*28 +k] * src->data[j*28 +k];
+    for (int k=r->y; k<r->y+r->h; k++) {
+        for (int j=r->x; j<r->x+r->w; j++) {
+            uint8_t p = imlib_get_pixel(src, j, k);
+            mean += p;
+            std  += p * p;
         }
     }
-    mean /= (src->w*src->h);
-    std = fast_sqrtf(std / (src->w*src->h) - mean*mean);
-    for (int j=0; j<src->w; j++) {
-        for (int k=0; k<src->h; k++) {
-            layer0[0][j + LENET_PADDING_SIZE][k + LENET_PADDING_SIZE] = (src->data[j*28 + k] - mean) / std;
+    mean /= (r->w*r->h);
+    std = fast_sqrtf(std / (r->w*r->h) - mean*mean);
+    for (int k=r->y; k<r->y+r->h; k++) {
+        for (int j=r->x; j<r->x+r->w; j++) {
+            layer0[0][(k-r->y) + LENET_PADDING_SIZE][(j-r->x)+ LENET_PADDING_SIZE] = (imlib_get_pixel(src, j, k) - mean) / std;
         }
     }
 }
+
 static inline void softmax(float *input, float *loss, int label, int count)
 {
     float inner = 0;
@@ -124,10 +126,10 @@ static inline void softmax(float *input, float *loss, int label, int count)
     }
 }
 
-uint8_t lenet_predict(lenet5_t *lenet, image_t *src, float *conf)
+uint8_t lenet_predict(lenet5_t *lenet, image_t *src, rectangle_t *roi, float *conf)
 {
     lenet5_feature_t *features = fb_alloc0(sizeof(*features)); 
-    load_input(features, src);
+    load_input(features, src, roi);
     forward(lenet, features, relu);
 
     uint8_t result = 0;

@@ -3837,15 +3837,24 @@ static mp_obj_t py_image_find_number(uint n_args, const mp_obj_t *args, mp_map_t
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
+    // Make sure ROI is bigger than or equal to template size
+    PY_ASSERT_TRUE_MSG((roi.w == LENET_INPUT_W && roi.h == LENET_INPUT_H),
+            "Region of interest must be 28x28!");
+
+    // Make sure ROI is smaller than or equal to image size
+    PY_ASSERT_TRUE_MSG(((roi.x + roi.w) <= arg_img->w && (roi.y + roi.h) <= arg_img->h),
+            "Region of interest is bigger than image!");
+
     int r = 0;
     float c = 0.0f;
     lenet5_t *lenet = (lenet5_t*) lenet_model_num;
 
-    r = lenet_predict(lenet, arg_img, &c);
+    r = lenet_predict(lenet, arg_img, &roi, &c);
     mp_obj_t ret_obj[2] = {
         mp_obj_new_int(r),
         mp_obj_new_float(c),
     };
+
     return mp_obj_new_tuple(2, ret_obj);
 }
 #endif //OMV_ENABLE_LENET
