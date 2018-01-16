@@ -9,7 +9,7 @@
 # image at once. Instead it breaks up the process by working on groups
 # of pixels in the image. This gives you a "new" image of results.
 #
-# Note that surfaces need to have some type of "edge" on them for the
+# NOTE that surfaces need to have some type of "edge" on them for the
 # algorithm to work. A featureless surface produces crazy results.
 
 BLOCK_W = 16 # pow2
@@ -53,13 +53,13 @@ while(True):
     for y in range(0, sensor.height(), BLOCK_H):
         for x in range(0, sensor.width(), BLOCK_W):
             # For this example we never update the old image to measure absolute change.
-            displacement_obj = extra_fb.find_displacement(img, \
+            displacement = extra_fb.find_displacement(img, \
                 roi = (x, y, BLOCK_W, BLOCK_H), template_roi = (x, y, BLOCK_W, BLOCK_H))
 
             # Below 0.1 or so (YMMV) and the results are just noise.
-            if(displacement_obj.response() > 0.1):
-                pixel_x = x + (BLOCK_W//2) + int(displacement_obj.x_offset())
-                pixel_y = y + (BLOCK_H//2) + int(displacement_obj.y_offset())
+            if(displacement.response() > 0.1):
+                pixel_x = x + (BLOCK_W//2) + int(displacement.x_translation())
+                pixel_y = y + (BLOCK_H//2) + int(displacement.y_translation())
                 img.draw_line((x + BLOCK_W//2, y + BLOCK_H//2, pixel_x, pixel_y), \
                     color = 255)
             else:

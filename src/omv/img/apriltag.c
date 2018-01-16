@@ -12196,7 +12196,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
     matd_t *A1 = matd_create(4, 3);
     MATD_EL(A1, 0, 0) = 1;  MATD_EL(A1, 0, 1) = 0;  MATD_EL(A1, 0, 2) = -img->w / 2.0;
     MATD_EL(A1, 1, 0) = 0;  MATD_EL(A1, 1, 1) = 1;  MATD_EL(A1, 1, 2) = -img->h / 2.0;
-    MATD_EL(A1, 2, 0) = 0;  MATD_EL(A1, 2, 1) = 0;  MATD_EL(A1, 2, 2) = 1;
+    MATD_EL(A1, 2, 0) = 0;  MATD_EL(A1, 2, 1) = 0;  MATD_EL(A1, 2, 2) = 0;
     MATD_EL(A1, 3, 0) = 0;  MATD_EL(A1, 3, 1) = 0;  MATD_EL(A1, 3, 2) = 1; // needed for h translation
 
     matd_t *RX = matd_create(4, 4);
@@ -12232,7 +12232,8 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
 
     matd_t *T1 = matd_op("M*M", R, A1);
     matd_t *T2 = matd_op("M*M", T, T1);
-    matd_t *T3 = matd_op("(M*M)^-1", A2, T2);
+    matd_t *T3 = matd_op("M*M", A2, T2);
+    matd_t *T4 = matd_inverse(T3);
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -12241,10 +12242,10 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
             memcpy(tmp, img->data, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
             memset(img->data, 0, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            if (T4) for (int y = 0, yy = img->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
                 for (int x = 0, xx = img->w; x < xx; x++) {
-                    float sourceX, sourceY; homography_project(T3, x, y, &sourceX, &sourceY);
+                    float sourceX, sourceY; homography_project(T4, x, y, &sourceX, &sourceY);
                     int sourceX2 = round(sourceX);
                     int sourceY2 = round(sourceY);
 
@@ -12265,10 +12266,10 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
             memcpy(tmp, img->data, img->w * img->h * sizeof(uint8_t));
             memset(img->data, 0, img->w * img->h * sizeof(uint8_t));
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            if (T4) for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                 for (int x = 0, xx = img->w; x < xx; x++) {
-                    float sourceX, sourceY; homography_project(T3, x, y, &sourceX, &sourceY);
+                    float sourceX, sourceY; homography_project(T4, x, y, &sourceX, &sourceY);
                     int sourceX2 = round(sourceX);
                     int sourceY2 = round(sourceY);
 
@@ -12289,10 +12290,10 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
             memcpy(tmp, img->data, img->w * img->h * sizeof(uint16_t));
             memset(img->data, 0, img->w * img->h * sizeof(uint16_t));
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            if (T4) for (int y = 0, yy = img->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                 for (int x = 0, xx = img->w; x < xx; x++) {
-                    float sourceX, sourceY; homography_project(T3, x, y, &sourceX, &sourceY);
+                    float sourceX, sourceY; homography_project(T4, x, y, &sourceX, &sourceY);
                     int sourceX2 = round(sourceX);
                     int sourceY2 = round(sourceY);
 
@@ -12312,6 +12313,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
         }
     }
 
+    if (T4) matd_destroy(T4);
     matd_destroy(T3);
     matd_destroy(T2);
     matd_destroy(T1);

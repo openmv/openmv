@@ -3642,20 +3642,23 @@ static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map
 }
 #endif // OMV_ENABLE_BARCODES
 
+#ifdef OMV_ENABLE_PHASE_CORRELATION
 // Displacement Object //
-#define py_displacement_obj_size 3
+#define py_displacement_obj_size 5
 typedef struct py_displacement_obj {
     mp_obj_base_t base;
-    mp_obj_t x_offset, y_offset, response;
+    mp_obj_t x_translation, y_translation, rotation, scale, response;
 } py_displacement_obj_t;
 
 static void py_displacement_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     py_displacement_obj_t *self = self_in;
     mp_printf(print,
-              "{x_offset:%f, y_offset:%f, response:%f}",
-              (double) mp_obj_get_float(self->x_offset),
-              (double) mp_obj_get_float(self->y_offset),
+              "{x_translation:%f, y_translation:%f, rotation:%f, scale:%f, response:%f}",
+              (double) mp_obj_get_float(self->x_translation),
+              (double) mp_obj_get_float(self->y_translation),
+              (double) mp_obj_get_float(self->rotation),
+              (double) mp_obj_get_float(self->scale),
               (double) mp_obj_get_float(self->response));
 }
 
@@ -3669,29 +3672,37 @@ static mp_obj_t py_displacement_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
             }
             mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
-            mp_seq_copy(result->items, &(self->x_offset) + slice.start, result->len, mp_obj_t);
+            mp_seq_copy(result->items, &(self->x_translation) + slice.start, result->len, mp_obj_t);
             return result;
         }
         switch (mp_get_index(self->base.type, py_displacement_obj_size, index, false)) {
-            case 0: return self->x_offset;
-            case 1: return self->y_offset;
-            case 2: return self->response;
+            case 0: return self->x_translation;
+            case 1: return self->y_translation;
+            case 2: return self->rotation;
+            case 3: return self->scale;
+            case 4: return self->response;
         }
     }
     return MP_OBJ_NULL; // op not supported
 }
 
-mp_obj_t py_displacement_x_offset(mp_obj_t self_in) { return ((py_displacement_obj_t *) self_in)->x_offset; }
-mp_obj_t py_displacement_y_offset(mp_obj_t self_in) { return ((py_displacement_obj_t *) self_in)->y_offset; }
+mp_obj_t py_displacement_x_translation(mp_obj_t self_in) { return ((py_displacement_obj_t *) self_in)->x_translation; }
+mp_obj_t py_displacement_y_translation(mp_obj_t self_in) { return ((py_displacement_obj_t *) self_in)->y_translation; }
+mp_obj_t py_displacement_rotation(mp_obj_t self_in) { return ((py_displacement_obj_t *) self_in)->rotation; }
+mp_obj_t py_displacement_scale(mp_obj_t self_in) { return ((py_displacement_obj_t *) self_in)->scale; }
 mp_obj_t py_displacement_response(mp_obj_t self_in) { return ((py_displacement_obj_t *) self_in)->response; }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_x_offset_obj, py_displacement_x_offset);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_y_offset_obj, py_displacement_y_offset);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_x_translation_obj, py_displacement_x_translation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_y_translation_obj, py_displacement_y_translation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_rotation_obj, py_displacement_rotation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_scale_obj, py_displacement_scale);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_displacement_response_obj, py_displacement_response);
 
 STATIC const mp_rom_map_elem_t py_displacement_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_x_offset), MP_ROM_PTR(&py_displacement_x_offset_obj) },
-    { MP_ROM_QSTR(MP_QSTR_y_offset), MP_ROM_PTR(&py_displacement_y_offset_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x_translation), MP_ROM_PTR(&py_displacement_x_translation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y_translation), MP_ROM_PTR(&py_displacement_y_translation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_displacement_rotation_obj) },
+    { MP_ROM_QSTR(MP_QSTR_scale), MP_ROM_PTR(&py_displacement_scale_obj) },
     { MP_ROM_QSTR(MP_QSTR_response), MP_ROM_PTR(&py_displacement_response_obj) },
 };
 
@@ -3721,112 +3732,25 @@ static mp_obj_t py_image_find_displacement(uint n_args, const mp_obj_t *args, mp
 
     PY_ASSERT_FALSE_MSG((roi.w != template_roi.w) || (roi.h != template_roi.h), "ROI(w,h) != TEMPLATE_ROI(w,h)");
 
-    float x_offset, y_offset, response;
+    bool logpolar = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_logpolar), false);
+    bool fix_rotation_scale = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fix_rotation_scale), false);
+
+    float x, y, r, s, response;
     fb_alloc_mark();
-    imlib_phasecorrelate(arg_img, arg_template_img, &roi, &template_roi, false, &x_offset, &y_offset, &response);
+    imlib_phasecorrelate(arg_img, arg_template_img, &roi, &template_roi, logpolar, fix_rotation_scale, &x, &y, &r, &s, &response);
     fb_alloc_free_till_mark();
 
     py_displacement_obj_t *o = m_new_obj(py_displacement_obj_t);
     o->base.type = &py_displacement_type;
-    o->x_offset = mp_obj_new_float(x_offset);
-    o->y_offset = mp_obj_new_float(y_offset);
+    o->x_translation = mp_obj_new_float(x);
+    o->y_translation = mp_obj_new_float(y);
+    o->rotation = mp_obj_new_float(r);
+    o->scale = mp_obj_new_float(s);
     o->response = mp_obj_new_float(response);
 
     return o;
 }
-
-// RotScale Object //
-#define py_rotscale_obj_size 3
-typedef struct py_rotscale_obj {
-    mp_obj_base_t base;
-    mp_obj_t rot_offset, scale_offset, response;
-} py_rotscale_obj_t;
-
-static void py_rotscale_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
-{
-    py_rotscale_obj_t *self = self_in;
-    mp_printf(print,
-              "{rot_offset:%f, scale_offset:%f, response:%f}",
-              (double) mp_obj_get_float(self->rot_offset),
-              (double) mp_obj_get_float(self->scale_offset),
-              (double) mp_obj_get_float(self->response));
-}
-
-static mp_obj_t py_rotscale_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
-{
-    if (value == MP_OBJ_SENTINEL) { // load
-        py_rotscale_obj_t *self = self_in;
-        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
-            mp_bound_slice_t slice;
-            if (!mp_seq_get_fast_slice_indexes(py_rotscale_obj_size, index, &slice)) {
-                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
-            }
-            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
-            mp_seq_copy(result->items, &(self->rot_offset) + slice.start, result->len, mp_obj_t);
-            return result;
-        }
-        switch (mp_get_index(self->base.type, py_rotscale_obj_size, index, false)) {
-            case 0: return self->rot_offset;
-            case 1: return self->scale_offset;
-            case 2: return self->response;
-        }
-    }
-    return MP_OBJ_NULL; // op not supported
-}
-
-mp_obj_t py_rotscale_rot_offset(mp_obj_t self_in) { return ((py_rotscale_obj_t *) self_in)->rot_offset; }
-mp_obj_t py_rotscale_scale_offset(mp_obj_t self_in) { return ((py_rotscale_obj_t *) self_in)->scale_offset; }
-mp_obj_t py_rotscale_response(mp_obj_t self_in) { return ((py_rotscale_obj_t *) self_in)->response; }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rotscale_rot_offset_obj, py_rotscale_rot_offset);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rotscale_scale_offset_obj, py_rotscale_scale_offset);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_rotscale_response_obj, py_rotscale_response);
-
-STATIC const mp_rom_map_elem_t py_rotscale_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_rot_offset), MP_ROM_PTR(&py_rotscale_rot_offset_obj) },
-    { MP_ROM_QSTR(MP_QSTR_scale_offset), MP_ROM_PTR(&py_rotscale_scale_offset_obj) },
-    { MP_ROM_QSTR(MP_QSTR_response), MP_ROM_PTR(&py_rotscale_response_obj) },
-};
-
-STATIC MP_DEFINE_CONST_DICT(py_rotscale_locals_dict, py_rotscale_locals_dict_table);
-
-static const mp_obj_type_t py_rotscale_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_rotscale,
-    .print = py_rotscale_print,
-    .subscr = py_rotscale_subscr,
-    .locals_dict = (mp_obj_t) &py_rotscale_locals_dict,
-};
-
-static mp_obj_t py_image_find_rotscale(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
-
-    image_t *arg_template_img = py_image_cobj(args[1]);
-    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_template_img), "Image format is not supported.");
-
-    rectangle_t roi;
-    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
-
-    rectangle_t template_roi;
-    py_helper_lookup_rectangle_2(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_template_roi), arg_template_img, &template_roi);
-
-    PY_ASSERT_FALSE_MSG((roi.w != template_roi.w) || (roi.h != template_roi.h), "ROI(w,h) != TEMPLATE_ROI(w,h)");
-
-    float rot_offset, scale_offset, response;
-    fb_alloc_mark();
-    imlib_phasecorrelate(arg_img, arg_template_img, &roi, &template_roi, true, &rot_offset, &scale_offset, &response);
-    fb_alloc_free_till_mark();
-
-    py_rotscale_obj_t *o = m_new_obj(py_rotscale_obj_t);
-    o->base.type = &py_rotscale_type;
-    o->rot_offset = mp_obj_new_float(rot_offset);
-    o->scale_offset = mp_obj_new_float(scale_offset);
-    o->response = mp_obj_new_float(response);
-
-    return o;
-}
+#endif // OMV_ENABLE_PHASE_CORRELATION
 
 #ifdef OMV_ENABLE_LENET
 static mp_obj_t py_image_find_number(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -4230,7 +4154,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_lens_corr_obj, 1, py_image_lens_corr);
 #ifdef OMV_ENABLE_ROTATION_CORR
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_rotation_corr_obj, 1, py_image_rotation_corr);
-#endif 
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_mask_ellipse_obj, py_image_mask_ellipse);
 /* Image Statistics */
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_get_similarity_obj, py_image_get_similarity);
@@ -4264,8 +4188,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_datamatrices_obj, 1, py_image_fi
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_barcodes_obj, 1, py_image_find_barcodes);
 #endif
 /* Template Matching */
+#ifdef OMV_ENABLE_PHASE_CORRELATION
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_displacement_obj, 2, py_image_find_displacement);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_rotscale_obj, 2, py_image_find_rotscale);
+#endif
 #ifdef OMV_ENABLE_LENET
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_number_obj, 1, py_image_find_number);
 #endif
@@ -4381,8 +4306,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_barcodes),       (mp_obj_t)&py_image_find_barcodes_obj},
 #endif
     /* Template Matching */
+#ifdef OMV_ENABLE_PHASE_CORRELATION
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_displacement),   (mp_obj_t)&py_image_find_displacement_obj},
-    {MP_OBJ_NEW_QSTR(MP_QSTR_find_rotscale),       (mp_obj_t)&py_image_find_rotscale_obj},
+#endif
 #ifdef OMV_ENABLE_LENET
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_number),         (mp_obj_t)&py_image_find_number_obj},
 #endif

@@ -13,7 +13,7 @@
 import sensor, image, time, math
 
 # NOTE!!! You have to use a small power of 2 resolution when using
-# find_rotscale(). This is because the algorithm is powered by
+# find_displacement(). This is because the algorithm is powered by
 # something called phase correlation which does the image comparison
 # using FFTs. A non-power of 2 resolution requires padding to a power
 # of 2 which reduces the usefulness of the algorithm results. Please
@@ -50,16 +50,18 @@ while(True):
     # Put in a zoom value below and you should see the z output be equal to that.
     if(0):
         expected_zoom = 0.8
-        extra_fb.rotation_corr(zoom=(2.05-expected_zoom))
+        extra_fb.rotation_corr(zoom=(2.00-expected_zoom))
 
-    rotscale_obj = extra_fb.find_rotscale(img)
+    displacement = extra_fb.find_displacement(img, logpolar=True)
     extra_fb.replace(img)
 
     # Offset results are noisy without filtering so we drop some accuracy.
-    rotation_change = int(math.degrees(rotscale_obj.rot_offset()) * 5) / 5.0
-    zoom_amount = 1.0 + rotscale_obj.scale_offset()
+    rotation_change = int(math.degrees(displacement.rotation()) * 5) / 5.0
+    zoom_amount = displacement.scale()
 
-    if(rotscale_obj.response() > 0.1): # Below 0.1 or so (YMMV) and the results are just noise.
-        print("{0:+f}r {1:+f}z {2} {3} FPS".format(rotation_change, zoom_amount, rotscale_obj.response(), clock.fps()))
+    if(displacement.response() > 0.1): # Below 0.1 or so (YMMV) and the results are just noise.
+        print("{0:+f}r {1:+f}z {2} {3} FPS".format(rotation_change, zoom_amount, \
+              displacement.response(),
+              clock.fps()))
     else:
         print(clock.fps())

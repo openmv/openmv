@@ -40,14 +40,16 @@ while(True):
     clock.tick() # Track elapsed milliseconds between snapshots().
     img = sensor.snapshot() # Take a picture and return the image.
 
-    displacement_obj = extra_fb.find_displacement(img)
+    displacement = extra_fb.find_displacement(img)
     extra_fb.replace(img)
 
     # Offset results are noisy without filtering so we drop some accuracy.
-    sub_pixel_x = int(displacement_obj.x_offset() * 5) / 5.0
-    sub_pixel_y = int(displacement_obj.y_offset() * 5) / 5.0
+    sub_pixel_x = int(displacement.x_translation() * 5) / 5.0
+    sub_pixel_y = int(displacement.y_translation() * 5) / 5.0
 
-    if(displacement_obj.response() > 0.1): # Below 0.1 or so (YMMV) and the results are just noise.
-        print("{0:+f}x {1:+f}y {2} {3} FPS".format(sub_pixel_x, sub_pixel_y, displacement_obj.response(), clock.fps()))
+    if(displacement.response() > 0.1): # Below 0.1 or so (YMMV) and the results are just noise.
+        print("{0:+f}x {1:+f}y {2} {3} FPS".format(sub_pixel_x, sub_pixel_y,
+              displacement.response(),
+              clock.fps()))
     else:
         print(clock.fps())
