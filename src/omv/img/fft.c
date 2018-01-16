@@ -332,6 +332,18 @@ static void prepare_real_input(uint8_t *in, int in_len, float *out, int N_pow2)
     }
 }
 
+static void prepare_real_input_again(float *in, int in_len, float *out, int N_pow2)
+{
+    for (int k = 0, l = 2 << N_pow2; k < l; k += 2) {
+        int m = bit_reverse(k, N_pow2);
+        out[m+0] = ((k+0) < in_len) ? in[(k*2)+0] : 0;
+        out[m+1] = ((k+1) < in_len) ? in[(k*2)+2] : 0;
+//        // Apply Hann Window (this is working on real numbers)
+//        out[m+0] *= get_hann(k+0, N_pow2);
+//        out[m+1] *= get_hann(k+1, N_pow2);
+    }
+}
+
 //// This works on complex numbers...
 //static void apply_hann_window(float *inout, int N_pow2, int stride)
 //{
@@ -466,6 +478,71 @@ void ifft1d_run(fft1d_controller_t *controller)
     fb_free();
 }
 
+void fft1d_mag(fft1d_controller_t *controller)
+{
+    for (int i = 0, j = 2 << controller->pow2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = fast_sqrtf((tmp_r*tmp_r)+(tmp_i*tmp_i));
+        controller->data[i + 1] = 0;
+    }
+}
+
+void fft1d_phase(fft1d_controller_t *controller)
+{
+    for (int i = 0, j = 2 << controller->pow2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (M_PI*1.5) : (M_PI*0.5));
+        controller->data[i + 1] = 0;
+    }
+}
+
+void fft1d_log(fft1d_controller_t *controller)
+{
+    for (int i = 0, j = 2 << controller->pow2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = fast_log(fast_sqrtf((tmp_r*tmp_r)+(tmp_i*tmp_i)));
+        controller->data[i + 1] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (M_PI*1.5) : (M_PI*0.5));
+    }
+}
+
+void fft1d_exp(fft1d_controller_t *controller)
+{
+    for (int i = 0, j = 2 << controller->pow2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = fast_expf(tmp_r) * cosf(tmp_i);
+        controller->data[i + 1] = fast_expf(tmp_r) * sinf(tmp_i);
+    }
+}
+
+void fft1d_swap(fft1d_controller_t *controller)
+{
+    for (int i = 0, j = ((1 << controller->pow2) / 2) * 2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = controller->data[j + i + 0];
+        controller->data[i + 1] = controller->data[j + i + 1];
+        controller->data[j + i + 0] = tmp_r;
+        controller->data[j + i + 1] = tmp_i;
+    }
+}
+
+void fft1d_run_again(fft1d_controller_t *controller)
+{
+    // We can speed up the FFT by packing data into both the real and imaginary
+    // values. This results in having to do an FFT of half the size normally.
+
+    float *h_buffer = fb_alloc((1 << controller->pow2) * sizeof(float));
+    prepare_real_input_again(controller->data, 1 << controller->pow2,
+                             h_buffer, controller->pow2 - 1);
+    do_fft(h_buffer, controller->pow2 - 1, 1);
+    unpack_fft(h_buffer, controller->data, controller->pow2 - 1);
+    fb_free();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 void fft2d_alloc(fft2d_controller_t *controller, image_t *img, rectangle_t *r)
@@ -518,9 +595,8 @@ void fft2d_run(fft2d_controller_t *controller)
 
     // The above operates on the rows and this fft operates on the columns. To
     // avoid having to transpose the array the fft takes a stride input.
-    for (int i = 0, ii = (2 << controller->w_pow2); i < ii; i += 2) {
+    for (int i = 0, ii = 2 << controller->w_pow2; i < ii; i += 2) {
         float *p = controller->data + i;
-        // Vertical FFTs are full FFTs...
 //        apply_hann_window(p, controller->h_pow2, (1 << controller->w_pow2));
         prepare_complex_input(p, p, controller->h_pow2, (1 << controller->w_pow2));
         do_fft(p, controller->h_pow2, (1 << controller->w_pow2));
@@ -530,18 +606,169 @@ void fft2d_run(fft2d_controller_t *controller)
 void ifft2d_run(fft2d_controller_t *controller)
 {
     // Do columns...
-    for (int i = 0, ii = (2 << controller->w_pow2); i < ii; i += 2) {
+    for (int i = 0, ii = 2 << controller->w_pow2; i < ii; i += 2) {
         float *p = controller->data + i;
-        // Vertical FFTs are full FFTs...
         prepare_complex_input(p, p, controller->h_pow2, (1 << controller->w_pow2));
         do_ifft(p, controller->h_pow2, (1 << controller->w_pow2));
     }
 
     // Do rows...
-    for (int i = 0; i < controller->r.h; i++) {
+    for (int i = 0, ii = 1 << controller->h_pow2; i < ii; i++) {
         fft1d_controller_t fft1d_controller_i;
         fft1d_controller_i.pow2 = controller->w_pow2;
         fft1d_controller_i.data = controller->data + (i * (2 << controller->w_pow2));
         ifft1d_run(&fft1d_controller_i);
+    }
+}
+
+void fft2d_mag(fft2d_controller_t *controller)
+{
+    for (int i = 0, j = (1 << controller->h_pow2) * (1 << controller->w_pow2) * 2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = fast_sqrtf((tmp_r*tmp_r)+(tmp_i*tmp_i));
+        controller->data[i + 1] = 0;
+    }
+}
+
+void fft2d_phase(fft2d_controller_t *controller)
+{
+    for (int i = 0, j = (1 << controller->h_pow2) * (1 << controller->w_pow2) * 2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (M_PI*1.5) : (M_PI*0.5));
+        controller->data[i + 1] = 0;
+    }
+}
+
+void fft2d_log(fft2d_controller_t *controller)
+{
+    for (int i = 0, j = (1 << controller->h_pow2) * (1 << controller->w_pow2) * 2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = fast_log(fast_sqrtf((tmp_r*tmp_r)+(tmp_i*tmp_i)));
+        controller->data[i + 1] = tmp_r ? fast_atan2f(tmp_i, tmp_r) : ((tmp_i < 0) ? (M_PI*1.5) : (M_PI*0.5));
+    }
+}
+
+void fft2d_exp(fft2d_controller_t *controller)
+{
+    for (int i = 0, j = (1 << controller->h_pow2) * (1 << controller->w_pow2) * 2; i < j; i += 2) {
+        float tmp_r = controller->data[i + 0];
+        float tmp_i = controller->data[i + 1];
+        controller->data[i + 0] = fast_expf(tmp_r) * cosf(tmp_i);
+        controller->data[i + 1] = fast_expf(tmp_r) * sinf(tmp_i);
+    }
+}
+
+void fft2d_swap(fft2d_controller_t *controller)
+{
+    // Do rows...
+    for (int i = 0, ii = 1 << controller->h_pow2; i < ii; i++) {
+        fft1d_controller_t fft1d_controller_i;
+        fft1d_controller_i.pow2 = controller->w_pow2;
+        fft1d_controller_i.data = controller->data + (i * (2 << controller->w_pow2));
+        fft1d_swap(&fft1d_controller_i);
+    }
+
+    // Do columns...
+    for (int x = 0, xx = 2 << controller->w_pow2; x < xx; x += 2) {
+        for (int y = 0, yy = (1 << controller->h_pow2) / 2; y < yy; y++) {
+            int i = (y * (2 << controller->w_pow2)) + x;
+            int j = yy * (2 << controller->w_pow2);
+            float tmp_r = controller->data[i + 0];
+            float tmp_i = controller->data[i + 1];
+            controller->data[i + 0] = controller->data[j + i + 0];
+            controller->data[i + 1] = controller->data[j + i + 1];
+            controller->data[j + i + 0] = tmp_r;
+            controller->data[j + i + 1] = tmp_i;
+        }
+    }
+}
+
+void fft2d_linpolar(fft2d_controller_t *controller)
+{
+    int w = 1 << controller->w_pow2;
+    int h = 1 << controller->h_pow2;
+    int s = h * w * 2 * sizeof(float);
+    float *tmp = fb_alloc(s);
+    memcpy(tmp, controller->data, s);
+    memset(controller->data, 0, s);
+
+    float w_2 = w / 2.0f;
+    float h_2 = h / 2.0f;
+    float rho_scale = fast_sqrtf((w_2 * w_2) + (h_2 * h_2)) / h;
+    float theta_scale = 360.0f / w;
+
+    for (int y = 0; y < h; y++) {
+        float *row_ptr = controller->data + (y * w * 2);
+        float rho = y * rho_scale;
+        for (int x = 0; x < w; x++) {
+            int sourceX, sourceY;
+            int theta = 630 - fast_roundf(x * theta_scale);
+            if (theta >= 360) theta -= 360;
+            sourceX = fast_roundf((rho * cos_table[theta]) + w_2);
+            sourceY = fast_roundf((rho * sin_table[theta]) + h_2);
+            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
+                float *ptr = tmp + (sourceY * w * 2);
+                row_ptr[(x * 2) + 0] = ptr[(sourceX * 2) + 0];
+                row_ptr[(x * 2) + 1] = ptr[(sourceX * 2) + 1];
+            }
+        }
+    }
+
+    fb_free();
+}
+
+void fft2d_logpolar(fft2d_controller_t *controller)
+{
+    int w = 1 << controller->w_pow2;
+    int h = 1 << controller->h_pow2;
+    int s = h * w * 2 * sizeof(float);
+    float *tmp = fb_alloc(s);
+    memcpy(tmp, controller->data, s);
+    memset(controller->data, 0, s);
+
+    float w_2 = w / 2.0f;
+    float h_2 = h / 2.0f;
+    float rho_scale = fast_log(fast_sqrtf((w_2 * w_2) + (h_2 * h_2))) / h;
+    float theta_scale = 360.0f / w;
+
+    for (int y = 0; y < h; y++) {
+        float *row_ptr = controller->data + (y * w * 2);
+        float rho = y * rho_scale;
+        for (int x = 0; x < w; x++) {
+            int sourceX, sourceY;
+            int theta = 630 - fast_roundf(x * theta_scale);
+            if (theta >= 360) theta -= 360;
+            sourceX = fast_roundf((fast_expf(rho) * cos_table[theta]) + w_2);
+            sourceY = fast_roundf((fast_expf(rho) * sin_table[theta]) + h_2);
+            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
+                float *ptr = tmp + (sourceY * w * 2);
+                row_ptr[(x * 2) + 0] = ptr[(sourceX * 2) + 0];
+                row_ptr[(x * 2) + 1] = ptr[(sourceX * 2) + 1];
+            }
+        }
+    }
+
+    fb_free();
+}
+
+void fft2d_run_again(fft2d_controller_t *controller)
+{
+    for (int i = 0, ii = 1 << controller->h_pow2; i < ii; i++) {
+        fft1d_controller_t fft1d_controller_i;
+        fft1d_controller_i.pow2 = controller->w_pow2;
+        fft1d_controller_i.data = controller->data + (i * (2 << controller->w_pow2));
+        fft1d_run_again(&fft1d_controller_i);
+    }
+
+    // The above operates on the rows and this fft operates on the columns. To
+    // avoid having to transpose the array the fft takes a stride input.
+    for (int i = 0, ii = 2 << controller->w_pow2; i < ii; i += 2) {
+        float *p = controller->data + i;
+//        apply_hann_window(p, controller->h_pow2, (1 << controller->w_pow2));
+        prepare_complex_input(p, p, controller->h_pow2, (1 << controller->w_pow2));
+        do_fft(p, controller->h_pow2, (1 << controller->w_pow2));
     }
 }

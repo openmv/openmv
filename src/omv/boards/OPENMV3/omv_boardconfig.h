@@ -56,6 +56,11 @@
 // Enable Barcodes (42 KB).
 #define OMV_ENABLE_BARCODES
 
+// Enable Phase Correlation
+#ifdef OMV_ENABLE_ROTATION_CORR
+#define OMV_ENABLE_PHASE_CORRELATION
+#endif
+
 // Enable LENET (200+ KB).
 #define OMV_ENABLE_LENET
 

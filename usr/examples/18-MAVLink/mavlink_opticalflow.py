@@ -13,16 +13,9 @@ uart_baudrate = 115200
 
 MAV_system_id = 1
 MAV_component_id = 0x54
-MAV_OPTICAL_FLOW_confidence_threshold = 0.2
+MAV_OPTICAL_FLOW_confidence_threshold = 0.1  # Below 0.1 or so (YMMV) and the results are just noise.
 
 ##############################################################################
-
-# Camera Setup
-
-sensor.reset()
-sensor.set_pixformat(sensor.GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)
-sensor.skip_frames(time = 2000)
 
 # Link Setup
 
@@ -56,8 +49,8 @@ def send_optical_flow_packet(x, y, c):
                        0,
                        0,
                        0,
-                       int(x * 10 * 4), # up sample by 4
-                       int(y * 10 * 4), # up sample by 4
+                       int(x * 10),
+                       int(y * 10),
                        MAV_OPTICAL_FLOW_id,
                        int(c * 255))
     temp = struct.pack("<bbbbb26s",
@@ -74,18 +67,35 @@ def send_optical_flow_packet(x, y, c):
     packet_sequence += 1
     uart.write(temp)
 
-# Main Loop
+sensor.reset()                      # Reset and initialize the sensor.
+sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_framesize(sensor.B64X32) # Set frame size to 64x32... (or 64x64)...
+sensor.skip_frames(time = 2000)     # Wait for settings take effect.
+clock = time.clock()                # Create a clock object to track the FPS.
 
-clock = time.clock()
-old_img = sensor.snapshot().mean_pooled(4, 4) # 160x120 -> 40x30
+# Take from the main frame buffer's RAM to allocate a second frame buffer.
+# There's a lot more RAM in the frame buffer than in the MicroPython heap.
+# However, after doing this you have a lot less RAM for some algorithms...
+# So, be aware that it's a lot easier to get out of RAM issues now.
+extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
+extra_fb.replace(sensor.snapshot())
+
 while(True):
-    clock.tick()
-    new_img = sensor.snapshot().mean_pooled(4, 4) # 160x120 -> 40x30
-    x, y, c = new_img.find_displacement(old_img)
-    old_img = new_img
+    clock.tick() # Track elapsed milliseconds between snapshots().
+    img = sensor.snapshot() # Take a picture and return the image.
 
-    if (not (math.isnan(x) or math.isnan(y) or math.isnan(c))) and (c > MAV_OPTICAL_FLOW_confidence_threshold):
-        send_optical_flow_packet(-x, -y, c)
-        print("dx %10f, dy %10f, confidence %10f - FPS %f" % (-x, -y, c, clock.fps()))
+    displacement = extra_fb.find_displacement(img)
+    extra_fb.replace(img)
+
+    # Offset results are noisy without filtering so we drop some accuracy.
+    sub_pixel_x = int(displacement.x_translation() * 5) / 5.0
+    sub_pixel_y = int(displacement.y_translation() * 5) / 5.0
+
+    if(displacement.response() > MAV_OPTICAL_FLOW_confidence_threshold):
+        send_optical_flow_packet(sub_pixel_x, sub_pixel_y, displacement.response())
+
+        print("{0:+f}x {1:+f}y {2} {3} FPS".format(sub_pixel_x, sub_pixel_y,
+              displacement.response(),
+              clock.fps()))
     else:
-        print("FPS %f" % (clock.fps()))
+        print(clock.fps())

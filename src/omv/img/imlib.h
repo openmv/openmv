@@ -1249,7 +1249,8 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
 void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int effort);
 void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi);
 // Template Matching
-void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, rectangle_t *roi1, bool logpolar, float *x_offset, float *y_offset, float *response);
+void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, rectangle_t *roi1, bool logpolar, bool fix_rotation_scale,
+                          float *x_translation, float *y_translation, float *rotation, float *scale, float *response);
 
 // LeNet (CNN for character recognition)
 #define LENGTH_KERNEL	5
@@ -1274,26 +1275,26 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
 #define LENET_MODEL_SIZE    (51902)
 
 typedef struct lenet5 {
-	float weight0_1[INPUT][LAYER1][LENGTH_KERNEL][LENGTH_KERNEL];
-	float weight2_3[LAYER2][LAYER3][LENGTH_KERNEL][LENGTH_KERNEL];
-	float weight4_5[LAYER4][LAYER5][LENGTH_KERNEL][LENGTH_KERNEL];
-	float weight5_6[LAYER5 * LENGTH_FEATURE5 * LENGTH_FEATURE5][LENET_OUTPUT_SIZE];
+    float weight0_1[INPUT][LAYER1][LENGTH_KERNEL][LENGTH_KERNEL];
+    float weight2_3[LAYER2][LAYER3][LENGTH_KERNEL][LENGTH_KERNEL];
+    float weight4_5[LAYER4][LAYER5][LENGTH_KERNEL][LENGTH_KERNEL];
+    float weight5_6[LAYER5 * LENGTH_FEATURE5 * LENGTH_FEATURE5][LENET_OUTPUT_SIZE];
 
-	float bias0_1[LAYER1];
-	float bias2_3[LAYER3];
-	float bias4_5[LAYER5];
-	float bias5_6[LENET_OUTPUT_SIZE];
+    float bias0_1[LAYER1];
+    float bias2_3[LAYER3];
+    float bias4_5[LAYER5];
+    float bias5_6[LENET_OUTPUT_SIZE];
 
 } lenet5_t;
 
 typedef struct lenet5_feature {
-	float input[INPUT][LENGTH_FEATURE0][LENGTH_FEATURE0];
-	float layer1[LAYER1][LENGTH_FEATURE1][LENGTH_FEATURE1];
-	float layer2[LAYER2][LENGTH_FEATURE2][LENGTH_FEATURE2];
-	float layer3[LAYER3][LENGTH_FEATURE3][LENGTH_FEATURE3];
-	float layer4[LAYER4][LENGTH_FEATURE4][LENGTH_FEATURE4];
-	float layer5[LAYER5][LENGTH_FEATURE5][LENGTH_FEATURE5];
-	float output[LENET_OUTPUT_SIZE];
+    float input[INPUT][LENGTH_FEATURE0][LENGTH_FEATURE0];
+    float layer1[LAYER1][LENGTH_FEATURE1][LENGTH_FEATURE1];
+    float layer2[LAYER2][LENGTH_FEATURE2][LENGTH_FEATURE2];
+    float layer3[LAYER3][LENGTH_FEATURE3][LENGTH_FEATURE3];
+    float layer4[LAYER4][LENGTH_FEATURE4][LENGTH_FEATURE4];
+    float layer5[LAYER5][LENGTH_FEATURE5][LENGTH_FEATURE5];
+    float output[LENET_OUTPUT_SIZE];
 } lenet5_feature_t;
 
 

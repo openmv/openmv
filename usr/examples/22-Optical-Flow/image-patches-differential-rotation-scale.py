@@ -9,7 +9,7 @@
 # image at once. Instead it breaks up the process by working on groups
 # of pixels in the image. This gives you a "new" image of results.
 #
-# Note that surfaces need to have some type of "edge" on them for the
+# NOTE that surfaces need to have some type of "edge" on them for the
 # algorithm to work. A featureless surface produces crazy results.
 
 # NOTE: Unless you have a very nice test rig this example is hard to see usefulness of...
@@ -25,7 +25,7 @@ BLOCK_H = 16 # pow2
 import sensor, image, time, math
 
 # NOTE!!! You have to use a small power of 2 resolution when using
-# find_rotscale(). This is because the algorithm is powered by
+# find_displacement(). This is because the algorithm is powered by
 # something called phase correlation which does the image comparison
 # using FFTs. A non-power of 2 resolution requires padding to a power
 # of 2 which reduces the usefulness of the algorithm results. Please
@@ -54,13 +54,13 @@ while(True):
 
     for y in range(0, sensor.height(), BLOCK_H):
         for x in range(0, sensor.width(), BLOCK_W):
-            rotscale_obj = extra_fb.find_rotscale(img, \
+            displacement = extra_fb.find_displacement(img, logpolar=True, \
                 roi = (x, y, BLOCK_W, BLOCK_H), template_roi = (x, y, BLOCK_W, BLOCK_H))
 
             # Below 0.1 or so (YMMV) and the results are just noise.
-            if(rotscale_obj.response() > 0.1):
-                rotation_change = rotscale_obj.rot_offset()
-                zoom_amount = 1.0 + rotscale_obj.scale_offset()
+            if(displacement.response() > 0.1):
+                rotation_change = displacement.rotation()
+                zoom_amount = 1.0 + displacement.scale()
                 pixel_x = x + (BLOCK_W//2) + int(math.sin(rotation_change) * zoom_amount * (BLOCK_W//4))
                 pixel_y = y + (BLOCK_H//2) + int(math.cos(rotation_change) * zoom_amount * (BLOCK_H//4))
                 img.draw_line((x + BLOCK_W//2, y + BLOCK_H//2, pixel_x, pixel_y), \
