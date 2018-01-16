@@ -799,7 +799,7 @@ static mp_obj_t py_image_clear(mp_obj_t img_obj)
 static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
-    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
+    PY_ASSERT_TRUE_MSG(!IM_IS_JPEG(arg_img), "Image format is not supported.");
 
     int arg_x = mp_obj_get_int(x_obj);
     int arg_y = mp_obj_get_int(y_obj);
@@ -807,15 +807,20 @@ static mp_obj_t py_image_get_pixel(mp_obj_t img_obj, mp_obj_t x_obj, mp_obj_t y_
         return mp_const_none;
     }
 
-    if (IM_IS_GS(arg_img)) {
-        return mp_obj_new_int(IM_GET_GS_PIXEL(arg_img, arg_x, arg_y));
-    } else {
-        uint16_t pixel = IM_GET_RGB565_PIXEL(arg_img, arg_x, arg_y);
-        mp_obj_t pixel_tuple[3];
-        pixel_tuple[0] = mp_obj_new_int(IM_R528(IM_R565(pixel)));
-        pixel_tuple[1] = mp_obj_new_int(IM_G628(IM_G565(pixel)));
-        pixel_tuple[2] = mp_obj_new_int(IM_B528(IM_B565(pixel)));
-        return mp_obj_new_tuple(3, pixel_tuple);
+    switch (arg_img->bpp) {
+        case 1: // GS
+        case 3: // BAYER
+            return mp_obj_new_int(IM_GET_GS_PIXEL(arg_img, arg_x, arg_y));
+        case 2: { // RGB565
+            uint16_t pixel = IM_GET_RGB565_PIXEL(arg_img, arg_x, arg_y);
+            mp_obj_t pixel_tuple[3];
+            pixel_tuple[0] = mp_obj_new_int(IM_R528(IM_R565(pixel)));
+            pixel_tuple[1] = mp_obj_new_int(IM_G628(IM_G565(pixel)));
+            pixel_tuple[2] = mp_obj_new_int(IM_B528(IM_B565(pixel)));
+            return mp_obj_new_tuple(3, pixel_tuple);
+        }
+        default:
+            return mp_const_none;
     }
 }
 
