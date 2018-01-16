@@ -1071,7 +1071,7 @@ void imlib_chrominvar(image_t *img)
     }
 }
 
-extern const uint8_t invariant_table[65536];
+extern const uint16_t invariant_table[65536];
 
 void imlib_illuminvar(image_t *img) // http://ai.stanford.edu/~alireza/publication/cic15.pdf
 {
@@ -1088,7 +1088,7 @@ void imlib_illuminvar(image_t *img) // http://ai.stanford.edu/~alireza/publicati
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
 #ifdef OMV_HAVE_INVARIANT_TABLE
-                    int chi_int = invariant_table[pixel];
+                    int rgb565 = invariant_table[pixel];
 #else
                     float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)] + 1.0;
                     float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)] + 1.0;
@@ -1118,9 +1118,46 @@ void imlib_illuminvar(image_t *img) // http://ai.stanford.edu/~alireza/publicati
 
                     float chi_x = (r_lin_sharp_div_log * 0.7071f) + (g_lin_sharp_div_log * -0.7071f) + (b_lin_sharp_div_log *  0.0000f);
                     float chi_y = (r_lin_sharp_div_log * 0.4082f) + (g_lin_sharp_div_log *  0.4082f) + (b_lin_sharp_div_log * -0.8164f);
-                    int chi_int = IM_MAX(IM_MIN(fast_roundf(fast_expf((chi_x * 0.9326f) + (chi_y * -0.3609f)) * 127.5f), COLOR_GRAYSCALE_MAX), COLOR_GRAYSCALE_MIN);
+
+                    float e_t_x =  0.9326f;
+                    float e_t_y = -0.3609f;
+
+                    float p_th_00 = e_t_x * e_t_x;
+                    float p_th_01 = e_t_x * e_t_y;
+                    float p_th_10 = e_t_y * e_t_x;
+                    float p_th_11 = e_t_y * e_t_y;
+
+                    float x_th_x = (p_th_00 * chi_x) + (p_th_01 * chi_y);
+                    float x_th_y = (p_th_10 * chi_x) + (p_th_11 * chi_y);
+
+                    float r_chi = (x_th_x *  0.7071f) + (x_th_y *  0.4082f);
+                    float g_chi = (x_th_x * -0.7071f) + (x_th_y *  0.4082f);
+                    float b_chi = (x_th_x *  0.0000f) + (x_th_y * -0.8164f);
+
+                    float r_chi_invariant = fast_expf(r_chi);
+                    float g_chi_invariant = fast_expf(g_chi);
+                    float b_chi_invariant = fast_expf(b_chi);
+
+                    float chi_invariant_sum = r_chi_invariant + g_chi_invariant + b_chi_invariant;
+
+                    float r_chi_invariant_m = 0.0f;
+                    float g_chi_invariant_m = 0.0f;
+                    float b_chi_invariant_m = 0.0f;
+
+                    if (chi_invariant_sum > 0.0f) {
+                        chi_invariant_sum = 1.0f / chi_invariant_sum;
+                        r_chi_invariant_m = r_chi_invariant * chi_invariant_sum;
+                        g_chi_invariant_m = g_chi_invariant * chi_invariant_sum;
+                        b_chi_invariant_m = b_chi_invariant * chi_invariant_sum;
+                    }
+
+                    int r_chi_invariant_m_int = IM_MAX(IM_MIN(r_chi_invariant_m * 255.0f, COLOR_R8_MAX), COLOR_R8_MIN);
+                    int g_chi_invariant_m_int = IM_MAX(IM_MIN(g_chi_invariant_m * 255.0f, COLOR_G8_MAX), COLOR_G8_MIN);
+                    int b_chi_invariant_m_int = IM_MAX(IM_MIN(b_chi_invariant_m * 255.0f, COLOR_B8_MAX), COLOR_B8_MIN);
+
+                    int rgb565 = COLOR_R8_G8_B8_TO_RGB565(r_chi_invariant_m_int, g_chi_invariant_m_int, b_chi_invariant_m_int);
 #endif
-                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, COLOR_R8_G8_B8_TO_RGB565(chi_int, chi_int, chi_int));
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, rgb565);
                 }
             }
 
