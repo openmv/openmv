@@ -1118,6 +1118,8 @@ void imlib_negate(image_t *img);
 void imlib_difference(image_t *img, const char *path, image_t *other);
 void imlib_replace(image_t *img, const char *path, image_t *other);
 void imlib_blend(image_t *img, const char *path, image_t *other, int alpha);
+void imlib_max(image_t *img, const char *path, image_t *other);
+void imlib_min(image_t *img, const char *path, image_t *other);
 
 /* Image Morphing */
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);

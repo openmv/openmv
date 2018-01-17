@@ -349,6 +349,12 @@ Q(CPUFREQ_216MHZ)
 Q(get_frequency)
 Q(set_frequency)
 
+// Max
+// duplicate Q(max)
+
+// Min
+// duplicate Q(min)
+
 // Log Polar
 Q(linpolar)
 Q(reverse)

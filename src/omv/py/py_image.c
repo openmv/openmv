@@ -1288,6 +1288,44 @@ static mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
     return args[0];
 }
 
+static mp_obj_t py_image_max(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        fb_alloc_mark();
+        imlib_max(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        fb_alloc_mark();
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        fb_alloc_mark();
+        imlib_max(arg_img, NULL, arg_other);
+        fb_alloc_free_till_mark();
+    }
+
+    return img_obj;
+}
+
+static mp_obj_t py_image_min(mp_obj_t img_obj, mp_obj_t other_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
+
+    if (MP_OBJ_IS_STR(other_obj)) {
+        fb_alloc_mark();
+        imlib_min(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        fb_alloc_mark();
+    } else {
+        image_t *arg_other = py_image_cobj(other_obj);
+        fb_alloc_mark();
+        imlib_min(arg_img, NULL, arg_other);
+        fb_alloc_free_till_mark();
+    }
+
+    return img_obj;
+}
+
 static mp_obj_t py_image_linpolar(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -4143,6 +4181,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_difference_obj, py_image_difference);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_replace_obj, py_image_replace);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_blend_obj, 2, py_image_blend);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_max_obj, py_image_max);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_min_obj, py_image_min);
 /* Image Morphing */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
 /* Image Filtering */
@@ -4257,6 +4297,8 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_difference),          (mp_obj_t)&py_image_difference_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_replace),             (mp_obj_t)&py_image_replace_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_max),                 (mp_obj_t)&py_image_max_obj},
+    {MP_OBJ_NEW_QSTR(MP_QSTR_min),                 (mp_obj_t)&py_image_min_obj},
     /* Image Morphing */
     {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
     /* Image Filtering */
