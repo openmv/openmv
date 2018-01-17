@@ -1022,6 +1022,58 @@ void imlib_blend(image_t *img, const char *path, image_t *other, int alpha)
     imlib_image_operation(img, path, other, imlib_blend_line_op, (void *) __PKHBT((256-alpha), alpha, 16));
 }
 
+static void imlib_max_line_op(image_t *img, int line, uint8_t *other, void *data)
+{
+    data = data;
+
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = IM_MAX(pixels[i], other[i]);
+        }
+    } else {
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            const int pixel = pixels[i], other_pixel = ((uint16_t *) other)[i];
+            const int r = IM_MAX(IM_R565(pixel), IM_R565(other_pixel));
+            const int g = IM_MAX(IM_G565(pixel), IM_G565(other_pixel));
+            const int b = IM_MAX(IM_B565(pixel), IM_B565(other_pixel));
+            pixels[i] = IM_RGB565(r, g, b);
+        }
+    }
+}
+
+void imlib_max(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_max_line_op, NULL);
+}
+
+static void imlib_min_line_op(image_t *img, int line, uint8_t *other, void *data)
+{
+    data = data;
+
+    if (IM_IS_GS(img)) {
+        uint8_t *pixels = img->pixels + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            pixels[i] = IM_MIN(pixels[i], other[i]);
+        }
+    } else {
+        uint16_t *pixels = ((uint16_t *) img->pixels) + (img->w * line);
+        for (int i=0; i<img->w; i++) {
+            const int pixel = pixels[i], other_pixel = ((uint16_t *) other)[i];
+            const int r = IM_MIN(IM_R565(pixel), IM_R565(other_pixel));
+            const int g = IM_MIN(IM_G565(pixel), IM_G565(other_pixel));
+            const int b = IM_MIN(IM_B565(pixel), IM_B565(other_pixel));
+            pixels[i] = IM_RGB565(r, g, b);
+        }
+    }
+}
+
+void imlib_min(image_t *img, const char *path, image_t *other)
+{
+    imlib_image_operation(img, path, other, imlib_min_line_op, NULL);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 void imlib_chrominvar(image_t *img)
