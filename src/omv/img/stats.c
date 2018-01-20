@@ -587,12 +587,16 @@ static int get_median_l(long long *array, long long array_sum, int array_len)
 }
 
 bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
-                          list_t *thresholds, bool invert, bool robust)
+                          list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold, bool robust)
 {
     bool result = false;
     memset(out, 0, sizeof(find_lines_list_lnk_data_t));
 
     if (!robust) { // Least Squares
+        int blob_x1 = roi->x + roi->w - 1;
+        int blob_y1 = roi->y + roi->h - 1;
+        int blob_x2 = roi->x;
+        int blob_y2 = roi->y;
         int blob_pixels = 0;
         int blob_cx = 0;
         int blob_cy = 0;
@@ -610,6 +614,10 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                         uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                         for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                             if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                blob_x1 = IM_MIN(blob_x1, x);
+                                blob_y1 = IM_MIN(blob_y1, y);
+                                blob_x2 = IM_MAX(blob_x2, x);
+                                blob_y2 = IM_MAX(blob_y2, y);
                                 blob_pixels += 1;
                                 blob_cx += x;
                                 blob_cy += y;
@@ -626,6 +634,10 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                         uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                         for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                             if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                blob_x1 = IM_MIN(blob_x1, x);
+                                blob_y1 = IM_MIN(blob_y1, y);
+                                blob_x2 = IM_MAX(blob_x2, x);
+                                blob_y2 = IM_MAX(blob_y2, y);
                                 blob_pixels += 1;
                                 blob_cx += x;
                                 blob_cy += y;
@@ -642,6 +654,10 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                         uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                         for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                             if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                blob_x1 = IM_MIN(blob_x1, x);
+                                blob_y1 = IM_MIN(blob_y1, y);
+                                blob_x2 = IM_MAX(blob_x2, x);
+                                blob_y2 = IM_MAX(blob_y2, y);
                                 blob_pixels += 1;
                                 blob_cx += x;
                                 blob_cy += y;
@@ -659,7 +675,9 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
             }
         }
 
-        if (blob_pixels) {
+        int w = blob_x2 - blob_x1;
+        int h = blob_y2 - blob_y1;
+        if (blob_pixels && ((w * h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
             // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
             // https://www.strchr.com/standard_deviation_in_one_pass
             //
@@ -735,6 +753,10 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
         size_t points_count = 0;
 
         if(points_max) {
+            int blob_x1 = roi->x + roi->w - 1;
+            int blob_y1 = roi->y + roi->h - 1;
+            int blob_x2 = roi->x;
+            int blob_y2 = roi->y;
             int blob_pixels = 0;
 
             for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
@@ -747,6 +769,10 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                             uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                             for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                                 if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                    blob_x1 = IM_MIN(blob_x1, x);
+                                    blob_y1 = IM_MIN(blob_y1, y);
+                                    blob_x2 = IM_MAX(blob_x2, x);
+                                    blob_y2 = IM_MAX(blob_y2, y);
                                     blob_pixels += 1;
                                     x_histogram[x]++;
                                     y_histogram[y]++;
@@ -765,6 +791,10 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                             uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                             for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                                 if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                    blob_x1 = IM_MIN(blob_x1, x);
+                                    blob_y1 = IM_MIN(blob_y1, y);
+                                    blob_x2 = IM_MAX(blob_x2, x);
+                                    blob_y2 = IM_MAX(blob_y2, y);
                                     blob_pixels += 1;
                                     x_histogram[x]++;
                                     y_histogram[y]++;
@@ -783,6 +813,10 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                             uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                             for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
                                 if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                    blob_x1 = IM_MIN(blob_x1, x);
+                                    blob_y1 = IM_MIN(blob_y1, y);
+                                    blob_x2 = IM_MAX(blob_x2, x);
+                                    blob_y2 = IM_MAX(blob_y2, y);
                                     blob_pixels += 1;
                                     x_histogram[x]++;
                                     y_histogram[y]++;
@@ -802,7 +836,9 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
                 }
             }
 
-            if (blob_pixels) {
+            int w = blob_x2 - blob_x1;
+            int h = blob_y2 - blob_y1;
+            if (blob_pixels && ((w * h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
                 long long delta_sum = (points_count * (points_count - 1)) / 2;
 
                 if (delta_sum) {
