@@ -355,7 +355,10 @@ Q(set_frequency)
 // Min
 // duplicate Q(min)
 
-// Log Polar
+// Shadow Removal
+Q(remove_shadows)
+
+// Linear Polar
 Q(linpolar)
 Q(reverse)
 

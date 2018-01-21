@@ -898,7 +898,7 @@ typedef struct img_read_settings {
     save_image_format_t format;
 } img_read_settings_t;
 
-typedef void (*line_op_t)(image_t*, int, uint8_t*, void*);
+typedef void (*line_op_t)(image_t*, int, uint8_t*, void*, bool);
 
 typedef enum descriptor_type {
     DESC_LBP,
@@ -1120,6 +1120,7 @@ void imlib_replace(image_t *img, const char *path, image_t *other);
 void imlib_blend(image_t *img, const char *path, image_t *other, int alpha);
 void imlib_max(image_t *img, const char *path, image_t *other);
 void imlib_min(image_t *img, const char *path, image_t *other);
+void imlib_remove_shadows(image_t *img, const char *path, image_t *other);
 
 /* Image Morphing */
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);

@@ -11,9 +11,9 @@ typedef struct imlib_similatiry_line_op_state {
     int lines_processed;
 } imlib_similatiry_line_op_state_t;
 
-void imlib_similarity_line_op(image_t *img, int line, uint8_t *other, void *data)
+void imlib_similarity_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
 {
-    imlib_similatiry_line_op_state_t *state = (imlib_similatiry_line_op_state_t *) data;
+    imlib_similatiry_line_op_state_t *state = (imlib_similatiry_line_op_state_t *) data; vflipped = vflipped;
     float c1 = 0, c2 = 0;
 
     switch(img->bpp) {
