@@ -5,6 +5,7 @@ SRCS += $(addprefix ,   \
 	fb_alloc.c          \
 	umm_malloc.c        \
 	ff_wrapper.c        \
+	ini.c               \
 	framebuffer.c       \
 	array.c             \
 	usbdbg.c            \
