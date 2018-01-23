@@ -70,6 +70,8 @@
 
 #include "framebuffer.h"
 
+#include "ini.h"
+
 int errno;
 extern char _vfs_buf;
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
@@ -269,6 +271,57 @@ void NORETURN __stack_chk_fail(void)
 }
 #endif
 
+static bool ini_handler_callback_is_true(const char *value)
+{
+    int i = ini_atoi(value);
+    if (i) return true;
+    if (strlen(value) != 4) return false;
+    if ((value[0] != 'T') && (value[0] != 't')) return false;
+    if ((value[1] != 'R') && (value[1] != 'r')) return false;
+    if ((value[2] != 'U') && (value[2] != 'u')) return false;
+    if ((value[3] != 'E') && (value[3] != 'e')) return false;
+    return true;
+}
+
+int ini_handler_callback(void *user, const char *section, const char *name, const char *value)
+{
+    user = user;
+
+    #define MATCH(s, n) ((strcmp(section, (s)) == 0) && (strcmp(name, (n)) == 0))
+
+    if (MATCH("BootSettings", "REPLUart")) {
+        if (ini_handler_callback_is_true(value)) {
+            mp_obj_t args[2] = {
+                MP_OBJ_NEW_SMALL_INT(3), // UART Port
+                MP_OBJ_NEW_SMALL_INT(115200) // Baud Rate
+            };
+
+            MP_STATE_PORT(pyb_stdio_uart) = pyb_uart_type.make_new((mp_obj_t) &pyb_uart_type, MP_ARRAY_SIZE(args), 0, args);
+        }
+    } else {
+        return 0;
+    }
+
+    return 1;
+
+    #undef MATCH
+}
+
+FRESULT apply_settings(const char *path)
+{
+    nlr_buf_t nlr;
+    FRESULT f_res = f_stat(&vfs_fat->fatfs, path, NULL);
+
+    if (f_res == FR_OK) {
+        if (nlr_push(&nlr) == 0) {
+            ini_parse(&vfs_fat->fatfs, path, ini_handler_callback, NULL);
+            nlr_pop();
+        }
+    }
+
+    return f_res;
+}
+
 FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
 {
     nlr_buf_t nlr;
@@ -378,6 +431,7 @@ soft_reset:
     i2c_init0();
     spi_init0();
     uart_init0();
+    MP_STATE_PORT(pyb_stdio_uart) = NULL; // need to zero
     dac_init();
     pyb_usb_init0();
     sensor_init0();
@@ -474,6 +528,7 @@ soft_reset:
     // Run boot script(s)
     if (first_soft_reset) {
         exec_boot_script("/selftest.py", true, false);
+        apply_settings("/openmv.config");
         exec_boot_script("/main.py", false, true);
     }
 
