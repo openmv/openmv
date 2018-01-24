@@ -1,4 +1,15 @@
 # Change Log
+## [2.7](https://github.com/openmv/openmv/releases/tag/v2.7) (2018-01-24)
+* Add LeNet NN.
+* Add shadow removal.
+* Implement low-power modes.
+* Update WINC firmware.
+* Update gain, exposure and white balance controls.
+* Add MQTT library and example.
+* Support BAYER get_pixel().
+* Fix getaddrinfo bug.
+* Fix find template bug.
+
 ## [2.6](https://github.com/openmv/openmv/releases/tag/v2.6) (2017-11-04)
 * Update to MicroPython 1.9.2
 * Support saving bayer (raw) images.
