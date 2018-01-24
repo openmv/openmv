@@ -29,36 +29,54 @@
 // Have built-in RGB->LAB table.
 #define OMV_HAVE_LAB_TABLE
 
-// Have built-in invariant table.
-#define OMV_HAVE_INVARIANT_TABLE
+// Enable remove_shadows()
+#define OMV_ENABLE_REMOVE_SHADOWS
 
-// Enable Rotation_Correction
+// Enable linpolar()
+#define OMV_ENABLE_LINPOLAR
+
+// Enable logpolar()
+#define OMV_ENABLE_LOGPOLAR
+
+// Enable chrominvar()
+#define OMV_ENABLE_CHROMINVAR
+
+// Enable illuminvar()
+#define OMV_ENABLE_ILLUMINVAR
+
+// Enable rotation_corr()
 #define OMV_ENABLE_ROTATION_CORR
 
-// Enable Find_Line_Segments
+// Enable get_similarity()
+#define OMV_ENABLE_GET_SIMILARITY
+
+// Enable find_lines()
+#define OMV_ENABLE_FIND_LINES
+
+// Enable find_line_segments()
 #define OMV_ENABLE_FIND_LINE_SEGMENTS
 
-// Enable Find_Circles
+// Enable find_circles()
 #define OMV_ENABLE_FIND_CIRCLES
 
-// Enable Find_Rects
+// Enable find_rects()
 #define OMV_ENABLE_FIND_RECTS
 
-// Enable QRCodes (14 KB)
+// Enable find_qrcodes() (14 KB)
 #define OMV_ENABLE_QRCODES
 
-// Enable AprilTags (64 KB).
+// Enable find_apriltags() (64 KB)
 #define OMV_ENABLE_APRILTAGS
 
-// Enable DataMatrices (26 KB).
+// Enable find_datamatrices() (26 KB)
 #define OMV_ENABLE_DATAMATRICES
 
-// Enable Barcodes (42 KB).
+// Enable find_barcodes() (42 KB)
 #define OMV_ENABLE_BARCODES
 
-// Enable Phase Correlation
+// Enable find_displacement()
 #ifdef OMV_ENABLE_ROTATION_CORR
-#define OMV_ENABLE_PHASE_CORRELATION
+#define OMV_ENABLE_FIND_DISPLACEMENT
 #endif
 
 // Enable LENET (200+ KB).

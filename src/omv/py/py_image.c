@@ -1326,6 +1326,7 @@ static mp_obj_t py_image_min(mp_obj_t img_obj, mp_obj_t other_obj)
     return img_obj;
 }
 
+#ifdef OMV_ENABLE_REMOVE_SHADOWS
 static mp_obj_t py_image_remove_shadows(mp_obj_t img_obj, mp_obj_t other_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
@@ -1344,7 +1345,9 @@ static mp_obj_t py_image_remove_shadows(mp_obj_t img_obj, mp_obj_t other_obj)
 
     return img_obj;
 }
+#endif // OMV_ENABLE_REMOVE_SHADOWS
 
+#ifdef OMV_ENABLE_LINPOLAR
 static mp_obj_t py_image_linpolar(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1357,7 +1360,9 @@ static mp_obj_t py_image_linpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
     fb_alloc_free_till_mark();
     return args[0];
 }
+#endif // OMV_ENABLE_LINPOLAR
 
+#ifdef OMV_ENABLE_LOGPOLAR
 static mp_obj_t py_image_logpolar(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1370,7 +1375,9 @@ static mp_obj_t py_image_logpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
     fb_alloc_free_till_mark();
     return args[0];
 }
+#endif // OMV_ENABLE_LOGPOLAR
 
+#ifdef OMV_ENABLE_CHROMINVAR
 static mp_obj_t py_image_chrominvar(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
@@ -1379,7 +1386,9 @@ static mp_obj_t py_image_chrominvar(mp_obj_t img_obj)
     imlib_chrominvar(arg_img);
     return img_obj;
 }
+#endif // OMV_ENABLE_CHROMINVAR
 
+#ifdef OMV_ENABLE_ILLUMINVAR
 static mp_obj_t py_image_illuminvar(mp_obj_t img_obj)
 {
     image_t *arg_img = py_image_cobj(img_obj);
@@ -1388,6 +1397,7 @@ static mp_obj_t py_image_illuminvar(mp_obj_t img_obj)
     imlib_illuminvar(arg_img);
     return img_obj;
 }
+#endif // OMV_ENABLE_ILLUMINVAR
 
 static mp_obj_t py_image_histeq(mp_obj_t img_obj)
 {
@@ -1450,7 +1460,7 @@ static mp_obj_t py_image_rotation_corr(uint n_args, const mp_obj_t *args, mp_map
     fb_alloc_free_till_mark();
     return args[0];
 }
-#endif
+#endif // OMV_ENABLE_ROTATION_CORR
 
 static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
 {
@@ -1461,6 +1471,7 @@ static mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
     return img_obj;
 }
 
+#ifdef OMV_ENABLE_GET_SIMILARITY
 // Similarity Object //
 #define py_similarity_obj_size 4
 typedef struct py_similarity_obj {
@@ -1555,6 +1566,7 @@ static mp_obj_t py_image_get_similarity(mp_obj_t img_obj, mp_obj_t other_obj)
     o->max = mp_obj_new_float(max);
     return o;
 }
+#endif // OMV_ENABLE_GET_SIMILARITY
 
 // Statistics Object //
 #define py_statistics_obj_size 24
@@ -2688,6 +2700,7 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     return objects_list;
 }
 
+#ifdef OMV_ENABLE_FIND_LINES
 static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -2731,6 +2744,7 @@ static mp_obj_t py_image_find_lines(uint n_args, const mp_obj_t *args, mp_map_t 
 
     return objects_list;
 }
+#endif // OMV_ENABLE_FIND_LINES
 
 #ifdef OMV_ENABLE_FIND_LINE_SEGMENTS
 static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -2771,7 +2785,7 @@ static mp_obj_t py_image_find_line_segments(uint n_args, const mp_obj_t *args, m
 
     return objects_list;
 }
-#endif
+#endif // OMV_ENABLE_FIND_LINE_SEGMENTS
 
 #ifdef OMV_ENABLE_FIND_CIRCLES
 // Circle Object //
@@ -3015,7 +3029,7 @@ static mp_obj_t py_image_find_rects(uint n_args, const mp_obj_t *args, mp_map_t 
 
     return objects_list;
 }
-#endif
+#endif // OMV_ENABLE_FIND_RECTS
 
 #ifdef OMV_ENABLE_QRCODES
 // QRCode Object //
@@ -3184,7 +3198,7 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
 
     return objects_list;
 }
-#endif
+#endif // OMV_ENABLE_QRCODES
 
 #ifdef OMV_ENABLE_APRILTAGS
 // AprilTag Object //
@@ -3706,7 +3720,7 @@ static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map
 }
 #endif // OMV_ENABLE_BARCODES
 
-#ifdef OMV_ENABLE_PHASE_CORRELATION
+#ifdef OMV_ENABLE_FIND_DISPLACEMENT
 // Displacement Object //
 #define py_displacement_obj_size 5
 typedef struct py_displacement_obj {
@@ -3814,7 +3828,7 @@ static mp_obj_t py_image_find_displacement(uint n_args, const mp_obj_t *args, mp
 
     return o;
 }
-#endif // OMV_ENABLE_PHASE_CORRELATION
+#endif // OMV_ENABLE_FIND_DISPLACEMENT
 
 #ifdef OMV_ENABLE_LENET
 static mp_obj_t py_image_find_number(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -4204,7 +4218,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_replace_obj, py_image_replace);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_blend_obj, 2, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_max_obj, py_image_max);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_min_obj, py_image_min);
+#ifdef OMV_ENABLE_REMOVE_SHADOWS
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_remove_shadows_obj, py_image_remove_shadows);
+#endif
 /* Image Morphing */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
 /* Image Filtering */
@@ -4213,10 +4229,18 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mean_obj, 2, py_image_mean);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mode_obj, 2, py_image_mode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gaussian_obj, 1, py_image_gaussian);
+#ifdef OMV_ENABLE_LINPOLAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_linpolar_obj, 1, py_image_linpolar);
+#endif
+#ifdef OMV_ENABLE_LOGPOLAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_logpolar_obj, 1, py_image_logpolar);
+#endif
+#ifdef OMV_ENABLE_CHROMINVAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_chrominvar_obj, py_image_chrominvar);
+#endif
+#ifdef OMV_ENABLE_ILLUMINVAR
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_illuminvar_obj, py_image_illuminvar);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_lens_corr_obj, 1, py_image_lens_corr);
 #ifdef OMV_ENABLE_ROTATION_CORR
@@ -4224,14 +4248,18 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_rotation_corr_obj, 1, py_image_rotati
 #endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_mask_ellipse_obj, py_image_mask_ellipse);
 /* Image Statistics */
+#ifdef OMV_ENABLE_GET_SIMILARITY
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_get_similarity_obj, py_image_get_similarity);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_histogram_obj, 1, py_image_get_histogram);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_statistics_obj, 1, py_image_get_statistics);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_regression_obj, 2, py_image_get_regression);
 /* Color Tracking */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_blobs_obj, 2, py_image_find_blobs);
 /* Shape Detection */
+#ifdef OMV_ENABLE_FIND_LINES
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lines_obj, 1, py_image_find_lines);
+#endif
 #ifdef OMV_ENABLE_FIND_LINE_SEGMENTS
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_line_segments_obj, 1, py_image_find_line_segments);
 #endif
@@ -4255,7 +4283,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_datamatrices_obj, 1, py_image_fi
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_barcodes_obj, 1, py_image_find_barcodes);
 #endif
 /* Template Matching */
-#ifdef OMV_ENABLE_PHASE_CORRELATION
+#ifdef OMV_ENABLE_FIND_DISPLACEMENT
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_displacement_obj, 2, py_image_find_displacement);
 #endif
 #ifdef OMV_ENABLE_LENET
@@ -4321,7 +4349,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_blend),               (mp_obj_t)&py_image_blend_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_max),                 (mp_obj_t)&py_image_max_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_min),                 (mp_obj_t)&py_image_min_obj},
+#ifdef OMV_ENABLE_REMOVE_SHADOWS
     {MP_OBJ_NEW_QSTR(MP_QSTR_remove_shadows),      (mp_obj_t)&py_image_remove_shadows_obj},
+#endif
     /* Image Morphing */
     {MP_OBJ_NEW_QSTR(MP_QSTR_morph),               (mp_obj_t)&py_image_morph_obj},
     /* Image Filtering */
@@ -4330,10 +4360,18 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_mode),                (mp_obj_t)&py_image_mode_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_median),              (mp_obj_t)&py_image_median_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_gaussian),            (mp_obj_t)&py_image_gaussian_obj},
+#ifdef OMV_ENABLE_LINPOLAR
     {MP_OBJ_NEW_QSTR(MP_QSTR_linpolar),            (mp_obj_t)&py_image_linpolar_obj},
+#endif
+#ifdef OMV_ENABLE_LOGPOLAR
     {MP_OBJ_NEW_QSTR(MP_QSTR_logpolar),            (mp_obj_t)&py_image_logpolar_obj},
+#endif
+#ifdef OMV_ENABLE_CHROMINVAR
     {MP_OBJ_NEW_QSTR(MP_QSTR_chrominvar),          (mp_obj_t)&py_image_chrominvar_obj},
+#endif
+#ifdef OMV_ENABLE_ILLUMINVAR
     {MP_OBJ_NEW_QSTR(MP_QSTR_illuminvar),          (mp_obj_t)&py_image_illuminvar_obj},
+#endif
     {MP_OBJ_NEW_QSTR(MP_QSTR_histeq),              (mp_obj_t)&py_image_histeq_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_lens_corr),           (mp_obj_t)&py_image_lens_corr_obj},
 #ifdef OMV_ENABLE_ROTATION_CORR
@@ -4341,7 +4379,9 @@ static const mp_map_elem_t locals_dict_table[] = {
 #endif
     {MP_OBJ_NEW_QSTR(MP_QSTR_mask_ellipse),        (mp_obj_t)&py_image_mask_ellipse_obj},
     /* Image Statistics */
+#ifdef OMV_ENABLE_GET_SIMILARITY
     {MP_OBJ_NEW_QSTR(MP_QSTR_get_similarity),      (mp_obj_t)&py_image_get_similarity_obj},
+#endif
     {MP_OBJ_NEW_QSTR(MP_QSTR_get_hist),            (mp_obj_t)&py_image_get_histogram_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_get_histogram),       (mp_obj_t)&py_image_get_histogram_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_histogram),           (mp_obj_t)&py_image_get_histogram_obj},
@@ -4352,7 +4392,9 @@ static const mp_map_elem_t locals_dict_table[] = {
     /* Color Tracking */
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_blobs),          (mp_obj_t)&py_image_find_blobs_obj},
     /* Shape Detection */
+#ifdef OMV_ENABLE_FIND_LINES
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_lines),          (mp_obj_t)&py_image_find_lines_obj},
+#endif
 #ifdef OMV_ENABLE_FIND_LINE_SEGMENTS
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_line_segments),  (mp_obj_t)&py_image_find_line_segments_obj},
 #endif
@@ -4376,7 +4418,7 @@ static const mp_map_elem_t locals_dict_table[] = {
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_barcodes),       (mp_obj_t)&py_image_find_barcodes_obj},
 #endif
     /* Template Matching */
-#ifdef OMV_ENABLE_PHASE_CORRELATION
+#ifdef OMV_ENABLE_FIND_DISPLACEMENT
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_displacement),   (mp_obj_t)&py_image_find_displacement_obj},
 #endif
 #ifdef OMV_ENABLE_LENET
