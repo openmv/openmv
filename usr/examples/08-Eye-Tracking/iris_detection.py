@@ -25,7 +25,7 @@ sensor.set_windowing((220, 190, 200, 100))
 sensor.set_pixformat(sensor.GRAYSCALE)
 
 # Load Haar Cascade
-# By default this will use all stages, lower satges is faster but less accurate.
+# By default this will use all stages, lower stages is faster but less accurate.
 eyes_cascade = image.HaarCascade("eye", stages=24)
 print(eyes_cascade)
 
