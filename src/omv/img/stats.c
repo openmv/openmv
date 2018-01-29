@@ -290,13 +290,71 @@ void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, 
 
                 for (int i = 0, j = ptr->BBinCount; i < j; i++) {
                     if ((median_count < percentile) && (percentile <= (median_count + ptr->BBins[i]))) {
-                        out->BValue = fast_roundf((i * mult) + COLOR_A_MIN);
+                        out->BValue = fast_roundf((i * mult) + COLOR_B_MIN);
                         break;
                     }
 
                     median_count += ptr->BBins[i];
                 }
             }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
+static int ostu(int bincount, float *bins)
+{
+    float cdf[bincount]; memset(cdf, 0, bincount * sizeof(float));
+    float weighted_cdf[bincount]; memset(weighted_cdf, 0, bincount * sizeof(float));
+
+    cdf[0] = bins[0];
+    weighted_cdf[0] = 0 * bins[0];
+
+    for (int i = 1; i < bincount; i++) {
+        cdf[i] = cdf[i - 1] + bins[i];
+        weighted_cdf[i] = weighted_cdf[i - 1] + (i * bins[i]);
+    }
+
+    float variance[bincount]; memset(variance, 0, bincount * sizeof(float));
+    float max_variance = 0.0f;
+    int threshold = 0;
+
+    for (int i = 0, ii = bincount - 1; i < ii; i++) {
+
+        if ((cdf[i] != 0.0f) && (cdf[i] != 1.0f)) {
+            variance[i] = powf((cdf[i] * weighted_cdf[bincount - 1]) - weighted_cdf[i], 2.0f) / (cdf[i] * (1.0f - cdf[i]));
+        } else {
+            variance[i] = 0.0f;
+        }
+
+        if (variance[i] > max_variance) {
+            max_variance = variance[i];
+            threshold = i;
+        }
+    }
+
+    return threshold;
+}
+
+void imlib_get_threshold(threshold_t *out, image_bpp_t bpp, histogram_t *ptr)
+{
+    memset(out, 0, sizeof(threshold_t));
+    switch(bpp) {
+        case IMAGE_BPP_BINARY: {
+            out->LValue = (ostu(ptr->LBinCount, ptr->LBins) * (COLOR_BINARY_MAX - COLOR_BINARY_MIN)) / (ptr->LBinCount - 1);
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            out->LValue = (ostu(ptr->LBinCount, ptr->LBins) * (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN)) / (ptr->LBinCount - 1);
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            out->LValue = (ostu(ptr->LBinCount, ptr->LBins) * (COLOR_L_MAX - COLOR_L_MIN)) / (ptr->LBinCount - 1);
+            out->AValue = (ostu(ptr->ABinCount, ptr->ABins) * (COLOR_A_MAX - COLOR_A_MIN)) / (ptr->ABinCount - 1);
+            out->BValue = (ostu(ptr->BBinCount, ptr->BBins) * (COLOR_B_MAX - COLOR_B_MIN)) / (ptr->BBinCount - 1);
             break;
         }
         default: {

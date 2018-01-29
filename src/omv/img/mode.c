@@ -15,7 +15,7 @@
 // ...
 // krn_s == n -> ((n*2)+1)x((n*2)+1) kernel
 
-void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert)
+void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask)
 {
     int brows = ksize + 1;
     uint8_t *buffer = fb_alloc(img->w * brows * img->bpp);
@@ -27,18 +27,19 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
                 int mcount = 0, mode = 0;
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
-                        if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
-                            const uint8_t pixel = IM_GET_GS_PIXEL(img, x+k, y+j);
-                            bins[pixel]++;
-                            if(bins[pixel] > mcount) {
-                                mcount = bins[pixel];
-                                mode = pixel;
-                            }
+                        int x_k = IM_MIN(IM_MAX(x+k, 0), img->w-1);
+                        int y_j = IM_MIN(IM_MAX(y+j, 0), img->h-1);
+                        const uint8_t pixel = IM_GET_GS_PIXEL(img, x_k, y_j);
+                        bins[pixel]++;
+                        if(bins[pixel] > mcount) {
+                            mcount = bins[pixel];
+                            mode = pixel;
                         }
                     }
                 }
                 // We're writing into the buffer like if it were a window.
                 uint8_t pixel = mode;
+                if (mask && (!IM_GET_GS_PIXEL(mask, x, y))) pixel = IM_GET_GS_PIXEL(img, x, y);
                 buffer[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((pixel-offset)<IM_GET_GS_PIXEL(img, x, y))^invert) ? 255 : 0);
             }
             if (y>=ksize) {
@@ -67,31 +68,32 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
                 int b_mcount = 0, b_mode = 0;
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
-                        if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
-                            const uint16_t pixel = IM_GET_RGB565_PIXEL(img, x+k, y+j);
-                            int red = IM_R565(pixel);
-                            int green = IM_G565(pixel);
-                            int blue = IM_B565(pixel);
-                            r_bins[red]++;
-                            if(r_bins[red] > r_mcount) {
-                                r_mcount = r_bins[red];
-                                r_mode = red;
-                            }
-                            g_bins[green]++;
-                            if(g_bins[green] > g_mcount) {
-                                g_mcount = g_bins[green];
-                                g_mode = green;
-                            }
-                            b_bins[blue]++;
-                            if(b_bins[blue] > b_mcount) {
-                                b_mcount = b_bins[blue];
-                                b_mode = blue;
-                            }
+                        int x_k = IM_MIN(IM_MAX(x+k, 0), img->w-1);
+                        int y_j = IM_MIN(IM_MAX(y+j, 0), img->h-1);
+                        const uint16_t pixel = IM_GET_RGB565_PIXEL(img, x_k, y_j);
+                        int red = IM_R565(pixel);
+                        int green = IM_G565(pixel);
+                        int blue = IM_B565(pixel);
+                        r_bins[red]++;
+                        if(r_bins[red] > r_mcount) {
+                            r_mcount = r_bins[red];
+                            r_mode = red;
+                        }
+                        g_bins[green]++;
+                        if(g_bins[green] > g_mcount) {
+                            g_mcount = g_bins[green];
+                            g_mode = green;
+                        }
+                        b_bins[blue]++;
+                        if(b_bins[blue] > b_mcount) {
+                            b_mcount = b_bins[blue];
+                            b_mode = blue;
                         }
                     }
                 }
                 // We're writing into the buffer like if it were a window.
                 uint16_t pixel = IM_RGB565(r_mode, g_mode, b_mode);
+                if (mask && (!IM_GET_RGB565_PIXEL(mask, x, y))) pixel = IM_GET_RGB565_PIXEL(img, x, y);
                 ((uint16_t *) buffer)[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((COLOR_RGB565_TO_Y(pixel)-offset)<COLOR_RGB565_TO_Y(IM_GET_RGB565_PIXEL(img, x, y)))^invert) ? 65535 : 0);
             }
             if (y>=ksize) {

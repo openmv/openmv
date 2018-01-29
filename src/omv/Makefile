@@ -59,6 +59,7 @@ SRCS += $(addprefix img/,   \
 	orb.c                   \
 	template.c              \
 	phasecorrelation.c      \
+	shadow_removal.c        \
 	font.c                  \
 	jpeg.c                  \
 	lbp.c                   \

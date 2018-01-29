@@ -172,8 +172,8 @@ color_thresholds_list_lnk_data_t;
 #define COLOR_Y_MIN -128
 #define COLOR_Y_MAX 127
 #define COLOR_U_MIN -128
-#define COLOR_V_MAX 127
-#define COLOR_U_MIN -128
+#define COLOR_U_MAX 127
+#define COLOR_V_MIN -128
 #define COLOR_V_MAX 127
 
 extern const uint8_t rb528_table[32];
@@ -243,10 +243,10 @@ extern const int8_t yuv_table[196608];
     _r_lin = (_r_lin > 0.0031308f) ? ((1.055f * powf(_r_lin, 0.416666f)) - 0.055f) : (_r_lin * 12.92f); \
     _g_lin = (_g_lin > 0.0031308f) ? ((1.055f * powf(_g_lin, 0.416666f)) - 0.055f) : (_g_lin * 12.92f); \
     _b_lin = (_b_lin > 0.0031308f) ? ((1.055f * powf(_b_lin, 0.416666f)) - 0.055f) : (_b_lin * 12.92f); \
-    unsigned int _r = IM_MAX(IM_MIN(roundf(_r_lin * COLOR_R5_MAX), COLOR_R5_MAX), COLOR_R5_MIN); \
-    unsigned int _g = IM_MAX(IM_MIN(roundf(_g_lin * COLOR_G6_MAX), COLOR_G6_MAX), COLOR_G6_MIN); \
-    unsigned int _b = IM_MAX(IM_MIN(roundf(_b_lin * COLOR_B5_MAX), COLOR_B5_MAX), COLOR_B5_MIN); \
-    COLOR_R5_G6_B5_TO_RGB565(_r, _g, _b); \
+    unsigned int _rgb565_r = IM_MAX(IM_MIN(roundf(_r_lin * COLOR_R5_MAX), COLOR_R5_MAX), COLOR_R5_MIN); \
+    unsigned int _rgb565_g = IM_MAX(IM_MIN(roundf(_g_lin * COLOR_G6_MAX), COLOR_G6_MAX), COLOR_G6_MIN); \
+    unsigned int _rgb565_b = IM_MAX(IM_MIN(roundf(_b_lin * COLOR_B5_MAX), COLOR_B5_MAX), COLOR_B5_MIN); \
+    COLOR_R5_G6_B5_TO_RGB565(_rgb565_r, _rgb565_g, _rgb565_b); \
 })
 
 // https://en.wikipedia.org/wiki/YCbCr -> JPEG Conversion
@@ -941,6 +941,12 @@ typedef struct percentile {
     int8_t BValue;
 } percentile_t;
 
+typedef struct threshold {
+    uint8_t LValue;
+    int8_t AValue;
+    int8_t BValue;
+} threshold_t;
+
 typedef struct statistics {
     uint8_t LMean, LMedian, LMode, LSTDev, LMin, LMax, LLQ, LUQ;
     int8_t AMean, AMedian, AMode, ASTDev, AMin, AMax, ALQ, AUQ;
@@ -1133,10 +1139,10 @@ int imlib_image_mean(image_t *src); // grayscale only
 int imlib_image_std(image_t *src); // grayscale only
 
 /* Image Filtering */
-void imlib_midpoint_filter(image_t *img, const int ksize, const int bias, bool threshold, int offset, bool invert);
-void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert);
-void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert);
-void imlib_median_filter(image_t *img, const int ksize, const int percentile, bool threshold, int offset, bool invert);
+void imlib_midpoint_filter(image_t *img, const int ksize, const int bias, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_median_filter(image_t *img, const int ksize, const int percentile, bool threshold, int offset, bool invert, image_t *mask);
 void imlib_histeq(image_t *img);
 void imlib_mask_ellipse(image_t *img);
 
@@ -1221,6 +1227,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
 void imlib_get_similarity(image_t *img, const char *path, image_t *other, float *avg, float *std, float *min, float *max);
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi);
 void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
+void imlib_get_threshold(threshold_t *out, image_bpp_t bpp, histogram_t *ptr);
 void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr);
 bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                           list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold, bool robust);

@@ -181,6 +181,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	orb.o                                   \
 	template.o                              \
 	phasecorrelation.o                      \
+	shadow_removal.o                        \
 	font.o                                  \
 	jpeg.o                                  \
 	lbp.o                                   \
