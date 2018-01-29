@@ -30,9 +30,9 @@ void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m
                 int ptr = 0;
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
-                        if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
-                            acc += krn[ptr++] * IM_GET_GS_PIXEL(img, x+k, y+j);
-                        }
+                        int x_k = IM_MIN(IM_MAX(x+k, 0), img->w-1);
+                        int y_j = IM_MIN(IM_MAX(y+j, 0), img->h-1);
+                        acc += krn[ptr++] * IM_GET_GS_PIXEL(img, x_k, y_j);
                     }
                 }
                 acc = (acc * m) + b; // scale, offset, and clamp
@@ -60,12 +60,12 @@ void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m
                 int ptr = 0;
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
-                        if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
-                             const uint16_t pixel = IM_GET_RGB565_PIXEL(img, x+k, y+j);
-                             r_acc += krn[ptr] * IM_R565(pixel);
-                             g_acc += krn[ptr] * IM_G565(pixel);
-                             b_acc += krn[ptr++] * IM_B565(pixel);
-                        }
+                        int x_k = IM_MIN(IM_MAX(x+k, 0), img->w-1);
+                        int y_j = IM_MIN(IM_MAX(y+j, 0), img->h-1);
+                         const uint16_t pixel = IM_GET_RGB565_PIXEL(img, x_k, y_j);
+                         r_acc += krn[ptr] * IM_R565(pixel);
+                         g_acc += krn[ptr] * IM_G565(pixel);
+                         b_acc += krn[ptr++] * IM_B565(pixel);
                     }
                 }
                 r_acc = (r_acc * m) + b; // scale, offset, and clamp

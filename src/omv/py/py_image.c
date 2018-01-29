@@ -1214,9 +1214,11 @@ static mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
     int arg_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
     int arg_offset = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
     int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), MP_MAP_LOOKUP);
 
     int bias = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
-    imlib_midpoint_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(bias, 0), 256), arg_threshold, arg_offset, arg_invert);
+    imlib_midpoint_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(bias, 0), 256), arg_threshold, arg_offset, arg_invert,
+                          (kw_arg != NULL) ? py_image_cobj(kw_arg->value) : NULL);
     return args[0];
 }
 
@@ -1231,8 +1233,10 @@ static mp_obj_t py_image_mean(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     int arg_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
     int arg_offset = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
     int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), MP_MAP_LOOKUP);
 
-    imlib_mean_filter(arg_img, arg_ksize, arg_threshold, arg_offset, arg_invert);
+    imlib_mean_filter(arg_img, arg_ksize, arg_threshold, arg_offset, arg_invert,
+                      (kw_arg != NULL) ? py_image_cobj(kw_arg->value) : NULL);
     return args[0];
 }
 
@@ -1247,8 +1251,10 @@ static mp_obj_t py_image_mode(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     int arg_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
     int arg_offset = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
     int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), MP_MAP_LOOKUP);
 
-    imlib_mode_filter(arg_img, arg_ksize, arg_threshold, arg_offset, arg_invert);
+    imlib_mode_filter(arg_img, arg_ksize, arg_threshold, arg_offset, arg_invert,
+                      (kw_arg != NULL) ? py_image_cobj(kw_arg->value) : NULL);
     return args[0];
 }
 
@@ -1264,10 +1270,12 @@ static mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     int arg_threshold = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
     int arg_offset = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
     int arg_invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), MP_MAP_LOOKUP);
 
     int n = ((arg_ksize*2)+1)*((arg_ksize*2)+1);
     int percentile = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_percentile), 0.5) * n;
-    imlib_median_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(percentile, 0), n-1), arg_threshold, arg_offset, arg_invert);
+    imlib_median_filter(arg_img, arg_ksize, IM_MIN(IM_MAX(percentile, 0), n-1), arg_threshold, arg_offset, arg_invert,
+                        (kw_arg != NULL) ? py_image_cobj(kw_arg->value) : NULL);
     return args[0];
 }
 
@@ -1327,23 +1335,27 @@ static mp_obj_t py_image_min(mp_obj_t img_obj, mp_obj_t other_obj)
 }
 
 #ifdef OMV_ENABLE_REMOVE_SHADOWS
-static mp_obj_t py_image_remove_shadows(mp_obj_t img_obj, mp_obj_t other_obj)
+static mp_obj_t py_image_remove_shadows(uint n_args, const mp_obj_t *args)
 {
-    image_t *arg_img = py_image_cobj(img_obj);
+    image_t *arg_img = py_image_cobj(args[0]);
     PY_ASSERT_TRUE_MSG(IM_IS_RGB565(arg_img), "Image format is not supported.");
 
-    if (MP_OBJ_IS_STR(other_obj)) {
+    if (n_args < 2) {
         fb_alloc_mark();
-        imlib_remove_shadows(arg_img, mp_obj_str_get_str(other_obj), NULL);
+        imlib_remove_shadows(arg_img, NULL, NULL);
+        fb_alloc_mark();
+    } else if (MP_OBJ_IS_STR(args[1])) {
+        fb_alloc_mark();
+        imlib_remove_shadows(arg_img, mp_obj_str_get_str(args[1]), NULL);
         fb_alloc_mark();
     } else {
-        image_t *arg_other = py_image_cobj(other_obj);
+        image_t *arg_other = py_image_cobj(args[1]);
         fb_alloc_mark();
         imlib_remove_shadows(arg_img, NULL, arg_other);
         fb_alloc_free_till_mark();
     }
 
-    return img_obj;
+    return args[0];
 }
 #endif // OMV_ENABLE_REMOVE_SHADOWS
 
@@ -1875,6 +1887,86 @@ static const mp_obj_type_t py_percentile_type = {
     .locals_dict = (mp_obj_t) &py_percentile_locals_dict,
 };
 
+// Threshold Object //
+#define py_threshold_obj_size 3
+typedef struct py_threshold_obj {
+    mp_obj_base_t base;
+    image_bpp_t bpp;
+    mp_obj_t LValue, AValue, BValue;
+} py_threshold_obj_t;
+
+static void py_threshold_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_threshold_obj_t *self = self_in;
+    switch(self->bpp) {
+        case IMAGE_BPP_BINARY: {
+            mp_printf(print, "{value:%d}", mp_obj_get_int(self->LValue));
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            mp_printf(print, "{value:%d}", mp_obj_get_int(self->LValue));
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            mp_printf(print, "{l_value:%d, a_value:%d, b_value:%d}", mp_obj_get_int(self->LValue), mp_obj_get_int(self->AValue), mp_obj_get_int(self->BValue));
+            break;
+        }
+        default: {
+            mp_printf(print, "{}");
+            break;
+        }
+    }
+}
+
+static mp_obj_t py_threshold_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
+{
+    if (value == MP_OBJ_SENTINEL) { // load
+        py_threshold_obj_t *self = self_in;
+        if (MP_OBJ_IS_TYPE(index, &mp_type_slice)) {
+            mp_bound_slice_t slice;
+            if (!mp_seq_get_fast_slice_indexes(py_threshold_obj_size, index, &slice)) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "only slices with step=1 (aka None) are supported"));
+            }
+            mp_obj_tuple_t *result = mp_obj_new_tuple(slice.stop - slice.start, NULL);
+            mp_seq_copy(result->items, &(self->LValue) + slice.start, result->len, mp_obj_t);
+            return result;
+        }
+        switch (mp_get_index(self->base.type, py_threshold_obj_size, index, false)) {
+            case 0: return self->LValue;
+            case 1: return self->AValue;
+            case 2: return self->BValue;
+        }
+    }
+    return MP_OBJ_NULL; // op not supported
+}
+
+mp_obj_t py_threshold_value(mp_obj_t self_in) { return ((py_threshold_obj_t *) self_in)->LValue; }
+mp_obj_t py_threshold_l_value(mp_obj_t self_in) { return ((py_threshold_obj_t *) self_in)->LValue; }
+mp_obj_t py_threshold_a_value(mp_obj_t self_in) { return ((py_threshold_obj_t *) self_in)->AValue; }
+mp_obj_t py_threshold_b_value(mp_obj_t self_in) { return ((py_threshold_obj_t *) self_in)->BValue; }
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_value_obj, py_threshold_value);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_l_value_obj, py_threshold_l_value);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_a_value_obj, py_threshold_a_value);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_threshold_b_value_obj, py_threshold_b_value);
+
+STATIC const mp_rom_map_elem_t py_threshold_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_value), MP_ROM_PTR(&py_threshold_value_obj) },
+    { MP_ROM_QSTR(MP_QSTR_l_value), MP_ROM_PTR(&py_threshold_l_value_obj) },
+    { MP_ROM_QSTR(MP_QSTR_a_value), MP_ROM_PTR(&py_threshold_a_value_obj) },
+    { MP_ROM_QSTR(MP_QSTR_b_value), MP_ROM_PTR(&py_threshold_b_value_obj) }
+};
+
+STATIC MP_DEFINE_CONST_DICT(py_threshold_locals_dict, py_threshold_locals_dict_table);
+
+static const mp_obj_type_t py_threshold_type = {
+    { &mp_type_type },
+    .name  = MP_QSTR_threshold,
+    .print = py_threshold_print,
+    .subscr = py_threshold_subscr,
+    .locals_dict = (mp_obj_t) &py_threshold_locals_dict,
+};
+
 // Histogram Object //
 #define py_histogram_obj_size 3
 typedef struct py_histogram_obj {
@@ -1984,6 +2076,47 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile)
     return o;
 }
 
+mp_obj_t py_histogram_get_threshold(mp_obj_t self_in)
+{
+    histogram_t hist;
+    hist.LBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->len;
+    hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
+    hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
+    fb_alloc_mark();
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+
+    for (int i = 0; i < hist.LBinCount; i++) {
+        hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
+    }
+
+    for (int i = 0; i < hist.ABinCount; i++) {
+        hist.ABins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->items[i]);
+    }
+
+    for (int i = 0; i < hist.BBinCount; i++) {
+        hist.BBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->items[i]);
+    }
+
+    threshold_t t;
+    imlib_get_threshold(&t, ((py_histogram_obj_t *) self_in)->bpp, &hist);
+    if (hist.BBinCount) fb_free();
+    if (hist.ABinCount) fb_free();
+    if (hist.LBinCount) fb_free();
+    fb_alloc_free_till_mark();
+
+    py_threshold_obj_t *o = m_new_obj(py_threshold_obj_t);
+    o->base.type = &py_threshold_type;
+    o->bpp = ((py_threshold_obj_t *) self_in)->bpp;
+
+    o->LValue = mp_obj_new_int(t.LValue);
+    o->AValue = mp_obj_new_int(t.AValue);
+    o->BValue = mp_obj_new_int(t.BValue);
+
+    return o;
+}
+
 mp_obj_t py_histogram_get_statistics(mp_obj_t self_in)
 {
     histogram_t hist;
@@ -2051,6 +2184,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_l_bins_obj, py_histogram_l_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_a_bins_obj, py_histogram_a_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_b_bins_obj, py_histogram_b_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_histogram_get_percentile_obj, py_histogram_get_percentile);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_get_threshold_obj, py_histogram_get_threshold);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_histogram_get_statistics_obj, py_histogram_get_statistics);
 
 STATIC const mp_rom_map_elem_t py_histogram_locals_dict_table[] = {
@@ -2059,6 +2193,7 @@ STATIC const mp_rom_map_elem_t py_histogram_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_a_bins), MP_ROM_PTR(&py_histogram_a_bins_obj) },
     { MP_ROM_QSTR(MP_QSTR_b_bins), MP_ROM_PTR(&py_histogram_b_bins_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_percentile), MP_ROM_PTR(&py_histogram_get_percentile_obj) },
+    { MP_ROM_QSTR(MP_QSTR_get_threshold), MP_ROM_PTR(&py_histogram_get_threshold_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_stats), MP_ROM_PTR(&py_histogram_get_statistics_obj) },
     { MP_ROM_QSTR(MP_QSTR_get_statistics), MP_ROM_PTR(&py_histogram_get_statistics_obj) },
     { MP_ROM_QSTR(MP_QSTR_statistics), MP_ROM_PTR(&py_histogram_get_statistics_obj) }
@@ -4219,7 +4354,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_blend_obj, 2, py_image_blend);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_max_obj, py_image_max);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_min_obj, py_image_min);
 #ifdef OMV_ENABLE_REMOVE_SHADOWS
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_image_remove_shadows_obj, py_image_remove_shadows);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_remove_shadows_obj, 1, 2, py_image_remove_shadows);
 #endif
 /* Image Morphing */
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);

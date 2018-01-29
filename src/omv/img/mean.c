@@ -15,7 +15,7 @@
 // ...
 // krn_s == n -> ((n*2)+1)x((n*2)+1) kernel
 
-void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert)
+void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask)
 {
     int n = ((ksize*2)+1)*((ksize*2)+1);
     int brows = ksize + 1;
@@ -26,14 +26,15 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                 int acc = 0;
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
-                        if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
-                            const uint8_t pixel = IM_GET_GS_PIXEL(img, x+k, y+j);
-                            acc += pixel;
-                        }
+                        int x_k = IM_MIN(IM_MAX(x+k, 0), img->w-1);
+                        int y_j = IM_MIN(IM_MAX(y+j, 0), img->h-1);
+                        const uint8_t pixel = IM_GET_GS_PIXEL(img, x_k, y_j);
+                        acc += pixel;
                     }
                 }
                 // We're writing into the buffer like if it were a window.
                 uint8_t pixel = acc/n;
+                if (mask && (!IM_GET_GS_PIXEL(mask, x, y))) pixel = IM_GET_GS_PIXEL(img, x, y);
                 buffer[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((pixel-offset)<IM_GET_GS_PIXEL(img, x, y))^invert) ? 255 : 0);
             }
             if (y>=ksize) {
@@ -55,16 +56,17 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                 int b_acc = 0;
                 for (int j=-ksize; j<=ksize; j++) {
                     for (int k=-ksize; k<=ksize; k++) {
-                        if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j)) {
-                            const uint16_t pixel = IM_GET_RGB565_PIXEL(img, x+k, y+j);
-                            r_acc += IM_R565(pixel);
-                            g_acc += IM_G565(pixel);
-                            b_acc += IM_B565(pixel);
-                        }
+                        int x_k = IM_MIN(IM_MAX(x+k, 0), img->w-1);
+                        int y_j = IM_MIN(IM_MAX(y+j, 0), img->h-1);
+                        const uint16_t pixel = IM_GET_RGB565_PIXEL(img, x_k, y_j);
+                        r_acc += IM_R565(pixel);
+                        g_acc += IM_G565(pixel);
+                        b_acc += IM_B565(pixel);
                     }
                 }
                 // We're writing into the buffer like if it were a window.
                 uint16_t pixel = IM_RGB565(r_acc/n, g_acc/n, b_acc/n);
+                if (mask && (!IM_GET_RGB565_PIXEL(mask, x, y))) pixel = IM_GET_RGB565_PIXEL(img, x, y);
                 ((uint16_t *) buffer)[((y%brows)*img->w)+x] = (!threshold) ? pixel : ((((COLOR_RGB565_TO_Y(pixel)-offset)<COLOR_RGB565_TO_Y(IM_GET_RGB565_PIXEL(img, x, y)))^invert) ? 65535 : 0);
             }
             if (y>=ksize) {
