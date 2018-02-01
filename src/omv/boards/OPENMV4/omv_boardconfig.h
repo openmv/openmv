@@ -26,33 +26,6 @@
 // Sensor PLL register value.
 #define OMV_OV7725_PLL_CONFIG   (0x81)  // x6
 
-// Have built-in RGB->LAB table.
-#define OMV_HAVE_LAB_TABLE
-
-// Enable Find_Line_Segments
-#define OMV_ENABLE_FIND_LINE_SEGMENTS
-
-// Enable Find_Circles
-#define OMV_ENABLE_FIND_CIRCLES
-
-// Enable Find_Rects
-#define OMV_ENABLE_FIND_RECTS
-
-// Enable QRCodes (14 KB)
-#define OMV_ENABLE_QRCODES
-
-// Enable AprilTags (64 KB).
-#define OMV_ENABLE_APRILTAGS
-
-// Enable DataMatrices (26 KB).
-#define OMV_ENABLE_DATAMATRICES
-
-// Enable Barcodes (42 KB).
-#define OMV_ENABLE_BARCODES
-
-// Enable LENET (200+ KB).
-#define OMV_ENABLE_LENET
-
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)

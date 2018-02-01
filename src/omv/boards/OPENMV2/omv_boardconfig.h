@@ -26,9 +26,6 @@
 // Sensor PLL register value.
 #define OMV_OV7725_PLL_CONFIG   (0x41)  // x4
 
-// Have built-in RGB->LAB table.
-#define OMV_HAVE_LAB_TABLE
-
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_2)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
