@@ -24,6 +24,9 @@
 // Enable illuminvar()
 #define IMLIB_ENABLE_ILLUMINVAR
 
+// Enable invariant table
+//#define IMLIB_ENABLE_INVARIANT_TABLE
+
 // Enable rotation_corr()
 #define IMLIB_ENABLE_ROTATION_CORR
 
