@@ -5,6 +5,7 @@
 
 #include "imlib.h"
 
+#ifdef IMLIB_ENABLE_REMOVE_SHADOWS
 // http://arma.sourceforge.net/shadows/
 // http://dx.doi.org/10.1016/j.patcog.2011.10.001
 
@@ -354,7 +355,9 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
 
 #undef imlib_remove_shadows_kernel_size
 #undef imlib_remove_shadows_kernel_rank
+#endif //IMLIB_ENABLE_REMOVE_SHADOWS
 
+#ifdef IMLIB_ENABLE_CHROMINVAR
 extern const float xyz_table[256];
 
 void imlib_chrominvar(image_t *img)
@@ -403,7 +406,9 @@ void imlib_chrominvar(image_t *img)
         }
     }
 }
+#endif //IMLIB_ENABLE_CHROMINVAR
 
+#ifdef IMLIB_ENABLE_ILLUMINVAR
 extern const uint16_t invariant_table[65536];
 
 void imlib_illuminvar(image_t *img) // http://ai.stanford.edu/~alireza/publication/cic15.pdf
@@ -420,7 +425,7 @@ void imlib_illuminvar(image_t *img) // http://ai.stanford.edu/~alireza/publicati
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
-#ifdef OMV_HAVE_INVARIANT_TABLE
+#ifdef IMLIB_ENABLE_INVARIANT_TABLE
                     int rgb565 = invariant_table[pixel];
 #else
                     float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)] + 1.0;
@@ -501,3 +506,4 @@ void imlib_illuminvar(image_t *img) // http://ai.stanford.edu/~alireza/publicati
         }
     }
 }
+#endif //IMLIB_ENABLE_ILLUMINVAR
