@@ -30,6 +30,15 @@
 // Enable rotation_corr()
 //#define IMLIB_ENABLE_ROTATION_CORR
 
+// Enable phasecorrelate()
+//#define IMLIB_ENABLE_FIND_DISPLACEMENT
+
+// rotation_corr() is required by phasecorrelate()
+#if defined(IMLIB_ENABLE_FIND_DISPLACEMENT)\
+    && !defined(IMLIB_ENABLE_ROTATION_CORR)
+    #define IMLIB_ENABLE_ROTATION_CORR
+#endif
+
 // Enable get_similarity()
 //#define IMLIB_ENABLE_GET_SIMILARITY
 
@@ -56,11 +65,6 @@
 
 // Enable find_barcodes() (42 KB)
 //#define IMLIB_ENABLE_BARCODES
-
-// Enable find_displacement()
-//#ifdef IMLIB_ENABLE_ROTATION_CORR
-//#define IMLIB_ENABLE_FIND_DISPLACEMENT
-//#endif
 
 // Enable LENET (200+ KB).
 //#define IMLIB_ENABLE_LENET
