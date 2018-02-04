@@ -139,6 +139,7 @@ void imlib_logpolar(image_t *img, bool linear, bool reverse)
 }
 #endif //defined(IMLIB_ENABLE_LOGPOLAR) || defined(IMLIB_ENABLE_LINPOLAR)
 
+#ifdef IMLIB_ENABLE_FIND_DISPLACEMENT
 // Note that both ROI widths and heights must be equal.
 void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, rectangle_t *roi1, bool logpolar, bool fix_rotation_scale,
                           float *x_translation, float *y_translation, float *rotation, float *scale, float *response)
@@ -483,3 +484,4 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
 
     if ((!logpolar) && fix_rotation_scale) fb_free();
 }
+#endif //IMLIB_ENABLE_FIND_DISPLACEMENT
