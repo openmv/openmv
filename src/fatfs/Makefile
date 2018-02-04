@@ -17,3 +17,5 @@ $(BUILD)/%.o : %.c
 $(BUILD)/%.o : %.s
 	$(ECHO) "AS $<"
 	$(AS) $(AFLAGS) $< -o $@
+
+-include $(OBJS:%.o=%.d)
