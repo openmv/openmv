@@ -12180,6 +12180,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi,
     fb_free(); // umm_init_x();
 }
 
+#ifdef IMLIB_ENABLE_ROTATION_CORR
 // http://jepsonsblog.blogspot.com/2012/11/rotation-in-3d-using-opencvs.html
 void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float z_rotation,
                          float x_translation, float y_translation,
@@ -12327,5 +12328,5 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
 
     fb_free(); // umm_init_x();
 }
-
+#endif //IMLIB_ENABLE_ROTATION_CORR
 #pragma GCC diagnostic pop
