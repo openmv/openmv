@@ -5,6 +5,7 @@
 
 #include "imlib.h"
 
+#ifdef IMLIB_ENABLE_GET_SIMILARITY
 typedef struct imlib_similatiry_line_op_state {
     int *sumBucketsOfX, *sumBucketsOfY, *sum2BucketsOfX, *sum2BucketsOfY, *sum2Buckets;
     float similarity_sum, similarity_sum_2, similarity_min, similarity_max;
@@ -138,6 +139,7 @@ void imlib_get_similarity(image_t *img, const char *path, image_t *other, float 
     fb_free();
     fb_free();
 }
+#endif //IMLIB_ENABLE_GET_SIMILARITY
 
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi)
 {
