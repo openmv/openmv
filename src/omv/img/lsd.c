@@ -7,6 +7,7 @@
 #include <limits.h>
 #include "imlib.h"
 
+#ifdef IMLIB_ENABLE_FIND_LINE_SEGMENTS
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -2707,3 +2708,4 @@ void imlib_lsd_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, u
 }
 
 #pragma GCC diagnostic pop
+#endif //IMLIB_ENABLE_FIND_LINE_SEGMENTS
