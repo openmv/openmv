@@ -11,7 +11,7 @@
 
 #include "imlib.h"
 #include "fb_alloc.h"
-
+#ifdef IMLIB_ENABLE_LENET
 #define GETLENGTH(array) (sizeof(array)/sizeof(*(array)))
 
 #define GETCOUNT(array)  (sizeof(array)/sizeof(float))
@@ -147,3 +147,4 @@ uint8_t lenet_predict(lenet5_t *lenet, image_t *src, rectangle_t *roi, float *co
     fb_free();
     return result;
 }
+#endif //IMLIB_ENABLE_LENET

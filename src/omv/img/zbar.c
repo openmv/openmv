@@ -5,7 +5,7 @@
 
 #include <limits.h>
 #include "imlib.h"
-
+#ifdef IMLIB_ENABLE_BARCODES
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -8877,3 +8877,4 @@ void imlib_find_barcodes(list_t *out, image_t *ptr, rectangle_t *roi)
 }
 
 #pragma GCC diagnostic pop
+#endif //IMLIB_ENABLE_BARCODES

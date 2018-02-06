@@ -5,7 +5,7 @@
 
 #include <float.h>
 #include "imlib.h"
-
+#ifdef IMLIB_ENABLE_DATAMATRICES
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
@@ -6387,3 +6387,4 @@ void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int ef
 }
 
 #pragma GCC diagnostic pop
+#endif //IMLIB_ENABLE_DATAMATRICES
