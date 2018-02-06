@@ -11956,8 +11956,8 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     fb_free(); // umm_init_x();
 }
 
-void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi,
-                      uint32_t threshold)
+#ifdef IMLIB_ENABLE_FIND_RECTS
+void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t threshold)
 {
     // Frame Buffer Memory Usage...
     // -> GRAYSCALE Input Image = w*h*1
@@ -12179,6 +12179,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi,
     apriltag_detector_destroy(td);
     fb_free(); // umm_init_x();
 }
+#endif //IMLIB_ENABLE_FIND_RECTS
 
 #ifdef IMLIB_ENABLE_ROTATION_CORR
 // http://jepsonsblog.blogspot.com/2012/11/rotation-in-3d-using-opencvs.html
