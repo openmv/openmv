@@ -9,6 +9,7 @@ SRCS += $(addprefix ,   \
 	framebuffer.c       \
 	array.c             \
 	usbdbg.c            \
+	wifi_dbg.c          \
 	cambus.c            \
 	ov9650.c            \
 	ov2640.c            \

@@ -53,6 +53,7 @@
 
 #include "sensor.h"
 #include "usbdbg.h"
+#include "wifi_dbg.h"
 #include "sdram.h"
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
@@ -271,6 +272,14 @@ void NORETURN __stack_chk_fail(void)
 }
 #endif
 
+typedef struct apply_settings_user
+{
+    wifi_dbg_settings_t wifi_dbg_settings;
+}
+apply_settings_user_t;
+
+extern char *strncpy(char *dst, const char *src, size_t n);
+
 static bool ini_handler_callback_is_true(const char *value)
 {
     int i = ini_atoi(value);
@@ -285,7 +294,7 @@ static bool ini_handler_callback_is_true(const char *value)
 
 int ini_handler_callback(void *user, const char *section, const char *name, const char *value)
 {
-    user = user;
+    apply_settings_user_t *apply_settings_user = (apply_settings_user_t *) user;
 
     #define MATCH(s, n) ((strcmp(section, (s)) == 0) && (strcmp(name, (n)) == 0))
 
@@ -298,6 +307,22 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
 
             MP_STATE_PORT(pyb_stdio_uart) = pyb_uart_type.make_new((mp_obj_t) &pyb_uart_type, MP_ARRAY_SIZE(args), 0, args);
         }
+    } else if (MATCH("BootSettings", "WiFiMode")) {
+        apply_settings_user->wifi_dbg_settings.wifi_mode = ini_atoi(value);
+    } else if (MATCH("BootSettings", "ClientModeSSID")) {
+        strncpy(apply_settings_user->wifi_dbg_settings.wifi_client_ssid, name, SSID_MAX);
+    } else if (MATCH("BootSettings", "ClientModePass")) {
+        strncpy(apply_settings_user->wifi_dbg_settings.wifi_client_pass, name, PASS_MAX);
+    } else if (MATCH("BootSettings", "ClientModeType")) {
+        apply_settings_user->wifi_dbg_settings.wifi_client_type = ini_atoi(value);
+    } else if (MATCH("BootSettings", "AccessPointModeSSID")) {
+        strncpy(apply_settings_user->wifi_dbg_settings.wifi_ap_ssid, name, SSID_MAX);
+    } else if (MATCH("BootSettings", "AccessPointModePass")) {
+        strncpy(apply_settings_user->wifi_dbg_settings.wifi_ap_pass, name, SSID_MAX);
+    } else if (MATCH("BootSettings", "AccessPointModeType")) {
+        apply_settings_user->wifi_dbg_settings.wifi_ap_type = ini_atoi(value);
+    } else if (MATCH("BootSettings", "BoardName")) {
+        strncpy(apply_settings_user->wifi_dbg_settings.wifi_board_name, name, NAME_MAX);
     } else {
         return 0;
     }
@@ -314,7 +339,9 @@ FRESULT apply_settings(const char *path)
 
     if (f_res == FR_OK) {
         if (nlr_push(&nlr) == 0) {
-            ini_parse(&vfs_fat->fatfs, path, ini_handler_callback, NULL);
+            apply_settings_user_t apply_settings_user = {};
+            ini_parse(&vfs_fat->fatfs, path, ini_handler_callback, &apply_settings_user);
+            wifi_dbg_apply_settings(&apply_settings_user.wifi_dbg_settings);
             nlr_pop();
         }
     }
@@ -441,6 +468,7 @@ soft_reset:
     py_fir_init0();
     servo_init();
     usbdbg_init();
+    wifi_dbg_init();
 
     if (first_soft_reset) {
         rtc_init_start(false);
@@ -465,7 +493,7 @@ soft_reset:
         vfs_fat->flags = 0;
         sdcard_init_vfs(vfs_fat, 1);
 
-        // Try to mount the SD card 
+        // Try to mount the SD card
         FRESULT res = f_mount(&vfs_fat->fatfs);
         if (res != FR_OK) {
             __fatal_error("Could not mount SD card\n");
