@@ -6,6 +6,7 @@
  * Common macros.
  *
  */
+#ifndef __OMV_COMMON_H__
 #ifndef ALWAYS_INLINE
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #endif
@@ -24,3 +25,12 @@
 #else
 #define debug_printf(...)
 #endif
+
+#ifndef MIN
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#endif
+
+#endif //__OMV_COMMON_H__
