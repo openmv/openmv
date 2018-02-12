@@ -76,6 +76,7 @@
 int errno;
 extern char _vfs_buf;
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
+pyb_thread_t pyb_thread_main;
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
@@ -419,14 +420,10 @@ int main(void)
     //  NOTE: The bootloader enables the CCM/DTCM memory.
     HAL_Init();
 
-    // Stack limit should be less than real stack size, so we have a
-    // chance to recover from limit hit. (Limit is measured in bytes)
-    mp_stack_set_top(&_ram_end);
-    mp_stack_set_limit((char*)&_ram_end - (char*)&_heap_end - 1024);
-
     // Basic sub-system init
     led_init();
     pendsv_init();
+    pyb_thread_init(&pyb_thread_main);
 
     // Re-enable IRQs (disabled by bootloader)
     __enable_irq();
@@ -438,6 +435,14 @@ soft_reset:
     led_state(LED_BLUE, 1);
 
     machine_init();
+
+    // Python threading init
+    mp_thread_init();
+
+    // Stack limit should be less than real stack size, so we have a
+    // chance to recover from limit hit. (Limit is measured in bytes)
+    mp_stack_set_top(&_ram_end);
+    mp_stack_set_limit((char*)&_ram_end - (char*)&_heap_end - 1024);
 
     // GC init
     gc_init(&_heap_start, &_heap_end);
@@ -607,6 +612,7 @@ soft_reset:
     timer_deinit();
     uart_deinit();
     can_deinit();
+    pyb_thread_deinit();
 
     first_soft_reset = false;
     goto soft_reset;

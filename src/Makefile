@@ -266,6 +266,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	modnetwork.o            \
 	modmachine.o            \
 	machine_i2c.o           \
+	pybthread.o             \
+	mpthreadport.o          \
 	)
 
 #------------- MicroPy Objects ----------------#
