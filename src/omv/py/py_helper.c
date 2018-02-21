@@ -132,3 +132,46 @@ void py_helper_lookup_rectangle_2(mp_map_t *kw_args, mp_obj_t kw, image_t *img, 
         nlr_raise(mp_obj_new_exception_msg(&mp_type_AssertionError, "Invalid ROI dimensions!"));
     }
 }
+
+void py_helper_arg_to_thresholds(const mp_obj_t arg, list_t *thresholds)
+{
+    mp_uint_t arg_thresholds_len;
+    mp_obj_t *arg_thresholds;
+    mp_obj_get_array(arg, &arg_thresholds_len, &arg_thresholds);
+    if (!arg_thresholds_len) return;
+
+    for(mp_uint_t i = 0; i < arg_thresholds_len; i++) {
+        mp_uint_t arg_threshold_len;
+        mp_obj_t *arg_threshold;
+        mp_obj_get_array(arg_thresholds[i], &arg_threshold_len, &arg_threshold);
+        if (arg_threshold_len) {
+            color_thresholds_list_lnk_data_t lnk_data;
+            lnk_data.LMin = (arg_threshold_len > 0) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[0]),
+                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) : IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN);
+            lnk_data.LMax = (arg_threshold_len > 1) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[1]),
+                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) : IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX);
+            lnk_data.AMin = (arg_threshold_len > 2) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[2]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MIN;
+            lnk_data.AMax = (arg_threshold_len > 3) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[3]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MAX;
+            lnk_data.BMin = (arg_threshold_len > 4) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[4]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MIN;
+            lnk_data.BMax = (arg_threshold_len > 5) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[5]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MAX;
+            color_thresholds_list_lnk_data_t lnk_data_tmp;
+            memcpy(&lnk_data_tmp, &lnk_data, sizeof(color_thresholds_list_lnk_data_t));
+            lnk_data.LMin = IM_MIN(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
+            lnk_data.LMax = IM_MAX(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
+            lnk_data.AMin = IM_MIN(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
+            lnk_data.AMax = IM_MAX(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
+            lnk_data.BMin = IM_MIN(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
+            lnk_data.BMax = IM_MAX(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
+            list_push_back(thresholds, &lnk_data);
+        }
+    }
+}
+
+void py_helper_keyword_thresholds(mp_map_t *kw_args, mp_obj_t kw, list_t *thresholds)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg != NULL) {
+        py_helper_arg_to_thresholds(kw_arg->value, thresholds);
+    }
+}
