@@ -2217,6 +2217,11 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
+    list_t thresholds;
+    list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
+    py_helper_keyword_thresholds(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thresholds), &thresholds);
+    bool invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+
     histogram_t hist;
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -2230,7 +2235,8 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            list_free(&thresholds);
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -2244,7 +2250,8 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            list_free(&thresholds);
             break;
         }
         case IMAGE_BPP_RGB565: {
@@ -2264,7 +2271,8 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
-            imlib_get_histogram(&hist, arg_img, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            list_free(&thresholds);
             break;
         }
         default: {
@@ -2308,6 +2316,11 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
+    list_t thresholds;
+    list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
+    py_helper_keyword_thresholds(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thresholds), &thresholds);
+    bool invert = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+
     histogram_t hist;
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -2321,7 +2334,8 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            list_free(&thresholds);
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -2335,7 +2349,8 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            list_free(&thresholds);
             break;
         }
         case IMAGE_BPP_RGB565: {
@@ -2355,7 +2370,8 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
-            imlib_get_histogram(&hist, arg_img, &roi);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            list_free(&thresholds);
             break;
         }
         default: {
@@ -2508,39 +2524,10 @@ static mp_obj_t py_image_get_regression(uint n_args, const mp_obj_t *args, mp_ma
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
-    mp_uint_t arg_thresholds_len;
-    mp_obj_t *arg_thresholds;
-    mp_obj_get_array(args[1], &arg_thresholds_len, &arg_thresholds);
-    if (!arg_thresholds_len) return mp_const_none;
-
     list_t thresholds;
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
-
-    for(mp_uint_t i = 0; i < arg_thresholds_len; i++) {
-        mp_uint_t arg_threshold_len;
-        mp_obj_t *arg_threshold;
-        mp_obj_get_array(arg_thresholds[i], &arg_threshold_len, &arg_threshold);
-        if (arg_threshold_len) {
-            color_thresholds_list_lnk_data_t lnk_data;
-            lnk_data.LMin = (arg_threshold_len > 0) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[0]),
-                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) : IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN);
-            lnk_data.LMax = (arg_threshold_len > 1) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[1]),
-                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) : IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX);
-            lnk_data.AMin = (arg_threshold_len > 2) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[2]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MIN;
-            lnk_data.AMax = (arg_threshold_len > 3) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[3]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MAX;
-            lnk_data.BMin = (arg_threshold_len > 4) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[4]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MIN;
-            lnk_data.BMax = (arg_threshold_len > 5) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[5]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MAX;
-            color_thresholds_list_lnk_data_t lnk_data_tmp;
-            memcpy(&lnk_data_tmp, &lnk_data, sizeof(color_thresholds_list_lnk_data_t));
-            lnk_data.LMin = IM_MIN(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
-            lnk_data.LMax = IM_MAX(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
-            lnk_data.AMin = IM_MIN(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
-            lnk_data.AMax = IM_MAX(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
-            lnk_data.BMin = IM_MIN(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
-            lnk_data.BMax = IM_MAX(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
-            list_push_back(&thresholds, &lnk_data);
-        }
-    }
+    py_helper_arg_to_thresholds(args[1], &thresholds);
+    if (!list_size(&thresholds)) return mp_const_none;
 
     unsigned int x_stride = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_stride), 2);
     PY_ASSERT_TRUE_MSG(x_stride > 0, "x_stride must not be zero.");
@@ -2753,39 +2740,10 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     rectangle_t roi;
     py_helper_lookup_rectangle(kw_args, arg_img, &roi);
 
-    mp_uint_t arg_thresholds_len;
-    mp_obj_t *arg_thresholds;
-    mp_obj_get_array(args[1], &arg_thresholds_len, &arg_thresholds);
-    if (!arg_thresholds_len) return mp_obj_new_list(0, NULL);
-
     list_t thresholds;
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
-
-    for(mp_uint_t i = 0; i < arg_thresholds_len; i++) {
-        mp_uint_t arg_threshold_len;
-        mp_obj_t *arg_threshold;
-        mp_obj_get_array(arg_thresholds[i], &arg_threshold_len, &arg_threshold);
-        if (arg_threshold_len) {
-            color_thresholds_list_lnk_data_t lnk_data;
-            lnk_data.LMin = (arg_threshold_len > 0) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[0]),
-                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) : IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN);
-            lnk_data.LMax = (arg_threshold_len > 1) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[1]),
-                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) : IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX);
-            lnk_data.AMin = (arg_threshold_len > 2) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[2]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MIN;
-            lnk_data.AMax = (arg_threshold_len > 3) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[3]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MAX;
-            lnk_data.BMin = (arg_threshold_len > 4) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[4]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MIN;
-            lnk_data.BMax = (arg_threshold_len > 5) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[5]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MAX;
-            color_thresholds_list_lnk_data_t lnk_data_tmp;
-            memcpy(&lnk_data_tmp, &lnk_data, sizeof(color_thresholds_list_lnk_data_t));
-            lnk_data.LMin = IM_MIN(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
-            lnk_data.LMax = IM_MAX(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
-            lnk_data.AMin = IM_MIN(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
-            lnk_data.AMax = IM_MAX(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
-            lnk_data.BMin = IM_MIN(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
-            lnk_data.BMax = IM_MAX(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
-            list_push_back(&thresholds, &lnk_data);
-        }
-    }
+    py_helper_arg_to_thresholds(args[1], &thresholds);
+    if (!list_size(&thresholds)) return mp_obj_new_list(0, NULL);
 
     unsigned int x_stride = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_stride), 2);
     PY_ASSERT_TRUE_MSG(x_stride > 0, "x_stride must not be zero.");

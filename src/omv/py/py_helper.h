@@ -18,4 +18,6 @@ int py_helper_lookup_color(mp_map_t *kw_args, int default_color);
 void py_helper_lookup_offset(mp_map_t *kw_args, image_t *img, point_t *p);
 void py_helper_lookup_rectangle(mp_map_t *kw_args, image_t *img, rectangle_t *r);
 void py_helper_lookup_rectangle_2(mp_map_t *kw_args, mp_obj_t kw, image_t *img, rectangle_t *r);
+void py_helper_arg_to_thresholds(const mp_obj_t arg, list_t *thresholds);
+void py_helper_keyword_thresholds(mp_map_t *kw_args, mp_obj_t kw, list_t *thresholds);
 #endif // __PY_HELPER__

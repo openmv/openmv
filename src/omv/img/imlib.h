@@ -1226,7 +1226,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
                          float zoom);
 // Statistics
 void imlib_get_similarity(image_t *img, const char *path, image_t *other, float *avg, float *std, float *min, float *max);
-void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi);
+void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_t *thresholds, bool invert);
 void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
 void imlib_get_threshold(threshold_t *out, image_bpp_t bpp, histogram_t *ptr);
 void imlib_get_statistics(statistics_t *out, image_bpp_t bpp, histogram_t *ptr);
