@@ -218,17 +218,21 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
             threshold_t t;
             imlib_get_threshold(&t, temp_image.bpp, &h);
 
-            simple_color_t t_l, t_h;
-            t_l.L = COLOR_L_MIN;
-            t_l.A = COLOR_A_MIN;
-            t_l.B = COLOR_B_MIN;
-            t_h.L = t.LValue;
-            t_h.A = COLOR_A_MAX;
-            t_h.B = COLOR_B_MAX;
-            imlib_binary(&temp_image, 1, &t_l, &t_h, false);
+            list_t thresholds;
+            list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
+            color_thresholds_list_lnk_data_t lnk_data;
+            lnk_data.LMin = COLOR_L_MIN;
+            lnk_data.AMin = COLOR_A_MIN;
+            lnk_data.BMin = COLOR_B_MIN;
+            lnk_data.LMax = t.LValue;
+            lnk_data.AMax = COLOR_A_MAX;
+            lnk_data.BMax = COLOR_B_MAX;
+            list_push_back(&thresholds, &lnk_data);
+            imlib_binary(&temp_image, &thresholds, false, false);
+            list_free(&thresholds);
 
-            imlib_erode(&temp_image, 3, 30);
-            imlib_dilate(&temp_image, 1, 1);
+            imlib_erode(&temp_image, 3, 30, NULL);
+            imlib_dilate(&temp_image, 1, 1, NULL);
 
             // Get Shadow Average
 
@@ -239,7 +243,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
             temp_image_2.data = fb_alloc(image_size(&temp_image));
 
             memcpy(temp_image_2.data, temp_image.data, image_size(&temp_image));
-            imlib_erode(&temp_image_2, 3, 48);
+            imlib_erode(&temp_image_2, 3, 48, NULL);
 
             int shadow_r_sum = 0;
             int shadow_g_sum = 0;
@@ -266,10 +270,10 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
 
             memcpy(temp_image_2.data, temp_image.data, image_size(&temp_image));
             imlib_invert(&temp_image_2);
-            imlib_erode(&temp_image_2, 5, 120);
+            imlib_erode(&temp_image_2, 5, 120, NULL);
             imlib_invert(&temp_image_2);
-            imlib_b_xor(&temp_image_2, NULL, &temp_image);
-            imlib_erode(&temp_image_2, 2, 24);
+            imlib_b_xor(&temp_image_2, NULL, &temp_image, NULL);
+            imlib_erode(&temp_image_2, 2, 24, NULL);
 
             int not_shadow_r_sum = 0;
             int not_shadow_g_sum = 0;
@@ -337,9 +341,9 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
 
             memcpy(temp_image.data, temp_image_2.data, image_size(&temp_image_2));
 
-            imlib_erode(&temp_image_2, 1, 8);
-            imlib_b_xor(&temp_image, NULL, &temp_image_2);
-            imlib_dilate(&temp_image, 3, 0);
+            imlib_erode(&temp_image_2, 1, 8, NULL);
+            imlib_b_xor(&temp_image, NULL, &temp_image_2, NULL);
+            imlib_dilate(&temp_image, 3, 0, NULL);
             imlib_median_filter(img, 2, 12, false, 0, false, &temp_image);
 
             fb_free(); // temp_image_2
