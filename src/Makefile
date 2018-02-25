@@ -144,6 +144,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
+	binary.o                                \
 	blob.o                                  \
 	qrcode.o                                \
 	apriltag.o                              \

@@ -46,22 +46,6 @@ Q(draw_circle)
 Q(draw_string)
 Q(draw_cross)
 Q(draw_keypoints)
-Q(binary)
-Q(invert)
-Q(and)
-Q(b_and)
-Q(nand)
-Q(b_nand)
-Q(or)
-Q(b_or)
-Q(nor)
-Q(b_nor)
-Q(xor)
-Q(b_xor)
-Q(xnor)
-Q(b_xnor)
-Q(erode)
-Q(dilate)
 Q(negate)
 Q(difference)
 Q(replace)
@@ -348,6 +332,54 @@ Q(CPUFREQ_192MHZ)
 Q(CPUFREQ_216MHZ)
 Q(get_frequency)
 Q(set_frequency)
+
+// Binary
+Q(binary)
+Q(invert)
+Q(zero)
+
+// Invert
+// duplicate Q(invert)
+
+// And
+Q(and)
+Q(b_and)
+Q(mask)
+
+// Nand
+Q(nand)
+Q(b_nand)
+// duplicate Q(mask)
+
+// Or
+Q(or)
+Q(b_or)
+// duplicate Q(mask)
+
+// Nor
+Q(nor)
+Q(b_nor)
+// duplicate Q(mask)
+
+// Xor
+Q(xor)
+Q(b_xor)
+// duplicate Q(mask)
+
+// Xnor
+Q(xnor)
+Q(b_xnor)
+// duplicate Q(mask)
+
+// Erode
+Q(erode)
+// duplicate Q(threshold)
+// duplicate Q(mask)
+
+// Dilate
+Q(dilate)
+// duplicate Q(threshold)
+// duplicate Q(mask)
 
 // Max
 // duplicate Q(max)

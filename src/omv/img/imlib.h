@@ -145,6 +145,10 @@ color_thresholds_list_lnk_data_t;
 
 #define COLOR_BINARY_MIN 0
 #define COLOR_BINARY_MAX 1
+#define COLOR_GRAYSCALE_BINARY_MIN 0x00
+#define COLOR_GRAYSCALE_BINARY_MAX 0xFF
+#define COLOR_RGB565_BINARY_MIN 0x0000
+#define COLOR_RGB565_BINARY_MAX 0xFFFF
 
 #define COLOR_GRAYSCALE_MIN 0
 #define COLOR_GRAYSCALE_MAX 255
@@ -319,9 +323,9 @@ extern const int8_t yuv_table[196608];
 
 #define COLOR_BINARY_TO_GRAYSCALE(pixel) ((pixel) * COLOR_GRAYSCALE_MAX)
 #define COLOR_BINARY_TO_RGB565(pixel) COLOR_YUV_TO_RGB565((pixel) * 127, 0, 0)
-#define COLOR_RGB565_TO_BINARY(pixel) (COLOR_RGB565_TO_Y(pixel) == 127)
+#define COLOR_RGB565_TO_BINARY(pixel) (COLOR_RGB565_TO_Y(pixel) > (((COLOR_Y_MAX - COLOR_Y_MIN) / 2) + COLOR_Y_MIN))
 #define COLOR_RGB565_TO_GRAYSCALE(pixel) (COLOR_RGB565_TO_Y(pixel) + 128)
-#define COLOR_GRAYSCALE_TO_BINARY(pixel) ((pixel) == COLOR_GRAYSCALE_MAX)
+#define COLOR_GRAYSCALE_TO_BINARY(pixel) ((pixel) > (((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / 2) + COLOR_GRAYSCALE_MIN))
 #define COLOR_GRAYSCALE_TO_RGB565(pixel) COLOR_YUV_TO_RGB565((pixel) - 128, 0, 0)
 
 /////////////////
@@ -350,7 +354,17 @@ typedef struct image {
 
 void image_init(image_t *ptr, int w, int h, int bpp, void *data);
 void image_copy(image_t *dst, image_t *src);
-uint32_t image_size(image_t *ptr);
+size_t image_size(image_t *ptr);
+bool image_get_mask_pixel(image_t *ptr, int x, int y);
+
+#define IMAGE_BINARY_LINE_LEN(image) (((image)->w + UINT32_T_MASK) >> UINT32_T_SHIFT)
+#define IMAGE_BINARY_LINE_LEN_BYTES(image) (IMAGE_BINARY_LINE_LEN(image) * sizeof(uint32_t))
+
+#define IMAGE_GRAYSCALE_LINE_LEN(image) ((image)->w)
+#define IMAGE_GRAYSCALE_LINE_LEN_BYTES(image) (IMAGE_GRAYSCALE_LINE_LEN(image) * sizeof(uint8_t))
+
+#define IMAGE_RGB565_LINE_LEN(image) ((image)->w)
+#define IMAGE_RGB565_LINE_LEN_BYTES(image) (IMAGE_RGB565_LINE_LEN(image) * sizeof(uint16_t))
 
 #define IMAGE_GET_BINARY_PIXEL(image, x, y) \
 ({ \
@@ -1106,20 +1120,6 @@ void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c);
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c);
 
-/* Binary functions */
-void imlib_binary(image_t *img,
-                  int num_thresholds, simple_color_t *l_thresholds, simple_color_t *h_thresholds,
-                  bool invert);
-void imlib_invert(image_t *img);
-void imlib_b_and(image_t *img, const char *path, image_t *other);
-void imlib_b_nand(image_t *img, const char *path, image_t *other);
-void imlib_b_or(image_t *img, const char *path, image_t *other);
-void imlib_b_nor(image_t *img, const char *path, image_t *other);
-void imlib_b_xor(image_t *img, const char *path, image_t *other);
-void imlib_b_xnor(image_t *img, const char *path, image_t *other);
-void imlib_erode(image_t *img, int ksize, int threshold);
-void imlib_dilate(image_t *img, int ksize, int threshold);
-
 /* Background Subtraction (Frame Differencing) functions */
 void imlib_negate(image_t *img);
 void imlib_difference(image_t *img, const char *path, image_t *other);
@@ -1213,6 +1213,17 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 // HoG
 void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
+// Binary Functions
+void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero);
+void imlib_invert(image_t *img);
+void imlib_b_and(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_b_nand(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_b_or(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_b_nor(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_b_xor(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_b_xnor(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_erode(image_t *img, int ksize, int threshold, image_t *mask);
+void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask);
 // Image Correction
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
 void imlib_logpolar(image_t *img, bool linear, bool reverse);
