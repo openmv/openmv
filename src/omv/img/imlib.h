@@ -32,6 +32,8 @@
 
 #define IM_MAX(a,b)     ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a > _b ? _a : _b; })
 #define IM_MIN(a,b)     ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
+#define IM_DIV(a,b)     ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _b ? (_a / _b) : 0; })
+#define IM_MOD(a,b)     ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _b ? (_a % _b) : 0; })
 
 #define INT8_T_BITS     (sizeof(int8_t) * 8)
 #define INT8_T_MASK     (INT8_T_BITS - 1)
@@ -1120,15 +1122,6 @@ void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c);
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c);
 
-/* Background Subtraction (Frame Differencing) functions */
-void imlib_negate(image_t *img);
-void imlib_difference(image_t *img, const char *path, image_t *other);
-void imlib_replace(image_t *img, const char *path, image_t *other);
-void imlib_blend(image_t *img, const char *path, image_t *other, int alpha);
-void imlib_max(image_t *img, const char *path, image_t *other);
-void imlib_min(image_t *img, const char *path, image_t *other);
-void imlib_remove_shadows(image_t *img, const char *path, image_t *other);
-
 /* Image Morphing */
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
 
@@ -1224,9 +1217,21 @@ void imlib_b_xor(image_t *img, const char *path, image_t *other, image_t *mask);
 void imlib_b_xnor(image_t *img, const char *path, image_t *other, image_t *mask);
 void imlib_erode(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask);
+// Math Functions
+void imlib_negate(image_t *img);
+void imlib_replace(image_t *img, const char *path, image_t *other, bool hmirror, bool vflip);
+void imlib_add(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_sub(image_t *img, const char *path, image_t *other, bool reverse, image_t *mask);
+void imlib_mul(image_t *img, const char *path, image_t *other, bool invert, image_t *mask);
+void imlib_div(image_t *img, const char *path, image_t *other, bool invert, image_t *mask);
+void imlib_min(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_max(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_difference(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_blend(image_t *img, const char *path, image_t *other, float alpha, image_t *mask);
 // Image Correction
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
 void imlib_logpolar(image_t *img, bool linear, bool reverse);
+void imlib_remove_shadows(image_t *img, const char *path, image_t *other);
 void imlib_chrominvar(image_t *img);
 void imlib_illuminvar(image_t *img);
 void imlib_histeq(image_t *img);

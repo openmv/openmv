@@ -46,10 +46,6 @@ Q(draw_circle)
 Q(draw_string)
 Q(draw_cross)
 Q(draw_keypoints)
-Q(negate)
-Q(difference)
-Q(replace)
-Q(blend)
 Q(morph)
 Q(midpoint)
 Q(mean)
@@ -381,22 +377,60 @@ Q(dilate)
 // duplicate Q(threshold)
 // duplicate Q(mask)
 
-// Max
-// duplicate Q(max)
+// Negate
+Q(negate)
+
+// Replace
+Q(replace)
+Q(hmirror)
+Q(vflip)
+
+// Add Op
+// duplicate Q(add)
+// duplicate Q(mask)
+
+// Sub Op
+Q(sub)
+Q(reverse)
+// duplicate Q(mask)
+
+// Mul Op
+// duplicate Q(mul)
+// duplicate Q(invert)
+// duplicate Q(msk)
+
+// Div Op
+Q(div)
+// duplicate Q(invert)
+// duplicate Q(mask)
 
 // Min
 // duplicate Q(min)
+// duplicate Q(mask)
 
-// Shadow Removal
-Q(remove_shadows)
+// Max
+// duplicate Q(max)
+// duplicate Q(mask)
+
+// Difference
+Q(difference)
+// duplicate Q(mask)
+
+// Blend
+Q(blend)
+// duplicate Q(alpha)
+// duplicate Q(mask)
 
 // Linear Polar
 Q(linpolar)
-Q(reverse)
+// duplicate Q(reverse)
 
 // Log Polar
 Q(logpolar)
 // duplicate Q(reverse)
+
+// Shadow Removal
+Q(remove_shadows)
 
 // Chromination Invariant
 Q(chrominvar)
