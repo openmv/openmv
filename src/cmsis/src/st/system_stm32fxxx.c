@@ -188,10 +188,14 @@ void SystemClock_Config(void)
        regarding system frequency refer to product datasheet.  */
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-#if defined (STM32H743xx)// 400MHz/48MHz
+    // Wait for PWR_FLAG_VOSRDY
+    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+    while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
+    }
+    #elif defined(MCU_SERIES_H7)
     while ((PWR->D3CR & (PWR_D3CR_VOSRDY)) != PWR_D3CR_VOSRDY) {
     }
-#endif
+    #endif
 
     /* Enable HSE Oscillator and activate PLL with HSE as source */
     RCC_OscInitStruct.HSEState = RCC_HSE_ON;
