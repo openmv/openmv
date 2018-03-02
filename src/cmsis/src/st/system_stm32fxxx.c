@@ -59,41 +59,21 @@
 #define FLASH_BASE FLASH_BANK1_BASE
 #endif
 
-// Uncomment the following line if you need to use external SRAM or SDRAM
-//#define DATA_IN_ExtSRAM
-//#define DATA_IN_ExtSDRAM
-
-#if defined(DATA_IN_ExtSRAM) && defined(DATA_IN_ExtSDRAM)
-#error "Please select DATA_IN_ExtSRAM or DATA_IN_ExtSDRAM "
-#endif /* DATA_IN_ExtSRAM && DATA_IN_ExtSDRAM */
-
-// Uncomment the following line if you need to relocate your vector Table in internal SRAM.
-//#define VECT_TAB_SRAM
-
-// Vector Table base offset field (defined in board config files).
-//#define VECT_TAB_OFFSET  0x10000
-
-/** This variable is updated in three ways:
-  * 1) by calling CMSIS function SystemCoreClockUpdate()
-  * 2) by calling HAL API function HAL_RCC_GetHCLKFreq()
-  * 3) each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
-  *    Note: If you use this function to configure the system clock; then there
-  *          is no need to call the 2 first functions listed above, since SystemCoreClock
-  *          variable is updated automatically.
+/** This variable is updated in two ways:
+  * 1) by calling HAL API function HAL_RCC_GetHCLKFreq()
+  * 2) each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
   */
 uint32_t SystemCoreClock = 16000000;
 
-const uint8_t APBPrescTable[8] = {0, 0, 0, 0, 1, 2, 3, 4};
-#if defined STM32H743xx
+#if defined(MCU_SERIES_H7)
 uint32_t SystemD2Clock = 64000000;
 const uint8_t D1CorePrescTable[16] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
 #else
+const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
 const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
 #endif
 
-#if defined (DATA_IN_ExtSRAM) || defined (DATA_IN_ExtSDRAM)
-static void SystemInit_ExtMemCtl(void);
-#endif /* DATA_IN_ExtSRAM || DATA_IN_ExtSDRAM */
+extern void __fatal_error(const char *msg);
 
 /**
   * @brief  Setup the microcontroller system
@@ -172,10 +152,6 @@ void SystemInit(void)
     RCC->CIR = 0x00000000;
 #endif
 
-#if defined (DATA_IN_ExtSRAM) || defined (DATA_IN_ExtSDRAM)
-    SystemInit_ExtMemCtl();
-#endif /* DATA_IN_ExtSRAM || DATA_IN_ExtSDRAM */
-
     /* Configure the Vector Table location add offset address */
 #ifdef VECT_TAB_SRAM
     /* Vector Table Relocation in Internal SRAM */
@@ -189,9 +165,6 @@ void SystemInit(void)
     SCB->CCR |= SCB_CCR_STKALIGN_Msk;
 #endif
 }
-
-void __fatal_error(const char *msg);
-#define Error_Handler() __fatal_error("SystemClock_Config")
 
 void SystemClock_Config(void)
 {
@@ -261,8 +234,8 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.PLL.PLLFRACN = 0;
 #endif
     if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
-        /* Initialization Error */
-        Error_Handler();
+        // Initialization Error
+        __fatal_error("HAL_RCC_OscConfig");
     }
 
 #if defined(STM32H743xx)
@@ -278,20 +251,18 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.PLL3.PLL3VCOSEL = RCC_PLL3VCOWIDE;
     PeriphClkInitStruct.PLL3.PLL3FRACN = 0;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-        /* Initialization Error */
-        Error_Handler();
+        // Initialization Error
+        __fatal_error("HAL_RCCEx_PeriphCLKConfig");
     }
 #endif
 
 
 #if defined(MCU_SERIES_H7)
     HAL_PWREx_EnableUSBVoltageDetector();
-#endif
-
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+#elif defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
     if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
-        /* Initialization Error */
-        Error_Handler();
+        // Initialization Error
+        __fatal_error("HAL_PWREx_EnableOverDrive");
     }
 #endif
 
@@ -315,8 +286,8 @@ void SystemClock_Config(void)
 #endif
 
     if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, flash_latency) != HAL_OK) {
-        /* Initialization Error */
-        Error_Handler();
+        // Initialization Error
+        __fatal_error("HAL_RCC_ClockConfig");
     }
 
 #if defined(MCU_SERIES_H7)
@@ -330,4 +301,3 @@ void SystemClock_Config(void)
     HAL_EnableCompensationCell();
 #endif
 }
-#undef Error_Handler
