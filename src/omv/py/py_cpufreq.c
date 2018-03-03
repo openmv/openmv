@@ -97,8 +97,6 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_idx_obj)
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "RCC CLK Initialization Error!!"));
     }
 
-    SystemCoreClockUpdate();
-
     // Do a soft-reset ?
     //nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Frequency is set!"));
     return mp_const_true;
