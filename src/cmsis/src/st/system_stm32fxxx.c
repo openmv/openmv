@@ -54,26 +54,35 @@
 #include STM32_HAL_H
 #include "omv_boardconfig.h"
 
-#if defined(STM32H743xx)
-#define SRAM_BASE D1_AXISRAM_BASE
-#define FLASH_BASE FLASH_BANK1_BASE
-#endif
-
 /** This variable is updated in two ways:
   * 1) by calling HAL API function HAL_RCC_GetHCLKFreq()
   * 2) each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
   */
 uint32_t SystemCoreClock = 16000000;
+extern void __fatal_error(const char *msg);
 
 #if defined(MCU_SERIES_H7)
+
+#define SRAM_BASE D1_AXISRAM_BASE
+#define FLASH_BASE FLASH_BANK1_BASE
+
+#define CONFIG_RCC_CR_1ST   (RCC_CR_HSION)
+#define CONFIG_RCC_CR_2ND   (0x15091280)
+#define CONFIG_RCC_PLLCFGR  (0x00000000)
+
 uint32_t SystemD2Clock = 64000000;
 const uint8_t D1CorePrescTable[16] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 8, 9};
-#else
+
+#elif defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+
+#define CONFIG_RCC_CR_1ST (RCC_CR_HSION)
+#define CONFIG_RCC_CR_2ND (RCC_CR_HSEON || RCC_CR_CSSON || RCC_CR_PLLON)
+#define CONFIG_RCC_PLLCFGR (0x24003010)
+
 const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
 const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
-#endif
 
-extern void __fatal_error(const char *msg);
+#endif
 
 /**
   * @brief  Setup the microcontroller system
@@ -85,85 +94,79 @@ extern void __fatal_error(const char *msg);
 void SystemInit(void)
 {
     /* FPU settings ------------------------------------------------------------*/
-    SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
-
+    #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
+      SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
+    #endif
     /* Reset the RCC clock configuration to the default reset state ------------*/
+    
     /* Set HSION bit */
-    RCC->CR |= RCC_CR_HSION;
-
+    RCC->CR |= CONFIG_RCC_CR_1ST;
+    
     /* Reset CFGR register */
     RCC->CFGR = 0x00000000;
-
-#if defined(STM32H743xx)
-    /* Reset HSEON, CSSON , CSION, RC48ON, CSIKERON PLL1ON, PLL2ON and PLL3ON bits */
-    RCC->CR &= (uint32_t)0xEAF6ED7F;
-
+    
+    /* Reset HSEON, CSSON and PLLON bits */
+    RCC->CR &= ~CONFIG_RCC_CR_2ND;
+    
+    /* Reset PLLCFGR register */
+    RCC->PLLCFGR = CONFIG_RCC_PLLCFGR;
+    
+    #if defined(MCU_SERIES_H7)
     /* Reset D1CFGR register */
     RCC->D1CFGR = 0x00000000;
-
+    
     /* Reset D2CFGR register */
     RCC->D2CFGR = 0x00000000;
-
+    
     /* Reset D3CFGR register */
     RCC->D3CFGR = 0x00000000;
-
+    
     /* Reset PLLCKSELR register */
     RCC->PLLCKSELR = 0x00000000;
-
-    /* Reset PLLCFGR register */
-    RCC->PLLCFGR = 0x00000000;
-
+    
     /* Reset PLL1DIVR register */
     RCC->PLL1DIVR = 0x00000000;
-
+    
     /* Reset PLL1FRACR register */
     RCC->PLL1FRACR = 0x00000000;
-
+    
     /* Reset PLL2DIVR register */
     RCC->PLL2DIVR = 0x00000000;
-
+    
     /* Reset PLL2FRACR register */
     RCC->PLL2FRACR = 0x00000000;
-
+    
     /* Reset PLL3DIVR register */
     RCC->PLL3DIVR = 0x00000000;
-
+    
     /* Reset PLL3FRACR register */
     RCC->PLL3FRACR = 0x00000000;
-#else
-    /* Reset HSEON, CSSON and PLLON bits */
-    RCC->CR &= (uint32_t)0xFEF6FFFF;
-
-    /* Reset PLLCFGR register */
-    RCC->PLLCFGR = 0x24003010;
-#endif
-
+    #endif // defined(MCU_SERIES_H7)
+    
     /* Reset HSEBYP bit */
     RCC->CR &= (uint32_t)0xFFFBFFFF;
-
-#if defined(STM32H743xx)
+    
     /* Disable all interrupts */
-    RCC->CIER = 0x00000000;
-
-    /* Change  the switch matrix read issuing capability to 1 for the AXI SRAM target (Target 7) */
-    *((__IO uint32_t*)0x51008108) = 0x000000001;
-#else
-    /* Disable all interrupts */
+    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
     RCC->CIR = 0x00000000;
-#endif
-
-    /* Configure the Vector Table location add offset address */
-#ifdef VECT_TAB_SRAM
-    /* Vector Table Relocation in Internal SRAM */
-    SCB->VTOR = SRAM_BASE | VECT_TAB_OFFSET;
-#else
-    /* Vector Table Relocation in Internal FLASH */
-    SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET;
-#endif
-
-#if !defined(STM32H743xx)
+    #elif defined(MCU_SERIES_L4) || defined(MCU_SERIES_H7)
+    RCC->CIER = 0x00000000;
+    #endif
+    
+    #if defined(MCU_SERIES_H7)
+    /* Change  the switch matrix read issuing capability to 1 for the AXI SRAM target (Target 7) */
+    *((__IO uint32_t*)0x51008108) = 0x00000001;
+    #endif // defined(MCU_SERIES_H7)
+    
+    /* Configure the Vector Table location add offset address ------------------*/
+    #ifdef VECT_TAB_SRAM
+    SCB->VTOR = SRAM1_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
+    #else
+    SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
+    #endif
+    
+    /* dpgeorge: enable 8-byte stack alignment for IRQ handlers, in accord with EABI */
     SCB->CCR |= SCB_CCR_STKALIGN_Msk;
-#endif
 }
 
 void SystemClock_Config(void)
@@ -171,17 +174,17 @@ void SystemClock_Config(void)
     uint32_t flash_latency;
     RCC_ClkInitTypeDef RCC_ClkInitStruct;
     RCC_OscInitTypeDef RCC_OscInitStruct;
-#if defined(MCU_SERIES_H7)
+    #if defined(MCU_SERIES_H7)
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct;
-#endif
+    #endif
 
-#if defined (STM32H743xx)// 400MHz/48MHz
+    #if defined(MCU_SERIES_H7)
     /* Supply configuration update enable */
     MODIFY_REG(PWR->CR3, PWR_CR3_SCUEN, 0);
-#else
+    #else
     /* Enable Power Control clock */
     __PWR_CLK_ENABLE();
-#endif
+    #endif
 
     /* The voltage scaling allows optimizing the power consumption when the device is
        clocked below the maximum system frequency, to update the voltage scaling value
@@ -200,33 +203,33 @@ void SystemClock_Config(void)
     /* Enable HSE Oscillator and activate PLL with HSE as source */
     RCC_OscInitStruct.HSEState = RCC_HSE_ON;
     RCC_OscInitStruct.HSIState = RCC_HSI_OFF;
-#if defined(MCU_SERIES_H7)
+    #if defined(MCU_SERIES_H7)
     RCC_OscInitStruct.CSIState = RCC_CSI_OFF;
-#endif
+    #endif
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
 
-#if   defined (STM32F407xx) // 168MHz/48MHz
+    #if   defined (STM32F407xx) // 168MHz/48MHz
     flash_latency = FLASH_LATENCY_5;
     RCC_OscInitStruct.PLL.PLLM = 12;
     RCC_OscInitStruct.PLL.PLLN = 336;
     RCC_OscInitStruct.PLL.PLLQ = 7;
     RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-#elif defined (STM32F427xx)// 192MHz/48MHz
+    #elif defined (STM32F427xx)// 192MHz/48MHz
     flash_latency = FLASH_LATENCY_7;
     RCC_OscInitStruct.PLL.PLLM = 12;
     RCC_OscInitStruct.PLL.PLLN = 384;
     RCC_OscInitStruct.PLL.PLLQ = 8;
     RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-#elif defined (STM32F765xx)// 216MHz/48MHz
+    #elif defined (STM32F765xx)// 216MHz/48MHz
     flash_latency = FLASH_LATENCY_7;
     RCC_OscInitStruct.PLL.PLLM = 12;
     RCC_OscInitStruct.PLL.PLLN = 432;
     RCC_OscInitStruct.PLL.PLLQ = 9;
     RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
     RCC_OscInitStruct.PLL.PLLR = 2;
-#elif defined (STM32H743xx)// 400MHz/48MHz
+    #elif defined (STM32H743xx)// 400MHz/48MHz
     flash_latency = FLASH_LATENCY_4;
     RCC_OscInitStruct.PLL.PLLM = 3;
     RCC_OscInitStruct.PLL.PLLN = 200;
@@ -236,13 +239,13 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
     RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
     RCC_OscInitStruct.PLL.PLLFRACN = 0;
-#endif
+    #endif
     if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_RCC_OscConfig");
     }
 
-#if defined(STM32H743xx)
+    #if defined(STM32H743xx)
     /* PLL3 for USB Clock */
     PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLL3;
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB;
@@ -258,20 +261,19 @@ void SystemClock_Config(void)
         // Initialization Error
         __fatal_error("HAL_RCCEx_PeriphCLKConfig");
     }
-#endif
+    #endif
 
-
-#if defined(MCU_SERIES_H7)
+    #if defined(MCU_SERIES_H7)
     HAL_PWREx_EnableUSBVoltageDetector();
-#elif defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+    #elif defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
     if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_PWREx_EnableOverDrive");
     }
-#endif
+    #endif
 
     /* Select PLL as system clock source and configure the HCLK, PCLK clocks dividers */
-#if defined(MCU_SERIES_H7)
+    #if defined(MCU_SERIES_H7)
     RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_D1PCLK1 |
                                    RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2  | RCC_CLOCKTYPE_D3PCLK1);
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
@@ -281,20 +283,20 @@ void SystemClock_Config(void)
     RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
     RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
     RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
-#else
+    #else
     RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
     RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_PLLCLK;
     RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
     RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
     RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
-#endif
+    #endif
 
     if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, flash_latency) != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_RCC_ClockConfig");
     }
 
-#if defined(MCU_SERIES_H7)
+    #if defined(MCU_SERIES_H7)
     // Activate CSI clock mondatory for I/O Compensation Cell
     __HAL_RCC_CSI_ENABLE() ;
 
@@ -303,5 +305,5 @@ void SystemClock_Config(void)
 
     // Enables the I/O Compensation Cell
     HAL_EnableCompensationCell();
-#endif
+    #endif
 }
