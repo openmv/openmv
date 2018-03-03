@@ -49,10 +49,10 @@
 //#define IMLIB_ENABLE_FIND_LINE_SEGMENTS
 
 // find_lines() is required by the old find_line_segments()
-//#if defined(IMLIB_ENABLE_FIND_LINE_SEGMENTS)\
-//    && !defined(IMLIB_ENABLE_FIND_LINES)
-//    #define IMLIB_ENABLE_FIND_LINES
-//#endif
+#if defined(IMLIB_ENABLE_FIND_LINE_SEGMENTS)\
+    && !defined(IMLIB_ENABLE_FIND_LINES)
+    #define IMLIB_ENABLE_FIND_LINES
+#endif
 
 // Enable find_circles()
 //#define IMLIB_ENABLE_FIND_CIRCLES
