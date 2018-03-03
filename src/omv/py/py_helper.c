@@ -1,20 +1,209 @@
-/*
- * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+/* This file is part of the OpenMV project.
+ * Copyright (c) 2013-2018 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
  * This work is licensed under the MIT license, see the file LICENSE for details.
- *
- * MicroPython helper functions.
- *
  */
+
 #include "py_helper.h"
+
+extern void *py_image_cobj(mp_obj_t img_obj);
+
+image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg)
+{
+    image_t *arg_img = py_image_cobj(arg);
+    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE(arg_img), "Image format is not supported!");
+    return arg_img;
+}
+
+image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, uint arg_index,
+                                            mp_map_t *kw_args, mp_obj_t kw, image_t *default_val)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg) {
+        default_val = py_helper_arg_to_image_mutable(kw_arg->value);
+    } else if (n_args > arg_index) {
+        default_val = py_helper_arg_to_image_mutable(args[arg_index]);
+    }
+
+    return default_val;
+}
+
+image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg)
+{
+    image_t *arg_img = py_image_cobj(arg);
+    PY_ASSERT_TRUE_MSG(arg_img->bpp == IMAGE_BPP_GRAYSCALE, "Image format is not supported!");
+    return arg_img;
+}
+
+image_t *py_helper_arg_to_image_color(const mp_obj_t arg)
+{
+    image_t *arg_img = py_image_cobj(arg);
+    PY_ASSERT_TRUE_MSG(arg_img->bpp == IMAGE_BPP_RGB565, "Image format is not supported!");
+    return arg_img;
+}
+
+void py_helper_arg_to_thresholds(const mp_obj_t arg, list_t *thresholds)
+{
+    mp_uint_t arg_thresholds_len;
+    mp_obj_t *arg_thresholds;
+    mp_obj_get_array(arg, &arg_thresholds_len, &arg_thresholds);
+    if (!arg_thresholds_len) return;
+
+    for(mp_uint_t i = 0; i < arg_thresholds_len; i++) {
+        mp_uint_t arg_threshold_len;
+        mp_obj_t *arg_threshold;
+        mp_obj_get_array(arg_thresholds[i], &arg_threshold_len, &arg_threshold);
+        if (arg_threshold_len) {
+            color_thresholds_list_lnk_data_t lnk_data;
+            lnk_data.LMin = (arg_threshold_len > 0) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[0]),
+                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) :
+                        IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN);
+            lnk_data.LMax = (arg_threshold_len > 1) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[1]),
+                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) :
+                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX);
+            lnk_data.AMin = (arg_threshold_len > 2) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[2]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MIN;
+            lnk_data.AMax = (arg_threshold_len > 3) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[3]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MAX;
+            lnk_data.BMin = (arg_threshold_len > 4) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[4]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MIN;
+            lnk_data.BMax = (arg_threshold_len > 5) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[5]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MAX;
+            color_thresholds_list_lnk_data_t lnk_data_tmp;
+            memcpy(&lnk_data_tmp, &lnk_data, sizeof(color_thresholds_list_lnk_data_t));
+            lnk_data.LMin = IM_MIN(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
+            lnk_data.LMax = IM_MAX(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
+            lnk_data.AMin = IM_MIN(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
+            lnk_data.AMax = IM_MAX(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
+            lnk_data.BMin = IM_MIN(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
+            lnk_data.BMax = IM_MAX(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
+            list_push_back(thresholds, &lnk_data);
+        }
+    }
+}
+
+void py_helper_keyword_thresholds(mp_map_t *kw_args, mp_obj_t kw, list_t *thresholds)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg) {
+        py_helper_arg_to_thresholds(kw_arg->value, thresholds);
+    }
+}
+
+int py_helper_keyword_int(uint n_args, const mp_obj_t *args, uint arg_index,
+                          mp_map_t *kw_args, mp_obj_t kw, int default_val)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg) {
+        default_val = mp_obj_get_int(kw_arg->value);
+    } else if (n_args > arg_index) {
+        default_val = mp_obj_get_int(args[arg_index]);
+    }
+
+    return default_val;
+}
+
+float py_helper_keyword_float(uint n_args, const mp_obj_t *args, uint arg_index,
+                              mp_map_t *kw_args, mp_obj_t kw, float default_val)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg) {
+        default_val = mp_obj_get_float(kw_arg->value);
+    } else if (n_args > arg_index) {
+        default_val = mp_obj_get_float(args[arg_index]);
+    }
+
+    return default_val;
+}
+
+int py_helper_arg_to_ksize(const mp_obj_t arg)
+{
+    int ksize = mp_obj_get_int(arg);
+    PY_ASSERT_TRUE_MSG(ksize >= 0, "KernelSize must be >= 0!");
+    return ksize;
+}
+
+int py_helper_ksize_to_n(int ksize)
+{
+    return ((ksize * 2) + 1) * ((ksize * 2) + 1);
+}
+
+uint py_helper_consume_array(uint n_args, const mp_obj_t *args, uint arg_index, size_t len, const mp_obj_t **items)
+{
+    if (MP_OBJ_IS_TYPE(args[arg_index], &mp_type_tuple) || MP_OBJ_IS_TYPE(args[arg_index], &mp_type_list)) {
+        mp_obj_get_array_fixed_n(args[arg_index], len, (mp_obj_t **) items);
+        return arg_index + 1;
+    } else {
+        PY_ASSERT_TRUE_MSG((n_args - arg_index) >= len, "Not enough positional arguments!");
+        *items = args + arg_index;
+        return arg_index + len;
+    }
+}
+
+int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uint arg_index,
+                            mp_map_t *kw_args, int default_val)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color), MP_MAP_LOOKUP);
+
+    if (kw_arg) {
+        if (mp_obj_is_integer(kw_arg->value)) {
+            default_val = mp_obj_get_int(kw_arg->value);
+        } else {
+            mp_obj_t *arg_color;
+            mp_obj_get_array_fixed_n(kw_arg->value, 3, &arg_color);
+            default_val = COLOR_R5_G6_B5_TO_RGB565(COLOR_R8_TO_R5(mp_obj_get_int(arg_color[0])),
+                                                   COLOR_G8_TO_G6(mp_obj_get_int(arg_color[1])),
+                                                   COLOR_B8_TO_B5(mp_obj_get_int(arg_color[2])));
+            switch(img->bpp) {
+                case IMAGE_BPP_BINARY: {
+                    default_val = COLOR_RGB565_TO_BINARY(default_val);
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    default_val = COLOR_RGB565_TO_GRAYSCALE(default_val);
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        }
+    } else if (n_args > arg_index) {
+        if (mp_obj_is_integer(args[arg_index])) {
+            default_val = mp_obj_get_int(args[arg_index]);
+        } else {
+            mp_obj_t *arg_color;
+            mp_obj_get_array_fixed_n(args[arg_index], 3, &arg_color);
+            default_val = COLOR_R5_G6_B5_TO_RGB565(COLOR_R8_TO_R5(mp_obj_get_int(arg_color[0])),
+                                                   COLOR_G8_TO_G6(mp_obj_get_int(arg_color[1])),
+                                                   COLOR_B8_TO_B5(mp_obj_get_int(arg_color[2])));
+            switch(img->bpp) {
+                case IMAGE_BPP_BINARY: {
+                    default_val = COLOR_RGB565_TO_BINARY(default_val);
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    default_val = COLOR_RGB565_TO_GRAYSCALE(default_val);
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+        }
+    }
+
+    return default_val;
+}
+
 
 int py_helper_lookup_int(mp_map_t *kw_args, mp_obj_t kw, int default_val)
 {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
 
-    if (kw_arg != NULL) {
+    if (kw_arg) {
         default_val = mp_obj_get_int(kw_arg->value);
     }
+
     return default_val;
 }
 
@@ -130,48 +319,5 @@ void py_helper_lookup_rectangle_2(mp_map_t *kw_args, mp_obj_t kw, image_t *img, 
 
     if ((r->w <= 0) || (r->h <= 0)) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_AssertionError, "Invalid ROI dimensions!"));
-    }
-}
-
-void py_helper_arg_to_thresholds(const mp_obj_t arg, list_t *thresholds)
-{
-    mp_uint_t arg_thresholds_len;
-    mp_obj_t *arg_thresholds;
-    mp_obj_get_array(arg, &arg_thresholds_len, &arg_thresholds);
-    if (!arg_thresholds_len) return;
-
-    for(mp_uint_t i = 0; i < arg_thresholds_len; i++) {
-        mp_uint_t arg_threshold_len;
-        mp_obj_t *arg_threshold;
-        mp_obj_get_array(arg_thresholds[i], &arg_threshold_len, &arg_threshold);
-        if (arg_threshold_len) {
-            color_thresholds_list_lnk_data_t lnk_data;
-            lnk_data.LMin = (arg_threshold_len > 0) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[0]),
-                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) : IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN);
-            lnk_data.LMax = (arg_threshold_len > 1) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[1]),
-                        IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX)), IM_MIN(COLOR_L_MIN, COLOR_GRAYSCALE_MIN)) : IM_MAX(COLOR_L_MAX, COLOR_GRAYSCALE_MAX);
-            lnk_data.AMin = (arg_threshold_len > 2) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[2]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MIN;
-            lnk_data.AMax = (arg_threshold_len > 3) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[3]), COLOR_A_MAX), COLOR_A_MIN) : COLOR_A_MAX;
-            lnk_data.BMin = (arg_threshold_len > 4) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[4]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MIN;
-            lnk_data.BMax = (arg_threshold_len > 5) ? IM_MAX(IM_MIN(mp_obj_get_int(arg_threshold[5]), COLOR_B_MAX), COLOR_B_MIN) : COLOR_B_MAX;
-            color_thresholds_list_lnk_data_t lnk_data_tmp;
-            memcpy(&lnk_data_tmp, &lnk_data, sizeof(color_thresholds_list_lnk_data_t));
-            lnk_data.LMin = IM_MIN(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
-            lnk_data.LMax = IM_MAX(lnk_data_tmp.LMin, lnk_data_tmp.LMax);
-            lnk_data.AMin = IM_MIN(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
-            lnk_data.AMax = IM_MAX(lnk_data_tmp.AMin, lnk_data_tmp.AMax);
-            lnk_data.BMin = IM_MIN(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
-            lnk_data.BMax = IM_MAX(lnk_data_tmp.BMin, lnk_data_tmp.BMax);
-            list_push_back(thresholds, &lnk_data);
-        }
-    }
-}
-
-void py_helper_keyword_thresholds(mp_map_t *kw_args, mp_obj_t kw, list_t *thresholds)
-{
-    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
-
-    if (kw_arg != NULL) {
-        py_helper_arg_to_thresholds(kw_arg->value, thresholds);
     }
 }
