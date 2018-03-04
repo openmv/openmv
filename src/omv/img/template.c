@@ -128,8 +128,9 @@ float imlib_template_match_ds(image_t *f, image_t *t, rectangle_t *r)
     imlib_integral_image(f, &sum);
 
     // Normalized sum of squares of the template
+    int t_mean = 0;
     uint32_t t_sumsq=0;
-    int t_mean = imlib_image_mean(t);
+    imlib_image_mean(t, &t_mean, &t_mean, &t_mean);
     for (int i=0; i < (t->w*t->h); i++) {
         int c = (int)t->data[i]-t_mean;
         t_sumsq += c*c;
@@ -229,7 +230,9 @@ float imlib_template_match_ex(image_t *f, image_t *t, rectangle_t *roi, int step
     imlib_integral_image_sq(f, &sumsq);
 
     // Normalized sum of squares of the template
-    int t_mean = imlib_image_mean(t);
+    int t_mean = 0;
+    imlib_image_mean(t, &t_mean, &t_mean, &t_mean);
+
     for (int i=0; i < (t->w*t->h); i++) {
         int c = (int)t->data[i]-t_mean;
         den_b += c*c;

@@ -853,17 +853,45 @@ void imlib_mask_ellipse(image_t *img)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int imlib_image_mean(image_t *src)
+int imlib_image_mean(image_t *src, int *r_mean, int *g_mean, int *b_mean)
 {
-    int s=0;
-    int n=src->w*src->h;
+    int r_s = 0;
+    int g_s = 0;
+    int b_s = 0;
+    int n = src->w * src->h;
 
-    for (int i=0; i<n; i++) {
-        s += src->pixels[i];
+    switch(src->bpp) {
+        case IMAGE_BPP_BINARY: {
+            // Can't run this on a binary image.
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            for (int i=0; i<n; i++) {
+                r_s += src->pixels[i];
+            }
+            *r_mean = r_s/n;
+            *g_mean = r_s/n;
+            *b_mean = r_s/n;
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int i=0; i<n; i++) {
+                uint16_t p = ((uint16_t*)src->pixels)[i];
+                r_s += COLOR_RGB565_TO_R8(p);
+                g_s += COLOR_RGB565_TO_G8(p);
+                b_s += COLOR_RGB565_TO_B8(p);
+            }
+            *r_mean = r_s/n;
+            *g_mean = g_s/n;
+            *b_mean = b_s/n;
+            break;
+        }
+        default: {
+            break;
+        }
     }
 
-    /* mean */
-    return s/n;
+    return 0;
 }
 
 // One pass standard deviation.

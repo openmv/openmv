@@ -1129,7 +1129,7 @@ void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m
 void imlib_sepconv3(image_t *img, const int8_t *krn, const float m, const int b);
 
 /* Image Statistics */
-int imlib_image_mean(image_t *src); // grayscale only
+int imlib_image_mean(image_t *src, int *r_mean, int *g_mean, int *b_mean);
 int imlib_image_std(image_t *src); // grayscale only
 
 /* Image Filtering */
