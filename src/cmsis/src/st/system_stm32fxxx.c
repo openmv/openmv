@@ -63,11 +63,11 @@ extern void __fatal_error(const char *msg);
 
 #if defined(MCU_SERIES_H7)
 
-#define SRAM_BASE D1_AXISRAM_BASE
-#define FLASH_BASE FLASH_BANK1_BASE
+#define SRAM_BASE           D1_AXISRAM_BASE
+#define FLASH_BASE          FLASH_BANK1_BASE
 
 #define CONFIG_RCC_CR_1ST   (RCC_CR_HSION)
-#define CONFIG_RCC_CR_2ND   (0x15091280)
+#define CONFIG_RCC_CR_2ND   (0xEAF6ED7F)
 #define CONFIG_RCC_PLLCFGR  (0x00000000)
 
 uint32_t SystemD2Clock = 64000000;
@@ -75,9 +75,9 @@ const uint8_t D1CorePrescTable[16] = {0, 0, 0, 0, 1, 2, 3, 4, 1, 2, 3, 4, 6, 7, 
 
 #elif defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
 
-#define CONFIG_RCC_CR_1ST (RCC_CR_HSION)
-#define CONFIG_RCC_CR_2ND (RCC_CR_HSEON || RCC_CR_CSSON || RCC_CR_PLLON)
-#define CONFIG_RCC_PLLCFGR (0x24003010)
+#define CONFIG_RCC_CR_1ST   (RCC_CR_HSION)
+#define CONFIG_RCC_CR_2ND   (0xFEF6FFFF)
+#define CONFIG_RCC_PLLCFGR  (0x24003010)
 
 const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
 const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
@@ -106,7 +106,7 @@ void SystemInit(void)
     RCC->CFGR = 0x00000000;
     
     /* Reset HSEON, CSSON and PLLON bits */
-    RCC->CR &= ~CONFIG_RCC_CR_2ND;
+    RCC->CR &= (uint32_t) CONFIG_RCC_CR_2ND;
     
     /* Reset PLLCFGR register */
     RCC->PLLCFGR = CONFIG_RCC_PLLCFGR;
@@ -160,7 +160,7 @@ void SystemInit(void)
     
     /* Configure the Vector Table location add offset address ------------------*/
     #ifdef VECT_TAB_SRAM
-    SCB->VTOR = SRAM1_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
+    SCB->VTOR = SRAM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
     #else
     SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
     #endif
@@ -193,8 +193,8 @@ void SystemClock_Config(void)
 
     // Wait for PWR_FLAG_VOSRDY
     #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
-    while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
-    }
+    //while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
+    //}
     #elif defined(MCU_SERIES_H7)
     while ((PWR->D3CR & (PWR_D3CR_VOSRDY)) != PWR_D3CR_VOSRDY) {
     }
