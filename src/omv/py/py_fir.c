@@ -223,7 +223,7 @@ calling:
 mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_fir_deinit();
-    switch (py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), FIR_SHIELD)) {
+    switch (py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), FIR_SHIELD)) {
         case FIR_NONE:
             return mp_const_none;
         case FIR_SHIELD:
@@ -234,8 +234,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             soft_i2c_init();
 
             // pasre refresh rate and ADC resolution
-            uint32_t IR_refresh_rate = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 64);     // 64Hz
-            uint32_t ADC_resolution  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 18);  // 18-bits
+            uint32_t IR_refresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 64);     // 64Hz
+            uint32_t ADC_resolution  = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 18);  // 18-bits
 
             // sanitize values
             ADC_resolution  = ((ADC_resolution > 18)? 18:(ADC_resolution < 15)? 15:ADC_resolution) - 15;
@@ -394,14 +394,14 @@ mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     float Ta = mp_obj_get_float(args[1]);
     float min = -17.7778, max = 37.7778; // 0F to 100F
 
-    int alpha = IM_MIN(IM_MAX(py_helper_lookup_int(kw_args,
+    int alpha = IM_MIN(IM_MAX(py_helper_keyword_int(n_args, args, 2, kw_args,
         MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 256);
 
-    mp_map_elem_t *kw_scale = mp_map_lookup(kw_args,
-        MP_OBJ_NEW_QSTR(MP_QSTR_scale), MP_MAP_LOOKUP);
-    if (kw_scale != NULL) {
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args,
+                                                  MP_OBJ_NEW_QSTR(MP_QSTR_scale));
+    if (scale_obj) {
         mp_obj_t *arg_scale;
-        mp_obj_get_array_fixed_n(kw_scale->value, 2, &arg_scale);
+        mp_obj_get_array_fixed_n(scale_obj, 2, &arg_scale);
         min = mp_obj_get_float(arg_scale[0]);
         max = mp_obj_get_float(arg_scale[1]);
     }
@@ -449,14 +449,14 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         max = IM_MAX(max, temp);
     }
 
-    int alpha = IM_MIN(IM_MAX(py_helper_lookup_int(kw_args,
+    int alpha = IM_MIN(IM_MAX(py_helper_keyword_int(n_args, args, 2, kw_args,
         MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 256);
 
-    mp_map_elem_t *kw_scale = mp_map_lookup(kw_args,
-        MP_OBJ_NEW_QSTR(MP_QSTR_scale), MP_MAP_LOOKUP);
-    if (kw_scale != NULL) {
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args,
+                                                  MP_OBJ_NEW_QSTR(MP_QSTR_scale));
+    if (scale_obj) {
         mp_obj_t *arg_scale;
-        mp_obj_get_array_fixed_n(kw_scale->value, 2, &arg_scale);
+        mp_obj_get_array_fixed_n(scale_obj, 2, &arg_scale);
         min = mp_obj_get_float(arg_scale[0]);
         max = mp_obj_get_float(arg_scale[1]);
     }
