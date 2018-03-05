@@ -28,10 +28,10 @@ typedef struct py_gif_obj {
 static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_gif_obj_t *gif = m_new_obj(py_gif_obj_t);
-    gif->width  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), MAIN_FB()->w);
-    gif->height = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), MAIN_FB()->h);
-    gif->color  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color), MAIN_FB()->bpp>=2);
-    gif->loop   = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_loop), true);
+    gif->width  = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), MAIN_FB()->w);
+    gif->height = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), MAIN_FB()->h);
+    gif->color  = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color), MAIN_FB()->bpp>=2);
+    gif->loop   = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_loop), true);
     gif->base.type = &py_gif_type;
 
     file_write_open(&gif->fp, mp_obj_str_get_str(args[0]));
@@ -78,7 +78,7 @@ static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw
     PY_ASSERT_FALSE_MSG((arg_gif->width != arg_img->w) ||
             (arg_gif->height != arg_img->h), "Unexpected image geometry!");
 
-    int delay = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_delay), 10);
+    int delay = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_delay), 10);
 
     gif_add_frame(&arg_gif->fp, arg_img, delay);
     return mp_const_none;

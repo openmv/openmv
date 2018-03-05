@@ -346,8 +346,8 @@ static mp_obj_t py_sensor_set_colorbar(mp_obj_t enable) {
 
 static mp_obj_t py_sensor_set_auto_gain(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     int enable = mp_obj_get_int(args[0]);
-    float gain_db = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), NAN);
-    float gain_db_ceiling = py_helper_lookup_float(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db_ceiling), NAN);
+    float gain_db = py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), NAN);
+    float gain_db_ceiling = py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db_ceiling), NAN);
     if (sensor_set_auto_gain(enable, gain_db, gain_db_ceiling) != 0) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
     }
@@ -363,7 +363,7 @@ static mp_obj_t py_sensor_get_gain_db() {
 }
 
 static mp_obj_t py_sensor_set_auto_exposure(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    int exposure_us = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_exposure_us), -1);
+    int exposure_us = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_exposure_us), -1);
     if (sensor_set_auto_exposure(mp_obj_get_int(args[0]), exposure_us) != 0) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
     }
@@ -381,7 +381,7 @@ static mp_obj_t py_sensor_get_exposure_us() {
 static mp_obj_t py_sensor_set_auto_whitebal(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     int enable = mp_obj_get_int(args[0]);
     float rgb_gain_db[3] = {NAN, NAN, NAN};
-    py_helper_lookup_float_array(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_gain_db), rgb_gain_db, 3);
+    py_helper_keyword_float_array(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_gain_db), rgb_gain_db, 3);
     if (sensor_set_auto_whitebal(enable, rgb_gain_db[0], rgb_gain_db[1], rgb_gain_db[2]) != 0) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
     }

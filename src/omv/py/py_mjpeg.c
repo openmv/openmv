@@ -28,8 +28,8 @@ typedef struct py_mjpeg_obj {
 static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_mjpeg_obj_t *mjpeg = m_new_obj(py_mjpeg_obj_t);
-    mjpeg->width  = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), MAIN_FB()->w);
-    mjpeg->height = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), MAIN_FB()->h);
+    mjpeg->width  = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), MAIN_FB()->w);
+    mjpeg->height = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), MAIN_FB()->h);
     mjpeg->frames = 0; // private
     mjpeg->bytes = 0; // private
     mjpeg->base.type = &py_mjpeg_type;
@@ -65,7 +65,7 @@ static mp_obj_t py_mjpeg_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *
                      || (arg_mjpeg->height != arg_img->h),
             "Unexpected image geometry");
 
-    int arg_q = py_helper_lookup_int(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
+    int arg_q = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
     mjpeg_add_frame(&arg_mjpeg->fp, &arg_mjpeg->frames, &arg_mjpeg->bytes, arg_img, arg_q);
     return mp_const_none;

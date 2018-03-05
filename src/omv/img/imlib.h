@@ -67,6 +67,9 @@
 #define UINT64_T_MASK   (UINT64_T_BITS - 1)
 #define UINT64_T_SHIFT  IM_LOG2(UINT64_T_MASK)
 
+#define IM_DEG2RAD(x)   (((x)*M_PI)/180)
+#define IM_RAD2DEG(x)   (((x)*180)/M_PI)
+
 /////////////////
 // Point Stuff //
 /////////////////
@@ -358,6 +361,23 @@ void image_init(image_t *ptr, int w, int h, int bpp, void *data);
 void image_copy(image_t *dst, image_t *src);
 size_t image_size(image_t *ptr);
 bool image_get_mask_pixel(image_t *ptr, int x, int y);
+
+#define IMAGE_IS_MUTABLE(image) \
+({ \
+    __typeof__ (image) _image = (image); \
+    (_image->bpp == IMAGE_BPP_BINARY) || \
+    (_image->bpp == IMAGE_BPP_GRAYSCALE) || \
+    (_image->bpp == IMAGE_BPP_RGB565); \
+})
+
+#define IMAGE_IS_MUTABLE_BAYER(image) \
+({ \
+    __typeof__ (image) _image = (image); \
+    (_image->bpp == IMAGE_BPP_BINARY) || \
+    (_image->bpp == IMAGE_BPP_GRAYSCALE) || \
+    (_image->bpp == IMAGE_BPP_RGB565) || \
+    (_image->bpp == IMAGE_BPP_BAYER); \
+})
 
 #define IMAGE_BINARY_LINE_LEN(image) (((image)->w + UINT32_T_MASK) >> UINT32_T_SHIFT)
 #define IMAGE_BINARY_LINE_LEN_BYTES(image) (IMAGE_BINARY_LINE_LEN(image) * sizeof(uint32_t))
