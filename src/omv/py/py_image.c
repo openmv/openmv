@@ -4354,7 +4354,7 @@ static mp_obj_t py_image_classify_object(uint n_args, const mp_obj_t *args, mp_m
     return output_list;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_classify_object_obj, 1, py_image_classify_object);
-#endif //IMLIB_ENABLE_LENET
+#endif //IMLIB_ENABLE_CNN
 
 static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
