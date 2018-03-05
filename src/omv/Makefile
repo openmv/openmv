@@ -75,6 +75,8 @@ SRCS += $(addprefix img/,   \
 	hog.c                   \
 	lenet.c                 \
 	lenet_model_num.c       \
+	cifar10.c               \
+	cifar10_model.c         \
    )
 
 SRCS += $(addprefix py/, \

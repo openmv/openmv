@@ -111,6 +111,13 @@ BOOT_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=h
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/ActivationFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/ConvolutionFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/FullyConnectedFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/NNSupportFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/PoolingFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/SoftmaxFunctions/*.o)
+
 #FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ComplexMathFunctions/*.o)
 #FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/ControllerFunctions/*.o)
 #FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FilteringFunctions/*.o)
@@ -197,6 +204,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	hog.o                                   \
 	lenet.o                                 \
 	lenet_model_num.o                       \
+	cifar10.o                               \
+	cifar10_model.o                         \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \

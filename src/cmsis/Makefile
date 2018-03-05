@@ -5,6 +5,13 @@ SRC_C = src/st/system_stm32fxxx.c
 SRC_C  += $(wildcard src/dsp/CommonTables/*.c)
 SRC_C  += $(wildcard src/dsp/FastMathFunctions/*.c)
 SRC_C  += $(wildcard src/dsp/MatrixFunctions/*.c)
+SRC_C  += $(wildcard src/nn/ActivationFunctions/*.c)
+SRC_C  += $(wildcard src/nn/ConvolutionFunctions/*.c)
+SRC_C  += $(wildcard src/nn/FullyConnectedFunctions/*.c)
+SRC_C  += $(wildcard src/nn/NNSupportFunctions/*.c)
+SRC_C  += $(wildcard src/nn/PoolingFunctions/*.c)
+SRC_C  += $(wildcard src/nn/SoftmaxFunctions/*.c)
+
 #SRC_C  += $(wildcard src/dsp/ComplexMathFunctions/*.c)
 #SRC_C  += $(wildcard src/dsp/ControllerFunctions/*.c)
 #SRC_C  += $(wildcard src/dsp/FilteringFunctions/*.c)

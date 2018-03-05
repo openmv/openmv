@@ -1327,4 +1327,7 @@ typedef struct lenet5_feature {
 extern const float lenet_model_num[LENET_MODEL_SIZE];
 
 uint8_t lenet_predict(lenet5_t *lenet, image_t *src, rectangle_t *roi, float *conf);
+
+// CMSIS CNN
+int imlib_classify_object(image_t *img, int8_t *output_data);
 #endif //__IMLIB_H__

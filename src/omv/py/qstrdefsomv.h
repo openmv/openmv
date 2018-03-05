@@ -764,6 +764,9 @@ Q(response)
 // LENET
 Q(find_number)
 
+// CMSIS CNN
+Q(classify_object)
+
 // Image Writer
 Q(ImageWriter)
 // Image Writer Object

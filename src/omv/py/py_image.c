@@ -4158,6 +4158,32 @@ static mp_obj_t py_image_find_number(uint n_args, const mp_obj_t *args, mp_map_t
 }
 #endif //IMLIB_ENABLE_LENET
 
+#ifdef IMLIB_ENABLE_CNN
+extern int imlib_classify_object(image_t *img, int8_t *output_data);
+static mp_obj_t py_image_classify_object(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_image_cobj(args[0]);
+    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
+
+    rectangle_t roi;
+    py_helper_lookup_rectangle(kw_args, arg_img, &roi);
+
+    // Make sure ROI is smaller than or equal to image size
+    PY_ASSERT_TRUE_MSG(((roi.x + roi.w) <= arg_img->w && (roi.y + roi.h) <= arg_img->h),
+            "Region of interest is bigger than image!");
+
+    int8_t output_data[10];
+    imlib_classify_object(arg_img, output_data);
+
+    mp_obj_t output_list = mp_obj_new_list(0, NULL);
+    for (int i=0; i<10; i++) {
+        mp_obj_list_append(output_list, mp_obj_new_int(output_data[i]));
+    }
+
+    return output_list;
+}
+#endif //IMLIB_ENABLE_LENET
+
 static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -4590,6 +4616,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_displacement_obj, 2, py_image_fi
 #ifdef IMLIB_ENABLE_LENET
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_number_obj, 1, py_image_find_number);
 #endif
+#ifdef IMLIB_ENABLE_CNN
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_classify_object_obj, 1, py_image_classify_object);
+#endif
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pool_obj, 3, py_image_midpoint_pool);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_mean_pool_obj, py_image_mean_pool);
@@ -4728,6 +4757,9 @@ static const mp_map_elem_t locals_dict_table[] = {
 #endif
 #ifdef IMLIB_ENABLE_LENET
     {MP_OBJ_NEW_QSTR(MP_QSTR_find_number),         (mp_obj_t)&py_image_find_number_obj},
+#endif
+#ifdef IMLIB_ENABLE_CNN
+    {MP_OBJ_NEW_QSTR(MP_QSTR_classify_object),     (mp_obj_t)&py_image_classify_object_obj},
 #endif
     {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint_pool),       (mp_obj_t)&py_image_midpoint_pool_obj},
     {MP_OBJ_NEW_QSTR(MP_QSTR_midpoint_pooled),     (mp_obj_t)&py_image_midpoint_pooled_obj},
