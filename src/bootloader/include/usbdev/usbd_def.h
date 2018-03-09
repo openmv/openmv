@@ -31,7 +31,7 @@
 #define __USBD_DEF_H
 
 /* Includes ------------------------------------------------------------------*/
-#include "usbd_conf.h"
+#include "usbdev/usbd_conf.h"
 
 /** @addtogroup STM32_USBD_DEVICE_LIBRARY
   * @{

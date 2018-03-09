@@ -26,7 +26,7 @@
   */ 
 
 /* Includes ------------------------------------------------------------------*/
-#include "usbd_ioreq.h"
+#include "usbdev/usbd_ioreq.h"
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
   * @{

@@ -30,10 +30,10 @@
 #define __USBD_CORE_H
 
 /* Includes ------------------------------------------------------------------*/
-#include "usbd_conf.h"
-#include "usbd_def.h"
-#include "usbd_ioreq.h"
-#include "usbd_ctlreq.h"
+#include "usbdev/usbd_conf.h"
+#include "usbdev/usbd_def.h"
+#include "usbdev/usbd_ioreq.h"
+#include "usbdev/usbd_ctlreq.h"
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
   * @{

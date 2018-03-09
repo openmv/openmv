@@ -1,6 +1,6 @@
 #include <stdint.h>
-#include <usbd_cdc.h>
 #include "flash.h"
+#include "usbdev/usbd_cdc.h"
 #include "omv_boardconfig.h"
 
 #define APP_RX_DATA_SIZE    2048

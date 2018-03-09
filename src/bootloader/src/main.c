@@ -1,6 +1,6 @@
 #include STM32_HAL_H
-#include "usbd_cdc.h"
-#include "usbd_desc.h"
+#include "usbdev/usbd_cdc.h"
+#include "usbdev/usbd_desc.h"
 #include "omv_boardconfig.h"
 
 #define IDE_TIMEOUT     (1000)

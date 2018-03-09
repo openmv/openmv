@@ -59,9 +59,9 @@
   */ 
 
 /* Includes ------------------------------------------------------------------*/
-#include "usbd_cdc.h"
-#include "usbd_desc.h"
-#include "usbd_ctlreq.h"
+#include "usbdev/usbd_cdc.h"
+#include "usbdev/usbd_desc.h"
+#include "usbdev/usbd_ctlreq.h"
 
 #define CDC_IFACE_NUM (0)
 static USBD_CDC_HandleTypeDef CDC_ClassData;

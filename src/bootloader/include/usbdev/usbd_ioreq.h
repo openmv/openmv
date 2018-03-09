@@ -1,10 +1,10 @@
 /**
   ******************************************************************************
-  * @file    usbd_req.h
+  * @file    usbd_ioreq.h
   * @author  MCD Application Team
   * @version V2.0.0
   * @date    18-February-2014
-  * @brief   header file for the usbd_req.c file
+  * @brief   header file for the usbd_ioreq.c file
   ******************************************************************************
   * @attention
   *
@@ -27,23 +27,23 @@
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 
-#ifndef __USB_REQUEST_H_
-#define __USB_REQUEST_H_
+#ifndef __USBD_IOREQ_H_
+#define __USBD_IOREQ_H_
 
 /* Includes ------------------------------------------------------------------*/
-#include  "usbd_def.h"
-
+#include  "usbdev/usbd_def.h"
+#include  "usbdev/usbd_core.h"
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
   * @{
   */
   
-/** @defgroup USBD_REQ
+/** @defgroup USBD_IOREQ
   * @brief header file for the usbd_ioreq.c file
   * @{
   */ 
 
-/** @defgroup USBD_REQ_Exported_Defines
+/** @defgroup USBD_IOREQ_Exported_Defines
   * @{
   */ 
 /**
@@ -51,48 +51,65 @@
   */ 
 
 
-/** @defgroup USBD_REQ_Exported_Types
+/** @defgroup USBD_IOREQ_Exported_Types
   * @{
   */
+
+
 /**
   * @}
   */ 
 
 
 
-/** @defgroup USBD_REQ_Exported_Macros
-  * @{
-  */ 
-/**
-  * @}
-  */ 
-
-/** @defgroup USBD_REQ_Exported_Variables
-  * @{
-  */ 
-/**
-  * @}
-  */ 
-
-/** @defgroup USBD_REQ_Exported_FunctionsPrototype
+/** @defgroup USBD_IOREQ_Exported_Macros
   * @{
   */ 
 
-USBD_StatusTypeDef  USBD_StdDevReq (USBD_HandleTypeDef  *pdev, USBD_SetupReqTypedef  *req);
-USBD_StatusTypeDef  USBD_StdItfReq (USBD_HandleTypeDef  *pdev, USBD_SetupReqTypedef  *req);
-USBD_StatusTypeDef  USBD_StdEPReq  (USBD_HandleTypeDef  *pdev, USBD_SetupReqTypedef  *req);
-
-
-void USBD_CtlError  (USBD_HandleTypeDef  *pdev, USBD_SetupReqTypedef *req);
-
-void USBD_ParseSetupRequest (USBD_SetupReqTypedef *req, uint8_t *pdata);
-
-void USBD_GetString         (uint8_t *desc, uint8_t *unicode, uint16_t *len);
 /**
   * @}
   */ 
 
-#endif /* __USB_REQUEST_H_ */
+/** @defgroup USBD_IOREQ_Exported_Variables
+  * @{
+  */ 
+
+/**
+  * @}
+  */ 
+
+/** @defgroup USBD_IOREQ_Exported_FunctionsPrototype
+  * @{
+  */ 
+
+USBD_StatusTypeDef  USBD_CtlSendData (USBD_HandleTypeDef  *pdev, 
+                               uint8_t *buf,
+                               uint16_t len);
+
+USBD_StatusTypeDef  USBD_CtlContinueSendData (USBD_HandleTypeDef  *pdev, 
+                               uint8_t *pbuf,
+                               uint16_t len);
+
+USBD_StatusTypeDef USBD_CtlPrepareRx (USBD_HandleTypeDef  *pdev, 
+                               uint8_t *pbuf,                                 
+                               uint16_t len);
+
+USBD_StatusTypeDef  USBD_CtlContinueRx (USBD_HandleTypeDef  *pdev, 
+                              uint8_t *pbuf,                                          
+                              uint16_t len);
+
+USBD_StatusTypeDef  USBD_CtlSendStatus (USBD_HandleTypeDef  *pdev);
+
+USBD_StatusTypeDef  USBD_CtlReceiveStatus (USBD_HandleTypeDef  *pdev);
+
+uint16_t  USBD_GetRxCount (USBD_HandleTypeDef  *pdev , 
+                           uint8_t epnum);
+
+/**
+  * @}
+  */ 
+
+#endif /* __USBD_IOREQ_H_ */
 
 /**
   * @}
@@ -101,6 +118,4 @@ void USBD_GetString         (uint8_t *desc, uint8_t *unicode, uint16_t *len);
 /**
 * @}
 */ 
-
-
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
