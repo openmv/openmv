@@ -46,7 +46,7 @@ OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/py/qstrdefsomv.h
 TARGET ?= OPENMV3
 FW_DIR=$(TOP_DIR)/../firmware/$(TARGET)
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
-MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/stmhal/boards/$(TARGET)/
+MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/boards/$(TARGET)/
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -88,9 +88,9 @@ CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/py/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/mp-readline
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/lib/oofatfs
-CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/
-CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/core/inc/
-CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/stmhal/usbdev/class/inc/
+CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/
+CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/
+CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/
 CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
@@ -257,7 +257,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	spi.o                   \
 	can.o                   \
 	pin.o                   \
-	pin_defs_stmhal.o       \
+	pin_defs_stm32.o        \
 	pin_named_pins.o        \
 	pins_$(TARGET).o        \
 	timer.o                 \
@@ -361,6 +361,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	machine_pinbase.o   \
 	utime_mphal.o       \
 	modonewire.o        \
+	uos_dupterm.o       \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
@@ -405,11 +406,11 @@ BOOTLOADER_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(BOOT_DIR)           BUILD=$(BUILD)/$(BOOT_DIR)
 
 FIRMWARE_OBJS:
-	$(MAKE)  -C $(CMSIS_DIR)          BUILD=$(BUILD)/$(CMSIS_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
-	$(MAKE)  -C $(STHAL_DIR)          BUILD=$(BUILD)/$(STHAL_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
-	$(MAKE)  -C $(MICROPY_DIR)/stmhal BUILD=$(BUILD)/$(MICROPY_DIR)  BOARD=$(TARGET) QSTR_DEFS=$(OMV_QSTR_DEFS)
-	$(MAKE)  -C $(WINC1500_DIR)       BUILD=$(BUILD)/$(WINC1500_DIR) CFLAGS="$(CFLAGS) -MMD"
-	$(MAKE)  -C $(OMV_DIR)            BUILD=$(BUILD)/$(OMV_DIR)      CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(CMSIS_DIR)                BUILD=$(BUILD)/$(CMSIS_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
+	$(MAKE)  -C $(STHAL_DIR)                BUILD=$(BUILD)/$(STHAL_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
+	$(MAKE)  -C $(MICROPY_DIR)/ports/stm32  BUILD=$(BUILD)/$(MICROPY_DIR)  BOARD=$(TARGET) QSTR_DEFS=$(OMV_QSTR_DEFS)
+	$(MAKE)  -C $(WINC1500_DIR)             BUILD=$(BUILD)/$(WINC1500_DIR) CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(OMV_DIR)                  BUILD=$(BUILD)/$(OMV_DIR)      CFLAGS="$(CFLAGS) -MMD"
 
 # This target generates the main/app firmware image located at 0x08010000
 $(FIRMWARE): FIRMWARE_OBJS

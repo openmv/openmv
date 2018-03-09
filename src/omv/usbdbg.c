@@ -11,6 +11,7 @@
 #include "sensor.h"
 #include "framebuffer.h"
 #include "ff.h"
+#include "usb.h"
 #include "usbdbg.h"
 #include "nlr.h"
 #include "lexer.h"
@@ -27,10 +28,6 @@ static volatile bool script_ready;
 static volatile bool script_running;
 static vstr_t script_buf;
 static mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
-
-extern void usbd_cdc_tx_buf_flush();
-extern uint32_t usbd_cdc_tx_buf_len();
-extern uint8_t *usbd_cdc_tx_buf(uint32_t bytes);
 extern const char *ffs_strerror(FRESULT res);
 
 void usbdbg_init()
@@ -79,14 +76,14 @@ void usbdbg_data_in(void *buffer, int length)
         }
 
         case USBDBG_TX_BUF_LEN: {
-            uint32_t tx_buf_len = usbd_cdc_tx_buf_len();
+            uint32_t tx_buf_len = usb_cdc_tx_buf_len();
             memcpy(buffer, &tx_buf_len, sizeof(tx_buf_len));
             cmd = USBDBG_NONE;
             break;
         }
 
         case USBDBG_TX_BUF: {
-            uint8_t *tx_buf = usbd_cdc_tx_buf(length);
+            uint8_t *tx_buf = usb_cdc_tx_buf(length);
             memcpy(buffer, tx_buf, length);
             if (xfer_bytes == xfer_length) {
                 cmd = USBDBG_NONE;
