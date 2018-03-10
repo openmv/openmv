@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date    29-December-2017
   * @brief   CMSIS STM32H7xx Device Peripheral Access Layer Header File.
   *
   *          The file is the unique include file that the application programmer
@@ -53,8 +53,8 @@
   * @{
   */
 
-#ifndef __STM32H7xx_H
-#define __STM32H7xx_H
+#ifndef STM32H7xx_H
+#define STM32H7xx_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -94,16 +94,16 @@
 #endif /* USE_HAL_DRIVER */
 
 /**
-  * @brief CMSIS Device version number V1.1.0
+  * @brief CMSIS Device version number V1.2.0
   */
 #define __STM32H7xx_CMSIS_DEVICE_VERSION_MAIN   (0x01) /*!< [31:24] main version */
-#define __STM32H7xx_CMSIS_DEVICE_VERSION_SUB1   (0x01) /*!< [23:16] sub1 version */
+#define __STM32H7xx_CMSIS_DEVICE_VERSION_SUB1   (0x02) /*!< [23:16] sub1 version */
 #define __STM32H7xx_CMSIS_DEVICE_VERSION_SUB2   (0x00) /*!< [15:8]  sub2 version */
 #define __STM32H7xx_CMSIS_DEVICE_VERSION_RC     (0x00) /*!< [7:0]  release candidate */
 #define __STM32H7xx_CMSIS_DEVICE_VERSION        ((__CMSIS_DEVICE_VERSION_MAIN     << 24)\
-												|(__CMSIS_DEVICE_HAL_VERSION_SUB1 << 16)\
-												|(__CMSIS_DEVICE_HAL_VERSION_SUB2 << 8 )\
-												|(__CMSIS_DEVICE_HAL_VERSION_RC))
+                                      |(__CMSIS_DEVICE_HAL_VERSION_SUB1 << 16)\
+                                      |(__CMSIS_DEVICE_HAL_VERSION_SUB2 << 8 )\
+                                      |(__CMSIS_DEVICE_HAL_VERSION_RC))
 
 /**
   * @}
@@ -185,7 +185,7 @@ typedef enum
 }
 #endif /* __cplusplus */
 
-#endif /* __STM32H7xx_H */
+#endif /* STM32H7xx_H */
 /**
   * @}
   */

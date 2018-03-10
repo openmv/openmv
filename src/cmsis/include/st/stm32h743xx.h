@@ -2,14 +2,14 @@
   ******************************************************************************
   * @file    stm32h743xx.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date    29-December-2017
   * @brief   CMSIS STM32H743xx Device Peripheral Access Layer Header File.
   *
   *          This file contains:
   *           - Data structures and the address mapping for all peripherals
   *           - Peripheral's registers declarations and bits definition
-  *           - Macros to access peripheral’s registers hardware
+  *           - Macros to access peripheral's registers hardware
   *
   ******************************************************************************
   * @attention
@@ -49,8 +49,8 @@
   * @{
   */
 
-#ifndef __STM32H743xx_H
-#define __STM32H743xx_H
+#ifndef STM32H743xx_H
+#define STM32H743xx_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -212,7 +212,7 @@ typedef enum
   LPTIM4_IRQn                 = 140,    /*!< LP TIM4 global interrupt                                          */
   LPTIM5_IRQn                 = 141,    /*!< LP TIM5 global interrupt                                          */
   LPUART1_IRQn                = 142,    /*!< LP UART1 interrupt                                                */
-  CRS_IRQn                    = 144,    /*!< Clock Recovery Global Interrupt                                   */
+  CRS_IRQn                    = 144,    /*!< Clock Recovery Global Interrupt                                   */                            
   SAI4_IRQn                   = 146,    /*!< SAI4 global interrupt                                             */
   WAKEUP_PIN_IRQn             = 149,    /*!< Interrupt for all 6 wake-up pins                                  */
 } IRQn_Type;
@@ -536,7 +536,6 @@ typedef struct
 /**
   * @brief Debug MCU
   */
-
 typedef struct
 {
   __IO uint32_t IDCODE;        /*!< MCU device ID code,                     Address offset: 0x00 */
@@ -552,7 +551,6 @@ typedef struct
   uint32_t RESERVED8;          /*!< Reserved,                             Address offset: 0x50 */
   __IO uint32_t APB4FZ1;     /*!< Debug MCU APB4FZ1 freeze register,    Address offset: 0x54 */
 }DBGMCU_TypeDef;
-
 /** 
   * @brief DCMI
   */
@@ -912,49 +910,49 @@ __IO uint32_t PR3;                 /*!< EXTI Pending register,                  
 
 typedef struct
 {
-  __IO uint32_t ACR;             /*!< FLASH access control register,                           Address offset: 0x00 */
-  __IO uint32_t KEYR1;           /*!< Flash Key Register for bank1,                            Address offset: 0x04 */
-  __IO uint32_t OPTKEYR;         /*!< Flash Option Key Register,                                Address offset: 0x08 */
-  __IO uint32_t CR1;             /*!< Flash Control Register for bank1,                        Address offset: 0x0C */
-  __IO uint32_t SR1;             /*!< Flash Status Register for bank1,                         Address offset: 0x10 */
-  __IO uint32_t CCR1;            /*!< Flash Control Register for bank1,                        Address offset: 0x14 */
-  __IO uint32_t OPTCR;           /*!< Flash Option Control Register,                            Address offset: 0x18 */
+  __IO uint32_t ACR;             /*!< FLASH access control register,                            Address offset: 0x00  */
+  __IO uint32_t KEYR1;           /*!< Flash Key Register for bank1,                             Address offset: 0x04  */
+  __IO uint32_t OPTKEYR;         /*!< Flash Option Key Register,                                Address offset: 0x08  */
+  __IO uint32_t CR1;             /*!< Flash Control Register for bank1,                         Address offset: 0x0C  */
+  __IO uint32_t SR1;             /*!< Flash Status Register for bank1,                          Address offset: 0x10  */
+  __IO uint32_t CCR1;            /*!< Flash Control Register for bank1,                         Address offset: 0x14  */
+  __IO uint32_t OPTCR;           /*!< Flash Option Control Register,                            Address offset: 0x18  */
   __IO uint32_t OPTSR_CUR;       /*!< Flash Option Status Current Register,                     Address offset: 0x1C */
   __IO uint32_t OPTSR_PRG;       /*!< Flash Option Status Current Register,                     Address offset: 0x20 */
   __IO uint32_t OPTCCR;          /*!< Flash Option Clear Control Register,                      Address offset: 0x24 */
-  __IO uint32_t PRAR_CUR1;       /*!< Flash Current Protection Address Register for bank1,     Address offset: 0x28 */
-  __IO uint32_t PRAR_PRG1;       /*!< Flash Protection Address to Program Register for bank1,  Address offset: 0x2C */
-  __IO uint32_t SCAR_CUR1;       /*!< Flash Current Secure Address Register for bank1,         Address offset: 0x30 */
-  __IO uint32_t SCAR_PRG1;       /*!< Flash Secure Address Register for bank1,                 Address offset: 0x34 */
-  __IO uint32_t WPSN_CUR1;       /*!< Flash Current Write Protection Register on bank1,        Address offset: 0x38 */
-  __IO uint32_t WPSN_PRG1;       /*!< Flash Write Protection to Program Register on bank1,     Address offset: 0x3C */
-  __IO uint32_t BOOT_CUR;        /*!< Flash Current Boot Address for Pelican Core Register,     Address offset: 0x40 */
-  __IO uint32_t BOOT_PRG;        /*!< Flash Boot Address to Program for Pelican Core Register,  Address offset: 0x44 */
-  uint32_t      RESERVED0[2];    /*!< Reserved, 0x48 to 0x4C                                                        */
-  __IO uint32_t CRCCR1;          /*!< Flash CRC Control register For Bank1 Register ,          Address offset: 0x50 */
-  __IO uint32_t CRCSADD1;        /*!< Flash CRC Start Address Register for Bank1 ,             Address offset: 0x54 */
-  __IO uint32_t CRCEADD1;        /*!< Flash CRC End Address Register for Bank1 ,               Address offset: 0x58 */
-  __IO uint32_t CRCDATA;         /*!< Flash CRC Data Register for Bank1 ,                      Address offset: 0x5C */
-  __IO uint32_t ECC_FA1;         /*!< Flash ECC Fail Address For Bank1 Register ,              Address offset: 0x60 */
-  uint32_t      RESERVED1[40];   /*!< Reserved, 0x64 to 0x100                                                       */
-  __IO uint32_t KEYR2;           /*!< Flash Key Register for bank2,                           Address offset: 0x104 */
-  uint32_t      RESERVED2;       /*!< Reserved, 0x108                                                               */
-  __IO uint32_t CR2;             /*!< Flash Control Register for bank2,                       Address offset: 0x10C */
-  __IO uint32_t SR2;             /*!< Flash Status Register for bank2,                        Address offset: 0x110 */
-  __IO uint32_t CCR2;            /*!< Flash Status Register for bank2,                        Address offset: 0x114 */
-  uint32_t      RESERVED3[4];    /*!< Reserved, 0x118 to 0x124                                                      */
-  __IO uint32_t PRAR_CUR2;       /*!< Flash Current Protection Address Register for bank2,    Address offset: 0x128 */
-  __IO uint32_t PRAR_PRG2;       /*!< Flash Protection Address to Program Register for bank2, Address offset: 0x12C */
-  __IO uint32_t SCAR_CUR2;       /*!< Flash Current Secure Address Register for bank2,        Address offset: 0x130 */
-  __IO uint32_t SCAR_PRG2;       /*!< Flash Secure Address Register for bank2,                Address offset: 0x134 */
-  __IO uint32_t WPSN_CUR2;       /*!< Flash Current Write Protection Register on bank2,       Address offset: 0x138 */
-  __IO uint32_t WPSN_PRG2;       /*!< Flash Write Protection to Program Register on bank2,    Address offset: 0x13C */
-  uint32_t      RESERVED4[4];    /*!< Reserved, 0x140 to 0x14C                                                      */
-  __IO uint32_t CRCCR2;          /*!< Flash CRC Control register For Bank2 Register ,         Address offset: 0x150 */
-  __IO uint32_t CRCSADD2;        /*!< Flash CRC Start Address Register for Bank2 ,            Address offset: 0x154 */
-  __IO uint32_t CRCEADD2;        /*!< Flash CRC End Address Register for Bank2 ,              Address offset: 0x158 */
-  __IO uint32_t CRCDATA2;        /*!< Flash CRC Data Register for Bank2 ,                     Address offset: 0x15C */
-  __IO uint32_t ECC_FA2;         /*!< Flash ECC Fail Address For Bank2 Register ,             Address offset: 0x160 */
+  __IO uint32_t PRAR_CUR1;       /*!< Flash Current Protection Address Register for bank1,      Address offset: 0x28  */
+  __IO uint32_t PRAR_PRG1;       /*!< Flash Protection Address to Program Register for bank1,   Address offset: 0x2C  */
+  __IO uint32_t SCAR_CUR1;       /*!< Flash Current Secure Address Register for bank1,          Address offset: 0x30  */
+  __IO uint32_t SCAR_PRG1;       /*!< Flash Secure Address Register for bank1,                  Address offset: 0x34  */
+  __IO uint32_t WPSN_CUR1;       /*!< Flash Current Write Protection Register on bank1,         Address offset: 0x38  */
+  __IO uint32_t WPSN_PRG1;       /*!< Flash Write Protection to Program Register on bank1,      Address offset: 0x3C  */
+  __IO uint32_t BOOT_CUR;        /*!< Flash Current Boot Address for Pelican Core Register,     Address offset: 0x40  */
+  __IO uint32_t BOOT_PRG;        /*!< Flash Boot Address to Program for Pelican Core Register,  Address offset: 0x44  */
+  uint32_t      RESERVED0[2];    /*!< Reserved, 0x48 to 0x4C                                                          */
+  __IO uint32_t CRCCR1;          /*!< Flash CRC Control register For Bank1 Register ,           Address offset: 0x50  */
+  __IO uint32_t CRCSADD1;        /*!< Flash CRC Start Address Register for Bank1 ,              Address offset: 0x54  */
+  __IO uint32_t CRCEADD1;        /*!< Flash CRC End Address Register for Bank1 ,                Address offset: 0x58  */
+  __IO uint32_t CRCDATA;         /*!< Flash CRC Data Register for Bank1 ,                       Address offset: 0x5C  */
+  __IO uint32_t ECC_FA1;         /*!< Flash ECC Fail Address For Bank1 Register ,               Address offset: 0x60  */
+  uint32_t      RESERVED1[40];   /*!< Reserved, 0x64 to 0x100                                                         */
+  __IO uint32_t KEYR2;           /*!< Flash Key Register for bank2,                             Address offset: 0x104 */
+  uint32_t      RESERVED2;       /*!< Reserved, 0x108                                                                 */
+  __IO uint32_t CR2;             /*!< Flash Control Register for bank2,                         Address offset: 0x10C */
+  __IO uint32_t SR2;             /*!< Flash Status Register for bank2,                          Address offset: 0x110 */
+  __IO uint32_t CCR2;            /*!< Flash Status Register for bank2,                          Address offset: 0x114 */
+  uint32_t      RESERVED3[4];    /*!< Reserved, 0x118 to 0x124                                                        */
+  __IO uint32_t PRAR_CUR2;       /*!< Flash Current Protection Address Register for bank2,      Address offset: 0x128 */
+  __IO uint32_t PRAR_PRG2;       /*!< Flash Protection Address to Program Register for bank2,   Address offset: 0x12C */
+  __IO uint32_t SCAR_CUR2;       /*!< Flash Current Secure Address Register for bank2,          Address offset: 0x130 */
+  __IO uint32_t SCAR_PRG2;       /*!< Flash Secure Address Register for bank2,                  Address offset: 0x134 */
+  __IO uint32_t WPSN_CUR2;       /*!< Flash Current Write Protection Register on bank2,         Address offset: 0x138 */
+  __IO uint32_t WPSN_PRG2;       /*!< Flash Write Protection to Program Register on bank2,      Address offset: 0x13C */
+  uint32_t      RESERVED4[4];    /*!< Reserved, 0x140 to 0x14C                                                        */
+  __IO uint32_t CRCCR2;          /*!< Flash CRC Control register For Bank2 Register ,           Address offset: 0x150 */
+  __IO uint32_t CRCSADD2;        /*!< Flash CRC Start Address Register for Bank2 ,              Address offset: 0x154 */
+  __IO uint32_t CRCEADD2;        /*!< Flash CRC End Address Register for Bank2 ,                Address offset: 0x158 */
+  __IO uint32_t CRCDATA2;        /*!< Flash CRC Data Register for Bank2 ,                       Address offset: 0x15C */
+  __IO uint32_t ECC_FA2;         /*!< Flash ECC Fail Address For Bank2 Register ,               Address offset: 0x160 */
 } FLASH_TypeDef;
 
 /**
@@ -1041,8 +1039,8 @@ typedef struct
 
 typedef struct
 {
-  __IO uint32_t CSR;          /*!< OPAMP control/status register,                     Address offset: 0x00 */
-  __IO uint32_t OTR;          /*!< OPAMP offset trimming register for normal mode,    Address offset: 0x04 */
+  __IO uint32_t CSR;          /*!< OPAMP control/status register,                      Address offset: 0x00 */
+  __IO uint32_t OTR;          /*!< OPAMP offset trimming register for normal mode,     Address offset: 0x04 */
   __IO uint32_t HSOTR;        /*!< OPAMP offset trimming register for high speed mode, Address offset: 0x08 */
 } OPAMP_TypeDef;
 
@@ -1055,7 +1053,7 @@ typedef struct
  uint32_t RESERVED1;           /*!< Reserved,                                           Address offset: 0x00        */
  __IO uint32_t PMCR;           /*!< SYSCFG peripheral mode configuration register,      Address offset: 0x04        */
  __IO uint32_t EXTICR[4];      /*!< SYSCFG external interrupt configuration registers,  Address offset: 0x08-0x14   */
- uint32_t RESERVED2[2];        /*!< Reserved,                                            Address offset: 0x18-0x1C  */
+ uint32_t RESERVED2[2];        /*!< Reserved,                                           Address offset: 0x18-0x1C   */
  __IO uint32_t CCCSR;          /*!< SYSCFG compensation cell control/status register,   Address offset: 0x20        */
  __IO uint32_t CCVR;           /*!< SYSCFG compensation cell value register,            Address offset: 0x24        */
  __IO uint32_t CCCR;           /*!< SYSCFG compensation cell code register,             Address offset: 0x28        */
@@ -1160,23 +1158,23 @@ typedef struct
 
 typedef struct
 {
-  uint32_t      RESERVED0[2];  /*!< Reserved, 0x00-0x04 */
+  uint32_t      RESERVED0[2];  /*!< Reserved, 0x00-0x04                                                       */
   __IO uint32_t SSCR;          /*!< LTDC Synchronization Size Configuration Register,    Address offset: 0x08 */
   __IO uint32_t BPCR;          /*!< LTDC Back Porch Configuration Register,              Address offset: 0x0C */
   __IO uint32_t AWCR;          /*!< LTDC Active Width Configuration Register,            Address offset: 0x10 */
   __IO uint32_t TWCR;          /*!< LTDC Total Width Configuration Register,             Address offset: 0x14 */
   __IO uint32_t GCR;           /*!< LTDC Global Control Register,                        Address offset: 0x18 */
-  uint32_t      RESERVED1[2];  /*!< Reserved, 0x1C-0x20 */
+  uint32_t      RESERVED1[2];  /*!< Reserved, 0x1C-0x20                                                       */
   __IO uint32_t SRCR;          /*!< LTDC Shadow Reload Configuration Register,           Address offset: 0x24 */
-  uint32_t      RESERVED2[1];  /*!< Reserved, 0x28 */
+  uint32_t      RESERVED2[1];  /*!< Reserved, 0x28                                                            */
   __IO uint32_t BCCR;          /*!< LTDC Background Color Configuration Register,        Address offset: 0x2C */
-  uint32_t      RESERVED3[1];  /*!< Reserved, 0x30 */
+  uint32_t      RESERVED3[1];  /*!< Reserved, 0x30                                                            */
   __IO uint32_t IER;           /*!< LTDC Interrupt Enable Register,                      Address offset: 0x34 */
   __IO uint32_t ISR;           /*!< LTDC Interrupt Status Register,                      Address offset: 0x38 */
   __IO uint32_t ICR;           /*!< LTDC Interrupt Clear Register,                       Address offset: 0x3C */
   __IO uint32_t LIPCR;         /*!< LTDC Line Interrupt Position Configuration Register, Address offset: 0x40 */
   __IO uint32_t CPSR;          /*!< LTDC Current Position Status Register,               Address offset: 0x44 */
-  __IO uint32_t CDSR;         /*!< LTDC Current Display Status Register,                       Address offset: 0x48 */
+  __IO uint32_t CDSR;         /*!< LTDC Current Display Status Register,                 Address offset: 0x48 */
 } LTDC_TypeDef;  
 
 /**
@@ -1405,32 +1403,32 @@ typedef struct
 
 typedef struct
 {
-  __IO uint32_t POWER;          /*!< SDMMC power control register,             Address offset: 0x00 */
-  __IO uint32_t CLKCR;          /*!< SDMMC clock control register,             Address offset: 0x04 */
-  __IO uint32_t ARG;            /*!< SDMMC argument register,                  Address offset: 0x08 */
-  __IO uint32_t CMD;            /*!< SDMMC command register,                   Address offset: 0x0C */
-  __I uint32_t  RESPCMD;        /*!< SDMMC command response register,          Address offset: 0x10 */
-  __I uint32_t  RESP1;          /*!< SDMMC response 1 register,                Address offset: 0x14 */
-  __I uint32_t  RESP2;          /*!< SDMMC response 2 register,                Address offset: 0x18 */
-  __I uint32_t  RESP3;          /*!< SDMMC response 3 register,                Address offset: 0x1C */
-  __I uint32_t  RESP4;          /*!< SDMMC response 4 register,                Address offset: 0x20 */
-  __IO uint32_t DTIMER;         /*!< SDMMC data timer register,                Address offset: 0x24 */
-  __IO uint32_t DLEN;           /*!< SDMMC data length register,               Address offset: 0x28 */
-  __IO uint32_t DCTRL;          /*!< SDMMC data control register,              Address offset: 0x2C */
-  __I uint32_t  DCOUNT;         /*!< SDMMC data counter register,              Address offset: 0x30 */
-  __I uint32_t  STA;            /*!< SDMMC status register,                    Address offset: 0x34 */
-  __IO uint32_t ICR;            /*!< SDMMC interrupt clear register,           Address offset: 0x38 */
-  __IO uint32_t MASK;           /*!< SDMMC mask register,                      Address offset: 0x3C */
-  __IO uint32_t ACKTIME;        /*!< SDMMC Acknowledgement timer register,     Address offset: 0x40 */
-  uint32_t      RESERVED0[3];   /*!< Reserved, 0x44 - 0x4C - 0x4C                                   */
-  __IO uint32_t IDMACTRL;       /*!< SDMMC DMA control register,               Address offset: 0x50 */
-  __IO uint32_t IDMABSIZE;      /*!< SDMMC DMA buffer size register,           Address offset: 0x54 */
-  __IO uint32_t IDMABASE0;      /*!< SDMMC DMA buffer 0 base address register, Address offset: 0x58 */
-  __IO uint32_t IDMABASE1;      /*!< SDMMC DMA buffer 1 base address register, Address offset: 0x5C */
-  uint32_t      RESERVED1[8];   /*!< Reserved, 0x60-0x7C                                            */
-  __IO uint32_t FIFO;           /*!< SDMMC data FIFO register,                 Address offset: 0x80 */
-  uint32_t      RESERVED2[222]; /*!< Reserved, 0x84-0x3F8                                           */  
-  __IO uint32_t IPVR;           /*!< SDMMC data FIFO register,                Address offset: 0x3FC */  
+  __IO uint32_t POWER;          /*!< SDMMC power control register,             Address offset: 0x00  */
+  __IO uint32_t CLKCR;          /*!< SDMMC clock control register,             Address offset: 0x04  */
+  __IO uint32_t ARG;            /*!< SDMMC argument register,                  Address offset: 0x08  */
+  __IO uint32_t CMD;            /*!< SDMMC command register,                   Address offset: 0x0C  */
+  __I uint32_t  RESPCMD;        /*!< SDMMC command response register,          Address offset: 0x10  */
+  __I uint32_t  RESP1;          /*!< SDMMC response 1 register,                Address offset: 0x14  */
+  __I uint32_t  RESP2;          /*!< SDMMC response 2 register,                Address offset: 0x18  */
+  __I uint32_t  RESP3;          /*!< SDMMC response 3 register,                Address offset: 0x1C  */
+  __I uint32_t  RESP4;          /*!< SDMMC response 4 register,                Address offset: 0x20  */
+  __IO uint32_t DTIMER;         /*!< SDMMC data timer register,                Address offset: 0x24  */
+  __IO uint32_t DLEN;           /*!< SDMMC data length register,               Address offset: 0x28  */
+  __IO uint32_t DCTRL;          /*!< SDMMC data control register,              Address offset: 0x2C  */
+  __I uint32_t  DCOUNT;         /*!< SDMMC data counter register,              Address offset: 0x30  */
+  __I uint32_t  STA;            /*!< SDMMC status register,                    Address offset: 0x34  */
+  __IO uint32_t ICR;            /*!< SDMMC interrupt clear register,           Address offset: 0x38  */
+  __IO uint32_t MASK;           /*!< SDMMC mask register,                      Address offset: 0x3C  */
+  __IO uint32_t ACKTIME;        /*!< SDMMC Acknowledgement timer register,     Address offset: 0x40  */
+  uint32_t      RESERVED0[3];   /*!< Reserved, 0x44 - 0x4C - 0x4C                                    */
+  __IO uint32_t IDMACTRL;       /*!< SDMMC DMA control register,               Address offset: 0x50  */
+  __IO uint32_t IDMABSIZE;      /*!< SDMMC DMA buffer size register,           Address offset: 0x54  */
+  __IO uint32_t IDMABASE0;      /*!< SDMMC DMA buffer 0 base address register, Address offset: 0x58  */
+  __IO uint32_t IDMABASE1;      /*!< SDMMC DMA buffer 1 base address register, Address offset: 0x5C  */
+  uint32_t      RESERVED1[8];   /*!< Reserved, 0x60-0x7C                                             */
+  __IO uint32_t FIFO;           /*!< SDMMC data FIFO register,                 Address offset: 0x80  */
+  uint32_t      RESERVED2[222]; /*!< Reserved, 0x84-0x3F8                                            */  
+  __IO uint32_t IPVR;           /*!< SDMMC data FIFO register,                 Address offset: 0x3FC */  
 } SDMMC_TypeDef;
 
 
@@ -1456,9 +1454,9 @@ typedef struct
   __IO uint32_t ICR;        /*!< HSEM Interrupt clear register ,              Address offset: 104h     */  
   __IO uint32_t ISR;        /*!< HSEM Interrupt Status register ,             Address offset: 108h     */ 
   __IO uint32_t MISR;       /*!< HSEM Interrupt Masked Status register ,      Address offset: 10Ch     */ 
-  uint32_t  Reserved[12];   /* Reserved                                       Address offset: 110h-13Ch*/
-  __IO uint32_t CR;         /*!< HSEM Semaphore clear register ,               Address offset: 140h      */
-  __IO uint32_t KEYR;       /*!< HSEM Semaphore clear key register ,           Address offset: 144h      */
+  uint32_t  Reserved[12];   /* Reserved                                       Address offset: 110h-13Ch  */
+  __IO uint32_t CR;         /*!< HSEM Semaphore clear register ,                Address offset: 140h      */
+  __IO uint32_t KEYR;       /*!< HSEM Semaphore clear key register ,            Address offset: 144h      */
 
 } HSEM_TypeDef;
 
@@ -1555,16 +1553,16 @@ typedef struct
   */
 typedef struct
 {
-  __IO uint32_t ISR;      /*!< LPTIM Interrupt and Status register,                Address offset: 0x00 */
-  __IO uint32_t ICR;      /*!< LPTIM Interrupt Clear register,                     Address offset: 0x04 */
-  __IO uint32_t IER;      /*!< LPTIM Interrupt Enable register,                    Address offset: 0x08 */
-  __IO uint32_t CFGR;     /*!< LPTIM Configuration register,                       Address offset: 0x0C */
-  __IO uint32_t CR;       /*!< LPTIM Control register,                             Address offset: 0x10 */
-  __IO uint32_t CMP;      /*!< LPTIM Compare register,                             Address offset: 0x14 */
-  __IO uint32_t ARR;      /*!< LPTIM Autoreload register,                          Address offset: 0x18 */
-  __IO uint32_t CNT;      /*!< LPTIM Counter register,                             Address offset: 0x1C */
-  uint16_t  RESERVED1;    /*!< Reserved, 0x20                                                 */
-  __IO uint32_t CFGR2;     /*!< LPTIM Option register,                              Address offset: 0x24 */
+  __IO uint32_t ISR;      /*!< LPTIM Interrupt and Status register,         Address offset: 0x00 */
+  __IO uint32_t ICR;      /*!< LPTIM Interrupt Clear register,              Address offset: 0x04 */
+  __IO uint32_t IER;      /*!< LPTIM Interrupt Enable register,             Address offset: 0x08 */
+  __IO uint32_t CFGR;     /*!< LPTIM Configuration register,                Address offset: 0x0C */
+  __IO uint32_t CR;       /*!< LPTIM Control register,                      Address offset: 0x10 */
+  __IO uint32_t CMP;      /*!< LPTIM Compare register,                      Address offset: 0x14 */
+  __IO uint32_t ARR;      /*!< LPTIM Autoreload register,                   Address offset: 0x18 */
+  __IO uint32_t CNT;      /*!< LPTIM Counter register,                      Address offset: 0x1C */
+  uint16_t  RESERVED1;    /*!< Reserved, 0x20                                                    */
+  __IO uint32_t CFGR2;     /*!< LPTIM Option register,                      Address offset: 0x24 */
 } LPTIM_TypeDef;
 
 /**
@@ -1573,8 +1571,8 @@ typedef struct
 typedef struct
 {
   __IO uint32_t SR;        /*!< Comparator status register,                    Address offset: 0x00 */
- __IO uint32_t ICFR;      /*!< Comparator interrupt clear flag register,      Address offset: 0x04 */
-	__IO uint32_t OR;        /*!< Comparator option register,                    Address offset: 0x08 */
+ __IO uint32_t ICFR;      /*!< Comparator interrupt clear flag register,       Address offset: 0x04 */
+	__IO uint32_t OR;        /*!< Comparator option register,                  Address offset: 0x08 */
 } COMPOPT_TypeDef;
 
 typedef struct
@@ -1652,7 +1650,7 @@ typedef struct
   __IO uint32_t MPER;           /*!< HRTIM Master Timer period register,                      Address offset: 0x14 */
   __IO uint32_t MREP;           /*!< HRTIM Master Timer repetition register,                  Address offset: 0x18 */
   __IO uint32_t MCMP1R;         /*!< HRTIM Master Timer compare 1 register,                   Address offset: 0x1C */
-  uint32_t      RESERVED0;     /*!< Reserved,                                                                0x20 */
+  uint32_t      RESERVED0;     /*!< Reserved,                                                                 0x20 */
   __IO uint32_t MCMP2R;         /*!< HRTIM Master Timer compare 2 register,                   Address offset: 0x24 */
   __IO uint32_t MCMP3R;         /*!< HRTIM Master Timer compare 3 register,                   Address offset: 0x28 */
   __IO uint32_t MCMP4R;         /*!< HRTIM Master Timer compare 4 register,                   Address offset: 0x2C */
@@ -1662,19 +1660,19 @@ typedef struct
 /* HRTIM Timer A to E registers definition */
 typedef struct
 {
-  __IO uint32_t TIMxCR;     /*!< HRTIM Timerx control register,                              Address offset: 0x00  */
-  __IO uint32_t TIMxISR;    /*!< HRTIM Timerx interrupt status register,                     Address offset: 0x04  */
-  __IO uint32_t TIMxICR;    /*!< HRTIM Timerx interrupt clear register,                      Address offset: 0x08  */
-  __IO uint32_t TIMxDIER;   /*!< HRTIM Timerx DMA/interrupt enable register,                 Address offset: 0x0C  */
-  __IO uint32_t CNTxR;      /*!< HRTIM Timerx counter register,                              Address offset: 0x10  */
-  __IO uint32_t PERxR;      /*!< HRTIM Timerx period register,                               Address offset: 0x14  */
-  __IO uint32_t REPxR;      /*!< HRTIM Timerx repetition register,                           Address offset: 0x18  */
-  __IO uint32_t CMP1xR;     /*!< HRTIM Timerx compare 1 register,                            Address offset: 0x1C  */
-  __IO uint32_t CMP1CxR;    /*!< HRTIM Timerx compare 1 compound register,                   Address offset: 0x20  */
-  __IO uint32_t CMP2xR;     /*!< HRTIM Timerx compare 2 register,                            Address offset: 0x24  */
-  __IO uint32_t CMP3xR;     /*!< HRTIM Timerx compare 3 register,                            Address offset: 0x28  */
-  __IO uint32_t CMP4xR;     /*!< HRTIM Timerx compare 4 register,                            Address offset: 0x2C  */
-  __IO uint32_t CPT1xR;     /*!< HRTIM Timerx capture 1 register,                            Address offset: 0x30  */
+  __IO uint32_t TIMxCR;     /*!< HRTIM Timerx control register,                              Address offset: 0x00 */
+  __IO uint32_t TIMxISR;    /*!< HRTIM Timerx interrupt status register,                     Address offset: 0x04 */
+  __IO uint32_t TIMxICR;    /*!< HRTIM Timerx interrupt clear register,                      Address offset: 0x08 */
+  __IO uint32_t TIMxDIER;   /*!< HRTIM Timerx DMA/interrupt enable register,                 Address offset: 0x0C */
+  __IO uint32_t CNTxR;      /*!< HRTIM Timerx counter register,                              Address offset: 0x10 */
+  __IO uint32_t PERxR;      /*!< HRTIM Timerx period register,                               Address offset: 0x14 */
+  __IO uint32_t REPxR;      /*!< HRTIM Timerx repetition register,                           Address offset: 0x18 */
+  __IO uint32_t CMP1xR;     /*!< HRTIM Timerx compare 1 register,                            Address offset: 0x1C */
+  __IO uint32_t CMP1CxR;    /*!< HRTIM Timerx compare 1 compound register,                   Address offset: 0x20 */
+  __IO uint32_t CMP2xR;     /*!< HRTIM Timerx compare 2 register,                            Address offset: 0x24 */
+  __IO uint32_t CMP3xR;     /*!< HRTIM Timerx compare 3 register,                            Address offset: 0x28 */
+  __IO uint32_t CMP4xR;     /*!< HRTIM Timerx compare 4 register,                            Address offset: 0x2C */
+  __IO uint32_t CPT1xR;     /*!< HRTIM Timerx capture 1 register,                            Address offset: 0x30 */
   __IO uint32_t CPT2xR;     /*!< HRTIM Timerx capture 2 register,                            Address offset: 0x34 */
   __IO uint32_t DTxR;       /*!< HRTIM Timerx dead time register,                            Address offset: 0x38 */
   __IO uint32_t SETx1R;     /*!< HRTIM Timerx output 1 set register,                         Address offset: 0x3C */
@@ -1689,7 +1687,7 @@ typedef struct
   __IO uint32_t CPT2xCR;    /*!< HRTIM Timerx Capture 2 register,                            Address offset: 0x60 */
   __IO uint32_t OUTxR;      /*!< HRTIM Timerx Output register,                               Address offset: 0x64 */
   __IO uint32_t FLTxR;      /*!< HRTIM Timerx Fault register,                                Address offset: 0x68 */
-  uint32_t      RESERVED0[5];  /*!< Reserved,                                                              0x6C..0x7C */
+  uint32_t      RESERVED0[5];  /*!< Reserved,                                                          0x6C..0x7C */
 }HRTIM_Timerx_TypeDef;
 
 /* HRTIM common register definition */
@@ -1846,9 +1844,9 @@ typedef struct
   uint32_t Reserved30[2];             /*!< Reserved                                     030h */
   __IO uint32_t GCCFG;                /*!< General Purpose IO Register                  038h */
   __IO uint32_t CID;                  /*!< User ID Register                             03Ch */
-  __IO uint32_t GSNPSID;              /* USB_OTG core ID                                 040h*/
-  __IO uint32_t GHWCFG1;              /* User HW config1                                 044h*/
-  __IO uint32_t GHWCFG2;              /* User HW config2                                 048h*/
+  __IO uint32_t GSNPSID;              /* USB_OTG core ID                                040h*/
+  __IO uint32_t GHWCFG1;              /* User HW config1                                044h*/
+  __IO uint32_t GHWCFG2;              /* User HW config2                                048h*/
   __IO uint32_t GHWCFG3;              /*!< User HW config3                              04Ch */
   uint32_t  Reserved6;                /*!< Reserved                                     050h */ 
   __IO uint32_t GLPMCFG;              /*!< LPM Register                                 054h */
@@ -1968,11 +1966,16 @@ typedef struct
 #define D3_SRAM_BASE              ((uint32_t)0x38000000) /*!< Base address of : Backup SRAM(64 KB) over AXI->AHB Bridge                               */ 
 
 #define PERIPH_BASE               ((uint32_t)0x40000000) /*!< Base address of : AHB/ABP Peripherals                                                   */
-#define QSPI_BASE                 ((uint32_t)0x90000000) /*!< Base address of : QSPI memories accessible over AXI                                     */
+#define QSPI_BASE                 ((uint32_t)0x90000000) /*!< Base address of : QSPI memories  accessible over AXI                                    */
 
-#define FLASH_BANK1_BASE          ((uint32_t)0x08000000) /*!< Base address of : Flash Bank1 accessible over AXI                                       */ 
-#define FLASH_BANK2_BASE          ((uint32_t)0x08100000) /*!< Base address of : Flash Bank2 accessible over AXI                                       */ 
+#define FLASH_BANK1_BASE          ((uint32_t)0x08000000) /*!< Base address of : (up to 1 MB) Flash Bank1 accessible over AXI                          */ 
+#define FLASH_BANK2_BASE          ((uint32_t)0x08100000) /*!< Base address of : (up to 1 MB) Flash Bank2 accessible over AXI                          */ 
 #define FLASH_END                 ((uint32_t)0x081FFFFF) /*!< FLASH end address                                                                       */
+ 
+#define FLASH_OTP_BANK1_BASE      ((uint32_t)0x1FF00000) /*!< Base address of : (up to 128KB) embedded FLASH Bank1 OTP Area                           */ 
+#define FLASH_OTP_BANK1_END       ((uint32_t)0x1FF1FFFF) /*!< End address of : (up to 128KB) embedded FLASH Bank1 OTP Area                            */ 
+#define FLASH_OTP_BANK2_BASE      ((uint32_t)0x1FF40000) /*!< Base address of : (up to 128KB) embedded FLASH Bank2 OTP Area                           */ 
+#define FLASH_OTP_BANK2_END       ((uint32_t)0x1FF5FFFF) /*!< End address of : (up to 128KB) embedded FLASH Bank2 OTP Area                            */ 
 
 /* Legacy define */
 #define FLASH_BASE                FLASH_BANK1_BASE
@@ -2303,6 +2306,8 @@ typedef struct
 #define VREFBUF             ((VREFBUF_TypeDef *) VREFBUF_BASE)
 #define RTC                 ((RTC_TypeDef *) RTC_BASE)
 #define WWDG1               ((WWDG_TypeDef *) WWDG1_BASE)
+
+
 #define IWDG1               ((IWDG_TypeDef *) IWDG1_BASE)
 #define SPI2                ((SPI_TypeDef *) SPI2_BASE)
 #define SPI3                ((SPI_TypeDef *) SPI3_BASE)
@@ -2347,6 +2352,7 @@ typedef struct
 #define EXTI                ((EXTI_TypeDef *) EXTI_BASE)
 #define EXTI_D1             ((EXTI_Core_TypeDef *) EXTI_D1_BASE)
 #define EXTI_D2             ((EXTI_Core_TypeDef *) EXTI_D2_BASE)
+#define SDMMC               ((SDMMC_TypeDef *) SDMMC_BASE)
 #define TIM1                ((TIM_TypeDef *) TIM1_BASE)
 #define SPI1                ((SPI_TypeDef *) SPI1_BASE)
 #define TIM8                ((TIM_TypeDef *) TIM8_BASE)
@@ -2520,6 +2526,7 @@ typedef struct
 #define LTDC                ((LTDC_TypeDef *)LTDC_BASE)
 #define LTDC_Layer1         ((LTDC_Layer_TypeDef *)LTDC_Layer1_BASE)
 #define LTDC_Layer2         ((LTDC_Layer_TypeDef *)LTDC_Layer2_BASE)
+
 #define MDIOS               ((MDIOS_TypeDef *) MDIOS_BASE)
 
 #define ETH                 ((ETH_TypeDef *)ETH_BASE)
@@ -2551,7 +2558,6 @@ typedef struct
 #define USB_OTG_FS                   USB2_OTG_FS         
 #define USB_OTG_HS_PERIPH_BASE       USB1_OTG_HS_PERIPH_BASE
 #define USB_OTG_FS_PERIPH_BASE       USB2_OTG_FS_PERIPH_BASE
-
 
 /**
   * @}
@@ -4138,7 +4144,6 @@ typedef struct
 #define VREFBUF_CCR_TRIM_Msk        (0x3FU << VREFBUF_CCR_TRIM_Pos)            /*!< 0x0000003F */
 #define VREFBUF_CCR_TRIM            VREFBUF_CCR_TRIM_Msk                       /*!<TRIM[5:0] bits (Trimming code)  */
 
-
 /******************************************************************************/
 /*                                                                            */
 /*                 Flexible Datarate Controller Area Network                  */
@@ -4251,9 +4256,9 @@ typedef struct
 #define FDCAN_CCCR_NISO           FDCAN_CCCR_NISO_Msk                          /*!<Non ISO Operation                        */
 
 /*****************  Bit definition for FDCAN_NBTP register  ********************/
-#define FDCAN_NBTP_TSEG2_Pos      (0U)                                         
-#define FDCAN_NBTP_TSEG2_Msk      (0x7FU << FDCAN_NBTP_TSEG2_Pos)              /*!< 0x0000007F */
-#define FDCAN_NBTP_TSEG2          FDCAN_NBTP_TSEG2_Msk                         /*!<Nominal Time segment after sample point  */
+#define FDCAN_NBTP_NTSEG2_Pos     (0U)                                         
+#define FDCAN_NBTP_NTSEG2_Msk     (0x7FU << FDCAN_NBTP_NTSEG2_Pos)             /*!< 0x0000007F */
+#define FDCAN_NBTP_NTSEG2         FDCAN_NBTP_NTSEG2_Msk                        /*!<Nominal Time segment after sample point  */
 #define FDCAN_NBTP_NTSEG1_Pos     (8U)                                         
 #define FDCAN_NBTP_NTSEG1_Msk     (0xFFU << FDCAN_NBTP_NTSEG1_Pos)             /*!< 0x0000FF00 */
 #define FDCAN_NBTP_NTSEG1         FDCAN_NBTP_NTSEG1_Msk                        /*!<Nominal Time segment before sample point */
@@ -4297,9 +4302,9 @@ typedef struct
 #define FDCAN_ECR_TEC_Pos         (0U)                                         
 #define FDCAN_ECR_TEC_Msk         (0xFU << FDCAN_ECR_TEC_Pos)                  /*!< 0x0000000F */
 #define FDCAN_ECR_TEC             FDCAN_ECR_TEC_Msk                            /*!<Transmit Error Counter                   */
-#define FDCAN_ECR_TREC_Pos        (8U)                                         
-#define FDCAN_ECR_TREC_Msk        (0x7FU << FDCAN_ECR_TREC_Pos)                /*!< 0x00007F00 */
-#define FDCAN_ECR_TREC            FDCAN_ECR_TREC_Msk                           /*!<Receive Error Counter                    */
+#define FDCAN_ECR_REC_Pos         (8U)                                         
+#define FDCAN_ECR_REC_Msk         (0x7FU << FDCAN_ECR_REC_Pos)                 /*!< 0x00007F00 */
+#define FDCAN_ECR_REC             FDCAN_ECR_REC_Msk                            /*!<Receive Error Counter                    */
 #define FDCAN_ECR_RP_Pos          (15U)                                        
 #define FDCAN_ECR_RP_Msk          (0x1U << FDCAN_ECR_RP_Pos)                   /*!< 0x00008000 */
 #define FDCAN_ECR_RP              FDCAN_ECR_RP_Msk                             /*!<Receive Error Passive                    */
@@ -5031,10 +5036,10 @@ typedef struct
 
 /*****************  Bit definition for FDCAN_TXEFC register  *********************/
 #define FDCAN_TXEFC_EFSA_Pos      (2U)                                         
-#define FDCAN_TXEFC_EFSA_Msk      (0x3FU << FDCAN_TXEFC_EFSA_Pos)              /*!< 0x000000FC */
+#define FDCAN_TXEFC_EFSA_Msk      (0x3FFFU << FDCAN_TXEFC_EFSA_Pos)            /*!< 0x0000FFFC */
 #define FDCAN_TXEFC_EFSA          FDCAN_TXEFC_EFSA_Msk                         /*!<Event FIFO Start Address                  */
-#define FDCAN_TXEFC_EFS_Pos       (8U)                                         
-#define FDCAN_TXEFC_EFS_Msk       (0x3FU << FDCAN_TXEFC_EFS_Pos)               /*!< 0x00003F00 */
+#define FDCAN_TXEFC_EFS_Pos       (16U)                                        
+#define FDCAN_TXEFC_EFS_Msk       (0x3FU << FDCAN_TXEFC_EFS_Pos)               /*!< 0x003F0000 */
 #define FDCAN_TXEFC_EFS           FDCAN_TXEFC_EFS_Msk                          /*!<Event FIFO Size                           */
 #define FDCAN_TXEFC_EFWM_Pos      (24U)                                        
 #define FDCAN_TXEFC_EFWM_Msk      (0x3FU << FDCAN_TXEFC_EFWM_Pos)              /*!< 0x3F000000 */
@@ -5909,26 +5914,42 @@ typedef struct
 #define DAC_CR_CEN2                 DAC_CR_CEN2_Msk                            /*!<DAC channel2 calibration enable >*/
 
 /*****************  Bit definition for DAC_SWTRIGR register  ******************/
-#define DAC_SWTRIGR_SWTRIG1         ((uint8_t)0x01)                            /*!<DAC channel1 software trigger */
-#define DAC_SWTRIGR_SWTRIG2         ((uint8_t)0x02)                            /*!<DAC channel2 software trigger */
+#define DAC_SWTRIGR_SWTRIG1_Pos     (0U)                                       
+#define DAC_SWTRIGR_SWTRIG1_Msk     (0x1U << DAC_SWTRIGR_SWTRIG1_Pos)          /*!< 0x00000001 */
+#define DAC_SWTRIGR_SWTRIG1         DAC_SWTRIGR_SWTRIG1_Msk                    /*!<DAC channel1 software trigger */
+#define DAC_SWTRIGR_SWTRIG2_Pos     (1U)                                       
+#define DAC_SWTRIGR_SWTRIG2_Msk     (0x1U << DAC_SWTRIGR_SWTRIG2_Pos)          /*!< 0x00000002 */
+#define DAC_SWTRIGR_SWTRIG2         DAC_SWTRIGR_SWTRIG2_Msk                    /*!<DAC channel2 software trigger */
 
 /*****************  Bit definition for DAC_DHR12R1 register  ******************/
-#define DAC_DHR12R1_DACC1DHR        ((uint16_t)0x0FFF)                         /*!<DAC channel1 12-bit Right aligned data */
+#define DAC_DHR12R1_DACC1DHR_Pos    (0U)                                       
+#define DAC_DHR12R1_DACC1DHR_Msk    (0xFFFU << DAC_DHR12R1_DACC1DHR_Pos)       /*!< 0x00000FFF */
+#define DAC_DHR12R1_DACC1DHR        DAC_DHR12R1_DACC1DHR_Msk                   /*!<DAC channel1 12-bit Right aligned data */
 
 /*****************  Bit definition for DAC_DHR12L1 register  ******************/
-#define DAC_DHR12L1_DACC1DHR        ((uint16_t)0xFFF0)                         /*!<DAC channel1 12-bit Left aligned data */
+#define DAC_DHR12L1_DACC1DHR_Pos    (4U)                                       
+#define DAC_DHR12L1_DACC1DHR_Msk    (0xFFFU << DAC_DHR12L1_DACC1DHR_Pos)       /*!< 0x0000FFF0 */
+#define DAC_DHR12L1_DACC1DHR        DAC_DHR12L1_DACC1DHR_Msk                   /*!<DAC channel1 12-bit Left aligned data */
 
 /******************  Bit definition for DAC_DHR8R1 register  ******************/
-#define DAC_DHR8R1_DACC1DHR         ((uint8_t)0xFF)                            /*!<DAC channel1 8-bit Right aligned data */
+#define DAC_DHR8R1_DACC1DHR_Pos     (0U)                                       
+#define DAC_DHR8R1_DACC1DHR_Msk     (0xFFU << DAC_DHR8R1_DACC1DHR_Pos)         /*!< 0x000000FF */
+#define DAC_DHR8R1_DACC1DHR         DAC_DHR8R1_DACC1DHR_Msk                    /*!<DAC channel1 8-bit Right aligned data */
 
 /*****************  Bit definition for DAC_DHR12R2 register  ******************/
-#define DAC_DHR12R2_DACC2DHR        ((uint16_t)0x0FFF)                         /*!<DAC channel2 12-bit Right aligned data */
+#define DAC_DHR12R2_DACC2DHR_Pos    (0U)                                       
+#define DAC_DHR12R2_DACC2DHR_Msk    (0xFFFU << DAC_DHR12R2_DACC2DHR_Pos)       /*!< 0x00000FFF */
+#define DAC_DHR12R2_DACC2DHR        DAC_DHR12R2_DACC2DHR_Msk                   /*!<DAC channel2 12-bit Right aligned data */
 
 /*****************  Bit definition for DAC_DHR12L2 register  ******************/
-#define DAC_DHR12L2_DACC2DHR        ((uint16_t)0xFFF0)                         /*!<DAC channel2 12-bit Left aligned data */
+#define DAC_DHR12L2_DACC2DHR_Pos    (4U)                                       
+#define DAC_DHR12L2_DACC2DHR_Msk    (0xFFFU << DAC_DHR12L2_DACC2DHR_Pos)       /*!< 0x0000FFF0 */
+#define DAC_DHR12L2_DACC2DHR        DAC_DHR12L2_DACC2DHR_Msk                   /*!<DAC channel2 12-bit Left aligned data */
 
 /******************  Bit definition for DAC_DHR8R2 register  ******************/
-#define DAC_DHR8R2_DACC2DHR         ((uint8_t)0xFF)                            /*!<DAC channel2 8-bit Right aligned data */
+#define DAC_DHR8R2_DACC2DHR_Pos     (0U)                                       
+#define DAC_DHR8R2_DACC2DHR_Msk     (0xFFU << DAC_DHR8R2_DACC2DHR_Pos)         /*!< 0x000000FF */
+#define DAC_DHR8R2_DACC2DHR         DAC_DHR8R2_DACC2DHR_Msk                    /*!<DAC channel2 8-bit Right aligned data */
 
 /*****************  Bit definition for DAC_DHR12RD register  ******************/
 #define DAC_DHR12RD_DACC1DHR_Pos    (0U)                                       
@@ -5947,14 +5968,22 @@ typedef struct
 #define DAC_DHR12LD_DACC2DHR        DAC_DHR12LD_DACC2DHR_Msk                   /*!<DAC channel2 12-bit Left aligned data */
 
 /******************  Bit definition for DAC_DHR8RD register  ******************/
-#define DAC_DHR8RD_DACC1DHR         ((uint16_t)0x00FF)                         /*!<DAC channel1 8-bit Right aligned data */
-#define DAC_DHR8RD_DACC2DHR         ((uint16_t)0xFF00)                         /*!<DAC channel2 8-bit Right aligned data */
+#define DAC_DHR8RD_DACC1DHR_Pos     (0U)                                       
+#define DAC_DHR8RD_DACC1DHR_Msk     (0xFFU << DAC_DHR8RD_DACC1DHR_Pos)         /*!< 0x000000FF */
+#define DAC_DHR8RD_DACC1DHR         DAC_DHR8RD_DACC1DHR_Msk                    /*!<DAC channel1 8-bit Right aligned data */
+#define DAC_DHR8RD_DACC2DHR_Pos     (8U)                                       
+#define DAC_DHR8RD_DACC2DHR_Msk     (0xFFU << DAC_DHR8RD_DACC2DHR_Pos)         /*!< 0x0000FF00 */
+#define DAC_DHR8RD_DACC2DHR         DAC_DHR8RD_DACC2DHR_Msk                    /*!<DAC channel2 8-bit Right aligned data */
 
 /*******************  Bit definition for DAC_DOR1 register  *******************/
-#define DAC_DOR1_DACC1DOR           ((uint16_t)0x0FFF)                         /*!<DAC channel1 data output */
+#define DAC_DOR1_DACC1DOR_Pos       (0U)                                       
+#define DAC_DOR1_DACC1DOR_Msk       (0xFFFU << DAC_DOR1_DACC1DOR_Pos)          /*!< 0x00000FFF */
+#define DAC_DOR1_DACC1DOR           DAC_DOR1_DACC1DOR_Msk                      /*!<DAC channel1 data output */
 
 /*******************  Bit definition for DAC_DOR2 register  *******************/
-#define DAC_DOR2_DACC2DOR           ((uint16_t)0x0FFF)                         /*!<DAC channel2 data output */
+#define DAC_DOR2_DACC2DOR_Pos       (0U)                                       
+#define DAC_DOR2_DACC2DOR_Msk       (0xFFFU << DAC_DOR2_DACC2DOR_Pos)          /*!< 0x00000FFF */
+#define DAC_DOR2_DACC2DOR           DAC_DOR2_DACC2DOR_Msk                      /*!<DAC channel2 data output */
 
 /********************  Bit definition for DAC_SR register  ********************/
 #define DAC_SR_DMAUDR1_Pos          (13U)                                      
@@ -6025,7 +6054,6 @@ typedef struct
 #define DAC_SHRR_TREFRESH2_Pos      (16U)                                      
 #define DAC_SHRR_TREFRESH2_Msk      (0xFFU << DAC_SHRR_TREFRESH2_Pos)          /*!< 0x00FF0000 */
 #define DAC_SHRR_TREFRESH2          DAC_SHRR_TREFRESH2_Msk                     /*!<DAC channel2 refresh time */
-
 
 /******************************************************************************/
 /*                                                                            */
@@ -7410,13 +7438,13 @@ typedef struct
 #define ETH_MACHWF0R_TSSTSSEL_BOTH                    ETH_MACHWF0R_TSSTSSEL_BOTH_Msk /* Timestamp System Time Source: Internal & External */ 
 #define ETH_MACHWF0R_MACADR64SEL_Pos                  (24U)                    
 #define ETH_MACHWF0R_MACADR64SEL_Msk                  (0x1U << ETH_MACHWF0R_MACADR64SEL_Pos) /*!< 0x01000000 */
-#define ETH_MACHWF0R_MACADR64SEL                      ETH_MACHWF0R_MACADR64SEL_Msk /* MAC Addresses 64–127 Selected */ 
+#define ETH_MACHWF0R_MACADR64SEL                      ETH_MACHWF0R_MACADR64SEL_Msk /* MAC Addresses 64-127 Selected */ 
 #define ETH_MACHWF0R_MACADR32SEL_Pos                  (23U)                    
 #define ETH_MACHWF0R_MACADR32SEL_Msk                  (0x1U << ETH_MACHWF0R_MACADR32SEL_Pos) /*!< 0x00800000 */
-#define ETH_MACHWF0R_MACADR32SEL                      ETH_MACHWF0R_MACADR32SEL_Msk /* MAC Addresses 32–63 Selected */ 
+#define ETH_MACHWF0R_MACADR32SEL                      ETH_MACHWF0R_MACADR32SEL_Msk /* MAC Addresses 32-63 Selected */ 
 #define ETH_MACHWF0R_ADDMACADRSEL_Pos                 (18U)                    
 #define ETH_MACHWF0R_ADDMACADRSEL_Msk                 (0x1FU << ETH_MACHWF0R_ADDMACADRSEL_Pos) /*!< 0x007C0000 */
-#define ETH_MACHWF0R_ADDMACADRSEL                     ETH_MACHWF0R_ADDMACADRSEL_Msk /* MAC Addresses 1– 31 Selected */ 
+#define ETH_MACHWF0R_ADDMACADRSEL                     ETH_MACHWF0R_ADDMACADRSEL_Msk /* MAC Addresses 1- 31 Selected */ 
 #define ETH_MACHWF0R_RXCOESEL_Pos                     (16U)                    
 #define ETH_MACHWF0R_RXCOESEL_Msk                     (0x1U << ETH_MACHWF0R_RXCOESEL_Pos) /*!< 0x00010000 */
 #define ETH_MACHWF0R_RXCOESEL                         ETH_MACHWF0R_RXCOESEL_Msk /* Receive Checksum Offload Enabled */ 
@@ -9074,6 +9102,8 @@ typedef struct
 /********************  Bit definition for DMA2D_FGCLUT register  **************/
                                                                      
 /********************  Bit definition for DMA2D_BGCLUT register  **************/
+
+
 /******************************************************************************/
 /*                                                                            */
 /*                    External Interrupt/Event Controller                     */
@@ -10069,183 +10099,367 @@ typedef struct
 */
 #define FLASH_SECTOR_TOTAL  16
 
+
 /*******************  Bits definition for FLASH_ACR register  **********************/
-#define FLASH_ACR_LATENCY                 0x00000007U
-#define FLASH_ACR_LATENCY_0WS             0x00000000U
-#define FLASH_ACR_LATENCY_1WS             0x00000001U
-#define FLASH_ACR_LATENCY_2WS             0x00000002U
-#define FLASH_ACR_LATENCY_3WS             0x00000003U
-#define FLASH_ACR_LATENCY_4WS             0x00000004U
-#define FLASH_ACR_LATENCY_5WS             0x00000005U
-#define FLASH_ACR_LATENCY_6WS             0x00000006U
-#define FLASH_ACR_LATENCY_7WS             0x00000007U
-#define FLASH_ACR_WRHIGHFREQ              0x00000030U
-#define FLASH_ACR_WRHIGHFREQ_0            0x00000000U
-#define FLASH_ACR_WRHIGHFREQ_1            0x00000010U
-#define FLASH_ACR_WRHIGHFREQ_2            0x00000020U
-#define FLASH_ACR_WRHIGHFREQ_3            0x00000030U
+#define FLASH_ACR_LATENCY_Pos                (0U)                              
+#define FLASH_ACR_LATENCY_Msk                (0x7U << FLASH_ACR_LATENCY_Pos)   /*!< 0x00000007 */
+#define FLASH_ACR_LATENCY                    FLASH_ACR_LATENCY_Msk             
+#define FLASH_ACR_LATENCY_0WS                ((uint32_t)0x00000000)            
+#define FLASH_ACR_LATENCY_1WS                ((uint32_t)0x00000001)            
+#define FLASH_ACR_LATENCY_2WS                ((uint32_t)0x00000002)            
+#define FLASH_ACR_LATENCY_3WS                ((uint32_t)0x00000003)            
+#define FLASH_ACR_LATENCY_4WS                ((uint32_t)0x00000004)            
+#define FLASH_ACR_LATENCY_5WS                ((uint32_t)0x00000005)            
+#define FLASH_ACR_LATENCY_6WS                ((uint32_t)0x00000006)            
+#define FLASH_ACR_LATENCY_7WS                ((uint32_t)0x00000007)            
+#define FLASH_ACR_WRHIGHFREQ_Pos             (4U)                              
+#define FLASH_ACR_WRHIGHFREQ_Msk             (0x3U << FLASH_ACR_WRHIGHFREQ_Pos) /*!< 0x00000030 */
+#define FLASH_ACR_WRHIGHFREQ                 FLASH_ACR_WRHIGHFREQ_Msk          
+#define FLASH_ACR_WRHIGHFREQ_0               (0x0U << FLASH_ACR_WRHIGHFREQ_Pos) /*!< 0x00000000 */
+#define FLASH_ACR_WRHIGHFREQ_1               (0x1U << FLASH_ACR_WRHIGHFREQ_Pos) /*!< 0x00000010 */
+#define FLASH_ACR_WRHIGHFREQ_2               (0x2U << FLASH_ACR_WRHIGHFREQ_Pos) /*!< 0x00000020 */
+#define FLASH_ACR_WRHIGHFREQ_3               (0x3U << FLASH_ACR_WRHIGHFREQ_Pos) /*!< 0x00000030 */
 
 /*******************  Bits definition for FLASH_CR register  ***********************/
-#define FLASH_CR_LOCK                     0x00000001U
-#define FLASH_CR_PG                       0x00000002U
-#define FLASH_CR_SER                      0x00000004U
-#define FLASH_CR_BER                      0x00000008U
+#define FLASH_CR_LOCK_Pos                    (0U)                              
+#define FLASH_CR_LOCK_Msk                    (0x1U << FLASH_CR_LOCK_Pos)       /*!< 0x00000001 */
+#define FLASH_CR_LOCK                        FLASH_CR_LOCK_Msk                 
+#define FLASH_CR_PG_Pos                      (1U)                              
+#define FLASH_CR_PG_Msk                      (0x1U << FLASH_CR_PG_Pos)         /*!< 0x00000002 */
+#define FLASH_CR_PG                          FLASH_CR_PG_Msk                   
+#define FLASH_CR_SER_Pos                     (2U)                              
+#define FLASH_CR_SER_Msk                     (0x1U << FLASH_CR_SER_Pos)        /*!< 0x00000004 */
+#define FLASH_CR_SER                         FLASH_CR_SER_Msk                  
+#define FLASH_CR_BER_Pos                     (3U)                              
+#define FLASH_CR_BER_Msk                     (0x1U << FLASH_CR_BER_Pos)        /*!< 0x00000008 */
+#define FLASH_CR_BER                         FLASH_CR_BER_Msk                  
 
-#define FLASH_CR_PSIZE                    0x00000030U
-#define FLASH_CR_PSIZE_0                  0x00000010U
-#define FLASH_CR_PSIZE_1                  0x00000020U
-#define FLASH_CR_FW                       0x00000040U
-#define FLASH_CR_START                    0x00000080U
+#define FLASH_CR_PSIZE_Pos                   (4U)                              
+#define FLASH_CR_PSIZE_Msk                   (0x3U << FLASH_CR_PSIZE_Pos)      /*!< 0x00000030 */
+#define FLASH_CR_PSIZE                       FLASH_CR_PSIZE_Msk                
+#define FLASH_CR_PSIZE_0                     (0x1U << FLASH_CR_PSIZE_Pos)      /*!< 0x00000010 */
+#define FLASH_CR_PSIZE_1                     (0x2U << FLASH_CR_PSIZE_Pos)      /*!< 0x00000020 */
+#define FLASH_CR_FW_Pos                      (6U)                              
+#define FLASH_CR_FW_Msk                      (0x1U << FLASH_CR_FW_Pos)         /*!< 0x00000040 */
+#define FLASH_CR_FW                          FLASH_CR_FW_Msk                   
+#define FLASH_CR_START_Pos                   (7U)                              
+#define FLASH_CR_START_Msk                   (0x1U << FLASH_CR_START_Pos)      /*!< 0x00000080 */
+#define FLASH_CR_START                       FLASH_CR_START_Msk                
 
-#define FLASH_CR_SNB                      0x00000700U
-#define FLASH_CR_SNB_0                    0x00000000U
-#define FLASH_CR_SNB_1                    0x00000100U
-#define FLASH_CR_SNB_2                    0x00000200U
-#define FLASH_CR_SNB_3                    0x00000300U
-#define FLASH_CR_SNB_4                    0x00000400U
-#define FLASH_CR_SNB_5                    0x00000500U
-#define FLASH_CR_SNB_6                    0x00000600U
-#define FLASH_CR_SNB_7                    0x00000700U
+#define FLASH_CR_SNB_Pos                     (8U)                              
+#define FLASH_CR_SNB_Msk                     (0x7U << FLASH_CR_SNB_Pos)        /*!< 0x00000700 */
+#define FLASH_CR_SNB                         FLASH_CR_SNB_Msk                  
+#define FLASH_CR_SNB_0                       (0x0U << FLASH_CR_SNB_Pos)        /*!< 0x00000000 */
+#define FLASH_CR_SNB_1                       (0x1U << FLASH_CR_SNB_Pos)        /*!< 0x00000100 */
+#define FLASH_CR_SNB_2                       (0x2U << FLASH_CR_SNB_Pos)        /*!< 0x00000200 */
+#define FLASH_CR_SNB_3                       (0x3U << FLASH_CR_SNB_Pos)        /*!< 0x00000300 */
+#define FLASH_CR_SNB_4                       (0x4U << FLASH_CR_SNB_Pos)        /*!< 0x00000400 */
+#define FLASH_CR_SNB_5                       (0x5U << FLASH_CR_SNB_Pos)        /*!< 0x00000500 */
+#define FLASH_CR_SNB_6                       (0x6U << FLASH_CR_SNB_Pos)        /*!< 0x00000600 */
+#define FLASH_CR_SNB_7                       (0x7U << FLASH_CR_SNB_Pos)        /*!< 0x00000700 */
 
-#define FLASH_CR_CRC_EN                   0x00008000U
+#define FLASH_CR_CRC_EN_Pos                  (15U)                             
+#define FLASH_CR_CRC_EN_Msk                  (0x1U << FLASH_CR_CRC_EN_Pos)     /*!< 0x00008000 */
+#define FLASH_CR_CRC_EN                      FLASH_CR_CRC_EN_Msk               
 
-#define FLASH_CR_EOPIE                    0x00010000U
-#define FLASH_CR_WRPERRIE                 0x00020000U
-#define FLASH_CR_PGSERRIE                 0x00040000U
-#define FLASH_CR_STRBERRIE                0x00080000U
-#define FLASH_CR_INCERRIE                 0x00200000U
-#define FLASH_CR_OPERRIE                  0x00400000U
-#define FLASH_CR_RDPERRIE                 0x00800000U
-#define FLASH_CR_RDSERRIE                 0x01000000U
+#define FLASH_CR_EOPIE_Pos                   (16U)                             
+#define FLASH_CR_EOPIE_Msk                   (0x1U << FLASH_CR_EOPIE_Pos)      /*!< 0x00010000 */
+#define FLASH_CR_EOPIE                       FLASH_CR_EOPIE_Msk                
+#define FLASH_CR_WRPERRIE_Pos                (17U)                             
+#define FLASH_CR_WRPERRIE_Msk                (0x1U << FLASH_CR_WRPERRIE_Pos)   /*!< 0x00020000 */
+#define FLASH_CR_WRPERRIE                    FLASH_CR_WRPERRIE_Msk             
+#define FLASH_CR_PGSERRIE_Pos                (18U)                             
+#define FLASH_CR_PGSERRIE_Msk                (0x1U << FLASH_CR_PGSERRIE_Pos)   /*!< 0x00040000 */
+#define FLASH_CR_PGSERRIE                    FLASH_CR_PGSERRIE_Msk             
+#define FLASH_CR_STRBERRIE_Pos               (19U)                             
+#define FLASH_CR_STRBERRIE_Msk               (0x1U << FLASH_CR_STRBERRIE_Pos)  /*!< 0x00080000 */
+#define FLASH_CR_STRBERRIE                   FLASH_CR_STRBERRIE_Msk            
+#define FLASH_CR_INCERRIE_Pos                (21U)                             
+#define FLASH_CR_INCERRIE_Msk                (0x1U << FLASH_CR_INCERRIE_Pos)   /*!< 0x00200000 */
+#define FLASH_CR_INCERRIE                    FLASH_CR_INCERRIE_Msk             
+#define FLASH_CR_OPERRIE_Pos                 (22U)                             
+#define FLASH_CR_OPERRIE_Msk                 (0x1U << FLASH_CR_OPERRIE_Pos)    /*!< 0x00400000 */
+#define FLASH_CR_OPERRIE                     FLASH_CR_OPERRIE_Msk              
+#define FLASH_CR_RDPERRIE_Pos                (23U)                             
+#define FLASH_CR_RDPERRIE_Msk                (0x1U << FLASH_CR_RDPERRIE_Pos)   /*!< 0x00800000 */
+#define FLASH_CR_RDPERRIE                    FLASH_CR_RDPERRIE_Msk             
+#define FLASH_CR_RDSERRIE_Pos                (24U)                             
+#define FLASH_CR_RDSERRIE_Msk                (0x1U << FLASH_CR_RDSERRIE_Pos)   /*!< 0x01000000 */
+#define FLASH_CR_RDSERRIE                    FLASH_CR_RDSERRIE_Msk             
 
-#define FLASH_CR_SNECCERRIE               0x02000000U
-#define FLASH_CR_DBECCERRIE               0x04000000U
+#define FLASH_CR_SNECCERRIE_Pos              (25U)                             
+#define FLASH_CR_SNECCERRIE_Msk              (0x1U << FLASH_CR_SNECCERRIE_Pos) /*!< 0x02000000 */
+#define FLASH_CR_SNECCERRIE                  FLASH_CR_SNECCERRIE_Msk           
+#define FLASH_CR_DBECCERRIE_Pos              (26U)                             
+#define FLASH_CR_DBECCERRIE_Msk              (0x1U << FLASH_CR_DBECCERRIE_Pos) /*!< 0x04000000 */
+#define FLASH_CR_DBECCERRIE                  FLASH_CR_DBECCERRIE_Msk           
 
-#define FLASH_CR_CRCENDIE                 0x08000000U
+#define FLASH_CR_CRCENDIE_Pos                (27U)                             
+#define FLASH_CR_CRCENDIE_Msk                (0x1U << FLASH_CR_CRCENDIE_Pos)   /*!< 0x08000000 */
+#define FLASH_CR_CRCENDIE                    FLASH_CR_CRCENDIE_Msk             
 
 /*******************  Bits definition for FLASH_SR register  ***********************/
-#define FLASH_SR_BSY                      0x00000001U
-#define FLASH_SR_WBNE                     0x00000002U
-#define FLASH_SR_QW                       0x00000004U
+#define FLASH_SR_BSY_Pos                     (0U)                              
+#define FLASH_SR_BSY_Msk                     (0x1U << FLASH_SR_BSY_Pos)        /*!< 0x00000001 */
+#define FLASH_SR_BSY                         FLASH_SR_BSY_Msk                  
+#define FLASH_SR_WBNE_Pos                    (1U)                              
+#define FLASH_SR_WBNE_Msk                    (0x1U << FLASH_SR_WBNE_Pos)       /*!< 0x00000002 */
+#define FLASH_SR_WBNE                        FLASH_SR_WBNE_Msk                 
+#define FLASH_SR_QW_Pos                      (2U)                              
+#define FLASH_SR_QW_Msk                      (0x1U << FLASH_SR_QW_Pos)         /*!< 0x00000004 */
+#define FLASH_SR_QW                          FLASH_SR_QW_Msk                   
 
-#define FLASH_SR_CRC_BUSY                 0x00000008U
+#define FLASH_SR_CRC_BUSY_Pos                (3U)                              
+#define FLASH_SR_CRC_BUSY_Msk                (0x1U << FLASH_SR_CRC_BUSY_Pos)   /*!< 0x00000008 */
+#define FLASH_SR_CRC_BUSY                    FLASH_SR_CRC_BUSY_Msk             
 
-#define FLASH_SR_EOP                      0x00010000U
-#define FLASH_SR_WRPERR                   0x00020000U
-#define FLASH_SR_PGSERR                   0x00040000U
-#define FLASH_SR_STRBERR                  0x00080000U
-#define FLASH_SR_INCERR                   0x00200000U
-#define FLASH_SR_OPERR                    0x00400000U
+#define FLASH_SR_EOP_Pos                     (16U)                             
+#define FLASH_SR_EOP_Msk                     (0x1U << FLASH_SR_EOP_Pos)        /*!< 0x00010000 */
+#define FLASH_SR_EOP                         FLASH_SR_EOP_Msk                  
+#define FLASH_SR_WRPERR_Pos                  (17U)                             
+#define FLASH_SR_WRPERR_Msk                  (0x1U << FLASH_SR_WRPERR_Pos)     /*!< 0x00020000 */
+#define FLASH_SR_WRPERR                      FLASH_SR_WRPERR_Msk               
+#define FLASH_SR_PGSERR_Pos                  (18U)                             
+#define FLASH_SR_PGSERR_Msk                  (0x1U << FLASH_SR_PGSERR_Pos)     /*!< 0x00040000 */
+#define FLASH_SR_PGSERR                      FLASH_SR_PGSERR_Msk               
+#define FLASH_SR_STRBERR_Pos                 (19U)                             
+#define FLASH_SR_STRBERR_Msk                 (0x1U << FLASH_SR_STRBERR_Pos)    /*!< 0x00080000 */
+#define FLASH_SR_STRBERR                     FLASH_SR_STRBERR_Msk              
+#define FLASH_SR_INCERR_Pos                  (21U)                             
+#define FLASH_SR_INCERR_Msk                  (0x1U << FLASH_SR_INCERR_Pos)     /*!< 0x00200000 */
+#define FLASH_SR_INCERR                      FLASH_SR_INCERR_Msk               
+#define FLASH_SR_OPERR_Pos                   (22U)                             
+#define FLASH_SR_OPERR_Msk                   (0x1U << FLASH_SR_OPERR_Pos)      /*!< 0x00400000 */
+#define FLASH_SR_OPERR                       FLASH_SR_OPERR_Msk                
 
-#define FLASH_SR_RDPERR                   0x00800000U
-#define FLASH_SR_RDSERR                   0x01000000U
+#define FLASH_SR_RDPERR_Pos                  (23U)                             
+#define FLASH_SR_RDPERR_Msk                  (0x1U << FLASH_SR_RDPERR_Pos)     /*!< 0x00800000 */
+#define FLASH_SR_RDPERR                      FLASH_SR_RDPERR_Msk               
+#define FLASH_SR_RDSERR_Pos                  (24U)                             
+#define FLASH_SR_RDSERR_Msk                  (0x1U << FLASH_SR_RDSERR_Pos)     /*!< 0x01000000 */
+#define FLASH_SR_RDSERR                      FLASH_SR_RDSERR_Msk               
 
-#define FLASH_SR_SNECCERR                 0x02000000U
-#define FLASH_SR_DBECCERR                 0x04000000U
+#define FLASH_SR_SNECCERR_Pos                (25U)                             
+#define FLASH_SR_SNECCERR_Msk                (0x1U << FLASH_SR_SNECCERR_Pos)   /*!< 0x02000000 */
+#define FLASH_SR_SNECCERR                    FLASH_SR_SNECCERR_Msk             
+#define FLASH_SR_DBECCERR_Pos                (26U)                             
+#define FLASH_SR_DBECCERR_Msk                (0x1U << FLASH_SR_DBECCERR_Pos)   /*!< 0x04000000 */
+#define FLASH_SR_DBECCERR                    FLASH_SR_DBECCERR_Msk             
 
-#define FLASH_SR_CRCEND                   0x08000000U
+#define FLASH_SR_CRCEND_Pos                  (27U)                             
+#define FLASH_SR_CRCEND_Msk                  (0x1U << FLASH_SR_CRCEND_Pos)     /*!< 0x08000000 */
+#define FLASH_SR_CRCEND                      FLASH_SR_CRCEND_Msk               
 
 /*******************  Bits definition for FLASH_CCR register  *******************/
-#define FLASH_CCR_CLR_EOP                 0x00010000U
-#define FLASH_CCR_CLR_WRPERR              0x00020000U
-#define FLASH_CCR_CLR_PGSERR              0x00040000U
-#define FLASH_CCR_CLR_STRBERR             0x00080000U
-#define FLASH_CCR_CLR_INCERR              0x00200000U
-#define FLASH_CCR_CLR_OPERR               0x00400000U
+#define FLASH_CCR_CLR_EOP_Pos                (16U)                             
+#define FLASH_CCR_CLR_EOP_Msk                (0x1U << FLASH_CCR_CLR_EOP_Pos)   /*!< 0x00010000 */
+#define FLASH_CCR_CLR_EOP                    FLASH_CCR_CLR_EOP_Msk             
+#define FLASH_CCR_CLR_WRPERR_Pos             (17U)                             
+#define FLASH_CCR_CLR_WRPERR_Msk             (0x1U << FLASH_CCR_CLR_WRPERR_Pos) /*!< 0x00020000 */
+#define FLASH_CCR_CLR_WRPERR                 FLASH_CCR_CLR_WRPERR_Msk          
+#define FLASH_CCR_CLR_PGSERR_Pos             (18U)                             
+#define FLASH_CCR_CLR_PGSERR_Msk             (0x1U << FLASH_CCR_CLR_PGSERR_Pos) /*!< 0x00040000 */
+#define FLASH_CCR_CLR_PGSERR                 FLASH_CCR_CLR_PGSERR_Msk          
+#define FLASH_CCR_CLR_STRBERR_Pos            (19U)                             
+#define FLASH_CCR_CLR_STRBERR_Msk            (0x1U << FLASH_CCR_CLR_STRBERR_Pos) /*!< 0x00080000 */
+#define FLASH_CCR_CLR_STRBERR                FLASH_CCR_CLR_STRBERR_Msk         
+#define FLASH_CCR_CLR_INCERR_Pos             (21U)                             
+#define FLASH_CCR_CLR_INCERR_Msk             (0x1U << FLASH_CCR_CLR_INCERR_Pos) /*!< 0x00200000 */
+#define FLASH_CCR_CLR_INCERR                 FLASH_CCR_CLR_INCERR_Msk          
+#define FLASH_CCR_CLR_OPERR_Pos              (22U)                             
+#define FLASH_CCR_CLR_OPERR_Msk              (0x1U << FLASH_CCR_CLR_OPERR_Pos) /*!< 0x00400000 */
+#define FLASH_CCR_CLR_OPERR                  FLASH_CCR_CLR_OPERR_Msk           
 
-#define FLASH_CCR_CLR_RDPERR              0x00800000U
-#define FLASH_CCR_CLR_RDSERR              0x01000000U
+#define FLASH_CCR_CLR_RDPERR_Pos             (23U)                             
+#define FLASH_CCR_CLR_RDPERR_Msk             (0x1U << FLASH_CCR_CLR_RDPERR_Pos) /*!< 0x00800000 */
+#define FLASH_CCR_CLR_RDPERR                 FLASH_CCR_CLR_RDPERR_Msk          
+#define FLASH_CCR_CLR_RDSERR_Pos             (24U)                             
+#define FLASH_CCR_CLR_RDSERR_Msk             (0x1U << FLASH_CCR_CLR_RDSERR_Pos) /*!< 0x01000000 */
+#define FLASH_CCR_CLR_RDSERR                 FLASH_CCR_CLR_RDSERR_Msk          
 
-#define FLASH_CCR_CLR_SNECCERR            0x02000000U
-#define FLASH_CCR_CLR_DBECCERR            0x04000000U
+#define FLASH_CCR_CLR_SNECCERR_Pos           (25U)                             
+#define FLASH_CCR_CLR_SNECCERR_Msk           (0x1U << FLASH_CCR_CLR_SNECCERR_Pos) /*!< 0x02000000 */
+#define FLASH_CCR_CLR_SNECCERR               FLASH_CCR_CLR_SNECCERR_Msk        
+#define FLASH_CCR_CLR_DBECCERR_Pos           (26U)                             
+#define FLASH_CCR_CLR_DBECCERR_Msk           (0x1U << FLASH_CCR_CLR_DBECCERR_Pos) /*!< 0x04000000 */
+#define FLASH_CCR_CLR_DBECCERR               FLASH_CCR_CLR_DBECCERR_Msk        
 
-#define FLASH_CCR_CLR_CRCEND              0x08000000U
+#define FLASH_CCR_CLR_CRCEND_Pos             (27U)                             
+#define FLASH_CCR_CLR_CRCEND_Msk             (0x1U << FLASH_CCR_CLR_CRCEND_Pos) /*!< 0x08000000 */
+#define FLASH_CCR_CLR_CRCEND                 FLASH_CCR_CLR_CRCEND_Msk          
 
 /*******************  Bits definition for FLASH_OPTCR register  *******************/
-#define FLASH_OPTCR_OPTLOCK               0x00000001U
-#define FLASH_OPTCR_OPTSTART              0x00000002U
-#define FLASH_OPTCR_MER                   0x00000008U
-#define FLASH_OPTCR_OPTCHANGEERRIE        0x40000000U
-#define FLASH_OPTCR_SWAP_BANK             0x80000000U
+#define FLASH_OPTCR_OPTLOCK_Pos              (0U)                              
+#define FLASH_OPTCR_OPTLOCK_Msk              (0x1U << FLASH_OPTCR_OPTLOCK_Pos) /*!< 0x00000001 */
+#define FLASH_OPTCR_OPTLOCK                  FLASH_OPTCR_OPTLOCK_Msk           
+#define FLASH_OPTCR_OPTSTART_Pos             (1U)                              
+#define FLASH_OPTCR_OPTSTART_Msk             (0x1U << FLASH_OPTCR_OPTSTART_Pos) /*!< 0x00000002 */
+#define FLASH_OPTCR_OPTSTART                 FLASH_OPTCR_OPTSTART_Msk          
+#define FLASH_OPTCR_MER_Pos                  (3U)                              
+#define FLASH_OPTCR_MER_Msk                  (0x1U << FLASH_OPTCR_MER_Pos)     /*!< 0x00000008 */
+#define FLASH_OPTCR_MER                      FLASH_OPTCR_MER_Msk               
+#define FLASH_OPTCR_OPTCHANGEERRIE_Pos       (30U)                             
+#define FLASH_OPTCR_OPTCHANGEERRIE_Msk       (0x1U << FLASH_OPTCR_OPTCHANGEERRIE_Pos) /*!< 0x40000000 */
+#define FLASH_OPTCR_OPTCHANGEERRIE           FLASH_OPTCR_OPTCHANGEERRIE_Msk    
+#define FLASH_OPTCR_SWAP_BANK_Pos            (31U)                             
+#define FLASH_OPTCR_SWAP_BANK_Msk            (0x1U << FLASH_OPTCR_SWAP_BANK_Pos) /*!< 0x80000000 */
+#define FLASH_OPTCR_SWAP_BANK                FLASH_OPTCR_SWAP_BANK_Msk         
 
 /*******************  Bits definition for FLASH_OPTSR register  ***************/
-#define FLASH_OPTSR_OPT_BUSY              0x00000001U
-#define FLASH_OPTSR_BOR_LEV               0x0000000CU
-#define FLASH_OPTSR_BOR_LEV_0             0x00000004U
-#define FLASH_OPTSR_BOR_LEV_1             0x00000008U
-#define FLASH_OPTSR_IWDG1_SW              0x00000010U
+#define FLASH_OPTSR_OPT_BUSY_Pos             (0U)                              
+#define FLASH_OPTSR_OPT_BUSY_Msk             (0x1U << FLASH_OPTSR_OPT_BUSY_Pos) /*!< 0x00000001 */
+#define FLASH_OPTSR_OPT_BUSY                 FLASH_OPTSR_OPT_BUSY_Msk          
+#define FLASH_OPTSR_BOR_LEV_Pos              (2U)                              
+#define FLASH_OPTSR_BOR_LEV_Msk              (0x3U << FLASH_OPTSR_BOR_LEV_Pos) /*!< 0x0000000C */
+#define FLASH_OPTSR_BOR_LEV                  FLASH_OPTSR_BOR_LEV_Msk           
+#define FLASH_OPTSR_BOR_LEV_0                (0x1U << FLASH_OPTSR_BOR_LEV_Pos) /*!< 0x00000004 */
+#define FLASH_OPTSR_BOR_LEV_1                (0x2U << FLASH_OPTSR_BOR_LEV_Pos) /*!< 0x00000008 */
+#define FLASH_OPTSR_IWDG1_SW_Pos             (4U)                              
+#define FLASH_OPTSR_IWDG1_SW_Msk             (0x1U << FLASH_OPTSR_IWDG1_SW_Pos) /*!< 0x00000010 */
+#define FLASH_OPTSR_IWDG1_SW                 FLASH_OPTSR_IWDG1_SW_Msk          
 
-#define FLASH_OPTSR_NRST_STOP_D1          0x00000040U
-#define FLASH_OPTSR_NRST_STBY_D1          0x00000080U
-#define FLASH_OPTSR_RDP                   0x0000FF00U
-#define FLASH_OPTCR_RDP_0                 0x00000100U
-#define FLASH_OPTCR_RDP_1                 0x00000200U
-#define FLASH_OPTCR_RDP_2                 0x00000400U
-#define FLASH_OPTCR_RDP_3                 0x00000800U
-#define FLASH_OPTCR_RDP_4                 0x00001000U
-#define FLASH_OPTCR_RDP_5                 0x00002000U
-#define FLASH_OPTCR_RDP_6                 0x00004000U
-#define FLASH_OPTCR_RDP_7                 0x00008000U
 
-#define FLASH_OPTSR_FZ_IWDG_STOP          0x00020000U
-#define FLASH_OPTSR_FZ_IWDG_SDBY          0x00040000U
-#define FLASH_OPTSR_ST_RAM_SIZE           0x00180000U
-#define FLASH_OPTSR_ST_RAM_SIZE_0         0x00080000U
-#define FLASH_OPTSR_ST_RAM_SIZE_1         0x00100000U
-#define FLASH_OPTSR_SECURITY              0x00200000U
-#define FLASH_OPTSR_RSS1                  0x04000000U
-#define FLASH_OPTSR_RSS2                  0x08000000U
-#define FLASH_OPTSR_PERSO_OK              0x10000000U
-#define FLASH_OPTSR_IO_HSLV               0x20000000U
-#define FLASH_OPTSR_OPTCHANGEERR          0x40000000U
-#define FLASH_OPTSR_SWAP_BANK_OPT         0x80000000U
+#define FLASH_OPTSR_NRST_STOP_D1_Pos         (6U)                              
+#define FLASH_OPTSR_NRST_STOP_D1_Msk         (0x1U << FLASH_OPTSR_NRST_STOP_D1_Pos) /*!< 0x00000040 */
+#define FLASH_OPTSR_NRST_STOP_D1             FLASH_OPTSR_NRST_STOP_D1_Msk      
+#define FLASH_OPTSR_NRST_STBY_D1_Pos         (7U)                              
+#define FLASH_OPTSR_NRST_STBY_D1_Msk         (0x1U << FLASH_OPTSR_NRST_STBY_D1_Pos) /*!< 0x00000080 */
+#define FLASH_OPTSR_NRST_STBY_D1             FLASH_OPTSR_NRST_STBY_D1_Msk      
+#define FLASH_OPTSR_RDP_Pos                  (8U)                              
+#define FLASH_OPTSR_RDP_Msk                  (0xFFU << FLASH_OPTSR_RDP_Pos)    /*!< 0x0000FF00 */
+#define FLASH_OPTSR_RDP                      FLASH_OPTSR_RDP_Msk               
+#define FLASH_OPTCR_RDP_0                    ((uint32_t)0x00000100)            
+#define FLASH_OPTCR_RDP_1                    ((uint32_t)0x00000200)            
+#define FLASH_OPTCR_RDP_2                    ((uint32_t)0x00000400)            
+#define FLASH_OPTCR_RDP_3                    ((uint32_t)0x00000800)            
+#define FLASH_OPTCR_RDP_4                    ((uint32_t)0x00001000)            
+#define FLASH_OPTCR_RDP_5                    ((uint32_t)0x00002000)            
+#define FLASH_OPTCR_RDP_6                    ((uint32_t)0x00004000)            
+#define FLASH_OPTCR_RDP_7                    ((uint32_t)0x00008000)            
+
+#define FLASH_OPTSR_FZ_IWDG_STOP_Pos         (17U)                             
+#define FLASH_OPTSR_FZ_IWDG_STOP_Msk         (0x1U << FLASH_OPTSR_FZ_IWDG_STOP_Pos) /*!< 0x00020000 */
+#define FLASH_OPTSR_FZ_IWDG_STOP             FLASH_OPTSR_FZ_IWDG_STOP_Msk      
+#define FLASH_OPTSR_FZ_IWDG_SDBY_Pos         (18U)                             
+#define FLASH_OPTSR_FZ_IWDG_SDBY_Msk         (0x1U << FLASH_OPTSR_FZ_IWDG_SDBY_Pos) /*!< 0x00040000 */
+#define FLASH_OPTSR_FZ_IWDG_SDBY             FLASH_OPTSR_FZ_IWDG_SDBY_Msk      
+#define FLASH_OPTSR_ST_RAM_SIZE_Pos          (19U)                             
+#define FLASH_OPTSR_ST_RAM_SIZE_Msk          (0x3U << FLASH_OPTSR_ST_RAM_SIZE_Pos) /*!< 0x00180000 */
+#define FLASH_OPTSR_ST_RAM_SIZE              FLASH_OPTSR_ST_RAM_SIZE_Msk       
+#define FLASH_OPTSR_ST_RAM_SIZE_0            (0x1U << FLASH_OPTSR_ST_RAM_SIZE_Pos) /*!< 0x00080000 */
+#define FLASH_OPTSR_ST_RAM_SIZE_1            (0x2U << FLASH_OPTSR_ST_RAM_SIZE_Pos) /*!< 0x00100000 */
+#define FLASH_OPTSR_SECURITY_Pos             (21U)                             
+#define FLASH_OPTSR_SECURITY_Msk             (0x1U << FLASH_OPTSR_SECURITY_Pos) /*!< 0x00200000 */
+#define FLASH_OPTSR_SECURITY                 FLASH_OPTSR_SECURITY_Msk          
+#define FLASH_OPTSR_RSS1_Pos                 (26U)                             
+#define FLASH_OPTSR_RSS1_Msk                 (0x1U << FLASH_OPTSR_RSS1_Pos)    /*!< 0x04000000 */
+#define FLASH_OPTSR_RSS1                     FLASH_OPTSR_RSS1_Msk              
+#define FLASH_OPTSR_RSS2_Pos                 (27U)                             
+#define FLASH_OPTSR_RSS2_Msk                 (0x1U << FLASH_OPTSR_RSS2_Pos)    /*!< 0x08000000 */
+#define FLASH_OPTSR_RSS2                     FLASH_OPTSR_RSS2_Msk              
+#define FLASH_OPTSR_PERSO_OK_Pos             (28U)                             
+#define FLASH_OPTSR_PERSO_OK_Msk             (0x1U << FLASH_OPTSR_PERSO_OK_Pos) /*!< 0x10000000 */
+#define FLASH_OPTSR_PERSO_OK                 FLASH_OPTSR_PERSO_OK_Msk          
+#define FLASH_OPTSR_IO_HSLV_Pos              (29U)                             
+#define FLASH_OPTSR_IO_HSLV_Msk              (0x1U << FLASH_OPTSR_IO_HSLV_Pos) /*!< 0x20000000 */
+#define FLASH_OPTSR_IO_HSLV                  FLASH_OPTSR_IO_HSLV_Msk           
+#define FLASH_OPTSR_OPTCHANGEERR_Pos         (30U)                             
+#define FLASH_OPTSR_OPTCHANGEERR_Msk         (0x1U << FLASH_OPTSR_OPTCHANGEERR_Pos) /*!< 0x40000000 */
+#define FLASH_OPTSR_OPTCHANGEERR             FLASH_OPTSR_OPTCHANGEERR_Msk      
+#define FLASH_OPTSR_SWAP_BANK_OPT_Pos        (31U)                             
+#define FLASH_OPTSR_SWAP_BANK_OPT_Msk        (0x1U << FLASH_OPTSR_SWAP_BANK_OPT_Pos) /*!< 0x80000000 */
+#define FLASH_OPTSR_SWAP_BANK_OPT            FLASH_OPTSR_SWAP_BANK_OPT_Msk     
 
 /*******************  Bits definition for FLASH_OPTCCR register  *******************/
-#define FLASH_OPTCCR_CLR_OPTCHANGEERR     0x40000000U
+#define FLASH_OPTCCR_CLR_OPTCHANGEERR_Pos    (30U)                             
+#define FLASH_OPTCCR_CLR_OPTCHANGEERR_Msk    (0x1U << FLASH_OPTCCR_CLR_OPTCHANGEERR_Pos) /*!< 0x40000000 */
+#define FLASH_OPTCCR_CLR_OPTCHANGEERR        FLASH_OPTCCR_CLR_OPTCHANGEERR_Msk 
 
 /*******************  Bits definition for FLASH_PRAR register  *********************/
-#define FLASH_PRAR_PROT_AREA_START        0x00000FFFU
-#define FLASH_PRAR_PROT_AREA_END          0x0FFF0000U
-#define FLASH_PRAR_DMEP                   0x80000000U
+#define FLASH_PRAR_PROT_AREA_START_Pos       (0U)                              
+#define FLASH_PRAR_PROT_AREA_START_Msk       (0xFFFU << FLASH_PRAR_PROT_AREA_START_Pos) /*!< 0x00000FFF */
+#define FLASH_PRAR_PROT_AREA_START           FLASH_PRAR_PROT_AREA_START_Msk    
+#define FLASH_PRAR_PROT_AREA_END_Pos         (16U)                             
+#define FLASH_PRAR_PROT_AREA_END_Msk         (0xFFFU << FLASH_PRAR_PROT_AREA_END_Pos) /*!< 0x0FFF0000 */
+#define FLASH_PRAR_PROT_AREA_END             FLASH_PRAR_PROT_AREA_END_Msk      
+#define FLASH_PRAR_DMEP_Pos                  (31U)                             
+#define FLASH_PRAR_DMEP_Msk                  (0x1U << FLASH_PRAR_DMEP_Pos)     /*!< 0x80000000 */
+#define FLASH_PRAR_DMEP                      FLASH_PRAR_DMEP_Msk               
 
 /*******************  Bits definition for FLASH_SCAR register  *********************/
-#define FLASH_SCAR_SEC_AREA_START         0x00000FFFU
-#define FLASH_SCAR_SEC_AREA_END           0x0FFF0000U
-#define FLASH_SCAR_DMES                   0x80000000U
+#define FLASH_SCAR_SEC_AREA_START_Pos        (0U)                              
+#define FLASH_SCAR_SEC_AREA_START_Msk        (0xFFFU << FLASH_SCAR_SEC_AREA_START_Pos) /*!< 0x00000FFF */
+#define FLASH_SCAR_SEC_AREA_START            FLASH_SCAR_SEC_AREA_START_Msk     
+#define FLASH_SCAR_SEC_AREA_END_Pos          (16U)                             
+#define FLASH_SCAR_SEC_AREA_END_Msk          (0xFFFU << FLASH_SCAR_SEC_AREA_END_Pos) /*!< 0x0FFF0000 */
+#define FLASH_SCAR_SEC_AREA_END              FLASH_SCAR_SEC_AREA_END_Msk       
+#define FLASH_SCAR_DMES_Pos                  (31U)                             
+#define FLASH_SCAR_DMES_Msk                  (0x1U << FLASH_SCAR_DMES_Pos)     /*!< 0x80000000 */
+#define FLASH_SCAR_DMES                      FLASH_SCAR_DMES_Msk               
 
 /*******************  Bits definition for FLASH_WPSN register  *********************/
-#define FLASH_WPSN_WRPSN                  0x000000FFU
+#define FLASH_WPSN_WRPSN_Pos                 (0U)                              
+#define FLASH_WPSN_WRPSN_Msk                 (0xFFU << FLASH_WPSN_WRPSN_Pos)   /*!< 0x000000FF */
+#define FLASH_WPSN_WRPSN                     FLASH_WPSN_WRPSN_Msk              
 
 /*******************  Bits definition for FLASH_BOOT_CUR register  ****************/
-#define FLASH_BOOT_ADD0                   0x0000FFFFU
-#define FLASH_BOOT_ADD1                   0xFFFF0000U
+#define FLASH_BOOT_ADD0_Pos                  (0U)                              
+#define FLASH_BOOT_ADD0_Msk                  (0xFFFFU << FLASH_BOOT_ADD0_Pos)  /*!< 0x0000FFFF */
+#define FLASH_BOOT_ADD0                      FLASH_BOOT_ADD0_Msk               
+#define FLASH_BOOT_ADD1_Pos                  (16U)                             
+#define FLASH_BOOT_ADD1_Msk                  (0xFFFFU << FLASH_BOOT_ADD1_Pos)  /*!< 0xFFFF0000 */
+#define FLASH_BOOT_ADD1                      FLASH_BOOT_ADD1_Msk               
+
 
 /*******************  Bits definition for FLASH_CRCCR register  ********************/
-#define FLASH_CRCCR_CRC_SECT              0x00000007U
-#define FLASH_CRCCR_ALL_BANK              0x00000080U
-#define FLASH_CRCCR_CRC_BY_SECT           0x00000100U
-#define FLASH_CRCCR_ADD_SECT              0x00000200U
-#define FLASH_CRCCR_CLEAN_SECT            0x00000400U
-#define FLASH_CRCCR_START_CRC             0x00010000U
-#define FLASH_CRCCR_CLEAN_CRC             0x00020000U
-#define FLASH_CRCCR_CRC_BURST             0x00300000U
-#define FLASH_CRCCR_CRC_BURST_0           0x00000000U
-#define FLASH_CRCCR_CRC_BURST_1           0x00100000U
-#define FLASH_CRCCR_CRC_BURST_2           0x00200000U
-#define FLASH_CRCCR_CRC_BURST_3           0x00300000U
+#define FLASH_CRCCR_CRC_SECT_Pos             (0U)                              
+#define FLASH_CRCCR_CRC_SECT_Msk             (0x7U << FLASH_CRCCR_CRC_SECT_Pos) /*!< 0x00000007 */
+#define FLASH_CRCCR_CRC_SECT                 FLASH_CRCCR_CRC_SECT_Msk          
+#define FLASH_CRCCR_ALL_BANK_Pos             (7U)                              
+#define FLASH_CRCCR_ALL_BANK_Msk             (0x1U << FLASH_CRCCR_ALL_BANK_Pos) /*!< 0x00000080 */
+#define FLASH_CRCCR_ALL_BANK                 FLASH_CRCCR_ALL_BANK_Msk          
+#define FLASH_CRCCR_CRC_BY_SECT_Pos          (8U)                              
+#define FLASH_CRCCR_CRC_BY_SECT_Msk          (0x1U << FLASH_CRCCR_CRC_BY_SECT_Pos) /*!< 0x00000100 */
+#define FLASH_CRCCR_CRC_BY_SECT              FLASH_CRCCR_CRC_BY_SECT_Msk       
+#define FLASH_CRCCR_ADD_SECT_Pos             (9U)                              
+#define FLASH_CRCCR_ADD_SECT_Msk             (0x1U << FLASH_CRCCR_ADD_SECT_Pos) /*!< 0x00000200 */
+#define FLASH_CRCCR_ADD_SECT                 FLASH_CRCCR_ADD_SECT_Msk          
+#define FLASH_CRCCR_CLEAN_SECT_Pos           (10U)                             
+#define FLASH_CRCCR_CLEAN_SECT_Msk           (0x1U << FLASH_CRCCR_CLEAN_SECT_Pos) /*!< 0x00000400 */
+#define FLASH_CRCCR_CLEAN_SECT               FLASH_CRCCR_CLEAN_SECT_Msk        
+#define FLASH_CRCCR_START_CRC_Pos            (16U)                             
+#define FLASH_CRCCR_START_CRC_Msk            (0x1U << FLASH_CRCCR_START_CRC_Pos) /*!< 0x00010000 */
+#define FLASH_CRCCR_START_CRC                FLASH_CRCCR_START_CRC_Msk         
+#define FLASH_CRCCR_CLEAN_CRC_Pos            (17U)                             
+#define FLASH_CRCCR_CLEAN_CRC_Msk            (0x1U << FLASH_CRCCR_CLEAN_CRC_Pos) /*!< 0x00020000 */
+#define FLASH_CRCCR_CLEAN_CRC                FLASH_CRCCR_CLEAN_CRC_Msk         
+#define FLASH_CRCCR_CRC_BURST_Pos            (20U)                             
+#define FLASH_CRCCR_CRC_BURST_Msk            (0x3U << FLASH_CRCCR_CRC_BURST_Pos) /*!< 0x00300000 */
+#define FLASH_CRCCR_CRC_BURST                FLASH_CRCCR_CRC_BURST_Msk         
+#define FLASH_CRCCR_CRC_BURST_0              (0x0U << FLASH_CRCCR_CRC_BURST_Pos) /*!< 0x00000000 */
+#define FLASH_CRCCR_CRC_BURST_1              (0x1U << FLASH_CRCCR_CRC_BURST_Pos) /*!< 0x00100000 */
+#define FLASH_CRCCR_CRC_BURST_2              (0x2U << FLASH_CRCCR_CRC_BURST_Pos) /*!< 0x00200000 */
+#define FLASH_CRCCR_CRC_BURST_3              (0x3U << FLASH_CRCCR_CRC_BURST_Pos) /*!< 0x00300000 */
 
 /*******************  Bits definition for FLASH_CRCSADD register  ****************/
-#define FLASH_CRCSADD_CRC_START_ADDR      0xFFFFFFFFU
+#define FLASH_CRCSADD_CRC_START_ADDR_Pos     (0U)                              
+#define FLASH_CRCSADD_CRC_START_ADDR_Msk     (0xFFFFFFFFU << FLASH_CRCSADD_CRC_START_ADDR_Pos) /*!< 0xFFFFFFFF */
+#define FLASH_CRCSADD_CRC_START_ADDR         FLASH_CRCSADD_CRC_START_ADDR_Msk  
 
 /*******************  Bits definition for FLASH_CRCEADD register  ****************/
-#define FLASH_CRCEADD_CRC_END_ADDR        0xFFFFFFFFU
+#define FLASH_CRCEADD_CRC_END_ADDR_Pos       (0U)                              
+#define FLASH_CRCEADD_CRC_END_ADDR_Msk       (0xFFFFFFFFU << FLASH_CRCEADD_CRC_END_ADDR_Pos) /*!< 0xFFFFFFFF */
+#define FLASH_CRCEADD_CRC_END_ADDR           FLASH_CRCEADD_CRC_END_ADDR_Msk    
 
 /*******************  Bits definition for FLASH_CRCDATA register  ***************/
-#define FLASH_CRCDATA_CRC_DATA            0xFFFFFFFFU
+#define FLASH_CRCDATA_CRC_DATA_Pos           (0U)                              
+#define FLASH_CRCDATA_CRC_DATA_Msk           (0xFFFFFFFFU << FLASH_CRCDATA_CRC_DATA_Pos) /*!< 0xFFFFFFFF */
+#define FLASH_CRCDATA_CRC_DATA               FLASH_CRCDATA_CRC_DATA_Msk        
 
 /*******************  Bits definition for FLASH_ECC_FA register  *******************/
-#define FLASH_ECC_FA_FAIL_ECC_ADDR        0x00007FFFU
-
+#define FLASH_ECC_FA_FAIL_ECC_ADDR_Pos       (0U)                              
+#define FLASH_ECC_FA_FAIL_ECC_ADDR_Msk       (0x7FFFU << FLASH_ECC_FA_FAIL_ECC_ADDR_Pos) /*!< 0x00007FFF */
+#define FLASH_ECC_FA_FAIL_ECC_ADDR           FLASH_ECC_FA_FAIL_ECC_ADDR_Msk    
 
 /******************************************************************************/
 /*                                                                            */
@@ -10942,13 +11156,27 @@ typedef struct
 #define FMC_PCR_ECCPS_2            (0x4U << FMC_PCR_ECCPS_Pos)                 /*!< 0x00080000 */
 
 /*******************  Bit definition for FMC_SR register  *******************/
-#define FMC_SR_IRS                 ((uint8_t)0x01)                             /*!<Interrupt Rising Edge status                */
-#define FMC_SR_ILS                 ((uint8_t)0x02)                             /*!<Interrupt Level status                      */
-#define FMC_SR_IFS                 ((uint8_t)0x04)                             /*!<Interrupt Falling Edge status               */
-#define FMC_SR_IREN                ((uint8_t)0x08)                             /*!<Interrupt Rising Edge detection Enable bit  */
-#define FMC_SR_ILEN                ((uint8_t)0x10)                             /*!<Interrupt Level detection Enable bit        */
-#define FMC_SR_IFEN                ((uint8_t)0x20)                             /*!<Interrupt Falling Edge detection Enable bit */
-#define FMC_SR_FEMPT               ((uint8_t)0x40)                             /*!<FIFO empty                                  */
+#define FMC_SR_IRS_Pos             (0U)                                        
+#define FMC_SR_IRS_Msk             (0x1U << FMC_SR_IRS_Pos)                    /*!< 0x00000001 */
+#define FMC_SR_IRS                 FMC_SR_IRS_Msk                              /*!<Interrupt Rising Edge status                */
+#define FMC_SR_ILS_Pos             (1U)                                        
+#define FMC_SR_ILS_Msk             (0x1U << FMC_SR_ILS_Pos)                    /*!< 0x00000002 */
+#define FMC_SR_ILS                 FMC_SR_ILS_Msk                              /*!<Interrupt Level status                      */
+#define FMC_SR_IFS_Pos             (2U)                                        
+#define FMC_SR_IFS_Msk             (0x1U << FMC_SR_IFS_Pos)                    /*!< 0x00000004 */
+#define FMC_SR_IFS                 FMC_SR_IFS_Msk                              /*!<Interrupt Falling Edge status               */
+#define FMC_SR_IREN_Pos            (3U)                                        
+#define FMC_SR_IREN_Msk            (0x1U << FMC_SR_IREN_Pos)                   /*!< 0x00000008 */
+#define FMC_SR_IREN                FMC_SR_IREN_Msk                             /*!<Interrupt Rising Edge detection Enable bit  */
+#define FMC_SR_ILEN_Pos            (4U)                                        
+#define FMC_SR_ILEN_Msk            (0x1U << FMC_SR_ILEN_Pos)                   /*!< 0x00000010 */
+#define FMC_SR_ILEN                FMC_SR_ILEN_Msk                             /*!<Interrupt Level detection Enable bit        */
+#define FMC_SR_IFEN_Pos            (5U)                                        
+#define FMC_SR_IFEN_Msk            (0x1U << FMC_SR_IFEN_Pos)                   /*!< 0x00000020 */
+#define FMC_SR_IFEN                FMC_SR_IFEN_Msk                             /*!<Interrupt Falling Edge detection Enable bit */
+#define FMC_SR_FEMPT_Pos           (6U)                                        
+#define FMC_SR_FEMPT_Msk           (0x1U << FMC_SR_FEMPT_Pos)                  /*!< 0x00000040 */
+#define FMC_SR_FEMPT               FMC_SR_FEMPT_Msk                            /*!<FIFO empty                                  */
 
 /******************  Bit definition for FMC_PMEM register  ******************/
 #define FMC_PMEM_MEMSET3_Pos       (0U)                                        
@@ -11835,26 +12063,26 @@ typedef struct
 /*                                                                            */
 /******************************************************************************/
 /********************  Bit definition for HSEM_R register  ********************/
-#define HSEM_R_PROCID_Pos        (0U)                                          
-#define HSEM_R_PROCID_Msk        (0xFFU << HSEM_R_PROCID_Pos)                  /*!< 0x000000FF */
-#define HSEM_R_PROCID            HSEM_R_PROCID_Msk                             /*!<Semaphore ProcessID */
+#define HSEM_R_PROCID_Pos         (0U)                                         
+#define HSEM_R_PROCID_Msk         (0xFFU << HSEM_R_PROCID_Pos)                 /*!< 0x000000FF */
+#define HSEM_R_PROCID             HSEM_R_PROCID_Msk                            /*!<Semaphore ProcessID */
 #define HSEM_R_MASTERID_Pos      (8U)                                          
 #define HSEM_R_MASTERID_Msk      (0xFFU << HSEM_R_MASTERID_Pos)                /*!< 0x0000FF00 */
 #define HSEM_R_MASTERID          HSEM_R_MASTERID_Msk                           /*!<Semaphore MasterID. */
-#define HSEM_R_LOCK_Pos          (31U)                                         
-#define HSEM_R_LOCK_Msk          (0x1U << HSEM_R_LOCK_Pos)                     /*!< 0x80000000 */
-#define HSEM_R_LOCK              HSEM_R_LOCK_Msk                               /*!<Lock indication. */
+#define HSEM_R_LOCK_Pos           (31U)                                        
+#define HSEM_R_LOCK_Msk           (0x1U << HSEM_R_LOCK_Pos)                    /*!< 0x80000000 */
+#define HSEM_R_LOCK               HSEM_R_LOCK_Msk                              /*!<Lock indication.    */
 
 /********************  Bit definition for HSEM_RLR register  ******************/
-#define HSEM_RLR_PROCID_Pos      (0U)                                          
-#define HSEM_RLR_PROCID_Msk      (0xFFU << HSEM_RLR_PROCID_Pos)                /*!< 0x000000FF */
-#define HSEM_RLR_PROCID          HSEM_RLR_PROCID_Msk                           /*!<Semaphore ProcessID */
+#define HSEM_RLR_PROCID_Pos       (0U)                                         
+#define HSEM_RLR_PROCID_Msk       (0xFFU << HSEM_RLR_PROCID_Pos)               /*!< 0x000000FF */
+#define HSEM_RLR_PROCID           HSEM_RLR_PROCID_Msk                          /*!<Semaphore ProcessID */
 #define HSEM_RLR_MASTERID_Pos    (8U)                                          
 #define HSEM_RLR_MASTERID_Msk    (0xFFU << HSEM_RLR_MASTERID_Pos)              /*!< 0x0000FF00 */
 #define HSEM_RLR_MASTERID        HSEM_RLR_MASTERID_Msk                         /*!<Semaphore MasterID. */
-#define HSEM_RLR_LOCK_Pos        (31U)                                         
-#define HSEM_RLR_LOCK_Msk        (0x1U << HSEM_RLR_LOCK_Pos)                   /*!< 0x80000000 */
-#define HSEM_RLR_LOCK            HSEM_RLR_LOCK_Msk                             /*!<Lock indication. */
+#define HSEM_RLR_LOCK_Pos         (31U)                                        
+#define HSEM_RLR_LOCK_Msk         (0x1U << HSEM_RLR_LOCK_Pos)                  /*!< 0x80000000 */
+#define HSEM_RLR_LOCK             HSEM_RLR_LOCK_Msk                            /*!<Lock indication.    */
 
 /********************  Bit definition for HSEM_IER register  *****************/
 #define HSEM_IER_ISEM0_Pos       (0U)                                          
@@ -12252,14 +12480,14 @@ typedef struct
 #define HSEM_CR_MASTERID_Pos     (8U)                                          
 #define HSEM_CR_MASTERID_Msk     (0xFFU << HSEM_CR_MASTERID_Pos)               /*!< 0x0000FF00 */
 #define HSEM_CR_MASTERID         HSEM_CR_MASTERID_Msk                          /*!<MasterID of semaphores to be cleared. */
-#define HSEM_CR_KEY_Pos          (16U)                                         
-#define HSEM_CR_KEY_Msk          (0xFFFFU << HSEM_CR_KEY_Pos)                  /*!< 0xFFFF0000 */
-#define HSEM_CR_KEY              HSEM_CR_KEY_Msk                               /*!<semaphores clear key. */
+#define HSEM_CR_KEY_Pos           (16U)                                        
+#define HSEM_CR_KEY_Msk           (0xFFFFU << HSEM_CR_KEY_Pos)                 /*!< 0xFFFF0000 */
+#define HSEM_CR_KEY               HSEM_CR_KEY_Msk                              /*!<semaphores clear key. */
 
 /********************  Bit definition for HSEM_KEYR register  *****************/
-#define HSEM_KEYR_KEY_Pos        (16U)                                         
-#define HSEM_KEYR_KEY_Msk        (0xFFFFU << HSEM_KEYR_KEY_Pos)                /*!< 0xFFFF0000 */
-#define HSEM_KEYR_KEY            HSEM_KEYR_KEY_Msk                             /*!<semaphores clear key. */
+#define HSEM_KEYR_KEY_Pos         (16U)                                        
+#define HSEM_KEYR_KEY_Msk         (0xFFFFU << HSEM_KEYR_KEY_Pos)               /*!< 0xFFFF0000 */
+#define HSEM_KEYR_KEY             HSEM_KEYR_KEY_Msk                            /*!<semaphores clear key. */
 
 /******************************************************************************/
 /*                                                                            */
@@ -12525,24 +12753,38 @@ typedef struct
 /*                                                                            */
 /******************************************************************************/
 /*******************  Bit definition for IWDG_KR register  ********************/
-#define IWDG_KR_KEY          ((uint16_t)0xFFFF)                                /*!<Key value (write only, read 0000h)  */
+#define IWDG_KR_KEY_Pos      (0U)                                              
+#define IWDG_KR_KEY_Msk      (0xFFFFU << IWDG_KR_KEY_Pos)                      /*!< 0x0000FFFF */
+#define IWDG_KR_KEY          IWDG_KR_KEY_Msk                                   /*!<Key value (write only, read 0000h)  */
 
 /*******************  Bit definition for IWDG_PR register  ********************/
-#define IWDG_PR_PR           ((uint8_t)0x07)                                   /*!<PR[2:0] (Prescaler divider)         */
-#define IWDG_PR_PR_0         ((uint8_t)0x01)                                   /*!<Bit 0 */
-#define IWDG_PR_PR_1         ((uint8_t)0x02)                                   /*!<Bit 1 */
-#define IWDG_PR_PR_2         ((uint8_t)0x04)                                   /*!<Bit 2 */
+#define IWDG_PR_PR_Pos       (0U)                                              
+#define IWDG_PR_PR_Msk       (0x7U << IWDG_PR_PR_Pos)                          /*!< 0x00000007 */
+#define IWDG_PR_PR           IWDG_PR_PR_Msk                                    /*!<PR[2:0] (Prescaler divider)         */
+#define IWDG_PR_PR_0         (0x1U << IWDG_PR_PR_Pos)                          /*!< 0x00000001 */
+#define IWDG_PR_PR_1         (0x2U << IWDG_PR_PR_Pos)                          /*!< 0x00000002 */
+#define IWDG_PR_PR_2         (0x4U << IWDG_PR_PR_Pos)                          /*!< 0x00000004 */
 
 /*******************  Bit definition for IWDG_RLR register  *******************/
-#define IWDG_RLR_RL          ((uint16_t)0x0FFF)                                /*!<Watchdog counter reload value        */
+#define IWDG_RLR_RL_Pos      (0U)                                              
+#define IWDG_RLR_RL_Msk      (0xFFFU << IWDG_RLR_RL_Pos)                       /*!< 0x00000FFF */
+#define IWDG_RLR_RL          IWDG_RLR_RL_Msk                                   /*!<Watchdog counter reload value        */
 
 /*******************  Bit definition for IWDG_SR register  ********************/
-#define IWDG_SR_PVU          ((uint8_t)0x01)                                   /*!< Watchdog prescaler value update */
-#define IWDG_SR_RVU          ((uint8_t)0x02)                                   /*!< Watchdog counter reload value update */
-#define IWDG_SR_WVU          ((uint8_t)0x04)                                   /*!< Watchdog counter window value update */
+#define IWDG_SR_PVU_Pos      (0U)                                              
+#define IWDG_SR_PVU_Msk      (0x1U << IWDG_SR_PVU_Pos)                         /*!< 0x00000001 */
+#define IWDG_SR_PVU          IWDG_SR_PVU_Msk                                   /*!< Watchdog prescaler value update */
+#define IWDG_SR_RVU_Pos      (1U)                                              
+#define IWDG_SR_RVU_Msk      (0x1U << IWDG_SR_RVU_Pos)                         /*!< 0x00000002 */
+#define IWDG_SR_RVU          IWDG_SR_RVU_Msk                                   /*!< Watchdog counter reload value update */
+#define IWDG_SR_WVU_Pos      (2U)                                              
+#define IWDG_SR_WVU_Msk      (0x1U << IWDG_SR_WVU_Pos)                         /*!< 0x00000004 */
+#define IWDG_SR_WVU          IWDG_SR_WVU_Msk                                   /*!< Watchdog counter window value update */
 
 /*******************  Bit definition for IWDG_KR register  ********************/
-#define IWDG_WINR_WIN        ((uint16_t)0x0FFF)                                /*!< Watchdog counter window value */
+#define IWDG_WINR_WIN_Pos    (0U)                                              
+#define IWDG_WINR_WIN_Msk    (0xFFFU << IWDG_WINR_WIN_Pos)                     /*!< 0x00000FFF */
+#define IWDG_WINR_WIN        IWDG_WINR_WIN_Msk                                 /*!< Watchdog counter window value */
 
 /******************************************************************************/
 /*                                                                            */
@@ -13264,7 +13506,7 @@ typedef struct
 #define MDMA_CTCR_SBURST          MDMA_CTCR_SBURST_Msk                         /*!< Source burst transfer configuration */
 #define MDMA_CTCR_SBURST_0        (0x1U << MDMA_CTCR_SBURST_Pos)               /*!< 0x00001000 */
 #define MDMA_CTCR_SBURST_1        (0x2U << MDMA_CTCR_SBURST_Pos)               /*!< 0x00002000 */
-#define MDMA_CTCR_SBURST_2        (0x3U << MDMA_CTCR_SBURST_Pos)               /*!< 0x00003000 */
+#define MDMA_CTCR_SBURST_2        (0x4U << MDMA_CTCR_SBURST_Pos)               /*!< 0x00004000 */
 #define MDMA_CTCR_DBURST_Pos      (15U)                                        
 #define MDMA_CTCR_DBURST_Msk      (0x7U << MDMA_CTCR_DBURST_Pos)               /*!< 0x00038000 */
 #define MDMA_CTCR_DBURST          MDMA_CTCR_DBURST_Msk                         /*!< Destination burst transfer configuration */
@@ -13350,7 +13592,7 @@ typedef struct
 /********************  Bit definition for MDMA_CxMDR)  ************************/
 #define MDMA_CMDR_MDR_Pos         (0U)                                         
 #define MDMA_CMDR_MDR_Msk         (0xFFFFFFFFU << MDMA_CMDR_MDR_Pos)           /*!< 0xFFFFFFFF */
-#define MDMA_CMDR_MDR             MDMA_CMDR_MDR_Msk                            /*!< Mask Mask Data */
+#define MDMA_CMDR_MDR             MDMA_CMDR_MDR_Msk                            /*!< Mask Data */
 
 /******************************************************************************/
 /*                                                                            */
@@ -14832,6 +15074,9 @@ typedef struct
 #define RCC_AHB4ENR_BKPRAMEN_Pos               (28U)                           
 #define RCC_AHB4ENR_BKPRAMEN_Msk               (0x1U << RCC_AHB4ENR_BKPRAMEN_Pos) /*!< 0x10000000 */
 #define RCC_AHB4ENR_BKPRAMEN                   RCC_AHB4ENR_BKPRAMEN_Msk        
+#define RCC_AHB4ENR_D3SRAM1EN_Pos              (29U)                           
+#define RCC_AHB4ENR_D3SRAM1EN_Msk              (0x1U << RCC_AHB4ENR_D3SRAM1EN_Pos) /*!< 0x20000000 */
+#define RCC_AHB4ENR_D3SRAM1EN                  RCC_AHB4ENR_D3SRAM1EN_Msk       
 
 /********************  Bit definition for RCC_APB3ENR register  ******************/
 
@@ -15135,6 +15380,7 @@ typedef struct
 #define RCC_APB3RSTR_LTDCRST_Pos               (3U)                            
 #define RCC_APB3RSTR_LTDCRST_Msk               (0x1U << RCC_APB3RSTR_LTDCRST_Pos) /*!< 0x00000008 */
 #define RCC_APB3RSTR_LTDCRST                   RCC_APB3RSTR_LTDCRST_Msk        
+
 /********************  Bit definition for RCC_APB1LRSTR register  ******************/
 
 #define RCC_APB1LRSTR_TIM2RST_Pos              (0U)                            
@@ -15358,6 +15604,7 @@ typedef struct
 #define RCC_D3AMR_ADC3AMEN_Pos                 (24U)                           
 #define RCC_D3AMR_ADC3AMEN_Msk                 (0x1U << RCC_D3AMR_ADC3AMEN_Pos) /*!< 0x01000000 */
 #define RCC_D3AMR_ADC3AMEN                     RCC_D3AMR_ADC3AMEN_Msk          
+
 
 #define RCC_D3AMR_BKPRAMAMEN_Pos               (28U)                           
 #define RCC_D3AMR_BKPRAMAMEN_Msk               (0x1U << RCC_D3AMR_BKPRAMAMEN_Pos) /*!< 0x10000000 */
@@ -15698,6 +15945,7 @@ typedef struct
 #define RCC_APB4LPENR_SAI4LPEN_Msk             (0x1U << RCC_APB4LPENR_SAI4LPEN_Pos) /*!< 0x00200000 */
 #define RCC_APB4LPENR_SAI4LPEN                 RCC_APB4LPENR_SAI4LPEN_Msk      
 
+
 /********************  Bit definition for RCC_RSR register  *******************/
 #define RCC_RSR_RMVF_Pos                       (16U)                           
 #define RCC_RSR_RMVF_Msk                       (0x1U << RCC_RSR_RMVF_Pos)      /*!< 0x00010000 */
@@ -15729,9 +15977,11 @@ typedef struct
 #define RCC_RSR_WWDG1RSTF_Pos                  (28U)                           
 #define RCC_RSR_WWDG1RSTF_Msk                  (0x1U << RCC_RSR_WWDG1RSTF_Pos) /*!< 0x10000000 */
 #define RCC_RSR_WWDG1RSTF                      RCC_RSR_WWDG1RSTF_Msk           
+
 #define RCC_RSR_LPWRRSTF_Pos                   (30U)                           
 #define RCC_RSR_LPWRRSTF_Msk                   (0x1U << RCC_RSR_LPWRRSTF_Pos)  /*!< 0x40000000 */
 #define RCC_RSR_LPWRRSTF                       RCC_RSR_LPWRRSTF_Msk            
+
 
 /******************************************************************************/
 /*                                                                            */
@@ -18384,14 +18634,12 @@ typedef struct
 #define SYSCFG_UR2_BOOT_ADD0_Pos        (16U)                                  
 #define SYSCFG_UR2_BOOT_ADD0_Msk        (0xFFFFU << SYSCFG_UR2_BOOT_ADD0_Pos)  /*!< 0xFFFF0000 */
 #define SYSCFG_UR2_BOOT_ADD0            SYSCFG_UR2_BOOT_ADD0_Msk               /*!< Core Boot Address 0 */
-
 /******************  Bit definition for SYSCFG_UR3 register  *******************/
 #define SYSCFG_UR3_BOOT_ADD1_Pos        (0U)                                   
 #define SYSCFG_UR3_BOOT_ADD1_Msk        (0xFFFFU << SYSCFG_UR3_BOOT_ADD1_Pos)  /*!< 0x0000FFFF */
 #define SYSCFG_UR3_BOOT_ADD1            SYSCFG_UR3_BOOT_ADD1_Msk               /*!< Core Boot Address 1 */
 
-
-/******************  Bit definition for SYSCFG_UR4 register  *******************/
+	/******************  Bit definition for SYSCFG_UR4 register  *******************/
 
 #define SYSCFG_UR4_MEPAD_BANK1_Pos      (16U)                                  
 #define SYSCFG_UR4_MEPAD_BANK1_Msk      (0x1U << SYSCFG_UR4_MEPAD_BANK1_Pos)   /*!< 0x00010000 */
@@ -20442,7 +20690,6 @@ typedef struct
 #define DBGMCU_APB4FZ1_DBG_IWDG1_Pos      (18U)                                
 #define DBGMCU_APB4FZ1_DBG_IWDG1_Msk      (0x1U << DBGMCU_APB4FZ1_DBG_IWDG1_Pos) /*!< 0x00040000 */
 #define DBGMCU_APB4FZ1_DBG_IWDG1          DBGMCU_APB4FZ1_DBG_IWDG1_Msk         
-
 
 /******************************************************************************/
 /*                                                                            */
@@ -24605,6 +24852,7 @@ typedef struct
 /******************** COMP Instances with window mode capability **************/
 #define IS_COMP_WINDOWMODE_INSTANCE(INSTANCE) ((INSTANCE) == COMP2) 
 
+
 /******************************* CRC Instances ********************************/
 #define IS_CRC_ALL_INSTANCE(INSTANCE) ((INSTANCE) == CRC)
 
@@ -25297,6 +25545,6 @@ typedef struct
 }
 #endif /* __cplusplus */
 
-#endif /* __STM32H7xx_H */
+#endif /* STM32H743xx_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
