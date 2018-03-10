@@ -3659,7 +3659,7 @@ static mp_obj_t py_image_find_qrcodes(uint n_args, const mp_obj_t *args, mp_map_
         o->y = mp_obj_new_int(lnk_data.rect.y);
         o->w = mp_obj_new_int(lnk_data.rect.w);
         o->h = mp_obj_new_int(lnk_data.rect.h);
-        o->payload = mp_obj_new_str(lnk_data.payload, lnk_data.payload_len, false);
+        o->payload = mp_obj_new_str(lnk_data.payload, lnk_data.payload_len);
         o->version = mp_obj_new_int(lnk_data.version);
         o->ecc_level = mp_obj_new_int(lnk_data.ecc_level);
         o->mask = mp_obj_new_int(lnk_data.mask);
@@ -4038,7 +4038,7 @@ static mp_obj_t py_image_find_datamatrices(uint n_args, const mp_obj_t *args, mp
         o->y = mp_obj_new_int(lnk_data.rect.y);
         o->w = mp_obj_new_int(lnk_data.rect.w);
         o->h = mp_obj_new_int(lnk_data.rect.h);
-        o->payload = mp_obj_new_str(lnk_data.payload, lnk_data.payload_len, false);
+        o->payload = mp_obj_new_str(lnk_data.payload, lnk_data.payload_len);
         o->rotation = mp_obj_new_float(IM_DEG2RAD(lnk_data.rotation));
         o->rows = mp_obj_new_int(lnk_data.rows);
         o->columns = mp_obj_new_int(lnk_data.columns);
@@ -4186,7 +4186,7 @@ static mp_obj_t py_image_find_barcodes(uint n_args, const mp_obj_t *args, mp_map
         o->y = mp_obj_new_int(lnk_data.rect.y);
         o->w = mp_obj_new_int(lnk_data.rect.w);
         o->h = mp_obj_new_int(lnk_data.rect.h);
-        o->payload = mp_obj_new_str(lnk_data.payload, lnk_data.payload_len, false);
+        o->payload = mp_obj_new_str(lnk_data.payload, lnk_data.payload_len);
         o->type = mp_obj_new_int(lnk_data.type);
         o->rotation = mp_obj_new_float(IM_DEG2RAD(lnk_data.rotation));
         o->quality = mp_obj_new_int(lnk_data.quality);

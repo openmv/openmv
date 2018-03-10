@@ -151,7 +151,8 @@ sint8 nm_bus_init(void *pvinit)
     SPI_HANDLE.Init.CRCPolynomial     = 7;
 
     // Init SPI
-    spi_init(&SPI_HANDLE, false);
+    spi_t spi = {&SPI_HANDLE, NULL, NULL};
+    spi_init(&spi, false);
 
     nm_bsp_reset();
 	SPI_DEASSERT_CS();

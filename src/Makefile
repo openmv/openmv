@@ -245,6 +245,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	gccollect.o             \
 	help.o                  \
 	flash.o                 \
+	flashbdev.o             \
 	storage.o               \
 	rtc.o                   \
 	irq.o                   \
@@ -327,9 +328,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
 
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
-	core/src/usbd_core.o                            \
-	core/src/usbd_ctlreq.o                          \
-	core/src/usbd_ioreq.o                           \
+	core/src/usbd_core.o                \
+	core/src/usbd_ctlreq.o              \
+	core/src/usbd_ioreq.o               \
 	class/src/usbd_cdc_msc_hid.o        \
 	class/src/usbd_msc_bot.o            \
 	class/src/usbd_msc_scsi.o           \
@@ -349,7 +350,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	vfs.o               \
 	vfs_fat.o           \
 	vfs_fat_file.o      \
-	vfs_fat_misc.o      \
 	vfs_reader.o        \
 	vfs_fat_diskio.o    \
 	virtpin.o           \
@@ -367,6 +367,12 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
 	ff.o                \
 	option/unicode.o    \
+	)
+
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
+	bus/softspi.o       \
+	dht/dht.o           \
+	memory/spiflash.o   \
 	)
 
 # Bootloader object files

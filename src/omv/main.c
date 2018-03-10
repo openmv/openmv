@@ -459,7 +459,6 @@ soft_reset:
     extint_init0();
     timer_init0();
     can_init0();
-    rng_init0();
     i2c_init0();
     spi_init0();
     uart_init0();

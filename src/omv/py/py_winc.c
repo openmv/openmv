@@ -214,9 +214,9 @@ static mp_obj_t py_winc_ifconfig(mp_obj_t self_in)
     // Add connection info
     mp_obj_list_append(ifconfig_list, mp_obj_new_int(ifconfig.rssi));
     mp_obj_list_append(ifconfig_list, mp_obj_new_int(ifconfig.security));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(ifconfig.ssid, strlen(ifconfig.ssid), false));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(mac_vstr.buf, mac_vstr.len, false));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(ip_vstr.buf, ip_vstr.len, false));
+    mp_obj_list_append(ifconfig_list, mp_obj_new_str(ifconfig.ssid, strlen(ifconfig.ssid)));
+    mp_obj_list_append(ifconfig_list, mp_obj_new_str(mac_vstr.buf, mac_vstr.len));
+    mp_obj_list_append(ifconfig_list, mp_obj_new_str(ip_vstr.buf, ip_vstr.len));
 
     return ifconfig_list;
 }
@@ -235,8 +235,8 @@ static int winc_scan_callback(winc_scan_result_t *scan_result, void *arg)
         mp_obj_new_int(scan_result->channel),
         mp_obj_new_int(scan_result->rssi),
         mp_obj_new_int(scan_result->security),
-        mp_obj_new_str(mac_vstr.buf, mac_vstr.len, false),
-        mp_obj_new_str(scan_result->ssid, strlen(scan_result->ssid), false),
+        mp_obj_new_str(mac_vstr.buf, mac_vstr.len),
+        mp_obj_new_str(scan_result->ssid, strlen(scan_result->ssid)),
     };
 
     mp_obj_list_append(scan_list, mp_obj_new_tuple(MP_ARRAY_SIZE(ap), ap));
