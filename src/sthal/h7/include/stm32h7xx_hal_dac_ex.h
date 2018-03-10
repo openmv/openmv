@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_dac_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of DAC HAL Extended module.
   ******************************************************************************
   * @attention
@@ -45,7 +45,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal_def.h"
-           
+
 /** @addtogroup STM32H7xx_HAL_Driver
   * @{
   */
@@ -55,10 +55,10 @@
   */
 
 /* Exported types ------------------------------------------------------------*/
-   
-/** 
-  * @brief  HAL State structures definition  
-  */ 
+
+/**
+  * @brief  HAL State structures definition
+  */
 
 /* Exported constants --------------------------------------------------------*/
 
@@ -94,7 +94,7 @@
 #define DAC_TRIANGLEAMPLITUDE_4095         ((uint32_t)DAC_CR_MAMP1_3 | DAC_CR_MAMP1_1 | DAC_CR_MAMP1_0) /*!< Select max triangle amplitude of 4095 */
 /**
   * @}
-  */       
+  */
 
 /**
   * @}
@@ -123,11 +123,11 @@
                                  ((TRIGGER) == DAC_TRIGGER_LP1_OUT) || \
                                  ((TRIGGER) == DAC_TRIGGER_LP2_OUT) || \
                                  ((TRIGGER) == DAC_TRIGGER_EXT_IT9) || \
-                                 ((TRIGGER) == DAC_TRIGGER_SOFTWARE)) 
- 
-#define IS_DAC_SAMPLETIME(TIME) ((TIME) <= 0x0000003FF)
+                                 ((TRIGGER) == DAC_TRIGGER_SOFTWARE))
 
-#define IS_DAC_HOLDTIME(TIME)   ((TIME) <= 0x0000003FF)
+#define IS_DAC_SAMPLETIME(TIME) ((TIME) <= 0x000003FF)
+
+#define IS_DAC_HOLDTIME(TIME)   ((TIME) <= 0x000003FF)
 
 #define IS_DAC_SAMPLEANDHOLD(MODE) (((MODE) == DAC_SAMPLEANDHOLD_DISABLE) || \
                                     ((MODE) == DAC_SAMPLEANDHOLD_ENABLE))
@@ -168,12 +168,12 @@
                                                       ((VALUE) == DAC_TRIANGLEAMPLITUDE_2047) || \
                                                       ((VALUE) == DAC_TRIANGLEAMPLITUDE_4095))
 
-                           
+
 /**
   * @}
   */
 
-/* Exported functions --------------------------------------------------------*/  
+/* Exported functions --------------------------------------------------------*/
 /* Extended features functions ***********************************************/
 
 /** @addtogroup DACEx_Exported_Functions
@@ -181,9 +181,9 @@
   */
   /** @addtogroup DACEx_Exported_Functions_Group2
  * @{
- */    
+ */
 /* IO operation functions *****************************************************/
-  
+
 HAL_StatusTypeDef HAL_DACEx_TriangleWaveGenerate(DAC_HandleTypeDef* hdac, uint32_t Channel, uint32_t Amplitude);
 HAL_StatusTypeDef HAL_DACEx_NoiseWaveGenerate(DAC_HandleTypeDef* hdac, uint32_t Channel, uint32_t Amplitude);
 HAL_StatusTypeDef HAL_DACEx_DualSetValue(DAC_HandleTypeDef* hdac, uint32_t Alignment, uint32_t Data1, uint32_t Data2);
@@ -202,12 +202,12 @@ HAL_StatusTypeDef HAL_DACEx_SetUserTrimming (DAC_HandleTypeDef* hdac, DAC_Channe
 
 /** @addtogroup DACEx_Exported_Functions_Group3
   * @{
-  */ 
+  */
 /* Peripheral Control functions ***********************************************/
 
 uint32_t HAL_DACEx_DualGetValue(DAC_HandleTypeDef* hdac);
 uint32_t HAL_DACEx_GetTrimOffset (DAC_HandleTypeDef *hdac, uint32_t Channel);
-   
+
 /**
   * @}
   */
@@ -229,7 +229,7 @@ void DAC_DMAHalfConvCpltCh2(DMA_HandleTypeDef *hdma);
 /**
   * @}
   */
-  
+
  /**
  * @}
  */
@@ -238,10 +238,10 @@ void DAC_DMAHalfConvCpltCh2(DMA_HandleTypeDef *hdma);
   * @}
   */
 
-  
+
 #ifdef __cplusplus
 }
-#endif   
+#endif
 
 #endif /*__STM32H7xx_HAL_DAC_EX_H */
 

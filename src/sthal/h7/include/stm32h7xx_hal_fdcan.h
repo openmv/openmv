@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_fdcan.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of FDCAN HAL module.
   ******************************************************************************
   * @attention
@@ -495,7 +495,7 @@ typedef struct
                                    This parameter can be a value of @ref FDCAN_TT_time_master               */
 
   uint32_t SyncDevLimit;      /*!< Specifies the Synchronization Deviation Limit SDL of the TUR
-                                   numerator : TUR = (Numerator ± SDL) / Denominator.
+                                   numerator : TUR = (Numerator ?? SDL) / Denominator.
                                    With : SDL = 2^(SyncDevLimit+5).
                                    This parameter must be a number between 0 and 7                          */
 
@@ -634,7 +634,7 @@ typedef struct
                                   This parameter is only relevant in Level 0 and Level 2, otherwise fixed to 1.
                                   This parameter can be:
                                    - 0 : Local clock speed not synchronized to Time Master clock speed
-                                   - 1 : Synchronization Deviation ≤ SDL                                        */
+                                   - 1 : Synchronization Deviation '?? SDL                                        */
 
   uint32_t RefTrigOffset;    /*!< Specifies the Actual Reference Trigger Offset Value.
                                   This parameter can be a number between 0 and 0xFF                             */

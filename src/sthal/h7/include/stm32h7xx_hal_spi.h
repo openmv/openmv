@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_spi.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of SPI HAL module.
   ******************************************************************************
   * @attention
@@ -69,10 +69,10 @@ typedef struct
 
     uint32_t Direction;                         /*!< Specifies the SPI bidirectional mode state.
                                                      This parameter can be a value of @ref SPI_Direction */
- 
+
     uint32_t DataSize;                          /*!< Specifies the SPI data size.
                                                      This parameter can be a value of @ref SPI_Data_Size */
- 
+
     uint32_t CLKPolarity;                       /*!< Specifies the serial clock steady state.
                                                      This parameter can be a value of @ref SPI_Clock_Polarity */
 
@@ -88,23 +88,23 @@ typedef struct
                                                      This parameter can be a value of @ref SPI_BaudRate_Prescaler
                                                      @note The communication clock is derived from the master
                                                      clock. The slave clock does not need to be set. */
-                                                
+
     uint32_t FirstBit;                          /*!< Specifies whether data transfers start from MSB or LSB bit.
                                                      This parameter can be a value of @ref SPI_MSB_LSB_Transmission */
-                                                
+
     uint32_t TIMode;                            /*!< Specifies if the TI mode is enabled or not.
                                                      This parameter can be a value of @ref SPI_TI_Mode */
-                                                
+
     uint32_t CRCCalculation;                    /*!< Specifies if the CRC calculation is enabled or not.
                                                      This parameter can be a value of @ref SPI_CRC_Calculation */
-                                                
+
     uint32_t CRCPolynomial;                     /*!< Specifies the polynomial used for the CRC calculation.
                                                      This parameter must be an odd number between Min_Data = 0 and Max_Data = 65535 */
-                                                
+
     uint32_t CRCLength;                         /*!< Specifies the CRC Length used for the CRC calculation.
                                                      CRC Length is only used with Data8 and Data16, not other data size
                                                      This parameter can be a value of @ref SPI_CRC_length */
-                                                
+
     uint32_t NSSPMode;                          /*!< Specifies whether the NSSP signal is enabled or not .
                                                      This parameter can be a value of @ref SPI_NSSP_Mode
                                                      This mode is activated by the NSSP bit in the SPIx_CR2 register and
@@ -112,29 +112,29 @@ typedef struct
                                                      master (FRF=0) with capture on the first edge (SPIx_CR1 CPHA = 0,
                                                      CPOL setting is ignored). */
 
-    uint32_t NSSPolarity;                       /*!< Specifies which level of SS input/output external signal (present on SS pin) is 
+    uint32_t NSSPolarity;                       /*!< Specifies which level of SS input/output external signal (present on SS pin) is
                                                      considered as active one.
                                                      This parameter can be a value of @ref SPI_NSS_Polarity */
 
-    uint32_t FifoThreshold;                     /*!< Specifies the FIFO threshold level. 
+    uint32_t FifoThreshold;                     /*!< Specifies the FIFO threshold level.
                                                      This parameter can be a value of @ref SPI_Fifo_Threshold */
-                                                
+
     uint32_t TxCRCInitializationPattern;        /*!< Specifies the transmitter CRC initialization Pattern used for the CRC calculation.
                                                      This parameter can be a value of @ref SPI_CRC_Calculation_Initialization_Pattern */
-                                                
+
     uint32_t RxCRCInitializationPattern;        /*!< Specifies the receiver CRC initialization Pattern used for the CRC calculation.
                                                      This parameter can be a value of @ref SPI_CRC_Calculation_Initialization_Pattern */
 
-    uint32_t MasterSSIdleness;                  /*!< Specifies an extra delay, expressed in number of SPI clock cycle periods, inserted 
+    uint32_t MasterSSIdleness;                  /*!< Specifies an extra delay, expressed in number of SPI clock cycle periods, inserted
                                                      additionally between active edge of SS and first data transaction start in master mode.
                                                      This parameter can be a value of @ref SPI_Master_SS_Idleness */
 
-    uint32_t MasterInterDataIdleness;           /*!< Specifies minimum time delay (expressed in SPI clock cycles periods) inserted between 
+    uint32_t MasterInterDataIdleness;           /*!< Specifies minimum time delay (expressed in SPI clock cycles periods) inserted between
                                                      two consecutive data frames in master mode
                                                      This parameter can be a value of @ref SPI_Master_InterData_Idleness */
 
-    uint32_t MasterReceiverAutoSusp;            /*!< Control continuous SPI transfer in master receiver mode and automatic management 
-                                                     in order to avoid overrun condition. 
+    uint32_t MasterReceiverAutoSusp;            /*!< Control continuous SPI transfer in master receiver mode and automatic management
+                                                     in order to avoid overrun condition.
                                                      This parameter can be a value of @ref SPI_Master_RX_AutoSuspend*/
 
     uint32_t MasterKeepIOState;                 /*!< Control of Alternate function GPIOs state
@@ -232,6 +232,7 @@ typedef struct __SPI_HandleTypeDef
 #define HAL_SPI_ERROR_UDR               (0x00000080U)   /*!< Underrun error                         */
 #define HAL_SPI_ERROR_TIMEOUT           (0x00000100U)   /*!< Timeout error                          */
 #define HAL_SPI_ERROR_UNKNOW            (0x00000200U)   /*!< Unknow error                           */
+#define HAL_SPI_ERROR_NOT_SUPPORTED     (0x00000400U)   /*!< Requested operation not supported      */
 /**
   * @}
   */
@@ -460,7 +461,7 @@ typedef struct __SPI_HandleTypeDef
 
 /** @defgroup SPI_IO_Swap Control SPI IO Swap
   * @{
-  */ 
+  */
 #define SPI_IO_SWAP_DISABLE                           (0x00000000U)
 #define SPI_IO_SWAP_ENABLE                            SPI_CFG2_IOSWP
 /**
@@ -493,22 +494,22 @@ typedef struct __SPI_HandleTypeDef
 /** @defgroup SPI_Master_InterData_Idleness SPI Master Inter-Data Ideleness
   * @{
   */
-#define SPI_MASTER_INTERDATA_IDLENESS_00CYCLE         (0x00000000U)
-#define SPI_MASTER_INTERDATA_IDLENESS_01CYCLE         (0x00000001U)
-#define SPI_MASTER_INTERDATA_IDLENESS_02CYCLE         (0x00000002U)
-#define SPI_MASTER_INTERDATA_IDLENESS_03CYCLE         (0x00000003U)
-#define SPI_MASTER_INTERDATA_IDLENESS_04CYCLE         (0x00000004U)
-#define SPI_MASTER_INTERDATA_IDLENESS_05CYCLE         (0x00000005U)
-#define SPI_MASTER_INTERDATA_IDLENESS_06CYCLE         (0x00000006U)
-#define SPI_MASTER_INTERDATA_IDLENESS_07CYCLE         (0x00000007U)
-#define SPI_MASTER_INTERDATA_IDLENESS_08CYCLE         (0x00000008U)
-#define SPI_MASTER_INTERDATA_IDLENESS_09CYCLE         (0x00000009U)
-#define SPI_MASTER_INTERDATA_IDLENESS_10CYCLE         (0x0000000AU)
-#define SPI_MASTER_INTERDATA_IDLENESS_11CYCLE         (0x0000000BU)
-#define SPI_MASTER_INTERDATA_IDLENESS_12CYCLE         (0x0000000CU)
-#define SPI_MASTER_INTERDATA_IDLENESS_13CYCLE         (0x0000000DU)
-#define SPI_MASTER_INTERDATA_IDLENESS_14CYCLE         (0x0000000EU)
-#define SPI_MASTER_INTERDATA_IDLENESS_15CYCLE         (0x0000000FU)
+  #define SPI_MASTER_INTERDATA_IDLENESS_00CYCLE         (0x00000000U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_01CYCLE         (0x00000010U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_02CYCLE         (0x00000020U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_03CYCLE         (0x00000030U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_04CYCLE         (0x00000040U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_05CYCLE         (0x00000050U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_06CYCLE         (0x00000060U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_07CYCLE         (0x00000070U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_08CYCLE         (0x00000080U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_09CYCLE         (0x00000090U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_10CYCLE         (0x000000A0U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_11CYCLE         (0x000000B0U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_12CYCLE         (0x000000C0U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_13CYCLE         (0x000000D0U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_14CYCLE         (0x000000E0U)
+  #define SPI_MASTER_INTERDATA_IDLENESS_15CYCLE         (0x000000F0U)
 /**
   * @}
   */
@@ -549,7 +550,11 @@ typedef struct __SPI_HandleTypeDef
 #define SPI_IT_RXNE                     SPI_IER_RXPIE
 #define SPI_IT_EOT                      SPI_IER_EOTIE
 #define SPI_IT_TXTF                     SPI_IER_TXTFIE
-#define SPI_IT_ERR                      (SPI_IER_UDRIE | SPI_IER_OVRIE | SPI_IER_TIFREIE | SPI_IER_MODFIE)
+#define SPI_IT_UDR                      SPI_IER_UDRIE
+#define SPI_IT_OVR                      SPI_IER_OVRIE
+#define SPI_IT_FRE                      SPI_IER_TIFREIE
+#define SPI_IT_MODF                     SPI_IER_MODFIE
+#define SPI_IT_ERR                      (SPI_IT_UDR | SPI_IT_OVR | SPI_IT_FRE | SPI_IT_MODF)
 /**
   * @}
   */
@@ -568,6 +573,8 @@ typedef struct __SPI_HandleTypeDef
 #define SPI_FLAG_RXWNE                  SPI_SR_RXWNE   /* SPI RxFIFO Word Not Empty                       */
 #define SPI_FLAG_TXTF                   SPI_SR_TXTF    /* SPI Transmission Transfer Filled flag           */
 #define SPI_FLAG_EOT                    SPI_SR_EOT     /* SPI fifo transmision complete                   */
+#define SPI_FLAG_SUSP                   SPI_SR_SUSP    /* SPI transfer suspend complete                   */
+
 /**
   * @}
   */
@@ -696,6 +703,12 @@ typedef struct __SPI_HandleTypeDef
   * @retval None
   */
 #define __HAL_SPI_CLEAR_TXTFFLAG(__HANDLE__) SET_BIT((__HANDLE__)->Instance->IFCR , SPI_IFCR_TXTFC)
+
+/** @brief  Clear the SPI SUSP pending flag.
+  * @param  __HANDLE__: specifies the SPI Handle.
+  * @retval None
+  */
+#define __HAL_SPI_CLEAR_SUSPFLAG(__HANDLE__) SET_BIT((__HANDLE__)->Instance->IFCR , SPI_IFCR_SUSPC)
 
 /** @brief  Enable the SPI peripheral.
   * @param  __HANDLE__: specifies the SPI Handle.

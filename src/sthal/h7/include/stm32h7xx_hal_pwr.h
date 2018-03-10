@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_pwr.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of PWR HAL module.
   ******************************************************************************
   * @attention
@@ -160,7 +160,11 @@ typedef struct
 #define PWR_FLAG_ACTVOS     ((uint8_t)0x0AU)
 #define PWR_FLAG_BRR        ((uint8_t)0x0BU)
 #define PWR_FLAG_VOSRDY     ((uint8_t)0x0CU)
+#if defined(SMPS)
+#define PWR_FLAG_SMPSEXTRDY   ((uint8_t)0x0DU)
+#else
 #define PWR_FLAG_SCUEN       ((uint8_t)0x0DU)
+#endif /* SMPS */
 /**
   * @}
   */

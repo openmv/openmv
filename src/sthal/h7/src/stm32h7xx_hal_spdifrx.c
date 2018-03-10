@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_spdifrx.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   This file provides firmware functions to manage the following
   *          functionalities of the SPDIFRX audio interface:
   *           + Initialization and Configuration
@@ -257,7 +257,7 @@ HAL_StatusTypeDef HAL_SPDIFRX_Init(SPDIFRX_HandleTypeDef *hspdif)
              hspdif->Init.ValidityBitMask |
              hspdif->Init.SymbolClockGen |
              hspdif->Init.BackupSymbolClockGen |
-             hspdif->Init.ParityErrorMask            
+             hspdif->Init.ParityErrorMask
              );
 
   hspdif->Instance->CR = tmpreg;

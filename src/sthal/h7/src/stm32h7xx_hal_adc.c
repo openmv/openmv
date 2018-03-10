@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_adc.c
   * @author  MCD Application conversion
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   This file provides firmware functions to manage the following
   *          functionalities of the Analog to Digital Convertor (ADC)
   *          peripheral:
@@ -1017,7 +1017,7 @@ HAL_StatusTypeDef HAL_ADC_Start(ADC_HandleTypeDef* hadc)
         if (READ_BIT(tmpADC_Master->CFGR, ADC_CFGR_JAUTO) != RESET)
         {
           ADC_STATE_CLR_SET(hadc->State, HAL_ADC_STATE_INJ_EOC, HAL_ADC_STATE_INJ_BUSY);
-      
+
         }  /* if (READ_BIT(tmpADC_Master->CFGR, ADC_CFGR_JAUTO) != RESET) */
         /* Process unlocked */
         __HAL_UNLOCK(hadc);
@@ -1301,12 +1301,12 @@ HAL_StatusTypeDef HAL_ADC_PollForEvent(ADC_HandleTypeDef* hadc, uint32_t EventTy
     case ADC_EOSMP_EVENT:
       /* Set ADC state */
       SET_BIT(hadc->State, HAL_ADC_STATE_REG_EOSMP);
-  
+
       /* Clear the End Of Sampling flag */
       __HAL_ADC_CLEAR_FLAG(hadc, ADC_FLAG_EOSMP);
-  
+
       break;
-  
+
     /* Analog watchdog (level out of window) event                              */
     /* Note: In case of several analog watchdog enabled, if needed to know      */
     /* which one triggered and on which ADCx, test ADC state of Analog Watchdog */
@@ -1317,45 +1317,45 @@ HAL_StatusTypeDef HAL_ADC_PollForEvent(ADC_HandleTypeDef* hadc, uint32_t EventTy
     case ADC_AWD_EVENT:
       /* Set ADC state */
       SET_BIT(hadc->State, HAL_ADC_STATE_AWD1);
-  
+
       /* Clear ADC analog watchdog flag */
       __HAL_ADC_CLEAR_FLAG(hadc, ADC_FLAG_AWD1);
-  
+
       break;
-  
+
     /* Check analog watchdog 2 flag */
     case ADC_AWD2_EVENT:
       /* Set ADC state */
       SET_BIT(hadc->State, HAL_ADC_STATE_AWD2);
-  
+
       /* Clear ADC analog watchdog flag */
       __HAL_ADC_CLEAR_FLAG(hadc, ADC_FLAG_AWD2);
-  
+
       break;
-  
+
     /* Check analog watchdog 3 flag */
     case ADC_AWD3_EVENT:
       /* Set ADC state */
       SET_BIT(hadc->State, HAL_ADC_STATE_AWD3);
-  
+
       /* Clear ADC analog watchdog flag */
       __HAL_ADC_CLEAR_FLAG(hadc, ADC_FLAG_AWD3);
-  
+
       break;
-  
+
     /* Injected context queue overflow event */
     case ADC_JQOVF_EVENT:
       /* Set ADC state */
       SET_BIT(hadc->State, HAL_ADC_STATE_INJ_JQOVF);
-  
+
       /* Set ADC error code to Injected context queue overflow */
       SET_BIT(hadc->ErrorCode, HAL_ADC_ERROR_JQOVF);
-  
+
       /* Clear ADC Injected context queue overflow flag */
       __HAL_ADC_CLEAR_FLAG(hadc, ADC_FLAG_JQOVF);
-  
+
       break;
-  
+
     /* Overrun event */
     default: /* Case ADC_OVR_EVENT */
       /* If overrun is set to overwrite previous data, overrun event is not     */
@@ -1366,7 +1366,7 @@ HAL_StatusTypeDef HAL_ADC_PollForEvent(ADC_HandleTypeDef* hadc, uint32_t EventTy
       {
         /* Set ADC state */
         SET_BIT(hadc->State, HAL_ADC_STATE_REG_OVR);
-  
+
         /* Set ADC error code to overrun */
         SET_BIT(hadc->ErrorCode, HAL_ADC_ERROR_OVR);
       }
@@ -2388,11 +2388,11 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
 
 
       /* Configure the offset: offset enable/disable, channel, offset value, Signed saturation feature */
-     
+
       /* Shift the offset in function of the selected ADC resolution. */
       /* Offset has to be left-aligned on bit 15, the LSB (right bits) are set to 0 */
       tmpOffsetShifted = ADC_OFFSET_SHIFT_RESOLUTION(hadc, sConfig->Offset);
-     
+
       switch (sConfig->OffsetNumber)
       {
          /* Configure offset register i when applicable:                         */
@@ -2415,7 +2415,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
              CLEAR_BIT(hadc->Instance->OFR1, ADC_OFR1_SSATE);
            }
           break;
-        
+
         case ADC_OFFSET_2:
           MODIFY_REG(hadc->Instance->OFR2,
                    ADC_OFR_FIELDS,
@@ -2431,7 +2431,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
              CLEAR_BIT(hadc->Instance->OFR2, ADC_OFR2_SSATE);
            }
           break;
-        
+
         case ADC_OFFSET_3:
           MODIFY_REG(hadc->Instance->OFR3,
                    ADC_OFR_FIELDS,
@@ -2447,7 +2447,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
              CLEAR_BIT(hadc->Instance->OFR3, ADC_OFR3_SSATE);
            }
           break;
-        
+
         case ADC_OFFSET_4:
           MODIFY_REG(hadc->Instance->OFR4,
                    ADC_OFR_FIELDS,
@@ -2463,7 +2463,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
             CLEAR_BIT(hadc->Instance->OFR4, ADC_OFR4_SSATE);
           }
           break;
-        
+
         /* Case ADC_OFFSET_NONE */
         default :
         /* Scan OFR1, OFR2, OFR3, OFR4 to check if the selected channel is enabled.
@@ -2508,7 +2508,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
       {
         /* Enable differential mode */
         SET_BIT(hadc->Instance->DIFSEL, ADC_DIFSEL_CHANNEL(sConfig->Channel));
-    
+
         /* Sampling time configuration of channel ADC_IN+1 (negative input)     */
         /* Clear the old sample time then set the new one for the selected      */
         /* channel.                                                             */
@@ -2532,7 +2532,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
       /*  paths.                                                                */
       /* Note: these internal measurement paths can be disabled using           */
       /* HAL_ADC_DeInit().                                                      */
-    
+
       /* Configuration of common ADC parameters                                 */
       if((hadc->Instance == ADC1) || (hadc->Instance == ADC2))
       {
@@ -2544,7 +2544,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
         /* Pointer to the common control register                                 */
         tmpADC_Common = ADC3_COMMON_REGISTER(hadc);
       }
-    
+
       /* If the requested internal measurement path has already been enabled,   */
       /* bypass the configuration processing.                                   */
       if (( (sConfig->Channel == ADC_CHANNEL_TEMPSENSOR) &&
@@ -2556,7 +2556,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
          )
       {
         /* Configuration of common ADC parameters (continuation)                */
-    
+
         /* Software is allowed to change common parameters only when all ADCs   */
         /* of the common group are disabled.                                    */
         if ((ADC_IS_ENABLE(hadc) == RESET)   &&
@@ -2567,7 +2567,7 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
           if ((sConfig->Channel == ADC_CHANNEL_TEMPSENSOR) && ((hadc->Instance == ADC3)))
           {
              SET_BIT(tmpADC_Common->CCR, ADC_CCR_TSEN);
-    
+
             /* Wait loop initialization and execution */
             /* Note: Variable divided by 2 to compensate partially          */
             /*       CPU processing cycles.                                 */
@@ -2597,11 +2597,11 @@ HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef* hadc, ADC_ChannelConf
         {
           /* Update ADC state machine to error */
           SET_BIT(hadc->State, HAL_ADC_STATE_ERROR_CONFIG);
-    
+
           tmp_hal_status = HAL_ERROR;
         }
       }
-    
+
     } /* if (ADC_IS_ENABLE(hadc) == RESET) */
 
   } /* if (ADC_IS_CONVERSION_ONGOING_REGULAR(hadc) == RESET) */

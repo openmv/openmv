@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_smartcard_ex.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   SMARTCARD HAL module driver.
   *          This file provides extended firmware functions to manage the following
   *          functionalities of the SmartCard.
@@ -114,7 +114,7 @@ void HAL_SMARTCARDEx_BlockLength_Config(SMARTCARD_HandleTypeDef *hsmartcard, uin
   * @param hsmartcard: Pointer to a SMARTCARD_HandleTypeDef structure that contains
   *                    the configuration information for the specified SMARTCARD module.
   * @param TimeOutValue: receiver timeout value in number of baud blocks. The timeout
-  *                     value must be less or equal to 0x0FFFFFFFF.
+  *                     value must be less or equal to 0x00FFFFFF.
   * @retval None
   */
 void HAL_SMARTCARDEx_TimeOut_Config(SMARTCARD_HandleTypeDef *hsmartcard, uint32_t TimeOutValue)

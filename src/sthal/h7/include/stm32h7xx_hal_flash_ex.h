@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32H7xx_hal_flash_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of FLASH HAL module.
   ******************************************************************************
   * @attention
@@ -54,7 +54,7 @@
   * @{
   */
 
-/* Exported types ------------------------------------------------------------*/ 
+/* Exported types ------------------------------------------------------------*/
 /** @defgroup FLASHEx_Exported_Types FLASH Exported Types
   * @{
   */
@@ -69,7 +69,7 @@ typedef struct
 
   uint32_t Banks;       /*!< Select banks to erase when Mass erase is enabled.
                              This parameter must be a value of @ref FLASHEx_Banks */
-  
+
   uint32_t Sector;      /*!< Initial FLASH sector to erase when Mass erase is disabled
                              This parameter must be a value of @ref FLASH_Sectors */
 
@@ -105,21 +105,21 @@ typedef struct
   uint32_t USERType;       /*!< User option byte(s) to be configured (used for OPTIONBYTE_USER).
                                 This parameter can be a combination of @ref FLASHEx_OB_USER_Type */
 
-  uint32_t USERConfig;   /*!< Program the FLASH User Option Byte: WWDG_SW / IWDG_SW / RST_STOP / RST_STDBY / 
+  uint32_t USERConfig;   /*!< Program the FLASH User Option Byte: WWDG_SW / IWDG_SW / RST_STOP / RST_STDBY /
                               IWDG_FREEZE_STOP / IWDG_FREEZE_SANDBY. */
   uint32_t Banks;          /*!< Select banks for WRP , PCROP and secure area config .
-                                This parameter must be a value of @ref FLASHEx_Banks */ 
-  uint32_t PCROPConfig;    /*!< specifies if the PCROP area shall be erased or not 
+                                This parameter must be a value of @ref FLASHEx_Banks */
+  uint32_t PCROPConfig;    /*!< specifies if the PCROP area shall be erased or not
                                 when RDP level decreased from Level 1 to Level 0 or during a mass erase.
                                 This parameter must be a value of @ref FLASHEx_OB_PCROP_RDP enumeration */
 
   uint32_t PCROPStartAddr; /*!< PCROP Start address (used for OPTIONBYTE_PCROP).
                                 This parameter must be a value between begin and end of a bank */
-                
+
   uint32_t PCROPEndAddr;   /*!< PCROP End address (used for OPTIONBYTE_PCROP).
                                 This parameter must be a value between PCROP Start address and end of a bank */
 
-  uint32_t BootConfig;  /*!< Specifies if the Boot Address to be configured BOOT_ADD0, BOOT_ADD1 
+  uint32_t BootConfig;  /*!< Specifies if the Boot Address to be configured BOOT_ADD0, BOOT_ADD1
                                 or both. This parameter must be a value of @ref FLASHEx_OB_BOOT_OPTION enumeration */
 
   uint32_t BootAddr0;   /*!< Boot Address 0.
@@ -127,14 +127,14 @@ typedef struct
 
   uint32_t BootAddr1;   /*!< Boot Address 1.
                                 This parameter must be a value between begin and end of a bank */
-  
-  uint32_t SecureAreaConfig;  /*!< specifies if the bank secured area shall be erased or not 
+
+  uint32_t SecureAreaConfig;  /*!< specifies if the bank secured area shall be erased or not
                                    when RDP level decreased from Level 1 to Level 0 or during a mass erase.
                                    This parameter must be a value of @ref FLASHEx_OB_SECURE_RDP enumeration */
 
   uint32_t SecureAreaStartAddr; /*!< Bank Secure area Start address.
                                      This parameter must be a value between begin and end of bank1 */
-                
+
   uint32_t SecureAreaEndAddr;   /*!< Bank Secure area End address .
                                      This parameter must be a value between Start address and end of a bank1 */
 
@@ -151,16 +151,16 @@ typedef struct
 
 /** @defgroup FLASHEx_Type_Erase FLASH Type Erase
   * @{
-  */ 
+  */
 #define FLASH_TYPEERASE_SECTORS         ((uint32_t)0x00U)  /*!< Sectors erase only          */
 #define FLASH_TYPEERASE_MASSERASE       ((uint32_t)0x01U)  /*!< Flash Mass erase activation */
 /**
   * @}
   */
-  
+
 /** @defgroup FLASHEx_Voltage_Range FLASH Voltage Range
   * @{
-  */ 
+  */
 #define FLASH_VOLTAGE_RANGE_1        ((uint32_t)0x00U)             /*!< Flash program/erase by 8 bits    */
 #define FLASH_VOLTAGE_RANGE_2        ((uint32_t)FLASH_CR_PSIZE_0)  /*!< Flash program/erase by 16 bits   */
 #define FLASH_VOLTAGE_RANGE_3        ((uint32_t)FLASH_CR_PSIZE_1)  /*!< Flash program/erase by 32 bits   */
@@ -169,19 +169,19 @@ typedef struct
 /**
   * @}
   */
-  
+
 /** @defgroup FLASHEx_WRP_State FLASH WRP State
   * @{
-  */ 
+  */
 #define OB_WRPSTATE_DISABLE       ((uint32_t)0x00U)  /*!< Disable the write protection of the desired bank 1 sectors */
 #define OB_WRPSTATE_ENABLE        ((uint32_t)0x01U)  /*!< Enable the write protection of the desired bank 1 sectors  */
 /**
   * @}
   */
-  
+
 /** @defgroup FLASHEx_Option_Type FLASH Option Type
   * @{
-  */ 
+  */
 #define OPTIONBYTE_WRP           ((uint32_t)0x01U)  /*!< WRP option byte configuration  */
 #define OPTIONBYTE_RDP           ((uint32_t)0x02U)  /*!< RDP option byte configuration  */
 #define OPTIONBYTE_USER          ((uint32_t)0x04U)  /*!< USER option byte configuration */
@@ -192,49 +192,49 @@ typedef struct
 /**
   * @}
   */
-  
+
 /** @defgroup FLASHEx_Option_Bytes_Read_Protection FLASH Option Bytes Read Protection
   * @{
   */
 #define OB_RDP_LEVEL_0       ((uint32_t)0xAA00U)
 #define OB_RDP_LEVEL_1       ((uint32_t)0x5500U)
-#define OB_RDP_LEVEL_2       ((uint32_t)0xCC00U)   /*!< Warning: When enabling read protection level 2 
+#define OB_RDP_LEVEL_2       ((uint32_t)0xCC00U)   /*!< Warning: When enabling read protection level 2
                                                         it s no more possible to go back to level 1 or 0 */
 /**
   * @}
-  */ 
-  
+  */
+
 /** @defgroup FLASHEx_Option_Bytes_WWatchdog FLASH Option Bytes WWatchdog
   * @{
-  */ 
+  */
 #define OB_WWDG_SW           ((uint32_t)0x10U)  /*!< Software WWDG selected */
 #define OB_WWDG_HW           ((uint32_t)0x00U)  /*!< Hardware WWDG selected */
 /**
   * @}
-  */ 
-  
+  */
+
 
 /** @defgroup FLASHEx_Option_Bytes_IWatchdog FLASH Option Bytes IWatchdog
   * @{
-  */ 
+  */
 #define OB_IWDG_SW           ((uint32_t)0x20U)  /*!< Software IWDG selected */
 #define OB_IWDG_HW           ((uint32_t)0x00U)  /*!< Hardware IWDG selected */
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup FLASHEx_Option_Bytes_nRST_STOP FLASH Option Bytes nRST_STOP
   * @{
-  */ 
+  */
 #define OB_STOP_NO_RST       ((uint32_t)0x40U) /*!< No reset generated when entering in STOP */
 #define OB_STOP_RST          ((uint32_t)0x00U) /*!< Reset generated when entering in STOP    */
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup FLASHEx_Option_Bytes_nRST_STDBY FLASH Option Bytes nRST_STDBY
   * @{
-  */                               
+  */
 #define OB_STDBY_NO_RST      ((uint32_t)0x80U) /*!< No reset generated when entering in STANDBY */
 #define OB_STDBY_RST         ((uint32_t)0x00U) /*!< Reset generated when entering in STANDBY    */
 /**
@@ -285,7 +285,7 @@ typedef struct
 /**
   * @}
   */
-  
+
 /** @defgroup FLASH_Latency FLASH Latency
   * @{
   */
@@ -316,16 +316,16 @@ typedef struct
 /** @defgroup FLASHEx_OB_PCROP_RDP  FLASHEx OB PCROP RDP
   * @{
   */
-#define OB_PCROP_RDP_NOT_ERASE    ((uint32_t)0x00000000U) /*!< PCROP area is not erased when the RDP level 
+#define OB_PCROP_RDP_NOT_ERASE    ((uint32_t)0x00000000U) /*!< PCROP area is not erased when the RDP level
                                                               is decreased from Level 1 to Level 0 or during a mass erase */
-#define OB_PCROP_RDP_ERASE        ((uint32_t)FLASH_PRAR_DMEP) /*!< PCROP area is erased when the RDP level is 
+#define OB_PCROP_RDP_ERASE        ((uint32_t)FLASH_PRAR_DMEP) /*!< PCROP area is erased when the RDP level is
                                                               decreased from Level 1 to Level 0 (full mass erase) */
 
 /**
   * @}
   */
 
-    
+
 
 /** @defgroup FLASHEx_Option_Bytes_Write_Protection FLASH Option Bytes Write Protection
   * @{
@@ -352,10 +352,10 @@ typedef struct
 
 /**
   * @}
-  */  
+  */
 
 
-  
+
 /** @defgroup FLASHEx_OB_IWDG1_SW  FLASHEx OB IWDG1 SW
   * @{
   */
@@ -393,7 +393,7 @@ typedef struct
 /**
   * @}
   */
-  
+
 /** @defgroup FLASHEx_OB_IOHSLV FLASHEx OB IOHSLV
   * @{
   */
@@ -403,20 +403,20 @@ typedef struct
 
 /**
   * @}
-  */  
+  */
 
 /** @defgroup FLASHEx_OB_BOOT_OPTION  FLASHEx OB BOOT OPTION
   * @{
   */
 #define OB_BOOT_ADD0             ((uint32_t)0x01U)                       /*!< Select Boot Address 0 */
-#define OB_BOOT_ADD1             ((uint32_t)0x02U)                       /*!< Select Boot Address 1 */   
-#define OB_BOOT_ADD_BOTH         ((uint32_t)0x03U)                       /*!< Select Boot Address 0 and 1 */ 
+#define OB_BOOT_ADD1             ((uint32_t)0x02U)                       /*!< Select Boot Address 1 */
+#define OB_BOOT_ADD_BOTH         ((uint32_t)0x03U)                       /*!< Select Boot Address 0 and 1 */
 
 
 /**
   * @}
   */
-  
+
  /** @defgroup FLASHEx_OB_USER_Type  FLASHEx OB USER Type
   * @{
   */
@@ -433,18 +433,18 @@ typedef struct
 /**
   * @}
   */
-  
+
 /** @defgroup FLASHEx_OB_SECURE_RDP  FLASHEx OB SECURE RDP
   * @{
   */
-#define OB_SECURE_RDP_NOT_ERASE    ((uint32_t)0x00000000U)               /*!< Secure area is not erased when the RDP level 
+#define OB_SECURE_RDP_NOT_ERASE    ((uint32_t)0x00000000U)               /*!< Secure area is not erased when the RDP level
                                                                              is decreased from Level 1 to Level 0 or during a mass erase*/
-#define OB_SECURE_RDP_ERASE        ((uint32_t)FLASH_SCAR_DMES)          /*!< Secure area is erased when the RDP level is 
+#define OB_SECURE_RDP_ERASE        ((uint32_t)FLASH_SCAR_DMES)          /*!< Secure area is erased when the RDP level is
                                                                              decreased from Level 1 to Level 0 (full mass erase) */
 
 /**
   * @}
-  */ 
+  */
 
 /* Exported macro ------------------------------------------------------------*/
 /** @defgroup FLASH_Exported_Macros FLASH Exported Macros
@@ -460,7 +460,7 @@ typedef struct
  /**
   * @}
   */
-                    
+
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup FLASHEx_Exported_Functions
   * @{
@@ -500,19 +500,19 @@ HAL_StatusTypeDef HAL_FLASHEx_Lock_Bank2(void);
   */
 
 #define IS_FLASH_TYPEERASE(VALUE)    (((VALUE) == FLASH_TYPEERASE_SECTORS) || \
-                                      ((VALUE) == FLASH_TYPEERASE_MASSERASE))  
+                                      ((VALUE) == FLASH_TYPEERASE_MASSERASE))
 
 #define IS_VOLTAGERANGE(RANGE)    (((RANGE) == FLASH_VOLTAGE_RANGE_1) || \
                                    ((RANGE) == FLASH_VOLTAGE_RANGE_2) || \
                                    ((RANGE) == FLASH_VOLTAGE_RANGE_3) || \
-                                   ((RANGE) == FLASH_VOLTAGE_RANGE_4))  
+                                   ((RANGE) == FLASH_VOLTAGE_RANGE_4))
 
 #define IS_WRPSTATE(VALUE)    (((VALUE) == OB_WRPSTATE_DISABLE) || \
-                               ((VALUE) == OB_WRPSTATE_ENABLE))  
+                               ((VALUE) == OB_WRPSTATE_ENABLE))
 #define IS_OPTIONBYTE(VALUE)    ((VALUE) <= (OB_USER_IWDG1_SW | OB_USER_NRST_STDBY_D1 | OB_USER_NRST_STOP_D1  |\
                                              OB_USER_IWDG_STOP| OB_USER_IWDG_STDBY    | OB_USER_SWAP_BANK     |\
                                              OB_USER_ST_RAM_SIZE   | OB_USER_SECURITY))
-                                             
+
 
 #define IS_OB_BOOT_ADDRESS(ADDRESS)     ((ADDRESS) <= 0x8013U)
 
@@ -545,7 +545,9 @@ HAL_StatusTypeDef HAL_FLASHEx_Lock_Bank2(void);
                                    ((LATENCY) == FLASH_LATENCY_6)  || \
                                    ((LATENCY) == FLASH_LATENCY_7))
 
-#define IS_FLASH_ADDRESS(ADDRESS) (((ADDRESS) >= FLASH_BASE) && ((ADDRESS) <= FLASH_END))
+#define IS_FLASH_ADDRESS(ADDRESS) ((((ADDRESS) >= FLASH_BASE) && ((ADDRESS) <= FLASH_END)) || \
+                                   (((ADDRESS) >= FLASH_OTP_BANK1_BASE) && ((ADDRESS) <= FLASH_OTP_BANK1_END)) || \
+                                   (((ADDRESS) >= FLASH_OTP_BANK2_BASE) && ((ADDRESS) <= FLASH_OTP_BANK2_END)))
 
 #define IS_FLASH_NBSECTORS(NBSECTORS) (((NBSECTORS) != 0U) && ((NBSECTORS) <= FLASH_SECTOR_TOTAL))
 
@@ -579,7 +581,7 @@ HAL_StatusTypeDef HAL_FLASHEx_Lock_Bank2(void);
 
 #define IS_OB_USER_IWDG_STDBY(VALUE)     (((VALUE) == OB_IWDG_STDBY_FREEZE) || ((VALUE) == OB_IWDG_STDBY_ACTIVE))
 
-#define IS_OB_USER_SECURITY(VALUE)       (((VALUE) == OB_SECURITY_ENABLE) || ((VALUE) == OB_SECURITY_DISABLE))  /*User can only move the security bit from 0 to 1*/                      
+#define IS_OB_USER_SECURITY(VALUE)       (((VALUE) == OB_SECURITY_ENABLE) || ((VALUE) == OB_SECURITY_DISABLE))  /*User can only move the security bit from 0 to 1*/
 #define IS_OB_USER_TYPE(TYPE)            (((TYPE) <= (uint32_t)0x400U) && ((TYPE) != 0))
 
 #define IS_OB_BOOT_ADD_OPTION(VALUE)     (((VALUE) == OB_BOOT_ADD0) || \
@@ -601,16 +603,16 @@ HAL_StatusTypeDef HAL_FLASHEx_Lock_Bank2(void);
 void FLASH_Erase_Sector(uint32_t Sector, uint32_t Bank, uint32_t VoltageRange);
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}
-  */ 
-  
+  */
+
 /**
   * @}
-  */ 
-  
+  */
+
 /**
   * @}
   */

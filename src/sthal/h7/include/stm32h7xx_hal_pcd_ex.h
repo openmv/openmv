@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_pcd_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of PCD HAL module.
   ******************************************************************************
   * @attention
@@ -33,7 +33,7 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32H7xx_HAL_PCD_EX_H
@@ -45,7 +45,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal_def.h"
-   
+
 /** @addtogroup STM32H7xx_HAL_Driver
   * @{
   */
@@ -54,22 +54,22 @@
   * @{
   */
 /* Exported types ------------------------------------------------------------*/
-typedef enum  
+typedef enum
 {
   PCD_LPM_L0_ACTIVE = 0x00U, /* on */
   PCD_LPM_L1_ACTIVE = 0x01U, /* LPM L1 sleep */
 }PCD_LPM_MsgTypeDef;
 
 
-typedef enum  
+typedef enum
 {
-  PCD_BCD_ERROR                     = 0xFF, 
+  PCD_BCD_ERROR                     = 0xFF,
   PCD_BCD_CONTACT_DETECTION         = 0xFE,
   PCD_BCD_STD_DOWNSTREAM_PORT       = 0xFD,
   PCD_BCD_CHARGING_DOWNSTREAM_PORT  = 0xFC,
   PCD_BCD_DEDICATED_CHARGING_PORT   = 0xFB,
   PCD_BCD_DISCOVERY_COMPLETED       = 0x00,
-  
+
 }PCD_BCD_MsgTypeDef;
 
 
@@ -94,15 +94,15 @@ void HAL_PCDEx_BCD_Callback(PCD_HandleTypeDef *hpcd, PCD_BCD_MsgTypeDef msg);
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}

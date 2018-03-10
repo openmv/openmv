@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_fdcan.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   FDCAN HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of the Flexible DataRate Controller Area Network
@@ -365,7 +365,7 @@ HAL_StatusTypeDef HAL_FDCAN_Init(FDCAN_HandleTypeDef* hfdcan)
                | Normal | Restricted |    Bus     | Internal | External
                |        | Operation  | Monitoring | LoopBack | LoopBack
      CCCR.TEST |   0    |     0      |     0      |    1     |    1
-     CCCR.MON  |   0    |     0      |     1      |    0     |    1
+     CCCR.MON  |   0    |     0      |     1      |    1     |    0
      TEST.LBCK |   0    |     0      |     0      |    1     |    1
      CCCR.ASM  |   0    |     1      |     0      |    0     |    0
   */
@@ -384,7 +384,7 @@ HAL_StatusTypeDef HAL_FDCAN_Init(FDCAN_HandleTypeDef* hfdcan)
       /* Enable LoopBack mode */
       SET_BIT(hfdcan->Instance->TEST, FDCAN_TEST_LBCK);
 
-      if(hfdcan->Init.Mode == FDCAN_MODE_EXTERNAL_LOOPBACK)
+      if(hfdcan->Init.Mode == FDCAN_MODE_INTERNAL_LOOPBACK)
       {
         SET_BIT(hfdcan->Instance->CCCR, FDCAN_CCCR_MON);
       }
@@ -2022,7 +2022,7 @@ HAL_StatusTypeDef HAL_FDCAN_GetErrorCounters(FDCAN_HandleTypeDef *hfdcan, FDCAN_
 
   /* Fill the error counters structure */
   ErrorCounters->TxErrorCnt = (CountersReg & FDCAN_ECR_TEC);
-  ErrorCounters->RxErrorCnt = ((CountersReg & FDCAN_ECR_TREC) >> 8);
+  ErrorCounters->RxErrorCnt = ((CountersReg & FDCAN_ECR_REC) >> 8);
   ErrorCounters->RxErrorPassive = ((CountersReg & FDCAN_ECR_RP) >> 15);
   ErrorCounters->ErrorLogging = ((CountersReg & FDCAN_ECR_CEL) >> 16);
 

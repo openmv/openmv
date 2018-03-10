@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_i2s.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of I2S HAL module.
   ******************************************************************************
   * @attention
@@ -33,7 +33,7 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32H7xx_HAL_I2S_H
@@ -94,7 +94,7 @@ typedef struct
   uint32_t Data24BitAlignment;              /*!< Specifies the Data Padding for 24 bits data lenght
                                                  This parameter can be a value of @ref I2S_Data_24Bit_Alignment    */
 
-  uint32_t FifoThreshold;                   /*!< Specifies the FIFO threshold level. 
+  uint32_t FifoThreshold;                   /*!< Specifies the FIFO threshold level.
                                                  This parameter can be a value of @ref I2S_Fifo_Threshold          */
 
   uint32_t MasterKeepIOState;               /*!< Control of Alternate function GPIOs state
@@ -274,7 +274,7 @@ typedef struct __I2S_HandleTypeDef
 
 /** @defgroup I2S_IO_Swap Control I2S IO Swap
   * @{
-  */ 
+  */
 #define I2S_IO_SWAP_DISABLE                     (0x00000000U)
 #define I2S_IO_SWAP_ENABLE                      SPI_CFG2_IOSWP
 /**
@@ -283,7 +283,7 @@ typedef struct __I2S_HandleTypeDef
 
 /** @defgroup I2S_Data_24Bit_Alignment Data Padding 24Bit
   * @{
-  */ 
+  */
 #define I2S_DATA_24BIT_ALIGNMENT_RIGHT         (0x00000000U)
 #define I2S_DATA_24BIT_ALIGNMENT_LEFT          SPI_I2SCFGR_DATFMT
 /**
@@ -346,7 +346,7 @@ typedef struct __I2S_HandleTypeDef
 /**
   * @}
   */
-  
+
 /**
   * @}
   */
@@ -362,7 +362,7 @@ typedef struct __I2S_HandleTypeDef
 #define __HAL_I2S_RESET_HANDLE_STATE(__HANDLE__) ((__HANDLE__)->State = HAL_I2S_STATE_RESET)
 
 /** @brief  Enable the specified SPI peripheral (in I2S mode).
-  * @param  __HANDLE__: specifies the I2S Handle. 
+  * @param  __HANDLE__: specifies the I2S Handle.
   * @retval None
   */
 #define __HAL_I2S_ENABLE(__HANDLE__) SET_BIT((__HANDLE__)->Instance->CR1, SPI_CR1_SPE)
@@ -596,7 +596,7 @@ uint32_t HAL_I2S_GetError(I2S_HandleTypeDef *hi2s);
 /**
   * @}
   */
-  
+
 /**
   * @}
   */

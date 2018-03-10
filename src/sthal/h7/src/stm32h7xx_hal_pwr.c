@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_pwr.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   PWR HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of the Power Controller (PWR) peripheral:
@@ -288,13 +288,13 @@ void HAL_PWR_ConfigPVD(PWR_PVDTypeDef *sConfigPVD)
   {
     __HAL_PWR_PVD_EXTI_ENABLE_IT();
   }
-  
+
   /* Configure event mode */
   if((sConfigPVD->Mode & PVD_MODE_EVT) == PVD_MODE_EVT)
   {
     __HAL_PWR_PVD_EXTI_ENABLE_EVENT();
   }
-  
+
   /* Configure the edge */
   if((sConfigPVD->Mode & PVD_RISING_EDGE) == PVD_RISING_EDGE)
   {

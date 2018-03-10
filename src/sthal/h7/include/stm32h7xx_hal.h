@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   This file contains all the functions prototypes for the HAL
   *          module driver.
   ******************************************************************************
@@ -56,6 +56,20 @@
   */
 
 /* Exported types ------------------------------------------------------------*/
+/** @defgroup HAL_TICK_FREQ Tick Frequency
+  * @{
+  */
+typedef enum
+{
+  HAL_TICK_FREQ_10HZ         = 100U,
+  HAL_TICK_FREQ_100HZ        = 10U,
+  HAL_TICK_FREQ_1KHZ         = 1U,
+  HAL_TICK_FREQ_DEFAULT      = HAL_TICK_FREQ_1KHZ
+} HAL_TickFreqTypeDef;
+/**
+  * @}
+  */
+
 /* Exported constants --------------------------------------------------------*/
 
 /** @defgroup SYSCFG_VREFBUF_VoltageScale VREFBUF Voltage Scale
@@ -65,7 +79,7 @@
 #define SYSCFG_VREFBUF_VOLTAGE_SCALE1   VREFBUF_CSR_VRS_OUT1   /*!< Voltage reference scale 1 (VREF_OUT1) */
 #define SYSCFG_VREFBUF_VOLTAGE_SCALE2   VREFBUF_CSR_VRS_OUT4   /*!< Voltage reference scale 2 (VREF_OUT4) */
 #define SYSCFG_VREFBUF_VOLTAGE_SCALE3   VREFBUF_CSR_VRS_OUT3   /*!< Voltage reference scale 3 (VREF_OUT3) */
-   
+
 
 #define IS_SYSCFG_VREFBUF_VOLTAGE_SCALE(__SCALE__)  (((__SCALE__) == SYSCFG_VREFBUF_VOLTAGE_SCALE0) || \
                                                      ((__SCALE__) == SYSCFG_VREFBUF_VOLTAGE_SCALE1) || \
@@ -82,7 +96,7 @@
   */
 #define SYSCFG_VREFBUF_HIGH_IMPEDANCE_DISABLE  ((uint32_t)0x00000000) /*!< VREF_plus pin is internally connected to Voltage reference buffer output */
 #define SYSCFG_VREFBUF_HIGH_IMPEDANCE_ENABLE   VREFBUF_CSR_HIZ        /*!< VREF_plus pin is high impedance */
-  
+
 #define IS_SYSCFG_VREFBUF_HIGH_IMPEDANCE(__VALUE__)  (((__VALUE__) == SYSCFG_VREFBUF_HIGH_IMPEDANCE_DISABLE) || \
                                                       ((__VALUE__) == SYSCFG_VREFBUF_HIGH_IMPEDANCE_ENABLE))
 
@@ -141,7 +155,7 @@
 /**
   * @}
   */
-  
+
 /** @defgroup SYSCFG_Boot_Config  Boot Config
   * @{
   */
@@ -156,7 +170,7 @@
 /**
   * @}
   */
-  
+
 
 /** @defgroup SYSCFG_IOCompenstionCell_Config  IOCompenstionCell Config
   * @{
@@ -179,7 +193,7 @@
 /** @defgroup EXTI_Event_Input_Config  Event Input Config
   * @{
   */
-  
+
 #define EXTI_MODE_IT          ((uint32_t)0x00010000)
 #define EXTI_MODE_EVT         ((uint32_t)0x00020000)
 #define EXTI_RISING_EDGE      ((uint32_t)0x00100000)
@@ -204,86 +218,86 @@
 #define EXTI_LINE13      ((uint32_t)0x0D)  /*!< External interrupt LINE 13 */
 #define EXTI_LINE14      ((uint32_t)0x0E)  /*!< External interrupt LINE 14 */
 #define EXTI_LINE15      ((uint32_t)0x0F)  /*!< External interrupt LINE 15 */
-#define EXTI_LINE16      ((uint32_t)0x10) 
-#define EXTI_LINE17      ((uint32_t)0x11)                                                
-#define EXTI_LINE18      ((uint32_t)0x12)                                                
-#define EXTI_LINE19      ((uint32_t)0x13)                                                                                            
-#define EXTI_LINE20      ((uint32_t)0x14)                                                                                                                                            
-#define EXTI_LINE21      ((uint32_t)0x15)                                                      
-#define EXTI_LINE22      ((uint32_t)0x16)                                                    
-#define EXTI_LINE23      ((uint32_t)0x17) 
-#define EXTI_LINE24      ((uint32_t)0x18) 
-#define EXTI_LINE25      ((uint32_t)0x19) 
-#define EXTI_LINE26      ((uint32_t)0x1A)  
-#define EXTI_LINE27      ((uint32_t)0x1B)  
-#define EXTI_LINE28      ((uint32_t)0x1C)  
-#define EXTI_LINE29      ((uint32_t)0x1D)  
-#define EXTI_LINE30      ((uint32_t)0x1E) 
-#define EXTI_LINE31      ((uint32_t)0x1F)  
-#define EXTI_LINE32      ((uint32_t)0x20)                                                                                     
-#define EXTI_LINE33      ((uint32_t)0x21)                                           
-#define EXTI_LINE34      ((uint32_t)0x22)                                                                                     
-#define EXTI_LINE35      ((uint32_t)0x23)                                                                                      
-#define EXTI_LINE36      ((uint32_t)0x24)                                                                                      
-#define EXTI_LINE37      ((uint32_t)0x25)                                                                                       
-#define EXTI_LINE38      ((uint32_t)0x26)                                                                                      
-#define EXTI_LINE39      ((uint32_t)0x27)  
+#define EXTI_LINE16      ((uint32_t)0x10)
+#define EXTI_LINE17      ((uint32_t)0x11)
+#define EXTI_LINE18      ((uint32_t)0x12)
+#define EXTI_LINE19      ((uint32_t)0x13)
+#define EXTI_LINE20      ((uint32_t)0x14)
+#define EXTI_LINE21      ((uint32_t)0x15)
+#define EXTI_LINE22      ((uint32_t)0x16)
+#define EXTI_LINE23      ((uint32_t)0x17)
+#define EXTI_LINE24      ((uint32_t)0x18)
+#define EXTI_LINE25      ((uint32_t)0x19)
+#define EXTI_LINE26      ((uint32_t)0x1A)
+#define EXTI_LINE27      ((uint32_t)0x1B)
+#define EXTI_LINE28      ((uint32_t)0x1C)
+#define EXTI_LINE29      ((uint32_t)0x1D)
+#define EXTI_LINE30      ((uint32_t)0x1E)
+#define EXTI_LINE31      ((uint32_t)0x1F)
+#define EXTI_LINE32      ((uint32_t)0x20)
+#define EXTI_LINE33      ((uint32_t)0x21)
+#define EXTI_LINE34      ((uint32_t)0x22)
+#define EXTI_LINE35      ((uint32_t)0x23)
+#define EXTI_LINE36      ((uint32_t)0x24)
+#define EXTI_LINE37      ((uint32_t)0x25)
+#define EXTI_LINE38      ((uint32_t)0x26)
+#define EXTI_LINE39      ((uint32_t)0x27)
 
-#define EXTI_LINE40      ((uint32_t)0x28) 
-#define EXTI_LINE41      ((uint32_t)0x29)  
-#define EXTI_LINE42      ((uint32_t)0x2A)                                                                                     
-#define EXTI_LINE43      ((uint32_t)0x2B)                                           
-#define EXTI_LINE44      ((uint32_t)0x2C)                                                                                     
-/* EXTI_LINE45 Reserved */                                                                                    
-/* EXTI_LINE46 Reserved */                                                                                    
-#define EXTI_LINE47      ((uint32_t)0x2F)                                                                                       
-#define EXTI_LINE48      ((uint32_t)0x30)                                                                                      
-#define EXTI_LINE49      ((uint32_t)0x31) 
-                                           
-#define EXTI_LINE50      ((uint32_t)0x32) 
-#define EXTI_LINE51      ((uint32_t)0x33)  
-#define EXTI_LINE52      ((uint32_t)0x34)                                                                                     
-#define EXTI_LINE53      ((uint32_t)0x35)                                           
-#define EXTI_LINE54      ((uint32_t)0x36)                                                                                     
-#define EXTI_LINE55      ((uint32_t)0x37)                                                                                      
-#define EXTI_LINE56      ((uint32_t)0x38)                                                                                      
-#define EXTI_LINE57      ((uint32_t)0x39)                                                                                       
-#define EXTI_LINE58      ((uint32_t)0x3A)                                                                                      
+#define EXTI_LINE40      ((uint32_t)0x28)
+#define EXTI_LINE41      ((uint32_t)0x29)
+#define EXTI_LINE42      ((uint32_t)0x2A)
+#define EXTI_LINE43      ((uint32_t)0x2B)
+#define EXTI_LINE44      ((uint32_t)0x2C)
+/* EXTI_LINE45 Reserved */
+/* EXTI_LINE46 Reserved */
+#define EXTI_LINE47      ((uint32_t)0x2F)
+#define EXTI_LINE48      ((uint32_t)0x30)
+#define EXTI_LINE49      ((uint32_t)0x31)
+
+#define EXTI_LINE50      ((uint32_t)0x32)
+#define EXTI_LINE51      ((uint32_t)0x33)
+#define EXTI_LINE52      ((uint32_t)0x34)
+#define EXTI_LINE53      ((uint32_t)0x35)
+#define EXTI_LINE54      ((uint32_t)0x36)
+#define EXTI_LINE55      ((uint32_t)0x37)
+#define EXTI_LINE56      ((uint32_t)0x38)
+#define EXTI_LINE57      ((uint32_t)0x39)
+#define EXTI_LINE58      ((uint32_t)0x3A)
 #define EXTI_LINE59      ((uint32_t)0x3B)
 
-#define EXTI_LINE60      ((uint32_t)0x3C) 
-#define EXTI_LINE61      ((uint32_t)0x3D)  
-#define EXTI_LINE62      ((uint32_t)0x3E)                                                                                     
-#define EXTI_LINE63      ((uint32_t)0x3F)                                           
-#define EXTI_LINE64      ((uint32_t)0x40)                                                                                     
-#define EXTI_LINE65      ((uint32_t)0x41)                                                                                      
-#define EXTI_LINE66      ((uint32_t)0x42)                                                                                      
-#define EXTI_LINE67      ((uint32_t)0x43)                                                                                       
-#define EXTI_LINE68      ((uint32_t)0x44)                                                                                      
+#define EXTI_LINE60      ((uint32_t)0x3C)
+#define EXTI_LINE61      ((uint32_t)0x3D)
+#define EXTI_LINE62      ((uint32_t)0x3E)
+#define EXTI_LINE63      ((uint32_t)0x3F)
+#define EXTI_LINE64      ((uint32_t)0x40)
+#define EXTI_LINE65      ((uint32_t)0x41)
+#define EXTI_LINE66      ((uint32_t)0x42)
+#define EXTI_LINE67      ((uint32_t)0x43)
+#define EXTI_LINE68      ((uint32_t)0x44)
 #define EXTI_LINE69      ((uint32_t)0x45)
 
-#define EXTI_LINE70      ((uint32_t)0x46) 
-#define EXTI_LINE71      ((uint32_t)0x47)  
-#define EXTI_LINE72      ((uint32_t)0x48)                                                                                     
-#define EXTI_LINE73      ((uint32_t)0x49)                                           
-#define EXTI_LINE74      ((uint32_t)0x4A)                                                                                     
-#define EXTI_LINE75      ((uint32_t)0x4B)                                                                                      
+#define EXTI_LINE70      ((uint32_t)0x46)
+#define EXTI_LINE71      ((uint32_t)0x47)
+#define EXTI_LINE72      ((uint32_t)0x48)
+#define EXTI_LINE73      ((uint32_t)0x49)
+#define EXTI_LINE74      ((uint32_t)0x4A)
+#define EXTI_LINE75      ((uint32_t)0x4B)
 #define EXTI_LINE76      ((uint32_t)0x4C)
 
-/* EXTI_LINE77   Reserved */                                                                           
-/* EXTI_LINE78   Reserved */                                                                          
-/* EXTI_LINE79   Reserved */   
-/* EXTI_LINE80   Reserved */   
-/* EXTI_LINE81   Reserved */   
-/* EXTI_LINE82   Reserved */                                                                         
-/* EXTI_LINE83   Reserved */                                        
-/* EXTI_LINE84   Reserved */                                                                         
+/* EXTI_LINE77   Reserved */
+/* EXTI_LINE78   Reserved */
+/* EXTI_LINE79   Reserved */
+/* EXTI_LINE80   Reserved */
+/* EXTI_LINE81   Reserved */
+/* EXTI_LINE82   Reserved */
+/* EXTI_LINE83   Reserved */
+/* EXTI_LINE84   Reserved */
 
-#define EXTI_LINE85      ((uint32_t)0x55)                                                                                      
-#define EXTI_LINE86      ((uint32_t)0x56)                                                                                      
+#define EXTI_LINE85      ((uint32_t)0x55)
+#define EXTI_LINE86      ((uint32_t)0x56)
 #define EXTI_LINE87      ((uint32_t)0x57)
 
-/* EXTI_LINE88   Reserved */ 
+/* EXTI_LINE88   Reserved */
 
 
 #define IS_EXTI_CONFIG_LINE(LINE) (((LINE) == EXTI_LINE0) || ((LINE) == EXTI_LINE1)|| \
@@ -339,8 +353,8 @@
                                 ((LINE) == EXTI_LINE73) || ((LINE) == EXTI_LINE74) || \
                                 ((LINE) == EXTI_LINE75) || ((LINE) == EXTI_LINE76) || \
                                 ((LINE) == EXTI_LINE85) || \
-                                ((LINE) == EXTI_LINE86) || ((LINE) == EXTI_LINE87)) 
-                                
+                                ((LINE) == EXTI_LINE86) || ((LINE) == EXTI_LINE87))
+
 #define IS_EXTI_D1_LINE(LINE) (((LINE) == EXTI_LINE0)  || ((LINE) == EXTI_LINE1)  || \
                                 ((LINE) == EXTI_LINE2)  || ((LINE) == EXTI_LINE3)  || \
                                 ((LINE) == EXTI_LINE4)  || ((LINE) == EXTI_LINE5)  || \
@@ -398,20 +412,20 @@
                                 ((LINE) == EXTI_LINE49) || ((LINE) == EXTI_LINE50) || \
                                 ((LINE) == EXTI_LINE51) || ((LINE) == EXTI_LINE52) || \
                                 ((LINE) == EXTI_LINE53))
-                                                                           
-                                
-#define  BDMA_CH6_CLEAR             ((uint32_t)0x00000000)   /*!< BDMA ch6 event selected as D3 domain pendclear source*/                  
+
+
+#define  BDMA_CH6_CLEAR             ((uint32_t)0x00000000)   /*!< BDMA ch6 event selected as D3 domain pendclear source*/
 #define  BDMA_CH7_CLEAR             ((uint32_t)0x00000001)   /*!< BDMA ch7 event selected as D3 domain pendclear source*/
 #define  LPTIM4_OUT_CLEAR           ((uint32_t)0x00000002)   /*!< LPTIM4 out selected as D3 domain pendclear source*/
 #define  LPTIM5_OUT_CLEAR           ((uint32_t)0x00000003)   /*!< LPTIM5 out selected as D3 domain pendclear source*/
 
 #define IS_EXTI_D3_CLEAR(SOURCE) (((SOURCE) == BDMA_CH6_CLEAR) || ((SOURCE) == BDMA_CH7_CLEAR)    || \
                                  ((SOURCE) == LPTIM4_OUT_CLEAR) || ((SOURCE) == LPTIM5_OUT_CLEAR))
-                                
+
 /**
   * @}
   */
-  
+
 
 /** @defgroup FMC_SwapBankMapping_Config  SwapBankMapping Config
   * @{
@@ -501,8 +515,15 @@
 
 
 
-
-
+/** @defgroup HAL_Private_Macros HAL Private Macros
+  * @{
+  */
+#define IS_TICKFREQ(FREQ) (((FREQ) == HAL_TICK_FREQ_10HZ)  || \
+                           ((FREQ) == HAL_TICK_FREQ_100HZ) || \
+                           ((FREQ) == HAL_TICK_FREQ_1KHZ))
+/**
+  * @}
+  */
 
 /* Exported functions --------------------------------------------------------*/
 
@@ -517,6 +538,9 @@ HAL_StatusTypeDef HAL_InitTick (uint32_t TickPriority);
 void HAL_IncTick(void);
 void HAL_Delay(__IO uint32_t Delay);
 uint32_t HAL_GetTick(void);
+uint32_t HAL_GetTickPrio(void);
+HAL_StatusTypeDef HAL_SetTickFreq(HAL_TickFreqTypeDef Freq);
+HAL_TickFreqTypeDef HAL_GetTickFreq(void);
 void HAL_SuspendTick(void);
 void HAL_ResumeTick(void);
 uint32_t HAL_GetHalVersion(void);

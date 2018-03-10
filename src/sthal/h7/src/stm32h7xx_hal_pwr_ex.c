@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_pwr_ex.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Extended PWR HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of PWR extension peripheral:
@@ -144,7 +144,7 @@
   *            @arg PWR_LDO_SUPPLY                      The LDO regulator supplies the Vcore Power Domains.
   *
   *            @arg PWR_EXTERNAL_SOURCE_SUPPLY          The LDO regulator is Bypassed.
-  *                                                     The Vcore Power Domains are supplied from external source.                                        
+  *                                                     The Vcore Power Domains are supplied from external source.
   * @retval HAL status.
   */
 HAL_StatusTypeDef HAL_PWREx_ConfigSupply(uint32_t SupplySource)
@@ -594,25 +594,26 @@ void HAL_PWREx_EnableWakeUpPin(PWREx_WakeupPinTypeDef *sPinParams)
 {
   uint32_t pinConfig;
   uint32_t regMask;
-  
+  const uint32_t pullMask = PWR_WKUPEPR_WKUPPUPD1;
+
   /* Check the parameters */
   assert_param(IS_PWR_WAKEUP_PIN(sPinParams->WakeUpPin));
   assert_param(IS_PWR_WAKEUP_PIN_POLARITY(sPinParams->PinPolarity));
   assert_param(IS_PWR_WAKEUP_PIN_PULL(sPinParams->PinPull));
 
   pinConfig = sPinParams->WakeUpPin | \
-              (sPinParams->PinPolarity << (POSITION_VAL(sPinParams->WakeUpPin) + 8)) | \
-              (sPinParams->PinPull << ((POSITION_VAL(sPinParams->WakeUpPin) * 2) + 16));
+              (sPinParams->PinPolarity << (POSITION_VAL(sPinParams->WakeUpPin) + PWR_WAKEUP_PINS_POLARITY_REGISTER_OFFSET)) | \
+              (sPinParams->PinPull << ((POSITION_VAL(sPinParams->WakeUpPin) * PWR_WAKEUP_PINS_PULL_POSITION_OFFSET) + PWR_WAKEUP_PINS_PULL_REGISTER_OFFSET));
 
   regMask   = sPinParams->WakeUpPin | \
-              ((1 << POSITION_VAL(sPinParams->WakeUpPin)) + 8) | \
-              (((1 << POSITION_VAL(sPinParams->WakeUpPin))*2) + 16);
-  
+              (PWR_WKUPEPR_WKUPP_1 << POSITION_VAL(sPinParams->WakeUpPin)) | \
+              (pullMask << (POSITION_VAL(sPinParams->WakeUpPin) * PWR_WAKEUP_PINS_PULL_POSITION_OFFSET));
+
   /* Enable and Specify the Wake-Up pin polarity and the pull configuration
      for the event detection (rising or falling edge) */
   MODIFY_REG(PWR->WKUPEPR, regMask, pinConfig);
   /* Configure the Wakeup Pin EXTI Line */
-  MODIFY_REG(EXTI_D1->IMR2, PWR_EXTI_WAKEUP_PINS_MASK, (sPinParams->WakeUpPin << 23));
+  MODIFY_REG(EXTI_D1->IMR2, PWR_EXTI_WAKEUP_PINS_MASK, (sPinParams->WakeUpPin << PWR_EXTI_WAKEUP_PINS_PULL_POSITION_OFFSET));
 }
 
 /**
@@ -1192,7 +1193,6 @@ void HAL_PWREx_ConfigAVD(PWREx_AVDTypeDef *sConfigAVD)
   {
     __HAL_PWR_AVD_EXTI_ENABLE_EVENT();
   }
-
   /* Configure the edge */
   if(AVD_RISING_EDGE == (sConfigAVD->Mode & AVD_RISING_EDGE))
   {

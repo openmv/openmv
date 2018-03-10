@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_spdifrx.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of SPDIFRX HAL module.
   ******************************************************************************
   * @attention
@@ -96,7 +96,7 @@ typedef struct
                                                                                   This parameter can be a value of @ref SPDIFRX_PE_Mask */
   FunctionalState SymbolClockGen;    /*!< Enable/Disable the SPDIFRX Symbol Clock generation.
                                           This parameter can be set to Enable or Disable */
-  
+
   FunctionalState BackupSymbolClockGen; /*!< Enable/Disable the SPDIFRX Backup Symbol Clock generation.
                                           This parameter can be set to Enable or Disable */
 } SPDIFRX_InitTypeDef;
@@ -514,32 +514,32 @@ uint32_t HAL_SPDIFRX_GetError(SPDIFRX_HandleTypeDef *hspdif);
                                             ((RET) == SPDIFRX_MAXRETRIES_3)     || \
                                             ((RET) == SPDIFRX_MAXRETRIES_15)    || \
                                             ((RET) == SPDIFRX_MAXRETRIES_63))
-                                            
+
 #define IS_SPDIFRX_WAIT_FOR_ACTIVITY(VAL)   (((VAL) == SPDIFRX_WAITFORACTIVITY_ON) || \
                                             ((VAL) == SPDIFRX_WAITFORACTIVITY_OFF))
-                                            
+
 #define IS_PREAMBLE_TYPE_MASK(VAL)          (((VAL) == SPDIFRX_PREAMBLETYPEMASK_ON) || \
                                             ((VAL) == SPDIFRX_PREAMBLETYPEMASK_OFF))
-                                            
+
 #define IS_VALIDITY_MASK(VAL)               (((VAL) == SPDIFRX_VALIDITYMASK_OFF) || \
                                             ((VAL) == SPDIFRX_VALIDITYMASK_ON))
-                                             
+
 #define IS_PARITY_ERROR_MASK(VAL)           (((VAL) == SPDIFRX_PARITYERRORMASK_OFF) || \
                                             ((VAL) == SPDIFRX_PARITYERRORMASK_ON))
-                                              
+
 #define IS_SPDIFRX_CHANNEL(CHANNEL)         (((CHANNEL) == SPDIFRX_CHANNEL_A) || \
                                             ((CHANNEL) == SPDIFRX_CHANNEL_B))
-                                            
+
 #define IS_SPDIFRX_DATA_FORMAT(FORMAT)      (((FORMAT) == SPDIFRX_DATAFORMAT_LSB) || \
                                             ((FORMAT) == SPDIFRX_DATAFORMAT_MSB)  || \
                                             ((FORMAT) == SPDIFRX_DATAFORMAT_32BITS))
-                                            
+
 #define IS_STEREO_MODE(MODE)                (((MODE) == SPDIFRX_STEREOMODE_DISABLE) || \
                                             ((MODE) == SPDIFRX_STEREOMODE_ENABLE))
 
 #define IS_CHANNEL_STATUS_MASK(VAL)         (((VAL) == SPDIFRX_CHANNELSTATUS_ON) || \
                                             ((VAL) == SPDIFRX_CHANNELSTATUS_OFF))
-#define IS_SYMBOL_CLOCK_GEN(VAL)            (((VAL) == ENABLE) || ((VAL) == DISABLE)) 
+#define IS_SYMBOL_CLOCK_GEN(VAL)            (((VAL) == ENABLE) || ((VAL) == DISABLE))
 /**
   * @}
   */

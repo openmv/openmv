@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_cortex.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   CORTEX HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of the CORTEX:
@@ -26,9 +26,9 @@
         function according to the following table.
     (#) Configure the priority of the selected IRQ Channels using HAL_NVIC_SetPriority().
     (#) Enable the selected IRQ Channels using HAL_NVIC_EnableIRQ().
-    (#) please refer to programming manual for details in how to configure priority. 
+    (#) please refer to programming manual for details in how to configure priority.
 
-     -@- When the NVIC_PRIORITYGROUP_0 is selected, IRQ preemption is no more possible. 
+     -@- When the NVIC_PRIORITYGROUP_0 is selected, IRQ preemption is no more possible.
          The pending IRQ priority will be managed only by the sub priority.
 
      -@- IRQ priority order (sorted by highest to lowest priority):
@@ -154,7 +154,7 @@
   *                                    1 bits for subpriority
   *         @arg NVIC_PRIORITYGROUP_4: 4 bits for preemption priority
   *                                    0 bits for subpriority
-  * @note   When the NVIC_PriorityGroup_0 is selected, IRQ preemption is no more possible. 
+  * @note   When the NVIC_PriorityGroup_0 is selected, IRQ preemption is no more possible.
   *         The pending IRQ priority will be managed only by the subpriority.
   * @retval None
   */
@@ -206,7 +206,7 @@ void HAL_NVIC_EnableIRQ(IRQn_Type IRQn)
 {
   /* Check the parameters */
   assert_param(IS_NVIC_DEVICE_IRQ(IRQn));
-  
+
   /* Enable interrupt */
   NVIC_EnableIRQ(IRQn);
 }
@@ -222,7 +222,7 @@ void HAL_NVIC_DisableIRQ(IRQn_Type IRQn)
 {
   /* Check the parameters */
   assert_param(IS_NVIC_DEVICE_IRQ(IRQn));
-  
+
   /* Disable interrupt */
   NVIC_DisableIRQ(IRQn);
 }
@@ -261,7 +261,7 @@ uint32_t HAL_SYSTICK_Config(uint32_t TicksNumb)
   ==============================================================================
     [..]
       This subsection provides a set of functions allowing to control the CORTEX
-      (NVIC, SYSTICK, MPU) functionalities. 
+      (NVIC, SYSTICK, MPU) functionalities.
 
 
 @endverbatim
@@ -364,7 +364,7 @@ void HAL_NVIC_SetPendingIRQ(IRQn_Type IRQn)
 {
   /* Check the parameters */
   assert_param(IS_NVIC_DEVICE_IRQ(IRQn));
-  
+
   /* Set interrupt pending */
   NVIC_SetPendingIRQ(IRQn);
 }
@@ -382,7 +382,7 @@ uint32_t HAL_NVIC_GetPendingIRQ(IRQn_Type IRQn)
 {
   /* Check the parameters */
   assert_param(IS_NVIC_DEVICE_IRQ(IRQn));
-  
+
   /* Return 1 if pending else 0 */
   return NVIC_GetPendingIRQ(IRQn);
 }
@@ -398,7 +398,7 @@ void HAL_NVIC_ClearPendingIRQ(IRQn_Type IRQn)
 {
   /* Check the parameters */
   assert_param(IS_NVIC_DEVICE_IRQ(IRQn));
-  
+
   /* Clear pending interrupt */
   NVIC_ClearPendingIRQ(IRQn);
 }
@@ -415,7 +415,7 @@ uint32_t HAL_NVIC_GetActive(IRQn_Type IRQn)
 {
   /* Check the parameters */
   assert_param(IS_NVIC_DEVICE_IRQ(IRQn));
-  
+
   /* Return 1 if active else 0 */
   return NVIC_GetActive(IRQn);
 }

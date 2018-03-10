@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_pwr_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of PWR HAL Extension module.
   ******************************************************************************
   * @attention
@@ -117,10 +117,18 @@ typedef struct
 #define PWR_WAKEUP_PIN2_LOW  (uint32_t)(PWR_WKUPEPR_WKUPP_2 | PWR_WKUPEPR_WKUPEN_2)
 #define PWR_WAKEUP_PIN1_LOW  (uint32_t)(PWR_WKUPEPR_WKUPP_1 | PWR_WKUPEPR_WKUPEN_1)
 
-/* WakeUp Pins mask */
+/* Wake-Up Pins EXTI register mask */
 #define PWR_EXTI_WAKEUP_PINS_MASK  (uint32_t)(EXTI_IMR2_IM55 | EXTI_IMR2_IM56 | \
                                               EXTI_IMR2_IM57 | EXTI_IMR2_IM58 | \
                                               EXTI_IMR2_IM59 | EXTI_IMR2_IM60)
+/* Wake-Up Pins EXTI register offset */
+#define PWR_EXTI_WAKEUP_PINS_PULL_POSITION_OFFSET  23U
+
+/* Wake-Up Pins PWR register offsets */
+#define PWR_WAKEUP_PINS_POLARITY_REGISTER_OFFSET  8U
+#define PWR_WAKEUP_PINS_PULL_REGISTER_OFFSET      16U
+#define PWR_WAKEUP_PINS_PULL_POSITION_OFFSET      2U
+
 /**
   * @}
   */
@@ -190,15 +198,44 @@ typedef struct
 /** @defgroup PWREx_Supply_configuration PWREx Supply configuration
   * @{
   */
-#define PWR_LDO_SUPPLY                       PWR_CR3_LDOEN /* Core domains are suppplied from the LDO */
+#define PWR_LDO_SUPPLY                      PWR_CR3_LDOEN /* Core domains are suppplied from the LDO */
+#if defined(SMPS)
+#define PWR_DIRECT_SMPS_SUPPLY              PWR_CR3_SMPSEN /* Core domains are suppplied from the SMPS only */
+#define PWR_SMPS_1V8_SUPPLIES_LDO           (PWR_CR3_SMPSLEVEL_0 | PWR_CR3_SMPSEN | PWR_CR3_LDOEN) /* The SMPS 1.8V output supplies the LDO which supplies the Core domains */
+#define PWR_SMPS_2V5_SUPPLIES_LDO           (PWR_CR3_SMPSLEVEL_1 | PWR_CR3_SMPSEN | PWR_CR3_LDOEN) /* The SMPS 2.5V output supplies the LDO which supplies the Core domains */
+#define PWR_SMPS_1V8_SUPPLIES_EXT_AND_LDO   (PWR_CR3_SMPSLEVEL_0 | PWR_CR3_SMPSEXTHP | PWR_CR3_SMPSEN | PWR_CR3_LDOEN) /* The SMPS 1.8V output supplies an external circuits and the LDO. The Core domains are suppplied from the LDO */
+#define PWR_SMPS_2V5_SUPPLIES_EXT_AND_LDO   (PWR_CR3_SMPSLEVEL_1 | PWR_CR3_SMPSEXTHP | PWR_CR3_SMPSEN | PWR_CR3_LDOEN) /* The SMPS 2.5V output supplies an external circuits and the LDO. The Core domains are suppplied from the LDO */
+#define PWR_SMPS_1V8_SUPPLIES_EXT           (PWR_CR3_SMPSLEVEL_0 | PWR_CR3_SMPSEXTHP | PWR_CR3_SMPSEN | PWR_CR3_BYPASS) /* The SMPS 1.8V output supplies an external source which supplies the Core domains */
+#define PWR_SMPS_2V5_SUPPLIES_EXT           (PWR_CR3_SMPSLEVEL_1 | PWR_CR3_SMPSEXTHP | PWR_CR3_SMPSEN | PWR_CR3_BYPASS) /* The SMPS 2.5V output supplies an external source which supplies the Core domains */
+#endif /* SMPS */
+#define PWR_EXTERNAL_SOURCE_SUPPLY          PWR_CR3_BYPASS /* The SMPS disabled and the LDO Bypass. The Core domains are supplied from an external source */
 
-#define PWR_EXTERNAL_SOURCE_SUPPLY           PWR_CR3_BYPASS /* The SMPS disabled and the LDO Bypass. The Core domains are supplied from an external source */
-
+#if defined(SMPS)
+#define PWR_SUPPLY_CONFIG_MASK               (PWR_CR3_SMPSLEVEL | PWR_CR3_SMPSEXTHP | \
+                                              PWR_CR3_SMPSEN | PWR_CR3_LDOEN | PWR_CR3_BYPASS)
+#else
 #define PWR_SUPPLY_CONFIG_MASK               (PWR_CR3_SCUEN | PWR_CR3_LDOEN | PWR_CR3_BYPASS)
+#endif /* SMPS */
 /**
   * @}
   */
 
+#if defined(SMPS)
+/** @defgroup HAL_PWREx_SMPS_SetOperationMode PWREx SMPS operation modes
+  * @{
+  */
+#define PWR_SMPS_FORCED_PWM                  PWR_PDR1_SMPSFPWMEN
+#define PWR_SMPS_SLOW_PULSE_SKIPPING_LEVEL0  PWR_PDR1_PSKSYNC
+#define PWR_SMPS_SLOW_PULSE_SKIPPING_LEVEL1  (PWR_PDR1_PSKSYNC | PWR_PDR1_PSKTHR_0)
+#define PWR_SMPS_SLOW_PULSE_SKIPPING_LEVEL2  (PWR_PDR1_PSKSYNC | PWR_PDR1_PSKTHR_1)
+#define PWR_SMPS_SLOW_PULSE_SKIPPING_LEVEL3  (PWR_PDR1_PSKSYNC | PWR_PDR1_PSKTHR)
+#define PWR_SMPS_FAST_PULSE_SKIPPING         (PWR_PDR1_FASTTRAN |PWR_PDR1_PSKSYNC)
+#define PWR_SMPS_ULTRA_FAST_PULSE_SKIPPING   PWR_PDR1_FASTTRAN
+#define PWR_SMPS_MODE_MASK                   (PWR_PDR1_FASTTRAN | PWR_PDR1_PSKTHR | PWR_PDR1_PSKSYNC | PWR_PDR1_SMPSFPWMEN)
+/**
+  * @}
+  */
+#endif /* SMPS */
 
 /** @defgroup PWREx_AVD_detection_level PWREx AVD detection level
   * @{
@@ -380,6 +417,9 @@ do { \
 /* Power supply control functions */
 HAL_StatusTypeDef HAL_PWREx_ConfigSupply(uint32_t SupplySource);
 uint32_t HAL_PWREx_GetSupplyConfig(void);
+#if defined(SMPS)
+uint32_t HAL_PWREx_SMPS_SetOperationMode(uint32_t SMPS_Mode);
+#endif /*SMPS*/
 /* Power volatge scaling functions */
 HAL_StatusTypeDef HAL_PWREx_ControlVoltageScaling(uint32_t VoltageScaling);
 uint32_t HAL_PWREx_GetVoltageRange(void);
@@ -472,8 +512,28 @@ void HAL_PWREx_AVDCallback(void);
 /** @defgroup PWREx_IS_PWR_Definitions PWREx Private macros to check input parameters
   * @{
   */
+#if defined(SMPS)
+#define IS_PWR_SUPPLY(PWR_SOURCE)  (((PWR_SOURCE) == PWR_LDO_SUPPLY)                    || \
+                                    ((PWR_SOURCE) == PWR_DIRECT_SMPS_SUPPLY)            || \
+                                    ((PWR_SOURCE) == PWR_SMPS_1V8_SUPPLIES_LDO)         || \
+                                    ((PWR_SOURCE) == PWR_SMPS_2V5_SUPPLIES_LDO)         || \
+                                    ((PWR_SOURCE) == PWR_SMPS_1V8_SUPPLIES_EXT_AND_LDO) || \
+                                    ((PWR_SOURCE) == PWR_SMPS_2V5_SUPPLIES_EXT_AND_LDO) || \
+                                    ((PWR_SOURCE) == PWR_SMPS_1V8_SUPPLIES_EXT)         || \
+                                    ((PWR_SOURCE) == PWR_SMPS_2V5_SUPPLIES_EXT)         || \
+                                    ((PWR_SOURCE) == PWR_EXTERNAL_SOURCE_SUPPLY))
+
+#define IS_PWR_SMPS_MODE(MODE)  (((MODE) == PWR_SMPS_FORCED_PWM) || \
+                                 ((MODE) == PWR_SMPS_SLOW_PULSE_SKIPPING_LEVEL0) || \
+                                 ((MODE) == PWR_SMPS_SLOW_PULSE_SKIPPING_LEVEL1) || \
+                                 ((MODE) == PWR_SMPS_SLOW_PULSE_SKIPPING_LEVEL2) || \
+                                 ((MODE) == PWR_SMPS_SLOW_PULSE_SKIPPING_LEVEL3) || \
+                                 ((MODE) == PWR_SMPS_FAST_PULSE_SKIPPING) ||  \
+                                 ((MODE) == PWR_SMPS_ULTRA_FAST_PULSE_SKIPPING))
+#else
 #define IS_PWR_SUPPLY(PWR_SOURCE)  (((PWR_SOURCE) == PWR_LDO_SUPPLY) || \
                                     ((PWR_SOURCE) == PWR_EXTERNAL_SOURCE_SUPPLY))
+#endif /*SMPS*/
 
 #define IS_PWR_STOP_MODE_REGULATOR_VOLTAGE(VOLTAGE)  (((VOLTAGE) == PWR_REGULATOR_SVOS_SCALE3)  || \
                                                       ((VOLTAGE) == PWR_REGULATOR_SVOS_SCALE4)  || \

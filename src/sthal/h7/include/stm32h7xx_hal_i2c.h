@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_i2c.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of I2C HAL module.
   ******************************************************************************
   * @attention
@@ -302,9 +302,9 @@ typedef struct __I2C_HandleTypeDef
   * @{
   */
 #define  I2C_NO_STARTSTOP               (0x00000000U)
-#define  I2C_GENERATE_STOP              I2C_CR2_STOP
-#define  I2C_GENERATE_START_READ        (uint32_t)(I2C_CR2_START | I2C_CR2_RD_WRN)
-#define  I2C_GENERATE_START_WRITE       I2C_CR2_START
+#define  I2C_GENERATE_STOP              (uint32_t)(0x80000000U | I2C_CR2_STOP)
+#define  I2C_GENERATE_START_READ        (uint32_t)(0x80000000U | I2C_CR2_START | I2C_CR2_RD_WRN)
+#define  I2C_GENERATE_START_WRITE       (uint32_t)(0x80000000U | I2C_CR2_START)
 /**
   * @}
   */

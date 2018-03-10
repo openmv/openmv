@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_def.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   This file contains HAL common defines, enumeration, macros and
   *          structures definitions.
   ******************************************************************************
@@ -91,11 +91,11 @@ typedef enum
 
 /** @brief Reset the Handle's State field.
   * @param __HANDLE__: specifies the Peripheral Handle.
-  * @note  This macro can be used for the following purpose: 
+  * @note  This macro can be used for the following purpose:
   *          - When the Handle is declared as local variable; before passing it as parameter
-  *            to HAL_PPP_Init() for the first time, it is mandatory to use this macro 
+  *            to HAL_PPP_Init() for the first time, it is mandatory to use this macro
   *            to set to 0 the Handle's "State" field.
-  *            Otherwise, "State" field may have any random value and the first time the function 
+  *            Otherwise, "State" field may have any random value and the first time the function
   *            HAL_PPP_Init() is called, the low level hardware initialization will be missed
   *            (i.e. HAL_PPP_MspInit() will not be executed).
   *          - When there is a need to reconfigure the low level hardware: instead of calling
@@ -157,6 +157,15 @@ typedef enum
     #endif /* __CC_ARM */
   #endif /* __ALIGN_BEGIN */
 #endif /* __GNUC__ */
+
+/* Macro to get variable aligned on 32-bytes,needed for cache maintenance purpose */
+#if defined   (__GNUC__)        /* GNU Compiler */
+  #define ALIGN_32BYTES(buf)  buf __attribute__ ((aligned (32)))
+#elif defined (__ICCARM__)    /* IAR Compiler */
+  #define ALIGN_32BYTES(buf) _Pragma("data_alignment=32") buf
+#elif defined   (__CC_ARM)      /* ARM Compiler */
+  #define ALIGN_32BYTES(buf) __align(32) buf
+#endif
 
 /**
   * @brief  __RAM_FUNC definition

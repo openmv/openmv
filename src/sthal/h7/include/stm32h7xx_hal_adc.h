@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_adc.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of ADC HAL module.
   ******************************************************************************
   * @attention
@@ -562,7 +562,7 @@ typedef struct
 /**
   * @brief Verify that a given value is aligned with the ADC resolution range.
   * @param RESOLUTION: ADC resolution (16, 14, 12, 10 or 8 bits).
-  * @param ADC_VALUE: value checked against the resolution.     
+  * @param ADC_VALUE: value checked against the resolution.
   * @retval SET (ADC_VALUE in line with RESOLUTION) or RESET (ADC_VALUE not in line with RESOLUTION)
   */
 #define IS_ADC_RANGE(RESOLUTION, ADC_VALUE)                                         \
@@ -574,14 +574,14 @@ typedef struct
 
 /**
   * @brief Verify the length of the scheduled regular conversions group.
-  * @param LENGTH: number of programmed conversions.   
+  * @param LENGTH: number of programmed conversions.
   * @retval SET (LENGTH is within the maximum number of possible programmable regular conversions) or RESET (LENGTH is null or too large)
   */
 #define IS_ADC_REGULAR_NB_CONV(LENGTH) (((LENGTH) >= ((uint32_t)1)) && ((LENGTH) <= ((uint32_t)16)))
 
 /**
   * @brief Verify the number of scheduled regular conversions in discontinuous mode.
-  * @param NUMBER: number of scheduled regular conversions in discontinuous mode.  
+  * @param NUMBER: number of scheduled regular conversions in discontinuous mode.
   * @retval SET (NUMBER is within the maximum number of regular conversions in discontinous mode) or RESET (NUMBER is null or too large)
   */
 #define IS_ADC_REGULAR_DISCONT_NUMBER(NUMBER) (((NUMBER) >= ((uint32_t)1)) && ((NUMBER) <= ((uint32_t)8)))
@@ -980,7 +980,7 @@ void ADC_DMAError(DMA_HandleTypeDef *hdma);
 /**
   * @}
   */
-  
+
 /**
   * @}
   */

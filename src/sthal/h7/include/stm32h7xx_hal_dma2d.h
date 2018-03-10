@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_dma2d.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of DMA2D HAL module.
   ******************************************************************************
   * @attention
@@ -33,7 +33,7 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32H7xx_HAL_DMA2D_H
@@ -61,7 +61,7 @@
   */
 #define MAX_DMA2D_LAYER  2U  /*!< DMA2D maximum number of layers */
 
-/** 
+/**
   * @brief DMA2D color Structure definition
   */
 typedef struct
@@ -76,7 +76,7 @@ typedef struct
                                     This parameter must be a number between Min_Data = 0x00 and Max_Data = 0xFF. */
 } DMA2D_ColorTypeDef;
 
-/** 
+/**
   * @brief DMA2D CLUT Structure definition
   */
 typedef struct
@@ -86,11 +86,11 @@ typedef struct
   uint32_t CLUTColorMode;           /*!< Configures the DMA2D CLUT color mode.
                                          This parameter can be one value of @ref DMA2D_CLUT_CM. */
 
-  uint32_t Size;                    /*!< Configures the DMA2D CLUT size. 
+  uint32_t Size;                    /*!< Configures the DMA2D CLUT size.
                                          This parameter must be a number between Min_Data = 0x00 and Max_Data = 0xFF.*/
 } DMA2D_CLUTCfgTypeDef;
 
-/** 
+/**
   * @brief DMA2D Init structure definition
   */
 typedef struct
@@ -101,7 +101,7 @@ typedef struct
   uint32_t             ColorMode;          /*!< Configures the color format of the output image.
                                                 This parameter can be one value of @ref DMA2D_Output_Color_Mode. */
 
-  uint32_t             OutputOffset;       /*!< Specifies the Offset value. 
+  uint32_t             OutputOffset;       /*!< Specifies the Offset value.
                                                 This parameter must be a number between Min_Data = 0x0000 and Max_Data = 0x3FFF. */
   uint32_t             AlphaInverted;     /*!< Select regular or inverted alpha value for the output pixel format converter.
                                                This parameter can be one value of @ref DMA2D_Alpha_Inverted */
@@ -109,11 +109,11 @@ typedef struct
   uint32_t             RedBlueSwap;       /*!< Select regular mode (RGB or ARGB) or swap mode (BGR or ABGR)
                                                for the output pixel format converter.
                                                This parameter can be one value of @ref DMA2D_RB_Swap. */
-  
+
 } DMA2D_InitTypeDef;
 
 
-/** 
+/**
   * @brief DMA2D Layer structure definition
   */
 typedef struct
@@ -121,16 +121,16 @@ typedef struct
   uint32_t             InputOffset;       /*!< Configures the DMA2D foreground or background offset.
                                                This parameter must be a number between Min_Data = 0x0000 and Max_Data = 0x3FFF. */
 
-  uint32_t             InputColorMode;    /*!< Configures the DMA2D foreground or background color mode. 
+  uint32_t             InputColorMode;    /*!< Configures the DMA2D foreground or background color mode.
                                                This parameter can be one value of @ref DMA2D_Input_Color_Mode. */
 
-  uint32_t             AlphaMode;         /*!< Configures the DMA2D foreground or background alpha mode. 
+  uint32_t             AlphaMode;         /*!< Configures the DMA2D foreground or background alpha mode.
                                                This parameter can be one value of @ref DMA2D_Alpha_Mode. */
 
-  uint32_t             InputAlpha;        /*!< Specifies the DMA2D foreground or background alpha value and color value in case of A8 or A4 color mode. 
+  uint32_t             InputAlpha;        /*!< Specifies the DMA2D foreground or background alpha value and color value in case of A8 or A4 color mode.
                                                This parameter must be a number between Min_Data = 0x00 and Max_Data = 0xFF except for the color modes detailed below.
-                                               @note In case of A8 or A4 color mode (ARGB), this parameter must be a number between 
-                                               Min_Data = 0x00000000 and Max_Data = 0xFFFFFFFF where 
+                                               @note In case of A8 or A4 color mode (ARGB), this parameter must be a number between
+                                               Min_Data = 0x00000000 and Max_Data = 0xFFFFFFFF where
                                                - InputAlpha[24:31] is the alpha value ALPHA[0:7]
                                                - InputAlpha[16:23] is the red value RED[0:7]
                                                - InputAlpha[8:15] is the green value GREEN[0:7]
@@ -140,13 +140,13 @@ typedef struct
                                                This parameter can be one value of @ref DMA2D_Alpha_Inverted.*/
 
   uint32_t             RedBlueSwap;       /*!< Select regular mode (RGB or ARGB) or swap mode (BGR or ABGR).
-                                               This parameter can be one value of @ref DMA2D_RB_Swap. */  
-  
+                                               This parameter can be one value of @ref DMA2D_RB_Swap. */
+
   uint32_t             ChromaSubSampling; /*!< Configure the chroma sub-sampling mode for the YCbCr color mode
                                                This parameter can be one value of @ref DMA2D_Chroma_Sub_Sampling */
 } DMA2D_LayerCfgTypeDef;
 
-/** 
+/**
   * @brief  HAL DMA2D State structures definition
   */
 typedef enum
@@ -159,26 +159,26 @@ typedef enum
   HAL_DMA2D_STATE_SUSPEND           = 0x05U     /*!< DMA2D process is suspended                  */
 }HAL_DMA2D_StateTypeDef;
 
-/** 
+/**
   * @brief  DMA2D handle Structure definition
   */
 typedef struct __DMA2D_HandleTypeDef
 {
   DMA2D_TypeDef               *Instance;                                                    /*!< DMA2D register base address.               */
-                                                                                                                                          
+
   DMA2D_InitTypeDef           Init;                                                         /*!< DMA2D communication parameters.            */
 
   void                        (* XferCpltCallback)(struct __DMA2D_HandleTypeDef * hdma2d);  /*!< DMA2D transfer complete callback.          */
-                                                                                                                                           
-  void                        (* XferErrorCallback)(struct __DMA2D_HandleTypeDef * hdma2d); /*!< DMA2D transfer error callback.             */                                                                                                                                             
 
-  DMA2D_LayerCfgTypeDef       LayerCfg[MAX_DMA2D_LAYER];                                    /*!< DMA2D Layers parameters           */  
+  void                        (* XferErrorCallback)(struct __DMA2D_HandleTypeDef * hdma2d); /*!< DMA2D transfer error callback.             */
 
-  HAL_LockTypeDef             Lock;                                                         /*!< DMA2D lock.                                */  
-                                                                                                                                           
+  DMA2D_LayerCfgTypeDef       LayerCfg[MAX_DMA2D_LAYER];                                    /*!< DMA2D Layers parameters           */
+
+  HAL_LockTypeDef             Lock;                                                         /*!< DMA2D lock.                                */
+
   __IO HAL_DMA2D_StateTypeDef State;                                                        /*!< DMA2D transfer state.                      */
-                                                                                                                                           
-  __IO uint32_t               ErrorCode;                                                    /*!< DMA2D error code.                          */  
+
+  __IO uint32_t               ErrorCode;                                                    /*!< DMA2D error code.                          */
 } DMA2D_HandleTypeDef;
 /**
   * @}
@@ -201,7 +201,7 @@ typedef struct __DMA2D_HandleTypeDef
   * @}
   */
 
-/** @defgroup DMA2D_Mode DMA2D Mode 
+/** @defgroup DMA2D_Mode DMA2D Mode
   * @{
   */
 #define DMA2D_M2M                   ((uint32_t)0x00000000U)  /*!< DMA2D memory to memory transfer mode */
@@ -212,7 +212,7 @@ typedef struct __DMA2D_HandleTypeDef
   * @}
   */
 
-/** @defgroup DMA2D_Output_Color_Mode DMA2D Output Color Mode 
+/** @defgroup DMA2D_Output_Color_Mode DMA2D Output Color Mode
   * @{
   */
 #define DMA2D_OUTPUT_ARGB8888       ((uint32_t)0x00000000U)               /*!< ARGB8888 DMA2D color mode */
@@ -252,19 +252,19 @@ typedef struct __DMA2D_HandleTypeDef
                                                                 with original alpha channel value                              */
 /**
   * @}
-  */    
+  */
 
-  
+
 /** @defgroup DMA2D_Alpha_Inverted DMA2D ALPHA Inversion
   * @{
   */
 #define DMA2D_REGULAR_ALPHA         ((uint32_t)0x00000000U)  /*!< No modification of the alpha channel value */
-#define DMA2D_INVERTED_ALPHA        ((uint32_t)0x00000001U)  /*!< Invert the alpha channel value */                                  
+#define DMA2D_INVERTED_ALPHA        ((uint32_t)0x00000001U)  /*!< Invert the alpha channel value */
 /**
   * @}
   */
 
- 
+
 /** @defgroup DMA2D_RB_Swap DMA2D Red and Blue Swap
   * @{
   */
@@ -276,10 +276,10 @@ typedef struct __DMA2D_HandleTypeDef
 
 /** @defgroup DMA2D_Chroma_Sub_Sampling DMA2D Chroma Sub Sampling
   * @{
-  */  
+  */
 #define DMA2D_NO_CSS               ((uint32_t)0x00000000)  /*!< No chroma sub-sampling 4:4:4 */
 #define DMA2D_CSS_422              ((uint32_t)0x00000001)  /*!< chroma sub-sampling 4:2:2 */
-#define DMA2D_CSS_420              ((uint32_t)0x00000002)  /*!< chroma sub-sampling 4:2:0 */  
+#define DMA2D_CSS_420              ((uint32_t)0x00000002)  /*!< chroma sub-sampling 4:2:0 */
 /**
   * @}
   */
@@ -295,7 +295,7 @@ typedef struct __DMA2D_HandleTypeDef
   */
 
 
-/** @defgroup DMA2D_Interrupts DMA2D Interrupts 
+/** @defgroup DMA2D_Interrupts DMA2D Interrupts
   * @{
   */
 #define DMA2D_IT_CE                 DMA2D_CR_CEIE            /*!< Configuration Error Interrupt */
@@ -304,13 +304,13 @@ typedef struct __DMA2D_HandleTypeDef
 #define DMA2D_IT_TW                 DMA2D_CR_TWIE            /*!< Transfer Watermark Interrupt */
 #define DMA2D_IT_TC                 DMA2D_CR_TCIE            /*!< Transfer Complete Interrupt */
 #define DMA2D_IT_TE                 DMA2D_CR_TEIE            /*!< Transfer Error Interrupt */
-/**                                                         
-  * @}                                                      
-  */                                                        
-                                                            
-/** @defgroup DMA2D_Flags DMA2D Flags                       
-  * @{                                                      
-  */                                                        
+/**
+  * @}
+  */
+
+/** @defgroup DMA2D_Flags DMA2D Flags
+  * @{
+  */
 #define DMA2D_FLAG_CE               DMA2D_ISR_CEIF           /*!< Configuration Error Interrupt Flag */
 #define DMA2D_FLAG_CTC              DMA2D_ISR_CTCIF          /*!< CLUT Transfer Complete Interrupt Flag */
 #define DMA2D_FLAG_CAE              DMA2D_ISR_CAEIF          /*!< CLUT Access Error Interrupt Flag */
@@ -320,7 +320,7 @@ typedef struct __DMA2D_HandleTypeDef
 /**
   * @}
   */
-  
+
 /** @defgroup DMA2D_Aliases DMA2D API Aliases
   * @{
   */
@@ -328,8 +328,8 @@ typedef struct __DMA2D_HandleTypeDef
 /**
   * @}
   */
-  
-  
+
+
 /**
   * @}
   */
@@ -363,7 +363,7 @@ typedef struct __DMA2D_HandleTypeDef
   *            @arg DMA2D_FLAG_CAE: CLUT access error flag
   *            @arg DMA2D_FLAG_TW:  Transfer Watermark flag
   *            @arg DMA2D_FLAG_TC:  Transfer complete flag
-  *            @arg DMA2D_FLAG_TE:  Transfer error flag   
+  *            @arg DMA2D_FLAG_TE:  Transfer error flag
   * @retval The state of FLAG.
   */
 #define __HAL_DMA2D_GET_FLAG(__HANDLE__, __FLAG__) ((__HANDLE__)->Instance->ISR & (__FLAG__))
@@ -378,7 +378,7 @@ typedef struct __DMA2D_HandleTypeDef
   *            @arg DMA2D_FLAG_CAE: CLUT access error flag
   *            @arg DMA2D_FLAG_TW:  Transfer Watermark flag
   *            @arg DMA2D_FLAG_TC:  Transfer complete flag
-  *            @arg DMA2D_FLAG_TE:  Transfer error flag    
+  *            @arg DMA2D_FLAG_TE:  Transfer error flag
   * @retval None
   */
 #define __HAL_DMA2D_CLEAR_FLAG(__HANDLE__, __FLAG__) ((__HANDLE__)->Instance->IFCR = (__FLAG__))
@@ -386,7 +386,7 @@ typedef struct __DMA2D_HandleTypeDef
 /**
   * @brief  Enable the specified DMA2D interrupts.
   * @param  __HANDLE__: DMA2D handle
-  * @param __INTERRUPT__: specifies the DMA2D interrupt sources to be enabled. 
+  * @param __INTERRUPT__: specifies the DMA2D interrupt sources to be enabled.
   *          This parameter can be any combination of the following values:
   *            @arg DMA2D_IT_CE:  Configuration error interrupt mask
   *            @arg DMA2D_IT_CTC: CLUT transfer complete interrupt mask
@@ -401,7 +401,7 @@ typedef struct __DMA2D_HandleTypeDef
 /**
   * @brief  Disable the specified DMA2D interrupts.
   * @param  __HANDLE__: DMA2D handle
-  * @param __INTERRUPT__: specifies the DMA2D interrupt sources to be disabled. 
+  * @param __INTERRUPT__: specifies the DMA2D interrupt sources to be disabled.
   *          This parameter can be any combination of the following values:
   *            @arg DMA2D_IT_CE:  Configuration error interrupt mask
   *            @arg DMA2D_IT_CTC: CLUT transfer complete interrupt mask
@@ -427,22 +427,22 @@ typedef struct __DMA2D_HandleTypeDef
   * @retval The state of INTERRUPT source.
   */
 #define __HAL_DMA2D_GET_IT_SOURCE(__HANDLE__, __INTERRUPT__) ((__HANDLE__)->Instance->CR & (__INTERRUPT__))
-     
+
 /**
   * @}
   */
 
-/* Exported functions --------------------------------------------------------*/  
+/* Exported functions --------------------------------------------------------*/
 /** @addtogroup DMA2D_Exported_Functions DMA2D Exported Functions
   * @{
   */
 
 /** @addtogroup DMA2D_Exported_Functions_Group1 Initialization and de-initialization functions
   * @{
-  */  
-  
+  */
+
 /* Initialization and de-initialization functions *******************************/
-HAL_StatusTypeDef HAL_DMA2D_Init(DMA2D_HandleTypeDef *hdma2d); 
+HAL_StatusTypeDef HAL_DMA2D_Init(DMA2D_HandleTypeDef *hdma2d);
 HAL_StatusTypeDef HAL_DMA2D_DeInit (DMA2D_HandleTypeDef *hdma2d);
 void              HAL_DMA2D_MspInit(DMA2D_HandleTypeDef* hdma2d);
 void              HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef* hdma2d);
@@ -455,7 +455,7 @@ void              HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef* hdma2d);
 /** @addtogroup DMA2D_Exported_Functions_Group2 IO operation functions
   * @{
   */
-  
+
 /* IO operation functions *******************************************************/
 HAL_StatusTypeDef HAL_DMA2D_Start(DMA2D_HandleTypeDef *hdma2d, uint32_t pdata, uint32_t DstAddress, uint32_t Width, uint32_t Height);
 HAL_StatusTypeDef HAL_DMA2D_BlendingStart(DMA2D_HandleTypeDef *hdma2d, uint32_t SrcAddress1, uint32_t SrcAddress2, uint32_t DstAddress, uint32_t Width,  uint32_t Height);
@@ -511,56 +511,56 @@ uint32_t               HAL_DMA2D_GetError(DMA2D_HandleTypeDef *hdma2d);
   * @}
   */
 
-/* Private constants ---------------------------------------------------------*/  
-  
+/* Private constants ---------------------------------------------------------*/
+
 /** @addtogroup DMA2D_Private_Constants DMA2D Private Constants
   * @{
-  */                         
+  */
 
-/** @defgroup DMA2D_Maximum_Line_WaterMark DMA2D Maximum Line Watermark 
+/** @defgroup DMA2D_Maximum_Line_WaterMark DMA2D Maximum Line Watermark
   * @{
   */
 #define DMA2D_LINE_WATERMARK_MAX            DMA2D_LWR_LW       /*!< DMA2D maximum line watermark */
 /**
   * @}
   */
-  
+
 /** @defgroup DMA2D_Color_Value DMA2D Color Value
   * @{
   */
 #define DMA2D_COLOR_VALUE                 ((uint32_t)0x000000FFU)  /*!< Color value mask */
 /**
   * @}
-  */      
+  */
 
-/** @defgroup DMA2D_Offset DMA2D Offset 
+/** @defgroup DMA2D_Offset DMA2D Offset
   * @{
   */
 #define DMA2D_OFFSET                DMA2D_FGOR_LO            /*!< maximum Line Offset */
 /**
   * @}
-  */ 
-  
-/** @defgroup DMA2D_Size DMA2D Size 
+  */
+
+/** @defgroup DMA2D_Size DMA2D Size
   * @{
   */
 #define DMA2D_PIXEL                 (DMA2D_NLR_PL >> 16U)    /*!< DMA2D maximum number of pixels per line */
 #define DMA2D_LINE                  DMA2D_NLR_NL             /*!< DMA2D maximum number of lines           */
 /**
   * @}
-  */    
-  
+  */
+
 /** @defgroup DMA2D_CLUT_Size DMA2D CLUT Size
   * @{
   */
 #define DMA2D_CLUT_SIZE             (DMA2D_FGPFCCR_CS >> 8)  /*!< DMA2D maximum CLUT size */
 /**
   * @}
-  */   
-    
+  */
+
 /**
   * @}
-  */ 
+  */
 
 
 /* Private macros ------------------------------------------------------------*/
@@ -612,7 +612,7 @@ uint32_t               HAL_DMA2D_GetError(DMA2D_HandleTypeDef *hdma2d);
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}
@@ -624,6 +624,6 @@ uint32_t               HAL_DMA2D_GetError(DMA2D_HandleTypeDef *hdma2d);
 #endif
 
 #endif /* __STM32H7xx_HAL_DMA2D_H */
- 
+
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

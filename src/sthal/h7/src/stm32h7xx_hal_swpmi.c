@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_swpmi.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   SWPMI HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of the Single Wire Protocol Master Interface (SWPMI).
@@ -44,7 +44,7 @@
     (#) Program the Bite Rate, Tx Buffering mode, Rx Buffering mode in the Init structure.
 
     (#) Enable the SWPMI peripheral by calling the HAL_SWPMI_Init() function.
-    
+
   @endverbatim
   ******************************************************************************
   * @attention
@@ -322,11 +322,11 @@ __weak void HAL_SWPMI_MspDeInit(SWPMI_HandleTypeDef *hswpmi)
         (++) HAL_SWPMI_RxCpltCallback()
         (++) HAL_SWPMI_ErrorCallback()
 
-    (#) The capability to launch the above IO operations in loopback mode for 
-        user application verification:    
+    (#) The capability to launch the above IO operations in loopback mode for
+        user application verification:
         (++) HAL_SWPMI_EnableLoopback()
         (++) HAL_SWPMI_DisableLoopback()
-        
+
 @endverbatim
   * @{
   */
@@ -494,7 +494,7 @@ HAL_StatusTypeDef HAL_SWPMI_Receive(SWPMI_HandleTypeDef *hswpmi, uint32_t *pData
           }
         }
       } while(Size != 0);
-      
+
       if(status == HAL_OK)
       {
         if(HAL_IS_BIT_SET(hswpmi->Instance->ISR, SWPMI_FLAG_RXBFF))
@@ -587,7 +587,7 @@ HAL_StatusTypeDef HAL_SWPMI_Transmit_IT(SWPMI_HandleTypeDef *hswpmi, uint32_t *p
     else
     {
       status =  HAL_BUSY;
-      
+
       /* Process Unlocked */
       __HAL_UNLOCK(hswpmi);
     }
@@ -648,7 +648,7 @@ HAL_StatusTypeDef HAL_SWPMI_Receive_IT(SWPMI_HandleTypeDef *hswpmi, uint32_t *pD
     else
     {
       status = HAL_BUSY;
-      
+
       /* Process Unlocked */
       __HAL_UNLOCK(hswpmi);
     }
@@ -723,7 +723,7 @@ HAL_StatusTypeDef HAL_SWPMI_Transmit_DMA(SWPMI_HandleTypeDef *hswpmi, uint32_t *
     else
     {
       status = HAL_BUSY;
-      
+
       /* Process Unlocked */
       __HAL_UNLOCK(hswpmi);
     }
@@ -909,11 +909,11 @@ HAL_StatusTypeDef HAL_SWPMI_DisableLoopback(SWPMI_HandleTypeDef *hswpmi)
 /** @defgroup SWPMI_Exported_Group3 SWPMI IRQ handler and callbacks
  *  @brief  SWPMI  IRQ handler.
  *
-@verbatim   
+@verbatim
   ==============================================================================
                       ##### SWPMI IRQ handler and callbacks  #####
-  ==============================================================================  
-[..]  This section provides SWPMI IRQ handler and callback functions called within 
+  ==============================================================================
+[..]  This section provides SWPMI IRQ handler and callback functions called within
       the IRQ handler.
 
 @endverbatim
@@ -969,7 +969,7 @@ void HAL_SWPMI_IRQHandler(SWPMI_HandleTypeDef *hswpmi)
   if(errcode != HAL_SWPMI_ERROR_NONE)
   {
     hswpmi->ErrorCode |= errcode;
-    
+
     if((errcode & HAL_SWPMI_ERROR_UDR) != RESET)
     {
       /* Check TXDMA transfer to abort */
@@ -977,11 +977,11 @@ void HAL_SWPMI_IRQHandler(SWPMI_HandleTypeDef *hswpmi)
       {
         /* Disable DMA TX at SWPMI level */
         CLEAR_BIT(hswpmi->Instance->CR, SWPMI_CR_TXDMA);
-        
+
         /* Abort the USART DMA Tx channel */
         if(hswpmi->hdmatx != NULL)
         {
-          /* Set the SWPMI Tx DMA Abort callback : 
+          /* Set the SWPMI Tx DMA Abort callback :
              will lead to call HAL_SWPMI_ErrorCallback() at end of DMA abort procedure */
           hswpmi->hdmatx->XferAbortCallback = SWPMI_DMAAbortOnError;
           /* Abort DMA TX */
@@ -1014,11 +1014,11 @@ void HAL_SWPMI_IRQHandler(SWPMI_HandleTypeDef *hswpmi)
       {
         /* Disable DMA RX at SWPMI level */
         CLEAR_BIT(hswpmi->Instance->CR, SWPMI_CR_RXDMA);
-        
+
         /* Abort the USART DMA Rx channel */
         if(hswpmi->hdmarx != NULL)
         {
-          /* Set the SWPMI Rx DMA Abort callback : 
+          /* Set the SWPMI Rx DMA Abort callback :
              will lead to call HAL_SWPMI_ErrorCallback() at end of DMA abort procedure */
           hswpmi->hdmarx->XferAbortCallback = SWPMI_DMAAbortOnError;
           /* Abort DMA RX */
@@ -1260,7 +1260,7 @@ static HAL_StatusTypeDef SWPMI_EndTransmit_IT(SWPMI_HandleTypeDef *hswpmi)
   {
     hswpmi->State = HAL_SWPMI_STATE_READY;
   }
-  
+
   HAL_SWPMI_TxCpltCallback(hswpmi);
 
   return HAL_OK;

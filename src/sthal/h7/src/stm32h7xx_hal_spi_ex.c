@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_spi_ex.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Extended SPI HAL module driver.
   *          This file provides firmware functions to manage the following
   *          SPI peripheral extended functionalities :
@@ -79,7 +79,6 @@
         (++) HAL_SPIEx_FlushRxFifo()
         (++) HAL_SPIEx_FlushRxFifo()
         (++) HAL_SPIEx_EnableLockConfiguration()
-        (++) HAL_SPIEx_DisableLockConfiguration()
         (++) HAL_SPIEx_ConfigureUnderrun()
 
 @endverbatim
@@ -101,7 +100,7 @@ HAL_StatusTypeDef HAL_SPIEx_FlushRxFifo(SPI_HandleTypeDef *hspi)
     count+=4;
     tmpreg = hspi->Instance->RXDR;
     UNUSED(tmpreg); /* To avoid GCC warning */
-    
+
     if (IS_SPI_HIGHEND_INSTANCE(hspi->Instance))
     {
       if(count > SPI_HIGHEND_FIFO_SIZE)
@@ -168,52 +167,6 @@ HAL_StatusTypeDef HAL_SPIEx_EnableLockConfiguration(SPI_HandleTypeDef *hspi)
 }
 
 /**
-  * @brief  Disable the Lock for the AF configuration of associated IOs
-  * @param  hspi: pointer to a SPI_HandleTypeDef structure that contains
-  *               the configuration information for SPI module.
-  * @retval None
-  */
-HAL_StatusTypeDef HAL_SPIEx_DisableLockConfiguration(SPI_HandleTypeDef *hspi)
-{
-  HAL_StatusTypeDef errorcode = HAL_OK;
-
-  /* Process Locked */
-  __HAL_LOCK(hspi);
-
-  if (hspi->State != HAL_SPI_STATE_READY)
-  {
-    errorcode = HAL_BUSY;
-    hspi->State = HAL_SPI_STATE_READY;
-    /* Process Unlocked */
-    __HAL_UNLOCK(hspi);
-    return errorcode;
-  }
-
-  /* Check if the SPI is disabled to edit IOLOCK bit */
-  if ((hspi->Instance->CR1 & SPI_CR1_SPE) != SPI_CR1_SPE)
-  {
-    CLEAR_BIT(hspi->Instance->CR1 , SPI_CR1_IOLOCK);
-  }
-  else
-  {
-    /* Disable SPI peripheral */
-    __HAL_SPI_DISABLE(hspi);
-
-    CLEAR_BIT(hspi->Instance->CR1 , SPI_CR1_IOLOCK);
-
-    /* Enable SPI peripheral */
-    __HAL_SPI_ENABLE(hspi);
-  }
-
-  hspi->Instance->CR1 &= ~(SPI_CR1_IOLOCK);
-
-  hspi->State = HAL_SPI_STATE_READY;
-  /* Process Unlocked */
-  __HAL_UNLOCK(hspi);
-  return errorcode;
-}
-
-/**
   * @brief  Configure the UNDERRUN condition and behavior of slave transmitter.
   * @param  hspi: pointer to a SPI_HandleTypeDef structure that contains
   *               the configuration information for SPI module.
@@ -222,7 +175,7 @@ HAL_StatusTypeDef HAL_SPIEx_DisableLockConfiguration(SPI_HandleTypeDef *hspi)
   * @param  UnderrunBehaviour : Behavior of slave transmitter at underrun condition
   *                             This parameter can be a value of @ref SPI_Underrun_Behaviour.
   * @retval None
-  */ 
+  */
 HAL_StatusTypeDef HAL_SPIEx_ConfigureUnderrun(SPI_HandleTypeDef *hspi, uint32_t UnderrunDetection, uint32_t UnderrunBehaviour)
 {
   HAL_StatusTypeDef errorcode = HAL_OK;

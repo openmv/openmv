@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_adc_ex.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   This file provides firmware functions to manage the following
   *          functionalities of the Analog to Digital Convertor (ADC)
   *          peripheral:
@@ -447,7 +447,7 @@ HAL_StatusTypeDef HAL_ADCEx_InjectedStart(ADC_HandleTypeDef* hadc)
   else
   {
 
-    /* In case of software trigger detection enabled, JQDIS must be set         
+    /* In case of software trigger detection enabled, JQDIS must be set
       (which can be done only if ADSTART and JADSTART are both cleared).
        If JQDIS is not set at that point, returns an error
        - since software trigger detection is disabled. User needs to
@@ -1967,6 +1967,8 @@ HAL_StatusTypeDef HAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
   /*    mode is disabled.                                                     */
   if (ADC_IS_CONVERSION_ONGOING_INJECTED(hadc) == RESET)
   {
+    /* ADC channels preselection */
+    hadc->Instance->PCSEL |= (1U << sConfigInjected->InjectedChannel);
 
     /* If auto-injected mode is disabled: no constraint                       */
     if (sConfigInjected->AutoInjectedConv == DISABLE)
@@ -2098,7 +2100,7 @@ HAL_StatusTypeDef HAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
           CLEAR_BIT(hadc->Instance->OFR1, ADC_OFR1_SSATE);
         }
         break;
-      
+
       case ADC_OFFSET_2:
         /* Configure offset register 2:                                         */
         /* - Enable offset                                                      */
@@ -2119,7 +2121,7 @@ HAL_StatusTypeDef HAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
           CLEAR_BIT(hadc->Instance->OFR2, ADC_OFR2_SSATE);
         }
         break;
-      
+
       case ADC_OFFSET_3:
         /* Configure offset register 3:                                         */
         /* - Enable offset                                                      */
@@ -2140,7 +2142,7 @@ HAL_StatusTypeDef HAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
           CLEAR_BIT(hadc->Instance->OFR3, ADC_OFR3_SSATE);
         }
         break;
-      
+
       case ADC_OFFSET_4:
         /* Configure offset register 1:                                         */
         /* - Enable offset                                                      */
@@ -2160,7 +2162,7 @@ HAL_StatusTypeDef HAL_ADCEx_InjectedConfigChannel(ADC_HandleTypeDef* hadc, ADC_I
           CLEAR_BIT(hadc->Instance->OFR4, ADC_OFR4_SSATE);
         }
         break;
-      
+
       /* Case ADC_OFFSET_NONE */
       default :
         break;

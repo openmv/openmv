@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_smbus.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of SMBUS HAL module.
   ******************************************************************************
   * @attention
@@ -281,9 +281,9 @@ typedef struct
   */
 
 #define  SMBUS_NO_STARTSTOP                     (0x00000000U)
-#define  SMBUS_GENERATE_STOP                    I2C_CR2_STOP
-#define  SMBUS_GENERATE_START_READ              (uint32_t)(I2C_CR2_START | I2C_CR2_RD_WRN)
-#define  SMBUS_GENERATE_START_WRITE             I2C_CR2_START
+#define  SMBUS_GENERATE_STOP                    (uint32_t)(0x80000000U | I2C_CR2_STOP)
+#define  SMBUS_GENERATE_START_READ              (uint32_t)(0x80000000U | I2C_CR2_START | I2C_CR2_RD_WRN)
+#define  SMBUS_GENERATE_START_WRITE             (uint32_t)(0x80000000U | I2C_CR2_START)
 /**
   * @}
   */

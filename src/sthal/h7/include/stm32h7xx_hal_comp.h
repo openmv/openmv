@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_comp.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of COMP HAL module.
   ******************************************************************************
   * @attention
@@ -32,7 +32,7 @@
   * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
-  ******************************************************************************  
+  ******************************************************************************
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
@@ -54,13 +54,13 @@
   * @{
   */
 
-/* Exported types ------------------------------------------------------------*/ 
+/* Exported types ------------------------------------------------------------*/
 /** @defgroup COMP_Exported_Types COMP Exported Types
   * @{
   */
 
-/** 
-  * @brief  COMP Init structure definition  
+/**
+  * @brief  COMP Init structure definition
   */
 typedef struct
 {
@@ -109,7 +109,7 @@ typedef enum
   HAL_COMP_STATE_BUSY_LOCKED       = (HAL_COMP_STATE_BUSY | COMP_STATE_BITFIELD_LOCK)   /*!< COMP is running and configuration is locked          */
 }HAL_COMP_StateTypeDef;
 
-/** 
+/**
   * @brief  COMP Handle Structure definition
   */
 typedef struct
@@ -217,7 +217,7 @@ typedef struct
 
 /** @defgroup COMP_OutputLevel COMP Output Level
   * @{
-  */ 
+  */
 
 /* Note: Comparator output level values are fixed to "0" and "1",             */
 /* corresponding COMP register bit is managed by HAL function to match        */
@@ -269,17 +269,17 @@ typedef struct
 /** @defgroup COMP_Interrupts_Definitions COMP Interrupts Definitions
   * @{
   */
-#define COMP_IT_EN               COMP_CFGRx_ITEN 
+#define COMP_IT_EN               COMP_CFGRx_ITEN
 
 /**
   * @}
   */
-  
+
 
 /**
   * @}
   */
- 
+
 /* Exported macros -----------------------------------------------------------*/
 /** @defgroup COMP_Exported_Macros COMP Exported Macros
   * @{
@@ -329,41 +329,41 @@ typedef struct
 /**
   * @}
   */
-  
+
 /** @defgroup COMP_Exti_Management  COMP external interrupt line management
   * @{
   */
 
 /**
-  * @brief  Enable the COMP1 EXTI line rising edge trigger. 
+  * @brief  Enable the COMP1 EXTI line rising edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP1_EXTI_ENABLE_RISING_EDGE()    SET_BIT(EXTI->RTSR1, COMP_EXTI_LINE_COMP1)
 
 
 /**
-  * @brief  Disable the COMP1 EXTI line rising edge trigger. 
+  * @brief  Disable the COMP1 EXTI line rising edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP1_EXTI_DISABLE_RISING_EDGE()    CLEAR_BIT(EXTI->RTSR1, COMP_EXTI_LINE_COMP1)
 
 /**
-  * @brief  Enable the COMP1 EXTI line falling edge trigger. 
+  * @brief  Enable the COMP1 EXTI line falling edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP1_EXTI_ENABLE_FALLING_EDGE()    SET_BIT(EXTI->FTSR1, COMP_EXTI_LINE_COMP1)
 
 /**
   * @brief  Disable the COMP1 EXTI line falling edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP1_EXTI_DISABLE_FALLING_EDGE()    CLEAR_BIT(EXTI->FTSR1, COMP_EXTI_LINE_COMP1)
 
 
 /**
-  * @brief  Enable the COMP1 EXTI line rising & falling edge trigger. 
+  * @brief  Enable the COMP1 EXTI line rising & falling edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP1_EXTI_ENABLE_RISING_FALLING_EDGE()   do { \
                                                                __HAL_COMP_COMP1_EXTI_ENABLE_RISING_EDGE(); \
                                                                __HAL_COMP_COMP1_EXTI_ENABLE_FALLING_EDGE(); \
@@ -371,9 +371,9 @@ typedef struct
 
 
 /**
-  * @brief  Disable the COMP1 EXTI line rising & falling edge trigger. 
+  * @brief  Disable the COMP1 EXTI line rising & falling edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP1_EXTI_DISABLE_RISING_FALLING_EDGE()  do { \
                                                                __HAL_COMP_COMP1_EXTI_DISABLE_RISING_EDGE(); \
                                                                __HAL_COMP_COMP1_EXTI_DISABLE_FALLING_EDGE(); \
@@ -383,7 +383,7 @@ typedef struct
 /**
   * @brief  Enable the COMP1 EXTI line in interrupt mode.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP1_EXTI_ENABLE_IT()             SET_BIT(EXTI_D1->IMR1, COMP_EXTI_LINE_COMP1)
 
 /**
@@ -437,31 +437,31 @@ typedef struct
 /**
   * @brief  Enable the COMP2 EXTI line rising edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP2_EXTI_ENABLE_RISING_EDGE()    SET_BIT(EXTI->RTSR1, COMP_EXTI_LINE_COMP2)
 
 /**
   * @brief  Disable the COMP2 EXTI line rising edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP2_EXTI_DISABLE_RISING_EDGE()   CLEAR_BIT(EXTI->RTSR1, COMP_EXTI_LINE_COMP2)
 
 /**
   * @brief  Enable the COMP2 EXTI line falling edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP2_EXTI_ENABLE_FALLING_EDGE()   SET_BIT(EXTI->FTSR1, COMP_EXTI_LINE_COMP2)
 
 /**
-  * @brief  Disable the COMP2 EXTI line falling edge trigger. 
+  * @brief  Disable the COMP2 EXTI line falling edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP2_EXTI_DISABLE_FALLING_EDGE()  CLEAR_BIT(EXTI->FTSR1, COMP_EXTI_LINE_COMP2)
 
 /**
   * @brief  Enable the COMP2 EXTI line rising & falling edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP2_EXTI_ENABLE_RISING_FALLING_EDGE()   do { \
                                                                __HAL_COMP_COMP2_EXTI_ENABLE_RISING_EDGE(); \
                                                                __HAL_COMP_COMP2_EXTI_ENABLE_FALLING_EDGE(); \
@@ -470,7 +470,7 @@ typedef struct
 /**
   * @brief  Disable the COMP2 EXTI line rising & falling edge trigger.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP2_EXTI_DISABLE_RISING_FALLING_EDGE()   do { \
                                                                __HAL_COMP_COMP2_EXTI_DISABLE_RISING_EDGE(); \
                                                                __HAL_COMP_COMP2_EXTI_DISABLE_FALLING_EDGE(); \
@@ -478,7 +478,7 @@ typedef struct
 /**
   * @brief  Enable the COMP2 EXTI line.
   * @retval None
-  */                                         
+  */
 #define __HAL_COMP_COMP2_EXTI_ENABLE_IT()             SET_BIT(EXTI_D1->IMR1, COMP_EXTI_LINE_COMP2)
 
 /**
@@ -535,7 +535,7 @@ typedef struct
   * @param  __INTERRUPT__: specifies the COMP interrupt source to check.
   *          This parameter can be one of the following values:
   *            @arg COMP_IT_EN: Comparator interrupt enable
-  *   
+  *
   * @retval The new state of __IT__ (TRUE or FALSE)
   */
 #define __HAL_COMP_GET_IT_SOURCE(__HANDLE__, __INTERRUPT__) ((((__HANDLE__)->Instance->CFGR & (__INTERRUPT__)) == (__INTERRUPT__)) ? SET : RESET)
@@ -547,7 +547,7 @@ typedef struct
   *            @arg COMP_FLAG_C2I:  Comparator 2 Interrupt Flag
   *            @retval The new state of __FLAG__ (TRUE or FALSE)
   */
-#define __HAL_COMP_GET_FLAG(__FLAG__)     ((COMP12->SR & (__FLAG__)) == (__FLAG__))   
+#define __HAL_COMP_GET_FLAG(__FLAG__)     ((COMP12->SR & (__FLAG__)) == (__FLAG__))
 
 /** @brief  Clears the specified COMP pending flag.
   * @param  __FLAG__: specifies the flag to check.
@@ -601,7 +601,7 @@ typedef struct
   *            @arg COMP_OR_AFOPG3  :  Alternate Function PG3 source selection
   *            @arg COMP_OR_AFOPG4  :  Alternate Function PG4 source selection
   *            @arg COMP_OR_AFOPI1  :  Alternate Function PI1 source selection
-  *            @arg COMP_OR_AFOPI4  :  Alternate Function PI4 source selection 
+  *            @arg COMP_OR_AFOPI4  :  Alternate Function PI4 source selection
   *            @arg COMP_OR_AFOPK2  :  Alternate Function PK2 source selection
   * @retval None
   */
@@ -620,7 +620,7 @@ typedef struct
   *            @arg COMP_OR_AFOPG4  :  Alternate Function PG4 source selection
   *            @arg COMP_OR_AFOPI1  :  Alternate Function PI1 source selection
   *            @arg COMP_OR_AFOPI4  :  Alternate Function PI4 source selection
-  *            @arg COMP_OR_AFOPK2  :  Alternate Function PK2 source selection  
+  *            @arg COMP_OR_AFOPK2  :  Alternate Function PK2 source selection
   * @retval None
   */
 #define __HAL_COMP_DISABLE_OR(__AF__) CLEAR_BIT(COMP12->OR, (__AF__))
@@ -659,7 +659,7 @@ typedef struct
 /** @defgroup COMP_Private_Macros COMP Private Macros
   * @{
   */
-/** @defgroup COMP_GET_EXTI_LINE COMP Private macros to get EXTI line associated with Comparators 
+/** @defgroup COMP_GET_EXTI_LINE COMP Private macros to get EXTI line associated with Comparators
   * @{
   */
 /**
@@ -685,7 +685,7 @@ typedef struct
 
 #define IS_COMP_INPUT_PLUS(__COMP_INSTANCE__, __INPUT_PLUS__) (((__INPUT_PLUS__) == COMP_INPUT_PLUS_IO1) || \
                                                                ((__INPUT_PLUS__) == COMP_INPUT_PLUS_IO2))
-                                                              
+
 
 
 #define IS_COMP_INPUT_MINUS(__COMP_INSTANCE__, __INPUT_MINUS__) (((__INPUT_MINUS__) == COMP_INPUT_MINUS_1_4VREFINT)  || \

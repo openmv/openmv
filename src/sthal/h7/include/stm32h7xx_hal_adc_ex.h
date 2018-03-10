@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_adc_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of ADC HAL extended module.
   ******************************************************************************
   * @attention
@@ -633,7 +633,7 @@ typedef struct
 
 /**
   * @brief Verify the length of scheduled injected conversions group.
-  * @param LENGTH : number of programmed conversions.   
+  * @param LENGTH : number of programmed conversions.
   * @retval SET (LENGTH is within the maximum number of possible programmable injected conversions) or RESET (LENGTH is null or too large)
   */
 #define IS_ADC_INJECTED_NB_CONV(LENGTH) (((LENGTH) >= ((uint32_t)1)) && ((LENGTH) <= ((uint32_t)4)))
@@ -1148,7 +1148,7 @@ typedef struct
 
 /**
   * @brief Verify the ADC single-ended input or differential mode setting.
-  * @param SING_DIFF: programmed channel setting. 
+  * @param SING_DIFF: programmed channel setting.
   * @retval SET (SING_DIFF is valid) or RESET (SING_DIFF is invalid)
   */
 #define IS_ADC_SINGLE_DIFFERENTIAL(SING_DIFF) (((SING_DIFF) == ADC_SINGLE_ENDED)      || \
@@ -1156,7 +1156,7 @@ typedef struct
 
 /**
   * @brief Verify the ADC offset management setting.
-  * @param OFFSET_NUMBER: ADC offset management. 
+  * @param OFFSET_NUMBER: ADC offset management.
   * @retval SET (OFFSET_NUMBER is valid) or RESET (OFFSET_NUMBER is invalid)
   */
 #define IS_ADC_OFFSET_NUMBER(OFFSET_NUMBER) (((OFFSET_NUMBER) == ADC_OFFSET_NONE) || \
@@ -1167,7 +1167,7 @@ typedef struct
 
 /**
   * @brief Verify the ADC injected channel setting.
-  * @param CHANNEL: programmed ADC injected channel. 
+  * @param CHANNEL: programmed ADC injected channel.
   * @retval SET (CHANNEL is valid) or RESET (__CHANNEL__ is invalid)
   */
 #define IS_ADC_INJECTED_RANK(CHANNEL) (((CHANNEL) == ADC_INJECTED_RANK_1) || \
@@ -1179,7 +1179,7 @@ typedef struct
   * @brief Verify the ADC injected conversions external trigger.
   * @param INJTRIG: programmed ADC injected conversions external trigger.
   * @retval SET (INJTRIG is a valid value) or RESET (INJTRIG is invalid)
-  */ 
+  */
 #define IS_ADC_EXTTRIGINJEC(INJTRIG) (((INJTRIG) == ADC_EXTERNALTRIGINJEC_T1_TRGO)     || \
                                       ((INJTRIG) == ADC_EXTERNALTRIGINJEC_T1_CC4)      || \
                                       ((INJTRIG) == ADC_EXTERNALTRIGINJEC_T2_TRGO)     || \
@@ -1203,7 +1203,7 @@ typedef struct
   * @brief Verify the ADC edge trigger setting for injected group.
   * @param EDGE: programmed ADC edge trigger setting.
   * @retval SET (EDGE is a valid value) or RESET (EDGE is invalid)
-  */ 
+  */
 #define IS_ADC_EXTTRIGINJEC_EDGE(EDGE) (((EDGE) == ADC_EXTERNALTRIGINJECCONV_EDGE_NONE)         || \
                                         ((EDGE) == ADC_EXTERNALTRIGINJECCONV_EDGE_RISING)       || \
                                         ((EDGE) == ADC_EXTERNALTRIGINJECCONV_EDGE_FALLING)      || \
@@ -1213,7 +1213,7 @@ typedef struct
   * @brief Verify the ADC multimode setting.
   * @param MODE: programmed ADC multimode setting.
   * @retval SET (MODE is valid) or RESET (MODE is invalid)
-  */ 
+  */
 #define IS_ADC_MODE(MODE) (((MODE) == ADC_MODE_INDEPENDENT)               || \
                            ((MODE) == ADC_DUALMODE_REGSIMULT_INJECSIMULT) || \
                            ((MODE) == ADC_DUALMODE_REGSIMULT_ALTERTRIG)   || \
@@ -1298,14 +1298,14 @@ typedef struct
                                      ((SCAN_MODE) == ADC_SCAN_ENABLE)    )
 
 /**
-  * @brief Verify the ADC oversampling ratio. 
+  * @brief Verify the ADC oversampling ratio.
   * @param RATIO: programmed ADC oversampling ratio.
   * @retval SET (RATIO is a valid value) or RESET (RATIO is invalid)
   */
 #define IS_ADC_OVERSAMPLING_RATIO(RATIO)  ((RATIO) < 1024)
 
 /**
-  * @brief Verify the ADC oversampling right shift. 
+  * @brief Verify the ADC oversampling right shift.
   * @param SHIFT: programmed ADC oversampling right shift.
   * @retval SET (SHIFT is a valid value) or RESET (SHIFT is invalid)
   */
@@ -1320,7 +1320,7 @@ typedef struct
                                                      ((SHIFT) == ADC_RIGHTBITSHIFT_8   ))
 
 /**
-  * @brief Verify the ADC oversampling left shift. 
+  * @brief Verify the ADC oversampling left shift.
   * @param SHIFT: programmed ADC oversampling left shift.
   * @retval SET (SHIFT is a valid value) or RESET (SHIFT is invalid)
   */
@@ -1342,18 +1342,18 @@ typedef struct
                                                      ((SHIFT) == ADC_LEFTBITSHIFT_15   ))
 
 /**
-  * @brief Verify the ADC oversampling triggered mode. 
-  * @param MODE: programmed ADC oversampling triggered mode. 
+  * @brief Verify the ADC oversampling triggered mode.
+  * @param MODE: programmed ADC oversampling triggered mode.
   * @retval SET (MODE is valid) or RESET (MODE is invalid)
-  */ 
+  */
 #define IS_ADC_TRIGGERED_OVERSAMPLING_MODE(MODE) (((MODE) == ADC_TRIGGEREDMODE_SINGLE_TRIGGER) || \
                                                   ((MODE) == ADC_TRIGGEREDMODE_MULTI_TRIGGER) )
 
 /**
-  * @brief Verify the ADC oversampling regular conversion resumed or continued mode. 
-  * @param MODE: programmed ADC oversampling regular conversion resumed or continued mode. 
+  * @brief Verify the ADC oversampling regular conversion resumed or continued mode.
+  * @param MODE: programmed ADC oversampling regular conversion resumed or continued mode.
   * @retval SET (MODE is valid) or RESET (MODE is invalid)
-  */ 
+  */
 #define IS_ADC_REGOVERSAMPLING_MODE(MODE) (((MODE) == ADC_REGOVERSAMPLING_CONTINUED_MODE) || \
                                            ((MODE) == ADC_REGOVERSAMPLING_RESUMED_MODE) )
 

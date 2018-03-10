@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_i2s_ex.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   I2S HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of I2S extension peripheral:
@@ -188,7 +188,7 @@ static HAL_StatusTypeDef I2SEx_WaitFlagStateUntilTimeout(I2S_HandleTypeDef *hi2s
   * @param  pRxData: a 16-bit pointer to the Receive data buffer
   * @param  Size: number of frames to be sent
   * @param  Timeout: Timeout duration
-  * @note   The I2S is kept enabled at the end of transaction to avoid the clock de-synchronization 
+  * @note   The I2S is kept enabled at the end of transaction to avoid the clock de-synchronization
   *         between Master and Slave(example: audio streaming).
   * @note   This function can use an Audio Frequency up to 48KHz when I2S Clock Source is 32MHz
   * @retval HAL status
@@ -272,7 +272,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive(I2S_HandleTypeDef *hi2s, uint16_t *p
           hi2s->pTxBuffPtr += sizeof(uint32_t);
           hi2s->TxXferCount --;
         }
-  
+
         /* Check RXNE flag */
         if ((hi2s->RxXferCount > 0U) && (__HAL_I2S_GET_FLAG(hi2s, I2S_FLAG_RXNE)))
         {
@@ -298,7 +298,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive(I2S_HandleTypeDef *hi2s, uint16_t *p
       }
     }
     /* Transmit and Receive data in 16 Bit mode */
-    else 
+    else
     {
       while ((hi2s->TxXferCount > 0U) || (hi2s->RxXferCount > 0U))
       {
@@ -382,12 +382,12 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive(I2S_HandleTypeDef *hi2s, uint16_t *p
   * @param pRxData: a 16-bit pointer to the Receive data buffer.
   * @param Size: number of data sample to be sent:
   * @note When a 16-bit data frame or a 16-bit data frame extended is selected during the I2S
-  *       configuration phase, the Size parameter means the number of 16-bit data length 
-  *       in the transaction and when a 24-bit data frame or a 32-bit data frame is selected 
-  *       the Size parameter means the number of 16-bit data length. 
-  * @note The I2S is kept enabled at the end of transaction to avoid the clock de-synchronization 
+  *       configuration phase, the Size parameter means the number of 16-bit data length
+  *       in the transaction and when a 24-bit data frame or a 32-bit data frame is selected
+  *       the Size parameter means the number of 16-bit data length.
+  * @note The I2S is kept enabled at the end of transaction to avoid the clock de-synchronization
   *       between Master and Slave(example: audio streaming).
-  * @note This function can use an Audio Frequency up to 48KHz when I2S Clock Source is 32MHz  
+  * @note This function can use an Audio Frequency up to 48KHz when I2S Clock Source is 32MHz
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_IT(I2S_HandleTypeDef *hi2s, uint16_t *pTxData, uint16_t *pRxData, uint16_t Size)
@@ -398,7 +398,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_IT(I2S_HandleTypeDef *hi2s, uint16_t
   /* Process Locked */
   __HAL_LOCK(hi2s);
 
-  if((pTxData == NULL) || (pRxData == NULL) || (Size == 0U)) 
+  if((pTxData == NULL) || (pRxData == NULL) || (Size == 0U))
   {
     __HAL_UNLOCK(hi2s);
     return  HAL_ERROR;
@@ -463,7 +463,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_IT(I2S_HandleTypeDef *hi2s, uint16_t
   * @param  pTxData: a 16-bit pointer to the Transmit data buffer.
   * @param  pRxData: a 16-bit pointer to the Receive data buffer.
   * @param  Size: number of frames to be sent.
-  * @note   The I2S is kept enabled at the end of transaction to avoid the clock de-synchronization 
+  * @note   The I2S is kept enabled at the end of transaction to avoid the clock de-synchronization
   *         between Master and Slave(example: audio streaming).
   * @retval HAL status
   */
@@ -472,7 +472,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_DMA(I2S_HandleTypeDef *hi2s, uint16_
   /* Check Mode parameter */
   assert_param(IS_I2S_FD_MODE(hi2s->Init.Mode));
 
-  if((pTxData == NULL) || (Size == 0U)) 
+  if((pTxData == NULL) || (Size == 0U))
   {
     return  HAL_ERROR;
   }
@@ -481,7 +481,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_DMA(I2S_HandleTypeDef *hi2s, uint16_
   __HAL_LOCK(hi2s);
 
   if(hi2s->State == HAL_I2S_STATE_READY)
-  {  
+  {
     hi2s->pTxBuffPtr = pTxData;
     hi2s->pRxBuffPtr = pRxData;
     hi2s->State = HAL_I2S_STATE_BUSY_TX_RX;
@@ -517,7 +517,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_DMA(I2S_HandleTypeDef *hi2s, uint16_
     /* Enable the Rx DMA Channel */
     HAL_DMA_Start_IT(hi2s->hdmarx, (uint32_t)&hi2s->Instance->RXDR, (uint32_t)hi2s->pRxBuffPtr, hi2s->RxXferSize);
 
-    /* Check if the I2S Rx requests are already enabled */ 
+    /* Check if the I2S Rx requests are already enabled */
     if(HAL_IS_BIT_CLR(hi2s->Instance->CFG1, SPI_CFG1_RXDMAEN))
     {
       /* Check if the SPI2S is disabled to edit CFG1 register */
@@ -530,7 +530,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_DMA(I2S_HandleTypeDef *hi2s, uint16_
       {
         /* Disable SPI peripheral */
         __HAL_I2S_DISABLE(hi2s);
-    
+
         /* Enable Rx DMA Request */
         SET_BIT(hi2s->Instance->CFG1, SPI_CFG1_RXDMAEN);
 
@@ -548,7 +548,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_DMA(I2S_HandleTypeDef *hi2s, uint16_
     /* Enable the Tx DMA Channel */
     HAL_DMA_Start_IT(hi2s->hdmatx, (uint32_t)hi2s->pTxBuffPtr, (uint32_t)&hi2s->Instance->TXDR, hi2s->TxXferSize);
 
-    /* Check if the I2S Tx requests are already enabled */ 
+    /* Check if the I2S Tx requests are already enabled */
     if(HAL_IS_BIT_CLR(hi2s->Instance->CFG1, SPI_CFG1_TXDMAEN))
     {
       /* Check if the SPI2S is disabled to edit CFG1 register */
@@ -561,7 +561,7 @@ HAL_StatusTypeDef HAL_I2SEx_TransmitReceive_DMA(I2S_HandleTypeDef *hi2s, uint16_
       {
         /* Disable SPI peripheral */
         __HAL_I2S_DISABLE(hi2s);
-    
+
         /* Enable Tx/Rx DMA Request */
         SET_BIT(hi2s->Instance->CFG1, SPI_CFG1_TXDMAEN);
 
@@ -628,7 +628,7 @@ __weak void HAL_I2SEx_TxRxCpltCallback(I2S_HandleTypeDef *hi2s)
   */
 
 /**
-  * @brief  DMA I2S transmit receive process complete callback 
+  * @brief  DMA I2S transmit receive process complete callback
   * @param  hdma: pointer to a DMA_HandleTypeDef structure that contains
   *         the configuration information for the specified DMA module.
   * @retval None
@@ -649,10 +649,10 @@ static void I2SEx_DMATxRxCplt(DMA_HandleTypeDef *hdma)
     {
       /* Disable SPI peripheral */
       __HAL_I2S_DISABLE(hi2s);
-  
+
       /* Disable Rx DMA Request */
       CLEAR_BIT(hi2s->Instance->CFG1, SPI_CFG1_RXDMAEN | SPI_CFG1_TXDMAEN);
-  
+
       /* Enable SPI peripheral */
       __HAL_I2S_ENABLE(hi2s);
     }
@@ -671,7 +671,7 @@ static void I2SEx_DMATxRxCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA I2S transmit receive process half complete callback 
+  * @brief  DMA I2S transmit receive process half complete callback
   * @param  hdma: pointer to a DMA_HandleTypeDef structure that contains
   *         the configuration information for the specified DMA module.
   * @retval None
@@ -920,7 +920,7 @@ static HAL_StatusTypeDef I2SEx_WaitFlagStateUntilTimeout(I2S_HandleTypeDef *hi2s
 /**
   * @}
   */
-  
+
 /**
   * @}
   */

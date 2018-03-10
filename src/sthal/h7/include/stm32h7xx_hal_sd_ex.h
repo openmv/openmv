@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_sd_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of SD HAL extended module.
   ******************************************************************************
   * @attention
@@ -33,7 +33,7 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32H7xx_HAL_SD_EX_H
@@ -53,7 +53,7 @@
 /** @addtogroup SDEx
   * @brief SD HAL extended module driver
   * @{
-  */ 
+  */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup SDEx_Exported_Types SDEx Exported Types
@@ -62,7 +62,7 @@
 
 /** @defgroup SDEx_Exported_Types_Group1 SD Card Internal DMA Buffer structure
   * @{
-  */ 
+  */
 typedef enum
 {
   SD_DMA_BUFFER0      = 0x00U,    /*!< selects SD internal DMA Buffer 0     */
@@ -71,20 +71,20 @@ typedef enum
 }HAL_SDEx_DMABuffer_MemoryTypeDef;
 
 
-/** 
+/**
   * @}
   */
-  
-/** 
+
+/**
   * @}
-  */  
+  */
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup SDEx_Exported_Functions SDEx Exported Functions
   * @{
   */
-  
+
 /** @defgroup SDEx_Exported_Functions_Group1 MultiBuffer functions
   * @{
   */
@@ -101,11 +101,11 @@ void HAL_SDEx_Write_DMADoubleBuffer1CpltCallback(SD_HandleTypeDef *hsd);
 /**
   * @}
   */
-  
+
 /**
   * @}
   */
-  
+
 /* Private types -------------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -113,7 +113,7 @@ void HAL_SDEx_Write_DMADoubleBuffer1CpltCallback(SD_HandleTypeDef *hsd);
 /* Private macros ------------------------------------------------------------*/
 /* Private functions prototypes ----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
-  
+
 /**
   * @}
   */
@@ -126,6 +126,6 @@ void HAL_SDEx_Write_DMADoubleBuffer1CpltCallback(SD_HandleTypeDef *hsd);
 #endif
 
 
-#endif /* __STM32H7xx_HAL_SDEx_H */ 
+#endif /* __STM32H7xx_HAL_SDEx_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

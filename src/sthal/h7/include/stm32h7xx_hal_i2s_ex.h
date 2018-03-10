@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_i2s_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of I2S HAL module.
   ******************************************************************************
   * @attention

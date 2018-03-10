@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_sai_ex.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   SAI Extended HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionality of the SAI Peripheral Controller:
@@ -84,8 +84,8 @@
 
 /**
   * @brief  Configure PDM microphone delays.
-  * @param  hsai: SAI handle.
-  * @param  pdmMicDelay: Microphone delays configuration.
+  * @param  hsai SAI handle.
+  * @param  pdmMicDelay Microphone delays configuration.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_SAIEx_ConfigPdmMicDelay(SAI_HandleTypeDef *hsai, SAIEx_PdmMicDelayParamTypeDef *pdmMicDelay)

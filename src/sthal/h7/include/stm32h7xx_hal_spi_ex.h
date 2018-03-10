@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_spi_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of SPI HAL Extended module.
   ******************************************************************************
   * @attention
@@ -69,7 +69,6 @@ extern "C" {
   */
 HAL_StatusTypeDef HAL_SPIEx_FlushRxFifo(SPI_HandleTypeDef *hspi);
 HAL_StatusTypeDef HAL_SPIEx_EnableLockConfiguration(SPI_HandleTypeDef *hspi);
-HAL_StatusTypeDef HAL_SPIEx_DisableLockConfiguration(SPI_HandleTypeDef *hspi);
 HAL_StatusTypeDef HAL_SPIEx_ConfigureUnderrun(SPI_HandleTypeDef *hspi, uint32_t UnderrunDetection, uint32_t UnderrunBehaviour);
 /**
   * @}

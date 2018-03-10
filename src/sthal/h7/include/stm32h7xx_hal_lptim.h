@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_lptim.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    31-August-2017
+  * @version V1.2.0
+  * @date   29-December-2017
   * @brief   Header file of LPTIM HAL module.
   ******************************************************************************
   * @attention
@@ -42,7 +42,7 @@
 #ifdef __cplusplus
  extern "C" {
 #endif
-  
+
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal_def.h"
 
@@ -54,13 +54,13 @@
   * @{
   */
 
-/* Exported types ------------------------------------------------------------*/ 
+/* Exported types ------------------------------------------------------------*/
 /** @defgroup LPTIM_Exported_Types LPTIM Exported Types
   * @{
   */
 
-/** 
-  * @brief  LPTIM Clock configuration definition  
+/**
+  * @brief  LPTIM Clock configuration definition
   */
 typedef struct
 {
@@ -69,11 +69,11 @@ typedef struct
 
   uint32_t Prescaler;      /*!< Specifies the counter clock Prescaler.
                            This parameter can be a value of @ref LPTIM_Clock_Prescaler */
-  
+
 }LPTIM_ClockConfigTypeDef;
 
-/** 
-  * @brief  LPTIM Clock configuration definition  
+/**
+  * @brief  LPTIM Clock configuration definition
   */
 typedef struct
 {
@@ -82,90 +82,90 @@ typedef struct
                            Note: This parameter is used only when Ultra low power clock source is used.
                            Note: If the polarity is configured on 'both edges', an auxiliary clock
                            (one of the Low power oscillator) must be active.
-                           This parameter can be a value of @ref LPTIM_Clock_Polarity */ 
-  
+                           This parameter can be a value of @ref LPTIM_Clock_Polarity */
+
   uint32_t SampleTime;     /*!< Selects the clock sampling time to configure the clock glitch filter.
                            Note: This parameter is used only when Ultra low power clock source is used.
-                           This parameter can be a value of @ref LPTIM_Clock_Sample_Time */  
-  
+                           This parameter can be a value of @ref LPTIM_Clock_Sample_Time */
+
 }LPTIM_ULPClockConfigTypeDef;
 
-/** 
-  * @brief  LPTIM Trigger configuration definition  
+/**
+  * @brief  LPTIM Trigger configuration definition
   */
 typedef struct
 {
   uint32_t Source;        /*!< Selects the Trigger source.
                           This parameter can be a value of @ref LPTIM_Trigger_Source */
-  
+
   uint32_t ActiveEdge;    /*!< Selects the Trigger active edge.
                           Note: This parameter is used only when an external trigger is used.
                           This parameter can be a value of @ref LPTIM_External_Trigger_Polarity */
-  
+
   uint32_t SampleTime;    /*!< Selects the trigger sampling time to configure the clock glitch filter.
                           Note: This parameter is used only when an external trigger is used.
-                          This parameter can be a value of @ref LPTIM_Trigger_Sample_Time  */  
+                          This parameter can be a value of @ref LPTIM_Trigger_Sample_Time  */
 }LPTIM_TriggerConfigTypeDef;
 
-/** 
-  * @brief  LPTIM Initialization Structure definition  
+/**
+  * @brief  LPTIM Initialization Structure definition
   */
 typedef struct
-{                                                    
+{
   LPTIM_ClockConfigTypeDef     Clock;               /*!< Specifies the clock parameters */
-                                                    
+
   LPTIM_ULPClockConfigTypeDef  UltraLowPowerClock;  /*!< Specifies the Ultra Low Power clock parameters */
-                                                    
+
   LPTIM_TriggerConfigTypeDef   Trigger;             /*!< Specifies the Trigger parameters */
-                                                    
+
   uint32_t                     OutputPolarity;      /*!< Specifies the Output polarity.
                                                     This parameter can be a value of @ref LPTIM_Output_Polarity */
-                                                    
+
   uint32_t                     UpdateMode;          /*!< Specifies whether the update of the autorelaod and the compare
                                                     values is done immediately or after the end of current period.
                                                     This parameter can be a value of @ref LPTIM_Updating_Mode */
 
   uint32_t                     CounterSource;       /*!< Specifies whether the counter is incremented each internal event
                                                     or each external event.
-                                                    This parameter can be a value of @ref LPTIM_Counter_Source */  
+                                                    This parameter can be a value of @ref LPTIM_Counter_Source */
 
   uint32_t                     Input1Source;        /*!< Specifies source selected for input1 (GPIO or comparator output).
-                                                    This parameter can be a value of @ref LPTIM_Input1_Source */  
+                                                    This parameter can be a value of @ref LPTIM_Input1_Source */
 
   uint32_t                     Input2Source;        /*!< Specifies source selected for input2 (GPIO or comparator output).
-                                                    Note: This parameter is used only for encoder feature so is used only 
+                                                    Note: This parameter is used only for encoder feature so is used only
                                                     for LPTIM1 instance.
-                                                    This parameter can be a value of @ref LPTIM_Input2_Source */ 
-  
+                                                    This parameter can be a value of @ref LPTIM_Input2_Source */
+
 }LPTIM_InitTypeDef;
 
-/** 
-  * @brief  HAL LPTIM State structure definition  
-  */ 
+/**
+  * @brief  HAL LPTIM State structure definition
+  */
 typedef enum __HAL_LPTIM_StateTypeDef
 {
   HAL_LPTIM_STATE_RESET            = 0x00U,    /*!< Peripheral not yet initialized or disabled  */
   HAL_LPTIM_STATE_READY            = 0x01U,    /*!< Peripheral Initialized and ready for use    */
-  HAL_LPTIM_STATE_BUSY             = 0x02U,    /*!< An internal process is ongoing              */    
-  HAL_LPTIM_STATE_TIMEOUT          = 0x03U,    /*!< Timeout state                               */  
-  HAL_LPTIM_STATE_ERROR            = 0x04U     /*!< Internal Process is ongoing                */                                                                             
+  HAL_LPTIM_STATE_BUSY             = 0x02U,    /*!< An internal process is ongoing              */
+  HAL_LPTIM_STATE_TIMEOUT          = 0x03U,    /*!< Timeout state                               */
+  HAL_LPTIM_STATE_ERROR            = 0x04U     /*!< Internal Process is ongoing                */
 }HAL_LPTIM_StateTypeDef;
 
-/** 
-  * @brief  LPTIM handle Structure definition  
-  */ 
+/**
+  * @brief  LPTIM handle Structure definition
+  */
 typedef struct
 {
       LPTIM_TypeDef              *Instance;         /*!< Register base address     */
-      
+
       LPTIM_InitTypeDef           Init;             /*!< LPTIM required parameters */
-  
-      HAL_StatusTypeDef           Status;           /*!< LPTIM peripheral status   */  
-  
+
+      HAL_StatusTypeDef           Status;           /*!< LPTIM peripheral status   */
+
       HAL_LockTypeDef             Lock;             /*!< LPTIM locking object      */
-  
+
    __IO  HAL_LPTIM_StateTypeDef   State;            /*!< LPTIM peripheral state    */
-  
+
 }LPTIM_HandleTypeDef;
 
 /**
@@ -182,7 +182,7 @@ typedef struct
   */
 #define LPTIM_CLOCKSOURCE_APBCLOCK_LPOSC        ((uint32_t)0x00U)
 #define LPTIM_CLOCKSOURCE_ULPTIM                LPTIM_CFGR_CKSEL
-/**                                             
+/**
   * @}
   */
 
@@ -199,7 +199,7 @@ typedef struct
 #define LPTIM_PRESCALER_DIV128                  ((uint32_t)LPTIM_CFGR_PRESC)
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup LPTIM_Output_Polarity LPTIM Output Polarity
   * @{
@@ -399,7 +399,7 @@ typedef struct
   * @retval None
   */
 #define __HAL_LPTIM_RESET_COUNTER_AFTERREAD(__HANDLE__)      ((__HANDLE__)->Instance->CR |=  LPTIM_CR_RSTARE)
-    
+
 /**
   * @brief  Write the passed parameter in the Autoreload register.
   * @param  __HANDLE__: LPTIM handle
@@ -494,7 +494,7 @@ typedef struct
   *            @arg LPTIM_IT_CMPM    : Compare match Interrupt.
   * @retval Interrupt status.
   */
-    
+
 #define __HAL_LPTIM_GET_IT_SOURCE(__HANDLE__, __INTERRUPT__) ((((__HANDLE__)->Instance->IER & (__INTERRUPT__)) == (__INTERRUPT__)) ? SET : RESET)
 
 /**
@@ -515,11 +515,11 @@ typedef struct
 /** @defgroup LPTIM_Private_Macros LPTIM Private Macros
   * @{
   */
-                                                
+
 #define IS_LPTIM_CLOCK_SOURCE(__SOURCE__)       (((__SOURCE__) == LPTIM_CLOCKSOURCE_ULPTIM) || \
                                                  ((__SOURCE__) == LPTIM_CLOCKSOURCE_APBCLOCK_LPOSC))
 
-                                                
+
 #define IS_LPTIM_CLOCK_PRESCALER(__PRESCALER__) (((__PRESCALER__) ==  LPTIM_PRESCALER_DIV1  ) || \
                                                  ((__PRESCALER__) ==  LPTIM_PRESCALER_DIV2  ) || \
                                                  ((__PRESCALER__) ==  LPTIM_PRESCALER_DIV4  ) || \
@@ -602,7 +602,7 @@ typedef struct
       ((__SOURCE__) == LPTIM_INPUT2SOURCE_COMP2)))
 /**
   * @}
-  */ 
+  */
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup LPTIM_Exported_Functions LPTIM Exported Functions
   * @{
@@ -688,7 +688,7 @@ HAL_LPTIM_StateTypeDef HAL_LPTIM_GetState(LPTIM_HandleTypeDef *hlptim);
 /**
   * @}
   */
-  
+
 /* Private functions ---------------------------------------------------------*/
 /** @defgroup LPTIM_Private_Functions LPTIM Private Functions
   * @{
@@ -702,7 +702,7 @@ HAL_LPTIM_StateTypeDef HAL_LPTIM_GetState(LPTIM_HandleTypeDef *hlptim);
   */
 /**
   * @}
-  */  
+  */
 #ifdef __cplusplus
 }
 #endif
