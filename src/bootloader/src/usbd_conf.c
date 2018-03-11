@@ -27,6 +27,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include STM32_HAL_H
+#include "stm32_hal_legacy.h"
 #include "usbdev/usbd_core.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -78,6 +79,12 @@ void HAL_PCD_MspInit(PCD_HandleTypeDef *hpcd)
     GPIO_InitStruct.Alternate = GPIO_AF10_OTG_FS;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); 
 #endif
+
+    #if defined(MCU_SERIES_H7)
+    // Keep USB clock running during sleep or else __WFI() will disable the USB
+    __HAL_RCC_USB2_OTG_FS_CLK_SLEEP_ENABLE();
+    __HAL_RCC_USB2_OTG_FS_ULPI_CLK_SLEEP_DISABLE();
+    #endif
 
     /* Enable USB FS Clocks */ 
     __USB_OTG_FS_CLK_ENABLE();
