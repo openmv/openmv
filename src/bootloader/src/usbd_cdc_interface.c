@@ -25,6 +25,10 @@ uint8_t UserTxBuffer[APP_TX_DATA_SIZE];/* Received Data over UART (CDC interface
 static volatile uint8_t ide_connected = 0;
 static volatile uint8_t vcp_connected = 0;
 
+#define FLASH_BUF_SIZE  (64)
+static uint32_t flash_buf_idx=0;
+static uint8_t  flash_buf[FLASH_BUF_SIZE];
+
 /* USB handler declaration */
 extern USBD_HandleTypeDef  USBD_Device;
 
@@ -195,6 +199,7 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
 
     switch (cmd) {
         case BOOTLDR_START:
+            flash_buf_idx= 0;
             flash_offset = MAIN_APP_ADDR;
             ide_connected = 1;
             // Send back the START command as an ACK
@@ -202,6 +207,13 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
             break;
         case BOOTLDR_RESET:
             ide_connected = 0;
+            if (flash_buf_idx) {
+                // Pad and flush the last packet
+                for (int i=flash_buf_idx; i<FLASH_BUF_SIZE; i++) {
+                    flash_buf[i] = 0xFF;
+                }
+                flash_write((uint32_t*)flash_buf, flash_offset, FLASH_BUF_SIZE);
+            }
             break;
         case BOOTLDR_ERASE: {
             uint32_t sector = *cmd_buf; 
@@ -209,8 +221,16 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
             break; 
         }
         case BOOTLDR_WRITE: {
-            flash_write((uint32_t*)(Buf+4), flash_offset, *Len-4);
-            flash_offset += (*Len-4);
+            uint8_t *buf =  Buf + 4;
+            uint32_t len = *Len - 4;
+            for (int i=0; i<len; i++) {
+                flash_buf[flash_buf_idx++] = buf[i];
+                if (flash_buf_idx == FLASH_BUF_SIZE) {
+                    flash_buf_idx = 0;
+                    flash_write((uint32_t*)flash_buf, flash_offset, FLASH_BUF_SIZE);
+                    flash_offset += FLASH_BUF_SIZE;
+                }
+            }
             break; 
         }
     }

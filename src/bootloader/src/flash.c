@@ -27,10 +27,7 @@
 #include STM32_HAL_H
 #include "flash.h"
 
-#if defined (STM32H743xx)
-#define FLASH_FLAG_PGAERR   (0)
-#define FLASH_FLAG_PGPERR   (0)
-#elif defined(STM32F765xx) ||  defined(STM32F769xx)
+#if defined (MCU_SERIES_F7)
 #define FLASH_FLAG_PGSERR   (FLASH_FLAG_ERSERR)
 #endif
 
@@ -38,22 +35,33 @@ extern void __fatal_error();
 
 void flash_erase(uint32_t sector)
 {
-    uint32_t SectorError = 0;
-
     // unlock
     HAL_FLASH_Unlock();
 
-    // Clear pending flags (if any)
+    #if defined(MCU_SERIES_H7)
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS_BANK1 | FLASH_FLAG_ALL_ERRORS_BANK2);
+    #else
     __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_EOP | FLASH_FLAG_OPERR | FLASH_FLAG_WRPERR |
                            FLASH_FLAG_PGAERR | FLASH_FLAG_PGPERR | FLASH_FLAG_PGSERR);
+    #endif
 
     // erase the sector(s)
     FLASH_EraseInitTypeDef EraseInitStruct;
-    EraseInitStruct.TypeErase = TYPEERASE_SECTORS;
+    EraseInitStruct.TypeErase    = TYPEERASE_SECTORS;
     EraseInitStruct.VoltageRange = VOLTAGE_RANGE_3; // voltage range needs to be 2.7V to 3.6V
+    #if defined(MCU_SERIES_H7)
+    EraseInitStruct.Sector = (sector % 8);
+    if (sector < 8) {
+        EraseInitStruct.Banks = FLASH_BANK_1;
+    } else {
+        EraseInitStruct.Banks = FLASH_BANK_2;
+    }
+    #else
     EraseInitStruct.Sector = sector;
+    #endif
     EraseInitStruct.NbSectors = 1;
 
+    uint32_t SectorError = 0;
     if (HAL_FLASHEx_Erase(&EraseInitStruct, &SectorError) != HAL_OK) {
         // error occurred during sector erase
         HAL_FLASH_Lock(); // lock the flash
@@ -65,10 +73,23 @@ void flash_erase(uint32_t sector)
 
 void flash_write(const uint32_t *src, uint32_t dst, uint32_t size)
 {
-    // unlock flash
+    // Unlock flash
     HAL_FLASH_Unlock();
 
-    // program the flash word by word
+    #if defined(MCU_SERIES_H7)
+    // Program the flash 32 bytes at a time.
+    uint64_t buf = (uint64_t)(uint32_t) src;
+    for (int i=0; i<size/32; i++) {
+        if (HAL_FLASH_Program(TYPEPROGRAM_WORD, dst, buf) != HAL_OK) {
+            // error occurred during flash write
+            HAL_FLASH_Lock(); // lock the flash
+            __fatal_error();
+        }
+        src += 8;
+        dst += 32;
+    }
+    #else
+    // Program the flash 4 bytes at a time.
     for (int i=0; i<size/4; i++) {
         if (HAL_FLASH_Program(TYPEPROGRAM_WORD, dst, *src) != HAL_OK) {
             // error occurred during flash write
@@ -78,6 +99,7 @@ void flash_write(const uint32_t *src, uint32_t dst, uint32_t size)
         src += 1;
         dst += 4;
     }
+    #endif
 
     // lock the flash
     HAL_FLASH_Lock();
