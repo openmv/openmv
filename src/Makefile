@@ -82,6 +82,7 @@ CFLAGS += -I$(TOP_DIR)/$(BOOT_DIR)/include/
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
 CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/st
 CFLAGS += -I$(TOP_DIR)/$(STHAL_DIR)/include/
+CFLAGS += -I$(TOP_DIR)/$(STHAL_DIR)/include/Legacy/
 
 CFLAGS += -I$(BUILD)/$(MICROPY_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/
@@ -465,3 +466,15 @@ flash_dfu::
 # Flash the bootloader + main firmware image (binary)
 flash_bin::
 	$(PYDFU) -m -u $(FW_DIR)/$(OPENMV).bin
+
+# Flash the bootloader using dfu_util
+flash_boot_dfu_util::
+	dfu-util -a 0 -d 0483:df11 -D $(FW_DIR)/$(BOOTLOADER).dfu
+
+# Flash the main firmware image using dfu_util
+flash_image_dfu_util::
+	dfu-util -a 0 -d 0483:df11 -D $(FW_DIR)/$(FIRMWARE).dfu
+
+# Flash the bootloader + main firmware image (DFU) using dfu_util
+flash_dfu_util::
+	dfu-util -a 0 -d 0483:df11 -D $(FW_DIR)/$(OPENMV).dfu
