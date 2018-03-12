@@ -1132,11 +1132,8 @@ STATIC mp_obj_t py_image_draw_arrow(uint n_args, const mp_obj_t *args, mp_map_t 
     int arg_thickness =
         py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thickness), 1);
 
-    // https://stackoverflow.com/questions/4165881/c-draw-a-line-in-gdi-with-a-filled-arrow-head-at-the-end
-
     int dx = (arg_x1 - arg_x0);
     int dy = (arg_y1 - arg_y0);
-
     float length = fast_sqrtf((dx * dx) + (dy * dy));
 
     float ux = dx / length;
@@ -1144,10 +1141,10 @@ STATIC mp_obj_t py_image_draw_arrow(uint n_args, const mp_obj_t *args, mp_map_t 
     float vx = -uy;
     float vy = ux;
 
-    int a0x = arg_x1 - (arg_s * ux) + (arg_s * vx * 0.5);
-    int a0y = arg_y1 - (arg_s * uy) + (arg_s * vy * 0.5);
-    int a1x = arg_x1 - (arg_s * ux) - (arg_s * vx * 0.5);
-    int a1y = arg_y1 - (arg_s * uy) - (arg_s * vy * 0.5);
+    int a0x = fast_roundf(arg_x1 - (arg_s * ux) + (arg_s * vx * 0.5));
+    int a0y = fast_roundf(arg_y1 - (arg_s * uy) + (arg_s * vy * 0.5));
+    int a1x = fast_roundf(arg_x1 - (arg_s * ux) - (arg_s * vx * 0.5));
+    int a1y = fast_roundf(arg_y1 - (arg_s * uy) - (arg_s * vy * 0.5));
 
     imlib_draw_line(arg_img, arg_x0, arg_y0, arg_x1, arg_y1, arg_c, arg_thickness);
     imlib_draw_line(arg_img, arg_x1, arg_y1, a0x, a0y, arg_c, arg_thickness);
@@ -1164,7 +1161,7 @@ STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     int arg_c =
         py_helper_keyword_color(arg_img, n_args, args, 2, kw_args, -1); // White.
     int arg_s =
-        py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), arg_img->w / 10);
+        py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
     int arg_thickness =
         py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thickness), 1);
     bool arg_fill =
@@ -1174,11 +1171,10 @@ STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
         kp_t *kp = array_at(kpts_obj->kpts, i);
         int cx = kp->x;
         int cy = kp->y;
-        int size = arg_s / 2;
-        int si = sin_table[kp->angle] * size;
-        int co = cos_table[kp->angle] * size;
+        int si = sin_table[kp->angle] * arg_s;
+        int co = cos_table[kp->angle] * arg_s;
         imlib_draw_line(arg_img, cx, cy, cx + co, cy + si, arg_c, arg_thickness);
-        imlib_draw_circle(arg_img, cx, cy, size, arg_c, arg_thickness, arg_fill);
+        imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
     }
 
     return args[0];
