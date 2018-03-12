@@ -218,7 +218,7 @@ extern const uint8_t g826_table[256];
     __typeof__ (r5) _r5 = (r5); \
     __typeof__ (g6) _g6 = (g6); \
     __typeof__ (b5) _b5 = (b5); \
-    (_r5 << 3) | (_g6 >> 3) | (_g6 << 13) | (_b5 << 8); \
+    (_r5 << 3) | (_g6 >> 3) | ((_g6 & 0x7) << 13) | (_b5 << 8); \
 })
 
 #define COLOR_R8_G8_B8_TO_RGB565(r8, g8, b8) COLOR_R5_G6_B5_TO_RGB565(COLOR_R8_TO_R5(r8), COLOR_G8_TO_G6(g8), COLOR_B8_TO_B5(b8))
@@ -1107,7 +1107,6 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
 void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op, void *data);
 void imlib_load_image(image_t *img, const char *path);
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality);
-void imlib_copy_image(image_t *dst, image_t *src, rectangle_t *roi);
 
 /* GIF functions */
 void gif_open(FIL *fp, int width, int height, bool color, bool loop);
@@ -1118,10 +1117,6 @@ void gif_close(FIL *fp);
 void mjpeg_open(FIL *fp, int width, int height);
 void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, int quality);
 void mjpeg_close(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps);
-
-/* Basic image functions */
-int imlib_get_pixel(image_t *img, int x, int y);
-void imlib_set_pixel(image_t *img, int x, int y, int p);
 
 /* Point functions */
 point_t *point_alloc(int16_t x, int16_t y);
@@ -1135,12 +1130,6 @@ bool rectangle_intersects(rectangle_t *r1, rectangle_t *r2);
 bool rectangle_subimg(image_t *img, rectangle_t *r, rectangle_t *r_out);
 array_t *rectangle_merge(array_t *rectangles);
 void rectangle_expand(rectangle_t *r, int x, int y);
-
-/* Drawing functions */
-void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c);
-void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c);
-void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c);
-void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c);
 
 /* Image Morphing */
 void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
@@ -1226,6 +1215,13 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 // HoG
 void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
+// Drawing Functions
+int imlib_get_pixel(image_t *img, int x, int y);
+void imlib_set_pixel(image_t *img, int x, int y, int p);
+void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int thickness);
+void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, int thickness, bool fill);
+void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness, bool fill);
+void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, int scale);
 // Binary Functions
 void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero);
 void imlib_invert(image_t *img);

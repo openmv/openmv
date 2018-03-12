@@ -106,6 +106,12 @@ static const mp_obj_type_t py_kp_type = {
     .unary_op = py_kp_unary_op,
 };
 
+py_kp_obj_t *py_kpts_obj(mp_obj_t kpts_obj)
+{
+    PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
+    return kpts_obj;
+}
+
 // LBP descriptor /////////////////////////////////////////////////////////////
 
 typedef struct _py_lbp_obj_t {
@@ -1012,9 +1018,11 @@ STATIC mp_obj_t py_image_draw_line(uint n_args, const mp_obj_t *args, mp_map_t *
     int arg_y1 = mp_obj_get_int(arg_vec[3]);
 
     int arg_c =
-        py_helper_keyword_color(arg_img, n_args, args, offset, kw_args, -1); // White.
+        py_helper_keyword_color(arg_img, n_args, args, offset + 0, kw_args, -1); // White.
+    int arg_thickness =
+        py_helper_keyword_int(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thickness), 1);
 
-    imlib_draw_line(arg_img, arg_x0, arg_y0, arg_x1, arg_y1, arg_c);
+    imlib_draw_line(arg_img, arg_x0, arg_y0, arg_x1, arg_y1, arg_c, arg_thickness);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_line_obj, 2, py_image_draw_line);
@@ -1031,9 +1039,13 @@ STATIC mp_obj_t py_image_draw_rectangle(uint n_args, const mp_obj_t *args, mp_ma
     int arg_rh = mp_obj_get_int(arg_vec[3]);
 
     int arg_c =
-        py_helper_keyword_color(arg_img, n_args, args, offset, kw_args, -1); // White.
+        py_helper_keyword_color(arg_img, n_args, args, offset + 0, kw_args, -1); // White.
+    int arg_thickness =
+        py_helper_keyword_int(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thickness), 1);
+    bool arg_fill =
+        py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fill), false);
 
-    imlib_draw_rectangle(arg_img, arg_rx, arg_ry, arg_rw, arg_rh, arg_c);
+    imlib_draw_rectangle(arg_img, arg_rx, arg_ry, arg_rw, arg_rh, arg_c, arg_thickness, arg_fill);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_rectangle_obj, 2, py_image_draw_rectangle);
@@ -1049,9 +1061,13 @@ STATIC mp_obj_t py_image_draw_circle(uint n_args, const mp_obj_t *args, mp_map_t
     int arg_cr = mp_obj_get_int(arg_vec[2]);
 
     int arg_c =
-        py_helper_keyword_color(arg_img, n_args, args, offset, kw_args, -1); // White.
+        py_helper_keyword_color(arg_img, n_args, args, offset + 0, kw_args, -1); // White.
+    int arg_thickness =
+        py_helper_keyword_int(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thickness), 1);
+    bool arg_fill =
+        py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fill), false);
 
-    imlib_draw_circle(arg_img, arg_cx, arg_cy, arg_cr, arg_c);
+    imlib_draw_circle(arg_img, arg_cx, arg_cy, arg_cr, arg_c, arg_thickness, arg_fill);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_circle_obj, 4, py_image_draw_circle);
@@ -1067,9 +1083,11 @@ STATIC mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t
     const char *arg_str = mp_obj_str_get_str(arg_vec[2]);
 
     int arg_c =
-        py_helper_keyword_color(arg_img, n_args, args, offset, kw_args, -1); // White.
+        py_helper_keyword_color(arg_img, n_args, args, offset + 0, kw_args, -1); // White.
+    int arg_scale =
+        py_helper_keyword_int(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1);
 
-    imlib_draw_string(arg_img, arg_x_off, arg_y_off, arg_str, arg_c);
+    imlib_draw_string(arg_img, arg_x_off, arg_y_off, arg_str, arg_c, arg_scale);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_string_obj, 4, py_image_draw_string);
@@ -1084,36 +1102,79 @@ STATIC mp_obj_t py_image_draw_cross(uint n_args, const mp_obj_t *args, mp_map_t 
     int arg_y = mp_obj_get_int(arg_vec[1]);
 
     int arg_c =
-        py_helper_keyword_color(arg_img, n_args, args, offset, kw_args, -1); // White.
+        py_helper_keyword_color(arg_img, n_args, args, offset + 0, kw_args, -1); // White.
     int arg_s =
         py_helper_keyword_int(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 5);
+    int arg_thickness =
+        py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thickness), 1);
 
-    imlib_draw_line(arg_img, arg_x-arg_s, arg_y      , arg_x+arg_s, arg_y      , arg_c);
-    imlib_draw_line(arg_img, arg_x      , arg_y-arg_s, arg_x      , arg_y+arg_s, arg_c);
+    imlib_draw_line(arg_img, arg_x - arg_s, arg_y        , arg_x + arg_s, arg_y        , arg_c, arg_thickness);
+    imlib_draw_line(arg_img, arg_x        , arg_y - arg_s, arg_x        , arg_y + arg_s, arg_c, arg_thickness);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_cross_obj, 2, py_image_draw_cross);
 
+STATIC mp_obj_t py_image_draw_arrow(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+
+    const mp_obj_t *arg_vec;
+    uint offset = py_helper_consume_array(n_args, args, 1, 4, &arg_vec);
+    int arg_x0 = mp_obj_get_int(arg_vec[0]);
+    int arg_y0 = mp_obj_get_int(arg_vec[1]);
+    int arg_x1 = mp_obj_get_int(arg_vec[2]);
+    int arg_y1 = mp_obj_get_int(arg_vec[3]);
+
+    int arg_c =
+        py_helper_keyword_color(arg_img, n_args, args, offset + 0, kw_args, -1); // White.
+    int arg_s =
+        py_helper_keyword_int(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
+    int arg_thickness =
+        py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thickness), 1);
+
+    int dx = (arg_x1 - arg_x0);
+    int dy = (arg_y1 - arg_y0);
+    float length = fast_sqrtf((dx * dx) + (dy * dy));
+
+    float ux = dx / length;
+    float uy = dy / length;
+    float vx = -uy;
+    float vy = ux;
+
+    int a0x = fast_roundf(arg_x1 - (arg_s * ux) + (arg_s * vx * 0.5));
+    int a0y = fast_roundf(arg_y1 - (arg_s * uy) + (arg_s * vy * 0.5));
+    int a1x = fast_roundf(arg_x1 - (arg_s * ux) - (arg_s * vx * 0.5));
+    int a1y = fast_roundf(arg_y1 - (arg_s * uy) - (arg_s * vy * 0.5));
+
+    imlib_draw_line(arg_img, arg_x0, arg_y0, arg_x1, arg_y1, arg_c, arg_thickness);
+    imlib_draw_line(arg_img, arg_x1, arg_y1, a0x, a0y, arg_c, arg_thickness);
+    imlib_draw_line(arg_img, arg_x1, arg_y1, a1x, a1y, arg_c, arg_thickness);
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_arrow_obj, 2, py_image_draw_arrow);
+
 STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
-    py_kp_obj_t *kpts_obj = (py_kp_obj_t*) args[1];
-    PY_ASSERT_TYPE(kpts_obj, &py_kp_type);
+    py_kp_obj_t *kpts_obj = py_kpts_obj(args[1]);
 
     int arg_c =
         py_helper_keyword_color(arg_img, n_args, args, 2, kw_args, -1); // White.
     int arg_s =
-        py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), arg_img->w * 0.1f);
+        py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 10);
+    int arg_thickness =
+        py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_thickness), 1);
+    bool arg_fill =
+        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fill), false);
 
-    for (int i=0; i<array_length(kpts_obj->kpts); i++) {
+    for (int i = 0, ii = array_length(kpts_obj->kpts); i < ii; i++) {
         kp_t *kp = array_at(kpts_obj->kpts, i);
         int cx = kp->x;
         int cy = kp->y;
-        int size = arg_s/2;
-        int si = sin_table[kp->angle] * size;
-        int co = cos_table[kp->angle] * size;
-        imlib_draw_line(arg_img, cx, cy, cx+co, cy+si, arg_c);
-        imlib_draw_circle(arg_img, cx, cy, size, arg_c);
+        int si = sin_table[kp->angle] * arg_s;
+        int co = cos_table[kp->angle] * arg_s;
+        imlib_draw_line(arg_img, cx, cy, cx + co, cy + si, arg_c, arg_thickness);
+        imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
     }
 
     return args[0];
@@ -4572,6 +4633,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_draw_circle),         MP_ROM_PTR(&py_image_draw_circle_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_string),         MP_ROM_PTR(&py_image_draw_string_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_cross),          MP_ROM_PTR(&py_image_draw_cross_obj)},
+    {MP_ROM_QSTR(MP_QSTR_draw_arrow),          MP_ROM_PTR(&py_image_draw_arrow_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_keypoints),      MP_ROM_PTR(&py_image_draw_keypoints_obj)},
     /* Binary Methods */
     {MP_ROM_QSTR(MP_QSTR_binary),              MP_ROM_PTR(&py_image_binary_obj)},
