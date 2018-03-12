@@ -36,6 +36,10 @@ _fballoc    = ORIGIN(OMV_FB_MEMORY) + OMV_FB_SIZE + OMV_FB_ALLOC_SIZE;
 _estack     = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
+#if defined(OMV_FFS_MEMORY)
+_ffs_cache  = OMV_FFS_MEMORY;
+#endif
+
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
 _stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 
@@ -77,9 +81,11 @@ SECTIONS
     _vfs_buf  = .; // VFS sturct + FATFS file buffer  (around 624 bytes)
     . = . + OMV_VFS_BUF_SIZE;
 
+    #if defined(OMV_FFS_BUF_SIZE)
     . = ALIGN(4);
     _ffs_cache = .; // Flash filesystem cache
     . = . + OMV_FFS_BUF_SIZE;
+    #endif
 
     . = ALIGN(4);
     _jpeg_buf = .; // IDE JPEG buffer
