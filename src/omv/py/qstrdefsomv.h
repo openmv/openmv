@@ -38,15 +38,6 @@ Q(width)
 Q(height)
 Q(format)
 Q(size)
-Q(get_pixel)
-Q(rgbtuple)
-Q(set_pixel)
-Q(draw_line)
-Q(draw_rectangle)
-Q(draw_circle)
-Q(draw_string)
-Q(draw_cross)
-Q(draw_keypoints)
 Q(morph)
 Q(midpoint)
 Q(mean)
@@ -70,7 +61,6 @@ Q(find_edges)
 Q(find_hog)
 Q(cmp_lbp)
 Q(quality)
-Q(color)
 Q(roi)
 Q(offset)
 Q(threshold)
@@ -329,6 +319,55 @@ Q(CPUFREQ_192MHZ)
 Q(CPUFREQ_216MHZ)
 Q(get_frequency)
 Q(set_frequency)
+
+// Get Pixel
+Q(get_pixel)
+Q(rgbtuple)
+
+// Set Pixel
+Q(set_pixel)
+Q(color)
+
+// Draw Line
+Q(draw_line)
+// duplicate Q(color)
+Q(thickness)
+
+// Draw Rectangle
+Q(draw_rectangle)
+// duplicate Q(color)
+// duplicate Q(thickness)
+Q(fill)
+
+// Draw Circle
+Q(draw_circle)
+// duplicate Q(color)
+// duplicate Q(thickness)
+// duplicate Q(fill)
+
+// Draw String
+Q(draw_string)
+// duplicate Q(color)
+// duplicate Q(scale)
+
+// Draw Cross
+Q(draw_cross)
+// duplicate Q(color)
+// duplicate Q(size)
+// duplicate Q(thickness)
+
+// Draw Arrow
+Q(draw_arrow)
+// duplicate Q(color)
+// duplicate Q(size)
+// duplicate Q(thickness)
+
+// Draw Keypoints
+Q(draw_keypoints)
+// duplicate Q(color)
+// duplicate Q(size)
+// duplicate Q(thickness)
+// duplicate Q(fill)
 
 // Binary
 Q(binary)

@@ -181,9 +181,9 @@ int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uin
         } else {
             mp_obj_t *arg_color;
             mp_obj_get_array_fixed_n(kw_arg->value, 3, &arg_color);
-            default_val = COLOR_R5_G6_B5_TO_RGB565(COLOR_R8_TO_R5(mp_obj_get_int(arg_color[0])),
-                                                   COLOR_G8_TO_G6(mp_obj_get_int(arg_color[1])),
-                                                   COLOR_B8_TO_B5(mp_obj_get_int(arg_color[2])));
+            default_val = COLOR_R8_G8_B8_TO_RGB565(IM_MAX(IM_MIN(mp_obj_get_int(arg_color[0]), COLOR_R8_MAX), COLOR_R8_MIN),
+                                                   IM_MAX(IM_MIN(mp_obj_get_int(arg_color[1]), COLOR_G8_MAX), COLOR_G8_MIN),
+                                                   IM_MAX(IM_MIN(mp_obj_get_int(arg_color[2]), COLOR_B8_MAX), COLOR_B8_MIN));
             switch(img->bpp) {
                 case IMAGE_BPP_BINARY: {
                     default_val = COLOR_RGB565_TO_BINARY(default_val);
@@ -204,9 +204,9 @@ int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uin
         } else {
             mp_obj_t *arg_color;
             mp_obj_get_array_fixed_n(args[arg_index], 3, &arg_color);
-            default_val = COLOR_R5_G6_B5_TO_RGB565(COLOR_R8_TO_R5(mp_obj_get_int(arg_color[0])),
-                                                   COLOR_G8_TO_G6(mp_obj_get_int(arg_color[1])),
-                                                   COLOR_B8_TO_B5(mp_obj_get_int(arg_color[2])));
+            default_val = COLOR_R8_G8_B8_TO_RGB565(IM_MAX(IM_MIN(mp_obj_get_int(arg_color[0]), COLOR_R8_MAX), COLOR_R8_MIN),
+                                                   IM_MAX(IM_MIN(mp_obj_get_int(arg_color[1]), COLOR_G8_MAX), COLOR_G8_MIN),
+                                                   IM_MAX(IM_MIN(mp_obj_get_int(arg_color[2]), COLOR_B8_MAX), COLOR_B8_MIN));
             switch(img->bpp) {
                 case IMAGE_BPP_BINARY: {
                     default_val = COLOR_RGB565_TO_BINARY(default_val);
