@@ -16,13 +16,6 @@ void HAL_MspInit()
     // Set the system clock
     SystemClock_Config();
 
-    #if defined(MCU_SERIES_H7)
-        // Enable D2 SRAM1/2/3 clocks.
-        __HAL_RCC_D2SRAM1_CLK_ENABLE();
-        __HAL_RCC_D2SRAM2_CLK_ENABLE();
-        __HAL_RCC_D2SRAM3_CLK_ENABLE();
-    #endif
-
     // Config Systick
     HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
