@@ -263,9 +263,7 @@ void SystemClock_Config(void)
     }
     #endif
 
-    #if defined(MCU_SERIES_H7)
-    HAL_PWREx_EnableUSBVoltageDetector();
-    #elif defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
+    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
     if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_PWREx_EnableOverDrive");
@@ -305,5 +303,8 @@ void SystemClock_Config(void)
 
     // Enables the I/O Compensation Cell
     HAL_EnableCompensationCell();
+
+    // Enable the USB voltage level detector
+    HAL_PWREx_EnableUSBVoltageDetector();
     #endif
 }
