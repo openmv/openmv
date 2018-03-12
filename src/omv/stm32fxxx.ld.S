@@ -37,7 +37,7 @@ _estack     = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
 #if defined(OMV_FFS_MEMORY)
-_ffs_cache  = OMV_FFS_MEMORY;
+_ffs_cache  = ORIGIN(OMV_FFS_MEMORY);
 #endif
 
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
