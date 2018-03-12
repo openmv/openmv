@@ -1,4 +1,5 @@
 #include STM32_HAL_H
+#include "stm32_hal_legacy.h"
 #include "conf_winc.h"
 #include "bsp/include/nm_bsp.h"
 #include "common/include/nm_common.h"
