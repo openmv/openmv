@@ -81,7 +81,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_idx_obj)
     RCC_OscInitStruct.PLL.PLLSource     = RCC_PLLSOURCE_HSE;
     RCC_OscInitStruct.PLL.PLLM          = 12; // depends on HSE
     RCC_OscInitStruct.PLL.PLLN          = cpufreq_freq[cpufreq_idx] * 2;
-    RCC_OscInitStruct.PLL.PLLP          = RCC_PLLP_DIV2;
+    RCC_OscInitStruct.PLL.PLLP          = 2;
     RCC_OscInitStruct.PLL.PLLQ          = cpufreq_pllq[cpufreq_idx];
 
     if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
