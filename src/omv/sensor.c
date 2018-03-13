@@ -118,7 +118,7 @@ static int dcmi_config(uint32_t jpeg_mode)
     DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        // Capture rate all frames
     DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; // Capture 8 bits on every pixel clock
     DCMIHandle.Init.JPEGMode = jpeg_mode;                   // Set JPEG Mode
-    #if defined(STM32F765xx) || defined(STM32F769xx)
+    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
     DCMIHandle.Init.ByteSelectMode  = DCMI_BSM_ALL;         // Capture all received bytes
     DCMIHandle.Init.ByteSelectStart = DCMI_OEBS_ODD;        // Ignored
     DCMIHandle.Init.LineSelectMode  = DCMI_LSM_ALL;         // Capture all received lines
