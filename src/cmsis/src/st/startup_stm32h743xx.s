@@ -78,9 +78,9 @@ defined in linker script */
   .type  Reset_Handler, %function
 Reset_Handler:  
   /* Enable ccm clock */
-  ldr r0,=0x40023830
+  ldr r0,=0x580244dc
   ldr r3,[r0]
-  orr r3, r3, #1048576 /* 0x100000 */
+  orr r3, r3, #3758096384 /* 0xE0000000 */
   str r3,[r0]
 
   ldr sp, =_estack      /* set stack pointer */
