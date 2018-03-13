@@ -21,7 +21,7 @@ int cambus_init()
     /* Configure I2C */
     I2CHandle.Instance             = SCCB_I2C;
     I2CHandle.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
-    #if defined(STM32F765xx) ||  defined(STM32F769xx)
+    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
     I2CHandle.Init.Timing          = 0x40912732; // 100KHz
     #else
     I2CHandle.Init.ClockSpeed      = I2C_FREQUENCY;
