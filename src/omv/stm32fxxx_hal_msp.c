@@ -36,18 +36,19 @@ void SystemClock_Config(void);
 
 void HAL_MspInit(void)
 {
-    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    // Invalidate each cache before enabling it
+    /* Set the system clock */
+    SystemClock_Config();
+
+    #if defined(MCU_SERIES_F7) ||\
+        defined(MCU_SERIES_H7)
+    // Invalidate CPU cache
     SCB_InvalidateICache();
     SCB_InvalidateDCache();
 
-    /* Enable the CPU Cache */
+    // Enable the CPU Cache
     SCB_EnableICache();
     SCB_EnableDCache();
     #endif
-
-    /* Set the system clock */
-    SystemClock_Config();
 
     /* Config Systick */
     HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
@@ -59,7 +60,7 @@ void HAL_MspInit(void)
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
 
-#if defined(STM32F769xx)
+    #if defined(STM32F769xx)
     __GPIOF_CLK_ENABLE();
     __GPIOG_CLK_ENABLE();
     __GPIOH_CLK_ENABLE();
@@ -69,11 +70,16 @@ void HAL_MspInit(void)
 
     /* Enable JPEG clock */
     __HAL_RCC_JPEG_CLK_ENABLE();
-#endif
+    #endif
 
     /* Enable DMA clocks */
     __DMA1_CLK_ENABLE();
     __DMA2_CLK_ENABLE();
+
+    #if defined(MCU_SERIES_H7)
+    // MDMA clock
+    //__HAL_RCC_MDMA_CLK_ENABLE();
+    #endif
 
     /* Configure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;
