@@ -88,10 +88,6 @@ SECTIONS
     #endif
 
     . = ALIGN(4);
-    _jpeg_buf = .; // IDE JPEG buffer
-    . = . + OMV_JPEG_BUF_SIZE;
-
-    . = ALIGN(4);
     *(.dma_buffer)
 
   } >OMV_DMA_MEMORY
@@ -103,8 +99,14 @@ SECTIONS
     _sdata = .;        /* create a global symbol at data start */
     _ram_start = .;
     *(.data)           /* .data sections */
+
     . = ALIGN(4);
     *(.data*)          /* .data* sections */
+
+    . = ALIGN(4);
+    _jpeg_buf = .; // IDE JPEG buffer
+    . = . + OMV_JPEG_BUF_SIZE;
+
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
   } >OMV_MAIN_MEMORY
