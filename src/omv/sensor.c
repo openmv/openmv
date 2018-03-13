@@ -145,7 +145,11 @@ static int dma_config()
 {
     // DMA Stream configuration
     DMAHandle.Instance              = DMA2_Stream1;             /* Select the DMA instance          */
+    #if defined(MCU_SERIES_H7)
+    DMAHandle.Init.Request          = DMA_REQUEST_DCMI;         /* DMA Channel                      */
+    #else
     DMAHandle.Init.Channel          = DMA_CHANNEL_1;            /* DMA Channel                      */
+    #endif
     DMAHandle.Init.Direction        = DMA_PERIPH_TO_MEMORY;     /* Peripheral to memory transfer    */
     DMAHandle.Init.MemInc           = DMA_MINC_ENABLE;          /* Memory increment mode Enable     */
     DMAHandle.Init.PeriphInc        = DMA_PINC_DISABLE;         /* Peripheral increment mode Enable */
@@ -860,7 +864,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
             break;
         case PIXFORMAT_JPEG:
             // Read the number of data items transferred
-            MAIN_FB()->bpp = (MAX_XFER_SIZE - DMAHandle.Instance->NDTR)*4;
+            MAIN_FB()->bpp = (MAX_XFER_SIZE - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
             break;
     }
 
