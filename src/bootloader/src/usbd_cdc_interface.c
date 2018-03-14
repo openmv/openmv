@@ -192,7 +192,7 @@ void CDC_Tx(uint8_t *buf, uint32_t len)
  */
 static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
 {
-    static uint32_t flash_offset;
+    static volatile uint32_t flash_offset;
 
     uint32_t *cmd_buf = (uint32_t*) Buf; 
     uint32_t cmd = *cmd_buf++;
