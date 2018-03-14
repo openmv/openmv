@@ -26,8 +26,8 @@ static volatile uint8_t ide_connected = 0;
 static volatile uint8_t vcp_connected = 0;
 
 #define FLASH_BUF_SIZE  (64)
-static uint32_t flash_buf_idx=0;
-static uint8_t  flash_buf[FLASH_BUF_SIZE];
+static volatile uint32_t flash_buf_idx=0;
+static volatile uint8_t  flash_buf[FLASH_BUF_SIZE];
 
 /* USB handler declaration */
 extern USBD_HandleTypeDef  USBD_Device;
