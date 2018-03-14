@@ -78,9 +78,8 @@ void flash_write(const uint32_t *src, uint32_t dst, uint32_t size)
 
     #if defined(MCU_SERIES_H7)
     // Program the flash 32 bytes at a time.
-    uint64_t buf = (uint64_t)(uint32_t) src;
     for (int i=0; i<size/32; i++) {
-        if (HAL_FLASH_Program(TYPEPROGRAM_WORD, dst, buf) != HAL_OK) {
+        if (HAL_FLASH_Program(TYPEPROGRAM_WORD, dst, (uint64_t)(uint32_t) src) != HAL_OK) {
             // error occurred during flash write
             HAL_FLASH_Lock(); // lock the flash
             __fatal_error();
