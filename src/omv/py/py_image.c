@@ -1086,8 +1086,12 @@ STATIC mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t
         py_helper_keyword_color(arg_img, n_args, args, offset + 0, kw_args, -1); // White.
     int arg_scale =
         py_helper_keyword_int(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1);
+    int arg_x_spacing =
+        py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_spacing), 0);
+    int arg_y_spacing =
+        py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_spacing), 0);
 
-    imlib_draw_string(arg_img, arg_x_off, arg_y_off, arg_str, arg_c, arg_scale);
+    imlib_draw_string(arg_img, arg_x_off, arg_y_off, arg_str, arg_c, arg_scale, arg_x_spacing, arg_y_spacing);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_string_obj, 4, py_image_draw_string);

@@ -349,6 +349,8 @@ Q(draw_circle)
 Q(draw_string)
 // duplicate Q(color)
 // duplicate Q(scale)
+Q(x_spacing)
+Q(y_spacing)
 
 // Draw Cross
 Q(draw_cross)
