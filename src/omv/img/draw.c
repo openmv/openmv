@@ -170,7 +170,7 @@ void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness
     }
 }
 
-void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, int scale)
+void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, int scale, int x_spacing, int y_spacing)
 {
     const int anchor = x_off;
 
@@ -182,7 +182,7 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
 
         if ((ch == '\n') || (ch == '\r')) { // handle '\n' or '\r' strings
             x_off = anchor;
-            y_off += font[0].h * scale; // newline height == space height
+            y_off += (font[0].h * scale) + y_spacing; // newline height == space height
             continue;
         }
 
@@ -206,6 +206,6 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
             }
         }
 
-        x_off += g->w * scale;
+        x_off += (g->w * scale) + x_spacing;
     }
 }

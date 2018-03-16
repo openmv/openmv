@@ -24,6 +24,8 @@ while(True):
 
         # If the first argument is a scaler then this method expects
         # to see x, y, and text. Otherwise, it expects a (x,y,text) tuple.
-        img.draw_string(x, y, "Hello World!", color = (r, g, b), scale = 2)
+        img.draw_string(x, y, "Hello World!", color = (r, g, b), scale = 2,
+                        x_spacing = -4, # You'll want to make these negative
+                        y_spacing = 0) # at higher scales to reduce kerning.
 
     print(clock.fps())
