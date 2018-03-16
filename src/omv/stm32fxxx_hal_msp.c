@@ -103,7 +103,7 @@ void HAL_MspInit(void)
 
     #if defined(MCU_SERIES_H7)
     // MDMA clock
-    //__HAL_RCC_MDMA_CLK_ENABLE();
+    __HAL_RCC_MDMA_CLK_ENABLE();
     #endif
 
     /* Configure DCMI GPIO */
