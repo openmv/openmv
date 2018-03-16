@@ -38,6 +38,7 @@ stm32h7xx_hal_jpeg.c\
 stm32h7xx_ll_usb.c\
 stm32h7xx_ll_sdmmc.c\
 stm32h7xx_ll_fmc.c\
+stm32h7xx_ll_delayblock.c\
 )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
