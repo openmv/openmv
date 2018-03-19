@@ -1,6 +1,6 @@
-# Sharpen Filter Example
+# Unsharp Filter Example
 #
-# This example shows off using the laplacian filter to sharpen images.
+# This example shows off using the guassian filter to unsharp mask filter images.
 
 import sensor, image, time
 
@@ -15,7 +15,7 @@ while(True):
     img = sensor.snapshot() # Take a picture and return the image.
 
     # Run the kernel on every pixel of the image.
-    img.laplacian(1, sharpen=True)
+    img.gaussian(1, unsharp=True)
 
     print(clock.fps()) # Note: Your OpenMV Cam runs about half as fast while
     # connected to your computer. The FPS should increase once disconnected.

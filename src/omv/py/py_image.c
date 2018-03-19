@@ -1571,8 +1571,8 @@ STATIC mp_obj_t py_image_blend(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     image_t *arg_img =
         py_helper_arg_to_image_mutable(args[0]);
     float arg_alpha =
-        IM_MAX(IM_MIN(py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha),
-            128), 256), 0) / 256.0f;
+        py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128) / 256.0f;
+    PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 1), "Error: 0 <= alpha <= 256!");
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
 
@@ -1631,11 +1631,9 @@ STATIC mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         py_helper_arg_to_image_mutable(args[0]);
     int arg_ksize =
         py_helper_arg_to_ksize(args[1]);
-    PY_ASSERT_TRUE_MSG(arg_ksize <= 2, "KernelSize must be <= 2!");
-    int n = py_helper_ksize_to_n(arg_ksize);
-    int arg_percentile =
-        IM_MAX(IM_MIN(py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_percentile),
-            0.5) * n, n - 1), 0);
+    float arg_percentile =
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_percentile), 0.5f);
+    PY_ASSERT_TRUE_MSG((0 <= arg_percentile) && (arg_percentile <= 1), "Error: 0 <= percentile <= 1!");
     bool arg_threshold =
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
     int arg_offset =
@@ -1680,9 +1678,9 @@ STATIC mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
         py_helper_arg_to_image_mutable(args[0]);
     int arg_ksize =
         py_helper_arg_to_ksize(args[1]);
-    int arg_bias =
-        IM_MAX(IM_MIN(py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias),
-            0.5) * 256, 256), 0);
+    float arg_bias =
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5f);
+    PY_ASSERT_TRUE_MSG((0 <= arg_bias) && (arg_bias <= 1), "Error: 0 <= bias <= 1!");
     bool arg_threshold =
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
     int arg_offset =
@@ -1705,19 +1703,18 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         py_helper_arg_to_image_mutable(args[0]);
     int arg_ksize =
         py_helper_arg_to_ksize(args[1]);
+
     int n = py_helper_ksize_to_n(arg_ksize);
 
     mp_obj_t *krn;
     mp_obj_get_array_fixed_n(args[2], n, &krn);
-    int8_t arg_krn[n];
+
+    int arg_krn[n];
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
-        int value = mp_obj_get_int(krn[i]);
-        PY_ASSERT_FALSE_MSG((value < -128) || (127 < value),
-            "Kernel Values must be between [-128:127] inclusive!");
-        arg_krn[i] = value;
-        arg_m += arg_krn[i];
+        arg_krn[i] = mp_obj_get_int(krn[i]);
+        arg_m += abs(arg_krn[i]);
     }
 
     if (arg_m == 0) {
@@ -1728,9 +1725,17 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0f / arg_m);
     float arg_add =
         py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_add), 0.0f);
+    bool arg_threshold =
+        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
+    int arg_offset =
+        py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
+    bool arg_invert =
+        py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
 
     fb_alloc_mark();
-    imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add);
+    imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
     fb_alloc_free_till_mark();
     return args[0];
 }
@@ -1741,22 +1746,106 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
     image_t *arg_img =
         py_helper_arg_to_image_mutable(args[0]);
     int arg_ksize =
-        mp_obj_get_int(args[1]);
-    PY_ASSERT_TRUE_MSG((arg_ksize == 3 || arg_ksize == 5), "KernelSize must be 3 or 5!");
+        py_helper_arg_to_ksize(args[1]);
 
-    if (arg_ksize == 3) {
-        fb_alloc_mark();
-        imlib_morph(arg_img, 1, kernel_gauss_3, 1.0f/16.0f, 0.0f);
-        fb_alloc_free_till_mark();
-    } else if (arg_ksize == 5) {
-        fb_alloc_mark();
-        imlib_morph(arg_img, 2, kernel_gauss_5, 1.0f/256.0f, 0.0f);
-        fb_alloc_free_till_mark();
+    int k_2 = arg_ksize * 2;
+    int n = k_2 + 1;
+
+    int pascal[n];
+    pascal[0] = 1;
+
+    for (int i = 0; i < k_2; i++) { // Compute a row of pascal's triangle.
+        pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
     }
 
+    int arg_krn[n * n];
+    int arg_m = 0;
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            arg_krn[(i * n) + j] = pascal[i] * pascal[j];
+            arg_m += abs(arg_krn[(i * n) + j]);
+        }
+    }
+
+    bool arg_unsharp =
+        py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_unsharp), false);
+
+    if (arg_unsharp) arg_krn[((n/2)*n)+(n/2)] -= arg_m * 2;
+    if (arg_unsharp) arg_m = -arg_m;
+
+    float arg_mul =
+        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0f / arg_m);
+    float arg_add =
+        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_add), 0.0f);
+    bool arg_threshold =
+        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
+    int arg_offset =
+        py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
+    bool arg_invert =
+        py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
+
+    fb_alloc_mark();
+    imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
+    fb_alloc_free_till_mark();
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gaussian_obj, 2, py_image_gaussian);
+
+STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img =
+        py_helper_arg_to_image_mutable(args[0]);
+    int arg_ksize =
+        py_helper_arg_to_ksize(args[1]);
+
+    int k_2 = arg_ksize * 2;
+    int n = k_2 + 1;
+
+    int pascal[n];
+    pascal[0] = 1;
+
+    for (int i = 0; i < k_2; i++) { // Compute a row of pascal's triangle.
+        pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
+    }
+
+    int arg_krn[n * n];
+    int arg_m = 0;
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            arg_krn[(i * n) + j] = -(pascal[i] * pascal[j]);
+            arg_m += abs(arg_krn[(i * n) + j]);
+        }
+    }
+
+    bool arg_sharpen =
+        py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_sharpen), false);
+
+    arg_krn[((n/2)*n)+(n/2)] += arg_m + arg_sharpen;
+    arg_m = 1;
+
+    float arg_mul =
+        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0f / arg_m);
+    float arg_add =
+        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_add), 0.0f);
+    bool arg_threshold =
+        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);
+    int arg_offset =
+        py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_offset), 0);
+    bool arg_invert =
+        py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
+
+    fb_alloc_mark();
+    imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_laplacian_obj, 2, py_image_laplacian);
 
 /////////////////////////
 // Shadow Removal Methods
@@ -1771,11 +1860,11 @@ STATIC mp_obj_t py_image_remove_shadows(uint n_args, const mp_obj_t *args)
     if (n_args < 2) {
         fb_alloc_mark();
         imlib_remove_shadows(arg_img, NULL, NULL);
-        fb_alloc_mark();
+        fb_alloc_free_till_mark();
     } else if (MP_OBJ_IS_STR(args[1])) {
         fb_alloc_mark();
         imlib_remove_shadows(arg_img, mp_obj_str_get_str(args[1]), NULL);
-        fb_alloc_mark();
+        fb_alloc_free_till_mark();
     } else {
         fb_alloc_mark();
         imlib_remove_shadows(arg_img, NULL, py_helper_arg_to_image_color(args[1]));
@@ -1892,13 +1981,6 @@ STATIC mp_obj_t py_image_rotation_corr(uint n_args, const mp_obj_t *args, mp_map
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_rotation_corr_obj, 1, py_image_rotation_corr);
 #endif // IMLIB_ENABLE_ROTATION_CORR
-
-STATIC mp_obj_t py_image_mask_ellipse(mp_obj_t img_obj)
-{
-    imlib_mask_ellipse(py_helper_arg_to_image_grayscale(img_obj));
-    return img_obj;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_mask_ellipse_obj, py_image_mask_ellipse);
 
 //////////////
 // Get Methods
@@ -4674,7 +4756,10 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_mode),                MP_ROM_PTR(&py_image_mode_obj)},
     {MP_ROM_QSTR(MP_QSTR_midpoint),            MP_ROM_PTR(&py_image_midpoint_obj)},
     {MP_ROM_QSTR(MP_QSTR_morph),               MP_ROM_PTR(&py_image_morph_obj)},
+    {MP_ROM_QSTR(MP_QSTR_blur),                MP_ROM_PTR(&py_image_gaussian_obj)},
     {MP_ROM_QSTR(MP_QSTR_gaussian),            MP_ROM_PTR(&py_image_gaussian_obj)},
+    {MP_ROM_QSTR(MP_QSTR_gaussian_blur),       MP_ROM_PTR(&py_image_gaussian_obj)},
+    {MP_ROM_QSTR(MP_QSTR_laplacian),           MP_ROM_PTR(&py_image_laplacian_obj)},
     /* Shadow Removal Methods */
 #ifdef IMLIB_ENABLE_REMOVE_SHADOWS
     {MP_ROM_QSTR(MP_QSTR_remove_shadows),      MP_ROM_PTR(&py_image_remove_shadows_obj)},
@@ -4696,7 +4781,6 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
 #ifdef IMLIB_ENABLE_ROTATION_CORR
     {MP_ROM_QSTR(MP_QSTR_rotation_corr),       MP_ROM_PTR(&py_image_rotation_corr_obj)},
 #endif
-    {MP_ROM_QSTR(MP_QSTR_mask_ellipse),        MP_ROM_PTR(&py_image_mask_ellipse_obj)},
     /* Get Methods */
 #ifdef IMLIB_ENABLE_GET_SIMILARITY
     {MP_ROM_QSTR(MP_QSTR_get_similarity),      MP_ROM_PTR(&py_image_get_similarity_obj)},

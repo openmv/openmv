@@ -162,11 +162,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	fmath.o                                 \
 	fsort.o                                 \
 	fft.o                                   \
+	filter.o                                \
 	haar.o                                  \
 	imlib.o                                 \
 	collections.o                           \
 	stats.o                                 \
-	morph.o                                 \
 	integral.o                              \
 	integral_mw.o                           \
 	kmeans.o                                \
@@ -177,10 +177,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	rgb2rgb_tab.o                           \
 	invariant_tab.o                         \
 	mathop.o                                \
-	midpoint.o                              \
-	mean.o                                  \
-	mode.o                                  \
-	median.o                                \
 	pool.o                                  \
 	point.o                                 \
 	rectangle.o                             \

@@ -9,5 +9,5 @@
 #ifndef __FSORT_H__
 #define __FSORT_H__
 #include <stdint.h>
-void fsort(uint8_t *data, int n);
+void fsort(int *data, int n);
 #endif /* __FSORT_H__ */

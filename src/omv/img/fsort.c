@@ -6,14 +6,15 @@
  * Fast 9 and 25 bin sort.
  *
  */
+#include <stdlib.h>
 #include "fsort.h"
-#include "common.h"
+
 // http://pages.ripco.net/~jgamble/nw.html
 
-ALWAYS_INLINE static void cmpswp(uint8_t *a, uint8_t *b)
+static void cmpswp(int *a, int *b)
 {
     if ((*b) < (*a)) {
-        uint8_t tmp = *a;
+        int tmp = *a;
         *a = *b;
         *b = tmp;
     }
@@ -36,7 +37,7 @@ ALWAYS_INLINE static void cmpswp(uint8_t *a, uint8_t *b)
 
 // This is graphed in 17 columns.
 
-static void fsort9(uint8_t *data)
+static void fsort9(int *data)
 {
     cmpswp(data+0, data+1);
     cmpswp(data+3, data+4);
@@ -108,7 +109,7 @@ static void fsort9(uint8_t *data)
 
 // This is graphed in 89 columns.
 
-static void fsort25(uint8_t *data)
+static void fsort25(int *data)
 {
     cmpswp(data+1,  data+2);
     cmpswp(data+4,  data+5);
@@ -292,12 +293,17 @@ static void fsort25(uint8_t *data)
     cmpswp(data+11, data+12);
 }
 
-void fsort(uint8_t *data, int n)
+static int fsort_compare(const void *a, const void *b)
+{
+    return (*((int *) a)) - (*((int *) b));
+}
+
+void fsort(int *data, int n)
 {
     switch(n) {
         case 1: return;
         case 9: fsort9(data); return;
         case 25: fsort25(data); return;
-        default: return;
+        default: qsort(data, n, sizeof(int), fsort_compare);
     }
 }

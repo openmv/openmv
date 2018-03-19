@@ -227,13 +227,13 @@ const int8_t kernel_gauss_5[5*5] = {
     1,  4,  6,  4, 1
 };
 
-const int8_t kernel_laplacian_3[3*3] = {
+const int kernel_laplacian_3[3*3] = {
      -1, -1, -1,
      -1,  8, -1,
      -1, -1, -1
 };
 
-const int8_t kernel_high_pass_3[3*3] = {
+const int kernel_high_pass_3[3*3] = {
     -1, -1, -1,
     -1, +8, -1,
     -1, -1, -1
@@ -521,71 +521,6 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void imlib_histeq(image_t *img)
-{
-    switch(img->bpp) {
-        case IMAGE_BPP_BINARY: {
-            // Can't run this on a binary image.
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            int a = img->w * img->h;
-            float s = (COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN) / ((float) a);
-            uint32_t *hist = fb_alloc0((COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1)*sizeof(uint32_t));
-            uint8_t *pixels = (uint8_t *) img->pixels;
-
-            // Compute the image histogram
-            for (int i=0; i<a; i++) {
-                hist[pixels[i]-COLOR_GRAYSCALE_MIN] += 1;
-            }
-
-            // Compute the CDF
-            for (int i=0, sum=0; i<(COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1); i++) {
-                sum += hist[i];
-                hist[i] = sum;
-            }
-
-            for (int i=0; i<a; i++) {
-                int pixel = pixels[i];
-                pixels[i] = (s * hist[pixel-COLOR_GRAYSCALE_MIN]) + COLOR_GRAYSCALE_MIN;
-            }
-
-            fb_free();
-            break;
-        }
-        case IMAGE_BPP_RGB565: {
-            int a = img->w * img->h;
-            float s = (COLOR_Y_MAX-COLOR_Y_MIN) / ((float) a);
-            uint32_t *hist = fb_alloc0((COLOR_Y_MAX-COLOR_Y_MIN+1)*sizeof(uint32_t));
-            uint16_t *pixels = (uint16_t *) img->pixels;
-
-            // Compute image histogram
-            for (int i=0; i<a; i++) {
-                hist[COLOR_RGB565_TO_Y(pixels[i])-COLOR_Y_MIN] += 1;
-            }
-
-            // Compute the CDF
-            for (int i=0, sum=0; i<(COLOR_Y_MAX-COLOR_Y_MIN+1); i++) {
-                sum += hist[i];
-                hist[i] = sum;
-            }
-
-            for (int i=0; i<a; i++) {
-                int pixel = pixels[i];
-                pixels[i] = imlib_yuv_to_rgb((s * hist[COLOR_RGB565_TO_Y(pixel)-COLOR_Y_MIN]),
-                                             COLOR_RGB565_TO_U(pixel),
-                                             COLOR_RGB565_TO_V(pixel));
-            }
-
-            fb_free();
-            break;
-        }
-        default: {
-            break;
-        }
-    }
-}
-
 // A simple algorithm for correcting lens distortion.
 // See http://www.tannerhelland.com/4743/simple-algorithm-correcting-lens-distortion/
 void imlib_lens_corr(image_t *img, float strength, float zoom)
@@ -697,23 +632,6 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
         }
         default: {
             break;
-        }
-    }
-}
-
-void imlib_mask_ellipse(image_t *img)
-{
-    int h = img->w/2;
-    int v = img->h/2;
-    int a = h * h;
-    int b = v * v;
-    uint8_t *pixels = img->pixels;
-
-    for (int y=0; y<img->h; y++) {
-        for (int x=0; x<img->w; x++) {
-            if ((((x-h)*(x-h)*100) / a + ((y-v)*(y-v)*100) / b) > 100) {
-                pixels[y*img->w+x] = 0;
-            }
         }
     }
 }

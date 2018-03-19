@@ -711,8 +711,8 @@ extern const uint8_t g826_table[256];
 // Image kernels
 extern const int8_t kernel_gauss_3[9];
 extern const int8_t kernel_gauss_5[25];
-extern const int8_t kernel_laplacian_3[9];
-extern const int8_t kernel_high_pass_3[9];
+extern const int kernel_laplacian_3[9];
+extern const int kernel_high_pass_3[9];
 
 #define IM_RGB5652L(p) \
     ({ __typeof__ (p) _p = (p); \
@@ -1131,23 +1131,12 @@ bool rectangle_subimg(image_t *img, rectangle_t *r, rectangle_t *r_out);
 array_t *rectangle_merge(array_t *rectangles);
 void rectangle_expand(rectangle_t *r, int x, int y);
 
-/* Image Morphing */
-void imlib_morph(image_t *img, const int ksize, const int8_t *krn, const float m, const int b);
-
 /* Separable 2D convolution */
 void imlib_sepconv3(image_t *img, const int8_t *krn, const float m, const int b);
 
 /* Image Statistics */
 int imlib_image_mean(image_t *src, int *r_mean, int *g_mean, int *b_mean);
 int imlib_image_std(image_t *src); // grayscale only
-
-/* Image Filtering */
-void imlib_midpoint_filter(image_t *img, const int ksize, const int bias, bool threshold, int offset, bool invert, image_t *mask);
-void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
-void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
-void imlib_median_filter(image_t *img, const int ksize, const int percentile, bool threshold, int offset, bool invert, image_t *mask);
-void imlib_histeq(image_t *img);
-void imlib_mask_ellipse(image_t *img);
 
 /* Template Matching */
 void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, const int bias);
@@ -1244,6 +1233,13 @@ void imlib_min(image_t *img, const char *path, image_t *other, image_t *mask);
 void imlib_max(image_t *img, const char *path, image_t *other, image_t *mask);
 void imlib_difference(image_t *img, const char *path, image_t *other, image_t *mask);
 void imlib_blend(image_t *img, const char *path, image_t *other, float alpha, image_t *mask);
+// Filtering Functions
+void imlib_histeq(image_t *img);
+void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_median_filter(image_t *img, const int ksize, float percentile, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, const int b, bool threshold, int offset, bool invert, image_t *mask);
 // Image Correction
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
 void imlib_logpolar(image_t *img, bool linear, bool reverse);

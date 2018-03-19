@@ -32,11 +32,11 @@ SRCS += $(addprefix img/,   \
 	fmath.c                 \
 	fsort.c                 \
 	fft.c                   \
+	filter.c                \
 	haar.c                  \
 	imlib.c                 \
 	collections.c           \
 	stats.c                 \
-	morph.c                 \
 	integral.c              \
 	integral_mw.c           \
 	kmeans.c                \
@@ -47,10 +47,6 @@ SRCS += $(addprefix img/,   \
 	rgb2rgb_tab.c           \
 	invariant_tab.c         \
 	mathop.c                \
-	midpoint.c              \
-	mean.c                  \
-	mode.c                  \
-	median.c                \
 	pool.c                  \
 	point.c                 \
 	rectangle.c             \
