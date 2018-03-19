@@ -1714,7 +1714,7 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
     for (int i = 0; i < n; i++) {
         arg_krn[i] = mp_obj_get_int(krn[i]);
-        arg_m += abs(arg_krn[i]);
+        arg_m += arg_krn[i];
     }
 
     if (arg_m == 0) {
@@ -1763,16 +1763,18 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            arg_krn[(i * n) + j] = pascal[i] * pascal[j];
-            arg_m += abs(arg_krn[(i * n) + j]);
+            int temp = pascal[i] * pascal[j];
+            arg_krn[(i * n) + j] = temp;
+            arg_m += temp;
         }
     }
 
-    bool arg_unsharp =
-        py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_unsharp), false);
+    int middle = ((n/2)*n)+(n/2);
 
-    if (arg_unsharp) arg_krn[((n/2)*n)+(n/2)] -= arg_m * 2;
-    if (arg_unsharp) arg_m = -arg_m;
+    if (py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_unsharp), false)) {
+        arg_krn[middle] -= arg_m * 2;
+        arg_m = -arg_m;
+    }
 
     float arg_mul =
         py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0f / arg_m);
@@ -1816,16 +1818,20 @@ STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            arg_krn[(i * n) + j] = -(pascal[i] * pascal[j]);
-            arg_m += abs(arg_krn[(i * n) + j]);
+            int temp = pascal[i] * pascal[j];
+            arg_krn[(i * n) + j] = -temp;
+            arg_m += temp;
         }
     }
 
-    bool arg_sharpen =
-        py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_sharpen), false);
+    int middle = ((n/2)*n)+(n/2);
+    int temp = -arg_krn[middle];
+    arg_krn[middle] += arg_m;
+    arg_m = temp;
 
-    arg_krn[((n/2)*n)+(n/2)] += arg_m + arg_sharpen;
-    arg_m = 1;
+    if (py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_sharpen), false)) {
+        arg_krn[middle] += arg_m;
+    }
 
     float arg_mul =
         py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mul), 1.0f / arg_m);
