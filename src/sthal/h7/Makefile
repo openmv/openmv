@@ -11,6 +11,7 @@ stm32h7xx_hal_dcmi.c\
 stm32h7xx_hal_dma.c\
 stm32h7xx_hal_dma_ex.c\
 stm32h7xx_hal_dma2d.c\
+stm32h7xx_hal_mdma.c\
 stm32h7xx_hal_flash.c\
 stm32h7xx_hal_flash_ex.c\
 stm32h7xx_hal_gpio.c\
