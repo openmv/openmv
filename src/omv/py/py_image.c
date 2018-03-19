@@ -1140,8 +1140,8 @@ STATIC mp_obj_t py_image_draw_arrow(uint n_args, const mp_obj_t *args, mp_map_t 
     int dy = (arg_y1 - arg_y0);
     float length = fast_sqrtf((dx * dx) + (dy * dy));
 
-    float ux = dx / length;
-    float uy = dy / length;
+    float ux = IM_DIV(dx, length);
+    float uy = IM_DIV(dy, length);
     float vx = -uy;
     float vy = ux;
 
