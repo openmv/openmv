@@ -38,11 +38,6 @@ Q(width)
 Q(height)
 Q(format)
 Q(size)
-Q(morph)
-Q(midpoint)
-Q(mean)
-Q(mode)
-Q(median)
 Q(gaussian)
 Q(midpoint_pool)
 Q(midpoint_pooled)
@@ -62,12 +57,6 @@ Q(find_hog)
 Q(cmp_lbp)
 Q(quality)
 Q(roi)
-Q(offset)
-Q(threshold)
-Q(mul)
-Q(add)
-Q(bias)
-Q(percentile)
 Q(normalized)
 Q(filter_outliers)
 Q(scale_factor)
@@ -411,7 +400,7 @@ Q(b_xnor)
 
 // Erode
 Q(erode)
-// duplicate Q(threshold)
+Q(threshold)
 // duplicate Q(mask)
 
 // Dilate
@@ -428,7 +417,7 @@ Q(hmirror)
 Q(vflip)
 
 // Add Op
-// duplicate Q(add)
+Q(add)
 // duplicate Q(mask)
 
 // Sub Op
@@ -437,9 +426,9 @@ Q(reverse)
 // duplicate Q(mask)
 
 // Mul Op
-// duplicate Q(mul)
+Q(mul)
 // duplicate Q(invert)
-// duplicate Q(msk)
+// duplicate Q(mask)
 
 // Div Op
 Q(div)
@@ -463,13 +452,69 @@ Q(blend)
 // duplicate Q(alpha)
 // duplicate Q(mask)
 
-// Linear Polar
-Q(linpolar)
-// duplicate Q(reverse)
+// Histogram Equalization
+Q(histeq)
 
-// Log Polar
-Q(logpolar)
-// duplicate Q(reverse)
+// Mean
+Q(mean)
+// duplicate Q(threshold)
+Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
+
+// Median
+Q(median)
+Q(percentile)
+// duplicate Q(threshold)
+// duplicate Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
+
+// Mode
+Q(mode)
+// duplicate Q(threshold)
+// duplicate Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
+
+// Midpoint
+Q(midpoint)
+Q(bias)
+// duplicate Q(threshold)
+// duplicate Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
+
+// Moprh
+Q(morph)
+// duplicate Q(mul)
+// duplicate Q(add)
+// duplicate Q(threshold)
+// duplicate Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
+
+// Gaussian Blur
+Q(blur)
+Q(gaussian)
+Q(gaussian_blur)
+Q(unsharp)
+// duplicate Q(mul)
+// duplicate Q(add)
+// duplicate Q(threshold)
+// duplicate Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
+
+// Laplacian
+Q(laplacian)
+Q(sharpen)
+// duplicate Q(mul)
+// duplicate Q(add)
+// duplicate Q(threshold)
+// duplicate Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
 
 // Shadow Removal
 Q(remove_shadows)
@@ -480,8 +525,13 @@ Q(chrominvar)
 // Illumination Invariant
 Q(illuminvar)
 
-// Histogram Equalization
-Q(histeq)
+// Linear Polar
+Q(linpolar)
+// duplicate Q(reverse)
+
+// Log Polar
+Q(logpolar)
+// duplicate Q(reverse)
 
 // Lens Correction
 Q(lens_corr)
