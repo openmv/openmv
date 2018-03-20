@@ -416,7 +416,7 @@ static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_en
     }
 }
 
-void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op, void *data)
+void imlib_image_operation(image_t *img, const char *path, image_t *other, int scalar, line_op_t op, void *data)
 {
     if (path) {
         uint32_t size = fb_avail() / 2;
@@ -457,12 +457,60 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, line_
         file_buffer_off(&fp);
         file_close(&fp);
         fb_free();
-    } else {
+    } else if (other) {
         if (!IM_EQUAL(img, other)) {
             ff_not_equal(NULL);
         }
         for (int i=0; i<img->h; i++) {
             op(img, i, other->pixels + (img->w * img->bpp * i), data, false);
+        }
+    } else {
+        switch(img->bpp) {
+            case IMAGE_BPP_BINARY: {
+                uint32_t *row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img));
+
+                for (int i=0, ii=img->w; i<ii; i++) {
+                    IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, i, scalar);
+                }
+
+                for (int i=0, ii=img->h; i<ii; i++) {
+                    op(img, i, row_ptr, data, false);
+                }
+
+                fb_free();
+                break;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                uint8_t *row_ptr = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img));
+
+                for (int i=0, ii=img->w; i<ii; i++) {
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, i, scalar);
+                }
+
+                for (int i=0, ii=img->h; i<ii; i++) {
+                    op(img, i, row_ptr, data, false);
+                }
+
+                fb_free();
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                uint16_t *row_ptr = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img));
+
+                for (int i=0, ii=img->w; i<ii; i++) {
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, i, scalar);
+                }
+
+                for (int i=0, ii=img->h; i<ii; i++) {
+                    op(img, i, row_ptr, data, false);
+                }
+
+                fb_free();
+                break;
+            }
+            default: {
+                break;
+            }
         }
     }
 }

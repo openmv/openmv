@@ -12,7 +12,7 @@ typedef struct imlib_similatiry_line_op_state {
     int lines_processed;
 } imlib_similatiry_line_op_state_t;
 
-void imlib_similarity_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+void imlib_similarity_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     imlib_similatiry_line_op_state_t *state = (imlib_similatiry_line_op_state_t *) data; vflipped = vflipped;
     float c1 = 0, c2 = 0;
@@ -108,7 +108,7 @@ void imlib_similarity_line_op(image_t *img, int line, uint8_t *other, void *data
     state->lines_processed += 1;
 }
 
-void imlib_get_similarity(image_t *img, const char *path, image_t *other, float *avg, float *std, float *min, float *max)
+void imlib_get_similarity(image_t *img, const char *path, image_t *other, int scalar, float *avg, float *std, float *min, float *max)
 {
     int h_blocks = (img->w + 7) / 8;
     int v_blocks = (img->h + 7) / 8;
@@ -127,7 +127,7 @@ void imlib_get_similarity(image_t *img, const char *path, image_t *other, float 
     state.similarity_max = FLT_MIN;
     state.lines_processed = 0;
 
-    imlib_image_operation(img, path, other, imlib_similarity_line_op, (void *) &state);
+    imlib_image_operation(img, path, other, scalar, imlib_similarity_line_op, &state);
     *avg = state.similarity_sum / blocks;
     *std = fast_sqrtf((state.similarity_sum_2 / blocks) - ((*avg) * (*avg)));
     *min = state.similarity_min;

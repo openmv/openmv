@@ -935,7 +935,7 @@ typedef struct img_read_settings {
     save_image_format_t format;
 } img_read_settings_t;
 
-typedef void (*line_op_t)(image_t*, int, uint8_t*, void*, bool);
+typedef void (*line_op_t)(image_t*, int, void*, void*, bool);
 
 typedef enum descriptor_type {
     DESC_LBP,
@@ -1104,7 +1104,7 @@ void jpeg_read_pixels(FIL *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
 void jpeg_write(image_t *img, const char *path, int quality);
 bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs);
-void imlib_image_operation(image_t *img, const char *path, image_t *other, line_op_t op, void *data);
+void imlib_image_operation(image_t *img, const char *path, image_t *other, int scalar, line_op_t op, void *data);
 void imlib_load_image(image_t *img, const char *path);
 void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int quality);
 
@@ -1214,25 +1214,25 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
 // Binary Functions
 void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero);
 void imlib_invert(image_t *img);
-void imlib_b_and(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_b_nand(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_b_or(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_b_nor(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_b_xor(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_b_xnor(image_t *img, const char *path, image_t *other, image_t *mask);
+void imlib_b_and(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_b_nand(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_b_or(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_b_nor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_b_xor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_b_xnor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_erode(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask);
 // Math Functions
 void imlib_negate(image_t *img);
-void imlib_replace(image_t *img, const char *path, image_t *other, bool hmirror, bool vflip);
-void imlib_add(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_sub(image_t *img, const char *path, image_t *other, bool reverse, image_t *mask);
-void imlib_mul(image_t *img, const char *path, image_t *other, bool invert, image_t *mask);
-void imlib_div(image_t *img, const char *path, image_t *other, bool invert, image_t *mask);
-void imlib_min(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_max(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_difference(image_t *img, const char *path, image_t *other, image_t *mask);
-void imlib_blend(image_t *img, const char *path, image_t *other, float alpha, image_t *mask);
+void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip);
+void imlib_add(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_sub(image_t *img, const char *path, image_t *other, int scalar, bool reverse, image_t *mask);
+void imlib_mul(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask);
+void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask);
+void imlib_min(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_max(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_difference(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
+void imlib_blend(image_t *img, const char *path, image_t *other, int scalar, float alpha, image_t *mask);
 // Filtering Functions
 void imlib_histeq(image_t *img);
 void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
@@ -1243,7 +1243,7 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
 // Image Correction
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
 void imlib_logpolar(image_t *img, bool linear, bool reverse);
-void imlib_remove_shadows(image_t *img, const char *path, image_t *other);
+void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int scalar, bool single);
 void imlib_chrominvar(image_t *img);
 void imlib_illuminvar(image_t *img);
 void imlib_histeq(image_t *img);
@@ -1253,7 +1253,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
                          float z_rotation, float x_translation, float y_translation,
                          float zoom);
 // Statistics
-void imlib_get_similarity(image_t *img, const char *path, image_t *other, float *avg, float *std, float *min, float *max);
+void imlib_get_similarity(image_t *img, const char *path, image_t *other, int scalar, float *avg, float *std, float *min, float *max);
 void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_t *thresholds, bool invert);
 void imlib_get_percentile(percentile_t *out, image_bpp_t bpp, histogram_t *ptr, float percentile);
 void imlib_get_threshold(threshold_t *out, image_bpp_t bpp, histogram_t *ptr);

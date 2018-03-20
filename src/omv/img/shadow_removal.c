@@ -127,7 +127,7 @@ static void imlib_remove_shadows_sub_line_op(image_t *img, int line, void *data,
     imlib_remove_shadows_sub_sub_line_op(img, line, data, vflipped);
 }
 
-static void imlib_remove_shadows_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_remove_shadows_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     imlib_remove_shadows_line_op_state_t *state = (imlib_remove_shadows_line_op_state_t *) data;
 
@@ -152,9 +152,9 @@ static void imlib_remove_shadows_line_op(image_t *img, int line, uint8_t *other,
     }
 }
 
-void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
+void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int scalar, bool single)
 {
-    if (path || other) {
+    if (!single) {
         imlib_remove_shadows_line_op_state_t state;
 
         for (int i = 0; i < imlib_remove_shadows_kernel_size; i++) {
@@ -165,7 +165,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
 
         state.lines_processed = 0;
 
-        imlib_image_operation(img, path, other, imlib_remove_shadows_line_op, (void *) &state);
+        imlib_image_operation(img, path, other, scalar, imlib_remove_shadows_line_op, &state);
 
         for (int i = 0; i < imlib_remove_shadows_kernel_size; i++) {
             fb_free();
@@ -272,7 +272,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
             imlib_invert(&temp_image_2);
             imlib_erode(&temp_image_2, 5, 120, NULL);
             imlib_invert(&temp_image_2);
-            imlib_b_xor(&temp_image_2, NULL, &temp_image, NULL);
+            imlib_b_xor(&temp_image_2, NULL, &temp_image, 0, NULL);
             imlib_erode(&temp_image_2, 2, 24, NULL);
 
             int not_shadow_r_sum = 0;
@@ -342,7 +342,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other)
             memcpy(temp_image.data, temp_image_2.data, image_size(&temp_image_2));
 
             imlib_erode(&temp_image_2, 1, 8, NULL);
-            imlib_b_xor(&temp_image, NULL, &temp_image_2, NULL);
+            imlib_b_xor(&temp_image, NULL, &temp_image_2, 0, NULL);
             imlib_dilate(&temp_image, 3, 0, NULL);
             imlib_median_filter(img, 2, 12, false, 0, false, &temp_image);
 
