@@ -1709,7 +1709,9 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     mp_obj_t *krn;
     mp_obj_get_array_fixed_n(args[2], n, &krn);
 
-    int arg_krn[n];
+    fb_alloc_mark();
+
+    int *arg_krn = fb_alloc(n * sizeof(int));
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -1734,8 +1736,8 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
 
-    fb_alloc_mark();
     imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
+    fb_free();
     fb_alloc_free_till_mark();
     return args[0];
 }
@@ -1751,14 +1753,16 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
     int k_2 = arg_ksize * 2;
     int n = k_2 + 1;
 
-    int pascal[n];
+    fb_alloc_mark();
+
+    int *pascal = fb_alloc(n * sizeof(int));
     pascal[0] = 1;
 
     for (int i = 0; i < k_2; i++) { // Compute a row of pascal's triangle.
         pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
     }
 
-    int arg_krn[n * n];
+    int *arg_krn = fb_alloc(n * n * sizeof(int));
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -1769,10 +1773,8 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
         }
     }
 
-    int middle = ((n/2)*n)+(n/2);
-
     if (py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_unsharp), false)) {
-        arg_krn[middle] -= arg_m * 2;
+        arg_krn[((n/2)*n)+(n/2)] -= arg_m * 2;
         arg_m = -arg_m;
     }
 
@@ -1789,8 +1791,9 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
 
-    fb_alloc_mark();
     imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
+    fb_free();
+    fb_free();
     fb_alloc_free_till_mark();
     return args[0];
 }
@@ -1806,14 +1809,16 @@ STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *
     int k_2 = arg_ksize * 2;
     int n = k_2 + 1;
 
-    int pascal[n];
+    fb_alloc_mark();
+
+    int *pascal = fb_alloc(n * sizeof(int));
     pascal[0] = 1;
 
     for (int i = 0; i < k_2; i++) { // Compute a row of pascal's triangle.
         pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
     }
 
-    int arg_krn[n * n];
+    int *arg_krn = fb_alloc(n * n * sizeof(int));
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -1846,8 +1851,9 @@ STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, 8, kw_args);
 
-    fb_alloc_mark();
     imlib_morph(arg_img, arg_ksize, arg_krn, arg_mul, arg_add, arg_threshold, arg_offset, arg_invert, arg_msk);
+    fb_free();
+    fb_free();
     fb_alloc_free_till_mark();
     return args[0];
 }
