@@ -53,7 +53,7 @@ typedef struct imlib_replace_line_op_state {
     bool hmirror, vflip;
 } imlib_replace_line_op_state_t;
 
-static void imlib_replace_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_replace_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     bool hmirror = ((imlib_replace_line_op_state_t *) data)->hmirror;
     bool vflip = ((imlib_replace_line_op_state_t *) data)->vflip;
@@ -95,15 +95,15 @@ static void imlib_replace_line_op(image_t *img, int line, uint8_t *other, void *
     }
 }
 
-void imlib_replace(image_t *img, const char *path, image_t *other, bool hmirror, bool vflip)
+void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip)
 {
     imlib_replace_line_op_state_t state;
     state.hmirror = hmirror;
     state.vflip = vflip;
-    imlib_image_operation(img, path, other, imlib_replace_line_op, &state);
+    imlib_image_operation(img, path, other, scalar, imlib_replace_line_op, &state);
 }
 
-static void imlib_add_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_add_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     image_t *mask = (image_t *) data;
 
@@ -157,9 +157,9 @@ static void imlib_add_line_op(image_t *img, int line, uint8_t *other, void *data
     }
 }
 
-void imlib_add(image_t *img, const char *path, image_t *other, image_t *mask)
+void imlib_add(image_t *img, const char *path, image_t *other, int scalar, image_t *mask)
 {
-    imlib_image_operation(img, path, other, imlib_add_line_op, mask);
+    imlib_image_operation(img, path, other, scalar, imlib_add_line_op, mask);
 }
 
 typedef struct imlib_sub_line_op_state {
@@ -167,7 +167,7 @@ typedef struct imlib_sub_line_op_state {
     image_t *mask;
 } imlib_sub_line_op_state_t;
 
-static void imlib_sub_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_sub_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     bool reverse = ((imlib_sub_line_op_state_t *) data)->reverse;
     image_t *mask = ((imlib_sub_line_op_state_t *) data)->mask;
@@ -228,12 +228,12 @@ static void imlib_sub_line_op(image_t *img, int line, uint8_t *other, void *data
     }
 }
 
-void imlib_sub(image_t *img, const char *path, image_t *other, bool reverse, image_t *mask)
+void imlib_sub(image_t *img, const char *path, image_t *other, int scalar, bool reverse, image_t *mask)
 {
     imlib_sub_line_op_state_t state;
     state.reverse = reverse;
     state.mask = mask;
-    imlib_image_operation(img, path, other, imlib_sub_line_op, &state);
+    imlib_image_operation(img, path, other, scalar, imlib_sub_line_op, &state);
 }
 
 typedef struct imlib_mul_line_op_state {
@@ -241,7 +241,7 @@ typedef struct imlib_mul_line_op_state {
     image_t *mask;
 } imlib_mul_line_op_state_t;
 
-static void imlib_mul_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_mul_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     bool invert = ((imlib_mul_line_op_state_t *) data)->invert;
     image_t *mask = ((imlib_mul_line_op_state_t *) data)->mask;
@@ -312,12 +312,12 @@ static void imlib_mul_line_op(image_t *img, int line, uint8_t *other, void *data
     }
 }
 
-void imlib_mul(image_t *img, const char *path, image_t *other, bool invert, image_t *mask)
+void imlib_mul(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask)
 {
     imlib_mul_line_op_state_t state;
     state.invert = invert;
     state.mask = mask;
-    imlib_image_operation(img, path, other, imlib_mul_line_op, &state);
+    imlib_image_operation(img, path, other, scalar, imlib_mul_line_op, &state);
 }
 
 typedef struct imlib_div_line_op_state {
@@ -325,7 +325,7 @@ typedef struct imlib_div_line_op_state {
     image_t *mask;
 } imlib_div_line_op_state_t;
 
-static void imlib_div_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_div_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     bool invert = ((imlib_div_line_op_state_t *) data)->invert;
     image_t *mask = ((imlib_div_line_op_state_t *) data)->mask;
@@ -391,15 +391,15 @@ static void imlib_div_line_op(image_t *img, int line, uint8_t *other, void *data
     }
 }
 
-void imlib_div(image_t *img, const char *path, image_t *other, bool invert, image_t *mask)
+void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask)
 {
     imlib_div_line_op_state_t state;
     state.invert = invert;
     state.mask = mask;
-    imlib_image_operation(img, path, other, imlib_div_line_op, &state);
+    imlib_image_operation(img, path, other, scalar, imlib_div_line_op, &state);
 }
 
-static void imlib_min_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_min_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     image_t *mask = (image_t *) data;
 
@@ -448,12 +448,12 @@ static void imlib_min_line_op(image_t *img, int line, uint8_t *other, void *data
     }
 }
 
-void imlib_min(image_t *img, const char *path, image_t *other, image_t *mask)
+void imlib_min(image_t *img, const char *path, image_t *other, int scalar, image_t *mask)
 {
-    imlib_image_operation(img, path, other, imlib_min_line_op, mask);
+    imlib_image_operation(img, path, other, scalar, imlib_min_line_op, mask);
 }
 
-static void imlib_max_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_max_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     image_t *mask = (image_t *) data;
 
@@ -502,12 +502,12 @@ static void imlib_max_line_op(image_t *img, int line, uint8_t *other, void *data
     }
 }
 
-void imlib_max(image_t *img, const char *path, image_t *other, image_t *mask)
+void imlib_max(image_t *img, const char *path, image_t *other, int scalar, image_t *mask)
 {
-    imlib_image_operation(img, path, other, imlib_max_line_op, mask);
+    imlib_image_operation(img, path, other, scalar, imlib_max_line_op, mask);
 }
 
-static void imlib_difference_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_difference_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     image_t *mask = (image_t *) data;
 
@@ -556,9 +556,9 @@ static void imlib_difference_line_op(image_t *img, int line, uint8_t *other, voi
     }
 }
 
-void imlib_difference(image_t *img, const char *path, image_t *other, image_t *mask)
+void imlib_difference(image_t *img, const char *path, image_t *other, int scalar, image_t *mask)
 {
-    imlib_image_operation(img, path, other, imlib_difference_line_op, mask);
+    imlib_image_operation(img, path, other, scalar,imlib_difference_line_op,  mask);
 }
 
 typedef struct imlib_blend_line_op_state {
@@ -566,7 +566,7 @@ typedef struct imlib_blend_line_op_state {
     image_t *mask;
 } imlib_blend_line_op_t;
 
-static void imlib_blend_line_op(image_t *img, int line, uint8_t *other, void *data, bool vflipped)
+static void imlib_blend_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     float alpha = ((imlib_blend_line_op_t *) data)->alpha, beta = 1 - alpha;
     image_t *mask = ((imlib_blend_line_op_t *) data)->mask;
@@ -616,10 +616,10 @@ static void imlib_blend_line_op(image_t *img, int line, uint8_t *other, void *da
     }
 }
 
-void imlib_blend(image_t *img, const char *path, image_t *other, float alpha, image_t *mask)
+void imlib_blend(image_t *img, const char *path, image_t *other, int scalar, float alpha, image_t *mask)
 {
     imlib_blend_line_op_t state;
     state.alpha = alpha;
     state.mask = mask;
-    imlib_image_operation(img, path, other, imlib_blend_line_op, &state);
+    imlib_image_operation(img, path, other, scalar, imlib_blend_line_op, &state);
 }

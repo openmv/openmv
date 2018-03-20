@@ -173,7 +173,7 @@ uint py_helper_consume_array(uint n_args, const mp_obj_t *args, uint arg_index, 
 int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uint arg_index,
                             mp_map_t *kw_args, int default_val)
 {
-    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color), MP_MAP_LOOKUP);
+    mp_map_elem_t *kw_arg = kw_args ? mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color), MP_MAP_LOOKUP) : NULL;
 
     if (kw_arg) {
         if (mp_obj_is_integer(kw_arg->value)) {
