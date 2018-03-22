@@ -14,6 +14,10 @@
 #define OMV_BOARD_TYPE          "M7"
 #define OMV_UNIQUE_ID_ADDR      0x1FF1E800
 
+// Flash sectors for the bootloader.
+// Flash FS sector, main FW sector, max sector.
+#define OMV_FLASH_LAYOUT        {1, 2, 15}
+
 #define OMV_XCLK_MCO            (0U)
 #define OMV_XCLK_TIM            (1U)
 

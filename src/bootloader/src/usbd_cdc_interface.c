@@ -3,8 +3,9 @@
 #include "usbdev/usbd_cdc.h"
 #include "omv_boardconfig.h"
 
-#define APP_RX_DATA_SIZE    2048
-#define APP_TX_DATA_SIZE    2048
+#define APP_RX_DATA_SIZE    (2048)
+#define APP_TX_DATA_SIZE    (2048)
+#define BOOTLOADER_VERSION  (0xABCD0002)
 
 USBD_CDC_LineCodingTypeDef LineCoding =
 {
@@ -28,6 +29,7 @@ static volatile uint8_t vcp_connected = 0;
 #define FLASH_BUF_SIZE  (64)
 static volatile uint32_t flash_buf_idx=0;
 static volatile uint8_t  flash_buf[FLASH_BUF_SIZE];
+static const    uint32_t flash_layout[3] = OMV_FLASH_LAYOUT;
 
 /* USB handler declaration */
 extern USBD_HandleTypeDef  USBD_Device;
@@ -43,6 +45,7 @@ enum bootldr_cmd {
     BOOTLDR_RESET   = 0xABCD0002,
     BOOTLDR_ERASE   = 0xABCD0004,
     BOOTLDR_WRITE   = 0xABCD0008,
+    BOOTLDR_FLASH   = 0xABCD0010,
 };
 
 USBD_CDC_ItfTypeDef USBD_CDC_fops = 
@@ -199,11 +202,15 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
 
     switch (cmd) {
         case BOOTLDR_START:
-            flash_buf_idx= 0;
-            flash_offset = MAIN_APP_ADDR;
+            flash_buf_idx = 0;
             ide_connected = 1;
-            // Send back the START command as an ACK
-            CDC_Tx(Buf, 4);
+            flash_offset = MAIN_APP_ADDR;
+            // Send back the bootloader version.
+            CDC_Tx((uint8_t*) BOOTLOADER_VERSION, 4);
+            break;
+        case BOOTLDR_FLASH:
+            // Return flash layout (bootloader v2)
+            CDC_Tx((uint8_t*) flash_layout, 12);
             break;
         case BOOTLDR_RESET:
             ide_connected = 0;
