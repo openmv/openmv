@@ -62,9 +62,7 @@
 #define OMV_CCM_ORIGIN      0x20000000
 #define OMV_CCM_LENGTH      128K    // Note DTCM/ITCM memory is not cacheable on M7
 #define OMV_SRAM1_ORIGIN    0x20020000
-#define OMV_SRAM1_LENGTH    368K
-#define OMV_SRAM2_ORIGIN    0x2007C000
-#define OMV_SRAM2_LENGTH    16K
+#define OMV_SRAM1_LENGTH    384K
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
