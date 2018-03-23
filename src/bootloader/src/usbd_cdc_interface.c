@@ -5,7 +5,6 @@
 
 #define APP_RX_DATA_SIZE    (2048)
 #define APP_TX_DATA_SIZE    (2048)
-#define BOOTLOADER_VERSION  (0xABCD0002)
 
 USBD_CDC_LineCodingTypeDef LineCoding =
 {
@@ -30,6 +29,7 @@ static volatile uint8_t vcp_connected = 0;
 static volatile uint32_t flash_buf_idx=0;
 static volatile uint8_t  flash_buf[FLASH_BUF_SIZE];
 static const    uint32_t flash_layout[3] = OMV_FLASH_LAYOUT;
+static const    uint32_t bootloader_version = 0xABCD0002;
 
 /* USB handler declaration */
 extern USBD_HandleTypeDef  USBD_Device;
@@ -206,7 +206,7 @@ static int8_t CDC_Itf_Receive(uint8_t *Buf, uint32_t *Len)
             ide_connected = 1;
             flash_offset = MAIN_APP_ADDR;
             // Send back the bootloader version.
-            CDC_Tx((uint8_t*) BOOTLOADER_VERSION, 4);
+            CDC_Tx((uint8_t *) &bootloader_version, 4);
             break;
         case BOOTLDR_FLASH:
             // Return flash layout (bootloader v2)
