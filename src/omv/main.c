@@ -190,6 +190,9 @@ static const char fresh_selftest_py[] =
 #endif
 
 void flash_error(int n) {
+    led_state(LED_RED, 0);
+    led_state(LED_GREEN, 0);
+    led_state(LED_BLUE, 0);
     for (int i = 0; i < n; i++) {
         led_state(LED_RED, 0);
         HAL_Delay(100);
@@ -407,6 +410,7 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
 int main(void)
 {
     int sensor_init_ret = 0;
+    bool sdcard_mounted = false;
     bool first_soft_reset = true;
 
     // Uncomment to disable write buffer to get precise faults.
@@ -473,6 +477,7 @@ soft_reset:
     servo_init();
     usbdbg_init();
     wifi_dbg_init();
+    sdcard_init();
 
     if (first_soft_reset) {
         rtc_init_start(false);
@@ -491,8 +496,6 @@ soft_reset:
 
     // Initialize storage
     if (sdcard_is_present()) {
-        sdcard_init();
-
         // Init the vfs object
         vfs_fat->flags = 0;
         sdcard_init_vfs(vfs_fat, 1);
@@ -500,12 +503,15 @@ soft_reset:
         // Try to mount the SD card
         FRESULT res = f_mount(&vfs_fat->fatfs);
         if (res != FR_OK) {
-            __fatal_error("Could not mount SD card\n");
+            sdcard_mounted = false;
+        } else {
+            sdcard_mounted = true;
+            // Set USB medium to SD
+            pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
         }
+    }
 
-        // Set USB medium to SD
-        pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
-    } else {
+    if (sdcard_mounted == false) {
         storage_init();
 
         // init the vfs object
