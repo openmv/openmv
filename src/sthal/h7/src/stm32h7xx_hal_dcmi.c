@@ -376,6 +376,10 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
   return HAL_OK;
 }
 
+#define MP_HAL_CLEANINVALIDATE_DCACHE(addr, size) \
+  (SCB_CleanInvalidateDCache_by_Addr((uint32_t*)((uint32_t)addr & ~0x1f), \
+      ((uint32_t)((uint8_t*)addr + size + 0x1f) & ~0x1f) - ((uint32_t)addr & ~0x1f)))
+
 HAL_StatusTypeDef HAL_DCMI_Start_DMA_MB(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mode, uint32_t pData, uint32_t Length, uint32_t Count)
 {
   /* Initialise the second memory address */
@@ -417,6 +421,8 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA_MB(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI
     
   /* Update second memory address */
   SecondMemAddress = (uint32_t)(pData + (4*hdcmi->XferSize));
+
+  MP_HAL_CLEANINVALIDATE_DCACHE(SecondMemAddress, (hdcmi->XferSize*4));
 
   /* Start DMA multi buffer transfer */
   HAL_DMAEx_MultiBufferStart_IT(hdcmi->DMA_Handle, (uint32_t)&hdcmi->Instance->DR, (uint32_t)pData, SecondMemAddress, hdcmi->XferSize);
@@ -883,9 +889,11 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 
   if ((stream->CR & DMA_SxCR_CT) == 0) {
     // Current traget is M0 call user callback with M1
+    MP_HAL_CLEANINVALIDATE_DCACHE(stream->M0AR, (hdcmi->XferSize*4));
     DCMI_DMAConvCpltUser(stream->M1AR);
   } else {
     // Current traget is M1 call user callback with M0
+    MP_HAL_CLEANINVALIDATE_DCACHE(stream->M1AR, (hdcmi->XferSize*4));
     DCMI_DMAConvCpltUser(stream->M0AR);
   }
 
