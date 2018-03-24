@@ -1141,7 +1141,7 @@ static const uint16_t UARTPrescTable[12] = {1, 2, 4, 6, 8, 10, 12, 16, 32, 64, 1
   * @param  __PRESCALER__: UART prescaler value.
   * @retval Division result
   */
-#define UART_DIV_LPUART(__PCLK__, __BAUD__, __PRESCALER__)      ((((((uint64_t)(__PCLK__)/UARTPrescTable[(__PRESCALER__)])*256)) + ((__BAUD__)/2)) / (__BAUD__))
+#define UART_DIV_LPUART(__PCLK__, __BAUD__, __PRESCALER__)      ((((((uint32_t)(__PCLK__)/UARTPrescTable[(__PRESCALER__)])*256)) + ((__BAUD__)/2)) / (__BAUD__))
 
 /** @brief  BRR division operation to set BRR register in 8-bit oversampling mode.
   * @param  __PCLK__: UART clock.
