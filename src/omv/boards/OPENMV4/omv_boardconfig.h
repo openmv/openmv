@@ -46,11 +46,11 @@
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_FFS_MEMORY          CCM         // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss, stack and heap
-#define OMV_DMA_MEMORY          SRAM3       // DMA buffers memory (32KBs)
+#define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
 #define OMV_FB_MEMORY           AXI_SRAM    // Framebuffer, fb_alloc
 
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE       (112K)      // minimum fb alloc size
+#define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
 #define OMV_STACK_SIZE          (8K)
 #define OMV_HEAP_SIZE           (64K)
 
