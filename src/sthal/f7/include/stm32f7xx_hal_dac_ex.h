@@ -2,13 +2,13 @@
   ******************************************************************************
   * @file    stm32f7xx_hal_dac.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    22-April-2016
+  * @version V1.2.2
+  * @date    14-April-2017
   * @brief   Header file of DAC HAL Extension module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -59,7 +59,7 @@
 /** @defgroup DACEx_Exported_Constants DAC Exported Constants
   * @{
   */
-   
+
 /** @defgroup DACEx_lfsrunmask_triangleamplitude DAC LFS Run Mask Triangle Amplitude
   * @{
   */
@@ -169,7 +169,7 @@ void HAL_DACEx_DMAUnderrunCallbackCh2(DAC_HandleTypeDef* hdac);
   */
 void DAC_DMAConvCpltCh2(DMA_HandleTypeDef *hdma);
 void DAC_DMAErrorCh2(DMA_HandleTypeDef *hdma);
-void DAC_DMAHalfConvCpltCh2(DMA_HandleTypeDef *hdma); 
+void DAC_DMAHalfConvCpltCh2(DMA_HandleTypeDef *hdma);
 /**
   * @}
   */
@@ -181,7 +181,7 @@ void DAC_DMAHalfConvCpltCh2(DMA_HandleTypeDef *hdma);
 /**
   * @}
   */
-  
+
 #ifdef __cplusplus
 }
 #endif

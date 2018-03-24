@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f7xx_hal_uart.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    22-April-2016
+  * @version V1.2.2
+  * @date    14-April-2017
   * @brief   UART HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of the Universal Asynchronous Receiver Transmitter (UART) peripheral:
@@ -126,7 +126,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -922,14 +922,11 @@ HAL_StatusTypeDef HAL_UART_Receive_IT(UART_HandleTypeDef *huart, uint8_t *pData,
     /* Process Unlocked */
     __HAL_UNLOCK(huart);
 
-    /* Enable the UART Parity Error Interrupt */
-    SET_BIT(huart->Instance->CR1, USART_CR1_PEIE);
-
     /* Enable the UART Error Interrupt: (Frame error, noise error, overrun error) */
     SET_BIT(huart->Instance->CR3, USART_CR3_EIE);
 
-    /* Enable the UART Data Register not empty Interrupt */
-    SET_BIT(huart->Instance->CR1, USART_CR1_RXNEIE);
+    /* Enable the UART Parity Error and Data Register not empty Interrupts */
+    SET_BIT(huart->Instance->CR1, USART_CR1_PEIE | USART_CR1_RXNEIE);
 
     return HAL_OK;
   }
@@ -1212,7 +1209,9 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
   }
 
   /* If some errors occur */
-  if((errorflags != RESET) && ((cr3its & (USART_CR3_EIE | USART_CR1_PEIE)) != RESET))
+  if(   (errorflags != RESET)
+     && (   ((cr3its & USART_CR3_EIE) != RESET)
+         || ((cr1its & (USART_CR1_RXNEIE | USART_CR1_PEIE)) != RESET)) )
   {
 
     /* UART parity error interrupt occurred -------------------------------------*/
@@ -1238,7 +1237,7 @@ void HAL_UART_IRQHandler(UART_HandleTypeDef *huart)
 
       huart->ErrorCode |= HAL_UART_ERROR_NE;
     }
-    
+
     /* UART Over-Run interrupt occurred -----------------------------------------*/
     if(((isrflags & USART_ISR_ORE) != RESET) &&
        (((cr1its & USART_CR1_RXNEIE) != RESET) || ((cr3its & USART_CR3_EIE) != RESET)))
@@ -1423,7 +1422,7 @@ static void UART_DMAReceiveCplt(DMA_HandleTypeDef *hdma)
     in the UART CR3 register */
     CLEAR_BIT(huart->Instance->CR3, USART_CR3_DMAR);
 
-	/* At end of Rx process, restore huart->RxState to Ready */
+    /* At end of Rx process, restore huart->RxState to Ready */
     huart->RxState = HAL_UART_STATE_READY;
   }
   HAL_UART_RxCpltCallback(huart);
@@ -1734,7 +1733,7 @@ static void UART_EndRxTransfer(UART_HandleTypeDef *huart)
      (+) HAL_HalfDuplex_EnableTransmitter() API disables receiver and enables transmitter
      (+) HAL_HalfDuplex_EnableReceiver() API disables transmitter and enables receiver
      (+) HAL_LIN_SendBreak() API transmits the break characters
-	 (+) HAL_MultiProcessorEx_AddressLength_Set() API optionally sets the UART node address
+     (+) HAL_MultiProcessorEx_AddressLength_Set() API optionally sets the UART node address
          detection length to more than 4 bits for multiprocessor address mark wake up.
 @endverbatim
   * @{
@@ -2026,16 +2025,6 @@ HAL_StatusTypeDef UART_CheckIdleState(UART_HandleTypeDef *huart)
   {
     /* Wait until TEACK flag is set */
     if(UART_WaitOnFlagUntilTimeout(huart, USART_ISR_TEACK, RESET, tickstart, HAL_UART_TIMEOUT_VALUE) != HAL_OK)
-    {
-      /* Timeout Occurred */
-      return HAL_TIMEOUT;
-    }
-  }
-  /* Check if the Receiver is enabled */
-  if((huart->Instance->CR1 & USART_CR1_RE) == USART_CR1_RE)
-  {
-    /* Wait until REACK flag is set */
-    if(UART_WaitOnFlagUntilTimeout(huart, USART_ISR_REACK, RESET, tickstart, HAL_UART_TIMEOUT_VALUE) != HAL_OK)
     {
       /* Timeout Occurred */
       return HAL_TIMEOUT;

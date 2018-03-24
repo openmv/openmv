@@ -2,10 +2,10 @@
   ******************************************************************************
   * @file    stm32f7xx_hal_iwdg.c
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    22-April-2016
+  * @version V1.2.2
+  * @date    14-April-2017
   * @brief   IWDG HAL module driver.
-  *          This file provides firmware functions to manage the following 
+  *          This file provides firmware functions to manage the following
   *          functionalities of the Independent Watchdog (IWDG) peripheral:
   *           + Initialization and Start functions
   *           + IO operation functions
@@ -21,12 +21,12 @@
     (+) The IWDG is clocked by Low-Speed clock (LSI) and thus stays active even
         if the main clock fails.
 
-    (+) Once the IWDG is started, the LSI is forced ON and both can not be 
+    (+) Once the IWDG is started, the LSI is forced ON and both can not be
         disabled. The counter starts counting down from the reset value (0xFFF).
-        When it reaches the end of count value (0x000) a reset signal is 
+        When it reaches the end of count value (0x000) a reset signal is
         generated (IWDG reset).
 
-    (+) Whenever the key value 0x0000 AAAA is written in the IWDG_KR register, 
+    (+) Whenever the key value 0x0000 AAAA is written in the IWDG_KR register,
         the IWDG_RLR value is reloaded in the counter and the watchdog reset is
         prevented.
 
@@ -36,7 +36,7 @@
         reset occurs.
 
     (+) Debug mode : When the microcontroller enters debug mode (core halted),
-        the IWDG counter either continues to work normally or stops, depending 
+        the IWDG counter either continues to work normally or stops, depending
         on DBG_IWDG_STOP configuration bit in DBG module, accessible through
         __HAL_DBGMCU_FREEZE_IWDG() and __HAL_DBGMCU_UNFREEZE_IWDG() macros
 
@@ -50,20 +50,20 @@
   ==============================================================================
   [..]
     (#) Use IWDG using HAL_IWDG_Init() function to :
-      (+) Enable instance by writing Start keyword in IWDG_KEY register. LSI 
+      (++) Enable instance by writing Start keyword in IWDG_KEY register. LSI
            clock is forced ON and IWDG counter starts downcounting.
-      (+) Enable write access to configuration register: IWDG_PR, IWDG_RLR & 
+      (++) Enable write access to configuration register: IWDG_PR, IWDG_RLR &
            IWDG_WINR.
-      (+) Configure the IWDG prescaler and counter reload value. This reload 
-           value will be loaded in the IWDG counter each time the watchdog is 
+      (++) Configure the IWDG prescaler and counter reload value. This reload
+           value will be loaded in the IWDG counter each time the watchdog is
            reloaded, then the IWDG will start counting down from this value.
-      (+) wait for status flags to be reset"
-      (+) Depending on window parameter:
-        (++) If Window Init parameter is same as Window register value, 
-             nothing more is done but reload counter value in order to exit 
-             function withy exact time base.
-        (++) Else modify Window register. This will automatically reload
-             watchdog counter.
+      (++) wait for status flags to be reset
+      (++) Depending on window parameter:
+         (+++) If Window Init parameter is same as Window register value,
+               nothing more is done but reload counter value in order to exit
+               function withy exact time base.
+         (+++) Else modify Window register. This will automatically reload
+               watchdog counter.
 
     (#) Then the application program must refresh the IWDG counter at regular
         intervals during normal operation to prevent an MCU reset, using
@@ -81,7 +81,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -126,8 +126,8 @@
 /** @defgroup IWDG_Private_Defines IWDG Private Defines
   * @{
   */
-/* Status register need 5 RC LSI divided by prescaler clock to be updated. With 
-   higher prescaler (256), and according to LSI variation, we need to wait at 
+/* Status register need 5 RC LSI divided by prescaler clock to be updated. With
+   higher prescaler (256), and according to LSI variation, we need to wait at
    least 6 cycles so 48 ms. */
 #define HAL_IWDG_DEFAULT_TIMEOUT            48u
 /**
@@ -151,10 +151,10 @@
           ##### Initialization and Start functions #####
  ===============================================================================
  [..]  This section provides functions allowing to:
-      (+) Initialize the IWDG according to the specified parameters in the 
+      (+) Initialize the IWDG according to the specified parameters in the
           IWDG_InitTypeDef of associated handle.
       (+) Manage Window option.
-      (+) Once initialization is performed in HAL_IWDG_Init function, Watchdog 
+      (+) Once initialization is performed in HAL_IWDG_Init function, Watchdog
           is reloaded in order to exit function with correct time base.
 
 @endverbatim
@@ -162,8 +162,8 @@
   */
 
 /**
-  * @brief  Initialize the IWDG according to the specified parameters in the 
-  *         IWDG_InitTypeDef and start watchdog. Before exiting function, 
+  * @brief  Initialize the IWDG according to the specified parameters in the
+  *         IWDG_InitTypeDef and start watchdog. Before exiting function,
   *         watchdog is refreshed in order to have correct time base.
   * @param  hiwdg  pointer to a IWDG_HandleTypeDef structure that contains
   *                the configuration information for the specified IWDG module.
@@ -208,12 +208,12 @@ HAL_StatusTypeDef HAL_IWDG_Init(IWDG_HandleTypeDef *hiwdg)
     }
   }
 
-  /* If window parameter is different than current value, modify window 
+  /* If window parameter is different than current value, modify window
   register */
   if(hiwdg->Instance->WINR != hiwdg->Init.Window)
   {
     /* Write to IWDG WINR the IWDG_Window value to compare with. In any case,
-    even if window feature is disabled, Watchdog will be reloaded by writing 
+    even if window feature is disabled, Watchdog will be reloaded by writing
     windows register */
     hiwdg->Instance->WINR = hiwdg->Init.Window;
   }

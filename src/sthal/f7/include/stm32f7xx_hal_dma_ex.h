@@ -2,13 +2,13 @@
   ******************************************************************************
   * @file    stm32f7xx_hal_dma_ex.h
   * @author  MCD Application Team
-  * @version V1.1.0
-  * @date    22-April-2016
+  * @version V1.2.2
+  * @date    14-April-2017
   * @brief   Header file of DMA HAL extension module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -52,17 +52,17 @@
 
 /** @addtogroup DMAEx
   * @{
-  */ 
+  */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup DMAEx_Exported_Types DMAEx Exported Types
   * @brief DMAEx Exported types
   * @{
   */
-   
-/** 
-  * @brief  HAL DMA Memory definition  
-  */ 
+
+/**
+  * @brief  HAL DMA Memory definition
+  */
 typedef enum
 {
   MEMORY0      = 0x00U,    /*!< Memory 0     */
@@ -73,18 +73,18 @@ typedef enum
 /**
   * @}
   */
-  
+
 /* Exported constants --------------------------------------------------------*/
 
 /** @defgroup DMA_Exported_Constants DMA Exported Constants
-  * @brief    DMA Exported constants 
+  * @brief    DMA Exported constants
   * @{
   */
 
 /** @defgroup DMAEx_Channel_selection DMA Channel selection
-  * @brief    DMAEx channel selection 
+  * @brief    DMAEx channel selection
   * @{
-  */ 
+  */
 #define DMA_CHANNEL_0        ((uint32_t)0x00000000U)  /*!< DMA Channel 0 */
 #define DMA_CHANNEL_1        ((uint32_t)0x02000000U)  /*!< DMA Channel 1 */
 #define DMA_CHANNEL_2        ((uint32_t)0x04000000U)  /*!< DMA Channel 2 */
@@ -93,7 +93,9 @@ typedef enum
 #define DMA_CHANNEL_5        ((uint32_t)0x0A000000U)  /*!< DMA Channel 5 */
 #define DMA_CHANNEL_6        ((uint32_t)0x0C000000U)  /*!< DMA Channel 6 */
 #define DMA_CHANNEL_7        ((uint32_t)0x0E000000U)  /*!< DMA Channel 7 */
-#if defined (STM32F765xx) || defined(STM32F767xx) || defined(STM32F769xx) || defined(STM32F777xx) || defined(STM32F779xx)
+#if defined (STM32F722xx) || defined (STM32F723xx) || defined (STM32F732xx) || defined (STM32F733xx) ||\
+    defined (STM32F765xx) || defined (STM32F767xx) || defined (STM32F769xx) || defined (STM32F777xx) ||\
+    defined (STM32F779xx)
 #define DMA_CHANNEL_8        ((uint32_t)0x10000000U)  /*!< DMA Channel 8 */
 #define DMA_CHANNEL_9        ((uint32_t)0x12000000U)  /*!< DMA Channel 9 */
 #define DMA_CHANNEL_10       ((uint32_t)0x14000000U)  /*!< DMA Channel 10*/
@@ -102,15 +104,16 @@ typedef enum
 #define DMA_CHANNEL_13       ((uint32_t)0x1A000000U)  /*!< DMA Channel 13*/
 #define DMA_CHANNEL_14       ((uint32_t)0x1C000000U)  /*!< DMA Channel 14*/
 #define DMA_CHANNEL_15       ((uint32_t)0x1E000000U)  /*!< DMA Channel 15*/
-#endif /* STM32F765xx || STM32F767xx || STM32F769xx || STM32F777xx || STM32F779xx */
+#endif /* STM32F722xx || STM32F723xx || STM32F732xx || STM32F733xx || STM32F765xx || STM32F767xx ||
+          STM32F769xx || STM32F777xx || STM32F779xx */
 
 /**
   * @}
   */
-  
+
 /**
   * @}
-  */  
+  */
 
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup DMAEx_Exported_Functions DMAEx Exported Functions
@@ -134,13 +137,15 @@ HAL_StatusTypeDef HAL_DMAEx_ChangeMemory(DMA_HandleTypeDef *hdma, uint32_t Addre
 /**
   * @}
   */
-  
+
 /* Private macros ------------------------------------------------------------*/
 /** @defgroup DMAEx_Private_Macros DMA Private Macros
-  * @brief    DMAEx private macros 
+  * @brief    DMAEx private macros
   * @{
   */
-#if defined (STM32F765xx) || defined(STM32F767xx) || defined(STM32F769xx) || defined(STM32F777xx) || defined(STM32F779xx)
+#if defined (STM32F722xx) || defined (STM32F723xx) || defined (STM32F732xx) || defined (STM32F733xx) ||\
+    defined (STM32F765xx) || defined (STM32F767xx) || defined (STM32F769xx) || defined (STM32F777xx) ||\
+    defined (STM32F779xx)
 #define IS_DMA_CHANNEL(CHANNEL) (((CHANNEL) == DMA_CHANNEL_0)  || \
                                  ((CHANNEL) == DMA_CHANNEL_1)  || \
                                  ((CHANNEL) == DMA_CHANNEL_2)  || \
@@ -156,7 +161,7 @@ HAL_StatusTypeDef HAL_DMAEx_ChangeMemory(DMA_HandleTypeDef *hdma, uint32_t Addre
                                  ((CHANNEL) == DMA_CHANNEL_12) || \
                                  ((CHANNEL) == DMA_CHANNEL_13) || \
                                  ((CHANNEL) == DMA_CHANNEL_14) || \
-                                 ((CHANNEL) == DMA_CHANNEL_15)) 
+                                 ((CHANNEL) == DMA_CHANNEL_15))
 #else
 #define IS_DMA_CHANNEL(CHANNEL) (((CHANNEL) == DMA_CHANNEL_0) || \
                                  ((CHANNEL) == DMA_CHANNEL_1) || \
@@ -166,11 +171,12 @@ HAL_StatusTypeDef HAL_DMAEx_ChangeMemory(DMA_HandleTypeDef *hdma, uint32_t Addre
                                  ((CHANNEL) == DMA_CHANNEL_5) || \
                                  ((CHANNEL) == DMA_CHANNEL_6) || \
                                  ((CHANNEL) == DMA_CHANNEL_7))
-#endif /* STM32F765xx || STM32F767xx || STM32F769xx || STM32F777xx || STM32F779xx */
+#endif /* STM32F722xx || STM32F723xx || STM32F732xx || STM32F733xx || STM32F765xx || STM32F767xx ||
+          STM32F769xx || STM32F777xx || STM32F779xx */
 /**
   * @}
-  */  
-         
+  */
+
 /* Private functions ---------------------------------------------------------*/
 /** @defgroup DMAEx_Private_Functions DMAEx Private Functions
   * @brief DMAEx Private functions
