@@ -1889,13 +1889,11 @@ STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *
         }
     }
 
-    int middle = ((n/2)*n)+(n/2);
-    int temp = -arg_krn[middle];
-    arg_krn[middle] += arg_m;
-    arg_m = temp;
+    arg_krn[((n/2)*n)+(n/2)] += arg_m;
+    arg_m = arg_krn[((n/2)*n)+(n/2)];
 
     if (py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_sharpen), false)) {
-        arg_krn[middle] += arg_m;
+        arg_krn[((n/2)*n)+(n/2)] += arg_m;
     }
 
     float arg_mul =
