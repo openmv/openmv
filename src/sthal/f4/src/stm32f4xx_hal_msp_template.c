@@ -2,15 +2,15 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_msp_template.c
   * @author  MCD Application Team
-  * @version V1.5.2
-  * @date    22-September-2016
+  * @version V1.7.1
+  * @date    14-April-2017
   * @brief   This file contains the HAL System and Peripheral (PPP) MSP initialization
   *          and de-initialization functions.
-  *          It should be copied to the application folder and renamed into 'stm32f4xx_hal_msp.c'.           
+  *          It should be copied to the application folder and renamed into 'stm32f4xx_hal_msp.c'.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -35,7 +35,7 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
@@ -84,7 +84,7 @@ void HAL_MspDeInit(void)
 
 /**
   * @brief  Initializes the PPP MSP.
-  * @note   This functiona is called from HAL_PPP_Init() function to perform 
+  * @note   This functiona is called from HAL_PPP_Init() function to perform
   *         peripheral(PPP) system level initialization (GPIOs, clock, DMA, interrupt)
   * @retval None
   */
@@ -95,7 +95,7 @@ void HAL_PPP_MspInit(void)
 
 /**
   * @brief  DeInitializes the PPP MSP.
-  * @note   This functiona is called from HAL_PPP_DeInit() function to perform 
+  * @note   This functiona is called from HAL_PPP_DeInit() function to perform
   *         peripheral(PPP) system level de-initialization (GPIOs, clock, DMA, interrupt)
   * @retval None
   */

@@ -2,13 +2,13 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_smartcard.h
   * @author  MCD Application Team
-  * @version V1.5.2
-  * @date    22-September-2016
+  * @version V1.7.1
+  * @date    14-April-2017
   * @brief   Header file of SMARTCARD HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -54,12 +54,12 @@
   * @{
   */
 
-/* Exported types ------------------------------------------------------------*/ 
+/* Exported types ------------------------------------------------------------*/
 /** @defgroup SMARTCARD_Exported_Types SMARTCARD Exported Types
   * @{
   */
 
-/** 
+/**
   * @brief SMARTCARD Init Structure definition
   */
 typedef struct
@@ -95,7 +95,7 @@ typedef struct
                                            data bit (MSB) has to be output on the SCLK pin in synchronous mode.
                                            This parameter can be a value of @ref SMARTCARD_Last_Bit */
 
-  uint32_t Prescaler;                 /*!< Specifies the SmartCard Prescaler value used for dividing the system clock 
+  uint32_t Prescaler;                 /*!< Specifies the SmartCard Prescaler value used for dividing the system clock
                                            to provide the smartcard clock. The value given in the register (5 significant bits)
                                            is multiplied by 2 to give the division factor of the source clock frequency.
                                            This parameter can be a value of @ref SMARTCARD_Prescaler */
@@ -106,13 +106,13 @@ typedef struct
                                            This parameter can be a value of @ref SMARTCARD_NACK_State */
 }SMARTCARD_InitTypeDef;
 
-/** 
+/**
   * @brief HAL SMARTCARD State structures definition
   * @note  HAL SMARTCARD State value is a combination of 2 different substates: gState and RxState.
-  *        - gState contains SMARTCARD state information related to global Handle management 
+  *        - gState contains SMARTCARD state information related to global Handle management
   *          and also information related to Tx operations.
   *          gState value coding follow below described bitmap :
-  *          b7-b6  Error information 
+  *          b7-b6  Error information
   *             00 : No Error
   *             01 : (Not Used)
   *             10 : Timeout
@@ -157,7 +157,7 @@ typedef enum
                                                         Value is allowed for gState only */
   HAL_SMARTCARD_STATE_BUSY_RX           = 0x22U,    /*!< Data Reception process is ongoing
                                                         Value is allowed for RxState only */
-  HAL_SMARTCARD_STATE_BUSY_TX_RX        = 0x23U,    /*!< Data Transmission and Reception process is ongoing 
+  HAL_SMARTCARD_STATE_BUSY_TX_RX        = 0x23U,    /*!< Data Transmission and Reception process is ongoing
                                                         Not to be used for neither gState nor RxState.
                                                         Value is result of combination (Or) between gState and RxState values */
   HAL_SMARTCARD_STATE_TIMEOUT           = 0xA0U,    /*!< Timeout state
@@ -166,7 +166,7 @@ typedef enum
                                                         Value is allowed for gState only */
 }HAL_SMARTCARD_StateTypeDef;
 
-/** 
+/**
   * @brief  SMARTCARD handle Structure definition
   */
 typedef struct
@@ -193,10 +193,10 @@ typedef struct
 
   HAL_LockTypeDef                  Lock;             /* Locking object */
 
-  __IO HAL_SMARTCARD_StateTypeDef  gState;           /* SmartCard state information related to global Handle management 
+  __IO HAL_SMARTCARD_StateTypeDef  gState;           /* SmartCard state information related to global Handle management
                                                         and also related to Tx operations.
                                                         This parameter can be a value of @ref HAL_SMARTCARD_StateTypeDef */
-  
+
   __IO HAL_SMARTCARD_StateTypeDef  RxState;          /* SmartCard state information related to Rx operations.
                                                         This parameter can be a value of @ref HAL_SMARTCARD_StateTypeDef */
 
@@ -213,15 +213,15 @@ typedef struct
   * @{
   */
 /** @defgroup SMARTCARD_Error_Code SMARTCARD Error Code
-  * @brief    SMARTCARD Error Code 
+  * @brief    SMARTCARD Error Code
   * @{
-  */ 
-#define HAL_SMARTCARD_ERROR_NONE         ((uint32_t)0x00000000U)   /*!< No error            */
-#define HAL_SMARTCARD_ERROR_PE           ((uint32_t)0x00000001U)   /*!< Parity error        */
-#define HAL_SMARTCARD_ERROR_NE           ((uint32_t)0x00000002U)   /*!< Noise error         */
-#define HAL_SMARTCARD_ERROR_FE           ((uint32_t)0x00000004U)   /*!< Frame error         */
-#define HAL_SMARTCARD_ERROR_ORE          ((uint32_t)0x00000008U)   /*!< Overrun error       */
-#define HAL_SMARTCARD_ERROR_DMA          ((uint32_t)0x00000010U)   /*!< DMA transfer error  */
+  */
+#define HAL_SMARTCARD_ERROR_NONE         0x00000000U   /*!< No error            */
+#define HAL_SMARTCARD_ERROR_PE           0x00000001U   /*!< Parity error        */
+#define HAL_SMARTCARD_ERROR_NE           0x00000002U   /*!< Noise error         */
+#define HAL_SMARTCARD_ERROR_FE           0x00000004U   /*!< Frame error         */
+#define HAL_SMARTCARD_ERROR_ORE          0x00000008U   /*!< Overrun error       */
+#define HAL_SMARTCARD_ERROR_DMA          0x00000010U   /*!< DMA transfer error  */
 /**
   * @}
   */
@@ -247,7 +247,7 @@ typedef struct
   * @{
   */
 #define SMARTCARD_PARITY_EVEN                    ((uint32_t)USART_CR1_PCE)
-#define SMARTCARD_PARITY_ODD                     ((uint32_t)(USART_CR1_PCE | USART_CR1_PS)) 
+#define SMARTCARD_PARITY_ODD                     ((uint32_t)(USART_CR1_PCE | USART_CR1_PS))
 /**
   * @}
   */
@@ -265,16 +265,16 @@ typedef struct
 /** @defgroup SMARTCARD_Clock_Polarity SMARTCARD Clock Polarity
   * @{
   */
-#define SMARTCARD_POLARITY_LOW                   ((uint32_t)0x00000000U)
+#define SMARTCARD_POLARITY_LOW                   0x00000000U
 #define SMARTCARD_POLARITY_HIGH                  ((uint32_t)USART_CR2_CPOL)
 /**
   * @}
-  */ 
+  */
 
 /** @defgroup SMARTCARD_Clock_Phase  SMARTCARD Clock Phase
   * @{
   */
-#define SMARTCARD_PHASE_1EDGE                    ((uint32_t)0x00000000U)
+#define SMARTCARD_PHASE_1EDGE                    0x00000000U
 #define SMARTCARD_PHASE_2EDGE                    ((uint32_t)USART_CR2_CPHA)
 /**
   * @}
@@ -283,7 +283,7 @@ typedef struct
 /** @defgroup SMARTCARD_Last_Bit  SMARTCARD Last Bit
   * @{
   */
-#define SMARTCARD_LASTBIT_DISABLE                ((uint32_t)0x00000000U)
+#define SMARTCARD_LASTBIT_DISABLE                0x00000000U
 #define SMARTCARD_LASTBIT_ENABLE                 ((uint32_t)USART_CR2_LBCL)
 /**
   * @}
@@ -293,7 +293,7 @@ typedef struct
   * @{
   */
 #define SMARTCARD_NACK_ENABLE                  ((uint32_t)USART_CR3_NACK)
-#define SMARTCARD_NACK_DISABLE                 ((uint32_t)0x00000000U)
+#define SMARTCARD_NACK_DISABLE                 0x00000000U
 /**
   * @}
   */
@@ -310,37 +310,37 @@ typedef struct
 /** @defgroup SMARTCARD_Prescaler SMARTCARD Prescaler
   * @{
   */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV2         ((uint32_t)0x00000001U)          /*!< SYSCLK divided by 2 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV4         ((uint32_t)0x00000002U)          /*!< SYSCLK divided by 4 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV6         ((uint32_t)0x00000003U)          /*!< SYSCLK divided by 6 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV8         ((uint32_t)0x00000004U)          /*!< SYSCLK divided by 8 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV10        ((uint32_t)0x00000005U)          /*!< SYSCLK divided by 10 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV12        ((uint32_t)0x00000006U)          /*!< SYSCLK divided by 12 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV14        ((uint32_t)0x00000007U)          /*!< SYSCLK divided by 14 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV16        ((uint32_t)0x00000008U)          /*!< SYSCLK divided by 16 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV18        ((uint32_t)0x00000009U)          /*!< SYSCLK divided by 18 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV20        ((uint32_t)0x0000000AU)          /*!< SYSCLK divided by 20 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV22        ((uint32_t)0x0000000BU)          /*!< SYSCLK divided by 22 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV24        ((uint32_t)0x0000000CU)          /*!< SYSCLK divided by 24 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV26        ((uint32_t)0x0000000DU)          /*!< SYSCLK divided by 26 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV28        ((uint32_t)0x0000000EU)          /*!< SYSCLK divided by 28 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV30        ((uint32_t)0x0000000FU)          /*!< SYSCLK divided by 30 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV32        ((uint32_t)0x00000010U)          /*!< SYSCLK divided by 32 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV34        ((uint32_t)0x00000011U)          /*!< SYSCLK divided by 34 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV36        ((uint32_t)0x00000012U)          /*!< SYSCLK divided by 36 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV38        ((uint32_t)0x00000013U)          /*!< SYSCLK divided by 38 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV40        ((uint32_t)0x00000014U)          /*!< SYSCLK divided by 40 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV42        ((uint32_t)0x00000015U)          /*!< SYSCLK divided by 42 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV44        ((uint32_t)0x00000016U)          /*!< SYSCLK divided by 44 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV46        ((uint32_t)0x00000017U)          /*!< SYSCLK divided by 46 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV48        ((uint32_t)0x00000018U)          /*!< SYSCLK divided by 48 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV50        ((uint32_t)0x00000019U)          /*!< SYSCLK divided by 50 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV52        ((uint32_t)0x0000001AU)          /*!< SYSCLK divided by 52 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV54        ((uint32_t)0x0000001BU)          /*!< SYSCLK divided by 54 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV56        ((uint32_t)0x0000001CU)          /*!< SYSCLK divided by 56 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV58        ((uint32_t)0x0000001DU)          /*!< SYSCLK divided by 58 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV60        ((uint32_t)0x0000001EU)          /*!< SYSCLK divided by 60 */
-#define SMARTCARD_PRESCALER_SYSCLK_DIV62        ((uint32_t)0x0000001FU)          /*!< SYSCLK divided by 62 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV2         0x00000001U          /*!< SYSCLK divided by 2 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV4         0x00000002U          /*!< SYSCLK divided by 4 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV6         0x00000003U          /*!< SYSCLK divided by 6 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV8         0x00000004U          /*!< SYSCLK divided by 8 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV10        0x00000005U          /*!< SYSCLK divided by 10 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV12        0x00000006U          /*!< SYSCLK divided by 12 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV14        0x00000007U          /*!< SYSCLK divided by 14 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV16        0x00000008U          /*!< SYSCLK divided by 16 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV18        0x00000009U          /*!< SYSCLK divided by 18 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV20        0x0000000AU          /*!< SYSCLK divided by 20 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV22        0x0000000BU          /*!< SYSCLK divided by 22 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV24        0x0000000CU          /*!< SYSCLK divided by 24 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV26        0x0000000DU          /*!< SYSCLK divided by 26 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV28        0x0000000EU          /*!< SYSCLK divided by 28 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV30        0x0000000FU          /*!< SYSCLK divided by 30 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV32        0x00000010U          /*!< SYSCLK divided by 32 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV34        0x00000011U          /*!< SYSCLK divided by 34 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV36        0x00000012U          /*!< SYSCLK divided by 36 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV38        0x00000013U          /*!< SYSCLK divided by 38 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV40        0x00000014U          /*!< SYSCLK divided by 40 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV42        0x00000015U          /*!< SYSCLK divided by 42 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV44        0x00000016U          /*!< SYSCLK divided by 44 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV46        0x00000017U          /*!< SYSCLK divided by 46 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV48        0x00000018U          /*!< SYSCLK divided by 48 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV50        0x00000019U          /*!< SYSCLK divided by 50 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV52        0x0000001AU          /*!< SYSCLK divided by 52 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV54        0x0000001BU          /*!< SYSCLK divided by 54 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV56        0x0000001CU          /*!< SYSCLK divided by 56 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV58        0x0000001DU          /*!< SYSCLK divided by 58 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV60        0x0000001EU          /*!< SYSCLK divided by 60 */
+#define SMARTCARD_PRESCALER_SYSCLK_DIV62        0x0000001FU          /*!< SYSCLK divided by 62 */
 /**
   * @}
   */
@@ -350,14 +350,14 @@ typedef struct
   *           - 0xXXXX  : Flag mask in the SR register
   * @{
   */
-#define SMARTCARD_FLAG_TXE                       ((uint32_t)0x00000080U)
-#define SMARTCARD_FLAG_TC                        ((uint32_t)0x00000040U)
-#define SMARTCARD_FLAG_RXNE                      ((uint32_t)0x00000020U)
-#define SMARTCARD_FLAG_IDLE                      ((uint32_t)0x00000010U)
-#define SMARTCARD_FLAG_ORE                       ((uint32_t)0x00000008U)
-#define SMARTCARD_FLAG_NE                        ((uint32_t)0x00000004U)
-#define SMARTCARD_FLAG_FE                        ((uint32_t)0x00000002U)
-#define SMARTCARD_FLAG_PE                        ((uint32_t)0x00000001U)
+#define SMARTCARD_FLAG_TXE                       0x00000080U
+#define SMARTCARD_FLAG_TC                        0x00000040U
+#define SMARTCARD_FLAG_RXNE                      0x00000020U
+#define SMARTCARD_FLAG_IDLE                      0x00000010U
+#define SMARTCARD_FLAG_ORE                       0x00000008U
+#define SMARTCARD_FLAG_NE                        0x00000004U
+#define SMARTCARD_FLAG_FE                        0x00000002U
+#define SMARTCARD_FLAG_PE                        0x00000001U
 /**
   * @}
   */
@@ -383,7 +383,7 @@ typedef struct
 /**
   * @}
   */
-  
+
 /* Exported macro ------------------------------------------------------------*/
 /** @defgroup SMARTCARD_Exported_Macros SMARTCARD Exported Macros
   * @{
@@ -396,13 +396,13 @@ typedef struct
 #define __HAL_SMARTCARD_RESET_HANDLE_STATE(__HANDLE__)  do{                                                        \
                                                             (__HANDLE__)->gState = HAL_SMARTCARD_STATE_RESET;      \
                                                             (__HANDLE__)->RxState = HAL_SMARTCARD_STATE_RESET;     \
-                                                          } while(0)
+                                                          } while(0U)
 
-/** @brief  Flushs the Smartcard DR register 
+/** @brief  Flushs the Smartcard DR register
   * @param  __HANDLE__: specifies the SMARTCARD Handle.
   */
 #define __HAL_SMARTCARD_FLUSH_DRREGISTER(__HANDLE__) ((__HANDLE__)->Instance->DR)
-    
+
 /** @brief  Checks whether the specified Smartcard flag is set or not.
   * @param  __HANDLE__: specifies the SMARTCARD Handle.
   * @param  __FLAG__: specifies the flag to check.
@@ -425,12 +425,12 @@ typedef struct
   *          This parameter can be any combination of the following values:
   *            @arg SMARTCARD_FLAG_TC:   Transmission Complete flag.
   *            @arg SMARTCARD_FLAG_RXNE: Receive data register not empty flag.
-  *   
-  * @note   PE (Parity error), FE (Framing error), NE (Noise error) and ORE (Overrun 
-  *          error) flags are cleared by software sequence: a read operation to 
+  *
+  * @note   PE (Parity error), FE (Framing error), NE (Noise error) and ORE (Overrun
+  *          error) flags are cleared by software sequence: a read operation to
   *          USART_SR register followed by a read operation to USART_DR register.
   * @note   RXNE flag can be also cleared by a read to the USART_DR register.
-  * @note   TC flag can be also cleared by software sequence: a read operation to 
+  * @note   TC flag can be also cleared by software sequence: a read operation to
   *          USART_SR register followed by a write operation to USART_DR register.
   * @note   TXE flag is cleared only by a write to the USART_DR register.
   */
@@ -438,7 +438,7 @@ typedef struct
 
 /** @brief  Clear the SMARTCARD PE pending flag.
   * @param  __HANDLE__: specifies the USART Handle.
-  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or 
+  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or
   *         SMARTCARD peripheral.
   * @retval None
   */
@@ -448,11 +448,11 @@ typedef struct
     tmpreg = (__HANDLE__)->Instance->SR;             \
     tmpreg = (__HANDLE__)->Instance->DR;             \
     UNUSED(tmpreg);                                  \
-  } while(0)
+  } while(0U)
 
 /** @brief  Clear the SMARTCARD FE pending flag.
   * @param  __HANDLE__: specifies the USART Handle.
-  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or 
+  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or
   *         SMARTCARD peripheral.
   * @retval None
   */
@@ -460,7 +460,7 @@ typedef struct
 
 /** @brief  Clear the SMARTCARD NE pending flag.
   * @param  __HANDLE__: specifies the USART Handle.
-  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or 
+  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or
   *         SMARTCARD peripheral.
   * @retval None
   */
@@ -468,7 +468,7 @@ typedef struct
 
 /** @brief  Clear the SMARTCARD ORE pending flag.
   * @param  __HANDLE__: specifies the USART Handle.
-  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or 
+  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or
   *         SMARTCARD peripheral.
   * @retval None
   */
@@ -476,7 +476,7 @@ typedef struct
 
 /** @brief  Clear the SMARTCARD IDLE pending flag.
   * @param  __HANDLE__: specifies the USART Handle.
-  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or 
+  *         This parameter can be USARTx where x: 1, 2, 3, 4, 5, 6, 7 or 8 to select the USART or
   *         SMARTCARD peripheral.
   * @retval None
   */
@@ -513,15 +513,15 @@ typedef struct
 #define __HAL_SMARTCARD_GET_IT_SOURCE(__HANDLE__, __IT__) (((((__IT__) >> 28U) == 1U)? (__HANDLE__)->Instance->CR1: (__HANDLE__)->Instance->CR3) & (((uint32_t)(__IT__)) & SMARTCARD_IT_MASK))
 
 /** @brief  Macro to enable the SMARTCARD's one bit sample method
-  * @param  __HANDLE__: specifies the SMARTCARD Handle.  
+  * @param  __HANDLE__: specifies the SMARTCARD Handle.
   * @retval None
-  */     
+  */
 #define __HAL_SMARTCARD_ONE_BIT_SAMPLE_ENABLE(__HANDLE__) ((__HANDLE__)->Instance->CR3|= USART_CR3_ONEBIT)
 
 /** @brief  Macro to disable the SMARTCARD's one bit sample method
-  * @param  __HANDLE__: specifies the SMARTCARD Handle.  
+  * @param  __HANDLE__: specifies the SMARTCARD Handle.
   * @retval None
-  */      
+  */
 #define __HAL_SMARTCARD_ONE_BIT_SAMPLE_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->CR3 &= (uint16_t)~((uint16_t)USART_CR3_ONEBIT))
 
 /** @brief  Enable the USART associated to the SMARTCARD Handle
@@ -556,7 +556,7 @@ typedef struct
 /** @addtogroup SMARTCARD_Exported_Functions
   * @{
   */
-  
+
 /** @addtogroup SMARTCARD_Exported_Functions_Group1
   * @{
   */
@@ -580,11 +580,21 @@ HAL_StatusTypeDef HAL_SMARTCARD_Transmit_IT(SMARTCARD_HandleTypeDef *hsc, uint8_
 HAL_StatusTypeDef HAL_SMARTCARD_Receive_IT(SMARTCARD_HandleTypeDef *hsc, uint8_t *pData, uint16_t Size);
 HAL_StatusTypeDef HAL_SMARTCARD_Transmit_DMA(SMARTCARD_HandleTypeDef *hsc, uint8_t *pData, uint16_t Size);
 HAL_StatusTypeDef HAL_SMARTCARD_Receive_DMA(SMARTCARD_HandleTypeDef *hsc, uint8_t *pData, uint16_t Size);
+/* Transfer Abort functions */
+HAL_StatusTypeDef HAL_SMARTCARD_Abort(SMARTCARD_HandleTypeDef *hsc);
+HAL_StatusTypeDef HAL_SMARTCARD_AbortTransmit(SMARTCARD_HandleTypeDef *hsc);
+HAL_StatusTypeDef HAL_SMARTCARD_AbortReceive(SMARTCARD_HandleTypeDef *hsc);
+HAL_StatusTypeDef HAL_SMARTCARD_Abort_IT(SMARTCARD_HandleTypeDef *hsc);
+HAL_StatusTypeDef HAL_SMARTCARD_AbortTransmit_IT(SMARTCARD_HandleTypeDef *hsc);
+HAL_StatusTypeDef HAL_SMARTCARD_AbortReceive_IT(SMARTCARD_HandleTypeDef *hsc);
 
 void HAL_SMARTCARD_IRQHandler(SMARTCARD_HandleTypeDef *hsc);
 void HAL_SMARTCARD_TxCpltCallback(SMARTCARD_HandleTypeDef *hsc);
 void HAL_SMARTCARD_RxCpltCallback(SMARTCARD_HandleTypeDef *hsc);
 void HAL_SMARTCARD_ErrorCallback(SMARTCARD_HandleTypeDef *hsc);
+void HAL_SMARTCARD_AbortCpltCallback(SMARTCARD_HandleTypeDef *hsc);
+void HAL_SMARTCARD_AbortTransmitCpltCallback(SMARTCARD_HandleTypeDef *hsc);
+void HAL_SMARTCARD_AbortReceiveCpltCallback(SMARTCARD_HandleTypeDef *hsc);
 /**
   * @}
   */
@@ -598,7 +608,7 @@ uint32_t HAL_SMARTCARD_GetError(SMARTCARD_HandleTypeDef *hsc);
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}
@@ -611,8 +621,8 @@ uint32_t HAL_SMARTCARD_GetError(SMARTCARD_HandleTypeDef *hsc);
   */
 
 /** @brief SMARTCARD interruptions flag mask
-  * 
-  */ 
+  *
+  */
 #define SMARTCARD_IT_MASK   ((uint32_t) USART_CR1_PEIE | USART_CR1_TXEIE | USART_CR1_TCIE | USART_CR1_RXNEIE | \
                                         USART_CR1_IDLEIE | USART_CR3_EIE )
 
@@ -640,7 +650,7 @@ uint32_t HAL_SMARTCARD_GetError(SMARTCARD_HandleTypeDef *hsc);
                                          ((STOPBITS) == SMARTCARD_STOPBITS_1_5))
 #define IS_SMARTCARD_PARITY(PARITY) (((PARITY) == SMARTCARD_PARITY_EVEN) || \
                                      ((PARITY) == SMARTCARD_PARITY_ODD))
-#define IS_SMARTCARD_MODE(MODE) ((((MODE) & (uint32_t)0x0000FFF3U) == 0x00U) && ((MODE) != (uint32_t)0x000000U))
+#define IS_SMARTCARD_MODE(MODE) ((((MODE) & 0x0000FFF3U) == 0x00U) && ((MODE) != 0x000000U))
 #define IS_SMARTCARD_POLARITY(CPOL) (((CPOL) == SMARTCARD_POLARITY_LOW) || ((CPOL) == SMARTCARD_POLARITY_HIGH))
 #define IS_SMARTCARD_PHASE(CPHA) (((CPHA) == SMARTCARD_PHASE_1EDGE) || ((CPHA) == SMARTCARD_PHASE_2EDGE))
 #define IS_SMARTCARD_LASTBIT(LASTBIT) (((LASTBIT) == SMARTCARD_LASTBIT_DISABLE) || \
@@ -663,7 +673,7 @@ uint32_t HAL_SMARTCARD_GetError(SMARTCARD_HandleTypeDef *hsc);
 
 /**
   * @}
-  */ 
+  */
 
 /**
   * @}

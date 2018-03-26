@@ -2,8 +2,8 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_iwdg.c
   * @author  MCD Application Team
-  * @version V1.5.2
-  * @date    22-September-2016
+  * @version V1.7.1
+  * @date    14-April-2017
   * @brief   IWDG HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of the Independent Watchdog (IWDG) peripheral:
@@ -21,9 +21,9 @@
     (+) The IWDG is clocked by Low-Speed clock (LSI) and thus stays active even
         if the main clock fails.
 
-    (+) Once the IWDG is started, the LSI is forced ON and both can not be 
+    (+) Once the IWDG is started, the LSI is forced ON and both can not be
         disabled. The counter starts counting down from the reset value (0xFFF).
-        When it reaches the end of count value (0x000) a reset signal is 
+        When it reaches the end of count value (0x000) a reset signal is
         generated (IWDG reset).
 
     (+) Whenever the key value 0x0000 AAAA is written in the IWDG_KR register,
@@ -50,13 +50,13 @@
   ==============================================================================
   [..]
     (#) Use IWDG using HAL_IWDG_Init() function to :
-      (+) Enable instance by writing Start keyword in IWDG_KEY register. LSI
+      (++) Enable instance by writing Start keyword in IWDG_KEY register. LSI
            clock is forced ON and IWDG counter starts downcounting.
-      (+) Enable write access to configuration register: IWDG_PR & IWDG_RLR.
-      (+) Configure the IWDG prescaler and counter reload value. This reload
+      (++) Enable write access to configuration register: IWDG_PR & IWDG_RLR.
+      (++) Configure the IWDG prescaler and counter reload value. This reload
            value will be loaded in the IWDG counter each time the watchdog is
            reloaded, then the IWDG will start counting down from this value.
-      (+) wait for status flags to be reset"
+      (++) wait for status flags to be reset"
 
     (#) Then the application program must refresh the IWDG counter at regular
         intervals during normal operation to prevent an MCU reset, using
@@ -74,7 +74,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -109,7 +109,7 @@
   */
 
 #ifdef HAL_IWDG_MODULE_ENABLED
-/** @addtogroup IWDG
+/** @defgroup IWDG IWDG
   * @brief IWDG HAL module driver.
   * @{
   */
@@ -119,7 +119,7 @@
 /** @defgroup IWDG_Private_Defines IWDG Private Defines
   * @{
   */
-/* Status register need 5 RC LSI divided by prescaler clock to be updated. With 
+/* Status register need 5 RC LSI divided by prescaler clock to be updated. With
    higher prescaler (256), and according to HSI variation, we need to wait at
    least 6 cycles so 48 ms. */
 #define HAL_IWDG_DEFAULT_TIMEOUT            48U

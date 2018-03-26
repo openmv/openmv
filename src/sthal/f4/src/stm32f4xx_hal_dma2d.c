@@ -2,14 +2,14 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_dma2d.c
   * @author  MCD Application Team
-  * @version V1.5.2
-  * @date    22-September-2016
+  * @version V1.7.1
+  * @date    14-April-2017
   * @brief   DMA2D HAL module driver.
   *          This file provides firmware functions to manage the following
   *          functionalities of the DMA2D peripheral:
   *           + Initialization and de-initialization functions
   *           + IO operation functions
-  *           + Peripheral Control functions 
+  *           + Peripheral Control functions
   *           + Peripheral State and Errors functions
   *
   @verbatim
@@ -23,9 +23,9 @@
 
       (#) Program the required configuration through the following parameters:
           the input color mode, the input color, the input alpha value, the alpha mode,
-          and the input offset using HAL_DMA2D_ConfigLayer() function for foreground 
+          and the input offset using HAL_DMA2D_ConfigLayer() function for foreground
           or/and background layer.
-          
+
      *** Polling mode IO operation ***
      =================================
     [..]
@@ -37,7 +37,7 @@
      *** Interrupt mode IO operation ***
      ===================================
      [..]
-       (#) Configure pdata parameter, destination and data length and enable 
+       (#) Configure pdata parameter, destination and data length and enable
            the transfer using HAL_DMA2D_Start_IT().
        (#) Use HAL_DMA2D_IRQHandler() called under DMA2D_IRQHandler() interrupt subroutine
        (#) At the end of data transfer HAL_DMA2D_IRQHandler() function is executed and user can
@@ -63,7 +63,7 @@
 
       (#) Optionally, configure the line watermark in using the API HAL_DMA2D_ProgramLineEvent()
 
-      (#) Optionally, configure the dead time value in the AHB clock cycle inserted between two 
+      (#) Optionally, configure the dead time value in the AHB clock cycle inserted between two
           consecutive accesses on the AHB master port in using the API HAL_DMA2D_ConfigDeadTime()
           and enable/disable the functionality  with the APIs HAL_DMA2D_EnableDeadTime() or
           HAL_DMA2D_DisableDeadTime().
@@ -76,7 +76,7 @@
           HAL_DMA2D_CLUTLoading_Abort().
 
       (#) To control the DMA2D state, use the following function: HAL_DMA2D_GetState().
-      
+
       (#) To read the DMA2D error code, use the following function: HAL_DMA2D_GetError().
 
      *** DMA2D HAL driver macros list ***
@@ -98,7 +98,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -150,8 +150,8 @@
 /** @defgroup DMA2D_TimeOut DMA2D Time Out
   * @{
   */
-#define DMA2D_TIMEOUT_ABORT           ((uint32_t)1000U)  /*!<  1s  */
-#define DMA2D_TIMEOUT_SUSPEND         ((uint32_t)1000U)  /*!<  1s  */
+#define DMA2D_TIMEOUT_ABORT           1000U  /*!<  1s  */
+#define DMA2D_TIMEOUT_SUSPEND         1000U  /*!<  1s  */
 /**
   * @}
   */
@@ -254,7 +254,7 @@ HAL_StatusTypeDef HAL_DMA2D_Init(DMA2D_HandleTypeDef *hdma2d)
   MODIFY_REG(hdma2d->Instance->OPFCCR, DMA2D_OPFCCR_CM, hdma2d->Init.ColorMode);
 
   /* DMA2D OOR register configuration ------------------------------------------*/
-  MODIFY_REG(hdma2d->Instance->OOR, DMA2D_OOR_LO, hdma2d->Init.OutputOffset);  
+  MODIFY_REG(hdma2d->Instance->OOR, DMA2D_OOR_LO, hdma2d->Init.OutputOffset);
 
   /* Update error code */
   hdma2d->ErrorCode = HAL_DMA2D_ERROR_NONE;
@@ -417,9 +417,9 @@ __weak void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef* hdma2d)
   * @brief  Start the DMA2D Transfer.
   * @param  hdma2d:     Pointer to a DMA2D_HandleTypeDef structure that contains
   *                     the configuration information for the DMA2D.
-  * @param  pdata:      Configure the source memory Buffer address if 
+  * @param  pdata:      Configure the source memory Buffer address if
   *                     Memory-to-Memory or Memory-to-Memory with pixel format
-  *                     conversion mode is selected, or configure 
+  *                     conversion mode is selected, or configure
   *                     the color value if Register-to-Memory mode is selected.
   * @param  DstAddress: The destination memory Buffer address.
   * @param  Width:      The width of data to be transferred from source to destination (expressed in number of pixels per line).
@@ -453,7 +453,7 @@ HAL_StatusTypeDef HAL_DMA2D_Start(DMA2D_HandleTypeDef *hdma2d, uint32_t pdata, u
   *                     the configuration information for the DMA2D.
   * @param  pdata:      Configure the source memory Buffer address if
   *                     the Memory-to-Memory or Memory-to-Memory with pixel format
-  *                     conversion mode is selected, or configure 
+  *                     conversion mode is selected, or configure
   *                     the color value if Register-to-Memory mode is selected.
   * @param  DstAddress: The destination memory Buffer address.
   * @param  Width:      The width of data to be transferred from source to destination (expressed in number of pixels per line).
@@ -569,8 +569,8 @@ HAL_StatusTypeDef HAL_DMA2D_Abort(DMA2D_HandleTypeDef *hdma2d)
 
   /* Abort the DMA2D transfer */
   /* START bit is reset to make sure not to set it again, in the event the HW clears it
-     between the register read and the register write by the CPU (writing ‘0’ has no
-     effect on START bitvalue). */
+     between the register read and the register write by the CPU (writing 0 has no
+     effect on START bitvalue) */
    MODIFY_REG(hdma2d->Instance->CR, DMA2D_CR_ABORT|DMA2D_CR_START, DMA2D_CR_ABORT);
 
   /* Get tick */
@@ -618,8 +618,8 @@ HAL_StatusTypeDef HAL_DMA2D_Suspend(DMA2D_HandleTypeDef *hdma2d)
 
   /* Suspend the DMA2D transfer */
   /* START bit is reset to make sure not to set it again, in the event the HW clears it
-     between the register read and the register write by the CPU (writing ‘0’ has no
-     effect on START bitvalue). */
+     between the register read and the register write by the CPU (writing 0 has no
+     effect on START bitvalue) */
   MODIFY_REG(hdma2d->Instance->CR, DMA2D_CR_SUSP|DMA2D_CR_START, DMA2D_CR_SUSP);
 
   /* Get tick */
@@ -673,8 +673,8 @@ HAL_StatusTypeDef HAL_DMA2D_Resume(DMA2D_HandleTypeDef *hdma2d)
 
   /* Resume the DMA2D transfer */
   /* START bit is reset to make sure not to set it again, in the event the HW clears it
-     between the register read and the register write by the CPU (writing ‘0’ has no
-     effect on START bitvalue). */
+     between the register read and the register write by the CPU (writing 0 has no
+     effect on START bitvalue) */
   CLEAR_BIT(hdma2d->Instance->CR, (DMA2D_CR_SUSP|DMA2D_CR_START));
 
   return HAL_OK;
@@ -835,7 +835,7 @@ HAL_StatusTypeDef HAL_DMA2D_CLUTLoad_IT(DMA2D_HandleTypeDef *hdma2d, DMA2D_CLUTC
   *                  the configuration information for the DMA2D.
   * @param  LayerIdx: DMA2D Layer index.
   *                   This parameter can be one of the following values:
-  *                   0(background) / 1(foreground) 
+  *                   0(background) / 1(foreground)
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_DMA2D_CLUTLoading_Abort(DMA2D_HandleTypeDef *hdma2d, uint32_t LayerIdx)
@@ -1305,7 +1305,7 @@ __weak void HAL_DMA2D_CLUTLoadingCpltCallback(DMA2D_HandleTypeDef *hdma2d)
   */
 
 /** @defgroup DMA2D_Exported_Functions_Group3 Peripheral Control functions
- *  @brief    Peripheral Control functions 
+ *  @brief    Peripheral Control functions
  *
 @verbatim
  ===============================================================================
@@ -1366,7 +1366,7 @@ HAL_StatusTypeDef HAL_DMA2D_ConfigLayer(DMA2D_HandleTypeDef *hdma2d, uint32_t La
   {
     regValue =  pLayerCfg->InputColorMode | (pLayerCfg->AlphaMode << DMA2D_POSITION_BGPFCCR_AM) | (pLayerCfg->InputAlpha << DMA2D_POSITION_BGPFCCR_ALPHA);
   }
-  
+
   /* Configure the background DMA2D layer */
   if(LayerIdx == 0)
   {
@@ -1580,12 +1580,12 @@ HAL_StatusTypeDef HAL_DMA2D_ConfigDeadTime(DMA2D_HandleTypeDef *hdma2d, uint8_t 
   */
 
 /** @defgroup DMA2D_Exported_Functions_Group4 Peripheral State and Error functions
- *  @brief    Peripheral State functions 
+ *  @brief    Peripheral State functions
  *
 @verbatim
  ===============================================================================
                   ##### Peripheral State and Errors functions #####
- ===============================================================================  
+ ===============================================================================
     [..]
     This subsection provides functions allowing to :
       (+) Get the DMA2D state
@@ -1593,7 +1593,7 @@ HAL_StatusTypeDef HAL_DMA2D_ConfigDeadTime(DMA2D_HandleTypeDef *hdma2d, uint8_t 
 
 @endverbatim
   * @{
-  */ 
+  */
 
 /**
   * @brief  Return the DMA2D state
@@ -1620,7 +1620,7 @@ uint32_t HAL_DMA2D_GetError(DMA2D_HandleTypeDef *hdma2d)
 /**
   * @}
   */
-  
+
 /**
   * @}
   */

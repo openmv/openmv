@@ -2,10 +2,10 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_flash_ramfunc.c
   * @author  MCD Application Team
-  * @version V1.5.2
-  * @date    22-September-2016
+  * @version V1.7.1
+  * @date    14-April-2017
   * @brief   FLASH RAMFUNC module driver.
-  *          This file provides a FLASH firmware functions which should be 
+  *          This file provides a FLASH firmware functions which should be
   *          executed from internal SRAM
   *            + Stop/Start the flash interface while System Run
   *            + Enable/Disable the flash sleep while System Run
@@ -16,11 +16,11 @@
   [..]
     *** ARM Compiler ***
     --------------------
-    [..] RAM functions are defined using the toolchain options. 
+    [..] RAM functions are defined using the toolchain options.
          Functions that are be executed in RAM should reside in a separate
          source module. Using the 'Options for File' dialog you can simply change
          the 'Code / Const' area of a module to a memory space in physical RAM.
-         Available memory areas are declared in the 'Target' tab of the 
+         Available memory areas are declared in the 'Target' tab of the
          Options for Target' dialog.
 
     *** ICCARM Compiler ***
@@ -31,12 +31,12 @@
     --------------------
     [..] RAM functions are defined using a specific toolchain attribute
          "__attribute__((section(".RamFunc")))".
-  
-  @endverbatim         
+
+  @endverbatim
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -61,7 +61,7 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
@@ -88,44 +88,44 @@
   * @{
   */
 
-/** @defgroup FLASH_RAMFUNC_Exported_Functions_Group1 Peripheral features functions executed from internal RAM 
-  *  @brief Peripheral Extended features functions 
+/** @defgroup FLASH_RAMFUNC_Exported_Functions_Group1 Peripheral features functions executed from internal RAM
+  *  @brief Peripheral Extended features functions
   *
-@verbatim   
+@verbatim
 
  ===============================================================================
                       ##### ramfunc functions #####
- ===============================================================================  
+ ===============================================================================
     [..]
-    This subsection provides a set of functions that should be executed from RAM 
+    This subsection provides a set of functions that should be executed from RAM
     transfers.
-    
+
 @endverbatim
   * @{
   */
 
 /**
   * @brief Stop the flash interface while System Run
-  * @note  This mode is only available for STM32F41xxx/STM32F446xx devices. 
-  * @note  This mode couldn't be set while executing with the flash itself. 
-  *        It should be done with specific routine executed from RAM.     
+  * @note  This mode is only available for STM32F41xxx/STM32F446xx devices.
+  * @note  This mode couldn't be set while executing with the flash itself.
+  *        It should be done with specific routine executed from RAM.
   * @retval None
   */
 __RAM_FUNC HAL_FLASHEx_StopFlashInterfaceClk(void)
 {
   /* Enable Power ctrl clock */
   __HAL_RCC_PWR_CLK_ENABLE();
-  /* Stop the flash interface while System Run */  
+  /* Stop the flash interface while System Run */
   SET_BIT(PWR->CR, PWR_CR_FISSR);
-   
+
   return HAL_OK;
 }
 
 /**
   * @brief Start the flash interface while System Run
-  * @note  This mode is only available for STM32F411xx/STM32F446xx devices. 
-  * @note  This mode couldn't be set while executing with the flash itself. 
-  *        It should be done with specific routine executed from RAM.     
+  * @note  This mode is only available for STM32F411xx/STM32F446xx devices.
+  * @note  This mode couldn't be set while executing with the flash itself.
+  *        It should be done with specific routine executed from RAM.
   * @retval None
   */
 __RAM_FUNC HAL_FLASHEx_StartFlashInterfaceClk(void)
@@ -140,9 +140,9 @@ __RAM_FUNC HAL_FLASHEx_StartFlashInterfaceClk(void)
 
 /**
   * @brief Enable the flash sleep while System Run
-  * @note  This mode is only available for STM32F41xxx/STM32F446xx devices. 
-  * @note  This mode could n't be set while executing with the flash itself. 
-  *        It should be done with specific routine executed from RAM.     
+  * @note  This mode is only available for STM32F41xxx/STM32F446xx devices.
+  * @note  This mode could n't be set while executing with the flash itself.
+  *        It should be done with specific routine executed from RAM.
   * @retval None
   */
 __RAM_FUNC HAL_FLASHEx_EnableFlashSleepMode(void)
@@ -157,9 +157,9 @@ __RAM_FUNC HAL_FLASHEx_EnableFlashSleepMode(void)
 
 /**
   * @brief Disable the flash sleep while System Run
-  * @note  This mode is only available for STM32F41xxx/STM32F446xx devices. 
-  * @note  This mode couldn't be set while executing with the flash itself. 
-  *        It should be done with specific routine executed from RAM.     
+  * @note  This mode is only available for STM32F41xxx/STM32F446xx devices.
+  * @note  This mode couldn't be set while executing with the flash itself.
+  *        It should be done with specific routine executed from RAM.
   * @retval None
   */
 __RAM_FUNC HAL_FLASHEx_DisableFlashSleepMode(void)
@@ -168,7 +168,7 @@ __RAM_FUNC HAL_FLASHEx_DisableFlashSleepMode(void)
   __HAL_RCC_PWR_CLK_ENABLE();
   /* Disable the flash sleep while System Run */
   CLEAR_BIT(PWR->CR, PWR_CR_FMSSR);
-  
+
   return HAL_OK;
 }
 

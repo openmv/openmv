@@ -2,13 +2,13 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_sdram.h
   * @author  MCD Application Team
-  * @version V1.5.2
-  * @date    22-September-2016
+  * @version V1.7.1
+  * @date    14-April-2017
   * @brief   Header file of SDRAM HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2016 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
   * Redistribution and use in source and binary forms, with or without modification,
   * are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
-  */ 
+  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32F4xx_HAL_SDRAM_H
@@ -55,16 +55,16 @@
 
 /** @addtogroup SDRAM
   * @{
-  */ 
+  */
 
-/* Exported typedef ----------------------------------------------------------*/   
+/* Exported typedef ----------------------------------------------------------*/
 /** @defgroup SDRAM_Exported_Types SDRAM Exported Types
   * @{
   */
 
-/** 
-  * @brief  HAL SDRAM State structure definition  
-  */ 
+/**
+  * @brief  HAL SDRAM State structure definition
+  */
 typedef enum
 {
   HAL_SDRAM_STATE_RESET             = 0x00U,  /*!< SDRAM not yet initialized or disabled */
@@ -73,24 +73,24 @@ typedef enum
   HAL_SDRAM_STATE_ERROR             = 0x03U,  /*!< SDRAM error state                     */
   HAL_SDRAM_STATE_WRITE_PROTECTED   = 0x04U,  /*!< SDRAM device write protected          */
   HAL_SDRAM_STATE_PRECHARGED        = 0x05U   /*!< SDRAM device precharged               */
-  
+
 }HAL_SDRAM_StateTypeDef;
 
-/** 
-  * @brief  SDRAM handle Structure definition  
-  */ 
+/**
+  * @brief  SDRAM handle Structure definition
+  */
 typedef struct
 {
   FMC_SDRAM_TypeDef             *Instance;  /*!< Register base address                 */
-  
+
   FMC_SDRAM_InitTypeDef         Init;       /*!< SDRAM device configuration parameters */
-  
+
   __IO HAL_SDRAM_StateTypeDef   State;      /*!< SDRAM access state                    */
-  
-  HAL_LockTypeDef               Lock;       /*!< SDRAM locking object                  */ 
+
+  HAL_LockTypeDef               Lock;       /*!< SDRAM locking object                  */
 
   DMA_HandleTypeDef             *hdma;      /*!< Pointer DMA handler                   */
-  
+
 }SDRAM_HandleTypeDef;
 /**
   * @}
@@ -116,7 +116,7 @@ typedef struct
   * @{
   */
 
-/** @addtogroup SDRAM_Exported_Functions_Group1 
+/** @addtogroup SDRAM_Exported_Functions_Group1
   * @{
   */
 
@@ -134,7 +134,7 @@ void HAL_SDRAM_DMA_XferErrorCallback(DMA_HandleTypeDef *hdma);
   * @}
   */
 
-/** @addtogroup SDRAM_Exported_Functions_Group2 
+/** @addtogroup SDRAM_Exported_Functions_Group2
   * @{
   */
 /* I/O operation functions ****************************************************/
@@ -150,8 +150,8 @@ HAL_StatusTypeDef HAL_SDRAM_Write_DMA(SDRAM_HandleTypeDef *hsdram, uint32_t *pAd
 /**
   * @}
   */
-  
-/** @addtogroup SDRAM_Exported_Functions_Group3 
+
+/** @addtogroup SDRAM_Exported_Functions_Group3
   * @{
   */
 /* SDRAM Control functions  *****************************************************/
@@ -165,7 +165,7 @@ uint32_t          HAL_SDRAM_GetModeStatus(SDRAM_HandleTypeDef *hsdram);
   * @}
   */
 
-/** @addtogroup SDRAM_Exported_Functions_Group4 
+/** @addtogroup SDRAM_Exported_Functions_Group4
   * @{
   */
 /* SDRAM State functions ********************************************************/
