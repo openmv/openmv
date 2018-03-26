@@ -31,6 +31,7 @@ SRCS += $(addprefix img/,   \
 	zbar.c                  \
 	fmath.c                 \
 	fsort.c                 \
+	qsort.c                 \
 	fft.c                   \
 	filter.c                \
 	haar.c                  \
