@@ -50,7 +50,7 @@
 #define OMV_DMA_MEMORY      SRAM2   // Misc DMA buffers
 
 #define OMV_FB_SIZE         (151K)  // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE   (14K)   // minimum fb alloc size
+#define OMV_FB_ALLOC_SIZE   (12K)   // minimum fb alloc size
 #define OMV_STACK_SIZE      (4K)
 #define OMV_HEAP_SIZE       (52K)
 
