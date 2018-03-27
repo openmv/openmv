@@ -48,6 +48,7 @@
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss, stack and heap
 #define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
 #define OMV_FB_MEMORY           AXI_SRAM    // Framebuffer, fb_alloc
+#define OMV_JPEG_MEMORY         SRAM3       // JPEG buffer memory.
 
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
@@ -76,8 +77,9 @@
 #define OMV_AXI_SRAM_ORIGIN     0x24000000
 #define OMV_AXI_SRAM_LENGTH     512K
 
-#define OMV_DMA_REGION_BASE     OMV_SRAM3_ORIGIN
-#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_32KB
+// Use the MPU to set an uncacheable memory region.
+//#define OMV_DMA_REGION_BASE     OMV_SRAMX_ORIGIN
+//#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_XXKB
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)

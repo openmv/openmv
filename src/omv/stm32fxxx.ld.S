@@ -39,6 +39,10 @@ _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 _ffs_cache  = ORIGIN(OMV_FFS_MEMORY);
 #endif
 
+#if defined(OMV_JPEG_MEMORY)
+_jpeg_buf  = ORIGIN(OMV_JPEG_MEMORY);
+#endif
+
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
 _stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 
@@ -99,6 +103,12 @@ SECTIONS
     . = . + OMV_FFS_BUF_SIZE;
     #endif
 
+    #if !defined(OMV_JPEG_MEMORY)
+    . = ALIGN(4);
+    _jpeg_buf = .;      // IDE JPEG buffer
+    . = . + OMV_JPEG_BUF_SIZE;
+    #endif
+
    . = ALIGN(4);
     *(.dma_buffer)
 
@@ -135,13 +145,9 @@ SECTIONS
     *(COMMON)
 
     . = ALIGN(4);
-    _jpeg_buf = .;      // IDE JPEG buffer
-    . = . + OMV_JPEG_BUF_SIZE;
-
-    . = ALIGN(4);
     _ebss = .;          // define a global symbol at bss end
-    __bss_end__ = _ebss;
-    _bss_end = _ebss;   // Used by gccollect
+    _bss_end = .;       // Used by gccollect
+    __bss_end__ = .;
   } >OMV_MAIN_MEMORY
 
   ._heap (NOLOAD) :
