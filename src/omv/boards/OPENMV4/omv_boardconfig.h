@@ -53,7 +53,7 @@
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
 #define OMV_STACK_SIZE          (8K)
-#define OMV_HEAP_SIZE           (64K)
+#define OMV_HEAP_SIZE           (240K)
 
 #define OMV_LINE_BUF_SIZE       (3K)        // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE        (2K)        // USB MSC bot data
@@ -67,9 +67,7 @@
 #define OMV_CCM_ORIGIN          0x20000000  // Note accessible by CPU and MDMA only.
 #define OMV_CCM_LENGTH          128K
 #define OMV_SRAM1_ORIGIN        0x30000000
-#define OMV_SRAM1_LENGTH        128K
-#define OMV_SRAM2_ORIGIN        0x30020000
-#define OMV_SRAM2_LENGTH        128K
+#define OMV_SRAM1_LENGTH        256K
 #define OMV_SRAM3_ORIGIN        0x30040000
 #define OMV_SRAM3_LENGTH        32K
 #define OMV_SRAM4_ORIGIN        0x38000000
