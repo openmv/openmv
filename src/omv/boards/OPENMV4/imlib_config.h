@@ -77,4 +77,8 @@
 
 // Enable CMSIS NN
 #define IMLIB_ENABLE_CNN
+
+// Enable FAST (20+ KBs).
+#define IMLIB_ENABLE_FAST
+
 #endif //__IMLIB_CONFIG_H__

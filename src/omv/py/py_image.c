@@ -4706,6 +4706,11 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     corner_detector_t corner_detector =
         py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_corner_detector), CORNER_AGAST);
 
+    #ifndef IMLIB_ENABLE_FAST
+    // Force AGAST when FAST is disabled.
+    corner_detector = CORNER_AGAST;
+    #endif
+
     // Find keypoints
     array_t *kpts = orb_find_keypoints(arg_img, normalized, threshold, scale_factor, max_keypoints, corner_detector, &roi);
 

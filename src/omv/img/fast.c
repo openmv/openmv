@@ -4,6 +4,8 @@
 #include "fb_alloc.h"
 #include "gc.h"
 
+#ifdef IMLIB_ENABLE_FAST
+
 #define MAX_ROW         (480)
 #define MAX_CORNERS     (2000)
 #define Compare(X, Y) ((X)>=(Y))
@@ -6035,3 +6037,4 @@ done:
     *n_corners = num_corners;
     return corners;
 }
+#endif //IMLIB_ENABLE_FAST

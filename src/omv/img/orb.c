@@ -385,9 +385,13 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
         imlib_sepconv3(&img_scaled, kernel_gauss_3, 1.0f/16.0f, 0.0f);
 
 		// Find kpts
+        #ifdef IMLIB_ENABLE_FAST
         if (corner_detector == CORNER_FAST) {
             fast_detect(&img_scaled, kpts, threshold, &roi_scaled);
-        } else {
+        }
+        else
+        #endif
+        {
             agast_detect(&img_scaled, kpts, threshold, &roi_scaled);
         }
 
