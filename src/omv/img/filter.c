@@ -10,7 +10,28 @@ void imlib_histeq(image_t *img)
 {
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            // Can't run this on a binary image.
+            int a = img->w * img->h;
+            float s = (COLOR_BINARY_MAX-COLOR_BINARY_MIN) / ((float) a);
+            uint32_t *hist = fb_alloc0((COLOR_BINARY_MAX-COLOR_BINARY_MIN+1)*sizeof(uint32_t));
+            uint32_t *pixels = (uint32_t *) img->data;
+
+            // Compute the image histogram
+            for (int i=0; i<a; i++) {
+                hist[pixels[i]-COLOR_BINARY_MIN] += 1;
+            }
+
+            // Compute the CDF
+            for (int i=0, sum=0; i<(COLOR_BINARY_MAX-COLOR_BINARY_MIN+1); i++) {
+                sum += hist[i];
+                hist[i] = sum;
+            }
+
+            for (int i=0; i<a; i++) {
+                int pixel = pixels[i];
+                pixels[i] = (s * hist[pixel-COLOR_BINARY_MIN]) + COLOR_BINARY_MIN;
+            }
+
+            fb_free();
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -88,7 +109,58 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            // Can't run this on a binary image.
+            buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows);
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                uint32_t *buf_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows));
+
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) {
+                        IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                        continue; // Short circuit.
+                    }
+
+                    int acc = 0;
+
+                    for (int j = -ksize; j <= ksize; j++) {
+                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
+                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+
+                        for (int k = -ksize; k <= ksize; k++) {
+                            acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
+                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                        }
+                    }
+
+                    int pixel = fast_roundf(acc * over_n);
+
+                    if (threshold) {
+                        if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
+                            pixel = COLOR_BINARY_MAX;
+                        } else {
+                            pixel = COLOR_BINARY_MIN;
+                        }
+                    }
+
+                    IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, pixel);
+                }
+
+                if (y >= ksize) { // Transfer buffer lines...
+                    memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, (y - ksize)),
+                           IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, ((y - ksize) % brows)),
+                           IMAGE_BINARY_LINE_LEN_BYTES(img));
+                }
+            }
+
+            // Copy any remaining lines from the buffer image...
+            for (int y = img->h - ksize, yy = img->h; y < yy; y++) {
+                memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y),
+                       IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows)),
+                       IMAGE_BINARY_LINE_LEN_BYTES(img));
+            }
+
+            fb_free();
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -224,7 +296,62 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            // Can't run this on a binary image.
+            buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows);
+            int *data = fb_alloc(n*sizeof(int));
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                uint32_t *buf_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows));
+
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) {
+                        IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                        continue; // Short circuit.
+                    }
+
+                    int *data_ptr = data;
+
+                    for (int j = -ksize; j <= ksize; j++) {
+                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
+                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+
+                        for (int k = -ksize; k <= ksize; k++) {
+                            *data_ptr++ = IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
+                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                        }
+                    }
+
+                    fsort(data, n);
+
+                    int pixel = data[int_percentile];
+
+                    if (threshold) {
+                        if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
+                            pixel = COLOR_BINARY_MAX;
+                        } else {
+                            pixel = COLOR_BINARY_MIN;
+                        }
+                    }
+
+                    IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, pixel);
+                }
+
+                if (y >= ksize) { // Transfer buffer lines...
+                    memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, (y - ksize)),
+                           IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, ((y - ksize) % brows)),
+                           IMAGE_BINARY_LINE_LEN_BYTES(img));
+                }
+            }
+
+            // Copy any remaining lines from the buffer image...
+            for (int y = img->h - ksize, yy = img->h; y < yy; y++) {
+                memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y),
+                       IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows)),
+                       IMAGE_BINARY_LINE_LEN_BYTES(img));
+            }
+
+            fb_free();
+            fb_free();
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -372,7 +499,68 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            // Can't run this on a binary image.
+            buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows);
+            int *bins = fb_alloc((COLOR_BINARY_MAX-COLOR_BINARY_MIN+1)*sizeof(int));
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                uint32_t *buf_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows));
+
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) {
+                        IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                        continue; // Short circuit.
+                    }
+
+                    memset(bins, 0, (COLOR_BINARY_MAX-COLOR_BINARY_MIN+1)*sizeof(int));
+
+                    int mcount = 0, mode = 0;
+
+                    for (int j = -ksize; j <= ksize; j++) {
+                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
+                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+
+                        for (int k = -ksize; k <= ksize; k++) {
+                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
+                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                            bins[pixel]++;
+
+                            if (bins[pixel] > mcount) {
+                                mcount = bins[pixel];
+                                mode = pixel;
+                            }
+                        }
+                    }
+
+                    int pixel = mode;
+
+                    if (threshold) {
+                        if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
+                            pixel = COLOR_BINARY_MAX;
+                        } else {
+                            pixel = COLOR_BINARY_MIN;
+                        }
+                    }
+
+                    IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, pixel);
+                }
+
+                if (y >= ksize) { // Transfer buffer lines...
+                    memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, (y - ksize)),
+                           IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, ((y - ksize) % brows)),
+                           IMAGE_BINARY_LINE_LEN_BYTES(img));
+                }
+            }
+
+            // Copy any remaining lines from the buffer image...
+            for (int y = img->h - ksize, yy = img->h; y < yy; y++) {
+                memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y),
+                       IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows)),
+                       IMAGE_BINARY_LINE_LEN_BYTES(img));
+            }
+
+            fb_free();
+            fb_free();
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -546,7 +734,60 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            // Can't run this on a binary image.
+            buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows);
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                uint32_t *buf_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows));
+
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) {
+                        IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                        continue; // Short circuit.
+                    }
+
+                    int min = COLOR_BINARY_MAX, max = COLOR_BINARY_MIN;
+    
+                    for (int j = -ksize; j <= ksize; j++) {
+                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
+                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+
+                        for (int k = -ksize; k <= ksize; k++) {
+                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
+                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                            min = IM_MIN(min, pixel);
+                            max = IM_MAX(max, pixel);
+                        }
+                    }
+
+                    int pixel = fast_roundf((min*min_bias)+(max*max_bias));
+
+                    if (threshold) {
+                        if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
+                            pixel = COLOR_BINARY_MAX;
+                        } else {
+                            pixel = COLOR_BINARY_MIN;
+                        }
+                    }
+
+                    IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, pixel);
+                }
+
+                if (y >= ksize) { // Transfer buffer lines...
+                    memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, (y - ksize)),
+                           IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, ((y - ksize) % brows)),
+                           IMAGE_BINARY_LINE_LEN_BYTES(img));
+                }
+            }
+
+            // Copy any remaining lines from the buffer image...
+            for (int y = img->h - ksize, yy = img->h; y < yy; y++) {
+                memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y),
+                       IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows)),
+                       IMAGE_BINARY_LINE_LEN_BYTES(img));
+            }
+
+            fb_free();
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
@@ -692,7 +933,58 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            // Can't run this on a binary image.
+            buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows);
+
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                uint32_t *buf_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows));
+
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) {
+                        IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+                        continue; // Short circuit.
+                    }
+
+                    int acc = 0, ptr = 0;
+
+                    for (int j = -ksize; j <= ksize; j++) {
+                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
+                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+
+                        for (int k = -ksize; k <= ksize; k++) {
+                            acc += krn[ptr++] * IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
+                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                        }
+                    }
+
+                    int pixel = IM_MAX(IM_MIN(fast_roundf(acc * m) + b, COLOR_BINARY_MAX), COLOR_BINARY_MIN);
+
+                    if (threshold) {
+                        if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
+                            pixel = COLOR_BINARY_MAX;
+                        } else {
+                            pixel = COLOR_BINARY_MIN;
+                        }
+                    }
+
+                    IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, pixel);
+                }
+
+                if (y >= ksize) { // Transfer buffer lines...
+                    memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, (y - ksize)),
+                           IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, ((y - ksize) % brows)),
+                           IMAGE_BINARY_LINE_LEN_BYTES(img));
+                }
+            }
+
+            // Copy any remaining lines from the buffer image...
+            for (int y = img->h - ksize, yy = img->h; y < yy; y++) {
+                memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y),
+                       IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows)),
+                       IMAGE_BINARY_LINE_LEN_BYTES(img));
+            }
+
+            fb_free();
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
