@@ -408,6 +408,26 @@ Q(dilate)
 // duplicate Q(threshold)
 // duplicate Q(mask)
 
+// Open
+// duplicate Q(open)
+// duplicate Q(threshold)
+// duplicate Q(mask)
+
+// Close
+// duplicate Q(close)
+// duplicate Q(threshold)
+// duplicate Q(mask)
+
+// Top Hat
+Q(top_hat)
+// duplicate Q(threshold)
+// duplicate Q(mask)
+
+// Black Hat
+Q(black_hat)
+// duplicate Q(threshold)
+// duplicate Q(mask)
+
 // Negate
 Q(negate)
 
@@ -511,6 +531,15 @@ Q(laplacian)
 Q(sharpen)
 // duplicate Q(mul)
 // duplicate Q(add)
+// duplicate Q(threshold)
+// duplicate Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
+
+// Bilateral
+Q(bilateral)
+Q(color_sigma)
+Q(space_sigma)
 // duplicate Q(threshold)
 // duplicate Q(offset)
 // duplicate Q(invert)

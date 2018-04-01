@@ -127,7 +127,13 @@ typedef struct color_thresholds_list_lnk_data
 }
 color_thresholds_list_lnk_data_t;
 
-#define COLOR_THRESHOLD_BINARY(pixel, threshold, invert) ((pixel) ^ (invert))
+#define COLOR_THRESHOLD_BINARY(pixel, threshold, invert) \
+({ \
+    __typeof__ (pixel) _pixel = (pixel); \
+    __typeof__ (threshold) _threshold = (threshold); \
+    __typeof__ (invert) _invert = (invert); \
+    ((_threshold->LMin <= _pixel) && (_pixel <= _threshold->LMax)) ^ _invert; \
+})
 
 #define COLOR_THRESHOLD_GRAYSCALE(pixel, threshold, invert) \
 ({ \
@@ -1222,6 +1228,10 @@ void imlib_b_xor(image_t *img, const char *path, image_t *other, int scalar, ima
 void imlib_b_xnor(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_erode(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask);
+void imlib_open(image_t *img, int ksize, int threshold, image_t *mask);
+void imlib_close(image_t *img, int ksize, int threshold, image_t *mask);
+void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask);
+void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask);
 // Math Functions
 void imlib_negate(image_t *img);
 void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip);
@@ -1240,6 +1250,7 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
 void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
 void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool threshold, int offset, bool invert, image_t *mask);
 void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, const int b, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, float space_sigma, bool threshold, int offset, bool invert, image_t *mask);
 // Image Correction
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
 void imlib_logpolar(image_t *img, bool linear, bool reverse);

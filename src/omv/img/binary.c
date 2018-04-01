@@ -13,6 +13,26 @@ void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero)
 
         switch(img->bpp) {
             case IMAGE_BPP_BINARY: {
+                if (!zero) {
+                    for (uint32_t *start = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, 0),
+                         *end = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h);
+                         start < end; start++) {
+                        for (int i = 0; i < UINT32_T_BITS; i++) {
+                            IMAGE_PUT_BINARY_PIXEL_FAST(start, i,
+                                COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(start, i), &lnk_data, invert)
+                                ? COLOR_BINARY_MAX : COLOR_BINARY_MIN);
+                        }
+                    }
+                } else {
+                    for (uint32_t *start = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, 0),
+                         *end = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h);
+                         start < end; start++) {
+                        for (int i = 0; i < UINT32_T_BITS; i++) {
+                            if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(start, i), &lnk_data, invert))
+                                IMAGE_PUT_BINARY_PIXEL_FAST(start, i, COLOR_BINARY_MIN);
+                        }
+                    }
+                }
                 break;
             }
             case IMAGE_BPP_GRAYSCALE: {
@@ -27,8 +47,8 @@ void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero)
                     for (uint8_t *start = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, 0),
                          *end = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, img->h);
                          start < end; start++) {
-                        if (COLOR_THRESHOLD_GRAYSCALE(*start, &lnk_data, invert)) *start =
-                            COLOR_GRAYSCALE_BINARY_MIN;
+                        if (COLOR_THRESHOLD_GRAYSCALE(*start, &lnk_data, invert))
+                            *start = COLOR_GRAYSCALE_BINARY_MIN;
                     }
                 }
                 break;
@@ -45,8 +65,8 @@ void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero)
                     for (uint16_t *start = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, 0),
                          *end = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, img->h);
                          start < end; start++) {
-                        if (COLOR_THRESHOLD_RGB565(*start, &lnk_data, invert)) *start =
-                            COLOR_RGB565_BINARY_MIN;
+                        if (COLOR_THRESHOLD_RGB565(*start, &lnk_data, invert))
+                            *start = COLOR_RGB565_BINARY_MIN;
                     }
                 }
                 break;
@@ -710,4 +730,42 @@ void imlib_dilate(image_t *img, int ksize, int threshold, image_t *mask)
     // must be set in the kernel (besides the center) for the output to be 1.
     // Dilate normally requires one pixel to be 1.
     imlib_erode_dilate(img, ksize, threshold, 1, mask);
+}
+
+void imlib_open(image_t *img, int ksize, int threshold, image_t *mask)
+{
+    imlib_erode(img, ksize, (((ksize*2)+1)*((ksize*2)+1))-1 - threshold, mask);
+    imlib_dilate(img, ksize, 0 + threshold, mask);
+}
+
+void imlib_close(image_t *img, int ksize, int threshold, image_t *mask)
+{
+    imlib_dilate(img, ksize, 0 + threshold, mask);
+    imlib_erode(img, ksize, (((ksize*2)+1)*((ksize*2)+1))-1 - threshold, mask);
+}
+
+void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask)
+{
+    image_t temp;
+    temp.w = img->w;
+    temp.h = img->h;
+    temp.bpp = img->bpp;
+    temp.data = fb_alloc(image_size(img));
+    memcpy(temp.data, img->data, image_size(img));
+    imlib_open(&temp, ksize, threshold, mask);
+    imlib_difference(img, NULL, &temp, 0, mask);
+    fb_free();
+}
+
+void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask)
+{
+    image_t temp;
+    temp.w = img->w;
+    temp.h = img->h;
+    temp.bpp = img->bpp;
+    temp.data = fb_alloc(image_size(img));
+    memcpy(temp.data, img->data, image_size(img));
+    imlib_close(&temp, ksize, threshold, mask);
+    imlib_difference(img, NULL, &temp, 0, mask);
+    fb_free();
 }
