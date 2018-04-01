@@ -14,11 +14,10 @@ void imlib_histeq(image_t *img, image_t *mask)
             float s = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) a);
             uint32_t *hist = fb_alloc0((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(uint32_t));
 
-            for (uint32_t *start = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, 0),
-                 *end = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h);
-                 start < end; start++) {
-                for (int i = 0; i < UINT32_T_BITS; i++) {
-                    hist[IMAGE_GET_BINARY_PIXEL_FAST(start, i) - COLOR_BINARY_MIN] += 1;
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    hist[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) - COLOR_BINARY_MIN] += 1;
                 }
             }
 
@@ -45,10 +44,11 @@ void imlib_histeq(image_t *img, image_t *mask)
             float s = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) a);
             uint32_t *hist = fb_alloc0((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(uint32_t));
 
-            for (uint8_t *start = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, 0),
-                 *end = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, img->h);
-                 start < end; start++) {
-                hist[(*start) - COLOR_GRAYSCALE_MIN] += 1;
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    hist[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x) - COLOR_GRAYSCALE_MIN] += 1;
+                }
             }
 
             for (int i = 0, sum = 0, ii = COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1; i < ii; i++) {
@@ -74,10 +74,11 @@ void imlib_histeq(image_t *img, image_t *mask)
             float s = (COLOR_Y_MAX - COLOR_Y_MIN) / ((float) a);
             uint32_t *hist = fb_alloc0((COLOR_Y_MAX - COLOR_Y_MIN + 1) * sizeof(uint32_t));
 
-            for (uint16_t *start = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, 0),
-                 *end = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, img->h);
-                 start < end; start++) {
-                hist[COLOR_RGB565_TO_Y(*start) - COLOR_Y_MIN] += 1;
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    hist[COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x)) - COLOR_Y_MIN] += 1;
+                }
             }
 
             for (int i = 0, sum = 0, ii = COLOR_Y_MAX - COLOR_Y_MIN + 1; i < ii; i++) {
@@ -1143,7 +1144,6 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows);
-
             float *gi_lut = fb_alloc((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(float));
 
             float max_color = IM_DIV(1.0f, COLOR_BINARY_MAX - COLOR_BINARY_MIN);
@@ -1221,7 +1221,6 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
         }
         case IMAGE_BPP_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows);
-
             float *gi_lut = fb_alloc((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(float));
 
             float max_color = IM_DIV(1.0f, COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN);
@@ -1299,7 +1298,6 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
         }
         case IMAGE_BPP_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows);
-
             float *r_gi_lut = fb_alloc((COLOR_R5_MAX - COLOR_R5_MIN + 1) * sizeof(float));
             float *g_gi_lut = fb_alloc((COLOR_G6_MAX - COLOR_G6_MIN + 1) * sizeof(float));
             float *b_gi_lut = fb_alloc((COLOR_B5_MAX - COLOR_B5_MIN + 1) * sizeof(float));
