@@ -1199,9 +1199,11 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     bool arg_zero =
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zero), false);
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 4, kw_args);
 
     fb_alloc_mark();
-    imlib_binary(py_helper_arg_to_image_mutable(args[0]), &arg_thresholds, arg_invert, arg_zero);
+    imlib_binary(py_helper_arg_to_image_mutable(args[0]), &arg_thresholds, arg_invert, arg_zero, arg_msk);
     fb_alloc_free_till_mark();
     list_free(&arg_thresholds);
     return args[0];

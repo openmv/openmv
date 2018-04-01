@@ -364,6 +364,7 @@ Q(draw_keypoints)
 Q(binary)
 Q(invert)
 Q(zero)
+Q(mask)
 
 // Invert
 // duplicate Q(invert)
@@ -371,7 +372,7 @@ Q(zero)
 // And
 Q(and)
 Q(b_and)
-Q(mask)
+// duplicate Q(mask)
 
 // Nand
 Q(nand)

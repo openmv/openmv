@@ -228,7 +228,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int sc
             lnk_data.AMax = COLOR_A_MAX;
             lnk_data.BMax = COLOR_B_MAX;
             list_push_back(&thresholds, &lnk_data);
-            imlib_binary(&temp_image, &thresholds, false, false);
+            imlib_binary(&temp_image, &thresholds, false, false, NULL);
             list_free(&thresholds);
 
             imlib_erode(&temp_image, 3, 30, NULL);

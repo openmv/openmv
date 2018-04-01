@@ -1218,7 +1218,7 @@ void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, i
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness, bool fill);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, int scale, int x_spacing, int y_spacing);
 // Binary Functions
-void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero);
+void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask);
 void imlib_invert(image_t *img);
 void imlib_b_and(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_b_nand(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
