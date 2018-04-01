@@ -536,6 +536,15 @@ Q(sharpen)
 // duplicate Q(invert)
 // duplicate Q(mask)
 
+// Bilateral
+Q(bilateral)
+Q(color_sigma)
+Q(space_sigma)
+// duplicate Q(threshold)
+// duplicate Q(offset)
+// duplicate Q(invert)
+// duplicate Q(mask)
+
 // Shadow Removal
 Q(remove_shadows)
 
