@@ -1122,9 +1122,9 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
     }
 }
 
-static float gaussian(int x, float sigma)
+static float gaussian(float x, float sigma)
 {
-    return fast_expf((x * x) / (-2.0f * sigma * sigma)) / (sigma * 2.506628f); // sqrt(2 * PI)
+    return fast_expf((x * x) / (-2.0f * sigma * sigma)) / (fabsf(sigma) * 2.506628f); // sqrt(2 * PI)
 }
 
 static float distance(int x, int y)
@@ -1146,16 +1146,18 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
 
             float *gi_lut = fb_alloc((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(float));
 
+            float max_color = IM_DIV(1.0f, COLOR_BINARY_MAX - COLOR_BINARY_MIN);
             for (int i = COLOR_BINARY_MIN; i <= COLOR_BINARY_MAX; i++) {
-                gi_lut[i] = gaussian(i, color_sigma);
+                gi_lut[i] = gaussian(i * max_color, color_sigma);
             }
 
             int n = (ksize * 2) + 1;
             float *gs_lut = fb_alloc(n * n * sizeof(float));
 
+            float max_space = IM_DIV(1.0f, distance(ksize, ksize));
             for (int y = -ksize; y <= ksize; y++) {
                 for (int x = -ksize; x <= ksize; x++) {
-                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y), space_sigma);
+                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y) * max_space, space_sigma);
                 }
             }
 
@@ -1222,16 +1224,18 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
 
             float *gi_lut = fb_alloc((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(float));
 
+            float max_color = IM_DIV(1.0f, COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN);
             for (int i = COLOR_GRAYSCALE_MIN; i <= COLOR_GRAYSCALE_MAX; i++) {
-                gi_lut[i] = gaussian(i, color_sigma);
+                gi_lut[i] = gaussian(i * max_color, color_sigma);
             }
 
             int n = (ksize * 2) + 1;
             float *gs_lut = fb_alloc(n * n * sizeof(float));
 
+            float max_space = IM_DIV(1.0f, distance(ksize, ksize));
             for (int y = -ksize; y <= ksize; y++) {
                 for (int x = -ksize; x <= ksize; x++) {
-                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y), space_sigma);
+                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y) * max_space, space_sigma);
                 }
             }
 
@@ -1300,24 +1304,28 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
             float *g_gi_lut = fb_alloc((COLOR_G6_MAX - COLOR_G6_MIN + 1) * sizeof(float));
             float *b_gi_lut = fb_alloc((COLOR_B5_MAX - COLOR_B5_MIN + 1) * sizeof(float));
 
+            float r_max_color = IM_DIV(1.0f, COLOR_R5_MAX - COLOR_R5_MIN);
             for (int i = COLOR_R5_MIN; i <= COLOR_R5_MAX; i++) {
-                r_gi_lut[i] = gaussian(i, color_sigma);
+                r_gi_lut[i] = gaussian(i * r_max_color, color_sigma);
             }
 
+            float g_max_color = IM_DIV(1.0f, COLOR_G6_MAX - COLOR_G6_MIN);
             for (int i = COLOR_G6_MIN; i <= COLOR_G6_MAX; i++) {
-                g_gi_lut[i] = gaussian(i, color_sigma);
+                g_gi_lut[i] = gaussian(i * g_max_color, color_sigma);
             }
 
+            float b_max_color = IM_DIV(1.0f, COLOR_B5_MAX - COLOR_B5_MIN);
             for (int i = COLOR_B5_MIN; i <= COLOR_B5_MAX; i++) {
-                b_gi_lut[i] = gaussian(i, color_sigma);
+                b_gi_lut[i] = gaussian(i * b_max_color, color_sigma);
             }
 
             int n = (ksize * 2) + 1;
             float *gs_lut = fb_alloc(n * n * sizeof(float));
 
+            float max_space = IM_DIV(1.0f, distance(ksize, ksize));
             for (int y = -ksize; y <= ksize; y++) {
                 for (int x = -ksize; x <= ksize; x++) {
-                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y), space_sigma);
+                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y) * max_space, space_sigma);
                 }
             }
 

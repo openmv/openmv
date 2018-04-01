@@ -1997,10 +1997,10 @@ STATIC mp_obj_t py_image_bilateral(uint n_args, const mp_obj_t *args, mp_map_t *
     int arg_ksize =
         py_helper_arg_to_ksize(args[1]);
     float arg_color_sigma =
-        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_sigma), 6);
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_sigma), 0.1);
     PY_ASSERT_TRUE_MSG((0 <= arg_color_sigma), "Error: 0 <= color_sigma!");
     float arg_space_sigma =
-        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_space_sigma), 6);
+        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_space_sigma), 1);
     PY_ASSERT_TRUE_MSG((0 <= arg_space_sigma), "Error: 0 <= space_sigma!");
     bool arg_threshold =
         py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);

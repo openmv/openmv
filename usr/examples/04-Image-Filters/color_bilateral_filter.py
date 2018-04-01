@@ -23,7 +23,7 @@ while(True):
     # A larger value is less strict.
 
     # Run the kernel on every pixel of the image.
-    img.bilateral(3, color_sigma=5, space_sigma=5)
+    img.bilateral(3, color_sigma=0.1, space_sigma=1)
 
     # Note that the bilateral filter can introduce image defects if you set
     # color_sigma/space_sigma to aggresively. Increase the sigma values until
