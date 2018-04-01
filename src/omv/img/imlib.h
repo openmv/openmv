@@ -1244,7 +1244,8 @@ void imlib_max(image_t *img, const char *path, image_t *other, int scalar, image
 void imlib_difference(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_blend(image_t *img, const char *path, image_t *other, int scalar, float alpha, image_t *mask);
 // Filtering Functions
-void imlib_histeq(image_t *img);
+void imlib_histeq(image_t *img, image_t *mask);
+void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask);
 void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
 void imlib_median_filter(image_t *img, const int ksize, float percentile, bool threshold, int offset, bool invert, image_t *mask);
 void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask);
@@ -1257,7 +1258,6 @@ void imlib_logpolar(image_t *img, bool linear, bool reverse);
 void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int scalar, bool single);
 void imlib_chrominvar(image_t *img);
 void imlib_illuminvar(image_t *img);
-void imlib_histeq(image_t *img);
 // Lens/Rotation Correction
 void imlib_lens_corr(image_t *img, float strength, float zoom);
 void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,

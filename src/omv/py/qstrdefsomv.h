@@ -474,6 +474,9 @@ Q(blend)
 
 // Histogram Equalization
 Q(histeq)
+Q(adaptive)
+Q(clip_limit)
+// duplicate Q(mask)
 
 // Mean
 Q(mean)

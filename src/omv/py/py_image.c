@@ -1718,14 +1718,23 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_blend_obj, 2, py_image_blend);
 // Filtering Methods
 ////////////////////
 
-static mp_obj_t py_image_histeq(mp_obj_t img_obj)
+static mp_obj_t py_image_histeq(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    image_t *arg_img =
+        py_helper_arg_to_image_mutable(args[0]);
+    bool arg_adaptive =
+        py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_adaptive), false);
+    float arg_clip_limit =
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_clip_limit), -1);
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+
     fb_alloc_mark();
-    imlib_histeq(py_helper_arg_to_image_mutable(img_obj));
+    if (arg_adaptive) imlib_clahe_histeq(arg_img, arg_clip_limit, arg_msk); else imlib_histeq(arg_img, arg_msk);
     fb_alloc_free_till_mark();
-    return img_obj;
+    return args[0];
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_histeq_obj, 1, py_image_histeq);
 
 STATIC mp_obj_t py_image_mean(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
