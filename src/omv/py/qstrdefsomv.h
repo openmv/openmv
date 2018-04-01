@@ -436,6 +436,7 @@ Q(negate)
 Q(replace)
 Q(hmirror)
 Q(vflip)
+// duplicate Q(mask)
 
 // Add Op
 Q(add)

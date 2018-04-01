@@ -1234,7 +1234,7 @@ void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask);
 // Math Functions
 void imlib_negate(image_t *img);
-void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip);
+void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip, image_t *mask);
 void imlib_add(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_sub(image_t *img, const char *path, image_t *other, int scalar, bool reverse, image_t *mask);
 void imlib_mul(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask);
