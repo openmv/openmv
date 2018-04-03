@@ -1199,9 +1199,11 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
     bool arg_zero =
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zero), false);
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 4, kw_args);
 
     fb_alloc_mark();
-    imlib_binary(py_helper_arg_to_image_mutable(args[0]), &arg_thresholds, arg_invert, arg_zero);
+    imlib_binary(py_helper_arg_to_image_mutable(args[0]), &arg_thresholds, arg_invert, arg_zero, arg_msk);
     fb_alloc_free_till_mark();
     list_free(&arg_thresholds);
     return args[0];
@@ -1486,17 +1488,19 @@ STATIC mp_obj_t py_image_replace(uint n_args, const mp_obj_t *args, mp_map_t *kw
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip =
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 4, kw_args);
 
     fb_alloc_mark();
 
     if (MP_OBJ_IS_STR(args[1])) {
-        imlib_replace(arg_img, mp_obj_str_get_str(args[1]), NULL, 0, arg_hmirror, arg_vflip);
+        imlib_replace(arg_img, mp_obj_str_get_str(args[1]), NULL, 0, arg_hmirror, arg_vflip, arg_msk);
     } else if (MP_OBJ_IS_TYPE(args[1], &py_image_type)) {
-        imlib_replace(arg_img, NULL, py_helper_arg_to_image_mutable(args[1]), 0, arg_hmirror, arg_vflip);
+        imlib_replace(arg_img, NULL, py_helper_arg_to_image_mutable(args[1]), 0, arg_hmirror, arg_vflip, arg_msk);
     } else {
         imlib_replace(arg_img, NULL, NULL,
                       py_helper_keyword_color(arg_img, n_args, args, 1, NULL, 0),
-                      arg_hmirror, arg_vflip);
+                      arg_hmirror, arg_vflip, arg_msk);
     }
 
     fb_alloc_free_till_mark();
@@ -1718,14 +1722,23 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_blend_obj, 2, py_image_blend);
 // Filtering Methods
 ////////////////////
 
-static mp_obj_t py_image_histeq(mp_obj_t img_obj)
+static mp_obj_t py_image_histeq(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    image_t *arg_img =
+        py_helper_arg_to_image_mutable(args[0]);
+    bool arg_adaptive =
+        py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_adaptive), false);
+    float arg_clip_limit =
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_clip_limit), -1);
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+
     fb_alloc_mark();
-    imlib_histeq(py_helper_arg_to_image_mutable(img_obj));
+    if (arg_adaptive) imlib_clahe_histeq(arg_img, arg_clip_limit, arg_msk); else imlib_histeq(arg_img, arg_msk);
     fb_alloc_free_till_mark();
-    return img_obj;
+    return args[0];
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_histeq_obj, py_image_histeq);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_histeq_obj, 1, py_image_histeq);
 
 STATIC mp_obj_t py_image_mean(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -1988,10 +2001,10 @@ STATIC mp_obj_t py_image_bilateral(uint n_args, const mp_obj_t *args, mp_map_t *
     int arg_ksize =
         py_helper_arg_to_ksize(args[1]);
     float arg_color_sigma =
-        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_sigma), 6);
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_sigma), 0.1);
     PY_ASSERT_TRUE_MSG((0 <= arg_color_sigma), "Error: 0 <= color_sigma!");
     float arg_space_sigma =
-        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_space_sigma), 6);
+        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_space_sigma), 1);
     PY_ASSERT_TRUE_MSG((0 <= arg_space_sigma), "Error: 0 <= space_sigma!");
     bool arg_threshold =
         py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), false);

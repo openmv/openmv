@@ -364,6 +364,7 @@ Q(draw_keypoints)
 Q(binary)
 Q(invert)
 Q(zero)
+Q(mask)
 
 // Invert
 // duplicate Q(invert)
@@ -371,7 +372,7 @@ Q(zero)
 // And
 Q(and)
 Q(b_and)
-Q(mask)
+// duplicate Q(mask)
 
 // Nand
 Q(nand)
@@ -435,6 +436,7 @@ Q(negate)
 Q(replace)
 Q(hmirror)
 Q(vflip)
+// duplicate Q(mask)
 
 // Add Op
 Q(add)
@@ -474,6 +476,9 @@ Q(blend)
 
 // Histogram Equalization
 Q(histeq)
+Q(adaptive)
+Q(clip_limit)
+// duplicate Q(mask)
 
 // Mean
 Q(mean)

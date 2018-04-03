@@ -5,7 +5,7 @@
 
 #include "imlib.h"
 
-void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero)
+void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask)
 {
     for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
         color_thresholds_list_lnk_data_t lnk_data;
@@ -14,22 +14,22 @@ void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero)
         switch(img->bpp) {
             case IMAGE_BPP_BINARY: {
                 if (!zero) {
-                    for (uint32_t *start = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, 0),
-                         *end = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h);
-                         start < end; start++) {
-                        for (int i = 0; i < UINT32_T_BITS; i++) {
-                            IMAGE_PUT_BINARY_PIXEL_FAST(start, i,
-                                COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(start, i), &lnk_data, invert)
-                                ? COLOR_BINARY_MAX : COLOR_BINARY_MIN);
+                    for (int y = 0, yy = img->h; y < yy; y++) {
+                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = img->w; x < xx; x++) {
+                            if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x,
+                                COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert));
                         }
                     }
                 } else {
-                    for (uint32_t *start = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, 0),
-                         *end = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h);
-                         start < end; start++) {
-                        for (int i = 0; i < UINT32_T_BITS; i++) {
-                            if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(start, i), &lnk_data, invert))
-                                IMAGE_PUT_BINARY_PIXEL_FAST(start, i, COLOR_BINARY_MIN);
+                    for (int y = 0, yy = img->h; y < yy; y++) {
+                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = img->w; x < xx; x++) {
+                            if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                            if (COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                IMAGE_CLEAR_BINARY_PIXEL_FAST(row_ptr, x);
+                            }
                         }
                     }
                 }
@@ -37,36 +37,48 @@ void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero)
             }
             case IMAGE_BPP_GRAYSCALE: {
                 if (!zero) {
-                    for (uint8_t *start = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, 0),
-                         *end = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, img->h);
-                         start < end; start++) {
-                        *start = COLOR_THRESHOLD_GRAYSCALE(*start, &lnk_data, invert)
-                            ? COLOR_GRAYSCALE_BINARY_MAX : COLOR_GRAYSCALE_BINARY_MIN;
+                    for (int y = 0, yy = img->h; y < yy; y++) {
+                        uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = img->w; x < xx; x++) {
+                            if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x,
+                                COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)
+                                ? COLOR_GRAYSCALE_BINARY_MAX : COLOR_GRAYSCALE_BINARY_MIN);
+                        }
                     }
                 } else {
-                    for (uint8_t *start = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, 0),
-                         *end = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, img->h);
-                         start < end; start++) {
-                        if (COLOR_THRESHOLD_GRAYSCALE(*start, &lnk_data, invert))
-                            *start = COLOR_GRAYSCALE_BINARY_MIN;
+                    for (int y = 0, yy = img->h; y < yy; y++) {
+                        uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = img->w; x < xx; x++) {
+                            if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                            if (COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, COLOR_GRAYSCALE_BINARY_MIN);
+                            }
+                        }
                     }
                 }
                 break;
             }
             case IMAGE_BPP_RGB565: {
                 if (!zero) {
-                    for (uint16_t *start = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, 0),
-                         *end = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, img->h);
-                         start < end; start++) {
-                        *start = COLOR_THRESHOLD_RGB565(*start, &lnk_data, invert)
-                            ? COLOR_RGB565_BINARY_MAX : COLOR_RGB565_BINARY_MIN;
+                    for (int y = 0, yy = img->h; y < yy; y++) {
+                        uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = img->w; x < xx; x++) {
+                            if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                            IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x,
+                                COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)
+                                ? COLOR_RGB565_BINARY_MAX : COLOR_RGB565_BINARY_MIN);
+                        }
                     }
                 } else {
-                    for (uint16_t *start = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, 0),
-                         *end = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, img->h);
-                         start < end; start++) {
-                        if (COLOR_THRESHOLD_RGB565(*start, &lnk_data, invert))
-                            *start = COLOR_RGB565_BINARY_MIN;
+                    for (int y = 0, yy = img->h; y < yy; y++) {
+                        uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = img->w; x < xx; x++) {
+                            if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                            if (COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
+                                IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, COLOR_RGB565_BINARY_MIN);
+                            }
+                        }
                     }
                 }
                 break;

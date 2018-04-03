@@ -6,29 +6,34 @@
 #include "fsort.h"
 #include "imlib.h"
 
-void imlib_histeq(image_t *img)
+void imlib_histeq(image_t *img, image_t *mask)
 {
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
             int a = img->w * img->h;
-            float s = (COLOR_BINARY_MAX-COLOR_BINARY_MIN) / ((float) a);
-            uint32_t *hist = fb_alloc0((COLOR_BINARY_MAX-COLOR_BINARY_MIN+1)*sizeof(uint32_t));
-            uint32_t *pixels = (uint32_t *) img->data;
+            float s = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) / ((float) a);
+            uint32_t *hist = fb_alloc0((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(uint32_t));
 
-            // Compute the image histogram
-            for (int i=0; i<a; i++) {
-                hist[pixels[i]-COLOR_BINARY_MIN] += 1;
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    hist[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) - COLOR_BINARY_MIN] += 1;
+                }
             }
 
-            // Compute the CDF
-            for (int i=0, sum=0; i<(COLOR_BINARY_MAX-COLOR_BINARY_MIN+1); i++) {
+            for (int i = 0, sum = 0, ii = COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1; i < ii; i++) {
                 sum += hist[i];
                 hist[i] = sum;
             }
 
-            for (int i=0; i<a; i++) {
-                int pixel = pixels[i];
-                pixels[i] = (s * hist[pixel-COLOR_BINARY_MIN]) + COLOR_BINARY_MIN;
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                    int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
+                    IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x,
+                        fast_roundf((s * hist[pixel - COLOR_BINARY_MIN]) + COLOR_BINARY_MIN));
+                }
             }
 
             fb_free();
@@ -36,24 +41,29 @@ void imlib_histeq(image_t *img)
         }
         case IMAGE_BPP_GRAYSCALE: {
             int a = img->w * img->h;
-            float s = (COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN) / ((float) a);
-            uint32_t *hist = fb_alloc0((COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1)*sizeof(uint32_t));
-            uint8_t *pixels = (uint8_t *) img->data;
+            float s = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / ((float) a);
+            uint32_t *hist = fb_alloc0((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(uint32_t));
 
-            // Compute the image histogram
-            for (int i=0; i<a; i++) {
-                hist[pixels[i]-COLOR_GRAYSCALE_MIN] += 1;
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    hist[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x) - COLOR_GRAYSCALE_MIN] += 1;
+                }
             }
 
-            // Compute the CDF
-            for (int i=0, sum=0; i<(COLOR_GRAYSCALE_MAX-COLOR_GRAYSCALE_MIN+1); i++) {
+            for (int i = 0, sum = 0, ii = COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1; i < ii; i++) {
                 sum += hist[i];
                 hist[i] = sum;
             }
 
-            for (int i=0; i<a; i++) {
-                int pixel = pixels[i];
-                pixels[i] = (s * hist[pixel-COLOR_GRAYSCALE_MIN]) + COLOR_GRAYSCALE_MIN;
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                    int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x,
+                        fast_roundf((s * hist[pixel - COLOR_GRAYSCALE_MIN]) + COLOR_GRAYSCALE_MIN));
+                }
             }
 
             fb_free();
@@ -61,26 +71,31 @@ void imlib_histeq(image_t *img)
         }
         case IMAGE_BPP_RGB565: {
             int a = img->w * img->h;
-            float s = (COLOR_Y_MAX-COLOR_Y_MIN) / ((float) a);
-            uint32_t *hist = fb_alloc0((COLOR_Y_MAX-COLOR_Y_MIN+1)*sizeof(uint32_t));
-            uint16_t *pixels = (uint16_t *) img->data;
+            float s = (COLOR_Y_MAX - COLOR_Y_MIN) / ((float) a);
+            uint32_t *hist = fb_alloc0((COLOR_Y_MAX - COLOR_Y_MIN + 1) * sizeof(uint32_t));
 
-            // Compute image histogram
-            for (int i=0; i<a; i++) {
-                hist[COLOR_RGB565_TO_Y(pixels[i])-COLOR_Y_MIN] += 1;
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    hist[COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x)) - COLOR_Y_MIN] += 1;
+                }
             }
 
-            // Compute the CDF
-            for (int i=0, sum=0; i<(COLOR_Y_MAX-COLOR_Y_MIN+1); i++) {
+            for (int i = 0, sum = 0, ii = COLOR_Y_MAX - COLOR_Y_MIN + 1; i < ii; i++) {
                 sum += hist[i];
                 hist[i] = sum;
             }
 
-            for (int i=0; i<a; i++) {
-                int pixel = pixels[i];
-                pixels[i] = imlib_yuv_to_rgb((s * hist[COLOR_RGB565_TO_Y(pixel)-COLOR_Y_MIN]),
-                                             COLOR_RGB565_TO_U(pixel),
-                                             COLOR_RGB565_TO_V(pixel));
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
+                    int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x,
+                        imlib_yuv_to_rgb(fast_roundf(s * hist[COLOR_RGB565_TO_Y(pixel) - COLOR_Y_MIN]),
+                                         COLOR_RGB565_TO_U(pixel),
+                                         COLOR_RGB565_TO_V(pixel)));
+                }
             }
 
             fb_free();
@@ -1108,9 +1123,9 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
     }
 }
 
-static float gaussian(int x, float sigma)
+static float gaussian(float x, float sigma)
 {
-    return fast_expf((x * x) / (-2.0f * sigma * sigma)) / (sigma * 2.506628f); // sqrt(2 * PI)
+    return fast_expf((x * x) / (-2.0f * sigma * sigma)) / (fabsf(sigma) * 2.506628f); // sqrt(2 * PI)
 }
 
 static float distance(int x, int y)
@@ -1129,19 +1144,20 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows);
-
             float *gi_lut = fb_alloc((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(float));
 
+            float max_color = IM_DIV(1.0f, COLOR_BINARY_MAX - COLOR_BINARY_MIN);
             for (int i = COLOR_BINARY_MIN; i <= COLOR_BINARY_MAX; i++) {
-                gi_lut[i] = gaussian(i, color_sigma);
+                gi_lut[i] = gaussian(i * max_color, color_sigma);
             }
 
             int n = (ksize * 2) + 1;
             float *gs_lut = fb_alloc(n * n * sizeof(float));
 
+            float max_space = IM_DIV(1.0f, distance(ksize, ksize));
             for (int y = -ksize; y <= ksize; y++) {
                 for (int x = -ksize; x <= ksize; x++) {
-                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y), space_sigma);
+                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y) * max_space, space_sigma);
                 }
             }
 
@@ -1205,19 +1221,20 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
         }
         case IMAGE_BPP_GRAYSCALE: {
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows);
-
             float *gi_lut = fb_alloc((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(float));
 
+            float max_color = IM_DIV(1.0f, COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN);
             for (int i = COLOR_GRAYSCALE_MIN; i <= COLOR_GRAYSCALE_MAX; i++) {
-                gi_lut[i] = gaussian(i, color_sigma);
+                gi_lut[i] = gaussian(i * max_color, color_sigma);
             }
 
             int n = (ksize * 2) + 1;
             float *gs_lut = fb_alloc(n * n * sizeof(float));
 
+            float max_space = IM_DIV(1.0f, distance(ksize, ksize));
             for (int y = -ksize; y <= ksize; y++) {
                 for (int x = -ksize; x <= ksize; x++) {
-                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y), space_sigma);
+                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y) * max_space, space_sigma);
                 }
             }
 
@@ -1281,29 +1298,32 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
         }
         case IMAGE_BPP_RGB565: {
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows);
-
             float *r_gi_lut = fb_alloc((COLOR_R5_MAX - COLOR_R5_MIN + 1) * sizeof(float));
             float *g_gi_lut = fb_alloc((COLOR_G6_MAX - COLOR_G6_MIN + 1) * sizeof(float));
             float *b_gi_lut = fb_alloc((COLOR_B5_MAX - COLOR_B5_MIN + 1) * sizeof(float));
 
+            float r_max_color = IM_DIV(1.0f, COLOR_R5_MAX - COLOR_R5_MIN);
             for (int i = COLOR_R5_MIN; i <= COLOR_R5_MAX; i++) {
-                r_gi_lut[i] = gaussian(i, color_sigma);
+                r_gi_lut[i] = gaussian(i * r_max_color, color_sigma);
             }
 
+            float g_max_color = IM_DIV(1.0f, COLOR_G6_MAX - COLOR_G6_MIN);
             for (int i = COLOR_G6_MIN; i <= COLOR_G6_MAX; i++) {
-                g_gi_lut[i] = gaussian(i, color_sigma);
+                g_gi_lut[i] = gaussian(i * g_max_color, color_sigma);
             }
 
+            float b_max_color = IM_DIV(1.0f, COLOR_B5_MAX - COLOR_B5_MIN);
             for (int i = COLOR_B5_MIN; i <= COLOR_B5_MAX; i++) {
-                b_gi_lut[i] = gaussian(i, color_sigma);
+                b_gi_lut[i] = gaussian(i * b_max_color, color_sigma);
             }
 
             int n = (ksize * 2) + 1;
             float *gs_lut = fb_alloc(n * n * sizeof(float));
 
+            float max_space = IM_DIV(1.0f, distance(ksize, ksize));
             for (int y = -ksize; y <= ksize; y++) {
                 for (int x = -ksize; x <= ksize; x++) {
-                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y), space_sigma);
+                    gs_lut[(n * (y + ksize)) + (x + ksize)] = gaussian(distance(x, y) * max_space, space_sigma);
                 }
             }
 
