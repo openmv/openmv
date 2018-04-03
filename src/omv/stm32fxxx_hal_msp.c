@@ -106,6 +106,11 @@ void HAL_MspInit(void)
     __HAL_RCC_MDMA_CLK_ENABLE();
     #endif
 
+    #if defined(OMV_HARDWARE_JPEG)
+    // Enable JPEG clock
+    __HAL_RCC_JPGDECEN_CLK_ENABLE();
+    #endif
+
     /* Configure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_PULLDOWN;

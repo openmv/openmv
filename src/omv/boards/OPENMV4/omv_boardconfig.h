@@ -37,6 +37,9 @@
 // RAW buffer size
 #define OMV_RAW_BUF_SIZE        (409600)
 
+// Enable hardware JPEG
+#define OMV_HARDWARE_JPEG       (1)
+
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH     (320*240*2)
