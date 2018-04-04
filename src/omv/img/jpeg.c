@@ -43,7 +43,6 @@ typedef struct _jpeg_enc {
     int y_offset;
     bool overflow;
     image_t *img;
-    jpeg_subsample_t subsample;
     union {
         uint8_t  *pixels8;
         uint16_t *pixels16;
@@ -170,9 +169,8 @@ void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData)
     if ((hjpeg->JpegOutCount+1024) > hjpeg->OutDataLength) {
         jpeg_enc.overflow = true;
         HAL_JPEG_Abort(hjpeg);
-        return;
-    }
-    if (jpeg_enc.y_offset == jpeg_enc.img_h) {
+        HAL_JPEG_ConfigInputBuffer(hjpeg, NULL, 0);
+    } else if (jpeg_enc.y_offset == jpeg_enc.img_h) {
         HAL_JPEG_ConfigInputBuffer(hjpeg, NULL, 0);
     } else {
         HAL_JPEG_ConfigInputBuffer(hjpeg, get_mcu(), jpeg_enc.mcu_size);
@@ -227,7 +225,6 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
         case 2:
         case 3:
             jpeg_enc.mcu_size           = JPEG_444_YCBCR_MCU_SIZE;
-            jpeg_enc.subsample          = JPEG_SUBSAMPLE_1x1;
             JPEG_Info.ColorSpace        = JPEG_YCBCR_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
             break;
@@ -240,7 +237,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     }
 
     // NOTE: output buffer size is stored in dst->bpp
-    if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 10000) != HAL_OK) {
+    if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 100) != HAL_OK) {
         return true;
         // Initialization error
         //nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "JPEG encode failed!!"));
