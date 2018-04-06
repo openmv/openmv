@@ -38,7 +38,6 @@ Q(width)
 Q(height)
 Q(format)
 Q(size)
-Q(gaussian)
 Q(midpoint_pool)
 Q(midpoint_pooled)
 Q(mean_pool)
@@ -47,7 +46,6 @@ Q(find_template)
 Q(kp_desc)
 Q(lbp_desc)
 Q(Cascade)
-Q(mask_ellipse)
 Q(find_features)
 Q(find_keypoints)
 Q(find_lbp)
@@ -317,6 +315,9 @@ Q(rgbtuple)
 Q(set_pixel)
 Q(color)
 
+// Clear
+Q(clear)
+
 // Draw Line
 Q(draw_line)
 // duplicate Q(color)
@@ -360,11 +361,20 @@ Q(draw_keypoints)
 // duplicate Q(thickness)
 // duplicate Q(fill)
 
+// Flood Fill
+Q(flood_fill)
+Q(seed_threshold)
+Q(floating_threshold)
+// duplicate Q(color)
+Q(invert)
+Q(clear_background)
+Q(mask)
+
 // Binary
 Q(binary)
-Q(invert)
+// duplicate Q(invert)
 Q(zero)
-Q(mask)
+// duplicate Q(mask)
 
 // Invert
 // duplicate Q(invert)
@@ -401,12 +411,12 @@ Q(b_xnor)
 
 // Erode
 Q(erode)
-Q(threshold)
+// duplicate Q(threshold)
 // duplicate Q(mask)
 
 // Dilate
 Q(dilate)
-// duplicate Q(threshold)
+Q(threshold)
 // duplicate Q(mask)
 
 // Open

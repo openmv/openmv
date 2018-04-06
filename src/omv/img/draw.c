@@ -209,3 +209,105 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
         x_off += (g->w * scale) + x_spacing;
     }
 }
+
+void imlib_flood_fill(image_t *img, int x, int y,
+                      float seed_threshold, float floating_threshold,
+                      int c, bool invert, bool clear_background, image_t *mask)
+{
+    if ((0 <= x) && (x < img->w) && (0 <= y) && (y < img->h)) {
+        image_t out;
+        out.w = img->w;
+        out.h = img->h;
+        out.bpp = IMAGE_BPP_BINARY;
+        out.data = fb_alloc0(image_size(&out));
+
+        if (mask) {
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    if (image_get_mask_pixel(mask, x, y)) IMAGE_SET_BINARY_PIXEL_FAST(row_ptr, x);
+                }
+            }
+        }
+
+        int color_seed_threshold = 0;
+        int color_floating_threshold = 0;
+
+        switch(img->bpp) {
+            case IMAGE_BPP_BINARY: {
+                color_seed_threshold = fast_roundf(seed_threshold * COLOR_BINARY_MAX);
+                color_floating_threshold = fast_roundf(floating_threshold * COLOR_BINARY_MAX);
+                break;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                color_seed_threshold = fast_roundf(seed_threshold * COLOR_GRAYSCALE_MAX);
+                color_floating_threshold = fast_roundf(floating_threshold * COLOR_GRAYSCALE_MAX);
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                color_seed_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_roundf(seed_threshold * COLOR_R5_MAX),
+                                                                fast_roundf(seed_threshold * COLOR_G6_MAX),
+                                                                fast_roundf(seed_threshold * COLOR_B5_MAX));
+                color_floating_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_roundf(floating_threshold * COLOR_R5_MAX),
+                                                                    fast_roundf(floating_threshold * COLOR_G6_MAX),
+                                                                    fast_roundf(floating_threshold * COLOR_B5_MAX));
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+
+        imlib_flood_fill_int(&out, img, x, y, color_seed_threshold, color_floating_threshold, NULL, NULL);
+
+        switch(img->bpp) {
+            case IMAGE_BPP_BINARY: {
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                    uint32_t *out_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        if (IMAGE_GET_BINARY_PIXEL_FAST(out_row_ptr, x) ^ invert) {
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, c);
+                        } else if (clear_background) {
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, 0);
+                        }
+                    }
+                }
+                break;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                    uint32_t *out_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        if (IMAGE_GET_BINARY_PIXEL_FAST(out_row_ptr, x) ^ invert) {
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, c);
+                        } else if (clear_background) {
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, 0);
+                        }
+                    }
+                }
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                    uint32_t *out_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        if (IMAGE_GET_BINARY_PIXEL_FAST(out_row_ptr, x) ^ invert) {
+                            IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, c);
+                        } else if (clear_background) {
+                            IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, 0);
+                        }
+                    }
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+
+        fb_free();
+    }
+}

@@ -151,7 +151,35 @@ color_thresholds_list_lnk_data_t;
     uint8_t _l = COLOR_RGB565_TO_L(_pixel); \
     int8_t _a = COLOR_RGB565_TO_A(_pixel); \
     int8_t _b = COLOR_RGB565_TO_B(_pixel); \
-    ((_threshold->LMin <= _l) && (_l <= _threshold->LMax) && (_threshold->AMin <= _a) && (_a <= _threshold->AMax) && (_threshold->BMin <= _b) && (_b <= _threshold->BMax)) ^ _invert; \
+    ((_threshold->LMin <= _l) && (_l <= _threshold->LMax) && \
+    (_threshold->AMin <= _a) && (_a <= _threshold->AMax) && \
+    (_threshold->BMin <= _b) && (_b <= _threshold->BMax)) ^ _invert; \
+})
+
+#define COLOR_BOUND_BINARY(pixel0, pixel1, threshold) \
+({ \
+    __typeof__ (pixel0) _pixel0 = (pixel0); \
+    __typeof__ (pixel1) _pixel1 = (pixel1); \
+    __typeof__ (threshold) _threshold = (threshold); \
+    (abs(_pixel0 - _pixel1) <= _threshold); \
+})
+
+#define COLOR_BOUND_GRAYSCALE(pixel0, pixel1, threshold) \
+({ \
+    __typeof__ (pixel0) _pixel0 = (pixel0); \
+    __typeof__ (pixel1) _pixel1 = (pixel1); \
+    __typeof__ (threshold) _threshold = (threshold); \
+    (abs(_pixel0 - _pixel1) <= _threshold); \
+})
+
+#define COLOR_BOUND_RGB565(pixel0, pixel1, threshold) \
+({ \
+    __typeof__ (pixel0) _pixel0 = (pixel0); \
+    __typeof__ (pixel1) _pixel1 = (pixel1); \
+    __typeof__ (threshold) _threshold = (threshold); \
+    (abs(COLOR_RGB565_TO_R5(_pixel0) - COLOR_RGB565_TO_R5(_pixel1)) <= COLOR_RGB565_TO_R5(_threshold)) && \
+    (abs(COLOR_RGB565_TO_G6(_pixel0) - COLOR_RGB565_TO_G6(_pixel1)) <= COLOR_RGB565_TO_G6(_threshold)) && \
+    (abs(COLOR_RGB565_TO_B5(_pixel0) - COLOR_RGB565_TO_B5(_pixel1)) <= COLOR_RGB565_TO_B5(_threshold)); \
 })
 
 #define COLOR_BINARY_MIN 0
@@ -942,6 +970,7 @@ typedef struct img_read_settings {
 } img_read_settings_t;
 
 typedef void (*line_op_t)(image_t*, int, void*, void*, bool);
+typedef void (*flood_fill_call_back_t)(image_t *, int, int, int, void *);
 
 typedef enum descriptor_type {
     DESC_LBP,
@@ -1210,6 +1239,10 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 // HoG
 void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
+// Helper Functions
+void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
+                          int seed_threshold, int floating_threshold,
+                          flood_fill_call_back_t cb, void *data);
 // Drawing Functions
 int imlib_get_pixel(image_t *img, int x, int y);
 void imlib_set_pixel(image_t *img, int x, int y, int p);
@@ -1217,6 +1250,9 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
 void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, int thickness, bool fill);
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness, bool fill);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, int scale, int x_spacing, int y_spacing);
+void imlib_flood_fill(image_t *img, int x, int y,
+                      float seed_threshold, float floating_threshold,
+                      int c, bool invert, bool clear_background, image_t *mask);
 // Binary Functions
 void imlib_binary(image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask);
 void imlib_invert(image_t *img);
