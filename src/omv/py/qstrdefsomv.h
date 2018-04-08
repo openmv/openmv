@@ -341,6 +341,7 @@ Q(draw_string)
 // duplicate Q(scale)
 Q(x_spacing)
 Q(y_spacing)
+Q(mono_space)
 
 // Draw Cross
 Q(draw_cross)
