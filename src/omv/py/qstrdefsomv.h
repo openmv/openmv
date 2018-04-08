@@ -7,6 +7,16 @@
  *
  */
 
+// OMV Module
+Q(omv)
+Q(version_major)
+Q(version_minor)
+Q(version_patch)
+Q(version_string)
+Q(arch)
+Q(board_type)
+Q(board_id)
+
 // Image module
 Q(image)
 Q(Image)
