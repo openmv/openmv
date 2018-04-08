@@ -354,6 +354,12 @@ Q(draw_arrow)
 // duplicate Q(size)
 // duplicate Q(thickness)
 
+// Draw Image
+Q(draw_image)
+Q(x_scale)
+Q(y_scale)
+Q(mask)
+
 // Draw Keypoints
 Q(draw_keypoints)
 // duplicate Q(color)
@@ -368,7 +374,7 @@ Q(floating_threshold)
 // duplicate Q(color)
 Q(invert)
 Q(clear_background)
-Q(mask)
+// duplicate Q(mask)
 
 // Binary
 Q(binary)
