@@ -210,6 +210,22 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
     }
 }
 
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, image_t *mask)
+{
+    float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
+
+    for (int y = 0, yy = fast_roundf(other->h * y_scale); y < yy; y++) {
+        int other_y = fast_roundf(y * over_yscale);
+
+        for (int x = 0, xx = fast_roundf(other->w * x_scale); x < xx; x++) {
+            int other_x = fast_roundf(x * over_xscale);
+
+            if (mask && (!image_get_mask_pixel(mask, other_x, other_y))) continue;
+            imlib_set_pixel(img, x_off + x, y_off + y, imlib_get_pixel(other, other_x, other_y));
+        }
+    }
+}
+
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask)

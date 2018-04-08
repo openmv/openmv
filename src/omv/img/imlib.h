@@ -1250,6 +1250,7 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
 void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, int thickness, bool fill);
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness, bool fill);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, int scale, int x_spacing, int y_spacing);
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, image_t *mask);
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);
@@ -1288,6 +1289,7 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
 void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool threshold, int offset, bool invert, image_t *mask);
 void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, const int b, bool threshold, int offset, bool invert, image_t *mask);
 void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, float space_sigma, bool threshold, int offset, bool invert, image_t *mask);
+void imlib_cartoon_filter(image_t *img, float seed_threshold, float floating_threshold, image_t *mask);
 // Image Correction
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
 void imlib_logpolar(image_t *img, bool linear, bool reverse);

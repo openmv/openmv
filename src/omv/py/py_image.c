@@ -1157,6 +1157,32 @@ STATIC mp_obj_t py_image_draw_arrow(uint n_args, const mp_obj_t *args, mp_map_t 
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_arrow_obj, 2, py_image_draw_arrow);
 
+STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+
+    image_t *arg_other =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 1, kw_args);
+
+    const mp_obj_t *arg_vec;
+    uint offset = py_helper_consume_array(n_args, args, 2, 2, &arg_vec);
+    int arg_cx = mp_obj_get_int(arg_vec[0]);
+    int arg_cy = mp_obj_get_int(arg_vec[1]);
+
+    float arg_x_scale =
+        py_helper_keyword_float(n_args, args, offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), 1.0f);
+    PY_ASSERT_TRUE_MSG((0.0f <= arg_x_scale), "Error: 0.0 <= x_scale!");
+    float arg_y_scale =
+        py_helper_keyword_float(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), 1.0f);
+    PY_ASSERT_TRUE_MSG((0.0f <= arg_y_scale), "Error: 0.0 <= y_scale!");
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 2, kw_args);
+
+    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_msk);
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_image_obj, 3, py_image_draw_image);
+
 STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
@@ -1212,7 +1238,8 @@ STATIC mp_obj_t py_image_flood_fill(uint n_args, const mp_obj_t *args, mp_map_t 
         py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 5, kw_args);
 
     fb_alloc_mark();
-    imlib_flood_fill(arg_img, arg_x_off, arg_y_off, arg_seed_threshold, arg_floating_threshold,
+    imlib_flood_fill(arg_img, arg_x_off, arg_y_off,
+                     arg_seed_threshold, arg_floating_threshold,
                      arg_c, arg_invert, clear_background, arg_msk);
     fb_alloc_free_till_mark();
     return args[0];
@@ -2053,6 +2080,28 @@ STATIC mp_obj_t py_image_bilateral(uint n_args, const mp_obj_t *args, mp_map_t *
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_bilateral_obj, 2, py_image_bilateral);
+
+STATIC mp_obj_t py_image_cartoon(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img =
+        py_helper_arg_to_image_mutable(args[0]);
+    float arg_seed_threshold =
+        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_seed_threshold), 0.05);
+    PY_ASSERT_TRUE_MSG((0.0f <= arg_seed_threshold) && (arg_seed_threshold <= 1.0f),
+                       "Error: 0.0 <= seed_threshold <= 1.0!");
+    float arg_floating_threshold =
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_floating_threshold), 0.05);
+    PY_ASSERT_TRUE_MSG((0.0f <= arg_floating_threshold) && (arg_floating_threshold <= 1.0f),
+                       "Error: 0.0 <= floating_threshold <= 1.0!");
+    image_t *arg_msk =
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+
+    fb_alloc_mark();
+    imlib_cartoon_filter(arg_img, arg_seed_threshold, arg_floating_threshold, arg_msk);
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_cartoon_obj, 1, py_image_cartoon);
 
 /////////////////////////
 // Shadow Removal Methods
@@ -4938,6 +4987,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_draw_string),         MP_ROM_PTR(&py_image_draw_string_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_cross),          MP_ROM_PTR(&py_image_draw_cross_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_arrow),          MP_ROM_PTR(&py_image_draw_arrow_obj)},
+    {MP_ROM_QSTR(MP_QSTR_draw_image),          MP_ROM_PTR(&py_image_draw_image_obj)},
     {MP_ROM_QSTR(MP_QSTR_flood_fill),          MP_ROM_PTR(&py_image_flood_fill_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_keypoints),      MP_ROM_PTR(&py_image_draw_keypoints_obj)},
     /* Binary Methods */
@@ -4984,6 +5034,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_gaussian_blur),       MP_ROM_PTR(&py_image_gaussian_obj)},
     {MP_ROM_QSTR(MP_QSTR_laplacian),           MP_ROM_PTR(&py_image_laplacian_obj)},
     {MP_ROM_QSTR(MP_QSTR_bilateral),           MP_ROM_PTR(&py_image_bilateral_obj)},
+    {MP_ROM_QSTR(MP_QSTR_cartoon),             MP_ROM_PTR(&py_image_cartoon_obj)},
     /* Shadow Removal Methods */
 #ifdef IMLIB_ENABLE_REMOVE_SHADOWS
     {MP_ROM_QSTR(MP_QSTR_remove_shadows),      MP_ROM_PTR(&py_image_remove_shadows_obj)},
