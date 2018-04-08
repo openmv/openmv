@@ -41,6 +41,10 @@
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH     (160*120*2)
 
+// Low and high JPEG QS.
+#define JPEG_QUALITY_LOW        35
+#define JPEG_QUALITY_HIGH       60
+
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).

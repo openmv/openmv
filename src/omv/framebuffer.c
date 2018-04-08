@@ -78,8 +78,8 @@ void fb_update_jpeg_buffer()
                     overflow_count--;
                 }
                 // No buffer overflow, increase quality up to max quality based on frame size
-                if (overflow_count == 0 &&
-                        JPEG_FB()->quality < ((fb_buffer_size() > JPEG_QUALITY_THRESH) ? 35:60)) {
+                if (overflow_count == 0 && JPEG_FB()->quality
+                       < ((fb_buffer_size() > JPEG_QUALITY_THRESH) ? JPEG_QUALITY_LOW:JPEG_QUALITY_HIGH)) {
                     JPEG_FB()->quality++;
                 }
                 // Set FB from JPEG image
