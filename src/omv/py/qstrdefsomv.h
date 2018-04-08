@@ -560,6 +560,12 @@ Q(space_sigma)
 // duplicate Q(invert)
 // duplicate Q(mask)
 
+// Cartoon
+Q(cartoon)
+// duplicate Q(seed_threshold)
+// duplicate Q(floating_threshold)
+Q(mask)
+
 // Shadow Removal
 Q(remove_shadows)
 
