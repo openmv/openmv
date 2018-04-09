@@ -610,21 +610,15 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= cambus_readb(sensor->slv_addr, COM8, &reg);
     ret |= cambus_writeb(sensor->slv_addr, COM8, (reg & (~COM8_AGC_EN)) | ((enable != 0) ? COM8_AGC_EN : 0));
 
-    if ((enable == 0) && (!isnanf(gain_db))) {
-        float gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)), 32.0), 0.0);
+    if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
+        float gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)), 32.0), 1.0);
 
-        int gain_hi = 15;
-        for (; gain_hi >= 0; gain_hi--) {
-            if ((gain / (gain_hi + 1.0)) >= 1.0) break;
-        }
-
-        int gain_lo = 15;
-        for (; gain_lo >= 0; gain_lo--) {
-            if (((gain / (gain_hi + 1.0)) / (1.0 + (gain_lo / 16.0))) >= 1.0) break;
-        }
+        int gain_temp = fast_roundf(fast_log2(IM_MAX(gain / 2.0, 1.0)));
+        int gain_hi = 0xF >> (4 - gain_temp);
+        int gain_lo = IM_MIN(fast_roundf(((gain / (1 << gain_temp)) - 1.0) * 16.0), 15);
 
         ret |= cambus_writeb(sensor->slv_addr, GAIN, (gain_hi << 4) | (gain_lo << 0));
-    } else if ((enable != 0) && (!isnanf(gain_db_ceiling))) {
+    } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         float gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)), 128.0), 2.0);
 
         ret |= cambus_readb(sensor->slv_addr, COM9, &reg);
@@ -655,7 +649,9 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
     // }
     // DISABLED
 
-    *gain_db = 20.0 * (fast_log((((gain >> 4) & 0xF) + 1.0) * (1.0 + (((gain >> 0) & 0xF) / 16.0))) / fast_log(10.0));
+    int hi_gain = 1 << (((gain >> 7) & 1) + ((gain >> 6) & 1) + ((gain >> 5) & 1) + ((gain >> 4) & 1));
+    float lo_gain = 1.0 + (((gain >> 0) & 0xF) / 16.0);
+    *gain_db = 20.0 * (fast_log(hi_gain * lo_gain) / fast_log(10.0));
 
     return ret;
 }
@@ -764,7 +760,8 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, floa
     ret |= cambus_readb(sensor->slv_addr, CTRL1, &reg);
     ret |= cambus_writeb(sensor->slv_addr, CTRL1, (reg & (~CTRL1_AWB)) | ((enable != 0) ? CTRL1_AWB : 0));
 
-    if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))) {
+    if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
+                      && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
     }
 
     return ret;
