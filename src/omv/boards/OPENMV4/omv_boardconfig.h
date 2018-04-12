@@ -25,10 +25,10 @@
 #define OMV_XCLK_SOURCE         (OMV_XCLK_TIM)
 
 // Sensor external clock timer frequency.
-#define OMV_XCLK_FREQUENCY      (9000000)
+#define OMV_XCLK_FREQUENCY      (12000000)
 
 // Sensor PLL register value.
-#define OMV_OV7725_PLL_CONFIG   (0x81)  // x6
+#define OMV_OV7725_PLL_CONFIG   (0x41)  // x4
 
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
