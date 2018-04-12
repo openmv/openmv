@@ -103,14 +103,6 @@
 #include "bsp/include/nm_bsp_arduino_uno.h"
 #endif
 
-#if   defined(OPENMV1)
-#include "nm_bsp_openmv1.h"
-#elif defined(OPENMV2)
-#include "nm_bsp_openmv2.h"
-#elif defined(OPENMV3)
-#include "nm_bsp_openmv3.h"
-#elif defined(OPENMV4)
-#include "nm_bsp_openmv4.h"
-#endif
+#include "nm_bsp_openmv.h"
 
 #endif //_NM_BSP_INTERNAL_H_

@@ -9,12 +9,9 @@
 #include "genhdr/pins.h"
 #include "extint.h"
 #include "systick.h"
+#include "omv_boardconfig.h"
 
 static tpfNmBspIsr gpfIsr;
-static const pin_obj_t *PIN_CS  = &(WINC_PIN_CS);
-static const pin_obj_t *PIN_EN  = &(WINC_PIN_EN);
-static const pin_obj_t *PIN_RST = &(WINC_PIN_RST);
-static const pin_obj_t *PIN_IRQ = &(WINC_PIN_IRQ);
 static const mp_obj_fun_builtin_fixed_t irq_callback_obj;
 
 /*
@@ -26,25 +23,43 @@ sint8 nm_bsp_init(void)
 {
 	gpfIsr = NULL;
 
-    // configure wlan CS and EN pins
+    // Enable SPI clock
+    WINC_SPI_CLK_ENABLE();
+
+    // Configure SPI pins
     GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
-    GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStructure.Pull = GPIO_PULLUP;
+    GPIO_InitStructure.Pull      = GPIO_PULLDOWN;
+    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
+    GPIO_InitStructure.Alternate = WINC_SPI_AF;
+
+    GPIO_InitStructure.Pin = WINC_SPI_MISO_PIN;
+    HAL_GPIO_Init(WINC_SPI_MISO_PORT, &GPIO_InitStructure);
+
+    GPIO_InitStructure.Pin = WINC_SPI_MOSI_PIN;
+    HAL_GPIO_Init(WINC_SPI_MOSI_PORT, &GPIO_InitStructure);
+
+    GPIO_InitStructure.Pin = WINC_SPI_SCLK_PIN;
+    HAL_GPIO_Init(WINC_SPI_SCLK_PORT, &GPIO_InitStructure);
+
+    // Configure GPIO pins
+    GPIO_InitStructure.Pull      = GPIO_PULLUP;
+    GPIO_InitStructure.Mode      = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
     GPIO_InitStructure.Alternate = 0;
 
-    GPIO_InitStructure.Pin = PIN_CS->pin_mask;
-    HAL_GPIO_Init(PIN_CS->gpio, &GPIO_InitStructure);
+    GPIO_InitStructure.Pin = WINC_EN_PIN;
+    HAL_GPIO_Init(WINC_EN_PORT, &GPIO_InitStructure);
 
-    GPIO_InitStructure.Pin = PIN_EN->pin_mask;
-    HAL_GPIO_Init(PIN_EN->gpio, &GPIO_InitStructure);
+    GPIO_InitStructure.Pin = WINC_CS_PIN;
+    HAL_GPIO_Init(WINC_CS_PORT, &GPIO_InitStructure);
 
-    GPIO_InitStructure.Pin = PIN_RST->pin_mask;
-    HAL_GPIO_Init(PIN_RST->gpio, &GPIO_InitStructure);
+    GPIO_InitStructure.Pin = WINC_RST_PIN;
+    HAL_GPIO_Init(WINC_RST_PORT, &GPIO_InitStructure);
 
-    HAL_GPIO_WritePin(PIN_CS->gpio, PIN_CS->pin_mask, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(PIN_EN->gpio, PIN_EN->pin_mask, GPIO_PIN_SET);
-    HAL_GPIO_WritePin(PIN_RST->gpio, PIN_RST->pin_mask, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(WINC_EN_PORT,  WINC_EN_PIN,  GPIO_PIN_SET);
+    HAL_GPIO_WritePin(WINC_CS_PORT,  WINC_CS_PIN,  GPIO_PIN_SET);
+    HAL_GPIO_WritePin(WINC_RST_PORT, WINC_RST_PIN, GPIO_PIN_SET);
 
 	/* Perform chip reset. */
 	nm_bsp_reset();
@@ -59,12 +74,12 @@ sint8 nm_bsp_init(void)
  */
 void nm_bsp_reset(void)
 {
-    HAL_GPIO_WritePin(PIN_EN->gpio, PIN_EN->pin_mask, GPIO_PIN_RESET);
-    HAL_GPIO_WritePin(PIN_RST->gpio, PIN_RST->pin_mask, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(WINC_EN_PORT,  WINC_EN_PIN,  GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(WINC_RST_PORT, WINC_RST_PIN, GPIO_PIN_RESET);
 	nm_bsp_sleep(100);
-    HAL_GPIO_WritePin(PIN_EN->gpio, PIN_EN->pin_mask, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(WINC_EN_PORT,  WINC_EN_PIN,  GPIO_PIN_SET);
 	nm_bsp_sleep(100);
-    HAL_GPIO_WritePin(PIN_RST->gpio, PIN_RST->pin_mask, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(WINC_RST_PORT, WINC_RST_PIN, GPIO_PIN_SET);
 	nm_bsp_sleep(100);
 }
 
@@ -90,8 +105,8 @@ void nm_bsp_register_isr(tpfNmBspIsr pfIsr)
 {
 	gpfIsr = pfIsr;
     // register EXTI
-    extint_register((mp_obj_t)PIN_IRQ, GPIO_MODE_IT_FALLING, GPIO_PULLUP, (mp_obj_t)&irq_callback_obj, true);
-    extint_enable(PIN_IRQ->pin);
+    extint_register((mp_obj_t)WINC_IRQ_PIN, GPIO_MODE_IT_FALLING, GPIO_PULLUP, (mp_obj_t)&irq_callback_obj, true);
+    extint_enable(WINC_IRQ_PIN->pin);
 }
 
 /*
@@ -103,9 +118,9 @@ void nm_bsp_register_isr(tpfNmBspIsr pfIsr)
 void nm_bsp_interrupt_ctrl(uint8 u8Enable)
 {
 	if (u8Enable) {
-        extint_enable(PIN_IRQ->pin);
+        extint_enable(WINC_IRQ_PIN->pin);
 	} else {
-        extint_disable(PIN_IRQ->pin);
+        extint_disable(WINC_IRQ_PIN->pin);
 	}
 }
 

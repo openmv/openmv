@@ -51,7 +51,7 @@
 #include "pin.h"
 #include "genhdr/pins.h"
 #include "extint.h"
-#include "spi.h"
+#include "omv_boardconfig.h"
 
 extern SPI_HandleTypeDef SPIHandle2;
 #define SPI_HANDLE      (SPIHandle2)
@@ -91,34 +91,26 @@ static sint8 nm_i2c_write_special(uint8 *wb1, uint16 sz1, uint8 *wb2, uint16 sz2
 #endif
 
 #ifdef CONF_WINC_USE_SPI
-/** PIO instance used by CS. */
-static const pin_obj_t *PIN_CS  = &WINC_PIN_CS;
-#define SPI_TIMEOUT         (10000)  /* in ms */
-#define SPI_ASSERT_CS()     do {HAL_GPIO_WritePin(PIN_CS->gpio, PIN_CS->pin_mask, GPIO_PIN_RESET);} while(0)
-#define SPI_DEASSERT_CS()   do {HAL_GPIO_WritePin(PIN_CS->gpio, PIN_CS->pin_mask, GPIO_PIN_SET);} while(0)
 
 static sint8 spi_rw(uint8 *tx_buf, uint8 *rx_buf, uint16 u16Sz)
 {
 	sint8 result = M2M_SUCCESS;
 
-	// Start SPI transfer
-    // TODO: Use DMA
-
     __disable_irq();
-    SPI_ASSERT_CS();
+    WINC_CS_LOW();
     if (tx_buf != 0) {
-        if (HAL_SPI_Transmit(&SPI_HANDLE, tx_buf, u16Sz, SPI_TIMEOUT) != HAL_OK) {
+        if (HAL_SPI_Transmit(&SPI_HANDLE, tx_buf, u16Sz, WINC_SPI_TIMEOUT) != HAL_OK) {
             result = M2M_ERR_BUS_FAIL;
         }
 	} else {
         tx_buf = rx_buf;
         memset(tx_buf, 0, u16Sz);
-        if (HAL_SPI_TransmitReceive(&SPI_HANDLE, tx_buf, rx_buf, u16Sz, SPI_TIMEOUT) != HAL_OK) {
+        if (HAL_SPI_TransmitReceive(&SPI_HANDLE, tx_buf, rx_buf, u16Sz, WINC_SPI_TIMEOUT) != HAL_OK) {
             result = M2M_ERR_BUS_FAIL;
         }
 
     }
-	SPI_DEASSERT_CS();
+	WINC_CS_HIGH();
     __enable_irq();
 
 	return result;
@@ -134,10 +126,10 @@ sint8 nm_bus_init(void *pvinit)
 {
 	sint8 result = M2M_SUCCESS;
 
-	SPI_DEASSERT_CS();
+	WINC_CS_HIGH();
 
     // SPI configuration
-    SPI_HANDLE.Instance               = SPI2;
+    SPI_HANDLE.Instance               = WINC_SPI;
     SPI_HANDLE.Init.Mode              = SPI_MODE_MASTER;
     SPI_HANDLE.Init.Direction         = SPI_DIRECTION_2LINES;
     SPI_HANDLE.Init.DataSize          = SPI_DATASIZE_8BIT;
@@ -151,11 +143,10 @@ sint8 nm_bus_init(void *pvinit)
     SPI_HANDLE.Init.CRCPolynomial     = 7;
 
     // Init SPI
-    spi_t spi = {&SPI_HANDLE, NULL, NULL};
-    spi_init(&spi, false);
+    HAL_SPI_Init(&SPI_HANDLE);
 
     nm_bsp_reset();
-	SPI_DEASSERT_CS();
+	WINC_CS_HIGH();
 
 	return result;
 }

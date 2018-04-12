@@ -150,4 +150,29 @@
 #define DCMI_VSYNC_IRQN         EXTI9_5_IRQn
 #define DCMI_VSYNC_IRQ_LINE     (7)
 
+#define WINC_SPI                (SPI2)
+#define WINC_SPI_AF             (GPIO_AF5_SPI2)
+#define WINC_SPI_TIMEOUT        (1000)
+#define WINC_SPI_CLK_ENABLE()   __HAL_RCC_SPI2_CLK_ENABLE()
+
+#define WINC_SPI_SCLK_PIN       (GPIO_PIN_13)
+#define WINC_SPI_MISO_PIN       (GPIO_PIN_14)
+#define WINC_SPI_MOSI_PIN       (GPIO_PIN_15)
+
+#define WINC_SPI_SCLK_PORT      (GPIOB)
+#define WINC_SPI_MISO_PORT      (GPIOB)
+#define WINC_SPI_MOSI_PORT      (GPIOB)
+
+#define WINC_EN_PIN             (GPIO_PIN_5)
+#define WINC_CS_PIN             (GPIO_PIN_12)
+#define WINC_RST_PIN            (GPIO_PIN_12)
+#define WINC_IRQ_PIN            (&pin_D13)
+
+#define WINC_EN_PORT            (GPIOA)
+#define WINC_CS_PORT            (GPIOB)
+#define WINC_RST_PORT           (GPIOD)
+
+#define WINC_CS_LOW()           HAL_GPIO_WritePin(WINC_CS_PORT, WINC_CS_PIN, GPIO_PIN_RESET)
+#define WINC_CS_HIGH()          HAL_GPIO_WritePin(WINC_CS_PORT, WINC_CS_PIN, GPIO_PIN_SET)
+
 #endif //__OMV_BOARDCONFIG_H__
