@@ -11,7 +11,7 @@
 
 // Architecture info
 #define OMV_ARCH_STR            "OMV4 H7 1024" // 33 chars max
-#define OMV_BOARD_TYPE          "M7"
+#define OMV_BOARD_TYPE          "H7"
 #define OMV_UNIQUE_ID_ADDR      0x1FF1E800
 
 // Flash sectors for the bootloader.
