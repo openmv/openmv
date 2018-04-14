@@ -9,6 +9,30 @@
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
 
+// Enable flood_fill()
+//#define IMLIB_ENABLE_FLOOD_FILL
+
+// Enable median()
+//#define IMLIB_ENABLE_MEDIAN
+
+// Enable mode()
+//#define IMLIB_ENABLE_MODE
+
+// Enable midpoint()
+//#define IMLIB_ENABLE_MIDPOINT
+
+// Enable Gaussian
+//#define IMLIB_ENABLE_GAUSSIAN
+
+// Enable Laplacian
+//#define IMLIB_ENABLE_LAPLACIAN
+
+// Enable bilateral()
+//#define IMLIB_ENABLE_BILATERAL
+
+// Enable cartoon()
+//#define IMLIB_ENABLE_CARTOON
+
 // Enable remove_shadows()
 //#define IMLIB_ENABLE_REMOVE_SHADOWS
 
@@ -77,5 +101,8 @@
 
 // Enable FAST (20+ KBs).
 //#define IMLIB_ENABLE_FAST
+
+// Enable find_hog()
+//#define IMLIB_ENABLE_HOG
 
 #endif //__IMLIB_CONFIG_H__

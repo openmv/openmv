@@ -299,6 +299,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
     }
 }
 
+#ifdef IMLIB_ENABLE_MEDIAN
 void imlib_median_filter(image_t *img, const int ksize, float percentile, bool threshold, int offset, bool invert, image_t *mask)
 {
     int brows = ksize + 1;
@@ -503,7 +504,9 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
         }
     }
 }
+#endif // IMLIB_ENABLE_MEDIAN
 
+#ifdef IMLIB_ENABLE_MODE
 void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask)
 {
     int brows = ksize + 1;
@@ -736,7 +739,9 @@ void imlib_mode_filter(image_t *img, const int ksize, bool threshold, int offset
         }
     }
 }
+#endif // IMLIB_ENABLE_MODE
 
+#ifdef IMLIB_ENABLE_MIDPOINT
 void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool threshold, int offset, bool invert, image_t *mask)
 {
     int brows = ksize + 1;
@@ -935,6 +940,7 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
         }
     }
 }
+#endif // IMLIB_ENABLE_MIDPOINT
 
 // http://www.fmwconcepts.com/imagemagick/digital_image_filtering.pdf
 
@@ -1123,6 +1129,7 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
     }
 }
 
+#ifdef IMLIB_ENABLE_BILATERAL
 static float gaussian(float x, float sigma)
 {
     return fast_expf((x * x) / (-2.0f * sigma * sigma)) / (fabsf(sigma) * 2.506628f); // sqrt(2 * PI)
@@ -1409,7 +1416,9 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
         }
     }
 }
+#endif // IMLIB_ENABLE_BILATERAL
 
+#ifdef IMLIB_ENABLE_CARTOON
 typedef struct imlib_cartoon_filter_mean_state {
     int r_acc, g_acc, b_acc, pixels;
 } imlib_cartoon_filter_mean_state_t;
@@ -1581,3 +1590,4 @@ void imlib_cartoon_filter(image_t *img, float seed_threshold, float floating_thr
     fb_free();
     fb_free();
 }
+#endif // IMLIB_ENABLE_CARTOON

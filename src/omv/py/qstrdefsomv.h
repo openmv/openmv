@@ -40,10 +40,6 @@ Q(match_descriptor)
 Q(copy)
 Q(copy_to_fb)
 Q(save)
-Q(compress)
-Q(compress_for_ide)
-Q(compressed)
-Q(compressed_for_ide)
 Q(width)
 Q(height)
 Q(format)
@@ -63,7 +59,6 @@ Q(find_eye)
 Q(find_edges)
 Q(find_hog)
 Q(cmp_lbp)
-Q(quality)
 Q(roi)
 Q(normalized)
 Q(filter_outliers)
@@ -324,6 +319,38 @@ Q(rgbtuple)
 // Set Pixel
 Q(set_pixel)
 Q(color)
+
+// To Bitmap
+Q(to_bitmap)
+// duplicate Q(copy)
+
+// To Grayscale
+Q(to_grayscale)
+// duplicate Q(copy)
+
+// To RGB565
+Q(to_rgb565)
+// duplicate Q(copy)
+
+// To Rainbow
+Q(to_rainbow)
+// duplicate Q(copy)
+
+// Compress (in place)
+Q(compress)
+Q(quality)
+
+// Compress for IDE (in place)
+Q(compress_for_ide)
+// duplicate Q(quality)
+
+// Compressed (out of place)
+Q(compressed)
+// duplicate Q(quality)
+
+// Compressed for IDE (out of place)
+Q(compressed_for_ide)
+// duplicate Q(quality)
 
 // Clear
 Q(clear)

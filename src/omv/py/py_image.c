@@ -740,6 +740,243 @@ static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_m
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
 
+static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+
+    image_t out;
+    out.w = arg_img->w;
+    out.h = arg_img->h;
+    out.bpp = IMAGE_BPP_BINARY;
+    out.data = copy ? xalloc(image_size(&out)) : arg_img->data;
+
+    switch(arg_img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            if (copy) memcpy(out.data, arg_img->data, image_size(&out));
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            PY_ASSERT_TRUE_MSG((out.w >= (sizeof(uint32_t)/sizeof(uint8_t))) || copy,
+                               "Can't convert to bitmap in place!");
+            fb_alloc_mark();
+            uint32_t *out_lin_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_BINARY_PIXEL_FAST(out_lin_ptr, x,
+                        COLOR_GRAYSCALE_TO_BINARY(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)));
+                }
+                memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y),
+                       out_lin_ptr, IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            }
+            fb_free();
+            fb_alloc_free_till_mark();
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            PY_ASSERT_TRUE_MSG((out.w >= (sizeof(uint32_t)/sizeof(uint16_t))) || copy,
+                               "Can't convert to bitmap in place!");
+            fb_alloc_mark();
+            uint32_t *out_lin_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_BINARY_PIXEL_FAST(out_lin_ptr, x,
+                        COLOR_RGB565_TO_BINARY(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x)));
+                }
+                memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y),
+                       out_lin_ptr, IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            }
+            fb_free();
+            fb_alloc_free_till_mark();
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    if ((!copy) && (MAIN_FB()->pixels == out.data)) {
+        MAIN_FB()->bpp = out.bpp;
+    }
+
+    return py_image_from_struct(&out);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_bitmap_obj, 1, py_image_to_bitmap);
+
+static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+
+    image_t out;
+    out.w = arg_img->w;
+    out.h = arg_img->h;
+    out.bpp = IMAGE_BPP_GRAYSCALE;
+    out.data = copy ? xalloc(image_size(&out)) : arg_img->data;
+
+    switch(arg_img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+                               "Can't convert to grayscale in place!");
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
+                uint8_t *out_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(out_row_ptr, x,
+                        COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)));
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            if (copy) memcpy(out.data, arg_img->data, image_size(&out));
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
+                uint8_t *out_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(out_row_ptr, x,
+                        COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x)));
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    if ((!copy) && (MAIN_FB()->pixels == out.data)) {
+        MAIN_FB()->bpp = out.bpp;
+    }
+
+    return py_image_from_struct(&out);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_grayscale_obj, 1, py_image_to_grayscale);
+
+static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+
+    image_t out;
+    out.w = arg_img->w;
+    out.h = arg_img->h;
+    out.bpp = IMAGE_BPP_RGB565;
+    out.data = copy ? xalloc(image_size(&out)) : arg_img->data;
+
+    switch(arg_img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+                "Can't convert to grayscale in place!");
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
+                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                        imlib_yuv_to_rgb(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX, 0, 0));
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            PY_ASSERT_TRUE_MSG(copy,
+                "Can't convert to rgb565 in place!");
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
+                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                        imlib_yuv_to_rgb(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), 0, 0));
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            if (copy) memcpy(out.data, arg_img->data, image_size(&out));
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    if ((!copy) && (MAIN_FB()->pixels == out.data)) {
+        MAIN_FB()->bpp = out.bpp;
+    }
+
+    return py_image_from_struct(&out);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_rgb565_obj, 1, py_image_to_rgb565);
+
+extern const uint16_t rainbow_table[256];
+
+static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+
+    image_t out;
+    out.w = arg_img->w;
+    out.h = arg_img->h;
+    out.bpp = IMAGE_BPP_RGB565;
+    out.data = copy ? xalloc(image_size(&out)) : arg_img->data;
+
+    switch(arg_img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+                "Can't convert to rainbow in place!");
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
+                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                        rainbow_table[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX]);
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            PY_ASSERT_TRUE_MSG(copy,
+                "Can't convert to rainbow in place!");
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
+                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                        rainbow_table[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)]);
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
+                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                        rainbow_table[COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x))]);
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    if ((!copy) && (MAIN_FB()->pixels == out.data)) {
+        MAIN_FB()->bpp = out.bpp;
+    }
+
+    return py_image_from_struct(&out);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_rainbow_obj, 1, py_image_to_rainbow);
+
 static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
@@ -1215,6 +1452,7 @@ STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_keypoints_obj, 2, py_image_draw_keypoints);
 
+#ifdef IMLIB_ENABLE_FLOOD_FILL
 STATIC mp_obj_t py_image_flood_fill(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
@@ -1249,6 +1487,7 @@ STATIC mp_obj_t py_image_flood_fill(uint n_args, const mp_obj_t *args, mp_map_t 
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_flood_fill_obj, 2, py_image_flood_fill);
+#endif // IMLIB_ENABLE_FLOOD_FILL
 
 /////////////////
 // Binary Methods
@@ -1827,6 +2066,7 @@ STATIC mp_obj_t py_image_mean(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mean_obj, 2, py_image_mean);
 
+#ifdef IMLIB_ENABLE_MEDIAN
 STATIC mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
@@ -1851,7 +2091,9 @@ STATIC mp_obj_t py_image_median(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_median_obj, 2, py_image_median);
+#endif // IMLIB_ENABLE_MEDIAN
 
+#ifdef IMLIB_ENABLE_MODE
 STATIC mp_obj_t py_image_mode(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
@@ -1873,7 +2115,9 @@ STATIC mp_obj_t py_image_mode(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mode_obj, 2, py_image_mode);
+#endif // IMLIB_ENABLE_MODE
 
+#ifdef IMLIB_ENABLE_MIDPOINT
 STATIC mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
@@ -1898,6 +2142,7 @@ STATIC mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_obj, 2, py_image_midpoint);
+#endif // IMLIB_ENABLE_MIDPOINT
 
 STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -1945,6 +2190,7 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
 
+#ifdef IMLIB_ENABLE_GAUSSIAN
 STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
@@ -2000,7 +2246,9 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gaussian_obj, 2, py_image_gaussian);
+#endif // IMLIB_ENABLE_GAUSSIAN
 
+#ifdef IMLIB_ENABLE_LAPLACIAN
 STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
@@ -2058,7 +2306,9 @@ STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_laplacian_obj, 2, py_image_laplacian);
+#endif // IMLIB_ENABLE_LAPLACIAN
 
+#ifdef IMLIB_ENABLE_BILATERAL
 STATIC mp_obj_t py_image_bilateral(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
@@ -2084,7 +2334,9 @@ STATIC mp_obj_t py_image_bilateral(uint n_args, const mp_obj_t *args, mp_map_t *
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_bilateral_obj, 2, py_image_bilateral);
+#endif // IMLIB_ENABLE_BILATERAL
 
+#ifdef IMLIB_ENABLE_CARTOON
 STATIC mp_obj_t py_image_cartoon(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
@@ -2106,6 +2358,7 @@ STATIC mp_obj_t py_image_cartoon(uint n_args, const mp_obj_t *args, mp_map_t *kw
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_cartoon_obj, 1, py_image_cartoon);
+#endif // IMLIB_ENABLE_CARTOON
 
 /////////////////////////
 // Shadow Removal Methods
@@ -4950,6 +5203,7 @@ static mp_obj_t py_image_find_edges(uint n_args, const mp_obj_t *args, mp_map_t 
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_edges_obj, 2, py_image_find_edges);
 
+#ifdef IMLIB_ENABLE_HOG
 static mp_obj_t py_image_find_hog(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_grayscale(args[0]);
@@ -4964,6 +5218,14 @@ static mp_obj_t py_image_find_hog(uint n_args, const mp_obj_t *args, mp_map_t *k
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_hog_obj, 1, py_image_find_hog);
+#endif // IMLIB_ENABLE_HOG
+
+mp_obj_t py_image_unavailable(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    PY_ASSERT_TRUE_MSG(false, "This method is unavailable on your OpenMV Cam version.");
+    return args[0];
+}
+MP_DEFINE_CONST_FUN_OBJ_KW(py_image_unavailable_obj, 1, py_image_unavailable);
 
 static const mp_rom_map_elem_t locals_dict_table[] = {
     /* Basic Methods */
@@ -4977,6 +5239,10 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_mean_pooled),         MP_ROM_PTR(&py_image_mean_pooled_obj)},
     {MP_ROM_QSTR(MP_QSTR_midpoint_pool),       MP_ROM_PTR(&py_image_midpoint_pool_obj)},
     {MP_ROM_QSTR(MP_QSTR_midpoint_pooled),     MP_ROM_PTR(&py_image_midpoint_pooled_obj)},
+    {MP_ROM_QSTR(MP_QSTR_to_bitmap),           MP_ROM_PTR(&py_image_to_bitmap_obj)},
+    {MP_ROM_QSTR(MP_QSTR_to_grayscale),        MP_ROM_PTR(&py_image_to_grayscale_obj)},
+    {MP_ROM_QSTR(MP_QSTR_to_rgb565),           MP_ROM_PTR(&py_image_to_rgb565_obj)},
+    {MP_ROM_QSTR(MP_QSTR_to_rainbow),          MP_ROM_PTR(&py_image_to_rainbow_obj)},
     {MP_ROM_QSTR(MP_QSTR_compress),            MP_ROM_PTR(&py_image_compress_obj)},
     {MP_ROM_QSTR(MP_QSTR_compress_for_ide),    MP_ROM_PTR(&py_image_compress_for_ide_obj)},
     {MP_ROM_QSTR(MP_QSTR_compressed),          MP_ROM_PTR(&py_image_compressed_obj)},
@@ -4992,7 +5258,11 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_draw_cross),          MP_ROM_PTR(&py_image_draw_cross_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_arrow),          MP_ROM_PTR(&py_image_draw_arrow_obj)},
     {MP_ROM_QSTR(MP_QSTR_draw_image),          MP_ROM_PTR(&py_image_draw_image_obj)},
+#ifdef IMLIB_ENABLE_FLOOD_FILL
     {MP_ROM_QSTR(MP_QSTR_flood_fill),          MP_ROM_PTR(&py_image_flood_fill_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_flood_fill),          MP_ROM_PTR(&py_image_unavailable_obj)},
+#endif
     {MP_ROM_QSTR(MP_QSTR_draw_keypoints),      MP_ROM_PTR(&py_image_draw_keypoints_obj)},
     /* Binary Methods */
     {MP_ROM_QSTR(MP_QSTR_binary),              MP_ROM_PTR(&py_image_binary_obj)},
@@ -5029,40 +5299,84 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     /* Filtering Methods */
     {MP_ROM_QSTR(MP_QSTR_histeq),              MP_ROM_PTR(&py_image_histeq_obj)},
     {MP_ROM_QSTR(MP_QSTR_mean),                MP_ROM_PTR(&py_image_mean_obj)},
+#ifdef IMLIB_ENABLE_MEDIAN
     {MP_ROM_QSTR(MP_QSTR_median),              MP_ROM_PTR(&py_image_median_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_median),              MP_ROM_PTR(&py_image_unavailable_obj)},
+#endif
+#ifdef IMLIB_ENABLE_MODE
     {MP_ROM_QSTR(MP_QSTR_mode),                MP_ROM_PTR(&py_image_mode_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_mode),                MP_ROM_PTR(&py_image_unavailable_obj)},
+#endif
+#ifdef IMLIB_ENABLE_MIDPOINT
     {MP_ROM_QSTR(MP_QSTR_midpoint),            MP_ROM_PTR(&py_image_midpoint_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_midpoint),            MP_ROM_PTR(&py_image_unavailable_obj)},
+#endif
     {MP_ROM_QSTR(MP_QSTR_morph),               MP_ROM_PTR(&py_image_morph_obj)},
+#ifdef IMLIB_ENABLE_GAUSSIAN
     {MP_ROM_QSTR(MP_QSTR_blur),                MP_ROM_PTR(&py_image_gaussian_obj)},
     {MP_ROM_QSTR(MP_QSTR_gaussian),            MP_ROM_PTR(&py_image_gaussian_obj)},
     {MP_ROM_QSTR(MP_QSTR_gaussian_blur),       MP_ROM_PTR(&py_image_gaussian_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_blur),                MP_ROM_PTR(&py_image_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_gaussian),            MP_ROM_PTR(&py_image_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_gaussian_blur),       MP_ROM_PTR(&py_image_unavailable_obj)},
+#endif
+#ifdef IMLIB_ENABLE_LAPLACIAN
     {MP_ROM_QSTR(MP_QSTR_laplacian),           MP_ROM_PTR(&py_image_laplacian_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_laplacian),           MP_ROM_PTR(&py_image_unavailable_obj)},
+#endif
+#ifdef IMLIB_ENABLE_BILATERAL
     {MP_ROM_QSTR(MP_QSTR_bilateral),           MP_ROM_PTR(&py_image_bilateral_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_bilateral),           MP_ROM_PTR(&py_image_unavailable_obj)},
+#endif
+#ifdef IMLIB_ENABLE_CARTOON
     {MP_ROM_QSTR(MP_QSTR_cartoon),             MP_ROM_PTR(&py_image_cartoon_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_cartoon),             MP_ROM_PTR(&py_image_unavailable_obj)},
+#endif
     /* Shadow Removal Methods */
 #ifdef IMLIB_ENABLE_REMOVE_SHADOWS
     {MP_ROM_QSTR(MP_QSTR_remove_shadows),      MP_ROM_PTR(&py_image_remove_shadows_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_remove_shadows),      MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_CHROMINVAR
     {MP_ROM_QSTR(MP_QSTR_chrominvar),          MP_ROM_PTR(&py_image_chrominvar_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_chrominvar),          MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_ILLUMINVAR
     {MP_ROM_QSTR(MP_QSTR_illuminvar),          MP_ROM_PTR(&py_image_illuminvar_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_illuminvar),          MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
     /* Geometric Methods */
 #ifdef IMLIB_ENABLE_LINPOLAR
     {MP_ROM_QSTR(MP_QSTR_linpolar),            MP_ROM_PTR(&py_image_linpolar_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_linpolar),            MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_LOGPOLAR
     {MP_ROM_QSTR(MP_QSTR_logpolar),            MP_ROM_PTR(&py_image_logpolar_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_logpolar),            MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
     {MP_ROM_QSTR(MP_QSTR_lens_corr),           MP_ROM_PTR(&py_image_lens_corr_obj)},
 #ifdef IMLIB_ENABLE_ROTATION_CORR
     {MP_ROM_QSTR(MP_QSTR_rotation_corr),       MP_ROM_PTR(&py_image_rotation_corr_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_rotation_corr),       MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
     /* Get Methods */
 #ifdef IMLIB_ENABLE_GET_SIMILARITY
     {MP_ROM_QSTR(MP_QSTR_get_similarity),      MP_ROM_PTR(&py_image_get_similarity_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_get_similarity),      MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
     {MP_ROM_QSTR(MP_QSTR_get_hist),            MP_ROM_PTR(&py_image_get_histogram_obj)},
     {MP_ROM_QSTR(MP_QSTR_get_histogram),       MP_ROM_PTR(&py_image_get_histogram_obj)},
@@ -5075,36 +5389,58 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_find_blobs),          MP_ROM_PTR(&py_image_find_blobs_obj)},
 #ifdef IMLIB_ENABLE_FIND_LINES
     {MP_ROM_QSTR(MP_QSTR_find_lines),          MP_ROM_PTR(&py_image_find_lines_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_lines),          MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_FIND_LINE_SEGMENTS
     {MP_ROM_QSTR(MP_QSTR_find_line_segments),  MP_ROM_PTR(&py_image_find_line_segments_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_line_segments),  MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_FIND_CIRCLES
     {MP_ROM_QSTR(MP_QSTR_find_circles),        MP_ROM_PTR(&py_image_find_circles_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_circles),        MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_FIND_RECTS
     {MP_ROM_QSTR(MP_QSTR_find_rects),          MP_ROM_PTR(&py_image_find_rects_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_rects),          MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_QRCODES
     {MP_ROM_QSTR(MP_QSTR_find_qrcodes),        MP_ROM_PTR(&py_image_find_qrcodes_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_qrcodes),        MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_APRILTAGS
     {MP_ROM_QSTR(MP_QSTR_find_apriltags),      MP_ROM_PTR(&py_image_find_apriltags_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_apriltags),      MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_DATAMATRICES
     {MP_ROM_QSTR(MP_QSTR_find_datamatrices),   MP_ROM_PTR(&py_image_find_datamatrices_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_datamatrices),   MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_BARCODES
     {MP_ROM_QSTR(MP_QSTR_find_barcodes),       MP_ROM_PTR(&py_image_find_barcodes_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_barcodes),       MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_FIND_DISPLACEMENT
     {MP_ROM_QSTR(MP_QSTR_find_displacement),   MP_ROM_PTR(&py_image_find_displacement_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_displacement),   MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_LENET
     {MP_ROM_QSTR(MP_QSTR_find_number),         MP_ROM_PTR(&py_image_find_number_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_number),         MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
 #ifdef IMLIB_ENABLE_CNN
     {MP_ROM_QSTR(MP_QSTR_classify_object),     MP_ROM_PTR(&py_image_classify_object_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_classify_object),     MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
     {MP_ROM_QSTR(MP_QSTR_find_template),       MP_ROM_PTR(&py_image_find_template_obj)},
     {MP_ROM_QSTR(MP_QSTR_find_features),       MP_ROM_PTR(&py_image_find_features_obj)},
@@ -5112,7 +5448,11 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_find_lbp),            MP_ROM_PTR(&py_image_find_lbp_obj)},
     {MP_ROM_QSTR(MP_QSTR_find_keypoints),      MP_ROM_PTR(&py_image_find_keypoints_obj)},
     {MP_ROM_QSTR(MP_QSTR_find_edges),          MP_ROM_PTR(&py_image_find_edges_obj)},
+#ifdef IMLIB_ENABLE_HOG
     {MP_ROM_QSTR(MP_QSTR_find_hog),            MP_ROM_PTR(&py_image_find_hog_obj)}
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_hog),            MP_ROM_PTR(&py_image_unavailable_obj)}
+#endif
 };
 
 STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
