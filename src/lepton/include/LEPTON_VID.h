@@ -322,10 +322,10 @@ extern "C"
    extern LEP_RESULT LEP_SetVidSbNucEnableState(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
                                                 LEP_VID_SBNUC_ENABLE_E vidSbNucEnableState);
 
-   extern LEP_RESULT LEP_GetOemVideoOutputFormat( LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
-                                                  LEP_VID_VIDEO_OUTPUT_FORMAT_E_PTR vidVideoOutputFormatPtr );
-   extern LEP_RESULT LEP_SetOemVideoOutputFormat( LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
-                                                  LEP_VID_VIDEO_OUTPUT_FORMAT_E vidVideoOutputFormat );
+   //extern LEP_RESULT LEP_GetOemVideoOutputFormat( LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
+   //                                               LEP_VID_VIDEO_OUTPUT_FORMAT_E_PTR vidVideoOutputFormatPtr );
+   //extern LEP_RESULT LEP_SetOemVideoOutputFormat( LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
+   //                                               LEP_VID_VIDEO_OUTPUT_FORMAT_E vidVideoOutputFormat );
 
 #if (USE_BORESIGHT_MEASUREMENT_FUNCTIONS == 1)
    extern LEP_RESULT LEP_CalcVidBoresightAlignment(LEP_VID_BORESIGHT_COORDINATES_T boresightCoordinates,

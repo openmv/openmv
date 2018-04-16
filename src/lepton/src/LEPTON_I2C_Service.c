@@ -114,7 +114,7 @@ LEP_RESULT LEP_I2C_MasterSelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
 LEP_RESULT LEP_I2C_MasterOpen(LEP_UINT16 portID,
                               LEP_UINT16 *portBaudRate)
 {
-    LEP_RESULT result;
+    LEP_RESULT result = LEP_OK;
 
     return(result);
 }
@@ -163,7 +163,7 @@ LEP_RESULT LEP_I2C_MasterReadData(LEP_UINT16 portID,
     LEP_RESULT result = LEP_OK;
 
     for (int i = 0; i < dataLength; i++) {
-        if (cambus_readw2(deviceAddress, subAddress, &dataPtr[i])) return LEP_ERROR;
+        if (cambus_readw2(deviceAddress << 1, subAddress + (i * 2), &dataPtr[i])) return LEP_ERROR;
     }
 
     return(result);
@@ -191,7 +191,7 @@ LEP_RESULT LEP_I2C_MasterWriteData(LEP_UINT16 portID,
     LEP_RESULT result = LEP_OK;
 
     for (int i = 0; i < dataLength; i++) {
-        if (cambus_writew2(deviceAddress, subAddress, dataPtr[i])) return LEP_ERROR;
+        if (cambus_writew2(deviceAddress << 1, subAddress + (i * 2), dataPtr[i])) return LEP_ERROR;
     }
 
     return(result);
@@ -205,7 +205,7 @@ LEP_RESULT LEP_I2C_MasterReadRegister(LEP_UINT16 portID,
 {
     LEP_RESULT result = LEP_OK;
 
-    if (cambus_readw2(deviceAddress, regAddress, regValue)) return LEP_ERROR;
+    if (cambus_readw2(deviceAddress << 1, regAddress, regValue)) return LEP_ERROR;
 
     return(result);
 }
@@ -218,7 +218,7 @@ LEP_RESULT LEP_I2C_MasterWriteRegister(LEP_UINT16 portID,
 {
     LEP_RESULT result = LEP_OK;
 
-    if (cambus_writew2(deviceAddress, regAddress, regValue)) return LEP_ERROR;
+    if (cambus_writew2(deviceAddress << 1, regAddress, regValue)) return LEP_ERROR;
 
     return(result);
 }

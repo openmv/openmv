@@ -389,7 +389,7 @@ LEP_RESULT LEP_GetVidTargetPosition(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
 {
    LEP_RESULT result = LEP_OK;
    LEP_VID_BORESIGHT_COORDINATES_T boresightCoordinates;
-   LEP_VID_BORESIGHT_CALC_ENABLE_STATE_E calcEnableState;
+   //LEP_VID_BORESIGHT_CALC_ENABLE_STATE_E calcEnableState;
 
    if(targetPositionPtr == NULL)
    {
@@ -692,21 +692,21 @@ LEP_RESULT LEP_CalcVidBoresightAlignment(LEP_VID_BORESIGHT_COORDINATES_T boresig
    {
       targetPositionPtr->row = left;
       targetPositionPtr->col = (LEP_FLOAT32)(bot + ((top - bot) / rows) * left);
-      targetPositionPtr->rotation = (LEP_FLOAT32)((57.2957802 * atan((top - bot) / rows)) / 2.0);
+      targetPositionPtr->rotation = (LEP_FLOAT32)((57.2957802 * atanf((top - bot) / rows)) / 2.0);
    }
    /* Line 1 has slope and Line 2 is perfect vertical */
    else if ((left != right) && (top == bot))
    {
       targetPositionPtr->col = top;
       targetPositionPtr->row = (LEP_FLOAT32)(right + (right - left) / cols * top / cols);
-      targetPositionPtr->rotation = (LEP_FLOAT32)((57.2957802 * atan((right - left) / cols)) / 2.0);
+      targetPositionPtr->rotation = (LEP_FLOAT32)((57.2957802 * atanf((right - left) / cols)) / 2.0);
    }
    /* Both lines have slope */
    else
    {
       targetPositionPtr->col = (LEP_FLOAT32)(((rows - rows * top / (top - bot)) - left) / ((right - left) / cols - rows / (top - bot)));
       targetPositionPtr->row = (LEP_FLOAT32)(left + targetPositionPtr->col * (right - left) / cols);
-      targetPositionPtr->rotation = (LEP_FLOAT32)((57.2957802 * (atan((right - left) / cols) + atan((top - bot) / rows))) / 2.0);
+      targetPositionPtr->rotation = (LEP_FLOAT32)((57.2957802 * (atanf((right - left) / cols) + atanf((top - bot) / rows))) / 2.0);
    }
 
    return(result);
