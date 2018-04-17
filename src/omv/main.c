@@ -462,7 +462,9 @@ soft_reset:
     pin_init0();
     extint_init0();
     timer_init0();
+    #if MICROPY_HW_ENABLE_CAN
     can_init0();
+    #endif
     i2c_init0();
     spi_init0();
     uart_init0();
@@ -616,7 +618,9 @@ soft_reset:
     storage_flush();
     timer_deinit();
     uart_deinit();
+    #if MICROPY_HW_ENABLE_CAN
     can_deinit();
+    #endif
     pyb_thread_deinit();
 
     first_soft_reset = false;
