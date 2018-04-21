@@ -148,6 +148,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	ov2640.o                                \
 	ov7725.o                                \
 	mt9v034.o                               \
+	lepton.o                                \
 	sensor.o                                \
 	stm32fxxx_hal_msp.o                     \
 	soft_i2c.o                              \
