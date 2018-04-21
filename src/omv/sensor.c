@@ -15,6 +15,7 @@
 #include "ov2640.h"
 #include "ov7725.h"
 #include "mt9v034.h"
+#include "lepton.h"
 #include "sensor.h"
 #include "systick.h"
 #include "framebuffer.h"
@@ -33,6 +34,7 @@ static int line = 0;
 extern uint8_t _line_buf;
 
 const int resolution[][2] = {
+    {0,    0   },
     // C/SIF Resolutions
     {88,   72  },    /* QQCIF     */
     {176,  144 },    /* QCIF      */
@@ -245,6 +247,7 @@ int sensor_init()
        is connected before initializing cambus and probing the sensor, which in turn
        requires pulling the sensor out of the reset state. So we try to probe the
        sensor with both polarities to determine line state. */
+    sensor.pwdn_pol = ACTIVE_HIGH;
     sensor.reset_pol = ACTIVE_HIGH;
 
     /* Reset the sensor */
@@ -267,52 +270,73 @@ int sensor_init()
 
         /* Probe again to set the slave addr */
         sensor.slv_addr = cambus_scan();
-        if (sensor.slv_addr == 0)  {
-            // Probe failed
-            return -2;
+        if (sensor.slv_addr == 0) {
+            sensor.pwdn_pol = ACTIVE_LOW;
+
+            DCMI_PWDN_HIGH();
+            systick_sleep(10);
+
+            sensor.slv_addr = cambus_scan();
+            if (sensor.slv_addr == 0) {
+                sensor.reset_pol = ACTIVE_HIGH;
+
+                DCMI_RESET_LOW();
+                systick_sleep(10);
+
+                sensor.slv_addr = cambus_scan();
+                if (sensor.slv_addr == 0) {
+                    return -2;
+                }
+            }
         }
     }
 
     // Clear sensor chip ID.
     sensor.chip_id = 0;
 
-    // Read ON semi sensor ID.
-    cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
-    if (sensor.chip_id == MT9V034_ID) {
-        // On/Aptina MT requires 13-27MHz clock.
-        extclk_config(27000000);
-        // Only the MT9V034 is currently supported.
-        mt9v034_init(&sensor);
-    } else { // Read OV sensor ID.
-        cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
-        // Initialize sensor struct.
-        switch (sensor.chip_id) {
-            case OV9650_ID:
-                ov9650_init(&sensor);
-                break;
-            case OV2640_ID:
-                ov2640_init(&sensor);
-                break;
-            case OV7725_ID:
-                ov7725_init(&sensor);
-                break;
-            default:
-                // Sensor is not supported.
-                return -3;
+    if (sensor.slv_addr == LEPTON_ID) {
+        sensor.chip_id = LEPTON_ID;
+        extclk_config(25000000);
+        if (lepton_init(&sensor) != 0) return -4;
+    } else {
+        // Read ON semi sensor ID.
+        cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
+        if (sensor.chip_id == MT9V034_ID) {
+            // On/Aptina MT requires 13-27MHz clock.
+            extclk_config(27000000);
+            // Only the MT9V034 is currently supported.
+            if (mt9v034_init(&sensor) != 0) return -4;
+        } else { // Read OV sensor ID.
+            cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+            // Initialize sensor struct.
+            switch (sensor.chip_id) {
+                case OV9650_ID:
+                    if (ov9650_init(&sensor) != 0) return -4;
+                    break;
+                case OV2640_ID:
+                    if (ov2640_init(&sensor) != 0) return -4;
+                    break;
+                case OV7725_ID:
+                    if (ov7725_init(&sensor) != 0) return -4;
+                    break;
+                default:
+                    // Sensor is not supported.
+                    return -3;
+            }
         }
     }
 
     /* Configure the DCMI DMA Stream */
     if (dma_config() != 0) {
         // DMA problem
-        return -4;
+        return -5;
     }
 
     /* Configure the DCMI interface. This should be called
        after ovxxx_init to set VSYNC/HSYNC/PCLK polarities */
     if (dcmi_config(DCMI_JPEG_DISABLE) != 0){
         // DCMI config failed
-        return -5;
+        return -6;
     }
 
     // Disable VSYNC EXTI IRQ
@@ -329,18 +353,18 @@ int sensor_init()
 int sensor_reset()
 {
     // Reset the sesnor state
-    sensor.sde          = 0xFF;
-    sensor.pixformat    = 0xFF;
-    sensor.framesize    = 0xFF;
-    sensor.framerate    = 0xFF;
-    sensor.gainceiling  = 0xFF;
-    sensor.vsync_gpio   = NULL;
+    sensor.sde         = 0;
+    sensor.pixformat   = 0;
+    sensor.framesize   = 0;
+    sensor.framerate   = 0;
+    sensor.gainceiling = 0;
+    sensor.vsync_gpio  = NULL;
 
     // Reset image filter
     sensor_set_line_filter(NULL, NULL);
 
     // Call sensor-specific reset function
-    sensor.reset(&sensor);
+    if (sensor.reset(&sensor) != 0) return -1;
 
     // Just in case there's a running DMA request.
     HAL_DMA_Abort(&DMAHandle);
@@ -434,7 +458,8 @@ int sensor_set_framesize(framesize_t framesize)
     MAIN_FB()->w = sensor.fb_w = resolution[framesize][0];
     MAIN_FB()->h = sensor.fb_h = resolution[framesize][1];
     HAL_DCMI_DisableCROP(&DCMIHandle);
-
+    sensor.fb_x = 0;
+    sensor.fb_y = 0;
     return 0;
 }
 
@@ -464,6 +489,8 @@ int sensor_set_windowing(int x, int y, int w, int h)
     MAIN_FB()->h = sensor.fb_h = h;
     HAL_DCMI_ConfigCROP(&DCMIHandle, x*2, y, w*2-1, h-1);
     HAL_DCMI_EnableCROP(&DCMIHandle);
+    sensor.fb_x = x;
+    sensor.fb_y = y;
     return 0;
 }
 
@@ -783,72 +810,80 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     // for GS, or the sensor pixel format will be swicthed to bayer for RGB.
     sensor_check_bufsize();
 
-    // Setup the size and address of the transfer
-    switch (sensor.pixformat) {
-        case PIXFORMAT_RGB565:
-        case PIXFORMAT_YUV422:
-            // RGB/YUV read 2 bytes per pixel.
-            length = (MAIN_FB()->w * MAIN_FB()->h * 2)/4;
-            addr = (uint32_t) &_line_buf;
-            break;
-        case PIXFORMAT_BAYER:
-            // BAYER/RAW: 1 byte per pixel
-            length = (MAIN_FB()->w * MAIN_FB()->h * 1)/4;
-            addr = (uint32_t) &_line_buf;
-            break;
-        case PIXFORMAT_GRAYSCALE:
-            // 1/2BPP Grayscale.
-            length = (MAIN_FB()->w * MAIN_FB()->h * sensor.gs_bpp)/4;
-            addr = (uint32_t) &_line_buf;
-            break;
-        case PIXFORMAT_JPEG:
-            // Sensor has hardware JPEG set max frame size.
-            length = MAX_XFER_SIZE;
-            addr = (uint32_t) (MAIN_FB()->pixels);
-            break;
-        default:
-            return -1;
-    }
-
-    // Clear line counter
-    line = 0;
-
-    // Snapshot start tick
-    tick_start = HAL_GetTick();
-
-    // Enable DMA IRQ
-    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
-
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
-        // Start a regular transfer
-        HAL_DCMI_Start_DMA(&DCMIHandle,
-                DCMI_MODE_SNAPSHOT, addr, length);
-    } else {
-        // Start a multibuffer transfer (line by line)
-        HAL_DCMI_Start_DMA_MB(&DCMIHandle,
-                DCMI_MODE_SNAPSHOT, addr, length, MAIN_FB()->h);
-    }
-
-    // Wait for frame
-    while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
-        // Wait for interrupt
-        __WFI();
-
-        if ((HAL_GetTick() - tick_start) >= 3000) {
-            // Sensor timeout, most likely a HW issue.
-            // Abort the DMA request.
-            HAL_DMA_Abort(&DMAHandle);
+    if (sensor.alt_snapshot_src) {
+        if (sensor.alt_snapshot_src(&sensor) != 0) {
+            MAIN_FB()->bpp = 0;
             return -1;
         }
+    } else {
+
+        // Setup the size and address of the transfer
+        switch (sensor.pixformat) {
+            case PIXFORMAT_RGB565:
+            case PIXFORMAT_YUV422:
+                // RGB/YUV read 2 bytes per pixel.
+                length = (MAIN_FB()->w * MAIN_FB()->h * 2)/4;
+                addr = (uint32_t) &_line_buf;
+                break;
+            case PIXFORMAT_BAYER:
+                // BAYER/RAW: 1 byte per pixel
+                length = (MAIN_FB()->w * MAIN_FB()->h * 1)/4;
+                addr = (uint32_t) &_line_buf;
+                break;
+            case PIXFORMAT_GRAYSCALE:
+                // 1/2BPP Grayscale.
+                length = (MAIN_FB()->w * MAIN_FB()->h * sensor.gs_bpp)/4;
+                addr = (uint32_t) &_line_buf;
+                break;
+            case PIXFORMAT_JPEG:
+                // Sensor has hardware JPEG set max frame size.
+                length = MAX_XFER_SIZE;
+                addr = (uint32_t) (MAIN_FB()->pixels);
+                break;
+            default:
+                return -1;
+        }
+
+        // Clear line counter
+        line = 0;
+
+        // Snapshot start tick
+        tick_start = HAL_GetTick();
+
+        // Enable DMA IRQ
+        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+
+        if (sensor.pixformat == PIXFORMAT_JPEG) {
+            // Start a regular transfer
+            HAL_DCMI_Start_DMA(&DCMIHandle,
+                    DCMI_MODE_SNAPSHOT, addr, length);
+        } else {
+            // Start a multibuffer transfer (line by line)
+            HAL_DCMI_Start_DMA_MB(&DCMIHandle,
+                    DCMI_MODE_SNAPSHOT, addr, length, MAIN_FB()->h);
+        }
+
+        // Wait for frame
+        while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
+            // Wait for interrupt
+            __WFI();
+
+            if ((HAL_GetTick() - tick_start) >= 3000) {
+                // Sensor timeout, most likely a HW issue.
+                // Abort the DMA request.
+                HAL_DMA_Abort(&DMAHandle);
+                return -1;
+            }
+        }
+
+        // Abort DMA transfer.
+        // Note: In JPEG mode the DMA will still be waiting for data since
+        // the max frame size is set, so we need to abort the DMA transfer.
+        HAL_DMA_Abort(&DMAHandle);
+
+        // Disable DMA IRQ
+        HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
     }
-
-    // Abort DMA transfer.
-    // Note: In JPEG mode the DMA will still be waiting for data since
-    // the max frame size is set, so we need to abort the DMA transfer.
-    HAL_DMA_Abort(&DMAHandle);
-
-    // Disable DMA IRQ
-    HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 
     // Fix the BPP
     switch (sensor.pixformat) {
@@ -865,6 +900,8 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
         case PIXFORMAT_JPEG:
             // Read the number of data items transferred
             MAIN_FB()->bpp = (MAX_XFER_SIZE - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+            break;
+        default:
             break;
     }
 
