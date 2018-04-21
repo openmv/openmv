@@ -15,8 +15,10 @@
 #define OV2640_ID       (0x26)
 #define OV7725_ID       (0x77)
 #define MT9V034_ID      (0x13)
+#define LEPTON_ID       (0x54)
 
 typedef enum {
+    PIXFORMAT_INVLAID = 0,
     PIXFORMAT_BAYER,     // 1BPP/RAW
     PIXFORMAT_RGB565,    // 2BPP/RGB565
     PIXFORMAT_YUV422,    // 2BPP/YUV422
@@ -25,6 +27,7 @@ typedef enum {
 } pixformat_t;
 
 typedef enum {
+    FRAMESIZE_INVALID = 0,
     // C/SIF Resolutions
     FRAMESIZE_QQCIF,    // 88x72
     FRAMESIZE_QCIF,     // 176x144
@@ -87,7 +90,7 @@ typedef enum {
 typedef enum {
     ACTIVE_LOW,
     ACTIVE_HIGH
-} reset_polarity_t;
+} polarity_t;
 
 typedef void (*line_filter_t) (uint8_t *src, int src_stride, uint8_t *dst, int dst_stride, void *args);
 
@@ -106,15 +109,18 @@ typedef struct _sensor {
     uint8_t  slv_addr;          // Sensor I2C slave address.
     uint16_t gs_bpp;            // Grayscale bytes per pixel.
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
-    uint32_t vsync_pin;
-    GPIO_TypeDef *vsync_gpio;
+
+    uint32_t vsync_pin;         // VSYNC GPIO output pin.
+    GPIO_TypeDef *vsync_gpio;   // VSYNC GPIO output port.
+
     uint32_t fb_w, fb_h;        // Backup for MAIN_FB().
 
     // Line pre-processing function and args
     void *line_filter_args;
     line_filter_t line_filter_func;
 
-    reset_polarity_t reset_pol; // Reset polarity (TODO move to hw_flags)
+    polarity_t pwdn_pol; // PWDN polarity (TODO move to hw_flags)
+    polarity_t reset_pol; // Reset polarity (TODO move to hw_flags)
 
     // Sensor state
     sde_t sde;                  // Special digital effects
