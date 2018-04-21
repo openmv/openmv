@@ -263,6 +263,23 @@ void SystemClock_Config(void)
     }
     #endif
 
+    #if defined(STM32H743xx)
+    PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL2;
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SPI123;
+    PeriphClkInitStruct.PLL2.PLL2M = 3;
+    PeriphClkInitStruct.PLL2.PLL2N = 80;
+    PeriphClkInitStruct.PLL2.PLL2P = 2;
+    PeriphClkInitStruct.PLL2.PLL2Q = 2;
+    PeriphClkInitStruct.PLL2.PLL2R = 2;
+    PeriphClkInitStruct.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_2;
+    PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
+    PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+        // Initialization Error
+        __fatal_error("HAL_RCCEx_PeriphCLKConfig");
+    }
+    #endif
+
     #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
     if (HAL_PWREx_EnableOverDrive() != HAL_OK) {
         // Initialization Error
