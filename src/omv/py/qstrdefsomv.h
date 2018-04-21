@@ -135,6 +135,7 @@ Q(OV9650)
 Q(OV2640)
 Q(OV7725)
 Q(MT9V034)
+Q(LEPTON)
 Q(line_filter)
 Q(value)
 
