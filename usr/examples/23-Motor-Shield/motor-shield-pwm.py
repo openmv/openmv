@@ -11,10 +11,10 @@ import pyb
 # below control the speed. The direction for each motor
 # is set by an H-Bridge where A0/1 are the two sides of
 # one H-Bridge driver. B0/1 are another H-Bridge.
-pinADir0 = pyb.Pin('P0', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
-pinADir1 = pyb.Pin('P1', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
-pinBDir0 = pyb.Pin('P2', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
-pinBDir1 = pyb.Pin('P3', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+pinADir0 = pyb.Pin('P3', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+pinADir1 = pyb.Pin('P2', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+pinBDir0 = pyb.Pin('P1', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+pinBDir1 = pyb.Pin('P0', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
 
 # Dir0/1 must be not equal to each other for forward or backwards
 # operation. If they are equal then that's a brake operation.

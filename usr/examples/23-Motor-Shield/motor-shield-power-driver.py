@@ -10,10 +10,10 @@ import pyb
 
 # These pins will be the ones we control to drive the
 # H-Bridge sides as we like.
-pinA = pyb.Pin('P0', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
-pinB = pyb.Pin('P1', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
-pinC = pyb.Pin('P2', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
-pinD = pyb.Pin('P3', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+pinA = pyb.Pin('P3', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+pinB = pyb.Pin('P2', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+pinC = pyb.Pin('P1', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
+pinD = pyb.Pin('P0', pyb.Pin.OUT_PP, pyb.Pin.PULL_NONE)
 
 # Create a timer object running at 1KHz which which will power the
 # PWM output on our OpenMV Cam. Just needs to be created once.
