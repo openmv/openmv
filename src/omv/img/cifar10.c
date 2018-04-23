@@ -183,11 +183,11 @@ int imlib_classify_object(image_t *img, int8_t *output_data)
             CONV1_STRIDE, conv1_bias, CONV1_BIAS_LSHIFT, CONV1_OUT_RSHIFT, img_buffer1, CONV1_OUT_DIM,
             (q15_t *) col_buffer, NULL);
 
-    arm_relu_q7(img_buffer1, CONV1_OUT_DIM * CONV1_OUT_DIM * CONV1_OUT_CH);
-
     // pool1 img_buffer1 -> img_buffer2
     arm_maxpool_q7_HWC(img_buffer1, CONV1_OUT_DIM, CONV1_OUT_CH, POOL1_KER_DIM,
             POOL1_PADDING, POOL1_STRIDE, POOL1_OUT_DIM, NULL, img_buffer2);
+
+    arm_relu_q7(img_buffer2, CONV2_IM_DIM * CONV2_IM_DIM * CONV2_IM_CH);
 
     // conv2 img_buffer2 -> img_buffer1
     arm_convolve_HWC_q7_fast(img_buffer2, CONV2_IM_DIM, CONV2_IM_CH, conv2_wt, CONV2_OUT_CH, CONV2_KER_DIM,
