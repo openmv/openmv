@@ -557,12 +557,21 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
             break;
         }
         case FORMAT_JPG:
+            jpeg_write(img, path, quality);
+            break;
         case FORMAT_DONT_CARE:
-            if (IM_IS_JPEG(img) || IM_IS_BAYER(img)) {
+            // Path doesn't have an extension.
+            if (IM_IS_JPEG(img)) {
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
                 jpeg_write(img, new_path, quality);
                 fb_free();
-            } else {
+            } else if (IM_IS_BAYER(img)) {
+                FIL fp;
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".raw");
+                file_write_open(&fp, new_path);
+                write_data(&fp, img->pixels, img->w * img->h);
+                fb_free();
+            } else { // RGB or GS, save as BMP.
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".bmp");
                 bmp_write_subimg(img, new_path, roi);
                 fb_free();
