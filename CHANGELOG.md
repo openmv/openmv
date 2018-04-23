@@ -1,4 +1,15 @@
 # Change Log
+## [2.8](https://github.com/openmv/openmv/releases/tag/v2.8) (2018-04-23)
+* Improved H7 support.
+* Enable text scaling.
+* Fix Image.save bug.
+* Make imlib more configurable.
+* Update MicroPython.
+* Add CMSIS NN example.
+* Add new example scripts.
+* Improved JPEG quality (for M7 and H7).
+* Add color thresholding support to get_histogram/stats.
+
 ## [2.7](https://github.com/openmv/openmv/releases/tag/v2.7) (2018-01-24)
 * Add LeNet NN.
 * Add shadow removal.
