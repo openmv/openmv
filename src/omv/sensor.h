@@ -15,8 +15,10 @@
 #define OV2640_ID       (0x26)
 #define OV7725_ID       (0x77)
 #define MT9V034_ID      (0x13)
+#define LEPTON_ID       (0x54)
 
 typedef enum {
+    PIXFORMAT_INVLAID = 0,
     PIXFORMAT_BAYER,     // 1BPP/RAW
     PIXFORMAT_RGB565,    // 2BPP/RGB565
     PIXFORMAT_YUV422,    // 2BPP/YUV422
@@ -25,6 +27,7 @@ typedef enum {
 } pixformat_t;
 
 typedef enum {
+    FRAMESIZE_INVALID = 0,
     // C/SIF Resolutions
     FRAMESIZE_QQCIF,    // 88x72
     FRAMESIZE_QCIF,     // 176x144
@@ -87,7 +90,7 @@ typedef enum {
 typedef enum {
     ACTIVE_LOW,
     ACTIVE_HIGH
-} reset_polarity_t;
+} polarity_t;
 
 typedef void (*line_filter_t) (uint8_t *src, int src_stride, uint8_t *dst, int dst_stride, void *args);
 
@@ -108,13 +111,14 @@ typedef struct _sensor {
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
     uint32_t vsync_pin;
     GPIO_TypeDef *vsync_gpio;
-    uint32_t fb_w, fb_h;        // Backup for MAIN_FB().
+    uint32_t fb_x, fb_y, fb_w, fb_h; // Backup for MAIN_FB().
 
     // Line pre-processing function and args
     void *line_filter_args;
     line_filter_t line_filter_func;
 
-    reset_polarity_t reset_pol; // Reset polarity (TODO move to hw_flags)
+    polarity_t pwdn_pol; // PWDN polarity (TODO move to hw_flags)
+    polarity_t reset_pol; // Reset polarity (TODO move to hw_flags)
 
     // Sensor state
     sde_t sde;                  // Special digital effects
@@ -137,6 +141,7 @@ typedef struct _sensor {
     int  (*set_gainceiling)     (sensor_t *sensor, gainceiling_t gainceiling);
     int  (*set_quality)         (sensor_t *sensor, int quality);
     int  (*set_colorbar)        (sensor_t *sensor, int enable);
+    int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
     int  (*set_auto_gain)       (sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling);
     int  (*get_gain_db)         (sensor_t *sensor, float *gain_db);
     int  (*set_auto_exposure)   (sensor_t *sensor, int enable, int exposure_us);
@@ -145,8 +150,8 @@ typedef struct _sensor {
     int  (*get_rgb_gain_db)     (sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db);
     int  (*set_hmirror)         (sensor_t *sensor, int enable);
     int  (*set_vflip)           (sensor_t *sensor, int enable);
-    int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
+    int  (*alt_snapshot_src)    (sensor_t *sensor);
 } sensor_t;
 
 // Resolution table

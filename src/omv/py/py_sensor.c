@@ -22,19 +22,22 @@
 extern sensor_t sensor;
 
 static mp_obj_t py_sensor_reset() {
-    sensor_reset();
+    if (sensor_reset() != 0) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
+    }
     return mp_const_none;
 }
 
 static mp_obj_t py_sensor_sleep(mp_obj_t enable) {
     if (sensor_sleep(mp_obj_is_true(enable)) != 0) {
-        return mp_const_false;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
     }
-    return mp_const_true;
+    return mp_const_none;
 }
 
 static mp_obj_t py_sensor_flush() {
     fb_update_jpeg_buffer();
+    systick_sleep(1000);
     return mp_const_none;
 }
 
@@ -492,6 +495,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_OV2640),              MP_OBJ_NEW_SMALL_INT(OV2640_ID)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_OV7725),              MP_OBJ_NEW_SMALL_INT(OV7725_ID)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_MT9V034),             MP_OBJ_NEW_SMALL_INT(MT9V034_ID)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_LEPTON),              MP_OBJ_NEW_SMALL_INT(LEPTON_ID)},
 
     // Special effects
     { MP_OBJ_NEW_QSTR(MP_QSTR_NORMAL),              MP_OBJ_NEW_SMALL_INT(SDE_NORMAL)},          /* Normal/No SDE */

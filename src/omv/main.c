@@ -184,7 +184,9 @@ static const char fresh_selftest_py[] =
 "if __name__ == '__main__':\n"
 "    print('')\n"
 "    test_int_adc()\n"
-"    test_color_bars()\n"
+"    id = sensor.get_id()\n"
+"    if (id != sensor.MT9V034) and (id != sensor.LEPTON):\n"
+"        test_color_bars()\n"
 "\n"
 ;
 #endif
