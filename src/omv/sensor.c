@@ -30,7 +30,7 @@ TIM_HandleTypeDef  TIMHandle;
 DMA_HandleTypeDef  DMAHandle;
 DCMI_HandleTypeDef DCMIHandle;
 
-static int line = 0;
+static volatile int line = 0;
 extern uint8_t _line_buf;
 
 const int resolution[][2] = {
@@ -467,9 +467,18 @@ int sensor_set_framesize(framesize_t framesize)
 
     // Skip the first frame.
     MAIN_FB()->bpp = 0;
-    MAIN_FB()->w = sensor.fb_w = resolution[framesize][0];
-    MAIN_FB()->h = sensor.fb_h = resolution[framesize][1];
-    HAL_DCMI_DisableCROP(&DCMIHandle);
+
+    // Set MAIN FB x, y offset.
+    MAIN_FB()->x = 0;
+    MAIN_FB()->y = 0;
+
+    // Set MAIN FB width and height.
+    MAIN_FB()->w = resolution[framesize][0];
+    MAIN_FB()->h = resolution[framesize][1];
+
+    // Set MAIN FB backup width and height.
+    MAIN_FB()->u = resolution[framesize][0];
+    MAIN_FB()->v = resolution[framesize][1];
     return 0;
 }
 
@@ -495,10 +504,10 @@ int sensor_set_framerate(framerate_t framerate)
 
 int sensor_set_windowing(int x, int y, int w, int h)
 {
-    MAIN_FB()->w = sensor.fb_w = w;
-    MAIN_FB()->h = sensor.fb_h = h;
-    HAL_DCMI_ConfigCROP(&DCMIHandle, x*2, y, w*2-1, h-1);
-    HAL_DCMI_EnableCROP(&DCMIHandle);
+    MAIN_FB()->x = x;
+    MAIN_FB()->y = y;
+    MAIN_FB()->w = MAIN_FB()->u = w;
+    MAIN_FB()->h = MAIN_FB()->v = h;
     return 0;
 }
 
@@ -711,60 +720,7 @@ void DCMI_VsyncExtiCallback()
     }
 }
 
-// This function is called back after each line transfer is complete,
-// with a pointer to the line buffer that was used. At this point the
-// DMA transfers the next line to the other half of the line buffer.
-// Note:  For JPEG this function is called once (and ignored) at the end of the transfer.
-void DCMI_DMAConvCpltUser(uint32_t addr)
-{
-    uint8_t *src = (uint8_t*) addr;
-    uint8_t *dst = MAIN_FB()->pixels;
-
-    if (sensor.line_filter_func && sensor.line_filter_args) {
-        int bpp = ((sensor.pixformat == PIXFORMAT_GRAYSCALE) ? 1:2);
-        dst += line++ * MAIN_FB()->w * bpp;
-        // If there's an image filter installed call it.
-        // Note: BPP is the target BPP, not the line bpp (the line is always 2 bytes per pixel) if the target BPP is 1
-        // it means the image currently being read is going to be Grayscale, and the function needs to output w * 1BPP.
-        sensor.line_filter_func(src, MAIN_FB()->w * 2 , dst, MAIN_FB()->w * bpp, sensor.line_filter_args);
-    } else {
-        switch (sensor.pixformat) {
-            case PIXFORMAT_BAYER:
-                dst += line++ * MAIN_FB()->w;
-                for (int i=0; i<MAIN_FB()->w; i++) {
-                    dst[i] = src[i];
-                }
-                break;
-            case PIXFORMAT_GRAYSCALE:
-                dst += line++ * MAIN_FB()->w;
-                if (sensor.gs_bpp == 1) {
-                    // 1BPP GRAYSCALE.
-                    for (int i=0; i<MAIN_FB()->w; i++) {
-                        dst[i] = src[i];
-                    }
-                } else {
-                    // Extract Y channel from YUV.
-                    for (int i=0; i<MAIN_FB()->w; i++) {
-                        dst[i] = src[i<<1];
-                    }
-                }
-                break;
-            case PIXFORMAT_YUV422:
-            case PIXFORMAT_RGB565:
-                dst += line++ * MAIN_FB()->w * 2;
-                for (int i=0; i<MAIN_FB()->w * 2; i++) {
-                    dst[i] = src[i];
-                }
-                break;
-            case PIXFORMAT_JPEG:
-                break;
-            default:
-                break;
-        }
-    }
-}
-
-static void sensor_check_bufsize()
+static void sensor_check_buffsize()
 {
     int bpp=0;
     switch (sensor.pixformat) {
@@ -792,48 +748,105 @@ static void sensor_check_bufsize()
 
 }
 
-// The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
-// The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
-// overwrite image pixels before they are compressed.
+// This function is called back after each line transfer is complete,
+// with a pointer to the line buffer that was used. At this point the
+// DMA transfers the next line to the other half of the line buffer.
+// Note:  For JPEG this function is called once (and ignored) at the end of the transfer.
+void DCMI_DMAConvCpltUser(uint32_t addr)
+{
+    uint8_t *src = (uint8_t*) addr;
+    uint8_t *dst = MAIN_FB()->pixels;
+
+    uint16_t *src16 = (uint16_t*) addr;
+    uint16_t *dst16 = (uint16_t*) MAIN_FB()->pixels;
+
+
+    // Skip lines outside the window.
+    if (line >= MAIN_FB()->y && line <= (MAIN_FB()->y + MAIN_FB()->h)) {
+        switch (sensor.pixformat) {
+            case PIXFORMAT_BAYER:
+                dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                for (int i=0; i<MAIN_FB()->w; i++) {
+                    dst[i] = src[MAIN_FB()->x + i];
+                }
+                break;
+            case PIXFORMAT_GRAYSCALE:
+                dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                if (sensor.gs_bpp == 1) {
+                    // 1BPP GRAYSCALE.
+                    for (int i=0; i<MAIN_FB()->w; i++) {
+                        dst[i] = src[MAIN_FB()->x + i];
+                    }
+                } else {
+                    // Extract Y channel from YUV.
+                    for (int i=0; i<MAIN_FB()->w; i++) {
+                        dst[i] = src[MAIN_FB()->x * 2 + i * 2];
+                    }
+                }
+                break;
+            case PIXFORMAT_YUV422:
+            case PIXFORMAT_RGB565:
+                dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                for (int i=0; i<MAIN_FB()->w; i++) {
+                    dst16[i] = src16[MAIN_FB()->x + i];
+                }
+                break;
+            case PIXFORMAT_JPEG:
+                break;
+            default:
+                break;
+        }
+    }
+
+    line++;
+}
+
+// This is the default snapshot function, which can be replaced in sensor_init functions. This function
+// uses the DCMI and DMA to capture frames and each line is processed in the DCMI_DMAConvCpltUser function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, line_filter_t line_filter_func, void *line_filter_args)
 {
     uint32_t addr, length, tick_start;
-
-    // Set line filter
-    sensor_set_line_filter(line_filter_func, line_filter_args);
 
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
     // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
     fb_update_jpeg_buffer();
 
+    // Make sure the raw frame fits into the FB. If it doesn't it will be cropped if
+    // the format is set to GS, otherwise the pixel format will be swicthed to BAYER.
+    sensor_check_buffsize();
+
     // The user may have changed the MAIN_FB width or height on the last image so we need
     // to restore that here. We don't have to restore bpp because that's taken care of
     // already in the code below. Note that we do the JPEG compression above first to save
     // the FB of whatever the user set it to and now we restore.
-    MAIN_FB()->w = sensor->fb_w;
-    MAIN_FB()->h = sensor->fb_h;
+    MAIN_FB()->w = MAIN_FB()->u;
+    MAIN_FB()->h = MAIN_FB()->v;
 
-    // Make sure the raw frame fits FB. If it doesn't it will be cropped
-    // for GS, or the sensor pixel format will be swicthed to bayer for RGB.
-    sensor_check_bufsize();
+    // We use the stored frame size to read the whole frame. Note that cropping is
+    // done in the line function using the diemensions stored in MAIN_FB()->x,y,w,h.
+    uint32_t w = resolution[sensor->framesize][0];
+    uint32_t h = resolution[sensor->framesize][1];
+
+    // Set line filter function and args.
+    sensor_set_line_filter(line_filter_func, line_filter_args);
 
     // Setup the size and address of the transfer
     switch (sensor->pixformat) {
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             // RGB/YUV read 2 bytes per pixel.
-            length = (MAIN_FB()->w * MAIN_FB()->h * 2)/4;
+            length = (w * h * 2)/4;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_BAYER:
             // BAYER/RAW: 1 byte per pixel
-            length = (MAIN_FB()->w * MAIN_FB()->h * 1)/4;
+            length = (w * h * 1)/4;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_GRAYSCALE:
             // 1/2BPP Grayscale.
-            length = (MAIN_FB()->w * MAIN_FB()->h * sensor->gs_bpp)/4;
+            length = (w * h * sensor->gs_bpp)/4;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_JPEG:
@@ -861,7 +874,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, line_filter_t line_filter_
     } else {
         // Start a multibuffer transfer (line by line)
         HAL_DCMI_Start_DMA_MB(&DCMIHandle,
-                DCMI_MODE_SNAPSHOT, addr, length, MAIN_FB()->h);
+                DCMI_MODE_SNAPSHOT, addr, length, h);
     }
 
     // Wait for frame

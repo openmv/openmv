@@ -113,8 +113,6 @@ typedef struct _sensor {
     uint32_t vsync_pin;         // VSYNC GPIO output pin.
     GPIO_TypeDef *vsync_gpio;   // VSYNC GPIO output port.
 
-    uint32_t fb_w, fb_h;        // Backup for MAIN_FB().
-
     // Line pre-processing function and args
     void *line_filter_args;
     line_filter_t line_filter_func;

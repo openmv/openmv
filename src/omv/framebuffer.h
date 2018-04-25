@@ -12,7 +12,9 @@
 #include "mutex.h"
 
 typedef struct framebuffer {
+    int x,y;
     int w,h;
+    int u,v;
     int bpp;
     uint8_t pixels[];
 } framebuffer_t;
