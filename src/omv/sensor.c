@@ -276,6 +276,9 @@ int sensor_init()
     // Clear sensor chip ID.
     sensor.chip_id = 0;
 
+    // Set default snapshot function.
+    sensor.snapshot = sensor_snapshot;
+
     // Read ON semi sensor ID.
     cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
     if (sensor.chip_id == MT9V034_ID) {
@@ -760,7 +763,7 @@ static void sensor_check_bufsize()
 // The JPEG offset allows JPEG compression of the framebuffer without overwriting the pixels.
 // The offset size may need to be adjusted depending on the quality, otherwise JPEG data may
 // overwrite image pixels before they are compressed.
-int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_filter_args)
+int sensor_snapshot(sensor_t *sensor, image_t *image, line_filter_t line_filter_func, void *line_filter_args)
 {
     uint32_t addr, length, tick_start;
 
@@ -776,15 +779,15 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     // to restore that here. We don't have to restore bpp because that's taken care of
     // already in the code below. Note that we do the JPEG compression above first to save
     // the FB of whatever the user set it to and now we restore.
-    MAIN_FB()->w = sensor.fb_w;
-    MAIN_FB()->h = sensor.fb_h;
+    MAIN_FB()->w = sensor->fb_w;
+    MAIN_FB()->h = sensor->fb_h;
 
     // Make sure the raw frame fits FB. If it doesn't it will be cropped
     // for GS, or the sensor pixel format will be swicthed to bayer for RGB.
     sensor_check_bufsize();
 
     // Setup the size and address of the transfer
-    switch (sensor.pixformat) {
+    switch (sensor->pixformat) {
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             // RGB/YUV read 2 bytes per pixel.
@@ -798,7 +801,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
             break;
         case PIXFORMAT_GRAYSCALE:
             // 1/2BPP Grayscale.
-            length = (MAIN_FB()->w * MAIN_FB()->h * sensor.gs_bpp)/4;
+            length = (MAIN_FB()->w * MAIN_FB()->h * sensor->gs_bpp)/4;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_JPEG:
@@ -819,7 +822,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     // Enable DMA IRQ
     HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
 
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
+    if (sensor->pixformat == PIXFORMAT_JPEG) {
         // Start a regular transfer
         HAL_DCMI_Start_DMA(&DCMIHandle,
                 DCMI_MODE_SNAPSHOT, addr, length);
@@ -851,7 +854,7 @@ int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_f
     HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 
     // Fix the BPP
-    switch (sensor.pixformat) {
+    switch (sensor->pixformat) {
         case PIXFORMAT_GRAYSCALE:
             MAIN_FB()->bpp = 1;
             break;

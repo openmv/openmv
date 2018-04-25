@@ -78,7 +78,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
        line_filter_func = py_line_filter;
     }
 
-    if (sensor_snapshot((struct image*) py_image_cobj(image), line_filter_func, line_filter_args)==-1) {
+    if (sensor.snapshot(&sensor, (struct image*) py_image_cobj(image), line_filter_func, line_filter_args)==-1) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         return mp_const_false;
     }
@@ -99,7 +99,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
 
     if (!n_args) {
         while ((systick_current_millis() - millis) < time) { // 32-bit math handles wrap arrounds...
-            if (sensor_snapshot(NULL, NULL, NULL) == -1) {
+            if (sensor.snapshot(&sensor, NULL, NULL, NULL) == -1) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
             }
         }
@@ -109,7 +109,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
                 break;
             }
 
-            if (sensor_snapshot(NULL, NULL, NULL) == -1) {
+            if (sensor.snapshot(&sensor, NULL, NULL, NULL) == -1) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
             }
         }

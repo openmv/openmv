@@ -147,6 +147,7 @@ typedef struct _sensor {
     int  (*set_vflip)           (sensor_t *sensor, int enable);
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
+    int  (*snapshot)            (sensor_t *sensor, image_t *image, line_filter_t line_filter_func, void *line_filter_args);
 } sensor_t;
 
 // Resolution table
@@ -240,6 +241,6 @@ int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_arg
 // Set vsync output pin
 int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
 
-// Capture a Snapshot.
-int sensor_snapshot(image_t *image, line_filter_t line_filter_func, void *line_filter_args);
+// Default snapshot function.
+int sensor_snapshot(sensor_t *sensor, image_t *image, line_filter_t line_filter_func, void *line_filter_args);
 #endif /* __SENSOR_H__ */
