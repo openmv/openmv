@@ -948,8 +948,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
             case JPEG_SUBSAMPLE_1x1: {
                 int8_t YDU[64], UDU[64], VDU[64];
                 uint16_t rgbbuf[64];
-                for (int y=1; y<src->h-1; y+=8) {
-                    for (int x=1; x<src->w-1; x+=8) {
+                for (int y=0; y<src->h; y+=8) {
+                    for (int x=0; x<src->w; x+=8) {
                         imlib_bayer_to_rgb565(src, 8, 8, x, y, rgbbuf);
                         for (int r=0, idx=0; r<8; r++, idx+=8) {
                             YDU[idx + 0] = yuv_table[rgbbuf[idx + 0] * 3 + 0];
@@ -999,8 +999,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                 uint16_t rgbbuf[128];
                 int8_t YDU[128], UDU[64], VDU[64];
 
-                for (int y=1; y<src->h-1; y+=8) {
-                    for (int x=1; x<src->w-1; x+=16) {
+                for (int y=0; y<src->h; y+=8) {
+                    for (int x=0; x<src->w; x+=16) {
                         imlib_bayer_to_rgb565(src, 16, 8, x, y, rgbbuf);
                         for (int r=0, idx=0, ofs=0; r<8; r++, idx+=8, ofs+=16) {
                             YDU[idx + 0]      = yuv_table[rgbbuf[ofs + 0] * 3 + 0];
@@ -1056,8 +1056,8 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                 uint16_t rgbbuf[256];
                 int8_t YDU[256], UDU[64], VDU[64];
 
-                for (int y=1; y<src->h-1; y+=16) {
-                    for (int x=1; x<src->w-1; x+=16) {
+                for (int y=0; y<src->h; y+=16) {
+                    for (int x=0; x<src->w; x+=16) {
                         imlib_bayer_to_rgb565(src, 16, 16, x, y, rgbbuf);
                         for (int r=0, idx=0; r<8; r++, idx+=8) {
                             int ofs = r*16;

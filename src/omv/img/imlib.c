@@ -325,47 +325,47 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
         for (int x=xoffs; x<xoffs+w; x++) {
             if ((y % 2) == 0) { // Even row
                 if ((x % 2) == 0) { // Even col
-                    r = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x-1, y+1)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
+                    r = (IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x-1, y-1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x+1, y-1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x-1, y+1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x+1, y+1)) >> 2;
 
-                    g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x, y+1)  +
-                         IM_GET_RAW_PIXEL(img, x-1, y)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
+                    g = (IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y+1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x+1, y)) >> 2;
 
                     b = IM_GET_RAW_PIXEL(img,  x, y);
                 } else { // Odd col
-                    r = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
+                    r = (IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y+1)) >> 1;
 
-                    b = (IM_GET_RAW_PIXEL(img, x-1, y)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
+                    b = (IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x+1, y)) >> 1;
 
                     g =  IM_GET_RAW_PIXEL(img, x, y);
                 }
             } else { // Odd row
                 if ((x % 2) == 0) { // Even Col
-                    r = (IM_GET_RAW_PIXEL(img, x-1, y)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
+                    r = (IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x+1, y)) >> 1;
 
                     g =  IM_GET_RAW_PIXEL(img, x, y);
 
-                    b = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
+                    b = (IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y+1)) >> 1;
                 } else { // Odd col
                     r = IM_GET_RAW_PIXEL(img,  x, y);
 
-                    g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x, y+1)  +
-                         IM_GET_RAW_PIXEL(img, x-1, y)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
+                    g = (IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y+1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x+1, y)) >> 2;
 
-                    b = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x-1, y+1)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
+                    b = (IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x-1, y-1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x+1, y-1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x-1, y+1)  +
+                         IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x+1, y+1)) >> 2;
                 }
 
             }

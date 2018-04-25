@@ -826,6 +826,28 @@ extern const int kernel_high_pass_3[9];
        __typeof__ (y) _y = (y); \
        ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
 
+#define IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x, y) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       __typeof__ (y) _y = (y); \
+       _x = (_x < 0) ? 0 : (_x >= img->w) ? (img->w -1): _x; \
+       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
+
+#define IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       __typeof__ (y) _y = (y); \
+       _y = (_y < 0) ? 0 : (_y >= img->h) ? (img->h -1): _y; \
+       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
+
+#define IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x, y) \
+    ({ __typeof__ (img) _img = (img); \
+       __typeof__ (x) _x = (x); \
+       __typeof__ (y) _y = (y); \
+       _x = (_x < 0) ? 0 : (_x >= img->w) ? (img->w -1): _x; \
+       _y = (_y < 0) ? 0 : (_y >= img->h) ? (img->h -1): _y; \
+       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
+
 #define IM_GET_RGB565_PIXEL(img, x, y) \
     ({ __typeof__ (img) _img = (img); \
        __typeof__ (x) _x = (x); \
