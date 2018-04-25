@@ -1123,6 +1123,7 @@ void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
 void imlib_rgb_to_grayscale(simple_color_t *rgb, simple_color_t *grayscale);
 void imlib_grayscale_to_rgb(simple_color_t *grayscale, simple_color_t *rgb);
 uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v);
+void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf);
 
 /* Image file functions */
 void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);

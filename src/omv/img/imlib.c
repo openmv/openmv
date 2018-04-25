@@ -318,6 +318,64 @@ ALWAYS_INLINE uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v)
     return IM_RGB565(IM_R825(r), IM_G826(g), IM_B825(b));
 }
 
+void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf)
+{
+    int r, g, b;
+    for (int y=yoffs; y<yoffs+h; y++) {
+        for (int x=xoffs; x<xoffs+w; x++) {
+            if ((y % 2) == 0) { // Even row
+                if ((x % 2) == 0) { // Even col
+                    r = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x-1, y+1)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
+
+                    g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x, y+1)  +
+                         IM_GET_RAW_PIXEL(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
+
+                    b = IM_GET_RAW_PIXEL(img,  x, y);
+                } else { // Odd col
+                    r = (IM_GET_RAW_PIXEL(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
+
+                    b = (IM_GET_RAW_PIXEL(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
+
+                    g =  IM_GET_RAW_PIXEL(img, x, y);
+                }
+            } else { // Odd row
+                if ((x % 2) == 0) { // Even Col
+                    r = (IM_GET_RAW_PIXEL(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
+
+                    g =  IM_GET_RAW_PIXEL(img, x, y);
+
+                    b = (IM_GET_RAW_PIXEL(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
+                } else { // Odd col
+                    r = IM_GET_RAW_PIXEL(img,  x, y);
+
+                    g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x, y+1)  +
+                         IM_GET_RAW_PIXEL(img, x-1, y)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
+
+                    b = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y-1)  +
+                         IM_GET_RAW_PIXEL(img, x-1, y+1)  +
+                         IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
+                }
+
+            }
+            r = IM_R825(r);
+            g = IM_G826(g);
+            b = IM_B825(b);
+            *rgbbuf++ = IM_RGB565(r, g, b);
+        }
+    }
+}
 ////////////////////////////////////////////////////////////////////////////////
 
 static save_image_format_t imblib_parse_extension(image_t *img, const char *path)

@@ -52,69 +52,6 @@ typedef struct _jpeg_enc {
 static uint8_t mcubuf[512];
 static jpeg_enc_t jpeg_enc;
 
-void bayer_blk_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf)
-{
-    int r, g, b;
-    for (int y=yoffs; y<yoffs+h; y++) {
-        for (int x=xoffs; x<xoffs+w; x++) {
-            if (x > (img->w-1) || y > (img->h-1) || x < 1 || y < 1) {
-                r = g = b = 0;
-            } else {
-                if ((y % 2) == 0) { // Even row
-                    if ((x % 2) == 0) { // Even col
-                        r = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
-                                IM_GET_RAW_PIXEL(img, x+1, y-1)  +
-                                IM_GET_RAW_PIXEL(img, x-1, y+1)  +
-                                IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
-
-                        g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                                IM_GET_RAW_PIXEL(img, x, y+1)  +
-                                IM_GET_RAW_PIXEL(img, x-1, y)  +
-                                IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
-
-                        b = IM_GET_RAW_PIXEL(img,  x, y);
-                    } else { // Odd col
-                        r = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                                IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
-
-                        b = (IM_GET_RAW_PIXEL(img, x-1, y)  +
-                                IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
-
-                        g =  IM_GET_RAW_PIXEL(img, x, y);
-                    }
-                } else { // Odd row
-                    if ((x % 2) == 0) { // Even Col
-                        r = (IM_GET_RAW_PIXEL(img, x-1, y)  +
-                                IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
-
-                        g =  IM_GET_RAW_PIXEL(img, x, y);
-
-                        b = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                                IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
-                    } else { // Odd col
-                        r = IM_GET_RAW_PIXEL(img,  x, y);
-
-                        g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                                IM_GET_RAW_PIXEL(img, x, y+1)  +
-                                IM_GET_RAW_PIXEL(img, x-1, y)  +
-                                IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
-
-                        b = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
-                                IM_GET_RAW_PIXEL(img, x+1, y-1)  +
-                                IM_GET_RAW_PIXEL(img, x-1, y+1)  +
-                                IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
-                    }
-
-                }
-                r = IM_R825(r);
-                g = IM_G826(g);
-                b = IM_B825(b);
-            }
-            *rgbbuf++ = IM_RGB565(r, g, b);
-        }
-    }
-}
-
 static uint8_t *get_mcu()
 {
     uint8_t *Y0 = mcubuf;
@@ -143,7 +80,7 @@ static uint8_t *get_mcu()
         }
         case 3: {
             uint16_t rgbbuf[64];
-            bayer_blk_to_rgb565(jpeg_enc.img, 8, 8, jpeg_enc.x_offset, jpeg_enc.y_offset, rgbbuf); 
+            imlib_bayer_to_rgb565(jpeg_enc.img, 8, 8, jpeg_enc.x_offset, jpeg_enc.y_offset, rgbbuf); 
             for (int y=0, idx=0; y<8; y++) {
                 for (int x=0; x<8; x++, idx++) {
                     Y0[idx] = yuv_table[rgbbuf[idx] * 3 + 0] - 128;
@@ -751,67 +688,6 @@ static void jpeg_write_headers(jpeg_buf_t *jpeg_buf, int w, int h, int bpp, jpeg
     jpeg_put_bytes(jpeg_buf, (uint8_t [3]){0x00, 0x3F, 0x0}, 3);
 }
 
-
-static void bayer_blk_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf)
-{
-    int r, g, b;
-    for (int y=yoffs; y<yoffs+h; y++) {
-        for (int x=xoffs; x<xoffs+w; x++) {
-            if ((y % 2) == 0) { // Even row
-                if ((x % 2) == 0) { // Even col
-                    r = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x-1, y+1)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
-
-                    g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x, y+1)  +
-                         IM_GET_RAW_PIXEL(img, x-1, y)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
-
-                    b = IM_GET_RAW_PIXEL(img,  x, y);
-                } else { // Odd col
-                    r = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
-
-                    b = (IM_GET_RAW_PIXEL(img, x-1, y)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
-
-                    g =  IM_GET_RAW_PIXEL(img, x, y);
-                }
-            } else { // Odd row
-                if ((x % 2) == 0) { // Even Col
-                    r = (IM_GET_RAW_PIXEL(img, x-1, y)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 1;
-
-                    g =  IM_GET_RAW_PIXEL(img, x, y);
-
-                    b = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x, y+1)) >> 1;
-                } else { // Odd col
-                    r = IM_GET_RAW_PIXEL(img,  x, y);
-
-                    g = (IM_GET_RAW_PIXEL(img, x, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x, y+1)  +
-                         IM_GET_RAW_PIXEL(img, x-1, y)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y)) >> 2;
-
-                    b = (IM_GET_RAW_PIXEL(img, x-1, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y-1)  +
-                         IM_GET_RAW_PIXEL(img, x-1, y+1)  +
-                         IM_GET_RAW_PIXEL(img, x+1, y+1)) >> 2;
-                }
-
-            }
-            r = IM_R825(r);
-            g = IM_G826(g);
-            b = IM_B825(b);
-            *rgbbuf++ = IM_RGB565(r, g, b);
-        }
-    }
-}
-
-
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 {
     int DCY=0, DCU=0, DCV=0;
@@ -1074,7 +950,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                 uint16_t rgbbuf[64];
                 for (int y=1; y<src->h-1; y+=8) {
                     for (int x=1; x<src->w-1; x+=8) {
-                        bayer_blk_to_rgb565(src, 8, 8, x, y, rgbbuf);
+                        imlib_bayer_to_rgb565(src, 8, 8, x, y, rgbbuf);
                         for (int r=0, idx=0; r<8; r++, idx+=8) {
                             YDU[idx + 0] = yuv_table[rgbbuf[idx + 0] * 3 + 0];
                             UDU[idx + 0] = yuv_table[rgbbuf[idx + 0] * 3 + 1];
@@ -1125,7 +1001,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 
                 for (int y=1; y<src->h-1; y+=8) {
                     for (int x=1; x<src->w-1; x+=16) {
-                        bayer_blk_to_rgb565(src, 16, 8, x, y, rgbbuf);
+                        imlib_bayer_to_rgb565(src, 16, 8, x, y, rgbbuf);
                         for (int r=0, idx=0, ofs=0; r<8; r++, idx+=8, ofs+=16) {
                             YDU[idx + 0]      = yuv_table[rgbbuf[ofs + 0] * 3 + 0];
                             YDU[idx + 1]      = yuv_table[rgbbuf[ofs + 1] * 3 + 0];
@@ -1182,7 +1058,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 
                 for (int y=1; y<src->h-1; y+=16) {
                     for (int x=1; x<src->w-1; x+=16) {
-                        bayer_blk_to_rgb565(src, 16, 16, x, y, rgbbuf);
+                        imlib_bayer_to_rgb565(src, 16, 16, x, y, rgbbuf);
                         for (int r=0, idx=0; r<8; r++, idx+=8) {
                             int ofs = r*16;
                             YDU[idx + 0]       = yuv_table[rgbbuf[ofs + 0] * 3 + 0];
