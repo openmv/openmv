@@ -153,6 +153,8 @@
 #define WINC_SPI                (SPI2)
 #define WINC_SPI_AF             (GPIO_AF5_SPI2)
 #define WINC_SPI_TIMEOUT        (1000)
+// SPI1/2/3 clock source is PCLK1 (54MHz/2 == 27MHz).
+#define WINC_SPI_PRESCALER      (SPI_BAUDRATEPRESCALER_2)
 #define WINC_SPI_CLK_ENABLE()   __HAL_RCC_SPI2_CLK_ENABLE()
 
 #define WINC_SPI_SCLK_PIN       (GPIO_PIN_13)
