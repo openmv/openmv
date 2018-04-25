@@ -242,10 +242,13 @@ static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
 }
 
 static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj) {
-    mp_uint_t array_len;
-    mp_obj_t *array;
-    mp_obj_get_array(roi_obj, &array_len, &array);
     int x, y, w, h;
+    int res_w = resolution[sensor.framesize][0];
+    int res_h = resolution[sensor.framesize][1];
+
+    mp_obj_t *array;
+    mp_uint_t array_len;
+    mp_obj_get_array(roi_obj, &array_len, &array);
 
     if (array_len == 4) {
         x = mp_obj_get_int(array[0]);
@@ -255,11 +258,21 @@ static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj) {
     } else if (array_len == 2) {
         w = mp_obj_get_int(array[0]);
         h = mp_obj_get_int(array[1]);
-        x = (resolution[sensor.framesize][0] / 2) - (w / 2);
-        y = (resolution[sensor.framesize][1] / 2) - (h / 2);
+        x = (res_w / 2) - (w / 2);
+        y = (res_h / 2) - (h / 2);
     } else {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
-            "tuple/list must either be (x, y, w, h) or (w, h)"));
+            "The tuple/list must either be (x, y, w, h) or (w, h)"));
+    }
+
+    if (w < 8 || h < 8) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+            "The selected window is too small"));
+    }
+
+    if (x < 0 || (x + w) > res_w || y < 0 || (y + h) > res_h) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+            "The selected window is outside the bounds of the frame"));
     }
 
     if (sensor_set_windowing(x, y, w, h) != 0) {
