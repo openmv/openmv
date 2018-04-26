@@ -239,7 +239,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             // sanitize values
             ADC_resolution  = ((ADC_resolution > 18)? 18:(ADC_resolution < 15)? 15:ADC_resolution) - 15;
-            IR_refresh_rate = 14 - __CLZ(__RBIT((IR_refresh_rate > 512) ? 512:(IR_refresh_rate < 1)? 1:IR_refresh_rate));
+            IR_refresh_rate = __CLZ((IR_refresh_rate > 512) ? 512:(IR_refresh_rate < 1)? 1:IR_refresh_rate) - 17;
 
             a_ij = xalloc(64 * sizeof(*a_ij));
             b_ij = xalloc(64 * sizeof(*b_ij));
