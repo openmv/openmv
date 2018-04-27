@@ -285,7 +285,7 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
-static int snapshot(sensor_t *sensor, image_t *image, line_filter_t line_filter_func, void *line_filter_args)
+static int snapshot(sensor_t *sensor, image_t *image)
 {
     if ((!h_res) || (!v_res) || (!sensor->framesize) || (!sensor->pixformat)) {
         return -1;

@@ -370,9 +370,6 @@ int sensor_reset()
     sensor.gainceiling = 0;
     sensor.vsync_gpio  = NULL;
 
-    // Reset image filter
-    sensor_set_line_filter(NULL, NULL);
-
     // Call sensor-specific reset function
     if (sensor.reset(&sensor) != 0) {
         return -1;
@@ -693,14 +690,6 @@ int sensor_set_lens_correction(int enable, int radi, int coef)
     return 0;
 }
 
-int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_args)
-{
-    // Set line pre-processing function and args
-    sensor.line_filter_func = line_filter_func;
-    sensor.line_filter_args = line_filter_args;
-    return 0;
-}
-
 int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin)
 {
     sensor.vsync_pin  = pin;
@@ -803,7 +792,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 
 // This is the default snapshot function, which can be replaced in sensor_init functions. This function
 // uses the DCMI and DMA to capture frames and each line is processed in the DCMI_DMAConvCpltUser function.
-int sensor_snapshot(sensor_t *sensor, image_t *image, line_filter_t line_filter_func, void *line_filter_args)
+int sensor_snapshot(sensor_t *sensor, image_t *image)
 {
     uint32_t addr, length, tick_start;
 
@@ -827,9 +816,6 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, line_filter_t line_filter_
     // done in the line function using the diemensions stored in MAIN_FB()->x,y,w,h.
     uint32_t w = resolution[sensor->framesize][0];
     uint32_t h = resolution[sensor->framesize][1];
-
-    // Set line filter function and args.
-    sensor_set_line_filter(line_filter_func, line_filter_args);
 
     // Setup the size and address of the transfer
     switch (sensor->pixformat) {

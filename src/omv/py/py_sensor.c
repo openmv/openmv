@@ -38,47 +38,14 @@ static mp_obj_t py_sensor_flush() {
     return mp_const_none;
 }
 
-/*
- * Filter functions bypass the default line processing in sensor.c, and pre-process lines before anything else.
- * Processing is done on the fly, i.e. line filters are called from sensor_snapshot after each line is readout.
- *
-*
- * Note2: This double indirection is to decouple omv/img code from omv/py code as much as possible.
- */
-static void py_line_filter(uint8_t *src, int src_stride, uint8_t *dst, int dst_stride, void *args)
-{
-    nlr_buf_t nlr;
-    if (nlr_push(&nlr) == 0) {
-        mp_call_function_2((mp_obj_t) args,                  // Callback function
-            mp_obj_new_bytearray_by_ref(src_stride, src),    // Source line buffer
-            mp_obj_new_bytearray_by_ref(dst_stride, dst));   // Destination line buffer
-        nlr_pop();
-    } else {
-        // Uncaught exception; disable the callback so it doesn't run again.
-        sensor_set_line_filter(NULL, NULL);
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
-    }
-}
-
 static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     // Snapshot image
     mp_obj_t image = py_image(0, 0, 0, 0);
 
-    // Line pre-processing function and args
-    mp_obj_t line_filter_args = NULL;
-    line_filter_t line_filter_func = NULL;
-
     // Sanity checks
     PY_ASSERT_TRUE_MSG((sensor.pixformat != PIXFORMAT_JPEG), "Operation not supported on JPEG");
 
-    // Lookup filter function
-    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_line_filter), MP_MAP_LOOKUP);
-    if (kw_arg != NULL) {
-       line_filter_args = kw_arg->value;
-       line_filter_func = py_line_filter;
-    }
-
-    if (sensor.snapshot(&sensor, (struct image*) py_image_cobj(image), line_filter_func, line_filter_args)==-1) {
+    if (sensor.snapshot(&sensor, (image_t*) py_image_cobj(image))==-1) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         return mp_const_false;
     }
@@ -99,7 +66,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
 
     if (!n_args) {
         while ((systick_current_millis() - millis) < time) { // 32-bit math handles wrap arrounds...
-            if (sensor.snapshot(&sensor, NULL, NULL, NULL) == -1) {
+            if (sensor.snapshot(&sensor, NULL) == -1) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
             }
         }
@@ -109,7 +76,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
                 break;
             }
 
-            if (sensor.snapshot(&sensor, NULL, NULL, NULL) == -1) {
+            if (sensor.snapshot(&sensor, NULL) == -1) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
             }
         }

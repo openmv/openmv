@@ -92,8 +92,6 @@ typedef enum {
     ACTIVE_HIGH
 } polarity_t;
 
-typedef void (*line_filter_t) (uint8_t *src, int src_stride, uint8_t *dst, int dst_stride, void *args);
-
 #define SENSOR_HW_FLAGS_VSYNC        (0) // vertical sync polarity.
 #define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
 #define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
@@ -112,10 +110,6 @@ typedef struct _sensor {
 
     uint32_t vsync_pin;         // VSYNC GPIO output pin.
     GPIO_TypeDef *vsync_gpio;   // VSYNC GPIO output port.
-
-    // Line pre-processing function and args
-    void *line_filter_args;
-    line_filter_t line_filter_func;
 
     polarity_t pwdn_pol; // PWDN polarity (TODO move to hw_flags)
     polarity_t reset_pol; // Reset polarity (TODO move to hw_flags)
@@ -151,7 +145,7 @@ typedef struct _sensor {
     int  (*set_vflip)           (sensor_t *sensor, int enable);
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
-    int  (*snapshot)            (sensor_t *sensor, image_t *image, line_filter_t line_filter_func, void *line_filter_args);
+    int  (*snapshot)            (sensor_t *sensor, image_t *image);
 } sensor_t;
 
 // Resolution table
@@ -239,12 +233,9 @@ int sensor_set_special_effect(sde_t sde);
 // Set lens shading correction
 int sensor_set_lens_correction(int enable, int radi, int coef);
 
-// Set filter function.
-int sensor_set_line_filter(line_filter_t line_filter_func, void *line_filter_args);
-
 // Set vsync output pin
 int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
 
 // Default snapshot function.
-int sensor_snapshot(sensor_t *sensor, image_t *image, line_filter_t line_filter_func, void *line_filter_args);
+int sensor_snapshot(sensor_t *sensor, image_t *image);
 #endif /* __SENSOR_H__ */
