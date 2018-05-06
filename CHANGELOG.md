@@ -1,4 +1,10 @@
 # Change Log
+## [2.9](https://github.com/openmv/openmv/releases/tag/v2.9) (2018-05-06)
+* Fix BAYER boundary issue.
+* Re-enable SD DMA transfers.
+* Fix bug in non-DMA SD transfers.
+* Add FLIR Lepton1/2/3 support.
+
 ## [2.8](https://github.com/openmv/openmv/releases/tag/v2.8) (2018-04-23)
 * Improved H7 support.
 * Enable text scaling.
