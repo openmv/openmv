@@ -453,7 +453,8 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
 
 #ifdef IMLIB_ENABLE_FIND_CIRCLES
 void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
-                        uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin)
+                        uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin,
+                        unsigned int r_min, unsigned int r_max, unsigned int r_step)
 {
     uint16_t *theta_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h);
     uint16_t *magnitude_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h);
@@ -675,7 +676,7 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
     list_init(out, sizeof(find_circles_list_lnk_data_t));
 
-    for (int r = 2, rr = IM_MIN((roi->w / 2), (roi->h / 2)); r < rr; r += 2) { // ignore r = 0/1
+    for (int r = r_min, rr = r_max; r < rr; r += r_step) { // ignore r = 0/1
         int a_size, b_size, hough_divide = 1; // divides a and b accumulators
         int w_size = roi->w - (2 * r);
         int h_size = roi->h - (2 * r);

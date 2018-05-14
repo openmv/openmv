@@ -1348,7 +1348,8 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
                               uint32_t threshold, unsigned int theta_margin, unsigned int rho_margin,
                               uint32_t segment_threshold);
 void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
-                        uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin);
+                        uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin,
+                        unsigned int r_min, unsigned int r_max, unsigned int r_step);
 void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi,
                       uint32_t threshold);
 // 1/2D Bar Codes
