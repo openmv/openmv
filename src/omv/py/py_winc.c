@@ -432,7 +432,7 @@ static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byt
         py_winc_socket_close(socket);
         return -1;
     }
-    return 0;
+    return ret;
 }
 
 static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno)
@@ -443,7 +443,7 @@ static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf
         py_winc_socket_close(socket);
         return -1;
     }
-    return 0;
+    return ret;
 }
 
 static mp_uint_t py_winc_socket_sendto(mod_network_socket_obj_t *socket,
@@ -456,7 +456,7 @@ static mp_uint_t py_winc_socket_sendto(mod_network_socket_obj_t *socket,
         py_winc_socket_close(socket);
         return -1;
     }
-    return 0;
+    return ret;
 }
 
 static mp_uint_t py_winc_socket_recvfrom(mod_network_socket_obj_t *socket,
@@ -470,7 +470,7 @@ static mp_uint_t py_winc_socket_recvfrom(mod_network_socket_obj_t *socket,
         py_winc_socket_close(socket);
         return -1;
     }
-    return 0;
+    return ret;
 }
 
 static int py_winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
