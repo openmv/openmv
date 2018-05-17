@@ -5971,7 +5971,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
             count = orb_match_keypoints(kpts1->kpts, kpts2->kpts, match, threshold, &r, &c, &theta);
 
             // Add matching keypoints to Python list.
-            for (int i=0; i<count; i+=2) {
+            for (int i=0; i<count*2; i+=2) {
                 mp_obj_t index_obj[2] = {
                     mp_obj_new_int(match[i+0]),
                     mp_obj_new_int(match[i+1]),
