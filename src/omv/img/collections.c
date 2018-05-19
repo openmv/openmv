@@ -294,7 +294,9 @@ void list_pop_front(list_t *ptr, void *data)
         memcpy(data, tmp->data, ptr->data_len);
     }
 
-    tmp->next_ptr->prev_ptr = NULL;
+    if (tmp->next_ptr) {
+        tmp->next_ptr->prev_ptr = NULL;
+    }
     ptr->head_ptr = tmp->next_ptr;
     ptr->size -= 1;
     xfree(tmp);
