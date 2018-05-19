@@ -97,6 +97,7 @@ CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
+CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/nn/
 CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
@@ -212,6 +213,10 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	cifar10_model.o                         \
 	)
 
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/nn/,\
+	nn.o                                    \
+	)
+
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_helper.o                             \
 	py_omv.o                                \
@@ -224,6 +229,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_mjpeg.o                              \
 	py_winc.o                               \
 	py_cpufreq.o                            \
+	py_nn.o                                 \
 	)
 
 

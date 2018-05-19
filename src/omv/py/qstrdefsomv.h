@@ -133,6 +133,13 @@ Q(MT9V034)
 Q(LEPTON)
 Q(value)
 
+// NN Module
+Q(load)
+
+// Net
+Q(Net)
+Q(forward)
+
 // C/SIF Resolutions
 Q(QQCIF)
 Q(QCIF)
