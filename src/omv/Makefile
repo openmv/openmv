@@ -20,6 +20,7 @@ SRCS += $(addprefix ,   \
 	stm32fxxx_hal_msp.c \
 	soft_i2c.c          \
 	mutex.c             \
+	trace.c             \
    )
 
 SRCS += $(addprefix img/,   \
