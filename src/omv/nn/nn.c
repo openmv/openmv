@@ -165,14 +165,14 @@ int nn_load_network(nn_t *net, const char *path)
                 // Alloc and read weights array
                 read_data(&fp, &conv_layer->w_size, 4);
                 printf("weights: %lu ", conv_layer->w_size);
-                conv_layer->w = xalloc(conv_layer->w_size);
-                read_data(&fp, conv_layer->w, conv_layer->w_size);
+                conv_layer->wt = xalloc(conv_layer->w_size);
+                read_data(&fp, conv_layer->wt, conv_layer->w_size);
 
                 // Alloc and read bias array
                 read_data(&fp, &conv_layer->b_size, 4);
                 printf("bias: %lu\n", conv_layer->b_size);
-                conv_layer->b = xalloc(conv_layer->b_size);
-                read_data(&fp, conv_layer->b, conv_layer->b_size);
+                conv_layer->bias = xalloc(conv_layer->b_size);
+                read_data(&fp, conv_layer->bias, conv_layer->b_size);
                 break;
             }
 
@@ -185,7 +185,7 @@ int nn_load_network(nn_t *net, const char *path)
             case LAYER_TYPE_POOL: {
                 pool_layer_t *pool_layer = (pool_layer_t *) layer;
                 // Read pooling layer type
-                read_data(&fp, &pool_layer->type, 4);
+                read_data(&fp, &pool_layer->ptype, 4);
                 // Read krnel dim, stride and padding
                 read_data(&fp, &pool_layer->krn_dim, 4);
                 read_data(&fp, &pool_layer->krn_str, 4);
@@ -206,14 +206,14 @@ int nn_load_network(nn_t *net, const char *path)
                 // Alloc and read weights array
                 read_data(&fp, &ip_layer->w_size, 4);
                 printf("weights: %lu ", ip_layer->w_size);
-                ip_layer->w = xalloc(ip_layer->w_size);
-                read_data(&fp, ip_layer->w, ip_layer->w_size);
+                ip_layer->wt = xalloc(ip_layer->w_size);
+                read_data(&fp, ip_layer->wt, ip_layer->w_size);
 
                 // Alloc and read bias array
                 read_data(&fp, &ip_layer->b_size, 4);
                 printf("bias %lu\n", ip_layer->b_size);
-                ip_layer->b = xalloc(ip_layer->b_size);
-                read_data(&fp, ip_layer->b, ip_layer->b_size);
+                ip_layer->bias = xalloc(ip_layer->b_size);
+                read_data(&fp, ip_layer->bias, ip_layer->b_size);
                 break;
             }
         }
@@ -234,7 +234,7 @@ int nn_load_network(nn_t *net, const char *path)
 
         if (layer->type == LAYER_TYPE_CONV) {
             conv_layer_t *conv_layer = (conv_layer_t *) layer;
-            uint32_t im2col_buffer_size = 2 * 2 * layer->c * conv_layer->krn_dim * conv_layer->krn_dim;
+            uint32_t im2col_buffer_size = 2 * 2 * conv_layer->c * conv_layer->krn_dim * conv_layer->krn_dim;
             max_colbuf_size = IM_MAX(max_colbuf_size, im2col_buffer_size);
         }
 
@@ -269,7 +269,7 @@ error:
     return res;
 }
 
-int nn_run_network(nn_t *net, image_t *image)
+int nn_run_network(nn_t *net, image_t *img, int8_t *output)
 {
     return 0;
 }

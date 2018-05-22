@@ -26,22 +26,25 @@ typedef enum {
     NETWORK_TYPE_CAFFE = 0,
 } network_type_t;
 
+#define NN_LAYER_BASE   \
+    layer_type_t type;  \
+    uint32_t c, h, w;   \
+    struct _layer *prev;\
+    struct _layer *next \
+
 typedef struct _layer {
-    layer_type_t type;
-    uint32_t c, h, w;
-    struct _layer *prev;
-    struct _layer *next;
+    NN_LAYER_BASE;
 } layer_t;
 
 typedef struct {
-    layer_t base;
+    NN_LAYER_BASE;
     uint32_t r_mean;
     uint32_t g_mean;
     uint32_t b_mean;
 } data_layer_t;
 
 typedef struct {
-    layer_t base;
+    NN_LAYER_BASE;
     uint32_t l_shift;
     uint32_t r_shift;
     uint32_t krn_dim;
@@ -49,28 +52,28 @@ typedef struct {
     uint32_t krn_pad;
     uint32_t w_size;
     uint32_t b_size;
-    int8_t *w, *b;
+    int8_t *wt, *bias;
 } conv_layer_t;
 
 typedef struct {
-    layer_t base;
+    NN_LAYER_BASE;
 } relu_layer_t;
 
 typedef struct {
-    layer_t base;
-    pool_type_t type;
+    NN_LAYER_BASE;
+    pool_type_t ptype;
     uint32_t krn_dim;
     uint32_t krn_str;
     uint32_t krn_pad;
 } pool_layer_t;
 
 typedef struct {
-    layer_t base;
+    NN_LAYER_BASE;
     uint32_t l_shift;
     uint32_t r_shift;
     uint32_t w_size;
     uint32_t b_size;
-    int8_t *w, *b;
+    int8_t *wt, *bias;
 } ip_layer_t;
 
 typedef struct {
@@ -84,5 +87,5 @@ typedef struct {
 
 int nn_dump_network(nn_t *net);
 int nn_load_network(nn_t *net, const char *path);
-int nn_run_network(nn_t *net, image_t *image);
+int nn_run_network(nn_t *net, image_t *img, int8_t *output);
 #endif //#define __CNN_H__
