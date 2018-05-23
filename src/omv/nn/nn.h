@@ -28,7 +28,7 @@ typedef enum {
 
 #define NN_LAYER_BASE   \
     layer_type_t type;  \
-    uint32_t c, h, w;   \
+    uint32_t n, c, h, w;\
     struct _layer *prev;\
     struct _layer *next \
 
@@ -84,6 +84,16 @@ typedef struct {
     uint32_t max_scrbuf_size;
     layer_t *layers;
 } nn_t;
+
+typedef arm_status (*conv_func_t) (const q7_t * Im_in, const uint16_t dim_im_in, const uint16_t ch_im_in,
+        const q7_t * wt, const uint16_t ch_im_out, const uint16_t dim_kernel, const uint16_t padding,
+        const uint16_t stride, const q7_t * bias, const uint16_t bias_shift, const uint16_t out_shift,
+        q7_t * Im_out,  const uint16_t dim_im_out,  q15_t * bufferA,  q7_t * bufferB);
+
+typedef void (*pool_func_t)(q7_t * Im_in, const uint16_t dim_im_in, const uint16_t ch_im_in,
+        const uint16_t dim_kernel, const uint16_t padding, const uint16_t stride,
+        const uint16_t dim_im_out, q7_t * bufferA, q7_t * Im_out);
+
 
 int nn_dump_network(nn_t *net);
 int nn_load_network(nn_t *net, const char *path);

@@ -30,10 +30,17 @@ void *py_net_cobj(mp_obj_t net)
 
 STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    int8_t output_data[10];
     nn_t *net = py_net_cobj(args[0]);
     image_t *img = py_helper_arg_to_image_mutable(args[1]);
-    nn_run_network(net, img);
-    return mp_const_none;
+    nn_run_network(net, img, output_data);
+
+    mp_obj_t output_list = mp_obj_new_list(0, NULL);
+    for (int i=0; i<10; i++) {
+        mp_obj_list_append(output_list, mp_obj_new_int(output_data[i]));
+    }
+
+    return output_list;
 }
 
 STATIC void py_net_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
