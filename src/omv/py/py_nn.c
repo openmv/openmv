@@ -14,6 +14,7 @@
 #include "py_helper.h"
 #include "py_assert.h"
 #include "omv_boardconfig.h"
+#include <stdbool.h>
 
 static const mp_obj_type_t py_net_type;
 
@@ -30,16 +31,22 @@ void *py_net_cobj(mp_obj_t net)
 
 STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    int8_t output_data[10];
     nn_t *net = py_net_cobj(args[0]);
     image_t *img = py_helper_arg_to_image_mutable(args[1]);
-    nn_run_network(net, img, output_data);
 
+    int8_t output_data[10]; //TODO alloc output buffer
     mp_obj_t output_list = mp_obj_new_list(0, NULL);
+    bool dry_run =  py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
+
+    if (dry_run == false) {
+        nn_run_network(net, img, output_data);
+    } else {
+        nn_dry_run_network(net, img, output_data);
+    }
+
     for (int i=0; i<10; i++) {
         mp_obj_list_append(output_list, mp_obj_new_int(output_data[i]));
     }
-
     return output_list;
 }
 

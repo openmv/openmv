@@ -273,19 +273,6 @@ error:
     return res;
 }
 
-#define BUFFER_2STR(buffer)\
-        (buffer == buffer1)     ? "buffer1":\
-        (buffer == buffer2)     ? "buffer2":\
-        (buffer == input_data)  ? "input_data":\
-        (buffer == output_data) ? "output_data": "???"
-
-#define CONV_FUNC_2STR(conv_func)\
-        (conv_func == arm_convolve_HWC_q7_basic) ? "arm_convolve_HWC_q7_basic" :\
-        (conv_func == arm_convolve_HWC_q7_fast ) ? "arm_convolve_HWC_q7_fast":"arm_convolve_HWC_q7_RGB"
-
-#define POOL_FUNC_2STR(pool_func)\
-        (pool_func == arm_maxpool_q7_HWC) ? "arm_maxpool_q7_HWC" : "arm_avepool_q7_HWC"
-
 int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
 {
     uint32_t layer_idx = 0;
@@ -301,13 +288,13 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
         return -1;
     }
 
-    q7_t *buffer1     = fb_alloc0(net->max_scrbuf_size);
-    q7_t *buffer2     = buffer1 + net->max_layer_size;
-    q7_t *col_buffer  = fb_alloc0(net->max_colbuf_size);
-
     q7_t *input_data    = NULL;
     q7_t *input_buffer  = NULL;
     q7_t *output_buffer = NULL;
+
+    q7_t *buffer1     = fb_alloc0(net->max_scrbuf_size);
+    q7_t *buffer2     = buffer1 + net->max_layer_size;
+    q7_t *col_buffer  = fb_alloc0(net->max_colbuf_size);
 
     while (layer != NULL) {
         layer_t *prev_layer = layer->prev;
@@ -347,12 +334,6 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
                 } else {
                     conv_func = arm_convolve_HWC_q7_fast;
                 }
-                debug_printf("forward: %s(%s, %lu, %lu, %s, %lu, %lu, %lu, %lu, %s, %lu, %lu, %s, %lu, %s, %p);\n",
-                        CONV_FUNC_2STR(conv_func), BUFFER_2STR(input_buffer),
-                        prev_layer->h, prev_layer->c, "conv_wt", conv_layer->c, 
-                        conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_str,
-                        "conv_bias", conv_layer->l_shift, conv_layer->r_shift,
-                        BUFFER_2STR(output_buffer), conv_layer->h, "col_buffer", NULL);
                 conv_func(input_buffer, prev_layer->h, prev_layer->c, conv_layer->wt, conv_layer->c, 
                         conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_str, conv_layer->bias,
                         conv_layer->l_shift, conv_layer->r_shift, output_buffer, conv_layer->h, (q15_t*)col_buffer, NULL); 
@@ -361,8 +342,6 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
 
             case LAYER_TYPE_RELU: {
                 relu_layer_t *relu_layer = (relu_layer_t *) layer;
-                debug_printf("forward: arm_relu_q7(%s, %lu*%lu*%lu);\n",
-                        BUFFER_2STR(input_buffer), relu_layer->h, relu_layer->w, relu_layer->c);
                 arm_relu_q7(input_buffer, relu_layer->h * relu_layer->w * relu_layer->c);
                 break;
             }
@@ -375,10 +354,6 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
                 } else {
                     pool_func = arm_avepool_q7_HWC;
                 }
-                debug_printf("forward: %s(%s, %lu, %lu, %lu, %lu, %lu, %lu, %s, %s);\n",
-                        POOL_FUNC_2STR(pool_func), BUFFER_2STR(input_buffer),
-                        prev_layer->h, prev_layer->c, pool_layer->krn_dim,
-                        pool_layer->krn_pad, pool_layer->krn_str, layer->w, "col_buffer", BUFFER_2STR(output_buffer));
                 pool_func(input_buffer, prev_layer->h, prev_layer->c, pool_layer->krn_dim,
                         pool_layer->krn_pad, pool_layer->krn_str, layer->w, col_buffer, output_buffer);
                 break;
@@ -386,11 +361,146 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
 
             case LAYER_TYPE_IP: {
                 ip_layer_t *ip_layer = (ip_layer_t*) layer;
-                debug_printf("forward: arm_fully_connected_q7_opt(%s, %s, %lu, %lu, %lu, %lu, %s, %s, %s);\n",
-                        BUFFER_2STR(input_buffer), "ip_wt", prev_layer->c * prev_layer->h * prev_layer->w,
-                        ip_layer->c, ip_layer->l_shift, ip_layer->r_shift, "ip_bias", BUFFER_2STR(output_buffer), "col_buffer");
                 arm_fully_connected_q7_opt(input_buffer, ip_layer->wt, prev_layer->c * prev_layer->h * prev_layer->w,
                         ip_layer->c, ip_layer->l_shift, ip_layer->r_shift, ip_layer->bias, output_buffer, (q15_t*)col_buffer);
+                break;
+            }
+        }
+
+        if (layer_idx++ > 0) {
+            if (input_buffer == input_data) {
+                // Image data has been processed
+                input_buffer = buffer2;
+            }
+
+            if (layer->type != LAYER_TYPE_RELU) {
+                // Switch buffers
+                q7_t *tmp_buffer = input_buffer;
+                input_buffer  = output_buffer;
+                output_buffer = tmp_buffer;
+            }
+
+            // Last layer
+            if (layer->next && layer->next->next == NULL) {
+                output_buffer = output_data;
+            }
+        }
+
+        layer = layer->next;
+    }
+
+    fb_free_all();
+    return 0;
+}
+
+#define BUFFER_2STR(buffer)\
+        (buffer == buffer1)     ? "buffer1":\
+        (buffer == buffer2)     ? "buffer2":\
+        (buffer == input_data)  ? "input_data":\
+        (buffer == output_data) ? "output_data": "???"
+
+#define CONV_FUNC_2STR(conv_func)\
+        (conv_func == arm_convolve_HWC_q7_basic) ? "arm_convolve_HWC_q7_basic" :\
+        (conv_func == arm_convolve_HWC_q7_fast ) ? "arm_convolve_HWC_q7_fast":"arm_convolve_HWC_q7_RGB"
+
+#define POOL_FUNC_2STR(pool_func)\
+        (pool_func == arm_maxpool_q7_HWC) ? "arm_maxpool_q7_HWC" : "arm_avepool_q7_HWC"
+
+int nn_dry_run_network(nn_t *net, image_t *img, int8_t *output_data)
+{
+    uint32_t layer_idx = 0;
+    layer_t *layer = net->layers;
+
+    if (layer == NULL) {
+        printf("First layer is NULL!\n");
+        return -1;
+    }
+
+    if (layer->type != LAYER_TYPE_DATA) {
+        printf("First layer is not a DATA layer!\n");
+        return -1;
+    }
+
+    q7_t *input_data    = NULL;
+    q7_t *input_buffer  = NULL;
+    q7_t *output_buffer = NULL;
+
+    q7_t *buffer1     = fb_alloc0(net->max_scrbuf_size);
+    q7_t *buffer2     = buffer1 + net->max_layer_size;
+
+    while (layer != NULL) {
+        layer_t *prev_layer = layer->prev;
+        switch (layer->type) {
+            case LAYER_TYPE_DATA: {
+                data_layer_t *data_layer = (data_layer_t *) layer;
+                input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w);
+                // Scale, convert, remove mean image and load input data.
+                int x_ratio = (int)((img->w<<16)/layer->w)+1;
+                int y_ratio = (int)((img->h<<16)/layer->h)+1;
+                for (int y=0, i=0; y<layer->h; y++) {
+                    int sy = (y*y_ratio)>>16;
+                    for (int x=0; x<layer->w; x++, i+=3) {
+                        int sx = (x*x_ratio)>>16;
+                        uint16_t p = IM_GET_RGB565_PIXEL(img, sx, sy);
+                        input_data[i+0] = (int8_t) (((int) COLOR_RGB565_TO_R8(p)) - (int) data_layer->r_mean);
+                        input_data[i+1] = (int8_t) (((int) COLOR_RGB565_TO_G8(p)) - (int) data_layer->g_mean);
+                        input_data[i+2] = (int8_t) (((int) COLOR_RGB565_TO_B8(p)) - (int) data_layer->b_mean);
+                    }
+                }
+                // Set image data as input buffer for the next layer.
+                input_buffer = input_data;
+                output_buffer = buffer1;
+                break;
+            }
+
+            case LAYER_TYPE_CONV: {
+                conv_func_t conv_func = NULL;
+                conv_layer_t *conv_layer = (conv_layer_t *) layer;
+                if (prev_layer->c % 4 != 0 ||
+                    conv_layer->n % 2 != 0 || prev_layer->h % 2 != 0) {
+                    conv_func = arm_convolve_HWC_q7_basic;
+                    if (prev_layer->c == 3) {
+                        conv_func = arm_convolve_HWC_q7_RGB;
+                    }
+                } else {
+                    conv_func = arm_convolve_HWC_q7_fast;
+                }
+                printf("forward: %s(%s, %lu, %lu, %s, %lu, %lu, %lu, %lu, %s, %lu, %lu, %s, %lu, %s, %p);\n",
+                        CONV_FUNC_2STR(conv_func), BUFFER_2STR(input_buffer),
+                        prev_layer->h, prev_layer->c, "conv_wt", conv_layer->c, 
+                        conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_str,
+                        "conv_bias", conv_layer->l_shift, conv_layer->r_shift,
+                        BUFFER_2STR(output_buffer), conv_layer->h, "col_buffer", NULL);
+                break;
+            }
+
+            case LAYER_TYPE_RELU: {
+                relu_layer_t *relu_layer = (relu_layer_t *) layer;
+                printf("forward: arm_relu_q7(%s, %lu*%lu*%lu);\n",
+                        BUFFER_2STR(input_buffer), relu_layer->h, relu_layer->w, relu_layer->c);
+                break;
+            }
+
+            case LAYER_TYPE_POOL: {
+                pool_func_t pool_func = NULL;
+                pool_layer_t *pool_layer = (pool_layer_t *) layer;
+                if (pool_layer->ptype == POOL_TYPE_MAX) {
+                    pool_func = arm_maxpool_q7_HWC;
+                } else {
+                    pool_func = arm_avepool_q7_HWC;
+                }
+                printf("forward: %s(%s, %lu, %lu, %lu, %lu, %lu, %lu, %s, %s);\n",
+                        POOL_FUNC_2STR(pool_func), BUFFER_2STR(input_buffer),
+                        prev_layer->h, prev_layer->c, pool_layer->krn_dim,
+                        pool_layer->krn_pad, pool_layer->krn_str, layer->w, "col_buffer", BUFFER_2STR(output_buffer));
+                break;
+            }
+
+            case LAYER_TYPE_IP: {
+                ip_layer_t *ip_layer = (ip_layer_t*) layer;
+                printf("forward: arm_fully_connected_q7_opt(%s, %s, %lu, %lu, %lu, %lu, %s, %s, %s);\n",
+                        BUFFER_2STR(input_buffer), "ip_wt", prev_layer->c * prev_layer->h * prev_layer->w,
+                        ip_layer->c, ip_layer->l_shift, ip_layer->r_shift, "ip_bias", BUFFER_2STR(output_buffer), "col_buffer");
                 break;
             }
         }
@@ -418,7 +528,7 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
     }
 
     fb_free_all();
-    debug_printf("\n");
+    printf("\n");
     return 0;
 }
 #endif //IMLIB_ENABLE_CNN

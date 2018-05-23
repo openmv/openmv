@@ -98,4 +98,5 @@ typedef void (*pool_func_t)(q7_t * Im_in, const uint16_t dim_im_in, const uint16
 int nn_dump_network(nn_t *net);
 int nn_load_network(nn_t *net, const char *path);
 int nn_run_network(nn_t *net, image_t *img, int8_t *output);
+int nn_dry_run_network(nn_t *net, image_t *img, int8_t *output);
 #endif //#define __CNN_H__
