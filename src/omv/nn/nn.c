@@ -433,22 +433,8 @@ int nn_dry_run_network(nn_t *net, image_t *img, int8_t *output_data)
         switch (layer->type) {
             case LAYER_TYPE_DATA: {
                 data_layer_t *data_layer = (data_layer_t *) layer;
-                input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w);
-                // Scale, convert, remove mean image and load input data.
-                int x_ratio = (int)((img->w<<16)/layer->w)+1;
-                int y_ratio = (int)((img->h<<16)/layer->h)+1;
-                for (int y=0, i=0; y<layer->h; y++) {
-                    int sy = (y*y_ratio)>>16;
-                    for (int x=0; x<layer->w; x++, i+=3) {
-                        int sx = (x*x_ratio)>>16;
-                        uint16_t p = IM_GET_RGB565_PIXEL(img, sx, sy);
-                        input_data[i+0] = (int8_t) (((int) COLOR_RGB565_TO_R8(p)) - (int) data_layer->r_mean);
-                        input_data[i+1] = (int8_t) (((int) COLOR_RGB565_TO_G8(p)) - (int) data_layer->g_mean);
-                        input_data[i+2] = (int8_t) (((int) COLOR_RGB565_TO_B8(p)) - (int) data_layer->b_mean);
-                    }
-                }
                 // Set image data as input buffer for the next layer.
-                input_buffer = input_data;
+                input_buffer = input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w);
                 output_buffer = buffer1;
                 break;
             }
