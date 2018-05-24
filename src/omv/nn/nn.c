@@ -273,6 +273,58 @@ error:
     return res;
 }
 
+void nn_transform_input(data_layer_t *data_layer, image_t *img, q7_t *input_data)
+{
+    // Scale, convert and normalize input image.
+    int x_ratio = (int)((img->w<<16)/data_layer->w)+1;
+    int y_ratio = (int)((img->h<<16)/data_layer->h)+1;
+
+    if (img->bpp == 2 && data_layer->c == 3) { //RGB565 to RGB888
+        for (int y=0, i=0; y<data_layer->h; y++) {
+            int sy = (y*y_ratio)>>16;
+            for (int x=0; x<data_layer->w; x++, i+=3) {
+                int sx = (x*x_ratio)>>16;
+                uint16_t p = IM_GET_RGB565_PIXEL(img, sx, sy);
+                input_data[i+0] = (int8_t) (((int) COLOR_RGB565_TO_R8(p)) - (int) data_layer->r_mean);
+                input_data[i+1] = (int8_t) (((int) COLOR_RGB565_TO_G8(p)) - (int) data_layer->g_mean);
+                input_data[i+2] = (int8_t) (((int) COLOR_RGB565_TO_B8(p)) - (int) data_layer->b_mean);
+            }
+        }
+    } else if (img->bpp == 2 && data_layer->c == 1) { //RGB565 to GS
+        for (int y=0, i=0; y<data_layer->h; y++) {
+            int sy = (y*y_ratio)>>16;
+            for (int x=0; x<data_layer->w; x++, i++) {
+                int sx = (x*x_ratio)>>16;
+                uint16_t p = IM_GET_RGB565_PIXEL(img, sx, sy);
+                input_data[i] = (int8_t) (((int) COLOR_RGB565_TO_GRAYSCALE(p)) - (int) data_layer->r_mean);
+            }
+        }
+    } else if (img->bpp == 1 && data_layer->c == 3) { //GS to RGB88
+        int mean = (int) ((0.30f * data_layer->r_mean) +
+                          (0.59f * data_layer->g_mean) +
+                          (0.11f * data_layer->b_mean));
+        for (int y=0, i=0; y<data_layer->h; y++) {
+            int sy = (y*y_ratio)>>16;
+            for (int x=0; x<data_layer->w; x++, i+=3) {
+                int sx = (x*x_ratio)>>16;
+                uint8_t p = IMAGE_GET_GRAYSCALE_PIXEL(img, sx, sy);
+                input_data[i+0] = (int8_t) (((int) p) - (int) mean);
+                input_data[i+1] = (int8_t) (((int) p) - (int) mean);
+                input_data[i+2] = (int8_t) (((int) p) - (int) mean);
+            }
+        }
+    } else if (img->bpp == 1 && data_layer->c == 1) { //GS to GS
+        for (int y=0, i=0; y<data_layer->h; y++) {
+            int sy = (y*y_ratio)>>16;
+            for (int x=0; x<data_layer->w; x++, i++) {
+                int sx = (x*x_ratio)>>16;
+                uint8_t p = IMAGE_GET_GRAYSCALE_PIXEL(img, sx, sy);
+                input_data[i] = (int8_t) (((int) p) - (int) data_layer->r_mean);
+            }
+        }
+    }
+}
+
 int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
 {
     uint32_t layer_idx = 0;
@@ -303,19 +355,7 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
             case LAYER_TYPE_DATA: {
                 data_layer_t *data_layer = (data_layer_t *) layer;
                 input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w);
-                // Scale, convert, remove mean image and load input data.
-                int x_ratio = (int)((img->w<<16)/layer->w)+1;
-                int y_ratio = (int)((img->h<<16)/layer->h)+1;
-                for (int y=0, i=0; y<layer->h; y++) {
-                    int sy = (y*y_ratio)>>16;
-                    for (int x=0; x<layer->w; x++, i+=3) {
-                        int sx = (x*x_ratio)>>16;
-                        uint16_t p = IM_GET_RGB565_PIXEL(img, sx, sy);
-                        input_data[i+0] = (int8_t) (((int) COLOR_RGB565_TO_R8(p)) - (int) data_layer->r_mean);
-                        input_data[i+1] = (int8_t) (((int) COLOR_RGB565_TO_G8(p)) - (int) data_layer->g_mean);
-                        input_data[i+2] = (int8_t) (((int) COLOR_RGB565_TO_B8(p)) - (int) data_layer->b_mean);
-                    }
-                }
+                nn_transform_input(data_layer, img, input_data);
                 // Set image data as input buffer for the next layer.
                 input_buffer = input_data;
                 output_buffer = buffer1;
