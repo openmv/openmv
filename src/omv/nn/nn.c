@@ -292,9 +292,9 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
     q7_t *input_buffer  = NULL;
     q7_t *output_buffer = NULL;
 
-    q7_t *buffer1     = fb_alloc0(net->max_scrbuf_size);
+    q7_t *buffer1     = fb_alloc(net->max_scrbuf_size);
     q7_t *buffer2     = buffer1 + net->max_layer_size;
-    q7_t *col_buffer  = fb_alloc0(net->max_colbuf_size);
+    q7_t *col_buffer  = fb_alloc(net->max_colbuf_size);
 
     while (layer != NULL) {
         layer_t *prev_layer = layer->prev;
@@ -425,7 +425,7 @@ int nn_dry_run_network(nn_t *net, image_t *img, int8_t *output_data)
     q7_t *input_buffer  = NULL;
     q7_t *output_buffer = NULL;
 
-    q7_t *buffer1     = fb_alloc0(net->max_scrbuf_size);
+    q7_t *buffer1     = fb_alloc(net->max_scrbuf_size);
     q7_t *buffer2     = buffer1 + net->max_layer_size;
 
     while (layer != NULL) {
