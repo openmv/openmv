@@ -41,6 +41,7 @@ typedef struct {
     uint32_t r_mean;
     uint32_t g_mean;
     uint32_t b_mean;
+    uint32_t scale;
 } data_layer_t;
 
 typedef struct {
