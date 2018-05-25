@@ -1,10 +1,8 @@
 #!/usr/bin/env python2
 import sys
-# import usb.core
-# import usb.util
 import numpy as np
 import pygame
-import openmv
+import pyopenmv
 from time import sleep
 
 script = """
@@ -35,12 +33,12 @@ else:
     portname = "/dev/openmvcam"
 
 connected = False
-openmv.disconnect()
+pyopenmv.disconnect()
 for i in range(10):
     try:
         # opens CDC port.
         # Set small timeout when connecting
-        openmv.init(portname, baudrate=921600, timeout=0.050)
+        pyopenmv.init(portname, baudrate=921600, timeout=0.050)
         connected = True
         break
     except Exception as e:
@@ -55,10 +53,10 @@ if not connected:
     sys.exit(1)
 
 # Set higher timeout after connecting for lengthy transfers.
-openmv.set_timeout(1*2) # SD Cards can cause big hicups.
-openmv.stop_script()
-openmv.enable_fb(True)
-openmv.exec_script(script)
+pyopenmv.set_timeout(1*2) # SD Cards can cause big hicups.
+pyopenmv.stop_script()
+pyopenmv.enable_fb(True)
+pyopenmv.exec_script(script)
 
 # init screen
 running = True
@@ -69,7 +67,7 @@ while running:
     Clock.tick(100)
 
     # read framebuffer
-    fb = openmv.fb_dump()
+    fb = pyopenmv.fb_dump()
 
     if fb == None:
         continue
@@ -101,4 +99,4 @@ while running:
 
 
 pygame.quit()
-openmv.stop_script()
+pyopenmv.stop_script()
