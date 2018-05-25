@@ -208,10 +208,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	sincos_tab.o                            \
 	edge.o                                  \
 	hog.o                                   \
-	lenet.o                                 \
-	lenet_model_num.o                       \
-	cifar10.o                               \
-	cifar10_model.o                         \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/nn/,\

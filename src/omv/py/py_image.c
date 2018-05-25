@@ -4980,54 +4980,6 @@ static mp_obj_t py_image_find_displacement(uint n_args, const mp_obj_t *args, mp
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_displacement_obj, 2, py_image_find_displacement);
 #endif // IMLIB_ENABLE_FIND_DISPLACEMENT
 
-#ifdef IMLIB_ENABLE_LENET
-static mp_obj_t py_image_find_number(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *arg_img = py_helper_arg_to_image_grayscale(args[0]);
-
-    rectangle_t roi;
-    py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
-
-    // Make sure ROI is bigger than or equal to template size
-    PY_ASSERT_TRUE_MSG((roi.w == LENET_INPUT_W && roi.h == LENET_INPUT_H),
-            "Region of interest must be 28x28!");
-
-    int r = 0;
-    float c = 0.0f;
-    lenet5_t *lenet = (lenet5_t*) lenet_model_num;
-
-    r = lenet_predict(lenet, arg_img, &roi, &c);
-    mp_obj_t ret_obj[2] = {
-        mp_obj_new_int(r),
-        mp_obj_new_float(c),
-    };
-
-    return mp_obj_new_tuple(2, ret_obj);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_number_obj, 1, py_image_find_number);
-#endif //IMLIB_ENABLE_LENET
-
-#ifdef IMLIB_ENABLE_CNN
-static mp_obj_t py_image_classify_object(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    image_t *arg_img = py_helper_arg_to_image_color(args[0]);
-
-    rectangle_t roi;
-    py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
-
-    int8_t output_data[10];
-    imlib_classify_object(arg_img, output_data);
-    mp_obj_t output_list = mp_obj_new_list(0, NULL);
-
-    for (int i=0; i<10; i++) {
-        mp_obj_list_append(output_list, mp_obj_new_int(output_data[i]));
-    }
-
-    return output_list;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_classify_object_obj, 1, py_image_classify_object);
-#endif //IMLIB_ENABLE_CNN
-
 static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_grayscale(args[0]);
@@ -5437,16 +5389,6 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_find_displacement),   MP_ROM_PTR(&py_image_find_displacement_obj)},
 #else
     {MP_ROM_QSTR(MP_QSTR_find_displacement),   MP_ROM_PTR(&py_image_unavailable_obj)},
-#endif
-#ifdef IMLIB_ENABLE_LENET
-    {MP_ROM_QSTR(MP_QSTR_find_number),         MP_ROM_PTR(&py_image_find_number_obj)},
-#else
-    {MP_ROM_QSTR(MP_QSTR_find_number),         MP_ROM_PTR(&py_image_unavailable_obj)},
-#endif
-#ifdef IMLIB_ENABLE_CNN
-    {MP_ROM_QSTR(MP_QSTR_classify_object),     MP_ROM_PTR(&py_image_classify_object_obj)},
-#else
-    {MP_ROM_QSTR(MP_QSTR_classify_object),     MP_ROM_PTR(&py_image_unavailable_obj)},
 #endif
     {MP_ROM_QSTR(MP_QSTR_find_template),       MP_ROM_PTR(&py_image_find_template_obj)},
     {MP_ROM_QSTR(MP_QSTR_find_features),       MP_ROM_PTR(&py_image_find_features_obj)},

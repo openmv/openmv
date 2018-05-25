@@ -74,10 +74,6 @@ SRCS += $(addprefix img/,   \
 	sincos_tab.c            \
 	edge.c                  \
 	hog.c                   \
-	lenet.c                 \
-	lenet_model_num.c       \
-	cifar10.c               \
-	cifar10_model.c         \
    )
 
 SRCS += $(addprefix nn/,    \
