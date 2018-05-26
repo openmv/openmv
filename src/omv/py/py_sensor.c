@@ -22,15 +22,13 @@
 extern sensor_t sensor;
 
 static mp_obj_t py_sensor_reset() {
-    sensor_reset();
+    PY_ASSERT_FALSE_MSG(sensor_reset() != 0, "Reset Failed");
     return mp_const_none;
 }
 
 static mp_obj_t py_sensor_sleep(mp_obj_t enable) {
-    if (sensor_sleep(mp_obj_is_true(enable)) != 0) {
-        return mp_const_false;
-    }
-    return mp_const_true;
+    PY_ASSERT_FALSE_MSG(sensor_sleep(mp_obj_is_true(enable)) != 0, "Sleep Failed");
+    return mp_const_none;
 }
 
 static mp_obj_t py_sensor_flush() {
