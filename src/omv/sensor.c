@@ -306,7 +306,7 @@ int sensor_init()
 
     if (sensor.slv_addr == LEPTON_ID) {
         sensor.chip_id = LEPTON_ID;
-        if (extclk_config(25000000) != 0) {
+        if (extclk_config(LEPTON_XCLK_FREQ) != 0) {
             return -3;
         }
         init_ret = lepton_init(&sensor);
@@ -314,7 +314,7 @@ int sensor_init()
         // Read ON semi sensor ID.
         cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
         if (sensor.chip_id == MT9V034_ID) {
-            if (extclk_config(27000000) != 0) {
+            if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
                 return -3;
             }
             init_ret = mt9v034_init(&sensor);
