@@ -52,6 +52,8 @@ typedef enum {
     // Other
     FRAMESIZE_LCD,      // 128x160
     FRAMESIZE_QQVGA2,   // 128x160
+    FRAMESIZE_WVGA,     // 720x480
+    FRAMESIZE_WVGA2,    // 752x480
     FRAMESIZE_SVGA,     // 800x600
     FRAMESIZE_SXGA,     // 1280x1024
     FRAMESIZE_UXGA,     // 1600x1200
