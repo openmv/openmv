@@ -103,10 +103,13 @@
 
 #define MICROSECOND_CLKS                        (1000000)
 
-static bool sensor_has_cfa = false;
+typedef enum { MT9V304_NOT_SET, MT9V304_CFA, MT9V304_GS, MT9V304_GS_CFA } mt9v304_mode_t;
+static mt9v304_mode_t mt9v304_mode = MT9V304_NOT_SET;
 
 static int reset(sensor_t *sensor)
 {
+    mt9v304_mode = MT9V304_NOT_SET;
+
     DCMI_PWDN_HIGH();
     systick_sleep(1);
 
@@ -119,7 +122,6 @@ static int reset(sensor_t *sensor)
     DCMI_RESET_HIGH();
     systick_sleep(1);
 
-    uint16_t reg_data;
     int ret = 0;
 
     // Setup reconmended reserved register settings.
@@ -135,11 +137,7 @@ static int reset(sensor_t *sensor)
     ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_OPERATION_MODE,
         MT9V034_PIXEL_OPERATION_MODE_HDR | MT9V034_PIXEL_OPERATION_MODE_COLOR);
 
-    ret |= cambus_readw(sensor->slv_addr, MT9V034_ID_REG, &reg_data);
-
-    sensor_has_cfa = ((reg_data >> 9) & 0x7) == 0x6;
-
-    return 0;
+    return ret;
 }
 
 static int sleep(sensor_t *sensor, int enable)
@@ -181,43 +179,65 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t width = resolution[framesize][0];
     uint16_t height = resolution[framesize][1];
 
+    if (sensor->pixformat == PIXFORMAT_INVLAID) {
+        return -1;
+    }
+
     if ((width > MT9V034_MAX_WIDTH) || (height > MT9V034_MAX_HEIGHT)) {
         return -1;
     }
 
-    uint16_t readmode;
-    int ret = 0;
-    ret |= cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &readmode);
-    readmode &= 0xFFF0;
+    uint16_t reg, read_mode;
 
-    if (((width * 4) <= MT9V034_MAX_WIDTH) && ((height * 4) <= MT9V034_MAX_HEIGHT)) {
-        width *= 4;
-        height *= 4;
-        if ((!sensor_has_cfa) || (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
-            readmode |= MT9V034_READ_MODE_COL_BIN_4 | MT9V034_READ_MODE_ROW_BIN_4;
-        }
-    } else if (((width * 2) <= MT9V034_MAX_WIDTH) && ((height * 2) <= MT9V034_MAX_HEIGHT)) {
-        width *= 2;
-        height *= 2;
-        if ((!sensor_has_cfa) || (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
-            readmode |= MT9V034_READ_MODE_COL_BIN_2 | MT9V034_READ_MODE_ROW_BIN_2;
+    if (cambus_readw(sensor->slv_addr, MT9V034_ID_REG, &reg) != 0) {
+        return -1;
+    }
+
+    if (cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode) != 0) {
+        return -1;
+    }
+
+    read_mode &= 0xFFF0;
+    bool is_cfa = ((reg >> 9) & 0x7) == 0x6;
+    mt9v304_mode_t mode_tmp = is_cfa ? MT9V304_CFA : MT9V304_GS;
+    int read_mode_mul = 1;
+
+    if ((!is_cfa) || (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
+        if ((width <= (MT9V034_MAX_WIDTH / 4)) && (height <= (MT9V034_MAX_HEIGHT / 4))) {
+            read_mode_mul = 4;
+            read_mode |= MT9V034_READ_MODE_COL_BIN_4 | MT9V034_READ_MODE_ROW_BIN_4;
+        } else if ((width <= (MT9V034_MAX_WIDTH / 2)) && (height <= (MT9V034_MAX_HEIGHT / 2))) {
+            read_mode_mul = 2;
+            read_mode |= MT9V034_READ_MODE_COL_BIN_2 | MT9V034_READ_MODE_ROW_BIN_2;
+        } else if (is_cfa && (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
+            mode_tmp = MT9V304_GS_CFA;
         }
     }
 
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_COL_START, ((MT9V034_MAX_WIDTH - width) / 2) + MT9V034_COL_START_MIN);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_ROW_START, ((MT9V034_MAX_HEIGHT - height) / 2) + MT9V034_ROW_START_MIN);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_WINDOW_WIDTH, width);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_WINDOW_HEIGHT, height);
+    int ret = 0;
+
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_COL_START,
+            ((MT9V034_MAX_WIDTH - (width * read_mode_mul)) / 2) + MT9V034_COL_START_MIN);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_ROW_START,
+            ((MT9V034_MAX_HEIGHT - (height * read_mode_mul)) / 2) + MT9V034_ROW_START_MIN);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_WINDOW_WIDTH, width * read_mode_mul);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_WINDOW_HEIGHT, height * read_mode_mul);
+
     // Notes: 1. The MT9V034 uses column parallel analog-digital converters, thus short row timing is not possible.
     // The minimum total row time is 690 columns (horizontal width + horizontal blanking). The minimum
     // horizontal blanking is 61. When the window width is set below 627, horizontal blanking
     // must be increased.
     ret |= cambus_writew(sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING,
-            MT9V034_HORIZONTAL_BLANKING_DEF + (MT9V034_MAX_WIDTH - width));
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, readmode);
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_COUNT,
-            (resolution[framesize][0] * resolution[framesize][1]) / 8);
-    return 0;
+            MT9V034_HORIZONTAL_BLANKING_DEF + (MT9V034_MAX_WIDTH - (width * read_mode_mul)));
+
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, read_mode);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_COUNT, (width * height) / 8);
+
+    if (ret == 0) {
+        mt9v304_mode = mode_tmp;
+    }
+
+    return ret;
 }
 
 static int set_framerate(sensor_t *sensor, framerate_t framerate)
@@ -366,6 +386,123 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
+extern int sensor_snapshot(sensor_t *sensor, image_t *image);
+
+static int snapshot(sensor_t *sensor, image_t *image)
+{
+    if ((!sensor->pixformat) || (!sensor->framesize) || (mt9v304_mode == MT9V304_NOT_SET)) {
+        return -1;
+    }
+
+    pixformat_t pixformat_bak = sensor->pixformat;
+    sensor->pixformat = PIXFORMAT_GRAYSCALE;
+
+    image_t new_image;
+    int ret = sensor_snapshot(sensor, &new_image);
+
+    sensor->pixformat = pixformat_bak;
+
+    if (ret != 0) {
+        return -1;
+    }
+
+    if (mt9v304_mode == MT9V304_GS) {
+        switch (sensor->pixformat) {
+            case PIXFORMAT_BAYER: {
+                new_image.bpp = IMAGE_BPP_BAYER;
+                break;
+            }
+            case PIXFORMAT_GRAYSCALE: {
+                new_image.bpp = IMAGE_BPP_GRAYSCALE;
+                break;
+            }
+            case PIXFORMAT_RGB565: {
+                new_image.bpp = IMAGE_BPP_RGB565;
+                uint16_t *rgbbuf = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
+
+                for (int y = new_image.h - 1; y >= 0; y--) {
+                    imlib_bayer_to_rgb565(&new_image, new_image.w, 1, 0, y, rgbbuf);
+                    memcpy(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&new_image, y),
+                           rgbbuf, IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
+                }
+
+                fb_free();
+                break;
+            }
+            default : {
+                return -1;
+            }
+        }
+    } else {
+        switch (sensor->pixformat) {
+            case PIXFORMAT_BAYER: {
+                new_image.bpp = IMAGE_BPP_BAYER;
+                break;
+            }
+            case PIXFORMAT_GRAYSCALE: {
+                new_image.bpp = IMAGE_BPP_GRAYSCALE;
+                if (mt9v304_mode == MT9V304_GS_CFA) {
+                    int ksize = 1, brows = ksize + 1;
+                    image_t buf;
+                    buf.w = new_image.w;
+                    buf.h = brows;
+                    buf.bpp = new_image.bpp;
+                    buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(&new_image) * brows);
+                    uint16_t *rgbbuf = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
+
+                    for (int y = 0, yy = new_image.h; y < yy; y++) {
+                        uint8_t *buf_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows));
+                        imlib_bayer_to_rgb565(&new_image, new_image.w, 1, 0, y, rgbbuf);
+
+                        for (int x = 0, xx = new_image.w; x < xx; x++) {
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x, COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(rgbbuf, x)));
+                        }
+
+                        if (y >= ksize) { // Transfer buffer lines...
+                            memcpy(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&new_image, (y - ksize)),
+                                   IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, ((y - ksize) % brows)),
+                                   IMAGE_GRAYSCALE_LINE_LEN_BYTES(&new_image));
+                        }
+                    }
+
+                    // Copy any remaining lines from the buffer image...
+                    for (int y = new_image.h - ksize, yy = new_image.h; y < yy; y++) {
+                        memcpy(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&new_image, y),
+                               IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows)),
+                               IMAGE_GRAYSCALE_LINE_LEN_BYTES(&new_image));
+                    }
+
+                    fb_free();
+                    fb_free();
+                }
+                break;
+            }
+            case PIXFORMAT_RGB565: {
+                new_image.bpp = IMAGE_BPP_RGB565;
+                uint16_t *rgbbuf = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
+
+                for (int y = new_image.h - 1; y >= 0; y--) {
+                    imlib_bayer_to_rgb565(&new_image, new_image.w, 1, 0, y, rgbbuf);
+                    memcpy(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&new_image, y),
+                           rgbbuf, IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
+                }
+
+                fb_free();
+                break;
+            }
+            default : {
+                return -1;
+            }
+        }
+    }
+
+    if (image) {
+        memcpy(image, &new_image, sizeof(image_t));
+    }
+
+    return 0;
+}
+
 int mt9v034_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
@@ -392,6 +529,7 @@ int mt9v034_init(sensor_t *sensor)
     sensor->set_vflip           = set_vflip;
     sensor->set_special_effect  = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
+    sensor->snapshot            = snapshot;
 
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
