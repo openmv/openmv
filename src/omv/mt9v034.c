@@ -398,7 +398,9 @@ static int snapshot(sensor_t *sensor, image_t *image)
     sensor->pixformat = PIXFORMAT_GRAYSCALE;
 
     image_t new_image;
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
     int ret = sensor_snapshot(sensor, &new_image);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
 
     sensor->pixformat = pixformat_bak;
 
@@ -505,6 +507,16 @@ static int snapshot(sensor_t *sensor, image_t *image)
 
 int mt9v034_init(sensor_t *sensor)
 {
+    GPIO_InitTypeDef GPIO_InitTypeDefMOSI;
+    GPIO_InitTypeDefMOSI.Pin = GPIO_PIN_5;
+    GPIO_InitTypeDefMOSI.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitTypeDefMOSI.Pull = GPIO_NOPULL;
+    GPIO_InitTypeDefMOSI.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitTypeDefMOSI.Alternate = GPIO_AF7_SPI3;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitTypeDefMOSI);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+
     sensor->gs_bpp              = sizeof(uint8_t);
     sensor->reset               = reset;
     sensor->sleep               = sleep;
