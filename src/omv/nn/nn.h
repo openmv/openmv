@@ -80,6 +80,7 @@ typedef struct {
 typedef struct {
     uint8_t  type[4];
     uint32_t n_layers;
+    int8_t  *output_data;
     uint32_t output_size;
     uint32_t max_layer_size;
     uint32_t max_colbuf_size;
@@ -99,6 +100,6 @@ typedef void (*pool_func_t)(q7_t * Im_in, const uint16_t dim_im_in, const uint16
 
 int nn_dump_network(nn_t *net);
 int nn_load_network(nn_t *net, const char *path);
-int nn_run_network(nn_t *net, image_t *img, int8_t *output);
-int nn_dry_run_network(nn_t *net, image_t *img, int8_t *output);
+int nn_run_network(nn_t *net, image_t *img);
+int nn_dry_run_network(nn_t *net, image_t *img);
 #endif //#define __CNN_H__

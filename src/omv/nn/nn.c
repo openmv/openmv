@@ -263,6 +263,8 @@ int nn_load_network(nn_t *net, const char *path)
         layer = layer->next;
     }
 
+    // Alloc output buffer.
+    net->output_data = xalloc(net->output_size);
     printf("Max layer: %lu Max col buf: %lu Max scratch buf: %lu Output size:%lu\n\n",
             net->max_layer_size, net->max_colbuf_size, net->max_scrbuf_size, net->output_size);
 error:
@@ -328,7 +330,7 @@ void nn_transform_input(data_layer_t *data_layer, image_t *img, q7_t *input_data
     }
 }
 
-int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
+int nn_run_network(nn_t *net, image_t *img)
 {
     uint32_t layer_idx = 0;
     layer_t *layer = net->layers;
@@ -425,7 +427,7 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
 
             // Last layer
             if (layer->next && layer->next->next == NULL) {
-                output_buffer = output_data;
+                output_buffer = net->output_data;
             }
         }
 
@@ -440,7 +442,7 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
         (buffer == buffer1)     ? "buffer1":\
         (buffer == buffer2)     ? "buffer2":\
         (buffer == input_data)  ? "input_data":\
-        (buffer == output_data) ? "output_data": "???"
+        (buffer == net->output_data) ? "output_data": "???"
 
 #define CONV_FUNC_2STR(conv_func)\
         (conv_func == arm_convolve_HWC_q7_basic) ? "arm_convolve_HWC_q7_basic" :\
@@ -449,7 +451,7 @@ int nn_run_network(nn_t *net, image_t *img, int8_t *output_data)
 #define POOL_FUNC_2STR(pool_func)\
         (pool_func == arm_maxpool_q7_HWC) ? "arm_maxpool_q7_HWC" : "arm_avepool_q7_HWC"
 
-int nn_dry_run_network(nn_t *net, image_t *img, int8_t *output_data)
+int nn_dry_run_network(nn_t *net, image_t *img)
 {
     uint32_t layer_idx = 0;
     layer_t *layer = net->layers;
@@ -549,7 +551,7 @@ int nn_dry_run_network(nn_t *net, image_t *img, int8_t *output_data)
 
             // Last layer
             if (layer->next && layer->next->next == NULL) {
-                output_buffer = output_data;
+                output_buffer = net->output_data;
             }
         }
         
