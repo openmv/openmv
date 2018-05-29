@@ -35,12 +35,13 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     image_t *img = py_helper_arg_to_image_mutable(args[1]);
 
     mp_obj_t output_list = mp_obj_new_list(0, NULL);
-    bool dry_run =  py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
+    bool softmax =  py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_softmax), false);
+    bool dry_run =  py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
 
     if (dry_run == false) {
-        nn_run_network(net, img);
+        nn_run_network(net, img, softmax);
     } else {
-        nn_dry_run_network(net, img);
+        nn_dry_run_network(net, img, softmax);
     }
 
     for (int i=0; i<net->output_size; i++) {

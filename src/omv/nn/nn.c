@@ -330,7 +330,7 @@ void nn_transform_input(data_layer_t *data_layer, image_t *img, q7_t *input_data
     }
 }
 
-int nn_run_network(nn_t *net, image_t *img)
+int nn_run_network(nn_t *net, image_t *img, bool softmax)
 {
     uint32_t layer_idx = 0;
     layer_t *layer = net->layers;
@@ -434,6 +434,11 @@ int nn_run_network(nn_t *net, image_t *img)
         layer = layer->next;
     }
 
+    // Softmax output
+    if (softmax) {
+        arm_softmax_q7(net->output_data, net->output_size, net->output_data);
+    }
+
     fb_free_all();
     return 0;
 }
@@ -451,7 +456,7 @@ int nn_run_network(nn_t *net, image_t *img)
 #define POOL_FUNC_2STR(pool_func)\
         (pool_func == arm_maxpool_q7_HWC) ? "arm_maxpool_q7_HWC" : "arm_avepool_q7_HWC"
 
-int nn_dry_run_network(nn_t *net, image_t *img)
+int nn_dry_run_network(nn_t *net, image_t *img, bool softmax)
 {
     uint32_t layer_idx = 0;
     layer_t *layer = net->layers;

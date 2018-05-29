@@ -140,6 +140,7 @@ Q(load)
 Q(Net)
 Q(forward)
 Q(dry_run)
+Q(softmax)
 
 // C/SIF Resolutions
 Q(QQCIF)
