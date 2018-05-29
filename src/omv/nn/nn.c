@@ -224,9 +224,6 @@ int nn_load_network(nn_t *net, const char *path)
         }
     }
 
-    uint32_t max_layer_size  = 0;
-    uint32_t max_colbuf_size = 0;
-    uint32_t max_scrbuf_size = 0;
     layer_t *layer = net->layers;
     while (layer != NULL) {
         // First layer is DATA will be skipped, so prev_layer *should* not be NULL.
@@ -234,13 +231,13 @@ int nn_load_network(nn_t *net, const char *path)
 
         if (layer->type == LAYER_TYPE_IP) {
             uint32_t fc_buffer_size = 2 * layer->c;
-            max_colbuf_size = IM_MAX(max_colbuf_size, fc_buffer_size);
+            net->max_colbuf_size = IM_MAX(net->max_colbuf_size, fc_buffer_size);
         }
 
         if (layer->type == LAYER_TYPE_CONV) {
             conv_layer_t *conv_layer = (conv_layer_t *) layer;
             uint32_t im2col_buffer_size = 2 * 2 * conv_layer->c * conv_layer->krn_dim * conv_layer->krn_dim;
-            max_colbuf_size = IM_MAX(max_colbuf_size, im2col_buffer_size);
+            net->max_colbuf_size = IM_MAX(net->max_colbuf_size, im2col_buffer_size);
         }
 
         if (layer->type == LAYER_TYPE_IP) {
@@ -250,24 +247,22 @@ int nn_load_network(nn_t *net, const char *path)
             } else if (prev_layer->type == LAYER_TYPE_CONV || prev_layer->type == LAYER_TYPE_POOL) {
                 buffer_size = buffer_size + prev_layer->c * prev_layer->h * prev_layer->w;
             }
-            max_scrbuf_size = IM_MAX(max_scrbuf_size, buffer_size);
+            net->max_scrbuf_size = IM_MAX(net->max_scrbuf_size, buffer_size);
         }
 
         if (layer->type == LAYER_TYPE_CONV || layer->type == LAYER_TYPE_POOL) {
             uint32_t buffer_size = layer->c * layer->h * layer->w + prev_layer->c * prev_layer->h * prev_layer->w;
-            max_scrbuf_size = IM_MAX(max_scrbuf_size, buffer_size);
+            net->max_scrbuf_size = IM_MAX(net->max_scrbuf_size, buffer_size);
         }
 
         uint32_t layer_size = layer->c * layer->h * layer->w;
-        max_layer_size = IM_MAX(max_layer_size, layer_size);
+        net->max_layer_size = IM_MAX(net->max_layer_size, layer_size);
         layer = layer->next;
     }
 
-    net->max_layer_size  = max_layer_size;
-    net->max_colbuf_size = max_colbuf_size;
-    net->max_scrbuf_size = max_scrbuf_size;
-    printf("Max layer: %lu Max col buf: %lu Max scratch buf: %lu\n\n",
-            max_layer_size, max_colbuf_size, max_scrbuf_size);
+    net->output_size = net->layers[net->n_layers-1].c;
+    printf("Max layer: %lu Max col buf: %lu Max scratch buf: %lu Output size:%lu\n\n",
+            net->max_layer_size, net->max_colbuf_size, net->max_scrbuf_size, net->output_size);
 error:
     file_buffer_off(&fp);
     file_close(&fp);

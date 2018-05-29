@@ -78,8 +78,9 @@ typedef struct {
 } ip_layer_t;
 
 typedef struct {
-    uint8_t type[4];
+    uint8_t  type[4];
     uint32_t n_layers;
+    uint32_t output_size;
     uint32_t max_layer_size;
     uint32_t max_colbuf_size;
     uint32_t max_scrbuf_size;
