@@ -257,10 +257,12 @@ int nn_load_network(nn_t *net, const char *path)
 
         uint32_t layer_size = layer->c * layer->h * layer->w;
         net->max_layer_size = IM_MAX(net->max_layer_size, layer_size);
+        if (layer->next == NULL) {
+            net->output_size = layer->c;
+        }
         layer = layer->next;
     }
 
-    net->output_size = net->layers[net->n_layers-1].c;
     printf("Max layer: %lu Max col buf: %lu Max scratch buf: %lu Output size:%lu\n\n",
             net->max_layer_size, net->max_colbuf_size, net->max_scrbuf_size, net->output_size);
 error:
