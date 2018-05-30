@@ -25,10 +25,10 @@
 #define ON_CHIP_ID      (0x00)
 #define MAX_XFER_SIZE (0xFFFC)
 
-sensor_t sensor;
-TIM_HandleTypeDef  TIMHandle;
-DMA_HandleTypeDef  DMAHandle;
-DCMI_HandleTypeDef DCMIHandle;
+sensor_t           sensor     = {};
+TIM_HandleTypeDef  TIMHandle  = {};
+DMA_HandleTypeDef  DMAHandle  = {};
+DCMI_HandleTypeDef DCMIHandle = {};
 
 static volatile int line = 0;
 extern uint8_t _line_buf;
@@ -69,34 +69,37 @@ const int resolution[][2] = {
 #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 static int extclk_config(int frequency)
 {
-    // Doubles PCLK
-    //__HAL_RCC_TIMCLKPRESCALER(RCC_TIMPRES_ACTIVATED);
-
     /* TCLK (PCLK * 2) */
-    int tclk  = DCMI_TIM_PCLK_FREQ() * 2;
+    int tclk = DCMI_TIM_PCLK_FREQ() * 2;
 
     /* Period should be even */
     int period = (tclk / frequency) - 1;
 
+    if (TIMHandle.Init.Period && (TIMHandle.Init.Period != period)) {
+        // __HAL_TIM_SET_AUTORELOAD sets TIMHandle.Init.Period...
+        __HAL_TIM_SET_AUTORELOAD(&TIMHandle, period);
+        __HAL_TIM_SET_COMPARE(&TIMHandle, DCMI_TIM_CHANNEL, period / 2);
+        return 0;
+    }
+
     /* Timer base configuration */
-    TIMHandle.Instance          = DCMI_TIM;
-    TIMHandle.Init.Period       = period;
-    TIMHandle.Init.Prescaler    = 0;
-    TIMHandle.Init.ClockDivision = 0;
+    TIMHandle.Instance           = DCMI_TIM;
+    TIMHandle.Init.Period        = period;
+    TIMHandle.Init.Prescaler     = TIM_ETRPRESCALER_DIV1;
     TIMHandle.Init.CounterMode   = TIM_COUNTERMODE_UP;
+    TIMHandle.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 
     /* Timer channel configuration */
     TIM_OC_InitTypeDef TIMOCHandle;
-    TIMOCHandle.Pulse       = period/2;
+    TIMOCHandle.Pulse       = period / 2;
     TIMOCHandle.OCMode      = TIM_OCMODE_PWM1;
     TIMOCHandle.OCPolarity  = TIM_OCPOLARITY_HIGH;
     TIMOCHandle.OCFastMode  = TIM_OCFAST_DISABLE;
     TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
 
-    if (HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK
-            || HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK
-            || HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK) {
-        // Initialization Error
+    if ((HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK)
+    || (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK)
+    || (HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK)) {
         return -1;
     }
 
@@ -303,15 +306,17 @@ int sensor_init()
 
     if (sensor.slv_addr == LEPTON_ID) {
         sensor.chip_id = LEPTON_ID;
-        extclk_config(25000000);
+        if (extclk_config(LEPTON_XCLK_FREQ) != 0) {
+            return -3;
+        }
         init_ret = lepton_init(&sensor);
     } else {
         // Read ON semi sensor ID.
         cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
         if (sensor.chip_id == MT9V034_ID) {
-            // On/Aptina MT requires 13-27MHz clock.
-            extclk_config(27000000);
-            // Only the MT9V034 is currently supported.
+            if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
+                return -3;
+            }
             init_ret = mt9v034_init(&sensor);
         } else { // Read OV sensor ID.
             cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
@@ -885,7 +890,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image)
 
     // Disable DMA IRQ
     HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
-    
+
 
     // Fix the BPP
     switch (sensor->pixformat) {
