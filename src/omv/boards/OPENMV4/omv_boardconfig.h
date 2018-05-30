@@ -111,8 +111,8 @@
 #define DCMI_PWDN_PIN           (GPIO_PIN_7)
 #define DCMI_PWDN_PORT          (GPIOD)
 
-#define DCMI_FSIN_PIN           (GPIO_PIN_3)
-#define DCMI_FSIN_PORT          (GPIOD)
+#define DCMI_FSIN_PIN           (GPIO_PIN_5)
+#define DCMI_FSIN_PORT          (GPIOB)
 
 #define DCMI_D0_PIN             (GPIO_PIN_6)
 #define DCMI_D1_PIN             (GPIO_PIN_7)
