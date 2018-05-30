@@ -398,7 +398,9 @@ static int snapshot(sensor_t *sensor, image_t *image)
     sensor->pixformat = PIXFORMAT_GRAYSCALE;
 
     image_t new_image;
+    DCMI_FSIN_HIGH();
     int ret = sensor_snapshot(sensor, &new_image);
+    DCMI_FSIN_LOW();
 
     sensor->pixformat = pixformat_bak;
 
