@@ -141,6 +141,7 @@ static int reset(sensor_t *sensor)
     }
 
     LEP_AGC_ROI_T roi;
+
     if (LEP_GetAgcROI(&tmp_handle, &roi) != LEP_OK) {
         return -1;
     }
@@ -151,6 +152,7 @@ static int reset(sensor_t *sensor)
     if (LEP_SetAgcEnableState(&tmp_handle, LEP_AGC_ENABLE) != LEP_OK) {
         return -1;
     }
+
     if (LEP_SetAgcCalcEnableState(&tmp_handle, LEP_AGC_ENABLE) != LEP_OK) {
         return -1;
     }
@@ -287,6 +289,8 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 
 static int snapshot(sensor_t *sensor, image_t *image)
 {
+    fb_update_jpeg_buffer();
+
     if ((!h_res) || (!v_res) || (!sensor->framesize) || (!sensor->pixformat)) {
         return -1;
     }
@@ -361,57 +365,57 @@ static int snapshot(sensor_t *sensor, image_t *image)
                 }
             }
 
-            //image_t img;
-            //img.w = sensor->fb_w;
-            //img.h = sensor->fb_h;
-            //img.bpp = MAIN_FB()->bpp; // invalid
-            //img.data = MAIN_FB()->pixels; // valid
+            image_t img;
+            img.w = MAIN_FB()->u;
+            img.h = MAIN_FB()->v;
+            img.bpp = MAIN_FB()->bpp; // invalid
+            img.data = MAIN_FB()->pixels; // valid
 
-            //float x_scale = resolution[sensor->framesize][0] / ((float) h_res);
-            //float y_scale = resolution[sensor->framesize][1] / ((float) v_res);
+            float x_scale = resolution[sensor->framesize][0] / ((float) h_res);
+            float y_scale = resolution[sensor->framesize][1] / ((float) v_res);
             // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
-            //float scale = IM_MAX(x_scale, y_scale);
-            //int x_offset = (resolution[sensor->framesize][0] - (h_res * scale)) / 2;
-            //int y_offset = (resolution[sensor->framesize][1] - (v_res * scale)) / 2;
-            //// The code below upscales the source image to the requested frame size
-            //// and then crops it to the window set by the user.
+            float scale = IM_MAX(x_scale, y_scale);
+            int x_offset = (resolution[sensor->framesize][0] - (h_res * scale)) / 2;
+            int y_offset = (resolution[sensor->framesize][1] - (v_res * scale)) / 2;
+            // The code below upscales the source image to the requested frame size
+            // and then crops it to the window set by the user.
 
-            //for (int yyy = fast_floorf(y * scale) + y_offset,
-            //     yyyy = fast_ceilf((y + 1) * scale) + y_offset; yyy < yyyy; yyy++) {
-            //    if ((sensor->fb_y <= yyy) && (yyy < (sensor->fb_y + sensor->fb_h))) {
+            for (int yyy = fast_floorf(y * scale) + y_offset,
+                 yyyy = fast_ceilf((y + 1) * scale) + y_offset; yyy < yyyy; yyy++) {
+                if ((MAIN_FB()->y <= yyy) && (yyy < (MAIN_FB()->y + MAIN_FB()->v))) {
 
-            //        for (int xxx = fast_floorf(x * scale) + x_offset,
-            //             xxxx = fast_ceilf((x + VOSPI_LINE_PIXELS) * scale) + x_offset; xxx < xxxx; xxx++) {
-            //            if ((sensor->fb_x <= xxx) && (xxx < (sensor->fb_x + sensor->fb_w))) {
+                    for (int xxx = fast_floorf(x * scale) + x_offset,
+                         xxxx = fast_ceilf((x + VOSPI_LINE_PIXELS) * scale) + x_offset; xxx < xxxx; xxx++) {
+                        if ((MAIN_FB()->x <= xxx) && (xxx < (MAIN_FB()->x + MAIN_FB()->u))) {
 
-            //                int i = (xxx / scale) - x;
-            //                // Value is the 14-bit value from the FLIR IR camera.
-            //                // However, with AGC enabled only the bottom 8-bits are non-zero.
-            //                int value = ((buffer[(i*2)+4] << 8) | (buffer[(i*2)+5] << 0)) & 0x3FFF;
+                            int i = (xxx / scale) - x;
+                            // Value is the 14-bit value from the FLIR IR camera.
+                            // However, with AGC enabled only the bottom 8-bits are non-zero.
+                            int value = ((buffer[(i*2)+4] << 8) | (buffer[(i*2)+5] << 0)) & 0x3FFF;
 
-            //                int t_x = xxx - sensor->fb_x;
-            //                int t_y = yyy - sensor->fb_y;
+                            int t_x = xxx - MAIN_FB()->x;
+                            int t_y = yyy - MAIN_FB()->y;
 
-            //                if (h_mirror) t_x = sensor->fb_w - t_x - 1;
-            //                if (v_flip) t_y = sensor->fb_h - t_y - 1;
+                            if (h_mirror) t_x = MAIN_FB()->u - t_x - 1;
+                            if (v_flip) t_y = MAIN_FB()->v - t_y - 1;
 
-            //                switch (sensor->pixformat) {
-            //                    case PIXFORMAT_RGB565: {
-            //                        IMAGE_PUT_RGB565_PIXEL(&img, t_x, t_y, rainbow_table[value & 0xFF]);
-            //                        break;
-            //                    }
-            //                    case PIXFORMAT_GRAYSCALE: {
-            //                        IMAGE_PUT_GRAYSCALE_PIXEL(&img, t_x, t_y, value & 0xFF);
-            //                        break;
-            //                    }
-            //                    default: {
-            //                        break;
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
+                            switch (sensor->pixformat) {
+                                case PIXFORMAT_RGB565: {
+                                    IMAGE_PUT_RGB565_PIXEL(&img, t_x, t_y, rainbow_table[value & 0xFF]);
+                                    break;
+                                }
+                                case PIXFORMAT_GRAYSCALE: {
+                                    IMAGE_PUT_GRAYSCALE_PIXEL(&img, t_x, t_y, value & 0xFF);
+                                    break;
+                                }
+                                default: {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             x += VOSPI_LINE_PIXELS;
         }
@@ -423,6 +427,28 @@ static int snapshot(sensor_t *sensor, image_t *image)
             reset = false;
         }
     }
+
+    MAIN_FB()->w = MAIN_FB()->u;
+    MAIN_FB()->h = MAIN_FB()->v;
+
+    switch (sensor->pixformat) {
+        case PIXFORMAT_RGB565: {
+            MAIN_FB()->bpp = sizeof(uint16_t);
+            break;
+        }
+        case PIXFORMAT_GRAYSCALE: {
+            MAIN_FB()->bpp = sizeof(uint8_t);
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    image->w = MAIN_FB()->w;
+    image->h = MAIN_FB()->h;
+    image->bpp = MAIN_FB()->bpp;
+    image->data = MAIN_FB()->pixels;
 
     return 0;
 }
