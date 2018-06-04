@@ -447,7 +447,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
     }
 
     // Skip the first frame.
-    MAIN_FB()->bpp = 0;
+    MAIN_FB()->bpp = -1;
 
     return dcmi_config(jpeg_mode);
 }
@@ -470,7 +470,7 @@ int sensor_set_framesize(framesize_t framesize)
     sensor.framesize = framesize;
 
     // Skip the first frame.
-    MAIN_FB()->bpp = 0;
+    MAIN_FB()->bpp = -1;
 
     // Set MAIN FB x, y offset.
     MAIN_FB()->x = 0;
