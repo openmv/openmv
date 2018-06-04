@@ -60,6 +60,13 @@ static uint8_t *get_mcu()
 
     // Copy 8x8 MCUs
     switch (jpeg_enc.img_bpp) {
+        case 0:
+            for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + MCU_H); y++) {
+                for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++) {
+                    *Y0++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(jpeg_enc.img, x, y)) - 128;
+                }
+            }
+            break;
         case 1:
             for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + MCU_H); y++) {
                 for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++) {
@@ -154,6 +161,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     JPEG_Info.ImageQuality  = quality;
 
     switch (src->bpp) {
+        case 0:
         case 1:
             jpeg_enc.mcu_size           = JPEG_444_GS_MCU_SIZE;
             JPEG_Info.ColorSpace        = JPEG_GRAYSCALE_COLORSPACE;
@@ -725,11 +733,33 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
         // Will be converted to RGB565
         jpeg_write_headers(&jpeg_buf, src->w, src->h, 2, jpeg_subsample);
     } else {
-        jpeg_write_headers(&jpeg_buf, src->w, src->h, src->bpp, jpeg_subsample);
+        jpeg_write_headers(&jpeg_buf, src->w, src->h, (src->bpp == 0) ? 1 : src->bpp, jpeg_subsample);
     }
 
     // Encode 8x8 macroblocks
-    if (src->bpp == 1) {
+    if (src->bpp == 0) {
+        int8_t YDU[64];
+
+        // Copy 8x8 MCUs
+        for (int y=0; y<src->h; y+=8) {
+            for (int x=0; x<src->w; x+=8) {
+                for (int r=y, idx=0; r<y+8; ++r, idx+=8) {
+                    YDU[idx + 0] = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(src, x+0, r)) - 128;
+                    YDU[idx + 1] = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(src, x+1, r)) - 128;
+                    YDU[idx + 2] = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(src, x+2, r)) - 128;
+                    YDU[idx + 3] = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(src, x+3, r)) - 128;
+                    YDU[idx + 4] = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(src, x+4, r)) - 128;
+                    YDU[idx + 5] = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(src, x+5, r)) - 128;
+                    YDU[idx + 6] = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(src, x+6, r)) - 128;
+                    YDU[idx + 7] = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(src, x+7, r)) - 128;
+                }
+                DCY = jpeg_processDU(&jpeg_buf, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+            }
+            if (jpeg_buf.overflow) {
+                goto jpeg_overflow;
+            }
+        }
+    } else if (src->bpp == 1) {
         int8_t YDU[64];
         uint8_t *pixels = (uint8_t *)src->pixels;
 
