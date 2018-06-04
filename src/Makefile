@@ -57,7 +57,7 @@ CFLAGS += -O2 -ggdb3 -DNDEBUG
 endif
 
 # OpenMV1 is No longer supported
-ifeq ($(TARGET), $(filter $(TARGET),OPENMV1 OPENMV2))
+ifeq ($(TARGET), OPENMV1)
 BRACKET = :)
 $(error "This camera is no longer supported :O Have fun hacking the code $(BRACKET)")
 endif
