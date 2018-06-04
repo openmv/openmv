@@ -16,6 +16,7 @@
 #include "omv_boardconfig.h"
 #include <stdbool.h>
 
+#ifdef IMLIB_ENABLE_CNN
 static const mp_obj_type_t py_net_type;
 
 typedef struct _py_net_obj_t {
@@ -84,10 +85,15 @@ static mp_obj_t py_nn_load(mp_obj_t path_obj)
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_nn_load_obj, py_nn_load);
+#endif // IMLIB_ENABLE_CNN
 
 static const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_nn) },
+#ifdef IMLIB_ENABLE_CNN
     { MP_OBJ_NEW_QSTR(MP_QSTR_load),   (mp_obj_t)&py_nn_load_obj },
+#else
+    { MP_OBJ_NEW_QSTR(MP_QSTR_load),   (mp_obj_t)&py_func_unavailable_obj },
+#endif // IMLIB_ENABLE_CNN
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
