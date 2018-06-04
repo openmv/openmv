@@ -1495,6 +1495,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_flood_fill_obj, 2, py_image_flood_fil
 
 STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+
     list_t arg_thresholds;
     list_init(&arg_thresholds, sizeof(color_thresholds_list_lnk_data_t));
     py_helper_arg_to_thresholds(args[1], &arg_thresholds);
@@ -1505,12 +1507,30 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zero), false);
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, 4, kw_args);
+    bool arg_to_bitmap =
+        py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_to_bitmap), false);
+    bool arg_copy =
+        py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+
+    PY_ASSERT_TRUE_MSG((!arg_to_bitmap) || arg_copy,
+                       "Can't convert to bitmap in place!");
+
+    image_t out;
+    out.w = arg_img->w;
+    out.h = arg_img->h;
+    out.bpp = arg_to_bitmap ? IMAGE_BPP_BINARY : arg_img->bpp;
+    out.data = arg_copy ? xalloc(image_size(&out)) : arg_img->data;
 
     fb_alloc_mark();
-    imlib_binary(py_helper_arg_to_image_mutable(args[0]), &arg_thresholds, arg_invert, arg_zero, arg_msk);
+    imlib_binary(&out, arg_img, &arg_thresholds, arg_invert, arg_zero, arg_msk);
     fb_alloc_free_till_mark();
     list_free(&arg_thresholds);
-    return args[0];
+
+    if ((!arg_copy) && (MAIN_FB()->pixels == out.data)) {
+        MAIN_FB()->bpp = out.bpp;
+    }
+
+    return py_image_from_struct(&out);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_binary_obj, 2, py_image_binary);
 
