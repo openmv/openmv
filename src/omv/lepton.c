@@ -458,23 +458,14 @@ int lepton_init(sensor_t *sensor)
 {
     memset(&SPIHandle, 0, sizeof(SPIHandle));
 
-    SPIHandle.Instance = SPI3;
-    SPIHandle.Init.Mode = SPI_MODE_MASTER;
-    SPIHandle.Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
-    SPIHandle.Init.DataSize = SPI_DATASIZE_8BIT;
-    SPIHandle.Init.CLKPolarity = SPI_POLARITY_HIGH;
-    SPIHandle.Init.CLKPhase = SPI_PHASE_2EDGE;
-    SPIHandle.Init.NSS = SPI_NSS_SOFT;
-
-    uint32_t prescale = HAL_RCC_GetPCLK1Freq() / 20000000;
-    if (prescale <= 2) { SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2; }
-    else if (prescale <= 4) { SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4; }
-    else if (prescale <= 8) { SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8; }
-    else if (prescale <= 16) { SPIHandle.Init.BaudRatePrescaler= SPI_BAUDRATEPRESCALER_16; }
-    else if (prescale <= 32) { SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32; }
-    else if (prescale <= 64) { SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64; }
-    else if (prescale <= 128) { SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128; }
-    else { SPIHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256; }
+    SPIHandle.Instance               = SPI3;
+    SPIHandle.Init.NSS               = SPI_NSS_SOFT;
+    SPIHandle.Init.Mode              = SPI_MODE_MASTER;
+    SPIHandle.Init.Direction         = SPI_DIRECTION_2LINES_RXONLY;
+    SPIHandle.Init.DataSize          = SPI_DATASIZE_8BIT;
+    SPIHandle.Init.CLKPhase          = SPI_PHASE_2EDGE;
+    SPIHandle.Init.CLKPolarity       = SPI_POLARITY_HIGH;
+    SPIHandle.Init.BaudRatePrescaler = LEPTON_SPI_PRESCALER;
 
     __HAL_RCC_SPI3_CLK_ENABLE();
     if (HAL_SPI_Init(&SPIHandle) != HAL_OK) {
