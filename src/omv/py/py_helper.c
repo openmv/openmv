@@ -7,6 +7,13 @@
 
 extern void *py_image_cobj(mp_obj_t img_obj);
 
+mp_obj_t py_image_unavailable(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    PY_ASSERT_TRUE_MSG(false, "This function is unavailable on your OpenMV Cam.");
+    return args[0];
+}
+MP_DEFINE_CONST_FUN_OBJ_KW(py_image_unavailable_obj, 1, py_image_unavailable);
+
 image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);

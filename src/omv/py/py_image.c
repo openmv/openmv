@@ -5198,13 +5198,6 @@ static mp_obj_t py_image_find_hog(uint n_args, const mp_obj_t *args, mp_map_t *k
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_hog_obj, 1, py_image_find_hog);
 #endif // IMLIB_ENABLE_HOG
 
-mp_obj_t py_image_unavailable(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    PY_ASSERT_TRUE_MSG(false, "This method is unavailable on your OpenMV Cam version.");
-    return args[0];
-}
-MP_DEFINE_CONST_FUN_OBJ_KW(py_image_unavailable_obj, 1, py_image_unavailable);
-
 static const mp_rom_map_elem_t locals_dict_table[] = {
     /* Basic Methods */
     {MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_image_width_obj)},
