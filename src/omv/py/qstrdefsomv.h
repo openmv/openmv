@@ -430,6 +430,8 @@ Q(binary)
 // duplicate Q(invert)
 Q(zero)
 // duplicate Q(mask)
+// duplciate Q(to_bitmap)
+// duplicate Q(copy)
 
 // Invert
 // duplicate Q(invert)
