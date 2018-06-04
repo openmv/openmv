@@ -26,7 +26,7 @@ void imlib_edge_simple(image_t *src, rectangle_t *roi, int low_thresh, int high_
     lnk_data.LMin=low_thresh;
     lnk_data.LMax=high_thresh;
     list_push_back(&thresholds, &lnk_data);
-    imlib_binary(src, &thresholds, false, false, NULL);
+    imlib_binary(src, src, &thresholds, false, false, NULL);
     list_free(&thresholds);
     imlib_erode(src, 1, 2, NULL);
 }
