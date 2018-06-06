@@ -1,0 +1,42 @@
+dist: trusty
+sudo: required
+language: c
+
+notifications:
+  email:
+    on_success: never
+
+branches:
+  only:
+    - master
+
+cache:
+  directories:
+    - "${HOME}/persist"
+
+matrix:
+  include:
+    - env: TARGET=OPENMV2
+    - env: TARGET=OPENMV3
+    - env: TARGET=OPENMV4
+
+before_install:
+  # update submodules 
+  - git submodule update --init --recursive
+  # install ARM GCC
+  - pushd .
+  - cd ~ && mkdir gcc && cd gcc
+  - GCC_URL="https://developer.arm.com/-/media/Files/downloads/gnu-rm/7-2017q4/gcc-arm-none-eabi-7-2017-q4-major-linux.tar.bz2"
+  - wget -O gcc.tar.bz2 ${GCC_URL}
+  - tar -jxf gcc.tar.bz2 --strip 1
+  - exportline="export PATH=\$HOME/gcc/bin:\$PATH"
+  - if grep -Fxq "$exportline" ~/.profile; then echo nothing to do ; else echo $exportline >> ~/.profile; fi
+  - . ~/.profile
+  - popd
+  
+
+before_script:
+  - arm-none-eabi-gcc --version
+
+script:
+  - make -j5 TARGET=$TARGET -C src
