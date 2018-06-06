@@ -523,8 +523,28 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         if (!IM_EQUAL(img, other)) {
             ff_not_equal(NULL);
         }
-        for (int i=0; i<img->h; i++) {
-            op(img, i, other->pixels + (img->w * img->bpp * i), data, false);
+        switch (img->bpp) {
+            case IMAGE_BPP_BINARY: {
+                for (int i=0, ii=img->h; i<ii; i++) {
+                    op(img, i, IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(other, i), data, false);
+                }
+                break;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                for (int i=0, ii=img->h; i<ii; i++) {
+                    op(img, i, IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(other, i), data, false);
+                }
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                for (int i=0, ii=img->h; i<ii; i++) {
+                    op(img, i, IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(other, i), data, false);
+                }
+                break;
+            }
+            default: {
+                break;
+            }
         }
     } else {
         switch(img->bpp) {
