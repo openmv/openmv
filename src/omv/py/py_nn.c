@@ -27,10 +27,10 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 {
     nn_t *net = py_net_cobj(args[0]);
     image_t *img = py_helper_arg_to_image_mutable(args[1]);
+    bool softmax = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_softmax), false);
+    bool dry_run = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
 
     mp_obj_t output_list = mp_obj_new_list(0, NULL);
-    bool softmax =  py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_softmax), false);
-    bool dry_run =  py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
 
     if (dry_run == false) {
         nn_run_network(net, img, softmax);
@@ -41,6 +41,7 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     for (int i=0; i<net->output_size; i++) {
         mp_obj_list_append(output_list, mp_obj_new_int(net->output_data[i]));
     }
+
     return output_list;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_net_forward_obj, 2, py_net_forward);
@@ -66,9 +67,8 @@ static const mp_obj_type_t py_net_type = {
 
 static mp_obj_t py_nn_load(mp_obj_t path_obj)
 {
-    py_net_obj_t *net = NULL;
     const char *path = mp_obj_str_get_str(path_obj);
-    net = m_new_obj(py_net_obj_t);
+    py_net_obj_t *net = m_new_obj(py_net_obj_t);
     net->base.type = &py_net_type;
     nn_load_network(py_net_cobj(net), path);
     return net;
