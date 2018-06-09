@@ -93,6 +93,7 @@
   #define __ASM            __asm                                      /*!< asm keyword for GNU Compiler */
   #define __INLINE         inline                                     /*!< inline keyword for GNU Compiler */
   #define __STATIC_INLINE  static inline
+  #define __STATIC_FORCEINLINE  static __attribute__((always_inline)) inline
 
 #elif defined ( __ICCARM__ )
   #define __ASM            __asm                                      /*!< asm keyword for IAR Compiler */
