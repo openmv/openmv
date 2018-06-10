@@ -23,17 +23,27 @@ void *py_net_cobj(mp_obj_t net_obj)
     return &((py_net_obj_t *)net_obj)->_cobj;
 }
 
+STATIC void py_net_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
+{
+    py_net_obj_t *self = self_in;
+    nn_dump_network(py_net_cobj(self));
+}
+
 STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     nn_t *net = py_net_cobj(args[0]);
     image_t *img = py_helper_arg_to_image_mutable(args[1]);
-    bool softmax = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_softmax), false);
-    bool dry_run = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
+
+    rectangle_t roi;
+    py_helper_keyword_rectangle_roi(img, n_args, args, 3, kw_args, &roi);
+
+    bool softmax = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_softmax), false);
+    bool dry_run = py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
 
     mp_obj_t output_list = mp_obj_new_list(0, NULL);
 
     if (dry_run == false) {
-        nn_run_network(net, img, softmax);
+        nn_run_network(net, img, &roi, softmax);
     } else {
         nn_dry_run_network(net, img, softmax);
     }
@@ -45,12 +55,6 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     return output_list;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_net_forward_obj, 2, py_net_forward);
-
-STATIC void py_net_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
-{
-    py_net_obj_t *self = self_in;
-    nn_dump_network(py_net_cobj(self));
-}
 
 STATIC const mp_rom_map_elem_t locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_forward), MP_ROM_PTR(&py_net_forward_obj) }
