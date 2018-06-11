@@ -205,8 +205,8 @@ STATIC mp_obj_t py_net_search(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 
                     int sum = 0;
                     int sum_2 = 0;
-                    for (int b = new_roi.y, bb = new_roi.y + new_roi.h; b < bb; b++) {
-                        for (int a = new_roi.x, aa = new_roi.x + new_roi.w; a < aa; a++) {
+                    for (int b = new_roi.y, bb = new_roi.y + new_roi.h, bbb = fast_sqrtf(new_roi.h); b < bb; b += bbb) {
+                        for (int a = new_roi.x, aa = new_roi.x + new_roi.w, aaa = fast_sqrtf(new_roi.w); a < aa; a += aaa) {
                             switch(arg_img->bpp) {
                                 case IMAGE_BPP_BINARY: {
                                     int pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(arg_img, a, b));
