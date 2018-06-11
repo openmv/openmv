@@ -15,7 +15,9 @@ static char *pointer = &_fballoc;
 
 NORETURN void fb_alloc_fail()
 {
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "FB Alloc Collision!!!"));
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
+        "Out of fast Frame Buffer Stack Memory!"
+        " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
 }
 
 void fb_alloc_init0()
@@ -36,7 +38,9 @@ void fb_alloc_mark()
 
     // Check if allocation overwrites the framebuffer pixels
     if (new_pointer < (char *) MAIN_FB_PIXELS()) {
-        nlr_raise_for_fb_alloc_mark(mp_obj_new_exception_msg(&mp_type_MemoryError, "FB Alloc Collision!!!"));
+        nlr_raise_for_fb_alloc_mark(mp_obj_new_exception_msg(&mp_type_MemoryError,
+            "Out of fast Frame Buffer Stack Memory!"
+            " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
     }
 
     // fb_alloc does not allow regions which are a size of 0 to be alloced,
