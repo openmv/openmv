@@ -27,11 +27,7 @@ void *xalloc(uint32_t size)
 // returns null pointer without error if size==0
 void *xalloc_try_alloc(uint32_t size)
 {
-    void *mem = gc_alloc(size, false);
-    if (size && (mem == NULL)) {
-        return NULL;
-    }
-    return mem;
+    return gc_alloc(size, false);
 }
 
 // returns null pointer without error if size==0
