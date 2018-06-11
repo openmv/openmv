@@ -35,12 +35,13 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     image_t *img = py_helper_arg_to_image_mutable(args[1]);
 
     rectangle_t roi;
-    py_helper_keyword_rectangle_roi(img, n_args, args, 3, kw_args, &roi);
+    py_helper_keyword_rectangle_roi(img, n_args, args, 2, kw_args, &roi);
 
-    bool softmax = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_softmax), false);
-    bool dry_run = py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
+    bool softmax = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_softmax), false);
+    bool dry_run = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
 
     mp_obj_t output_list = mp_obj_new_list(0, NULL);
+    fb_alloc_mark();
 
     if (dry_run == false) {
         nn_run_network(net, img, &roi, softmax);
@@ -52,6 +53,7 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         mp_obj_list_append(output_list, mp_obj_new_int(net->output_data[i]));
     }
 
+    fb_alloc_free_till_mark();
     return output_list;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_net_forward_obj, 2, py_net_forward);
