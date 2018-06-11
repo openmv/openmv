@@ -143,7 +143,7 @@ static int dcmi_config(uint32_t jpeg_mode)
     }
 
     // Configure and enable DCMI IRQ Channel
-    HAL_NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI, IRQ_SUBPRI_DCMI);
+    NVIC_SetPriority(DCMI_IRQn, IRQ_PRI_DCMI);
     HAL_NVIC_EnableIRQ(DCMI_IRQn);
     return 0;
 }
@@ -170,7 +170,7 @@ static int dma_config()
     DMAHandle.Init.PeriphBurst          = DMA_PBURST_SINGLE;        /* Peripheral burst                 */
 
     // Configure and disable DMA IRQ Channel
-    HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21, IRQ_SUBPRI_DMA21);
+    NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
     HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 
     // Initialize the DMA stream
@@ -702,7 +702,7 @@ int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin)
     sensor.vsync_pin  = pin;
     sensor.vsync_gpio = gpio;
     // Enable VSYNC EXTI IRQ
-    HAL_NVIC_SetPriority(DCMI_VSYNC_IRQN, IRQ_PRI_EXTINT, IRQ_SUBPRI_EXTINT);
+    NVIC_SetPriority(DCMI_VSYNC_IRQN, IRQ_PRI_EXTINT);
     HAL_NVIC_EnableIRQ(DCMI_VSYNC_IRQN);
     return 0;
 }

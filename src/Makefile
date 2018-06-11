@@ -265,6 +265,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	uart.o                  \
 	systick.o               \
 	i2c.o                   \
+	pyb_i2c.o               \
 	spi.o                   \
 	can.o                   \
 	pin.o                   \

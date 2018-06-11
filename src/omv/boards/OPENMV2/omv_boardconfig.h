@@ -152,7 +152,7 @@
 #define WINC_EN_PIN             (GPIO_PIN_5)
 #define WINC_CS_PIN             (GPIO_PIN_12)
 #define WINC_RST_PIN            (GPIO_PIN_12)
-#define WINC_IRQ_PIN            (&pin_D13)
+#define WINC_IRQ_PIN            (pin_D13)
 
 #define WINC_EN_PORT            (GPIOA)
 #define WINC_CS_PORT            (GPIOB)
