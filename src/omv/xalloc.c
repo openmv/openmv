@@ -11,7 +11,7 @@
 
 NORETURN static void xalloc_fail()
 {
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Micro Python Heap Memory!"
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of normal MicroPython Heap Memory!"
         " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
 }
 
