@@ -273,19 +273,27 @@ error:
     return res;
 }
 
-void nn_transform_input(data_layer_t *data_layer, image_t *img, q7_t *input_data)
+#ifndef __SSAT
+#define __SSAT(a, b) ({ __typeof__ (a) _a = (a); \
+                        __typeof__ (b) _b = (b); \
+                        _b = 1 << (_b - 1); \
+                        _a = _a < (_b - 1) ? _a : (_b - 1); \
+                        _a > (-_b) ? _a : (-_b); })
+#endif
+
+void nn_transform_input(data_layer_t *data_layer, image_t *img, q7_t *input_data, rectangle_t *roi)
 {
     int input_scale = data_layer->scale;
-    // scale, convert and normalize input image.
-    int x_ratio = (int)((img->w<<16)/data_layer->w)+1;
-    int y_ratio = (int)((img->h<<16)/data_layer->h)+1;
+    // Scale, convert and normalize input image.
+    int x_ratio = (int)((roi->w<<16)/data_layer->w)+1;
+    int y_ratio = (int)((roi->h<<16)/data_layer->h)+1;
 
-    if (img->bpp == 2 && data_layer->c == 3) { //RGB565 to RGB888
+    if ((img->bpp == 2) && (data_layer->c == 3)) { // RGB565 to RGB888
         for (int y=0, i=0; y<data_layer->h; y++) {
             int sy = (y*y_ratio)>>16;
             for (int x=0; x<data_layer->w; x++, i+=3) {
                 int sx = (x*x_ratio)>>16;
-                uint16_t p = IM_GET_RGB565_PIXEL(img, sx, sy);
+                uint16_t p = IM_GET_RGB565_PIXEL(img, sx+roi->x, sy+roi->y);
                 input_data[i+0] = (q7_t)__SSAT((((((int) COLOR_RGB565_TO_R8(p))
                                   - (int) data_layer->r_mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
                 input_data[i+1] = (q7_t)__SSAT((((((int) COLOR_RGB565_TO_G8(p))
@@ -294,17 +302,17 @@ void nn_transform_input(data_layer_t *data_layer, image_t *img, q7_t *input_data
                                   - (int) data_layer->b_mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
             }
         }
-    } else if (img->bpp == 2 && data_layer->c == 1) { //RGB565 to GS
+    } else if ((img->bpp == 2) && (data_layer->c == 1)) { // RGB565 to GS
         for (int y=0, i=0; y<data_layer->h; y++) {
             int sy = (y*y_ratio)>>16;
             for (int x=0; x<data_layer->w; x++, i++) {
                 int sx = (x*x_ratio)>>16;
-                uint16_t p = IM_GET_RGB565_PIXEL(img, sx, sy);
+                uint16_t p = IM_GET_RGB565_PIXEL(img, sx+roi->x, sy+roi->y);
                 input_data[i] = (q7_t)__SSAT((((((int) COLOR_RGB565_TO_GRAYSCALE(p))
                                 - (int) data_layer->r_mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
             }
         }
-    } else if (img->bpp == 1 && data_layer->c == 3) { //GS to RGB88
+    } else if ((img->bpp == 1) && (data_layer->c == 3)) { // GS to RGB88
         int mean = (int) ((0.30f * data_layer->r_mean) +
                           (0.59f * data_layer->g_mean) +
                           (0.11f * data_layer->b_mean));
@@ -312,25 +320,48 @@ void nn_transform_input(data_layer_t *data_layer, image_t *img, q7_t *input_data
             int sy = (y*y_ratio)>>16;
             for (int x=0; x<data_layer->w; x++, i+=3) {
                 int sx = (x*x_ratio)>>16;
-                int p = (int) IMAGE_GET_GRAYSCALE_PIXEL(img, sx, sy);
+                int p = (int) IMAGE_GET_GRAYSCALE_PIXEL(img, sx+roi->x, sy+roi->y);
                 input_data[i+0] = (q7_t)__SSAT((((p - (int) mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
                 input_data[i+1] = (q7_t)__SSAT((((p - (int) mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
                 input_data[i+2] = (q7_t)__SSAT((((p - (int) mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
             }
         }
-    } else if (img->bpp == 1 && data_layer->c == 1) { //GS to GS
+    } else if ((img->bpp == 1) && (data_layer->c == 1)) { // GS to GS
         for (int y=0, i=0; y<data_layer->h; y++) {
             int sy = (y*y_ratio)>>16;
             for (int x=0; x<data_layer->w; x++, i++) {
                 int sx = (x*x_ratio)>>16;
-                int p = (int) IMAGE_GET_GRAYSCALE_PIXEL(img, sx, sy);
+                int p = (int) IMAGE_GET_GRAYSCALE_PIXEL(img, sx+roi->x, sy+roi->y);
+                input_data[i] = (q7_t)__SSAT((((p - (int) data_layer->r_mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
+            }
+        }
+    } else if ((img->bpp == 0) && (data_layer->c == 3)) { // BINARY to RGB88
+        int mean = (int) ((0.30f * data_layer->r_mean) +
+                          (0.59f * data_layer->g_mean) +
+                          (0.11f * data_layer->b_mean));
+        for (int y=0, i=0; y<data_layer->h; y++) {
+            int sy = (y*y_ratio)>>16;
+            for (int x=0; x<data_layer->w; x++, i+=3) {
+                int sx = (x*x_ratio)>>16;
+                int p = (int) COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(img, sx+roi->x, sy+roi->y));
+                input_data[i+0] = (q7_t)__SSAT((((p - (int) mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
+                input_data[i+1] = (q7_t)__SSAT((((p - (int) mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
+                input_data[i+2] = (q7_t)__SSAT((((p - (int) mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
+            }
+        }
+    } else if ((img->bpp == 0) && (data_layer->c == 1)) { // BINARY to GS
+        for (int y=0, i=0; y<data_layer->h; y++) {
+            int sy = (y*y_ratio)>>16;
+            for (int x=0; x<data_layer->w; x++, i++) {
+                int sx = (x*x_ratio)>>16;
+                int p = (int) COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(img, sx+roi->x, sy+roi->y));
                 input_data[i] = (q7_t)__SSAT((((p - (int) data_layer->r_mean)<<7) + (1<<(input_scale-1))) >> input_scale, 8);
             }
         }
     }
 }
 
-int nn_run_network(nn_t *net, image_t *img, bool softmax)
+int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
 {
     uint32_t layer_idx = 0;
     layer_t *layer = net->layers;
@@ -360,7 +391,7 @@ int nn_run_network(nn_t *net, image_t *img, bool softmax)
             case LAYER_TYPE_DATA: {
                 data_layer_t *data_layer = (data_layer_t *) layer;
                 input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w);
-                nn_transform_input(data_layer, img, input_data);
+                nn_transform_input(data_layer, img, input_data, roi);
                 // Set image data as input buffer for the next layer.
                 input_buffer = input_data;
                 output_buffer = buffer1;

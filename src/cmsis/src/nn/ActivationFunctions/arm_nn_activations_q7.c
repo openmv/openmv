@@ -80,7 +80,7 @@ void arm_nn_activations_direct_q7(q7_t * data, uint16_t size, uint16_t int_width
     while (i)
     {
         in = *pIn++;
-        out = lookup_table[(uint8_t) in >> shift_size];
+        out = lookup_table[(uint8_t) (in >> shift_size)];
         *pOut++ = out;
         i--;
     }

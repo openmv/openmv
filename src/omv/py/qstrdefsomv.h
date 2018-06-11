@@ -138,9 +138,30 @@ Q(load)
 
 // Net
 Q(Net)
+
+// Forward
 Q(forward)
 Q(dry_run)
 Q(softmax)
+
+// Search
+// duplicate Q(search)
+// duplicate Q(roi)
+// duplicate Q(threshold)
+Q(min_scale)
+Q(scale_mul)
+Q(x_overlap)
+Q(y_overlap)
+Q(contrast_threshold)
+// duplicate Q(softmax)
+// NN Class
+Q(nn_class)
+// duplicate Q(x)
+// duplicate Q(y)
+// duplicate Q(w)
+// duplicate Q(h)
+// duplicate Q(index)
+// duplicate Q(value)
 
 // C/SIF Resolutions
 Q(QQCIF)
