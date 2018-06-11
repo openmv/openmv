@@ -12,7 +12,7 @@ sensor.reset()                         # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)      # Set frame size to QVGA (320x240)
 sensor.set_windowing((128, 128))       # Set 128x128 window.
-sensor.skip_frames(time=500)           # Don't let autogain run every long.
+sensor.skip_frames(time=500)           # Don't let autogain run very long.
 sensor.set_auto_gain(False)            # Turn off autogain.
 sensor.set_auto_exposure(False)        # Turn off whitebalance.
 
