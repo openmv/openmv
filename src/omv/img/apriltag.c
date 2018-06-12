@@ -9125,7 +9125,6 @@ typedef struct unionfind unionfind_t;
 
 struct unionfind
 {
-    uint32_t maxid;
     struct ufrec *data;
 };
 
@@ -9133,13 +9132,12 @@ struct ufrec
 {
     // the parent of this node. If a node's parent is its own index,
     // then it is a root.
-    uint32_t parent;
+    uint16_t parent;
 };
 
-static inline unionfind_t *unionfind_create(uint32_t maxid)
+static inline unionfind_t *unionfind_create(uint16_t maxid)
 {
     unionfind_t *uf = (unionfind_t*) fb_alloc(sizeof(unionfind_t));
-    uf->maxid = maxid;
     uf->data = (struct ufrec*) fb_alloc((maxid+1) * sizeof(struct ufrec));
     for (int i = 0; i <= maxid; i++) {
         uf->data[i].parent = i;
@@ -9154,7 +9152,7 @@ static inline void unionfind_destroy()
 }
 
 /*
-static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id)
+static inline uint16_t unionfind_get_representative(unionfind_t *uf, uint16_t id)
 {
     // base case: a node is its own parent
     if (uf->data[id].parent == id)
@@ -9172,9 +9170,9 @@ static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id
 
 // this one seems to be every-so-slightly faster than the recursive
 // version above.
-static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id)
+static inline uint16_t unionfind_get_representative(unionfind_t *uf, uint16_t id)
 {
-    uint32_t root = id;
+    uint16_t root = id;
 
     // chase down the root
     while (uf->data[root].parent != root) {
@@ -9187,7 +9185,7 @@ static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id
     // (e.g. image segmentation), we are actually faster not doing
     // this...
     while (uf->data[id].parent != root) {
-        uint32_t tmp = uf->data[id].parent;
+        uint16_t tmp = uf->data[id].parent;
         uf->data[id].parent = root;
         id = tmp;
     }
@@ -9195,10 +9193,10 @@ static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id
     return root;
 }
 
-static inline uint32_t unionfind_connect(unionfind_t *uf, uint32_t aid, uint32_t bid)
+static inline uint16_t unionfind_connect(unionfind_t *uf, uint16_t aid, uint16_t bid)
 {
-    uint32_t aroot = unionfind_get_representative(uf, aid);
-    uint32_t broot = unionfind_get_representative(uf, bid);
+    uint16_t aroot = unionfind_get_representative(uf, aid);
+    uint16_t broot = unionfind_get_representative(uf, bid);
 
     if (aroot != broot)
         uf->data[broot].parent = aroot;
@@ -9223,12 +9221,12 @@ static inline uint32_t u64hash_2(uint64_t x) {
     return (uint32_t) x;
 }
 
-struct uint64_zarray_entry
+struct uint32_zarray_entry
 {
-    uint64_t id;
+    uint32_t id;
     zarray_t *cluster;
 
-    struct uint64_zarray_entry *next;
+    struct uint32_zarray_entry *next;
 };
 
 #ifndef M_PI
@@ -10399,8 +10397,8 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
     }
 
     uint32_t nclustermap;
-    struct uint64_zarray_entry **clustermap = fb_alloc0_all(&nclustermap);
-    nclustermap /= sizeof(struct uint64_zarray_entry*);
+    struct uint32_zarray_entry **clustermap = fb_alloc0_all(&nclustermap);
+    nclustermap /= sizeof(struct uint32_zarray_entry*);
     if (!nclustermap) fb_alloc_fail();
 
     for (int y = 1; y < h-1; y++) {
@@ -10411,7 +10409,7 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
                 continue;
 
             // XXX don't query this until we know we need it?
-            uint64_t rep0 = unionfind_get_representative(uf, y*w + x);
+            uint32_t rep0 = unionfind_get_representative(uf, y*w + x);
 
             // whenever we find two adjacent pixels such that one is
             // white and the other black, we add the point half-way
@@ -10438,22 +10436,22 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
                 uint8_t v1 = threshim->buf[y*ts + dy*ts + x + dx];      \
                                                                         \
                 while (v0 + v1 == 255) {                                   \
-                    uint64_t rep1 = unionfind_get_representative(uf, y*w + dy*w + x + dx); \
-                    uint64_t clusterid;                                 \
+                    uint32_t rep1 = unionfind_get_representative(uf, y*w + dy*w + x + dx); \
+                    uint32_t clusterid;                                 \
                     if (rep0 < rep1)                                    \
-                        clusterid = (rep1 << 32) + rep0;                \
+                        clusterid = (rep1 << 16) + rep0;                \
                     else                                                \
-                        clusterid = (rep0 << 32) + rep1;                \
+                        clusterid = (rep0 << 16) + rep1;                \
                                                                         \
                     /* XXX lousy hash function */                       \
                     uint32_t clustermap_bucket = u64hash_2(clusterid) % nclustermap; \
-                    struct uint64_zarray_entry *entry = clustermap[clustermap_bucket]; \
+                    struct uint32_zarray_entry *entry = clustermap[clustermap_bucket]; \
                     while (entry && entry->id != clusterid)     {       \
                         entry = entry->next;                            \
                     }                                                   \
                                                                         \
                     if (!entry) {                                       \
-                        entry = umm_calloc(1, sizeof(struct uint64_zarray_entry)); \
+                        entry = umm_calloc(1, sizeof(struct uint32_zarray_entry)); \
                         if (!entry) break;                              \
                         entry->id = clusterid;                          \
                         entry->cluster = zarray_create_fail_ok(sizeof(struct pt)); \
@@ -10484,11 +10482,11 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
 
     ////////////////////////////////////////////////////////
     // step 3. process each connected component.
-    zarray_t *clusters = zarray_create_fail_ok(sizeof(zarray_t*)); //, uint64_zarray_hash_size(clustermap));
+    zarray_t *clusters = zarray_create_fail_ok(sizeof(zarray_t*)); //, uint32_zarray_hash_size(clustermap));
     if (clusters) {
         for (int i = 0; i < nclustermap; i++) {
 
-            for (struct uint64_zarray_entry *entry = clustermap[i]; entry; entry = entry->next) {
+            for (struct uint32_zarray_entry *entry = clustermap[i]; entry; entry = entry->next) {
                 // XXX reject clusters here?
                 zarray_add_fail_ok(clusters, &entry->cluster);
             }
@@ -10500,7 +10498,7 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
 
     if (1) {
       for (int i = 0; i < nclustermap; i++) {
-        struct uint64_zarray_entry *entry = clustermap[i];
+        struct uint32_zarray_entry *entry = clustermap[i];
         while (entry) {
           // free any leaked cluster (zarray_add_fail_ok)
           bool leaked = true;
@@ -10510,7 +10508,7 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
               leaked &= entry->cluster != cluster;
           }
           if (leaked) free(entry->cluster);
-          struct uint64_zarray_entry *tmp = entry->next;
+          struct uint32_zarray_entry *tmp = entry->next;
           free(entry);
           entry = tmp;
         }
@@ -11632,9 +11630,9 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     // Frame Buffer Memory Usage...
     // -> GRAYSCALE Input Image = w*h*1
     // -> GRAYSCALE Threhsolded Image = w*h*1
-    // -> UnionFind = w*h*4 (+w*h*2 for hash table)
+    // -> UnionFind = w*h*2 (+w*h*1 for hash table)
     size_t resolution = roi->w * roi->h;
-    size_t fb_alloc_need = resolution * (1 + 1 + 4 + 2); // read above...
+    size_t fb_alloc_need = resolution * (1 + 1 + 2 + 1); // read above...
     umm_init_x(((fb_avail() - fb_alloc_need) / resolution) * resolution);
     apriltag_detector_t *td = apriltag_detector_create();
 
