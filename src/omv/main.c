@@ -361,17 +361,14 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
 
     if (f_res == FR_OK) {
         if (nlr_push(&nlr) == 0) {
-            // Parse and compile the script.
-            mp_obj_t code = pyexec_compile_file(path);
-
             // Enable IDE interrupts if allowed.
             if (interruptible) {
                 usbdbg_set_irq_enabled(true);
                 usbdbg_set_script_running(true);
             }
 
-            // Execute the compiled script.
-            pyexec_exec_code(code);
+            // Parse, compile and execute the script.
+            pyexec_file(path);
             nlr_pop();
         } else {
             interrupted = true;
@@ -602,15 +599,11 @@ soft_reset:
     if (usbdbg_script_ready()) {
         nlr_buf_t nlr;
         if (nlr_push(&nlr) == 0) {
-            // Parse and compile the script
-            vstr_t *buf = usbdbg_get_script();
-            mp_obj_t code = pyexec_compile_str(buf);
-
             // Enable IDE interrupt
             usbdbg_set_irq_enabled(true);
 
-            // Execute the compiled script
-            pyexec_exec_code(code);
+            // Execute the script.
+            pyexec_str(usbdbg_get_script());
             nlr_pop();
         } else {
             mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
