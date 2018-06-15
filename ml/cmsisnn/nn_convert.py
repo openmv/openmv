@@ -28,6 +28,8 @@ def get_mean_values(mean_file):
         blob.ParseFromString(data)
         arr = np.array(caffe.io.blobproto_to_array(blob))[0]
         mean_vals = [int(x.mean().round()) for x in arr]
+        if (len(mean_vals) < 3):
+            mean_vals += [mean_vals[0]] * (3 - len(mean_vals))
     return mean_vals
 
 def convert_to_x4_weights(weights):
