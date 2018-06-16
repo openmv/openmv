@@ -1,0 +1,35 @@
+# Simle detection using Haar Cascade + CNN.
+import sensor, time, image, os, nn
+
+sensor.reset()                          # Reset and initialize the sensor.
+sensor.set_contrast(2)
+sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565
+sensor.set_framesize(sensor.QQVGA)      # Set frame size to QVGA (320x240)
+sensor.skip_frames(time=2000)
+sensor.set_auto_gain(False)
+
+# Load smile detection network
+net = nn.load('/smile.network')
+
+# Load Face Haar Cascade
+face_cascade = image.HaarCascade("frontalface", stages=25)
+print(face_cascade)
+
+# FPS clock
+clock = time.clock()
+while (True):
+    clock.tick()
+
+    # Capture snapshot
+    img = sensor.snapshot()
+
+    # Find faces.
+    objects = img.find_features(face_cascade, threshold=0.75, scale_factor=1.25)
+
+    # Detect smiles
+    for r in objects:
+        img.draw_rectangle(r)
+        out = net.forward(img, roi=r, softmax=True)
+        img.draw_string(r[0], r[1], ':)' if (out[0]/127 > 0.8) else ':(', color=(255), scale=2)
+
+    print(clock.fps())
