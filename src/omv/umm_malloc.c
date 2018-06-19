@@ -3,9 +3,17 @@
  * This work is licensed under the MIT license, see the file LICENSE for details.
  */
 
+#include <mp.h>
 #include <string.h>
 #include "fb_alloc.h"
 #include "umm_malloc.h"
+
+NORETURN  void umm_alloc_fail()
+{
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
+        "Out of temporary Frame Buffer Heap Memory!"
+        " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "umm_malloc.c"
