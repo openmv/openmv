@@ -28,6 +28,8 @@ while (True):
 
     # Detect smiles
     for r in objects:
+        # Resize and center detection area
+        r = [r[0], r[1]+10, int(r[2]*1.1), int(r[2]*1.1)]
         img.draw_rectangle(r)
         out = net.forward(img, roi=r, softmax=True)
         img.draw_string(r[0], r[1], ':)' if (out[0]/127 > 0.8) else ':(', color=(255), scale=2)
