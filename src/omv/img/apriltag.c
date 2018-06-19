@@ -266,6 +266,8 @@ static inline void zarray_add_fail_ok(zarray_t *za, const void *p)
 
     if (za->size + 1 > za->alloc)
     {
+        int old_alloc = za->alloc;
+
         while (za->alloc < za->size + 1) {
             za->alloc += 8; // use less memory // *= 2;
             if (za->alloc < 8)
@@ -275,9 +277,7 @@ static inline void zarray_add_fail_ok(zarray_t *za, const void *p)
         za->data = (char*) umm_realloc(za->data, za->alloc * za->el_sz);
 
         if (!za->data) {
-            // reset the zarray...
-            za->size = 0;
-            za->alloc = 0;
+            za->alloc = old_alloc;
             return;
         }
     }
