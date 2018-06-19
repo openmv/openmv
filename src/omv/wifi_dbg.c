@@ -23,9 +23,9 @@ void wifi_dbg_init()
     // Also, reset regular USB CDC DBG access if things were setup before.
 }
 
-void wifi_dbg_apply_settings(wifi_dbg_settings_t *settings)
+void wifi_dbg_apply_config(wifi_dbg_config_t *config)
 {
-    switch(settings->wifi_mode) {
+    switch(config->wifi_mode) {
         case WIFI_DBG_DISABLED: // Don't init anything.
             break;
         case WIFI_DBG_ENABLED_CLIENT_MODE:
@@ -33,7 +33,7 @@ void wifi_dbg_apply_settings(wifi_dbg_settings_t *settings)
             // Additionally, make network.WINC() return a python object of the setup wifi module and make
             // winc.connect()/winc.disconnect() do nothing. This should allow the user to use the wifi module
             // normally in their scripts in debug mode.
-            // You should have all the settings you need to init the wifi module in the settings struct.
+            // You should have all the settings you need to init the wifi module in the config struct.
             // Disable regular USB CDC DBG if this works... two folks can't share the interface.
             // For data transfer create a TCP server after setting up the wifi. You will then UDP broadcast
             // your IP address along with the port you chose for the TCP server. OpenMV IDE will connect to this.
@@ -43,7 +43,7 @@ void wifi_dbg_apply_settings(wifi_dbg_settings_t *settings)
             // Additionally, make network.WINC() return a python object of the setup wifi module and make
             // winc.connect()/winc.disconnect() do nothing. This should allow the user to use the wifi module
             // normally in their scripts in debug mode.
-            // You should have all the settings you need to init the wifi module in the settings struct.
+            // You should have all the settings you need to init the wifi module in the config struct.
             // Disable regular USB CDC DBG if this works... two folks can't share the interface.
             // For data transfer create a TCP server after setting up the wifi. You will then UDP broadcast
             // your IP address along with the port you chose for the TCP server. OpenMV IDE will connect to this.

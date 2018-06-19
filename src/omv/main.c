@@ -276,11 +276,9 @@ void NORETURN __stack_chk_fail(void)
 }
 #endif
 
-typedef struct apply_settings_user
-{
-    wifi_dbg_settings_t wifi_dbg_settings;
-}
-apply_settings_user_t;
+typedef struct openmv_config {
+    wifi_dbg_config_t wifi_dbg_config;
+} openmv_config_t;
 
 extern char *strncpy(char *dst, const char *src, size_t n);
 
@@ -298,7 +296,7 @@ static bool ini_handler_callback_is_true(const char *value)
 
 int ini_handler_callback(void *user, const char *section, const char *name, const char *value)
 {
-    apply_settings_user_t *apply_settings_user = (apply_settings_user_t *) user;
+    openmv_config_t *openmv_config = (openmv_config_t *) user;
 
     #define MATCH(s, n) ((strcmp(section, (s)) == 0) && (strcmp(name, (n)) == 0))
 
@@ -312,21 +310,21 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
             MP_STATE_PORT(pyb_stdio_uart) = pyb_uart_type.make_new((mp_obj_t) &pyb_uart_type, MP_ARRAY_SIZE(args), 0, args);
         }
     } else if (MATCH("BootSettings", "WiFiMode")) {
-        apply_settings_user->wifi_dbg_settings.wifi_mode = ini_atoi(value);
+        openmv_config->wifi_dbg_config.wifi_mode = ini_atoi(value);
     } else if (MATCH("BootSettings", "ClientModeSSID")) {
-        strncpy(apply_settings_user->wifi_dbg_settings.wifi_client_ssid, name, SSID_MAX);
+        strncpy(openmv_config->wifi_dbg_config.wifi_client_ssid, name, SSID_MAX);
     } else if (MATCH("BootSettings", "ClientModePass")) {
-        strncpy(apply_settings_user->wifi_dbg_settings.wifi_client_pass, name, PASS_MAX);
+        strncpy(openmv_config->wifi_dbg_config.wifi_client_pass, name, PASS_MAX);
     } else if (MATCH("BootSettings", "ClientModeType")) {
-        apply_settings_user->wifi_dbg_settings.wifi_client_type = ini_atoi(value);
+        openmv_config->wifi_dbg_config.wifi_client_type = ini_atoi(value);
     } else if (MATCH("BootSettings", "AccessPointModeSSID")) {
-        strncpy(apply_settings_user->wifi_dbg_settings.wifi_ap_ssid, name, SSID_MAX);
+        strncpy(openmv_config->wifi_dbg_config.wifi_ap_ssid, name, SSID_MAX);
     } else if (MATCH("BootSettings", "AccessPointModePass")) {
-        strncpy(apply_settings_user->wifi_dbg_settings.wifi_ap_pass, name, SSID_MAX);
+        strncpy(openmv_config->wifi_dbg_config.wifi_ap_pass, name, SSID_MAX);
     } else if (MATCH("BootSettings", "AccessPointModeType")) {
-        apply_settings_user->wifi_dbg_settings.wifi_ap_type = ini_atoi(value);
+        openmv_config->wifi_dbg_config.wifi_ap_type = ini_atoi(value);
     } else if (MATCH("BootSettings", "BoardName")) {
-        strncpy(apply_settings_user->wifi_dbg_settings.wifi_board_name, name, NAME_MAX);
+        strncpy(openmv_config->wifi_dbg_config.wifi_board_name, name, NAME_MAX);
     } else {
         return 0;
     }
@@ -334,23 +332,6 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
     return 1;
 
     #undef MATCH
-}
-
-FRESULT apply_settings(const char *path)
-{
-    nlr_buf_t nlr;
-    FRESULT f_res = f_stat(&vfs_fat->fatfs, path, NULL);
-
-    if (f_res == FR_OK) {
-        if (nlr_push(&nlr) == 0) {
-            apply_settings_user_t apply_settings_user = {};
-            ini_parse(&vfs_fat->fatfs, path, ini_handler_callback, &apply_settings_user);
-            wifi_dbg_apply_settings(&apply_settings_user.wifi_dbg_settings);
-            nlr_pop();
-        }
-    }
-
-    return f_res;
 }
 
 FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
@@ -551,6 +532,13 @@ soft_reset:
     MP_STATE_VM(vfs_mount_table) = vfs;
     MP_STATE_PORT(vfs_cur) = vfs;
 
+    // Parse OpenMV configuration file.
+    if (first_soft_reset) {
+        openmv_config_t openmv_config = {0};
+        ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
+        wifi_dbg_apply_config(&openmv_config.wifi_dbg_config);
+    }
+
     // Init USB device to default setting if it was not already configured
     pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
 
@@ -569,7 +557,6 @@ soft_reset:
     // Run boot script(s)
     if (first_soft_reset) {
         exec_boot_script("/selftest.py", true, false);
-        apply_settings("/openmv.config");
         exec_boot_script("/main.py", false, true);
     }
 
