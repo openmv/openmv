@@ -539,8 +539,17 @@ soft_reset:
         wifi_dbg_apply_config(&openmv_config.wifi_dbg_config);
     }
 
+    // Run boot script(s)
+    if (first_soft_reset) {
+        // Execute the boot.py script before initializing the USB dev
+        // to override the USB mode if required, otherwise VCP+MSC is used.
+        exec_boot_script("/boot.py", false, false);
+    }
+
     // Init USB device to default setting if it was not already configured
-    pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
+    if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
+        pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
+    }
 
     // check sensor init result
     if (first_soft_reset && sensor_init_ret != 0) {
