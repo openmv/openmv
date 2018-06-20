@@ -4528,13 +4528,13 @@ static const mp_obj_type_t py_apriltag_type = {
 static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
-    PY_ASSERT_TRUE_MSG((arg_img->w * arg_img->h) < 65536, "The maximum supported resolution for find_apriltags() is 64K pixels.");
-    if ((arg_img->w < 4) || (arg_img->h < 4)) {
-        return mp_obj_new_list(0, NULL);
-    }
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
+    PY_ASSERT_TRUE_MSG((roi.w * roi.h) < 65536, "The maximum supported resolution for find_apriltags() is < 64K pixels.");
+    if ((roi.w < 4) || (roi.h < 4)) {
+        return mp_obj_new_list(0, NULL);
+    }
 
     apriltag_families_t families = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_families), TAG36H11);
     // 2.8mm Focal Length w/ OV7725 sensor for reference.
