@@ -3,13 +3,15 @@
 # This example shows the power of the OpenMV Cam to detect April Tags
 # on the OpenMV Cam M7. The M4 versions cannot detect April Tags.
 
-import sensor, image, time, math
+import sensor, image, time, math, omv
 
 sensor.reset()
 sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA) # we run out of memory if the resolution is much bigger...
-sensor.set_windowing((200, 200)) # Center 200x200 pixels - cannot go much larger...
-                                 # AprilTags works on a maximum of 64K pixels.
+# AprilTags works on a maximum of < 64K pixels.
+if omv.board_type() == "H7": sensor.set_windowing((240, 240))
+elif omv.board_type() == "M7": sensor.set_windowing((200, 200))
+else: raise Exception("You need a more powerful OpenMV Cam to run this script")
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False)  # must turn this off to prevent image washout...
 sensor.set_auto_whitebal(False)  # must turn this off to prevent image washout...
