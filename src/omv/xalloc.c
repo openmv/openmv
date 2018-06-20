@@ -11,7 +11,8 @@
 
 NORETURN static void xalloc_fail()
 {
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of Memory!!!"));
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of normal MicroPython Heap Memory!"
+        " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
 }
 
 // returns null pointer without error if size==0
@@ -27,11 +28,7 @@ void *xalloc(uint32_t size)
 // returns null pointer without error if size==0
 void *xalloc_try_alloc(uint32_t size)
 {
-    void *mem = gc_alloc(size, false);
-    if (size && (mem == NULL)) {
-        return NULL;
-    }
-    return mem;
+    return gc_alloc(size, false);
 }
 
 // returns null pointer without error if size==0
