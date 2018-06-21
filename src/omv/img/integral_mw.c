@@ -58,7 +58,7 @@
        ( b) = (_t); })
 
 #define IM_TO_GS_PIXEL(img, x, y)    \
-    img->bpp == 1 ? img->pixels[(y*img->w)+x] : (yuv_table[((uint16_t*)img->pixels)[(y*img->w)+x] * 3] + 128)
+    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (yuv_table[((uint16_t*)img->pixels)[((y)*img->w)+(x)] * 3] + 128))
 
 void imlib_integral_mw_alloc(mw_image_t *sum, int w, int h)
 {
