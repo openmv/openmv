@@ -91,8 +91,6 @@ int nn_load_network(nn_t *net, const char *path)
     // Read number of layers
     read_data(&fp, &net->n_layers, 4);
 
-    printf("Net type: %4s Num layers: %lu\n", net->type, net->n_layers);
-
     layer_t *prev_layer = NULL;
     for (int i=0; i<net->n_layers; i++) {
         layer_t *layer;
@@ -138,9 +136,6 @@ int nn_load_network(nn_t *net, const char *path)
         read_data(&fp, &layer->h, 4);
         read_data(&fp, &layer->w, 4);
 
-        printf("Reading layer: %s Shape: [%lu, %lu, %lu, %lu] ",
-                layer_to_str(layer->type), layer->n, layer->c, layer->h, layer->w);
-
         switch (layer_type) {
             case LAYER_TYPE_DATA: {
                 data_layer_t *data_layer = (data_layer_t *) layer;
@@ -149,8 +144,6 @@ int nn_load_network(nn_t *net, const char *path)
                 read_data(&fp, &data_layer->g_mean, 4);
                 read_data(&fp, &data_layer->b_mean, 4);
                 read_data(&fp, &data_layer->scale, 4);
-                printf("r_mean: %lu g_mean: %lu b_mean: %lu scale: %lu\n",
-                        data_layer->r_mean, data_layer->g_mean, data_layer->b_mean, data_layer->scale);
                 break;
             }
 
@@ -163,19 +156,14 @@ int nn_load_network(nn_t *net, const char *path)
                 read_data(&fp, &conv_layer->krn_dim, 4);
                 read_data(&fp, &conv_layer->krn_pad, 4);
                 read_data(&fp, &conv_layer->krn_str, 4);
-                printf("l_shift: %lu r_shift:%lu k_size: %lu k_stride: %lu k_padding: %lu ",
-                        conv_layer->l_shift, conv_layer->r_shift,
-                        conv_layer->krn_dim, conv_layer->krn_str, conv_layer->krn_pad);
-               
+
                 // Alloc and read weights array
                 read_data(&fp, &conv_layer->w_size, 4);
-                printf("weights: %lu ", conv_layer->w_size);
                 conv_layer->wt = xalloc(conv_layer->w_size);
                 read_data(&fp, conv_layer->wt, conv_layer->w_size);
 
                 // Alloc and read bias array
                 read_data(&fp, &conv_layer->b_size, 4);
-                printf("bias: %lu\n", conv_layer->b_size);
                 conv_layer->bias = xalloc(conv_layer->b_size);
                 read_data(&fp, conv_layer->bias, conv_layer->b_size);
                 break;
@@ -183,7 +171,6 @@ int nn_load_network(nn_t *net, const char *path)
 
             case LAYER_TYPE_RELU: {
                 // Nothing to read for RELU layer
-                printf("\n");
                 break;
             }
 
@@ -195,8 +182,6 @@ int nn_load_network(nn_t *net, const char *path)
                 read_data(&fp, &pool_layer->krn_dim, 4);
                 read_data(&fp, &pool_layer->krn_pad, 4);
                 read_data(&fp, &pool_layer->krn_str, 4);
-                printf("k_size: %lu k_stride: %lu k_padding: %lu\n",
-                        pool_layer->krn_dim, pool_layer->krn_str, pool_layer->krn_pad);
                 break;
             }
 
@@ -205,18 +190,14 @@ int nn_load_network(nn_t *net, const char *path)
                 // Read layer l_shift, r_shift
                 read_data(&fp, &ip_layer->l_shift, 4);
                 read_data(&fp, &ip_layer->r_shift, 4);
-                printf("l_shift: %lu r_shift:%lu ",
-                        ip_layer->l_shift, ip_layer->r_shift);
 
                 // Alloc and read weights array
                 read_data(&fp, &ip_layer->w_size, 4);
-                printf("weights: %lu ", ip_layer->w_size);
                 ip_layer->wt = xalloc(ip_layer->w_size);
                 read_data(&fp, ip_layer->wt, ip_layer->w_size);
 
                 // Alloc and read bias array
                 read_data(&fp, &ip_layer->b_size, 4);
-                printf("bias %lu\n", ip_layer->b_size);
                 ip_layer->bias = xalloc(ip_layer->b_size);
                 read_data(&fp, ip_layer->bias, ip_layer->b_size);
                 break;
@@ -243,7 +224,7 @@ int nn_load_network(nn_t *net, const char *path)
         if (layer->type == LAYER_TYPE_IP) {
             uint32_t buffer_size = layer->c;
             if (prev_layer->type == LAYER_TYPE_IP) {
-                buffer_size = buffer_size + prev_layer->c; 
+                buffer_size = buffer_size + prev_layer->c;
             } else if (prev_layer->type == LAYER_TYPE_CONV || prev_layer->type == LAYER_TYPE_POOL) {
                 buffer_size = buffer_size + prev_layer->c * prev_layer->h * prev_layer->w;
             }
@@ -265,8 +246,6 @@ int nn_load_network(nn_t *net, const char *path)
 
     // Alloc output buffer.
     net->output_data = xalloc(net->output_size);
-    printf("Max layer: %lu Max col buf: %lu Max scratch buf: %lu Output size:%lu\n\n",
-            net->max_layer_size, net->max_colbuf_size, net->max_scrbuf_size, net->output_size);
 error:
     file_buffer_off(&fp);
     file_close(&fp);
