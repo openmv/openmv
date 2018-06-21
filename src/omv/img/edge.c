@@ -35,14 +35,14 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 {
     int w = src->w;
 
-    gvec_t *gm = fb_alloc0(src->w*src->h*sizeof*gm);
+    gvec_t *gm = fb_alloc0(roi->w*roi->h*sizeof*gm);
 
     //1. Noise Reduction with a Gaussian filter
     imlib_sepconv3(src, kernel_gauss_3, 1.0f/16.0f, 0.0f);
 
     //2. Finding Image Gradients
-    for (int y=roi->y+1; y<roi->y+roi->h-1; y++) {
-        for (int x=roi->x+1; x<roi->x+roi->w-1; x++) {
+    for (int gy=1, y=roi->y+1; y<roi->y+roi->h-1; y++, gy++) {
+        for (int gx=1, x=roi->x+1; x<roi->x+roi->w-1; x++, gx++) {
             int vx=0, vy=0;
             // sobel kernel in the horizontal direction
             vx  = src->data [(y-1)*w+x-1]
@@ -76,17 +76,17 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
                 t = 0;
             }
 
-            gm[(y)*w+(x)].t = t;
-            gm[(y)*w+(x)].g = g;
+            gm[gy*roi->w+gx].t = t;
+            gm[gy*roi->w+gx].g = g;
         }
     }
 
     // 3. Hysteresis Thresholding
     // 4. Non-maximum Suppression and output
-    for (int y=roi->y; y<roi->y+roi->h; y++) {
-        for (int x=roi->x; x<roi->x+roi->w; x++) {
+    for (int gy=0, y=roi->y; y<roi->y+roi->h; y++, gy++) {
+        for (int gx=0, x=roi->x; x<roi->x+roi->w; x++, gx++) {
             int i = y*w+x;
-            gvec_t *va=NULL, *vb=NULL, *vc = &gm[i];
+            gvec_t *va=NULL, *vb=NULL, *vc = &gm[gy*roi->w+gx];
 
             // Clear the borders
             if (y == (roi->y) || y == (roi->y+roi->h-1) ||
@@ -101,14 +101,14 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
                 continue;
             // Check if strong or weak edge
             } else if (vc->g >= high_thresh ||
-                       gm[(y-1)*w+(x-1)].g >= high_thresh ||
-                       gm[(y-1)*w+(x+0)].g >= high_thresh ||
-                       gm[(y-1)*w+(x+1)].g >= high_thresh ||
-                       gm[(y+0)*w+(x-1)].g >= high_thresh ||
-                       gm[(y+0)*w+(x+1)].g >= high_thresh ||
-                       gm[(y+1)*w+(x-1)].g >= high_thresh ||
-                       gm[(y+1)*w+(x+0)].g >= high_thresh ||
-                       gm[(y+1)*w+(x+1)].g >= high_thresh) {
+                       gm[(gy-1)*roi->w+(gx-1)].g >= high_thresh ||
+                       gm[(gy-1)*roi->w+(gx+0)].g >= high_thresh ||
+                       gm[(gy-1)*roi->w+(gx+1)].g >= high_thresh ||
+                       gm[(gy+0)*roi->w+(gx-1)].g >= high_thresh ||
+                       gm[(gy+0)*roi->w+(gx+1)].g >= high_thresh ||
+                       gm[(gy+1)*roi->w+(gx-1)].g >= high_thresh ||
+                       gm[(gy+1)*roi->w+(gx+0)].g >= high_thresh ||
+                       gm[(gy+1)*roi->w+(gx+1)].g >= high_thresh) {
                 vc->g = vc->g;
             } else { // Not an edge
                 src->data[i] = 0;
@@ -117,26 +117,26 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 
             switch (vc->t) {
                 case 0: {
-                    va = &gm[(y+0)*w+(x-1)];
-                    vb = &gm[(y+0)*w+(x+1)];
+                    va = &gm[(gy+0)*roi->w+(gx-1)];
+                    vb = &gm[(gy+0)*roi->w+(gx+1)];
                     break;
                 }
 
                 case 45: {
-                    va = &gm[(y+1)*w+(x-1)];
-                    vb = &gm[(y-1)*w+(x+1)];
+                    va = &gm[(gy+1)*roi->w+(gx-1)];
+                    vb = &gm[(gy-1)*roi->w+(gx+1)];
                     break;
                 }
 
                 case 90: {
-                    va = &gm[(y+1)*w+(x+0)];
-                    vb = &gm[(y-1)*w+(x+0)];
+                    va = &gm[(gy+1)*roi->w+(gx+0)];
+                    vb = &gm[(gy-1)*roi->w+(gx+0)];
                     break;
                 }
 
                 case 135: {
-                    va = &gm[(y+1)*w+(x+1)];
-                    vb = &gm[(y-1)*w+(x-1)];
+                    va = &gm[(gy+1)*roi->w+(gx+1)];
+                    vb = &gm[(gy-1)*roi->w+(gx-1)];
                     break;
                 }
             }
