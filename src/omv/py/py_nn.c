@@ -50,7 +50,7 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     }
 
     for (int i=0; i<net->output_size; i++) {
-        mp_obj_list_append(output_list, mp_obj_new_int(net->output_data[i]));
+        mp_obj_list_append(output_list, mp_obj_new_float(((float) (net->output_data[i] + 128)) / 255));
     }
 
     fb_alloc_free_till_mark();
