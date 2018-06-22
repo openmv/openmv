@@ -55,7 +55,7 @@ void fb_update_jpeg_buffer()
             // Unlock the framebuffer mutex
             mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
         }
-    } else if ((MAIN_FB()->bpp > 0) && JPEG_FB()->enabled) {
+    } else if ((MAIN_FB()->bpp >= 0) && JPEG_FB()->enabled) {
         // Lock FB
         if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
             // Set JPEG src and dst images.
