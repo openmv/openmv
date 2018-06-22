@@ -118,7 +118,7 @@ layer {
     bottom: "conv2"
     top: "conv2"
     dropout_param {
-        dropout_ratio: 0.5
+        dropout_ratio: 0.25
     }
     include {
         phase: TRAIN
@@ -148,8 +148,8 @@ layer {
   top: "conv3"
   convolution_param {
     num_output: 32
-    pad: 2
-    kernel_size: 5
+    pad: 1
+    kernel_size: 3
     stride: 1
     weight_filler {
       type: "gaussian"
@@ -166,7 +166,7 @@ layer {
     bottom: "conv3"
     top: "conv3"
     dropout_param {
-        dropout_ratio: 0.5
+        dropout_ratio: 0.3
     }
     include {
         phase: TRAIN
