@@ -8,10 +8,10 @@ layer {
     phase: TRAIN
   }
   transform_param {
-    mean_file: "/home/iabdalkader/caffe/examples/smile/mean.binaryproto"
+    mean_file: "caffe/examples/smile/mean.binaryproto"
   }
   data_param {
-    source: "/home/iabdalkader/caffe/examples/smile/train_lmdb"
+    source: "caffe/examples/smile/train_lmdb"
     batch_size: 100
     backend: LMDB
   }
@@ -25,10 +25,10 @@ layer {
     phase: TEST
   }
   transform_param {
-    mean_file: "/home/iabdalkader/caffe/examples/smile/mean.binaryproto"
+    mean_file: "caffe/examples/smile/mean.binaryproto"
   }
   data_param {
-    source: "/home/iabdalkader/caffe/examples/smile/test_lmdb"
+    source: "caffe/examples/smile/test_lmdb"
     batch_size: 48
     backend: LMDB
   }
