@@ -20,7 +20,7 @@ while(True):
     img = sensor.snapshot()         # Take a picture and return the image.
     out = net.forward(img.copy().binary([(150, 255)], invert=True))
     max_idx = out.index(max(out))
-    score = int(((out[max_idx]+128)/255)*100)
+    score = int(out[max_idx]*100)
     if (score < 70):
         score_str = "??:??%"
     else:
