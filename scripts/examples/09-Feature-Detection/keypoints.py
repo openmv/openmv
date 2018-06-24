@@ -18,10 +18,11 @@ sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False, value=100)
 
 def draw_keypoints(img, kpts):
-    print(kpts)
-    img.draw_keypoints(kpts)
-    img = sensor.snapshot()
-    time.sleep(1000)
+    if kpts:
+        print(kpts)
+        img.draw_keypoints(kpts)
+        img = sensor.snapshot()
+        time.sleep(1000)
 
 kpts1 = None
 # NOTE: uncomment to load a keypoints descriptor from file
