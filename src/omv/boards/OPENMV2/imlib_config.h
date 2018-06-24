@@ -22,7 +22,7 @@
 //#define IMLIB_ENABLE_MIDPOINT
 
 // Enable Gaussian
-//#define IMLIB_ENABLE_GAUSSIAN
+#define IMLIB_ENABLE_GAUSSIAN
 
 // Enable Laplacian
 //#define IMLIB_ENABLE_LAPLACIAN
