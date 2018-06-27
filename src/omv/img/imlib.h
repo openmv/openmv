@@ -874,21 +874,20 @@ extern const int kernel_high_pass_3[9];
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
 typedef struct simple_color {
-    uint8_t G;
+    uint8_t G;          // Gray
     union {
-        int8_t L;
-        uint8_t red; // RGB888 not RGB565
+        int8_t L;       // LAB L
+        uint8_t red;    // RGB888 Red
     };
     union {
-        int8_t A;
-        uint8_t green; // RGB888 not RGB565
+        int8_t A;       // LAB A
+        uint8_t green;  // RGB888 Green
     };
     union {
-        int8_t B;
-        uint8_t blue; // RGB888 not RGB565
+        int8_t B;       // LAB B
+        uint8_t blue;   // RGB888 Blue
     };
-}
-simple_color_t;
+} simple_color_t;
 
 typedef struct integral_image {
     int w;
