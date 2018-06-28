@@ -343,7 +343,7 @@ static void image_scale(image_t *src, image_t *dst)
         int sy = (y*y_ratio)>>16;
 		for (int x=0; x<dst->w; x++) {
             int sx = (x*x_ratio)>>16;
-			dst->pixels[y*dst->w+x] = src->pixels[sy*src->w+sx];
+			dst->pixels[y*dst->w+x] = IM_TO_GS_PIXEL(src, sx, sy);
 		}
 	}
 }
