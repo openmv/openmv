@@ -873,6 +873,9 @@ extern const int kernel_high_pass_3[9];
        __typeof__ (img1) _img1 = (img1); \
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
+#define IM_TO_GS_PIXEL(img, x, y)    \
+    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (yuv_table[((uint16_t*)img->pixels)[((y)*img->w)+(x)] * 3] + 128))
+
 typedef struct simple_color {
     uint8_t G;          // Gray
     union {
