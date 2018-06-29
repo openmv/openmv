@@ -1,4 +1,16 @@
 # Change Log
+## [3.0](https://github.com/openmv/openmv/releases/tag/v3.0) (2018-06-29)
+* Fix SPI driver bug.
+* Fix pendsv hardfault bug.
+* Fix WINC driver bug.
+* Fix collections list_pop_front bug.
+* Re-enable OMV2 build.
+* Update to MicroPython 1.9.4.
+* Add support for loading NN models.
+* Add NN quantization and converter scripts and example models.
+* Add support for running Haar on RGB images.
+* Add support for running keypoints on RGB images.
+
 ## [2.9](https://github.com/openmv/openmv/releases/tag/v2.9) (2018-05-06)
 * Fix BAYER boundary issue.
 * Re-enable SD DMA transfers.
