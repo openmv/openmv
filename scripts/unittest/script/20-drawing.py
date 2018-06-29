@@ -9,7 +9,7 @@ def unittest(data_path, temp_path):
     img.draw_line([img.width()//2-50, 50, img.width()//2+50, 50])
     img.draw_rectangle([img.width()//2-25, img.height()//2-25, 50, 50])
     img.draw_circle(img.width()//2, img.height()//2, 40)
-    img.draw_string(10, 10, "HelloWorld!")
+    img.draw_string(11, 10, "HelloWorld!")
     img.draw_cross(img.width()//2, img.height()//2)
     sensor.flush()
     img.difference(data_path+"/drawing.pgm")
