@@ -12,6 +12,7 @@
 #include "imlib.h"
 #include "fb_alloc.h"
 #include "xalloc.h"
+#ifdef IMLIB_ENABLE_SELECTIVE_SEARCH
 
 #define THRESHOLD(size, c) (c/size)
 typedef struct {
@@ -442,3 +443,4 @@ array_t *imlib_selective_search(image_t *src, float t, int min_size, float a1, f
     fb_free_all();
     return proposals;
 }
+#endif //IMLIB_ENABLE_SELECTIVE_SEARCH
