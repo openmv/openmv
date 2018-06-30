@@ -210,6 +210,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	sincos_tab.o                            \
 	edge.o                                  \
 	hog.o                                   \
+	selective_search.o                      \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/nn/,\

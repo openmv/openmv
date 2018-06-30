@@ -66,6 +66,10 @@ Q(scale_factor)
 Q(max_keypoints)
 Q(corner_detector)
 Q(kptmatch)
+Q(selective_search)
+Q(a1)
+Q(a2)
+Q(a3)
 
 // Lcd Module
 Q(lcd)

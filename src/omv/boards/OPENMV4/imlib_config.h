@@ -108,4 +108,7 @@
 // Enable find_hog()
 #define IMLIB_ENABLE_HOG
 
+// Enable selective_search()
+#define IMLIB_ENABLE_SELECTIVE_SEARCH
+
 #endif //__IMLIB_CONFIG_H__

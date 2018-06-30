@@ -74,6 +74,7 @@ SRCS += $(addprefix img/,   \
 	sincos_tab.c            \
 	edge.c                  \
 	hog.c                   \
+	selective_search.c      \
    )
 
 SRCS += $(addprefix nn/,    \
