@@ -359,6 +359,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	moduselect.o        \
 	modutimeq.o         \
 	moduheapq.o         \
+	moductypes.o        \
 	vfs.o               \
 	vfs_fat.o           \
 	vfs_fat_file.o      \
