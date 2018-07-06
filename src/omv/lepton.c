@@ -478,8 +478,8 @@ int lepton_init(sensor_t *sensor)
     GPIO_InitTypeDef GPIO_InitTypeDefSS;
     GPIO_InitTypeDefSS.Pin = GPIO_PIN_15;
     GPIO_InitTypeDefSS.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitTypeDefSS.Pull = GPIO_NOPULL;
-    GPIO_InitTypeDefSS.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitTypeDefSS.Pull = GPIO_PULLUP;
+    GPIO_InitTypeDefSS.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitTypeDefSS.Alternate = GPIO_AF6_SPI3;
     HAL_GPIO_Init(GPIOA, &GPIO_InitTypeDefSS);
 
@@ -488,24 +488,24 @@ int lepton_init(sensor_t *sensor)
     GPIO_InitTypeDef GPIO_InitTypeDefSCLK;
     GPIO_InitTypeDefSCLK.Pin = GPIO_PIN_3;
     GPIO_InitTypeDefSCLK.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitTypeDefSCLK.Pull = GPIO_NOPULL;
-    GPIO_InitTypeDefSCLK.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitTypeDefSCLK.Pull = GPIO_PULLUP;
+    GPIO_InitTypeDefSCLK.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitTypeDefSCLK.Alternate = GPIO_AF6_SPI3;
     HAL_GPIO_Init(GPIOB, &GPIO_InitTypeDefSCLK);
 
     GPIO_InitTypeDef GPIO_InitTypeDefMISO;
     GPIO_InitTypeDefMISO.Pin = GPIO_PIN_4;
     GPIO_InitTypeDefMISO.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitTypeDefMISO.Pull = GPIO_NOPULL;
-    GPIO_InitTypeDefMISO.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitTypeDefMISO.Pull = GPIO_PULLUP;
+    GPIO_InitTypeDefMISO.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitTypeDefMISO.Alternate = GPIO_AF6_SPI3;
     HAL_GPIO_Init(GPIOB, &GPIO_InitTypeDefMISO);
 
     GPIO_InitTypeDef GPIO_InitTypeDefMOSI;
     GPIO_InitTypeDefMOSI.Pin = GPIO_PIN_5;
     GPIO_InitTypeDefMOSI.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitTypeDefMOSI.Pull = GPIO_NOPULL;
-    GPIO_InitTypeDefMOSI.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitTypeDefMOSI.Pull = GPIO_PULLUP;
+    GPIO_InitTypeDefMOSI.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitTypeDefMOSI.Alternate = GPIO_AF7_SPI3;
     HAL_GPIO_Init(GPIOB, &GPIO_InitTypeDefMOSI);
 
