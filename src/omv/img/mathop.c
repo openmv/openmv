@@ -5,6 +5,7 @@
 
 #include "imlib.h"
 
+#ifdef IMLIB_ENABLE_MATH_OPS
 void imlib_negate(image_t *img)
 {
     switch(img->bpp) {
@@ -635,3 +636,4 @@ void imlib_blend(image_t *img, const char *path, image_t *other, int scalar, flo
     state.mask = mask;
     imlib_image_operation(img, path, other, scalar, imlib_blend_line_op, &state);
 }
+#endif //IMLIB_ENABLE_MATH_OPS
