@@ -111,7 +111,7 @@ ini_atoi(string)
         }
     }
 
-    while(*string++) {
+    for (;*string; string++) {
         digit = *string - '0';
         if ((digit < 0) || (digit > 9)) {
             break;
