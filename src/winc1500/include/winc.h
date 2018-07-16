@@ -12,12 +12,13 @@
 #define WINC_IP_ADDR_LEN    (4)
 #define WINC_MAC_ADDR_LEN   (6)
 #define WINC_MAX_SSID_LEN   (33)
+#define WINC_MAX_PSK_LEN    (65)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
     struct sockaddr addr; \
     addr.sa_family = AF_INET; \
-    addr.sa_data[0] = port >> 8; \
-    addr.sa_data[1] = port; \
+    addr.sa_data[0] = (uint8_t)(port >> 8); \
+    addr.sa_data[1] = (uint8_t)(port); \
     addr.sa_data[2] = ip[0]; \
     addr.sa_data[3] = ip[1]; \
     addr.sa_data[4] = ip[2]; \
@@ -37,6 +38,14 @@ typedef enum {
     WINC_MODE_BSP,
     WINC_MODE_FIRMWARE,
 } winc_mode_t;
+
+typedef enum {
+	WINC_SEC_INVALID = 0,
+	WINC_SEC_OPEN,
+	WINC_SEC_WPA_PSK,
+	WINC_SEC_WEP,
+	WINC_SEC_802_1X
+} winc_security_t;
 
 typedef struct {
     int8_t  rssi;
