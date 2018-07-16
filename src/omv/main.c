@@ -280,20 +280,6 @@ typedef struct openmv_config {
     wifi_dbg_config_t wifi_dbg_config;
 } openmv_config_t;
 
-extern char *strncpy(char *dst, const char *src, size_t n);
-
-static bool ini_handler_callback_is_true(const char *value)
-{
-    int i = ini_atoi(value);
-    if (i) return true;
-    if (strlen(value) != 4) return false;
-    if ((value[0] != 'T') && (value[0] != 't')) return false;
-    if ((value[1] != 'R') && (value[1] != 'r')) return false;
-    if ((value[2] != 'U') && (value[2] != 'u')) return false;
-    if ((value[3] != 'E') && (value[3] != 'e')) return false;
-    return true;
-}
-
 int ini_handler_callback(void *user, const char *section, const char *name, const char *value)
 {
     openmv_config_t *openmv_config = (openmv_config_t *) user;
@@ -301,7 +287,7 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
     #define MATCH(s, n) ((strcmp(section, (s)) == 0) && (strcmp(name, (n)) == 0))
 
     if (MATCH("BootSettings", "REPLUart")) {
-        if (ini_handler_callback_is_true(value)) {
+        if (ini_is_true(value)) {
             mp_obj_t args[2] = {
                 MP_OBJ_NEW_SMALL_INT(3), // UART Port
                 MP_OBJ_NEW_SMALL_INT(115200) // Baud Rate

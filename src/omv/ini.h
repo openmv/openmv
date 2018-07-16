@@ -16,6 +16,7 @@ https://github.com/benhoyt/inih
 #define __INI_H__
 
 int ini_atoi(const char *string);
+bool ini_is_true(const char *value);
 
 /* Make this header file easier to include in C++ code */
 #ifdef __cplusplus

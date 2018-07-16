@@ -4,6 +4,8 @@
  */
 
 #include <stddef.h>
+#include <stdbool.h>
+#include <string.h>
 #include "ini.h"
 
 /*-------------------------------------------------------------------------
@@ -124,6 +126,18 @@ ini_atoi(string)
         return -result;
     }
     return result;
+}
+
+bool ini_is_true(const char *value)
+{
+    int i = ini_atoi(value);
+    if (i) return true;
+    if (strlen(value) != 4) return false;
+    if ((value[0] != 'T') && (value[0] != 't')) return false;
+    if ((value[1] != 'R') && (value[1] != 'r')) return false;
+    if ((value[2] != 'U') && (value[2] != 'u')) return false;
+    if ((value[3] != 'E') && (value[3] != 'e')) return false;
+    return true;
 }
 
 /*-
