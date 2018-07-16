@@ -277,6 +277,7 @@ void NORETURN __stack_chk_fail(void)
 #endif
 
 typedef struct openmv_config {
+    bool wifi_dbg;
     wifi_dbg_config_t wifi_dbg_config;
 } openmv_config_t;
 
@@ -286,7 +287,7 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
 
     #define MATCH(s, n) ((strcmp(section, (s)) == 0) && (strcmp(name, (n)) == 0))
 
-    if (MATCH("BootSettings", "REPLUart")) {
+    if (MATCH("BoardConfig", "REPLUart")) {
         if (ini_is_true(value)) {
             mp_obj_t args[2] = {
                 MP_OBJ_NEW_SMALL_INT(3), // UART Port
@@ -295,22 +296,18 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
 
             MP_STATE_PORT(pyb_stdio_uart) = pyb_uart_type.make_new((mp_obj_t) &pyb_uart_type, MP_ARRAY_SIZE(args), 0, args);
         }
-    } else if (MATCH("BootSettings", "WiFiMode")) {
-        openmv_config->wifi_dbg_config.wifi_mode = ini_atoi(value);
-    } else if (MATCH("BootSettings", "ClientModeSSID")) {
-        strncpy(openmv_config->wifi_dbg_config.wifi_client_ssid, name, SSID_MAX);
-    } else if (MATCH("BootSettings", "ClientModePass")) {
-        strncpy(openmv_config->wifi_dbg_config.wifi_client_pass, name, PASS_MAX);
-    } else if (MATCH("BootSettings", "ClientModeType")) {
-        openmv_config->wifi_dbg_config.wifi_client_type = ini_atoi(value);
-    } else if (MATCH("BootSettings", "AccessPointModeSSID")) {
-        strncpy(openmv_config->wifi_dbg_config.wifi_ap_ssid, name, SSID_MAX);
-    } else if (MATCH("BootSettings", "AccessPointModePass")) {
-        strncpy(openmv_config->wifi_dbg_config.wifi_ap_pass, name, SSID_MAX);
-    } else if (MATCH("BootSettings", "AccessPointModeType")) {
-        openmv_config->wifi_dbg_config.wifi_ap_type = ini_atoi(value);
-    } else if (MATCH("BootSettings", "BoardName")) {
-        strncpy(openmv_config->wifi_dbg_config.wifi_board_name, name, NAME_MAX);
+    } else if (MATCH("BoardConfig", "WiFiDebug")) {
+        openmv_config->wifi_dbg = ini_is_true(value);
+    } else if (MATCH("WiFiConfig", "Mode")) {
+        openmv_config->wifi_dbg_config.mode = ini_atoi(value);
+    } else if (MATCH("WiFiConfig", "SSID")) {
+        strncpy(openmv_config->wifi_dbg_config.ssid, value, WINC_MAX_SSID_LEN);
+    } else if (MATCH("WiFiConfig", "Key")) {
+        strncpy(openmv_config->wifi_dbg_config.key,  value, WINC_MAX_PSK_LEN);
+    } else if (MATCH("WiFiConfig", "Security")) {
+        openmv_config->wifi_dbg_config.security = ini_atoi(value);
+    } else if (MATCH("WiFiConfig", "Channel")) {
+        openmv_config->wifi_dbg_config.channel = ini_atoi(value);
     } else {
         return 0;
     }
@@ -446,7 +443,6 @@ soft_reset:
     py_fir_init0();
     servo_init();
     usbdbg_init();
-    wifi_dbg_init();
     sdcard_init();
 
     if (first_soft_reset) {
@@ -519,10 +515,15 @@ soft_reset:
     MP_STATE_PORT(vfs_cur) = vfs;
 
     // Parse OpenMV configuration file.
+    openmv_config_t openmv_config;
     if (first_soft_reset) {
-        openmv_config_t openmv_config = {0};
+        memset(&openmv_config, 0, sizeof(openmv_config));
+        // Parse config, and init wifi if enabled.
         ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
-        wifi_dbg_apply_config(&openmv_config.wifi_dbg_config);
+        if (openmv_config.wifi_dbg == true &&
+                wifi_dbg_init(&openmv_config.wifi_dbg_config) != 0) {
+                openmv_config.wifi_dbg = false;
+        }
     }
 
     // Run boot script(s)
@@ -532,8 +533,10 @@ soft_reset:
         exec_boot_script("/boot.py", false, false);
     }
 
-    // Init USB device to default setting if it was not already configured
-    if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
+    // Init USB device to default setting if it was not already
+    // configured, and the camera is not configured to use WiFi debug mode.
+    if (openmv_config.wifi_dbg == false &&
+            !(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
         pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
     }
 
@@ -553,6 +556,16 @@ soft_reset:
     if (first_soft_reset) {
         exec_boot_script("/selftest.py", true, false);
         exec_boot_script("/main.py", false, true);
+    }
+
+    if (openmv_config.wifi_dbg == true) {
+        // TODO implement wifi debugging code.
+        // Start WiFi debugging thread.
+        size_t stack_size = 2048;
+        mp_thread_create(wifidbg_thread_entry, NULL, &stack_size);
+        while (true) {
+            HAL_Delay(1000);
+        }
     }
 
     // If there's no script ready, just re-exec REPL
