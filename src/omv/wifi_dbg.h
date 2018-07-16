@@ -4,38 +4,16 @@
  */
 #ifndef __WIFI_DBG_H__
 #define __WIFI_DBG_H__
-
-#define SSID_MAX 63
-#define PASS_MAX 63
-#define NAME_MAX 63
-
-#define OPENMVCAM_BROADCAST_PORT 0xABD1
-
-typedef enum wifi_dbg_wifi_mode {
-    WIFI_DBG_DISABLED = 0,
-    WIFI_DBG_ENABLED_CLIENT_MODE = 1,
-    WIFI_DBG_ENABLED_AP_MODE = 2
-} wifi_dbg_wifi_mode_t;
-
-typedef enum wifi_dbg_wifi_type {
-    WIFI_DBG_OPEN,
-    WIFI_DBG_WPA,
-    WIFI_DBG_WEP
-} wifi_dbg_wifi_type_t;
+#include "winc.h"
 
 typedef struct wifi_dbg_config {
-    wifi_dbg_wifi_mode_t wifi_mode;
-    char wifi_client_ssid[SSID_MAX+1];
-    char wifi_client_pass[PASS_MAX+1];
-    wifi_dbg_wifi_type_t wifi_client_type;
-    char wifi_ap_ssid[SSID_MAX+1];
-    char wifi_ap_pass[PASS_MAX+1];
-    wifi_dbg_wifi_type_t wifi_ap_type;
-    char wifi_board_name[NAME_MAX+1];
+    winc_mode_t mode;
+    winc_security_t security;
+    char key[WINC_MAX_PSK_LEN + 1];
+    char ssid[WINC_MAX_SSID_LEN + 1];
+    uint8_t channel;
 } wifi_dbg_config_t;
 
-void wifi_dbg_init();
-void wifi_dbg_apply_config(wifi_dbg_config_t *config);
-void wifi_dbg_beacon();
-
+int wifi_dbg_init(wifi_dbg_config_t *config);
+void *wifidbg_thread_entry(void *args_in);
 #endif /* __WIFI_DBG_H__ */
