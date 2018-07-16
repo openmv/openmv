@@ -111,12 +111,9 @@ ini_atoi(string)
         }
     }
 
-    for ( ; ; string += 1) {
+    while(*string++) {
         digit = *string - '0';
         if ((digit < 0) || (digit > 9)) {
-            if (!ini_isspace(*string)) {
-                result = 0;
-            }
             break;
         }
         result = (10*result) + digit;
