@@ -53,10 +53,6 @@
 static int client_fd = -1;
 static int server_fd = -1;
 
-extern void usbdbg_data_in(void *buffer, int length);
-extern void usbdbg_data_out(void *buffer, int length);
-extern void usbdbg_control(void *buffer, uint8_t brequest, uint32_t wlength);
-
 int wifidbg_init(wifidbg_config_t *config)
 {
     client_fd = -1;
