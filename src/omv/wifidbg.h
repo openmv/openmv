@@ -6,14 +6,14 @@
 #define __WIFI_DBG_H__
 #include "winc.h"
 
-typedef struct wifi_dbg_config {
+typedef struct wifidbg_config {
     winc_mode_t mode;
     winc_security_t security;
     char key[WINC_MAX_PSK_LEN + 1];
     char ssid[WINC_MAX_SSID_LEN + 1];
     uint8_t channel;
-} wifi_dbg_config_t;
+} wifidbg_config_t;
 
-int wifi_dbg_init(wifi_dbg_config_t *config);
-void *wifidbg_thread_entry(void *args_in);
-#endif /* __WIFI_DBG_H__ */
+void wifidbg_dispatch();
+int wifidbg_init(wifidbg_config_t *config);
+#endif /* __WIFIDBG_H__ */
