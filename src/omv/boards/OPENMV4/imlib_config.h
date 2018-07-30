@@ -24,6 +24,9 @@
 // Enable midpoint()
 #define IMLIB_ENABLE_MIDPOINT
 
+// Enable morph()
+#define IMLIB_ENABLE_MORPH
+
 // Enable Gaussian
 #define IMLIB_ENABLE_GAUSSIAN
 
