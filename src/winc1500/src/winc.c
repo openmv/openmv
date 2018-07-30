@@ -160,7 +160,7 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
                 *((int*) async_request_data) = pstrRecv->s16BufferSize;
                 debug_printf("recv %d\n", pstrRecv->s16BufferSize);
             } else {
-                *((int*) async_request_data) = -1;
+                *((int*) async_request_data) = pstrRecv->s16BufferSize;
                 debug_printf("recv error! %d\n", pstrRecv->s16BufferSize);
             }
             async_request_done = true;
@@ -179,7 +179,7 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 				debug_printf("recvfrom size: %d addr:%lu port:%d\n",
                         pstrRecv->s16BufferSize, rfrom->addr.sin_addr.s_addr, rfrom->addr.sin_port);
 			} else {
-                rfrom->size = -1;
+                rfrom->size = pstrRecv->s16BufferSize;
 				debug_printf("recvfrom error:%d\n", pstrRecv->s16BufferSize);
 			}
             async_request_done = true;
@@ -385,6 +385,13 @@ static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout)
     async_request_data = ret;
     async_request_done = false;
     async_request_type = msg_type;
+
+    if (msg_type != SOCKET_MSG_ACCEPT) {
+        // Only use async timeout for accept since it doesn't have a timeout arg.
+        // For other calls that have a timeout arg, we use a large async timeout.
+        timeout = 1000;
+    }
+
     uint32_t tick_start = HAL_GetTick();
 
     // Wait for async request to finish.
