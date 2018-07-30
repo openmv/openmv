@@ -2166,6 +2166,7 @@ STATIC mp_obj_t py_image_midpoint(uint n_args, const mp_obj_t *args, mp_map_t *k
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_obj, 2, py_image_midpoint);
 #endif // IMLIB_ENABLE_MIDPOINT
 
+#ifdef IMLIB_ENABLE_MORPH
 STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
@@ -2211,6 +2212,7 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_morph_obj, 3, py_image_morph);
+#endif //IMLIB_ENABLE_MORPH
 
 #ifdef IMLIB_ENABLE_GAUSSIAN
 STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -5336,7 +5338,11 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
 #else
     {MP_ROM_QSTR(MP_QSTR_midpoint),            MP_ROM_PTR(&py_func_unavailable_obj)},
 #endif
+#ifdef IMLIB_ENABLE_MORPH
     {MP_ROM_QSTR(MP_QSTR_morph),               MP_ROM_PTR(&py_image_morph_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_morph),               MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif
 #ifdef IMLIB_ENABLE_GAUSSIAN
     {MP_ROM_QSTR(MP_QSTR_blur),                MP_ROM_PTR(&py_image_gaussian_obj)},
     {MP_ROM_QSTR(MP_QSTR_gaussian),            MP_ROM_PTR(&py_image_gaussian_obj)},
