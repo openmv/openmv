@@ -57,13 +57,6 @@ extern void usbdbg_data_in(void *buffer, int length);
 extern void usbdbg_data_out(void *buffer, int length);
 extern void usbdbg_control(void *buffer, uint8_t brequest, uint32_t wlength);
 
-void flash_led(int led)
-{
-    led_state(led, 1);
-    HAL_Delay(10);
-    led_state(led, 0);
-}
-
 int wifidbg_init(wifidbg_config_t *config)
 {
     client_fd = -1;
