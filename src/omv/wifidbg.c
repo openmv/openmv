@@ -36,6 +36,9 @@
 #define SERVER_PORT              (9000)
 #define BUFFER_SIZE              (512)
 
+#define UDPCAST_STRING           "%d.%d.%d.%d:%d:%s"
+#define UDPCAST_STRING_SIZE      4+4+4+4+6+WINC_MAX_BOARD_NAME_LEN+1
+
 #define close_all_sockets()             \
     do {                                \
         winc_socket_close(client_fd);   \
@@ -64,7 +67,8 @@ static int client_fd = -1;
 static int server_fd = -1;
 static int udpbcast_fd = -1;
 static int udpbcast_time = 0;
-static uint8_t udpbcast_ip[WINC_IP_ADDR_LEN] = {};
+
+static char udpbcast_string[UDPCAST_STRING_SIZE] = {};
 
 int wifidbg_init(wifidbg_config_t *config)
 {
@@ -89,9 +93,13 @@ int wifidbg_init(wifidbg_config_t *config)
             return -3;
         }
 
-        memcpy(udpbcast_ip, ifconfig.ip_addr, WINC_IP_ADDR_LEN);
+        snprintf(udpbcast_string, UDPCAST_STRING_SIZE, UDPCAST_STRING,
+                 ifconfig.ip_addr[0], ifconfig.ip_addr[1], ifconfig.ip_addr[2], ifconfig.ip_addr[3],
+                 SERVER_PORT, config->board_name);
     } else {
-        memcpy(udpbcast_ip, SERVER_ADDR, WINC_IP_ADDR_LEN);
+        snprintf(udpbcast_string, UDPCAST_STRING_SIZE, UDPCAST_STRING,
+                 SERVER_ADDR[0], SERVER_ADDR[1], SERVER_ADDR[2], SERVER_ADDR[3],
+                 SERVER_PORT, config->board_name);
     }
 
     return 0;
@@ -121,11 +129,9 @@ void wifidbg_dispatch()
         // Create broadcast socket
         MAKE_SOCKADDR(udpbcast_sockaddr, OPENMVCAM_BROADCAST_ADDR, OPENMVCAM_BROADCAST_PORT)
 
-        int n = snprintf((char *) buf, BUFFER_SIZE, "%d.%d.%d.%d:%d:%s",
-                         udpbcast_ip[0], udpbcast_ip[1], udpbcast_ip[2], udpbcast_ip[3],
-                         SERVER_PORT, "OpenMVCam");
-
-        if ((ret = winc_socket_sendto(udpbcast_fd, buf, n + 1, &udpbcast_sockaddr, 500)) < 0) {
+        if ((ret = winc_socket_sendto(udpbcast_fd,
+                                      (uint8_t *) udpbcast_string, strlen(udpbcast_string) + 1,
+                                      &udpbcast_sockaddr, 500)) < 0) {
             close_udpbcast_socket();
             return;
         }

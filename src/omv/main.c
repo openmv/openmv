@@ -306,6 +306,8 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
         strncpy(openmv_config->wifidbg_config.key,  value, WINC_MAX_PSK_LEN);
     } else if (MATCH("WiFiConfig", "Security")) {
         openmv_config->wifidbg_config.security = ini_atoi(value);
+    } else if (MATCH("WiFiConfig", "BoardName")) {
+        strncpy(openmv_config->wifidbg_config.board_name,  value, WINC_MAX_BOARD_NAME_LEN);
     } else if (MATCH("WiFiConfig", "Channel")) {
         openmv_config->wifidbg_config.channel = ini_atoi(value);
     } else {
