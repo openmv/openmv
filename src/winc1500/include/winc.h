@@ -9,10 +9,11 @@
 #ifndef __WINC_H__
 #define __WINC_H__
 #include <stdint.h>
-#define WINC_IP_ADDR_LEN    (4)
-#define WINC_MAC_ADDR_LEN   (6)
-#define WINC_MAX_SSID_LEN   (33)
-#define WINC_MAX_PSK_LEN    (65)
+#define WINC_IP_ADDR_LEN        (4)
+#define WINC_MAC_ADDR_LEN       (6)
+#define WINC_MAX_SSID_LEN       (33)
+#define WINC_MAX_PSK_LEN        (65)
+#define WINC_MAX_BOARD_NAME_LEN (33)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
     struct sockaddr addr; \
@@ -40,11 +41,11 @@ typedef enum {
 } winc_mode_t;
 
 typedef enum {
-	WINC_SEC_INVALID = 0,
-	WINC_SEC_OPEN,
-	WINC_SEC_WPA_PSK,
-	WINC_SEC_WEP,
-	WINC_SEC_802_1X
+    WINC_SEC_INVALID = 0,
+    WINC_SEC_OPEN,
+    WINC_SEC_WPA_PSK,
+    WINC_SEC_WEP,
+    WINC_SEC_802_1X
 } winc_security_t;
 
 typedef struct {
@@ -56,23 +57,23 @@ typedef struct {
 } winc_ifconfig_t;
 
 typedef struct {
-	int8_t  rssi;
-	uint8_t security;
+    int8_t  rssi;
+    uint8_t security;
     uint8_t channel;
-	uint8_t bssid[6];
-	char    ssid[WINC_MAX_SSID_LEN];
+    uint8_t bssid[6];
+    char    ssid[WINC_MAX_SSID_LEN];
 } winc_scan_result_t;
 
 typedef int (*winc_scan_callback_t) (winc_scan_result_t *, void *);
 
 typedef struct {
-	uint8_t fw_major;       // Firmware version major number.
-	uint8_t fw_minor;       // Firmware version minor number.
-	uint8_t fw_patch;       // Firmware version patch number.
-	uint8_t drv_major;      // Driver version major number.
-	uint8_t drv_minor;      // Driver version minor number.
-	uint8_t drv_patch;      // Driver version patch number.
-	uint32_t chip_id;       // HW revision number (chip ID).
+    uint8_t fw_major;       // Firmware version major number.
+    uint8_t fw_minor;       // Firmware version minor number.
+    uint8_t fw_patch;       // Firmware version patch number.
+    uint8_t drv_major;      // Driver version major number.
+    uint8_t drv_minor;      // Driver version minor number.
+    uint8_t drv_patch;      // Driver version patch number.
+    uint32_t chip_id;       // HW revision number (chip ID).
 } winc_fwver_t;
 
 typedef struct {
@@ -110,4 +111,5 @@ int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, uint32_t timeout);
 int winc_socket_sendto(int fd, const uint8_t *buf, uint32_t len, sockaddr *addr, uint32_t timeout);
 int winc_socket_recvfrom(int fd, uint8_t *buf, uint32_t len, sockaddr *addr, uint32_t timeout);
 int winc_socket_setsockopt(int fd, uint32_t level, uint32_t opt, const void *optval, uint32_t optlen);
+
 #endif //__WINC_H__
