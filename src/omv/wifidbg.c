@@ -30,16 +30,20 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #endif
 
-#define SERVER_ADDR     ((uint8_t [5]){192, 168, 1, 1})
-#define SERVER_PORT     (9000)
-#define BUFFER_SIZE     (512)
+#define OPENMVCAM_BROADCAST_ADDR ((uint8_t [5]){255, 255, 255, 255})
+#define OPENMVCAM_BROADCAST_PORT (0xABD1)
+#define SERVER_ADDR              ((uint8_t [5]){192, 168, 1, 1})
+#define SERVER_PORT              (9000)
+#define BUFFER_SIZE              (512)
 
 #define close_all_sockets()             \
     do {                                \
         winc_socket_close(client_fd);   \
         winc_socket_close(server_fd);   \
+        winc_socket_close(udpbcast_fd); \
         client_fd = -1;                 \
         server_fd = -1;                 \
+        udpbcast_fd = -1;               \
     } while (0)
 
 #define close_server_socket()           \
@@ -48,15 +52,25 @@
         server_fd = -1;                 \
     } while (0)
 
+#define close_udpbcast_socket()         \
+    do {                                \
+        winc_socket_close(udpbcast_fd); \
+        udpbcast_fd = -1;               \
+    } while (0)
+
 #define TIMEDOUT(x) (x == -ETIMEDOUT || x == SOCK_ERR_TIMEOUT)
 
 static int client_fd = -1;
 static int server_fd = -1;
+static int udpbcast_fd = -1;
+static int udpbcast_time = 0;
+static uint8_t udpbcast_ip[WINC_IP_ADDR_LEN] = {};
 
 int wifidbg_init(wifidbg_config_t *config)
 {
     client_fd = -1;
     server_fd = -1;
+    udpbcast_fd = -1;
 
     // Initialize WiFi in AP mode.
     if (winc_init(WINC_MODE_AP) != 0) {
@@ -68,6 +82,18 @@ int wifidbg_init(wifidbg_config_t *config)
         return -2;
     }
 
+    if(0) {
+        winc_ifconfig_t ifconfig;
+
+        if (winc_ifconfig(&ifconfig) < 0) {
+            return -3;
+        }
+
+        memcpy(udpbcast_ip, ifconfig.ip_addr, WINC_IP_ADDR_LEN);
+    } else {
+        memcpy(udpbcast_ip, SERVER_ADDR, WINC_IP_ADDR_LEN);
+    }
+
     return 0;
 }
 
@@ -76,6 +102,34 @@ void wifidbg_dispatch()
     int ret;
     uint8_t buf[BUFFER_SIZE];
     sockaddr client_sockaddr;
+
+    if (udpbcast_fd < 0) {
+        // Create broadcast socket
+        MAKE_SOCKADDR(udpbcast_sockaddr, OPENMVCAM_BROADCAST_ADDR, OPENMVCAM_BROADCAST_PORT)
+
+        if ((udpbcast_fd = winc_socket_socket(SOCK_DGRAM)) < 0) {
+            return;
+        }
+
+        if ((ret = winc_socket_bind(udpbcast_fd, &udpbcast_sockaddr)) < 0) {
+            close_udpbcast_socket();
+            return;
+        }
+    }
+
+    if ((udpbcast_fd >= 0) && (!(udpbcast_time++ % 100))) {
+        // Create broadcast socket
+        MAKE_SOCKADDR(udpbcast_sockaddr, OPENMVCAM_BROADCAST_ADDR, OPENMVCAM_BROADCAST_PORT)
+
+        int n = snprintf((char *) buf, BUFFER_SIZE, "%d.%d.%d.%d:%d:%s",
+                         udpbcast_ip[0], udpbcast_ip[1], udpbcast_ip[2], udpbcast_ip[3],
+                         SERVER_PORT, "OpenMVCam");
+
+        if ((ret = winc_socket_sendto(udpbcast_fd, buf, n + 1, &udpbcast_sockaddr, 500)) < 0) {
+            close_udpbcast_socket();
+            return;
+        }
+    }
 
     if (server_fd < 0) {
         // Create server socket
@@ -107,7 +161,6 @@ void wifidbg_dispatch()
             }
             return;
         }
-
     }
 
     if ((ret = winc_socket_recv(client_fd, buf, 8, 10)) < 0) {
