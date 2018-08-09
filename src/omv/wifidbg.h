@@ -8,11 +8,11 @@
 
 typedef struct wifidbg_config {
     winc_mode_t mode;
-    winc_security_t security;
-    char key[WINC_MAX_PSK_LEN + 1];
-    char ssid[WINC_MAX_SSID_LEN + 1];
+    winc_security_t client_security, access_point_security;
+    char client_key[WINC_MAX_PSK_LEN + 1], access_point_key[WINC_MAX_PSK_LEN + 1];
+    char client_ssid[WINC_MAX_SSID_LEN + 1], access_point_ssid[WINC_MAX_SSID_LEN + 1];
+    uint8_t client_channel, access_point_channel;
     char board_name[WINC_MAX_BOARD_NAME_LEN + 1];
-    uint8_t channel;
 } wifidbg_config_t;
 
 int wifidbg_init(wifidbg_config_t *config);

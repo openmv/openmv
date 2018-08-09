@@ -67,7 +67,7 @@ static int client_fd = -1;
 static int server_fd = -1;
 static int udpbcast_fd = -1;
 static int udpbcast_time = 0;
-
+static uint8_t ip_addr[WINC_IP_ADDR_LEN] = {};
 static char udpbcast_string[UDPCAST_STRING_SIZE] = {};
 
 int wifidbg_init(wifidbg_config_t *config)
@@ -76,31 +76,50 @@ int wifidbg_init(wifidbg_config_t *config)
     server_fd = -1;
     udpbcast_fd = -1;
 
-    // Initialize WiFi in AP mode.
-    if (winc_init(WINC_MODE_AP) != 0) {
-        return -1;
-    }
+    if(!config->mode) { // STA Mode
 
-    // Start WiFi in AP mode.
-    if (winc_start_ap(config->ssid, config->security, config->key, config->channel) != 0) {
-        return -2;
-    }
+        // Initialize WiFi in STA mode.
+        if (winc_init(WINC_MODE_STA) != 0) {
+            return -1;
+        }
 
-    if(0) {
+        // Connect to network.
+        if (winc_connect(config->client_ssid,
+                         config->client_security,
+                         config->client_key,
+                         config->client_channel) != 0) {
+            return -2;
+        }
+
         winc_ifconfig_t ifconfig;
 
         if (winc_ifconfig(&ifconfig) < 0) {
             return -3;
         }
 
-        snprintf(udpbcast_string, UDPCAST_STRING_SIZE, UDPCAST_STRING,
-                 ifconfig.ip_addr[0], ifconfig.ip_addr[1], ifconfig.ip_addr[2], ifconfig.ip_addr[3],
-                 SERVER_PORT, config->board_name);
-    } else {
-        snprintf(udpbcast_string, UDPCAST_STRING_SIZE, UDPCAST_STRING,
-                 SERVER_ADDR[0], SERVER_ADDR[1], SERVER_ADDR[2], SERVER_ADDR[3],
-                 SERVER_PORT, config->board_name);
+        memcpy(ip_addr, ifconfig.ip_addr, WINC_IP_ADDR_LEN);
+
+    } else { // AP Mode
+
+        // Initialize WiFi in AP mode.
+        if (winc_init(WINC_MODE_AP) != 0) {
+            return -1;
+        }
+
+        // Start WiFi in AP mode.
+        if (winc_start_ap(config->access_point_ssid,
+                          config->access_point_security,
+                          config->access_point_key,
+                          config->access_point_channel) != 0) {
+            return -2;
+        }
+
+        memcpy(ip_addr, SERVER_ADDR, WINC_IP_ADDR_LEN);
     }
+
+    snprintf(udpbcast_string, UDPCAST_STRING_SIZE, UDPCAST_STRING,
+             ip_addr[0], ip_addr[1], ip_addr[2], ip_addr[3],
+             SERVER_PORT, config->board_name);
 
     return 0;
 }
@@ -139,7 +158,7 @@ void wifidbg_dispatch()
 
     if (server_fd < 0) {
         // Create server socket
-        MAKE_SOCKADDR(server_sockaddr, SERVER_ADDR, SERVER_PORT)
+        MAKE_SOCKADDR(server_sockaddr, ip_addr, SERVER_PORT)
 
         if ((server_fd = winc_socket_socket(SOCK_STREAM)) < 0) {
             return;
