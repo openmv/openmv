@@ -12,6 +12,9 @@
 // Enable flood_fill()
 //#define IMLIB_ENABLE_FLOOD_FILL
 
+// Enable mean()
+//#define IMLIB_ENABLE_MEAN
+
 // Enable median()
 //#define IMLIB_ENABLE_MEDIAN
 
