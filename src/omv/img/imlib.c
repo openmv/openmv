@@ -632,6 +632,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
             FIL fp;
             file_write_open(&fp, path);
             write_data(&fp, img->pixels, img->w * img->h);
+            file_close(&fp);
             break;
         }
         case FORMAT_JPG:
@@ -648,6 +649,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".raw");
                 file_write_open(&fp, new_path);
                 write_data(&fp, img->pixels, img->w * img->h);
+                file_close(&fp);
                 fb_free();
             } else { // RGB or GS, save as BMP.
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".bmp");
