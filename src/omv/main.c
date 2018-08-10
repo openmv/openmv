@@ -300,14 +300,24 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
         openmv_config->wifidbg = ini_is_true(value);
     } else if (MATCH("WiFiConfig", "Mode")) {
         openmv_config->wifidbg_config.mode = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "SSID")) {
-        strncpy(openmv_config->wifidbg_config.ssid, value, WINC_MAX_SSID_LEN);
-    } else if (MATCH("WiFiConfig", "Key")) {
-        strncpy(openmv_config->wifidbg_config.key,  value, WINC_MAX_PSK_LEN);
-    } else if (MATCH("WiFiConfig", "Security")) {
-        openmv_config->wifidbg_config.security = ini_atoi(value);
-    } else if (MATCH("WiFiConfig", "Channel")) {
-        openmv_config->wifidbg_config.channel = ini_atoi(value);
+    } else if (MATCH("WiFiConfig", "ClientSSID")) {
+        strncpy(openmv_config->wifidbg_config.client_ssid, value, WINC_MAX_SSID_LEN);
+    } else if (MATCH("WiFiConfig", "ClientKey")) {
+        strncpy(openmv_config->wifidbg_config.client_key,  value, WINC_MAX_PSK_LEN);
+    } else if (MATCH("WiFiConfig", "ClientSecurity")) {
+        openmv_config->wifidbg_config.client_security = ini_atoi(value);
+    } else if (MATCH("WiFiConfig", "ClientChannel")) {
+        openmv_config->wifidbg_config.client_channel = ini_atoi(value);
+    } else if (MATCH("WiFiConfig", "AccessPointSSID")) {
+        strncpy(openmv_config->wifidbg_config.access_point_ssid, value, WINC_MAX_SSID_LEN);
+    } else if (MATCH("WiFiConfig", "AccessPointKey")) {
+        strncpy(openmv_config->wifidbg_config.access_point_key,  value, WINC_MAX_PSK_LEN);
+    } else if (MATCH("WiFiConfig", "AccessPointSecurity")) {
+        openmv_config->wifidbg_config.access_point_security = ini_atoi(value);
+    } else if (MATCH("WiFiConfig", "AccessPointChannel")) {
+        openmv_config->wifidbg_config.access_point_channel = ini_atoi(value);
+    } else if (MATCH("WiFiConfig", "BoardName")) {
+        strncpy(openmv_config->wifidbg_config.board_name,  value, WINC_MAX_BOARD_NAME_LEN);
     } else {
         return 0;
     }
