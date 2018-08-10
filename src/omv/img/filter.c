@@ -112,6 +112,7 @@ void imlib_histeq(image_t *img, image_t *mask)
 // ...
 // ksize == n -> ((n*2)+1)x((n*2)+1) kernel
 
+#ifdef IMLIB_ENABLE_MEAN
 void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask)
 {
     int brows = ksize + 1;
@@ -298,6 +299,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
         }
     }
 }
+#endif // IMLIB_ENABLE_MEAN
 
 #ifdef IMLIB_ENABLE_MEDIAN
 void imlib_median_filter(image_t *img, const int ksize, float percentile, bool threshold, int offset, bool invert, image_t *mask)
