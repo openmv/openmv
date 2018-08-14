@@ -561,7 +561,7 @@ soft_reset:
     led_state(LED_BLUE, 0);
 
     if (openmv_config.wifidbg == true) {
-        timer_tim5_init();
+        timer_tim5_init(100);
     }
 
     // Run boot script(s)
