@@ -147,7 +147,7 @@ void wifidbg_dispatch()
         return;
     }
 
-    if (client_fd < 0 && (udpbcast_fd >= 0) && (!(udpbcast_time++ % 1000))) {
+    if (client_fd < 0 && (udpbcast_fd >= 0) && (!(udpbcast_time++ % 100))) {
         // Broadcast message to the IDE.
         MAKE_SOCKADDR(udpbcast_sockaddr, OPENMVCAM_BROADCAST_ADDR, OPENMVCAM_BROADCAST_PORT)
 
@@ -169,12 +169,12 @@ void wifidbg_dispatch()
         }
 
         if ((ret = winc_socket_bind(server_fd, &server_sockaddr)) < 0) {
-            close_server_socket();
+            close_all_sockets();
             return;
         }
 
         if ((ret = winc_socket_listen(server_fd, 1)) < 0) {
-            close_server_socket();
+            close_all_sockets();
             return;
         }
 
@@ -189,7 +189,7 @@ void wifidbg_dispatch()
             if (TIMEDOUT(ret)) {
                 client_fd = -1;
             } else {
-                close_server_socket();
+                close_all_sockets();
             }
             return;
         }
