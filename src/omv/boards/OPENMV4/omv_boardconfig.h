@@ -63,7 +63,7 @@
 
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
-#define OMV_STACK_SIZE          (8K)
+#define OMV_STACK_SIZE          (7K)
 #define OMV_HEAP_SIZE           (240K)
 
 #define OMV_LINE_BUF_SIZE       (3K)        // Image line buffer round(640 * 2BPP * 2 buffers).
