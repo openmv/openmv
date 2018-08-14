@@ -385,13 +385,6 @@ static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout)
     async_request_data = ret;
     async_request_done = false;
     async_request_type = msg_type;
-
-    if (msg_type != SOCKET_MSG_ACCEPT) {
-        // Only use async timeout for accept since it doesn't have a timeout arg.
-        // For other calls that have a timeout arg, we use a large async timeout.
-        timeout = 1000;
-    }
-
     uint32_t tick_start = HAL_GetTick();
 
     // Wait for async request to finish.
@@ -769,22 +762,32 @@ int winc_socket_send(int fd, const uint8_t *buf, uint32_t len, uint32_t timeout)
     return bytes;
 }
 
-int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, uint32_t timeout)
+int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sockbuf, uint32_t timeout)
 {
-    // cap length at SOCKET_BUFFER_MAX_LENGTH
-    len = MIN(len, SOCKET_BUFFER_MAX_LENGTH);
+    if (sockbuf->size == 0) { // No buffered data.
+        sockbuf->idx = 0; // Reset sockbuf index.
 
-    // do the recv
-    int ret = WINC1500_EXPORT(recv)(fd, buf, len, timeout);
-    if (ret == SOCK_ERR_NO_ERROR) {
-        // Do async request
-        ret = winc_async_request(SOCKET_MSG_RECV, &len, timeout);
+        int recv_bytes;
+        // Set recv to the maximum possible packet size.
+        int ret = WINC1500_EXPORT(recv)(fd, sockbuf->buf, SOCKET_BUFFER_MAX_LENGTH, timeout);
+        if (ret == SOCK_ERR_NO_ERROR) {
+            // Do async request
+            // sockbuf->size is the actual size of the recv'd packet.
+            ret = winc_async_request(SOCKET_MSG_RECV, &recv_bytes, timeout);
+        }
+
+        if (ret != SOCK_ERR_NO_ERROR || recv_bytes <= 0) {
+            return (recv_bytes <= 0)? recv_bytes : ret;
+        }
+
+        sockbuf->size = recv_bytes;
     }
 
-    if (ret != SOCK_ERR_NO_ERROR) {
-        return ret;
-    }
-    return len;
+    uint32_t bytes = MIN(len, sockbuf->size);
+    memcpy(buf, sockbuf->buf+sockbuf->idx, bytes);
+    sockbuf->idx  += bytes;
+    sockbuf->size -= bytes;
+    return bytes;
 }
 
 int winc_socket_sendto(int fd, const uint8_t *buf, uint32_t len, sockaddr *addr, uint32_t timeout)

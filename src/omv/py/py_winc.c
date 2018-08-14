@@ -437,7 +437,7 @@ static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byt
 
 static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno)
 {
-    int ret = winc_socket_recv(socket->fd, buf, len, socket->timeout);
+    int ret = winc_socket_recv(socket->fd, buf, len, &socket->sockbuf, socket->timeout);
     if (ret < 0) {
         *_errno = ret;
         py_winc_socket_close(socket);

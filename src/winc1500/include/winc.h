@@ -14,6 +14,7 @@
 #define WINC_MAX_SSID_LEN       (33)
 #define WINC_MAX_PSK_LEN        (65)
 #define WINC_MAX_BOARD_NAME_LEN (33)
+#define WINC_SOCKBUF_SIZE       (1400)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
     struct sockaddr addr; \
@@ -81,6 +82,13 @@ typedef struct {
     uint16_t timeout;
 } winc_socket_t;
 
+// Sock buffer workaround for WINC's recv issue.
+typedef struct {
+    int idx;
+    int size;
+    uint8_t buf[WINC_SOCKBUF_SIZE];
+} winc_socket_buf_t;
+
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 
@@ -107,7 +115,7 @@ int winc_socket_listen(int fd, uint32_t backlog);
 int winc_socket_accept(int fd, sockaddr *addr, int *fd_out, uint32_t timeout);
 int winc_socket_connect(int fd, sockaddr *addr, uint32_t timeout);
 int winc_socket_send(int fd, const uint8_t *buf, uint32_t len, uint32_t timeout);
-int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, uint32_t timeout);
+int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sockbuf, uint32_t timeout);
 int winc_socket_sendto(int fd, const uint8_t *buf, uint32_t len, sockaddr *addr, uint32_t timeout);
 int winc_socket_recvfrom(int fd, uint8_t *buf, uint32_t len, sockaddr *addr, uint32_t timeout);
 int winc_socket_setsockopt(int fd, uint32_t level, uint32_t opt, const void *optval, uint32_t optlen);

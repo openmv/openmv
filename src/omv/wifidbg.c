@@ -69,6 +69,7 @@ static int udpbcast_fd = -1;
 static int udpbcast_time = 0;
 static uint8_t ip_addr[WINC_IP_ADDR_LEN] = {};
 static char udpbcast_string[UDPCAST_STRING_SIZE] = {};
+static winc_socket_buf_t sockbuf;
 
 int wifidbg_init(wifidbg_config_t *config)
 {
@@ -130,8 +131,8 @@ void wifidbg_dispatch()
     uint8_t buf[BUFFER_SIZE];
     sockaddr client_sockaddr;
 
-    if (udpbcast_fd < 0) {
-        // Create broadcast socket
+    if (client_fd < 0 && udpbcast_fd < 0) {
+        // Create broadcast socket.
         MAKE_SOCKADDR(udpbcast_sockaddr, OPENMVCAM_BROADCAST_ADDR, OPENMVCAM_BROADCAST_PORT)
 
         if ((udpbcast_fd = winc_socket_socket(SOCK_DGRAM)) < 0) {
@@ -142,18 +143,21 @@ void wifidbg_dispatch()
             close_udpbcast_socket();
             return;
         }
+
+        return;
     }
 
-    if ((udpbcast_fd >= 0) && (!(udpbcast_time++ % 100))) {
-        // Create broadcast socket
+    if (client_fd < 0 && (udpbcast_fd >= 0) && (!(udpbcast_time++ % 1000))) {
+        // Broadcast message to the IDE.
         MAKE_SOCKADDR(udpbcast_sockaddr, OPENMVCAM_BROADCAST_ADDR, OPENMVCAM_BROADCAST_PORT)
 
-        if ((ret = winc_socket_sendto(udpbcast_fd,
-                                      (uint8_t *) udpbcast_string, strlen(udpbcast_string) + 1,
-                                      &udpbcast_sockaddr, 500)) < 0) {
+        if ((ret = winc_socket_sendto(udpbcast_fd, (uint8_t *) udpbcast_string,
+                        strlen(udpbcast_string) + 1, &udpbcast_sockaddr, 500)) < 0) {
             close_udpbcast_socket();
             return;
         }
+
+        return;
     }
 
     if (server_fd < 0) {
@@ -173,9 +177,12 @@ void wifidbg_dispatch()
             close_server_socket();
             return;
         }
+
+        return;
     }
 
     if (client_fd < 0) {
+        sockbuf.size = sockbuf.idx = 0;
         // Call accept.
         if ((ret = winc_socket_accept(server_fd,
                         &client_sockaddr, &client_fd, 10)) < 0) {
@@ -186,15 +193,21 @@ void wifidbg_dispatch()
             }
             return;
         }
+
+        return;
     }
 
-    if ((ret = winc_socket_recv(client_fd, buf, 8, 10)) < 0) {
+    if ((ret = winc_socket_recv(client_fd, buf, 6, &sockbuf, 10)) < 0) {
         if (TIMEDOUT(ret)) {
             return;
         } else {
-            close_server_socket();
+            close_all_sockets();
             return;
         }
+    }
+
+    if (ret != 6 || buf[0] != 0x30) {
+        return;
     }
 
     uint8_t request = buf[1];
@@ -214,7 +227,7 @@ void wifidbg_dispatch()
         } else {
             // Host-to-device data phase
             int bytes = MIN(xfer_length, BUFFER_SIZE);
-            if ((ret = winc_socket_recv(client_fd, buf, bytes, 500)) < 0) {
+            if ((ret = winc_socket_recv(client_fd, buf, bytes, &sockbuf, 500)) < 0) {
                 close_all_sockets();
                 return;
             }
