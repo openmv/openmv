@@ -3486,6 +3486,18 @@ static HAL_StatusTypeDef SPI_EndRxTxTransaction(SPI_HandleTypeDef *hspi, uint32_
     SET_BIT(hspi->ErrorCode, HAL_SPI_ERROR_FLAG);
     return HAL_TIMEOUT;
   }
+   
+  /* BUSY bit may stay high at the end of a data transfer 
+     in Slave mode. See STM32F7 erratasheet (DM00145382, 2.11.2)
+     Workaround "Alternative" is proposed :
+     -> We assume that at this moment, the last byte is not sent now,
+        and that the disable operation is quicker than the end of 
+        last byte transmission. */    
+  if (hspi->Init.Mode == SPI_MODE_SLAVE)
+  {
+    __HAL_SPI_DISABLE(hspi);
+  }
+
   /* Control the BSY flag */
   if (SPI_WaitFlagStateUntilTimeout(hspi, SPI_FLAG_BSY, RESET, Timeout, Tickstart) != HAL_OK)
   {
