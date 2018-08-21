@@ -7,7 +7,7 @@
 #
 # Add the following script to boot.py:
 #
-##import pyb (UNCOMMENT THIS LINE!)
+##import pyb #(UNCOMMENT THIS LINE!)
 ##pyb.usb_mode('VCP+HID') # serial device + mouse (UNCOMMENT THIS LINE!)
 ##pyb.usb_mode('VCP+MSC') # serial device + storage device (default)
 ##pyb.usb_mode('VCP+HID', hid=pyb.hid_keyboard) # serial device + keyboard
