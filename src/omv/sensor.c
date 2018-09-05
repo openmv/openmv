@@ -405,6 +405,18 @@ int sensor_sleep(int enable)
     return 0;
 }
 
+int sensor_shutdown(int enable)
+{
+    if (enable) {
+        DCMI_PWDN_HIGH();
+    } else {
+        DCMI_PWDN_LOW();
+    }
+
+    systick_sleep(10);
+    return 0;
+}
+
 int sensor_read_reg(uint8_t reg_addr)
 {
     if (sensor.read_reg == NULL) {

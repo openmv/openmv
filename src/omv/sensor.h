@@ -168,6 +168,9 @@ int sensor_get_id();
 // Sleep mode.
 int sensor_sleep(int enable);
 
+// Shutdown mode.
+int sensor_shutdown(int enable);
+
 // Read a sensor register.
 int sensor_read_reg(uint8_t reg_addr);
 
