@@ -20,7 +20,7 @@ if (sensor.get_id() == sensor.OV7725):
     # Bypass internal regulator
     sensor.__write_reg(0x4F, 0x18)
 
-# Enable sensro softsleep
+# Enable sensor softsleep
 sensor.sleep(True)
 
 # Shutdown the sensor (pulls PWDN high).
