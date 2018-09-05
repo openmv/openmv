@@ -136,6 +136,7 @@ Q(OV7725)
 Q(MT9V034)
 Q(LEPTON)
 Q(value)
+Q(shutdown)
 
 // NN Module
 Q(load)
