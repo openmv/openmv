@@ -1070,7 +1070,11 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
     fb_alloc_mark();
     uint8_t *buffer = fb_alloc_all(&size);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
-    PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
+    if(jpeg_compress(arg_img, &out, arg_q, false)) {
+        // compression overflow
+        fb_alloc_free_till_mark();
+        PY_ASSERT_TRUE_MSG(false, "Compression Failed");
+    }
     uint8_t *temp = xalloc(out.bpp);
     memcpy(temp, out.data, out.bpp);
     out.data = temp;
