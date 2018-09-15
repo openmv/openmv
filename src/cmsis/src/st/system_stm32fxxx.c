@@ -230,7 +230,7 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
     RCC_OscInitStruct.PLL.PLLR = 2;
     #elif defined (STM32H743xx)// 400MHz/48MHz
-    flash_latency = FLASH_LATENCY_4;
+    flash_latency = FLASH_LATENCY_2;
     RCC_OscInitStruct.PLL.PLLM = 3;
     RCC_OscInitStruct.PLL.PLLN = 200;
     RCC_OscInitStruct.PLL.PLLP = 2;
