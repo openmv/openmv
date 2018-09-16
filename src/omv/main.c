@@ -524,6 +524,9 @@ soft_reset:
     MP_STATE_VM(vfs_mount_table) = vfs;
     MP_STATE_PORT(vfs_cur) = vfs;
 
+    // set label
+    f_setlabel(&vfs_fat->fatfs, "OPENMV_DISK");
+
     // Parse OpenMV configuration file.
     openmv_config_t openmv_config;
     if (first_soft_reset) {
