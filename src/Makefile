@@ -448,6 +448,7 @@ WEBCAM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	imlib.o                                 \
 	)
 
+WEBCAM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 ###################################################
 #Export Variables
 export Q

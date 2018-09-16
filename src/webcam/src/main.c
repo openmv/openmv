@@ -7,27 +7,14 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-#define FRAME_HEADER_LENGTH (2)
-#define FRAME_LINE_LENGTH (320)
-#define IMAGE_NUM_LINES (240)
-
 extern sensor_t sensor;
 USBD_HandleTypeDef hUsbDeviceFS;
 extern volatile uint8_t g_uvc_stream_status;
 extern struct uvc_streaming_control videoCommitControl;
 
-void __flash_led()
-{
-    HAL_GPIO_TogglePin(OMV_BOOTLDR_LED_PORT, OMV_BOOTLDR_LED_PIN);
-    HAL_Delay(100);
-    HAL_GPIO_TogglePin(OMV_BOOTLDR_LED_PORT, OMV_BOOTLDR_LED_PIN);
-    HAL_Delay(100);
-}
-
 void __attribute__((noreturn)) __fatal_error()
 {
     while (1) {
-        __flash_led();
     }
 }
 
@@ -38,24 +25,20 @@ void __attribute__((noreturn)) __stack_chk_fail(void)
 {
     __asm__ volatile ("BKPT");
     while (1) {
-        __flash_led();
     }
 }
 #endif
-
-void systick_sleep(volatile uint32_t ms)
-{
-    volatile uint32_t curr_ticks = HAL_GetTick();
-    while ((HAL_GetTick() - curr_ticks) < ms) {
-        __WFI();
-    }
-}
 
 void *xrealloc(void *mem, uint32_t size)
 {
     // Will never be called.
     __fatal_error();
     return NULL;
+}
+
+NORETURN void fb_alloc_fail()
+{
+    __fatal_error();
 }
 
 int main()
@@ -65,8 +48,6 @@ int main()
     // Re-enable IRQs (disabled by bootloader)
     __enable_irq();
 
-    // Remove the BASEPRI masking (if any)
-    //irq_set_base_priority(0);
 
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_PULLUP;
