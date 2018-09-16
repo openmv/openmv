@@ -13,7 +13,7 @@
 extern char _fballoc;
 static char *pointer = &_fballoc;
 
-NORETURN void fb_alloc_fail()
+__weak NORETURN void fb_alloc_fail()
 {
     nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
         "Out of fast Frame Buffer Stack Memory!"
