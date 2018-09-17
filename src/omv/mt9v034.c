@@ -103,12 +103,12 @@
 
 #define MICROSECOND_CLKS                        (1000000)
 
-typedef enum { MT9V304_NOT_SET, MT9V304_CFA, MT9V304_GS, MT9V304_GS_CFA } mt9v304_mode_t;
-static mt9v304_mode_t mt9v304_mode = MT9V304_NOT_SET;
+typedef enum { MT9V034_NOT_SET, MT9V034_CFA, MT9V034_GS, MT9V034_GS_CFA } MT9V034_mode_t;
+static MT9V034_mode_t MT9V034_mode = MT9V034_NOT_SET;
 
 static int reset(sensor_t *sensor)
 {
-    mt9v304_mode = MT9V304_NOT_SET;
+    MT9V034_mode = MT9V034_NOT_SET;
 
     DCMI_PWDN_HIGH();
     systick_sleep(1);
@@ -199,7 +199,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     read_mode &= 0xFFF0;
     bool is_cfa = ((reg >> 9) & 0x7) == 0x6;
-    mt9v304_mode_t mode_tmp = is_cfa ? MT9V304_CFA : MT9V304_GS;
+    MT9V034_mode_t mode_tmp = is_cfa ? MT9V034_CFA : MT9V034_GS;
     int read_mode_mul = 1;
 
     if ((!is_cfa) || (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
@@ -210,7 +210,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             read_mode_mul = 2;
             read_mode |= MT9V034_READ_MODE_COL_BIN_2 | MT9V034_READ_MODE_ROW_BIN_2;
         } else if (is_cfa && (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
-            mode_tmp = MT9V304_GS_CFA;
+            mode_tmp = MT9V034_GS_CFA;
         }
     }
 
@@ -234,7 +234,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_COUNT, (width * height) / 8);
 
     if (ret == 0) {
-        mt9v304_mode = mode_tmp;
+        MT9V034_mode = mode_tmp;
     }
 
     return ret;
@@ -390,7 +390,7 @@ extern int sensor_snapshot(sensor_t *sensor, image_t *image);
 
 static int snapshot(sensor_t *sensor, image_t *image)
 {
-    if ((!sensor->pixformat) || (!sensor->framesize) || (mt9v304_mode == MT9V304_NOT_SET)) {
+    if ((!sensor->pixformat) || (!sensor->framesize) || (MT9V034_mode == MT9V034_NOT_SET)) {
         return -1;
     }
 
@@ -408,7 +408,7 @@ static int snapshot(sensor_t *sensor, image_t *image)
         return -1;
     }
 
-    if (mt9v304_mode == MT9V304_GS) {
+    if (MT9V034_mode == MT9V034_GS) {
         switch (sensor->pixformat) {
             case PIXFORMAT_BAYER: {
                 new_image.bpp = IMAGE_BPP_BAYER;
@@ -443,7 +443,7 @@ static int snapshot(sensor_t *sensor, image_t *image)
             }
             case PIXFORMAT_GRAYSCALE: {
                 new_image.bpp = IMAGE_BPP_GRAYSCALE;
-                if (mt9v304_mode == MT9V304_GS_CFA) {
+                if (MT9V034_mode == MT9V034_GS_CFA) {
                     int ksize = 1, brows = ksize + 1;
                     image_t buf;
                     buf.w = new_image.w;
