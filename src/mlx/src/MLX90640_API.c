@@ -18,6 +18,10 @@
 #include <MLX90640_API.h>
 #include <math.h>
 
+#define double float
+#define pow(a,b) powf(a,b)
+#define sqrt(x) sqrtf(x)
+
 void ExtractVDDParameters(uint16_t *eeData, paramsMLX90640 *mlx90640);
 void ExtractPTATParameters(uint16_t *eeData, paramsMLX90640 *mlx90640);
 void ExtractGainParameters(uint16_t *eeData, paramsMLX90640 *mlx90640);

@@ -25,21 +25,26 @@
  * higher frequency.
  */
  
-#include "mbed.h"
+//#include "mbed.h"
 #include "MLX90640_I2C_Driver.h"
+#include STM32_HAL_H
+#include "omv_boardconfig.h"
 
-
-DigitalInOut sda(p9);
-DigitalOut scl(p10);
+//DigitalInOut sda(p9);
+#define sda I2C_SIOD_READ()
+//DigitalOut scl(p10);
 
 #define LOW 0;
 #define HIGH 1;
 
-#define SCL_HIGH scl = HIGH;
-#define SCL_LOW scl = LOW;     
-#define SDA_HIGH sda.input();
-#define SDA_LOW sda.output(); \
-                sda = LOW;           
+//#define SCL_HIGH scl = HIGH;
+#define SCL_HIGH I2C_SIOC_H()
+//#define SCL_LOW scl = LOW;
+#define SCL_LOW I2C_SIOC_L()
+//#define SDA_HIGH sda.input();
+#define SDA_HIGH I2C_SIOD_H()
+//#define SDA_LOW sda.output(); sda = LOW;
+#define SDA_LOW I2C_SIOD_L()
 
 int I2CSendByte(int8_t);
 void I2CReadBytes(int, char *);
@@ -233,14 +238,10 @@ void I2CReadBytes(int nBytes, char *dataP)
     }    
     
 }
-        
+
 void Wait(int freqCnt)
 {
-    int cnt;
-    for(int i = 0;i<freqCnt;i++)
-    {
-        cnt = cnt++; 
-    }    
+    for(volatile int i = 0;i<freqCnt;i++);
 } 
 
 void I2CStart(void)
