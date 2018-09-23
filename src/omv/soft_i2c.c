@@ -13,9 +13,9 @@
 #define ACK 0
 #define NACK 1
 
-static void delay(void) // TODO: Update with clock speed knowledge for M7.
+static void delay(void)
 {
-    for(volatile int i=0; i<16; i++);
+    for(volatile int i=0; i<I2C_SPIN_DELAY; i++);
 }
 
 static void i2c_start(void)

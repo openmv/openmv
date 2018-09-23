@@ -174,4 +174,6 @@
 #define I2C_SIOD_READ()         HAL_GPIO_ReadPin(I2C_PORT, I2C_SIOD_PIN)
 #define I2C_SIOD_WRITE(bit)     HAL_GPIO_WritePin(I2C_PORT, I2C_SIOD_PIN, bit);
 
+#define I2C_SPIN_DELAY          16
+
 #endif //__OMV_BOARDCONFIG_H__
