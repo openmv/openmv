@@ -76,7 +76,7 @@ int MLX90640_I2CWrite(uint8_t slaveAddr, uint16_t writeAddress, uint16_t data)
     uint8_t sa;
     int ack = 0;
     char cmd[4] = {0,0,0,0};
-    static uint16_t dataCheck;
+    uint16_t dataCheck;
     
 
     sa = (slaveAddr << 1);

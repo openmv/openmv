@@ -3,18 +3,18 @@
  * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * MLX90621 Python module.
+ * MLX Python module.
  *
  */
-#include <mp.h>
-#include <math.h>
-#include <float.h>
+#include <stdbool.h>
 #include "soft_i2c.h"
-#include "fb_alloc.h"
-#include "xalloc.h"
-#include "py_assert.h"
-#include "py_image.h"
+#include "MLX90640_I2C_Driver.h"
+#include "MLX90640_API.h"
+#include "omv_boardconfig.h"
+#include "framebuffer.h"
+#include "sensor.h"
 #include "py_helper.h"
+#include "py_image.h"
 #include "py_fir.h"
 
 #define FIR_EEPROM_ADDR     0xA0
@@ -71,6 +71,8 @@
 
 #define CAL_BCP             0xD5
 
+#define MLX90640_ADDR       0x33
+
 #define MAP(OldValue, OldMin, OldMax, NewMin, NewMax) \
     ({ __typeof__ (OldValue) _OldValue = (OldValue); \
        __typeof__ (OldMin) _OldMin = (OldMin); \
@@ -89,73 +91,77 @@ static float *b_ij = NULL;
 static float *alpha_ij = NULL;
 static float v_th, k_t1, k_t2, tgc, emissivity, ksta, alpha_cp, ks4, a_cp, b_cp;
 
-static int width = 0;
-static int height = 0;
-static enum { FIR_NONE, FIR_SHIELD } type = FIR_NONE;
+static uint8_t width = 0;
+static uint8_t height = 0;
+static enum { FIR_NONE, FIR_SHIELD, FIR_MLX90640, FIR_AMG8833 } type = FIR_NONE;
+static uint8_t IR_refresh_rate = 0;
+static uint8_t ADC_resolution = 0;
+
+static void test_ack(int ret)
+{
+    PY_ASSERT_TRUE_MSG(ret == 0, "I2C Bus communication error - missing ACK!");
+}
 
 static float calculate_Ta() // ambient temp
 {
     // Code to handle dealing with brown-out conditions.
     {
         uint16_t config_reg;
-        soft_i2c_write_bytes(FIR_MODULE_ADDR,
-            (uint8_t [4]) {FIR_READ_CMD, 0x92, 0x00, 0x01}, 4, false);
-        soft_i2c_read_bytes(FIR_MODULE_ADDR,
-            (uint8_t*) &config_reg, 2, true);
+        test_ack(soft_i2c_write_bytes(FIR_MODULE_ADDR,
+            (uint8_t [4]) {FIR_READ_CMD, 0x92, 0x00, 0x01}, 4, false));
+        test_ack(soft_i2c_read_bytes(FIR_MODULE_ADDR,
+            (uint8_t*) &config_reg, 2, true));
 
         if (!(config_reg & 0x0400)) { // brown out
             uint8_t eeprom;
             // Read the eeprom.
-            soft_i2c_write_bytes(FIR_EEPROM_ADDR,
-                (uint8_t [1]){CAL_OSC_TRIM}, 1, false);
-            soft_i2c_read_bytes(FIR_EEPROM_ADDR,
-                &eeprom, 1, true);
+            test_ack(soft_i2c_write_bytes(FIR_EEPROM_ADDR,
+                (uint8_t [1]){CAL_OSC_TRIM}, 1, false));
+            test_ack(soft_i2c_read_bytes(FIR_EEPROM_ADDR,
+                &eeprom, 1, true));
 
             // Write oscillator trimming value.
             soft_i2c_write_bytes(FIR_MODULE_ADDR,
                 (uint8_t [5]){FIR_WR_TRIM_CMD,
                 (uint8_t)(eeprom-0xAA), eeprom,
-                (uint8_t)(0x00-0xAA), 0x00}, 5, true);
+                (uint8_t)(0x00-0xAA), 0x00}, 5, true); // no ack here
 
             // Write device configuration value.
-            uint8_t IR_refresh_rate = 0x8; // 64 Hz
-            uint8_t ADC_resolution = 0x3; // 18-bits
             uint8_t lsb = (ADC_resolution << 4) | IR_refresh_rate;
             // Normal Operation Mode - Continuous Measurment Mode
-            // ADC set to 18 bit resolution - IR Refresh rate = 64 Hz
             uint8_t msb = 0x44;
             // ADC low reference enabled - EEPROM enabled
             // I2C FM+ enabled
-            soft_i2c_write_bytes(FIR_MODULE_ADDR,
+            test_ack(soft_i2c_write_bytes(FIR_MODULE_ADDR,
                 (uint8_t [5]){FIR_WR_CFG_REG,
                 (uint8_t)(lsb-0x55), lsb,
-                (uint8_t)(msb-0x55), msb}, 5, true);
+                (uint8_t)(msb-0x55), msb}, 5, true));
         }
     }
 
     uint16_t ptat;
-    soft_i2c_write_bytes(FIR_MODULE_ADDR,
-        (uint8_t [4]) {FIR_READ_CMD, 0x40, 0x00, 0x01}, 4, false);
-    soft_i2c_read_bytes(FIR_MODULE_ADDR,
-        (uint8_t*) &ptat, 2, true);
-    return (((-k_t1)+fast_sqrtf((k_t1*k_t1)-(4*k_t2*(v_th-ptat))))/(2*k_t2))+25;
+    test_ack(soft_i2c_write_bytes(FIR_MODULE_ADDR,
+        (uint8_t [4]) {FIR_READ_CMD, 0x40, 0x00, 0x01}, 4, false));
+    test_ack(soft_i2c_read_bytes(FIR_MODULE_ADDR,
+        (uint8_t*) &ptat, 2, true));
+    return (((-k_t1)+sqrtf((k_t1*k_t1)-(4*k_t2*(v_th-ptat))))/(2*k_t2))+25;
 }
 
 static void calculate_To(float Ta, float *To)
 {
     int16_t v_ir[64];
     // Read IR sensor result
-    soft_i2c_write_bytes(FIR_MODULE_ADDR,
-        (uint8_t [4]){FIR_READ_CMD, 0x00, 0x01, 0x40}, 4, false);
-    soft_i2c_read_bytes(FIR_MODULE_ADDR,
-        (uint8_t*) v_ir, 128, true);
+    test_ack(soft_i2c_write_bytes(FIR_MODULE_ADDR,
+        (uint8_t [4]){FIR_READ_CMD, 0x00, 0x01, 0x40}, 4, false));
+    test_ack(soft_i2c_read_bytes(FIR_MODULE_ADDR,
+        (uint8_t*) v_ir, 128, true));
 
     int16_t v_cp;
     // Read compensation pixel result
-    soft_i2c_write_bytes(FIR_MODULE_ADDR,
-        (uint8_t [4]){FIR_READ_CMD, 0x41, 0x00, 0x01}, 4, false);
-    soft_i2c_read_bytes(FIR_MODULE_ADDR,
-        (uint8_t*) &v_cp, 2, true);
+    test_ack(soft_i2c_write_bytes(FIR_MODULE_ADDR,
+        (uint8_t [4]){FIR_READ_CMD, 0x41, 0x00, 0x01}, 4, false));
+    test_ack(soft_i2c_read_bytes(FIR_MODULE_ADDR,
+        (uint8_t*) &v_cp, 2, true));
 
     // Calculate Thermal Gradien Compensation (TGC)
     float v_ir_cp_off_comp = v_cp-(a_cp+(b_cp*(Ta-25)));
@@ -189,11 +195,14 @@ static mp_obj_t py_fir_deinit()
         case FIR_NONE:
             return mp_const_none;
         case FIR_SHIELD:
+        case FIR_MLX90640:
+        case FIR_AMG8833:
             soft_i2c_deinit();
             width = 0;
             height = 0;
             type = FIR_NONE;
-
+            IR_refresh_rate = 0;
+            ADC_resolution = 0;
             if (a_ij) {
                 a_ij = NULL;
             }
@@ -207,6 +216,7 @@ static mp_obj_t py_fir_deinit()
     }
     return mp_const_none;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_deinit_obj, py_fir_deinit);
 
 /*
 Allows the refresh rate to be set in the range 1Hz and 512Hz, in powers of 2. (64Hz default)
@@ -225,7 +235,9 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     py_fir_deinit();
     switch (py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), FIR_SHIELD)) {
         case FIR_NONE:
+        {
             return mp_const_none;
+        }
         case FIR_SHIELD:
         {
             width = 16;
@@ -233,13 +245,13 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             type = FIR_SHIELD;
             soft_i2c_init();
 
-            // pasre refresh rate and ADC resolution
-            uint32_t IR_refresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 64);     // 64Hz
-            uint32_t ADC_resolution  = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 18);  // 18-bits
+            // parse refresh rate and ADC resolution
+            IR_refresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 64);     // 64Hz
+            ADC_resolution  = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 18);  // 18-bits
 
             // sanitize values
-            ADC_resolution  = ((ADC_resolution > 18)? 18:(ADC_resolution < 15)? 15:ADC_resolution) - 15;
-            IR_refresh_rate = 14 - __CLZ(__RBIT((IR_refresh_rate > 512) ? 512:(IR_refresh_rate < 1)? 1:IR_refresh_rate));
+            ADC_resolution  = ((ADC_resolution > 18) ? 18 : (ADC_resolution < 15) ? 15 : ADC_resolution) - 15;
+            IR_refresh_rate = 14 - __CLZ(__RBIT((IR_refresh_rate > 512) ? 512 : (IR_refresh_rate < 1) ? 1 : IR_refresh_rate));
 
             a_ij = xalloc(64 * sizeof(*a_ij));
             b_ij = xalloc(64 * sizeof(*b_ij));
@@ -247,29 +259,28 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             uint8_t eeprom[256];
             // Read the whole eeprom.
-            soft_i2c_write_bytes(FIR_EEPROM_ADDR,
-                (uint8_t [1]){0x00}, 1, false);
-            soft_i2c_read_bytes(FIR_EEPROM_ADDR,
-                eeprom, 256, true);
+            test_ack(soft_i2c_write_bytes(FIR_EEPROM_ADDR,
+                (uint8_t [1]){0x00}, 1, false));
+            test_ack(soft_i2c_read_bytes(FIR_EEPROM_ADDR,
+                eeprom, 256, true));
 
             // Write oscillator trimming value.
             soft_i2c_write_bytes(FIR_MODULE_ADDR,
                 (uint8_t [5]){FIR_WR_TRIM_CMD,
                 (uint8_t)(eeprom[CAL_OSC_TRIM]-0xAA), eeprom[CAL_OSC_TRIM],
-                (uint8_t)(0x00-0xAA), 0x00}, 5, true);
+                (uint8_t)(0x00-0xAA), 0x00}, 5, true); // no ack here
 
             // Write device configuration value.
             // assignment of IR_refresh_rate and ADC_resolution now done above
             uint8_t lsb = (ADC_resolution << 4) | IR_refresh_rate;
             // Normal Operation Mode - Continuous Measurment Mode
-            // ADC set to 18 bit resolution - IR Refresh rate = 64 Hz
             uint8_t msb = 0x44;
             // ADC low reference enabled - EEPROM enabled
             // I2C FM+ enabled
-            soft_i2c_write_bytes(FIR_MODULE_ADDR,
+            test_ack(soft_i2c_write_bytes(FIR_MODULE_ADDR,
                 (uint8_t [5]){FIR_WR_CFG_REG,
                 (uint8_t)(lsb-0x55), lsb,
-                (uint8_t)(msb-0x55), msb}, 5, true);
+                (uint8_t)(msb-0x55), msb}, 5, true));
 
             v_th = ((int16_t)((eeprom[CAL_VTH_H]<<8)|eeprom[CAL_VTH_L])) /
                 powf(2,3-ADC_resolution);
@@ -323,81 +334,198 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             return mp_const_none;
         }
+        case FIR_MLX90640:
+        {
+            width = 32;
+            height = 24;
+            type = FIR_MLX90640;
+            soft_i2c_init();
+
+            // parse refresh rate and ADC resolution
+            IR_refresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 32);     // 32Hz
+            ADC_resolution  = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 19);  // 19-bits
+
+            // sanitize values
+            ADC_resolution  = ((ADC_resolution > 19) ? 19 : (ADC_resolution < 16) ? 16 : ADC_resolution) - 16;
+            IR_refresh_rate = __CLZ(__RBIT((IR_refresh_rate > 64) ? 64 : (IR_refresh_rate < 1) ? 1 : IR_refresh_rate)) + 1;
+
+            alpha_ij = xalloc(sizeof(paramsMLX90640));
+
+            MLX90640_I2CFreqSet(I2C_SPIN_DELAY);
+            MLX90640_I2CInit();
+
+            int error = 0;
+
+            error |= MLX90640_SetResolution(MLX90640_ADDR, ADC_resolution);
+            error |= MLX90640_SetRefreshRate(MLX90640_ADDR, IR_refresh_rate);
+
+            uint16_t eeprom[832];
+            error |= MLX90640_DumpEE(MLX90640_ADDR, eeprom);
+            error |= MLX90640_ExtractParameters(eeprom, (paramsMLX90640 *) alpha_ij);
+
+            PY_ASSERT_TRUE_MSG(error == 0, "Failed to init the MLX90640!");
+
+            return mp_const_none;
+        }
+        case FIR_AMG8833:
+        {
+            return mp_const_none;
+        }
     }
     return mp_const_none;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_init_obj, 0, py_fir_init);
 
 static mp_obj_t py_fir_width()
 {
     if (type == FIR_NONE) return mp_const_none;
     return mp_obj_new_int(width);
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_width_obj, py_fir_width);
 
 static mp_obj_t py_fir_height()
 {
     if (type == FIR_NONE) return mp_const_none;
     return mp_obj_new_int(height);
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
 
 static mp_obj_t py_fir_type()
 {
     if (type == FIR_NONE) return mp_const_none;
     return mp_obj_new_int(type);
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_type_obj, py_fir_type);
+
+static mp_obj_t py_fir_refresh()
+{
+    const int mlx_90621_refresh_rates[16] = {512, 512, 512, 512, 512, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0};
+    const int mlx_90640_refresh_rates[8] = {0, 1, 2, 4, 8, 16, 32, 64};
+    if (type == FIR_NONE) return mp_const_none;
+    if (type == FIR_SHIELD) return mp_obj_new_int(mlx_90621_refresh_rates[IR_refresh_rate]);
+    if (type == FIR_MLX90640) return mp_obj_new_int(mlx_90640_refresh_rates[IR_refresh_rate]);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_refresh_obj, py_fir_refresh);
+
+static mp_obj_t py_fir_resolution()
+{
+    if (type == FIR_NONE) return mp_const_none;
+    if (type == FIR_SHIELD) return mp_obj_new_int(ADC_resolution + 15);
+    if (type == FIR_MLX90640) return mp_obj_new_int(ADC_resolution + 16);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
 
 mp_obj_t py_fir_read_ta()
 {
-    if (type == FIR_NONE) return mp_const_none;
-    return mp_obj_new_float(calculate_Ta());
+    switch(type) {
+        case FIR_NONE: return mp_const_none;
+        case FIR_SHIELD: return mp_obj_new_float(calculate_Ta());
+        case FIR_MLX90640:
+        {
+            uint16_t data[834];
+            PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
+                               "Failed to read the MLX90640 sensor data!");
+            return mp_obj_new_float(MLX90640_GetTa(data, (paramsMLX90640 *) alpha_ij));
+        }
+        case FIR_AMG8833:
+        {
+            return mp_const_none;
+        }
+    }
+    return mp_const_none;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
 
 mp_obj_t py_fir_read_ir()
 {
-    if (type == FIR_NONE) {
-        return mp_const_none;
-    }
+    switch(type) {
+        case FIR_NONE: return mp_const_none;
+        case FIR_SHIELD:
+        {
+            float To[64], To_rot[64];
+            float Ta = calculate_Ta();
+            float min = FLT_MAX, max = FLT_MIN;
 
-    float To[64], To_rot[64];
-    float Ta = calculate_Ta();
-    float min = FLT_MAX, max = FLT_MIN;
+            // Calculate object temperatures
+            calculate_To(Ta, To_rot);
 
-    // Calculate object temperatures
-    calculate_To(Ta, To_rot);
+            // Rotate temperatures array (sensor memory is read column wise).
+            for (int x=15, r=0; x>=0; x--) {
+                for (int y=0; y<4; y++) {
+                    float temp = To[y*16 + x] = To_rot[r++];
+                    min = IM_MIN(min, temp);
+                    max = IM_MAX(max, temp);
+                }
+            }
 
-    // Rotate temperatures array (sensor memory is read column wise).
-    for (int x=15, r=0; x>=0; x--) {
-        for (int y=0; y<4; y++) {
-            float temp = To[y*16 + x] = To_rot[r++];
-            min = IM_MIN(min, temp);
-            max = IM_MAX(max, temp);
+            mp_obj_t tuple[4];
+            tuple[0] = mp_obj_new_float(Ta);
+            tuple[1] = mp_obj_new_list(0, NULL);
+            tuple[2] = mp_obj_new_float(min);
+            tuple[3] = mp_obj_new_float(max);
+
+            for (int i=0; i<64; i++) {
+                mp_obj_list_append(tuple[1], mp_obj_new_float(To[i]));
+            }
+
+            return mp_obj_new_tuple(4, tuple);
+        }
+        case FIR_MLX90640:
+        {
+            uint16_t data[834];
+            // Calculate 1st sub-frame...
+            PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
+                               "Failed to read the MLX90640 sensor data!");
+            float Ta = MLX90640_GetTa(data, (paramsMLX90640 *) alpha_ij);
+            float To[768] = {};
+            MLX90640_CalculateTo(data, (paramsMLX90640 *) alpha_ij, 0.95, Ta - 8, To);
+            // Calculate 2nd sub-frame...
+            PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
+                               "Failed to read the MLX90640 sensor data!");
+            Ta = MLX90640_GetTa(data, (paramsMLX90640 *) alpha_ij);
+            MLX90640_CalculateTo(data, (paramsMLX90640 *) alpha_ij, 0.95, Ta - 8, To);
+            float min = FLT_MAX, max = FLT_MIN;
+
+            for (int i=0; i<768; i++) {
+                min = IM_MIN(min, To[i]);
+                max = IM_MAX(max, To[i]);
+            }
+
+            mp_obj_t tuple[4];
+            tuple[0] = mp_obj_new_float(Ta);
+            tuple[1] = mp_obj_new_list(0, NULL);
+            tuple[2] = mp_obj_new_float(min);
+            tuple[3] = mp_obj_new_float(max);
+
+            for (int i=0; i<768; i++) {
+                mp_obj_list_append(tuple[1], mp_obj_new_float(To[i]));
+            }
+
+            return mp_obj_new_tuple(4, tuple);
+        }
+        case FIR_AMG8833:
+        {
+            return mp_const_none;
         }
     }
-
-    mp_obj_t tuple[4];
-    tuple[0] = mp_obj_new_float(Ta);
-    tuple[1] = mp_obj_new_list(0, NULL);
-    tuple[2] = mp_obj_new_float(min);
-    tuple[3] = mp_obj_new_float(max);
-
-    for (int i=0; i<64; i++) {
-        mp_obj_list_append(tuple[1], mp_obj_new_float(To[i]));
-    }
-    return mp_obj_new_tuple(4, tuple);
+    return mp_const_none;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ir_obj,  py_fir_read_ir);
 
 mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (type == FIR_NONE) return mp_const_none;
-    image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
     float Ta = mp_obj_get_float(args[1]);
     float min = -17.7778, max = 37.7778; // 0F to 100F
 
-    int alpha = IM_MIN(IM_MAX(py_helper_keyword_int(n_args, args, 2, kw_args,
-        MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 256);
+    int alpha = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
+    PY_ASSERT_TRUE_MSG((0 <= alpha) && (alpha <= 256), "Error: 0 <= alpha <= 256!");
 
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args,
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args, 
                                                   MP_OBJ_NEW_QSTR(MP_QSTR_scale));
     if (scale_obj) {
         mp_obj_t *arg_scale;
@@ -407,50 +535,65 @@ mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     uint8_t gs_ta = IM_MIN(IM_MAX(MAP(Ta, min, max, 0, 255), 0), 255);
-    uint16_t r_ta = IM_R565(rainbow_table[gs_ta]);
-    uint16_t g_ta = IM_G565(rainbow_table[gs_ta]);
-    uint16_t b_ta = IM_B565(rainbow_table[gs_ta]);
+    uint16_t r_ta = COLOR_RGB565_TO_R5(rainbow_table[gs_ta]);
+    uint16_t g_ta = COLOR_RGB565_TO_G6(rainbow_table[gs_ta]);
+    uint16_t b_ta = COLOR_RGB565_TO_B5(rainbow_table[gs_ta]);
     uint32_t va = __PKHBT((256-alpha), alpha, 16);
     for (int y=0; y<arg_img->h; y++) {
         for (int x=0; x<arg_img->w; x++) {
-            if (IM_IS_GS(arg_img)) {
-                uint8_t pixel = IM_GET_GS_PIXEL(arg_img, x, y);
-                uint32_t vgs = __PKHBT(pixel, gs_ta, 16);
-                uint32_t gs = __SMUAD(va, vgs)>>8;
-                IM_SET_GS_PIXEL(arg_img, x, y, gs);
-            } else {
-                uint16_t pixel = IM_GET_RGB565_PIXEL(arg_img, x, y);
-                uint32_t vr = __PKHBT(IM_R565(pixel), r_ta, 16);
-                uint32_t vg = __PKHBT(IM_G565(pixel), g_ta, 16);
-                uint32_t vb = __PKHBT(IM_B565(pixel), b_ta, 16);
-                uint32_t r = __SMUAD(va, vr)>>8;
-                uint32_t g = __SMUAD(va, vg)>>8;
-                uint32_t b = __SMUAD(va, vb)>>8;
-                IM_SET_RGB565_PIXEL(arg_img, x, y, IM_RGB565(r, g, b));
+            switch (arg_img->bpp) {
+                case IMAGE_BPP_BINARY:
+                {
+                    uint8_t pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(arg_img, x, y));
+                    uint32_t vgs = __PKHBT(pixel, gs_ta, 16);
+                    uint32_t gs = __SMUAD(va, vgs)>>8;
+                    IMAGE_PUT_BINARY_PIXEL(arg_img, x, y, COLOR_GRAYSCALE_TO_BINARY(gs));
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE:
+                {
+                    uint8_t pixel = IMAGE_GET_GRAYSCALE_PIXEL(arg_img, x, y);
+                    uint32_t vgs = __PKHBT(pixel, gs_ta, 16);
+                    uint32_t gs = __SMUAD(va, vgs)>>8;
+                    IMAGE_PUT_GRAYSCALE_PIXEL(arg_img, x, y, gs);
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    uint16_t pixel = IMAGE_GET_RGB565_PIXEL(arg_img, x, y);
+                    uint32_t vr = __PKHBT(COLOR_RGB565_TO_R5(pixel), r_ta, 16);
+                    uint32_t vg = __PKHBT(COLOR_RGB565_TO_G6(pixel), g_ta, 16);
+                    uint32_t vb = __PKHBT(COLOR_RGB565_TO_B5(pixel), b_ta, 16);
+                    uint32_t r = __SMUAD(va, vr)>>8;
+                    uint32_t g = __SMUAD(va, vg)>>8;
+                    uint32_t b = __SMUAD(va, vb)>>8;
+                    IMAGE_PUT_RGB565_PIXEL(arg_img, x, y, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    break;
+                }
+                default: break;
             }
         }
     }
     return mp_const_none;
 }
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ta_obj, 2, py_fir_draw_ta);
 
 mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (type == FIR_NONE) return mp_const_none;
-    image_t *arg_img = py_image_cobj(args[0]);
-    PY_ASSERT_TRUE_MSG(IM_IS_MUTABLE(arg_img), "Image format is not supported.");
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
     mp_obj_t *arg_To;
-    mp_obj_get_array_fixed_n(args[1], 64, &arg_To);
+    mp_obj_get_array_fixed_n(args[1], width*height, &arg_To);
 
-    float To[64], min = FLT_MAX, max = FLT_MIN;
-    for (int i=0; i<64; i++) {
+    float To[width*height], min = FLT_MAX, max = FLT_MIN;
+    for (int i=0; i<width*height; i++) {
         float temp = To[i] = mp_obj_get_float(arg_To[i]);
         min = IM_MIN(min, temp);
         max = IM_MAX(max, temp);
     }
 
-    int alpha = IM_MIN(IM_MAX(py_helper_keyword_int(n_args, args, 2, kw_args,
-        MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128), 0), 256);
+    int alpha = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
+    PY_ASSERT_TRUE_MSG((0 <= alpha) && (alpha <= 256), "Error: 0 <= alpha <= 256!");
 
     mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args,
                                                   MP_OBJ_NEW_QSTR(MP_QSTR_scale));
@@ -470,56 +613,118 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         for (int x=x_offset; x<x_offset+(width*x_scale); x++) {
             int index = (((y-y_offset)/y_scale)*width)+((x-x_offset)/x_scale);
             uint8_t gs_to = IM_MIN(IM_MAX(MAP(To[index], min, max, 0, 255), 0), 255);
-            uint16_t r_to = IM_R565(rainbow_table[gs_to]);
-            uint16_t g_to = IM_G565(rainbow_table[gs_to]);
-            uint16_t b_to = IM_B565(rainbow_table[gs_to]);
-            if (IM_IS_GS(arg_img)) {
-                uint8_t pixel = IM_GET_GS_PIXEL(arg_img, x, y);
-                uint32_t vgs = __PKHBT(pixel, gs_to, 16);
-                uint32_t gs = __SMUAD(va, vgs)>>8;
-                IM_SET_GS_PIXEL(arg_img, x, y, gs);
-            } else {
-                uint16_t pixel = IM_GET_RGB565_PIXEL(arg_img, x, y);
-                uint32_t vr = __PKHBT(IM_R565(pixel), r_to, 16);
-                uint32_t vg = __PKHBT(IM_G565(pixel), g_to, 16);
-                uint32_t vb = __PKHBT(IM_B565(pixel), b_to, 16);
-                uint32_t r = __SMUAD(va, vr)>>8;
-                uint32_t g = __SMUAD(va, vg)>>8;
-                uint32_t b = __SMUAD(va, vb)>>8;
-                IM_SET_RGB565_PIXEL(arg_img, x, y, IM_RGB565(r, g, b));
+            uint16_t r_to = COLOR_RGB565_TO_R5(rainbow_table[gs_to]);
+            uint16_t g_to = COLOR_RGB565_TO_G6(rainbow_table[gs_to]);
+            uint16_t b_to = COLOR_RGB565_TO_B5(rainbow_table[gs_to]);
+            switch (arg_img->bpp) {
+                case IMAGE_BPP_BINARY:
+                {
+                    uint8_t pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(arg_img, x, y));
+                    uint32_t vgs = __PKHBT(pixel, gs_to, 16);
+                    uint32_t gs = __SMUAD(va, vgs)>>8;
+                    IMAGE_PUT_BINARY_PIXEL(arg_img, x, y, COLOR_GRAYSCALE_TO_BINARY(gs));
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE:
+                {
+                    uint8_t pixel = IMAGE_GET_GRAYSCALE_PIXEL(arg_img, x, y);
+                    uint32_t vgs = __PKHBT(pixel, gs_to, 16);
+                    uint32_t gs = __SMUAD(va, vgs)>>8;
+                    IMAGE_PUT_GRAYSCALE_PIXEL(arg_img, x, y, gs);
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    uint16_t pixel = IMAGE_GET_RGB565_PIXEL(arg_img, x, y);
+                    uint32_t vr = __PKHBT(COLOR_RGB565_TO_R5(pixel), r_to, 16);
+                    uint32_t vg = __PKHBT(COLOR_RGB565_TO_G6(pixel), g_to, 16);
+                    uint32_t vb = __PKHBT(COLOR_RGB565_TO_B5(pixel), b_to, 16);
+                    uint32_t r = __SMUAD(va, vr)>>8;
+                    uint32_t g = __SMUAD(va, vg)>>8;
+                    uint32_t b = __SMUAD(va, vb)>>8;
+                    IMAGE_PUT_RGB565_PIXEL(arg_img, x, y, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    break;
+                }
+                default: break;
             }
         }
     }
     return mp_const_none;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_init_obj, 0, py_fir_init);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_deinit_obj, py_fir_deinit);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_width_obj, py_fir_width);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_type_obj, py_fir_type);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ir_obj,  py_fir_read_ir);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ta_obj, 2, py_fir_draw_ta);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
-static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),    MP_OBJ_NEW_QSTR(MP_QSTR_fir)  },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init),        (mp_obj_t)&py_fir_init_obj    },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_deinit),      (mp_obj_t)&py_fir_deinit_obj  },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_width),       (mp_obj_t)&py_fir_width_obj   },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_height),      (mp_obj_t)&py_fir_height_obj  },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_type),        (mp_obj_t)&py_fir_type_obj    },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_ta),     (mp_obj_t)&py_fir_read_ta_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_ir),     (mp_obj_t)&py_fir_read_ir_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_draw_ta),     (mp_obj_t)&py_fir_draw_ta_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_draw_ir),     (mp_obj_t)&py_fir_draw_ir_obj },
-    { NULL, NULL },
+
+mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    if (type == FIR_NONE) return mp_const_none;
+    mp_obj_t ir = py_fir_read_ir();
+    size_t len;
+    mp_obj_t *items;
+    mp_obj_tuple_get(ir, &len, &items);
+
+    int pixformat = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixformat), PIXFORMAT_RGB565);
+    PY_ASSERT_TRUE_MSG((pixformat == PIXFORMAT_GRAYSCALE) || (pixformat == PIXFORMAT_RGB565), "Invalid Pixformat!");
+
+    bool copy_to_fb = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), false);
+    if (copy_to_fb) fb_update_jpeg_buffer();
+
+    image_t image;
+    image.w = width;
+    image.h = height;
+    image.bpp = (pixformat == PIXFORMAT_RGB565) ? IMAGE_BPP_RGB565 : IMAGE_BPP_GRAYSCALE;
+    image.data = NULL;
+
+    if (copy_to_fb) {
+       PY_ASSERT_TRUE_MSG((image_size(&image) <= OMV_RAW_BUF_SIZE), "FB Overflow!");
+       MAIN_FB()->w = image.w;
+       MAIN_FB()->h = image.h;
+       MAIN_FB()->bpp = image.bpp;
+       image.data = MAIN_FB()->pixels;
+    } else {
+       image.data = xalloc(image_size(&image));
+    }
+
+    mp_obj_t snapshot = py_image_from_struct(&image);
+
+    mp_obj_t *new_args = xalloc((2 + n_args) * sizeof(mp_obj_t));
+    new_args[0] = snapshot;
+    new_args[1] = items[1]; // ir array
+
+    for (uint i = 0; i < n_args; i++) {
+        new_args[2+i] = args[i];
+    }
+
+    py_fir_draw_ir(2 + n_args, new_args, kw_args);
+
+    return snapshot;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_snapshot_obj, 0, py_fir_snapshot);
+
+STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_fir) },
+    { MP_ROM_QSTR(MP_QSTR_FIR_NONE),        MP_ROM_INT(FIR_NONE) },
+    { MP_ROM_QSTR(MP_QSTR_FIR_SHIELD),      MP_ROM_INT(FIR_SHIELD) },
+    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90620),    MP_ROM_INT(FIR_SHIELD) }, // == FIR_SHIELD
+    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90621),    MP_ROM_INT(FIR_SHIELD) }, // == FIR_SHIELD
+    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90640),    MP_ROM_INT(FIR_MLX90640) },
+    { MP_ROM_QSTR(MP_QSTR_FIR_AMG8833),     MP_ROM_INT(FIR_AMG8833) },
+    { MP_ROM_QSTR(MP_QSTR_init),            MP_ROM_PTR(&py_fir_init_obj) },
+    { MP_ROM_QSTR(MP_QSTR_deinit),          MP_ROM_PTR(&py_fir_deinit_obj) },
+    { MP_ROM_QSTR(MP_QSTR_width),           MP_ROM_PTR(&py_fir_width_obj) },
+    { MP_ROM_QSTR(MP_QSTR_height),          MP_ROM_PTR(&py_fir_height_obj) },
+    { MP_ROM_QSTR(MP_QSTR_type),            MP_ROM_PTR(&py_fir_type_obj) },
+    { MP_ROM_QSTR(MP_QSTR_refresh),         MP_ROM_PTR(&py_fir_refresh_obj) },
+    { MP_ROM_QSTR(MP_QSTR_resolution),      MP_ROM_PTR(&py_fir_resolution_obj) },
+    { MP_ROM_QSTR(MP_QSTR_read_ta),         MP_ROM_PTR(&py_fir_read_ta_obj) },
+    { MP_ROM_QSTR(MP_QSTR_read_ir),         MP_ROM_PTR(&py_fir_read_ir_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_ta),         MP_ROM_PTR(&py_fir_draw_ta_obj) },
+    { MP_ROM_QSTR(MP_QSTR_draw_ir),         MP_ROM_PTR(&py_fir_draw_ir_obj) },
+    { MP_ROM_QSTR(MP_QSTR_snapshot),        MP_ROM_PTR(&py_fir_snapshot_obj) }
 };
+
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
 
 const mp_obj_module_t fir_module = {
     .base = { &mp_type_module },
-    .globals = (mp_obj_t)&globals_dict,
+    .globals = (mp_obj_t) &globals_dict,
 };
 
 void py_fir_init0()
