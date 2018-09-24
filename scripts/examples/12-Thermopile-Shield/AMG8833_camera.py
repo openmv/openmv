@@ -3,7 +3,7 @@
 # This example shows off how to overlay a heatmap onto your OpenMV Cam's
 # live video output from the main camera.
 
-import image, time, fir, gc
+import image, time, fir
 
 # Initialize the thermal sensor
 fir.init(type=fir.FIR_AMG8833)
@@ -15,7 +15,6 @@ while (True):
     clock.tick()
 
     img = fir.snapshot(copy_to_fb=True)
-    gc.collect()
 
     # Print FPS.
     print(clock.fps())

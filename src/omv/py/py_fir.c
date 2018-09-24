@@ -468,8 +468,7 @@ mp_obj_t py_fir_read_ir()
         case FIR_NONE: return mp_const_none;
         case FIR_SHIELD:
         {
-            float *To = fb_alloc(64 * sizeof(float));
-            float *To_rot = fb_alloc(64 * sizeof(float));
+            float *To = fb_alloc(64 * sizeof(float)), *To_rot = fb_alloc(64 * sizeof(float));
             float Ta = calculate_Ta();
             float min = FLT_MAX, max = FLT_MIN;
 
@@ -753,6 +752,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     py_fir_draw_ir(2 + n_args, new_args, kw_args);
+    gc_collect();
 
     return snapshot;
 }
