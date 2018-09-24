@@ -73,6 +73,8 @@
 
 #define MLX90640_ADDR       0x33
 
+#define AMG8833_ADDR        0xD2
+
 #define MAP(OldValue, OldMin, OldMax, NewMin, NewMax) \
     ({ __typeof__ (OldValue) _OldValue = (OldValue); \
        __typeof__ (OldMin) _OldMin = (OldMin); \
@@ -369,6 +371,16 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         }
         case FIR_AMG8833:
         {
+            width = 8;
+            height = 8;
+            type = FIR_AMG8833;
+            soft_i2c_init();
+
+            IR_refresh_rate = 10;
+            ADC_resolution  = 12;
+
+            test_ack(soft_i2c_write_bytes(AMG8833_ADDR, (uint8_t [2]){0x01, 0x3F}, 2, true));
+
             return mp_const_none;
         }
     }
@@ -404,6 +416,7 @@ static mp_obj_t py_fir_refresh()
     if (type == FIR_NONE) return mp_const_none;
     if (type == FIR_SHIELD) return mp_obj_new_int(mlx_90621_refresh_rates[IR_refresh_rate]);
     if (type == FIR_MLX90640) return mp_obj_new_int(mlx_90640_refresh_rates[IR_refresh_rate]);
+    if (type == FIR_AMG8833) return mp_obj_new_int(IR_refresh_rate);
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_refresh_obj, py_fir_refresh);
@@ -413,6 +426,7 @@ static mp_obj_t py_fir_resolution()
     if (type == FIR_NONE) return mp_const_none;
     if (type == FIR_SHIELD) return mp_obj_new_int(ADC_resolution + 15);
     if (type == FIR_MLX90640) return mp_obj_new_int(ADC_resolution + 16);
+    if (type == FIR_AMG8833) return mp_obj_new_int(ADC_resolution);
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
@@ -431,7 +445,12 @@ mp_obj_t py_fir_read_ta()
         }
         case FIR_AMG8833:
         {
-            return mp_const_none;
+            test_ack(soft_i2c_write_bytes(AMG8833_ADDR, (uint8_t [1]){0x0E}, 1, true));
+            int16_t temp;
+            test_ack(soft_i2c_read_bytes(AMG8833_ADDR, (uint8_t *) &temp, 2, true));
+            if ((temp >> 11) & 1) temp |= 1 << 15;
+            temp &= 0x87FF;
+            return mp_obj_new_float(temp * 0.0625);
         }
     }
     return mp_const_none;
@@ -507,7 +526,36 @@ mp_obj_t py_fir_read_ir()
         }
         case FIR_AMG8833:
         {
-            return mp_const_none;
+            test_ack(soft_i2c_write_bytes(AMG8833_ADDR, (uint8_t [1]){0x0E}, 1, true));
+            int16_t temp;
+            test_ack(soft_i2c_read_bytes(AMG8833_ADDR, (uint8_t *) &temp, 2, true));
+            if ((temp >> 11) & 1) temp |= 1 << 15;
+            temp &= 0x87FF;
+            float Ta = temp * 0.0625;
+
+            test_ack(soft_i2c_write_bytes(AMG8833_ADDR, (uint8_t [1]){0x80}, 1, true));
+            int16_t data[64];
+            test_ack(soft_i2c_read_bytes(AMG8833_ADDR, (uint8_t *) data, 128, true));
+            float To[64], min = FLT_MAX, max = FLT_MIN;
+            for (int i = 0; i < 64; i++) {
+                if ((data[i] >> 11) & 1) data[i] |= 1 << 15;
+                data[i] &= 0x87FF;
+                To[i] = data[i] * 0.25;
+                min = IM_MIN(min, To[i]);
+                max = IM_MAX(max, To[i]);
+            }
+
+            mp_obj_t tuple[4];
+            tuple[0] = mp_obj_new_float(Ta);
+            tuple[1] = mp_obj_new_list(0, NULL);
+            tuple[2] = mp_obj_new_float(min);
+            tuple[3] = mp_obj_new_float(max);
+
+            for (int i=0; i<64; i++) {
+                mp_obj_list_append(tuple[1], mp_obj_new_float(To[i]));
+            }
+
+            return mp_obj_new_tuple(4, tuple);
         }
     }
     return mp_const_none;
@@ -604,14 +652,14 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         max = mp_obj_get_float(arg_scale[1]);
     }
 
-    int x_scale = arg_img->w / width;
-    int x_offset = (arg_img->w - (width * x_scale)) / 2;
-    int y_scale = x_scale; // keep aspect ratio
-    int y_offset = (arg_img->h - (height * y_scale)) / 2;
+    int x_scale = arg_img->w / width, y_scale = arg_img->h / height;
+    int scale = IM_MIN(x_scale, y_scale);
+    int x_offset = (arg_img->w - (width * scale)) / 2;
+    int y_offset = (arg_img->h - (height * scale)) / 2;
     uint32_t va = __PKHBT((256-alpha), alpha, 16);
-    for (int y=y_offset; y<y_offset+(height*y_scale); y++) {
-        for (int x=x_offset; x<x_offset+(width*x_scale); x++) {
-            int index = (((y-y_offset)/y_scale)*width)+((x-x_offset)/x_scale);
+    for (int y=y_offset; y<y_offset+(height*scale); y++) {
+        for (int x=x_offset; x<x_offset+(width*scale); x++) {
+            int index = (((y-y_offset)/scale)*width)+((x-x_offset)/scale);
             uint8_t gs_to = IM_MIN(IM_MAX(MAP(To[index], min, max, 0, 255), 0), 255);
             uint16_t r_to = COLOR_RGB565_TO_R5(rainbow_table[gs_to]);
             uint16_t g_to = COLOR_RGB565_TO_G6(rainbow_table[gs_to]);
