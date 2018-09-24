@@ -107,7 +107,7 @@ int soft_i2c_read_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
     i2c_start();
     ret |= i2c_write_byte(slv_addr | 1);
     for(int i=0; i<len; i++) {
-        buf[i] = i2c_read_byte(ACK);
+        buf[i] = i2c_read_byte((i != (len-1)) ? ACK : NACK);
     }
     if (stop) {
         i2c_stop();
