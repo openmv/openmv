@@ -9,6 +9,12 @@
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
 
+// Enable binary ops
+//#define IMLIB_ENABLE_BINARY_OPS
+
+// Enable math ops
+//#define IMLIB_ENABLE_MATH_OPS
+
 // Enable flood_fill()
 //#define IMLIB_ENABLE_FLOOD_FILL
 

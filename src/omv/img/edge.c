@@ -11,6 +11,7 @@
 #include <string.h>
 #include "imlib.h"
 #include "fb_alloc.h"
+#ifdef IMLIB_ENABLE_BINARY_OPS
 
 typedef struct gvec {
     uint16_t t;
@@ -151,3 +152,4 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 
     fb_free();
 }
+#endif

@@ -8,26 +8,14 @@
  */
 #include <mp.h>
 #include "soft_i2c.h"
-
-#define I2C_PORT            GPIOB
-#define I2C_SIOC_PIN        GPIO_PIN_10
-#define I2C_SIOD_PIN        GPIO_PIN_11
-
-#define I2C_SIOC_H()        HAL_GPIO_WritePin(I2C_PORT, I2C_SIOC_PIN, GPIO_PIN_SET)
-#define I2C_SIOC_L()        HAL_GPIO_WritePin(I2C_PORT, I2C_SIOC_PIN, GPIO_PIN_RESET)
-
-#define I2C_SIOD_H()        HAL_GPIO_WritePin(I2C_PORT, I2C_SIOD_PIN, GPIO_PIN_SET)
-#define I2C_SIOD_L()        HAL_GPIO_WritePin(I2C_PORT, I2C_SIOD_PIN, GPIO_PIN_RESET)
-
-#define I2C_SIOD_READ()     HAL_GPIO_ReadPin(I2C_PORT, I2C_SIOD_PIN)
-#define I2C_SIOD_WRITE(bit) HAL_GPIO_WritePin(I2C_PORT, I2C_SIOD_PIN, bit);
+#include "omv_boardconfig.h"
 
 #define ACK 0
 #define NACK 1
 
-static void delay(void) // TODO: Update with clock speed knowledge for M7.
+static void delay(void)
 {
-    for(volatile int i=0; i<16; i++);
+    for(volatile int i=0; i<I2C_SPIN_DELAY; i++);
 }
 
 static void i2c_start(void)
@@ -119,7 +107,7 @@ int soft_i2c_read_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
     i2c_start();
     ret |= i2c_write_byte(slv_addr | 1);
     for(int i=0; i<len; i++) {
-        buf[i] = i2c_read_byte(ACK);
+        buf[i] = i2c_read_byte((i != (len-1)) ? ACK : NACK);
     }
     if (stop) {
         i2c_stop();

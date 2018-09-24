@@ -5,6 +5,7 @@
 
 #include "imlib.h"
 
+#ifdef IMLIB_ENABLE_BINARY_OPS
 void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask)
 {
     for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
@@ -839,3 +840,4 @@ void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask)
     imlib_difference(img, NULL, &temp, 0, mask);
     fb_free();
 }
+#endif
