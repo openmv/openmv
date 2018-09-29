@@ -41,13 +41,69 @@ NORETURN void fb_alloc_fail()
     __fatal_error();
 }
 
+static uint8_t frame_index = 0;
+static uint8_t format_index = 0;
+
+static uint8_t uvc_header[2] = { 2, 0 };
+static uint8_t packet[VIDEO_PACKET_SIZE];
+uint32_t packet_size = VIDEO_PACKET_SIZE-2;
+
+bool streaming_cb(image_t *image)
+{
+    uint32_t xfer_size = 0;
+    uint32_t xfer_bytes = 0;
+    uint8_t *dst = packet + 2;
+
+    xfer_size = image->w * image->h * image->bpp;
+
+    while (xfer_bytes < xfer_size) {
+        packet[0] = uvc_header[0];
+        packet[1] = uvc_header[1];
+
+        switch (videoCommitControl.bFormatIndex) {
+            case VS_FMT_INDEX(GREY): {
+                for (int i=0; i<packet_size; i++, xfer_bytes+=image->bpp) {
+                    dst[i+0] = image->pixels[xfer_bytes+0];
+                }
+                break;
+            }
+            case VS_FMT_INDEX(YUYV):
+            case VS_FMT_INDEX(RGB565): {
+                for (int i=0; i<packet_size; i+=2, xfer_bytes+=2) {
+                    dst[i+0] = image->pixels[xfer_bytes+1];
+                    dst[i+1] = image->pixels[xfer_bytes+0];
+                }
+                break;
+            }
+            default:
+                break;
+        }
+
+        if (xfer_bytes == xfer_size) {
+            packet[1] |= 0x2;    // Flag end of frame
+            uvc_header[1] ^= 1;  // Toggle bit 0 for next new frame
+        }
+
+        while (UVC_Transmit_FS(packet, VIDEO_PACKET_SIZE) != USBD_OK) {
+            __WFI();
+        }
+    }
+
+    if (g_uvc_stream_status != 2 ||
+            frame_index != videoCommitControl.bFrameIndex ||
+            format_index != videoCommitControl.bFormatIndex) {
+        return false;
+    }
+
+    return true;
+}
+
 int main()
 {
     HAL_Init();
 
     // Re-enable IRQs (disabled by bootloader)
     __enable_irq();
-
 
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_PULLUP;
@@ -79,99 +135,46 @@ int main()
 
     USBD_Start(&hUsbDeviceFS);
 
-    image_t image = {0};
-    uint32_t frame_size = 0;
-    uint8_t  frame_index = 0;
-    uint8_t  format_index = 0;
-    uint32_t packet_size = VIDEO_PACKET_SIZE;
-    static uint8_t uvc_header[2] = { 2, 0 };
-    static uint8_t packet[VIDEO_PACKET_SIZE];
-
-    while (1) {
-        uint32_t idx = 0;
+    while (true) {
         while (g_uvc_stream_status == 2) {
-            uint32_t pidx = 0;
-            packet[pidx++] = uvc_header[0];
-            packet[pidx++] = uvc_header[1];
-
-            if (image.bpp == 0) {
-                if (frame_index != videoCommitControl.bFrameIndex ||
-                    format_index != videoCommitControl.bFormatIndex) {
-
-                    switch (videoCommitControl.bFormatIndex) {
-                        case VS_FMT_INDEX(YUYV):
-                            sensor_set_pixformat(PIXFORMAT_YUV422);
-                            break;
-                        case VS_FMT_INDEX(GREY):
-                            sensor_set_pixformat(PIXFORMAT_GRAYSCALE);
-                            break;
-                        case VS_FMT_INDEX(RGB565):
-                            sensor_set_pixformat(PIXFORMAT_RGB565);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    switch (videoCommitControl.bFrameIndex) {
-                        case VS_FRAME_INDEX_1:
-                            sensor_set_framesize(FRAMESIZE_QQQVGA);
-                            break;
-                        case VS_FRAME_INDEX_2:
-                            sensor_set_framesize(FRAMESIZE_QQVGA);
-                            break;
-                        case VS_FRAME_INDEX_3:
-                            sensor_set_framesize(FRAMESIZE_QVGA);
-                            break;
-                        case VS_FRAME_INDEX_4:
-                            sensor_set_framesize(FRAMESIZE_VGA);
-                            break;
-                        default:
-                            break;
-                    }
-
-                    frame_index = videoCommitControl.bFrameIndex;
-                    format_index = videoCommitControl.bFormatIndex;
+            if (frame_index != videoCommitControl.bFrameIndex ||
+                format_index != videoCommitControl.bFormatIndex) {
+                switch (videoCommitControl.bFormatIndex) {
+                    case VS_FMT_INDEX(YUYV):
+                        sensor_set_pixformat(PIXFORMAT_YUV422);
+                        break;
+                    case VS_FMT_INDEX(GREY):
+                        sensor_set_pixformat(PIXFORMAT_GRAYSCALE);
+                        break;
+                    case VS_FMT_INDEX(RGB565):
+                        sensor_set_pixformat(PIXFORMAT_RGB565);
+                        break;
+                    default:
+                        break;
                 }
 
-                // capture new frame
-                sensor.snapshot(&sensor, &image);
-                frame_size =  image.w * image.h * image.bpp;
+                switch (videoCommitControl.bFrameIndex) {
+                    case VS_FRAME_INDEX_1:
+                        sensor_set_framesize(FRAMESIZE_QQQVGA);
+                        break;
+                    case VS_FRAME_INDEX_2:
+                        sensor_set_framesize(FRAMESIZE_QQVGA);
+                        break;
+                    case VS_FRAME_INDEX_3:
+                        sensor_set_framesize(FRAMESIZE_QVGA);
+                        break;
+                    case VS_FRAME_INDEX_4:
+                        sensor_set_framesize(FRAMESIZE_VGA);
+                        break;
+                    default:
+                        break;
+                }
+
+                frame_index = videoCommitControl.bFrameIndex;
+                format_index = videoCommitControl.bFormatIndex;
             }
 
-            switch (videoCommitControl.bFormatIndex) {
-                case VS_FMT_INDEX(YUYV): {
-                    for (; pidx<packet_size && idx<frame_size; idx+=2, pidx+=2) {
-                        packet[pidx+0] = image.pixels[idx+1];
-                        packet[pidx+1] = image.pixels[idx+0];
-                    }
-                    break;
-                }
-                case VS_FMT_INDEX(GREY): {
-                    for (; pidx<packet_size && idx<frame_size; idx++, pidx++) {
-                        packet[pidx] = image.pixels[idx];
-                    }
-                    break;
-                }
-                case VS_FMT_INDEX(RGB565): {
-                    for (; pidx<packet_size && idx<frame_size; idx+=2, pidx+=2) {
-                        packet[pidx+0] = image.pixels[idx+1];
-                        packet[pidx+1] = image.pixels[idx+0];
-                    }
-                    break;
-                }
-                default:
-                    break;
-            }
-
-            if (idx == frame_size) {
-                packet[1] |= 0x2;    // Flag end of frame
-                uvc_header[1] ^= 1;  // Toggle bit 0 for next new frame
-                idx = image.bpp = 0; // Reset image.
-            }
-
-            while (UVC_Transmit_FS(packet, pidx) != USBD_OK) {
-                __WFI();
-            }
+            sensor_start_streaming(&sensor, streaming_cb);
         }
     }
 }

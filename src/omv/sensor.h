@@ -103,6 +103,8 @@ typedef enum {
 #define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
 #define SENSOR_HW_FLAGS_CLR(s, x)    ((s)->hw_flags &= ~(1<<x))
 
+typedef bool (*streaming_cb_t)(image_t *image);
+
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
     uint8_t  chip_id;           // Sensor ID.
@@ -243,4 +245,6 @@ int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image);
+
+int sensor_start_streaming(sensor_t *sensor, streaming_cb_t cb);
 #endif /* __SENSOR_H__ */
