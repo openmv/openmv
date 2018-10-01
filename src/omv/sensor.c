@@ -23,7 +23,7 @@
 
 #define OV_CHIP_ID      (0x0A)
 #define ON_CHIP_ID      (0x00)
-#define MAX_XFER_SIZE (0xFFFC)
+#define MAX_XFER_SIZE   (0xFFFC*4)
 
 sensor_t           sensor     = {0};
 TIM_HandleTypeDef  TIMHandle  = {0};
@@ -811,8 +811,11 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 
 // This is the default snapshot function, which can be replaced in sensor_init functions. This function
 // uses the DCMI and DMA to capture frames and each line is processed in the DCMI_DMAConvCpltUser function.
-int sensor_snapshot(sensor_t *sensor, image_t *image)
+int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
 {
+    uint32_t frame = 0;
+    bool streaming = (streaming_cb != NULL); // Streaming mode.
+    bool doublebuf = false; // Use double buffers in streaming mode.
     uint32_t addr, length, tick_start;
 
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
@@ -823,6 +826,10 @@ int sensor_snapshot(sensor_t *sensor, image_t *image)
     // Make sure the raw frame fits into the FB. If it doesn't it will be cropped if
     // the format is set to GS, otherwise the pixel format will be swicthed to BAYER.
     sensor_check_buffsize();
+
+    // Set the current frame buffer target used in the DMA line callback
+    // (DCMI_DMAConvCpltUser function), in both snapshot and streaming modes.
+    dest_fb = MAIN_FB()->pixels;
 
     // The user may have changed the MAIN_FB width or height on the last image so we need
     // to restore that here. We don't have to restore bpp because that's taken care of
@@ -841,17 +848,17 @@ int sensor_snapshot(sensor_t *sensor, image_t *image)
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             // RGB/YUV read 2 bytes per pixel.
-            length = (w * h * 2)/4;
+            length = (w * h * 2);
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_BAYER:
             // BAYER/RAW: 1 byte per pixel
-            length = (w * h * 1)/4;
+            length = (w * h * 1);
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_GRAYSCALE:
             // 1/2BPP Grayscale.
-            length = (w * h * sensor->gs_bpp)/4;
+            length = (w * h * sensor->gs_bpp);
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_JPEG:
@@ -863,119 +870,14 @@ int sensor_snapshot(sensor_t *sensor, image_t *image)
             return -1;
     }
 
-    // Clear line counter
-    line = 0;
-
-    // Snapshot start tick
-    tick_start = HAL_GetTick();
-
-    // Enable DMA IRQ
-    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
-
-    // Set the frameb buffer used by the line processing function.
-    dest_fb = MAIN_FB()->pixels;
-
-    if (sensor->pixformat == PIXFORMAT_JPEG) {
-        // Start a regular transfer
-        HAL_DCMI_Start_DMA(&DCMIHandle,
-                DCMI_MODE_SNAPSHOT, addr, length);
-    } else {
-        // Start a multibuffer transfer (line by line)
-        HAL_DCMI_Start_DMA_MB(&DCMIHandle,
-                DCMI_MODE_SNAPSHOT, addr, length, h);
+    if (streaming_cb) {
+        image->pixels = NULL;
     }
 
-    // Wait for frame
-    while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
-        // Wait for interrupt
-        __WFI();
-
-        if ((HAL_GetTick() - tick_start) >= 3000) {
-            // Sensor timeout, most likely a HW issue.
-            // Abort the DMA request.
-            HAL_DMA_Abort(&DMAHandle);
-            return -1;
-        }
-    }
-
-    // Abort DMA transfer.
-    // Note: In JPEG mode the DMA will still be waiting for data since
-    // the max frame size is set, so we need to abort the DMA transfer.
-    HAL_DMA_Abort(&DMAHandle);
-
-    // Disable DMA IRQ
-    HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
-
-    // Fix the BPP
-    switch (sensor->pixformat) {
-        case PIXFORMAT_GRAYSCALE:
-            MAIN_FB()->bpp = 1;
-            break;
-        case PIXFORMAT_YUV422:
-        case PIXFORMAT_RGB565:
-            MAIN_FB()->bpp = 2;
-            break;
-        case PIXFORMAT_BAYER:
-            MAIN_FB()->bpp = 3;
-            break;
-        case PIXFORMAT_JPEG:
-            // Read the number of data items transferred
-            MAIN_FB()->bpp = (MAX_XFER_SIZE - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
-            break;
-        default:
-            break;
-    }
-
-    // Set the user image.
-    if (image != NULL) {
-        image->w = MAIN_FB()->w;
-        image->h = MAIN_FB()->h;
-        image->bpp = MAIN_FB()->bpp;
-        image->pixels = MAIN_FB()->pixels;
-    }
-
-    return 0;
-}
-
-int sensor_start_streaming(sensor_t *sensor, streaming_cb_t streaming_cb)
-{
-    uint32_t frame = 0;
-    bool streaming = true;
-    bool doublebuf = false;
-    uint32_t length, tick_start;
-
-    image_t image;
-    image.w = MAIN_FB()->w;
-    image.h = MAIN_FB()->h;
-    image.pixels = NULL;
-
-    // Setup the size and address of the transfer
-    switch (sensor->pixformat) {
-        case PIXFORMAT_RGB565:
-        case PIXFORMAT_YUV422:
-            // RGB/YUV read 2 bytes per pixel.
-            image.bpp = 2;
-            length = (image.w * image.h * 2);
-            break;
-        case PIXFORMAT_BAYER:
-            // BAYER/RAW: 1 byte per pixel
-            // TODO: Note BAYER is not supported by UVC yet.
-            image.bpp = 3;
-            length = (image.w * image.h * 1);
-            break;
-        case PIXFORMAT_GRAYSCALE:
-            // 1/2BPP Grayscale.
-            image.bpp = 1;
-            length = (image.w * image.h * sensor->gs_bpp);
-            break;
-        default:
-            return -1;
-    }
-
-    dest_fb = MAIN_FB()->pixels;
+    // If two frames fit in ram, use double buffering in streaming mode.
     doublebuf = ((length*2) <= OMV_RAW_BUF_SIZE);
 
-    while (streaming) {
+    do {
         // Clear line counter
         line = 0;
 
@@ -985,18 +887,23 @@ int sensor_start_streaming(sensor_t *sensor, streaming_cb_t streaming_cb)
         // Enable DMA IRQ
         HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
 
-        // Start a multibuffer transfer (line by line).
-        HAL_DCMI_Start_DMA_MB(&DCMIHandle,
-                DCMI_MODE_SNAPSHOT, (uint32_t) &_line_buf, length/4, image.h);
-
-        if (doublebuf) {
-            // Call streaming function with previous frame.
-            if (image.pixels != NULL) {
-                streaming = streaming_cb(&image);
-            }
+        if (sensor->pixformat == PIXFORMAT_JPEG) {
+            // Start a regular transfer
+            HAL_DCMI_Start_DMA(&DCMIHandle,
+                    DCMI_MODE_SNAPSHOT, addr, length/4);
+        } else {
+            // Start a multibuffer transfer (line by line)
+            HAL_DCMI_Start_DMA_MB(&DCMIHandle,
+                    DCMI_MODE_SNAPSHOT, addr, length/4, h);
         }
 
-        // Wait for current frame
+        if (streaming_cb && doublebuf && image->pixels != NULL) {
+            // Call streaming callback function with previous frame.
+            // Note: Image pointer should Not be NULL in streaming mode.
+            streaming = streaming_cb(image);
+        }
+
+        // Wait for frame
         while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
             // Wait for interrupt
             __WFI();
@@ -1017,31 +924,55 @@ int sensor_start_streaming(sensor_t *sensor, streaming_cb_t streaming_cb)
         // Disable DMA IRQ
         HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
 
-        if (doublebuf) {
-            if (frame == 0) {
-                image.pixels = MAIN_FB()->pixels;
-                // Next frame will be transfered to the second half.
-                dest_fb = MAIN_FB()->pixels + length;
-            } else {
-                image.pixels = MAIN_FB()->pixels + length;
-                // Next frame will be transfered to the first half.
-                dest_fb = MAIN_FB()->pixels;
-            }
-            #if __DCACHE_PRESENT == 1
-            #define CLEANINVALIDATE_DCACHE(addr, size) \
-                (SCB_CleanInvalidateDCache_by_Addr((uint32_t*)((uint32_t)addr & ~0x1f), \
-                    ((uint32_t)((uint8_t*)addr + size + 0x1f) & ~0x1f) - ((uint32_t)addr & ~0x1f)))
-            // Not using linebuf, need to invalidate the cache.
-            CLEANINVALIDATE_DCACHE(image.pixels, length);
-            #endif
-
-            // Switch frame buffer.
-            frame ^= 1;
-        } else {
-            image.pixels = MAIN_FB()->pixels;
-            streaming = streaming_cb(&image);
+        // Fix the BPP
+        switch (sensor->pixformat) {
+            case PIXFORMAT_GRAYSCALE:
+                MAIN_FB()->bpp = 1;
+                break;
+            case PIXFORMAT_YUV422:
+            case PIXFORMAT_RGB565:
+                MAIN_FB()->bpp = 2;
+                break;
+            case PIXFORMAT_BAYER:
+                MAIN_FB()->bpp = 3;
+                break;
+            case PIXFORMAT_JPEG:
+                // Read the number of data items transferred
+                MAIN_FB()->bpp = (MAX_XFER_SIZE - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+                break;
+            default:
+                break;
         }
-    }
+
+        // Set the user image.
+        if (image != NULL) {
+            image->w = MAIN_FB()->w;
+            image->h = MAIN_FB()->h;
+            image->bpp = MAIN_FB()->bpp;
+            image->pixels = MAIN_FB()->pixels;
+
+            if (streaming_cb) {
+                // In streaming mode, either switch frame buffers in double buffer mode,
+                // or call the streaming callback with the main FB in single buffer mode.
+                if (doublebuf == false) {
+                    // In single buffer mode, call streaming callback.
+                    streaming = streaming_cb(image);
+                } else {
+                    // In double buffer mode, switch frame buffers.
+                    if (frame == 0) {
+                        image->pixels = MAIN_FB()->pixels;
+                        // Next frame will be transfered to the second half.
+                        dest_fb = MAIN_FB()->pixels + length;
+                    } else {
+                        image->pixels = MAIN_FB()->pixels + length;
+                        // Next frame will be transfered to the first half.
+                        dest_fb = MAIN_FB()->pixels;
+                    }
+                    frame ^= 1; // Switch frame buffers.
+                }
+            }
+        }
+    } while (streaming == true);
 
     return 0;
 }

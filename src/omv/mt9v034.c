@@ -12,6 +12,7 @@
 #include "mt9v034.h"
 #include "systick.h"
 #include "framebuffer.h"
+#include "sensor.h"
 #include "omv_boardconfig.h"
 #if defined(OMV_ENABLE_MT9V034)
 #define MT9V034_MAX_HEIGHT                      (480)
@@ -386,9 +387,7 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
-extern int sensor_snapshot(sensor_t *sensor, image_t *image);
-
-static int snapshot(sensor_t *sensor, image_t *image)
+static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t cb)
 {
     if ((!sensor->pixformat) || (!sensor->framesize) || (MT9V034_mode == MT9V034_NOT_SET)) {
         return -1;
@@ -399,7 +398,7 @@ static int snapshot(sensor_t *sensor, image_t *image)
 
     image_t new_image;
     DCMI_FSIN_HIGH();
-    int ret = sensor_snapshot(sensor, &new_image);
+    int ret = sensor_snapshot(sensor, &new_image, NULL);
     DCMI_FSIN_LOW();
 
     sensor->pixformat = pixformat_bak;
