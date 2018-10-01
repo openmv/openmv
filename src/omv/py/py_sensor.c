@@ -48,7 +48,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
     // Sanity checks
     PY_ASSERT_TRUE_MSG((sensor.pixformat != PIXFORMAT_JPEG), "Operation not supported on JPEG");
 
-    if (sensor.snapshot(&sensor, (image_t*) py_image_cobj(image))==-1) {
+    if (sensor.snapshot(&sensor, (image_t*) py_image_cobj(image), NULL)==-1) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         return mp_const_false;
     }
@@ -69,7 +69,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
 
     if (!n_args) {
         while ((systick_current_millis() - millis) < time) { // 32-bit math handles wrap arrounds...
-            if (sensor.snapshot(&sensor, NULL) == -1) {
+            if (sensor.snapshot(&sensor, NULL, NULL) == -1) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
             }
         }
@@ -79,7 +79,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
                 break;
             }
 
-            if (sensor.snapshot(&sensor, NULL) == -1) {
+            if (sensor.snapshot(&sensor, NULL, NULL) == -1) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
             }
         }

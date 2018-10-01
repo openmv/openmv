@@ -288,7 +288,7 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
-static int snapshot(sensor_t *sensor, image_t *image)
+static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t cb)
 {
     fb_update_jpeg_buffer();
 
