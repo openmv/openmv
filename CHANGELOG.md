@@ -1,4 +1,15 @@
 # Change Log
+## [3.1](https://github.com/openmv/openmv/releases/tag/v3.1) (2018-10-02)
+* Fix/Re-enable CAN.
+* Fix WINC recv buffer bug.
+* Fix SPI timeout in slave mode.
+* Improved FLIR drivers.
+* Add sensor shutdown function.
+* Add selective search
+* Add support for WiFi programming.
+* Add new UVC firmware.
+* Add support for the new MLX sensors.
+
 ## [3.0](https://github.com/openmv/openmv/releases/tag/v3.0) (2018-06-29)
 * Fix SPI driver bug.
 * Fix pendsv hardfault bug.
