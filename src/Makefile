@@ -27,7 +27,7 @@ CAT     = $(Q)cat
 # Targets
 OPENMV = openmv
 BOOTLOADER = bootloader
-WEBCAM = webcam
+UVC = uvc
 FIRMWARE = firmware
 
 # Directories
@@ -41,7 +41,7 @@ LEPTON_DIR=lepton
 MLX_DIR=mlx
 WINC1500_DIR=winc1500
 BOOTLDR_DIR=bootloader
-WEBCAM_DIR=webcam
+UVC_DIR=uvc
 
 # Additional qstr definitions for OpenMV
 OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/py/qstrdefsomv.h
@@ -108,9 +108,9 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 
-WEBCAM_CFLAGS = $(CFLAGS)
-WEBCAM_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
-WEBCAM_CFLAGS += -I$(TOP_DIR)/$(WEBCAM_DIR)/include/
+UVC_CFLAGS = $(CFLAGS)
+UVC_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
+UVC_CFLAGS += -I$(TOP_DIR)/$(UVC_DIR)/include/
 
 BOOTLDR_CFLAGS = $(CFLAGS)
 BOOTLDR_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
@@ -127,8 +127,8 @@ BOOTLDR_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-ab
                -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
 
 # Linker Flags
-WEBCAM_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
-               -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(WEBCAM_DIR)/stm32fxxx.lds
+UVC_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
+               -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(UVC_DIR)/stm32fxxx.lds
 
 #------------- Libraries ----------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
@@ -414,15 +414,15 @@ BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 	system_stm32fxxx.o                          \
 	)
 
-# Webcam object files
-WEBCAM_OBJ += $(wildcard $(BUILD)/$(WEBCAM_DIR)/src/*.o)
-WEBCAM_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
-WEBCAM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+# UVC object files
+UVC_OBJ += $(wildcard $(BUILD)/$(UVC_DIR)/src/*.o)
+UVC_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
+UVC_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 	$(STARTUP).o                                \
 	system_stm32fxxx.o                          \
 	)
 
-WEBCAM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
+UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	fb_alloc.o                              \
 	framebuffer.o                           \
 	array.o                                 \
@@ -439,7 +439,7 @@ WEBCAM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	trace.o                                 \
 	)
 
-WEBCAM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
+UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	lab_tab.o                               \
 	xyz_tab.o                               \
 	yuv_tab.o                               \
@@ -451,8 +451,8 @@ WEBCAM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	imlib.o                                 \
 	)
 
-WEBCAM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
-WEBCAM_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
+UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
+UVC_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
 ###################################################
 #Export Variables
 export Q
@@ -480,8 +480,8 @@ $(BUILD):
 BOOTLOADER_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(BOOTLDR_DIR)              BUILD=$(BUILD)/$(BOOTLDR_DIR)  CFLAGS="$(BOOTLDR_CFLAGS) -MMD"
 
-WEBCAM_OBJS: FIRMWARE_OBJS
-	$(MAKE)  -C $(WEBCAM_DIR)               BUILD=$(BUILD)/$(WEBCAM_DIR)   CFLAGS="$(WEBCAM_CFLAGS) -MMD"
+UVC_OBJS: FIRMWARE_OBJS
+	$(MAKE)  -C $(UVC_DIR)                  BUILD=$(BUILD)/$(UVC_DIR)      CFLAGS="$(UVC_CFLAGS) -MMD"
 
 FIRMWARE_OBJS:
 	$(MAKE)  -C $(CMSIS_DIR)                BUILD=$(BUILD)/$(CMSIS_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
@@ -509,15 +509,15 @@ $(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
 	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
 	$(OBJCOPY) -Obinary --pad-to=$(MAIN_APP_ADDR) --gap-fill=0xFF $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 
-# This target generates the webcam firmware.
-$(WEBCAM): FIRMWARE_OBJS WEBCAM_OBJS
-	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(WEBCAM_DIR)/stm32fxxx.ld.S > $(BUILD)/$(WEBCAM_DIR)/stm32fxxx.lds
-	$(CC) $(WEBCAM_LDFLAGS) $(WEBCAM_OBJ) -o $(FW_DIR)/$(WEBCAM).elf
-	$(OBJCOPY) -Obinary $(FW_DIR)/$(WEBCAM).elf $(FW_DIR)/$(WEBCAM).bin
-	$(PYTHON) $(MKDFU) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(WEBCAM).bin $(FW_DIR)/$(WEBCAM).dfu
+# This target generates the UVC firmware.
+$(UVC): FIRMWARE_OBJS UVC_OBJS
+	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(UVC_DIR)/stm32fxxx.ld.S > $(BUILD)/$(UVC_DIR)/stm32fxxx.lds
+	$(CC) $(UVC_LDFLAGS) $(UVC_OBJ) -o $(FW_DIR)/$(UVC).elf
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(UVC).elf $(FW_DIR)/$(UVC).bin
+	$(PYTHON) $(MKDFU) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
 
 # This target generates a combined bootloader+main firmware image.
-$(OPENMV): $(BOOTLOADER) $(WEBCAM) $(FIRMWARE) | $(BUILD)
+$(OPENMV): $(BOOTLOADER) $(UVC) $(FIRMWARE) | $(BUILD)
 	$(CAT) $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
 	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
