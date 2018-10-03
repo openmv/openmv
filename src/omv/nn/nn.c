@@ -361,7 +361,7 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
 
     q7_t *buffer1     = fb_alloc(net->max_scrbuf_size);
     q7_t *buffer2     = buffer1 + net->max_layer_size;
-    q7_t *col_buffer  = fb_alloc(net->max_colbuf_size);
+    q7_t *col_buffer  = fb_alloc(net->max_colbuf_size * 2);
 
     while (layer != NULL) {
         layer_t *prev_layer = layer->prev;
