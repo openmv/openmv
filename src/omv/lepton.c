@@ -59,12 +59,12 @@ static volatile uint32_t vospi_pid = 0;
 static volatile uint32_t vospi_seg = 1;
 static uint32_t vospi_packets = 60;
 
-void SPI3_IRQHandler(void)
+void LEPTON_SPI_IRQHandler(void)
 {
     HAL_SPI_IRQHandler(&SPIHandle);
 }
 
-void DMA1_Stream0_IRQHandler(void)
+void LEPTON_SPI_DMA_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(SPIHandle.hdmarx);
 }
@@ -74,7 +74,7 @@ static void lepton_sync()
     HAL_SPI_Abort(&SPIHandle);
 
     // Disable DMA IRQ
-    HAL_NVIC_DisableIRQ(DMA1_Stream0_IRQn);
+    HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
 
     debug_printf("resync...\n");
     systick_sleep(200);
@@ -83,7 +83,7 @@ static void lepton_sync()
     vospi_pid = VOSPI_FIRST_PACKET;
     vospi_seg = VOSPI_FIRST_SEGMENT;
 
-    HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+    HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
     HAL_SPI_Receive_DMA(&SPIHandle, vospi_packet, VOSPI_PACKET_SIZE);
 }
 
@@ -451,33 +451,15 @@ int lepton_init(sensor_t *sensor)
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
 
-    GPIO_InitTypeDef GPIO_Init;
-    GPIO_Init.Pull      = GPIO_PULLUP;
-    GPIO_Init.Mode      = GPIO_MODE_AF_PP;
-    GPIO_Init.Alternate = GPIO_AF6_SPI3;
-    GPIO_Init.Speed     = GPIO_SPEED_FREQ_LOW;
-
-    GPIO_Init.Pin       = GPIO_PIN_3;
-    HAL_GPIO_Init(GPIOB, &GPIO_Init);
-
-    GPIO_Init.Pin       = GPIO_PIN_4;
-    HAL_GPIO_Init(GPIOB, &GPIO_Init);
-
-    GPIO_Init.Pin       = GPIO_PIN_5;
-    HAL_GPIO_Init(GPIOB, &GPIO_Init);
-
-    GPIO_Init.Pin       = GPIO_PIN_15;
-    HAL_GPIO_Init(GPIOA, &GPIO_Init);
-
     // Configure the DMA handler for Transmission process
-    DMAHandle.Instance                 = DMA1_Stream0;
-    DMAHandle.Init.Request             = DMA_REQUEST_SPI3_RX;
+    DMAHandle.Instance                 = LEPTON_SPI_DMA_STREAM;
+    DMAHandle.Init.Request             = LEPTON_SPI_DMA_REQUEST;
     DMAHandle.Init.Mode                = DMA_CIRCULAR;
     DMAHandle.Init.Priority            = DMA_PRIORITY_HIGH;
     DMAHandle.Init.Direction           = DMA_PERIPH_TO_MEMORY;
     // When the DMA is configured in direct mode (the FIFO is disabled), the source and
     // destination transfer widths are equal, and both defined by PSIZE (MSIZE is ignored).
-    // Additionally, the burst transfers are not possible (MBURST and PBURST are ignored).
+    // Additionally, burst transfers are not possible (MBURST and PBURST are both ignored).
     DMAHandle.Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
     DMAHandle.Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_FULL;
     // Note MBURST and PBURST are ignored.
@@ -489,8 +471,8 @@ int lepton_init(sensor_t *sensor)
     DMAHandle.Init.PeriphInc           = DMA_PINC_DISABLE;
 
     // NVIC configuration for DMA transfer complete interrupt
-    NVIC_SetPriority(DMA1_Stream0_IRQn, IRQ_PRI_DMA21);
-    HAL_NVIC_DisableIRQ(DMA1_Stream0_IRQn);
+    NVIC_SetPriority(LEPTON_SPI_DMA_IRQn, IRQ_PRI_DMA21);
+    HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
 
     HAL_DMA_DeInit(&DMAHandle);
     if (HAL_DMA_Init(&DMAHandle) != HAL_OK) {
@@ -499,7 +481,7 @@ int lepton_init(sensor_t *sensor)
     }
 
     memset(&SPIHandle, 0, sizeof(SPIHandle));
-    SPIHandle.Instance               = SPI3;
+    SPIHandle.Instance               = LEPTON_SPI;
     SPIHandle.Init.NSS               = SPI_NSS_HARD_OUTPUT;
     SPIHandle.Init.NSSPMode          = SPI_NSS_PULSE_DISABLE;
     SPIHandle.Init.NSSPolarity       = SPI_NSS_POLARITY_LOW;
@@ -515,11 +497,10 @@ int lepton_init(sensor_t *sensor)
     // Recommanded setting to avoid glitches
     SPIHandle.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;
 
-    __HAL_RCC_SPI3_CLK_ENABLE();
     if (HAL_SPI_Init(&SPIHandle) != HAL_OK) {
-        __HAL_RCC_SPI3_FORCE_RESET();
-        __HAL_RCC_SPI3_RELEASE_RESET();
-        __HAL_RCC_SPI3_CLK_DISABLE();
+        LEPTON_SPI_RESET();
+        LEPTON_SPI_RELEASE();
+        LEPTON_SPI_CLK_DISABLE();
         return -1;
     }
 
@@ -527,8 +508,8 @@ int lepton_init(sensor_t *sensor)
     __HAL_LINKDMA(&SPIHandle, hdmarx, DMAHandle);
 
     // NVIC configuration for SPI transfer complete interrupt
-    NVIC_SetPriority(SPI3_IRQn, IRQ_PRI_DCMI);
-    HAL_NVIC_EnableIRQ(SPI3_IRQn);
+    NVIC_SetPriority(LEPTON_SPI_IRQn, IRQ_PRI_DCMI);
+    HAL_NVIC_EnableIRQ(LEPTON_SPI_IRQn);
 
     return 0;
 }
