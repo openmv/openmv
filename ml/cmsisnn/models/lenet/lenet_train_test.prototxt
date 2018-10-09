@@ -7,6 +7,9 @@ layer {
   include {
     phase: TRAIN
   }
+  transform_param {
+    scale: 0.00390625
+  }
   data_param {
     source: "caffe/examples/mnist/mnist_train_lmdb"
     batch_size: 64
