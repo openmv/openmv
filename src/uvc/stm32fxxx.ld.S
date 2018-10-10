@@ -43,6 +43,10 @@ _ffs_cache  = ORIGIN(OMV_FFS_MEMORY);
 _jpeg_buf  = ORIGIN(OMV_JPEG_MEMORY);
 #endif
 
+#if defined(OMV_VOSPI_MEMORY)
+_vospi_buf  = ORIGIN(OMV_VOSPI_MEMORY);
+#endif
+
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
 _stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 

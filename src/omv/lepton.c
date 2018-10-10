@@ -8,11 +8,14 @@
  */
 
 #include STM32_HAL_H
+#include "mp.h"
+#include "irq.h"
 #include "cambus.h"
 #include "sensor.h"
 #include "systick.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+#include "common.h"
 
 #if defined(OMV_ENABLE_LEPTON)
 #include "crc16.h"
@@ -26,7 +29,16 @@
 
 #define VOSPI_LINE_PIXELS       (80)
 #define VOSPI_NUMBER_PACKETS    (60)
-#define VOSPI_SPECIAL_LINE      (20)
+#define VOSPI_SPECIAL_PACKET    (20)
+#define VOSPI_LINE_SIZE         (80 * 2)
+#define VOSPI_HEADER_SIZE       (4)
+#define VOSPI_PACKET_SIZE       (VOSPI_HEADER_SIZE + VOSPI_LINE_SIZE)
+#define VOSPI_HEADER_SEG(buf)   (((buf[0] >> 4) & 0x7))
+#define VOSPI_HEADER_PID(buf)   (((buf[0] << 8) | (buf[1] << 0)) & 0x0FFF)
+#define VOSPI_HEADER_CRC(buf)   (((buf[2] << 8) | (buf[3] << 0)))
+#define VOSPI_FIRST_PACKET      (0)
+#define VOSPI_FIRST_SEGMENT     (1)
+#define LEPTON_TIMEOUT          (1000)
 
 static int h_res = 0;
 static int v_res = 0;
@@ -34,134 +46,54 @@ static bool h_mirror = false;
 static bool v_flip = false;
 
 static SPI_HandleTypeDef SPIHandle;
-static LEP_CAMERA_PORT_DESC_T handle;
+static DMA_HandleTypeDef DMAHandle;
+
+extern uint8_t _line_buf;
+extern uint8_t _vospi_buf;
 extern const uint16_t rainbow_table[256];
 
-static int reset(sensor_t *sensor)
+static bool vospi_resync = true;
+static uint8_t *vospi_packet = &_line_buf;
+static uint8_t *vospi_buffer = &_vospi_buf;
+static volatile uint32_t vospi_pid = 0;
+static volatile uint32_t vospi_seg = 1;
+static uint32_t vospi_packets = 60;
+
+void LEPTON_SPI_IRQHandler(void)
 {
-    memset(&handle, 0, sizeof(handle));
+    HAL_SPI_IRQHandler(&SPIHandle);
+}
 
-    h_res = 0;
-    v_res = 0;
-    h_mirror = false;
-    v_flip = false;
+void LEPTON_SPI_DMA_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(SPIHandle.hdmarx);
+}
 
-    DCMI_PWDN_LOW();
-    systick_sleep(10);
+static void lepton_sync()
+{
+    HAL_SPI_Abort(&SPIHandle);
 
-    DCMI_PWDN_HIGH();
-    systick_sleep(10);
+    // Disable DMA IRQ
+    HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
 
-    DCMI_RESET_LOW();
-    systick_sleep(10);
+    debug_printf("resync...\n");
+    systick_sleep(200);
 
-    DCMI_RESET_HIGH();
-    systick_sleep(1000);
+    vospi_resync = false;
+    vospi_pid = VOSPI_FIRST_PACKET;
+    vospi_seg = VOSPI_FIRST_SEGMENT;
 
-    LEP_CAMERA_PORT_DESC_T tmp_handle;
+    HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
+    HAL_SPI_Receive_DMA(&SPIHandle, vospi_packet, VOSPI_PACKET_SIZE);
+}
 
-    bool okay = false;
-
-    for (int i = 0; i < 1000; i++) {
-        LEP_RESULT result = LEP_OpenPort(0, LEP_CCI_TWI, 0, &tmp_handle);
-
-        if (result == LEP_OK) {
-            okay = true;
-            break;
-        } else {
-            systick_sleep(1);
-        }
-    }
-
-    if (!okay) {
-        return -1;
-    }
-
-    bool booted = false;
-
-    for (int i = 0; i < 1000; i++) {
-        LEP_SDK_BOOT_STATUS_E status;
-        if (LEP_GetCameraBootStatus(&tmp_handle, &status) != LEP_OK) {
-            return -1;
-        }
-
-        if (status == LEP_BOOT_STATUS_BOOTED) {
-            booted = true;
-            break;
-        } else {
-            systick_sleep(1);
-        }
-    }
-
-    if (!booted) {
-        return -1;
-    }
-
-    bool busy = true;
-
-    for (int i = 0; i < 1000; i++) {
-        LEP_UINT16 status;
-        if (LEP_DirectReadRegister(&tmp_handle, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
-            return -1;
-        }
-
-        if (!(status & LEP_I2C_STATUS_BUSY_BIT_MASK)) {
-            busy = false;
-            break;
-        } else {
-            systick_sleep(1);
-        }
-    }
-
-    if (busy) {
-        return -1;
-    }
-
-    busy = true;
-
-    for (int i = 0; i < 5000; i++) {
-        LEP_SYS_STATUS_E status;
-        if (LEP_GetSysFFCStatus(&tmp_handle, &status) != LEP_OK) {
-            return -1;
-        }
-
-        if (status == LEP_SYS_STATUS_READY) {
-            busy = false;
-            break;
-        } else {
-            systick_sleep(1);
-        }
-    }
-
-    if (busy) {
-        return -1;
-    }
-
-    if (LEP_SetRadEnableState(&tmp_handle, LEP_RAD_DISABLE) != LEP_OK) {
-        return -1;
-    }
-
-    LEP_AGC_ROI_T roi;
-
-    if (LEP_GetAgcROI(&tmp_handle, &roi) != LEP_OK) {
-        return -1;
-    }
-
-    int tmp_h_res = roi.endCol + 1;
-    int tmp_v_res = roi.endRow + 1;
-
-    if (LEP_SetAgcEnableState(&tmp_handle, LEP_AGC_ENABLE) != LEP_OK) {
-        return -1;
-    }
-
-    if (LEP_SetAgcCalcEnableState(&tmp_handle, LEP_AGC_ENABLE) != LEP_OK) {
-        return -1;
-    }
-
-    handle = tmp_handle;
-    h_res = tmp_h_res;
-    v_res = tmp_v_res;
-    return 0;
+static uint16_t lepton_calc_crc(uint8_t *buf)
+{
+    buf[0] &= 0x0F;
+    buf[1] &= 0xFF;
+    buf[2] = 0;
+    buf[3] = 0;
+    return CalcCRC16Bytes(VOSPI_LINE_SIZE, (char *) buf);
 }
 
 static int sleep(sensor_t *sensor, int enable)
@@ -288,157 +220,192 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
+static int reset(sensor_t *sensor)
+{
+    DCMI_PWDN_LOW();
+    systick_sleep(10);
+
+    DCMI_PWDN_HIGH();
+    systick_sleep(10);
+
+    DCMI_RESET_LOW();
+    systick_sleep(10);
+
+    DCMI_RESET_HIGH();
+    systick_sleep(1000);
+
+    LEP_AGC_ROI_T roi;
+    LEP_CAMERA_PORT_DESC_T handle = {0};
+    h_res = v_res = h_mirror = v_flip = 0;
+
+    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
+        if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &handle) == LEP_OK) {
+            break;
+        }
+        if (HAL_GetTick() - start >= LEPTON_TIMEOUT) {
+            return -1;
+        }
+    }
+
+    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
+        LEP_SDK_BOOT_STATUS_E status;
+        if (LEP_GetCameraBootStatus(&handle, &status) != LEP_OK) {
+            return -1;
+        }
+        if (status == LEP_BOOT_STATUS_BOOTED) {
+            break;
+        }
+        if (HAL_GetTick() - start >= LEPTON_TIMEOUT) {
+            return -1;
+        }
+    }
+
+    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
+        LEP_UINT16 status;
+        if (LEP_DirectReadRegister(&handle, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
+            return -1;
+        }
+        if (!(status & LEP_I2C_STATUS_BUSY_BIT_MASK)) {
+            break;
+        }
+        if (HAL_GetTick() - start >= LEPTON_TIMEOUT) {
+            return -1;
+        }
+    }
+
+    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
+        LEP_SYS_STATUS_E status;
+        if (LEP_GetSysFFCStatus(&handle, &status) != LEP_OK) {
+            return -1;
+        }
+        if (status == LEP_SYS_STATUS_READY) {
+            break;
+        }
+        if (HAL_GetTick() - start >= (LEPTON_TIMEOUT * 5)) {
+            return -1;
+        }
+    }
+
+    if (LEP_SetRadEnableState(&handle, LEP_RAD_DISABLE) != LEP_OK
+        || LEP_GetAgcROI(&handle, &roi) != LEP_OK
+        || LEP_SetAgcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK
+        || LEP_SetAgcCalcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK) {
+        return -1;
+    }
+
+    h_res = roi.endCol + 1;
+    v_res = roi.endRow + 1;
+
+    if (v_res > 60) {
+        vospi_packets = 240;
+    } else {
+        vospi_packets = 60;
+    }
+
+    // resync and enable DMA before the first snapshot.
+    vospi_resync = true;
+    return 0;
+}
+
+#define HAL_CLEANINVALIDATE_DCACHE(addr, size) \
+  (SCB_CleanInvalidateDCache_by_Addr((uint32_t*)((uint32_t)addr & ~0x1f), \
+      ((uint32_t)((uint8_t*)addr + size + 0x1f) & ~0x1f) - ((uint32_t)addr & ~0x1f)))
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    (void) lepton_calc_crc; // to shut the compiler up.
+
+    if (vospi_resync == true) {
+        return; // nothing to do here
+    }
+
+    // Invalidate cache prior to access by CPU
+    HAL_CLEANINVALIDATE_DCACHE(vospi_packet, VOSPI_PACKET_SIZE);
+
+    if (vospi_pid < vospi_packets && (vospi_packet[0] & 0xF) != 0xF) {
+        uint32_t pid = VOSPI_HEADER_PID(vospi_packet);
+        uint32_t seg = VOSPI_HEADER_SEG(vospi_packet);
+        if (pid != (vospi_pid % VOSPI_NUMBER_PACKETS)) {
+            if (vospi_pid == VOSPI_FIRST_PACKET) {
+                // Wait for the first packet of the first segement.
+                vospi_pid = VOSPI_FIRST_PACKET;
+                vospi_seg = VOSPI_FIRST_SEGMENT;
+            } else { // lost sync
+                vospi_resync = true;
+                debug_printf("lost sync, packet id:%lu expected id:%lu \n", pid, vospi_pid);
+            }
+        } else if (vospi_packets > 60 && pid == VOSPI_SPECIAL_PACKET && seg != vospi_seg ) {
+            if (vospi_seg == VOSPI_FIRST_SEGMENT) {
+                // Wait for the first packet of the first segement.
+                vospi_pid = VOSPI_FIRST_PACKET;
+                vospi_seg = VOSPI_FIRST_SEGMENT;
+            } else { // lost sync
+                vospi_resync = true;
+                debug_printf("lost sync, segment id:%lu expected id:%lu\n", seg, vospi_seg);
+            }
+        } else {
+            memcpy(vospi_buffer + vospi_pid * VOSPI_LINE_SIZE,
+                    vospi_packet + VOSPI_HEADER_SIZE, VOSPI_LINE_SIZE);
+            if ((++vospi_pid % VOSPI_NUMBER_PACKETS) == 0) {
+                vospi_seg++;
+            }
+        }
+    }
+
+}
+
 static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t cb)
 {
-    fb_update_jpeg_buffer();
-
     if ((!h_res) || (!v_res) || (!sensor->framesize) || (!sensor->pixformat)) {
         return -1;
     }
 
-    int y_scaler = h_res / VOSPI_LINE_PIXELS;
-    int vospi_line_size = sizeof(uint16_t) + sizeof(uint16_t) + (VOSPI_LINE_PIXELS * sizeof(uint16_t));
-    uint8_t buffer[vospi_line_size];
+    fb_update_jpeg_buffer();
 
-    bool reset = false;
-    uint32_t time = systick_current_millis();
-    for (int y = 0; y < v_res;) {
-        for (int x = 0; x < h_res;) {
-            if (sys_tick_has_passed(time, (h_res > VOSPI_LINE_PIXELS) ? 3000 : 1000)) {
-                return -1;
-            }
-
-            int state = __get_PRIMASK();
-            __disable_irq();
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_RESET);
-            HAL_StatusTypeDef status = HAL_SPI_Receive(&SPIHandle, buffer, vospi_line_size, 1000);
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-            __set_PRIMASK(state);
-
-            if (status != HAL_OK) {
-                return -1;
-            }
-
-            if ((buffer[0] & 0xF) == 0xF) {
-                continue;
-            }
-
-            int ttt = (buffer[0] >> 4) & 0x7;
-            int packet_num = ((buffer[0] << 8) | (buffer[1] << 0)) & 0xFFF;
-            int crc = (buffer[2] << 8) | (buffer[3] << 0);
-
-            buffer[0] &= 0x0F;
-            buffer[1] &= 0xFF;
-            buffer[2] = 0;
-            buffer[3] = 0;
-
-            if (CalcCRC16Bytes(vospi_line_size, (char *) buffer) != crc) {
-                systick_sleep(200);
-                y = x = 0;
-                reset = false;
-                continue;
-            }
-
-            if ((y == 0) && (x == 0) && (packet_num != 0)) {
-                systick_sleep(200);
-                y = x = 0;
-                reset = false;
-                continue;
-            }
-
-            if ((((y % (VOSPI_NUMBER_PACKETS / y_scaler)) * y_scaler) + (x / VOSPI_LINE_PIXELS)) != packet_num) {
-                systick_sleep(200);
-                y = x = 0;
-                reset = false;
-                continue;
-            }
-
-            if ((h_res > VOSPI_LINE_PIXELS)
-            && (packet_num == VOSPI_SPECIAL_LINE)
-            && (((y / (VOSPI_NUMBER_PACKETS / y_scaler)) + 1) != ttt)) {
-                if (!ttt) {
-                    reset = true;
-                } else {
-                    systick_sleep(200);
-                    y = x = 0;
-                    reset = false;
-                    continue;
-                }
-            }
-
-            image_t img;
-            img.w = MAIN_FB()->u;
-            img.h = MAIN_FB()->v;
-            img.bpp = MAIN_FB()->bpp; // invalid
-            img.data = MAIN_FB()->pixels; // valid
-
-            float x_scale = resolution[sensor->framesize][0] / ((float) h_res);
-            float y_scale = resolution[sensor->framesize][1] / ((float) v_res);
-            // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
-            float scale = IM_MAX(x_scale, y_scale);
-            int x_offset = (resolution[sensor->framesize][0] - (h_res * scale)) / 2;
-            int y_offset = (resolution[sensor->framesize][1] - (v_res * scale)) / 2;
-            // The code below upscales the source image to the requested frame size
-            // and then crops it to the window set by the user.
-
-            for (int yyy = fast_floorf(y * scale) + y_offset,
-                 yyyy = fast_ceilf((y + 1) * scale) + y_offset; yyy < yyyy; yyy++) {
-                if ((MAIN_FB()->y <= yyy) && (yyy < (MAIN_FB()->y + MAIN_FB()->v))) {
-
-                    for (int xxx = fast_floorf(x * scale) + x_offset,
-                         xxxx = fast_ceilf((x + VOSPI_LINE_PIXELS) * scale) + x_offset; xxx < xxxx; xxx++) {
-                        if ((MAIN_FB()->x <= xxx) && (xxx < (MAIN_FB()->x + MAIN_FB()->u))) {
-
-                            int i = (xxx / scale) - x;
-                            // Value is the 14-bit value from the FLIR IR camera.
-                            // However, with AGC enabled only the bottom 8-bits are non-zero.
-                            int value = ((buffer[(i*2)+4] << 8) | (buffer[(i*2)+5] << 0)) & 0x3FFF;
-
-                            int t_x = xxx - MAIN_FB()->x;
-                            int t_y = yyy - MAIN_FB()->y;
-
-                            if (h_mirror) t_x = MAIN_FB()->u - t_x - 1;
-                            if (v_flip) t_y = MAIN_FB()->v - t_y - 1;
-
-                            switch (sensor->pixformat) {
-                                case PIXFORMAT_RGB565: {
-                                    IMAGE_PUT_RGB565_PIXEL(&img, t_x, t_y, rainbow_table[value & 0xFF]);
-                                    break;
-                                }
-                                case PIXFORMAT_GRAYSCALE: {
-                                    IMAGE_PUT_GRAYSCALE_PIXEL(&img, t_x, t_y, value & 0xFF);
-                                    break;
-                                }
-                                default: {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            x += VOSPI_LINE_PIXELS;
+    vospi_pid = VOSPI_FIRST_PACKET;
+    vospi_seg = VOSPI_FIRST_SEGMENT;
+    do {
+        if (vospi_resync == true) {
+            lepton_sync();
         }
+        __WFI();
+    } while (vospi_pid < vospi_packets);
 
-        y += 1;
+    image->w    = MAIN_FB()->w;
+    image->h    = MAIN_FB()->h;
+    image->bpp  = MAIN_FB()->bpp; // invalid
+    image->data = MAIN_FB()->pixels; // valid
 
-        if (reset && (!(y % (VOSPI_NUMBER_PACKETS / y_scaler)))) {
-            y -= VOSPI_NUMBER_PACKETS / y_scaler;
-            reset = false;
+    uint16_t *src = (uint16_t*) vospi_buffer;
+
+    for (int y=0; y<v_res; y++) {
+        for (int x=0; x<h_res; x++) {
+            // Value is the 14-bit value from the FLIR IR camera.
+            // However, with AGC enabled only the bottom 8-bits are non-zero.
+            uint8_t val = src[y*h_res+x]>>8;
+            switch (sensor->pixformat) {
+                case PIXFORMAT_RGB565: {
+                    IMAGE_PUT_RGB565_PIXEL(image, x, y, rainbow_table[val]);
+                    break;
+                }
+                case PIXFORMAT_GRAYSCALE: {
+                    IMAGE_PUT_GRAYSCALE_PIXEL(image, x, y, val);
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
         }
     }
 
-    MAIN_FB()->w = MAIN_FB()->u;
-    MAIN_FB()->h = MAIN_FB()->v;
-
     switch (sensor->pixformat) {
-        case PIXFORMAT_RGB565: {
-            MAIN_FB()->bpp = sizeof(uint16_t);
+        case PIXFORMAT_GRAYSCALE: {
+            MAIN_FB()->bpp = 1;
             break;
         }
-        case PIXFORMAT_GRAYSCALE: {
-            MAIN_FB()->bpp = sizeof(uint8_t);
+        case PIXFORMAT_RGB565: {
+            MAIN_FB()->bpp = 2;
             break;
         }
         default: {
@@ -446,69 +413,12 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t cb)
         }
     }
 
-    image->w = MAIN_FB()->w;
-    image->h = MAIN_FB()->h;
-    image->bpp = MAIN_FB()->bpp;
-    image->data = MAIN_FB()->pixels;
-
+    image->bpp  = MAIN_FB()->bpp;
     return 0;
 }
 
 int lepton_init(sensor_t *sensor)
 {
-    memset(&SPIHandle, 0, sizeof(SPIHandle));
-
-    SPIHandle.Instance               = SPI3;
-    SPIHandle.Init.NSS               = SPI_NSS_SOFT;
-    SPIHandle.Init.Mode              = SPI_MODE_MASTER;
-    SPIHandle.Init.Direction         = SPI_DIRECTION_2LINES_RXONLY;
-    SPIHandle.Init.DataSize          = SPI_DATASIZE_8BIT;
-    SPIHandle.Init.CLKPhase          = SPI_PHASE_2EDGE;
-    SPIHandle.Init.CLKPolarity       = SPI_POLARITY_HIGH;
-    SPIHandle.Init.BaudRatePrescaler = LEPTON_SPI_PRESCALER;
-
-    __HAL_RCC_SPI3_CLK_ENABLE();
-    if (HAL_SPI_Init(&SPIHandle) != HAL_OK) {
-        __HAL_RCC_SPI3_FORCE_RESET();
-        __HAL_RCC_SPI3_RELEASE_RESET();
-        __HAL_RCC_SPI3_CLK_DISABLE();
-        return -1;
-    }
-
-    GPIO_InitTypeDef GPIO_InitTypeDefSS;
-    GPIO_InitTypeDefSS.Pin = GPIO_PIN_15;
-    GPIO_InitTypeDefSS.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitTypeDefSS.Pull = GPIO_PULLUP;
-    GPIO_InitTypeDefSS.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitTypeDefSS.Alternate = GPIO_AF6_SPI3;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitTypeDefSS);
-
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_15, GPIO_PIN_SET);
-
-    GPIO_InitTypeDef GPIO_InitTypeDefSCLK;
-    GPIO_InitTypeDefSCLK.Pin = GPIO_PIN_3;
-    GPIO_InitTypeDefSCLK.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitTypeDefSCLK.Pull = GPIO_PULLUP;
-    GPIO_InitTypeDefSCLK.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitTypeDefSCLK.Alternate = GPIO_AF6_SPI3;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitTypeDefSCLK);
-
-    GPIO_InitTypeDef GPIO_InitTypeDefMISO;
-    GPIO_InitTypeDefMISO.Pin = GPIO_PIN_4;
-    GPIO_InitTypeDefMISO.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitTypeDefMISO.Pull = GPIO_PULLUP;
-    GPIO_InitTypeDefMISO.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitTypeDefMISO.Alternate = GPIO_AF6_SPI3;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitTypeDefMISO);
-
-    GPIO_InitTypeDef GPIO_InitTypeDefMOSI;
-    GPIO_InitTypeDefMOSI.Pin = GPIO_PIN_5;
-    GPIO_InitTypeDefMOSI.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitTypeDefMOSI.Pull = GPIO_PULLUP;
-    GPIO_InitTypeDefMOSI.Speed = GPIO_SPEED_FREQ_LOW;
-    GPIO_InitTypeDefMOSI.Alternate = GPIO_AF7_SPI3;
-    HAL_GPIO_Init(GPIOB, &GPIO_InitTypeDefMOSI);
-
     sensor->gs_bpp              = sizeof(uint8_t);
     sensor->reset               = reset;
     sensor->sleep               = sleep;
@@ -540,6 +450,66 @@ int lepton_init(sensor_t *sensor)
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
+
+    // Configure the DMA handler for Transmission process
+    DMAHandle.Instance                 = LEPTON_SPI_DMA_STREAM;
+    DMAHandle.Init.Request             = LEPTON_SPI_DMA_REQUEST;
+    DMAHandle.Init.Mode                = DMA_CIRCULAR;
+    DMAHandle.Init.Priority            = DMA_PRIORITY_HIGH;
+    DMAHandle.Init.Direction           = DMA_PERIPH_TO_MEMORY;
+    // When the DMA is configured in direct mode (the FIFO is disabled), the source and
+    // destination transfer widths are equal, and both defined by PSIZE (MSIZE is ignored).
+    // Additionally, burst transfers are not possible (MBURST and PBURST are both ignored).
+    DMAHandle.Init.FIFOMode            = DMA_FIFOMODE_DISABLE;
+    DMAHandle.Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_FULL;
+    // Note MBURST and PBURST are ignored.
+    DMAHandle.Init.MemBurst            = DMA_MBURST_INC4;
+    DMAHandle.Init.PeriphBurst         = DMA_PBURST_INC4;
+    DMAHandle.Init.MemDataAlignment    = DMA_MDATAALIGN_WORD;
+    DMAHandle.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    DMAHandle.Init.MemInc              = DMA_MINC_ENABLE;
+    DMAHandle.Init.PeriphInc           = DMA_PINC_DISABLE;
+
+    // NVIC configuration for DMA transfer complete interrupt
+    NVIC_SetPriority(LEPTON_SPI_DMA_IRQn, IRQ_PRI_DMA21);
+    HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
+
+    HAL_DMA_DeInit(&DMAHandle);
+    if (HAL_DMA_Init(&DMAHandle) != HAL_OK) {
+        // Initialization Error
+        return -1;
+    }
+
+    memset(&SPIHandle, 0, sizeof(SPIHandle));
+    SPIHandle.Instance               = LEPTON_SPI;
+    SPIHandle.Init.NSS               = SPI_NSS_HARD_OUTPUT;
+    SPIHandle.Init.NSSPMode          = SPI_NSS_PULSE_DISABLE;
+    SPIHandle.Init.NSSPolarity       = SPI_NSS_POLARITY_LOW;
+    SPIHandle.Init.Mode              = SPI_MODE_MASTER;
+    SPIHandle.Init.TIMode            = SPI_TIMODE_DISABLE;
+    SPIHandle.Init.Direction         = SPI_DIRECTION_2LINES_RXONLY;
+    SPIHandle.Init.DataSize          = SPI_DATASIZE_8BIT;
+    SPIHandle.Init.FifoThreshold     = SPI_FIFO_THRESHOLD_04DATA;
+    SPIHandle.Init.FirstBit          = SPI_FIRSTBIT_MSB;
+    SPIHandle.Init.CLKPhase          = SPI_PHASE_2EDGE;
+    SPIHandle.Init.CLKPolarity       = SPI_POLARITY_HIGH;
+    SPIHandle.Init.BaudRatePrescaler = LEPTON_SPI_PRESCALER;
+    // Recommanded setting to avoid glitches
+    SPIHandle.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;
+
+    if (HAL_SPI_Init(&SPIHandle) != HAL_OK) {
+        LEPTON_SPI_RESET();
+        LEPTON_SPI_RELEASE();
+        LEPTON_SPI_CLK_DISABLE();
+        return -1;
+    }
+
+    // Associate the initialized DMA handle to the the SPI handle
+    __HAL_LINKDMA(&SPIHandle, hdmarx, DMAHandle);
+
+    // NVIC configuration for SPI transfer complete interrupt
+    NVIC_SetPriority(LEPTON_SPI_IRQn, IRQ_PRI_DCMI);
+    HAL_NVIC_EnableIRQ(LEPTON_SPI_IRQn);
 
     return 0;
 }
