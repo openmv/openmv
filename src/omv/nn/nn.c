@@ -211,7 +211,7 @@ int nn_load_network(nn_t *net, const char *path)
         prev_layer = layer->prev;
 
         if (layer->type == LAYER_TYPE_IP) {
-            uint32_t fc_buffer_size = 2 * layer->c;
+            uint32_t fc_buffer_size = 2 * prev_layer->c * prev_layer->w * prev_layer->h;
             net->max_colbuf_size = IM_MAX(net->max_colbuf_size, fc_buffer_size);
         }
 
@@ -361,7 +361,7 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
 
     q7_t *buffer1     = fb_alloc(net->max_scrbuf_size);
     q7_t *buffer2     = buffer1 + net->max_layer_size;
-    q7_t *col_buffer  = fb_alloc(net->max_colbuf_size * 2);
+    q7_t *col_buffer  = fb_alloc(net->max_colbuf_size);
 
     while (layer != NULL) {
         layer_t *prev_layer = layer->prev;
