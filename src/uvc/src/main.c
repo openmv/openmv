@@ -41,6 +41,15 @@ NORETURN void fb_alloc_fail()
     __fatal_error();
 }
 
+int puts(const char *s) {
+    return 0;
+}
+
+int printf(const char *fmt, ...)
+{
+    return 0;
+}
+
 static uint8_t frame_index = 0;
 static uint8_t format_index = 0;
 
