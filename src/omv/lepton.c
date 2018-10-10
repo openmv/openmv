@@ -307,10 +307,6 @@ static int reset(sensor_t *sensor)
     return 0;
 }
 
-#define HAL_CLEANINVALIDATE_DCACHE(addr, size) \
-  (SCB_CleanInvalidateDCache_by_Addr((uint32_t*)((uint32_t)addr & ~0x1f), \
-      ((uint32_t)((uint8_t*)addr + size + 0x1f) & ~0x1f) - ((uint32_t)addr & ~0x1f)))
-
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
     (void) lepton_calc_crc; // to shut the compiler up.
@@ -318,9 +314,6 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
     if (vospi_resync == true) {
         return; // nothing to do here
     }
-
-    // Invalidate cache prior to access by CPU
-    HAL_CLEANINVALIDATE_DCACHE(vospi_packet, VOSPI_PACKET_SIZE);
 
     if (vospi_pid < vospi_packets && (vospi_packet[0] & 0xF) != 0xF) {
         uint32_t pid = VOSPI_HEADER_PID(vospi_packet);

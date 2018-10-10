@@ -63,7 +63,7 @@
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
 
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
+#define OMV_FB_ALLOC_SIZE       (96K)       // minimum fb alloc size
 #define OMV_STACK_SIZE          (7K)
 #define OMV_HEAP_SIZE           (240K)
 
@@ -88,8 +88,8 @@
 #define OMV_AXI_SRAM_LENGTH     512K
 
 // Use the MPU to set an uncacheable memory region.
-//#define OMV_DMA_REGION_BASE     OMV_SRAMX_ORIGIN
-//#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_XXKB
+#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+(500*1024))
+#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_16KB
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
