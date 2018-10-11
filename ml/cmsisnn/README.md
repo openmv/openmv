@@ -90,7 +90,7 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
      2. `./models/smile/train.sh` - This takes a while.
 2. Great! Now let's test the network.
   1. `./models/smile/test.sh` - You should get an accuracy of about 96%.
-  2. `python2 nn_quantizer.py --gpu --model models/smile/smile_train_test.prototxt --weights models/smile/smile_iter_10000.caffemodel --save models/smile/smile.pkl` - Note how the accuracy stays at about 96%.
+  2. `python2 nn_quantizer.py --gpu --model models/smile/smile_train_test.prototxt --weights models/smile/smile_iter_200000.caffemodel --save models/smile/smile.pkl` - Note how the accuracy stays at about 96%.
   3. `python2 nn_convert.py --model models/smile/smile.pkl --mean caffe/examples/smile/mean.binaryproto --output models/smile/smile.network`.
   4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network.
 
