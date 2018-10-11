@@ -18,12 +18,13 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
 
 ## Training a CIFAR10 Model
 1. Now we're going to train a CIFAR10 Model.
-    1. First we need to get the data and create an lmdb.
+    1. Open a terminal in this folder.
+    2. First we need to get the data and create an lmdb.
         1. `cd caffe`
         2. `./data/cifar10/get_cifar10.sh`
         3. `./examples/cifar10/create_cifar10.sh`
         4. `./build/tools/compute_image_mean -backend=lmdb examples/cifar10/cifar10_train_lmdb examples/cifar10/mean.binaryproto`
-    2. Next we need to train our network.
+    3. Next we need to train our network.
         1. `cd ..`
         2. `./models/cifar10/train.sh` - This takes a while.
 2. Great! Now let's test and then convert the network.
@@ -34,12 +35,13 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
 
 ## Training a CIFAR10 Fast Model
 1. Now we're going to train a CIFAR10 Fast Model which is 60% smaller than the cifar10 network with only a 2% loss in accurary.
-    1. First we need to get the data and create an lmdb.
+    1. Open a terminal in this folder.
+    2. First we need to get the data and create an lmdb.
         1. `cd caffe`
         2. `./data/cifar10/get_cifar10.sh`
         3. `./examples/cifar10/create_cifar10.sh`
         4. `./build/tools/compute_image_mean -backend=lmdb examples/cifar10/cifar10_train_lmdb examples/cifar10/mean.binaryproto`
-    2. Next we need to train our network.
+    3. Next we need to train our network.
         1. `cd ..`
         2. `./models/cifar10_fast/train.sh` - This takes a while.
 2. Great! Now let's test and then convert the network.
@@ -50,12 +52,13 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
 
 ## Training a MNIST Model
 1. Now we're going to train a MNIST Model.
-    1. First we need to get the data and create an lmdb.
+    1. Open a terminal in this folder.
+    2. First we need to get the data and create an lmdb.
         1. `cd caffe`
         2. `./data/mnist/get_mnist.sh`
         3. `./examples/mnist/create_mnist.sh`
         4. `./build/tools/compute_image_mean -backend=lmdb examples/mnist/mnist_train_lmdb examples/mnist/mean.binaryproto`
-     2. Next we need to train our network.
+    3. Next we need to train our network.
         1. `cd ..`
         2. `./models/lenet/train.sh` - This takes a while.
 2. Great! Now let's test and then convert the network.
@@ -66,7 +69,8 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
 
 ## Training a Smile Detection Model
 1. Now we're going to train a Smile Detection Model.
-    1. First we need to get the data and create an lmdb.
+    1. Open a terminal in this folder.
+    2. First we need to get the data and create an lmdb.
         1. `cd caffe/examples`
         2. `mkdir smile`
         3. `cd smile`
@@ -85,7 +89,7 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
             4. `GLOG_logtostderr=1 ./build/tools/convert_imageset --shuffle examples/smile/lmdbin/ examples/smile/train.txt examples/smile/train_lmdb`
             5. `GLOG_logtostderr=1 ./build/tools/convert_imageset --shuffle examples/smile/lmdbin/ examples/smile/test.txt examples/smile/test_lmdb`
         8. `./build/tools/compute_image_mean -backend=lmdb examples/smile/train_lmdb examples/smile/mean.binaryproto`
-    2. Next we need to train our network.
+    3. Next we need to train our network.
         1. `cd ..`
         2. `./models/smile/train.sh` - This takes a while.
 2. Great! Now let's test and then convert the network.
