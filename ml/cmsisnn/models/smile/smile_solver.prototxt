@@ -1,23 +1,29 @@
 # The train/test net protocol buffer definition
 net: "models/smile/smile_train_test.prototxt"
-# test_iter specifies how many forward passes the test should carry out.
-test_iter: 100
+# Specifies how many forward passes the test should carry out.
+# Test batch size 48*30 iterations = 1440 testing images.
+test_iter: 30
 # Carry out testing every 500 training iterations.
 test_interval: 500
-# The base learning rate, momentum and the weight decay of the network.
+# The learning rate policy
+# begin training at a learning rate of 0.01 = 1e-2
 base_lr: 0.01
 momentum: 0.9
-weight_decay: 0.0005
-# The learning rate policy
-lr_policy: "inv"
-gamma: 0.0001
-power: 0.75
+weight_decay: 0.00001
+# learning rate policy: drop the learning rate in
+# "steps" by a factor of gamma every stepsize iterations
+lr_policy: "step"
+# drop the learning rate by a factor of 10
+# (i.e., multiply it by a factor of gamma = 0.1)
+gamma: 0.1
+# Drop the learning rate every 10K iterations
+stepsize: 40000
+# train for 100K iterations total
+max_iter: 200000
 # Display every 100 iterations
 display: 100
-# The maximum number of iterations
-max_iter: 10000
 # snapshot intermediate results
-snapshot: 5000
+snapshot: 20000
 snapshot_prefix: "models/smile/smile"
 # solver mode: CPU or GPU
 solver_mode: GPU
