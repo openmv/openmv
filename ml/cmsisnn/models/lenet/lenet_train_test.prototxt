@@ -9,6 +9,7 @@ layer {
   }
   transform_param {
     scale: 0.00390625
+    mean_file: "caffe/examples/mnist/mean.binaryproto"
   }
   data_param {
     source: "caffe/examples/mnist/mnist_train_lmdb"
@@ -26,6 +27,7 @@ layer {
   }
   transform_param {
     scale: 0.00390625
+    mean_file: "caffe/examples/mnist/mean.binaryproto"
   }
   data_param {
     source: "caffe/examples/mnist/mnist_test_lmdb"
