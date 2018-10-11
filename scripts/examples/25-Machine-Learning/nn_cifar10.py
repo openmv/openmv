@@ -20,7 +20,7 @@ clock = time.clock()                # Create a clock object to track the FPS.
 while(True):
     clock.tick()                    # Update the FPS clock.
     img = sensor.snapshot()         # Take a picture and return the image.
-    out = net.forward(img)
+    out = net.forward(img, softmax=True)
     max_idx = out.index(max(out))
     score = int(out[max_idx]*100)
     if (score < 70):

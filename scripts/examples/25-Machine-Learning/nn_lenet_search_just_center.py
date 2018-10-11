@@ -8,6 +8,9 @@
 
 import sensor, image, time, os, nn
 
+# Set to True to see what the CNN sees.
+BINARY_VIEW = True
+
 sensor.reset()                         # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)      # Set frame size to QVGA (320x240)
@@ -25,7 +28,9 @@ while(True):
     clock.tick()
 
     img = sensor.snapshot()
-    tmp_img = img.copy().binary([(150, 255)], invert=True)
+    # Use the copy() method below to see the live video instead of the binary image...
+    tmp_img = img.binary([(150, 255)], invert=True, copy=True, to_bitmap=True)
+    if BINARY_VIEW: img.binary([(150, 255)], invert=True)
 
     # net.search() will search an roi in the image for the network (or the whole image if the roi is not
     # specified). At each location to look in the image if one of the classifier outputs is larger than
@@ -44,7 +49,7 @@ while(True):
     # Setting y_overlap=-1 forces the window to stay centered in the ROI in the y direction always. If
     # x_overlap is not -1 the method will serach in all horizontal positions.
 
-    for obj in net.search(tmp_img, threshold=0.8, min_scale=0.4, scale_mul=0.8, \
+    for obj in net.search(tmp_img, threshold=0.7, min_scale=0.4, scale_mul=0.8, \
             x_overlap=-1, y_overlap=-1, contrast_threshold=0.5):
         print("Detected %s - Confidence %f%%" % (labels[obj.index()], obj.value()))
         img.draw_rectangle(obj.rect())
