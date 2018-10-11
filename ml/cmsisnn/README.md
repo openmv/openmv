@@ -98,12 +98,13 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
     3. `python2 nn_convert.py --model models/smile/smile.pkl --mean caffe/examples/smile/mean.binaryproto --output models/smile/smile.network`.
     4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network. To run the CNN copy the `models/smile/smile.network` file to your OpenMV Cam's disk and then run our Smile Machine Learning Example.
 
-### Train Custom Net
+### Train A Custom Net
 If you'd like to train your own custom CNN you need to assemble a dataset of hundreds (preferably thousands) of images of training examples. Once you've collected all the training examples save the images per class of training examples in seperate folders structed like this:
 * data/
     * 0_some_class/
     * 1_some_other_class/
     * 2_etc/
+
 Once you've built a folder structure like this please refer to the examples above to:
 1. Create a labeled training dataset using augment_images.py and create_labels.py.
 2. Create training and test lmdb files.
