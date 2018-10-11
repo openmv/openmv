@@ -1,6 +1,9 @@
 # LetNet Example
 import sensor, image, time, os, nn
 
+# Set to True to see what the CNN sees.
+BINARY_VIEW = True
+
 sensor.reset()                         # Reset and initialize the sensor.
 sensor.set_contrast(3)
 sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to RGB565 (or GRAYSCALE)
@@ -18,14 +21,15 @@ clock = time.clock()                # Create a clock object to track the FPS.
 while(True):
     clock.tick()                    # Update the FPS clock.
     img = sensor.snapshot()         # Take a picture and return the image.
-    out = net.forward(img.copy().binary([(150, 255)], invert=True))
+    out = net.forward(img.binary([(150, 255)], invert=True, copy=True, to_bitmap=True), softmax=True)
+    if BINARY_VIEW: img.binary([(150, 255)], invert=True)
     max_idx = out.index(max(out))
     score = int(out[max_idx]*100)
     if (score < 70):
         score_str = "??:??%"
     else:
         score_str = "%s:%d%% "%(labels[max_idx], score)
-    img.draw_string(0, 0, score_str)
+    img.draw_string(0, 0, score_str, color=127)
 
     print(clock.fps())             # Note: OpenMV Cam runs about half as fast when connected
                                    # to the IDE. The FPS should increase once disconnected.

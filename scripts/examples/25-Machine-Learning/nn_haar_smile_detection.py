@@ -29,9 +29,9 @@ while (True):
     # Detect smiles
     for r in objects:
         # Resize and center detection area
-        r = [r[0]+10, r[1]+25, int(r[2]*0.70), int(r[2]*0.70)]
+        r = [r[0]+5, r[1]+20, int(r[2]*0.90), int(r[2]*0.90)]
         img.draw_rectangle(r)
         out = net.forward(img, roi=r, softmax=True)
-        img.draw_string(r[0], r[1], ':)' if (out[0] > 0.8) else ':(', color=(255), scale=2)
+        img.draw_string(r[0], r[1], ':)' if (out[0] > 0.7) else ':(', color=(255), scale=2)
 
     print(clock.fps())
