@@ -30,7 +30,7 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
   1. `./models/cifar10/test.sh` - You should get an accuracy of about 80%.
   2. `python2 nn_quantizer.py --gpu --model models/cifar10/cifar10_train_test.prototxt --weights models/cifar10/cifar10_iter_70000.caffemodel.h5 --save models/cifar10/cifar10.pkl` - Note how the accuracy stays at about 80%.
   3. `python2 nn_convert.py --model models/cifar10/cifar10.pkl --mean caffe/examples/cifar10/mean.binaryproto --output models/cifar10/cifar10.network`.
-  4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network.
+  4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network. To run the CNN copy the `models/cifar10/cifar10.network` file to your OpenMV Cam's disk and then run our CIFAR10 Machine Learning Examples.
 
 ## Training a CIFAR10 Fast Model
 1. Now we're going to train a CIFAR10 Fast Model which is 60% smaller than the cifar10 network with only a 2% loss in accurary.
@@ -46,7 +46,7 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
   1. `./models/cifar10_fast/test.sh` - You should get an accuracy of about 78%.
   2. `python2 nn_quantizer.py --gpu --model models/cifar10_fast/cifar10_fast_train_test.prototxt --weights models/cifar10_fast/cifar10_fast_iter_70000.caffemodel.h5 --save models/cifar10_fast/cifar10_fast.pkl` - Note how the accuracy stays at about 78%.
   3. `python2 nn_convert.py --model models/cifar10_fast/cifar10_fast.pkl --mean caffe/examples/cifar10/mean.binaryproto --output models/cifar10_fast/cifar10_fast.network`.
-  4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network.
+  4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network. To run the CNN copy the `models/cifar10_fast/cifar10_fast.network` file to your OpenMV Cam's disk and then run our CIFAR10 Machine Learning Examples using the cifar10_fast.network.
 
 ## Training a MNIST Model
 1. Now we're going to train a MNIST Model.
@@ -62,7 +62,7 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
   1. `./models/lenet/test.sh` - You should get an accuracy of about 99%.
   2. `python2 nn_quantizer.py --gpu --model models/lenet/lenet_train_test.prototxt --weights models/lenet/lenet_iter_10000.caffemodel --save models/lenet/lenet.pkl` - Note how the accuracy stays at about 99%.
   3. `python2 nn_convert.py --model models/lenet/lenet.pkl --mean caffe/examples/mnist/mean.binaryproto --output models/lenet/lenet.network`.
-  4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network.
+  4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network. To run the CNN copy the `models/lenet/lenet.network` file to your OpenMV Cam's disk and then run our LENET Machine Learning Examples.
 
 ## Training a Smile Detection Model
 1. Now we're going to train a Smile Detection Model.
@@ -92,7 +92,7 @@ This folder contains scripts to train, test, and quantize Caffe models and then 
   1. `./models/smile/test.sh` - You should get an accuracy of about 96%.
   2. `python2 nn_quantizer.py --gpu --model models/smile/smile_train_test.prototxt --weights models/smile/smile_iter_200000.caffemodel --save models/smile/smile.pkl` - Note how the accuracy stays at about 96%.
   3. `python2 nn_convert.py --model models/smile/smile.pkl --mean caffe/examples/smile/mean.binaryproto --output models/smile/smile.network`.
-  4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network.
+  4. And that's it! You've created a CNN that will run on the OpenMV Cam! Keep in mind that your OpenMV Cam has limited weight/bias heap space so this limits the size of the network. To run the CNN copy the `models/smile/smile.network` file to your OpenMV Cam's disk and then run our Smile Machine Learning Example.
 
 ### Known Limitations 
 1. Parser supports conv, pool, relu, fc layers only.
