@@ -68,7 +68,7 @@
 #define OMV_HEAP_SIZE           (240K)
 
 #define OMV_LINE_BUF_SIZE       (3K)        // Image line buffer round(640 * 2BPP * 2 buffers).
-#define OMV_MSC_BUF_SIZE        (2K)        // USB MSC bot data
+#define OMV_MSC_BUF_SIZE        (12K)       // USB MSC bot data
 #define OMV_VFS_BUF_SIZE        (1K)        // VFS sturct + FATFS file buffer (624 bytes)
 #define OMV_JPEG_BUF_SIZE       (32 * 1024) // IDE JPEG buffer (header + data).
 
@@ -88,7 +88,7 @@
 #define OMV_AXI_SRAM_LENGTH     512K
 
 // Use the MPU to set an uncacheable memory region.
-#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+(500*1024))
+#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+(496*1024))
 #define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_16KB
 
 /* SCCB/I2C */
