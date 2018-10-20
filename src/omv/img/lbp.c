@@ -84,7 +84,7 @@ int imlib_lbp_desc_distance(uint8_t *d0, uint8_t *d1)
 {
     uint32_t sum = 0;
     for (int i=0; i<LBP_DESC_SIZE; i++) {
-        int w = lbp_weights[i%LBP_HIST_SIZE];
+        int w = lbp_weights[i/LBP_HIST_SIZE];
         sum += w * ((((d0[i] - d1[i]) * (d0[i] - d1[i]))/IM_MAX((d0[i] + d1[i]),1)));
     }
     return sum;
