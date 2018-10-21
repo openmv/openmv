@@ -130,5 +130,5 @@ void arm_q7_to_q15_no_shift(const q7_t * pSrc, q15_t * pDst, uint32_t blockSize)
 }
 
 /**    
- * @} end of q7_to_x group    
+ * @} end of nndata_convert group   
  */

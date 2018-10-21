@@ -21,7 +21,7 @@
  * Title:        arm_nnsupportfunctions.h
  * Description:  Public header file of support functions for CMSIS NN Library
  *
- * $Date:        17. January 2018
+ * $Date:        13. July 2018
  * $Revision:    V.1.0.0
  *
  * Target Processor:  Cortex-M cores
@@ -135,6 +135,57 @@ __STATIC_FORCEINLINE void *read_and_pad_reordered(void *source, q31_t * out1, q3
 }
 #endif
 
+/**
+ * @defgroup NNBasicMath Basic Math Functions for Neural Network Computation
+ *
+ * Basic Math Functions for Neural Network Computation
+ *
+ */
+
+/**
+ * @brief           Q7 vector multiplication with variable output shifts
+ * @param[in]       *pSrcA        pointer to the first input vector
+ * @param[in]       *pSrcB        pointer to the second input vector
+ * @param[out]      *pDst         pointer to the output vector
+ * @param[in]       out_shift     amount of right-shift for output
+ * @param[in]       blockSize     number of samples in each vector
+ * @return none.
+ *
+ * <b>Scaling and Overflow Behavior:</b>
+ * \par
+ * The function uses saturating arithmetic.
+ * Results outside of the allowable Q15 range [0x8000 0x7FFF] will be saturated.
+ */
+
+void arm_nn_mult_q15(
+  q15_t * pSrcA,
+  q15_t * pSrcB,
+  q15_t * pDst,
+  const uint16_t out_shift,
+  uint32_t blockSize);
+  
+/**
+ * @brief           Q7 vector multiplication with variable output shifts
+ * @param[in]       *pSrcA        pointer to the first input vector
+ * @param[in]       *pSrcB        pointer to the second input vector
+ * @param[out]      *pDst         pointer to the output vector
+ * @param[in]       out_shift     amount of right-shift for output
+ * @param[in]       blockSize     number of samples in each vector
+ * @return none.
+ *
+ * <b>Scaling and Overflow Behavior:</b>
+ * \par
+ * The function uses saturating arithmetic.
+ * Results outside of the allowable Q7 range [0x80 0x7F] will be saturated.
+ */
+
+void arm_nn_mult_q7(
+  q7_t * pSrcA,
+  q7_t * pSrcB,
+  q7_t * pDst,
+  const uint16_t out_shift,
+  uint32_t blockSize);
+ 
 /**
  * @brief defition to adding rouding offset
  */
