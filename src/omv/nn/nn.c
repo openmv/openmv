@@ -79,17 +79,17 @@ int nn_dump_network(nn_t *net)
 
 int nn_load_network(nn_t *net, const char *path)
 {
-    FIL fp;
+    file_t fp;
     int res = 0;
 
     file_read_open(&fp, path);
     file_buffer_on(&fp);
 
     // Read network type
-    read_data(&fp, net->type, 4);
+    file_read_data(&fp, net->type, 4);
 
     // Read number of layers
-    read_data(&fp, &net->n_layers, 4);
+    file_read_data(&fp, &net->n_layers, 4);
 
     layer_t *prev_layer = NULL;
     for (int i=0; i<net->n_layers; i++) {
@@ -97,7 +97,7 @@ int nn_load_network(nn_t *net, const char *path)
         layer_type_t layer_type;
 
         // Read layer type
-        read_data(&fp, &layer_type, 4);
+        file_read_data(&fp, &layer_type, 4);
         switch (layer_type) {
             case LAYER_TYPE_DATA:
                 layer = xalloc0(sizeof(data_layer_t));
@@ -131,41 +131,41 @@ int nn_load_network(nn_t *net, const char *path)
         layer->type = layer_type;
 
         // Read layer shape (NCHW)
-        read_data(&fp, &layer->n, 4);
-        read_data(&fp, &layer->c, 4);
-        read_data(&fp, &layer->h, 4);
-        read_data(&fp, &layer->w, 4);
+        file_read_data(&fp, &layer->n, 4);
+        file_read_data(&fp, &layer->c, 4);
+        file_read_data(&fp, &layer->h, 4);
+        file_read_data(&fp, &layer->w, 4);
 
         switch (layer_type) {
             case LAYER_TYPE_DATA: {
                 data_layer_t *data_layer = (data_layer_t *) layer;
                 // Read data layer R, G, B mean and input scale
-                read_data(&fp, &data_layer->r_mean, 4);
-                read_data(&fp, &data_layer->g_mean, 4);
-                read_data(&fp, &data_layer->b_mean, 4);
-                read_data(&fp, &data_layer->scale, 4);
+                file_read_data(&fp, &data_layer->r_mean, 4);
+                file_read_data(&fp, &data_layer->g_mean, 4);
+                file_read_data(&fp, &data_layer->b_mean, 4);
+                file_read_data(&fp, &data_layer->scale, 4);
                 break;
             }
 
             case LAYER_TYPE_CONV: {
                 conv_layer_t *conv_layer = (conv_layer_t *) layer;
                 // Read layer l_shift, r_shift
-                read_data(&fp, &conv_layer->l_shift, 4);
-                read_data(&fp, &conv_layer->r_shift, 4);
+                file_read_data(&fp, &conv_layer->l_shift, 4);
+                file_read_data(&fp, &conv_layer->r_shift, 4);
                 // Read krnel dim, stride and padding
-                read_data(&fp, &conv_layer->krn_dim, 4);
-                read_data(&fp, &conv_layer->krn_pad, 4);
-                read_data(&fp, &conv_layer->krn_str, 4);
+                file_read_data(&fp, &conv_layer->krn_dim, 4);
+                file_read_data(&fp, &conv_layer->krn_pad, 4);
+                file_read_data(&fp, &conv_layer->krn_str, 4);
 
                 // Alloc and read weights array
-                read_data(&fp, &conv_layer->w_size, 4);
+                file_read_data(&fp, &conv_layer->w_size, 4);
                 conv_layer->wt = xalloc(conv_layer->w_size);
-                read_data(&fp, conv_layer->wt, conv_layer->w_size);
+                file_read_data(&fp, conv_layer->wt, conv_layer->w_size);
 
                 // Alloc and read bias array
-                read_data(&fp, &conv_layer->b_size, 4);
+                file_read_data(&fp, &conv_layer->b_size, 4);
                 conv_layer->bias = xalloc(conv_layer->b_size);
-                read_data(&fp, conv_layer->bias, conv_layer->b_size);
+                file_read_data(&fp, conv_layer->bias, conv_layer->b_size);
                 break;
             }
 
@@ -177,29 +177,29 @@ int nn_load_network(nn_t *net, const char *path)
             case LAYER_TYPE_POOL: {
                 pool_layer_t *pool_layer = (pool_layer_t *) layer;
                 // Read pooling layer type
-                read_data(&fp, &pool_layer->ptype, 4);
+                file_read_data(&fp, &pool_layer->ptype, 4);
                 // Read krnel dim, stride and padding
-                read_data(&fp, &pool_layer->krn_dim, 4);
-                read_data(&fp, &pool_layer->krn_pad, 4);
-                read_data(&fp, &pool_layer->krn_str, 4);
+                file_read_data(&fp, &pool_layer->krn_dim, 4);
+                file_read_data(&fp, &pool_layer->krn_pad, 4);
+                file_read_data(&fp, &pool_layer->krn_str, 4);
                 break;
             }
 
             case LAYER_TYPE_IP: {
                 ip_layer_t *ip_layer = (ip_layer_t *) layer;
                 // Read layer l_shift, r_shift
-                read_data(&fp, &ip_layer->l_shift, 4);
-                read_data(&fp, &ip_layer->r_shift, 4);
+                file_read_data(&fp, &ip_layer->l_shift, 4);
+                file_read_data(&fp, &ip_layer->r_shift, 4);
 
                 // Alloc and read weights array
-                read_data(&fp, &ip_layer->w_size, 4);
+                file_read_data(&fp, &ip_layer->w_size, 4);
                 ip_layer->wt = xalloc(ip_layer->w_size);
-                read_data(&fp, ip_layer->wt, ip_layer->w_size);
+                file_read_data(&fp, ip_layer->wt, ip_layer->w_size);
 
                 // Alloc and read bias array
-                read_data(&fp, &ip_layer->b_size, 4);
+                file_read_data(&fp, &ip_layer->b_size, 4);
                 ip_layer->bias = xalloc(ip_layer->b_size);
-                read_data(&fp, ip_layer->bias, ip_layer->b_size);
+                file_read_data(&fp, ip_layer->bias, ip_layer->b_size);
                 break;
             }
         }

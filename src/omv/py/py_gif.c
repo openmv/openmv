@@ -22,7 +22,7 @@ typedef struct py_gif_obj {
     int height;
     bool color;
     bool loop;
-    FIL fp;
+    file_t fp;
 } py_gif_obj_t;
 
 static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)

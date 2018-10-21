@@ -56,11 +56,11 @@ typedef char* (*ini_reader)(char* str, int num, void* stream);
    stop on first error), -1 on file open error, or -2 on memory allocation
    error (only when INI_USE_STACK is zero).
 */
-int ini_parse(FATFS *fs, const char* filename, ini_handler handler, void* user);
+int ini_parse(const char* filename, ini_handler handler, void* user);
 
-/* Same as ini_parse(), but takes a FIL* instead of filename. This doesn't
+/* Same as ini_parse(), but takes a file_t* instead of filename. This doesn't
    close the file when it's finished -- the caller must do that. */
-int ini_parse_file(FIL* file, ini_handler handler, void* user);
+int ini_parse_file(file_t* file, ini_handler handler, void* user);
 
 /* Same as ini_parse(), but takes an ini_reader function pointer instead of
    filename. Used for implementing custom or string-based I/O (see also

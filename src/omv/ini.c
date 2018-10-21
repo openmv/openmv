@@ -225,12 +225,12 @@ strncpy(char *dst, const char *src, size_t n)
 /**  ini_fgetc(fp) -- get char from stream */
 
 int
-ini_fgetc(FIL *fp)
+ini_fgetc(file_t *fp)
 {
     char c;
     UINT b;
-
-    if (f_read (fp, &c, 1, &b) != FR_OK || b != 1)
+    b = file_read(fp, &c, 1);
+    if (b != 1)
         return (EOF);
     return (c);
 }
@@ -269,7 +269,7 @@ ini_fgetc(FIL *fp)
 /**  char *ini_fgets(dst,max,fp) -- get string from stream */
 
 char *
-ini_fgets(char *dst, int max, FIL *fp)
+ini_fgets(char *dst, int max, file_t *fp)
 {
     int c;
     char *p;
@@ -501,24 +501,22 @@ int ini_parse_stream(ini_reader reader, void* stream, ini_handler handler,
 }
 
 /* See documentation in header file. */
-int ini_parse_file(FIL* file, ini_handler handler, void* user)
+int ini_parse_file(file_t* file, ini_handler handler, void* user)
 {
     return ini_parse_stream((ini_reader)ini_fgets, file, handler, user);
 }
 
 /* See documentation in header file. */
-int ini_parse(FATFS *fs, const char* filename, ini_handler handler, void* user)
+int ini_parse(const char* filename, ini_handler handler, void* user)
 {
-    FIL file;
+    file_t file;
     int error;
 
-    FRESULT res = f_open(fs, &file, filename, FA_READ | FA_OPEN_EXISTING);
+    FRESULT res = f_open_helper(&file, filename, FA_READ | FA_OPEN_EXISTING);
     if (res != FR_OK)
         return -1;
     error = ini_parse_file(&file, handler, user);
-    res = f_close(&file);
-    if (res != FR_OK)
-        return -1;
+    file_close(&file);
     return error;
 }
 

@@ -22,7 +22,7 @@ typedef struct py_mjpeg_obj {
     int height;
     uint32_t frames;
     uint32_t bytes;
-    FIL fp;
+    file_t fp;
 } py_mjpeg_obj_t;
 
 static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -54,7 +54,7 @@ static mp_obj_t py_mjpeg_height(mp_obj_t mjpeg_obj)
 static mp_obj_t py_mjpeg_size(mp_obj_t mjpeg_obj)
 {
     py_mjpeg_obj_t *arg_mjpeg = mjpeg_obj;
-    return mp_obj_new_int(f_size(&arg_mjpeg->fp));
+    return mp_obj_new_int(file_size(&arg_mjpeg->fp));
 }
 
 static mp_obj_t py_mjpeg_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)

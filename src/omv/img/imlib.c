@@ -437,11 +437,11 @@ static save_image_format_t imblib_parse_extension(image_t *img, const char *path
     return FORMAT_DONT_CARE;
 }
 
-bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_settings_t *rs)
+bool imlib_read_geometry(file_t *fp, image_t *img, const char *path, img_read_settings_t *rs)
 {
     file_read_open(fp, path);
     char magic[2];
-    read_data(fp, &magic, 2);
+    file_read_data(fp, &magic, 2);
     file_close(fp);
 
     bool vflipped = false;
@@ -464,7 +464,7 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
     return vflipped;
 }
 
-static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
+static void imlib_read_pixels(file_t *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
 {
     switch (rs->format) {
         case FORMAT_BMP:
@@ -487,7 +487,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         // the line operation on each line in that window before moving to the
         // next window. The vflipped part is here because BMP files can be saved
         // vertically flipped resulting in us reading the image backwards.
-        FIL fp;
+        file_t fp;
         image_t temp;
         img_read_settings_t rs;
         bool vflipped = imlib_read_geometry(&fp, &temp, path, &rs);
@@ -599,10 +599,10 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
 
 void imlib_load_image(image_t *img, const char *path)
 {
-    FIL fp;
+    file_t fp;
     file_read_open(&fp, path);
     char magic[2];
-    read_data(&fp, &magic, 2);
+    file_read_data(&fp, &magic, 2);
     file_close(&fp);
 
     if ((magic[0]=='P')
@@ -629,9 +629,9 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
             ppm_write_subimg(img, path, roi);
             break;
         case FORMAT_RAW: {
-            FIL fp;
+            file_t fp;
             file_write_open(&fp, path);
-            write_data(&fp, img->pixels, img->w * img->h);
+            file_write_data(&fp, img->pixels, img->w * img->h);
             file_close(&fp);
             break;
         }
@@ -645,10 +645,10 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
                 jpeg_write(img, new_path, quality);
                 fb_free();
             } else if (IM_IS_BAYER(img)) {
-                FIL fp;
+                file_t fp;
                 char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".raw");
                 file_write_open(&fp, new_path);
-                write_data(&fp, img->pixels, img->w * img->h);
+                file_write_data(&fp, img->pixels, img->w * img->h);
                 file_close(&fp);
                 fb_free();
             } else { // RGB or GS, save as BMP.

@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include STM32_HAL_H
+#include <mphalport.h>
 #include "mpconfig.h"
 #include "systick.h"
 #include "pendsv.h"
@@ -203,15 +203,15 @@ void flash_error(int n) {
 }
 
 void NORETURN __fatal_error(const char *msg) {
-    FIL fp;
+    file_t fp;
     if (f_open(&vfs_fat->fatfs, &fp, "ERROR.LOG",
                FA_WRITE|FA_CREATE_ALWAYS) == FR_OK) {
         UINT bytes;
         const char *hdr = "FATAL ERROR:\n";
-        f_write(&fp, hdr, strlen(hdr), &bytes);
-        f_write(&fp, msg, strlen(msg), &bytes);
+        bytes = file_write(&fp, hdr, strlen(hdr));
+        bytes = file_write(&fp, msg, strlen(msg));
     }
-    f_close(&fp);
+    file_close(&fp);
     storage_flush();
 
     for (uint i = 0;;) {
@@ -237,7 +237,7 @@ void __attribute__((weak))
 
 void make_flash_fs()
 {
-    FIL fp;
+    file_t fp;
     UINT n;
 
     led_state(LED_RED, 1);
@@ -249,18 +249,18 @@ void make_flash_fs()
 
     // Create default main.py
     f_open(&vfs_fat->fatfs, &fp, "/main.py", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */, &n);
-    f_close(&fp);
+    n = file_write(&fp, fresh_main_py, sizeof(fresh_main_py) - 1 /* don't count null terminator */);
+    file_close(&fp);
 
     // Create readme file
     f_open(&vfs_fat->fatfs, &fp, "/README.txt", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
-    f_close(&fp);
+    n = file_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */);
+    file_close(&fp);
 
     // Create default selftest.py
     f_open(&vfs_fat->fatfs, &fp, "/selftest.py", FA_WRITE | FA_CREATE_ALWAYS);
-    f_write(&fp, fresh_selftest_py, sizeof(fresh_selftest_py) - 1 /* don't count null terminator */, &n);
-    f_close(&fp);
+    n = file_write(&fp, fresh_selftest_py, sizeof(fresh_selftest_py) - 1 /* don't count null terminator */);
+    file_close(&fp);
 
     led_state(LED_RED, 0);
 }

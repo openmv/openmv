@@ -1187,11 +1187,11 @@ jpeg_overflow:
 #endif //defined OMV_HARDWARE_JPEG
 
 // This function inits the geometry values of an image.
-void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
+void jpeg_read_geometry(file_t *fp, image_t *img, const char *path)
 {
     for (;;) {
         uint16_t header;
-        read_word(fp, &header);
+        file_read_word(fp, &header);
         header = IM_SWAP16(header);
         if ((0xFFD0 <= header) && (header <= 0xFFD9)) {
             continue;
@@ -1201,26 +1201,26 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
                 || ((0xFFF0 <= header) && (header <= 0xFFFE)))
         {
             uint16_t size;
-            read_word(fp, &size);
+            file_read_word(fp, &size);
             size = IM_SWAP16(size);
             if (((0xFFC0 <= header) && (header <= 0xFFC3))
              || ((0xFFC5 <= header) && (header <= 0xFFC7))
              || ((0xFFC9 <= header) && (header <= 0xFFCB))
              || ((0xFFCD <= header) && (header <= 0xFFCF)))
             {
-                read_byte_ignore(fp);
+                file_read_byte_ignore(fp);
                 uint16_t width;
-                read_word(fp, &width);
+                file_read_word(fp, &width);
                 width = IM_SWAP16(width);
                 uint16_t height;
-                read_word(fp, &height);
+                file_read_word(fp, &height);
                 height = IM_SWAP16(height);
                 img->w = width;
                 img->h = height;
-                img->bpp = f_size(fp);
+                img->bpp = file_size(fp);
                 return;
             } else {
-                file_seek(fp, f_tell(fp) + size - 2);
+                file_seek(fp, file_tell(fp) + size - 2);
             }
         } else {
             ff_file_corrupted(fp);
@@ -1229,15 +1229,15 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
 }
 
 // This function reads the pixel values of an image.
-void jpeg_read_pixels(FIL *fp, image_t *img)
+void jpeg_read_pixels(file_t *fp, image_t *img)
 {
     file_seek(fp, 0);
-    read_data(fp, img->pixels, img->bpp);
+    file_read_data(fp, img->pixels, img->bpp);
 }
 
 void jpeg_read(image_t *img, const char *path)
 {
-    FIL fp;
+    file_t fp;
     file_read_open(&fp, path);
     // Do not use file_buffer_on() here.
     jpeg_read_geometry(&fp, img, path);
@@ -1249,10 +1249,10 @@ void jpeg_read(image_t *img, const char *path)
 
 void jpeg_write(image_t *img, const char *path, int quality)
 {
-    FIL fp;
+    file_t fp;
     file_write_open(&fp, path);
     if (IM_IS_JPEG(img)) {
-        write_data(&fp, img->pixels, img->bpp);
+        file_write_data(&fp, img->pixels, img->bpp);
     } else {
         uint32_t size;
         uint8_t *buffer = fb_alloc_all(&size);
@@ -1261,7 +1261,7 @@ void jpeg_write(image_t *img, const char *path, int quality)
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
         jpeg_compress(img, &out, quality, false);
-        write_data(&fp, out.pixels, out.bpp);
+        file_write_data(&fp, out.pixels, out.bpp);
         fb_free();
     }
     file_close(&fp);
