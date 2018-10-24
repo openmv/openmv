@@ -48,6 +48,7 @@
 #include "conf_winc.h"
 #include "py/nlr.h"
 #include "py/runtime.h"
+#include "irq.h"
 #include "pin.h"
 #include "genhdr/pins.h"
 #include "extint.h"
@@ -94,9 +95,11 @@ static sint8 nm_i2c_write_special(uint8 *wb1, uint16 sz1, uint8 *wb2, uint16 sz2
 
 static sint8 spi_rw(uint8 *tx_buf, uint8 *rx_buf, uint16 u16Sz)
 {
+    uint32_t basepri;
 	sint8 result = M2M_SUCCESS;
 
-    __disable_irq();
+    // Allow systick to run.
+    basepri = raise_irq_pri(IRQ_PRI_UART);
     WINC_CS_LOW();
     if (tx_buf != 0) {
         if (HAL_SPI_Transmit(&SPI_HANDLE, tx_buf, u16Sz, WINC_SPI_TIMEOUT) != HAL_OK) {
@@ -111,8 +114,7 @@ static sint8 spi_rw(uint8 *tx_buf, uint8 *rx_buf, uint16 u16Sz)
 
     }
 	WINC_CS_HIGH();
-    __enable_irq();
-
+    restore_irq_pri(basepri);
 	return result;
 }
 #endif
