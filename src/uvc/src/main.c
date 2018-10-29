@@ -98,10 +98,6 @@ bool streaming_cb(image_t *image)
         }
     }
 
-    // TODO: This is a hack for old snapshot functions that don't support
-    // the streaming mode yet, we call the streaming function explicitly.
-    image->pixels = NULL;
-
     if (g_uvc_stream_status != 2 ||
             frame_index != videoCommitControl.bFrameIndex ||
             format_index != videoCommitControl.bFormatIndex) {
@@ -190,11 +186,6 @@ int main()
             image_t image;
             image.pixels = NULL;
             sensor.snapshot(&sensor, &image, streaming_cb);
-            if (image.pixels) {
-                // TODO: This is a hack for old snapshot functions that don't support
-                // the streaming mode yet, we call the streaming function explicitly.
-                streaming_cb(&image);
-            }
         }
     }
 }
