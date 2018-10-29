@@ -172,6 +172,9 @@ static int write_reg(sensor_t *sensor, uint8_t reg_addr, uint16_t reg_data)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
+    if (pixformat != PIXFORMAT_GRAYSCALE) {
+        return -1;
+    }
     return 0;
 }
 
@@ -387,123 +390,6 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
-static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t cb)
-{
-    if ((!sensor->pixformat) || (!sensor->framesize) || (MT9V034_mode == MT9V034_NOT_SET)) {
-        return -1;
-    }
-
-    pixformat_t pixformat_bak = sensor->pixformat;
-    sensor->pixformat = PIXFORMAT_GRAYSCALE;
-
-    image_t new_image;
-    DCMI_FSIN_HIGH();
-    int ret = sensor_snapshot(sensor, &new_image, NULL);
-    DCMI_FSIN_LOW();
-
-    sensor->pixformat = pixformat_bak;
-
-    if (ret != 0) {
-        return -1;
-    }
-
-    if (MT9V034_mode == MT9V034_GS) {
-        switch (sensor->pixformat) {
-            case PIXFORMAT_BAYER: {
-                new_image.bpp = IMAGE_BPP_BAYER;
-                break;
-            }
-            case PIXFORMAT_GRAYSCALE: {
-                new_image.bpp = IMAGE_BPP_GRAYSCALE;
-                break;
-            }
-            case PIXFORMAT_RGB565: {
-                new_image.bpp = IMAGE_BPP_RGB565;
-                uint16_t *rgbbuf = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
-
-                for (int y = new_image.h - 1; y >= 0; y--) {
-                    imlib_bayer_to_rgb565(&new_image, new_image.w, 1, 0, y, rgbbuf);
-                    memcpy(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&new_image, y),
-                           rgbbuf, IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
-                }
-
-                fb_free();
-                break;
-            }
-            default : {
-                return -1;
-            }
-        }
-    } else {
-        switch (sensor->pixformat) {
-            case PIXFORMAT_BAYER: {
-                new_image.bpp = IMAGE_BPP_BAYER;
-                break;
-            }
-            case PIXFORMAT_GRAYSCALE: {
-                new_image.bpp = IMAGE_BPP_GRAYSCALE;
-                if (MT9V034_mode == MT9V034_GS_CFA) {
-                    int ksize = 1, brows = ksize + 1;
-                    image_t buf;
-                    buf.w = new_image.w;
-                    buf.h = brows;
-                    buf.bpp = new_image.bpp;
-                    buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(&new_image) * brows);
-                    uint16_t *rgbbuf = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
-
-                    for (int y = 0, yy = new_image.h; y < yy; y++) {
-                        uint8_t *buf_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows));
-                        imlib_bayer_to_rgb565(&new_image, new_image.w, 1, 0, y, rgbbuf);
-
-                        for (int x = 0, xx = new_image.w; x < xx; x++) {
-                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x, COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(rgbbuf, x)));
-                        }
-
-                        if (y >= ksize) { // Transfer buffer lines...
-                            memcpy(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&new_image, (y - ksize)),
-                                   IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, ((y - ksize) % brows)),
-                                   IMAGE_GRAYSCALE_LINE_LEN_BYTES(&new_image));
-                        }
-                    }
-
-                    // Copy any remaining lines from the buffer image...
-                    for (int y = new_image.h - ksize, yy = new_image.h; y < yy; y++) {
-                        memcpy(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&new_image, y),
-                               IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows)),
-                               IMAGE_GRAYSCALE_LINE_LEN_BYTES(&new_image));
-                    }
-
-                    fb_free();
-                    fb_free();
-                }
-                break;
-            }
-            case PIXFORMAT_RGB565: {
-                new_image.bpp = IMAGE_BPP_RGB565;
-                uint16_t *rgbbuf = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
-
-                for (int y = new_image.h - 1; y >= 0; y--) {
-                    imlib_bayer_to_rgb565(&new_image, new_image.w, 1, 0, y, rgbbuf);
-                    memcpy(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&new_image, y),
-                           rgbbuf, IMAGE_RGB565_LINE_LEN_BYTES(&new_image));
-                }
-
-                fb_free();
-                break;
-            }
-            default : {
-                return -1;
-            }
-        }
-    }
-
-    if (image) {
-        memcpy(image, &new_image, sizeof(image_t));
-    }
-
-    return 0;
-}
-
 int mt9v034_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
@@ -530,7 +416,6 @@ int mt9v034_init(sensor_t *sensor)
     sensor->set_vflip           = set_vflip;
     sensor->set_special_effect  = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
-    sensor->snapshot            = snapshot;
 
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);

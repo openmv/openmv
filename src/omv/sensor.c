@@ -887,6 +887,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         // Enable DMA IRQ
         HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
 
+        #if defined(DCMI_FSIN_PIN)
+        if (sensor->chip_id == MT9V034_ID) {
+            DCMI_FSIN_HIGH();
+        }
+        #endif
+
         if (sensor->pixformat == PIXFORMAT_JPEG) {
             // Start a regular transfer
             HAL_DCMI_Start_DMA(&DCMIHandle,
@@ -915,6 +921,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 return -1;
             }
         }
+
+        #if defined(DCMI_FSIN_PIN)
+        if (sensor->chip_id == MT9V034_ID) {
+            DCMI_FSIN_LOW();
+        }
+        #endif
 
         // Abort DMA transfer.
         // Note: In JPEG mode the DMA will still be waiting for data since
