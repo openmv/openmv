@@ -346,7 +346,7 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
     }
 }
 
-static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t cb)
+static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
 {
     fb_update_jpeg_buffer();
 
@@ -354,92 +354,104 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t cb)
         return -1;
     }
 
-    // The SPI DMA device is always clocking the FLIR Lepton in the background.
-    // The code below resets the vospi control values to let data be pulled in.
-    // If we need to re-sync we do it. Otherwise, after we finish pulling data
-    // in we exit and let the SPI bus keep running. Then on the next call to
-    // snapshot we read in more data and pull in the next frame.
-    HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
-    vospi_pid = VOSPI_FIRST_PACKET;
-    vospi_seg = VOSPI_FIRST_SEGMENT;
-    HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
+    bool frame_ready = false;
+    bool streaming = (streaming_cb != NULL); // Streaming mode.
 
     do {
-        if (vospi_resync == true) {
-            lepton_sync();
+        // The SPI DMA device is always clocking the FLIR Lepton in the background.
+        // The code below resets the vospi control values to let data be pulled in.
+        // If we need to re-sync we do it. Otherwise, after we finish pulling data
+        // in we exit and let the SPI bus keep running. Then on the next call to
+        // snapshot we read in more data and pull in the next frame.
+        HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
+        vospi_pid = VOSPI_FIRST_PACKET;
+        vospi_seg = VOSPI_FIRST_SEGMENT;
+        HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
+
+        do {
+            if (vospi_resync == true) {
+                lepton_sync();
+            }
+            if (frame_ready == true && streaming_cb != NULL) {
+                // Start streaming the frame while a new one is captured.
+                streaming = streaming_cb(image);
+                frame_ready = false;
+            } else {
+                __WFI();
+            }
+        } while (vospi_pid < vospi_packets); // only checking one volatile var so atomic.
+
+        MAIN_FB()->w = MAIN_FB()->u;
+        MAIN_FB()->h = MAIN_FB()->v;
+
+        switch (sensor->pixformat) {
+            case PIXFORMAT_RGB565: {
+                MAIN_FB()->bpp = sizeof(uint16_t);
+                break;
+            }
+            case PIXFORMAT_GRAYSCALE: {
+                MAIN_FB()->bpp = sizeof(uint8_t);
+                break;
+            }
+            default: {
+                break;
+            }
         }
-        __WFI();
-    } while (vospi_pid < vospi_packets); // only checking one volatile var so atomic.
 
-    MAIN_FB()->w = MAIN_FB()->u;
-    MAIN_FB()->h = MAIN_FB()->v;
+        image->w = MAIN_FB()->u;
+        image->h = MAIN_FB()->v;
+        image->bpp = MAIN_FB()->bpp; // invalid
+        image->data = MAIN_FB()->pixels; // valid
 
-    switch (sensor->pixformat) {
-        case PIXFORMAT_RGB565: {
-            MAIN_FB()->bpp = sizeof(uint16_t);
-            break;
-        }
-        case PIXFORMAT_GRAYSCALE: {
-            MAIN_FB()->bpp = sizeof(uint8_t);
-            break;
-        }
-        default: {
-            break;
-        }
-    }
+        uint16_t *src = (uint16_t*) vospi_buffer;
 
-    image->w = MAIN_FB()->u;
-    image->h = MAIN_FB()->v;
-    image->bpp = MAIN_FB()->bpp; // invalid
-    image->data = MAIN_FB()->pixels; // valid
+        float x_scale = resolution[sensor->framesize][0] / ((float) h_res);
+        float y_scale = resolution[sensor->framesize][1] / ((float) v_res);
+        // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
+        float scale = IM_MAX(x_scale, y_scale), scale_inv = 1.0f / scale;
+        int x_offset = (resolution[sensor->framesize][0] - (h_res * scale)) / 2;
+        int y_offset = (resolution[sensor->framesize][1] - (v_res * scale)) / 2;
+        // The code below upscales the source image to the requested frame size
+        // and then crops it to the window set by the user.
 
-    uint16_t *src = (uint16_t*) vospi_buffer;
+        for (int y = y_offset, yy = fast_ceilf(v_res * scale) + y_offset; y < yy; y++) {
+            if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) { // user window cropping
 
-    float x_scale = resolution[sensor->framesize][0] / ((float) h_res);
-    float y_scale = resolution[sensor->framesize][1] / ((float) v_res);
-    // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
-    float scale = IM_MAX(x_scale, y_scale), scale_inv = 1.0f / scale;
-    int x_offset = (resolution[sensor->framesize][0] - (h_res * scale)) / 2;
-    int y_offset = (resolution[sensor->framesize][1] - (v_res * scale)) / 2;
-    // The code below upscales the source image to the requested frame size
-    // and then crops it to the window set by the user.
+                uint16_t *row_ptr = src + (fast_floorf(y * scale_inv) * h_res);
 
-    for (int y = y_offset, yy = fast_ceilf(v_res * scale) + y_offset; y < yy; y++) {
-        if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) { // user window cropping
+                for (int x = x_offset, xx = fast_ceilf(h_res * scale) + x_offset; x < xx; x++) {
+                    if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) { // user window cropping
 
-            uint16_t *row_ptr = src + (fast_floorf(y * scale_inv) * h_res);
+                        // Value is the 14-bit value from the FLIR IR camera.
+                        // However, with AGC enabled only the bottom 8-bits are non-zero.
+                        int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]) & 0x3FFF;
 
-            for (int x = x_offset, xx = fast_ceilf(h_res * scale) + x_offset; x < xx; x++) {
-                if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) { // user window cropping
+                        int t_x = x - MAIN_FB()->x;
+                        int t_y = y - MAIN_FB()->y;
 
-                    // Value is the 14-bit value from the FLIR IR camera.
-                    // However, with AGC enabled only the bottom 8-bits are non-zero.
-                    int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]) & 0x3FFF;
+                        if (h_mirror) t_x = MAIN_FB()->u - t_x - 1;
+                        if (v_flip) t_y = MAIN_FB()->v - t_y - 1;
 
-                    int t_x = x - MAIN_FB()->x;
-                    int t_y = y - MAIN_FB()->y;
-
-                    if (h_mirror) t_x = MAIN_FB()->u - t_x - 1;
-                    if (v_flip) t_y = MAIN_FB()->v - t_y - 1;
-
-                    switch (sensor->pixformat) {
-                        case PIXFORMAT_RGB565: {
-                            IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, rainbow_table[value & 0xFF]);
-                            break;
-                        }
-                        case PIXFORMAT_GRAYSCALE: {
-                            IMAGE_PUT_GRAYSCALE_PIXEL(image, t_x, t_y, value & 0xFF);
-                            break;
-                        }
-                        default: {
-                            break;
+                        switch (sensor->pixformat) {
+                            case PIXFORMAT_RGB565: {
+                                IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, rainbow_table[value & 0xFF]);
+                                break;
+                            }
+                            case PIXFORMAT_GRAYSCALE: {
+                                IMAGE_PUT_GRAYSCALE_PIXEL(image, t_x, t_y, value & 0xFF);
+                                break;
+                            }
+                            default: {
+                                break;
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
+        frame_ready = true;
+    } while (streaming && streaming_cb != NULL);
     return 0;
 }
 
