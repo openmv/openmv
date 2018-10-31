@@ -541,14 +541,12 @@ soft_reset:
 
     // Parse OpenMV configuration file.
     openmv_config_t openmv_config;
-    if (first_soft_reset) {
-        memset(&openmv_config, 0, sizeof(openmv_config));
-        // Parse config, and init wifi if enabled.
-        ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
-        if (openmv_config.wifidbg == true &&
-                wifidbg_init(&openmv_config.wifidbg_config) != 0) {
-                openmv_config.wifidbg = false;
-        }
+    memset(&openmv_config, 0, sizeof(openmv_config));
+    // Parse config, and init wifi if enabled.
+    ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
+    if (openmv_config.wifidbg == true &&
+            wifidbg_init(&openmv_config.wifidbg_config) != 0) {
+        openmv_config.wifidbg = false;
     }
 
     // Run boot script(s)
