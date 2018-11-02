@@ -64,6 +64,8 @@
 #include "usbd_ctlreq.h"
 #include "usbd_types.h"
 #include "uvc_desc.h"
+#include "sensor.h"
+extern sensor_t sensor;
 
 static USBD_UVC_HandleTypeDef USBD_UVC_Handle;
 volatile uint8_t g_uvc_stream_status = 0;
@@ -424,7 +426,7 @@ __ALIGN_BEGIN struct usbd_uvc_cfg USBD_UVC_CfgFSDesc __ALIGN_END = {
       .bDescriptorSubType = UVC_VS_INPUT_HEADER, // 1 (INPUT_HEADER)
       .bNumFormats = VS_NUM_FORMATS,             // number of format descriptors
       .wTotalLength =
-        SIZEOF_M(struct usbd_uvc_cfg, uvc_vs_input_header_desc) + 
+        SIZEOF_M(struct usbd_uvc_cfg, uvc_vs_input_header_desc) +
         SIZEOF_M(struct usbd_uvc_cfg, uvc_vs_frames_formats_desc),
       .bEndpointAddress = UVC_IN_EP,             // 0x83 EP 3 IN
       .bmInfo = 0x00,                            // 0 no dynamic format change supported
@@ -439,35 +441,7 @@ __ALIGN_BEGIN struct usbd_uvc_cfg USBD_UVC_CfgFSDesc __ALIGN_END = {
         { 0x00 },                                // bmaControls(2)           0 no VS specific controls
       },
     },
-    
-    .uvc_vs_frames_formats_desc = {
-    .uvc_vs_frames_format_1 =
-      {
-        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(YUYV, 3),
-        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, YUYV, 80, 60),
-                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, YUYV, 160, 120),
-                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, YUYV, 320, 240)},
-        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
-      },
-    .uvc_vs_frames_format_2 =
-      {
-        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(GREY, 4),
-        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, GREY, 80, 60),
-                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, GREY, 160, 120),
-                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, GREY, 320, 240),
-                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_4, GREY, 640, 480)},
-        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
-      },
-    .uvc_vs_frames_format_3 =
-      {
-        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(RGB565, 3),
-        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, RGB565, 80, 60),
-                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, RGB565, 160, 120),
-                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, RGB565, 320, 240)},
-        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
-      },
-    },
-    
+
     /* Standard VS Interface Descriptor  = interface 1 */
     // alternate setting 1 = operational setting
     .uvc_vs_if_alt1_desc = {
@@ -492,6 +466,62 @@ __ALIGN_BEGIN struct usbd_uvc_cfg USBD_UVC_CfgFSDesc __ALIGN_END = {
       .bInterval = 0x01,                            // 1 one frame interval
     },
 
+};
+
+static struct uvc_vs_frames_formats_descriptor uvc_vs_frames_formats_desc = {
+    .uvc_vs_frames_format_1 =
+      {
+        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(GREY, 4),
+        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, GREY, 80, 60),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, GREY, 160, 120),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, GREY, 320, 240),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_4, GREY, 640, 480)},
+        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
+      },
+    .uvc_vs_frames_format_2 =
+      {
+        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(YUYV, 3),
+        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, YUYV, 80, 60),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, YUYV, 160, 120),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, YUYV, 320, 240)},
+        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
+      },
+    .uvc_vs_frames_format_3 =
+      {
+        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(RGB565, 3),
+        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, RGB565, 80, 60),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, RGB565, 160, 120),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, RGB565, 320, 240)},
+        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
+      },
+};
+
+static struct uvc_vs_frames_formats_descriptor uvc_vs_frames_formats_desc_gs = {
+    .uvc_vs_frames_format_1 =
+      {
+        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(  GREY, 4),
+        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, GREY, 80, 60),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, GREY, 160, 120),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, GREY, 320, 240),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_4, GREY, 640, 480)},
+        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
+      },
+    .uvc_vs_frames_format_2 =
+      {
+        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(  GREY, 3),
+        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, GREY, 80, 60),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, GREY, 160, 120),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, GREY, 320, 240)},
+        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
+      },
+    .uvc_vs_frames_format_3 =
+      {
+        .uvc_vs_format = UVC_FORMAT_UNCOMPRESSED_DESCRIPTOR(  GREY, 3),
+        .uvc_vs_frame  = { UVC_FRAME_FORMAT(VS_FRAME_INDEX_1, GREY, 80, 60),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_2, GREY, 160, 120),
+                           UVC_FRAME_FORMAT(VS_FRAME_INDEX_3, GREY, 320, 240)},
+        .uvc_vs_color  = UVC_COLOR_MATCHING_DESCRIPTOR(),
+      },
 };
 
 /**
@@ -736,6 +766,11 @@ static uint8_t  USBD_UVC_EP0_RxReady (USBD_HandleTypeDef *pdev)
   */
 static uint8_t  *USBD_UVC_GetFSCfgDesc (uint16_t *length)
 {
+  if (sensor_get_id(&sensor) != MT9V034_ID) {
+      USBD_UVC_CfgFSDesc.uvc_vs_frames_formats_desc = uvc_vs_frames_formats_desc;
+  } else {
+      USBD_UVC_CfgFSDesc.uvc_vs_frames_formats_desc = uvc_vs_frames_formats_desc_gs;
+  }
   *length = sizeof(USBD_UVC_CfgFSDesc);
   return (uint8_t*)&USBD_UVC_CfgFSDesc;
 }

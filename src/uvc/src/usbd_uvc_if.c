@@ -56,7 +56,7 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 __ALIGN_BEGIN struct uvc_streaming_control videoCommitControl __ALIGN_END =
 {
   .bmHint = 0x00,
-  .bFormatIndex = VS_FMT_INDEX(YUYV),
+  .bFormatIndex = VS_FMT_INDEX(GREY),
   .bFrameIndex = 0x01,
   .dwFrameInterval = 0, 
   .wKeyFrameRate = 0,
@@ -76,7 +76,7 @@ __ALIGN_BEGIN struct uvc_streaming_control videoCommitControl __ALIGN_END =
 __ALIGN_BEGIN struct uvc_streaming_control videoProbeControl __ALIGN_END =
 {
   .bmHint = 0x00,
-  .bFormatIndex = VS_FMT_INDEX(YUYV),
+  .bFormatIndex = VS_FMT_INDEX(GREY),
   .bFrameIndex = 0x01,
   .dwFrameInterval = 0, 
   .wKeyFrameRate = 0,

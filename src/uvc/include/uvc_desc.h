@@ -24,8 +24,8 @@ DECLARE_UVC_FRAMES_FORMAT_UNCOMPRESSED(3);
 DECLARE_UVC_FRAMES_FORMAT_UNCOMPRESSED(4);
 
 struct uvc_vs_frames_formats_descriptor {
-  struct UVC_FRAMES_FORMAT_UNCOMPRESSED(3) uvc_vs_frames_format_1;
-  struct UVC_FRAMES_FORMAT_UNCOMPRESSED(4) uvc_vs_frames_format_2;
+  struct UVC_FRAMES_FORMAT_UNCOMPRESSED(4) uvc_vs_frames_format_1;
+  struct UVC_FRAMES_FORMAT_UNCOMPRESSED(3) uvc_vs_frames_format_2;
   struct UVC_FRAMES_FORMAT_UNCOMPRESSED(3) uvc_vs_frames_format_3;
 };
 

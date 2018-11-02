@@ -77,8 +77,8 @@ enum CUST_COMTROL_IDS {
 };
 
 enum _vs_fmt_indexes {
-  VS_FMT_INDEX_YUYV = 1,
-  VS_FMT_INDEX_GREY,
+  VS_FMT_INDEX_GREY = 1,
+  VS_FMT_INDEX_YUYV,
   VS_FMT_INDEX_RGB565,
 };
 
