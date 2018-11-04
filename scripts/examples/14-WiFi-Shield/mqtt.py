@@ -8,8 +8,8 @@
 import time, network
 from mqtt import MQTTClient
 
-SSID='mux' # Network SSID
-KEY='j806fVnT7tObdCYE'  # Network key
+SSID='' # Network SSID
+KEY=''  # Network key
 
 # Init wlan module and connect to network
 print("Trying to connect... (may take a while)...")
