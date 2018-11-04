@@ -1,4 +1,16 @@
 # Change Log
+## [3.2](https://github.com/openmv/openmv/releases/tag/v3.2) (2018-11-04)
+* Fix column buffer bug in CMSIS-NN library.
+* Fix H7 SPI clock source.
+* Fix bug in LBP.
+* Fix WINC1500 initialization timeout bug.
+* Fix REPL on UART bug.
+* Use DMA in FLIR/Lepton driver.
+* Update NN documentation.
+* Update to CMSIS NN 5.4.0
+* Faster UVC streaming.
+* Enable exFAT for OpenMV F7 and H7.
+
 ## [3.1](https://github.com/openmv/openmv/releases/tag/v3.1) (2018-10-02)
 * Fix/Re-enable CAN.
 * Fix WINC recv buffer bug.
