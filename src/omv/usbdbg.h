@@ -18,7 +18,7 @@
   * the IDE will Not connect if the major version number is different.
   */
 #define FIRMWARE_VERSION_MAJOR      (3)
-#define FIRMWARE_VERSION_MINOR      (2)
+#define FIRMWARE_VERSION_MINOR      (3)
 #define FIRMWARE_VERSION_PATCH      (0)
 
 /**
