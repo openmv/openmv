@@ -168,7 +168,7 @@ def arch_str():
 
 if __name__ == '__main__':
     if len(sys.argv)!= 2:
-        print ('usage: openmv.py <script>')
+        print ('usage: pyopenmv.py <script>')
         sys.exit(1)
     with open(sys.argv[1], 'r') as fin:
         buf = fin.read()
