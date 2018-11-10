@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # This file is part of the OpenMV project.
 # Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
 # This work is licensed under the MIT license, see the file LICENSE for details.
@@ -105,7 +105,7 @@ def fb_dump():
 
 def exec_script(buf):
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_EXEC, len(buf)))
-    __serial.write(buf)
+    __serial.write(buf.encode())
 
 def stop_script():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_SCRIPT_STOP, 0))
@@ -167,16 +167,19 @@ def arch_str():
     return __serial.read(64).split('\0', 1)[0]
 
 if __name__ == '__main__':
-    if len(sys.argv)!= 2:
-        print ('usage: pyopenmv.py <script>')
+    if len(sys.argv)!= 3:
+        print ('usage: pyopenmv.py <port> <script>')
         sys.exit(1)
-    with open(sys.argv[1], 'r') as fin:
+
+    with open(sys.argv[2], 'r') as fin:
         buf = fin.read()
 
-    s = serial.Serial("/dev/openmvcam", 921600, timeout=0.3)
-    init(s)
+    disconnect()
+    init(sys.argv[1])
+    stop_script()
     exec_script(buf)
     tx_len = tx_buf_len()
+    time.sleep(0.250)
     if (tx_len):
-        print(tx_buf(tx_len))
-    s.close()
+        print(tx_buf(tx_len).decode())
+    disconnect()

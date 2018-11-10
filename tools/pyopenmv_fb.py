@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 import sys
 import numpy as np
 import pygame
@@ -26,12 +26,11 @@ while(True):
 # init pygame
 pygame.init()
 
-# init openmv
-if 'darwin' in sys.platform:
-    portname = "/dev/cu.usbmodem14221"
-else:
-    portname = "/dev/openmvcam"
+if len(sys.argv)!= 2:
+    print ('usage: pyopenmv_fb.py <serial port>')
+    sys.exit(1)
 
+portname = sys.argv[1]
 connected = False
 pyopenmv.disconnect()
 for i in range(10):
@@ -68,35 +67,28 @@ while running:
 
     # read framebuffer
     fb = pyopenmv.fb_dump()
+    if fb != None:
+        # create image from RGB888
+        image = pygame.image.frombuffer(fb[2].flat[0:], (fb[0], fb[1]), 'RGB')
+        # TODO check if res changed
+        screen = pygame.display.set_mode((fb[0], fb[1]), pygame.DOUBLEBUF, 32)
 
-    if fb == None:
-        continue
+        fps = Clock.get_fps()
+        # blit stuff
+        screen.blit(image, (0, 0))
+        screen.blit(font.render("FPS %.2f"%(fps), 1, (255, 0, 0)), (0, 0))
 
-    # create image from RGB888
-    image = pygame.image.frombuffer(fb[2].flat[0:], (fb[0], fb[1]), 'RGB')
-    # TODO check if res changed
-    screen = pygame.display.set_mode((fb[0], fb[1]), pygame.DOUBLEBUF, 32)
+        # update display
+        pygame.display.flip()
 
-    fps = Clock.get_fps()
-    if fps < 50.0:
-        sys.stderr.write("WARNING: fps drop\n")
-
-    # blit stuff
-    screen.blit(image, (0, 0))
-    screen.blit(font.render("FPS %.2f"%(fps), 1, (255, 0, 0)), (0, 0))
-
-    # update display
-    pygame.display.flip()
-
-    event = pygame.event.poll()
-    if event.type == pygame.QUIT:
-         running = False
-    elif event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_ESCAPE:
-            running = False
-        if event.key == pygame.K_c:
-            pygame.image.save(image, "capture.png")
-
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+             running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                running = False
+            if event.key == pygame.K_c:
+                pygame.image.save(image, "capture.png")
 
 pygame.quit()
 pyopenmv.stop_script()
