@@ -12,7 +12,7 @@
 #define PY_ASSERT_TRUE(cond)                            \
     do {                                                \
         if ((cond) == 0) {                              \
-            nlr_jump(mp_obj_new_exception_msg(          \
+            nlr_raise(mp_obj_new_exception_msg(         \
                         &mp_type_OSError,               \
                         "Operation not supported"));    \
         }                                               \
@@ -21,7 +21,7 @@
 #define PY_ASSERT_TRUE_MSG(cond, msg)                   \
     do {                                                \
         if ((cond) == 0) {                              \
-            nlr_jump(mp_obj_new_exception_msg(          \
+            nlr_raise(mp_obj_new_exception_msg(         \
                         &mp_type_OSError, msg));        \
         }                                               \
     } while(0)
@@ -29,7 +29,7 @@
 #define PY_ASSERT_FALSE_MSG(cond, msg)                  \
     do {                                                \
         if ((cond) == 1) {                              \
-            nlr_jump(mp_obj_new_exception_msg(          \
+            nlr_raise(mp_obj_new_exception_msg(         \
                         &mp_type_OSError, msg));        \
         }                                               \
     } while(0)
@@ -39,7 +39,7 @@
         __typeof__ (obj) _a = (obj);                    \
         __typeof__ (type) _b = (type);                  \
         if (!MP_OBJ_IS_TYPE(_a, _b)) {                  \
-            nlr_jump(mp_obj_new_exception_msg_varg(     \
+            nlr_raise(mp_obj_new_exception_msg_varg(    \
                         &mp_type_TypeError,             \
                         "Can't convert %s to %s",       \
                         mp_obj_get_type_str(_a),        \
@@ -51,7 +51,7 @@
     do {                                                \
         __typeof__ (obj) _a = (obj);                    \
         if (!MP_OBJ_IS_STR(_a)) {                       \
-            nlr_jump(mp_obj_new_exception_msg_varg(     \
+            nlr_raise(mp_obj_new_exception_msg_varg(    \
                         &mp_type_TypeError,             \
                         "Can't convert %s to %s",       \
                         mp_obj_get_type_str(_a),        \
