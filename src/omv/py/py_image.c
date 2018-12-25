@@ -1403,7 +1403,7 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
     image_t *arg_other =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 1, kw_args);
+        py_helper_arg_to_image_mutable(args[1]);
 
     const mp_obj_t *arg_vec;
     uint offset = py_helper_consume_array(n_args, args, 2, 2, &arg_vec);
