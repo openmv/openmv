@@ -170,6 +170,104 @@ void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness
     }
 }
 
+// https://scratch.mit.edu/projects/50039326/
+static void scratch_draw_pixel(image_t *img, int x0, int y0, int dx, int dy, float shear_dx, float shear_dy, int r0, int r1, int c)
+{
+    point_fill(img, x0 + dx, y0 + dy + fast_floorf((dx * shear_dy) / shear_dx), r0, r1, c);
+}
+
+// https://scratch.mit.edu/projects/50039326/
+static void scratch_draw_line(image_t *img, int x0, int y0, int dx, int dy0, int dy1, float shear_dx, float shear_dy, int c)
+{
+    imlib_draw_line(img, x0 + dx, y0 + dy0 + fast_floorf((dx * shear_dy) / shear_dx),
+                         x0 + dx, y0 + dy1 + fast_floorf((dx * shear_dy) / shear_dx), c, 1);
+}
+
+// https://scratch.mit.edu/projects/50039326/
+static void scratch_draw_sheared_ellipse(image_t *img, int x0, int y0, int width, int height, bool filled, float shear_dx, float shear_dy, int c, int thickness)
+{
+    int thickness0 = (thickness - 0) / 2;
+    int thickness1 = (thickness - 1) / 2;
+    if (((thickness > 0) || filled) && (shear_dx != 0)) {
+        int a_squared = width * width;
+        int four_a_squared = a_squared * 4;
+        int b_squared = height * height;
+        int four_b_squared = b_squared * 4;
+
+        int x = 0;
+        int y = height;
+        int sigma = (2 * b_squared) + (a_squared * (1 - (2 * height)));
+
+        while ((b_squared * x) <= (a_squared * y)) {
+            if (filled) {
+                scratch_draw_line(img, x0, y0, x, -y, y, shear_dx, shear_dy, c);
+                scratch_draw_line(img, x0, y0, -x, -y, y, shear_dx, shear_dy, c);
+            } else {
+                scratch_draw_pixel(img, x0, y0, x, y, shear_dx, shear_dy, -thickness0, thickness1, c);
+                scratch_draw_pixel(img, x0, y0, -x, y, shear_dx, shear_dy, -thickness0, thickness1, c);
+                scratch_draw_pixel(img, x0, y0, x, -y, shear_dx, shear_dy, -thickness0, thickness1, c);
+                scratch_draw_pixel(img, x0, y0, -x, -y, shear_dx, shear_dy, -thickness0, thickness1, c);
+            }
+
+            if (sigma >= 0) {
+                sigma += four_a_squared * (1 - y);
+                y -= 1;
+            }
+
+            sigma += b_squared * ((4 * x) + 6);
+            x += 1;
+        }
+
+        x = width;
+        y = 0;
+        sigma = (2 * a_squared) + (b_squared * (1 - (2 * width)));
+
+        while ((a_squared * y) <= (b_squared * x)) {
+            if (filled) {
+                scratch_draw_line(img, x0, y0, x, -y, y, shear_dx, shear_dy, c);
+                scratch_draw_line(img, x0, y0, -x, -y, y, shear_dx, shear_dy, c);
+            } else {
+                scratch_draw_pixel(img, x0, y0, x, y, shear_dx, shear_dy, -thickness0, thickness1, c);
+                scratch_draw_pixel(img, x0, y0, -x, y, shear_dx, shear_dy, -thickness0, thickness1, c);
+                scratch_draw_pixel(img, x0, y0, x, -y, shear_dx, shear_dy, -thickness0, thickness1, c);
+                scratch_draw_pixel(img, x0, y0, -x, -y, shear_dx, shear_dy, -thickness0, thickness1, c);
+            }
+
+            if (sigma >= 0) {
+                sigma += four_b_squared * (1 - x);
+                x -= 1;
+            }
+
+            sigma += a_squared * ((4 * y) + 6);
+            y += 1;
+        }
+    }
+}
+
+// https://scratch.mit.edu/projects/50039326/
+static void scratch_draw_rotated_ellipse(image_t *img, int x, int y, int x_axis, int y_axis, int rotation, bool filled, int c, int thickness)
+{
+    if ((x_axis > 0) && (y_axis > 0)) {
+        if ((x_axis == y_axis) || ((rotation % 180) == 0)) {
+            scratch_draw_sheared_ellipse(img, x, y, x_axis / 2, y_axis / 2, filled, 1, 0, c, thickness);
+        } else if ((rotation % 180) == 90) {
+            scratch_draw_sheared_ellipse(img, x, y, y_axis / 2, x_axis / 2, filled, 1, 0, c, thickness);
+        } else {
+            float theta = fast_atanf(IM_DIV(y_axis, x_axis) * (-tanf(IM_DEG2RAD(rotation))));
+            float shear_dx = (x_axis * cosf(theta) * cosf(IM_DEG2RAD(rotation))) - (y_axis * sinf(theta) * sinf(IM_DEG2RAD(rotation)));
+            float shear_dy = (x_axis * cosf(theta) * sinf(IM_DEG2RAD(rotation))) + (y_axis * sinf(theta) * cosf(IM_DEG2RAD(rotation)));
+            float shear_x_axis = fast_fabsf(shear_dx);
+            float shear_y_axis = IM_DIV((y_axis * x_axis), shear_x_axis);
+            scratch_draw_sheared_ellipse(img, x, y, fast_floorf(shear_x_axis / 2), fast_floorf(shear_y_axis / 2), filled, shear_dx, shear_dy, c, thickness);
+        }
+    }
+}
+
+void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotation, int c, int thickness, bool fill)
+{
+    scratch_draw_rotated_ellipse(img, cx, cy, rx * 2, ry * 2, rotation, fill, c, thickness);
+}
+
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, int scale, int x_spacing, int y_spacing, bool mono_space)
 {
     const int anchor = x_off;

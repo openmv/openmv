@@ -398,6 +398,13 @@ Q(draw_circle)
 // duplicate Q(thickness)
 // duplicate Q(fill)
 
+// Draw Ellipse
+Q(draw_ellipse)
+Q(rotation)
+// duplicate Q(color)
+// duplicate Q(thickness)
+// duplicate Q(fill)
+
 // Draw String
 Q(draw_string)
 // duplicate Q(color)
@@ -800,7 +807,7 @@ Q(h)
 Q(pixels)
 Q(cx)
 Q(cy)
-Q(rotation)
+// duplicate Q(rotation)
 Q(code)
 Q(count)
 Q(area)
