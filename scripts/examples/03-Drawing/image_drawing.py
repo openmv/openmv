@@ -14,12 +14,12 @@ while(True):
     clock.tick()
 
     img = sensor.snapshot()
-    w = img.width()
-    h = img.height()
-    # Draws an image in the frame buffer. In this case we're
-    # drawing the image we're currently drawing which causes
-    # graphical glitches but is cool. Pass an optional mask
-    # image to control what pixels are drawn.
-    img.draw_image(img, w//4, h//4, x_scale=0.5, y_scale=0.5)
+    small_img = img.mean_pooled(4, 4) # Makes a copy.
+
+    x = (img.width()//2)-(small_img.width()//2)
+    y = (img.height()//2)-(small_img.height()//2)
+    # Draws an image in the frame buffer.Pass an optional
+    # mask image to control what pixels are drawn.
+    img.draw_image(small_img, x, y, x_scale=1, y_scale=1)
 
     print(clock.fps())
