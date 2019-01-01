@@ -1547,9 +1547,7 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     out.bpp = arg_to_bitmap ? IMAGE_BPP_BINARY : arg_img->bpp;
     out.data = arg_copy ? xalloc(image_size(&out)) : arg_img->data;
 
-    fb_alloc_mark();
     imlib_binary(&out, arg_img, &arg_thresholds, arg_invert, arg_zero, arg_msk);
-    fb_alloc_free_till_mark();
     list_free(&arg_thresholds);
 
     if ((!arg_copy) && (MAIN_FB()->pixels == out.data)) {
@@ -1562,9 +1560,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_binary_obj, 2, py_image_binary);
 
 STATIC mp_obj_t py_image_invert(mp_obj_t img_obj)
 {
-    fb_alloc_mark();
     imlib_invert(py_helper_arg_to_image_mutable(img_obj));
-    fb_alloc_free_till_mark();
     return img_obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_invert_obj, py_image_invert);
@@ -1837,16 +1833,13 @@ STATIC mp_obj_t py_image_gamma_corr(uint n_args, const mp_obj_t *args, mp_map_t 
     fb_alloc_mark();
     imlib_gamma_corr(arg_img, arg_gamma, arg_contrast, arg_brightness);
     fb_alloc_free_till_mark();
-
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_gamma_corr_obj, 1, py_image_gamma_corr);
 
 STATIC mp_obj_t py_image_negate(mp_obj_t img_obj)
 {
-    fb_alloc_mark();
     imlib_negate(py_helper_arg_to_image_mutable(img_obj));
-    fb_alloc_free_till_mark();
     return img_obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_negate_obj, py_image_negate);
