@@ -179,8 +179,8 @@ static void scratch_draw_pixel(image_t *img, int x0, int y0, int dx, int dy, flo
 // https://scratch.mit.edu/projects/50039326/
 static void scratch_draw_line(image_t *img, int x0, int y0, int dx, int dy0, int dy1, float shear_dx, float shear_dy, int c)
 {
-    imlib_draw_line(img, x0 + dx, y0 + dy0 + fast_floorf((dx * shear_dy) / shear_dx),
-                         x0 + dx, y0 + dy1 + fast_floorf((dx * shear_dy) / shear_dx), c, 1);
+    int y = y0 + fast_floorf((dx * shear_dy) / shear_dx);
+    yLine(img, x0 + dx, y + dy0, y + dy1, c);
 }
 
 // https://scratch.mit.edu/projects/50039326/
