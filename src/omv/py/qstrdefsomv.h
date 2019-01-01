@@ -518,6 +518,12 @@ Q(black_hat)
 // duplicate Q(threshold)
 // duplicate Q(mask)
 
+// Gamma Correct
+Q(gamma_corr)
+Q(gamma)
+Q(contrast)
+Q(brightness)
+
 // Negate
 Q(negate)
 
