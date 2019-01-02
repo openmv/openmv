@@ -460,13 +460,14 @@ void imlib_mul(image_t *img, const char *path, image_t *other, int scalar, bool 
 }
 
 typedef struct imlib_div_line_op_state {
-    bool invert;
+    bool invert, mod;
     image_t *mask;
 } imlib_div_line_op_state_t;
 
 static void imlib_div_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
 {
     bool invert = ((imlib_div_line_op_state_t *) data)->invert;
+    bool mod = ((imlib_div_line_op_state_t *) data)->mod;
     image_t *mask = ((imlib_div_line_op_state_t *) data)->mask;
 
     switch(img->bpp) {
@@ -477,7 +478,9 @@ static void imlib_div_line_op(image_t *img, int line, void *other, void *data, b
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
                     int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, i);
                     int otherPixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), i);
-                    int p = IM_DIV((invert?otherPixel:dataPixel) * pScale, (invert?dataPixel:otherPixel));
+                    int p = mod
+                        ? IM_MOD((invert?otherPixel:dataPixel) * pScale, (invert?dataPixel:otherPixel))
+                        : IM_DIV((invert?otherPixel:dataPixel) * pScale, (invert?dataPixel:otherPixel));
                     p = IM_MIN(p, COLOR_BINARY_MAX);
                     IMAGE_PUT_BINARY_PIXEL_FAST(data, i, p);
                 }
@@ -491,7 +494,9 @@ static void imlib_div_line_op(image_t *img, int line, void *other, void *data, b
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
                     int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, i);
                     int otherPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(((uint8_t *) other), i);
-                    int p = IM_DIV((invert?otherPixel:dataPixel) * pScale, (invert?dataPixel:otherPixel));
+                    int p = mod
+                        ? IM_MOD((invert?otherPixel:dataPixel) * pScale, (invert?dataPixel:otherPixel))
+                        : IM_DIV((invert?otherPixel:dataPixel) * pScale, (invert?dataPixel:otherPixel));
                     p = IM_MIN(p, COLOR_GRAYSCALE_MAX);
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, i, p);
                 }
@@ -513,9 +518,15 @@ static void imlib_div_line_op(image_t *img, int line, void *other, void *data, b
                     int oR = COLOR_RGB565_TO_R5(otherPixel);
                     int oG = COLOR_RGB565_TO_G6(otherPixel);
                     int oB = COLOR_RGB565_TO_B5(otherPixel);
-                    int r = IM_DIV((invert?oR:dR) * rScale, (invert?dR:oR));
-                    int g = IM_DIV((invert?oG:dG) * gScale, (invert?dG:oG));
-                    int b = IM_DIV((invert?oB:dB) * bScale, (invert?dB:oB));
+                    int r = mod
+                        ? IM_MOD((invert?oR:dR) * rScale, (invert?dR:oR))
+                        : IM_DIV((invert?oR:dR) * rScale, (invert?dR:oR));
+                    int g = mod
+                        ? IM_MOD((invert?oG:dG) * gScale, (invert?dG:oG))
+                        : IM_DIV((invert?oG:dG) * gScale, (invert?dG:oG));
+                    int b = mod
+                        ? IM_MOD((invert?oB:dB) * bScale, (invert?dB:oB))
+                        : IM_DIV((invert?oB:dB) * bScale, (invert?dB:oB));
                     r = IM_MIN(r, COLOR_R5_MAX);
                     g = IM_MIN(g, COLOR_G6_MAX);
                     b = IM_MIN(b, COLOR_B5_MAX);
@@ -530,10 +541,11 @@ static void imlib_div_line_op(image_t *img, int line, void *other, void *data, b
     }
 }
 
-void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask)
+void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, bool mod, image_t *mask)
 {
     imlib_div_line_op_state_t state;
     state.invert = invert;
+    state.mod = mod;
     state.mask = mask;
     imlib_image_operation(img, path, other, scalar, imlib_div_line_op, &state);
 }

@@ -553,6 +553,7 @@ Q(mul)
 // Div Op
 Q(div)
 // duplicate Q(invert)
+Q(mod)
 // duplicate Q(mask)
 
 // Min

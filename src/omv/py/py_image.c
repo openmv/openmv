@@ -1979,19 +1979,23 @@ STATIC mp_obj_t py_image_div(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
         py_helper_arg_to_image_mutable(args[0]);
     bool arg_invert =
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    bool arg_mod =
+        py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mod), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 3, kw_args);
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 4, kw_args);
 
     fb_alloc_mark();
 
     if (MP_OBJ_IS_STR(args[1])) {
-        imlib_div(arg_img, mp_obj_str_get_str(args[1]), NULL, 0, arg_invert, arg_msk);
+        imlib_div(arg_img, mp_obj_str_get_str(args[1]), NULL, 0,
+                  arg_invert, arg_mod, arg_msk);
     } else if (MP_OBJ_IS_TYPE(args[1], &py_image_type)) {
-        imlib_div(arg_img, NULL, py_helper_arg_to_image_mutable(args[1]), 0, arg_invert, arg_msk);
+        imlib_div(arg_img, NULL, py_helper_arg_to_image_mutable(args[1]), 0,
+                  arg_invert, arg_mod, arg_msk);
     } else {
         imlib_div(arg_img, NULL, NULL,
                   py_helper_keyword_color(arg_img, n_args, args, 1, NULL, 0),
-                  arg_invert, arg_msk);
+                  arg_invert, arg_mod, arg_msk);
     }
 
     fb_alloc_free_till_mark();

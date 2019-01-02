@@ -1302,7 +1302,7 @@ void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, b
 void imlib_add(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_sub(image_t *img, const char *path, image_t *other, int scalar, bool reverse, image_t *mask);
 void imlib_mul(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask);
-void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask);
+void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, bool mod, image_t *mask);
 void imlib_min(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_max(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_difference(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
