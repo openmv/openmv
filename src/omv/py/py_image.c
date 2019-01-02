@@ -1348,6 +1348,7 @@ STATIC mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t
         py_helper_keyword_color(arg_img, n_args, args, offset + 0, kw_args, -1); // White.
     float arg_scale =
         py_helper_keyword_float(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), 1.0);
+    PY_ASSERT_TRUE_MSG(0 < arg_scale, "Error: 0 < scale!");
     int arg_x_spacing =
         py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_spacing), 0);
     int arg_y_spacing =
