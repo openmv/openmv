@@ -1866,16 +1866,19 @@ STATIC mp_obj_t py_image_replace(uint n_args, const mp_obj_t *args, mp_map_t *kw
         size_t size1 = image_size(arg_img);
         arg_img->w = w;
         arg_img->h = h;
-        PY_ASSERT_TRUE_MSG(size1 <= size0, "Unable to transpose the image because it would grow in size!");
+        PY_ASSERT_TRUE_MSG(size1 <= size0,
+                           "Unable to transpose the image because it would grow in size!");
     }
 
     fb_alloc_mark();
 
-    if (MP_OBJ_IS_STR(args[1])) {
-        imlib_replace(arg_img, mp_obj_str_get_str(args[1]), NULL, 0,
+    mp_obj_t arg_1 = (n_args > 1) ? args[1] : args[0];
+
+    if (MP_OBJ_IS_STR(arg_1)) {
+        imlib_replace(arg_img, mp_obj_str_get_str(arg_1), NULL, 0,
                       arg_hmirror, arg_vflip, arg_transpose, arg_msk);
-    } else if (MP_OBJ_IS_TYPE(args[1], &py_image_type)) {
-        imlib_replace(arg_img, NULL, py_helper_arg_to_image_mutable(args[1]), 0,
+    } else if (MP_OBJ_IS_TYPE(arg_1, &py_image_type)) {
+        imlib_replace(arg_img, NULL, py_helper_arg_to_image_mutable(arg_1), 0,
                       arg_hmirror, arg_vflip, arg_transpose, arg_msk);
     } else {
         imlib_replace(arg_img, NULL, NULL,
@@ -1892,7 +1895,7 @@ STATIC mp_obj_t py_image_replace(uint n_args, const mp_obj_t *args, mp_map_t *kw
 
     return args[0];
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_replace_obj, 2, py_image_replace);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_replace_obj, 1, py_image_replace);
 
 STATIC mp_obj_t py_image_add(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {

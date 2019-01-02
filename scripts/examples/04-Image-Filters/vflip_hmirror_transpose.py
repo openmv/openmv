@@ -22,11 +22,9 @@ counter = 0
 while(True):
     clock.tick()
 
-    img = sensor.snapshot()
-    # You can also use "set" or "assign".
-    img.replace(img, vflip=(counter//2)%2,
-                     hmirror=(counter//4)%2,
-                     transpose=(counter//8)%2)
+    img = sensor.snapshot().replace(vflip=(counter//2)%2,
+                                    hmirror=(counter//4)%2,
+                                    transpose=(counter//8)%2)
 
     if (pyb.millis() > (mills + 1000)):
         mills = pyb.millis()
