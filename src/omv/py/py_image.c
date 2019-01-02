@@ -1442,10 +1442,13 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     float arg_y_scale =
         py_helper_keyword_float(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), 1.0f);
     PY_ASSERT_TRUE_MSG((0.0f <= arg_y_scale), "Error: 0.0 <= y_scale!");
+    float arg_alpha =
+        py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 256) / 256.0f;
+    PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 1), "Error: 0 <= alpha <= 256!");
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 2, kw_args);
+        py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 3, kw_args);
 
-    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_msk);
+    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_image_obj, 3, py_image_draw_image);

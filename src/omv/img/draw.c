@@ -401,9 +401,9 @@ static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
     }
 }
 
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, image_t *mask)
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, float alpha, image_t *mask)
 {
-    float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
+    float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale), beta = 1 - alpha;
 
     for (int y = 0, yy = fast_roundf(other->h * y_scale); y < yy; y++) {
         int other_y = fast_roundf(y * over_yscale);
@@ -412,7 +412,9 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
             int other_x = fast_roundf(x * over_xscale);
 
             if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
-                imlib_set_pixel(img, x_off + x, y_off + y, safe_map_pixel(img, other, imlib_get_pixel(other, other_x, other_y)));
+                int pixel = safe_map_pixel(img, other, imlib_get_pixel(other, other_x, other_y));
+                imlib_set_pixel(img, x_off + x, y_off + y, (alpha == 1) ? pixel :
+                                (pixel * alpha) + (imlib_get_pixel(img, x_off + x, y_off + y) * beta));
             }
         }
     }

@@ -429,6 +429,7 @@ Q(draw_arrow)
 Q(draw_image)
 Q(x_scale)
 Q(y_scale)
+Q(alpha)
 Q(mask)
 
 // Draw Keypoints
@@ -570,7 +571,7 @@ Q(difference)
 
 // Blend
 Q(blend)
-Q(alpha)
+// duplicate Q(alpha)
 // duplicate Q(mask)
 
 // Histogram Equalization
