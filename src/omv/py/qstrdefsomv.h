@@ -527,10 +527,13 @@ Q(brightness)
 // Negate
 Q(negate)
 
-// Replace
+// Assign/Replace/Set
+Q(assign)
 Q(replace)
+Q(set)
 Q(hmirror)
 Q(vflip)
+Q(transpose)
 // duplicate Q(mask)
 
 // Add Op

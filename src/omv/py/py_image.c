@@ -1852,22 +1852,43 @@ STATIC mp_obj_t py_image_replace(uint n_args, const mp_obj_t *args, mp_map_t *kw
         py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip =
         py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
+    bool arg_transpose =
+        py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
     image_t *arg_msk =
-        py_helper_keyword_to_image_mutable_mask(n_args, args, 4, kw_args);
+        py_helper_keyword_to_image_mutable_mask(n_args, args, 5, kw_args);
+
+    if (arg_transpose) {
+        size_t size0 = image_size(arg_img);
+        int w = arg_img->w;
+        int h = arg_img->h;
+        arg_img->w = h;
+        arg_img->h = w;
+        size_t size1 = image_size(arg_img);
+        arg_img->w = w;
+        arg_img->h = h;
+        PY_ASSERT_TRUE_MSG(size1 <= size0, "Unable to transpose the image because it would grow in size!");
+    }
 
     fb_alloc_mark();
 
     if (MP_OBJ_IS_STR(args[1])) {
-        imlib_replace(arg_img, mp_obj_str_get_str(args[1]), NULL, 0, arg_hmirror, arg_vflip, arg_msk);
+        imlib_replace(arg_img, mp_obj_str_get_str(args[1]), NULL, 0,
+                      arg_hmirror, arg_vflip, arg_transpose, arg_msk);
     } else if (MP_OBJ_IS_TYPE(args[1], &py_image_type)) {
-        imlib_replace(arg_img, NULL, py_helper_arg_to_image_mutable(args[1]), 0, arg_hmirror, arg_vflip, arg_msk);
+        imlib_replace(arg_img, NULL, py_helper_arg_to_image_mutable(args[1]), 0,
+                      arg_hmirror, arg_vflip, arg_transpose, arg_msk);
     } else {
         imlib_replace(arg_img, NULL, NULL,
                       py_helper_keyword_color(arg_img, n_args, args, 1, NULL, 0),
-                      arg_hmirror, arg_vflip, arg_msk);
+                      arg_hmirror, arg_vflip, arg_transpose, arg_msk);
     }
 
     fb_alloc_free_till_mark();
+
+    if (MAIN_FB()->pixels == arg_img->data) {
+        MAIN_FB()->w = arg_img->w;
+        MAIN_FB()->h = arg_img->h;
+    }
 
     return args[0];
 }
@@ -5363,7 +5384,9 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     /* Math Methods */
     {MP_ROM_QSTR(MP_QSTR_gamma_corr),          MP_ROM_PTR(&py_image_gamma_corr_obj)},
     {MP_ROM_QSTR(MP_QSTR_negate),              MP_ROM_PTR(&py_image_negate_obj)},
+    {MP_ROM_QSTR(MP_QSTR_assign),              MP_ROM_PTR(&py_image_replace_obj)},
     {MP_ROM_QSTR(MP_QSTR_replace),             MP_ROM_PTR(&py_image_replace_obj)},
+    {MP_ROM_QSTR(MP_QSTR_set),                 MP_ROM_PTR(&py_image_replace_obj)},
     {MP_ROM_QSTR(MP_QSTR_add),                 MP_ROM_PTR(&py_image_add_obj)},
     {MP_ROM_QSTR(MP_QSTR_sub),                 MP_ROM_PTR(&py_image_sub_obj)},
     {MP_ROM_QSTR(MP_QSTR_mul),                 MP_ROM_PTR(&py_image_mul_obj)},
@@ -5376,7 +5399,9 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_top_hat),             MP_ROM_PTR(&py_func_unavailable_obj)},
     {MP_ROM_QSTR(MP_QSTR_black_hat),           MP_ROM_PTR(&py_func_unavailable_obj)},
     {MP_ROM_QSTR(MP_QSTR_negate),              MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_assign),              MP_ROM_PTR(&py_func_unavailable_obj)},
     {MP_ROM_QSTR(MP_QSTR_replace),             MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_set),                 MP_ROM_PTR(&py_func_unavailable_obj)},
     {MP_ROM_QSTR(MP_QSTR_add),                 MP_ROM_PTR(&py_func_unavailable_obj)},
     {MP_ROM_QSTR(MP_QSTR_sub),                 MP_ROM_PTR(&py_func_unavailable_obj)},
     {MP_ROM_QSTR(MP_QSTR_mul),                 MP_ROM_PTR(&py_func_unavailable_obj)},

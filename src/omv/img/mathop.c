@@ -147,7 +147,7 @@ void imlib_negate(image_t *img)
 }
 
 typedef struct imlib_replace_line_op_state {
-    bool hmirror, vflip;
+    bool hmirror, vflip, transpose;
     image_t *mask;
 } imlib_replace_line_op_state_t;
 
@@ -155,44 +155,52 @@ static void imlib_replace_line_op(image_t *img, int line, void *other, void *dat
 {
     bool hmirror = ((imlib_replace_line_op_state_t *) data)->hmirror;
     bool vflip = ((imlib_replace_line_op_state_t *) data)->vflip;
+    bool transpose = ((imlib_replace_line_op_state_t *) data)->transpose;
     image_t *mask = ((imlib_replace_line_op_state_t *) data)->mask;
+
+    image_t target;
+    memcpy(&target, img, sizeof(image_t));
+
+    if (transpose) {
+        int w = target.w;
+        int h = target.h;
+        target.w = h;
+        target.h = w;
+    }
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
             int v_line = vflip ? (img->h - line - 1) : line;
-            uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, v_line);
             for (int i = 0, j = img->w; i < j; i++) {
                 int h_i = hmirror ? (img->w - i - 1) : i;
 
                 if ((!mask) || image_get_mask_pixel(mask, h_i, v_line)) {
                     int pixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), h_i);
-                    IMAGE_PUT_BINARY_PIXEL_FAST(data, i, pixel);
+                    IMAGE_PUT_BINARY_PIXEL(&target, transpose ? v_line : i, transpose ? i : v_line, pixel);
                 }
             }
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
             int v_line = vflip ? (img->h - line - 1) : line;
-            uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, v_line);
             for (int i = 0, j = img->w; i < j; i++) {
                 int h_i = hmirror ? (img->w - i - 1) : i;
 
                 if ((!mask) || image_get_mask_pixel(mask, h_i, v_line)) {
                     int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(((uint8_t *) other), h_i);
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, i, pixel);
+                    IMAGE_PUT_GRAYSCALE_PIXEL(&target, transpose ? v_line : i, transpose ? i : v_line, pixel);
                 }
             }
             break;
         }
         case IMAGE_BPP_RGB565: {
             int v_line = vflip ? (img->h - line - 1) : line;
-            uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, v_line);
             for (int i = 0, j = img->w; i < j; i++) {
                 int h_i = hmirror ? (img->w - i - 1) : i;
 
                 if ((!mask) || image_get_mask_pixel(mask, h_i, v_line)) {
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(((uint16_t *) other), h_i);
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, i, pixel);
+                    IMAGE_PUT_RGB565_PIXEL(&target, transpose ? v_line : i, transpose ? i : v_line, pixel);
                 }
             }
             break;
@@ -203,13 +211,35 @@ static void imlib_replace_line_op(image_t *img, int line, void *other, void *dat
     }
 }
 
-void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip, image_t *mask)
+void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip, bool transpose, image_t *mask)
 {
+    bool in_place = img == other;
+    image_t temp;
+
+    if (in_place) {
+        memcpy(&temp, other, sizeof(image_t));
+        temp.data = fb_alloc(image_size(&temp));
+        memcpy(temp.data, other->data, image_size(&temp));
+        other = &temp;
+    }
+
     imlib_replace_line_op_state_t state;
     state.hmirror = hmirror;
     state.vflip = vflip;
     state.mask = mask;
+    state.transpose = transpose;
     imlib_image_operation(img, path, other, scalar, imlib_replace_line_op, &state);
+
+    if (in_place) {
+        fb_free();
+    }
+
+    if (transpose) {
+        int w = img->w;
+        int h = img->h;
+        img->w = h;
+        img->h = w;
+    }
 }
 
 static void imlib_add_line_op(image_t *img, int line, void *other, void *data, bool vflipped)
