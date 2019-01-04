@@ -1456,7 +1456,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_image_obj, 3, py_image_draw_imag
 STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
-    py_kp_obj_t *kpts_obj = py_kpts_obj(args[1]);
 
     int arg_c =
         py_helper_keyword_color(arg_img, n_args, args, 2, kw_args, -1); // White.
@@ -1467,14 +1466,33 @@ STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     bool arg_fill =
         py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fill), false);
 
-    for (int i = 0, ii = array_length(kpts_obj->kpts); i < ii; i++) {
-        kp_t *kp = array_at(kpts_obj->kpts, i);
-        int cx = kp->x;
-        int cy = kp->y;
-        int si = sin_table[kp->angle] * arg_s;
-        int co = cos_table[kp->angle] * arg_s;
-        imlib_draw_line(arg_img, cx, cy, cx + co, cy + si, arg_c, arg_thickness);
-        imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
+    if (MP_OBJ_IS_TYPE(args[1], &mp_type_tuple) || MP_OBJ_IS_TYPE(args[1], &mp_type_list)) {
+        size_t len;
+        mp_obj_t *items;
+        mp_obj_get_array(args[1], &len, &items);
+        for (size_t i = 0; i < len; i++) {
+            mp_obj_t *tuple;
+            mp_obj_get_array_fixed_n(items[i], 3, &tuple);
+            int cx = mp_obj_get_int(tuple[0]);
+            int cy = mp_obj_get_int(tuple[1]);
+            int angle = mp_obj_get_int(tuple[2]) % 360;
+            int si = sin_table[angle] * arg_s;
+            int co = cos_table[angle] * arg_s;
+            imlib_draw_line(arg_img, cx, cy, cx + co, cy + si, arg_c, arg_thickness);
+            imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
+        }
+    } else {
+        py_kp_obj_t *kpts_obj = py_kpts_obj(args[1]);
+        for (int i = 0, ii = array_length(kpts_obj->kpts); i < ii; i++) {
+            kp_t *kp = array_at(kpts_obj->kpts, i);
+            int cx = kp->x;
+            int cy = kp->y;
+            int angle = kp->angle % 360;
+            int si = sin_table[angle] * arg_s;
+            int co = cos_table[angle] * arg_s;
+            imlib_draw_line(arg_img, cx, cy, cx + co, cy + si, arg_c, arg_thickness);
+            imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
+        }
     }
 
     return args[0];
