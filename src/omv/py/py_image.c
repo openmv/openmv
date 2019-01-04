@@ -1560,8 +1560,23 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     bool arg_copy =
         py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
 
-    PY_ASSERT_TRUE_MSG((!arg_to_bitmap) || arg_copy,
-                       "Can't convert to bitmap in place!");
+    if (arg_to_bitmap && (!arg_copy)) {
+        switch(arg_img->bpp) {
+            case IMAGE_BPP_GRAYSCALE: {
+                PY_ASSERT_TRUE_MSG((arg_img->w >= (sizeof(uint32_t)/sizeof(uint8_t))),
+                                   "Can't convert to bitmap in place!");
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                PY_ASSERT_TRUE_MSG((arg_img->w >= (sizeof(uint32_t)/sizeof(uint16_t))),
+                                   "Can't convert to bitmap in place!");
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    }
 
     image_t out;
     out.w = arg_img->w;
@@ -1569,10 +1584,13 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     out.bpp = arg_to_bitmap ? IMAGE_BPP_BINARY : arg_img->bpp;
     out.data = arg_copy ? xalloc(image_size(&out)) : arg_img->data;
 
+    fb_alloc_mark();
     imlib_binary(&out, arg_img, &arg_thresholds, arg_invert, arg_zero, arg_msk);
+    fb_alloc_free_till_mark();
+
     list_free(&arg_thresholds);
 
-    if ((!arg_copy) && (MAIN_FB()->pixels == out.data)) {
+    if (arg_to_bitmap && (!arg_copy) && (MAIN_FB()->pixels == out.data)) {
         MAIN_FB()->bpp = out.bpp;
     }
 
