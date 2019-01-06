@@ -361,7 +361,7 @@ extern const int8_t yuv_table[196608];
 })
 
 #define COLOR_BINARY_TO_GRAYSCALE(pixel) ((pixel) * COLOR_GRAYSCALE_MAX)
-#define COLOR_BINARY_TO_RGB565(pixel) COLOR_YUV_TO_RGB565((pixel) * 127, 0, 0)
+#define COLOR_BINARY_TO_RGB565(pixel) COLOR_YUV_TO_RGB565((pixel) ? 127 : -128, 0, 0)
 #define COLOR_RGB565_TO_BINARY(pixel) (COLOR_RGB565_TO_Y(pixel) > (((COLOR_Y_MAX - COLOR_Y_MIN) / 2) + COLOR_Y_MIN))
 #define COLOR_RGB565_TO_GRAYSCALE(pixel) (COLOR_RGB565_TO_Y(pixel) + 128)
 #define COLOR_GRAYSCALE_TO_BINARY(pixel) ((pixel) > (((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / 2) + COLOR_GRAYSCALE_MIN))
@@ -1275,8 +1275,8 @@ void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int th
 void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, int thickness, bool fill);
 void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness, bool fill);
 void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotation, int c, int thickness, bool fill);
-void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, int scale, int x_spacing, int y_spacing, bool mono_space);
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, image_t *mask);
+void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, float scale, int x_spacing, int y_spacing, bool mono_space);
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, float alpha, image_t *mask);
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);
@@ -1296,12 +1296,13 @@ void imlib_close(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask);
 void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask);
 // Math Functions
+void imlib_gamma_corr(image_t *img, float gamma, float scale, float offset);
 void imlib_negate(image_t *img);
-void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip, image_t *mask);
+void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip, bool transpose, image_t *mask);
 void imlib_add(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_sub(image_t *img, const char *path, image_t *other, int scalar, bool reverse, image_t *mask);
 void imlib_mul(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask);
-void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, image_t *mask);
+void imlib_div(image_t *img, const char *path, image_t *other, int scalar, bool invert, bool mod, image_t *mask);
 void imlib_min(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_max(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
 void imlib_difference(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);

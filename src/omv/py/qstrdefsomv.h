@@ -429,6 +429,7 @@ Q(draw_arrow)
 Q(draw_image)
 Q(x_scale)
 Q(y_scale)
+Q(alpha)
 Q(mask)
 
 // Draw Keypoints
@@ -518,13 +519,22 @@ Q(black_hat)
 // duplicate Q(threshold)
 // duplicate Q(mask)
 
+// Gamma Correct
+Q(gamma_corr)
+Q(gamma)
+Q(contrast)
+Q(brightness)
+
 // Negate
 Q(negate)
 
-// Replace
+// Assign/Replace/Set
+Q(assign)
 Q(replace)
+Q(set)
 Q(hmirror)
 Q(vflip)
+Q(transpose)
 // duplicate Q(mask)
 
 // Add Op
@@ -544,6 +554,7 @@ Q(mul)
 // Div Op
 Q(div)
 // duplicate Q(invert)
+Q(mod)
 // duplicate Q(mask)
 
 // Min
@@ -560,7 +571,7 @@ Q(difference)
 
 // Blend
 Q(blend)
-Q(alpha)
+// duplicate Q(alpha)
 // duplicate Q(mask)
 
 // Histogram Equalization

@@ -189,3 +189,10 @@ float fast_log(float x)
 {
   return 0.69314718f * fast_log2 (x);
 }
+
+float fast_powf(float a, float b)
+{
+    union { float d; int x; } u = { a };
+    u.x = (int)((b * (u.x - 1064866805)) + 1064866805);
+    return u.d;
+}
