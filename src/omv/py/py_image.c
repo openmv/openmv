@@ -3746,6 +3746,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_regression_obj, 2, py_image_get_r
 #define py_blob_obj_size 10
 typedef struct py_blob_obj {
     mp_obj_base_t base;
+    mp_obj_t corners;
+    mp_obj_t min_corners;
     mp_obj_t x, y, w, h, pixels, cx, cy, rotation, code, count;
     mp_obj_t x_hist_bins;
     mp_obj_t y_hist_bins;
@@ -3797,6 +3799,8 @@ static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
     return MP_OBJ_NULL; // op not supported
 }
 
+mp_obj_t py_blob_corners(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->corners; }
+mp_obj_t py_blob_min_corners(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->min_corners; }
 mp_obj_t py_blob_rect(mp_obj_t self_in)
 {
     return mp_obj_new_tuple(4, (mp_obj_t []) {((py_blob_obj_t *) self_in)->x,
@@ -3826,6 +3830,8 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
 
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_corners_obj, py_blob_corners);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_min_corners_obj, py_blob_min_corners);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rect_obj, py_blob_rect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_obj, py_blob_x);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_obj, py_blob_y);
@@ -3843,6 +3849,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
 
 STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR_corners), MP_ROM_PTR(&py_blob_corners_obj) },
+    { MP_ROM_QSTR(MP_QSTR_min_corners), MP_ROM_PTR(&py_blob_min_corners_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_blob_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_x), MP_ROM_PTR(&py_blob_x_obj) },
     { MP_ROM_QSTR(MP_QSTR_y), MP_ROM_PTR(&py_blob_y_obj) },
@@ -3874,6 +3882,18 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
 {
     py_blob_obj_t *o = m_new_obj(py_blob_obj_t);
     o->base.type = &py_blob_type;
+    o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob->corners[0].x), mp_obj_new_int(blob->corners[0].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob->corners[1].x), mp_obj_new_int(blob->corners[1].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob->corners[2].x), mp_obj_new_int(blob->corners[2].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob->corners[3].x), mp_obj_new_int(blob->corners[3].y)})});
+    point_t min_corners[4];
+    point_min_area_rectangle(blob->corners, min_corners);
+    o->min_corners = mp_obj_new_tuple(4, (mp_obj_t [])
+        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[0].x), mp_obj_new_int(min_corners[0].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[1].x), mp_obj_new_int(min_corners[1].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[2].x), mp_obj_new_int(min_corners[2].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[3].x), mp_obj_new_int(min_corners[3].y)})});
     o->x = mp_obj_new_int(blob->rect.x);
     o->y = mp_obj_new_int(blob->rect.y);
     o->w = mp_obj_new_int(blob->rect.w);
@@ -3902,6 +3922,18 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
 {
     py_blob_obj_t *o0 = m_new_obj(py_blob_obj_t);
     o0->base.type = &py_blob_type;
+    o0->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob0->corners[0].x), mp_obj_new_int(blob0->corners[0].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob0->corners[1].x), mp_obj_new_int(blob0->corners[1].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob0->corners[2].x), mp_obj_new_int(blob0->corners[2].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob0->corners[3].x), mp_obj_new_int(blob0->corners[3].y)})});
+    point_t min_area_rect_corners0[4];
+    point_min_area_rectangle(blob0->corners, min_area_rect_corners0);
+    o0->min_corners = mp_obj_new_tuple(4, (mp_obj_t [])
+        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners0[0].x), mp_obj_new_int(min_area_rect_corners0[0].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners0[1].x), mp_obj_new_int(min_area_rect_corners0[1].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners0[2].x), mp_obj_new_int(min_area_rect_corners0[2].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners0[3].x), mp_obj_new_int(min_area_rect_corners0[3].y)})});
     o0->x = mp_obj_new_int(blob0->rect.x);
     o0->y = mp_obj_new_int(blob0->rect.y);
     o0->w = mp_obj_new_int(blob0->rect.w);
@@ -3925,6 +3957,18 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
 
     py_blob_obj_t *o1 = m_new_obj(py_blob_obj_t);
     o1->base.type = &py_blob_type;
+    o1->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob1->corners[0].x), mp_obj_new_int(blob1->corners[0].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob1->corners[1].x), mp_obj_new_int(blob1->corners[1].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob1->corners[2].x), mp_obj_new_int(blob1->corners[2].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(blob1->corners[3].x), mp_obj_new_int(blob1->corners[3].y)})});
+    point_t min_area_rect_corners1[4];
+    point_min_area_rectangle(blob1->corners, min_area_rect_corners1);
+    o1->min_corners = mp_obj_new_tuple(4, (mp_obj_t [])
+        {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners1[0].x), mp_obj_new_int(min_area_rect_corners1[0].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners1[1].x), mp_obj_new_int(min_area_rect_corners1[1].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners1[2].x), mp_obj_new_int(min_area_rect_corners1[2].y)}),
+         mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_area_rect_corners1[3].x), mp_obj_new_int(min_area_rect_corners1[3].y)})});
     o1->x = mp_obj_new_int(blob1->rect.x);
     o1->y = mp_obj_new_int(blob1->rect.y);
     o1->w = mp_obj_new_int(blob1->rect.w);
@@ -3990,6 +4034,18 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
 
         py_blob_obj_t *o = m_new_obj(py_blob_obj_t);
         o->base.type = &py_blob_type;
+        o->corners = mp_obj_new_tuple(4, (mp_obj_t [])
+            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[0].x), mp_obj_new_int(lnk_data.corners[0].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[1].x), mp_obj_new_int(lnk_data.corners[1].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[2].x), mp_obj_new_int(lnk_data.corners[2].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(lnk_data.corners[3].x), mp_obj_new_int(lnk_data.corners[3].y)})});
+        point_t min_corners[4];
+        point_min_area_rectangle(lnk_data.corners, min_corners);
+        o->min_corners = mp_obj_new_tuple(4, (mp_obj_t [])
+            {mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[0].x), mp_obj_new_int(min_corners[0].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[1].x), mp_obj_new_int(min_corners[1].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[2].x), mp_obj_new_int(min_corners[2].y)}),
+             mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_int(min_corners[3].x), mp_obj_new_int(min_corners[3].y)})});
         o->x = mp_obj_new_int(lnk_data.rect.x);
         o->y = mp_obj_new_int(lnk_data.rect.y);
         o->w = mp_obj_new_int(lnk_data.rect.w);

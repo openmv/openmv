@@ -123,10 +123,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x;
-                            int blob_y1 = y;
-                            int blob_x2 = x;
-                            int blob_y2 = y;
+                            int blob_x1 = x, blob_x1y = y;
+                            int blob_y1 = y, blob_y1x = x;
+                            int blob_x2 = x, blob_x2y = y;
+                            int blob_y2 = y, blob_y2x = x;
                             int blob_pixels = 0;
                             int blob_cx = 0;
                             int blob_cy = 0;
@@ -155,10 +155,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
-                                blob_x1 = IM_MIN(blob_x1, left);
-                                blob_y1 = IM_MIN(blob_y1, y);
-                                blob_x2 = IM_MAX(blob_x2, right);
-                                blob_y2 = IM_MAX(blob_y2, y);
+                                if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
+                                if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
+                                if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
+                                if (blob_y2 < y) { blob_y2 = y, blob_y2x = right; } // blob_y2 = IM_MAX(blob_y2, y);
                                 for (int i = left; i <= right; i++) {
                                     bitmap_bit_set(&bitmap, BITMAP_COMPUTE_INDEX(index, i));
                                     blob_pixels += 1;
@@ -265,6 +265,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                             find_blobs_list_lnk_data_t lnk_blob;
+                            lnk_blob.corners[0].x = blob_x1;
+                            lnk_blob.corners[0].y = blob_x1y;
+                            lnk_blob.corners[1].x = blob_y1x;
+                            lnk_blob.corners[1].y = blob_y1;
+                            lnk_blob.corners[2].x = blob_x2;
+                            lnk_blob.corners[2].y = blob_x2y;
+                            lnk_blob.corners[3].x = blob_y2x;
+                            lnk_blob.corners[3].y = blob_y2;
                             lnk_blob.rect.x = blob_x1;
                             lnk_blob.rect.y = blob_y1;
                             lnk_blob.rect.w = blob_x2 - blob_x1;
@@ -313,10 +321,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x;
-                            int blob_y1 = y;
-                            int blob_x2 = x;
-                            int blob_y2 = y;
+                            int blob_x1 = x, blob_x1y = y;
+                            int blob_y1 = y, blob_y1x = x;
+                            int blob_x2 = x, blob_x2y = y;
+                            int blob_y2 = y, blob_y2x = x;
                             int blob_pixels = 0;
                             int blob_cx = 0;
                             int blob_cy = 0;
@@ -345,10 +353,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
-                                blob_x1 = IM_MIN(blob_x1, left);
-                                blob_y1 = IM_MIN(blob_y1, y);
-                                blob_x2 = IM_MAX(blob_x2, right);
-                                blob_y2 = IM_MAX(blob_y2, y);
+                                if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
+                                if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
+                                if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
+                                if (blob_y2 < y) { blob_y2 = y, blob_y2x = right; } // blob_y2 = IM_MAX(blob_y2, y);
                                 for (int i = left; i <= right; i++) {
                                     bitmap_bit_set(&bitmap, BITMAP_COMPUTE_INDEX(index, i));
                                     blob_pixels += 1;
@@ -455,6 +463,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                             find_blobs_list_lnk_data_t lnk_blob;
+                            lnk_blob.corners[0].x = blob_x1;
+                            lnk_blob.corners[0].y = blob_x1y;
+                            lnk_blob.corners[1].x = blob_y1x;
+                            lnk_blob.corners[1].y = blob_y1;
+                            lnk_blob.corners[2].x = blob_x2;
+                            lnk_blob.corners[2].y = blob_x2y;
+                            lnk_blob.corners[3].x = blob_y2x;
+                            lnk_blob.corners[3].y = blob_y2;
                             lnk_blob.rect.x = blob_x1;
                             lnk_blob.rect.y = blob_y1;
                             lnk_blob.rect.w = blob_x2 - blob_x1;
@@ -503,10 +519,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x;
-                            int blob_y1 = y;
-                            int blob_x2 = x;
-                            int blob_y2 = y;
+                            int blob_x1 = x, blob_x1y = y;
+                            int blob_y1 = y, blob_y1x = x;
+                            int blob_x2 = x, blob_x2y = y;
+                            int blob_y2 = y, blob_y2x = x;
                             int blob_pixels = 0;
                             int blob_cx = 0;
                             int blob_cy = 0;
@@ -535,10 +551,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
-                                blob_x1 = IM_MIN(blob_x1, left);
-                                blob_y1 = IM_MIN(blob_y1, y);
-                                blob_x2 = IM_MAX(blob_x2, right);
-                                blob_y2 = IM_MAX(blob_y2, y);
+                                if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
+                                if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
+                                if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
+                                if (blob_y2 < y) { blob_y2 = y, blob_y2x = right; } // blob_y2 = IM_MAX(blob_y2, y);
                                 for (int i = left; i <= right; i++) {
                                     bitmap_bit_set(&bitmap, BITMAP_COMPUTE_INDEX(index, i));
                                     blob_pixels += 1;
@@ -645,6 +661,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                             find_blobs_list_lnk_data_t lnk_blob;
+                            lnk_blob.corners[0].x = blob_x1;
+                            lnk_blob.corners[0].y = blob_x1y;
+                            lnk_blob.corners[1].x = blob_y1x;
+                            lnk_blob.corners[1].y = blob_y1;
+                            lnk_blob.corners[2].x = blob_x2;
+                            lnk_blob.corners[2].y = blob_x2y;
+                            lnk_blob.corners[3].x = blob_y2x;
+                            lnk_blob.corners[3].y = blob_y2;
                             lnk_blob.rect.x = blob_x1;
                             lnk_blob.rect.y = blob_y1;
                             lnk_blob.rect.w = blob_x2 - blob_x1;
@@ -725,6 +749,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         if (y_hist_bins_max) merge_bins(lnk_blob.rect.y, lnk_blob.rect.y + lnk_blob.rect.h - 1, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count,
                                                         tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1, &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
                                                         y_hist_bins_max);
+                        if (tmp_blob.corners[0].x < lnk_blob.corners[0].x) { lnk_blob.corners[0].x = tmp_blob.corners[0].x, lnk_blob.corners[0].y = tmp_blob.corners[0].y; }
+                        if (tmp_blob.corners[1].y < lnk_blob.corners[1].y) { lnk_blob.corners[1].y = tmp_blob.corners[1].y, lnk_blob.corners[1].x = tmp_blob.corners[1].x; }
+                        if (lnk_blob.corners[2].x < tmp_blob.corners[2].x) { lnk_blob.corners[2].x = tmp_blob.corners[2].x, lnk_blob.corners[2].y = tmp_blob.corners[2].y; }
+                        if (lnk_blob.corners[3].y < tmp_blob.corners[3].y) { lnk_blob.corners[3].y = tmp_blob.corners[3].y, lnk_blob.corners[3].x = tmp_blob.corners[3].x; }
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
                         lnk_blob.centroid.x = ((lnk_blob.centroid.x * lnk_blob.pixels) + (tmp_blob.centroid.x * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         lnk_blob.centroid.y = ((lnk_blob.centroid.y * lnk_blob.pixels) + (tmp_blob.centroid.y * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);

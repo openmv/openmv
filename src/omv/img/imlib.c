@@ -42,6 +42,56 @@ int point_quadrance(point_t *ptr0, point_t *ptr1)
     return (delta_x * delta_x) + (delta_y * delta_y);
 }
 
+void point_rotate(int x, int y, float r, int center_x, int center_y, int16_t *new_x, int16_t *new_y)
+{
+    x -= center_x;
+    y -= center_y;
+    *new_x = (x * cosf(r)) - (y * sinf(r)) + center_x;
+    *new_y = (x * sinf(r)) + (y * cosf(r)) + center_y;
+}
+
+void point_min_area_rectangle(point_t *corners, point_t *new_corners)
+{
+    int i_min = 0;
+    int i_min_area = INT_MAX;
+    int i_x0 = 0, i_y0 = 0;
+    int i_x1 = 0, i_y1 = 0;
+    int i_x2 = 0, i_y2 = 0;
+    int i_x3 = 0, i_y3 = 0;
+    float i_r = 0;
+
+    // This algorithm aligns the 4 edges produced by the 4 corners to the x axis and then computes the
+    // min area rect for each alignment. The smallest rect is choosen and then re-rotated and returned.
+    for (int i = 0; i < 4; i++) {
+        int16_t x0 = corners[i].x, y0 = corners[i].y;
+        int x_diff = corners[(i+1)%4].x - corners[i].x;
+        int y_diff = corners[(i+1)%4].y - corners[i].y;
+        float r = -fast_atan2f(y_diff, x_diff);
+        int16_t x1, y1; point_rotate(corners[(i+1)%4].x, corners[(i+1)%4].y, r, x0, y0, &x1, &y1);
+        int16_t x2, y2; point_rotate(corners[(i+2)%4].x, corners[(i+2)%4].y, r, x0, y0, &x2, &y2);
+        int16_t x3, y3; point_rotate(corners[(i+3)%4].x, corners[(i+3)%4].y, r, x0, y0, &x3, &y3);
+        int minx = IM_MIN(x0, IM_MIN(x1, IM_MIN(x2, x3)));
+        int maxx = IM_MAX(x0, IM_MAX(x1, IM_MAX(x2, x3)));
+        int miny = IM_MIN(y0, IM_MIN(y1, IM_MIN(y2, y3)));
+        int maxy = IM_MAX(y0, IM_MAX(y1, IM_MAX(y2, y3)));
+        int area = (maxx - minx + 1) * (maxy - miny + 1);
+        if (area < i_min_area) {
+            i_min = i;
+            i_min_area = area;
+            i_x0 = minx, i_y0 = miny;
+            i_x1 = maxx, i_y1 = miny;
+            i_x2 = maxx, i_y2 = maxy;
+            i_x3 = minx, i_y3 = maxy;
+            i_r = r;
+        }
+    }
+
+    point_rotate(i_x0, i_y0, -i_r, corners[i_min].x, corners[i_min].y, &new_corners[0].x, &new_corners[0].y);
+    point_rotate(i_x1, i_y1, -i_r, corners[i_min].x, corners[i_min].y, &new_corners[1].x, &new_corners[1].y);
+    point_rotate(i_x2, i_y2, -i_r, corners[i_min].x, corners[i_min].y, &new_corners[2].x, &new_corners[2].y);
+    point_rotate(i_x3, i_y3, -i_r, corners[i_min].x, corners[i_min].y, &new_corners[3].x, &new_corners[3].y);
+}
+
 ////////////////
 // Line Stuff //
 ////////////////
