@@ -11,14 +11,95 @@ typedef struct xylf
 }
 xylf_t;
 
+static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_t **new_hist, uint16_t *new_size)
+{
+    int start = -1;
+
+    for (int i = 0; i < size; i++) {
+        if (hist[i]) {
+            start = i;
+            break;
+        }
+    }
+
+    if (start != -1) {
+        int end = start;
+
+        for (int i = start + 1; i < size; i++) {
+            if (!hist[i]) {
+                break;
+            }
+            end = i;
+        }
+
+        int bin_count = end - start + 1; // >= 1
+        *new_size = IM_MIN(max_size, bin_count);
+        *new_hist = xalloc0((*new_size) * sizeof(uint16_t));
+        float div_value = (*new_size) / ((float) bin_count); // Reversed so we can multiply below.
+
+        for (int i = 0; i < bin_count; i++) {
+            (*new_hist)[fast_floorf(i*div_value)] += hist[start+i];
+        }
+    }
+}
+
+static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, uint16_t *b_dst_hist_len,
+                       int b_src_start, int b_src_end, uint16_t **b_src_hist, uint16_t *b_src_hist_len,
+                       unsigned int max_size)
+{
+    int start = IM_MIN(b_dst_start, b_src_start);
+    int end = IM_MAX(b_dst_end, b_src_end);
+
+    int bin_count = end - start + 1; // >= 1
+    uint16_t new_size = IM_MIN(max_size, bin_count);
+    uint16_t *new_hist = xalloc0(new_size * sizeof(uint16_t));
+    float div_value = new_size / ((float) bin_count); // Reversed so we can multiply below.
+
+    int b_dst_bin_count = b_dst_end - b_dst_start + 1; // >= 1
+    uint16_t b_dst_new_size = IM_MIN((*b_dst_hist_len), b_dst_bin_count);
+    float b_dst_div_value = b_dst_new_size / ((float) b_dst_bin_count); // Reversed so we can multiply below.
+
+    int b_src_bin_count = b_src_end - b_src_start + 1; // >= 1
+    uint16_t b_src_new_size = IM_MIN((*b_src_hist_len), b_src_bin_count);
+    float b_src_div_value = b_src_new_size / ((float) b_src_bin_count); // Reversed so we can multiply below.
+
+    for(int i = 0; i < bin_count; i++) {
+        if ((b_dst_start <= (i + start)) && ((i + start) <= b_dst_end)) {
+            int index = fast_floorf((i + start - b_dst_start) * b_dst_div_value);
+            new_hist[fast_floorf(i*div_value)] += (*b_dst_hist)[index];
+            (*b_dst_hist)[index] = 0; // prevent from adding again...
+        }
+        if ((b_src_start <= (i + start)) && ((i + start) <= b_src_end)) {
+            int index = fast_floorf((i + start - b_src_start) * b_src_div_value);
+            new_hist[fast_floorf(i*div_value)] += (*b_src_hist)[index];
+            (*b_src_hist)[index] = 0; // prevent from adding again...
+        }
+    }
+
+    xfree(*b_dst_hist);
+    xfree(*b_src_hist);
+
+    *b_dst_hist_len = new_size;
+    (*b_dst_hist) = new_hist;
+    *b_src_hist_len = 0;
+    (*b_src_hist) = NULL;
+}
+
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
-                     list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
-                     bool merge, int margin,
-                     bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
-                     bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg)
+                      list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
+                      bool merge, int margin,
+                      bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
+                      bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg,
+                      unsigned int x_hist_bins_max, unsigned int y_hist_bins_max)
 {
     bitmap_t bitmap; // Same size as the image so we don't have to translate.
     bitmap_alloc(&bitmap, ptr->w * ptr->h);
+
+    uint16_t *x_hist_bins = NULL;
+    if (x_hist_bins_max) x_hist_bins = fb_alloc(ptr->w * sizeof(uint16_t));
+
+    uint16_t *y_hist_bins = NULL;
+    if (y_hist_bins_max) y_hist_bins = fb_alloc(ptr->h * sizeof(uint16_t));
 
     lifo_t lifo;
     size_t lifo_len;
@@ -52,6 +133,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_a = 0;
                             long long blob_b = 0;
                             long long blob_c = 0;
+                            if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
+                            if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
 
                             // Scanline Flood Fill Algorithm //
 
@@ -84,6 +167,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_a += i*i;
                                     blob_b += i*y;
                                     blob_c += y*y;
+                                    if (x_hist_bins) x_hist_bins[i] += 1;
+                                    if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
 
                                 bool break_out = false;
@@ -190,10 +275,25 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
+                            lnk_blob.x_hist_bins_count = 0;
+                            lnk_blob.x_hist_bins = NULL;
+                            lnk_blob.y_hist_bins_count = 0;
+                            lnk_blob.y_hist_bins = NULL;
+
+                            if (x_hist_bins) {
+                                bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
+                            }
+
+                            if (y_hist_bins) {
+                                bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
+                            }
 
                             if (((lnk_blob.rect.w * lnk_blob.rect.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)
                             && ((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
                                 list_push_back(out, &lnk_blob);
+                            } else {
+                                if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
+                                if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
                             }
 
                             x = old_x;
@@ -223,6 +323,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_a = 0;
                             long long blob_b = 0;
                             long long blob_c = 0;
+                            if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
+                            if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
 
                             // Scanline Flood Fill Algorithm //
 
@@ -255,6 +357,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_a += i*i;
                                     blob_b += i*y;
                                     blob_c += y*y;
+                                    if (x_hist_bins) x_hist_bins[i] += 1;
+                                    if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
 
                                 bool break_out = false;
@@ -361,10 +465,25 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
+                            lnk_blob.x_hist_bins_count = 0;
+                            lnk_blob.x_hist_bins = NULL;
+                            lnk_blob.y_hist_bins_count = 0;
+                            lnk_blob.y_hist_bins = NULL;
+
+                            if (x_hist_bins) {
+                                bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
+                            }
+
+                            if (y_hist_bins) {
+                                bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
+                            }
 
                             if (((lnk_blob.rect.w * lnk_blob.rect.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)
                             && ((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
                                 list_push_back(out, &lnk_blob);
+                            } else {
+                                if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
+                                if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
                             }
 
                             x = old_x;
@@ -394,6 +513,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_a = 0;
                             long long blob_b = 0;
                             long long blob_c = 0;
+                            if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
+                            if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
 
                             // Scanline Flood Fill Algorithm //
 
@@ -426,6 +547,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_a += i*i;
                                     blob_b += i*y;
                                     blob_c += y*y;
+                                    if (x_hist_bins) x_hist_bins[i] += 1;
+                                    if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
 
                                 bool break_out = false;
@@ -532,10 +655,25 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
+                            lnk_blob.x_hist_bins_count = 0;
+                            lnk_blob.x_hist_bins = NULL;
+                            lnk_blob.y_hist_bins_count = 0;
+                            lnk_blob.y_hist_bins = NULL;
+
+                            if (x_hist_bins) {
+                                bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
+                            }
+
+                            if (y_hist_bins) {
+                                bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
+                            }
 
                             if (((lnk_blob.rect.w * lnk_blob.rect.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)
                             && ((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
                                 list_push_back(out, &lnk_blob);
+                            } else {
+                                if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
+                                if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
                             }
 
                             x = old_x;
@@ -554,6 +692,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
     }
 
     lifo_free(&lifo);
+    if (y_hist_bins) fb_free();
+    if (x_hist_bins) fb_free();
     bitmap_free(&bitmap);
 
     if (merge) {
@@ -579,6 +719,12 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                     if (rectangle_overlap(&(lnk_blob.rect), &temp)
                     && ((merge_cb_arg == NULL) || merge_cb(merge_cb_arg, &lnk_blob, &tmp_blob))) {
+                        if (x_hist_bins_max) merge_bins(lnk_blob.rect.x, lnk_blob.rect.x + lnk_blob.rect.w - 1, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count,
+                                                        tmp_blob.rect.x, tmp_blob.rect.x + tmp_blob.rect.w - 1, &tmp_blob.x_hist_bins, &tmp_blob.x_hist_bins_count,
+                                                        x_hist_bins_max);
+                        if (y_hist_bins_max) merge_bins(lnk_blob.rect.y, lnk_blob.rect.y + lnk_blob.rect.h - 1, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count,
+                                                        tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1, &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
+                                                        y_hist_bins_max);
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
                         lnk_blob.centroid.x = ((lnk_blob.centroid.x * lnk_blob.pixels) + (tmp_blob.centroid.x * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         lnk_blob.centroid.y = ((lnk_blob.centroid.y * lnk_blob.pixels) + (tmp_blob.centroid.y * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);

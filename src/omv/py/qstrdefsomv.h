@@ -811,6 +811,8 @@ Q(merge)
 Q(margin)
 Q(threshold_cb)
 Q(merge_cb)
+Q(x_hist_bins_max)
+Q(y_hist_bins_max)
 // Blob Object
 Q(blob)
 Q(rect)
@@ -826,6 +828,8 @@ Q(code)
 Q(count)
 Q(area)
 Q(density)
+Q(x_hist_bins)
+Q(y_hist_bins)
 
 // Find Lines
 Q(find_lines)

@@ -3747,6 +3747,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_regression_obj, 2, py_image_get_r
 typedef struct py_blob_obj {
     mp_obj_base_t base;
     mp_obj_t x, y, w, h, pixels, cx, cy, rotation, code, count;
+    mp_obj_t x_hist_bins;
+    mp_obj_t y_hist_bins;
 } py_blob_obj_t;
 
 static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
@@ -3821,6 +3823,8 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
     if (area) return mp_obj_new_float(mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels) / ((float) area));
     return mp_obj_new_float(0.0f);
 }
+mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
+mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rect_obj, py_blob_rect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_obj, py_blob_x);
@@ -3835,6 +3839,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
 
 STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&py_blob_rect_obj) },
@@ -3849,7 +3855,9 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_code), MP_ROM_PTR(&py_blob_code_obj) },
     { MP_ROM_QSTR(MP_QSTR_count), MP_ROM_PTR(&py_blob_count_obj) },
     { MP_ROM_QSTR(MP_QSTR_area), MP_ROM_PTR(&py_blob_area_obj) } ,
-    { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) }
+    { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) },
+    { MP_ROM_QSTR(MP_QSTR_x_hist_bins), MP_ROM_PTR(&py_blob_x_hist_bins_obj) },
+    { MP_ROM_QSTR(MP_QSTR_y_hist_bins), MP_ROM_PTR(&py_blob_y_hist_bins_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(py_blob_locals_dict, py_blob_locals_dict_table);
@@ -3876,6 +3884,16 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
     o->rotation = mp_obj_new_float(blob->rotation);
     o->code = mp_obj_new_int(blob->code);
     o->count = mp_obj_new_int(blob->count);
+    o->x_hist_bins = mp_obj_new_list(blob->x_hist_bins_count, NULL);
+    o->y_hist_bins = mp_obj_new_list(blob->y_hist_bins_count, NULL);
+
+    for (int i = 0; i < blob->x_hist_bins_count; i++) {
+        ((mp_obj_list_t *) o->x_hist_bins)->items[i] = mp_obj_new_int(blob->x_hist_bins[i]);
+    }
+
+    for (int i = 0; i < blob->y_hist_bins_count; i++) {
+        ((mp_obj_list_t *) o->y_hist_bins)->items[i] = mp_obj_new_int(blob->y_hist_bins[i]);
+    }
 
     return mp_obj_is_true(mp_call_function_1(fun_obj, o));
 }
@@ -3894,6 +3912,16 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o0->rotation = mp_obj_new_float(blob0->rotation);
     o0->code = mp_obj_new_int(blob0->code);
     o0->count = mp_obj_new_int(blob0->count);
+    o0->x_hist_bins = mp_obj_new_list(blob0->x_hist_bins_count, NULL);
+    o0->y_hist_bins = mp_obj_new_list(blob0->y_hist_bins_count, NULL);
+
+    for (int i = 0; i < blob0->x_hist_bins_count; i++) {
+        ((mp_obj_list_t *) o0->x_hist_bins)->items[i] = mp_obj_new_int(blob0->x_hist_bins[i]);
+    }
+
+    for (int i = 0; i < blob0->y_hist_bins_count; i++) {
+        ((mp_obj_list_t *) o0->y_hist_bins)->items[i] = mp_obj_new_int(blob0->y_hist_bins[i]);
+    }
 
     py_blob_obj_t *o1 = m_new_obj(py_blob_obj_t);
     o1->base.type = &py_blob_type;
@@ -3907,6 +3935,16 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o1->rotation = mp_obj_new_float(blob1->rotation);
     o1->code = mp_obj_new_int(blob1->code);
     o1->count = mp_obj_new_int(blob1->count);
+    o1->x_hist_bins = mp_obj_new_list(blob1->x_hist_bins_count, NULL);
+    o1->y_hist_bins = mp_obj_new_list(blob1->y_hist_bins_count, NULL);
+
+    for (int i = 0; i < blob1->x_hist_bins_count; i++) {
+        ((mp_obj_list_t *) o1->x_hist_bins)->items[i] = mp_obj_new_int(blob1->x_hist_bins[i]);
+    }
+
+    for (int i = 0; i < blob1->y_hist_bins_count; i++) {
+        ((mp_obj_list_t *) o1->y_hist_bins)->items[i] = mp_obj_new_int(blob1->y_hist_bins[i]);
+    }
 
     return mp_obj_is_true(mp_call_function_2(fun_obj, o0, o1));
 }
@@ -3934,12 +3972,14 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     int margin = py_helper_keyword_int(n_args, args, 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 0);
     mp_obj_t threshold_cb = py_helper_keyword_object(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold_cb));
     mp_obj_t merge_cb = py_helper_keyword_object(n_args, args, 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge_cb));
+    unsigned int x_hist_bins_max = py_helper_keyword_int(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_hist_bins_max), 0);
+    unsigned int y_hist_bins_max = py_helper_keyword_int(n_args, args, 13, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_hist_bins_max), 0);
 
     list_t out;
     fb_alloc_mark();
     imlib_find_blobs(&out, arg_img, &roi, x_stride, y_stride, &thresholds, invert,
             area_threshold, pixels_threshold, merge, margin,
-            py_image_find_blobs_threshold_cb, threshold_cb, py_image_find_blobs_merge_cb, merge_cb);
+            py_image_find_blobs_threshold_cb, threshold_cb, py_image_find_blobs_merge_cb, merge_cb, x_hist_bins_max, y_hist_bins_max);
     fb_alloc_free_till_mark();
     list_free(&thresholds);
 
@@ -3960,8 +4000,20 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
         o->rotation = mp_obj_new_float(lnk_data.rotation);
         o->code = mp_obj_new_int(lnk_data.code);
         o->count = mp_obj_new_int(lnk_data.count);
+        o->x_hist_bins = mp_obj_new_list(lnk_data.x_hist_bins_count, NULL);
+        o->y_hist_bins = mp_obj_new_list(lnk_data.y_hist_bins_count, NULL);
+
+        for (int i = 0; i < lnk_data.x_hist_bins_count; i++) {
+            ((mp_obj_list_t *) o->x_hist_bins)->items[i] = mp_obj_new_int(lnk_data.x_hist_bins[i]);
+        }
+
+        for (int i = 0; i < lnk_data.y_hist_bins_count; i++) {
+            ((mp_obj_list_t *) o->y_hist_bins)->items[i] = mp_obj_new_int(lnk_data.y_hist_bins[i]);
+        }
 
         objects_list->items[i] = o;
+        if (lnk_data.x_hist_bins) xfree(lnk_data.x_hist_bins);
+        if (lnk_data.y_hist_bins) xfree(lnk_data.y_hist_bins);
     }
 
     return objects_list;
