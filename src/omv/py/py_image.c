@@ -3877,6 +3877,175 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
 }
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
+mp_obj_t py_blob_major_axis_line(mp_obj_t self_in) {
+    mp_obj_t *corners, *p0, *p1, *p2, *p3;
+    mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
+    mp_obj_get_array_fixed_n(corners[0], 2, &p0);
+    mp_obj_get_array_fixed_n(corners[1], 2, &p1);
+    mp_obj_get_array_fixed_n(corners[2], 2, &p2);
+    mp_obj_get_array_fixed_n(corners[3], 2, &p3);
+
+    int x0, y0, x1, y1, x2, y2, x3, y3;
+    x0 = mp_obj_get_int(p0[0]);
+    y0 = mp_obj_get_int(p0[1]);
+    x1 = mp_obj_get_int(p1[0]);
+    y1 = mp_obj_get_int(p1[1]);
+    x2 = mp_obj_get_int(p2[0]);
+    y2 = mp_obj_get_int(p2[1]);
+    x3 = mp_obj_get_int(p3[0]);
+    y3 = mp_obj_get_int(p3[1]);
+
+    int m0x = (x0 + x1) / 2;
+    int m0y = (y0 + y1) / 2;
+    int m1x = (x1 + x2) / 2;
+    int m1y = (y1 + y2) / 2;
+    int m2x = (x2 + x3) / 2;
+    int m2y = (y2 + y3) / 2;
+    int m3x = (x3 + x0) / 2;
+    int m3y = (y3 + y0) / 2;
+
+    float l0 = fast_sqrtf(((m0x - m2x) * (m0x - m2x)) + ((m0y - m2y) * (m0y - m2y)));
+    float l1 = fast_sqrtf(((m1x - m3x) * (m1x - m3x)) + ((m1y - m3y) * (m1y - m3y)));
+
+    if (l0 >= l1) {
+        return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(m0x),
+                                                  mp_obj_new_int(m0y),
+                                                  mp_obj_new_int(m2x),
+                                                  mp_obj_new_int(m2y)});
+    } else {
+        return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(m1x),
+                                                  mp_obj_new_int(m1y),
+                                                  mp_obj_new_int(m3x),
+                                                  mp_obj_new_int(m3y)});
+    }
+}
+mp_obj_t py_blob_minor_axis_line(mp_obj_t self_in) {
+    mp_obj_t *corners, *p0, *p1, *p2, *p3;
+    mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
+    mp_obj_get_array_fixed_n(corners[0], 2, &p0);
+    mp_obj_get_array_fixed_n(corners[1], 2, &p1);
+    mp_obj_get_array_fixed_n(corners[2], 2, &p2);
+    mp_obj_get_array_fixed_n(corners[3], 2, &p3);
+
+    int x0, y0, x1, y1, x2, y2, x3, y3;
+    x0 = mp_obj_get_int(p0[0]);
+    y0 = mp_obj_get_int(p0[1]);
+    x1 = mp_obj_get_int(p1[0]);
+    y1 = mp_obj_get_int(p1[1]);
+    x2 = mp_obj_get_int(p2[0]);
+    y2 = mp_obj_get_int(p2[1]);
+    x3 = mp_obj_get_int(p3[0]);
+    y3 = mp_obj_get_int(p3[1]);
+
+    int m0x = (x0 + x1) / 2;
+    int m0y = (y0 + y1) / 2;
+    int m1x = (x1 + x2) / 2;
+    int m1y = (y1 + y2) / 2;
+    int m2x = (x2 + x3) / 2;
+    int m2y = (y2 + y3) / 2;
+    int m3x = (x3 + x0) / 2;
+    int m3y = (y3 + y0) / 2;
+
+    float l0 = fast_sqrtf(((m0x - m2x) * (m0x - m2x)) + ((m0y - m2y) * (m0y - m2y)));
+    float l1 = fast_sqrtf(((m1x - m3x) * (m1x - m3x)) + ((m1y - m3y) * (m1y - m3y)));
+
+    if (l0 < l1) {
+        return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(m0x),
+                                                  mp_obj_new_int(m0y),
+                                                  mp_obj_new_int(m2x),
+                                                  mp_obj_new_int(m2y)});
+    } else {
+        return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(m1x),
+                                                  mp_obj_new_int(m1y),
+                                                  mp_obj_new_int(m3x),
+                                                  mp_obj_new_int(m3y)});
+    }
+}
+mp_obj_t py_blob_enclosing_circle(mp_obj_t self_in) {
+    mp_obj_t *corners, *p0, *p1, *p2, *p3;
+    mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
+    mp_obj_get_array_fixed_n(corners[0], 2, &p0);
+    mp_obj_get_array_fixed_n(corners[1], 2, &p1);
+    mp_obj_get_array_fixed_n(corners[2], 2, &p2);
+    mp_obj_get_array_fixed_n(corners[3], 2, &p3);
+
+    int x0, y0, x1, y1, x2, y2, x3, y3;
+    x0 = mp_obj_get_int(p0[0]);
+    y0 = mp_obj_get_int(p0[1]);
+    x1 = mp_obj_get_int(p1[0]);
+    y1 = mp_obj_get_int(p1[1]);
+    x2 = mp_obj_get_int(p2[0]);
+    y2 = mp_obj_get_int(p2[1]);
+    x3 = mp_obj_get_int(p3[0]);
+    y3 = mp_obj_get_int(p3[1]);
+
+    int cx = (x0 + x1 + x2 + x3) / 4;
+    int cy = (y0 + y1 + y2 + y3) / 4;
+
+    float d0 = fast_sqrtf(((x0 - cx) * (x0 - cx)) + ((y0 - cy) * (y0 - cy)));
+    float d1 = fast_sqrtf(((x1 - cx) * (x1 - cx)) + ((y1 - cy) * (y1 - cy)));
+    float d2 = fast_sqrtf(((x2 - cx) * (x2 - cx)) + ((y2 - cy) * (y2 - cy)));
+    float d3 = fast_sqrtf(((x3 - cx) * (x3 - cx)) + ((y3 - cy) * (y3 - cy)));
+    float d = IM_MAX(d0, IM_MAX(d1, IM_MAX(d2, d3)));
+
+    return mp_obj_new_tuple(3, (mp_obj_t []) {mp_obj_new_int(cx),
+                                              mp_obj_new_int(cy),
+                                              mp_obj_new_int(fast_roundf(d))});
+}
+mp_obj_t py_blob_enclosed_ellipse(mp_obj_t self_in) {
+    mp_obj_t *corners, *p0, *p1, *p2, *p3;
+    mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
+    mp_obj_get_array_fixed_n(corners[0], 2, &p0);
+    mp_obj_get_array_fixed_n(corners[1], 2, &p1);
+    mp_obj_get_array_fixed_n(corners[2], 2, &p2);
+    mp_obj_get_array_fixed_n(corners[3], 2, &p3);
+
+    int x0, y0, x1, y1, x2, y2, x3, y3;
+    x0 = mp_obj_get_int(p0[0]);
+    y0 = mp_obj_get_int(p0[1]);
+    x1 = mp_obj_get_int(p1[0]);
+    y1 = mp_obj_get_int(p1[1]);
+    x2 = mp_obj_get_int(p2[0]);
+    y2 = mp_obj_get_int(p2[1]);
+    x3 = mp_obj_get_int(p3[0]);
+    y3 = mp_obj_get_int(p3[1]);
+
+    int m0x = (x0 + x1) / 2;
+    int m0y = (y0 + y1) / 2;
+    int m1x = (x1 + x2) / 2;
+    int m1y = (y1 + y2) / 2;
+    int m2x = (x2 + x3) / 2;
+    int m2y = (y2 + y3) / 2;
+    int m3x = (x3 + x0) / 2;
+    int m3y = (y3 + y0) / 2;
+
+    int cx = (x0 + x1 + x2 + x3) / 4;
+    int cy = (y0 + y1 + y2 + y3) / 4;
+
+    float d0 = fast_sqrtf(((m0x - cx) * (m0x - cx)) + ((m0y - cy) * (m0y - cy)));
+    float d1 = fast_sqrtf(((m1x - cx) * (m1x - cx)) + ((m1y - cy) * (m1y - cy)));
+    float d2 = fast_sqrtf(((m2x - cx) * (m2x - cx)) + ((m2y - cy) * (m2y - cy)));
+    float d3 = fast_sqrtf(((m3x - cx) * (m3x - cx)) + ((m3y - cy) * (m3y - cy)));
+    float a = IM_MIN(d0, d2);
+    float b = IM_MIN(d1, d3);
+
+    float l0 = fast_sqrtf(((m0x - m2x) * (m0x - m2x)) + ((m0y - m2y) * (m0y - m2y)));
+    float l1 = fast_sqrtf(((m1x - m3x) * (m1x - m3x)) + ((m1y - m3y) * (m1y - m3y)));
+
+    float r;
+
+    if (l0 >= l1) {
+        r = IM_RAD2DEG(fast_atan2f(m0y - m2y, m0x - m2x));
+    } else {
+        r = IM_RAD2DEG(fast_atan2f(m1y - m3y, m1x - m3x) + M_PI_2);
+    }
+
+    return mp_obj_new_tuple(5, (mp_obj_t []) {mp_obj_new_int(cx),
+                                              mp_obj_new_int(cy),
+                                              mp_obj_new_int(a),
+                                              mp_obj_new_int(b),
+                                              mp_obj_new_int(r)});
+}
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_corners_obj, py_blob_corners);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_min_corners_obj, py_blob_min_corners);
@@ -3897,6 +4066,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_major_axis_line_obj, py_blob_major_axis_line);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_minor_axis_line_obj, py_blob_minor_axis_line);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_enclosing_circle_obj, py_blob_enclosing_circle);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_enclosed_ellipse_obj, py_blob_enclosed_ellipse);
 
 STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_corners), MP_ROM_PTR(&py_blob_corners_obj) },
@@ -3917,7 +4090,11 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_area), MP_ROM_PTR(&py_blob_area_obj) } ,
     { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) },
     { MP_ROM_QSTR(MP_QSTR_x_hist_bins), MP_ROM_PTR(&py_blob_x_hist_bins_obj) },
-    { MP_ROM_QSTR(MP_QSTR_y_hist_bins), MP_ROM_PTR(&py_blob_y_hist_bins_obj) }
+    { MP_ROM_QSTR(MP_QSTR_y_hist_bins), MP_ROM_PTR(&py_blob_y_hist_bins_obj) },
+    { MP_ROM_QSTR(MP_QSTR_major_axis_line), MP_ROM_PTR(&py_blob_major_axis_line_obj) },
+    { MP_ROM_QSTR(MP_QSTR_minor_axis_line), MP_ROM_PTR(&py_blob_minor_axis_line_obj) },
+    { MP_ROM_QSTR(MP_QSTR_enclosing_circle), MP_ROM_PTR(&py_blob_enclosing_circle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_enclosed_ellipse), MP_ROM_PTR(&py_blob_enclosed_ellipse_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(py_blob_locals_dict, py_blob_locals_dict_table);

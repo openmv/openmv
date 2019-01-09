@@ -841,6 +841,10 @@ Q(area)
 Q(density)
 Q(x_hist_bins)
 Q(y_hist_bins)
+Q(major_axis_line)
+Q(minor_axis_line)
+Q(enclosing_circle)
+Q(enclosed_ellipse)
 
 // Find Lines
 Q(find_lines)
