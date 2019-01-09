@@ -428,6 +428,13 @@ Q(draw_arrow)
 // duplicate Q(size)
 // duplicate Q(thickness)
 
+// Draw Edges
+Q(draw_edges)
+// duplicate Q(color)
+// duplicate Q(size)
+// duplicate Q(thickness)
+// duplicate Q(fill)
+
 // Draw Image
 Q(draw_image)
 Q(x_scale)
