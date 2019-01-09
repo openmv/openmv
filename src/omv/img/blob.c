@@ -278,8 +278,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rect.w = blob_x2 - blob_x1;
                             lnk_blob.rect.h = blob_y2 - blob_y1;
                             lnk_blob.pixels = blob_pixels;
-                            lnk_blob.centroid.x = mx;
-                            lnk_blob.centroid.y = my;
+                            lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
+                            lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
@@ -476,8 +476,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rect.w = blob_x2 - blob_x1;
                             lnk_blob.rect.h = blob_y2 - blob_y1;
                             lnk_blob.pixels = blob_pixels;
-                            lnk_blob.centroid.x = mx;
-                            lnk_blob.centroid.y = my;
+                            lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
+                            lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
@@ -674,8 +674,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rect.w = blob_x2 - blob_x1;
                             lnk_blob.rect.h = blob_y2 - blob_y1;
                             lnk_blob.pixels = blob_pixels;
-                            lnk_blob.centroid.x = mx;
-                            lnk_blob.centroid.y = my;
+                            lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
+                            lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
@@ -754,8 +754,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         if (lnk_blob.corners[2].x < tmp_blob.corners[2].x) { lnk_blob.corners[2].x = tmp_blob.corners[2].x, lnk_blob.corners[2].y = tmp_blob.corners[2].y; }
                         if (lnk_blob.corners[3].y < tmp_blob.corners[3].y) { lnk_blob.corners[3].y = tmp_blob.corners[3].y, lnk_blob.corners[3].x = tmp_blob.corners[3].x; }
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
-                        lnk_blob.centroid.x = ((lnk_blob.centroid.x * lnk_blob.pixels) + (tmp_blob.centroid.x * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
-                        lnk_blob.centroid.y = ((lnk_blob.centroid.y * lnk_blob.pixels) + (tmp_blob.centroid.y * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
+                        lnk_blob.centroid_x = ((lnk_blob.centroid_x * lnk_blob.pixels) + (tmp_blob.centroid_x * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
+                        lnk_blob.centroid_y = ((lnk_blob.centroid_y * lnk_blob.pixels) + (tmp_blob.centroid_y * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         float sin_mean = ((sinf(lnk_blob.rotation) * lnk_blob.pixels) + (sinf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         float cos_mean = ((cosf(lnk_blob.rotation) * lnk_blob.pixels) + (cosf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         lnk_blob.rotation = fast_atan2f(sin_mean, cos_mean);

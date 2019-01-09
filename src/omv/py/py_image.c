@@ -3809,8 +3809,8 @@ static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_ki
               mp_obj_get_int(self->w),
               mp_obj_get_int(self->h),
               mp_obj_get_int(self->pixels),
-              mp_obj_get_int(self->cx),
-              mp_obj_get_int(self->cy),
+              fast_roundf(mp_obj_get_float(self->cx)),
+              fast_roundf(mp_obj_get_float(self->cy)),
               (double) mp_obj_get_float(self->rotation),
               mp_obj_get_int(self->code),
               mp_obj_get_int(self->count));
@@ -3835,8 +3835,8 @@ static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
             case 2: return self->w;
             case 3: return self->h;
             case 4: return self->pixels;
-            case 5: return self->cx;
-            case 6: return self->cy;
+            case 5: return mp_obj_new_int(fast_roundf(mp_obj_get_float(self->cx)));
+            case 6: return mp_obj_new_int(fast_roundf(mp_obj_get_float(self->cy)));
             case 7: return self->rotation;
             case 8: return self->code;
             case 9: return self->count;
@@ -3860,8 +3860,10 @@ mp_obj_t py_blob_y(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y; }
 mp_obj_t py_blob_w(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->w; }
 mp_obj_t py_blob_h(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->h; }
 mp_obj_t py_blob_pixels(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->pixels; }
-mp_obj_t py_blob_cx(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cx; }
-mp_obj_t py_blob_cy(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cy; }
+mp_obj_t py_blob_cx(mp_obj_t self_in) { return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_blob_obj_t *) self_in)->cx))); }
+mp_obj_t py_blob_cxf(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cx; }
+mp_obj_t py_blob_cy(mp_obj_t self_in) { return mp_obj_new_int(fast_roundf(mp_obj_get_float(((py_blob_obj_t *) self_in)->cy))); }
+mp_obj_t py_blob_cyf(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->cy; }
 mp_obj_t py_blob_rotation(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->rotation; }
 mp_obj_t py_blob_code(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->code; }
 mp_obj_t py_blob_count(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->count; }
@@ -3885,7 +3887,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_w_obj, py_blob_w);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_h_obj, py_blob_h);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_pixels_obj, py_blob_pixels);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cx_obj, py_blob_cx);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cxf_obj, py_blob_cxf);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cy_obj, py_blob_cy);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_cyf_obj, py_blob_cyf);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
@@ -3904,7 +3908,9 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_h), MP_ROM_PTR(&py_blob_h_obj) },
     { MP_ROM_QSTR(MP_QSTR_pixels), MP_ROM_PTR(&py_blob_pixels_obj) },
     { MP_ROM_QSTR(MP_QSTR_cx), MP_ROM_PTR(&py_blob_cx_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cxf), MP_ROM_PTR(&py_blob_cxf_obj) },
     { MP_ROM_QSTR(MP_QSTR_cy), MP_ROM_PTR(&py_blob_cy_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cyf), MP_ROM_PTR(&py_blob_cyf_obj) },
     { MP_ROM_QSTR(MP_QSTR_rotation), MP_ROM_PTR(&py_blob_rotation_obj) },
     { MP_ROM_QSTR(MP_QSTR_code), MP_ROM_PTR(&py_blob_code_obj) },
     { MP_ROM_QSTR(MP_QSTR_count), MP_ROM_PTR(&py_blob_count_obj) },
@@ -3945,8 +3951,8 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
     o->w = mp_obj_new_int(blob->rect.w);
     o->h = mp_obj_new_int(blob->rect.h);
     o->pixels = mp_obj_new_int(blob->pixels);
-    o->cx = mp_obj_new_int(blob->centroid.x);
-    o->cy = mp_obj_new_int(blob->centroid.y);
+    o->cx = mp_obj_new_float(blob->centroid_x);
+    o->cy = mp_obj_new_float(blob->centroid_y);
     o->rotation = mp_obj_new_float(blob->rotation);
     o->code = mp_obj_new_int(blob->code);
     o->count = mp_obj_new_int(blob->count);
@@ -3985,8 +3991,8 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o0->w = mp_obj_new_int(blob0->rect.w);
     o0->h = mp_obj_new_int(blob0->rect.h);
     o0->pixels = mp_obj_new_int(blob0->pixels);
-    o0->cx = mp_obj_new_int(blob0->centroid.x);
-    o0->cy = mp_obj_new_int(blob0->centroid.y);
+    o0->cx = mp_obj_new_float(blob0->centroid_x);
+    o0->cy = mp_obj_new_float(blob0->centroid_y);
     o0->rotation = mp_obj_new_float(blob0->rotation);
     o0->code = mp_obj_new_int(blob0->code);
     o0->count = mp_obj_new_int(blob0->count);
@@ -4020,8 +4026,8 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o1->w = mp_obj_new_int(blob1->rect.w);
     o1->h = mp_obj_new_int(blob1->rect.h);
     o1->pixels = mp_obj_new_int(blob1->pixels);
-    o1->cx = mp_obj_new_int(blob1->centroid.x);
-    o1->cy = mp_obj_new_int(blob1->centroid.y);
+    o1->cx = mp_obj_new_float(blob1->centroid_x);
+    o1->cy = mp_obj_new_float(blob1->centroid_y);
     o1->rotation = mp_obj_new_float(blob1->rotation);
     o1->code = mp_obj_new_int(blob1->code);
     o1->count = mp_obj_new_int(blob1->count);
@@ -4097,8 +4103,8 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
         o->w = mp_obj_new_int(lnk_data.rect.w);
         o->h = mp_obj_new_int(lnk_data.rect.h);
         o->pixels = mp_obj_new_int(lnk_data.pixels);
-        o->cx = mp_obj_new_int(lnk_data.centroid.x);
-        o->cy = mp_obj_new_int(lnk_data.centroid.y);
+        o->cx = mp_obj_new_float(lnk_data.centroid_x);
+        o->cy = mp_obj_new_float(lnk_data.centroid_y);
         o->rotation = mp_obj_new_float(lnk_data.rotation);
         o->code = mp_obj_new_int(lnk_data.code);
         o->count = mp_obj_new_int(lnk_data.count);
