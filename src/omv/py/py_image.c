@@ -3908,8 +3908,8 @@ mp_obj_t py_blob_convexity(mp_obj_t self_in) {
 
     // Shoelace Formula
     float min_area = (((x0*y1)+(x1*y2)+(x2*y3)+(x3*y0))-((y0*x1)+(y1*x2)+(y2*x3)+(y3*x0)))/2.0f;
-    int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
-    return mp_obj_new_float(IM_DIV(((area * 4) / M_PI), min_area));
+    int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
+    return mp_obj_new_float(IM_DIV(((pixels * 4) / M_PI), min_area));
 }
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
