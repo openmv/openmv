@@ -3887,7 +3887,7 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
 mp_obj_t py_blob_compactness(mp_obj_t self_in) {
     int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
     float perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
-    if (area) return mp_obj_new_float(((perimeter * perimeter) / ((float) area)) / (4 * M_PI));
+    if (area) return mp_obj_new_float((((float) area) * (4 * M_PI)) / (perimeter * perimeter));
     return mp_obj_new_float(0.0f);
 }
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }

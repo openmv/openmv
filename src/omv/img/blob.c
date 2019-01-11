@@ -102,7 +102,7 @@ static float calculate_elongation(int blob_a, int blob_b, int blob_c)
     float elongation_max = IM_MAX(elongation_0, IM_MAX(elongation_1, IM_MAX(elongation_2, elongation_3)));
     float elongation_min = IM_MIN(elongation_0, IM_MIN(elongation_1, IM_MIN(elongation_2, elongation_3)));
 
-    return IM_DIV(elongation_max, elongation_min);
+    return IM_DIV(elongation_min, elongation_max);
 }
 
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
