@@ -3886,7 +3886,30 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
 mp_obj_t py_blob_compactness(mp_obj_t self_in) {
     int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
     float perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
-    return mp_obj_new_float(IM_DIV((((float) area) * (4 * M_PI)), (perimeter * perimeter)));
+    return mp_obj_new_float(IM_DIV((area * 4 * M_PI), (perimeter * perimeter)));
+}
+mp_obj_t py_blob_convexity(mp_obj_t self_in) {
+    mp_obj_t *corners, *p0, *p1, *p2, *p3;
+    mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
+    mp_obj_get_array_fixed_n(corners[0], 2, &p0);
+    mp_obj_get_array_fixed_n(corners[1], 2, &p1);
+    mp_obj_get_array_fixed_n(corners[2], 2, &p2);
+    mp_obj_get_array_fixed_n(corners[3], 2, &p3);
+
+    int x0, y0, x1, y1, x2, y2, x3, y3;
+    x0 = mp_obj_get_int(p0[0]);
+    y0 = mp_obj_get_int(p0[1]);
+    x1 = mp_obj_get_int(p1[0]);
+    y1 = mp_obj_get_int(p1[1]);
+    x2 = mp_obj_get_int(p2[0]);
+    y2 = mp_obj_get_int(p2[1]);
+    x3 = mp_obj_get_int(p3[0]);
+    y3 = mp_obj_get_int(p3[1]);
+
+    // Shoelace Formula
+    float min_area = (((x0*y1)+(x1*y2)+(x2*y3)+(x3*y0))-((y0*x1)+(y1*x2)+(y2*x3)+(y3*x0)))/2.0f;
+    int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
+    return mp_obj_new_float(IM_DIV(((area * 4) / M_PI), min_area));
 }
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
@@ -4080,6 +4103,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_elongation_obj, py_blob_elongation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_compactness_obj, py_blob_compactness);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_convexity_obj, py_blob_convexity);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_major_axis_line_obj, py_blob_major_axis_line);
@@ -4108,6 +4132,7 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_area), MP_ROM_PTR(&py_blob_area_obj) } ,
     { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) },
     { MP_ROM_QSTR(MP_QSTR_compactness), MP_ROM_PTR(&py_blob_compactness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_convexity), MP_ROM_PTR(&py_blob_convexity_obj) },
     { MP_ROM_QSTR(MP_QSTR_x_hist_bins), MP_ROM_PTR(&py_blob_x_hist_bins_obj) },
     { MP_ROM_QSTR(MP_QSTR_y_hist_bins), MP_ROM_PTR(&py_blob_y_hist_bins_obj) },
     { MP_ROM_QSTR(MP_QSTR_major_axis_line), MP_ROM_PTR(&py_blob_major_axis_line_obj) },
