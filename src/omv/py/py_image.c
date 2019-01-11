@@ -3884,9 +3884,9 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
     return mp_obj_new_float(IM_DIV(pixels, ((float) area)));
 }
 mp_obj_t py_blob_compactness(mp_obj_t self_in) {
-    int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
+    int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     float perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
-    return mp_obj_new_float(IM_DIV((area * 4 * M_PI), (perimeter * perimeter)));
+    return mp_obj_new_float(IM_DIV((pixels * 4 * M_PI), (perimeter * perimeter)));
 }
 mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
