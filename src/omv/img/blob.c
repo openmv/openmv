@@ -307,8 +307,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.corners[3].y = blob_y2;
                             lnk_blob.rect.x = blob_x1;
                             lnk_blob.rect.y = blob_y1;
-                            lnk_blob.rect.w = blob_x2 - blob_x1;
-                            lnk_blob.rect.h = blob_y2 - blob_y1;
+                            lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
+                            lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
                             lnk_blob.pixels = blob_pixels;
                             lnk_blob.perimeter = perimeter;
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
@@ -519,8 +519,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.corners[3].y = blob_y2;
                             lnk_blob.rect.x = blob_x1;
                             lnk_blob.rect.y = blob_y1;
-                            lnk_blob.rect.w = blob_x2 - blob_x1;
-                            lnk_blob.rect.h = blob_y2 - blob_y1;
+                            lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
+                            lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
                             lnk_blob.pixels = blob_pixels;
                             lnk_blob.perimeter = perimeter;
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
@@ -731,8 +731,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.corners[3].y = blob_y2;
                             lnk_blob.rect.x = blob_x1;
                             lnk_blob.rect.y = blob_y1;
-                            lnk_blob.rect.w = blob_x2 - blob_x1;
-                            lnk_blob.rect.h = blob_y2 - blob_y1;
+                            lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
+                            lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
                             lnk_blob.pixels = blob_pixels;
                             lnk_blob.perimeter = perimeter;
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
