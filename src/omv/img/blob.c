@@ -135,6 +135,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_c = 0;
                             if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
                             if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
+                            int perimeter = 0;
 
                             // Scanline Flood Fill Algorithm //
 
@@ -155,6 +156,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
+                                perimeter += 2;
                                 if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
                                 if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
                                 if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
@@ -197,7 +199,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             }
                                             if (recurse) {
                                                 break;
+                                            } else {
+                                                perimeter += 1;
                                             }
+                                        } else {
+                                            perimeter += right - left + 1;
                                         }
 
                                         if (y < (roi->y + roi->h - 1)) {
@@ -222,8 +228,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             }
                                             if (recurse) {
                                                 break;
+                                            } else {
+                                                perimeter += 1;
                                             }
+                                        } else {
+                                            perimeter += right - left + 1;
                                         }
+                                    } else {
+                                        perimeter += (right - left + 1) * 2;
                                     }
 
                                     if (!lifo_size(&lifo)) {
@@ -278,6 +290,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rect.w = blob_x2 - blob_x1;
                             lnk_blob.rect.h = blob_y2 - blob_y1;
                             lnk_blob.pixels = blob_pixels;
+                            lnk_blob.perimeter = perimeter;
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
                             lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
@@ -333,6 +346,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_c = 0;
                             if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
                             if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
+                            int perimeter = 0;
 
                             // Scanline Flood Fill Algorithm //
 
@@ -353,6 +367,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
+                                perimeter += 2;
                                 if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
                                 if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
                                 if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
@@ -395,7 +410,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             }
                                             if (recurse) {
                                                 break;
+                                            } else {
+                                                perimeter += 1;
                                             }
+                                        } else {
+                                            perimeter += right - left + 1;
                                         }
 
                                         if (y < (roi->y + roi->h - 1)) {
@@ -420,8 +439,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             }
                                             if (recurse) {
                                                 break;
+                                            } else {
+                                                perimeter += 1;
                                             }
+                                        } else {
+                                            perimeter += right - left + 1;
                                         }
+                                    } else {
+                                        perimeter += (right - left + 1) * 2;
                                     }
 
                                     if (!lifo_size(&lifo)) {
@@ -476,6 +501,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rect.w = blob_x2 - blob_x1;
                             lnk_blob.rect.h = blob_y2 - blob_y1;
                             lnk_blob.pixels = blob_pixels;
+                            lnk_blob.perimeter = perimeter;
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
                             lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
@@ -531,6 +557,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_c = 0;
                             if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
                             if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
+                            int perimeter = 0;
 
                             // Scanline Flood Fill Algorithm //
 
@@ -551,6 +578,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
+                                perimeter += 2;
                                 if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
                                 if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
                                 if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
@@ -593,7 +621,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             }
                                             if (recurse) {
                                                 break;
+                                            } else {
+                                                perimeter += 1;
                                             }
+                                        } else {
+                                            perimeter += right - left + 1;
                                         }
 
                                         if (y < (roi->y + roi->h - 1)) {
@@ -618,8 +650,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             }
                                             if (recurse) {
                                                 break;
+                                            } else {
+                                                perimeter += 1;
                                             }
+                                        } else {
+                                            perimeter += right - left + 1;
                                         }
+                                    } else {
+                                        perimeter += (right - left + 1) * 2;
                                     }
 
                                     if (!lifo_size(&lifo)) {
@@ -674,6 +712,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.rect.w = blob_x2 - blob_x1;
                             lnk_blob.rect.h = blob_y2 - blob_y1;
                             lnk_blob.pixels = blob_pixels;
+                            lnk_blob.perimeter = perimeter;
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
                             lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
@@ -760,6 +799,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         float cos_mean = ((cosf(lnk_blob.rotation) * lnk_blob.pixels) + (cosf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         lnk_blob.rotation = fast_atan2f(sin_mean, cos_mean);
                         lnk_blob.pixels += tmp_blob.pixels; // won't overflow
+                        lnk_blob.perimeter += tmp_blob.perimeter; // won't overflow
                         lnk_blob.code |= tmp_blob.code;
                         lnk_blob.count = IM_MAX(IM_MIN(lnk_blob.count + tmp_blob.count, UINT16_MAX), 0);
                         merge_occured = true;
