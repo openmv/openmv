@@ -85,6 +85,26 @@ static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, ui
     (*b_src_hist) = NULL;
 }
 
+static float calculate_elongation(int blob_a, int blob_b, int blob_c)
+{
+    float elongation_div = fast_sqrtf((blob_b * blob_b) + ((blob_a - blob_c) * (blob_a - blob_c)));
+    float elongation_sin = IM_DIV(blob_b, elongation_div);
+    float elongation_cos = IM_DIV(blob_a - blob_c, elongation_div);
+    float elongation_add = (blob_a + blob_c) / 2;
+    float elongation_cos_mul = (blob_a - blob_c) / 2;
+    float elongation_sin_mul = blob_b / 2;
+
+    float elongation_0 = elongation_add + (elongation_cos * elongation_cos_mul) + (elongation_sin * elongation_sin_mul);
+    float elongation_1 = elongation_add + (elongation_cos * elongation_cos_mul) - (elongation_sin * elongation_sin_mul);
+    float elongation_2 = elongation_add - (elongation_cos * elongation_cos_mul) + (elongation_sin * elongation_sin_mul);
+    float elongation_3 = elongation_add - (elongation_cos * elongation_cos_mul) - (elongation_sin * elongation_sin_mul);
+
+    float elongation_max = IM_MAX(elongation_0, IM_MAX(elongation_1, IM_MAX(elongation_2, elongation_3)));
+    float elongation_min = IM_MIN(elongation_0, IM_MIN(elongation_1, IM_MIN(elongation_2, elongation_3)));
+
+    return IM_DIV(elongation_max, elongation_min);
+}
+
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                       bool merge, int margin,
@@ -294,6 +314,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
                             lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
+                            lnk_blob.elongation = calculate_elongation(small_blob_a, small_blob_b, small_blob_c);
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
                             lnk_blob.x_hist_bins_count = 0;
@@ -505,6 +526,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
                             lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
+                            lnk_blob.elongation = calculate_elongation(small_blob_a, small_blob_b, small_blob_c);
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
                             lnk_blob.x_hist_bins_count = 0;
@@ -716,6 +738,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
                             lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
                             lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
+                            lnk_blob.elongation = calculate_elongation(small_blob_a, small_blob_b, small_blob_c);
                             lnk_blob.code = 1 << code;
                             lnk_blob.count = 1;
                             lnk_blob.x_hist_bins_count = 0;
@@ -798,6 +821,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         float sin_mean = ((sinf(lnk_blob.rotation) * lnk_blob.pixels) + (sinf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         float cos_mean = ((cosf(lnk_blob.rotation) * lnk_blob.pixels) + (cosf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         lnk_blob.rotation = fast_atan2f(sin_mean, cos_mean);
+                        lnk_blob.elongation = ((lnk_blob.elongation * lnk_blob.pixels) + (tmp_blob.elongation * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
                         lnk_blob.pixels += tmp_blob.pixels; // won't overflow
                         lnk_blob.perimeter += tmp_blob.perimeter; // won't overflow
                         lnk_blob.code |= tmp_blob.code;

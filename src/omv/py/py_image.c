@@ -3789,12 +3789,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_get_regression_obj, 2, py_image_get_r
 ///////////////
 
 // Blob Object //
-#define py_blob_obj_size 11
+#define py_blob_obj_size 12
 typedef struct py_blob_obj {
     mp_obj_base_t base;
     mp_obj_t corners;
     mp_obj_t min_corners;
-    mp_obj_t x, y, w, h, pixels, cx, cy, rotation, code, count, perimeter;
+    mp_obj_t x, y, w, h, pixels, cx, cy, rotation, code, count, perimeter, elongation;
     mp_obj_t x_hist_bins;
     mp_obj_t y_hist_bins;
 } py_blob_obj_t;
@@ -3805,7 +3805,7 @@ static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_ki
     mp_printf(print,
               "{\"x\":%d, \"y\":%d, \"w\":%d, \"h\":%d,"
               " \"pixels\":%d, \"cx\":%d, \"cy\":%d, \"rotation\":%f, \"code\":%d, \"count\":%d,"
-              " \"perimeter\":%d}",
+              " \"perimeter\":%d, \"elongation:%f\"}",
               mp_obj_get_int(self->x),
               mp_obj_get_int(self->y),
               mp_obj_get_int(self->w),
@@ -3816,7 +3816,8 @@ static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_ki
               (double) mp_obj_get_float(self->rotation),
               mp_obj_get_int(self->code),
               mp_obj_get_int(self->count),
-              mp_obj_get_int(self->perimeter));
+              mp_obj_get_int(self->perimeter),
+              (double) mp_obj_get_float(self->elongation));
 }
 
 static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
@@ -3844,6 +3845,7 @@ static mp_obj_t py_blob_subscr(mp_obj_t self_in, mp_obj_t index, mp_obj_t value)
             case 8: return self->code;
             case 9: return self->count;
             case 10: return self->perimeter;
+            case 11: return self->elongation;
         }
     }
     return MP_OBJ_NULL; // op not supported
@@ -3872,6 +3874,7 @@ mp_obj_t py_blob_rotation(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)
 mp_obj_t py_blob_code(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->code; }
 mp_obj_t py_blob_count(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->count; }
 mp_obj_t py_blob_perimeter(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->perimeter; }
+mp_obj_t py_blob_elongation(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->elongation; }
 mp_obj_t py_blob_area(mp_obj_t self_in) {
     return mp_obj_new_int(mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h));
 }
@@ -4068,6 +4071,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_rotation_obj, py_blob_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_perimeter_obj, py_blob_perimeter);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_elongation_obj, py_blob_elongation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
@@ -4094,6 +4098,7 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_code), MP_ROM_PTR(&py_blob_code_obj) },
     { MP_ROM_QSTR(MP_QSTR_count), MP_ROM_PTR(&py_blob_count_obj) },
     { MP_ROM_QSTR(MP_QSTR_perimeter), MP_ROM_PTR(&py_blob_perimeter_obj) },
+    { MP_ROM_QSTR(MP_QSTR_elongation), MP_ROM_PTR(&py_blob_elongation_obj) },
     { MP_ROM_QSTR(MP_QSTR_area), MP_ROM_PTR(&py_blob_area_obj) } ,
     { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) },
     { MP_ROM_QSTR(MP_QSTR_x_hist_bins), MP_ROM_PTR(&py_blob_x_hist_bins_obj) },
@@ -4141,6 +4146,7 @@ static bool py_image_find_blobs_threshold_cb(void *fun_obj, find_blobs_list_lnk_
     o->code = mp_obj_new_int(blob->code);
     o->count = mp_obj_new_int(blob->count);
     o->perimeter = mp_obj_new_int(blob->perimeter);
+    o->elongation = mp_obj_new_float(blob->elongation);
     o->x_hist_bins = mp_obj_new_list(blob->x_hist_bins_count, NULL);
     o->y_hist_bins = mp_obj_new_list(blob->y_hist_bins_count, NULL);
 
@@ -4182,6 +4188,7 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o0->code = mp_obj_new_int(blob0->code);
     o0->count = mp_obj_new_int(blob0->count);
     o0->perimeter = mp_obj_new_int(blob0->perimeter);
+    o0->elongation = mp_obj_new_float(blob0->elongation);
     o0->x_hist_bins = mp_obj_new_list(blob0->x_hist_bins_count, NULL);
     o0->y_hist_bins = mp_obj_new_list(blob0->y_hist_bins_count, NULL);
 
@@ -4218,6 +4225,7 @@ static bool py_image_find_blobs_merge_cb(void *fun_obj, find_blobs_list_lnk_data
     o1->code = mp_obj_new_int(blob1->code);
     o1->count = mp_obj_new_int(blob1->count);
     o1->perimeter = mp_obj_new_int(blob1->perimeter);
+    o1->elongation = mp_obj_new_float(blob1->elongation);
     o1->x_hist_bins = mp_obj_new_list(blob1->x_hist_bins_count, NULL);
     o1->y_hist_bins = mp_obj_new_list(blob1->y_hist_bins_count, NULL);
 
@@ -4296,6 +4304,7 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
         o->code = mp_obj_new_int(lnk_data.code);
         o->count = mp_obj_new_int(lnk_data.count);
         o->perimeter = mp_obj_new_int(lnk_data.perimeter);
+        o->elongation = mp_obj_new_float(lnk_data.elongation);
         o->x_hist_bins = mp_obj_new_list(lnk_data.x_hist_bins_count, NULL);
         o->y_hist_bins = mp_obj_new_list(lnk_data.y_hist_bins_count, NULL);
 
