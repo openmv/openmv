@@ -3885,6 +3885,10 @@ mp_obj_t py_blob_density(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_DIV(pixels, ((float) area)));
 }
+// Rect-area versus pixels (e.g. blob area) -> Above.
+// Rect-area versus perimeter -> Basically the same as the above with a different scale factor.
+// Rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
+// Rect-perimeter versus perimeter -> Basically the same as the above with a different scale factor.
 mp_obj_t py_blob_compactness(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     float perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
@@ -3913,6 +3917,10 @@ mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_DIV(((pixels * 4) / M_PI), min_area));
 }
+// Min rect-area versus pixels (e.g. blob area) -> Above.
+// Min rect-area versus perimeter -> Basically the same as the above with a different scale factor.
+// Min rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
+// Min rect-perimeter versus perimeter -> Basically the same as the above with a different scale factor.
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
 mp_obj_t py_blob_major_axis_line(mp_obj_t self_in) {
