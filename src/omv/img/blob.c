@@ -280,66 +280,75 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
-                            // https://www.strchr.com/standard_deviation_in_one_pass
-                            //
-                            // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
-                            // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
-                            // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
-                            //
-                            // blob_a = sigma(x*x)
-                            // blob_b = sigma(x*y)
-                            // blob_c = sigma(y*y)
-                            // blob_cx = sigma(x)
-                            // blob_cy = sigma(y)
-                            // blob_pixels = sigma()
+                            if ((((blob_x2 - blob_x1 + 1) * (blob_y2 - blob_y1 + 1)) >= area_threshold)
+                            && (blob_pixels >= pixels_threshold)) {
 
-                            int mx = blob_cx / blob_pixels; // x centroid
-                            int my = blob_cy / blob_pixels; // y centroid
-                            int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
-                            int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
-                            int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
-
-                            find_blobs_list_lnk_data_t lnk_blob;
-                            lnk_blob.corners[0].x = blob_x1;
-                            lnk_blob.corners[0].y = blob_x1y;
-                            lnk_blob.corners[1].x = blob_y1x;
-                            lnk_blob.corners[1].y = blob_y1;
-                            lnk_blob.corners[2].x = blob_x2;
-                            lnk_blob.corners[2].y = blob_x2y;
-                            lnk_blob.corners[3].x = blob_y2x;
-                            lnk_blob.corners[3].y = blob_y2;
-                            lnk_blob.rect.x = blob_x1;
-                            lnk_blob.rect.y = blob_y1;
-                            lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
-                            lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
-                            lnk_blob.pixels = blob_pixels;
-                            lnk_blob.perimeter = perimeter;
-                            lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
-                            lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
-                            lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
-                            lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
-                            lnk_blob.code = 1 << code;
-                            lnk_blob.count = 1;
-                            lnk_blob.x_hist_bins_count = 0;
-                            lnk_blob.x_hist_bins = NULL;
-                            lnk_blob.y_hist_bins_count = 0;
-                            lnk_blob.y_hist_bins = NULL;
-
-                            if (x_hist_bins) {
-                                bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
-                            }
-
-                            if (y_hist_bins) {
-                                bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
-                            }
-
-                            if (((lnk_blob.rect.w * lnk_blob.rect.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)
-                            && ((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
-                                list_push_back(out, &lnk_blob);
-                            } else {
-                                if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
-                                if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
+                                // https://www.strchr.com/standard_deviation_in_one_pass
+                                //
+                                // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
+                                // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
+                                // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
+                                //
+                                // blob_a = sigma(x*x)
+                                // blob_b = sigma(x*y)
+                                // blob_c = sigma(y*y)
+                                // blob_cx = sigma(x)
+                                // blob_cy = sigma(y)
+                                // blob_pixels = sigma()
+    
+                                int mx = blob_cx / blob_pixels; // x centroid
+                                int my = blob_cy / blob_pixels; // y centroid
+                                int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
+                                int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
+                                int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+    
+                                find_blobs_list_lnk_data_t lnk_blob;
+                                lnk_blob.corners[0].x = blob_x1;
+                                lnk_blob.corners[0].y = blob_x1y;
+                                lnk_blob.corners[1].x = blob_y1x;
+                                lnk_blob.corners[1].y = blob_y1;
+                                lnk_blob.corners[2].x = blob_x2;
+                                lnk_blob.corners[2].y = blob_x2y;
+                                lnk_blob.corners[3].x = blob_y2x;
+                                lnk_blob.corners[3].y = blob_y2;
+                                lnk_blob.rect.x = blob_x1;
+                                lnk_blob.rect.y = blob_y1;
+                                lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
+                                lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
+                                lnk_blob.pixels = blob_pixels;
+                                lnk_blob.perimeter = perimeter;
+                                lnk_blob.code = 1 << code;
+                                lnk_blob.count = 1;
+                                lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
+                                lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
+                                lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
+                                lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
+                                lnk_blob.x_hist_bins_count = 0;
+                                lnk_blob.x_hist_bins = NULL;
+                                lnk_blob.y_hist_bins_count = 0;
+                                lnk_blob.y_hist_bins = NULL;
+                                // These store the current average accumulation.
+                                lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
+                                lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+    
+                                if (x_hist_bins) {
+                                    bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
+                                }
+    
+                                if (y_hist_bins) {
+                                    bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
+                                }
+    
+                                if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
+                                    list_push_back(out, &lnk_blob);
+                                } else {
+                                    if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
+                                    if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                }
                             }
 
                             x = old_x;
@@ -492,66 +501,75 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
-                            // https://www.strchr.com/standard_deviation_in_one_pass
-                            //
-                            // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
-                            // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
-                            // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
-                            //
-                            // blob_a = sigma(x*x)
-                            // blob_b = sigma(x*y)
-                            // blob_c = sigma(y*y)
-                            // blob_cx = sigma(x)
-                            // blob_cy = sigma(y)
-                            // blob_pixels = sigma()
+                            if ((((blob_x2 - blob_x1 + 1) * (blob_y2 - blob_y1 + 1)) >= area_threshold)
+                            && (blob_pixels >= pixels_threshold)) {
 
-                            int mx = blob_cx / blob_pixels; // x centroid
-                            int my = blob_cy / blob_pixels; // y centroid
-                            int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
-                            int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
-                            int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
-
-                            find_blobs_list_lnk_data_t lnk_blob;
-                            lnk_blob.corners[0].x = blob_x1;
-                            lnk_blob.corners[0].y = blob_x1y;
-                            lnk_blob.corners[1].x = blob_y1x;
-                            lnk_blob.corners[1].y = blob_y1;
-                            lnk_blob.corners[2].x = blob_x2;
-                            lnk_blob.corners[2].y = blob_x2y;
-                            lnk_blob.corners[3].x = blob_y2x;
-                            lnk_blob.corners[3].y = blob_y2;
-                            lnk_blob.rect.x = blob_x1;
-                            lnk_blob.rect.y = blob_y1;
-                            lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
-                            lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
-                            lnk_blob.pixels = blob_pixels;
-                            lnk_blob.perimeter = perimeter;
-                            lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
-                            lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
-                            lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
-                            lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
-                            lnk_blob.code = 1 << code;
-                            lnk_blob.count = 1;
-                            lnk_blob.x_hist_bins_count = 0;
-                            lnk_blob.x_hist_bins = NULL;
-                            lnk_blob.y_hist_bins_count = 0;
-                            lnk_blob.y_hist_bins = NULL;
-
-                            if (x_hist_bins) {
-                                bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
-                            }
-
-                            if (y_hist_bins) {
-                                bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
-                            }
-
-                            if (((lnk_blob.rect.w * lnk_blob.rect.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)
-                            && ((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
-                                list_push_back(out, &lnk_blob);
-                            } else {
-                                if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
-                                if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
+                                // https://www.strchr.com/standard_deviation_in_one_pass
+                                //
+                                // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
+                                // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
+                                // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
+                                //
+                                // blob_a = sigma(x*x)
+                                // blob_b = sigma(x*y)
+                                // blob_c = sigma(y*y)
+                                // blob_cx = sigma(x)
+                                // blob_cy = sigma(y)
+                                // blob_pixels = sigma()
+    
+                                int mx = blob_cx / blob_pixels; // x centroid
+                                int my = blob_cy / blob_pixels; // y centroid
+                                int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
+                                int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
+                                int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+    
+                                find_blobs_list_lnk_data_t lnk_blob;
+                                lnk_blob.corners[0].x = blob_x1;
+                                lnk_blob.corners[0].y = blob_x1y;
+                                lnk_blob.corners[1].x = blob_y1x;
+                                lnk_blob.corners[1].y = blob_y1;
+                                lnk_blob.corners[2].x = blob_x2;
+                                lnk_blob.corners[2].y = blob_x2y;
+                                lnk_blob.corners[3].x = blob_y2x;
+                                lnk_blob.corners[3].y = blob_y2;
+                                lnk_blob.rect.x = blob_x1;
+                                lnk_blob.rect.y = blob_y1;
+                                lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
+                                lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
+                                lnk_blob.pixels = blob_pixels;
+                                lnk_blob.perimeter = perimeter;
+                                lnk_blob.code = 1 << code;
+                                lnk_blob.count = 1;
+                                lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
+                                lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
+                                lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
+                                lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
+                                lnk_blob.x_hist_bins_count = 0;
+                                lnk_blob.x_hist_bins = NULL;
+                                lnk_blob.y_hist_bins_count = 0;
+                                lnk_blob.y_hist_bins = NULL;
+                                // These store the current average accumulation.
+                                lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
+                                lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+    
+                                if (x_hist_bins) {
+                                    bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
+                                }
+    
+                                if (y_hist_bins) {
+                                    bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
+                                }
+    
+                                if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
+                                    list_push_back(out, &lnk_blob);
+                                } else {
+                                    if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
+                                    if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                }
                             }
 
                             x = old_x;
@@ -704,66 +722,75 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
-                            // https://www.strchr.com/standard_deviation_in_one_pass
-                            //
-                            // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
-                            // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
-                            // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
-                            //
-                            // blob_a = sigma(x*x)
-                            // blob_b = sigma(x*y)
-                            // blob_c = sigma(y*y)
-                            // blob_cx = sigma(x)
-                            // blob_cy = sigma(y)
-                            // blob_pixels = sigma()
+                            if ((((blob_x2 - blob_x1 + 1) * (blob_y2 - blob_y1 + 1)) >= area_threshold)
+                            && (blob_pixels >= pixels_threshold)) {
 
-                            int mx = blob_cx / blob_pixels; // x centroid
-                            int my = blob_cy / blob_pixels; // y centroid
-                            int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
-                            int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
-                            int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
-
-                            find_blobs_list_lnk_data_t lnk_blob;
-                            lnk_blob.corners[0].x = blob_x1;
-                            lnk_blob.corners[0].y = blob_x1y;
-                            lnk_blob.corners[1].x = blob_y1x;
-                            lnk_blob.corners[1].y = blob_y1;
-                            lnk_blob.corners[2].x = blob_x2;
-                            lnk_blob.corners[2].y = blob_x2y;
-                            lnk_blob.corners[3].x = blob_y2x;
-                            lnk_blob.corners[3].y = blob_y2;
-                            lnk_blob.rect.x = blob_x1;
-                            lnk_blob.rect.y = blob_y1;
-                            lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
-                            lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
-                            lnk_blob.pixels = blob_pixels;
-                            lnk_blob.perimeter = perimeter;
-                            lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
-                            lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
-                            lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
-                            lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
-                            lnk_blob.code = 1 << code;
-                            lnk_blob.count = 1;
-                            lnk_blob.x_hist_bins_count = 0;
-                            lnk_blob.x_hist_bins = NULL;
-                            lnk_blob.y_hist_bins_count = 0;
-                            lnk_blob.y_hist_bins = NULL;
-
-                            if (x_hist_bins) {
-                                bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
-                            }
-
-                            if (y_hist_bins) {
-                                bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
-                            }
-
-                            if (((lnk_blob.rect.w * lnk_blob.rect.h) >= area_threshold) && (lnk_blob.pixels >= pixels_threshold)
-                            && ((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
-                                list_push_back(out, &lnk_blob);
-                            } else {
-                                if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
-                                if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
+                                // https://www.strchr.com/standard_deviation_in_one_pass
+                                //
+                                // a = sigma(x*x) + (mx*sigma(x)) + (mx*sigma(x)) + (sigma()*mx*mx)
+                                // b = sigma(x*y) + (mx*sigma(y)) + (my*sigma(x)) + (sigma()*mx*my)
+                                // c = sigma(y*y) + (my*sigma(y)) + (my*sigma(y)) + (sigma()*my*my)
+                                //
+                                // blob_a = sigma(x*x)
+                                // blob_b = sigma(x*y)
+                                // blob_c = sigma(y*y)
+                                // blob_cx = sigma(x)
+                                // blob_cy = sigma(y)
+                                // blob_pixels = sigma()
+    
+                                int mx = blob_cx / blob_pixels; // x centroid
+                                int my = blob_cy / blob_pixels; // y centroid
+                                int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
+                                int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
+                                int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
+    
+                                find_blobs_list_lnk_data_t lnk_blob;
+                                lnk_blob.corners[0].x = blob_x1;
+                                lnk_blob.corners[0].y = blob_x1y;
+                                lnk_blob.corners[1].x = blob_y1x;
+                                lnk_blob.corners[1].y = blob_y1;
+                                lnk_blob.corners[2].x = blob_x2;
+                                lnk_blob.corners[2].y = blob_x2y;
+                                lnk_blob.corners[3].x = blob_y2x;
+                                lnk_blob.corners[3].y = blob_y2;
+                                lnk_blob.rect.x = blob_x1;
+                                lnk_blob.rect.y = blob_y1;
+                                lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
+                                lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
+                                lnk_blob.pixels = blob_pixels;
+                                lnk_blob.perimeter = perimeter;
+                                lnk_blob.code = 1 << code;
+                                lnk_blob.count = 1;
+                                lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
+                                lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
+                                lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
+                                lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
+                                lnk_blob.x_hist_bins_count = 0;
+                                lnk_blob.x_hist_bins = NULL;
+                                lnk_blob.y_hist_bins_count = 0;
+                                lnk_blob.y_hist_bins = NULL;
+                                // These store the current average accumulation.
+                                lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
+                                lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
+    
+                                if (x_hist_bins) {
+                                    bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
+                                }
+    
+                                if (y_hist_bins) {
+                                    bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
+                                }
+    
+                                if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
+                                    list_push_back(out, &lnk_blob);
+                                } else {
+                                    if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
+                                    if (lnk_blob.y_hist_bins) xfree(lnk_blob.y_hist_bins);
+                                }
                             }
 
                             x = old_x;
@@ -809,27 +836,36 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                     if (rectangle_overlap(&(lnk_blob.rect), &temp)
                     && ((merge_cb_arg == NULL) || merge_cb(merge_cb_arg, &lnk_blob, &tmp_blob))) {
+                        // Have to merge these first before merging rects.
                         if (x_hist_bins_max) merge_bins(lnk_blob.rect.x, lnk_blob.rect.x + lnk_blob.rect.w - 1, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count,
                                                         tmp_blob.rect.x, tmp_blob.rect.x + tmp_blob.rect.w - 1, &tmp_blob.x_hist_bins, &tmp_blob.x_hist_bins_count,
                                                         x_hist_bins_max);
                         if (y_hist_bins_max) merge_bins(lnk_blob.rect.y, lnk_blob.rect.y + lnk_blob.rect.h - 1, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count,
                                                         tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1, &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
                                                         y_hist_bins_max);
+                        // Merge corners...
                         if (tmp_blob.corners[0].x < lnk_blob.corners[0].x) { lnk_blob.corners[0].x = tmp_blob.corners[0].x, lnk_blob.corners[0].y = tmp_blob.corners[0].y; }
                         if (tmp_blob.corners[1].y < lnk_blob.corners[1].y) { lnk_blob.corners[1].y = tmp_blob.corners[1].y, lnk_blob.corners[1].x = tmp_blob.corners[1].x; }
                         if (lnk_blob.corners[2].x < tmp_blob.corners[2].x) { lnk_blob.corners[2].x = tmp_blob.corners[2].x, lnk_blob.corners[2].y = tmp_blob.corners[2].y; }
                         if (lnk_blob.corners[3].y < tmp_blob.corners[3].y) { lnk_blob.corners[3].y = tmp_blob.corners[3].y, lnk_blob.corners[3].x = tmp_blob.corners[3].x; }
+                        // Merge rects...
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
-                        lnk_blob.centroid_x = ((lnk_blob.centroid_x * lnk_blob.pixels) + (tmp_blob.centroid_x * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
-                        lnk_blob.centroid_y = ((lnk_blob.centroid_y * lnk_blob.pixels) + (tmp_blob.centroid_y * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
-                        float sin_mean = ((sinf(lnk_blob.rotation) * lnk_blob.pixels) + (sinf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
-                        float cos_mean = ((cosf(lnk_blob.rotation) * lnk_blob.pixels) + (cosf(tmp_blob.rotation) * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
-                        lnk_blob.rotation = fast_atan2f(sin_mean, cos_mean);
-                        lnk_blob.roundness = ((lnk_blob.roundness * lnk_blob.pixels) + (tmp_blob.roundness * tmp_blob.pixels)) / (lnk_blob.pixels + tmp_blob.pixels);
+                        // Merge counters...
                         lnk_blob.pixels += tmp_blob.pixels; // won't overflow
                         lnk_blob.perimeter += tmp_blob.perimeter; // won't overflow
-                        lnk_blob.code |= tmp_blob.code;
-                        lnk_blob.count = IM_MAX(IM_MIN(lnk_blob.count + tmp_blob.count, UINT16_MAX), 0);
+                        lnk_blob.code |= tmp_blob.code; // won't overflow
+                        lnk_blob.count += tmp_blob.count; // won't overflow
+                        // Merge accumulators...
+                        lnk_blob.centroid_x_acc += tmp_blob.centroid_x_acc;
+                        lnk_blob.centroid_y_acc += tmp_blob.centroid_y_acc;
+                        lnk_blob.rotation_acc_x += tmp_blob.rotation_acc_x;
+                        lnk_blob.rotation_acc_y += tmp_blob.rotation_acc_y;
+                        lnk_blob.roundness_acc += tmp_blob.roundness_acc;
+                        // Compute current values...
+                        lnk_blob.centroid_x = lnk_blob.centroid_x_acc / lnk_blob.pixels;
+                        lnk_blob.centroid_y = lnk_blob.centroid_y_acc / lnk_blob.pixels;
+                        lnk_blob.rotation = fast_atan2f(lnk_blob.rotation_acc_y / lnk_blob.pixels, lnk_blob.centroid_x_acc / lnk_blob.pixels);
+                        lnk_blob.roundness = lnk_blob.roundness_acc / lnk_blob.pixels;
                         merge_occured = true;
                     } else {
                         list_push_back(out, &tmp_blob);
