@@ -57,6 +57,8 @@ static const mp_obj_type_t py_cascade_type = {
 
 // Keypoints object ///////////////////////////////////////////////////////////
 
+#ifdef IMLIB_ENABLE_FIND_KEYPOINTS
+
 typedef struct _py_kp_obj_t {
     mp_obj_base_t base;
     array_t *kpts;
@@ -112,7 +114,11 @@ py_kp_obj_t *py_kpts_obj(mp_obj_t kpts_obj)
     return kpts_obj;
 }
 
+#endif // IMLIB_ENABLE_FIND_KEYPOINTS
+
 // LBP descriptor /////////////////////////////////////////////////////////////
+
+#ifdef IMLIB_ENABLE_FIND_LBP
 
 typedef struct _py_lbp_obj_t {
     mp_obj_base_t base;
@@ -130,7 +136,12 @@ static const mp_obj_type_t py_lbp_type = {
     .print = py_lbp_print,
 };
 
-// Keypoints match object /////////////////////////////////////////////////////
+#endif // IMLIB_ENABLE_FIND_LBP
+
+// Keypoints Match Object /////////////////////////////////////////////////////
+
+#ifdef IMLIB_ENABLE_FIND_KEYPOINTS
+
 #define kptmatch_obj_size 9
 typedef struct _py_kptmatch_obj_t {
     mp_obj_base_t base;
@@ -226,6 +237,8 @@ static const mp_obj_type_t py_kptmatch_type = {
     .subscr = py_kptmatch_subscr,
     .locals_dict = (mp_obj_t) &py_kptmatch_locals_dict
 };
+
+#endif // IMLIB_ENABLE_FIND_KEYPOINTS
 
 // Image //////////////////////////////////////////////////////////////////////
 
@@ -1528,6 +1541,7 @@ STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
             imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
         }
     } else {
+#ifdef IMLIB_ENABLE_FIND_KEYPOINTS
         py_kp_obj_t *kpts_obj = py_kpts_obj(args[1]);
         for (int i = 0, ii = array_length(kpts_obj->kpts); i < ii; i++) {
             kp_t *kp = array_at(kpts_obj->kpts, i);
@@ -1539,6 +1553,9 @@ STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
             imlib_draw_line(arg_img, cx, cy, cx + co, cy + si, arg_c, arg_thickness);
             imlib_draw_circle(arg_img, cx, cy, (arg_s - 2) / 2, arg_c, arg_thickness, arg_fill);
         }
+#else
+        PY_ASSERT_TRUE_MSG(false, "Expected a list of tuples!");
+#endif // IMLIB_ENABLE_FIND_KEYPOINTS
     }
 
     return args[0];
@@ -5520,6 +5537,7 @@ static mp_obj_t py_image_find_displacement(uint n_args, const mp_obj_t *args, mp
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_displacement_obj, 2, py_image_find_displacement);
 #endif // IMLIB_ENABLE_FIND_DISPLACEMENT
 
+#ifdef IMLIB_FIND_TEMPLATE
 static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_grayscale(args[0]);
@@ -5561,6 +5579,7 @@ static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_template_obj, 3, py_image_find_template);
+#endif // IMLIB_FIND_TEMPLATE
 
 static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -5615,6 +5634,7 @@ static mp_obj_t py_image_find_eye(uint n_args, const mp_obj_t *args, mp_map_t *k
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_eye_obj, 2, py_image_find_eye);
 
+#ifdef IMLIB_ENABLE_FIND_LBP
 static mp_obj_t py_image_find_lbp(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_grayscale(args[0]);
@@ -5628,7 +5648,9 @@ static mp_obj_t py_image_find_lbp(uint n_args, const mp_obj_t *args, mp_map_t *k
     return lbp_obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_lbp_obj, 2, py_image_find_lbp);
+#endif // IMLIB_ENABLE_FIND_LBP
 
+#ifdef IMLIB_ENABLE_FIND_KEYPOINTS
 static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
@@ -5666,6 +5688,7 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_find_keypoints_obj, 1, py_image_find_keypoints);
+#endif // IMLIB_ENABLE_FIND_KEYPOINTS
 
 #ifdef IMLIB_ENABLE_BINARY_OPS
 static mp_obj_t py_image_find_edges(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -6006,11 +6029,23 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
 #else
     {MP_ROM_QSTR(MP_QSTR_find_displacement),   MP_ROM_PTR(&py_func_unavailable_obj)},
 #endif
+#ifdef IMLIB_FIND_TEMPLATE
     {MP_ROM_QSTR(MP_QSTR_find_template),       MP_ROM_PTR(&py_image_find_template_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_template),       MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif
     {MP_ROM_QSTR(MP_QSTR_find_features),       MP_ROM_PTR(&py_image_find_features_obj)},
     {MP_ROM_QSTR(MP_QSTR_find_eye),            MP_ROM_PTR(&py_image_find_eye_obj)},
+#ifdef IMLIB_ENABLE_FIND_LBP
     {MP_ROM_QSTR(MP_QSTR_find_lbp),            MP_ROM_PTR(&py_image_find_lbp_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_lbp),            MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif
+#ifdef IMLIB_ENABLE_FIND_KEYPOINTS
     {MP_ROM_QSTR(MP_QSTR_find_keypoints),      MP_ROM_PTR(&py_image_find_keypoints_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_find_keypoints),      MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif
 #ifdef IMLIB_ENABLE_BINARY_OPS
     {MP_ROM_QSTR(MP_QSTR_find_edges),          MP_ROM_PTR(&py_image_find_edges_obj)},
 #else
@@ -6380,6 +6415,7 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
 
+#ifdef IMLIB_ENABLE_DESCRIPTOR
 mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     FIL fp;
@@ -6573,6 +6609,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
     return match_obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 2, py_image_match_descriptor);
+#endif // IMLIB_ENABLE_DESCRIPTOR
 
 int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *roi)
 {
@@ -6598,8 +6635,10 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
 
 static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
+#ifdef IMLIB_FIND_TEMPLATE
     {MP_ROM_QSTR(MP_QSTR_SEARCH_EX),           MP_ROM_INT(SEARCH_EX)},
     {MP_ROM_QSTR(MP_QSTR_SEARCH_DS),           MP_ROM_INT(SEARCH_DS)},
+#endif
     {MP_ROM_QSTR(MP_QSTR_EDGE_CANNY),          MP_ROM_INT(EDGE_CANNY)},
     {MP_ROM_QSTR(MP_QSTR_EDGE_SIMPLE),         MP_ROM_INT(EDGE_SIMPLE)},
     {MP_ROM_QSTR(MP_QSTR_CORNER_FAST),         MP_ROM_INT(CORNER_FAST)},
@@ -6638,9 +6677,15 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_grayscale_to_rgb),    MP_ROM_PTR(&py_image_grayscale_to_rgb_obj)},
     {MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_image_load_image_obj)},
     {MP_ROM_QSTR(MP_QSTR_HaarCascade),         MP_ROM_PTR(&py_image_load_cascade_obj)},
+#ifdef IMLIB_ENABLE_DESCRIPTOR
     {MP_ROM_QSTR(MP_QSTR_load_descriptor),     MP_ROM_PTR(&py_image_load_descriptor_obj)},
     {MP_ROM_QSTR(MP_QSTR_save_descriptor),     MP_ROM_PTR(&py_image_save_descriptor_obj)},
     {MP_ROM_QSTR(MP_QSTR_match_descriptor),    MP_ROM_PTR(&py_image_match_descriptor_obj)}
+#else
+    {MP_ROM_QSTR(MP_QSTR_load_descriptor),     MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_save_descriptor),     MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_match_descriptor),    MP_ROM_PTR(&py_func_unavailable_obj)}
+#endif
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
