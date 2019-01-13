@@ -1057,7 +1057,7 @@ typedef struct find_blobs_list_lnk_data {
     uint32_t pixels, perimeter, code, count;
     float centroid_x, centroid_y, rotation, roundness;
     uint16_t x_hist_bins_count, *x_hist_bins, y_hist_bins_count, *y_hist_bins;
-    float centroid_x_acc, centroid_y_acc, rotation_acc_x, rotation_acc_y, roundness_acc;
+    int32_t centroid_x_acc, centroid_y_acc, rotation_acc_x, rotation_acc_y, roundness_acc;
 } find_blobs_list_lnk_data_t;
 
 typedef struct find_lines_list_lnk_data {
