@@ -85,7 +85,7 @@ static void merge_bins(int b_dst_start, int b_dst_end, uint16_t **b_dst_hist, ui
     (*b_src_hist) = NULL;
 }
 
-static float calc_roundness(int blob_a, int blob_b, int blob_c)
+static float calc_roundness(float blob_a, float blob_b, float blob_c)
 {
     float roundness_div = fast_sqrtf((blob_b * blob_b) + ((blob_a - blob_c) * (blob_a - blob_c)));
     float roundness_sin = IM_DIV(blob_b, roundness_div);
