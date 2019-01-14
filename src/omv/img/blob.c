@@ -11,6 +11,16 @@ typedef struct xylr
 }
 xylr_t;
 
+static int sum_m_to_n(int m, int n)
+{
+    return ((n * (n + 1)) - (m * (m - 1))) / 2;
+}
+
+static int sum_2_m_to_n(int m, int n)
+{
+    return ((n * (n + 1) * ((2 * n) + 1)) - (m * (m - 1) * ((2 * m) - 1))) / 6;
+}
+
 static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_t **new_hist, uint16_t *new_size)
 {
     int start = -1;
@@ -147,9 +157,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y;
+                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1;
                             int blob_y1 = y, blob_y1x = x;
-                            int blob_x2 = x, blob_x2y = y;
+                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1;
                             int blob_y2 = y, blob_y2x = x;
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
@@ -180,22 +190,48 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
-                                if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
-                                if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
-                                if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
-                                if (blob_y2 < y) { blob_y2 = y, blob_y2x = right; } // blob_y2 = IM_MAX(blob_y2, y);
-                                blob_perimeter += 2;
                                 for (int i = left; i <= right; i++) {
                                     IMAGE_SET_BINARY_PIXEL_FAST(bmp_row, i);
-                                    blob_pixels += 1;
-                                    blob_cx += i;
-                                    blob_cy += y;
-                                    blob_a += i*i;
-                                    blob_b += i*y;
-                                    blob_c += y*y;
                                     if (x_hist_bins) x_hist_bins[i] += 1;
-                                    if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
+
+                                int sum = sum_m_to_n(left, right);
+                                int sum_2 = sum_2_m_to_n(left, right);
+                                int cnt = right - left + 1;
+                                int avg = sum / cnt;
+
+                                if (left < blob_x1) { // Restart left column average.
+                                    blob_x1 = left, blob_x1y = y;
+                                    blob_x1y_n = 1;
+                                } else if (left == blob_x1) { // Moving average for left.
+                                    blob_x1y = (y + (blob_x1y_n * blob_x1y)) / (blob_x1y_n + 1);
+                                    blob_x1y_n += 1;
+                                }
+
+                                if (y < blob_y1) { // Top is the average of all top pixels.
+                                    blob_y1 = y, blob_y1x = avg;
+                                }
+
+                                if (blob_x2 < right) { // Restart right column average.
+                                    blob_x2 = right, blob_x2y = y;
+                                    blob_x2y_n = 1;
+                                } else if (right == blob_x2) {
+                                    blob_x2y = (y + (blob_x2y_n * blob_x2y)) / (blob_x2y_n + 1);
+                                    blob_x2y_n += 1;
+                                }
+
+                                if (blob_y2 < y) { // Bot is the average of all top pixels.
+                                    blob_y2 = y, blob_y2x = avg;
+                                }
+
+                                blob_pixels += cnt;
+                                blob_perimeter += 2;
+                                blob_cx += sum;
+                                blob_cy += y * cnt;
+                                blob_a += sum_2;
+                                blob_b += y * sum;
+                                blob_c += y * y * cnt;
+                                if (y_hist_bins) y_hist_bins[y] += cnt;
 
                                 int top_left = left;
                                 int bot_left = left;
@@ -309,8 +345,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // blob_cy = sigma(y)
                                 // blob_pixels = sigma()
 
-                                int mx = fast_roundf(blob_cx / ((float) blob_pixels)); // x centroid
-                                int my = fast_roundf(blob_cy / ((float) blob_pixels)); // y centroid
+                                float b_mx = blob_cx / ((float) blob_pixels);
+                                float b_my = blob_cy / ((float) blob_pixels);
+                                int mx = fast_roundf(b_mx); // x centroid
+                                int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
@@ -332,8 +370,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
                                 lnk_blob.count = 1;
-                                lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
-                                lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
+                                lnk_blob.centroid_x = b_mx;
+                                lnk_blob.centroid_y = b_my;
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
@@ -343,9 +381,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
                                 lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 100 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
+                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -380,9 +418,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y;
+                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1;
                             int blob_y1 = y, blob_y1x = x;
-                            int blob_x2 = x, blob_x2y = y;
+                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1;
                             int blob_y2 = y, blob_y2x = x;
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
@@ -413,22 +451,48 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
-                                if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
-                                if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
-                                if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
-                                if (blob_y2 < y) { blob_y2 = y, blob_y2x = right; } // blob_y2 = IM_MAX(blob_y2, y);
-                                blob_perimeter += 2;
                                 for (int i = left; i <= right; i++) {
                                     IMAGE_SET_BINARY_PIXEL_FAST(bmp_row, i);
-                                    blob_pixels += 1;
-                                    blob_cx += i;
-                                    blob_cy += y;
-                                    blob_a += i*i;
-                                    blob_b += i*y;
-                                    blob_c += y*y;
                                     if (x_hist_bins) x_hist_bins[i] += 1;
-                                    if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
+
+                                int sum = sum_m_to_n(left, right);
+                                int sum_2 = sum_2_m_to_n(left, right);
+                                int cnt = right - left + 1;
+                                int avg = sum / cnt;
+
+                                if (left < blob_x1) { // Restart left column average.
+                                    blob_x1 = left, blob_x1y = y;
+                                    blob_x1y_n = 1;
+                                } else if (left == blob_x1) { // Moving average for left.
+                                    blob_x1y = (y + (blob_x1y_n * blob_x1y)) / (blob_x1y_n + 1);
+                                    blob_x1y_n += 1;
+                                }
+
+                                if (y < blob_y1) { // Top is the average of all top pixels.
+                                    blob_y1 = y, blob_y1x = avg;
+                                }
+
+                                if (blob_x2 < right) { // Restart right column average.
+                                    blob_x2 = right, blob_x2y = y;
+                                    blob_x2y_n = 1;
+                                } else if (right == blob_x2) {
+                                    blob_x2y = (y + (blob_x2y_n * blob_x2y)) / (blob_x2y_n + 1);
+                                    blob_x2y_n += 1;
+                                }
+
+                                if (blob_y2 < y) { // Bot is the average of all top pixels.
+                                    blob_y2 = y, blob_y2x = avg;
+                                }
+
+                                blob_pixels += cnt;
+                                blob_perimeter += 2;
+                                blob_cx += sum;
+                                blob_cy += y * cnt;
+                                blob_a += sum_2;
+                                blob_b += y * sum;
+                                blob_c += y * y * cnt;
+                                if (y_hist_bins) y_hist_bins[y] += cnt;
 
                                 int top_left = left;
                                 int bot_left = left;
@@ -542,8 +606,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // blob_cy = sigma(y)
                                 // blob_pixels = sigma()
 
-                                int mx = fast_roundf(blob_cx / ((float) blob_pixels)); // x centroid
-                                int my = fast_roundf(blob_cy / ((float) blob_pixels)); // y centroid
+                                float b_mx = blob_cx / ((float) blob_pixels);
+                                float b_my = blob_cy / ((float) blob_pixels);
+                                int mx = fast_roundf(b_mx); // x centroid
+                                int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
@@ -565,8 +631,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
                                 lnk_blob.count = 1;
-                                lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
-                                lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
+                                lnk_blob.centroid_x = b_mx;
+                                lnk_blob.centroid_y = b_my;
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
@@ -576,9 +642,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
                                 lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 100 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
+                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -613,9 +679,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y;
+                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1;
                             int blob_y1 = y, blob_y1x = x;
-                            int blob_x2 = x, blob_x2y = y;
+                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1;
                             int blob_y2 = y, blob_y2x = x;
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
@@ -646,22 +712,48 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     right++;
                                 }
 
-                                if (left < blob_x1) { blob_x1 = left, blob_x1y = y; } // blob_x1 = IM_MIN(blob_x1, left);
-                                if (y < blob_y1) { blob_y1 = y, blob_y1x = left; } // blob_y1 = IM_MIN(blob_y1, y);
-                                if (blob_x2 < right) { blob_x2 = right, blob_x2y = y; } // blob_x2 = IM_MAX(blob_x2, right);
-                                if (blob_y2 < y) { blob_y2 = y, blob_y2x = right; } // blob_y2 = IM_MAX(blob_y2, y);
-                                blob_perimeter += 2;
                                 for (int i = left; i <= right; i++) {
                                     IMAGE_SET_BINARY_PIXEL_FAST(bmp_row, i);
-                                    blob_pixels += 1;
-                                    blob_cx += i;
-                                    blob_cy += y;
-                                    blob_a += i*i;
-                                    blob_b += i*y;
-                                    blob_c += y*y;
                                     if (x_hist_bins) x_hist_bins[i] += 1;
-                                    if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
+
+                                int sum = sum_m_to_n(left, right);
+                                int sum_2 = sum_2_m_to_n(left, right);
+                                int cnt = right - left + 1;
+                                int avg = sum / cnt;
+
+                                if (left < blob_x1) { // Restart left column average.
+                                    blob_x1 = left, blob_x1y = y;
+                                    blob_x1y_n = 1;
+                                } else if (left == blob_x1) { // Moving average for left.
+                                    blob_x1y = (y + (blob_x1y_n * blob_x1y)) / (blob_x1y_n + 1);
+                                    blob_x1y_n += 1;
+                                }
+
+                                if (y < blob_y1) { // Top is the average of all top pixels.
+                                    blob_y1 = y, blob_y1x = avg;
+                                }
+
+                                if (blob_x2 < right) { // Restart right column average.
+                                    blob_x2 = right, blob_x2y = y;
+                                    blob_x2y_n = 1;
+                                } else if (right == blob_x2) {
+                                    blob_x2y = (y + (blob_x2y_n * blob_x2y)) / (blob_x2y_n + 1);
+                                    blob_x2y_n += 1;
+                                }
+
+                                if (blob_y2 < y) { // Bot is the average of all top pixels.
+                                    blob_y2 = y, blob_y2x = avg;
+                                }
+
+                                blob_pixels += cnt;
+                                blob_perimeter += 2;
+                                blob_cx += sum;
+                                blob_cy += y * cnt;
+                                blob_a += sum_2;
+                                blob_b += y * sum;
+                                blob_c += y * y * cnt;
+                                if (y_hist_bins) y_hist_bins[y] += cnt;
 
                                 int top_left = left;
                                 int bot_left = left;
@@ -775,8 +867,10 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // blob_cy = sigma(y)
                                 // blob_pixels = sigma()
 
-                                int mx = fast_roundf(blob_cx / ((float) blob_pixels)); // x centroid
-                                int my = fast_roundf(blob_cy / ((float) blob_pixels)); // y centroid
+                                float b_mx = blob_cx / ((float) blob_pixels);
+                                float b_my = blob_cy / ((float) blob_pixels);
+                                int mx = fast_roundf(b_mx); // x centroid
+                                int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
                                 int small_blob_b = blob_b - ((mx * blob_cy) + (my * blob_cx)) + (blob_pixels * mx * my);
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
@@ -798,8 +892,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
                                 lnk_blob.count = 1;
-                                lnk_blob.centroid_x = blob_cx / ((float) blob_pixels);
-                                lnk_blob.centroid_y = blob_cy / ((float) blob_pixels);
+                                lnk_blob.centroid_x = b_mx;
+                                lnk_blob.centroid_y = b_my;
                                 lnk_blob.rotation = (small_blob_a != small_blob_c) ? (fast_atan2f(2 * small_blob_b, small_blob_a - small_blob_c) / 2.0f) : 0.0f;
                                 lnk_blob.roundness = calc_roundness(small_blob_a, small_blob_b, small_blob_c);
                                 lnk_blob.x_hist_bins_count = 0;
@@ -809,9 +903,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
                                 lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 100 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
+                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -900,8 +994,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         // Compute current values...
                         lnk_blob.centroid_x = lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels);
                         lnk_blob.centroid_y = lnk_blob.centroid_y_acc / ((float) lnk_blob.pixels);
-                        lnk_blob.rotation = fast_atan2f((lnk_blob.rotation_acc_y / ((float) lnk_blob.pixels)) / 100, (lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels)) / 100);
-                        lnk_blob.roundness = (lnk_blob.roundness_acc / ((float) lnk_blob.pixels)) / 100;
+                        lnk_blob.rotation = fast_atan2f((lnk_blob.rotation_acc_y / ((float) lnk_blob.pixels)) / 256, (lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels)) / 256);
+                        lnk_blob.roundness = (lnk_blob.roundness_acc / ((float) lnk_blob.pixels)) / 256;
                         merge_occured = true;
                     } else {
                         list_push_back(out, &tmp_blob);
