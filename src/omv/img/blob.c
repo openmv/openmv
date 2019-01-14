@@ -5,11 +5,11 @@
 
 #include "imlib.h"
 
-typedef struct xylf
+typedef struct xylr
 {
-    int16_t x, y, l, r;
+    int16_t x, y, l, r, t_l, b_l;
 }
-xylf_t;
+xylr_t;
 
 static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_t **new_hist, uint16_t *new_size)
 {
@@ -127,7 +127,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
     lifo_t lifo;
     size_t lifo_len;
-    lifo_alloc_all(&lifo, &lifo_len, sizeof(xylf_t));
+    lifo_alloc_all(&lifo, &lifo_len, sizeof(xylr_t));
 
     list_init(out, sizeof(find_blobs_list_lnk_data_t));
 
@@ -197,6 +197,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
 
+                                int top_left = left;
+                                int bot_left = left;
                                 bool break_out = false;
                                 for(;;) {
                                     if (lifo_size(&lifo) < lifo_len) {
@@ -206,25 +208,29 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             bmp_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y - 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++) {
+                                            for (int i = top_left; i <= right; i++) {
+                                                bool ok = true; // Does nothing if thresholding is skipped.
+
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
-                                                && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i), &lnk_data, invert)) {
-                                                    xylf_t context;
+                                                && (ok = COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i), &lnk_data, invert))) {
+                                                    xylr_t context;
                                                     context.x = x;
                                                     context.y = y;
                                                     context.l = left;
                                                     context.r = right;
+                                                    context.t_l = i + 1; // Don't test the same pixel again...
+                                                    context.b_l = bot_left;
                                                     lifo_enqueue(&lifo, &context);
                                                     x = i;
                                                     y = y - 1;
                                                     recurse = true;
                                                     break;
                                                 }
+
+                                                blob_perimeter += (!ok) && (i != left) && (i != right);
                                             }
                                             if (recurse) {
                                                 break;
-                                            } else {
-                                                blob_perimeter += 1;
                                             }
                                         } else {
                                             blob_perimeter += right - left + 1;
@@ -235,25 +241,29 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             bmp_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y + 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++) {
+                                            for (int i = bot_left; i <= right; i++) {
+                                                bool ok = true; // Does nothing if thresholding is skipped.
+
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
-                                                && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i), &lnk_data, invert)) {
-                                                    xylf_t context;
+                                                && (ok = COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i), &lnk_data, invert))) {
+                                                    xylr_t context;
                                                     context.x = x;
                                                     context.y = y;
                                                     context.l = left;
                                                     context.r = right;
+                                                    context.t_l = top_left;
+                                                    context.b_l = i + 1; // Don't test the same pixel again...
                                                     lifo_enqueue(&lifo, &context);
                                                     x = i;
                                                     y = y + 1;
                                                     recurse = true;
                                                     break;
                                                 }
+
+                                                blob_perimeter += (!ok) && (i != left) && (i != right);
                                             }
                                             if (recurse) {
                                                 break;
-                                            } else {
-                                                blob_perimeter += 1;
                                             }
                                         } else {
                                             blob_perimeter += right - left + 1;
@@ -267,12 +277,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                         break;
                                     }
 
-                                    xylf_t context;
+                                    xylr_t context;
                                     lifo_dequeue(&lifo, &context);
                                     x = context.x;
                                     y = context.y;
                                     left = context.l;
                                     right = context.r;
+                                    top_left = context.t_l;
+                                    bot_left = context.b_l;
                                 }
 
                                 if (break_out) {
@@ -418,6 +430,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
 
+                                int top_left = left;
+                                int bot_left = left;
                                 bool break_out = false;
                                 for(;;) {
                                     if (lifo_size(&lifo) < lifo_len) {
@@ -427,25 +441,29 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             bmp_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y - 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++) {
+                                            for (int i = top_left; i <= right; i++) {
+                                                bool ok = true; // Does nothing if thresholding is skipped.
+
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
-                                                && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i), &lnk_data, invert)) {
-                                                    xylf_t context;
+                                                && (ok = COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i), &lnk_data, invert))) {
+                                                    xylr_t context;
                                                     context.x = x;
                                                     context.y = y;
                                                     context.l = left;
                                                     context.r = right;
+                                                    context.t_l = i + 1; // Don't test the same pixel again...
+                                                    context.b_l = bot_left;
                                                     lifo_enqueue(&lifo, &context);
                                                     x = i;
                                                     y = y - 1;
                                                     recurse = true;
                                                     break;
                                                 }
+
+                                                blob_perimeter += (!ok) && (i != left) && (i != right);
                                             }
                                             if (recurse) {
                                                 break;
-                                            } else {
-                                                blob_perimeter += 1;
                                             }
                                         } else {
                                             blob_perimeter += right - left + 1;
@@ -456,25 +474,29 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             bmp_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y + 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++) {
+                                            for (int i = bot_left; i <= right; i++) {
+                                                bool ok = true; // Does nothing if thresholding is skipped.
+
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
-                                                && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i), &lnk_data, invert)) {
-                                                    xylf_t context;
+                                                && (ok = COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i), &lnk_data, invert))) {
+                                                    xylr_t context;
                                                     context.x = x;
                                                     context.y = y;
                                                     context.l = left;
                                                     context.r = right;
+                                                    context.t_l = top_left;
+                                                    context.b_l = i + 1; // Don't test the same pixel again...
                                                     lifo_enqueue(&lifo, &context);
                                                     x = i;
                                                     y = y + 1;
                                                     recurse = true;
                                                     break;
                                                 }
+
+                                                blob_perimeter += (!ok) && (i != left) && (i != right);
                                             }
                                             if (recurse) {
                                                 break;
-                                            } else {
-                                                blob_perimeter += 1;
                                             }
                                         } else {
                                             blob_perimeter += right - left + 1;
@@ -488,12 +510,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                         break;
                                     }
 
-                                    xylf_t context;
+                                    xylr_t context;
                                     lifo_dequeue(&lifo, &context);
                                     x = context.x;
                                     y = context.y;
                                     left = context.l;
                                     right = context.r;
+                                    top_left = context.t_l;
+                                    bot_left = context.b_l;
                                 }
 
                                 if (break_out) {
@@ -639,6 +663,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     if (y_hist_bins) y_hist_bins[y] += 1;
                                 }
 
+                                int top_left = left;
+                                int bot_left = left;
                                 bool break_out = false;
                                 for(;;) {
                                     if (lifo_size(&lifo) < lifo_len) {
@@ -648,25 +674,29 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             bmp_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y - 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++) {
+                                            for (int i = top_left; i <= right; i++) {
+                                                bool ok = true; // Does nothing if thresholding is skipped.
+
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
-                                                && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i), &lnk_data, invert)) {
-                                                    xylf_t context;
+                                                && (ok = COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i), &lnk_data, invert))) {
+                                                    xylr_t context;
                                                     context.x = x;
                                                     context.y = y;
                                                     context.l = left;
                                                     context.r = right;
+                                                    context.t_l = i + 1; // Don't test the same pixel again...
+                                                    context.b_l = bot_left;
                                                     lifo_enqueue(&lifo, &context);
                                                     x = i;
                                                     y = y - 1;
                                                     recurse = true;
                                                     break;
                                                 }
+
+                                                blob_perimeter += (!ok) && (i != left) && (i != right);
                                             }
                                             if (recurse) {
                                                 break;
-                                            } else {
-                                                blob_perimeter += 1;
                                             }
                                         } else {
                                             blob_perimeter += right - left + 1;
@@ -677,25 +707,29 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                             bmp_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y + 1);
 
                                             bool recurse = false;
-                                            for (int i = left; i <= right; i++) {
+                                            for (int i = bot_left; i <= right; i++) {
+                                                bool ok = true; // Does nothing if thresholding is skipped.
+
                                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row, i))
-                                                && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i), &lnk_data, invert)) {
-                                                    xylf_t context;
+                                                && (ok = COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i), &lnk_data, invert))) {
+                                                    xylr_t context;
                                                     context.x = x;
                                                     context.y = y;
                                                     context.l = left;
                                                     context.r = right;
+                                                    context.t_l = top_left;
+                                                    context.b_l = i + 1; // Don't test the same pixel again...
                                                     lifo_enqueue(&lifo, &context);
                                                     x = i;
                                                     y = y + 1;
                                                     recurse = true;
                                                     break;
                                                 }
+
+                                                blob_perimeter += (!ok) && (i != left) && (i != right);
                                             }
                                             if (recurse) {
                                                 break;
-                                            } else {
-                                                blob_perimeter += 1;
                                             }
                                         } else {
                                             blob_perimeter += right - left + 1;
@@ -709,12 +743,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                         break;
                                     }
 
-                                    xylf_t context;
+                                    xylr_t context;
                                     lifo_dequeue(&lifo, &context);
                                     x = context.x;
                                     y = context.y;
                                     left = context.l;
                                     right = context.r;
+                                    top_left = context.t_l;
+                                    bot_left = context.b_l;
                                 }
 
                                 if (break_out) {
@@ -890,7 +926,7 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
 {
     lifo_t lifo;
     size_t lifo_len;
-    lifo_alloc_all(&lifo, &lifo_len, sizeof(xylf_t));
+    lifo_alloc_all(&lifo, &lifo_len, sizeof(xylr_t));
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -919,6 +955,8 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                     IMAGE_SET_BINARY_PIXEL_FAST(out_row, i);
                 }
 
+                int top_left = left;
+                int bot_left = left;
                 bool break_out = false;
                 for(;;) {
                     if (lifo_size(&lifo) < lifo_len) {
@@ -929,16 +967,18 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                             out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y - 1);
 
                             bool recurse = false;
-                            for (int i = left; i <= right; i++) {
+                            for (int i = top_left; i <= right; i++) {
                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(out_row, i))
                                 && COLOR_BOUND_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i), seed_pixel, seed_threshold)
                                 && COLOR_BOUND_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i),
                                                       IMAGE_GET_BINARY_PIXEL_FAST(old_row, i), floating_threshold)) {
-                                    xylf_t context;
+                                    xylr_t context;
                                     context.x = x;
                                     context.y = y;
                                     context.l = left;
                                     context.r = right;
+                                    context.t_l = i + 1; // Don't test the same pixel again...
+                                    context.b_l = bot_left;
                                     lifo_enqueue(&lifo, &context);
                                     x = i;
                                     y = y - 1;
@@ -956,16 +996,18 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                             out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y + 1);
 
                             bool recurse = false;
-                            for (int i = left; i <= right; i++) {
+                            for (int i = bot_left; i <= right; i++) {
                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(out_row, i))
                                 && COLOR_BOUND_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i), seed_pixel, seed_threshold)
                                 && COLOR_BOUND_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row, i),
                                                       IMAGE_GET_BINARY_PIXEL_FAST(old_row, i), floating_threshold)) {
-                                    xylf_t context;
+                                    xylr_t context;
                                     context.x = x;
                                     context.y = y;
                                     context.l = left;
                                     context.r = right;
+                                    context.t_l = top_left;
+                                    context.b_l = i + 1; // Don't test the same pixel again...
                                     lifo_enqueue(&lifo, &context);
                                     x = i;
                                     y = y + 1;
@@ -986,12 +1028,14 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                         break;
                     }
 
-                    xylf_t context;
+                    xylr_t context;
                     lifo_dequeue(&lifo, &context);
                     x = context.x;
                     y = context.y;
                     left = context.l;
                     right = context.r;
+                    top_left = context.t_l;
+                    bot_left = context.b_l;
                 }
 
                 if (break_out) {
@@ -1026,6 +1070,8 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                     IMAGE_SET_BINARY_PIXEL_FAST(out_row, i);
                 }
 
+                int top_left = left;
+                int bot_left = left;
                 bool break_out = false;
                 for(;;) {
                     if (lifo_size(&lifo) < lifo_len) {
@@ -1036,16 +1082,18 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                             out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y - 1);
 
                             bool recurse = false;
-                            for (int i = left; i <= right; i++) {
+                            for (int i = top_left; i <= right; i++) {
                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(out_row, i))
                                 && COLOR_BOUND_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i), seed_pixel, seed_threshold)
                                 && COLOR_BOUND_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i),
                                                          IMAGE_GET_GRAYSCALE_PIXEL_FAST(old_row, i), floating_threshold)) {
-                                    xylf_t context;
+                                    xylr_t context;
                                     context.x = x;
                                     context.y = y;
                                     context.l = left;
                                     context.r = right;
+                                    context.t_l = i + 1; // Don't test the same pixel again...
+                                    context.b_l = bot_left;
                                     lifo_enqueue(&lifo, &context);
                                     x = i;
                                     y = y - 1;
@@ -1063,16 +1111,18 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                             out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y + 1);
 
                             bool recurse = false;
-                            for (int i = left; i <= right; i++) {
+                            for (int i = bot_left; i <= right; i++) {
                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(out_row, i))
                                 && COLOR_BOUND_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i), seed_pixel, seed_threshold)
                                 && COLOR_BOUND_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row, i),
                                                          IMAGE_GET_GRAYSCALE_PIXEL_FAST(old_row, i), floating_threshold)) {
-                                    xylf_t context;
+                                    xylr_t context;
                                     context.x = x;
                                     context.y = y;
                                     context.l = left;
                                     context.r = right;
+                                    context.t_l = top_left;
+                                    context.b_l = i + 1; // Don't test the same pixel again...
                                     lifo_enqueue(&lifo, &context);
                                     x = i;
                                     y = y + 1;
@@ -1093,12 +1143,14 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                         break;
                     }
 
-                    xylf_t context;
+                    xylr_t context;
                     lifo_dequeue(&lifo, &context);
                     x = context.x;
                     y = context.y;
                     left = context.l;
                     right = context.r;
+                    top_left = context.t_l;
+                    bot_left = context.b_l;
                 }
 
                 if (break_out) {
@@ -1133,6 +1185,8 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                     IMAGE_SET_BINARY_PIXEL_FAST(out_row, i);
                 }
 
+                int top_left = left;
+                int bot_left = left;
                 bool break_out = false;
                 for(;;) {
                     if (lifo_size(&lifo) < lifo_len) {
@@ -1143,16 +1197,18 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                             out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y - 1);
 
                             bool recurse = false;
-                            for (int i = left; i <= right; i++) {
+                            for (int i = top_left; i <= right; i++) {
                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(out_row, i))
                                 && COLOR_BOUND_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i), seed_pixel, seed_threshold)
                                 && COLOR_BOUND_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i),
                                                       IMAGE_GET_RGB565_PIXEL_FAST(old_row, i), floating_threshold)) {
-                                    xylf_t context;
+                                    xylr_t context;
                                     context.x = x;
                                     context.y = y;
                                     context.l = left;
                                     context.r = right;
+                                    context.t_l = i + 1; // Don't test the same pixel again...
+                                    context.b_l = bot_left;
                                     lifo_enqueue(&lifo, &context);
                                     x = i;
                                     y = y - 1;
@@ -1170,16 +1226,18 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                             out_row = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(out, y + 1);
 
                             bool recurse = false;
-                            for (int i = left; i <= right; i++) {
+                            for (int i = bot_left; i <= right; i++) {
                                 if ((!IMAGE_GET_BINARY_PIXEL_FAST(out_row, i))
                                 && COLOR_BOUND_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i), seed_pixel, seed_threshold)
                                 && COLOR_BOUND_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row, i),
                                                       IMAGE_GET_RGB565_PIXEL_FAST(old_row, i), floating_threshold)) {
-                                    xylf_t context;
+                                    xylr_t context;
                                     context.x = x;
                                     context.y = y;
                                     context.l = left;
                                     context.r = right;
+                                    context.t_l = top_left;
+                                    context.b_l = i + 1; // Don't test the same pixel again...
                                     lifo_enqueue(&lifo, &context);
                                     x = i;
                                     y = y + 1;
@@ -1200,12 +1258,14 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                         break;
                     }
 
-                    xylf_t context;
+                    xylr_t context;
                     lifo_dequeue(&lifo, &context);
                     x = context.x;
                     y = context.y;
                     left = context.l;
                     right = context.r;
+                    top_left = context.t_l;
+                    bot_left = context.b_l;
                 }
 
                 if (break_out) {
