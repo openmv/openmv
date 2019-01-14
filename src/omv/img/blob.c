@@ -343,9 +343,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
                                 lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
+                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 100 * lnk_blob.pixels);
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -576,9 +576,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
                                 lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
+                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 100 * lnk_blob.pixels);
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -809,9 +809,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
                                 lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
+                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 100 * lnk_blob.pixels);
+                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 100 * lnk_blob.pixels);
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -900,8 +900,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         // Compute current values...
                         lnk_blob.centroid_x = lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels);
                         lnk_blob.centroid_y = lnk_blob.centroid_y_acc / ((float) lnk_blob.pixels);
-                        lnk_blob.rotation = fast_atan2f(lnk_blob.rotation_acc_y / ((float) lnk_blob.pixels), lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels));
-                        lnk_blob.roundness = lnk_blob.roundness_acc / ((float) lnk_blob.pixels);
+                        lnk_blob.rotation = fast_atan2f((lnk_blob.rotation_acc_y / ((float) lnk_blob.pixels)) / 100, (lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels)) / 100);
+                        lnk_blob.roundness = (lnk_blob.roundness_acc / ((float) lnk_blob.pixels)) / 100;
                         merge_occured = true;
                     } else {
                         list_push_back(out, &tmp_blob);
