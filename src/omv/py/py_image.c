@@ -3932,7 +3932,7 @@ mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     // Shoelace Formula
     float min_area = (((x0*y1)+(x1*y2)+(x2*y3)+(x3*y0))-((y0*x1)+(y1*x2)+(y2*x3)+(y3*x0)))/2.0f;
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
-    return mp_obj_new_float(IM_DIV(((pixels * 4) / M_PI), min_area));
+    return mp_obj_new_float(IM_DIV(pixels, min_area));
 }
 // Min rect-area versus pixels (e.g. blob area) -> Above.
 // Min rect-area versus perimeter -> Basically the same as the above with a different scale factor.
