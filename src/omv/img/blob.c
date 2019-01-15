@@ -21,6 +21,11 @@ static int sum_2_m_to_n(int m, int n)
     return ((n * (n + 1) * ((2 * n) + 1)) - (m * (m - 1) * ((2 * m) - 1))) / 6;
 }
 
+static int cumulative_moving_average(int avg, int x, int n)
+{
+    return (x + (n * avg)) / (n + 1);
+}
+
 static void bin_up(uint16_t *hist, uint16_t size, unsigned int max_size, uint16_t **new_hist, uint16_t *new_size)
 {
     int start = -1;
@@ -157,14 +162,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1;
-                            int blob_y1 = y, blob_y1x = x;
-                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1;
-                            int blob_y2 = y, blob_y2x = x;
-                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1; // upper left
-                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1; // upper right
-                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0; // lower left
-                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0; // lower right
+                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
+                            int blob_y1 = y, blob_y1x = x;                 // top
+                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
+                            int blob_y2 = y, blob_y2x = x;                 // bot
+                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
+                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
+                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
+                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0, d_blob_lr_n = 1; // lower right
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
                             int blob_cx = 0;
@@ -204,11 +209,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int avg = sum / cnt;
 
                                 if (left < blob_x1) { // Restart left column average.
-                                    blob_x1 = left, blob_x1y = y;
-                                    blob_x1y_n = 1;
+                                    blob_x1 = left, blob_x1y = y, blob_x1y_n = 1;
                                 } else if (left == blob_x1) { // Moving average for left.
-                                    blob_x1y = (y + (blob_x1y_n * blob_x1y)) / (blob_x1y_n + 1);
-                                    blob_x1y_n += 1;
+                                    blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
                                 }
 
                                 if (y < blob_y1) { // Top is the average of all top pixels.
@@ -216,21 +219,47 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
 
                                 if (blob_x2 < right) { // Restart right column average.
-                                    blob_x2 = right, blob_x2y = y;
-                                    blob_x2y_n = 1;
-                                } else if (right == blob_x2) { // Moving average for right.
-                                    blob_x2y = (y + (blob_x2y_n * blob_x2y)) / (blob_x2y_n + 1);
-                                    blob_x2y_n += 1;
+                                    blob_x2 = right, blob_x2y = y, blob_x2y_n = 1;
+                                } else if (blob_x2 == right) { // Moving average for right.
+                                    blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
                                 }
 
                                 if (blob_y2 < y) { // Bot is the average of all top pixels.
                                     blob_y2 = y, blob_y2x = avg;
                                 }
 
-                                if ((left + y) < d_blob_ul)  { d_blob_ul =  left + y, d_blob_ul_x = left,  d_blob_ul_y = y; }
-                                if (d_blob_ur < (right - y)) { d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y; }
-                                if ((left - y) < d_blob_ll)  { d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y; }
-                                if (d_blob_lr < (right + y)) { d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y; }
+                                if ((left + y) < d_blob_ul) { // Restart the average.
+                                    d_blob_ul = left + y, d_blob_ul_x = left, d_blob_ul_y = y, d_blob_ul_n = 1;
+                                } else if ((left + y) == d_blob_ul) { // Moving average.
+                                    d_blob_ul_x = cumulative_moving_average(d_blob_ul_x, left, d_blob_ul_n);
+                                    d_blob_ul_y = cumulative_moving_average(d_blob_ul_y, y, d_blob_ul_n);
+                                    d_blob_ul_n += 1;
+                                }
+
+                                if (d_blob_ur < (right - y)) { // Restart the average.
+                                    d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y;
+                                } else if (d_blob_ur == (right - y)) { // Moving average.
+                                    d_blob_ur_x = cumulative_moving_average(d_blob_ur_x, right, d_blob_ur_n);
+                                    d_blob_ur_y = cumulative_moving_average(d_blob_ur_y, y, d_blob_ur_n);
+                                    d_blob_ur_n += 1;
+                                }
+
+                                if ((left - y) < d_blob_ll) { // Restart the average.
+                                    d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y;
+                                } else if ((left - y) == d_blob_ll) { // Moving average.
+                                    d_blob_ll_x = cumulative_moving_average(d_blob_ll_x, left, d_blob_ll_n);
+                                    d_blob_ll_y = cumulative_moving_average(d_blob_ll_y, y, d_blob_ll_n);
+                                    d_blob_ll_n += 1;
+                                }
+
+                                if (d_blob_lr < (right + y)) { // Restart the average.
+                                    d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y;
+                                } else if (d_blob_lr == (right + y)) { // Moving average.
+                                    d_blob_lr_x = cumulative_moving_average(d_blob_lr_x, right, d_blob_lr_n);
+                                    d_blob_lr_y = cumulative_moving_average(d_blob_lr_y, y, d_blob_lr_n);
+                                    d_blob_lr_n += 1;
+                                }
+
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
                                 blob_cx += sum;
@@ -238,6 +267,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 blob_a += sum_2;
                                 blob_b += y * sum;
                                 blob_c += y * y * cnt;
+
                                 if (y_hist_bins) y_hist_bins[y] += cnt;
                                 if (x_hist_bins) for (int i = left; i <= right; i++) x_hist_bins[i] += 1;
 
@@ -434,14 +464,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1;
-                            int blob_y1 = y, blob_y1x = x;
-                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1;
-                            int blob_y2 = y, blob_y2x = x;
-                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1; // upper left
-                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1; // upper right
-                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0; // lower left
-                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0; // lower right
+                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
+                            int blob_y1 = y, blob_y1x = x;                 // top
+                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
+                            int blob_y2 = y, blob_y2x = x;                 // bot
+                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
+                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
+                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
+                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0, d_blob_lr_n = 1; // lower right
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
                             int blob_cx = 0;
@@ -481,11 +511,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int avg = sum / cnt;
 
                                 if (left < blob_x1) { // Restart left column average.
-                                    blob_x1 = left, blob_x1y = y;
-                                    blob_x1y_n = 1;
+                                    blob_x1 = left, blob_x1y = y, blob_x1y_n = 1;
                                 } else if (left == blob_x1) { // Moving average for left.
-                                    blob_x1y = (y + (blob_x1y_n * blob_x1y)) / (blob_x1y_n + 1);
-                                    blob_x1y_n += 1;
+                                    blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
                                 }
 
                                 if (y < blob_y1) { // Top is the average of all top pixels.
@@ -493,21 +521,47 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
 
                                 if (blob_x2 < right) { // Restart right column average.
-                                    blob_x2 = right, blob_x2y = y;
-                                    blob_x2y_n = 1;
-                                } else if (right == blob_x2) { // Moving average for right.
-                                    blob_x2y = (y + (blob_x2y_n * blob_x2y)) / (blob_x2y_n + 1);
-                                    blob_x2y_n += 1;
+                                    blob_x2 = right, blob_x2y = y, blob_x2y_n = 1;
+                                } else if (blob_x2 == right) { // Moving average for right.
+                                    blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
                                 }
 
                                 if (blob_y2 < y) { // Bot is the average of all top pixels.
                                     blob_y2 = y, blob_y2x = avg;
                                 }
 
-                                if ((left + y) < d_blob_ul)  { d_blob_ul =  left + y, d_blob_ul_x = left,  d_blob_ul_y = y; }
-                                if (d_blob_ur < (right - y)) { d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y; }
-                                if ((left - y) < d_blob_ll)  { d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y; }
-                                if (d_blob_lr < (right + y)) { d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y; }
+                                if ((left + y) < d_blob_ul) { // Restart the average.
+                                    d_blob_ul = left + y, d_blob_ul_x = left, d_blob_ul_y = y, d_blob_ul_n = 1;
+                                } else if ((left + y) == d_blob_ul) { // Moving average.
+                                    d_blob_ul_x = cumulative_moving_average(d_blob_ul_x, left, d_blob_ul_n);
+                                    d_blob_ul_y = cumulative_moving_average(d_blob_ul_y, y, d_blob_ul_n);
+                                    d_blob_ul_n += 1;
+                                }
+
+                                if (d_blob_ur < (right - y)) { // Restart the average.
+                                    d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y;
+                                } else if (d_blob_ur == (right - y)) { // Moving average.
+                                    d_blob_ur_x = cumulative_moving_average(d_blob_ur_x, right, d_blob_ur_n);
+                                    d_blob_ur_y = cumulative_moving_average(d_blob_ur_y, y, d_blob_ur_n);
+                                    d_blob_ur_n += 1;
+                                }
+
+                                if ((left - y) < d_blob_ll) { // Restart the average.
+                                    d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y;
+                                } else if ((left - y) == d_blob_ll) { // Moving average.
+                                    d_blob_ll_x = cumulative_moving_average(d_blob_ll_x, left, d_blob_ll_n);
+                                    d_blob_ll_y = cumulative_moving_average(d_blob_ll_y, y, d_blob_ll_n);
+                                    d_blob_ll_n += 1;
+                                }
+
+                                if (d_blob_lr < (right + y)) { // Restart the average.
+                                    d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y;
+                                } else if (d_blob_lr == (right + y)) { // Moving average.
+                                    d_blob_lr_x = cumulative_moving_average(d_blob_lr_x, right, d_blob_lr_n);
+                                    d_blob_lr_y = cumulative_moving_average(d_blob_lr_y, y, d_blob_lr_n);
+                                    d_blob_lr_n += 1;
+                                }
+
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
                                 blob_cx += sum;
@@ -515,6 +569,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 blob_a += sum_2;
                                 blob_b += y * sum;
                                 blob_c += y * y * cnt;
+
                                 if (y_hist_bins) y_hist_bins[y] += cnt;
                                 if (x_hist_bins) for (int i = left; i <= right; i++) x_hist_bins[i] += 1;
 
@@ -711,14 +766,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1;
-                            int blob_y1 = y, blob_y1x = x;
-                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1;
-                            int blob_y2 = y, blob_y2x = x;
-                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1; // upper left
-                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1; // upper right
-                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0; // lower left
-                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0; // lower right
+                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
+                            int blob_y1 = y, blob_y1x = x;                 // top
+                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
+                            int blob_y2 = y, blob_y2x = x;                 // bot
+                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
+                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
+                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
+                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0, d_blob_lr_n = 1; // lower right
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
                             int blob_cx = 0;
@@ -758,11 +813,9 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int avg = sum / cnt;
 
                                 if (left < blob_x1) { // Restart left column average.
-                                    blob_x1 = left, blob_x1y = y;
-                                    blob_x1y_n = 1;
+                                    blob_x1 = left, blob_x1y = y, blob_x1y_n = 1;
                                 } else if (left == blob_x1) { // Moving average for left.
-                                    blob_x1y = (y + (blob_x1y_n * blob_x1y)) / (blob_x1y_n + 1);
-                                    blob_x1y_n += 1;
+                                    blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
                                 }
 
                                 if (y < blob_y1) { // Top is the average of all top pixels.
@@ -770,21 +823,47 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
 
                                 if (blob_x2 < right) { // Restart right column average.
-                                    blob_x2 = right, blob_x2y = y;
-                                    blob_x2y_n = 1;
-                                } else if (right == blob_x2) { // Moving average for right.
-                                    blob_x2y = (y + (blob_x2y_n * blob_x2y)) / (blob_x2y_n + 1);
-                                    blob_x2y_n += 1;
+                                    blob_x2 = right, blob_x2y = y, blob_x2y_n = 1;
+                                } else if (blob_x2 == right) { // Moving average for right.
+                                    blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
                                 }
 
                                 if (blob_y2 < y) { // Bot is the average of all top pixels.
                                     blob_y2 = y, blob_y2x = avg;
                                 }
 
-                                if ((left + y) < d_blob_ul)  { d_blob_ul =  left + y, d_blob_ul_x = left,  d_blob_ul_y = y; }
-                                if (d_blob_ur < (right - y)) { d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y; }
-                                if ((left - y) < d_blob_ll)  { d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y; }
-                                if (d_blob_lr < (right + y)) { d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y; }
+                                if ((left + y) < d_blob_ul) { // Restart the average.
+                                    d_blob_ul = left + y, d_blob_ul_x = left, d_blob_ul_y = y, d_blob_ul_n = 1;
+                                } else if ((left + y) == d_blob_ul) { // Moving average.
+                                    d_blob_ul_x = cumulative_moving_average(d_blob_ul_x, left, d_blob_ul_n);
+                                    d_blob_ul_y = cumulative_moving_average(d_blob_ul_y, y, d_blob_ul_n);
+                                    d_blob_ul_n += 1;
+                                }
+
+                                if (d_blob_ur < (right - y)) { // Restart the average.
+                                    d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y;
+                                } else if (d_blob_ur == (right - y)) { // Moving average.
+                                    d_blob_ur_x = cumulative_moving_average(d_blob_ur_x, right, d_blob_ur_n);
+                                    d_blob_ur_y = cumulative_moving_average(d_blob_ur_y, y, d_blob_ur_n);
+                                    d_blob_ur_n += 1;
+                                }
+
+                                if ((left - y) < d_blob_ll) { // Restart the average.
+                                    d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y;
+                                } else if ((left - y) == d_blob_ll) { // Moving average.
+                                    d_blob_ll_x = cumulative_moving_average(d_blob_ll_x, left, d_blob_ll_n);
+                                    d_blob_ll_y = cumulative_moving_average(d_blob_ll_y, y, d_blob_ll_n);
+                                    d_blob_ll_n += 1;
+                                }
+
+                                if (d_blob_lr < (right + y)) { // Restart the average.
+                                    d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y;
+                                } else if (d_blob_lr == (right + y)) { // Moving average.
+                                    d_blob_lr_x = cumulative_moving_average(d_blob_lr_x, right, d_blob_lr_n);
+                                    d_blob_lr_y = cumulative_moving_average(d_blob_lr_y, y, d_blob_lr_n);
+                                    d_blob_lr_n += 1;
+                                }
+
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
                                 blob_cx += sum;
@@ -792,6 +871,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 blob_a += sum_2;
                                 blob_b += y * sum;
                                 blob_c += y * y * cnt;
+
                                 if (y_hist_bins) y_hist_bins[y] += cnt;
                                 if (x_hist_bins) for (int i = left; i <= right; i++) x_hist_bins[i] += 1;
 
