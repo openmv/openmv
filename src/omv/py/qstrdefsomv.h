@@ -79,6 +79,13 @@ Q(get_backlight)
 Q(display)
 Q(clear)
 
+// tv Module
+Q(tv)
+Q(channel)
+Q(type)
+Q(display)
+Q(palettes)
+
 // Gif module
 Q(gif)
 Q(Gif)
