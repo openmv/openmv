@@ -84,7 +84,7 @@ void point_copy(point_t *dst, point_t *src);
 bool point_equal_fast(point_t *ptr0, point_t *ptr1);
 int point_quadrance(point_t *ptr0, point_t *ptr1);
 void point_rotate(int x, int y, float r, int center_x, int center_y, int16_t *new_x, int16_t *new_y);
-void point_min_area_rectangle(point_t *corners, point_t *new_corners);
+void point_min_area_rectangle(point_t *corners, point_t *new_corners, int corners_len);
 
 ////////////////
 // Line Stuff //
@@ -1052,7 +1052,7 @@ typedef struct statistics {
 } statistics_t;
 
 typedef struct find_blobs_list_lnk_data {
-    point_t corners[4];
+    point_t corners[8];
     rectangle_t rect;
     uint32_t pixels, perimeter, code, count;
     float centroid_x, centroid_y, rotation, roundness;

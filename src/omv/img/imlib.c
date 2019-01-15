@@ -50,7 +50,7 @@ void point_rotate(int x, int y, float r, int center_x, int center_y, int16_t *ne
     *new_y = (x * sinf(r)) + (y * cosf(r)) + center_y;
 }
 
-void point_min_area_rectangle(point_t *corners, point_t *new_corners)
+void point_min_area_rectangle(point_t *corners, point_t *new_corners, int corners_len) // Corners need to be sorted!
 {
     int i_min = 0;
     int i_min_area = INT_MAX;
@@ -62,18 +62,29 @@ void point_min_area_rectangle(point_t *corners, point_t *new_corners)
 
     // This algorithm aligns the 4 edges produced by the 4 corners to the x axis and then computes the
     // min area rect for each alignment. The smallest rect is choosen and then re-rotated and returned.
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < corners_len; i++) {
         int16_t x0 = corners[i].x, y0 = corners[i].y;
-        int x_diff = corners[(i+1)%4].x - corners[i].x;
-        int y_diff = corners[(i+1)%4].y - corners[i].y;
+        int x_diff = corners[(i+1)%corners_len].x - corners[i].x;
+        int y_diff = corners[(i+1)%corners_len].y - corners[i].y;
         float r = -fast_atan2f(y_diff, x_diff);
-        int16_t x1, y1; point_rotate(corners[(i+1)%4].x, corners[(i+1)%4].y, r, x0, y0, &x1, &y1);
-        int16_t x2, y2; point_rotate(corners[(i+2)%4].x, corners[(i+2)%4].y, r, x0, y0, &x2, &y2);
-        int16_t x3, y3; point_rotate(corners[(i+3)%4].x, corners[(i+3)%4].y, r, x0, y0, &x3, &y3);
-        int minx = IM_MIN(x0, IM_MIN(x1, IM_MIN(x2, x3)));
-        int maxx = IM_MAX(x0, IM_MAX(x1, IM_MAX(x2, x3)));
-        int miny = IM_MIN(y0, IM_MIN(y1, IM_MIN(y2, y3)));
-        int maxy = IM_MAX(y0, IM_MAX(y1, IM_MAX(y2, y3)));
+
+        int16_t x1[corners_len-1];
+        int16_t y1[corners_len-1];
+        for (int j = 0, jj = corners_len - 1; j < jj; j++) {
+            point_rotate(corners[(i+j+1)%corners_len].x, corners[(i+j+1)%corners_len].y, r, x0, y0, x1 + j, y1 + j);
+        }
+
+        int minx = x0;
+        int maxx = x0;
+        int miny = y0;
+        int maxy = y0;
+        for (int j = 0, jj = corners_len - 1; j < jj; j++) {
+            minx = MIN(minx, x1[j]);
+            maxx = MAX(maxx, x1[j]);
+            miny = MIN(miny, y1[j]);
+            maxy = MAX(maxy, y1[j]);
+        }
+
         int area = (maxx - minx + 1) * (maxy - miny + 1);
         if (area < i_min_area) {
             i_min = i;
