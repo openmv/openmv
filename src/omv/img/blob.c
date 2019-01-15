@@ -165,7 +165,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
                             int blob_y1 = y, blob_y1x = x;                 // top
                             int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
-                            int blob_y2 = y, blob_y2x = x;                 // bot
+                            int blob_y2 = y, blob_y2x = x;                 // bottom
                             int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
                             int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
                             int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
@@ -214,7 +214,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
                                 }
 
-                                if (y < blob_y1) { // Top is the average of all top pixels.
+                                if (y < blob_y1) {
                                     blob_y1 = y, blob_y1x = avg;
                                 }
 
@@ -224,7 +224,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
                                 }
 
-                                if (blob_y2 < y) { // Bot is the average of all top pixels.
+                                if (blob_y2 < y) {
                                     blob_y2 = y, blob_y2x = avg;
                                 }
 
@@ -467,7 +467,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
                             int blob_y1 = y, blob_y1x = x;                 // top
                             int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
-                            int blob_y2 = y, blob_y2x = x;                 // bot
+                            int blob_y2 = y, blob_y2x = x;                 // bottom
                             int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
                             int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
                             int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
@@ -516,7 +516,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
                                 }
 
-                                if (y < blob_y1) { // Top is the average of all top pixels.
+                                if (y < blob_y1) {
                                     blob_y1 = y, blob_y1x = avg;
                                 }
 
@@ -526,7 +526,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
                                 }
 
-                                if (blob_y2 < y) { // Bot is the average of all top pixels.
+                                if (blob_y2 < y) {
                                     blob_y2 = y, blob_y2x = avg;
                                 }
 
@@ -769,7 +769,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
                             int blob_y1 = y, blob_y1x = x;                 // top
                             int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
-                            int blob_y2 = y, blob_y2x = x;                 // bot
+                            int blob_y2 = y, blob_y2x = x;                 // bottom
                             int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
                             int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
                             int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
@@ -818,7 +818,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
                                 }
 
-                                if (y < blob_y1) { // Top is the average of all top pixels.
+                                if (y < blob_y1) {
                                     blob_y1 = y, blob_y1x = avg;
                                 }
 
@@ -828,7 +828,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
                                 }
 
-                                if (blob_y2 < y) { // Bot is the average of all top pixels.
+                                if (blob_y2 < y) {
                                     blob_y2 = y, blob_y2x = avg;
                                 }
 
