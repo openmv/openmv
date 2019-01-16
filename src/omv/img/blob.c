@@ -120,6 +120,70 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c)
     return IM_DIV(roundness_min, roundness_max);
 }
 
+// This define creates the accumulator and point storage variables which are used by the EDGE_MAX_MIN. The variables are initialized
+// to the opposite values EDGE_MAX_MIN will drive them towards such that the variable can be optimized.
+#define EDGE_MAX_MIN_DEF(maximize, x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
+int accumulator_x = IM_MAX(IM_MIN(maximize ? ((-x_max) * x_weight) : (x_max * x_weight), x_max), 0); \
+int accumulator_y = IM_MAX(IM_MIN(maximize ? ((-y_max) * y_weight) : (y_max * y_weight), y_max), 0); \
+int accumulator_z = (accumulator_x * x_weight) + (accumulator_y * y_weight); \
+int accumulator_n = 1;
+
+#define EDGE_MAX_DEF(x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
+EDGE_MAX_MIN_DEF(true, x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n)
+
+#define EDGE_MIN_DEF(x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
+EDGE_MAX_MIN_DEF(false, x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n)
+
+// As this function is called on a list of points in an image it will record the point coordinates that max/minimize
+// z. z is a hyper-plane which achieves max/min value in different directions depending on the weights.
+#define EDGE_MAX_MIN(maximize, x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
+({ \
+    __typeof__ (x_weight) _x_weight = (x_weight); \
+    __typeof__ (y_weight) _y_weight = (y_weight); \
+    int z = (x * _x_weight) + (y * _y_weight); \
+    if (maximize ? (accumulator_z < z) : (z < accumulator_z)) { \
+        accumulator_z = z; \
+        accumulator_x = x; \
+        accumulator_y = y; \
+        accumulator_n = 1; \
+    } else if (accumulator_z == z) { \
+        accumulator_x = cumulative_moving_average(accumulator_x, x, accumulator_n); \
+        accumulator_y = cumulative_moving_average(accumulator_y, y, accumulator_n); \
+        accumulator_n += 1; \
+    } \
+})
+
+#define EDGE_MAXIMIZATION(x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
+({ \
+    EDGE_MAX_MIN(true, x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n); \
+})
+
+#define EDGE_MINIMIZATION(x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
+({ \
+    EDGE_MAX_MIN(false, x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n); \
+})
+
+// This function picks the best point which max/minimizes the hyper-plane function.
+#define EDGE_MAX_MIN_MERGE(maximize, index, dst, src, x_weight, y_weight) \
+({ \
+    int z_dst = (dst.corners[index].x * x_weight) + (dst.corners[index].y * y_weight); \
+    int z_src = (src.corners[index].x * x_weight) + (src.corners[index].y * y_weight); \
+    if (maximize ? (z_dst < z_src) : (z_src < z_dst)) { \
+        dst.corners[index].x = src.corners[index].x; \
+        dst.corners[index].y = src.corners[index].y; \
+    } \
+})
+
+#define EDGE_MAX_MERGE(index, dst, src, x_weight, y_weight) \
+({ \
+    EDGE_MAX_MIN_MERGE(true, index, dst, src, x_weight, y_weight); \
+})
+
+#define EDGE_MIN_MERGE(index, dst, src, x_weight, y_weight) \
+({ \
+    EDGE_MAX_MIN_MERGE(false, index, dst, src, x_weight, y_weight); \
+})
+
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                       bool merge, int margin,
@@ -153,23 +217,24 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
         switch(ptr->bpp) {
             case IMAGE_BPP_BINARY: {
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
+                for (int y = roi->y, yy = roi->y + roi->h, y_max = yy - 1; y < yy; y += y_stride) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
-                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
+                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w, x_max = xx - 1; x < xx; x += x_stride) {
                         if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row_ptr, x))
                         && COLOR_THRESHOLD_BINARY(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
-                            int blob_y1 = y, blob_y1x = x;                 // top
-                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
-                            int blob_y2 = y, blob_y2x = x;                 // bottom
-                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
-                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
-                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
-                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0, d_blob_lr_n = 1; // lower right
+                            EDGE_MIN_DEF(x_max, +1, y_max, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n)
+                            EDGE_MIN_DEF(x_max, +1, y_max, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n)
+                            EDGE_MIN_DEF(x_max, +0, y_max, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n)
+                            EDGE_MAX_DEF(x_max, +0, y_max, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n)
+                            EDGE_MIN_DEF(x_max, +1, y_max, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n)
+
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
                             int blob_cx = 0;
@@ -177,6 +242,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_a = 0;
                             long long blob_b = 0;
                             long long blob_c = 0;
+
                             if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
                             if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
 
@@ -208,57 +274,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int cnt = right - left + 1;
                                 int avg = sum / cnt;
 
-                                if (left < blob_x1) { // Restart left column average.
-                                    blob_x1 = left, blob_x1y = y, blob_x1y_n = 1;
-                                } else if (left == blob_x1) { // Moving average for left.
-                                    blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
-                                }
-
-                                if (y < blob_y1) {
-                                    blob_y1 = y, blob_y1x = avg;
-                                }
-
-                                if (blob_x2 < right) { // Restart right column average.
-                                    blob_x2 = right, blob_x2y = y, blob_x2y_n = 1;
-                                } else if (blob_x2 == right) { // Moving average for right.
-                                    blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
-                                }
-
-                                if (blob_y2 < y) {
-                                    blob_y2 = y, blob_y2x = avg;
-                                }
-
-                                if ((left + y) < d_blob_ul) { // Restart the average.
-                                    d_blob_ul = left + y, d_blob_ul_x = left, d_blob_ul_y = y, d_blob_ul_n = 1;
-                                } else if ((left + y) == d_blob_ul) { // Moving average.
-                                    d_blob_ul_x = cumulative_moving_average(d_blob_ul_x, left, d_blob_ul_n);
-                                    d_blob_ul_y = cumulative_moving_average(d_blob_ul_y, y, d_blob_ul_n);
-                                    d_blob_ul_n += 1;
-                                }
-
-                                if (d_blob_ur < (right - y)) { // Restart the average.
-                                    d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y, d_blob_ur_n = 1;
-                                } else if (d_blob_ur == (right - y)) { // Moving average.
-                                    d_blob_ur_x = cumulative_moving_average(d_blob_ur_x, right, d_blob_ur_n);
-                                    d_blob_ur_y = cumulative_moving_average(d_blob_ur_y, y, d_blob_ur_n);
-                                    d_blob_ur_n += 1;
-                                }
-
-                                if ((left - y) < d_blob_ll) { // Restart the average.
-                                    d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y, d_blob_ll_n = 1;
-                                } else if ((left - y) == d_blob_ll) { // Moving average.
-                                    d_blob_ll_x = cumulative_moving_average(d_blob_ll_x, left, d_blob_ll_n);
-                                    d_blob_ll_y = cumulative_moving_average(d_blob_ll_y, y, d_blob_ll_n);
-                                    d_blob_ll_n += 1;
-                                }
-
-                                if (d_blob_lr < (right + y)) { // Restart the average.
-                                    d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y, d_blob_lr_n = 1;
-                                } else if (d_blob_lr == (right + y)) { // Moving average.
-                                    d_blob_lr_x = cumulative_moving_average(d_blob_lr_x, right, d_blob_lr_n);
-                                    d_blob_lr_y = cumulative_moving_average(d_blob_lr_y, y, d_blob_lr_n);
-                                    d_blob_lr_n += 1;
-                                }
+                                EDGE_MINIMIZATION( left, +1, y, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n);
+                                EDGE_MINIMIZATION( left, +1, y, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n);
+                                EDGE_MINIMIZATION(  avg, +0, y, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n);
+                                EDGE_MAXIMIZATION(right, +1, y, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n);
+                                EDGE_MAXIMIZATION(right, +1, y, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n);
+                                EDGE_MAXIMIZATION(right, +1, y, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n);
+                                EDGE_MAXIMIZATION(  avg, +0, y, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n);
+                                EDGE_MINIMIZATION( left, +1, y, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n);
 
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
@@ -366,7 +389,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            if ((((blob_x2 - blob_x1 + 1) * (blob_y2 - blob_y1 + 1)) >= area_threshold)
+                            if ((((blob_r_x - blob_l_x + 1) * (blob_b_y - blob_t_y + 1)) >= area_threshold)
                             && (blob_pixels >= pixels_threshold)) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
@@ -385,6 +408,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
+
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
@@ -392,26 +416,42 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                                 find_blobs_list_lnk_data_t lnk_blob;
-                                lnk_blob.corners[0].x = blob_x1;
-                                lnk_blob.corners[0].y = blob_x1y;
-                                lnk_blob.corners[1].x = d_blob_ul_x;
-                                lnk_blob.corners[1].y = d_blob_ul_y;
-                                lnk_blob.corners[2].x = blob_y1x;
-                                lnk_blob.corners[2].y = blob_y1;
-                                lnk_blob.corners[3].x = d_blob_ur_x;
-                                lnk_blob.corners[3].y = d_blob_ur_y;
-                                lnk_blob.corners[4].x = blob_x2;
-                                lnk_blob.corners[4].y = blob_x2y;
-                                lnk_blob.corners[5].x = d_blob_lr_x;
-                                lnk_blob.corners[5].y = d_blob_lr_y;
-                                lnk_blob.corners[6].x = blob_y2x;
-                                lnk_blob.corners[6].y = blob_y2;
-                                lnk_blob.corners[7].x = d_blob_ll_x;
-                                lnk_blob.corners[7].y = d_blob_ll_y;
-                                lnk_blob.rect.x = blob_x1;
-                                lnk_blob.rect.y = blob_y1;
-                                lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
-                                lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
+                                lnk_blob.corners[0].x = blob_l_x;
+                                lnk_blob.corners[0].y = blob_l_y;
+                                lnk_blob.corners[1].x = blob_ul_x;
+                                lnk_blob.corners[1].y = blob_ul_y;
+                                lnk_blob.corners[2].x = blob_ul_x;
+                                lnk_blob.corners[2].y = blob_ul_y;
+                                lnk_blob.corners[3].x = blob_ul_x;
+                                lnk_blob.corners[3].y = blob_ul_y;
+                                lnk_blob.corners[4].x = blob_t_x;
+                                lnk_blob.corners[4].y = blob_t_y;
+                                lnk_blob.corners[5].x = blob_ur_x;
+                                lnk_blob.corners[5].y = blob_ur_y;
+                                lnk_blob.corners[6].x = blob_ur_x;
+                                lnk_blob.corners[6].y = blob_ur_y;
+                                lnk_blob.corners[7].x = blob_ur_x;
+                                lnk_blob.corners[7].y = blob_ur_y;
+                                lnk_blob.corners[8].x = blob_r_x;
+                                lnk_blob.corners[8].y = blob_r_y;
+                                lnk_blob.corners[9].x = blob_lr_x;
+                                lnk_blob.corners[9].y = blob_lr_y;
+                                lnk_blob.corners[10].x = blob_lr_x;
+                                lnk_blob.corners[10].y = blob_lr_y;
+                                lnk_blob.corners[11].x = blob_lr_x;
+                                lnk_blob.corners[11].y = blob_lr_y;
+                                lnk_blob.corners[12].x = blob_b_x;
+                                lnk_blob.corners[12].y = blob_b_y;
+                                lnk_blob.corners[13].x = blob_ll_x;
+                                lnk_blob.corners[13].y = blob_ll_y;
+                                lnk_blob.corners[14].x = blob_ll_x;
+                                lnk_blob.corners[14].y = blob_ll_y;
+                                lnk_blob.corners[15].x = blob_ll_x;
+                                lnk_blob.corners[15].y = blob_ll_y;
+                                lnk_blob.rect.x = blob_l_x;
+                                lnk_blob.rect.y = blob_t_y;
+                                lnk_blob.rect.w = blob_r_x - blob_l_x + 1;
+                                lnk_blob.rect.h = blob_b_y - blob_t_y + 1;
                                 lnk_blob.pixels = blob_pixels;
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
@@ -426,7 +466,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.y_hist_bins = NULL;
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
-                                lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
+                                lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels);
+                                // The multiply by 256 helps prevent truncation of the floating point number when pixels is small.
                                 lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
                                 lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
                                 lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
@@ -455,23 +496,24 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                 break;
             }
             case IMAGE_BPP_GRAYSCALE: {
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
+                for (int y = roi->y, yy = roi->y + roi->h, y_max = yy - 1; y < yy; y += y_stride) {
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
-                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
+                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w, x_max = xx - 1; x < xx; x += x_stride) {
                         if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row_ptr, x))
                         && COLOR_THRESHOLD_GRAYSCALE(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
-                            int blob_y1 = y, blob_y1x = x;                 // top
-                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
-                            int blob_y2 = y, blob_y2x = x;                 // bottom
-                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
-                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
-                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
-                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0, d_blob_lr_n = 1; // lower right
+                            EDGE_MIN_DEF(x_max, +1, y_max, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n)
+                            EDGE_MIN_DEF(x_max, +1, y_max, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n)
+                            EDGE_MIN_DEF(x_max, +0, y_max, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n)
+                            EDGE_MAX_DEF(x_max, +0, y_max, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n)
+                            EDGE_MIN_DEF(x_max, +1, y_max, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n)
+
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
                             int blob_cx = 0;
@@ -479,6 +521,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_a = 0;
                             long long blob_b = 0;
                             long long blob_c = 0;
+
                             if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
                             if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
 
@@ -510,57 +553,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int cnt = right - left + 1;
                                 int avg = sum / cnt;
 
-                                if (left < blob_x1) { // Restart left column average.
-                                    blob_x1 = left, blob_x1y = y, blob_x1y_n = 1;
-                                } else if (left == blob_x1) { // Moving average for left.
-                                    blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
-                                }
-
-                                if (y < blob_y1) {
-                                    blob_y1 = y, blob_y1x = avg;
-                                }
-
-                                if (blob_x2 < right) { // Restart right column average.
-                                    blob_x2 = right, blob_x2y = y, blob_x2y_n = 1;
-                                } else if (blob_x2 == right) { // Moving average for right.
-                                    blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
-                                }
-
-                                if (blob_y2 < y) {
-                                    blob_y2 = y, blob_y2x = avg;
-                                }
-
-                                if ((left + y) < d_blob_ul) { // Restart the average.
-                                    d_blob_ul = left + y, d_blob_ul_x = left, d_blob_ul_y = y, d_blob_ul_n = 1;
-                                } else if ((left + y) == d_blob_ul) { // Moving average.
-                                    d_blob_ul_x = cumulative_moving_average(d_blob_ul_x, left, d_blob_ul_n);
-                                    d_blob_ul_y = cumulative_moving_average(d_blob_ul_y, y, d_blob_ul_n);
-                                    d_blob_ul_n += 1;
-                                }
-
-                                if (d_blob_ur < (right - y)) { // Restart the average.
-                                    d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y, d_blob_ur_n = 1;
-                                } else if (d_blob_ur == (right - y)) { // Moving average.
-                                    d_blob_ur_x = cumulative_moving_average(d_blob_ur_x, right, d_blob_ur_n);
-                                    d_blob_ur_y = cumulative_moving_average(d_blob_ur_y, y, d_blob_ur_n);
-                                    d_blob_ur_n += 1;
-                                }
-
-                                if ((left - y) < d_blob_ll) { // Restart the average.
-                                    d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y, d_blob_ll_n = 1;
-                                } else if ((left - y) == d_blob_ll) { // Moving average.
-                                    d_blob_ll_x = cumulative_moving_average(d_blob_ll_x, left, d_blob_ll_n);
-                                    d_blob_ll_y = cumulative_moving_average(d_blob_ll_y, y, d_blob_ll_n);
-                                    d_blob_ll_n += 1;
-                                }
-
-                                if (d_blob_lr < (right + y)) { // Restart the average.
-                                    d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y, d_blob_lr_n = 1;
-                                } else if (d_blob_lr == (right + y)) { // Moving average.
-                                    d_blob_lr_x = cumulative_moving_average(d_blob_lr_x, right, d_blob_lr_n);
-                                    d_blob_lr_y = cumulative_moving_average(d_blob_lr_y, y, d_blob_lr_n);
-                                    d_blob_lr_n += 1;
-                                }
+                                EDGE_MINIMIZATION( left, +1, y, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n);
+                                EDGE_MINIMIZATION( left, +1, y, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n);
+                                EDGE_MINIMIZATION(  avg, +0, y, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n);
+                                EDGE_MAXIMIZATION(right, +1, y, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n);
+                                EDGE_MAXIMIZATION(right, +1, y, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n);
+                                EDGE_MAXIMIZATION(right, +1, y, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n);
+                                EDGE_MAXIMIZATION(  avg, +0, y, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n);
+                                EDGE_MINIMIZATION( left, +1, y, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n);
 
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
@@ -668,7 +668,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            if ((((blob_x2 - blob_x1 + 1) * (blob_y2 - blob_y1 + 1)) >= area_threshold)
+                            if ((((blob_r_x - blob_l_x + 1) * (blob_b_y - blob_t_y + 1)) >= area_threshold)
                             && (blob_pixels >= pixels_threshold)) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
@@ -687,6 +687,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
+
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
@@ -694,26 +695,42 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                                 find_blobs_list_lnk_data_t lnk_blob;
-                                lnk_blob.corners[0].x = blob_x1;
-                                lnk_blob.corners[0].y = blob_x1y;
-                                lnk_blob.corners[1].x = d_blob_ul_x;
-                                lnk_blob.corners[1].y = d_blob_ul_y;
-                                lnk_blob.corners[2].x = blob_y1x;
-                                lnk_blob.corners[2].y = blob_y1;
-                                lnk_blob.corners[3].x = d_blob_ur_x;
-                                lnk_blob.corners[3].y = d_blob_ur_y;
-                                lnk_blob.corners[4].x = blob_x2;
-                                lnk_blob.corners[4].y = blob_x2y;
-                                lnk_blob.corners[5].x = d_blob_lr_x;
-                                lnk_blob.corners[5].y = d_blob_lr_y;
-                                lnk_blob.corners[6].x = blob_y2x;
-                                lnk_blob.corners[6].y = blob_y2;
-                                lnk_blob.corners[7].x = d_blob_ll_x;
-                                lnk_blob.corners[7].y = d_blob_ll_y;
-                                lnk_blob.rect.x = blob_x1;
-                                lnk_blob.rect.y = blob_y1;
-                                lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
-                                lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
+                                lnk_blob.corners[0].x = blob_l_x;
+                                lnk_blob.corners[0].y = blob_l_y;
+                                lnk_blob.corners[1].x = blob_ul_x;
+                                lnk_blob.corners[1].y = blob_ul_y;
+                                lnk_blob.corners[2].x = blob_ul_x;
+                                lnk_blob.corners[2].y = blob_ul_y;
+                                lnk_blob.corners[3].x = blob_ul_x;
+                                lnk_blob.corners[3].y = blob_ul_y;
+                                lnk_blob.corners[4].x = blob_t_x;
+                                lnk_blob.corners[4].y = blob_t_y;
+                                lnk_blob.corners[5].x = blob_ur_x;
+                                lnk_blob.corners[5].y = blob_ur_y;
+                                lnk_blob.corners[6].x = blob_ur_x;
+                                lnk_blob.corners[6].y = blob_ur_y;
+                                lnk_blob.corners[7].x = blob_ur_x;
+                                lnk_blob.corners[7].y = blob_ur_y;
+                                lnk_blob.corners[8].x = blob_r_x;
+                                lnk_blob.corners[8].y = blob_r_y;
+                                lnk_blob.corners[9].x = blob_lr_x;
+                                lnk_blob.corners[9].y = blob_lr_y;
+                                lnk_blob.corners[10].x = blob_lr_x;
+                                lnk_blob.corners[10].y = blob_lr_y;
+                                lnk_blob.corners[11].x = blob_lr_x;
+                                lnk_blob.corners[11].y = blob_lr_y;
+                                lnk_blob.corners[12].x = blob_b_x;
+                                lnk_blob.corners[12].y = blob_b_y;
+                                lnk_blob.corners[13].x = blob_ll_x;
+                                lnk_blob.corners[13].y = blob_ll_y;
+                                lnk_blob.corners[14].x = blob_ll_x;
+                                lnk_blob.corners[14].y = blob_ll_y;
+                                lnk_blob.corners[15].x = blob_ll_x;
+                                lnk_blob.corners[15].y = blob_ll_y;
+                                lnk_blob.rect.x = blob_l_x;
+                                lnk_blob.rect.y = blob_t_y;
+                                lnk_blob.rect.w = blob_r_x - blob_l_x + 1;
+                                lnk_blob.rect.h = blob_b_y - blob_t_y + 1;
                                 lnk_blob.pixels = blob_pixels;
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
@@ -728,7 +745,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.y_hist_bins = NULL;
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
-                                lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
+                                lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels);
+                                // The multiply by 256 helps prevent truncation of the floating point number when pixels is small.
                                 lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
                                 lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
                                 lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
@@ -757,23 +775,24 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                 break;
             }
             case IMAGE_BPP_RGB565: {
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y += y_stride) {
+                for (int y = roi->y, yy = roi->y + roi->h, y_max = yy - 1; y < yy; y += y_stride) {
                     uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                     uint32_t *bmp_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&bmp, y);
-                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w; x < xx; x += x_stride) {
+                    for (int x = roi->x + (y % x_stride), xx = roi->x + roi->w, x_max = xx - 1; x < xx; x += x_stride) {
                         if ((!IMAGE_GET_BINARY_PIXEL_FAST(bmp_row_ptr, x))
                         && COLOR_THRESHOLD_RGB565(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), &lnk_data, invert)) {
                             int old_x = x;
                             int old_y = y;
 
-                            int blob_x1 = x, blob_x1y = y, blob_x1y_n = 1; // left
-                            int blob_y1 = y, blob_y1x = x;                 // top
-                            int blob_x2 = x, blob_x2y = y, blob_x2y_n = 1; // right
-                            int blob_y2 = y, blob_y2x = x;                 // bottom
-                            int d_blob_ul = xx + yy - 2, d_blob_ul_x = xx - 1, d_blob_ul_y = yy - 1, d_blob_ul_n = 1; // upper left
-                            int d_blob_ur =     -yy + 1, d_blob_ur_x = 0,      d_blob_ur_y = yy - 1, d_blob_ur_n = 1; // upper right
-                            int d_blob_ll =      xx - 1, d_blob_ll_x = xx - 1, d_blob_ll_y =      0, d_blob_ll_n = 1; // lower left
-                            int d_blob_lr =           0, d_blob_lr_x =      0, d_blob_lr_y =      0, d_blob_lr_n = 1; // lower right
+                            EDGE_MIN_DEF(x_max, +1, y_max, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n)
+                            EDGE_MIN_DEF(x_max, +1, y_max, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n)
+                            EDGE_MIN_DEF(x_max, +0, y_max, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n)
+                            EDGE_MAX_DEF(x_max, +1, y_max, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n)
+                            EDGE_MAX_DEF(x_max, +0, y_max, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n)
+                            EDGE_MIN_DEF(x_max, +1, y_max, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n)
+
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
                             int blob_cx = 0;
@@ -781,6 +800,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             long long blob_a = 0;
                             long long blob_b = 0;
                             long long blob_c = 0;
+
                             if (x_hist_bins) memset(x_hist_bins, 0, ptr->w * sizeof(uint16_t));
                             if (y_hist_bins) memset(y_hist_bins, 0, ptr->h * sizeof(uint16_t));
 
@@ -812,57 +832,14 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int cnt = right - left + 1;
                                 int avg = sum / cnt;
 
-                                if (left < blob_x1) { // Restart left column average.
-                                    blob_x1 = left, blob_x1y = y, blob_x1y_n = 1;
-                                } else if (left == blob_x1) { // Moving average for left.
-                                    blob_x1y = cumulative_moving_average(blob_x1y, y, blob_x1y_n), blob_x1y_n += 1;
-                                }
-
-                                if (y < blob_y1) {
-                                    blob_y1 = y, blob_y1x = avg;
-                                }
-
-                                if (blob_x2 < right) { // Restart right column average.
-                                    blob_x2 = right, blob_x2y = y, blob_x2y_n = 1;
-                                } else if (blob_x2 == right) { // Moving average for right.
-                                    blob_x2y = cumulative_moving_average(blob_x2y, y, blob_x2y_n), blob_x2y_n += 1;
-                                }
-
-                                if (blob_y2 < y) {
-                                    blob_y2 = y, blob_y2x = avg;
-                                }
-
-                                if ((left + y) < d_blob_ul) { // Restart the average.
-                                    d_blob_ul = left + y, d_blob_ul_x = left, d_blob_ul_y = y, d_blob_ul_n = 1;
-                                } else if ((left + y) == d_blob_ul) { // Moving average.
-                                    d_blob_ul_x = cumulative_moving_average(d_blob_ul_x, left, d_blob_ul_n);
-                                    d_blob_ul_y = cumulative_moving_average(d_blob_ul_y, y, d_blob_ul_n);
-                                    d_blob_ul_n += 1;
-                                }
-
-                                if (d_blob_ur < (right - y)) { // Restart the average.
-                                    d_blob_ur = right - y, d_blob_ur_x = right, d_blob_ur_y = y, d_blob_ur_n = 1;
-                                } else if (d_blob_ur == (right - y)) { // Moving average.
-                                    d_blob_ur_x = cumulative_moving_average(d_blob_ur_x, right, d_blob_ur_n);
-                                    d_blob_ur_y = cumulative_moving_average(d_blob_ur_y, y, d_blob_ur_n);
-                                    d_blob_ur_n += 1;
-                                }
-
-                                if ((left - y) < d_blob_ll) { // Restart the average.
-                                    d_blob_ll =  left - y, d_blob_ll_x = left,  d_blob_ll_y = y, d_blob_ll_n =1;
-                                } else if ((left - y) == d_blob_ll) { // Moving average.
-                                    d_blob_ll_x = cumulative_moving_average(d_blob_ll_x, left, d_blob_ll_n);
-                                    d_blob_ll_y = cumulative_moving_average(d_blob_ll_y, y, d_blob_ll_n);
-                                    d_blob_ll_n += 1;
-                                }
-
-                                if (d_blob_lr < (right + y)) { // Restart the average.
-                                    d_blob_lr = right + y, d_blob_lr_x = right, d_blob_lr_y = y, d_blob_lr_n = 1;
-                                } else if (d_blob_lr == (right + y)) { // Moving average.
-                                    d_blob_lr_x = cumulative_moving_average(d_blob_lr_x, right, d_blob_lr_n);
-                                    d_blob_lr_y = cumulative_moving_average(d_blob_lr_y, y, d_blob_lr_n);
-                                    d_blob_lr_n += 1;
-                                }
+                                EDGE_MINIMIZATION( left, +1, y, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n);
+                                EDGE_MINIMIZATION( left, +1, y, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n);
+                                EDGE_MINIMIZATION(  avg, +0, y, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n);
+                                EDGE_MAXIMIZATION(right, +1, y, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n);
+                                EDGE_MAXIMIZATION(right, +1, y, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n);
+                                EDGE_MAXIMIZATION(right, +1, y, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n);
+                                EDGE_MAXIMIZATION(  avg, +0, y, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n);
+                                EDGE_MINIMIZATION( left, +1, y, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n);
 
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
@@ -970,7 +947,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            if ((((blob_x2 - blob_x1 + 1) * (blob_y2 - blob_y1 + 1)) >= area_threshold)
+                            if ((((blob_r_x - blob_l_x + 1) * (blob_b_y - blob_t_y + 1)) >= area_threshold)
                             && (blob_pixels >= pixels_threshold)) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
@@ -989,6 +966,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
+
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
@@ -996,26 +974,42 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                                 find_blobs_list_lnk_data_t lnk_blob;
-                                lnk_blob.corners[0].x = blob_x1;
-                                lnk_blob.corners[0].y = blob_x1y;
-                                lnk_blob.corners[1].x = d_blob_ul_x;
-                                lnk_blob.corners[1].y = d_blob_ul_y;
-                                lnk_blob.corners[2].x = blob_y1x;
-                                lnk_blob.corners[2].y = blob_y1;
-                                lnk_blob.corners[3].x = d_blob_ur_x;
-                                lnk_blob.corners[3].y = d_blob_ur_y;
-                                lnk_blob.corners[4].x = blob_x2;
-                                lnk_blob.corners[4].y = blob_x2y;
-                                lnk_blob.corners[5].x = d_blob_lr_x;
-                                lnk_blob.corners[5].y = d_blob_lr_y;
-                                lnk_blob.corners[6].x = blob_y2x;
-                                lnk_blob.corners[6].y = blob_y2;
-                                lnk_blob.corners[7].x = d_blob_ll_x;
-                                lnk_blob.corners[7].y = d_blob_ll_y;
-                                lnk_blob.rect.x = blob_x1;
-                                lnk_blob.rect.y = blob_y1;
-                                lnk_blob.rect.w = blob_x2 - blob_x1 + 1;
-                                lnk_blob.rect.h = blob_y2 - blob_y1 + 1;
+                                lnk_blob.corners[0].x = blob_l_x;
+                                lnk_blob.corners[0].y = blob_l_y;
+                                lnk_blob.corners[1].x = blob_ul_x;
+                                lnk_blob.corners[1].y = blob_ul_y;
+                                lnk_blob.corners[2].x = blob_ul_x;
+                                lnk_blob.corners[2].y = blob_ul_y;
+                                lnk_blob.corners[3].x = blob_ul_x;
+                                lnk_blob.corners[3].y = blob_ul_y;
+                                lnk_blob.corners[4].x = blob_t_x;
+                                lnk_blob.corners[4].y = blob_t_y;
+                                lnk_blob.corners[5].x = blob_ur_x;
+                                lnk_blob.corners[5].y = blob_ur_y;
+                                lnk_blob.corners[6].x = blob_ur_x;
+                                lnk_blob.corners[6].y = blob_ur_y;
+                                lnk_blob.corners[7].x = blob_ur_x;
+                                lnk_blob.corners[7].y = blob_ur_y;
+                                lnk_blob.corners[8].x = blob_r_x;
+                                lnk_blob.corners[8].y = blob_r_y;
+                                lnk_blob.corners[9].x = blob_lr_x;
+                                lnk_blob.corners[9].y = blob_lr_y;
+                                lnk_blob.corners[10].x = blob_lr_x;
+                                lnk_blob.corners[10].y = blob_lr_y;
+                                lnk_blob.corners[11].x = blob_lr_x;
+                                lnk_blob.corners[11].y = blob_lr_y;
+                                lnk_blob.corners[12].x = blob_b_x;
+                                lnk_blob.corners[12].y = blob_b_y;
+                                lnk_blob.corners[13].x = blob_ll_x;
+                                lnk_blob.corners[13].y = blob_ll_y;
+                                lnk_blob.corners[14].x = blob_ll_x;
+                                lnk_blob.corners[14].y = blob_ll_y;
+                                lnk_blob.corners[15].x = blob_ll_x;
+                                lnk_blob.corners[15].y = blob_ll_y;
+                                lnk_blob.rect.x = blob_l_x;
+                                lnk_blob.rect.y = blob_t_y;
+                                lnk_blob.rect.w = blob_r_x - blob_l_x + 1;
+                                lnk_blob.rect.h = blob_b_y - blob_t_y + 1;
                                 lnk_blob.pixels = blob_pixels;
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
@@ -1031,6 +1025,7 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 // These store the current average accumulation.
                                 lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
                                 lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
+                                // The multiply by 256 helps prevent truncation of the floating point number when pixels is small.
                                 lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
                                 lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
                                 lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
@@ -1102,18 +1097,22 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                         tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1, &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
                                                         y_hist_bins_max);
                         // Merge corners...
-                        if (tmp_blob.corners[0].x < lnk_blob.corners[0].x) { lnk_blob.corners[0].x = tmp_blob.corners[0].x, lnk_blob.corners[0].y = tmp_blob.corners[0].y; }
-                        if (tmp_blob.corners[2].y < lnk_blob.corners[2].y) { lnk_blob.corners[2].y = tmp_blob.corners[2].y, lnk_blob.corners[2].x = tmp_blob.corners[2].x; }
-                        if (lnk_blob.corners[4].x < tmp_blob.corners[4].x) { lnk_blob.corners[4].x = tmp_blob.corners[4].x, lnk_blob.corners[4].y = tmp_blob.corners[4].y; }
-                        if (lnk_blob.corners[6].y < tmp_blob.corners[6].y) { lnk_blob.corners[6].y = tmp_blob.corners[6].y, lnk_blob.corners[6].x = tmp_blob.corners[6].x; }
-                        if ((tmp_blob.corners[1].x + tmp_blob.corners[1].y) < (lnk_blob.corners[1].x + lnk_blob.corners[1].y)) { // Merge upper left diagonal.
-                                lnk_blob.corners[1].x = tmp_blob.corners[1].x, lnk_blob.corners[1].y = tmp_blob.corners[1].y; }
-                        if ((lnk_blob.corners[3].x - lnk_blob.corners[3].y) < (tmp_blob.corners[3].x - tmp_blob.corners[3].y)) { // Merge upper right diagonal.
-                                lnk_blob.corners[3].x = tmp_blob.corners[3].x, lnk_blob.corners[3].y = tmp_blob.corners[3].y; }
-                        if ((tmp_blob.corners[5].x - tmp_blob.corners[5].y) < (lnk_blob.corners[5].x - lnk_blob.corners[5].y)) { // Merge lower right diagonal.
-                                lnk_blob.corners[5].x = tmp_blob.corners[5].x, lnk_blob.corners[5].y = tmp_blob.corners[5].y; }
-                        if ((lnk_blob.corners[7].x + lnk_blob.corners[7].y) < (tmp_blob.corners[7].x + tmp_blob.corners[7].y)) { // Merge upper right diagonal.
-                                lnk_blob.corners[7].x = tmp_blob.corners[7].x, lnk_blob.corners[7].y = tmp_blob.corners[7].y; }
+                        EDGE_MIN_MERGE( 0, lnk_blob, tmp_blob, +1, +0);
+                        EDGE_MIN_MERGE( 1, lnk_blob, tmp_blob, +1, +1);
+                        EDGE_MIN_MERGE( 2, lnk_blob, tmp_blob, +1, +1);
+                        EDGE_MIN_MERGE( 3, lnk_blob, tmp_blob, +1, +1);
+                        EDGE_MIN_MERGE( 4, lnk_blob, tmp_blob, +0, +1);
+                        EDGE_MAX_MERGE( 5, lnk_blob, tmp_blob, +1, -1);
+                        EDGE_MAX_MERGE( 6, lnk_blob, tmp_blob, +1, -1);
+                        EDGE_MAX_MERGE( 7, lnk_blob, tmp_blob, +1, -1);
+                        EDGE_MAX_MERGE( 8, lnk_blob, tmp_blob, +1, +0);
+                        EDGE_MAX_MERGE( 9, lnk_blob, tmp_blob, +1, +1);
+                        EDGE_MAX_MERGE(10, lnk_blob, tmp_blob, +1, +1);
+                        EDGE_MAX_MERGE(11, lnk_blob, tmp_blob, +1, +1);
+                        EDGE_MAX_MERGE(12, lnk_blob, tmp_blob, +0, +1);
+                        EDGE_MIN_MERGE(13, lnk_blob, tmp_blob, +1, -1);
+                        EDGE_MIN_MERGE(14, lnk_blob, tmp_blob, +1, -1);
+                        EDGE_MIN_MERGE(15, lnk_blob, tmp_blob, +1, -1);
                         // Merge rects...
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
                         // Merge counters...
@@ -1130,7 +1129,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         // Compute current values...
                         lnk_blob.centroid_x = lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels);
                         lnk_blob.centroid_y = lnk_blob.centroid_y_acc / ((float) lnk_blob.pixels);
-                        lnk_blob.rotation = fast_atan2f((lnk_blob.rotation_acc_y / ((float) lnk_blob.pixels)) / 256, (lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels)) / 256);
+                        lnk_blob.rotation = fast_atan2f((lnk_blob.rotation_acc_y / ((float) lnk_blob.pixels)) / 256,
+                                                        (lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels)) / 256);
                         lnk_blob.roundness = (lnk_blob.roundness_acc / ((float) lnk_blob.pixels)) / 256;
                         merge_occured = true;
                     } else {
@@ -1149,6 +1149,18 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
         }
     }
 }
+
+#undef EDGE_MIN_MERGE
+#undef EDGE_MAX_MERGE
+#undef EDGE_MAX_MIN_MERGE
+
+#undef EDGE_MINIMIZATION
+#undef EDGE_MAXIMIZATION
+#undef EDGE_MAX_MIN
+
+#undef EDGE_MIN_DEF
+#undef EDGE_MAX_DEF
+#undef EDGE_MAX_MIN_DEF
 
 void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                           int seed_threshold, int floating_threshold,
