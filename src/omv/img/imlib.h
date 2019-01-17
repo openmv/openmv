@@ -1052,7 +1052,7 @@ typedef struct statistics {
 } statistics_t;
 
 typedef struct find_blobs_list_lnk_data {
-    point_t corners[16];
+    point_t corners[8];
     rectangle_t rect;
     uint32_t pixels, perimeter, code, count;
     float centroid_x, centroid_y, rotation, roundness;
