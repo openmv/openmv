@@ -11,6 +11,11 @@ typedef struct xylr
 }
 xylr_t;
 
+static float sign(float x)
+{
+    return x / fabsf(x);
+}
+
 static int sum_m_to_n(int m, int n)
 {
     return ((n * (n + 1)) - (m * (m - 1))) / 2;
@@ -120,70 +125,6 @@ static float calc_roundness(float blob_a, float blob_b, float blob_c)
     return IM_DIV(roundness_min, roundness_max);
 }
 
-// This define creates the accumulator and point storage variables which are used by the EDGE_MAX_MIN. The variables are initialized
-// to the opposite values EDGE_MAX_MIN will drive them towards such that the variable can be optimized.
-#define EDGE_MAX_MIN_DEF(maximize, x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
-int accumulator_x = IM_MAX(IM_MIN(maximize ? ((-x_max) * x_weight) : (x_max * x_weight), x_max), 0); \
-int accumulator_y = IM_MAX(IM_MIN(maximize ? ((-y_max) * y_weight) : (y_max * y_weight), y_max), 0); \
-int accumulator_z = (accumulator_x * x_weight) + (accumulator_y * y_weight); \
-int accumulator_n = 1;
-
-#define EDGE_MAX_DEF(x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
-EDGE_MAX_MIN_DEF(true, x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n)
-
-#define EDGE_MIN_DEF(x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
-EDGE_MAX_MIN_DEF(false, x_max, x_weight, y_max, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n)
-
-// As this function is called on a list of points in an image it will record the point coordinates that max/minimize
-// z. z is a hyper-plane which achieves max/min value in different directions depending on the weights.
-#define EDGE_MAX_MIN(maximize, x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
-({ \
-    __typeof__ (x_weight) _x_weight = (x_weight); \
-    __typeof__ (y_weight) _y_weight = (y_weight); \
-    int z = (x * _x_weight) + (y * _y_weight); \
-    if (maximize ? (accumulator_z < z) : (z < accumulator_z)) { \
-        accumulator_z = z; \
-        accumulator_x = x; \
-        accumulator_y = y; \
-        accumulator_n = 1; \
-    } else if (accumulator_z == z) { \
-        accumulator_x = cumulative_moving_average(accumulator_x, x, accumulator_n); \
-        accumulator_y = cumulative_moving_average(accumulator_y, y, accumulator_n); \
-        accumulator_n += 1; \
-    } \
-})
-
-#define EDGE_MAXIMIZATION(x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
-({ \
-    EDGE_MAX_MIN(true, x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n); \
-})
-
-#define EDGE_MINIMIZATION(x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n) \
-({ \
-    EDGE_MAX_MIN(false, x, x_weight, y, y_weight, accumulator_z, accumulator_x, accumulator_y, accumulator_n); \
-})
-
-// This function picks the best point which max/minimizes the hyper-plane function.
-#define EDGE_MAX_MIN_MERGE(maximize, index, dst, src, x_weight, y_weight) \
-({ \
-    int z_dst = (dst.corners[index].x * x_weight) + (dst.corners[index].y * y_weight); \
-    int z_src = (src.corners[index].x * x_weight) + (src.corners[index].y * y_weight); \
-    if (maximize ? (z_dst < z_src) : (z_src < z_dst)) { \
-        dst.corners[index].x = src.corners[index].x; \
-        dst.corners[index].y = src.corners[index].y; \
-    } \
-})
-
-#define EDGE_MAX_MERGE(index, dst, src, x_weight, y_weight) \
-({ \
-    EDGE_MAX_MIN_MERGE(true, index, dst, src, x_weight, y_weight); \
-})
-
-#define EDGE_MIN_MERGE(index, dst, src, x_weight, y_weight) \
-({ \
-    EDGE_MAX_MIN_MERGE(false, index, dst, src, x_weight, y_weight); \
-})
-
 void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int x_stride, unsigned int y_stride,
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                       bool merge, int margin,
@@ -226,14 +167,17 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            EDGE_MIN_DEF(x_max, +1, y_max, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n)
-                            EDGE_MIN_DEF(x_max, +1, y_max, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n)
-                            EDGE_MIN_DEF(x_max, +0, y_max, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n)
-                            EDGE_MAX_DEF(x_max, +0, y_max, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n)
-                            EDGE_MIN_DEF(x_max, +1, y_max, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n)
+                            float corners_acc[FIND_BLOBS_CORNERS_RESOLUTION];
+                            point_t corners[FIND_BLOBS_CORNERS_RESOLUTION];
+                            int corners_n[FIND_BLOBS_CORNERS_RESOLUTION];
+                            // These values are initialized to their maximum before we minimize.
+                            for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
+                                corners[i].x = IM_MAX(IM_MIN(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]), x_max), 0);
+                                corners[i].y = IM_MAX(IM_MIN(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]), y_max), 0);
+                                corners_acc[i] = (corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
+                                                 (corners[i].y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]);
+                                corners_n[i] = 1;
+                            }
 
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
@@ -274,14 +218,23 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int cnt = right - left + 1;
                                 int avg = sum / cnt;
 
-                                EDGE_MINIMIZATION( left, +1, y, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n);
-                                EDGE_MINIMIZATION( left, +1, y, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n);
-                                EDGE_MINIMIZATION(  avg, +0, y, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n);
-                                EDGE_MAXIMIZATION(right, +1, y, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n);
-                                EDGE_MAXIMIZATION(right, +1, y, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n);
-                                EDGE_MAXIMIZATION(right, +1, y, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n);
-                                EDGE_MAXIMIZATION(  avg, +0, y, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n);
-                                EDGE_MINIMIZATION( left, +1, y, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n);
+                                for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
+                                    int x_new = (cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i] > 0) ? left :
+                                                ((cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i] == 0) ? avg :
+                                                                                                  right);
+                                    float z = (x_new * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
+                                              (y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]);
+                                    if (z < corners_acc[i]) {
+                                        corners_acc[i] = z;
+                                        corners[i].x = x_new;
+                                        corners[i].y = y;
+                                        corners_n[i] = 1;
+                                    } else if (z == corners_acc[i]) {
+                                        corners[i].x = cumulative_moving_average(corners[i].x, x_new, corners_n[i]);
+                                        corners[i].y = cumulative_moving_average(corners[i].y, y, corners_n[i]);
+                                        corners_n[i] += 1;
+                                    }
+                                }
 
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
@@ -389,8 +342,13 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            if ((((blob_r_x - blob_l_x + 1) * (blob_b_y - blob_t_y + 1)) >= area_threshold)
-                            && (blob_pixels >= pixels_threshold)) {
+                            rectangle_t rect;
+                            rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
+                            rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
+                            rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
+                            rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+
+                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
@@ -408,7 +366,6 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
-
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
@@ -416,26 +373,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                                 find_blobs_list_lnk_data_t lnk_blob;
-                                lnk_blob.corners[0].x = blob_l_x;
-                                lnk_blob.corners[0].y = blob_l_y;
-                                lnk_blob.corners[1].x = blob_ul_x;
-                                lnk_blob.corners[1].y = blob_ul_y;
-                                lnk_blob.corners[2].x = blob_t_x;
-                                lnk_blob.corners[2].y = blob_t_y;
-                                lnk_blob.corners[3].x = blob_ur_x;
-                                lnk_blob.corners[3].y = blob_ur_y;
-                                lnk_blob.corners[4].x = blob_r_x;
-                                lnk_blob.corners[4].y = blob_r_y;
-                                lnk_blob.corners[5].x = blob_lr_x;
-                                lnk_blob.corners[5].y = blob_lr_y;
-                                lnk_blob.corners[6].x = blob_b_x;
-                                lnk_blob.corners[6].y = blob_b_y;
-                                lnk_blob.corners[7].x = blob_ll_x;
-                                lnk_blob.corners[7].y = blob_ll_y;
-                                lnk_blob.rect.x = blob_l_x;
-                                lnk_blob.rect.y = blob_t_y;
-                                lnk_blob.rect.w = blob_r_x - blob_l_x + 1;
-                                lnk_blob.rect.h = blob_b_y - blob_t_y + 1;
+                                memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
+                                memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
@@ -449,12 +388,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
                                 // These store the current average accumulation.
-                                lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
-                                lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels);
-                                // The multiply by 256 helps prevent truncation of the floating point number when pixels is small.
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
+                                lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
+                                lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -489,14 +427,17 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            EDGE_MIN_DEF(x_max, +1, y_max, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n)
-                            EDGE_MIN_DEF(x_max, +1, y_max, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n)
-                            EDGE_MIN_DEF(x_max, +0, y_max, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n)
-                            EDGE_MAX_DEF(x_max, +0, y_max, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n)
-                            EDGE_MIN_DEF(x_max, +1, y_max, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n)
+                            float corners_acc[FIND_BLOBS_CORNERS_RESOLUTION];
+                            point_t corners[FIND_BLOBS_CORNERS_RESOLUTION];
+                            int corners_n[FIND_BLOBS_CORNERS_RESOLUTION];
+                            // These values are initialized to their maximum before we minimize.
+                            for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
+                                corners[i].x = IM_MAX(IM_MIN(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]), x_max), 0);
+                                corners[i].y = IM_MAX(IM_MIN(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]), y_max), 0);
+                                corners_acc[i] = (corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
+                                                 (corners[i].y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]);
+                                corners_n[i] = 1;
+                            }
 
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
@@ -537,14 +478,23 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int cnt = right - left + 1;
                                 int avg = sum / cnt;
 
-                                EDGE_MINIMIZATION( left, +1, y, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n);
-                                EDGE_MINIMIZATION( left, +1, y, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n);
-                                EDGE_MINIMIZATION(  avg, +0, y, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n);
-                                EDGE_MAXIMIZATION(right, +1, y, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n);
-                                EDGE_MAXIMIZATION(right, +1, y, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n);
-                                EDGE_MAXIMIZATION(right, +1, y, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n);
-                                EDGE_MAXIMIZATION(  avg, +0, y, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n);
-                                EDGE_MINIMIZATION( left, +1, y, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n);
+                                for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
+                                    int x_new = (cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i] > 0) ? left :
+                                                ((cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i] == 0) ? avg :
+                                                                                                  right);
+                                    float z = (x_new * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
+                                              (y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]);
+                                    if (z < corners_acc[i]) {
+                                        corners_acc[i] = z;
+                                        corners[i].x = x_new;
+                                        corners[i].y = y;
+                                        corners_n[i] = 1;
+                                    } else if (z == corners_acc[i]) {
+                                        corners[i].x = cumulative_moving_average(corners[i].x, x_new, corners_n[i]);
+                                        corners[i].y = cumulative_moving_average(corners[i].y, y, corners_n[i]);
+                                        corners_n[i] += 1;
+                                    }
+                                }
 
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
@@ -652,8 +602,13 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            if ((((blob_r_x - blob_l_x + 1) * (blob_b_y - blob_t_y + 1)) >= area_threshold)
-                            && (blob_pixels >= pixels_threshold)) {
+                            rectangle_t rect;
+                            rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
+                            rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
+                            rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
+                            rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+
+                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
@@ -671,7 +626,6 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
-
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
@@ -679,26 +633,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                                 find_blobs_list_lnk_data_t lnk_blob;
-                                lnk_blob.corners[0].x = blob_l_x;
-                                lnk_blob.corners[0].y = blob_l_y;
-                                lnk_blob.corners[1].x = blob_ul_x;
-                                lnk_blob.corners[1].y = blob_ul_y;
-                                lnk_blob.corners[2].x = blob_t_x;
-                                lnk_blob.corners[2].y = blob_t_y;
-                                lnk_blob.corners[3].x = blob_ur_x;
-                                lnk_blob.corners[3].y = blob_ur_y;
-                                lnk_blob.corners[4].x = blob_r_x;
-                                lnk_blob.corners[4].y = blob_r_y;
-                                lnk_blob.corners[5].x = blob_lr_x;
-                                lnk_blob.corners[5].y = blob_lr_y;
-                                lnk_blob.corners[6].x = blob_b_x;
-                                lnk_blob.corners[6].y = blob_b_y;
-                                lnk_blob.corners[7].x = blob_ll_x;
-                                lnk_blob.corners[7].y = blob_ll_y;
-                                lnk_blob.rect.x = blob_l_x;
-                                lnk_blob.rect.y = blob_t_y;
-                                lnk_blob.rect.w = blob_r_x - blob_l_x + 1;
-                                lnk_blob.rect.h = blob_b_y - blob_t_y + 1;
+                                memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
+                                memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
@@ -712,12 +648,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
                                 // These store the current average accumulation.
-                                lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
-                                lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels);
-                                // The multiply by 256 helps prevent truncation of the floating point number when pixels is small.
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
+                                lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
+                                lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -752,14 +687,17 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                             int old_x = x;
                             int old_y = y;
 
-                            EDGE_MIN_DEF(x_max, +1, y_max, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n)
-                            EDGE_MIN_DEF(x_max, +1, y_max, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n)
-                            EDGE_MIN_DEF(x_max, +0, y_max, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n)
-                            EDGE_MAX_DEF(x_max, +1, y_max, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n)
-                            EDGE_MAX_DEF(x_max, +0, y_max, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n)
-                            EDGE_MIN_DEF(x_max, +1, y_max, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n)
+                            float corners_acc[FIND_BLOBS_CORNERS_RESOLUTION];
+                            point_t corners[FIND_BLOBS_CORNERS_RESOLUTION];
+                            int corners_n[FIND_BLOBS_CORNERS_RESOLUTION];
+                            // Ensures that maximum goes all the way to the edge of the image.
+                            for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
+                                corners[i].x = IM_MAX(IM_MIN(x_max * sign(cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]), x_max), 0);
+                                corners[i].y = IM_MAX(IM_MIN(y_max * sign(sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]), y_max), 0);
+                                corners_acc[i] = (corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
+                                                 (corners[i].y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]);
+                                corners_n[i] = 1;
+                            }
 
                             int blob_pixels = 0;
                             int blob_perimeter = 0;
@@ -800,14 +738,23 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int cnt = right - left + 1;
                                 int avg = sum / cnt;
 
-                                EDGE_MINIMIZATION( left, +1, y, +0,  blob_l_acc,  blob_l_x,  blob_l_y,  blob_l_n);
-                                EDGE_MINIMIZATION( left, +1, y, +1, blob_ul_acc, blob_ul_x, blob_ul_y, blob_ul_n);
-                                EDGE_MINIMIZATION(  avg, +0, y, +1,  blob_t_acc,  blob_t_x,  blob_t_y,  blob_t_n);
-                                EDGE_MAXIMIZATION(right, +1, y, -1, blob_ur_acc, blob_ur_x, blob_ur_y, blob_ur_n);
-                                EDGE_MAXIMIZATION(right, +1, y, +0,  blob_r_acc,  blob_r_x,  blob_r_y,  blob_r_n);
-                                EDGE_MAXIMIZATION(right, +1, y, +1, blob_lr_acc, blob_lr_x, blob_lr_y, blob_lr_n);
-                                EDGE_MAXIMIZATION(  avg, +0, y, +1,  blob_b_acc,  blob_b_x,  blob_b_y,  blob_b_n);
-                                EDGE_MINIMIZATION( left, +1, y, -1, blob_ll_acc, blob_ll_x, blob_ll_y, blob_ll_n);
+                                for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
+                                    int x_new = (cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i] > 0) ? left :
+                                                ((cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i] == 0) ? avg :
+                                                                                                  right);
+                                    float z = (x_new * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
+                                              (y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]);
+                                    if (z < corners_acc[i]) {
+                                        corners_acc[i] = z;
+                                        corners[i].x = x_new;
+                                        corners[i].y = y;
+                                        corners_n[i] = 1;
+                                    } else if (z == corners_acc[i]) {
+                                        corners[i].x = cumulative_moving_average(corners[i].x, x_new, corners_n[i]);
+                                        corners[i].y = cumulative_moving_average(corners[i].y, y, corners_n[i]);
+                                        corners_n[i] += 1;
+                                    }
+                                }
 
                                 blob_pixels += cnt;
                                 blob_perimeter += 2;
@@ -915,8 +862,13 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 }
                             }
 
-                            if ((((blob_r_x - blob_l_x + 1) * (blob_b_y - blob_t_y + 1)) >= area_threshold)
-                            && (blob_pixels >= pixels_threshold)) {
+                            rectangle_t rect;
+                            rect.x = corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x; // l
+                            rect.y = corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y; // t
+                            rect.w = corners[(FIND_BLOBS_CORNERS_RESOLUTION*2)/4].x - corners[(FIND_BLOBS_CORNERS_RESOLUTION*0)/4].x + 1; // r - l + 1
+                            rect.h = corners[(FIND_BLOBS_CORNERS_RESOLUTION*3)/4].y - corners[(FIND_BLOBS_CORNERS_RESOLUTION*1)/4].y + 1; // b - t + 1
+
+                            if (((rect.w * rect.h) >= area_threshold) && (blob_pixels >= pixels_threshold)) {
 
                                 // http://www.cse.usf.edu/~r1k/MachineVisionBook/MachineVision.files/MachineVision_Chapter2.pdf
                                 // https://www.strchr.com/standard_deviation_in_one_pass
@@ -934,7 +886,6 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
 
                                 float b_mx = blob_cx / ((float) blob_pixels);
                                 float b_my = blob_cy / ((float) blob_pixels);
-
                                 int mx = fast_roundf(b_mx); // x centroid
                                 int my = fast_roundf(b_my); // y centroid
                                 int small_blob_a = blob_a - ((mx * blob_cx) + (mx * blob_cx)) + (blob_pixels * mx * mx);
@@ -942,26 +893,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 int small_blob_c = blob_c - ((my * blob_cy) + (my * blob_cy)) + (blob_pixels * my * my);
 
                                 find_blobs_list_lnk_data_t lnk_blob;
-                                lnk_blob.corners[0].x = blob_l_x;
-                                lnk_blob.corners[0].y = blob_l_y;
-                                lnk_blob.corners[1].x = blob_ul_x;
-                                lnk_blob.corners[1].y = blob_ul_y;
-                                lnk_blob.corners[2].x = blob_t_x;
-                                lnk_blob.corners[2].y = blob_t_y;
-                                lnk_blob.corners[3].x = blob_ur_x;
-                                lnk_blob.corners[3].y = blob_ur_y;
-                                lnk_blob.corners[4].x = blob_r_x;
-                                lnk_blob.corners[4].y = blob_r_y;
-                                lnk_blob.corners[5].x = blob_lr_x;
-                                lnk_blob.corners[5].y = blob_lr_y;
-                                lnk_blob.corners[6].x = blob_b_x;
-                                lnk_blob.corners[6].y = blob_b_y;
-                                lnk_blob.corners[7].x = blob_ll_x;
-                                lnk_blob.corners[7].y = blob_ll_y;
-                                lnk_blob.rect.x = blob_l_x;
-                                lnk_blob.rect.y = blob_t_y;
-                                lnk_blob.rect.w = blob_r_x - blob_l_x + 1;
-                                lnk_blob.rect.h = blob_b_y - blob_t_y + 1;
+                                memcpy(lnk_blob.corners, corners, FIND_BLOBS_CORNERS_RESOLUTION * sizeof(point_t));
+                                memcpy(&lnk_blob.rect, &rect, sizeof(rectangle_t));
                                 lnk_blob.pixels = blob_pixels;
                                 lnk_blob.perimeter = blob_perimeter;
                                 lnk_blob.code = 1 << code;
@@ -975,12 +908,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                 lnk_blob.y_hist_bins_count = 0;
                                 lnk_blob.y_hist_bins = NULL;
                                 // These store the current average accumulation.
-                                lnk_blob.centroid_x_acc = fast_roundf(lnk_blob.centroid_x * lnk_blob.pixels);
-                                lnk_blob.centroid_y_acc = fast_roundf(lnk_blob.centroid_y * lnk_blob.pixels) ;
-                                // The multiply by 256 helps prevent truncation of the floating point number when pixels is small.
-                                lnk_blob.rotation_acc_x = fast_roundf(cosf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
-                                lnk_blob.rotation_acc_y = fast_roundf(sinf(lnk_blob.rotation) * 256 * lnk_blob.pixels);
-                                lnk_blob.roundness_acc = fast_roundf(lnk_blob.roundness * 256 * lnk_blob.pixels);
+                                lnk_blob.centroid_x_acc = lnk_blob.centroid_x * lnk_blob.pixels;
+                                lnk_blob.centroid_y_acc = lnk_blob.centroid_y * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_x = cosf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.rotation_acc_y = sinf(lnk_blob.rotation) * lnk_blob.pixels;
+                                lnk_blob.roundness_acc = lnk_blob.roundness * lnk_blob.pixels;
 
                                 if (x_hist_bins) {
                                     bin_up(x_hist_bins, ptr->w, x_hist_bins_max, &lnk_blob.x_hist_bins, &lnk_blob.x_hist_bins_count);
@@ -1049,14 +981,16 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                                         tmp_blob.rect.y, tmp_blob.rect.y + tmp_blob.rect.h - 1, &tmp_blob.y_hist_bins, &tmp_blob.y_hist_bins_count,
                                                         y_hist_bins_max);
                         // Merge corners...
-                        EDGE_MIN_MERGE(0, lnk_blob, tmp_blob, +1, +0);
-                        EDGE_MIN_MERGE(1, lnk_blob, tmp_blob, +1, +1);
-                        EDGE_MIN_MERGE(2, lnk_blob, tmp_blob, +0, +1);
-                        EDGE_MAX_MERGE(3, lnk_blob, tmp_blob, +1, -1);
-                        EDGE_MAX_MERGE(4, lnk_blob, tmp_blob, +1, +0);
-                        EDGE_MAX_MERGE(5, lnk_blob, tmp_blob, +1, +1);
-                        EDGE_MAX_MERGE(6, lnk_blob, tmp_blob, +0, +1);
-                        EDGE_MIN_MERGE(7, lnk_blob, tmp_blob, +1, -1);
+                        for (int i = 0; i < FIND_BLOBS_CORNERS_RESOLUTION; i++) {
+                            float z_dst = (lnk_blob.corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
+                                          (lnk_blob.corners[i].y * sin_table[FIND_BLOBS_ANGLE_RESOLUTION*i]);
+                            float z_src = (tmp_blob.corners[i].x * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]) +
+                                          (tmp_blob.corners[i].y * cos_table[FIND_BLOBS_ANGLE_RESOLUTION*i]);
+                            if (z_src < z_dst) {
+                                lnk_blob.corners[i].x = tmp_blob.corners[i].x;
+                                lnk_blob.corners[i].y = tmp_blob.corners[i].y;
+                            }
+                        }
                         // Merge rects...
                         rectangle_united(&(lnk_blob.rect), &(tmp_blob.rect));
                         // Merge counters...
@@ -1071,11 +1005,11 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                         lnk_blob.rotation_acc_y += tmp_blob.rotation_acc_y;
                         lnk_blob.roundness_acc += tmp_blob.roundness_acc;
                         // Compute current values...
-                        lnk_blob.centroid_x = lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels);
-                        lnk_blob.centroid_y = lnk_blob.centroid_y_acc / ((float) lnk_blob.pixels);
-                        lnk_blob.rotation = fast_atan2f((lnk_blob.rotation_acc_y / ((float) lnk_blob.pixels)) / 256,
-                                                        (lnk_blob.centroid_x_acc / ((float) lnk_blob.pixels)) / 256);
-                        lnk_blob.roundness = (lnk_blob.roundness_acc / ((float) lnk_blob.pixels)) / 256;
+                        lnk_blob.centroid_x = lnk_blob.centroid_x_acc / lnk_blob.pixels;
+                        lnk_blob.centroid_y = lnk_blob.centroid_y_acc / lnk_blob.pixels;
+                        lnk_blob.rotation = fast_atan2f(lnk_blob.rotation_acc_y / lnk_blob.pixels,
+                                                        lnk_blob.rotation_acc_x / lnk_blob.pixels);
+                        lnk_blob.roundness = lnk_blob.roundness_acc / lnk_blob.pixels;
                         merge_occured = true;
                     } else {
                         list_push_back(out, &tmp_blob);
@@ -1093,18 +1027,6 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
         }
     }
 }
-
-#undef EDGE_MIN_MERGE
-#undef EDGE_MAX_MERGE
-#undef EDGE_MAX_MIN_MERGE
-
-#undef EDGE_MINIMIZATION
-#undef EDGE_MAXIMIZATION
-#undef EDGE_MAX_MIN
-
-#undef EDGE_MIN_DEF
-#undef EDGE_MAX_DEF
-#undef EDGE_MAX_MIN_DEF
 
 void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                           int seed_threshold, int floating_threshold,
