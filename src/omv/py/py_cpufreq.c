@@ -13,6 +13,7 @@
 #include <math.h>
 #include STM32_HAL_H
 #include "py_cpufreq.h"
+#include "py_helper.h"
 
 #if defined(STM32F7) || defined(STM32H7)
 
