@@ -337,13 +337,9 @@ Q(bssid)
 
 // cpufreq Module
 Q(cpufreq)
-Q(CPUFREQ_120MHZ)
-Q(CPUFREQ_144MHZ)
-Q(CPUFREQ_168MHZ)
-Q(CPUFREQ_192MHZ)
-Q(CPUFREQ_216MHZ)
-Q(get_frequency)
 Q(set_frequency)
+Q(get_current_frequencies)
+Q(get_supported_frequencies)
 
 // Get Pixel
 Q(get_pixel)
