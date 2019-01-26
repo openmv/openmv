@@ -9,6 +9,12 @@
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
 
+// Enable mean pooling
+//#define IMLIB_ENABLE_MEAN_POOLING
+
+// Enable midpoint pooling
+//#define IMLIB_ENABLE_MIDPOINT_POOLING
+
 // Enable binary ops
 //#define IMLIB_ENABLE_BINARY_OPS
 

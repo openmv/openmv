@@ -643,6 +643,7 @@ STATIC mp_obj_t py_image_set_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_set_pixel_obj, 2, py_image_set_pixel);
 
+#ifdef IMLIB_ENABLE_MEAN_POOLING
 static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_t y_div_obj)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(img_obj);
@@ -694,7 +695,9 @@ static mp_obj_t py_image_mean_pooled(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_ob
     return py_image_from_struct(&out_img);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_mean_pooled_obj, py_image_mean_pooled);
+#endif // IMLIB_ENABLE_MEAN_POOLING
 
+#ifdef IMLIB_ENABLE_MIDPOINT_POOLING
 static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
@@ -752,6 +755,7 @@ static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_m
     return py_image_from_struct(&out_img);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
+#endif // IMLIB_ENABLE_MIDPOINT_POOLING
 
 static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -5838,10 +5842,20 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_size),                MP_ROM_PTR(&py_image_size_obj)},
     {MP_ROM_QSTR(MP_QSTR_get_pixel),           MP_ROM_PTR(&py_image_get_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_set_pixel),           MP_ROM_PTR(&py_image_set_pixel_obj)},
+#ifdef IMLIB_ENABLE_MEAN_POOLING
     {MP_ROM_QSTR(MP_QSTR_mean_pool),           MP_ROM_PTR(&py_image_mean_pool_obj)},
     {MP_ROM_QSTR(MP_QSTR_mean_pooled),         MP_ROM_PTR(&py_image_mean_pooled_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_mean_pool),           MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_mean_pooled),         MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif
+#ifdef IMLIB_ENABLE_MIDPOINT_POOLING
     {MP_ROM_QSTR(MP_QSTR_midpoint_pool),       MP_ROM_PTR(&py_image_midpoint_pool_obj)},
     {MP_ROM_QSTR(MP_QSTR_midpoint_pooled),     MP_ROM_PTR(&py_image_midpoint_pooled_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_midpoint_pool),       MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_midpoint_pooled),     MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif
     {MP_ROM_QSTR(MP_QSTR_to_bitmap),           MP_ROM_PTR(&py_image_to_bitmap_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_grayscale),        MP_ROM_PTR(&py_image_to_grayscale_obj)},
     {MP_ROM_QSTR(MP_QSTR_to_rgb565),           MP_ROM_PTR(&py_image_to_rgb565_obj)},
