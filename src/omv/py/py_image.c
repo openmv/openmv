@@ -3894,13 +3894,14 @@ mp_obj_t py_blob_code(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->co
 mp_obj_t py_blob_count(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->count; }
 mp_obj_t py_blob_perimeter(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->perimeter; }
 mp_obj_t py_blob_roundness(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->roundness; }
+mp_obj_t py_blob_elongation(mp_obj_t self_in) { return mp_obj_new_float(1 - mp_obj_get_float(((py_blob_obj_t *) self_in)->roundness)); }
 mp_obj_t py_blob_area(mp_obj_t self_in) {
     return mp_obj_new_int(mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h));
 }
 mp_obj_t py_blob_density(mp_obj_t self_in) {
     int area = mp_obj_get_int(((py_blob_obj_t *) self_in)->w) * mp_obj_get_int(((py_blob_obj_t *) self_in)->h);
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
-    return mp_obj_new_float(IM_MIN(IM_DIV(pixels, ((float) area)), 1));
+    return mp_obj_new_float(IM_DIV(pixels, ((float) area)));
 }
 // Rect-area versus pixels (e.g. blob area) -> Above.
 // Rect-area versus perimeter -> Basically the same as the above with a different scale factor.
@@ -3911,7 +3912,7 @@ mp_obj_t py_blob_compactness(mp_obj_t self_in) {
     float perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
     return mp_obj_new_float(IM_DIV((pixels * 4 * M_PI), (perimeter * perimeter)));
 }
-mp_obj_t py_blob_convexity(mp_obj_t self_in) {
+mp_obj_t py_blob_solidity(mp_obj_t self_in) {
     mp_obj_t *corners, *p0, *p1, *p2, *p3;
     mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
     mp_obj_get_array_fixed_n(corners[0], 2, &p0);
@@ -3934,10 +3935,35 @@ mp_obj_t py_blob_convexity(mp_obj_t self_in) {
     int pixels = mp_obj_get_int(((py_blob_obj_t *) self_in)->pixels);
     return mp_obj_new_float(IM_MIN(IM_DIV(pixels, min_area), 1));
 }
+mp_obj_t py_blob_convexity(mp_obj_t self_in) {
+    mp_obj_t *corners, *p0, *p1, *p2, *p3;
+    mp_obj_get_array_fixed_n(((py_blob_obj_t *) self_in)->min_corners, 4, &corners);
+    mp_obj_get_array_fixed_n(corners[0], 2, &p0);
+    mp_obj_get_array_fixed_n(corners[1], 2, &p1);
+    mp_obj_get_array_fixed_n(corners[2], 2, &p2);
+    mp_obj_get_array_fixed_n(corners[3], 2, &p3);
+
+    int x0, y0, x1, y1, x2, y2, x3, y3;
+    x0 = mp_obj_get_int(p0[0]);
+    y0 = mp_obj_get_int(p0[1]);
+    x1 = mp_obj_get_int(p1[0]);
+    y1 = mp_obj_get_int(p1[1]);
+    x2 = mp_obj_get_int(p2[0]);
+    y2 = mp_obj_get_int(p2[1]);
+    x3 = mp_obj_get_int(p3[0]);
+    y3 = mp_obj_get_int(p3[1]);
+
+    float d0 = fast_sqrtf(((x0 - x1) * (x0 - x1)) + ((y0 - y1) * (y0 - y1)));
+    float d1 = fast_sqrtf(((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2)));
+    float d2 = fast_sqrtf(((x2 - x3) * (x2 - x3)) + ((y2 - y3) * (y2 - y3)));
+    float d3 = fast_sqrtf(((x3 - x0) * (x3 - x0)) + ((y3 - y0) * (y3 - y0)));
+    int perimeter = mp_obj_get_int(((py_blob_obj_t *) self_in)->perimeter);
+    return mp_obj_new_float(IM_MIN(IM_DIV(d0 + d1 + d2 + d3, perimeter), 1));
+}
 // Min rect-area versus pixels (e.g. blob area) -> Above.
 // Min rect-area versus perimeter -> Basically the same as the above with a different scale factor.
 // Min rect-perimeter versus pixels (e.g. blob area) -> Basically the same as the above with a different scale factor.
-// Min rect-perimeter versus perimeter -> Basically the same as the above with a different scale factor.
+// Min rect-perimeter versus perimeter -> Above
 mp_obj_t py_blob_x_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->x_hist_bins; }
 mp_obj_t py_blob_y_hist_bins(mp_obj_t self_in) { return ((py_blob_obj_t *) self_in)->y_hist_bins; }
 mp_obj_t py_blob_major_axis_line(mp_obj_t self_in) {
@@ -4129,9 +4155,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_code_obj, py_blob_code);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_count_obj, py_blob_count);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_perimeter_obj, py_blob_perimeter);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_roundness_obj, py_blob_roundness);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_elongation_obj, py_blob_elongation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_area_obj, py_blob_area);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_density_obj, py_blob_density);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_compactness_obj, py_blob_compactness);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_solidity_obj, py_blob_solidity);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_convexity_obj, py_blob_convexity);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_x_hist_bins_obj, py_blob_x_hist_bins);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_blob_y_hist_bins_obj, py_blob_y_hist_bins);
@@ -4160,9 +4188,12 @@ STATIC const mp_rom_map_elem_t py_blob_locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_count), MP_ROM_PTR(&py_blob_count_obj) },
     { MP_ROM_QSTR(MP_QSTR_perimeter), MP_ROM_PTR(&py_blob_perimeter_obj) },
     { MP_ROM_QSTR(MP_QSTR_roundness), MP_ROM_PTR(&py_blob_roundness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_elongation), MP_ROM_PTR(&py_blob_elongation_obj) },
     { MP_ROM_QSTR(MP_QSTR_area), MP_ROM_PTR(&py_blob_area_obj) } ,
     { MP_ROM_QSTR(MP_QSTR_density), MP_ROM_PTR(&py_blob_density_obj) },
+    { MP_ROM_QSTR(MP_QSTR_extent), MP_ROM_PTR(&py_blob_density_obj) },
     { MP_ROM_QSTR(MP_QSTR_compactness), MP_ROM_PTR(&py_blob_compactness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_solidity), MP_ROM_PTR(&py_blob_solidity_obj) },
     { MP_ROM_QSTR(MP_QSTR_convexity), MP_ROM_PTR(&py_blob_convexity_obj) },
     { MP_ROM_QSTR(MP_QSTR_x_hist_bins), MP_ROM_PTR(&py_blob_x_hist_bins_obj) },
     { MP_ROM_QSTR(MP_QSTR_y_hist_bins), MP_ROM_PTR(&py_blob_y_hist_bins_obj) },
