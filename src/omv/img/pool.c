@@ -8,6 +8,7 @@
  */
 #include "imlib.h"
 
+#ifdef IMLIB_ENABLE_MIDPOINT_POOLING
 void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, const int bias)
 {
     int min_bias = (256-bias);
@@ -55,7 +56,9 @@ void imlib_midpoint_pool(image_t *img_i, image_t *img_o, int x_div, int y_div, c
         }
     }
 }
+#endif // IMLIB_ENABLE_MIDPOINT_POOLING
 
+#ifdef IMLIB_ENABLE_MEAN_POOLING
 void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div)
 {
     int n = x_div * y_div;
@@ -93,3 +96,4 @@ void imlib_mean_pool(image_t *img_i, image_t *img_o, int x_div, int y_div)
         }
     }
 }
+#endif // IMLIB_ENABLE_MEAN_POOLING
