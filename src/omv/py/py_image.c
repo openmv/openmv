@@ -648,20 +648,21 @@ static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(img_obj);
 
-    int x_div = mp_obj_get_int(x_div_obj);
-    PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(x_div <= arg_img->w, "Width divisor must be less than <= img width");
-    int y_div = mp_obj_get_int(y_div_obj);
-    PY_ASSERT_TRUE_MSG(y_div >= 1, "Height divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(y_div <= arg_img->h, "Height divisor must be less than <= img height");
+    int arg_x_div = mp_obj_get_int(x_div_obj);
+    PY_ASSERT_TRUE_MSG(arg_x_div >= 1, "Width divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(arg_x_div <= arg_img->w, "Width divisor must be less than <= img width");
+    int arg_y_div = mp_obj_get_int(y_div_obj);
+    PY_ASSERT_TRUE_MSG(arg_y_div >= 1, "Height divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(arg_y_div <= arg_img->h, "Height divisor must be less than <= img height");
 
     image_t out_img;
-    out_img.w = arg_img->w / x_div;
-    out_img.h = arg_img->h / y_div;
+    out_img.w = arg_img->w / arg_x_div;
+    out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = arg_img->pixels;
+    PY_ASSERT_TRUE_MSG(image_size(&out_img) <= image_size(arg_img), "Can't pool in place!");
 
-    imlib_mean_pool(arg_img, &out_img, x_div, y_div);
+    imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
     arg_img->w = out_img.w;
     arg_img->h = out_img.h;
 
@@ -678,20 +679,20 @@ static mp_obj_t py_image_mean_pooled(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_ob
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(img_obj);
 
-    int x_div = mp_obj_get_int(x_div_obj);
-    PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(x_div <= arg_img->w, "Width divisor must be less than <= img width");
-    int y_div = mp_obj_get_int(y_div_obj);
-    PY_ASSERT_TRUE_MSG(y_div >= 1, "Height divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(y_div <= arg_img->h, "Height divisor must be less than <= img height");
+    int arg_x_div = mp_obj_get_int(x_div_obj);
+    PY_ASSERT_TRUE_MSG(arg_x_div >= 1, "Width divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(arg_x_div <= arg_img->w, "Width divisor must be less than <= img width");
+    int arg_y_div = mp_obj_get_int(y_div_obj);
+    PY_ASSERT_TRUE_MSG(arg_y_div >= 1, "Height divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(arg_y_div <= arg_img->h, "Height divisor must be less than <= img height");
 
     image_t out_img;
-    out_img.w = arg_img->w / x_div;
-    out_img.h = arg_img->h / y_div;
+    out_img.w = arg_img->w / arg_x_div;
+    out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = xalloc(image_size(&out_img));
 
-    imlib_mean_pool(arg_img, &out_img, x_div, y_div);
+    imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
     return py_image_from_struct(&out_img);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_mean_pooled_obj, py_image_mean_pooled);
@@ -702,23 +703,24 @@ static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
-    int x_div = mp_obj_get_int(args[1]);
-    PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(x_div <= arg_img->w, "Width divisor must be less than <= img width");
-    int y_div = mp_obj_get_int(args[2]);
-    PY_ASSERT_TRUE_MSG(y_div >= 1, "Height divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(y_div <= arg_img->h, "Height divisor must be less than <= img height");
+    int arg_x_div = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(arg_x_div >= 1, "Width divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(arg_x_div <= arg_img->w, "Width divisor must be less than <= img width");
+    int arg_y_div = mp_obj_get_int(args[2]);
+    PY_ASSERT_TRUE_MSG(arg_y_div >= 1, "Height divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(arg_y_div <= arg_img->h, "Height divisor must be less than <= img height");
 
-    int bias = IM_MAX(IM_MIN(py_helper_keyword_float(n_args, args, 3, kw_args,
-                                                     MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256, 256), 0);
+    int arg_bias = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
+    PY_ASSERT_TRUE_MSG((0 <= arg_bias) && (arg_bias <= 256), "Error: 0 <= bias <= 1!");
 
     image_t out_img;
-    out_img.w = arg_img->w / x_div;
-    out_img.h = arg_img->h / y_div;
+    out_img.w = arg_img->w / arg_x_div;
+    out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = arg_img->pixels;
+    PY_ASSERT_TRUE_MSG(image_size(&out_img) <= image_size(arg_img), "Can't pool in place!");
 
-    imlib_midpoint_pool(arg_img, &out_img, x_div, y_div, bias);
+    imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
     arg_img->w = out_img.w;
     arg_img->h = out_img.h;
 
@@ -735,23 +737,23 @@ static mp_obj_t py_image_midpoint_pooled(uint n_args, const mp_obj_t *args, mp_m
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
-    int x_div = mp_obj_get_int(args[1]);
-    PY_ASSERT_TRUE_MSG(x_div >= 1, "Width divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(x_div <= arg_img->w, "Width divisor must be less than <= img width");
-    int y_div = mp_obj_get_int(args[2]);
-    PY_ASSERT_TRUE_MSG(y_div >= 1, "Height divisor must be greater than >= 1");
-    PY_ASSERT_TRUE_MSG(y_div <= arg_img->h, "Height divisor must be less than <= img height");
+    int arg_x_div = mp_obj_get_int(args[1]);
+    PY_ASSERT_TRUE_MSG(arg_x_div >= 1, "Width divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(arg_x_div <= arg_img->w, "Width divisor must be less than <= img width");
+    int arg_y_div = mp_obj_get_int(args[2]);
+    PY_ASSERT_TRUE_MSG(arg_y_div >= 1, "Height divisor must be greater than >= 1");
+    PY_ASSERT_TRUE_MSG(arg_y_div <= arg_img->h, "Height divisor must be less than <= img height");
 
-    int bias = IM_MAX(IM_MIN(py_helper_keyword_float(n_args, args, 3, kw_args,
-                                                     MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256, 256), 0);
+    int arg_bias = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bias), 0.5) * 256;
+    PY_ASSERT_TRUE_MSG((0 <= arg_bias) && (arg_bias <= 256), "Error: 0 <= bias <= 1!");
 
     image_t out_img;
-    out_img.w = arg_img->w / x_div;
-    out_img.h = arg_img->h / y_div;
+    out_img.w = arg_img->w / arg_x_div;
+    out_img.h = arg_img->h / arg_y_div;
     out_img.bpp = arg_img->bpp;
     out_img.pixels = xalloc(image_size(&out_img));
 
-    imlib_midpoint_pool(arg_img, &out_img, x_div, y_div, bias);
+    imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
     return py_image_from_struct(&out_img);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midpoint_pooled);
