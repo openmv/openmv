@@ -60,10 +60,6 @@ Q(width)
 Q(height)
 Q(format)
 Q(size)
-Q(midpoint_pool)
-Q(midpoint_pooled)
-Q(mean_pool)
-Q(mean_pooled)
 Q(find_template)
 Q(kp_desc)
 Q(lbp_desc)
@@ -365,6 +361,20 @@ Q(rgbtuple)
 Q(set_pixel)
 Q(color)
 
+// Mean Pool
+Q(mean_pool)
+
+// Mean Pooled
+Q(mean_pooled)
+
+// Midpoint Pool
+Q(midpoint_pool)
+Q(bias)
+
+// Midpoint Pooled
+Q(midpoint_pooled)
+// duplicate Q(bias)
+
 // To Bitmap
 Q(to_bitmap)
 // duplicate Q(copy)
@@ -630,7 +640,7 @@ Q(mode)
 
 // Midpoint
 Q(midpoint)
-Q(bias)
+// duplicate Q(bias)
 // duplicate Q(threshold)
 // duplicate Q(offset)
 // duplicate Q(invert)
