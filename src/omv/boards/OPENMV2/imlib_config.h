@@ -16,16 +16,16 @@
 //#define IMLIB_ENABLE_YUV_LUT
 
 // Enable mean pooling
-//#define IMLIB_ENABLE_MEAN_POOLING
+#define IMLIB_ENABLE_MEAN_POOLING
 
 // Enable midpoint pooling
-//#define IMLIB_ENABLE_MIDPOINT_POOLING
+#define IMLIB_ENABLE_MIDPOINT_POOLING
 
 // Enable binary ops
-//#define IMLIB_ENABLE_BINARY_OPS
+#define IMLIB_ENABLE_BINARY_OPS
 
 // Enable math ops
-//#define IMLIB_ENABLE_MATH_OPS
+#define IMLIB_ENABLE_MATH_OPS
 
 // Enable flood_fill()
 //#define IMLIB_ENABLE_FLOOD_FILL
