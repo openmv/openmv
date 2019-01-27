@@ -347,14 +347,12 @@ static inline int8_t COLOR_RGB565_TO_V(uint16_t pixel) \
 // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
 // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
 
-#define COLOR_LAB_TO_RGB565(l, a, b) \
-({ \
-    __typeof__ (l) _l = (l); \
-    __typeof__ (a) _a = (a); \
-    __typeof__ (b) _b = (b); \
-    float _x = ((_l + 16) * 0.008621f) + (_a * 0.002f); \
-    float _y = ((_l + 16) * 0.008621f); \
-    float _z = ((_l + 16) * 0.008621f) - (_b * 0.005f); \
+ // Use static inline here to avoid statement-expression issues...
+static inline uint16_t COLOR_LAB_TO_RGB565(int8_t l, int8_t a, int8_t b) \
+{ \
+    float _x = ((l + 16) * 0.008621f) + (a * 0.002f); \
+    float _y = ((l + 16) * 0.008621f); \
+    float _z = ((l + 16) * 0.008621f) - (b * 0.005f); \
     _x = ((_x > 0.206897f) ? (_x * _x * _x) : ((0.128419f * _x) - 0.017713f)) * 095.047f; \
     _y = ((_y > 0.206897f) ? (_y * _y * _y) : ((0.128419f * _y) - 0.017713f)) * 100.000f; \
     _z = ((_z > 0.206897f) ? (_z * _z * _z) : ((0.128419f * _z) - 0.017713f)) * 108.883f; \
@@ -367,21 +365,19 @@ static inline int8_t COLOR_RGB565_TO_V(uint16_t pixel) \
     unsigned int _rgb565_r = IM_MAX(IM_MIN(roundf(_r_lin * COLOR_R5_MAX), COLOR_R5_MAX), COLOR_R5_MIN); \
     unsigned int _rgb565_g = IM_MAX(IM_MIN(roundf(_g_lin * COLOR_G6_MAX), COLOR_G6_MAX), COLOR_G6_MIN); \
     unsigned int _rgb565_b = IM_MAX(IM_MIN(roundf(_b_lin * COLOR_B5_MAX), COLOR_B5_MAX), COLOR_B5_MIN); \
-    COLOR_R5_G6_B5_TO_RGB565(_rgb565_r, _rgb565_g, _rgb565_b); \
-})
+    return COLOR_R5_G6_B5_TO_RGB565(_rgb565_r, _rgb565_g, _rgb565_b); \
+}
 
 // https://en.wikipedia.org/wiki/YCbCr -> JPEG Conversion
 
-#define COLOR_YUV_TO_RGB565(y, u, v) \
-({ \
-    __typeof__ (y) _y = (y); \
-    __typeof__ (u) _u = (u); \
-    __typeof__ (v) _v = (v); \
-    unsigned int _r = IM_MAX(IM_MIN(128 + _y + ((((uint32_t) ((1.402000 * 65536) + 0.5)) * _v) >> 16), COLOR_R8_MAX), COLOR_R8_MIN); \
-    unsigned int _g = IM_MAX(IM_MIN(128 + _y - (((((uint32_t) ((0.344136 * 65536) + 0.5)) * _u) + (((uint32_t) ((0.714136 * 65536) + 0.5)) * _v)) >> 16), COLOR_G8_MAX), COLOR_G8_MIN); \
-    unsigned int _b = IM_MAX(IM_MIN(128 + _y + ((((uint32_t) ((1.772000 * 65536) + 0.5)) * _u) >> 16), COLOR_B8_MAX), COLOR_B8_MIN); \
-    COLOR_R8_G8_B8_TO_RGB565(_r, _g, _b); \
-})
+ // Use static inline here to avoid statement-expression issues...
+static inline uint16_t COLOR_YUV_TO_RGB565(int8_t y, int8_t u, int8_t v) \
+{ \
+    unsigned int _r = IM_MAX(IM_MIN(128 + y + ((91881 * v) >> 16), COLOR_R8_MAX), COLOR_R8_MIN); \
+    unsigned int _g = IM_MAX(IM_MIN(128 + y - (((22554 * u) + (46802 * v)) >> 16), COLOR_G8_MAX), COLOR_G8_MIN); \
+    unsigned int _b = IM_MAX(IM_MIN(128 + y + ((116130 * u) >> 16), COLOR_B8_MAX), COLOR_B8_MIN); \
+    return COLOR_R8_G8_B8_TO_RGB565(_r, _g, _b); \
+}
 
 #define COLOR_BAYER_TO_RGB565(img, x, y, r, g, b)            \
 ({                                                           \
@@ -953,22 +949,6 @@ extern const int kernel_high_pass_3[9];
 #define IM_TO_GS_PIXEL(img, x, y)    \
     (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (COLOR_RGB565_TO_Y(((uint16_t*)img->pixels)[((y)*img->w)+(x)]) + 128))
 
-typedef struct simple_color {
-    uint8_t G;          // Gray
-    union {
-        int8_t L;       // LAB L
-        uint8_t red;    // RGB888 Red
-    };
-    union {
-        int8_t A;       // LAB A
-        uint8_t green;  // RGB888 Green
-    };
-    union {
-        int8_t B;       // LAB B
-        uint8_t blue;   // RGB888 Blue
-    };
-} simple_color_t;
-
 typedef struct integral_image {
     int w;
     int h;
@@ -1223,11 +1203,6 @@ typedef struct find_barcodes_list_lnk_data {
 } find_barcodes_list_lnk_data_t;
 
 /* Color space functions */
-void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
-void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
-void imlib_rgb_to_grayscale(simple_color_t *rgb, simple_color_t *grayscale);
-void imlib_grayscale_to_rgb(simple_color_t *grayscale, simple_color_t *rgb);
-uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v);
 void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf);
 
 /* Image file functions */

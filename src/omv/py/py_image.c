@@ -895,7 +895,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
                 uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
                     IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                        imlib_yuv_to_rgb(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX, 0, 0));
+                        COLOR_YUV_TO_RGB565((IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX) - 128, 0, 0));
                 }
             }
             break;
@@ -908,7 +908,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
                 uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
                     IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                        imlib_yuv_to_rgb(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), 0, 0));
+                        COLOR_YUV_TO_RGB565(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x) - 128, 0, 0));
                 }
             }
             break;
@@ -6538,7 +6538,7 @@ mp_obj_t py_image_yuv_to_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
     char y = (mp_obj_get_int(arg_vec[0]) & 255) - 128;
     char u = mp_obj_get_int(arg_vec[1]) & 255;
     char v = mp_obj_get_int(arg_vec[2]) & 255;
-    int rgb565 = COLOR_YUV_TO_RGB565(y, u, v);
+    int rgb565 = COLOR_YUV_TO_RGB565(y - 128, u, v);
     return mp_obj_new_int(COLOR_RGB565_TO_BINARY(rgb565));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_yuv_to_binary_obj, 1, py_image_yuv_to_binary);
@@ -6550,7 +6550,7 @@ mp_obj_t py_image_yuv_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_t *
     char y = (mp_obj_get_int(arg_vec[0]) & 255) - 128;
     char u = mp_obj_get_int(arg_vec[1]) & 255;
     char v = mp_obj_get_int(arg_vec[2]) & 255;
-    int rgb565 = COLOR_YUV_TO_RGB565(y, u, v);
+    int rgb565 = COLOR_YUV_TO_RGB565(y - 128, u, v);
     return mp_obj_new_int(COLOR_RGB565_TO_GRAYSCALE(rgb565));
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_yuv_to_grayscale_obj, 1, py_image_yuv_to_grayscale);
@@ -6562,7 +6562,7 @@ mp_obj_t py_image_yuv_to_rgb(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     char y = (mp_obj_get_int(arg_vec[0]) & 255) - 128;
     char u = mp_obj_get_int(arg_vec[1]) & 255;
     char v = mp_obj_get_int(arg_vec[2]) & 255;
-    int rgb565 = COLOR_YUV_TO_RGB565(y, u, v);
+    int rgb565 = COLOR_YUV_TO_RGB565(y - 128, u, v);
     return mp_obj_new_tuple(3, (mp_obj_t[3])
             {mp_obj_new_int(COLOR_RGB565_TO_R8(rgb565)),
              mp_obj_new_int(COLOR_RGB565_TO_G8(rgb565)),
@@ -6577,7 +6577,7 @@ mp_obj_t py_image_yuv_to_lab(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     char y = (mp_obj_get_int(arg_vec[0]) & 255) - 128;
     char u = mp_obj_get_int(arg_vec[1]) & 255;
     char v = mp_obj_get_int(arg_vec[2]) & 255;
-    int rgb565 = COLOR_YUV_TO_RGB565(y, u, v);
+    int rgb565 = COLOR_YUV_TO_RGB565(y - 128, u, v);
     return mp_obj_new_tuple(3, (mp_obj_t[3])
             {mp_obj_new_int(COLOR_RGB565_TO_L(rgb565)),
              mp_obj_new_int(COLOR_RGB565_TO_A(rgb565)),

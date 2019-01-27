@@ -403,9 +403,9 @@ void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
                     if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x,
-                        imlib_yuv_to_rgb(IMAGE_GET_GRAYSCALE_PIXEL_FAST(clahe_row_ptr, x + xOffset),
-                                         COLOR_RGB565_TO_U(pixel),
-                                         COLOR_RGB565_TO_V(pixel)));
+                        COLOR_YUV_TO_RGB565(IMAGE_GET_GRAYSCALE_PIXEL_FAST(clahe_row_ptr, x + xOffset) - 128,
+                                            COLOR_RGB565_TO_U(pixel),
+                                            COLOR_RGB565_TO_V(pixel)));
                 }
             }
             break;
