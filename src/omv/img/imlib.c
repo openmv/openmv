@@ -304,7 +304,71 @@ const int kernel_high_pass_3[3*3] = {
     -1, -1, -1
 };
 
-// USE THE LUT FOR RGB->LAB CONVERSION - NOT THIS FUNCTION!
+int8_t imlib_rgb565_to_l(uint16_t pixel)
+{
+    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
+    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
+    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
+
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f);
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
+    return fast_roundf(116 * y) - 16;
+}
+
+int8_t imlib_rgb565_to_a(uint16_t pixel)
+{
+    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
+    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
+    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
+
+    float x = ((r_lin * 0.4124f) + (g_lin * 0.3576f) + (b_lin * 0.1805f)) * (1.0f / 095.047f);
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f);
+
+    x = (x>0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f);
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
+
+    return fast_roundf(500 * (x-y));
+}
+
+int8_t imlib_rgb565_to_b(uint16_t pixel)
+{
+    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
+    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
+    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
+
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f); \
+    float z = ((r_lin * 0.0193f) + (g_lin * 0.1192f) + (b_lin * 0.9505f)) * (1.0f / 108.883f); \
+
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
+    z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f);
+
+    return fast_roundf(200 * (y-z));
+}
+
+int8_t imlib_rgb565_to_y(uint16_t pixel)
+{
+    int r = COLOR_RGB565_TO_R8(pixel);
+    int g = COLOR_RGB565_TO_G8(pixel);
+    int b = COLOR_RGB565_TO_B8(pixel);
+    return fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f)) - 128;
+}
+
+int8_t imlib_rgb565_to_u(uint16_t pixel)
+{
+    int r = COLOR_RGB565_TO_R8(pixel);
+    int g = COLOR_RGB565_TO_G8(pixel);
+    int b = COLOR_RGB565_TO_B8(pixel);
+    return fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f));
+}
+
+int8_t imlib_rgb565_to_v(uint16_t pixel)
+{
+    int r = COLOR_RGB565_TO_R8(pixel);
+    int g = COLOR_RGB565_TO_G8(pixel);
+    int b = COLOR_RGB565_TO_B8(pixel);
+    return fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f));
+}
+
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab)
 {
     // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation

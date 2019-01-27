@@ -9,6 +9,12 @@
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
 
+// Enable LAB LUT
+#define IMLIB_ENABLE_LAB_LUT
+
+// Enable YUV LUT
+//#define IMLIB_ENABLE_YUV_LUT
+
 // Enable mean pooling
 //#define IMLIB_ENABLE_MEAN_POOLING
 

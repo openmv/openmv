@@ -262,12 +262,25 @@ extern const uint8_t g826_table[256];
 extern const int8_t lab_table[196608];
 extern const int8_t yuv_table[196608];
 
+#ifdef IMLIB_ENABLE_LAB_LUT
 #define COLOR_RGB565_TO_L(pixel) lab_table[(pixel) * 3]
 #define COLOR_RGB565_TO_A(pixel) lab_table[((pixel) * 3) + 1]
 #define COLOR_RGB565_TO_B(pixel) lab_table[((pixel) * 3) + 2]
+#else
+#define COLOR_RGB565_TO_L(pixel) imlib_rgb565_to_l(pixel)
+#define COLOR_RGB565_TO_A(pixel) imlib_rgb565_to_a(pixel)
+#define COLOR_RGB565_TO_B(pixel) imlib_rgb565_to_b(pixel)
+#endif
+
+#ifdef IMLIB_ENABLE_YUV_LUT
 #define COLOR_RGB565_TO_Y(pixel) yuv_table[(pixel) * 3]
 #define COLOR_RGB565_TO_U(pixel) yuv_table[((pixel) * 3) + 1]
 #define COLOR_RGB565_TO_V(pixel) yuv_table[((pixel) * 3) + 2]
+#else
+#define COLOR_RGB565_TO_Y(pixel) imlib_rgb565_to_y(pixel)
+#define COLOR_RGB565_TO_U(pixel) imlib_rgb565_to_u(pixel)
+#define COLOR_RGB565_TO_V(pixel) imlib_rgb565_to_v(pixel)
+#endif
 
 // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
 // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
@@ -876,7 +889,7 @@ extern const int kernel_high_pass_3[9];
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
 #define IM_TO_GS_PIXEL(img, x, y)    \
-    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (yuv_table[((uint16_t*)img->pixels)[((y)*img->w)+(x)] * 3] + 128))
+    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (COLOR_RGB565_TO_Y(((uint16_t*)img->pixels)[((y)*img->w)+(x)]) + 128))
 
 typedef struct simple_color {
     uint8_t G;          // Gray
@@ -1148,6 +1161,12 @@ typedef struct find_barcodes_list_lnk_data {
 } find_barcodes_list_lnk_data_t;
 
 /* Color space functions */
+int8_t imlib_rgb565_to_l(uint16_t pixel);
+int8_t imlib_rgb565_to_a(uint16_t pixel);
+int8_t imlib_rgb565_to_b(uint16_t pixel);
+int8_t imlib_rgb565_to_y(uint16_t pixel);
+int8_t imlib_rgb565_to_u(uint16_t pixel);
+int8_t imlib_rgb565_to_v(uint16_t pixel);
 void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
 void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
 void imlib_rgb_to_grayscale(simple_color_t *rgb, simple_color_t *grayscale);
