@@ -562,9 +562,6 @@ void fft2d_dealloc()
     fb_free();
 }
 
-// RGB565 to YUV conversion
-extern const int8_t yuv_table[196608];
-
 void fft2d_run(fft2d_controller_t *controller)
 {
     // This section copies image data into the fft buffer. It takes care of
@@ -578,8 +575,8 @@ void fft2d_run(fft2d_controller_t *controller)
                 tmp[j] = IM_GET_GS_PIXEL(controller->img,
                     controller->r.x + j, controller->r.y + i);
             } else {
-                tmp[j] = yuv_table[IM_GET_RGB565_PIXEL(controller->img,
-                    controller->r.x + j, controller->r.y + i)*3];
+                tmp[j] = COLOR_RGB565_TO_Y(IM_GET_RGB565_PIXEL(controller->img,
+                    controller->r.x + j, controller->r.y + i));
             }
         }
         // Do FFT on image data and copy to main buffer.

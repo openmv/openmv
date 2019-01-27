@@ -262,12 +262,87 @@ extern const uint8_t g826_table[256];
 extern const int8_t lab_table[196608];
 extern const int8_t yuv_table[196608];
 
+#ifdef IMLIB_ENABLE_LAB_LUT
 #define COLOR_RGB565_TO_L(pixel) lab_table[(pixel) * 3]
 #define COLOR_RGB565_TO_A(pixel) lab_table[((pixel) * 3) + 1]
 #define COLOR_RGB565_TO_B(pixel) lab_table[((pixel) * 3) + 2]
+#else // Use static inline here to avoid statement-expression issues...
+static inline int8_t COLOR_RGB565_TO_L(uint16_t pixel) \
+{ \
+    int r = COLOR_RGB565_TO_R8(pixel); \
+    int g = COLOR_RGB565_TO_G8(pixel); \
+    int b = COLOR_RGB565_TO_B8(pixel); \
+    float r_lin = xyz_table[r]; \
+    float g_lin = xyz_table[g]; \
+    float b_lin = xyz_table[b]; \
+    float x = ((r_lin * 0.4124f) + (g_lin * 0.3576f) + (b_lin * 0.1805f)) * (1.0f / 095.047f); \
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f); \
+    float z = ((r_lin * 0.0193f) + (g_lin * 0.1192f) + (b_lin * 0.9505f)) * (1.0f / 108.883f); \
+    x = (x>0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f); \
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f); \
+    z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f); \
+    return fast_roundf(116 * y) - 16; \
+}
+static inline int8_t COLOR_RGB565_TO_A(uint16_t pixel) \
+{ \
+    int r = COLOR_RGB565_TO_R8(pixel); \
+    int g = COLOR_RGB565_TO_G8(pixel); \
+    int b = COLOR_RGB565_TO_B8(pixel); \
+    float r_lin = xyz_table[r]; \
+    float g_lin = xyz_table[g]; \
+    float b_lin = xyz_table[b]; \
+    float x = ((r_lin * 0.4124f) + (g_lin * 0.3576f) + (b_lin * 0.1805f)) * (1.0f / 095.047f); \
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f); \
+    float z = ((r_lin * 0.0193f) + (g_lin * 0.1192f) + (b_lin * 0.9505f)) * (1.0f / 108.883f); \
+    x = (x>0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f); \
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f); \
+    z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f); \
+    return fast_roundf(500 * (x-y)); \
+}
+static inline int8_t COLOR_RGB565_TO_B(uint16_t pixel) \
+{ \
+    int r = COLOR_RGB565_TO_R8(pixel); \
+    int g = COLOR_RGB565_TO_G8(pixel); \
+    int b = COLOR_RGB565_TO_B8(pixel); \
+    float r_lin = xyz_table[r]; \
+    float g_lin = xyz_table[g]; \
+    float b_lin = xyz_table[b]; \
+    float x = ((r_lin * 0.4124f) + (g_lin * 0.3576f) + (b_lin * 0.1805f)) * (1.0f / 095.047f); \
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f); \
+    float z = ((r_lin * 0.0193f) + (g_lin * 0.1192f) + (b_lin * 0.9505f)) * (1.0f / 108.883f); \
+    x = (x>0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f); \
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f); \
+    z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f); \
+    return fast_roundf(200 * (y-z)); \
+}
+#endif
+#ifdef IMLIB_ENABLE_YUV_LUT
 #define COLOR_RGB565_TO_Y(pixel) yuv_table[(pixel) * 3]
 #define COLOR_RGB565_TO_U(pixel) yuv_table[((pixel) * 3) + 1]
 #define COLOR_RGB565_TO_V(pixel) yuv_table[((pixel) * 3) + 2]
+#else // Use static inline here to avoid statement-expression issues...
+static inline int8_t COLOR_RGB565_TO_Y(uint16_t pixel) \
+{ \
+    int r = COLOR_RGB565_TO_R8(pixel); \
+    int g = COLOR_RGB565_TO_G8(pixel); \
+    int b = COLOR_RGB565_TO_B8(pixel); \
+    return fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f)) - 128; \
+}
+static inline int8_t COLOR_RGB565_TO_U(uint16_t pixel) \
+{ \
+    int r = COLOR_RGB565_TO_R8(pixel); \
+    int g = COLOR_RGB565_TO_G8(pixel); \
+    int b = COLOR_RGB565_TO_B8(pixel); \
+    return fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f)); \
+}
+static inline int8_t COLOR_RGB565_TO_V(uint16_t pixel) \
+{ \
+    int r = COLOR_RGB565_TO_R8(pixel); \
+    int g = COLOR_RGB565_TO_G8(pixel); \
+    int b = COLOR_RGB565_TO_B8(pixel); \
+    return fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f)); \
+}
+#endif
 
 // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
 // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
@@ -876,7 +951,7 @@ extern const int kernel_high_pass_3[9];
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
 #define IM_TO_GS_PIXEL(img, x, y)    \
-    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (yuv_table[((uint16_t*)img->pixels)[((y)*img->w)+(x)] * 3] + 128))
+    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (COLOR_RGB565_TO_Y(((uint16_t*)img->pixels)[((y)*img->w)+(x)]) + 128))
 
 typedef struct simple_color {
     uint8_t G;          // Gray
