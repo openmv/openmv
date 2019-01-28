@@ -19,7 +19,6 @@ Q(board_id)
 
 // Image module
 Q(image)
-Q(Image)
 Q(binary_to_grayscale)
 Q(binary_to_rgb)
 Q(binary_to_lab)
@@ -51,10 +50,8 @@ Q(CORNER_AGAST)
 Q(load_descriptor)
 Q(save_descriptor)
 Q(match_descriptor)
-
 // Image class
-Q(copy)
-Q(copy_to_fb)
+Q(Image)
 Q(save)
 Q(width)
 Q(height)
@@ -64,14 +61,13 @@ Q(find_template)
 Q(kp_desc)
 Q(lbp_desc)
 Q(Cascade)
+Q(cmp_lbp)
 Q(find_features)
 Q(find_keypoints)
 Q(find_lbp)
 Q(find_eye)
 Q(find_edges)
 Q(find_hog)
-Q(cmp_lbp)
-Q(roi)
 Q(normalized)
 Q(filter_outliers)
 Q(scale_factor)
@@ -377,7 +373,7 @@ Q(midpoint_pooled)
 
 // To Bitmap
 Q(to_bitmap)
-// duplicate Q(copy)
+Q(copy)
 Q(rgb_channel)
 
 // To Grayscale
@@ -411,6 +407,15 @@ Q(compressed)
 Q(compressed_for_ide)
 // duplicate Q(quality)
 
+// Copy
+// duplicate Q(copy)
+Q(crop)
+Q(scale)
+Q(roi)
+Q(x_scale)
+Q(y_scale)
+Q(copy_to_fb)
+
 // Clear
 Q(clear)
 
@@ -441,7 +446,7 @@ Q(rotation)
 // Draw String
 Q(draw_string)
 // duplicate Q(color)
-Q(scale)
+// duplicate Q(scale)
 Q(x_spacing)
 Q(y_spacing)
 Q(mono_space)
@@ -467,8 +472,8 @@ Q(draw_edges)
 
 // Draw Image
 Q(draw_image)
-Q(x_scale)
-Q(y_scale)
+// duplicate Q(x_scale)
+// duplicate Q(y_scale)
 Q(alpha)
 Q(mask)
 

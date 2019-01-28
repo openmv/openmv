@@ -1236,83 +1236,145 @@ static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, m
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_for_ide_obj, 1, py_image_compressed_for_ide);
 
-static mp_obj_t py_image_copy(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *kw_args, bool mode)
 {
-    image_t *arg_img = py_image_cobj(args[0]);
+    // mode == false -> copy behavior
+    // mode == true -> crop/scale behavior
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
 
-    bool copy_to_fb = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), false);
-    if (copy_to_fb) fb_update_jpeg_buffer();
+    float arg_x_scale =
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), 1.0f);
+    PY_ASSERT_TRUE_MSG((0.0f <= arg_x_scale), "Error: 0.0 <= x_scale!");
+
+    float arg_y_scale =
+        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), 1.0f);
+    PY_ASSERT_TRUE_MSG((0.0f <= arg_y_scale), "Error: 0.0 <= y_scale!");
+
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(mode ? MP_QSTR_copy : MP_QSTR_copy_to_fb));
+    bool copy_to_fb = false;
+    image_t *arg_other = mode ? arg_img : NULL;
+
+    if (copy_to_fb_obj) {
+        if (mp_obj_is_integer(copy_to_fb_obj)) {
+            if (!mode) {
+                copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
+            } else if (mp_obj_get_int(copy_to_fb_obj)) {
+                arg_other = NULL;
+            }
+        } else {
+            arg_other = py_helper_arg_to_image_mutable(copy_to_fb_obj);
+        }
+    }
+
+    if (copy_to_fb) {
+        fb_update_jpeg_buffer();
+    }
 
     image_t image;
-    image.w = roi.w;
-    image.h = roi.h;
+    image.w = fast_roundf(roi.w * arg_x_scale);
+    PY_ASSERT_TRUE_MSG(image.w >= 1, "Output image width is 0!");
+    image.h = fast_roundf(roi.h * arg_y_scale);
+    PY_ASSERT_TRUE_MSG(image.h >= 1, "Output image height is 0!");
     image.bpp = arg_img->bpp;
     image.data = NULL;
 
     if (copy_to_fb) {
-       PY_ASSERT_TRUE_MSG(arg_img->data != MAIN_FB()->pixels, "Cannot copy to fb!");
-       PY_ASSERT_TRUE_MSG((image_size(&image) <= OMV_RAW_BUF_SIZE), "FB Overflow!");
-       MAIN_FB()->w = image.w;
-       MAIN_FB()->h = image.h;
-       MAIN_FB()->bpp = image.bpp;
-       image.data = MAIN_FB()->pixels;
+        MAIN_FB()->w = 0;
+        MAIN_FB()->h = 0;
+        MAIN_FB()->bpp = 0;
+        PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
+        MAIN_FB()->w = image.w;
+        MAIN_FB()->h = image.h;
+        MAIN_FB()->bpp = image.bpp;
+        image.data = MAIN_FB()->pixels;
+    } else if (arg_other) {
+        PY_ASSERT_TRUE_MSG((image_size(&image) <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
+        image.data = arg_other->data;
     } else {
-       image.data = xalloc(image_size(&image));
+        image.data = xalloc(image_size(&image));
     }
+
+    bool in_place = arg_img->data == image.data;
+    image_t temp;
+
+    if (in_place) {
+        memcpy(&temp, arg_img, sizeof(image_t));
+        fb_alloc_mark();
+        temp.data = fb_alloc(image_size(&temp));
+        memcpy(temp.data, arg_img->data, image_size(&temp));
+        arg_img = &temp;
+        if (copy_to_fb) PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
+    }
+
+    float over_xscale = IM_DIV(1.0, arg_x_scale), over_yscale = IM_DIV(1.0f, arg_y_scale);
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            for (int y = roi.y, yy = roi.y + roi.h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
-                uint32_t *row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&image, y - roi.y);
-                for (int x = roi.x, xx = roi.x + roi.w; x < xx; x++) {
-                    IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr_2, x - roi.x, IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
+            for (int y = 0, yy = image.h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint32_t *row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&image, y);
+                for (int x = 0, xx = image.w; x < xx; x++) {
+                    IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr_2, x,
+                        IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
                 }
             }
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            for (int y = roi.y, yy = roi.y + roi.h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
-                uint8_t *row_ptr_2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&image, y - roi.y);
-                for (int x = roi.x, xx = roi.x + roi.w; x < xx; x++) {
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr_2, x - roi.x, IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x));
+            for (int y = 0, yy = image.h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint8_t *row_ptr_2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&image, y);
+                for (int x = 0, xx = image.w; x < xx; x++) {
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr_2, x,
+                        IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
                 }
             }
             break;
         }
         case IMAGE_BPP_RGB565: {
-            for (int y = roi.y, yy = roi.y + roi.h; y < yy; y++) {
-                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
-                uint16_t *row_ptr_2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&image, y - roi.y);
-                for (int x = roi.x, xx = roi.x + roi.w; x < xx; x++) {
-                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_2, x - roi.x, IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+            for (int y = 0, yy = image.h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint16_t *row_ptr_2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&image, y);
+                for (int x = 0, xx = image.w; x < xx; x++) {
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_2, x,
+                        IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
                 }
             }
             break;
         }
-        case IMAGE_BPP_BAYER:  { // Correct!
-            for (int y = roi.y, yy = roi.y + roi.h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
-                uint8_t *row_ptr_2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&image, y - roi.y);
-                for (int x = roi.x, xx = roi.x + roi.w; x < xx; x++) {
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr_2, x - roi.x, IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        default: { // JPEG
-            memcpy(image.data, arg_img->data, image_size(&image));
+        default: {
             break;
         }
     }
 
-    return py_image_from_struct(&image); 
+    if (in_place) {
+        fb_free();
+        fb_alloc_free_till_mark();
+    }
+
+    if (MAIN_FB()->pixels == image.data) {
+        MAIN_FB()->w = image.w;
+        MAIN_FB()->h = image.h;
+        MAIN_FB()->bpp = image.bpp;
+    }
+
+    return py_image_from_struct(&image);
+}
+
+static mp_obj_t py_image_copy(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    return py_image_copy_int(n_args, args, kw_args, false);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_copy_obj, 1, py_image_copy);
+
+static mp_obj_t py_image_crop(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    return py_image_copy_int(n_args, args, kw_args, true);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_crop_obj, 1, py_image_crop);
 
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -5949,6 +6011,8 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_compressed),          MP_ROM_PTR(&py_image_compressed_obj)},
     {MP_ROM_QSTR(MP_QSTR_compressed_for_ide),  MP_ROM_PTR(&py_image_compressed_for_ide_obj)},
     {MP_ROM_QSTR(MP_QSTR_copy),                MP_ROM_PTR(&py_image_copy_obj)},
+    {MP_ROM_QSTR(MP_QSTR_crop),                MP_ROM_PTR(&py_image_crop_obj)},
+    {MP_ROM_QSTR(MP_QSTR_scale),               MP_ROM_PTR(&py_image_crop_obj)},
     {MP_ROM_QSTR(MP_QSTR_save),                MP_ROM_PTR(&py_image_save_obj)},
     /* Drawing Methods */
     {MP_ROM_QSTR(MP_QSTR_clear),               MP_ROM_PTR(&py_image_clear_obj)},
