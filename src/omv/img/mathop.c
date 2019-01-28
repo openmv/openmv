@@ -213,7 +213,7 @@ static void imlib_replace_line_op(image_t *img, int line, void *other, void *dat
 
 void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, bool hmirror, bool vflip, bool transpose, image_t *mask)
 {
-    bool in_place = img == other;
+    bool in_place = img->data == other->data;
     image_t temp;
 
     if (in_place) {
