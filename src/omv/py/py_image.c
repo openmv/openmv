@@ -1114,7 +1114,7 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
     uint8_t *buffer = fb_alloc_all(&size);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    PY_ASSERT_TRUE_MSG(out.bpp <= image_size(arg_img), "Can't compress in place!");
+    PY_ASSERT_TRUE_MSG(((((out.bpp * 8) + 5) / 6) + 2) <= image_size(arg_img), "Can't compress in place!");
     uint8_t *ptr = arg_img->data;
 
     *ptr++ = 0xFE;
