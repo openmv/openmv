@@ -763,6 +763,7 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
     bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+    int channel = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
 
     image_t out;
     out.w = arg_img->w;
@@ -779,15 +780,15 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
             PY_ASSERT_TRUE_MSG((out.w >= (sizeof(uint32_t)/sizeof(uint8_t))) || copy,
                                "Can't convert to bitmap in place!");
             fb_alloc_mark();
-            uint32_t *out_lin_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_BINARY_PIXEL_FAST(out_lin_ptr, x,
+                    IMAGE_PUT_BINARY_PIXEL_FAST(out_row_ptr, x,
                         COLOR_GRAYSCALE_TO_BINARY(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)));
                 }
                 memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y),
-                       out_lin_ptr, IMAGE_BINARY_LINE_LEN_BYTES(&out));
+                       out_row_ptr, IMAGE_BINARY_LINE_LEN_BYTES(&out));
             }
             fb_free();
             fb_alloc_free_till_mark();
@@ -797,15 +798,33 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
             PY_ASSERT_TRUE_MSG((out.w >= (sizeof(uint32_t)/sizeof(uint16_t))) || copy,
                                "Can't convert to bitmap in place!");
             fb_alloc_mark();
-            uint32_t *out_lin_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_BINARY_PIXEL_FAST(out_lin_ptr, x,
-                        COLOR_RGB565_TO_BINARY(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x)));
+                    int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                    switch (channel) {
+                        case 0: {
+                            pixel = COLOR_RGB565_TO_R5(pixel) > (((COLOR_R5_MAX - COLOR_R5_MIN) / 2) + COLOR_R5_MIN);
+                            break;
+                        }
+                        case 1: {
+                            pixel = COLOR_RGB565_TO_G6(pixel) > (((COLOR_G6_MAX - COLOR_G6_MIN) / 2) + COLOR_G6_MIN);
+                            break;
+                        }
+                        case 2: {
+                            pixel = COLOR_RGB565_TO_B5(pixel) > (((COLOR_B5_MAX - COLOR_B5_MIN) / 2) + COLOR_B5_MIN);
+                            break;
+                        }
+                        default: {
+                            pixel = COLOR_RGB565_TO_BINARY(pixel);
+                            break;
+                        }
+                    }
+                    IMAGE_PUT_BINARY_PIXEL_FAST(out_row_ptr, x, pixel);
                 }
                 memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&out, y),
-                       out_lin_ptr, IMAGE_BINARY_LINE_LEN_BYTES(&out));
+                       out_row_ptr, IMAGE_BINARY_LINE_LEN_BYTES(&out));
             }
             fb_free();
             fb_alloc_free_till_mark();
@@ -828,6 +847,7 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
     bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+    int channel = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
 
     image_t out;
     out.w = arg_img->w;
@@ -837,7 +857,7 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+            PY_ASSERT_TRUE_MSG((out.w <= (sizeof(uint32_t)/sizeof(uint8_t))) || copy,
                                "Can't convert to grayscale in place!");
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
@@ -858,8 +878,26 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
                 uint8_t *out_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&out, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(out_row_ptr, x,
-                        COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x)));
+                    int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                    switch (channel) {
+                        case 0: {
+                            pixel = COLOR_RGB565_TO_R8(pixel);
+                            break;
+                        }
+                        case 1: {
+                            pixel = COLOR_RGB565_TO_G8(pixel);
+                            break;
+                        }
+                        case 2: {
+                            pixel = COLOR_RGB565_TO_B8(pixel);
+                            break;
+                        }
+                        default: {
+                            pixel = COLOR_RGB565_TO_GRAYSCALE(pixel);
+                            break;
+                        }
+                    }
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(out_row_ptr, x, pixel);
                 }
             }
             break;
@@ -881,6 +919,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
     bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+    int channel = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
 
     image_t out;
     out.w = arg_img->w;
@@ -890,7 +929,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+            PY_ASSERT_TRUE_MSG((out.w <= (sizeof(uint32_t)/sizeof(uint16_t))) || copy,
                 "Can't convert to grayscale in place!");
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
@@ -916,7 +955,31 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
             break;
         }
         case IMAGE_BPP_RGB565: {
-            if (copy) memcpy(out.data, arg_img->data, image_size(&out));
+            for (int y = 0, yy = out.h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
+                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                for (int x = 0, xx = out.w; x < xx; x++) {
+                    int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                    switch (channel) {
+                        case 0: {
+                            pixel = COLOR_R5_G6_B5_TO_RGB565(COLOR_RGB565_TO_R8(pixel), 0, 0);
+                            break;
+                        }
+                        case 1: {
+                            pixel = COLOR_R5_G6_B5_TO_RGB565(0, COLOR_RGB565_TO_G8(pixel), 0);
+                            break;
+                        }
+                        case 2: {
+                            pixel = COLOR_R5_G6_B5_TO_RGB565(0, 0, COLOR_RGB565_TO_B8(pixel));
+                            break;
+                        }
+                        default: {
+                            break;
+                        }
+                    }
+                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x, pixel);
+                }
+            }
             break;
         }
         default: {
@@ -938,6 +1001,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
     bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
+    int channel = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
 
     image_t out;
     out.w = arg_img->w;
@@ -947,7 +1011,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+            PY_ASSERT_TRUE_MSG((out.w <= (sizeof(uint32_t)/sizeof(uint16_t))) || copy,
                 "Can't convert to rainbow in place!");
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
@@ -977,8 +1041,26 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
                 uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                        rainbow_table[COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x))]);
+                    int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                    switch (channel) {
+                        case 0: {
+                            pixel = rainbow_table[COLOR_RGB565_TO_R8(pixel)];
+                            break;
+                        }
+                        case 1: {
+                            pixel = rainbow_table[COLOR_RGB565_TO_G8(pixel)];
+                            break;
+                        }
+                        case 2: {
+                            pixel = rainbow_table[COLOR_RGB565_TO_B8(pixel)];
+                            break;
+                        }
+                        default: {
+                            pixel = rainbow_table[COLOR_RGB565_TO_GRAYSCALE(pixel)];
+                            break;
+                        }
+                    }
+                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x, pixel);
                 }
             }
             break;

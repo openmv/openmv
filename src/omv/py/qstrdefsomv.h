@@ -378,18 +378,22 @@ Q(midpoint_pooled)
 // To Bitmap
 Q(to_bitmap)
 // duplicate Q(copy)
+Q(rgb_channel)
 
 // To Grayscale
 Q(to_grayscale)
 // duplicate Q(copy)
+// duplicate Q(rgb_channel)
 
 // To RGB565
 Q(to_rgb565)
 // duplicate Q(copy)
+// duplicate Q(rgb_channel)
 
 // To Rainbow
 Q(to_rainbow)
 // duplicate Q(copy)
+// duplicate Q(rgb_channel)
 
 // Compress (in place)
 Q(compress)
