@@ -63,7 +63,7 @@ static uint8_t *get_mcu()
         case 0:
             for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + MCU_H); y++) {
                 for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++) {
-                    *Y0++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(jpeg_enc.img, x, y)) - 128;
+                    *Y0++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(jpeg_enc.img, x, y));
                 }
             }
             break;
