@@ -962,15 +962,15 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
                     switch (channel) {
                         case 0: {
-                            pixel = COLOR_R5_G6_B5_TO_RGB565(COLOR_RGB565_TO_R8(pixel), 0, 0);
+                            pixel = COLOR_R5_G6_B5_TO_RGB565(COLOR_RGB565_TO_R5(pixel), 0, 0);
                             break;
                         }
                         case 1: {
-                            pixel = COLOR_R5_G6_B5_TO_RGB565(0, COLOR_RGB565_TO_G8(pixel), 0);
+                            pixel = COLOR_R5_G6_B5_TO_RGB565(0, COLOR_RGB565_TO_G6(pixel), 0);
                             break;
                         }
                         case 2: {
-                            pixel = COLOR_R5_G6_B5_TO_RGB565(0, 0, COLOR_RGB565_TO_B8(pixel));
+                            pixel = COLOR_R5_G6_B5_TO_RGB565(0, 0, COLOR_RGB565_TO_B5(pixel));
                             break;
                         }
                         default: {
