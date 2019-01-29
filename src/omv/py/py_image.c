@@ -861,7 +861,7 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w <= (sizeof(uint32_t)/sizeof(uint8_t))) || copy,
+            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
                                "Can't convert to grayscale in place!");
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
@@ -937,7 +937,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w <= (sizeof(uint32_t)/sizeof(uint16_t))) || copy,
+            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
                 "Can't convert to grayscale in place!");
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
@@ -1023,7 +1023,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w <= (sizeof(uint32_t)/sizeof(uint16_t))) || copy,
+            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
                 "Can't convert to rainbow in place!");
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
