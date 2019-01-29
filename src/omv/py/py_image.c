@@ -835,8 +835,12 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
         }
     }
 
-    if ((!copy) && (MAIN_FB()->pixels == out.data)) {
-        MAIN_FB()->bpp = out.bpp;
+    if (!copy) {
+        arg_img->bpp = IMAGE_BPP_BINARY;
+
+        if ((MAIN_FB()->pixels == out.data)) {
+            MAIN_FB()->bpp = out.bpp;
+        }
     }
 
     return py_image_from_struct(&out);
@@ -907,8 +911,12 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
         }
     }
 
-    if ((!copy) && (MAIN_FB()->pixels == out.data)) {
-        MAIN_FB()->bpp = out.bpp;
+    if (!copy) {
+        arg_img->bpp = IMAGE_BPP_GRAYSCALE;
+
+        if ((MAIN_FB()->pixels == out.data)) {
+            MAIN_FB()->bpp = out.bpp;
+        }
     }
 
     return py_image_from_struct(&out);
@@ -987,8 +995,12 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
         }
     }
 
-    if ((!copy) && (MAIN_FB()->pixels == out.data)) {
-        MAIN_FB()->bpp = out.bpp;
+    if (!copy) {
+        arg_img->bpp = IMAGE_BPP_RGB565;
+
+        if ((MAIN_FB()->pixels == out.data)) {
+            MAIN_FB()->bpp = out.bpp;
+        }
     }
 
     return py_image_from_struct(&out);
@@ -1070,8 +1082,12 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
         }
     }
 
-    if ((!copy) && (MAIN_FB()->pixels == out.data)) {
-        MAIN_FB()->bpp = out.bpp;
+    if (!copy) {
+        arg_img->bpp = IMAGE_BPP_RGB565;
+
+        if ((MAIN_FB()->pixels == out.data)) {
+            MAIN_FB()->bpp = out.bpp;
+        }
     }
 
     return py_image_from_struct(&out);
@@ -1359,6 +1375,20 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
         MAIN_FB()->w = image.w;
         MAIN_FB()->h = image.h;
         MAIN_FB()->bpp = image.bpp;
+    }
+
+    if (copy_to_fb) {
+        if (MAIN_FB()->pixels == arg_img->data) {
+            arg_img->w = image.w;
+            arg_img->h = image.h;
+            arg_img->bpp = image.bpp;
+        }
+    } else {
+        if (arg_other) {
+            arg_other->w = image.w;
+            arg_other->h = image.h;
+            arg_other->bpp = image.bpp;
+        }
     }
 
     return py_image_from_struct(&image);
@@ -1803,8 +1833,12 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 
     list_free(&arg_thresholds);
 
-    if (arg_to_bitmap && (!arg_copy) && (MAIN_FB()->pixels == out.data)) {
-        MAIN_FB()->bpp = out.bpp;
+    if (arg_to_bitmap && (!arg_copy)) {
+        arg_img->bpp = IMAGE_BPP_BINARY;
+
+        if ((MAIN_FB()->pixels == out.data)) {
+            MAIN_FB()->bpp = out.bpp;
+        }
     }
 
     return py_image_from_struct(&out);
