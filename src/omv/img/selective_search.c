@@ -199,6 +199,8 @@ array_t *imlib_selective_search(image_t *src, float t, int min_size, float a1, f
     int width=0, height=0;
     image_t *img = NULL;
 
+    fb_alloc_mark();
+
     if ((src->w * src->h) <= (80 * 60)) {
         img    = src;
         width  = src->w;
@@ -440,7 +442,7 @@ array_t *imlib_selective_search(image_t *src, float t, int min_size, float a1, f
             r->h *=4;
         }
     }
-    fb_free_all();
+    fb_alloc_free_till_mark();
     return proposals;
 }
 #endif //IMLIB_ENABLE_SELECTIVE_SEARCH
