@@ -6431,11 +6431,23 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
 {
     // Don't use the file buffer here...
 
-    bool copy_to_fb = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), true);
-    if (copy_to_fb) fb_update_jpeg_buffer();
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb));
+    bool copy_to_fb = true;
+    image_t *arg_other = NULL;
+
+    if (copy_to_fb_obj) {
+        if (mp_obj_is_integer(copy_to_fb_obj)) {
+            copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
+        } else {
+            arg_other = py_helper_arg_to_image_mutable(copy_to_fb_obj);
+        }
+    }
+
+    if (copy_to_fb) {
+        fb_update_jpeg_buffer();
+    }
 
     FIL *fp = &((py_imagereader_obj_t *) args[0])->fp;
-    image_t image = {0};
 
     if (f_eof(fp)) {
         if (!py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_loop), true)) {
@@ -6461,6 +6473,8 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
 
     ((py_imagewriter_obj_t *) args[0])->ms = ms;
 
+    image_t image = {0};
+
     read_long(fp, (uint32_t *) &image.w);
     read_long(fp, (uint32_t *) &image.h);
     read_long(fp, (uint32_t *) &image.bpp);
@@ -6468,11 +6482,17 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     uint32_t size = image_size(&image);
 
     if (copy_to_fb) {
-        PY_ASSERT_TRUE_MSG((size <= OMV_RAW_BUF_SIZE), "FB Overflow!");
-        image.data = MAIN_FB()->pixels;
+        MAIN_FB()->w = 0;
+        MAIN_FB()->h = 0;
+        MAIN_FB()->bpp = 0;
+        PY_ASSERT_TRUE_MSG((size <= fb_avail()), "The new image won't fit in the main frame buffer!");
         MAIN_FB()->w = image.w;
         MAIN_FB()->h = image.h;
         MAIN_FB()->bpp = image.bpp;
+        image.data = MAIN_FB()->pixels;
+    } else if (arg_other) {
+        PY_ASSERT_TRUE_MSG((size <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
+        image.data = arg_other->data;
     } else {
         image.data = xalloc(size);
     }
@@ -6480,6 +6500,18 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     char ignore[15];
     read_data(fp, image.data, size);
     if (size % 16) read_data(fp, ignore, 16 - (size % 16)); // Read in to multiple of 16 bytes.
+
+    if (MAIN_FB()->pixels == image.data) {
+        MAIN_FB()->w = image.w;
+        MAIN_FB()->h = image.h;
+        MAIN_FB()->bpp = image.bpp;
+    }
+
+    if (arg_other) {
+        arg_other->w = image.w;
+        arg_other->h = image.h;
+        arg_other->bpp = image.bpp;
+    }
 
     return py_image_from_struct(&image);
 }
