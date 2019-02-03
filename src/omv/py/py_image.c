@@ -6788,34 +6788,98 @@ mp_obj_t py_image_from_struct(image_t *img)
 
 mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    const char *path = mp_obj_str_get_str(args[0]);
+    // mode == false -> load behavior
+    // mode == true -> make behavior
+    bool mode = mp_obj_is_integer(args[0]);
+    const char *path = mode ? NULL : mp_obj_str_get_str(args[0]);
 
-    bool copy_to_fb = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), false);
-    if (copy_to_fb) fb_update_jpeg_buffer();
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, mode ? 3 : 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb));
+    bool copy_to_fb = false;
+    image_t *arg_other = NULL;
+
+    if (copy_to_fb_obj) {
+        if (mp_obj_is_integer(copy_to_fb_obj)) {
+            copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
+        } else {
+            arg_other = py_helper_arg_to_image_mutable(copy_to_fb_obj);
+        }
+    }
+
+    if (copy_to_fb) {
+        fb_update_jpeg_buffer();
+    }
 
     image_t image = {0};
 
-    if (copy_to_fb) {
-       MAIN_FB()->w = 0;
-       MAIN_FB()->h = 0;
-       MAIN_FB()->bpp = 0;
+    if (mode) {
+        PY_ASSERT_TRUE_MSG(n_args >= 3, "Expected width, height, and type");
 
-       FIL fp;
-       img_read_settings_t rs;
-       imlib_read_geometry(&fp, &image, path, &rs);
-       file_buffer_off(&fp);
-       file_close(&fp);
+        image.w = mp_obj_get_int(args[0]);
+        PY_ASSERT_TRUE_MSG(image.w > 0, "Width must be > 0");
 
-       uint32_t size = image_size(&image);
+        image.h = mp_obj_get_int(args[1]);
+        PY_ASSERT_TRUE_MSG(image.h > 0, "Height must be > 0");
 
-       PY_ASSERT_TRUE_MSG((size <= OMV_RAW_BUF_SIZE), "FB Overflow!");
-       MAIN_FB()->w = image.w;
-       MAIN_FB()->h = image.h;
-       MAIN_FB()->bpp = image.bpp;
-       image.data = MAIN_FB()->pixels;
+        switch(mp_obj_get_int(args[2])) {
+            // TODO: PIXFORMAT_BINARY
+            // case PIXFOTMAT_BINARY:
+            //    image.bpp = IMAGE_BPP_BINARY;
+            //    break;
+            // TODO: PIXFORMAT_BINARY
+            case PIXFORMAT_GRAYSCALE:
+                image.bpp = IMAGE_BPP_GRAYSCALE;
+                break;
+            case PIXFORMAT_RGB565:
+                image.bpp = IMAGE_BPP_RGB565;
+                break;
+            default:
+                PY_ASSERT_TRUE_MSG(false, "Unsupported type");
+                break;
+        }
+    } else {
+        fb_alloc_mark();
+        FIL fp;
+        img_read_settings_t rs;
+        imlib_read_geometry(&fp, &image, path, &rs);
+        file_buffer_off(&fp);
+        file_close(&fp);
     }
 
-    imlib_load_image(&image, path);
+    if (copy_to_fb) {
+        MAIN_FB()->w = 0;
+        MAIN_FB()->h = 0;
+        MAIN_FB()->bpp = 0;
+        PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
+        MAIN_FB()->w = image.w;
+        MAIN_FB()->h = image.h;
+        MAIN_FB()->bpp = image.bpp;
+        image.data = MAIN_FB()->pixels;
+    } else if (arg_other) {
+        PY_ASSERT_TRUE_MSG((image_size(&image) <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
+        image.data = arg_other->data;
+    } else if (mode) {
+        image.data = xalloc(image_size(&image));
+    }
+
+    if (mode) {
+        memset(image.data, 0, image_size(&image));
+    } else {
+        imlib_load_image(&image, path);
+        fb_alloc_free_till_mark();
+    }
+
+    if (MAIN_FB()->pixels == image.data) {
+        MAIN_FB()->w = image.w;
+        MAIN_FB()->h = image.h;
+        MAIN_FB()->bpp = image.bpp;
+    }
+
+    if (arg_other) {
+        arg_other->w = image.w;
+        arg_other->h = image.h;
+        arg_other->bpp = image.bpp;
+    }
+
     return py_image_from_struct(&image);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_image_obj, 1, py_image_load_image);
