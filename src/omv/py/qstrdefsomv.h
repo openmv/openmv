@@ -51,12 +51,6 @@ Q(load_descriptor)
 Q(save_descriptor)
 Q(match_descriptor)
 // Image class
-Q(Image)
-Q(save)
-Q(width)
-Q(height)
-Q(format)
-Q(size)
 Q(find_template)
 Q(kp_desc)
 Q(lbp_desc)
@@ -349,6 +343,22 @@ Q(set_frequency)
 Q(get_current_frequencies)
 Q(get_supported_frequencies)
 
+// Image Class
+Q(Image)
+Q(copy_to_fb)
+
+// Width
+Q(width)
+
+// Height
+Q(height)
+
+// Format
+Q(format)
+
+// Size
+Q(size)
+
 // Get Pixel
 Q(get_pixel)
 Q(rgbtuple)
@@ -414,7 +424,10 @@ Q(scale)
 Q(roi)
 Q(x_scale)
 Q(y_scale)
-Q(copy_to_fb)
+// duplicate Q(copy_to_fb)
+
+// Save
+Q(save)
 
 // Clear
 Q(clear)
