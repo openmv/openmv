@@ -525,8 +525,10 @@ mp_obj_t py_fir_read_ir()
             tuple[2] = mp_obj_new_float(min);
             tuple[3] = mp_obj_new_float(max);
 
-            for (int i=0; i<768; i++) {
-                mp_obj_list_append(tuple[1], mp_obj_new_float(To[i]));
+            for (int i=0; i<24; i++) {
+                for (int j=0; j<32; j++) {
+                    mp_obj_list_append(tuple[1], mp_obj_new_float(To[(i*32)+(31-j)]));
+                }
             }
 
             fb_free();
@@ -560,8 +562,10 @@ mp_obj_t py_fir_read_ir()
             tuple[2] = mp_obj_new_float(min);
             tuple[3] = mp_obj_new_float(max);
 
-            for (int i=0; i<64; i++) {
-                mp_obj_list_append(tuple[1], mp_obj_new_float(To[i]));
+            for (int i=0; i<8; i++) {
+                for (int j=0; j<8; j++) {
+                    mp_obj_list_append(tuple[1], mp_obj_new_float(To[((7-j)*8)+i]));
+                }
             }
 
             fb_free();
