@@ -861,15 +861,43 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
-                               "Can't convert to grayscale in place!");
-            for (int y = 0, yy = out.h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
-                uint8_t *out_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&out, y);
-                for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(out_row_ptr, x,
-                        COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)));
+            if (copy || (MAIN_FB()->pixels != out.data)) {
+                PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+                    "Can't convert to grayscale in place!");
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
+                    uint8_t *out_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(out_row_ptr, x,
+                            COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)));
+                    }
                 }
+            } else {
+                image_t temp;
+                memcpy(&temp, arg_img, sizeof(image_t));
+                fb_alloc_mark();
+                temp.data = fb_alloc(image_size(&temp));
+                memcpy(temp.data, arg_img->data, image_size(&temp));
+
+                MAIN_FB()->w = 0;
+                MAIN_FB()->h = 0;
+                MAIN_FB()->bpp = 0;
+                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to grayscale in place!");
+                MAIN_FB()->w = out.w;
+                MAIN_FB()->h = out.h;
+                MAIN_FB()->bpp = out.bpp;
+
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&temp, y);
+                    uint8_t *out_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(out_row_ptr, x,
+                            COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)));
+                    }
+                }
+
+                fb_free();
+                fb_alloc_free_till_mark();
             }
             break;
         }
@@ -937,28 +965,84 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
-                "Can't convert to grayscale in place!");
-            for (int y = 0, yy = out.h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
-                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
-                for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                        imlib_yuv_to_rgb(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX, 0, 0));
+            if (copy || (MAIN_FB()->pixels != out.data)) {
+                PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+                    "Can't convert to grayscale in place!");
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
+                    uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                            imlib_yuv_to_rgb(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX, 0, 0));
+                    }
                 }
+            } else {
+                image_t temp;
+                memcpy(&temp, arg_img, sizeof(image_t));
+                fb_alloc_mark();
+                temp.data = fb_alloc(image_size(&temp));
+                memcpy(temp.data, arg_img->data, image_size(&temp));
+
+                MAIN_FB()->w = 0;
+                MAIN_FB()->h = 0;
+                MAIN_FB()->bpp = 0;
+                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to grayscale in place!");
+                MAIN_FB()->w = out.w;
+                MAIN_FB()->h = out.h;
+                MAIN_FB()->bpp = out.bpp;
+
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&temp, y);
+                    uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                            imlib_yuv_to_rgb(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX, 0, 0));
+                    }
+                }
+
+                fb_free();
+                fb_alloc_free_till_mark();
             }
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            PY_ASSERT_TRUE_MSG(copy,
-                "Can't convert to rgb565 in place!");
-            for (int y = 0, yy = out.h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
-                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
-                for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                        imlib_yuv_to_rgb(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), 0, 0));
+            if (copy || (MAIN_FB()->pixels != out.data)) {
+                PY_ASSERT_TRUE_MSG(copy,
+                    "Can't convert to rgb565 in place!");
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
+                    uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                            imlib_yuv_to_rgb(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), 0, 0));
+                    }
                 }
+            } else {
+                image_t temp;
+                memcpy(&temp, arg_img, sizeof(image_t));
+                fb_alloc_mark();
+                temp.data = fb_alloc(image_size(&temp));
+                memcpy(temp.data, arg_img->data, image_size(&temp));
+
+                MAIN_FB()->w = 0;
+                MAIN_FB()->h = 0;
+                MAIN_FB()->bpp = 0;
+                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to grayscale in place!");
+                MAIN_FB()->w = out.w;
+                MAIN_FB()->h = out.h;
+                MAIN_FB()->bpp = out.bpp;
+
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y);
+                    uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                            imlib_yuv_to_rgb(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x), 0, 0));
+                    }
+                }
+
+                fb_free();
+                fb_alloc_free_till_mark();
             }
             break;
         }
@@ -1023,28 +1107,84 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
-                "Can't convert to rainbow in place!");
-            for (int y = 0, yy = out.h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
-                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
-                for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                        rainbow_table[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX]);
+            if (copy || (MAIN_FB()->pixels != out.data)) {
+                PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
+                    "Can't convert to rainbow in place!");
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, y);
+                    uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                            rainbow_table[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX]);
+                    }
                 }
+            } else {
+                image_t temp;
+                memcpy(&temp, arg_img, sizeof(image_t));
+                fb_alloc_mark();
+                temp.data = fb_alloc(image_size(&temp));
+                memcpy(temp.data, arg_img->data, image_size(&temp));
+
+                MAIN_FB()->w = 0;
+                MAIN_FB()->h = 0;
+                MAIN_FB()->bpp = 0;
+                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to rainbow in place!");
+                MAIN_FB()->w = out.w;
+                MAIN_FB()->h = out.h;
+                MAIN_FB()->bpp = out.bpp;
+
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&temp, y);
+                    uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                            rainbow_table[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX]);
+                    }
+                }
+
+                fb_free();
+                fb_alloc_free_till_mark();
             }
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            PY_ASSERT_TRUE_MSG(copy,
-                "Can't convert to rainbow in place!");
-            for (int y = 0, yy = out.h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
-                uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
-                for (int x = 0, xx = out.w; x < xx; x++) {
-                    IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                        rainbow_table[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)]);
+            if (copy || (MAIN_FB()->pixels != out.data)) {
+                PY_ASSERT_TRUE_MSG(copy,
+                    "Can't convert to rainbow in place!");
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
+                    uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                            rainbow_table[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)]);
+                    }
                 }
+            } else {
+                image_t temp;
+                memcpy(&temp, arg_img, sizeof(image_t));
+                fb_alloc_mark();
+                temp.data = fb_alloc(image_size(&temp));
+                memcpy(temp.data, arg_img->data, image_size(&temp));
+
+                MAIN_FB()->w = 0;
+                MAIN_FB()->h = 0;
+                MAIN_FB()->bpp = 0;
+                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to rainbow in place!");
+                MAIN_FB()->w = out.w;
+                MAIN_FB()->h = out.h;
+                MAIN_FB()->bpp = out.bpp;
+
+                for (int y = 0, yy = out.h; y < yy; y++) {
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y);
+                    uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
+                    for (int x = 0, xx = out.w; x < xx; x++) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
+                            rainbow_table[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)]);
+                    }
+                }
+
+                fb_free();
+                fb_alloc_free_till_mark();
             }
             break;
         }
@@ -1085,7 +1225,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
     if (!copy) {
         arg_img->bpp = IMAGE_BPP_RGB565;
 
-        if ((MAIN_FB()->pixels == out.data)) {
+        if (MAIN_FB()->pixels == out.data) {
             MAIN_FB()->bpp = out.bpp;
         }
     }
