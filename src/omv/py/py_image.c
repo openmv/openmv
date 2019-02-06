@@ -1462,7 +1462,15 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
         temp.data = fb_alloc(image_size(&temp));
         memcpy(temp.data, arg_img->data, image_size(&temp));
         arg_img = &temp;
-        if (copy_to_fb) PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
+        if (copy_to_fb) {
+            MAIN_FB()->w = 0;
+            MAIN_FB()->h = 0;
+            MAIN_FB()->bpp = 0;
+            PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
+            MAIN_FB()->w = image.w;
+            MAIN_FB()->h = image.h;
+            MAIN_FB()->bpp = image.bpp;
+        }
     }
 
     float over_xscale = IM_DIV(1.0, arg_x_scale), over_yscale = IM_DIV(1.0f, arg_y_scale);
@@ -1518,6 +1526,8 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     }
 
     if (copy_to_fb) {
+        image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+
         if (MAIN_FB()->pixels == arg_img->data) {
             arg_img->w = image.w;
             arg_img->h = image.h;
