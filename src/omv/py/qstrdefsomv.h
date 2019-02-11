@@ -506,6 +506,16 @@ Q(invert)
 Q(clear_background)
 // duplicate Q(mask)
 
+// Mask Rectangle
+Q(mask_rectangle)
+
+// Mask Circle
+Q(mask_circle)
+
+// Mask Ellipse
+Q(mask_ellipse)
+// duplicate Q(rotation)
+
 // Binary
 Q(binary)
 // duplicate Q(invert)

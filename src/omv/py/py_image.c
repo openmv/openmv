@@ -1892,6 +1892,125 @@ STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_keypoints_obj, 2, py_image_draw_keypoints);
 
+STATIC mp_obj_t py_image_mask_rectangle(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    int arg_rx;
+    int arg_ry;
+    int arg_rw;
+    int arg_rh;
+
+    if (n_args > 1) {
+        const mp_obj_t *arg_vec;
+        py_helper_consume_array(n_args, args, 1, 4, &arg_vec);
+        arg_rx = mp_obj_get_int(arg_vec[0]);
+        arg_ry = mp_obj_get_int(arg_vec[1]);
+        arg_rw = mp_obj_get_int(arg_vec[2]);
+        arg_rh = mp_obj_get_int(arg_vec[3]);
+    } else {
+        arg_rx = arg_img->w / 4;
+        arg_ry = arg_img->h / 4;
+        arg_rw = arg_img->w / 2;
+        arg_rh = arg_img->h / 2;
+    }
+
+    fb_alloc_mark();
+    image_t temp;
+    temp.w = arg_img->w;
+    temp.h = arg_img->h;
+    temp.bpp = IMAGE_BPP_BINARY;
+    temp.data = fb_alloc0(image_size(&temp));
+
+    imlib_draw_rectangle(&temp, arg_rx, arg_ry, arg_rw, arg_rh, -1, 0, true);
+    imlib_zero(arg_img, &temp, true);
+
+    fb_free();
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mask_rectangle_obj, 1, py_image_mask_rectangle);
+
+STATIC mp_obj_t py_image_mask_circle(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    int arg_cx;
+    int arg_cy;
+    int arg_cr;
+
+    if (n_args > 1) {
+        const mp_obj_t *arg_vec;
+        py_helper_consume_array(n_args, args, 1, 3, &arg_vec);
+        arg_cx = mp_obj_get_int(arg_vec[0]);
+        arg_cy = mp_obj_get_int(arg_vec[1]);
+        arg_cr = mp_obj_get_int(arg_vec[2]);
+    } else {
+        arg_cx = arg_img->w / 2;
+        arg_cy = arg_img->h / 2;
+        arg_cr = IM_MIN(arg_img->w, arg_img->h) / 2;
+    }
+
+    fb_alloc_mark();
+    image_t temp;
+    temp.w = arg_img->w;
+    temp.h = arg_img->h;
+    temp.bpp = IMAGE_BPP_BINARY;
+    temp.data = fb_alloc0(image_size(&temp));
+
+    imlib_draw_circle(&temp, arg_cx, arg_cy, arg_cr, -1, 0, true);
+    imlib_zero(arg_img, &temp, true);
+
+    fb_free();
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mask_circle_obj, 1, py_image_mask_circle);
+
+STATIC mp_obj_t py_image_mask_ellipse(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    uint offset;
+    int arg_cx;
+    int arg_cy;
+    int arg_rx;
+    int arg_ry;
+    int arg_r;
+
+    if (n_args > 1) {
+        const mp_obj_t *arg_vec;
+        offset = py_helper_consume_array(n_args, args, 1, 5, &arg_vec);
+        arg_cx = mp_obj_get_int(arg_vec[0]);
+        arg_cy = mp_obj_get_int(arg_vec[1]);
+        arg_rx = mp_obj_get_int(arg_vec[2]);
+        arg_ry = mp_obj_get_int(arg_vec[3]);
+        arg_r = mp_obj_get_int(arg_vec[4]);
+    } else {
+        offset = 1;
+        arg_cx = arg_img->w / 2;
+        arg_cy = arg_img->h / 2;
+        arg_rx = arg_img->w / 2;
+        arg_ry = arg_img->h / 2;
+        arg_r = 0;
+    }
+
+    int arg_rotation =
+        py_helper_keyword_int(n_args, args, offset, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rotation), arg_r);
+
+    fb_alloc_mark();
+    image_t temp;
+    temp.w = arg_img->w;
+    temp.h = arg_img->h;
+    temp.bpp = IMAGE_BPP_BINARY;
+    temp.data = fb_alloc0(image_size(&temp));
+
+    imlib_draw_ellipse(&temp, arg_cx, arg_cy, arg_rx, arg_ry, arg_rotation, -1, 0, true);
+    imlib_zero(arg_img, &temp, true);
+
+    fb_free();
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mask_ellipse_obj, 1, py_image_mask_ellipse);
+
 #ifdef IMLIB_ENABLE_FLOOD_FILL
 STATIC mp_obj_t py_image_flood_fill(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -6215,6 +6334,9 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_flood_fill),          MP_ROM_PTR(&py_func_unavailable_obj)},
 #endif
     {MP_ROM_QSTR(MP_QSTR_draw_keypoints),      MP_ROM_PTR(&py_image_draw_keypoints_obj)},
+    {MP_ROM_QSTR(MP_QSTR_mask_rectangle),      MP_ROM_PTR(&py_image_mask_rectangle_obj)},
+    {MP_ROM_QSTR(MP_QSTR_mask_circle),         MP_ROM_PTR(&py_image_mask_circle_obj)},
+    {MP_ROM_QSTR(MP_QSTR_mask_ellipse),        MP_ROM_PTR(&py_image_mask_ellipse_obj)},
     /* Binary Methods */
 #ifdef IMLIB_ENABLE_BINARY_OPS
     {MP_ROM_QSTR(MP_QSTR_binary),              MP_ROM_PTR(&py_image_binary_obj)},

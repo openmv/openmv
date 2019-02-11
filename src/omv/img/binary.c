@@ -6,6 +6,51 @@
 #include "imlib.h"
 
 #ifdef IMLIB_ENABLE_BINARY_OPS
+void imlib_zero(image_t *img, image_t *mask, bool invert)
+{
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                uint32_t *row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(mask, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (IMAGE_GET_BINARY_PIXEL_FAST(row_ptr_2, x) ^ invert) {
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                uint32_t *row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(mask, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (IMAGE_GET_BINARY_PIXEL_FAST(row_ptr_2, x) ^ invert) {
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                uint32_t *row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(mask, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (IMAGE_GET_BINARY_PIXEL_FAST(row_ptr_2, x) ^ invert) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
 void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask)
 {
     image_t bmp;
@@ -17,6 +62,7 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
     for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
         color_thresholds_list_lnk_data_t lnk_data;
         iterator_get(thresholds, it, &lnk_data);
+
         switch(img->bpp) {
             case IMAGE_BPP_BINARY: {
                 for (int y = 0, yy = img->h; y < yy; y++) {
