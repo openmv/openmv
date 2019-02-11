@@ -29,7 +29,7 @@ while(True):
         # If the first argument is a scaler then this method expects
         # to see x, y, radius x, and radius y.
         # Otherwise, it expects a (x,y,radius_x,radius_y) tuple.
-        img.draw_ellipse(x, y, radius_x, radius_y, \
-                         rotation = rot, color = (r, g, b), thickness = 2, fill = False)
+        img.draw_ellipse(x, y, radius_x, radius_y, rot,
+                         color = (r, g, b), thickness = 2, fill = False)
 
     print(clock.fps())

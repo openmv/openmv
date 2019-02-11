@@ -1581,7 +1581,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 STATIC mp_obj_t py_image_clear(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
-    image_t *arg_msk = py_helper_keyword_to_image_mutable_mask(n_args, args, 1, kw_args);
+
+    image_t *arg_msk =
+            py_helper_keyword_to_image_mutable_mask(n_args, args, 1, kw_args);
 
     if (!arg_msk) {
         memset(arg_img->data, 0, image_size(arg_img));
@@ -1664,14 +1666,13 @@ STATIC mp_obj_t py_image_draw_ellipse(uint n_args, const mp_obj_t *args, mp_map_
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
     const mp_obj_t *arg_vec;
-    uint offset = py_helper_consume_array(n_args, args, 1, 4, &arg_vec);
+    uint offset = py_helper_consume_array(n_args, args, 1, 5, &arg_vec);
     int arg_cx = mp_obj_get_int(arg_vec[0]);
     int arg_cy = mp_obj_get_int(arg_vec[1]);
     int arg_rx = mp_obj_get_int(arg_vec[2]);
     int arg_ry = mp_obj_get_int(arg_vec[3]);
+    int arg_r = mp_obj_get_int(arg_vec[4]);
 
-    int arg_rotation =
-        py_helper_keyword_int(n_args, args, offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rotation), 0);
     int arg_c =
         py_helper_keyword_color(arg_img, n_args, args, offset + 1, kw_args, -1); // White.
     int arg_thickness =
@@ -1679,7 +1680,7 @@ STATIC mp_obj_t py_image_draw_ellipse(uint n_args, const mp_obj_t *args, mp_map_
     bool arg_fill =
         py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fill), false);
 
-    imlib_draw_ellipse(arg_img, arg_cx, arg_cy, arg_rx, arg_ry, arg_rotation, arg_c, arg_thickness, arg_fill);
+    imlib_draw_ellipse(arg_img, arg_cx, arg_cy, arg_rx, arg_ry, arg_r, arg_c, arg_thickness, arg_fill);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_ellipse_obj, 2, py_image_draw_ellipse);
@@ -1975,7 +1976,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mask_circle_obj, 1, py_image_mask_cir
 STATIC mp_obj_t py_image_mask_ellipse(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
-    uint offset;
     int arg_cx;
     int arg_cy;
     int arg_rx;
@@ -1984,23 +1984,19 @@ STATIC mp_obj_t py_image_mask_ellipse(uint n_args, const mp_obj_t *args, mp_map_
 
     if (n_args > 1) {
         const mp_obj_t *arg_vec;
-        offset = py_helper_consume_array(n_args, args, 1, 5, &arg_vec);
+        py_helper_consume_array(n_args, args, 1, 5, &arg_vec);
         arg_cx = mp_obj_get_int(arg_vec[0]);
         arg_cy = mp_obj_get_int(arg_vec[1]);
         arg_rx = mp_obj_get_int(arg_vec[2]);
         arg_ry = mp_obj_get_int(arg_vec[3]);
         arg_r = mp_obj_get_int(arg_vec[4]);
     } else {
-        offset = 1;
         arg_cx = arg_img->w / 2;
         arg_cy = arg_img->h / 2;
         arg_rx = arg_img->w / 2;
         arg_ry = arg_img->h / 2;
         arg_r = 0;
     }
-
-    int arg_rotation =
-        py_helper_keyword_int(n_args, args, offset, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rotation), arg_r);
 
     fb_alloc_mark();
     image_t temp;
@@ -2009,7 +2005,7 @@ STATIC mp_obj_t py_image_mask_ellipse(uint n_args, const mp_obj_t *args, mp_map_
     temp.bpp = IMAGE_BPP_BINARY;
     temp.data = fb_alloc0(image_size(&temp));
 
-    imlib_draw_ellipse(&temp, arg_cx, arg_cy, arg_rx, arg_ry, arg_rotation, -1, 0, true);
+    imlib_draw_ellipse(&temp, arg_cx, arg_cy, arg_rx, arg_ry, arg_r, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
 
     fb_free();

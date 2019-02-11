@@ -452,7 +452,6 @@ Q(draw_circle)
 
 // Draw Ellipse
 Q(draw_ellipse)
-Q(rotation)
 // duplicate Q(color)
 // duplicate Q(thickness)
 // duplicate Q(fill)
@@ -515,7 +514,6 @@ Q(mask_circle)
 
 // Mask Ellipse
 Q(mask_ellipse)
-// duplicate Q(rotation)
 
 // Binary
 Q(binary)
@@ -893,7 +891,7 @@ Q(cx)
 Q(cxf)
 Q(cy)
 Q(cyf)
-// duplicate Q(rotation)
+Q(rotation)
 Q(rotation_deg)
 Q(rotation_rad)
 Q(code)
