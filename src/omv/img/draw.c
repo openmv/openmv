@@ -280,17 +280,17 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
 
         if ((ch == '\n') || (ch == '\r')) { // handle '\n' or '\r' strings
             x_off = anchor;
-            y_off += fast_roundf(font[0].h * scale) + y_spacing; // newline height == space height
+            y_off += fast_floorf(font[0].h * scale) + y_spacing; // newline height == space height
             continue;
         }
 
         if ((ch < ' ') || (ch > '~')) { // handle unknown characters
             imlib_draw_rectangle(img,
-                x_off + (fast_roundf(scale * 3) / 2),
-                y_off + (fast_roundf(scale * 3) / 2),
-                fast_roundf(font[0].w * scale) - ((fast_roundf(scale * 3) / 2) * 2),
-                fast_roundf(font[0].h * scale) - ((fast_roundf(scale * 3) / 2) * 2),
-                c, fast_roundf(scale), false);
+                x_off + (fast_floorf(scale * 3) / 2),
+                y_off + (fast_floorf(scale * 3) / 2),
+                fast_floorf(font[0].w * scale) - ((fast_floorf(scale * 3) / 2) * 2),
+                fast_floorf(font[0].h * scale) - ((fast_floorf(scale * 3) / 2) * 2),
+                c, fast_floorf(scale), false);
             continue;
         }
 
@@ -303,7 +303,7 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
             for (int x = 0, xx = g->w; x < xx; x++) {
                 for (int y = 0, yy = g->h; y < yy; y++) {
                     if (g->data[y] & (1 << (g->w - 1 - x))) {
-                        x_off -= fast_roundf(x * scale);
+                        x_off -= fast_floorf(x * scale);
                         exit = true;
                         break;
                     }
@@ -313,16 +313,16 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
             }
         }
 
-        for (int y = 0, yy = fast_roundf(g->h * scale); y < yy; y++) {
-            for (int x = 0, xx = fast_roundf(g->w * scale); x < xx; x++) {
-                if (g->data[fast_roundf(y / scale)] & (1 << (g->w - 1 - fast_roundf(x / scale)))) {
+        for (int y = 0, yy = fast_floorf(g->h * scale); y < yy; y++) {
+            for (int x = 0, xx = fast_floorf(g->w * scale); x < xx; x++) {
+                if (g->data[fast_floorf(y / scale)] & (1 << (g->w - 1 - fast_floorf(x / scale)))) {
                     imlib_set_pixel(img, (x_off + x), (y_off + y), c);
                 }
             }
         }
 
         if (mono_space) {
-            x_off += fast_roundf(g->w * scale) + x_spacing;
+            x_off += fast_floorf(g->w * scale) + x_spacing;
         } else {
             // Find the last pixel set and offset to that.
             bool exit = false;
@@ -330,7 +330,7 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
             for (int x = g->w - 1; x >= 0; x--) {
                 for (int y = g->h - 1; y >= 0; y--) {
                     if (g->data[y] & (1 << (g->w - 1 - x))) {
-                        x_off += fast_roundf((x + 2) * scale) + x_spacing;
+                        x_off += fast_floorf((x + 2) * scale) + x_spacing;
                         exit = true;
                         break;
                     }
@@ -339,7 +339,7 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
                 if (exit) break;
             }
 
-            if (!exit) x_off += fast_roundf(scale * 3); // space char
+            if (!exit) x_off += fast_floorf(scale * 3); // space char
         }
     }
 }
@@ -405,11 +405,11 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
 {
     float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale), beta = 1 - alpha;
 
-    for (int y = 0, yy = fast_roundf(other->h * y_scale); y < yy; y++) {
-        int other_y = fast_roundf(y * over_yscale);
+    for (int y = 0, yy = fast_floorf(other->h * y_scale); y < yy; y++) {
+        int other_y = fast_floorf(y * over_yscale);
 
-        for (int x = 0, xx = fast_roundf(other->w * x_scale); x < xx; x++) {
-            int other_x = fast_roundf(x * over_xscale);
+        for (int x = 0, xx = fast_floorf(other->w * x_scale); x < xx; x++) {
+            int other_x = fast_floorf(x * over_xscale);
 
             if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
                 int pixel = safe_map_pixel(img, other, imlib_get_pixel(other, other_x, other_y));
@@ -446,22 +446,22 @@ void imlib_flood_fill(image_t *img, int x, int y,
 
         switch(img->bpp) {
             case IMAGE_BPP_BINARY: {
-                color_seed_threshold = fast_roundf(seed_threshold * COLOR_BINARY_MAX);
-                color_floating_threshold = fast_roundf(floating_threshold * COLOR_BINARY_MAX);
+                color_seed_threshold = fast_floorf(seed_threshold * COLOR_BINARY_MAX);
+                color_floating_threshold = fast_floorf(floating_threshold * COLOR_BINARY_MAX);
                 break;
             }
             case IMAGE_BPP_GRAYSCALE: {
-                color_seed_threshold = fast_roundf(seed_threshold * COLOR_GRAYSCALE_MAX);
-                color_floating_threshold = fast_roundf(floating_threshold * COLOR_GRAYSCALE_MAX);
+                color_seed_threshold = fast_floorf(seed_threshold * COLOR_GRAYSCALE_MAX);
+                color_floating_threshold = fast_floorf(floating_threshold * COLOR_GRAYSCALE_MAX);
                 break;
             }
             case IMAGE_BPP_RGB565: {
-                color_seed_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_roundf(seed_threshold * COLOR_R5_MAX),
-                                                                fast_roundf(seed_threshold * COLOR_G6_MAX),
-                                                                fast_roundf(seed_threshold * COLOR_B5_MAX));
-                color_floating_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_roundf(floating_threshold * COLOR_R5_MAX),
-                                                                    fast_roundf(floating_threshold * COLOR_G6_MAX),
-                                                                    fast_roundf(floating_threshold * COLOR_B5_MAX));
+                color_seed_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(seed_threshold * COLOR_R5_MAX),
+                                                                fast_floorf(seed_threshold * COLOR_G6_MAX),
+                                                                fast_floorf(seed_threshold * COLOR_B5_MAX));
+                color_floating_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(floating_threshold * COLOR_R5_MAX),
+                                                                    fast_floorf(floating_threshold * COLOR_G6_MAX),
+                                                                    fast_floorf(floating_threshold * COLOR_B5_MAX));
                 break;
             }
             default: {

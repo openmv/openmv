@@ -1430,9 +1430,9 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     }
 
     image_t image;
-    image.w = fast_roundf(roi.w * arg_x_scale);
+    image.w = fast_floorf(roi.w * arg_x_scale);
     PY_ASSERT_TRUE_MSG(image.w >= 1, "Output image width is 0!");
-    image.h = fast_roundf(roi.h * arg_y_scale);
+    image.h = fast_floorf(roi.h * arg_y_scale);
     PY_ASSERT_TRUE_MSG(image.h >= 1, "Output image height is 0!");
     image.bpp = arg_img->bpp;
     image.data = NULL;
@@ -1478,33 +1478,33 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
             for (int y = 0, yy = image.h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, fast_floorf(y * over_yscale) + roi.y);
                 uint32_t *row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&image, y);
                 for (int x = 0, xx = image.w; x < xx; x++) {
                     IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr_2, x,
-                        IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
+                        IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, fast_floorf(x * over_xscale) + roi.x));
                 }
             }
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
             for (int y = 0, yy = image.h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, fast_floorf(y * over_yscale) + roi.y);
                 uint8_t *row_ptr_2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&image, y);
                 for (int x = 0, xx = image.w; x < xx; x++) {
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr_2, x,
-                        IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
+                        IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, fast_floorf(x * over_xscale) + roi.x));
                 }
             }
             break;
         }
         case IMAGE_BPP_RGB565: {
             for (int y = 0, yy = image.h; y < yy; y++) {
-                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, fast_floorf(y * over_yscale) + roi.y);
                 uint16_t *row_ptr_2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&image, y);
                 for (int x = 0, xx = image.w; x < xx; x++) {
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_2, x,
-                        IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
+                        IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, fast_floorf(x * over_xscale) + roi.x));
                 }
             }
             break;
