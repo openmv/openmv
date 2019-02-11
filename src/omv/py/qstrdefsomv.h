@@ -431,6 +431,7 @@ Q(save)
 
 // Clear
 Q(clear)
+Q(mask)
 
 // Draw Line
 Q(draw_line)
@@ -488,7 +489,7 @@ Q(draw_image)
 // duplicate Q(x_scale)
 // duplicate Q(y_scale)
 Q(alpha)
-Q(mask)
+// duplicate Q(mask)
 
 // Draw Keypoints
 Q(draw_keypoints)

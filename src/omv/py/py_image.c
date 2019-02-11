@@ -1578,13 +1578,20 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 // Drawing Methods
 //////////////////
 
-STATIC mp_obj_t py_image_clear(mp_obj_t img_obj)
+STATIC mp_obj_t py_image_clear(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(img_obj);
-    memset(arg_img->data, 0, image_size(arg_img));
-    return img_obj;
+    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_msk = py_helper_keyword_to_image_mutable_mask(n_args, args, 1, kw_args);
+
+    if (!arg_msk) {
+        memset(arg_img->data, 0, image_size(arg_img));
+    } else {
+        imlib_zero(arg_img, arg_msk, false);
+    }
+
+    return args[0];
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_clear_obj, py_image_clear);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_clear_obj, 1, py_image_clear);
 
 STATIC mp_obj_t py_image_draw_line(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {

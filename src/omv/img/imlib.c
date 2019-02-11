@@ -755,6 +755,48 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void imlib_zero(image_t *img, image_t *mask, bool invert)
+{
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (image_get_mask_pixel(mask, x, y) ^ invert) {
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (image_get_mask_pixel(mask, x, y) ^ invert) {
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (image_get_mask_pixel(mask, x, y) ^ invert) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
 // A simple algorithm for correcting lens distortion.
 // See http://www.tannerhelland.com/4743/simple-algorithm-correcting-lens-distortion/
 void imlib_lens_corr(image_t *img, float strength, float zoom)

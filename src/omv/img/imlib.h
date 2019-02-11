@@ -1251,6 +1251,7 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
 // Helper Functions
+void imlib_zero(image_t *img, image_t *mask, bool invert);
 void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                           int seed_threshold, int floating_threshold,
                           flood_fill_call_back_t cb, void *data);
@@ -1267,7 +1268,6 @@ void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);
 // Binary Functions
-void imlib_zero(image_t *img, image_t *mask, bool invert);
 void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, bool zero, image_t *mask);
 void imlib_invert(image_t *img);
 void imlib_b_and(image_t *img, const char *path, image_t *other, int scalar, image_t *mask);
