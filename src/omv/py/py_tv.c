@@ -234,10 +234,6 @@
 #define CURLINE 0x53
 #define GPIOCTL 0x82
 
-#define RST_PORT            GPIOD
-#define RST_PIN             GPIO_PIN_12
-#define RST_PIN_WRITE(bit)  HAL_GPIO_WritePin(RST_PORT, RST_PIN, bit);
-
 #define CS_PORT             GPIOB
 #define CS_PIN              GPIO_PIN_12
 #define CS_PIN_WRITE(bit)   HAL_GPIO_WritePin(CS_PORT, CS_PIN, bit);
@@ -480,7 +476,6 @@ static mp_obj_t py_tv_deinit()
         case TV_NONE:
             return mp_const_none;
         case TV_SHIELD:
-            HAL_GPIO_DeInit(RST_PORT, RST_PIN);
             HAL_GPIO_DeInit(CS_PORT, CS_PIN);
             pyb_spi_deinit(spi_port);
             spi_port = NULL;
@@ -504,11 +499,6 @@ static mp_obj_t py_tv_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             GPIO_InitStructure.Pin = CS_PIN;
             CS_PIN_WRITE(true); // Set first to prevent glitches.
             HAL_GPIO_Init(CS_PORT, &GPIO_InitStructure);
-
-            GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
-            GPIO_InitStructure.Pin = RST_PIN;
-            RST_PIN_WRITE(true); // Set first to prevent glitches.
-            HAL_GPIO_Init(RST_PORT, &GPIO_InitStructure);
 
             spi_port = pyb_spi_make_new(NULL,
                 2, // n_args
