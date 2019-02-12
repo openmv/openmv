@@ -9,6 +9,18 @@
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
 
+// Enable LAB LUT
+#define IMLIB_ENABLE_LAB_LUT
+
+// Enable YUV LUT
+#define IMLIB_ENABLE_YUV_LUT
+
+// Enable mean pooling
+#define IMLIB_ENABLE_MEAN_POOLING
+
+// Enable midpoint pooling
+#define IMLIB_ENABLE_MIDPOINT_POOLING
+
 // Enable binary ops
 #define IMLIB_ENABLE_BINARY_OPS
 
@@ -116,6 +128,19 @@
 
 // Enable FAST (20+ KBs).
 #define IMLIB_ENABLE_FAST
+
+// Enable find_template()
+#define IMLIB_FIND_TEMPLATE
+
+// Enable find_lbp()
+#define IMLIB_ENABLE_FIND_LBP
+
+// Enable find_keypoints()
+#define IMLIB_ENABLE_FIND_KEYPOINTS
+
+#if defined(IMLIB_ENABLE_FIND_LBP) || defined(IMLIB_ENABLE_FIND_KEYPOINTS)
+    #define IMLIB_ENABLE_DESCRIPTOR
+#endif
 
 // Enable find_hog()
 #define IMLIB_ENABLE_HOG

@@ -145,14 +145,8 @@ static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_
         case PIXFORMAT_RGB565:
             img.bpp = IMAGE_BPP_RGB565;
             break;
-        case PIXFORMAT_BAYER:
-            img.bpp = IMAGE_BPP_BAYER;
-            break;
-        case PIXFORMAT_JPEG:
-            img.bpp = IMAGE_BPP_JPEG;
-            break;
         default:
-            PY_ASSERT_TRUE_MSG(false, "Unknown type");
+            PY_ASSERT_TRUE_MSG(false, "Unsupported type");
             break;
     }
 

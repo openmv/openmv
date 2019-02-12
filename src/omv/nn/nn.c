@@ -359,6 +359,8 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
     q7_t *input_buffer  = NULL;
     q7_t *output_buffer = NULL;
 
+    fb_alloc_mark();
+
     q7_t *buffer1     = fb_alloc(net->max_scrbuf_size);
     q7_t *buffer2     = buffer1 + net->max_layer_size;
     q7_t *col_buffer  = fb_alloc(net->max_colbuf_size);
@@ -449,7 +451,7 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
         arm_softmax_q7(net->output_data, net->output_size, net->output_data);
     }
 
-    fb_free_all();
+    fb_alloc_free_till_mark();
     return 0;
 }
 
@@ -484,6 +486,8 @@ int nn_dry_run_network(nn_t *net, image_t *img, bool softmax)
     q7_t *input_data    = NULL;
     q7_t *input_buffer  = NULL;
     q7_t *output_buffer = NULL;
+
+    fb_alloc_mark();
 
     q7_t *buffer1     = fb_alloc(net->max_scrbuf_size);
     q7_t *buffer2     = buffer1 + net->max_layer_size;
@@ -573,7 +577,7 @@ int nn_dry_run_network(nn_t *net, image_t *img, bool softmax)
         layer = layer->next;
     }
 
-    fb_free_all();
+    fb_alloc_free_till_mark();
     printf("\n");
     return 0;
 }

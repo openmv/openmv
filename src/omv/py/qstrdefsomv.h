@@ -19,11 +19,26 @@ Q(board_id)
 
 // Image module
 Q(image)
-Q(Image)
-Q(rgb_to_lab)
-Q(lab_to_rgb)
-Q(rgb_to_grayscale)
+Q(binary_to_grayscale)
+Q(binary_to_rgb)
+Q(binary_to_lab)
+Q(binary_to_yuv)
+Q(grayscale_to_binary)
 Q(grayscale_to_rgb)
+Q(grayscale_to_lab)
+Q(grayscale_to_yuv)
+Q(rgb_to_binary)
+Q(rgb_to_grayscale)
+Q(rgb_to_lab)
+Q(rgb_to_yuv)
+Q(lab_to_binary)
+Q(lab_to_grayscale)
+Q(lab_to_rgb)
+Q(lab_to_yuv)
+Q(yuv_to_binary)
+Q(yuv_to_grayscale)
+Q(yuv_to_rgb)
+Q(yuv_to_lab)
 Q(HaarCascade)
 Q(search)
 Q(SEARCH_EX)
@@ -35,31 +50,18 @@ Q(CORNER_AGAST)
 Q(load_descriptor)
 Q(save_descriptor)
 Q(match_descriptor)
-
 // Image class
-Q(copy)
-Q(copy_to_fb)
-Q(save)
-Q(width)
-Q(height)
-Q(format)
-Q(size)
-Q(midpoint_pool)
-Q(midpoint_pooled)
-Q(mean_pool)
-Q(mean_pooled)
 Q(find_template)
 Q(kp_desc)
 Q(lbp_desc)
 Q(Cascade)
+Q(cmp_lbp)
 Q(find_features)
 Q(find_keypoints)
 Q(find_lbp)
 Q(find_eye)
 Q(find_edges)
 Q(find_hog)
-Q(cmp_lbp)
-Q(roi)
 Q(normalized)
 Q(filter_outliers)
 Q(scale_factor)
@@ -78,6 +80,13 @@ Q(set_backlight)
 Q(get_backlight)
 Q(display)
 Q(clear)
+
+// tv Module
+Q(tv)
+Q(channel)
+Q(type)
+Q(display)
+Q(palettes)
 
 // Gif module
 Q(gif)
@@ -330,13 +339,25 @@ Q(bssid)
 
 // cpufreq Module
 Q(cpufreq)
-Q(CPUFREQ_120MHZ)
-Q(CPUFREQ_144MHZ)
-Q(CPUFREQ_168MHZ)
-Q(CPUFREQ_192MHZ)
-Q(CPUFREQ_216MHZ)
-Q(get_frequency)
 Q(set_frequency)
+Q(get_current_frequencies)
+Q(get_supported_frequencies)
+
+// Image Class
+Q(Image)
+Q(copy_to_fb)
+
+// Width
+Q(width)
+
+// Height
+Q(height)
+
+// Format
+Q(format)
+
+// Size
+Q(size)
 
 // Get Pixel
 Q(get_pixel)
@@ -346,21 +367,39 @@ Q(rgbtuple)
 Q(set_pixel)
 Q(color)
 
+// Mean Pool
+Q(mean_pool)
+
+// Mean Pooled
+Q(mean_pooled)
+
+// Midpoint Pool
+Q(midpoint_pool)
+Q(bias)
+
+// Midpoint Pooled
+Q(midpoint_pooled)
+// duplicate Q(bias)
+
 // To Bitmap
 Q(to_bitmap)
-// duplicate Q(copy)
+Q(copy)
+Q(rgb_channel)
 
 // To Grayscale
 Q(to_grayscale)
 // duplicate Q(copy)
+// duplicate Q(rgb_channel)
 
 // To RGB565
 Q(to_rgb565)
 // duplicate Q(copy)
+// duplicate Q(rgb_channel)
 
 // To Rainbow
 Q(to_rainbow)
 // duplicate Q(copy)
+// duplicate Q(rgb_channel)
 
 // Compress (in place)
 Q(compress)
@@ -377,6 +416,18 @@ Q(compressed)
 // Compressed for IDE (out of place)
 Q(compressed_for_ide)
 // duplicate Q(quality)
+
+// Copy
+// duplicate Q(copy)
+Q(crop)
+Q(scale)
+Q(roi)
+Q(x_scale)
+Q(y_scale)
+// duplicate Q(copy_to_fb)
+
+// Save
+Q(save)
 
 // Clear
 Q(clear)
@@ -408,7 +459,7 @@ Q(rotation)
 // Draw String
 Q(draw_string)
 // duplicate Q(color)
-Q(scale)
+// duplicate Q(scale)
 Q(x_spacing)
 Q(y_spacing)
 Q(mono_space)
@@ -425,10 +476,17 @@ Q(draw_arrow)
 // duplicate Q(size)
 // duplicate Q(thickness)
 
+// Draw Edges
+Q(draw_edges)
+// duplicate Q(color)
+// duplicate Q(size)
+// duplicate Q(thickness)
+// duplicate Q(fill)
+
 // Draw Image
 Q(draw_image)
-Q(x_scale)
-Q(y_scale)
+// duplicate Q(x_scale)
+// duplicate Q(y_scale)
 Q(alpha)
 Q(mask)
 
@@ -604,7 +662,7 @@ Q(mode)
 
 // Midpoint
 Q(midpoint)
-Q(bias)
+// duplicate Q(bias)
 // duplicate Q(threshold)
 // duplicate Q(offset)
 // duplicate Q(invert)
@@ -808,8 +866,12 @@ Q(merge)
 Q(margin)
 Q(threshold_cb)
 Q(merge_cb)
+Q(x_hist_bins_max)
+Q(y_hist_bins_max)
 // Blob Object
 Q(blob)
+Q(corners)
+Q(min_corners)
 Q(rect)
 Q(x)
 Q(y)
@@ -817,12 +879,29 @@ Q(w)
 Q(h)
 Q(pixels)
 Q(cx)
+Q(cxf)
 Q(cy)
+Q(cyf)
 // duplicate Q(rotation)
+Q(rotation_deg)
+Q(rotation_rad)
 Q(code)
 Q(count)
+Q(perimeter)
+Q(roundness)
+Q(elongation)
 Q(area)
 Q(density)
+Q(extent)
+Q(compactness)
+Q(solidity)
+Q(convexity)
+Q(x_hist_bins)
+Q(y_hist_bins)
+Q(major_axis_line)
+Q(minor_axis_line)
+Q(enclosing_circle)
+Q(enclosed_ellipse)
 
 // Find Lines
 Q(find_lines)
@@ -865,7 +944,7 @@ Q(find_rects)
 // duplicate Q(threshold)
 // Rect Object
 // duplicate Q(rect)
-Q(corners)
+// duplicate Q(corners)
 // duplicate Q(rect)
 // duplicate Q(x)
 // duplicate Q(y)

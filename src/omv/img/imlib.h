@@ -83,6 +83,8 @@ void point_init(point_t *ptr, int x, int y);
 void point_copy(point_t *dst, point_t *src);
 bool point_equal_fast(point_t *ptr0, point_t *ptr1);
 int point_quadrance(point_t *ptr0, point_t *ptr1);
+void point_rotate(int x, int y, float r, int center_x, int center_y, int16_t *new_x, int16_t *new_y);
+void point_min_area_rectangle(point_t *corners, point_t *new_corners, int corners_len);
 
 ////////////////
 // Line Stuff //
@@ -260,51 +262,28 @@ extern const uint8_t g826_table[256];
 extern const int8_t lab_table[196608];
 extern const int8_t yuv_table[196608];
 
+#ifdef IMLIB_ENABLE_LAB_LUT
 #define COLOR_RGB565_TO_L(pixel) lab_table[(pixel) * 3]
 #define COLOR_RGB565_TO_A(pixel) lab_table[((pixel) * 3) + 1]
 #define COLOR_RGB565_TO_B(pixel) lab_table[((pixel) * 3) + 2]
+#else
+#define COLOR_RGB565_TO_L(pixel) imlib_rgb565_to_l(pixel)
+#define COLOR_RGB565_TO_A(pixel) imlib_rgb565_to_a(pixel)
+#define COLOR_RGB565_TO_B(pixel) imlib_rgb565_to_b(pixel)
+#endif
+
+#ifdef IMLIB_ENABLE_YUV_LUT
 #define COLOR_RGB565_TO_Y(pixel) yuv_table[(pixel) * 3]
 #define COLOR_RGB565_TO_U(pixel) yuv_table[((pixel) * 3) + 1]
 #define COLOR_RGB565_TO_V(pixel) yuv_table[((pixel) * 3) + 2]
+#else
+#define COLOR_RGB565_TO_Y(pixel) imlib_rgb565_to_y(pixel)
+#define COLOR_RGB565_TO_U(pixel) imlib_rgb565_to_u(pixel)
+#define COLOR_RGB565_TO_V(pixel) imlib_rgb565_to_v(pixel)
+#endif
 
-// https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
-// https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
-
-#define COLOR_LAB_TO_RGB565(l, a, b) \
-({ \
-    __typeof__ (l) _l = (l); \
-    __typeof__ (a) _a = (a); \
-    __typeof__ (b) _b = (b); \
-    float _x = ((_l + 16) * 0.008621f) + (_a * 0.002f); \
-    float _y = ((_l + 16) * 0.008621f); \
-    float _z = ((_l + 16) * 0.008621f) - (_b * 0.005f); \
-    _x = ((_x > 0.206897f) ? (_x * _x * _x) : ((0.128419f * _x) - 0.017713f)) * 095.047f; \
-    _y = ((_y > 0.206897f) ? (_y * _y * _y) : ((0.128419f * _y) - 0.017713f)) * 100.000f; \
-    _z = ((_z > 0.206897f) ? (_z * _z * _z) : ((0.128419f * _z) - 0.017713f)) * 108.883f; \
-    float _r_lin = ((_x * +3.2406f) + (_y * -1.5372f) + (_z * -0.4986f)) / 100.0f; \
-    float _g_lin = ((_x * -0.9689f) + (_y * +1.8758f) + (_z * +0.0415f)) / 100.0f; \
-    float _b_lin = ((_x * +0.0557f) + (_y * -0.2040f) + (_z * +1.0570f)) / 100.0f; \
-    _r_lin = (_r_lin > 0.0031308f) ? ((1.055f * powf(_r_lin, 0.416666f)) - 0.055f) : (_r_lin * 12.92f); \
-    _g_lin = (_g_lin > 0.0031308f) ? ((1.055f * powf(_g_lin, 0.416666f)) - 0.055f) : (_g_lin * 12.92f); \
-    _b_lin = (_b_lin > 0.0031308f) ? ((1.055f * powf(_b_lin, 0.416666f)) - 0.055f) : (_b_lin * 12.92f); \
-    unsigned int _rgb565_r = IM_MAX(IM_MIN(roundf(_r_lin * COLOR_R5_MAX), COLOR_R5_MAX), COLOR_R5_MIN); \
-    unsigned int _rgb565_g = IM_MAX(IM_MIN(roundf(_g_lin * COLOR_G6_MAX), COLOR_G6_MAX), COLOR_G6_MIN); \
-    unsigned int _rgb565_b = IM_MAX(IM_MIN(roundf(_b_lin * COLOR_B5_MAX), COLOR_B5_MAX), COLOR_B5_MIN); \
-    COLOR_R5_G6_B5_TO_RGB565(_rgb565_r, _rgb565_g, _rgb565_b); \
-})
-
-// https://en.wikipedia.org/wiki/YCbCr -> JPEG Conversion
-
-#define COLOR_YUV_TO_RGB565(y, u, v) \
-({ \
-    __typeof__ (y) _y = (y); \
-    __typeof__ (u) _u = (u); \
-    __typeof__ (v) _v = (v); \
-    unsigned int _r = IM_MAX(IM_MIN(128 + _y + ((((uint32_t) ((1.402000 * 65536) + 0.5)) * _v) >> 16), COLOR_R8_MAX), COLOR_R8_MIN); \
-    unsigned int _g = IM_MAX(IM_MIN(128 + _y - (((((uint32_t) ((0.344136 * 65536) + 0.5)) * _u) + (((uint32_t) ((0.714136 * 65536) + 0.5)) * _v)) >> 16), COLOR_G8_MAX), COLOR_G8_MIN); \
-    unsigned int _b = IM_MAX(IM_MIN(128 + _y + ((((uint32_t) ((1.772000 * 65536) + 0.5)) * _u) >> 16), COLOR_B8_MAX), COLOR_B8_MIN); \
-    COLOR_R8_G8_B8_TO_RGB565(_r, _g, _b); \
-})
+#define COLOR_LAB_TO_RGB565(l, a, b) imlib_lab_to_rgb(l, a, b)
+#define COLOR_YUV_TO_RGB565(y, u, v) imlib_yuv_to_rgb(y + 128, u, v)
 
 #define COLOR_BAYER_TO_RGB565(img, x, y, r, g, b)            \
 ({                                                           \
@@ -874,7 +853,7 @@ extern const int kernel_high_pass_3[9];
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
 #define IM_TO_GS_PIXEL(img, x, y)    \
-    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (yuv_table[((uint16_t*)img->pixels)[((y)*img->w)+(x)] * 3] + 128))
+    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (COLOR_RGB565_TO_Y(((uint16_t*)img->pixels)[((y)*img->w)+(x)]) + 128))
 
 typedef struct simple_color {
     uint8_t G;          // Gray
@@ -1049,12 +1028,16 @@ typedef struct statistics {
     int8_t BMean, BMedian, BMode, BSTDev, BMin, BMax, BLQ, BUQ;
 } statistics_t;
 
+#define FIND_BLOBS_CORNERS_RESOLUTION 20 // multiple of 4
+#define FIND_BLOBS_ANGLE_RESOLUTION (360 / FIND_BLOBS_CORNERS_RESOLUTION)
+
 typedef struct find_blobs_list_lnk_data {
+    point_t corners[FIND_BLOBS_CORNERS_RESOLUTION];
     rectangle_t rect;
-    uint32_t pixels;
-    point_t centroid;
-    float rotation;
-    uint16_t code, count;
+    uint32_t pixels, perimeter, code, count;
+    float centroid_x, centroid_y, rotation, roundness;
+    uint16_t x_hist_bins_count, y_hist_bins_count, *x_hist_bins, *y_hist_bins;
+    float centroid_x_acc, centroid_y_acc, rotation_acc_x, rotation_acc_y, roundness_acc;
 } find_blobs_list_lnk_data_t;
 
 typedef struct find_lines_list_lnk_data {
@@ -1142,10 +1125,13 @@ typedef struct find_barcodes_list_lnk_data {
 } find_barcodes_list_lnk_data_t;
 
 /* Color space functions */
-void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab);
-void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb);
-void imlib_rgb_to_grayscale(simple_color_t *rgb, simple_color_t *grayscale);
-void imlib_grayscale_to_rgb(simple_color_t *grayscale, simple_color_t *rgb);
+int8_t imlib_rgb565_to_l(uint16_t pixel);
+int8_t imlib_rgb565_to_a(uint16_t pixel);
+int8_t imlib_rgb565_to_b(uint16_t pixel);
+int8_t imlib_rgb565_to_y(uint16_t pixel);
+int8_t imlib_rgb565_to_u(uint16_t pixel);
+int8_t imlib_rgb565_to_v(uint16_t pixel);
+uint16_t imlib_lab_to_rgb(uint8_t l, int8_t a, int8_t b);
 uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v);
 void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf);
 
@@ -1341,7 +1327,8 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                       list_t *thresholds, bool invert, unsigned int area_threshold, unsigned int pixels_threshold,
                       bool merge, int margin,
                       bool (*threshold_cb)(void*,find_blobs_list_lnk_data_t*), void *threshold_cb_arg,
-                      bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg);
+                      bool (*merge_cb)(void*,find_blobs_list_lnk_data_t*,find_blobs_list_lnk_data_t*), void *merge_cb_arg,
+                      unsigned int x_hist_bins_max, unsigned int y_hist_bins_max);
 // Shape Detection
 size_t trace_line(image_t *ptr, line_t *l, int *theta_buffer, uint32_t *mag_buffer, point_t *point_buffer); // helper/internal
 void merge_alot(list_t *out, int threshold, int theta_threshold); // helper/internal

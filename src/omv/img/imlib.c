@@ -42,6 +42,67 @@ int point_quadrance(point_t *ptr0, point_t *ptr1)
     return (delta_x * delta_x) + (delta_y * delta_y);
 }
 
+void point_rotate(int x, int y, float r, int center_x, int center_y, int16_t *new_x, int16_t *new_y)
+{
+    x -= center_x;
+    y -= center_y;
+    *new_x = (x * cosf(r)) - (y * sinf(r)) + center_x;
+    *new_y = (x * sinf(r)) + (y * cosf(r)) + center_y;
+}
+
+void point_min_area_rectangle(point_t *corners, point_t *new_corners, int corners_len) // Corners need to be sorted!
+{
+    int i_min = 0;
+    int i_min_area = INT_MAX;
+    int i_x0 = 0, i_y0 = 0;
+    int i_x1 = 0, i_y1 = 0;
+    int i_x2 = 0, i_y2 = 0;
+    int i_x3 = 0, i_y3 = 0;
+    float i_r = 0;
+
+    // This algorithm aligns the 4 edges produced by the 4 corners to the x axis and then computes the
+    // min area rect for each alignment. The smallest rect is choosen and then re-rotated and returned.
+    for (int i = 0; i < corners_len; i++) {
+        int16_t x0 = corners[i].x, y0 = corners[i].y;
+        int x_diff = corners[(i+1)%corners_len].x - corners[i].x;
+        int y_diff = corners[(i+1)%corners_len].y - corners[i].y;
+        float r = -fast_atan2f(y_diff, x_diff);
+
+        int16_t x1[corners_len-1];
+        int16_t y1[corners_len-1];
+        for (int j = 0, jj = corners_len - 1; j < jj; j++) {
+            point_rotate(corners[(i+j+1)%corners_len].x, corners[(i+j+1)%corners_len].y, r, x0, y0, x1 + j, y1 + j);
+        }
+
+        int minx = x0;
+        int maxx = x0;
+        int miny = y0;
+        int maxy = y0;
+        for (int j = 0, jj = corners_len - 1; j < jj; j++) {
+            minx = MIN(minx, x1[j]);
+            maxx = MAX(maxx, x1[j]);
+            miny = MIN(miny, y1[j]);
+            maxy = MAX(maxy, y1[j]);
+        }
+
+        int area = (maxx - minx + 1) * (maxy - miny + 1);
+        if (area < i_min_area) {
+            i_min = i;
+            i_min_area = area;
+            i_x0 = minx, i_y0 = miny;
+            i_x1 = maxx, i_y1 = miny;
+            i_x2 = maxx, i_y2 = maxy;
+            i_x3 = minx, i_y3 = maxy;
+            i_r = r;
+        }
+    }
+
+    point_rotate(i_x0, i_y0, -i_r, corners[i_min].x, corners[i_min].y, &new_corners[0].x, &new_corners[0].y);
+    point_rotate(i_x1, i_y1, -i_r, corners[i_min].x, corners[i_min].y, &new_corners[1].x, &new_corners[1].y);
+    point_rotate(i_x2, i_y2, -i_r, corners[i_min].x, corners[i_min].y, &new_corners[2].x, &new_corners[2].y);
+    point_rotate(i_x3, i_y3, -i_r, corners[i_min].x, corners[i_min].y, &new_corners[3].x, &new_corners[3].y);
+}
+
 ////////////////
 // Line Stuff //
 ////////////////
@@ -243,41 +304,87 @@ const int kernel_high_pass_3[3*3] = {
     -1, -1, -1
 };
 
-// USE THE LUT FOR RGB->LAB CONVERSION - NOT THIS FUNCTION!
-void imlib_rgb_to_lab(simple_color_t *rgb, simple_color_t *lab)
+int8_t imlib_rgb565_to_l(uint16_t pixel)
 {
-    // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
-    // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
+    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
+    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
+    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
 
-    float r_lin = xyz_table[rgb->red];
-    float g_lin = xyz_table[rgb->green];
-    float b_lin = xyz_table[rgb->blue];
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f);
 
-    float x = ((r_lin * 0.4124f) + (g_lin * 0.3576f) + (b_lin * 0.1805f)) / 095.047f;
-    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) / 100.000f;
-    float z = ((r_lin * 0.0193f) + (g_lin * 0.1192f) + (b_lin * 0.9505f)) / 108.883f;
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
+
+    return fast_roundf(116 * y) - 16;
+}
+
+int8_t imlib_rgb565_to_a(uint16_t pixel)
+{
+    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
+    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
+    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
+
+    float x = ((r_lin * 0.4124f) + (g_lin * 0.3576f) + (b_lin * 0.1805f)) * (1.0f / 095.047f);
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f);
 
     x = (x>0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f);
     y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
-    z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f);
 
-    lab->L = ((int8_t) fast_roundf(116 * y)) - 16;
-    lab->A = ((int8_t) fast_roundf(500 * (x-y)));
-    lab->B = ((int8_t) fast_roundf(200 * (y-z)));
+    return fast_roundf(500 * (x-y));
 }
 
-void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb)
+int8_t imlib_rgb565_to_b(uint16_t pixel)
 {
-    // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
-    // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
+    float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];
+    float g_lin = xyz_table[COLOR_RGB565_TO_G8(pixel)];
+    float b_lin = xyz_table[COLOR_RGB565_TO_B8(pixel)];
 
-    float x = ((lab->L + 16) * 0.008621f) + (lab->A * 0.002f);
-    float y = ((lab->L + 16) * 0.008621f);
-    float z = ((lab->L + 16) * 0.008621f) - (lab->B * 0.005f);
+    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) * (1.0f / 100.000f);
+    float z = ((r_lin * 0.0193f) + (g_lin * 0.1192f) + (b_lin * 0.9505f)) * (1.0f / 108.883f);
 
-    x = ((x>0.206897f) ? (x*x*x) : ((0.128419f * x) - 0.017713f)) * 095.047f;
-    y = ((y>0.206897f) ? (y*y*y) : ((0.128419f * y) - 0.017713f)) * 100.000f;
-    z = ((z>0.206897f) ? (z*z*z) : ((0.128419f * z) - 0.017713f)) * 108.883f;
+    y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
+    z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f);
+
+    return fast_roundf(200 * (y-z));
+}
+
+int8_t imlib_rgb565_to_y(uint16_t pixel)
+{
+    int r = COLOR_RGB565_TO_R8(pixel);
+    int g = COLOR_RGB565_TO_G8(pixel);
+    int b = COLOR_RGB565_TO_B8(pixel);
+
+    return fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f)) - 128;
+}
+
+int8_t imlib_rgb565_to_u(uint16_t pixel)
+{
+    int r = COLOR_RGB565_TO_R8(pixel);
+    int g = COLOR_RGB565_TO_G8(pixel);
+    int b = COLOR_RGB565_TO_B8(pixel);
+
+    return fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f));
+}
+
+int8_t imlib_rgb565_to_v(uint16_t pixel)
+{
+    int r = COLOR_RGB565_TO_R8(pixel);
+    int g = COLOR_RGB565_TO_G8(pixel);
+    int b = COLOR_RGB565_TO_B8(pixel);
+
+    return fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f));
+}
+
+// https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
+// https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
+uint16_t imlib_lab_to_rgb(uint8_t l, int8_t a, int8_t b)
+{
+    float x = ((l + 16) * 0.008621f) + (a * 0.002f);
+    float y = ((l + 16) * 0.008621f);
+    float z = ((l + 16) * 0.008621f) - (b * 0.005f);
+
+    x = ((x > 0.206897f) ? (x*x*x) : ((0.128419f * x) - 0.017713f)) * 095.047f;
+    y = ((y > 0.206897f) ? (y*y*y) : ((0.128419f * y) - 0.017713f)) * 100.000f;
+    z = ((z > 0.206897f) ? (z*z*z) : ((0.128419f * z) - 0.017713f)) * 108.883f;
 
     float r_lin = ((x * +3.2406f) + (y * -1.5372f) + (z * -0.4986f)) / 100.0f;
     float g_lin = ((x * -0.9689f) + (y * +1.8758f) + (z * +0.0415f)) / 100.0f;
@@ -287,35 +394,21 @@ void imlib_lab_to_rgb(simple_color_t *lab, simple_color_t *rgb)
     g_lin = (g_lin>0.0031308f) ? ((1.055f*powf(g_lin, 0.416666f))-0.055f) : (g_lin*12.92f);
     b_lin = (b_lin>0.0031308f) ? ((1.055f*powf(b_lin, 0.416666f))-0.055f) : (b_lin*12.92f);
 
-    rgb->red   = IM_MAX(IM_MIN(fast_roundf(r_lin * 255), 255), 0);
-    rgb->green = IM_MAX(IM_MIN(fast_roundf(g_lin * 255), 255), 0);
-    rgb->blue  = IM_MAX(IM_MIN(fast_roundf(b_lin * 255), 255), 0);
+    uint32_t red   = IM_MAX(IM_MIN(fast_roundf(r_lin * COLOR_R8_MAX), COLOR_R8_MAX), COLOR_R8_MIN);
+    uint32_t green = IM_MAX(IM_MIN(fast_roundf(g_lin * COLOR_G8_MAX), COLOR_G8_MAX), COLOR_G8_MIN);
+    uint32_t blue  = IM_MAX(IM_MIN(fast_roundf(b_lin * COLOR_B8_MAX), COLOR_B8_MAX), COLOR_B8_MIN);
+
+    return COLOR_R8_G8_B8_TO_RGB565(red, green, blue);
 }
 
-void imlib_rgb_to_grayscale(simple_color_t *rgb, simple_color_t *grayscale)
+// https://en.wikipedia.org/wiki/YCbCr -> JPEG Conversion
+uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v)
 {
-    float r_lin = xyz_table[rgb->red];
-    float g_lin = xyz_table[rgb->green];
-    float b_lin = xyz_table[rgb->blue];
-    float y = ((r_lin * 0.2126f) + (g_lin * 0.7152f) + (b_lin * 0.0722f)) / 100.0f;
-    y = (y>0.0031308f) ? ((1.055f*powf(y, 0.416666f))-0.055f) : (y*12.92f);
-    grayscale->G = IM_MAX(IM_MIN(fast_roundf(y * 255), 255), 0);
-}
+    uint32_t r = IM_MAX(IM_MIN(y + ((91881 * v) >> 16), COLOR_R8_MAX), COLOR_R8_MIN);
+    uint32_t g = IM_MAX(IM_MIN(y - (((22554 * u) + (46802 * v)) >> 16), COLOR_G8_MAX), COLOR_G8_MIN);
+    uint32_t b = IM_MAX(IM_MIN(y + ((116130 * u) >> 16), COLOR_B8_MAX), COLOR_B8_MIN);
 
-// Just copy settings back.
-void imlib_grayscale_to_rgb(simple_color_t *grayscale, simple_color_t *rgb)
-{
-    rgb->red   = grayscale->G;
-    rgb->green = grayscale->G;
-    rgb->blue  = grayscale->G;
-}
-
-ALWAYS_INLINE uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v)
-{
-    uint32_t r = IM_MAX(IM_MIN(y + ((91881*v)>>16), 255), 0);
-    uint32_t g = IM_MAX(IM_MIN(y - (((22554*u)+(46802*v))>>16), 255), 0);
-    uint32_t b = IM_MAX(IM_MIN(y + ((116130*u)>>16), 255), 0);
-    return IM_RGB565(IM_R825(r), IM_G826(g), IM_B825(b));
+    return COLOR_R8_G8_B8_TO_RGB565(r, g, b);
 }
 
 void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf)

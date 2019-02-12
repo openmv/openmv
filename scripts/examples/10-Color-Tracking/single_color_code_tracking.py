@@ -5,7 +5,7 @@
 # A color code is a blob composed of two or more colors. The example below will
 # only track colored objects which have both the colors below in them.
 
-import sensor, image, time
+import sensor, image, time, math
 
 # Color Tracking Thresholds (L Min, L Max, A Min, A Max, B Min, B Max)
 # The below thresholds track in general red/green things. You may wish to tune them...
@@ -30,6 +30,14 @@ while(True):
     img = sensor.snapshot()
     for blob in img.find_blobs(thresholds, pixels_threshold=100, area_threshold=100, merge=True):
         if blob.code() == 3: # r/g code == (1 << 1) | (1 << 0)
+            # These values depend on the blob not being circular - otherwise they will be shaky.
+            if blob.elongation() > 0.5:
+                img.draw_edges(blob.min_corners(), color=(255,0,0))
+                img.draw_line(blob.major_axis_line(), color=(0,255,0))
+                img.draw_line(blob.minor_axis_line(), color=(0,0,255))
+            # These values are stable all the time.
             img.draw_rectangle(blob.rect())
             img.draw_cross(blob.cx(), blob.cy())
+            # Note - the blob rotation is unique to 0-180 only.
+            img.draw_keypoints([(blob.cx(), blob.cy(), int(math.degrees(blob.rotation())))], size=20)
     print(clock.fps())

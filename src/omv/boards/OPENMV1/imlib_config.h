@@ -9,6 +9,12 @@
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
 
+// Enable LAB LUT
+//#define IMLIB_ENABLE_LAB_LUT
+
+// Enable YUV LUT
+//#define IMLIB_ENABLE_YUV_LUT
+
 // Enable remove_shadows()
 //#define IMLIB_ENABLE_REMOVE_SHADOWS
 

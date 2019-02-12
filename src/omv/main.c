@@ -68,6 +68,7 @@
 #include "py_image.h"
 #include "py_lcd.h"
 #include "py_fir.h"
+#include "py_tv.h"
 
 #include "framebuffer.h"
 
@@ -463,6 +464,7 @@ soft_reset:
     file_buffer_init0();
     py_lcd_init0();
     py_fir_init0();
+    py_tv_init0();
     servo_init();
     usbdbg_init();
     sdcard_init();

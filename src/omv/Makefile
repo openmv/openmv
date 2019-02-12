@@ -89,6 +89,7 @@ SRCS += $(addprefix py/, \
 	py_image.c              \
 	py_time.c               \
 	py_lcd.c                \
+	py_tv.c                 \
 	py_fir.c                \
 	py_gif.c                \
 	py_mjpeg.c              \
