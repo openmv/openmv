@@ -70,6 +70,11 @@ SECTIONS
     _etext = .;         // define a global symbols at end of code
   } >FLASH_TEXT
 
+  .ARM.exidx :
+  {
+      *(.ARM.exidx*)
+  } > FLASH_TEXT
+
   /* used by the startup to initialize data */
   _sidata = .;
 
