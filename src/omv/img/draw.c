@@ -248,11 +248,28 @@ static void scratch_draw_sheared_ellipse(image_t *img, int x0, int y0, int width
 static void scratch_draw_rotated_ellipse(image_t *img, int x, int y, int x_axis, int y_axis, int rotation, bool filled, int c, int thickness)
 {
     if ((x_axis > 0) && (y_axis > 0)) {
-        if ((x_axis == y_axis) || ((rotation % 180) == 0)) {
+        if ((x_axis == y_axis) || (rotation == 0)) {
             scratch_draw_sheared_ellipse(img, x, y, x_axis / 2, y_axis / 2, filled, 1, 0, c, thickness);
-        } else if ((rotation % 180) == 90) {
+        } else if (rotation == 90) {
             scratch_draw_sheared_ellipse(img, x, y, y_axis / 2, x_axis / 2, filled, 1, 0, c, thickness);
         } else {
+
+            // Avoid rotations above 90.
+            if (rotation > 90) {
+                rotation -= 90;
+                int temp = x_axis;
+                x_axis = y_axis;
+                y_axis = temp;
+            }
+
+            // Avoid rotations above 45.
+            if (rotation > 45) {
+                rotation -= 90;
+                int temp = x_axis;
+                x_axis = y_axis;
+                y_axis = temp;
+            }
+
             float theta = fast_atanf(IM_DIV(y_axis, x_axis) * (-tanf(IM_DEG2RAD(rotation))));
             float shear_dx = (x_axis * cosf(theta) * cosf(IM_DEG2RAD(rotation))) - (y_axis * sinf(theta) * sinf(IM_DEG2RAD(rotation)));
             float shear_dy = (x_axis * cosf(theta) * sinf(IM_DEG2RAD(rotation))) + (y_axis * sinf(theta) * cosf(IM_DEG2RAD(rotation)));
@@ -265,7 +282,10 @@ static void scratch_draw_rotated_ellipse(image_t *img, int x, int y, int x_axis,
 
 void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotation, int c, int thickness, bool fill)
 {
-    scratch_draw_rotated_ellipse(img, cx, cy, rx * 2, ry * 2, rotation, fill, c, thickness);
+    int r = rotation % 180;
+    if (r < 0) r += 180;
+
+    scratch_draw_rotated_ellipse(img, cx, cy, rx * 2, ry * 2, r, fill, c, thickness);
 }
 
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, float scale, int x_spacing, int y_spacing, bool mono_space)
