@@ -72,7 +72,7 @@ static void py_kp_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind
     mp_printf(print, "{\"size\":%d, \"threshold\":%d, \"normalized\":%d}", array_length(self->kpts), self->threshold, self->normalized);
 }
 
-mp_obj_t py_kp_unary_op(mp_uint_t op, mp_obj_t self_in) {
+mp_obj_t py_kp_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
     py_kp_obj_t *self = MP_OBJ_TO_PTR(self_in);
     switch (op) {
         case MP_UNARY_OP_LEN:
