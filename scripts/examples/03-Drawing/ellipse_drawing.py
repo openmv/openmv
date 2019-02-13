@@ -20,7 +20,7 @@ while(True):
         y = (pyb.rng() % (2*img.height())) - (img.height()//2)
         radius_x = pyb.rng() % (max(img.height(), img.width())//2)
         radius_y = pyb.rng() % (max(img.height(), img.width())//2)
-        rot = pyb.rng() % 45 # Avoid large rotation angles with fill on...
+        rot = pyb.rng()
 
         r = (pyb.rng() % 127) + 128
         g = (pyb.rng() % 127) + 128
