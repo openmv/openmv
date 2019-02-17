@@ -463,6 +463,12 @@ Q(draw_string)
 Q(x_spacing)
 Q(y_spacing)
 Q(mono_space)
+Q(char_rotation)
+Q(char_hmirror)
+Q(char_vflip)
+Q(string_rotation)
+Q(string_hmirror)
+Q(string_vflip)
 
 // Draw Cross
 Q(draw_cross)

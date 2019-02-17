@@ -24,6 +24,10 @@ while(True):
 
         # If the first argument is a scaler then this method expects
         # to see x, y, and text. Otherwise, it expects a (x,y,text) tuple.
-        img.draw_string(x, y, "Hello World!", color = (r, g, b), scale = 2, mono_space = False)
+
+        # Character and string rotation can be done at 0, 90, 180, 270, and etc. degrees.
+        img.draw_string(x, y, "Hello World!", color = (r, g, b), scale = 2, mono_space = False,
+                        char_rotation = 0, char_hmirror = False, char_vflip = False,
+                        string_rotation = 0, string_hmirror = False, string_vflip = False)
 
     print(clock.fps())
