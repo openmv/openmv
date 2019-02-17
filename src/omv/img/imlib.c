@@ -314,7 +314,7 @@ int8_t imlib_rgb565_to_l(uint16_t pixel)
 
     y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
 
-    return fast_roundf(116 * y) - 16;
+    return fast_floorf(116 * y) - 16;
 }
 
 int8_t imlib_rgb565_to_a(uint16_t pixel)
@@ -329,7 +329,7 @@ int8_t imlib_rgb565_to_a(uint16_t pixel)
     x = (x>0.008856f) ? fast_cbrtf(x) : ((x * 7.787037f) + 0.137931f);
     y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
 
-    return fast_roundf(500 * (x-y));
+    return fast_floorf(500 * (x-y));
 }
 
 int8_t imlib_rgb565_to_b(uint16_t pixel)
@@ -344,7 +344,7 @@ int8_t imlib_rgb565_to_b(uint16_t pixel)
     y = (y>0.008856f) ? fast_cbrtf(y) : ((y * 7.787037f) + 0.137931f);
     z = (z>0.008856f) ? fast_cbrtf(z) : ((z * 7.787037f) + 0.137931f);
 
-    return fast_roundf(200 * (y-z));
+    return fast_floorf(200 * (y-z));
 }
 
 int8_t imlib_rgb565_to_y(uint16_t pixel)
@@ -394,9 +394,9 @@ uint16_t imlib_lab_to_rgb(uint8_t l, int8_t a, int8_t b)
     g_lin = (g_lin>0.0031308f) ? ((1.055f*powf(g_lin, 0.416666f))-0.055f) : (g_lin*12.92f);
     b_lin = (b_lin>0.0031308f) ? ((1.055f*powf(b_lin, 0.416666f))-0.055f) : (b_lin*12.92f);
 
-    uint32_t red   = IM_MAX(IM_MIN(fast_roundf(r_lin * COLOR_R8_MAX), COLOR_R8_MAX), COLOR_R8_MIN);
-    uint32_t green = IM_MAX(IM_MIN(fast_roundf(g_lin * COLOR_G8_MAX), COLOR_G8_MAX), COLOR_G8_MIN);
-    uint32_t blue  = IM_MAX(IM_MIN(fast_roundf(b_lin * COLOR_B8_MAX), COLOR_B8_MAX), COLOR_B8_MIN);
+    uint32_t red   = IM_MAX(IM_MIN(fast_floorf(r_lin * COLOR_R8_MAX), COLOR_R8_MAX), COLOR_R8_MIN);
+    uint32_t green = IM_MAX(IM_MIN(fast_floorf(g_lin * COLOR_G8_MAX), COLOR_G8_MAX), COLOR_G8_MIN);
+    uint32_t blue  = IM_MAX(IM_MIN(fast_floorf(b_lin * COLOR_B8_MAX), COLOR_B8_MAX), COLOR_B8_MIN);
 
     return COLOR_R8_G8_B8_TO_RGB565(red, green, blue);
 }
@@ -755,6 +755,48 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void imlib_zero(image_t *img, image_t *mask, bool invert)
+{
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (image_get_mask_pixel(mask, x, y) ^ invert) {
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (image_get_mask_pixel(mask, x, y) ^ invert) {
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            for (int y = 0, yy = img->h; y < yy; y++) {
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                for (int x = 0, xx = img->w; x < xx; x++) {
+                    if (image_get_mask_pixel(mask, x, y) ^ invert) {
+                        IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, 0);
+                    }
+                }
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+}
+
 // A simple algorithm for correcting lens distortion.
 // See http://www.tannerhelland.com/4743/simple-algorithm-correcting-lens-distortion/
 void imlib_lens_corr(image_t *img, float strength, float zoom)
@@ -784,8 +826,8 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
                     float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_roundf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_roundf(theta * zoomedY);
+                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
+                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
 
                     if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
                         uint32_t *ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
@@ -817,8 +859,8 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
                     float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_roundf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_roundf(theta * zoomedY);
+                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
+                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
 
                     if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
                         uint8_t *ptr = tmp + (img->w * sourceY);
@@ -850,8 +892,8 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
                     float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_roundf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_roundf(theta * zoomedY);
+                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
+                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
 
                     if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
                         uint16_t *ptr = tmp + (img->w * sourceY);

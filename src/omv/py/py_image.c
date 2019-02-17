@@ -1430,9 +1430,9 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     }
 
     image_t image;
-    image.w = fast_roundf(roi.w * arg_x_scale);
+    image.w = fast_floorf(roi.w * arg_x_scale);
     PY_ASSERT_TRUE_MSG(image.w >= 1, "Output image width is 0!");
-    image.h = fast_roundf(roi.h * arg_y_scale);
+    image.h = fast_floorf(roi.h * arg_y_scale);
     PY_ASSERT_TRUE_MSG(image.h >= 1, "Output image height is 0!");
     image.bpp = arg_img->bpp;
     image.data = NULL;
@@ -1478,33 +1478,33 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
             for (int y = 0, yy = image.h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(arg_img, fast_floorf(y * over_yscale) + roi.y);
                 uint32_t *row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&image, y);
                 for (int x = 0, xx = image.w; x < xx; x++) {
                     IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr_2, x,
-                        IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
+                        IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, fast_floorf(x * over_xscale) + roi.x));
                 }
             }
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
             for (int y = 0, yy = image.h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, fast_floorf(y * over_yscale) + roi.y);
                 uint8_t *row_ptr_2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&image, y);
                 for (int x = 0, xx = image.w; x < xx; x++) {
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr_2, x,
-                        IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
+                        IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, fast_floorf(x * over_xscale) + roi.x));
                 }
             }
             break;
         }
         case IMAGE_BPP_RGB565: {
             for (int y = 0, yy = image.h; y < yy; y++) {
-                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, fast_roundf(y * over_yscale) + roi.y);
+                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, fast_floorf(y * over_yscale) + roi.y);
                 uint16_t *row_ptr_2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&image, y);
                 for (int x = 0, xx = image.w; x < xx; x++) {
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr_2, x,
-                        IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, fast_roundf(x * over_xscale) + roi.x));
+                        IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, fast_floorf(x * over_xscale) + roi.x));
                 }
             }
             break;
@@ -1578,13 +1578,22 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 // Drawing Methods
 //////////////////
 
-STATIC mp_obj_t py_image_clear(mp_obj_t img_obj)
+STATIC mp_obj_t py_image_clear(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(img_obj);
-    memset(arg_img->data, 0, image_size(arg_img));
-    return img_obj;
+    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+
+    image_t *arg_msk =
+            py_helper_keyword_to_image_mutable_mask(n_args, args, 1, kw_args);
+
+    if (!arg_msk) {
+        memset(arg_img->data, 0, image_size(arg_img));
+    } else {
+        imlib_zero(arg_img, arg_msk, false);
+    }
+
+    return args[0];
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_clear_obj, py_image_clear);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_clear_obj, 1, py_image_clear);
 
 STATIC mp_obj_t py_image_draw_line(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -1657,14 +1666,13 @@ STATIC mp_obj_t py_image_draw_ellipse(uint n_args, const mp_obj_t *args, mp_map_
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
     const mp_obj_t *arg_vec;
-    uint offset = py_helper_consume_array(n_args, args, 1, 4, &arg_vec);
+    uint offset = py_helper_consume_array(n_args, args, 1, 5, &arg_vec);
     int arg_cx = mp_obj_get_int(arg_vec[0]);
     int arg_cy = mp_obj_get_int(arg_vec[1]);
     int arg_rx = mp_obj_get_int(arg_vec[2]);
     int arg_ry = mp_obj_get_int(arg_vec[3]);
+    int arg_r = mp_obj_get_int(arg_vec[4]);
 
-    int arg_rotation =
-        py_helper_keyword_int(n_args, args, offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rotation), 0);
     int arg_c =
         py_helper_keyword_color(arg_img, n_args, args, offset + 1, kw_args, -1); // White.
     int arg_thickness =
@@ -1672,7 +1680,7 @@ STATIC mp_obj_t py_image_draw_ellipse(uint n_args, const mp_obj_t *args, mp_map_
     bool arg_fill =
         py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fill), false);
 
-    imlib_draw_ellipse(arg_img, arg_cx, arg_cy, arg_rx, arg_ry, arg_rotation, arg_c, arg_thickness, arg_fill);
+    imlib_draw_ellipse(arg_img, arg_cx, arg_cy, arg_rx, arg_ry, arg_r, arg_c, arg_thickness, arg_fill);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_ellipse_obj, 2, py_image_draw_ellipse);
@@ -1698,10 +1706,23 @@ STATIC mp_obj_t py_image_draw_string(uint n_args, const mp_obj_t *args, mp_map_t
         py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_spacing), 0);
     bool arg_mono_space =
         py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mono_space), true);
+    int arg_char_rotation =
+        py_helper_keyword_int(n_args, args, offset + 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_char_rotation), 0);
+    int arg_char_hmirror =
+        py_helper_keyword_int(n_args, args, offset + 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_char_hmirror), false);
+    int arg_char_vflip =
+        py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_char_vflip), false);
+    int arg_string_rotation =
+        py_helper_keyword_int(n_args, args, offset + 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_string_rotation), 0);
+    int arg_string_hmirror =
+        py_helper_keyword_int(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_string_hmirror), false);
+    int arg_string_vflip =
+        py_helper_keyword_int(n_args, args, offset + 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_string_vflip), false);
 
     imlib_draw_string(arg_img, arg_x_off, arg_y_off, arg_str,
-                      arg_c, arg_scale, arg_x_spacing, arg_y_spacing,
-                      arg_mono_space);
+                      arg_c, arg_scale, arg_x_spacing, arg_y_spacing, arg_mono_space,
+                      arg_char_rotation, arg_char_hmirror, arg_char_vflip,
+                      arg_string_rotation, arg_string_hmirror, arg_string_vflip);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_string_obj, 2, py_image_draw_string);
@@ -1891,6 +1912,120 @@ STATIC mp_obj_t py_image_draw_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_keypoints_obj, 2, py_image_draw_keypoints);
+
+STATIC mp_obj_t py_image_mask_rectangle(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    int arg_rx;
+    int arg_ry;
+    int arg_rw;
+    int arg_rh;
+
+    if (n_args > 1) {
+        const mp_obj_t *arg_vec;
+        py_helper_consume_array(n_args, args, 1, 4, &arg_vec);
+        arg_rx = mp_obj_get_int(arg_vec[0]);
+        arg_ry = mp_obj_get_int(arg_vec[1]);
+        arg_rw = mp_obj_get_int(arg_vec[2]);
+        arg_rh = mp_obj_get_int(arg_vec[3]);
+    } else {
+        arg_rx = arg_img->w / 4;
+        arg_ry = arg_img->h / 4;
+        arg_rw = arg_img->w / 2;
+        arg_rh = arg_img->h / 2;
+    }
+
+    fb_alloc_mark();
+    image_t temp;
+    temp.w = arg_img->w;
+    temp.h = arg_img->h;
+    temp.bpp = IMAGE_BPP_BINARY;
+    temp.data = fb_alloc0(image_size(&temp));
+
+    imlib_draw_rectangle(&temp, arg_rx, arg_ry, arg_rw, arg_rh, -1, 0, true);
+    imlib_zero(arg_img, &temp, true);
+
+    fb_free();
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mask_rectangle_obj, 1, py_image_mask_rectangle);
+
+STATIC mp_obj_t py_image_mask_circle(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    int arg_cx;
+    int arg_cy;
+    int arg_cr;
+
+    if (n_args > 1) {
+        const mp_obj_t *arg_vec;
+        py_helper_consume_array(n_args, args, 1, 3, &arg_vec);
+        arg_cx = mp_obj_get_int(arg_vec[0]);
+        arg_cy = mp_obj_get_int(arg_vec[1]);
+        arg_cr = mp_obj_get_int(arg_vec[2]);
+    } else {
+        arg_cx = arg_img->w / 2;
+        arg_cy = arg_img->h / 2;
+        arg_cr = IM_MIN(arg_img->w, arg_img->h) / 2;
+    }
+
+    fb_alloc_mark();
+    image_t temp;
+    temp.w = arg_img->w;
+    temp.h = arg_img->h;
+    temp.bpp = IMAGE_BPP_BINARY;
+    temp.data = fb_alloc0(image_size(&temp));
+
+    imlib_draw_circle(&temp, arg_cx, arg_cy, arg_cr, -1, 0, true);
+    imlib_zero(arg_img, &temp, true);
+
+    fb_free();
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mask_circle_obj, 1, py_image_mask_circle);
+
+STATIC mp_obj_t py_image_mask_ellipse(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    int arg_cx;
+    int arg_cy;
+    int arg_rx;
+    int arg_ry;
+    int arg_r;
+
+    if (n_args > 1) {
+        const mp_obj_t *arg_vec;
+        py_helper_consume_array(n_args, args, 1, 5, &arg_vec);
+        arg_cx = mp_obj_get_int(arg_vec[0]);
+        arg_cy = mp_obj_get_int(arg_vec[1]);
+        arg_rx = mp_obj_get_int(arg_vec[2]);
+        arg_ry = mp_obj_get_int(arg_vec[3]);
+        arg_r = mp_obj_get_int(arg_vec[4]);
+    } else {
+        arg_cx = arg_img->w / 2;
+        arg_cy = arg_img->h / 2;
+        arg_rx = arg_img->w / 2;
+        arg_ry = arg_img->h / 2;
+        arg_r = 0;
+    }
+
+    fb_alloc_mark();
+    image_t temp;
+    temp.w = arg_img->w;
+    temp.h = arg_img->h;
+    temp.bpp = IMAGE_BPP_BINARY;
+    temp.data = fb_alloc0(image_size(&temp));
+
+    imlib_draw_ellipse(&temp, arg_cx, arg_cy, arg_rx, arg_ry, arg_r, -1, 0, true);
+    imlib_zero(arg_img, &temp, true);
+
+    fb_free();
+    fb_alloc_free_till_mark();
+    return args[0];
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_mask_ellipse_obj, 1, py_image_mask_ellipse);
 
 #ifdef IMLIB_ENABLE_FLOOD_FILL
 STATIC mp_obj_t py_image_flood_fill(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -6215,6 +6350,9 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_flood_fill),          MP_ROM_PTR(&py_func_unavailable_obj)},
 #endif
     {MP_ROM_QSTR(MP_QSTR_draw_keypoints),      MP_ROM_PTR(&py_image_draw_keypoints_obj)},
+    {MP_ROM_QSTR(MP_QSTR_mask_rectangle),      MP_ROM_PTR(&py_image_mask_rectangle_obj)},
+    {MP_ROM_QSTR(MP_QSTR_mask_circle),         MP_ROM_PTR(&py_image_mask_circle_obj)},
+    {MP_ROM_QSTR(MP_QSTR_mask_ellipse),        MP_ROM_PTR(&py_image_mask_ellipse_obj)},
     /* Binary Methods */
 #ifdef IMLIB_ENABLE_BINARY_OPS
     {MP_ROM_QSTR(MP_QSTR_binary),              MP_ROM_PTR(&py_image_binary_obj)},

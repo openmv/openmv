@@ -32,7 +32,7 @@ void imlib_histeq(image_t *img, image_t *mask)
                     if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
                     int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x,
-                        fast_roundf((s * hist[pixel - COLOR_BINARY_MIN]) + COLOR_BINARY_MIN));
+                        fast_floorf((s * hist[pixel - COLOR_BINARY_MIN]) + COLOR_BINARY_MIN));
                 }
             }
 
@@ -62,7 +62,7 @@ void imlib_histeq(image_t *img, image_t *mask)
                     if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
                     int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x,
-                        fast_roundf((s * hist[pixel - COLOR_GRAYSCALE_MIN]) + COLOR_GRAYSCALE_MIN));
+                        fast_floorf((s * hist[pixel - COLOR_GRAYSCALE_MIN]) + COLOR_GRAYSCALE_MIN));
                 }
             }
 
@@ -92,7 +92,7 @@ void imlib_histeq(image_t *img, image_t *mask)
                     if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x,
-                        imlib_yuv_to_rgb(fast_roundf(s * hist[COLOR_RGB565_TO_Y(pixel) - COLOR_Y_MIN]),
+                        imlib_yuv_to_rgb(fast_floorf(s * hist[COLOR_RGB565_TO_Y(pixel) - COLOR_Y_MIN]),
                                          COLOR_RGB565_TO_U(pixel),
                                          COLOR_RGB565_TO_V(pixel)));
                 }
@@ -149,7 +149,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         }
                     }
 
-                    int pixel = fast_roundf(acc * over_n);
+                    int pixel = fast_floorf(acc * over_n);
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -204,7 +204,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         }
                     }
 
-                    int pixel = fast_roundf(acc * over_n);
+                    int pixel = fast_floorf(acc * over_n);
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -262,9 +262,9 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         }
                     }
 
-                    int pixel = COLOR_R5_G6_B5_TO_RGB565(fast_roundf(r_acc * over_n),
-                                                         fast_roundf(g_acc * over_n),
-                                                         fast_roundf(b_acc * over_n));
+                    int pixel = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(r_acc * over_n),
+                                                         fast_floorf(g_acc * over_n),
+                                                         fast_floorf(b_acc * over_n));
 
                     if (threshold) {
                         if (((COLOR_RGB565_TO_Y(pixel) - offset) < COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x))) ^ invert) {
@@ -310,7 +310,7 @@ void imlib_median_filter(image_t *img, const int ksize, float percentile, bool t
     buf.h = brows;
     buf.bpp = img->bpp;
 
-    int n = ((ksize*2)+1)*((ksize*2)+1), int_percentile = fast_roundf(percentile * (n - 1));
+    int n = ((ksize*2)+1)*((ksize*2)+1), int_percentile = fast_floorf(percentile * (n - 1));
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -782,7 +782,7 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
                         }
                     }
 
-                    int pixel = fast_roundf((min*min_bias)+(max*max_bias));
+                    int pixel = fast_floorf((min*min_bias)+(max*max_bias));
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -839,7 +839,7 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
                         }
                     }
 
-                    int pixel = fast_roundf((min*min_bias)+(max*max_bias));
+                    int pixel = fast_floorf((min*min_bias)+(max*max_bias));
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -905,9 +905,9 @@ void imlib_midpoint_filter(image_t *img, const int ksize, float bias, bool thres
                         }
                     }
 
-                    int pixel = COLOR_R5_G6_B5_TO_RGB565(fast_roundf((r_min*min_bias)+(r_max*max_bias)),
-                                                         fast_roundf((g_min*min_bias)+(g_max*max_bias)),
-                                                         fast_roundf((b_min*min_bias)+(b_max*max_bias)));
+                    int pixel = COLOR_R5_G6_B5_TO_RGB565(fast_floorf((r_min*min_bias)+(r_max*max_bias)),
+                                                         fast_floorf((g_min*min_bias)+(g_max*max_bias)),
+                                                         fast_floorf((b_min*min_bias)+(b_max*max_bias)));
 
                     if (threshold) {
                         if (((COLOR_RGB565_TO_Y(pixel) - offset) < COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x))) ^ invert) {
@@ -980,7 +980,7 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
                         }
                     }
 
-                    int pixel = IM_MAX(IM_MIN(fast_roundf(acc * m) + b, COLOR_BINARY_MAX), COLOR_BINARY_MIN);
+                    int pixel = IM_MAX(IM_MIN(fast_floorf(acc * m) + b, COLOR_BINARY_MAX), COLOR_BINARY_MIN);
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -1035,7 +1035,7 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
                         }
                     }
 
-                    int pixel = IM_MAX(IM_MIN(fast_roundf(acc * m) + b, COLOR_GRAYSCALE_MAX), COLOR_GRAYSCALE_MIN);
+                    int pixel = IM_MAX(IM_MIN(fast_floorf(acc * m) + b, COLOR_GRAYSCALE_MAX), COLOR_GRAYSCALE_MIN);
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -1093,9 +1093,9 @@ void imlib_morph(image_t *img, const int ksize, const int *krn, const float m, c
                         }
                     }
 
-                    int pixel = COLOR_R5_G6_B5_TO_RGB565(IM_MAX(IM_MIN(fast_roundf(r_acc * m) + b, COLOR_R5_MAX), COLOR_R5_MIN),
-                                                         IM_MAX(IM_MIN(fast_roundf(g_acc * m) + b, COLOR_G6_MAX), COLOR_G6_MIN),
-                                                         IM_MAX(IM_MIN(fast_roundf(b_acc * m) + b, COLOR_B5_MAX), COLOR_B5_MIN));
+                    int pixel = COLOR_R5_G6_B5_TO_RGB565(IM_MAX(IM_MIN(fast_floorf(r_acc * m) + b, COLOR_R5_MAX), COLOR_R5_MIN),
+                                                         IM_MAX(IM_MIN(fast_floorf(g_acc * m) + b, COLOR_G6_MAX), COLOR_G6_MIN),
+                                                         IM_MAX(IM_MIN(fast_floorf(b_acc * m) + b, COLOR_B5_MAX), COLOR_B5_MIN));
 
                     if (threshold) {
                         if (((COLOR_RGB565_TO_Y(pixel) - offset) < COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x))) ^ invert) {
@@ -1196,7 +1196,7 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
                         }
                     }
 
-                    int pixel = fast_roundf(IM_MIN(IM_DIV(i_acc, w_acc), COLOR_BINARY_MAX));
+                    int pixel = fast_floorf(IM_MIN(IM_DIV(i_acc, w_acc), COLOR_BINARY_MAX));
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -1273,7 +1273,7 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
                         }
                     }
 
-                    int pixel = fast_roundf(IM_MIN(IM_DIV(i_acc, w_acc), COLOR_GRAYSCALE_MAX));
+                    int pixel = fast_floorf(IM_MIN(IM_DIV(i_acc, w_acc), COLOR_GRAYSCALE_MAX));
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -1377,9 +1377,9 @@ void imlib_bilateral_filter(image_t *img, const int ksize, float color_sigma, fl
                         }
                     }
 
-                    int pixel = COLOR_R5_G6_B5_TO_RGB565(fast_roundf(IM_MIN(IM_DIV(r_i_acc, r_w_acc), COLOR_R5_MAX)),
-                                                         fast_roundf(IM_MIN(IM_DIV(g_i_acc, g_w_acc), COLOR_G6_MAX)),
-                                                         fast_roundf(IM_MIN(IM_DIV(b_i_acc, b_w_acc), COLOR_B5_MAX)));
+                    int pixel = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(IM_MIN(IM_DIV(r_i_acc, r_w_acc), COLOR_R5_MAX)),
+                                                         fast_floorf(IM_MIN(IM_DIV(g_i_acc, g_w_acc), COLOR_G6_MAX)),
+                                                         fast_floorf(IM_MIN(IM_DIV(b_i_acc, b_w_acc), COLOR_B5_MAX)));
 
                     if (threshold) {
                         if (((COLOR_RGB565_TO_Y(pixel) - offset) < COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x))) ^ invert) {
@@ -1527,22 +1527,22 @@ void imlib_cartoon_filter(image_t *img, float seed_threshold, float floating_thr
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            color_seed_threshold = fast_roundf(seed_threshold * COLOR_BINARY_MAX);
-            color_floating_threshold = fast_roundf(floating_threshold * COLOR_BINARY_MAX);
+            color_seed_threshold = fast_floorf(seed_threshold * COLOR_BINARY_MAX);
+            color_floating_threshold = fast_floorf(floating_threshold * COLOR_BINARY_MAX);
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            color_seed_threshold = fast_roundf(seed_threshold * COLOR_GRAYSCALE_MAX);
-            color_floating_threshold = fast_roundf(floating_threshold * COLOR_GRAYSCALE_MAX);
+            color_seed_threshold = fast_floorf(seed_threshold * COLOR_GRAYSCALE_MAX);
+            color_floating_threshold = fast_floorf(floating_threshold * COLOR_GRAYSCALE_MAX);
             break;
         }
         case IMAGE_BPP_RGB565: {
-            color_seed_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_roundf(seed_threshold * COLOR_R5_MAX),
-                                                            fast_roundf(seed_threshold * COLOR_G6_MAX),
-                                                            fast_roundf(seed_threshold * COLOR_B5_MAX));
-            color_floating_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_roundf(floating_threshold * COLOR_R5_MAX),
-                                                                fast_roundf(floating_threshold * COLOR_G6_MAX),
-                                                                fast_roundf(floating_threshold * COLOR_B5_MAX));
+            color_seed_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(seed_threshold * COLOR_R5_MAX),
+                                                            fast_floorf(seed_threshold * COLOR_G6_MAX),
+                                                            fast_floorf(seed_threshold * COLOR_B5_MAX));
+            color_floating_threshold = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(floating_threshold * COLOR_R5_MAX),
+                                                                fast_floorf(floating_threshold * COLOR_G6_MAX),
+                                                                fast_floorf(floating_threshold * COLOR_B5_MAX));
             break;
         }
         default: {

@@ -431,6 +431,7 @@ Q(save)
 
 // Clear
 Q(clear)
+Q(mask)
 
 // Draw Line
 Q(draw_line)
@@ -451,7 +452,6 @@ Q(draw_circle)
 
 // Draw Ellipse
 Q(draw_ellipse)
-Q(rotation)
 // duplicate Q(color)
 // duplicate Q(thickness)
 // duplicate Q(fill)
@@ -463,6 +463,12 @@ Q(draw_string)
 Q(x_spacing)
 Q(y_spacing)
 Q(mono_space)
+Q(char_rotation)
+Q(char_hmirror)
+Q(char_vflip)
+Q(string_rotation)
+Q(string_hmirror)
+Q(string_vflip)
 
 // Draw Cross
 Q(draw_cross)
@@ -488,7 +494,7 @@ Q(draw_image)
 // duplicate Q(x_scale)
 // duplicate Q(y_scale)
 Q(alpha)
-Q(mask)
+// duplicate Q(mask)
 
 // Draw Keypoints
 Q(draw_keypoints)
@@ -505,6 +511,15 @@ Q(floating_threshold)
 Q(invert)
 Q(clear_background)
 // duplicate Q(mask)
+
+// Mask Rectangle
+Q(mask_rectangle)
+
+// Mask Circle
+Q(mask_circle)
+
+// Mask Ellipse
+Q(mask_ellipse)
 
 // Binary
 Q(binary)
@@ -882,7 +897,7 @@ Q(cx)
 Q(cxf)
 Q(cy)
 Q(cyf)
-// duplicate Q(rotation)
+Q(rotation)
 Q(rotation_deg)
 Q(rotation_rad)
 Q(code)
