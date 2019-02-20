@@ -18,7 +18,7 @@
 #define LEPTON_ID       (0x54)
 
 typedef enum {
-    PIXFORMAT_INVLAID = 0,
+    PIXFORMAT_INVALID = 0,
     PIXFORMAT_BAYER,     // 1BPP/RAW
     PIXFORMAT_RGB565,    // 2BPP/RGB565
     PIXFORMAT_YUV422,    // 2BPP/YUV422
