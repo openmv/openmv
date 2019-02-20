@@ -521,7 +521,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_height_obj, py_image_height);
 static mp_obj_t py_image_format(mp_obj_t img_obj)
 {
     switch (((image_t *) py_image_cobj(img_obj))->bpp) {
-        case IMAGE_BPP_BINARY: return mp_const_none; // TODO: FIXME!
+        case IMAGE_BPP_BINARY: return mp_obj_new_int(PIXFORMAT_BINARY);
         case IMAGE_BPP_GRAYSCALE: return mp_obj_new_int(PIXFORMAT_GRAYSCALE);
         case IMAGE_BPP_RGB565: return mp_obj_new_int(PIXFORMAT_RGB565);
         case IMAGE_BPP_BAYER: return mp_obj_new_int(PIXFORMAT_BAYER);
@@ -7141,11 +7141,9 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
         PY_ASSERT_TRUE_MSG(image.h > 0, "Height must be > 0");
 
         switch(mp_obj_get_int(args[2])) {
-            // TODO: PIXFORMAT_BINARY
-            // case PIXFOTMAT_BINARY:
-            //    image.bpp = IMAGE_BPP_BINARY;
-            //    break;
-            // TODO: PIXFORMAT_BINARY
+            case PIXFORMAT_BINARY:
+                image.bpp = IMAGE_BPP_BINARY;
+                break;
             case PIXFORMAT_GRAYSCALE:
                 image.bpp = IMAGE_BPP_GRAYSCALE;
                 break;
