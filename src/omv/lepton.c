@@ -40,6 +40,7 @@
 #define VOSPI_FIRST_SEGMENT     (1)
 #define LEPTON_TIMEOUT          (1000)
 
+static LEP_CAMERA_PORT_DESC_T l_handle;
 static int h_res = 0;
 static int v_res = 0;
 static bool h_mirror = false;
@@ -235,7 +236,9 @@ static int reset(sensor_t *sensor)
     systick_sleep(1000);
 
     LEP_AGC_ROI_T roi;
-    LEP_CAMERA_PORT_DESC_T handle = {0};
+    LEP_CAMERA_PORT_DESC_T handle;
+
+    memset(&l_handle, 0, sizeof(l_handle));
     h_res = v_res = h_mirror = v_flip = 0;
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
@@ -293,6 +296,7 @@ static int reset(sensor_t *sensor)
         return -1;
     }
 
+    l_handle = handle;
     h_res = roi.endCol + 1;
     v_res = roi.endRow + 1;
 
@@ -455,6 +459,54 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
     return 0;
 }
 
+int lepton_width(sensor_t *sensor)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    return h_res;
+}
+
+int lepton_height(sensor_t *sensor)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    return v_res;
+}
+
+int lepton_type(sensor_t *sensor)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    return (h_res == 80) ? 1 : 3;
+}
+
+int lepton_refresh(sensor_t *sensor)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    return (h_res == 80) ? 27 : 9;
+}
+
+int lepton_resolution(sensor_t *sensor)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    return 14;
+}
+
+int lepton_get_attribute(sensor_t *sensor, uint16_t command, uint16_t *data, size_t data_len)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    return (LEP_GetAttribute(&l_handle, command, (LEP_ATTRIBUTE_T_PTR) data, data_len) == LEP_OK) ? 0 : -1;
+}
+
+int lepton_set_attribute(sensor_t *sensor, uint16_t command, uint16_t *data, size_t data_len)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    return (LEP_SetAttribute(&l_handle, command, (LEP_ATTRIBUTE_T_PTR) data, data_len) == LEP_OK) ? 0 : -1;
+}
+
+int lepton_run_command(sensor_t *sensor, uint16_t command)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    return (LEP_RunCommand(&l_handle, command) == LEP_OK) ? 0 : -1;
+}
+
 int lepton_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
@@ -482,6 +534,14 @@ int lepton_init(sensor_t *sensor)
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
     sensor->set_lens_correction = set_lens_correction;
+    sensor->lepton_width        = lepton_width;
+    sensor->lepton_height       = lepton_height;
+    sensor->lepton_type         = lepton_type;
+    sensor->lepton_refresh      = lepton_refresh;
+    sensor->lepton_resolution   = lepton_resolution;
+    sensor->lepton_get_attribute = lepton_get_attribute;
+    sensor->lepton_set_attribute = lepton_set_attribute;
+    sensor->lepton_run_command  = lepton_run_command;
 
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);

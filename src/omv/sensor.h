@@ -151,6 +151,15 @@ typedef struct _sensor {
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
     int  (*snapshot)            (sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+    // Lepton Specific
+    int  (*lepton_width)        (sensor_t *sensor);
+    int  (*lepton_height)       (sensor_t *sensor);
+    int  (*lepton_type)         (sensor_t *sensor);
+    int  (*lepton_refresh)      (sensor_t *sensor);
+    int  (*lepton_resolution)   (sensor_t *sensor);
+    int  (*lepton_get_attribute) (sensor_t *sensor, uint16_t command, uint16_t *data, size_t data_len);
+    int  (*lepton_set_attribute) (sensor_t *sensor, uint16_t command, uint16_t *data, size_t data_len);
+    int  (*lepton_run_command)  (sensor_t *sensor, uint16_t command);
 } sensor_t;
 
 // Resolution table
@@ -246,4 +255,15 @@ int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+
+// Lepton Specific
+int sensor_lepton_width();
+int sensor_lepton_height();
+int sensor_lepton_type();
+int sensor_lepton_refresh();
+int sensor_lepton_resolution();
+int sensor_lepton_get_attribute(uint16_t command, uint16_t *data, size_t data_len);
+int sensor_lepton_set_attribute(uint16_t command, uint16_t *data, size_t data_len);
+int sensor_lepton_run_command(uint16_t command);
+
 #endif /* __SENSOR_H__ */

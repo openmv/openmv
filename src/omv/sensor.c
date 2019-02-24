@@ -988,3 +988,83 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
 
     return 0;
 }
+
+int sensor_lepton_width()
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_width == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_width(&sensor);
+}
+
+int sensor_lepton_height()
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_height == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_height(&sensor);
+}
+
+int sensor_lepton_type()
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_type == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_type(&sensor);
+}
+
+int sensor_lepton_refresh()
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_refresh == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_refresh(&sensor);
+}
+
+int sensor_lepton_resolution()
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_resolution == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_resolution(&sensor);
+}
+
+int sensor_lepton_get_attribute(uint16_t command, uint16_t *data, size_t data_len)
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_get_attribute == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_get_attribute(&sensor, command, data, data_len);
+}
+
+int sensor_lepton_set_attribute(uint16_t command, uint16_t *data, size_t data_len)
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_set_attribute == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_set_attribute(&sensor, command, data, data_len);
+}
+
+int sensor_lepton_run_command(uint16_t command)
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_run_command == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_run_command(&sensor, command);
+}

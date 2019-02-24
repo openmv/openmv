@@ -415,6 +415,60 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
     return mp_obj_new_int(sensor_read_reg(mp_obj_get_int(addr)));
 }
 
+static mp_obj_t py_sensor_lepton_width() {
+    int width = sensor_lepton_width();
+    if (width < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_int(width);
+}
+
+static mp_obj_t py_sensor_lepton_height() {
+    int height = sensor_lepton_height();
+    if (height < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_int(height);
+}
+
+static mp_obj_t py_sensor_lepton_type() {
+    int type = sensor_lepton_type();
+    if (type < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_int(type);
+}
+
+static mp_obj_t py_sensor_lepton_refresh() {
+    int refresh = sensor_lepton_refresh();
+    if (refresh < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_int(refresh);
+}
+
+static mp_obj_t py_sensor_lepton_resolution() {
+    int resolution = sensor_lepton_resolution();
+    if (resolution < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_int(resolution);
+}
+
+static mp_obj_t py_sensor_lepton_get_attribute(mp_obj_t command, mp_obj_t attribute_len) {
+    size_t data_len = mp_obj_get_int(attribute_len);
+    PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
+    uint16_t *data = xalloc(data_len * sizeof(uint16_t));
+    int result = sensor_lepton_get_attribute(mp_obj_get_int(command), data, data_len);
+    if (result < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_bytearray_by_ref(data_len, data);
+}
+
+static mp_obj_t py_sensor_lepton_set_attribute(mp_obj_t command, mp_obj_t attribute) {
+    size_t data_len;
+    const char *data = mp_obj_str_get_data(attribute, &data_len);
+    PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
+    int result = sensor_lepton_set_attribute(mp_obj_get_int(command), (uint16_t *) data, data_len / sizeof(uint16_t));
+    if (result < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_lepton_run_command(mp_obj_t command) {
+    int result = sensor_lepton_run_command(mp_obj_get_int(command));
+    if (result < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_const_none;
+}
+
 //static void py_sensor_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
 //    mp_printf(print, "<Sensor MID:0x%.2X%.2X PID:0x%.2X VER:0x%.2X>",
 //            sensor.id.MIDH, sensor.id.MIDL, sensor.id.PID, sensor.id.VER);
@@ -455,6 +509,15 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_output_obj,    py_sensor_set_vsync_output);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,           py_sensor_write_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,            py_sensor_read_reg);
+// Lepton Specific
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_width_obj,        py_sensor_lepton_width);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_height_obj,       py_sensor_lepton_height);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_type_obj,         py_sensor_lepton_type);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_refresh_obj,      py_sensor_lepton_refresh);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_resolution_obj,   py_sensor_lepton_resolution);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_lepton_get_attribute_obj, py_sensor_lepton_get_attribute);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_lepton_set_attribute_obj, py_sensor_lepton_set_attribute);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_lepton_run_command_obj,  py_sensor_lepton_run_command);
 
 STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_sensor) },
@@ -540,6 +603,15 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vsync_output),    (mp_obj_t)&py_sensor_set_vsync_output_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),         (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),          (mp_obj_t)&py_sensor_read_reg_obj },
+    // Lepton Specific
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_width),        (mp_obj_t)&py_sensor_lepton_width_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_height),       (mp_obj_t)&py_sensor_lepton_height_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_type),         (mp_obj_t)&py_sensor_lepton_type_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_refresh),      (mp_obj_t)&py_sensor_lepton_refresh_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_resolution),   (mp_obj_t)&py_sensor_lepton_resolution_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_get_attribute), (mp_obj_t)&py_sensor_lepton_get_attribute_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_set_attribute), (mp_obj_t)&py_sensor_lepton_set_attribute_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_run_command),  (mp_obj_t)&py_sensor_lepton_run_command_obj },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
