@@ -1068,3 +1068,23 @@ int sensor_lepton_run_command(uint16_t command)
     }
     return sensor.lepton_run_command(&sensor, command);
 }
+
+int sensor_lepton_temp()
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_temp == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_temp(&sensor);
+}
+
+int sensor_lepton_aux_temp()
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_aux_temp == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_aux_temp(&sensor);
+}

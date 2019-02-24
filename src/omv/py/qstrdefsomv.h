@@ -245,6 +245,8 @@ Q(lepton_resolution)
 Q(lepton_get_attribute)
 Q(lepton_set_attribute)
 Q(lepton_run_command)
+Q(lepton_temp)
+Q(lepton_aux_temp)
 
 // GPIOS
 Q(P1)

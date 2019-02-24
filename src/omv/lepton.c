@@ -507,6 +507,22 @@ int lepton_run_command(sensor_t *sensor, uint16_t command)
     return (LEP_RunCommand(&l_handle, command) == LEP_OK) ? 0 : -1;
 }
 
+int lepton_temp(sensor_t *sensor)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    LEP_SYS_FPA_TEMPERATURE_KELVIN_T temp;
+    bool ok = LEP_GetSysFpaTemperatureKelvin(&l_handle, &temp) == LEP_OK;
+    return ok ? temp : -1;
+}
+
+int lepton_aux_temp(sensor_t *sensor)
+{
+    if ((!h_res) || (!v_res) || (lepton_type(sensor) != 3)) return -1;
+    LEP_SYS_AUX_TEMPERATURE_KELVIN_T temp;
+    bool ok = LEP_GetSysAuxTemperatureKelvin(&l_handle, &temp) == LEP_OK;
+    return ok ? temp : -1;
+}
+
 int lepton_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
@@ -542,6 +558,8 @@ int lepton_init(sensor_t *sensor)
     sensor->lepton_get_attribute = lepton_get_attribute;
     sensor->lepton_set_attribute = lepton_set_attribute;
     sensor->lepton_run_command  = lepton_run_command;
+    sensor->lepton_temp         = lepton_temp;
+    sensor->lepton_aux_temp     = lepton_aux_temp;
 
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);

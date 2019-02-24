@@ -469,6 +469,18 @@ static mp_obj_t py_sensor_lepton_run_command(mp_obj_t command) {
     return mp_const_none;
 }
 
+static mp_obj_t py_sensor_lepton_temp() {
+    int temp = sensor_lepton_temp();
+    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_float((((float) temp) / 100) - 273.15);
+}
+
+static mp_obj_t py_sensor_lepton_aux_temp() {
+    int temp = sensor_lepton_aux_temp();
+    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_float((((float) temp) / 100) - 273.15);
+}
+
 //static void py_sensor_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
 //    mp_printf(print, "<Sensor MID:0x%.2X%.2X PID:0x%.2X VER:0x%.2X>",
 //            sensor.id.MIDH, sensor.id.MIDL, sensor.id.PID, sensor.id.VER);
@@ -518,6 +530,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_resolution_obj,   py_sensor_le
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_lepton_get_attribute_obj, py_sensor_lepton_get_attribute);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_lepton_set_attribute_obj, py_sensor_lepton_set_attribute);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_lepton_run_command_obj,  py_sensor_lepton_run_command);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_temp_obj,         py_sensor_lepton_temp);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_aux_temp_obj,     py_sensor_lepton_aux_temp);
 
 STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_sensor) },
@@ -612,6 +626,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_get_attribute), (mp_obj_t)&py_sensor_lepton_get_attribute_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_set_attribute), (mp_obj_t)&py_sensor_lepton_set_attribute_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_run_command),  (mp_obj_t)&py_sensor_lepton_run_command_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_temp),         (mp_obj_t)&py_sensor_lepton_temp_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_aux_temp),     (mp_obj_t)&py_sensor_lepton_aux_temp_obj },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
