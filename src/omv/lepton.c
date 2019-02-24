@@ -125,7 +125,7 @@ static int write_reg(sensor_t *sensor, uint8_t reg_addr, uint16_t reg_data)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
-    return 0;
+    return ((pixformat != PIXFORMAT_GRAYSCALE) && (pixformat != PIXFORMAT_RGB565)) ? - 1 : 0;
 }
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
@@ -276,13 +276,13 @@ static int reset(sensor_t *sensor)
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
         LEP_SYS_STATUS_E status;
         if (LEP_GetSysFFCStatus(&handle, &status) != LEP_OK) {
-            return -1;
+            break; // don't error out on this...
         }
         if (status == LEP_SYS_STATUS_READY) {
             break;
         }
         if (HAL_GetTick() - start >= (LEPTON_TIMEOUT * 5)) {
-            return -1;
+            break; // don't error out on this...
         }
     }
 
@@ -385,12 +385,12 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         MAIN_FB()->h = MAIN_FB()->v;
 
         switch (sensor->pixformat) {
-            case PIXFORMAT_RGB565: {
-                MAIN_FB()->bpp = sizeof(uint16_t);
+            case PIXFORMAT_GRAYSCALE: {
+                MAIN_FB()->bpp = IMAGE_BPP_GRAYSCALE;
                 break;
             }
-            case PIXFORMAT_GRAYSCALE: {
-                MAIN_FB()->bpp = sizeof(uint8_t);
+            case PIXFORMAT_RGB565: {
+                MAIN_FB()->bpp = IMAGE_BPP_RGB565;
                 break;
             }
             default: {
@@ -433,12 +433,12 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                         if (v_flip) t_y = MAIN_FB()->v - t_y - 1;
 
                         switch (sensor->pixformat) {
-                            case PIXFORMAT_RGB565: {
-                                IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, rainbow_table[value & 0xFF]);
-                                break;
-                            }
                             case PIXFORMAT_GRAYSCALE: {
                                 IMAGE_PUT_GRAYSCALE_PIXEL(image, t_x, t_y, value & 0xFF);
+                                break;
+                            }
+                            case PIXFORMAT_RGB565: {
+                                IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, rainbow_table[value & 0xFF]);
                                 break;
                             }
                             default: {
