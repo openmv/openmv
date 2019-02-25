@@ -247,6 +247,10 @@ Q(lepton_set_attribute)
 Q(lepton_run_command)
 Q(lepton_temp)
 Q(lepton_aux_temp)
+Q(lepton_set_agc)
+Q(lepton_get_agc)
+Q(lepton_set_range)
+Q(lepton_get_range)
 
 // GPIOS
 Q(P1)

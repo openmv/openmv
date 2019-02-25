@@ -472,13 +472,39 @@ static mp_obj_t py_sensor_lepton_run_command(mp_obj_t command) {
 static mp_obj_t py_sensor_lepton_temp() {
     int temp = sensor_lepton_temp();
     if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
-    return mp_obj_new_float((((float) temp) / 100) - 273.15);
+    return mp_obj_new_float((((float) temp) / 100) - 273.15f);
 }
 
 static mp_obj_t py_sensor_lepton_aux_temp() {
     int temp = sensor_lepton_aux_temp();
     if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
-    return mp_obj_new_float((((float) temp) / 100) - 273.15);
+    return mp_obj_new_float((((float) temp) / 100) - 273.15f);
+}
+
+static mp_obj_t py_sensor_lepton_set_agc(mp_obj_t enable) {
+    int temp = sensor_lepton_set_agc(mp_obj_get_int(enable));
+    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_lepton_get_agc() {
+    int temp = sensor_lepton_get_agc();
+    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_bool(temp);
+}
+
+static mp_obj_t py_sensor_lepton_set_range(mp_obj_t min_temp, mp_obj_t max_temp) {
+    int temp = sensor_lepton_set_range(mp_obj_get_float(min_temp), mp_obj_get_float(max_temp));
+    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_lepton_get_range() {
+    float min_temp, max_temp;
+    int temp = sensor_lepton_get_range(&min_temp, &max_temp);
+    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_tuple(2, (mp_obj_t []) {mp_obj_new_float(min_temp),
+                                              mp_obj_new_float(max_temp)});
 }
 
 //static void py_sensor_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
@@ -532,6 +558,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_lepton_set_attribute_obj, py_sensor_l
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_lepton_run_command_obj,  py_sensor_lepton_run_command);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_temp_obj,         py_sensor_lepton_temp);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_aux_temp_obj,     py_sensor_lepton_aux_temp);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_lepton_set_agc_obj,      py_sensor_lepton_set_agc);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_get_agc_obj,      py_sensor_lepton_get_agc);
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_lepton_set_range_obj,    py_sensor_lepton_set_range);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_lepton_get_range_obj,    py_sensor_lepton_get_range);
 
 STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_sensor) },
@@ -628,6 +658,10 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_run_command),  (mp_obj_t)&py_sensor_lepton_run_command_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_temp),         (mp_obj_t)&py_sensor_lepton_temp_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_aux_temp),     (mp_obj_t)&py_sensor_lepton_aux_temp_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_set_agc),      (mp_obj_t)&py_sensor_lepton_set_agc_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_get_agc),      (mp_obj_t)&py_sensor_lepton_get_agc_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_set_range),    (mp_obj_t)&py_sensor_lepton_set_range_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_lepton_get_range),    (mp_obj_t)&py_sensor_lepton_get_range_obj }
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);

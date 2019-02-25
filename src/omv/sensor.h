@@ -162,6 +162,10 @@ typedef struct _sensor {
     int  (*lepton_run_command)  (sensor_t *sensor, uint16_t command);
     int  (*lepton_temp)         (sensor_t *sensor);
     int  (*lepton_aux_temp)     (sensor_t *sensor);
+    int  (*lepton_set_agc)      (sensor_t *sensor, int enable);
+    int  (*lepton_get_agc)      (sensor_t *sensor);
+    int  (*lepton_set_range)    (sensor_t *sensor, float min_temp, float max_temp);
+    int  (*lepton_get_range)    (sensor_t *sensor, float *min_temp, float *max_temp);
 } sensor_t;
 
 // Resolution table
@@ -269,5 +273,9 @@ int sensor_lepton_set_attribute(uint16_t command, uint16_t *data, size_t data_le
 int sensor_lepton_run_command(uint16_t command);
 int sensor_lepton_temp();
 int sensor_lepton_aux_temp();
+int sensor_lepton_set_agc(int enable);
+int sensor_lepton_get_agc();
+int sensor_lepton_set_range(float min_temp, float max_temp);
+int sensor_lepton_get_range(float *min_temp, float *max_temp);
 
 #endif /* __SENSOR_H__ */

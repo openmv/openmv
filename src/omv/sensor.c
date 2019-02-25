@@ -1088,3 +1088,43 @@ int sensor_lepton_aux_temp()
     }
     return sensor.lepton_aux_temp(&sensor);
 }
+
+int sensor_lepton_set_agc(int enable)
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_set_agc == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_set_agc(&sensor, enable);
+}
+
+int sensor_lepton_get_agc()
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_get_agc == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_get_agc(&sensor);
+}
+
+int sensor_lepton_set_range(float min_range, float max_range)
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_set_range == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_set_range(&sensor, min_range, max_range);
+}
+
+int sensor_lepton_get_range(float *min_range, float *max_range)
+{
+    /* call the sensor specific function */
+    if (sensor.lepton_get_range == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.lepton_get_range(&sensor, min_range, max_range);
+}

@@ -45,6 +45,8 @@ static int h_res = 0;
 static int v_res = 0;
 static bool h_mirror = false;
 static bool v_flip = false;
+static float l_min_temp = -17.7778; // 0F
+static float l_max_temp = 37.7778; // 100F
 
 static SPI_HandleTypeDef SPIHandle;
 static DMA_HandleTypeDef DMAHandle;
@@ -237,9 +239,10 @@ static int reset(sensor_t *sensor)
 
     LEP_AGC_ROI_T roi;
     LEP_CAMERA_PORT_DESC_T handle;
-
     memset(&l_handle, 0, sizeof(l_handle));
     h_res = v_res = h_mirror = v_flip = 0;
+    l_min_temp = -17.7778; // 0F
+    l_max_temp = 37.7778; // 100F
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
         if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &handle) == LEP_OK) {
@@ -418,6 +421,12 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         // The code below upscales the source image to the requested frame size
         // and then crops it to the window set by the user.
 
+        LEP_AGC_ENABLE_E enable;
+        if (LEP_GetAgcEnableState(&l_handle, &enable) != LEP_OK) return -1;
+
+        LEP_SYS_GAIN_MODE_E mode;
+        if (LEP_GetSysGainMode(&l_handle, &mode) != LEP_OK) return -1;
+
         for (int y = y_offset, yy = fast_ceilf(v_res * scale) + y_offset; y < yy; y++) {
             if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) { // user window cropping
 
@@ -429,6 +438,12 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                         // Value is the 14-bit value from the FLIR IR camera.
                         // However, with AGC enabled only the bottom 8-bits are non-zero.
                         int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]) & 0x3FFF;
+
+                        if (enable != LEP_AGC_ENABLE) { // Need to convert 14-bits to 8-bits ourselves...
+                            float celsius = ((mode == LEP_SYS_GAIN_MODE_LOW) ? (value * 0.1f) : (value * 0.01f)) - 273.15f;
+                            celsius = IM_MAX(IM_MIN(celsius, l_max_temp), l_min_temp);
+                            value = IM_DIV(((celsius - l_min_temp) * 255), (l_max_temp - l_min_temp));
+                        }
 
                         int t_x = x - MAIN_FB()->x;
                         int t_y = y - MAIN_FB()->y;
@@ -523,6 +538,45 @@ int lepton_aux_temp(sensor_t *sensor)
     return ok ? temp : -1;
 }
 
+int lepton_set_agc(sensor_t *sensor, int enable)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    if (LEP_SetRadEnableState(&l_handle, enable ? LEP_RAD_DISABLE : LEP_RAD_ENABLE) != LEP_OK
+        || LEP_SetAgcEnableState(&l_handle, enable ? LEP_AGC_ENABLE : LEP_AGC_DISABLE) != LEP_OK
+        || LEP_SetAgcCalcEnableState(&l_handle, enable ? LEP_AGC_ENABLE : LEP_AGC_DISABLE) != LEP_OK) {
+        return -1;
+    }
+    return 0;
+}
+
+int lepton_get_agc(sensor_t *sensor)
+{
+    if ((!h_res) || (!v_res)) return -1;
+    LEP_AGC_ENABLE_E enable;
+    if (LEP_GetAgcEnableState(&l_handle, &enable) != LEP_OK) return -1;
+    return enable == LEP_AGC_ENABLE;
+}
+
+int lepton_set_range(sensor_t *sensor, float min_temp, float max_temp)
+{
+    l_min_temp = IM_MIN(min_temp, max_temp);
+    l_max_temp = IM_MAX(max_temp, min_temp);
+    if (lepton_type(sensor) == 3) {
+        if (LEP_SetSysGainMode(&l_handle, (l_max_temp > 140) ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH) != LEP_OK
+            || LEP_SetRadTLinearResolution(&l_handle, (l_max_temp > 140) ? LEP_RAD_RESOLUTION_0_1 : LEP_RAD_RESOLUTION_0_01) != LEP_OK) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+int lepton_get_range(sensor_t *sensor, float *min_temp, float *max_temp)
+{
+    *min_temp = l_min_temp;
+    *max_temp = l_max_temp;
+    return 0;
+}
+
 int lepton_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
@@ -560,6 +614,10 @@ int lepton_init(sensor_t *sensor)
     sensor->lepton_run_command  = lepton_run_command;
     sensor->lepton_temp         = lepton_temp;
     sensor->lepton_aux_temp     = lepton_aux_temp;
+    sensor->lepton_set_agc      = lepton_set_agc;
+    sensor->lepton_get_agc      = lepton_get_agc;
+    sensor->lepton_set_range    = lepton_set_range;
+    sensor->lepton_get_range    = lepton_get_range;
 
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
