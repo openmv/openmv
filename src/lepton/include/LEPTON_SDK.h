@@ -113,6 +113,7 @@ extern "C"
       LEP_BOOT_STATUS_BOOTED = 1,
 
       LEP_END_BOOT_STATUS,
+      LEP_BOOT_STATUS_MAKE_32_BIT_ENUM = 0x7FFFFFFF
    }LEP_SDK_BOOT_STATUS_E, *LEP_SDK_BOOT_STATUS_E_PTR;
 /******************************************************************************/
 /** EXPORTED DEFINES                                                         **/

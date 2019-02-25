@@ -132,8 +132,9 @@ typedef enum Result
 
    /* Other Errors */
    LEP_OPERATION_CANCELED            = -126,  /* Camera operation canceled */
-   LEP_UNDEFINED_ERROR_CODE          = -127   /* Undefined error */
+   LEP_UNDEFINED_ERROR_CODE          = -127,  /* Undefined error */
 
+   LEP_RESULT_MAKE_32_BIT_ENUM = 0x7FFFFFFF
 } LEP_RESULT;
 
 /** EXPORTED PUBLIC DATA                                                     **/

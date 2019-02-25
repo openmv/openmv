@@ -173,30 +173,34 @@ extern "C"
     typedef enum
     {
         LEP_LSB_FIRST=0,
-        LEP_MSB_FIRST
+        LEP_MSB_FIRST,
 
+        LEP_BYTE_ORDER_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_BYTE_ORDER_T, *LEP_BYTE_ORDER_T_PTR;
 
     typedef enum
     {
         LEP_READY = 0,
         LEP_BUSY,
-        LEP_WAITING
+        LEP_WAITING,
 
+        LEP_OPERATION_STATE_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_OPERATION_STATE;
 
     typedef enum
     {
         LEP_DISABLED = 0,
-        LEP_ENABLED
+        LEP_ENABLED,
 
+        LEP_ENABLE_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_ENABLE_STATE;
 
     typedef enum
     {
         LEP_OFF = 0,
-        LEP_ON
+        LEP_ON,
 
+        LEP_ON_STATE_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_ON_STATE;
 
 
@@ -206,7 +210,9 @@ extern "C"
     {
         LEP_CCI_TWI=0,
         LEP_CCI_SPI,
-        LEP_END_CCI_PORTS
+        LEP_END_CCI_PORTS,
+        
+        LEP_CCI_PORTS_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_CAMERA_PORT_E, *LEP_CAMERA_PORT_E_PTR;
 
     /* Device entries
@@ -222,6 +228,8 @@ extern "C"
         /* SPI Devices */
 
         LEP_END_PROTOCOL_DEVICE,
+        
+        LEP_PROTOCOL_DEVICE_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     } LEP_PROTOCOL_DEVICE_E, *LEP_PROTOCOL_DEVICE_E_PTR;
 
     /* Lepton supported TWI  clock rates
@@ -231,8 +239,9 @@ extern "C"
         LEP_TWI_CLOCK_100KHZ=0,
         LEP_TWI_CLOCK_400KHZ,
         LEP_TWI_CLOCK_1MHZ,
-        LEP_END_TWI_CLOCK_RATE
+        LEP_END_TWI_CLOCK_RATE,
 
+        LEP_TWI_CLOCK_RATE_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_TWI_CLOCK_RATE_T, *LEP_TWI_CLOCK_RATE_T_PTR;
 
     /* Lepton supported SPI  clock rates
@@ -242,8 +251,9 @@ extern "C"
         LEP_SPI_CLOCK_2MHZ=0,
         LEP_SPI_CLOCK_10MHZ,
         LEP_SPI_CLOCK_20MHZ,
-        LEP_END_SPI_CLOCK_RATE
+        LEP_END_SPI_CLOCK_RATE,
 
+        LEP_SPI_CLOCK_RATE_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_SPI_CLOCK_RATE_T, *LEP_SPI_CLOCK_RATE_T_PTR;
 
     /* Communications Port Descriptor Type
