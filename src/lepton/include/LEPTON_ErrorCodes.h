@@ -85,7 +85,7 @@ extern "C"
  */
 typedef enum Result
 {
-   LEP_OK                            = 0,     /* Camera ok */
+   LEP_OK                            = 0L,     /* Camera ok */
    LEP_COMM_OK                       = LEP_OK, /* Camera comm ok (same as LEP_OK) */
 
    LEP_ERROR                         = -1,    /* Camera general error */

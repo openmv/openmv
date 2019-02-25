@@ -109,7 +109,7 @@ extern "C"
 
    typedef enum LEP_SDK_BOOT_STATUS_E_TAG
    {
-      LEP_BOOT_STATUS_NOT_BOOTED = 0,
+      LEP_BOOT_STATUS_NOT_BOOTED = 0L,
       LEP_BOOT_STATUS_BOOTED = 1,
 
       LEP_END_BOOT_STATUS,

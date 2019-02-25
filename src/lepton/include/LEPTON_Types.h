@@ -172,14 +172,14 @@ extern "C"
 
     typedef enum
     {
-        LEP_LSB_FIRST=0,
+        LEP_LSB_FIRST=0L,
         LEP_MSB_FIRST
 
     }LEP_BYTE_ORDER_T, *LEP_BYTE_ORDER_T_PTR;
 
     typedef enum
     {
-        LEP_READY = 0,
+        LEP_READY = 0L,
         LEP_BUSY,
         LEP_WAITING
 
@@ -187,14 +187,14 @@ extern "C"
 
     typedef enum
     {
-        LEP_DISABLED = 0,
+        LEP_DISABLED = 0L,
         LEP_ENABLED
 
     }LEP_ENABLE_STATE;
 
     typedef enum
     {
-        LEP_OFF = 0,
+        LEP_OFF = 0L,
         LEP_ON
 
     }LEP_ON_STATE;
@@ -204,7 +204,7 @@ extern "C"
     */
     typedef enum LEP_CAMERA_PORT_E_TAG
     {
-        LEP_CCI_TWI=0,
+        LEP_CCI_TWI=0L,
         LEP_CCI_SPI,
         LEP_END_CCI_PORTS
     }LEP_CAMERA_PORT_E, *LEP_CAMERA_PORT_E_PTR;
@@ -214,7 +214,7 @@ extern "C"
     typedef enum LEP_PROTOCOL_DEVICE_E_TAG
     {
         /* I2C Devices */
-        AARDVARK_I2C = 0,
+        AARDVARK_I2C = 0L,
         DEV_BOARD_FTDI_V2,
         //C232HM_DDHSL_0,
       TCP_IP,
@@ -228,7 +228,7 @@ extern "C"
     */
     typedef enum LEP_TWI_CLOCK_RATE_T_TAG
     {
-        LEP_TWI_CLOCK_100KHZ=0,
+        LEP_TWI_CLOCK_100KHZ=0L,
         LEP_TWI_CLOCK_400KHZ,
         LEP_TWI_CLOCK_1MHZ,
         LEP_END_TWI_CLOCK_RATE
@@ -239,7 +239,7 @@ extern "C"
     */
     typedef enum LEP_SPI_CLOCK_RATE_T_TAG
     {
-        LEP_SPI_CLOCK_2MHZ=0,
+        LEP_SPI_CLOCK_2MHZ=0L,
         LEP_SPI_CLOCK_10MHZ,
         LEP_SPI_CLOCK_20MHZ,
         LEP_END_SPI_CLOCK_RATE

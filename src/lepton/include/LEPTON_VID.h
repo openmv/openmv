@@ -114,7 +114,7 @@ extern "C"
 
    typedef enum LEP_POLARITY_E_TAG
    {
-      LEP_VID_WHITE_HOT=0,
+      LEP_VID_WHITE_HOT=0L,
       LEP_VID_BLACK_HOT,
       LEP_VID_END_POLARITY
 
@@ -125,7 +125,7 @@ extern "C"
    */
    typedef enum LEP_PCOLOR_LUT_E_TAG
    {
-      LEP_VID_WHEEL6_LUT=0,
+      LEP_VID_WHEEL6_LUT=0L,
       LEP_VID_FUSION_LUT,
       LEP_VID_RAINBOW_LUT,
       LEP_VID_GLOBOW_LUT,
@@ -164,7 +164,7 @@ extern "C"
    */
    typedef enum LEP_VID_ENABLE_TAG
    {
-      LEP_VID_FOCUS_CALC_DISABLE=0,
+      LEP_VID_FOCUS_CALC_DISABLE=0L,
       LEP_VID_FOCUS_CALC_ENABLE,
       LEP_VID_END_FOCUS_CALC_ENABLE
 
@@ -187,7 +187,7 @@ extern "C"
    */
    typedef enum LEP_VID_SBNUC_ENABLE_TAG
    {
-      LEP_VID_SBNUC_DISABLE = 0,
+      LEP_VID_SBNUC_DISABLE = 0L,
       LEP_VID_SBNUC_ENABLE,
       LEP_VID_END_SBNUC_ENABLE
 
@@ -198,7 +198,7 @@ extern "C"
    */
    typedef enum LEP_VID_FREEZE_ENABLE_TAG
    {
-      LEP_VID_FREEZE_DISABLE = 0,
+      LEP_VID_FREEZE_DISABLE = 0L,
       LEP_VID_FREEZE_ENABLE,
       LEP_VID_END_FREEZE_ENABLE
 
@@ -206,7 +206,7 @@ extern "C"
 
    typedef enum LEP_VID_BORESIGHT_CALC_ENABLE_STATE_E_TAG
    {
-      LEP_VID_BORESIGHT_CALC_DISABLED = 0,
+      LEP_VID_BORESIGHT_CALC_DISABLED = 0L,
       LEP_VID_BORESIGHT_CALC_ENABLED,
 
       LEP_VID_END_BORESIGHT_CALC_ENABLE_STATE,
@@ -243,7 +243,7 @@ extern "C"
 
    typedef enum LEP_VID_VIDEO_OUTPUT_FORMAT_TAG
    {
-      LEP_VID_VIDEO_OUTPUT_FORMAT_RAW8 = 0,          // To be supported in later release
+      LEP_VID_VIDEO_OUTPUT_FORMAT_RAW8 = 0L,         // To be supported in later release
       LEP_VID_VIDEO_OUTPUT_FORMAT_RAW10,             // To be supported in later release
       LEP_VID_VIDEO_OUTPUT_FORMAT_RAW12,             // To be supported in later release
       LEP_VID_VIDEO_OUTPUT_FORMAT_RGB888,            // To be supported in later release
