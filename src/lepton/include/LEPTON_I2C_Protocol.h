@@ -90,8 +90,9 @@ extern "C"
     {
         LEP_I2C_COMMAND_NOT_BUSY = 0,
         LEP_I2C_COMMAND_IS_BUSY,
-        LEP_I2C_END_COMMAND_STATUS
+        LEP_I2C_END_COMMAND_STATUS,
 
+        LEP_I2C_COMMAND_STATUS_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_I2C_COMMAND_STATUS_E, *LEP_I2C_COMMAND_STATUS_E_PTR;
 
 /******************************************************************************/
