@@ -85,7 +85,7 @@
        (_OldMax-OldMin))+_NewMin; })
 
 // Grayscale to RGB565 conversion
-extern const uint16_t rainbow_table[256];
+extern const uint16_t *rainbow_table;
 
 // MLX variables
 static float *a_ij = NULL;

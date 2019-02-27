@@ -1123,6 +1123,12 @@ Q(next_frame)
 // duplicate Q(loop)
 // duplicate Q(close)
 
+// Rainbow LUT
+Q(set_rainbow_lut)
+Q(get_rainbow_lut)
+Q(RAINBOW_LUT)
+Q(IRONBOW_LUT)
+
 // FIR Module
 Q(fir)
 // duplicate Q(init)

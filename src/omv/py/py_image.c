@@ -1091,7 +1091,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_rgb565_obj, 1, py_image_to_rgb565);
 
-extern const uint16_t rainbow_table[256];
+extern const uint16_t *rainbow_table;
 
 static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -6845,6 +6845,43 @@ mp_obj_t py_image_imagereader(mp_obj_t path)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_imagereader_obj, py_image_imagereader);
 
+extern const uint16_t int_rainbow_table[256];
+extern const uint16_t int_ironbow_table[256];
+
+void py_image_init_0()
+{
+    rainbow_table = int_rainbow_table;
+}
+
+mp_obj_t py_image_set_rainbow_lut(mp_obj_t arg)
+{
+    switch (mp_obj_get_int(arg)) {
+        case RAINBOW_LUT: {
+            rainbow_table = int_rainbow_table; break;
+        }
+        case IRONBOW_LUT: {
+            rainbow_table = int_ironbow_table; break;
+        }
+        default : {
+            break;
+        }
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_set_rainbow_lut_obj, py_image_set_rainbow_lut);
+
+mp_obj_t py_image_get_rainbow_lut()
+{
+    if (rainbow_table == int_rainbow_table) {
+        return mp_obj_new_int(RAINBOW_LUT);
+    } else if (rainbow_table == int_ironbow_table) {
+        return mp_obj_new_int(IRONBOW_LUT);
+    } else {
+        PY_ASSERT_TRUE_MSG(false, "Unknown Table!");
+    }
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_image_get_rainbow_lut_obj, py_image_get_rainbow_lut);
+
 mp_obj_t py_image_binary_to_grayscale(mp_obj_t arg)
 {
     int8_t b = mp_obj_get_int(arg) & 1;
@@ -7482,8 +7519,12 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE93),              MP_ROM_INT(BARCODE_CODE93)},
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
 #endif
+    {MP_ROM_QSTR(MP_QSTR_RAINBOW_LUT),         MP_ROM_INT(RAINBOW_LUT)},
+    {MP_ROM_QSTR(MP_QSTR_IRONBOW_LUT),         MP_ROM_INT(IRONBOW_LUT)},
     {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_image_imagewriter_obj)},
     {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_image_imagereader_obj)},
+    {MP_ROM_QSTR(MP_QSTR_set_rainbow_lut),     MP_ROM_PTR(&py_image_set_rainbow_lut_obj)},
+    {MP_ROM_QSTR(MP_QSTR_get_rainbow_lut),     MP_ROM_PTR(&py_image_get_rainbow_lut_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_grayscale), MP_ROM_PTR(&py_image_binary_to_grayscale_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_rgb),       MP_ROM_PTR(&py_image_binary_to_rgb_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_lab),       MP_ROM_PTR(&py_image_binary_to_lab_obj)},

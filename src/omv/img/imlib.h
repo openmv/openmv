@@ -346,6 +346,11 @@ extern const int8_t yuv_table[196608];
 #define COLOR_GRAYSCALE_TO_BINARY(pixel) ((pixel) > (((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / 2) + COLOR_GRAYSCALE_MIN))
 #define COLOR_GRAYSCALE_TO_RGB565(pixel) COLOR_YUV_TO_RGB565((pixel) - 128, 0, 0)
 
+typedef enum rainbow_table_lut {
+    RAINBOW_LUT,
+    IRONBOW_LUT
+} rainbow_table_lut_t;
+
 /////////////////
 // Image Stuff //
 /////////////////

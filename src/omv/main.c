@@ -460,6 +460,7 @@ soft_reset:
     dac_init();
     pyb_usb_init0();
     sensor_init0();
+    py_image_init_0();
     fb_alloc_init0();
     file_buffer_init0();
     py_lcd_init0();

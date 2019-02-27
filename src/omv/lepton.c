@@ -53,7 +53,7 @@ static DMA_HandleTypeDef DMAHandle;
 
 extern uint8_t _line_buf;
 extern uint8_t _vospi_buf;
-extern const uint16_t rainbow_table[256];
+extern const uint16_t *rainbow_table;
 
 static bool vospi_resync = true;
 static uint8_t *vospi_packet = &_line_buf;
@@ -559,8 +559,8 @@ int lepton_get_agc(sensor_t *sensor)
 
 int lepton_set_range(sensor_t *sensor, float min_temp, float max_temp)
 {
-    l_min_temp = IM_MIN(min_temp, max_temp);
-    l_max_temp = IM_MAX(max_temp, min_temp);
+    l_min_temp = IM_MAX(IM_MIN(min_temp, max_temp), -10.0f);
+    l_max_temp = IM_MIN(IM_MAX(max_temp, min_temp), 450.0f);
     if (lepton_type(sensor) == 3) {
         if (LEP_SetSysGainMode(&l_handle, (l_max_temp > 140) ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH) != LEP_OK
             || LEP_SetRadTLinearResolution(&l_handle, (l_max_temp > 140) ? LEP_RAD_RESOLUTION_0_1 : LEP_RAD_RESOLUTION_0_01) != LEP_OK) {
