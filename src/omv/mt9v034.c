@@ -183,10 +183,6 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t width = resolution[framesize][0];
     uint16_t height = resolution[framesize][1];
 
-    if (sensor->pixformat == PIXFORMAT_INVALID) {
-        return -1;
-    }
-
     if ((width > MT9V034_MAX_WIDTH) || (height > MT9V034_MAX_HEIGHT)) {
         return -1;
     }
