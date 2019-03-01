@@ -198,7 +198,7 @@ static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
 
 static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
     if (sensor_set_framesize(mp_obj_get_int(framesize)) != 0) {
-        return mp_const_false;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to set framesize!"));
     }
     return mp_const_true;
 }
