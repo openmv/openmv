@@ -40,6 +40,8 @@
 #define MT9V034_VERTICAL_BLANKING_DEF           (45)
 #define MT9V034_CHIP_CONTROL                    (0x07)
 #define MT9V034_CHIP_CONTROL_MASTER_MODE        (1 << 3)
+#define MT9V034_CHIP_CONTROL_SNAP_MODE          (3 << 3)
+#define MT9V034_CHIP_CONTROL_MODE_MASK          (3 << 3)
 #define MT9V034_CHIP_CONTROL_DOUT_ENABLE        (1 << 7)
 #define MT9V034_CHIP_CONTROL_SEQUENTIAL         (1 << 8)
 #define MT9V034_SHUTTER_WIDTH1                  (0x08)
@@ -386,6 +388,24 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
+int mt9v034_set_triggered_mode(sensor_t *sensor, int enable)
+{
+    uint16_t chip_control;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_CHIP_CONTROL,
+            (chip_control & (~MT9V034_CHIP_CONTROL_MODE_MASK))
+            | ((enable != 0) ? MT9V034_CHIP_CONTROL_SNAP_MODE : MT9V034_CHIP_CONTROL_MASTER_MODE));
+    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+    return ret;
+}
+
+int mt9v034_get_triggered_mode(sensor_t *sensor)
+{
+    uint16_t chip_control;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    return (ret >= 0) ? ((chip_control & MT9V034_CHIP_CONTROL_MODE_MASK) == MT9V034_CHIP_CONTROL_SNAP_MODE) : -1;
+}
+
 int mt9v034_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
@@ -412,6 +432,8 @@ int mt9v034_init(sensor_t *sensor)
     sensor->set_vflip           = set_vflip;
     sensor->set_special_effect  = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
+    sensor->mt9v034_set_triggered_mode = mt9v034_set_triggered_mode;
+    sensor->mt9v034_get_triggered_mode = mt9v034_get_triggered_mode;
 
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);

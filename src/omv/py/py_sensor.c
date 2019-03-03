@@ -415,6 +415,18 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
     return mp_obj_new_int(sensor_read_reg(mp_obj_get_int(addr)));
 }
 
+static mp_obj_t py_mt9v034_set_triggered_mode(mp_obj_t enable) {
+    int temp = sensor_mt9v034_set_triggered_mode(mp_obj_get_int(enable));
+    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_const_none;
+}
+
+static mp_obj_t py_mt9v034_get_triggered_mode() {
+    int temp = sensor_mt9v034_get_triggered_mode();
+    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+    return mp_obj_new_bool(temp);
+}
+
 //static void py_sensor_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
 //    mp_printf(print, "<Sensor MID:0x%.2X%.2X PID:0x%.2X VER:0x%.2X>",
 //            sensor.id.MIDH, sensor.id.MIDL, sensor.id.PID, sensor.id.VER);
@@ -455,6 +467,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_output_obj,    py_sensor_set_vsync_output);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,           py_sensor_write_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,            py_sensor_read_reg);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mt9v034_set_triggered_mode_obj, py_mt9v034_set_triggered_mode);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_mt9v034_get_triggered_mode_obj, py_mt9v034_get_triggered_mode);
 
 STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_sensor) },
@@ -540,6 +554,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vsync_output),    (mp_obj_t)&py_sensor_set_vsync_output_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),         (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),          (mp_obj_t)&py_sensor_read_reg_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_mt9v034_set_triggered_mode), (mp_obj_t)&py_mt9v034_set_triggered_mode_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_mt9v034_get_triggered_mode), (mp_obj_t)&py_mt9v034_get_triggered_mode_obj },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
