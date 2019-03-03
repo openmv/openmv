@@ -10,5 +10,6 @@
 #define __LEPTON_H__
 #include "sensor.h"
 #define LEPTON_XCLK_FREQ 25000000
+void lepton_init0();
 int lepton_init(sensor_t *sensor);
 #endif // __LEPTON_H__

@@ -41,10 +41,12 @@
 #define LEPTON_TIMEOUT          (1000)
 
 static LEP_CAMERA_PORT_DESC_T l_handle;
+static bool l_radiometry = false;
 static int h_res = 0;
 static int v_res = 0;
 static bool h_mirror = false;
 static bool v_flip = false;
+static bool l_agc = true; // default on
 static float l_min_temp = -17.7778; // 0F
 static float l_max_temp = 37.7778; // 100F
 
@@ -225,6 +227,16 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 
 static int reset(sensor_t *sensor)
 {
+    LEP_CAMERA_PORT_DESC_T handle;
+    LEP_AGC_ROI_T roi;
+    LEP_SYS_GAIN_MODE_E mode;
+    memset(&l_handle, 0, sizeof(l_handle));
+    l_radiometry = false;
+    h_res = 0;
+    v_res = 0;
+    h_mirror = false;
+    v_flip = false;
+
     DCMI_PWDN_LOW();
     systick_sleep(10);
 
@@ -236,13 +248,6 @@ static int reset(sensor_t *sensor)
 
     DCMI_RESET_HIGH();
     systick_sleep(1000);
-
-    LEP_AGC_ROI_T roi;
-    LEP_CAMERA_PORT_DESC_T handle;
-    memset(&l_handle, 0, sizeof(l_handle));
-    h_res = v_res = h_mirror = v_flip = 0;
-    l_min_temp = -17.7778; // 0F
-    l_max_temp = 37.7778; // 100F
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
         if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &handle) == LEP_OK) {
@@ -279,27 +284,23 @@ static int reset(sensor_t *sensor)
         }
     }
 
-    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
-        LEP_SYS_STATUS_E status;
-        if (LEP_GetSysFFCStatus(&handle, &status) != LEP_OK) {
-            break; // don't error out on this...
-        }
-        if (status == LEP_SYS_STATUS_READY) {
-            break;
-        }
-        if (HAL_GetTick() - start >= (LEPTON_TIMEOUT * 5)) {
-            break; // don't error out on this...
-        }
-    }
-
-    if (LEP_SetRadEnableState(&handle, LEP_RAD_DISABLE) != LEP_OK
-        || LEP_GetAgcROI(&handle, &roi) != LEP_OK
-        || LEP_SetAgcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK
-        || LEP_SetAgcCalcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK) {
+    if (LEP_GetAgcROI(&handle, &roi) != LEP_OK) {
         return -1;
     }
 
+    // Test if the lepton has the radiometry feature.
+    bool radiometry = LEP_GetSysGainMode(&handle, &mode) == LEP_OK;
+
+    if (l_agc) {
+        if (LEP_SetRadEnableState(&handle, LEP_RAD_DISABLE) != LEP_OK
+            || LEP_SetAgcCalcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK
+            || LEP_SetAgcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK) {
+            return -1;
+        }
+    }
+
     l_handle = handle;
+    l_radiometry = radiometry;
     h_res = roi.endCol + 1;
     v_res = roi.endRow + 1;
 
@@ -421,11 +422,13 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         // The code below upscales the source image to the requested frame size
         // and then crops it to the window set by the user.
 
-        LEP_AGC_ENABLE_E enable;
-        if (LEP_GetAgcEnableState(&l_handle, &enable) != LEP_OK) return -1;
+        LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
 
-        LEP_SYS_GAIN_MODE_E mode;
-        if (LEP_GetSysGainMode(&l_handle, &mode) != LEP_OK) return -1;
+        if (!l_radiometry) {
+            if (LEP_GetSysFpaTemperatureKelvin(&l_handle, &kelvin) != LEP_OK) {
+                return -1;
+            }
+        }
 
         for (int y = y_offset, yy = fast_ceilf(v_res * scale) + y_offset; y < yy; y++) {
             if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) { // user window cropping
@@ -435,12 +438,14 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 for (int x = x_offset, xx = fast_ceilf(h_res * scale) + x_offset; x < xx; x++) {
                     if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) { // user window cropping
 
-                        // Value is the 14-bit value from the FLIR IR camera.
+                        // Value is the 14/16-bit value from the FLIR IR camera.
                         // However, with AGC enabled only the bottom 8-bits are non-zero.
-                        int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]) & 0x3FFF;
+                        int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]);
 
-                        if (enable != LEP_AGC_ENABLE) { // Need to convert 14-bits to 8-bits ourselves...
-                            float celsius = ((mode == LEP_SYS_GAIN_MODE_LOW) ? (value * 0.1f) : (value * 0.01f)) - 273.15f;
+                        if (!l_agc) {
+                            // Need to convert 14/16-bits to 8-bits ourselves...
+                            if (!l_radiometry) value = (value - 8192) + kelvin;
+                            float celsius = (value * 0.01f) - 273.15f;
                             celsius = IM_MAX(IM_MIN(celsius, l_max_temp), l_min_temp);
                             value = IM_DIV(((celsius - l_min_temp) * 255), (l_max_temp - l_min_temp));
                         }
@@ -489,13 +494,13 @@ int lepton_height(sensor_t *sensor)
 int lepton_type(sensor_t *sensor)
 {
     if ((!h_res) || (!v_res)) return -1;
-    return (h_res == 80) ? 1 : 3;
+    return l_radiometry;
 }
 
 int lepton_refresh(sensor_t *sensor)
 {
     if ((!h_res) || (!v_res)) return -1;
-    return (h_res == 80) ? 27 : 9;
+    return 9;
 }
 
 int lepton_resolution(sensor_t *sensor)
@@ -532,7 +537,7 @@ int lepton_temp(sensor_t *sensor)
 
 int lepton_aux_temp(sensor_t *sensor)
 {
-    if ((!h_res) || (!v_res) || (lepton_type(sensor) != 3)) return -1;
+    if ((!h_res) || (!v_res)) return -1;
     LEP_SYS_AUX_TEMPERATURE_KELVIN_T temp;
     bool ok = LEP_GetSysAuxTemperatureKelvin(&l_handle, &temp) == LEP_OK;
     return ok ? temp : -1;
@@ -540,33 +545,19 @@ int lepton_aux_temp(sensor_t *sensor)
 
 int lepton_set_agc(sensor_t *sensor, int enable)
 {
-    if ((!h_res) || (!v_res)) return -1;
-    if (LEP_SetRadEnableState(&l_handle, enable ? LEP_RAD_DISABLE : LEP_RAD_ENABLE) != LEP_OK
-        || LEP_SetAgcEnableState(&l_handle, enable ? LEP_AGC_ENABLE : LEP_AGC_DISABLE) != LEP_OK
-        || LEP_SetAgcCalcEnableState(&l_handle, enable ? LEP_AGC_ENABLE : LEP_AGC_DISABLE) != LEP_OK) {
-        return -1;
-    }
+    l_agc = enable != 0;
     return 0;
 }
 
 int lepton_get_agc(sensor_t *sensor)
 {
-    if ((!h_res) || (!v_res)) return -1;
-    LEP_AGC_ENABLE_E enable;
-    if (LEP_GetAgcEnableState(&l_handle, &enable) != LEP_OK) return -1;
-    return enable == LEP_AGC_ENABLE;
+    return l_agc;
 }
 
 int lepton_set_range(sensor_t *sensor, float min_temp, float max_temp)
 {
     l_min_temp = IM_MAX(IM_MIN(min_temp, max_temp), -10.0f);
-    l_max_temp = IM_MIN(IM_MAX(max_temp, min_temp), 450.0f);
-    if (lepton_type(sensor) == 3) {
-        if (LEP_SetSysGainMode(&l_handle, (l_max_temp > 140) ? LEP_SYS_GAIN_MODE_LOW : LEP_SYS_GAIN_MODE_HIGH) != LEP_OK
-            || LEP_SetRadTLinearResolution(&l_handle, (l_max_temp > 140) ? LEP_RAD_RESOLUTION_0_1 : LEP_RAD_RESOLUTION_0_01) != LEP_OK) {
-            return -1;
-        }
-    }
+    l_max_temp = IM_MIN(IM_MAX(max_temp, min_temp), 140.0f);
     return 0;
 }
 
@@ -575,6 +566,19 @@ int lepton_get_range(sensor_t *sensor, float *min_temp, float *max_temp)
     *min_temp = l_min_temp;
     *max_temp = l_max_temp;
     return 0;
+}
+
+void lepton_init0()
+{
+    memset(&l_handle, 0, sizeof(l_handle));
+    l_radiometry = false;
+    h_res = 0;
+    v_res = 0;
+    h_mirror = false;
+    v_flip = false;
+    l_agc = true; // default on
+    l_min_temp = -17.7778; // 0F
+    l_max_temp = 37.7778; // 100F
 }
 
 int lepton_init(sensor_t *sensor)

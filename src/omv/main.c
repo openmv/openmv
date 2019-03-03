@@ -52,6 +52,7 @@
 #include "servo.h"
 
 #include "sensor.h"
+#include "lepton.h"
 #include "usbdbg.h"
 #include "wifidbg.h"
 #include "sdram.h"
@@ -460,6 +461,7 @@ soft_reset:
     dac_init();
     pyb_usb_init0();
     sensor_init0();
+    lepton_init0();
     py_image_init_0();
     fb_alloc_init0();
     file_buffer_init0();
