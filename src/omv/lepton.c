@@ -692,6 +692,10 @@ int lepton_init(sensor_t *sensor)
     return 0;
 }
 #else
+void lepton_init0()
+{
+    return;
+}
 int lepton_init(sensor_t *sensor)
 {
     return -1;
