@@ -14,6 +14,7 @@
 #include "framebuffer.h"
 #include "sensor.h"
 #include "omv_boardconfig.h"
+
 #if defined(OMV_ENABLE_MT9V034)
 #define MT9V034_MAX_HEIGHT                      (480)
 #define MT9V034_MAX_WIDTH                       (752)
@@ -44,6 +45,7 @@
 #define MT9V034_CHIP_CONTROL_MODE_MASK          (3 << 3)
 #define MT9V034_CHIP_CONTROL_DOUT_ENABLE        (1 << 7)
 #define MT9V034_CHIP_CONTROL_SEQUENTIAL         (1 << 8)
+#define MT9V034_CHIP_CONTROL_RESERVED           (1 << 9)
 #define MT9V034_SHUTTER_WIDTH1                  (0x08)
 #define MT9V034_SHUTTER_WIDTH2                  (0x09)
 #define MT9V034_SHUTTER_WIDTH_CONTROL           (0x0A)
@@ -106,13 +108,8 @@
 
 #define MICROSECOND_CLKS                        (1000000)
 
-typedef enum { MT9V034_NOT_SET, MT9V034_CFA, MT9V034_GS, MT9V034_GS_CFA } MT9V034_mode_t;
-static MT9V034_mode_t MT9V034_mode = MT9V034_NOT_SET;
-
 static int reset(sensor_t *sensor)
 {
-    MT9V034_mode = MT9V034_NOT_SET;
-
     DCMI_PWDN_HIGH();
     systick_sleep(1);
 
@@ -127,18 +124,13 @@ static int reset(sensor_t *sensor)
 
     int ret = 0;
 
-    // Setup reconmended reserved register settings.
-    ret |= cambus_writew(sensor->slv_addr, 0x13, 0x2D2E);
-    ret |= cambus_writew(sensor->slv_addr, 0x20, 0x01C7);
-    ret |= cambus_writew(sensor->slv_addr, 0x24, 0x001B);
-    ret |= cambus_writew(sensor->slv_addr, 0x2B, 0x0003);
-    ret |= cambus_writew(sensor->slv_addr, 0x2F, 0x0003);
+    uint16_t chip_control;
+    ret |= cambus_readw(sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_CHIP_CONTROL, (chip_control & (~MT9V034_CHIP_CONTROL_RESERVED)));
 
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE,
-        MT9V034_READ_MODE_ROW_FLIP | MT9V034_READ_MODE_COL_FLIP);
-
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_OPERATION_MODE,
-        MT9V034_PIXEL_OPERATION_MODE_HDR | MT9V034_PIXEL_OPERATION_MODE_COLOR);
+    uint16_t read_mode;
+    ret |= cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, read_mode | MT9V034_READ_MODE_ROW_FLIP | MT9V034_READ_MODE_COL_FLIP);
 
     return ret;
 }
@@ -189,31 +181,21 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         return -1;
     }
 
-    uint16_t reg, read_mode;
-
-    if (cambus_readw(sensor->slv_addr, MT9V034_ID_REG, &reg) != 0) {
-        return -1;
-    }
+    uint16_t read_mode;
 
     if (cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode) != 0) {
         return -1;
     }
 
-    read_mode &= 0xFFF0;
-    bool is_cfa = ((reg >> 9) & 0x7) == 0x6;
-    MT9V034_mode_t mode_tmp = is_cfa ? MT9V034_CFA : MT9V034_GS;
     int read_mode_mul = 1;
+    read_mode &= 0xFFF0;
 
-    if ((!is_cfa) || (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
-        if ((width <= (MT9V034_MAX_WIDTH / 4)) && (height <= (MT9V034_MAX_HEIGHT / 4))) {
-            read_mode_mul = 4;
-            read_mode |= MT9V034_READ_MODE_COL_BIN_4 | MT9V034_READ_MODE_ROW_BIN_4;
-        } else if ((width <= (MT9V034_MAX_WIDTH / 2)) && (height <= (MT9V034_MAX_HEIGHT / 2))) {
-            read_mode_mul = 2;
-            read_mode |= MT9V034_READ_MODE_COL_BIN_2 | MT9V034_READ_MODE_ROW_BIN_2;
-        } else if (is_cfa && (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
-            mode_tmp = MT9V034_GS_CFA;
-        }
+    if ((width <= (MT9V034_MAX_WIDTH / 4)) && (height <= (MT9V034_MAX_HEIGHT / 4))) {
+        read_mode_mul = 4;
+        read_mode |= MT9V034_READ_MODE_COL_BIN_4 | MT9V034_READ_MODE_ROW_BIN_4;
+    } else if ((width <= (MT9V034_MAX_WIDTH / 2)) && (height <= (MT9V034_MAX_HEIGHT / 2))) {
+        read_mode_mul = 2;
+        read_mode |= MT9V034_READ_MODE_COL_BIN_2 | MT9V034_READ_MODE_ROW_BIN_2;
     }
 
     int ret = 0;
@@ -235,9 +217,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, read_mode);
     ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_COUNT, (width * height) / 8);
 
-    if (ret == 0) {
-        MT9V034_mode = mode_tmp;
-    }
+    // We need more setup time for the pixel_clk at the full data rate...
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_CLOCK, (read_mode_mul == 1) ? MT9V034_PIXEL_CLOCK_INV_PXL_CLK : 0);
 
     return ret;
 }
@@ -412,11 +393,6 @@ int mt9v034_get_triggered_mode(sensor_t *sensor)
     return (ret >= 0) ? ((chip_control & MT9V034_CHIP_CONTROL_MODE_MASK) == MT9V034_CHIP_CONTROL_SNAP_MODE) : -1;
 }
 
-void mt9v034_init0()
-{
-    MT9V034_mode = MT9V034_NOT_SET;
-}
-
 int mt9v034_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
@@ -455,10 +431,6 @@ int mt9v034_init(sensor_t *sensor)
     return 0;
 }
 #else
-void mt9v034_init0()
-{
-    return;
-}
 int mt9v034_init(sensor_t *sensor)
 {
     return -1;
