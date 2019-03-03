@@ -197,7 +197,7 @@ void sensor_init0()
     memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
 
     // Set default quality
-    JPEG_FB()->quality = 35;
+    JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
 
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled;
