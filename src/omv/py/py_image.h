@@ -10,7 +10,7 @@
 #define __PY_IMAGE_H__
 // DISABLED #include <mp.h>
 #include "imlib.h"
-void py_image_init_0();
+void py_image_init0();
 mp_obj_t py_image(int width, int height, int bpp, void *pixels);
 mp_obj_t py_image_from_struct(image_t *img);
 void *py_image_cobj(mp_obj_t img_obj);

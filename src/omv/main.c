@@ -462,7 +462,7 @@ soft_reset:
     pyb_usb_init0();
     sensor_init0();
     lepton_init0();
-    py_image_init_0();
+    py_image_init0();
     fb_alloc_init0();
     file_buffer_init0();
     py_lcd_init0();

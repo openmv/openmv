@@ -6848,7 +6848,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_imagereader_obj, py_image_imagereader)
 extern const uint16_t int_rainbow_table[256];
 extern const uint16_t int_ironbow_table[256];
 
-void py_image_init_0()
+void py_image_init0()
 {
     rainbow_table = int_rainbow_table;
 }
