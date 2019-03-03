@@ -406,6 +406,11 @@ int mt9v034_get_triggered_mode(sensor_t *sensor)
     return (ret >= 0) ? ((chip_control & MT9V034_CHIP_CONTROL_MODE_MASK) == MT9V034_CHIP_CONTROL_SNAP_MODE) : -1;
 }
 
+void mt9v034_init0()
+{
+    MT9V034_mode = MT9V034_NOT_SET;
+}
+
 int mt9v034_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
@@ -444,6 +449,10 @@ int mt9v034_init(sensor_t *sensor)
     return 0;
 }
 #else
+void mt9v034_init0()
+{
+    return;
+}
 int mt9v034_init(sensor_t *sensor)
 {
     return -1;
