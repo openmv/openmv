@@ -7,7 +7,7 @@
 # stablizes. You can force the re-calibration to not happen if you need to via the lepton API.
 # However, it is not recommended because the image will degrade overtime.
 
-import sensor, image, time, math
+import sensor, image, time, math, lcd
 
 # Cool looking color palette
 image.set_rainbow_lut(image.IRONBOW_LUT)
@@ -24,6 +24,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.LCD)
 sensor.skip_frames(time=5000)
 clock = time.clock()
+lcd.init()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are
 # returned by "find_blobs" below. Change "pixels_threshold" and "area_threshold" if you change the
@@ -35,4 +36,5 @@ while(True):
     for blob in img.find_blobs(thresholds, pixels_threshold=200, area_threshold=200, merge=True):
         img.draw_rectangle(blob.rect(), color=127)
         img.draw_cross(blob.cx(), blob.cy(), color=127)
+    lcd.display(img)
     print(clock.fps())
