@@ -20,7 +20,7 @@ sensor.set_framesize(sensor.VGA)    # Set frame size to VGA (640x480)
 sensor.skip_frames(time = 2000)     # Wait for settings take effect.
 clock = time.clock()                # Create a clock object to track the FPS.
 
-sensor.mt9v034_set_triggered_mode(True)
+sensor.ioctl(sensor.IOCTL_SET_TRIGGERED_MODE, True)
 
 while(True):
     clock.tick()                    # Update the FPS clock.
