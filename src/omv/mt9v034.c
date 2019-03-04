@@ -211,8 +211,10 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     // The minimum total row time is 690 columns (horizontal width + horizontal blanking). The minimum
     // horizontal blanking is 61. When the window width is set below 627, horizontal blanking
     // must be increased.
+    //
+    // The STM32H7 needs more than 94+(752-640) clocks between rows otherwise it can't keep up with the pixel rate.
     ret |= cambus_writew(sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING,
-            MT9V034_HORIZONTAL_BLANKING_DEF + (MT9V034_MAX_WIDTH - (width * read_mode_mul)));
+            MT9V034_HORIZONTAL_BLANKING_DEF + (MT9V034_MAX_WIDTH - IM_MIN(width * read_mode_mul, 640)));
 
     ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, read_mode);
     ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_COUNT, (width * height) / 8);
