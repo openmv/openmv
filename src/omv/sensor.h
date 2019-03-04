@@ -151,6 +151,8 @@ typedef struct _sensor {
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
     int  (*snapshot)            (sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+    int  (*mt9v034_set_triggered_mode) (sensor_t *sensor, int enable);
+    int  (*mt9v034_get_triggered_mode) (sensor_t *sensor);
 } sensor_t;
 
 // Resolution table
@@ -246,4 +248,10 @@ int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+
+// MT9V034 Set Triggered Mode register
+int sensor_mt9v034_set_triggered_mode(int enable);
+
+// MT9V034 Get Triggered Mode register
+int sensor_mt9v034_get_triggered_mode();
 #endif /* __SENSOR_H__ */

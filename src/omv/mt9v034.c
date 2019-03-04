@@ -14,6 +14,7 @@
 #include "framebuffer.h"
 #include "sensor.h"
 #include "omv_boardconfig.h"
+
 #if defined(OMV_ENABLE_MT9V034)
 #define MT9V034_MAX_HEIGHT                      (480)
 #define MT9V034_MAX_WIDTH                       (752)
@@ -40,8 +41,11 @@
 #define MT9V034_VERTICAL_BLANKING_DEF           (45)
 #define MT9V034_CHIP_CONTROL                    (0x07)
 #define MT9V034_CHIP_CONTROL_MASTER_MODE        (1 << 3)
+#define MT9V034_CHIP_CONTROL_SNAP_MODE          (3 << 3)
+#define MT9V034_CHIP_CONTROL_MODE_MASK          (3 << 3)
 #define MT9V034_CHIP_CONTROL_DOUT_ENABLE        (1 << 7)
 #define MT9V034_CHIP_CONTROL_SEQUENTIAL         (1 << 8)
+#define MT9V034_CHIP_CONTROL_RESERVED           (1 << 9)
 #define MT9V034_SHUTTER_WIDTH1                  (0x08)
 #define MT9V034_SHUTTER_WIDTH2                  (0x09)
 #define MT9V034_SHUTTER_WIDTH_CONTROL           (0x0A)
@@ -104,13 +108,8 @@
 
 #define MICROSECOND_CLKS                        (1000000)
 
-typedef enum { MT9V034_NOT_SET, MT9V034_CFA, MT9V034_GS, MT9V034_GS_CFA } MT9V034_mode_t;
-static MT9V034_mode_t MT9V034_mode = MT9V034_NOT_SET;
-
 static int reset(sensor_t *sensor)
 {
-    MT9V034_mode = MT9V034_NOT_SET;
-
     DCMI_PWDN_HIGH();
     systick_sleep(1);
 
@@ -125,18 +124,13 @@ static int reset(sensor_t *sensor)
 
     int ret = 0;
 
-    // Setup reconmended reserved register settings.
-    ret |= cambus_writew(sensor->slv_addr, 0x13, 0x2D2E);
-    ret |= cambus_writew(sensor->slv_addr, 0x20, 0x01C7);
-    ret |= cambus_writew(sensor->slv_addr, 0x24, 0x001B);
-    ret |= cambus_writew(sensor->slv_addr, 0x2B, 0x0003);
-    ret |= cambus_writew(sensor->slv_addr, 0x2F, 0x0003);
+    uint16_t chip_control;
+    ret |= cambus_readw(sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_CHIP_CONTROL, (chip_control & (~MT9V034_CHIP_CONTROL_RESERVED)));
 
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE,
-        MT9V034_READ_MODE_ROW_FLIP | MT9V034_READ_MODE_COL_FLIP);
-
-    ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_OPERATION_MODE,
-        MT9V034_PIXEL_OPERATION_MODE_HDR | MT9V034_PIXEL_OPERATION_MODE_COLOR);
+    uint16_t read_mode;
+    ret |= cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, read_mode | MT9V034_READ_MODE_ROW_FLIP | MT9V034_READ_MODE_COL_FLIP);
 
     return ret;
 }
@@ -187,31 +181,21 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         return -1;
     }
 
-    uint16_t reg, read_mode;
-
-    if (cambus_readw(sensor->slv_addr, MT9V034_ID_REG, &reg) != 0) {
-        return -1;
-    }
+    uint16_t read_mode;
 
     if (cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode) != 0) {
         return -1;
     }
 
-    read_mode &= 0xFFF0;
-    bool is_cfa = ((reg >> 9) & 0x7) == 0x6;
-    MT9V034_mode_t mode_tmp = is_cfa ? MT9V034_CFA : MT9V034_GS;
     int read_mode_mul = 1;
+    read_mode &= 0xFFF0;
 
-    if ((!is_cfa) || (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
-        if ((width <= (MT9V034_MAX_WIDTH / 4)) && (height <= (MT9V034_MAX_HEIGHT / 4))) {
-            read_mode_mul = 4;
-            read_mode |= MT9V034_READ_MODE_COL_BIN_4 | MT9V034_READ_MODE_ROW_BIN_4;
-        } else if ((width <= (MT9V034_MAX_WIDTH / 2)) && (height <= (MT9V034_MAX_HEIGHT / 2))) {
-            read_mode_mul = 2;
-            read_mode |= MT9V034_READ_MODE_COL_BIN_2 | MT9V034_READ_MODE_ROW_BIN_2;
-        } else if (is_cfa && (sensor->pixformat == PIXFORMAT_GRAYSCALE)) {
-            mode_tmp = MT9V034_GS_CFA;
-        }
+    if ((width <= (MT9V034_MAX_WIDTH / 4)) && (height <= (MT9V034_MAX_HEIGHT / 4))) {
+        read_mode_mul = 4;
+        read_mode |= MT9V034_READ_MODE_COL_BIN_4 | MT9V034_READ_MODE_ROW_BIN_4;
+    } else if ((width <= (MT9V034_MAX_WIDTH / 2)) && (height <= (MT9V034_MAX_HEIGHT / 2))) {
+        read_mode_mul = 2;
+        read_mode |= MT9V034_READ_MODE_COL_BIN_2 | MT9V034_READ_MODE_ROW_BIN_2;
     }
 
     int ret = 0;
@@ -227,15 +211,16 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     // The minimum total row time is 690 columns (horizontal width + horizontal blanking). The minimum
     // horizontal blanking is 61. When the window width is set below 627, horizontal blanking
     // must be increased.
+    //
+    // The STM32H7 needs more than 94+(752-640) clocks between rows otherwise it can't keep up with the pixel rate.
     ret |= cambus_writew(sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING,
-            MT9V034_HORIZONTAL_BLANKING_DEF + (MT9V034_MAX_WIDTH - (width * read_mode_mul)));
+            MT9V034_HORIZONTAL_BLANKING_DEF + (MT9V034_MAX_WIDTH - IM_MIN(width * read_mode_mul, 640)));
 
     ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, read_mode);
     ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_COUNT, (width * height) / 8);
 
-    if (ret == 0) {
-        MT9V034_mode = mode_tmp;
-    }
+    // We need more setup time for the pixel_clk at the full data rate...
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_PIXEL_CLOCK, (read_mode_mul == 1) ? MT9V034_PIXEL_CLOCK_INV_PXL_CLK : 0);
 
     return ret;
 }
@@ -277,6 +262,7 @@ static int set_colorbar(sensor_t *sensor, int enable)
     ret |= cambus_writew(sensor->slv_addr, MT9V034_TEST_PATTERN,
             (test & (~(MT9V034_TEST_PATTERN_ENABLE | MT9V034_TEST_PATTERN_GRAY_MASK)))
           | ((enable != 0) ? (MT9V034_TEST_PATTERN_ENABLE | MT9V034_TEST_PATTERN_GRAY_VERTICAL) : 0));
+    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
     return ret;
 }
 
@@ -291,6 +277,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     int ret = cambus_readw(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
     ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE,
             (reg & (~MT9V034_AGC_ENABLE)) | ((enable != 0) ? MT9V034_AGC_ENABLE : 0));
+    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0) * fast_log(10.0)) * 16.0), 127), 0);
@@ -323,6 +310,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     int ret = cambus_readw(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
     ret |= cambus_writew(sensor->slv_addr, MT9V034_AEC_AGC_ENABLE,
             (reg & (~MT9V034_AEC_ENABLE)) | ((enable != 0) ? MT9V034_AEC_ENABLE : 0));
+    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
 
     if ((enable == 0) && (exposure_us >= 0)) {
         ret |= cambus_readw(sensor->slv_addr, MT9V034_WINDOW_WIDTH, &row_time_0);
@@ -335,6 +323,15 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 
         ret |= cambus_writew(sensor->slv_addr, MT9V034_TOTAL_SHUTTER_WIDTH, coarse_time);
         ret |= cambus_writew(sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL, fine_time);
+    } else if ((enable != 0) && (exposure_us >= 0)) {
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_WINDOW_WIDTH, &row_time_0);
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING, &row_time_1);
+
+        int exposure = IM_MIN(exposure_us, MICROSECOND_CLKS / 2) * (MT9V034_XCLK_FREQ / MICROSECOND_CLKS);
+        int row_time = row_time_0 + row_time_1;
+        int coarse_time = exposure / row_time;
+
+        ret |= cambus_writew(sensor->slv_addr, MT9V034_MAX_EXPOSE, coarse_time);
     }
 
     return ret;
@@ -369,6 +366,7 @@ static int set_hmirror(sensor_t *sensor, int enable)
     int ret = cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode);
     ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, // inverted behavior
             (read_mode & (~MT9V034_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V034_READ_MODE_COL_FLIP : 0));
+    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
     return ret;
 }
 
@@ -378,12 +376,31 @@ static int set_vflip(sensor_t *sensor, int enable)
     int ret = cambus_readw(sensor->slv_addr, MT9V034_READ_MODE, &read_mode);
     ret |= cambus_writew(sensor->slv_addr, MT9V034_READ_MODE, // inverted behavior
             (read_mode & (~MT9V034_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V034_READ_MODE_ROW_FLIP : 0));
+    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
     return ret;
 }
 
 static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 {
     return 0;
+}
+
+int mt9v034_set_triggered_mode(sensor_t *sensor, int enable)
+{
+    uint16_t chip_control;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    ret |= cambus_writew(sensor->slv_addr, MT9V034_CHIP_CONTROL,
+            (chip_control & (~MT9V034_CHIP_CONTROL_MODE_MASK))
+            | ((enable != 0) ? MT9V034_CHIP_CONTROL_SNAP_MODE : MT9V034_CHIP_CONTROL_MASTER_MODE));
+    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+    return ret;
+}
+
+int mt9v034_get_triggered_mode(sensor_t *sensor)
+{
+    uint16_t chip_control;
+    int ret = cambus_readw(sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    return (ret >= 0) ? ((chip_control & MT9V034_CHIP_CONTROL_MODE_MASK) == MT9V034_CHIP_CONTROL_SNAP_MODE) : -1;
 }
 
 int mt9v034_init(sensor_t *sensor)
@@ -412,6 +429,8 @@ int mt9v034_init(sensor_t *sensor)
     sensor->set_vflip           = set_vflip;
     sensor->set_special_effect  = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
+    sensor->mt9v034_set_triggered_mode = mt9v034_set_triggered_mode;
+    sensor->mt9v034_get_triggered_mode = mt9v034_get_triggered_mode;
 
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);

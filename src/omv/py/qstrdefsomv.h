@@ -237,6 +237,8 @@ Q(set_special_effect)
 Q(set_lens_correction)
 Q(__write_reg)
 Q(__read_reg)
+Q(mt9v034_set_triggered_mode)
+Q(mt9v034_get_triggered_mode)
 
 // GPIOS
 Q(P1)

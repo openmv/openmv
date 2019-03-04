@@ -988,3 +988,23 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
 
     return 0;
 }
+
+int sensor_mt9v034_set_triggered_mode(int enable)
+{
+    /* call the sensor specific function */
+    if (sensor.mt9v034_set_triggered_mode == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.mt9v034_set_triggered_mode(&sensor, enable);
+}
+
+int sensor_mt9v034_get_triggered_mode()
+{
+    /* call the sensor specific function */
+    if (sensor.mt9v034_get_triggered_mode == NULL) {
+        /* operation not supported */
+        return -1;
+    }
+    return sensor.mt9v034_get_triggered_mode(&sensor);
+}
