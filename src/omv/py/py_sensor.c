@@ -409,7 +409,30 @@ static mp_obj_t py_sensor_set_vsync_output(mp_obj_t pin_obj) {
 
 static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
 {
-    return mp_obj_new_int(-1);
+    mp_obj_t ret_obj = mp_const_true;
+    int request = mp_obj_get_int(args[0]);
+
+    switch (request) {
+        case IOCTL_SET_TRIGGERED_MODE:
+            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+            }
+            break;
+
+        case IOCTL_GET_TRIGGERED_MODE: {
+            int enabled;
+            if (sensor_ioctl(request, &enabled) != 0) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+            }
+            ret_obj = mp_obj_new_bool(enabled);
+            break;
+        }
+
+        default:
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Operation not supported!"));
+            break;
+    }
+    return ret_obj;
 }
 
 static mp_obj_t py_sensor_write_reg(mp_obj_t addr, mp_obj_t val) {
@@ -419,18 +442,6 @@ static mp_obj_t py_sensor_write_reg(mp_obj_t addr, mp_obj_t val) {
 
 static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
     return mp_obj_new_int(sensor_read_reg(mp_obj_get_int(addr)));
-}
-
-static mp_obj_t py_mt9v034_set_triggered_mode(mp_obj_t enable) {
-    int temp = sensor_mt9v034_set_triggered_mode(mp_obj_get_int(enable));
-    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
-    return mp_const_none;
-}
-
-static mp_obj_t py_mt9v034_get_triggered_mode() {
-    int temp = sensor_mt9v034_get_triggered_mode();
-    if (temp < 0) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
-    return mp_obj_new_bool(temp);
 }
 
 //static void py_sensor_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
@@ -474,8 +485,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_output_obj,    py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,           py_sensor_write_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,            py_sensor_read_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_ioctl_obj, 1, 5, py_sensor_ioctl);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mt9v034_set_triggered_mode_obj, py_mt9v034_set_triggered_mode);
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_mt9v034_get_triggered_mode_obj, py_mt9v034_get_triggered_mode);
 
 STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_sensor) },
@@ -525,6 +534,10 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_SXGA),                MP_OBJ_NEW_SMALL_INT(FRAMESIZE_SXGA)},     /* 1280x1024 */
     { MP_OBJ_NEW_QSTR(MP_QSTR_UXGA),                MP_OBJ_NEW_SMALL_INT(FRAMESIZE_UXGA)},     /* 1600x1200 */
 
+    // IOCTLs
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_SET_TRIGGERED_MODE), MP_OBJ_NEW_SMALL_INT(IOCTL_SET_TRIGGERED_MODE)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_GET_TRIGGERED_MODE), MP_OBJ_NEW_SMALL_INT(IOCTL_GET_TRIGGERED_MODE)},
+
     // Sensor functions
     { MP_OBJ_NEW_QSTR(MP_QSTR_reset),               (mp_obj_t)&py_sensor_reset_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_sleep),               (mp_obj_t)&py_sensor_sleep_obj },
@@ -562,8 +575,6 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_ioctl),               (mp_obj_t)&py_sensor_ioctl_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),         (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),          (mp_obj_t)&py_sensor_read_reg_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_mt9v034_set_triggered_mode), (mp_obj_t)&py_mt9v034_set_triggered_mode_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_mt9v034_get_triggered_mode), (mp_obj_t)&py_mt9v034_get_triggered_mode_obj },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);

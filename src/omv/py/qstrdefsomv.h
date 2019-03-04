@@ -201,6 +201,10 @@ Q(UXGA)
 Q(NORMAL)
 Q(NEGATIVE)
 
+//IOCTLs
+Q(IOCTL_SET_TRIGGERED_MODE)
+Q(IOCTL_GET_TRIGGERED_MODE)
+
 Q(reset)
 Q(flush)
 Q(snapshot)
@@ -238,8 +242,6 @@ Q(set_lens_correction)
 Q(ioctl)
 Q(__write_reg)
 Q(__read_reg)
-Q(mt9v034_set_triggered_mode)
-Q(mt9v034_get_triggered_mode)
 
 // GPIOS
 Q(P1)

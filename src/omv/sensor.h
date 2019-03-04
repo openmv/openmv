@@ -96,6 +96,11 @@ typedef enum {
     ACTIVE_HIGH
 } polarity_t;
 
+typedef enum {
+    IOCTL_SET_TRIGGERED_MODE,
+    IOCTL_GET_TRIGGERED_MODE,
+} ioctl_t;
+
 #define SENSOR_HW_FLAGS_VSYNC        (0) // vertical sync polarity.
 #define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
 #define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
@@ -153,8 +158,6 @@ typedef struct _sensor {
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
     int  (*ioctl)               (sensor_t *sensor, int request, va_list ap);
     int  (*snapshot)            (sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
-    int  (*mt9v034_set_triggered_mode) (sensor_t *sensor, int enable);
-    int  (*mt9v034_get_triggered_mode) (sensor_t *sensor);
 } sensor_t;
 
 // Resolution table
@@ -253,10 +256,4 @@ int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
-
-// MT9V034 Set Triggered Mode register
-int sensor_mt9v034_set_triggered_mode(int enable);
-
-// MT9V034 Get Triggered Mode register
-int sensor_mt9v034_get_triggered_mode();
 #endif /* __SENSOR_H__ */
