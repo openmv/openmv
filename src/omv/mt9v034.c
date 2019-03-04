@@ -321,7 +321,15 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 
         ret |= cambus_writew(sensor->slv_addr, MT9V034_TOTAL_SHUTTER_WIDTH, coarse_time);
         ret |= cambus_writew(sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL, fine_time);
-        ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+    } else if ((enable != 0) && (exposure_us >= 0)) {
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_WINDOW_WIDTH, &row_time_0);
+        ret |= cambus_readw(sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING, &row_time_1);
+
+        int exposure = IM_MIN(exposure_us, MICROSECOND_CLKS / 2) * (MT9V034_XCLK_FREQ / MICROSECOND_CLKS);
+        int row_time = row_time_0 + row_time_1;
+        int coarse_time = exposure / row_time;
+
+        ret |= cambus_writew(sensor->slv_addr, MT9V034_MAX_EXPOSE, coarse_time);
     }
 
     return ret;
