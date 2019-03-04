@@ -9,6 +9,7 @@
 #ifndef __SENSOR_H__
 #define __SENSOR_H__
 #include <stdint.h>
+#include <stdarg.h>
 #include "imlib.h"
 
 #define OV9650_ID       (0x96)
@@ -150,6 +151,7 @@ typedef struct _sensor {
     int  (*set_vflip)           (sensor_t *sensor, int enable);
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
+    int  (*ioctl)               (sensor_t *sensor, int request, va_list ap);
     int  (*snapshot)            (sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
     int  (*mt9v034_set_triggered_mode) (sensor_t *sensor, int enable);
     int  (*mt9v034_get_triggered_mode) (sensor_t *sensor);
@@ -242,6 +244,9 @@ int sensor_set_special_effect(sde_t sde);
 
 // Set lens shading correction
 int sensor_set_lens_correction(int enable, int radi, int coef);
+
+// IOCTL function
+int sensor_ioctl(int request, ...);
 
 // Set vsync output pin
 int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);

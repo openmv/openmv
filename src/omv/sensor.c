@@ -710,6 +710,19 @@ int sensor_set_lens_correction(int enable, int radi, int coef)
     return 0;
 }
 
+int sensor_ioctl(int request, ... /* arg */)
+{
+    int ret = -1;
+    if (sensor.ioctl != NULL) {
+        va_list ap;
+        va_start(ap, request);
+        /* call the sensor specific function */
+        ret = sensor.ioctl(&sensor, request, ap);
+        va_end(ap);
+    }
+    return ret;
+}
+
 int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin)
 {
     sensor.vsync_pin  = pin;
