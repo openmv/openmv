@@ -6,6 +6,7 @@
  * Sensor Python module.
  *
  */
+#include <stdarg.h>
 #include "mp.h"
 #include "pin.h"
 #include "sensor.h"
@@ -406,6 +407,11 @@ static mp_obj_t py_sensor_set_vsync_output(mp_obj_t pin_obj) {
     return mp_const_true;
 }
 
+static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
+{
+    return mp_obj_new_int(-1);
+}
+
 static mp_obj_t py_sensor_write_reg(mp_obj_t addr, mp_obj_t val) {
     sensor_write_reg(mp_obj_get_int(addr), mp_obj_get_int(val));
     return mp_const_none;
@@ -467,6 +473,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_output_obj,    py_sensor_set_vsync_output);
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_sensor_write_reg_obj,           py_sensor_write_reg);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_read_reg_obj,            py_sensor_read_reg);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_sensor_ioctl_obj, 1, 5, py_sensor_ioctl);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_mt9v034_set_triggered_mode_obj, py_mt9v034_set_triggered_mode);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_mt9v034_get_triggered_mode_obj, py_mt9v034_get_triggered_mode);
 
@@ -552,6 +559,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_lens_correction), (mp_obj_t)&py_sensor_set_lens_correction_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vsync_output),    (mp_obj_t)&py_sensor_set_vsync_output_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_ioctl),               (mp_obj_t)&py_sensor_ioctl_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___write_reg),         (mp_obj_t)&py_sensor_write_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR___read_reg),          (mp_obj_t)&py_sensor_read_reg_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_mt9v034_set_triggered_mode), (mp_obj_t)&py_mt9v034_set_triggered_mode_obj },
