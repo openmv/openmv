@@ -50,6 +50,7 @@ Q(CORNER_AGAST)
 Q(load_descriptor)
 Q(save_descriptor)
 Q(match_descriptor)
+
 // Image class
 Q(find_template)
 Q(kp_desc)
@@ -205,6 +206,10 @@ Q(NEGATIVE)
 Q(IOCTL_SET_TRIGGERED_MODE)
 Q(IOCTL_GET_TRIGGERED_MODE)
 
+// Color Palettes
+Q(PALETTE_RAINBOW)
+Q(PALETTE_IRONBOW)
+
 Q(reset)
 Q(flush)
 Q(snapshot)
@@ -240,6 +245,7 @@ Q(set_vflip)
 Q(set_special_effect)
 Q(set_lens_correction)
 Q(ioctl)
+Q(set_color_palette)
 Q(__write_reg)
 Q(__read_reg)
 
