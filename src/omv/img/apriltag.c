@@ -12078,7 +12078,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     int sourceX2 = round(sourceX);
                     int sourceY2 = round(sourceY);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                    if ((0 <= sourceX2) && (sourceX2 < img->w) && (0 <= sourceY2) && (sourceY2 < img->h)) {
                         uint32_t *ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY2);
                         int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX2);
                         IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
@@ -12102,7 +12102,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     int sourceX2 = round(sourceX);
                     int sourceY2 = round(sourceY);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                    if ((0 <= sourceX2) && (sourceX2 < img->w) && (0 <= sourceY2) && (sourceY2 < img->h)) {
                         uint8_t *ptr = tmp + (img->w * sourceY2);
                         int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX2);
                         IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
@@ -12126,7 +12126,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     int sourceX2 = round(sourceX);
                     int sourceY2 = round(sourceY);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
+                    if ((0 <= sourceX2) && (sourceX2 < img->w) && (0 <= sourceY2) && (sourceY2 < img->h)) {
                         uint16_t *ptr = tmp + (img->w * sourceY2);
                         int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX2);
                         IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
