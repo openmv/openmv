@@ -118,12 +118,13 @@ typedef struct _sensor {
     uint8_t  slv_addr;          // Sensor I2C slave address.
     uint16_t gs_bpp;            // Grayscale bytes per pixel.
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
+    const uint16_t *color_palette;    // Color palette used for color lookup.
 
     uint32_t vsync_pin;         // VSYNC GPIO output pin.
     GPIO_TypeDef *vsync_gpio;   // VSYNC GPIO output port.
 
-    polarity_t pwdn_pol; // PWDN polarity (TODO move to hw_flags)
-    polarity_t reset_pol; // Reset polarity (TODO move to hw_flags)
+    polarity_t pwdn_pol;        // PWDN polarity (TODO move to hw_flags)
+    polarity_t reset_pol;       // Reset polarity (TODO move to hw_flags)
 
     // Sensor state
     sde_t sde;                  // Special digital effects
@@ -253,6 +254,9 @@ int sensor_ioctl(int request, ...);
 
 // Set vsync output pin
 int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
+
+// Set color palette
+int sensor_set_color_palette(const uint16_t *color_palette);
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);

@@ -50,7 +50,6 @@ static DMA_HandleTypeDef DMAHandle;
 
 extern uint8_t _line_buf;
 extern uint8_t _vospi_buf;
-extern const uint16_t rainbow_table[256];
 
 static bool vospi_resync = true;
 static uint8_t *vospi_packet = &_line_buf;
@@ -425,7 +424,7 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                                 break;
                             }
                             case PIXFORMAT_RGB565: {
-                                IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, rainbow_table[value & 0xFF]);
+                                IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, sensor->color_palette[value & 0xFF]);
                                 break;
                             }
                             default: {
