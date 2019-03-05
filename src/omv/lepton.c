@@ -47,7 +47,7 @@ static bool v_flip = false;
 
 static SPI_HandleTypeDef SPIHandle;
 static DMA_HandleTypeDef DMAHandle;
-
+LEP_CAMERA_PORT_DESC_T   LEPHandle;
 extern uint8_t _line_buf;
 extern uint8_t _vospi_buf;
 
@@ -219,6 +219,73 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return 0;
 }
 
+static int ioctl(sensor_t *sensor, int request, va_list ap)
+{
+    int ret = 0;
+
+    if ((!h_res) || (!v_res)) {
+        return -1;
+    }
+
+    switch (request) {
+        case IOCTL_LEPTON_GET_TYPE: {
+            int *type = va_arg(ap, int *);
+            *type = (h_res == 80) ? 1 : 3;
+            break;
+        }
+        case IOCTL_LEPTON_GET_REFRESH: {
+            int *refresh = va_arg(ap, int *);
+            *refresh = (h_res == 80) ? 27 : 9;
+            break;
+        }
+        case IOCTL_LEPTON_GET_RESOLUTION: {
+            int *resolution = va_arg(ap, int *);
+            *resolution = 14;
+            break;
+        }
+        case IOCTL_LEPTON_RUN_COMMAND: {
+            int command = va_arg(ap, int);
+            ret = (LEP_RunCommand(&LEPHandle, command) == LEP_OK) ? 0 : -1;
+            break;
+        }
+        case IOCTL_LEPTON_SET_ATTRIBUTE: {
+            int command = va_arg(ap, int);
+            uint16_t *data = va_arg(ap, uint16_t *);
+            size_t data_len = va_arg(ap, size_t);
+            ret = (LEP_SetAttribute(&LEPHandle, command, (LEP_ATTRIBUTE_T_PTR) data, data_len) == LEP_OK) ? 0 : -1;
+            break;
+        }
+        case IOCTL_LEPTON_GET_ATTRIBUTE: {
+            int command = va_arg(ap, int);
+            uint16_t *data = va_arg(ap, uint16_t *);
+            size_t data_len = va_arg(ap, size_t);
+            ret = (LEP_GetAttribute(&LEPHandle, command, (LEP_ATTRIBUTE_T_PTR) data, data_len) == LEP_OK) ? 0 : -1;
+            break;
+        }
+        case IOCTL_LEPTON_GET_FPA_TEMPERATURE: {
+            int *temp = va_arg(ap, int *);
+            LEP_SYS_FPA_TEMPERATURE_KELVIN_T tfpa;
+            ret = (LEP_GetSysFpaTemperatureKelvin(&LEPHandle, &tfpa) == LEP_OK) ? 0 : -1;
+            *temp = tfpa;
+            break;
+        }
+        case IOCTL_LEPTON_GET_AUX_TEMPERATURE: {
+            int *temp = va_arg(ap, int *);
+            LEP_SYS_AUX_TEMPERATURE_KELVIN_T taux;
+            ret = (LEP_GetSysAuxTemperatureKelvin(&LEPHandle, &taux) == LEP_OK) ? 0 : -1;
+            *temp = taux;
+            break;
+        }
+        default: {
+            ret = -1;
+            break;
+        }
+    }
+
+    return ret;
+}
+
+
 static int reset(sensor_t *sensor)
 {
     DCMI_PWDN_LOW();
@@ -234,11 +301,11 @@ static int reset(sensor_t *sensor)
     systick_sleep(1000);
 
     LEP_AGC_ROI_T roi;
-    LEP_CAMERA_PORT_DESC_T handle = {0};
     h_res = v_res = h_mirror = v_flip = 0;
+    memset(&LEPHandle, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
-        if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &handle) == LEP_OK) {
+        if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &LEPHandle) == LEP_OK) {
             break;
         }
         if (HAL_GetTick() - start >= LEPTON_TIMEOUT) {
@@ -248,7 +315,7 @@ static int reset(sensor_t *sensor)
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
         LEP_SDK_BOOT_STATUS_E status;
-        if (LEP_GetCameraBootStatus(&handle, &status) != LEP_OK) {
+        if (LEP_GetCameraBootStatus(&LEPHandle, &status) != LEP_OK) {
             return -1;
         }
         if (status == LEP_BOOT_STATUS_BOOTED) {
@@ -261,7 +328,7 @@ static int reset(sensor_t *sensor)
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
         LEP_UINT16 status;
-        if (LEP_DirectReadRegister(&handle, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
+        if (LEP_DirectReadRegister(&LEPHandle, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
             return -1;
         }
         if (!(status & LEP_I2C_STATUS_BUSY_BIT_MASK)) {
@@ -272,10 +339,10 @@ static int reset(sensor_t *sensor)
         }
     }
 
-    if (LEP_SetRadEnableState(&handle, LEP_RAD_DISABLE) != LEP_OK
-        || LEP_GetAgcROI(&handle, &roi) != LEP_OK
-        || LEP_SetAgcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK
-        || LEP_SetAgcCalcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK) {
+    if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
+        || LEP_GetAgcROI(&LEPHandle, &roi) != LEP_OK
+        || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK
+        || LEP_SetAgcCalcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK) {
         return -1;
     }
 
@@ -468,6 +535,7 @@ int lepton_init(sensor_t *sensor)
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
     sensor->set_lens_correction = set_lens_correction;
+    sensor->ioctl               = ioctl;
 
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
