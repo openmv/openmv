@@ -273,19 +273,6 @@ static int reset(sensor_t *sensor)
         }
     }
 
-    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
-        LEP_SYS_STATUS_E status;
-        if (LEP_GetSysFFCStatus(&handle, &status) != LEP_OK) {
-            return -1;
-        }
-        if (status == LEP_SYS_STATUS_READY) {
-            break;
-        }
-        if (HAL_GetTick() - start >= (LEPTON_TIMEOUT * 5)) {
-            return -1;
-        }
-    }
-
     if (LEP_SetRadEnableState(&handle, LEP_RAD_DISABLE) != LEP_OK
         || LEP_GetAgcROI(&handle, &roi) != LEP_OK
         || LEP_SetAgcEnableState(&handle, LEP_AGC_ENABLE) != LEP_OK
