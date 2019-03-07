@@ -143,7 +143,7 @@ def cascade_binary(path, n_stages, name):
     # open output file with the specified name or xml file name
     if not name:
         name = os.path.basename(path).split('.')[0]
-    fout = open(name+".cascade", "w")
+    fout = open(name+".cascade", "wb")
 
     n_rectangles = 0
     for f in feature:
@@ -242,7 +242,7 @@ def cascade_binary_old(path, n_stages, name):
     # open output file with the specified name or xml file name
     if not name:
         name = os.path.basename(path).split('.')[0]
-    fout = open(name+".cascade", "w")
+    fout = open(name+".cascade", "wb")
 
     n_rectangles = 0
     for f in feature:
