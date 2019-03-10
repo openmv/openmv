@@ -241,7 +241,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
         }
         case IOCTL_LEPTON_GET_TYPE: {
             int *type = va_arg(ap, int *);
-            *type = (h_res == 80) ? 1 : 3;
+            *type = radiometry;
             break;
         }
         case IOCTL_LEPTON_GET_REFRESH: {
