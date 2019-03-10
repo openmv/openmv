@@ -245,7 +245,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
         }
         case IOCTL_LEPTON_GET_REFRESH: {
             int *refresh = va_arg(ap, int *);
-            *refresh = (h_res == 80) ? 27 : 9;
+            *refresh = 9;
             break;
         }
         case IOCTL_LEPTON_GET_RESOLUTION: {
