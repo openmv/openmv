@@ -228,6 +228,16 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     }
 
     switch (request) {
+        case IOCTL_LEPTON_GET_WIDTH: {
+            int *width = va_arg(ap, int *);
+            *width = h_res;
+            break;
+        }
+        case IOCTL_LEPTON_GET_HEIGHT: {
+            int *height = va_arg(ap, int *);
+            *height = v_res;
+            break;
+        }
         case IOCTL_LEPTON_GET_TYPE: {
             int *type = va_arg(ap, int *);
             *type = (h_res == 80) ? 1 : 3;
