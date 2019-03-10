@@ -446,12 +446,12 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             break;
         }
 
-        case IOCTL_LEPTON_GET_TYPE: {
-            int type;
-            if (sensor_ioctl(request, &type) != 0) {
+        case IOCTL_LEPTON_GET_RADIOMETRY: {
+            int radiometry;
+            if (sensor_ioctl(request, &radiometry) != 0) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
             }
-            ret_obj = mp_obj_new_int(type);
+            ret_obj = mp_obj_new_int(radiometry);
             break;
         }
 
@@ -644,7 +644,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_GET_TRIGGERED_MODE),          MP_OBJ_NEW_SMALL_INT(IOCTL_GET_TRIGGERED_MODE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_WIDTH),            MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_WIDTH)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_HEIGHT),           MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_HEIGHT)},
-    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_TYPE),             MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_TYPE)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_RADIOMETRY),       MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_RADIOMETRY)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_REFRESH),          MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_REFRESH)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_RESOLUTION),       MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_RESOLUTION)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_RUN_COMMAND),          MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_RUN_COMMAND)},
