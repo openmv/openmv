@@ -541,7 +541,7 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 for (int x = x_offset, xx = fast_ceilf(h_res * scale) + x_offset; x < xx; x++) {
                     if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) { // user window cropping
 
-                        // Value is the 14-bit value from the FLIR IR camera.
+                        // Value is the 14/16-bit value from the FLIR IR camera.
                         // However, with AGC enabled only the bottom 8-bits are non-zero.
                         int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]);
 
