@@ -428,6 +428,24 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             break;
         }
 
+        case IOCTL_LEPTON_GET_WIDTH: {
+            int width;
+            if (sensor_ioctl(request, &width) != 0) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+            }
+            ret_obj = mp_obj_new_int(width);
+            break;
+        }
+
+        case IOCTL_LEPTON_GET_HEIGHT: {
+            int height;
+            if (sensor_ioctl(request, &height) != 0) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+            }
+            ret_obj = mp_obj_new_int(height);
+            break;
+        }
+
         case IOCTL_LEPTON_GET_TYPE: {
             int type;
             if (sensor_ioctl(request, &type) != 0) {
@@ -461,6 +479,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             }
             break;
         }
+
         case IOCTL_LEPTON_SET_ATTRIBUTE: {
             size_t data_len;
             int command = mp_obj_get_int(args[0]);
@@ -492,6 +511,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             }
             ret_obj = mp_obj_new_int(temp);
         }
+
         default:
             nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Operation not supported!"));
             break;
@@ -622,6 +642,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     // IOCTLs
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_SET_TRIGGERED_MODE),          MP_OBJ_NEW_SMALL_INT(IOCTL_SET_TRIGGERED_MODE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_GET_TRIGGERED_MODE),          MP_OBJ_NEW_SMALL_INT(IOCTL_GET_TRIGGERED_MODE)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_WIDTH),            MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_WIDTH)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_HEIGHT),           MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_HEIGHT)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_TYPE),             MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_TYPE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_REFRESH),          MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_REFRESH)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_RESOLUTION),       MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_RESOLUTION)},
