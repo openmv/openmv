@@ -345,6 +345,7 @@ static int reset(sensor_t *sensor)
     DCMI_RESET_HIGH();
     systick_sleep(1000);
 
+    LEP_CAMERA_PORT_DESC_T tmp_LEPHandle;
     LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
     radiometry = false;
@@ -355,7 +356,7 @@ static int reset(sensor_t *sensor)
     memset(&LEPHandle, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
-        if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &LEPHandle) == LEP_OK) {
+        if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &tmp_LEPHandle) == LEP_OK) {
             break;
         }
         if (HAL_GetTick() - start >= LEPTON_TIMEOUT) {
@@ -365,7 +366,7 @@ static int reset(sensor_t *sensor)
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
         LEP_SDK_BOOT_STATUS_E status;
-        if (LEP_GetCameraBootStatus(&LEPHandle, &status) != LEP_OK) {
+        if (LEP_GetCameraBootStatus(&tmp_LEPHandle, &status) != LEP_OK) {
             return -1;
         }
         if (status == LEP_BOOT_STATUS_BOOTED) {
@@ -378,7 +379,7 @@ static int reset(sensor_t *sensor)
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
         LEP_UINT16 status;
-        if (LEP_DirectReadRegister(&LEPHandle, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
+        if (LEP_DirectReadRegister(&tmp_LEPHandle, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
             return -1;
         }
         if (!(status & LEP_I2C_STATUS_BUSY_BIT_MASK)) {
@@ -389,15 +390,15 @@ static int reset(sensor_t *sensor)
         }
     }
 
-    if (LEP_GetRadEnableState(&LEPHandle, &rad) != LEP_OK
-        || LEP_GetAgcROI(&LEPHandle, &roi) != LEP_OK) {
+    if (LEP_GetRadEnableState(&tmp_LEPHandle, &rad) != LEP_OK
+        || LEP_GetAgcROI(&tmp_LEPHandle, &roi) != LEP_OK) {
         return -1;
     }
 
     if (!measurement_mode) {
-        if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
-            || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK
-            || LEP_SetAgcCalcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK) {
+        if (LEP_SetRadEnableState(&tmp_LEPHandle, LEP_RAD_DISABLE) != LEP_OK
+            || LEP_SetAgcEnableState(&tmp_LEPHandle, LEP_AGC_ENABLE) != LEP_OK
+            || LEP_SetAgcCalcEnableState(&tmp_LEPHandle, LEP_AGC_ENABLE) != LEP_OK) {
             return -1;
         }
     }
@@ -405,6 +406,7 @@ static int reset(sensor_t *sensor)
     radiometry = rad == LEP_RAD_ENABLE;
     h_res = roi.endCol + 1;
     v_res = roi.endRow + 1;
+    memcpy(&LEPHandle, &tmp_LEPHandle, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     if (v_res > 60) {
         vospi_packets = 240;
