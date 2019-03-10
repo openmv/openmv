@@ -45,6 +45,9 @@ static int h_res = 0;
 static int v_res = 0;
 static bool h_mirror = false;
 static bool v_flip = false;
+static bool measurement_mode = false;
+static float min_temp = -17.7778; // 0F
+static float max_temp = 37.7778; // 100F
 
 static SPI_HandleTypeDef SPIHandle;
 static DMA_HandleTypeDef DMAHandle;
@@ -287,6 +290,37 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             *temp = taux;
             break;
         }
+        case IOCTL_LEPTON_SET_MEASUREMENT_MODE: {
+            int enabled = va_arg(ap, int);
+            bool old_measurement_mode = measurement_mode;
+            measurement_mode = enabled != 0;
+            if (measurement_mode != old_measurement_mode) {
+                ret = sensor->reset(sensor);
+            }
+            if (ret < 0) {
+                measurement_mode = old_measurement_mode;
+            }
+            break;
+        }
+        case IOCTL_LEPTON_GET_MEASUREMENT_MODE: {
+            bool *enabled = va_arg(ap, bool *);
+            *enabled = measurement_mode;
+            break;
+        }
+        case IOCTL_LEPTON_SET_MEASUREMENT_RANGE: {
+            float *arg_min_temp = va_arg(ap, float *);
+            float *arg_max_temp = va_arg(ap, float *);
+            min_temp = IM_MAX(IM_MIN(*arg_min_temp, *arg_max_temp), -10.0f);
+            max_temp = IM_MIN(IM_MAX(*arg_max_temp, *arg_min_temp), 140.0f);
+            break;
+        }
+        case IOCTL_LEPTON_GET_MEASUREMENT_RANGE: {
+            float *ptr_min_temp = va_arg(ap, float *);
+            float *ptr_max_temp = va_arg(ap, float *);
+            *ptr_min_temp = min_temp;
+            *ptr_max_temp = max_temp;
+            break;
+        }
         default: {
             ret = -1;
             break;
@@ -356,11 +390,16 @@ static int reset(sensor_t *sensor)
     }
 
     if (LEP_GetRadEnableState(&LEPHandle, &rad) != LEP_OK
-        || LEP_GetAgcROI(&LEPHandle, &roi) != LEP_OK
-        || LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
-        || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK
-        || LEP_SetAgcCalcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK) {
+        || LEP_GetAgcROI(&LEPHandle, &roi) != LEP_OK) {
         return -1;
+    }
+
+    if (!measurement_mode) {
+        if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
+            || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK
+            || LEP_SetAgcCalcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK) {
+            return -1;
+        }
     }
 
     radiometry = rad == LEP_RAD_ENABLE;
@@ -485,6 +524,13 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         // The code below upscales the source image to the requested frame size
         // and then crops it to the window set by the user.
 
+        LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
+        if (measurement_mode && (!radiometry)) {
+            if (LEP_GetSysFpaTemperatureKelvin(&LEPHandle, &kelvin) != LEP_OK) {
+                return -1;
+            }
+        }
+
         for (int y = y_offset, yy = fast_ceilf(v_res * scale) + y_offset; y < yy; y++) {
             if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) { // user window cropping
 
@@ -495,7 +541,15 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
 
                         // Value is the 14-bit value from the FLIR IR camera.
                         // However, with AGC enabled only the bottom 8-bits are non-zero.
-                        int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]) & 0x3FFF;
+                        int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]);
+
+                        if (measurement_mode) {
+                            // Need to convert 14/16-bits to 8-bits ourselves...
+                            if (!radiometry) value = (value - 8192) + kelvin;
+                            float celsius = (value * 0.01f) - 273.15f;
+                            celsius = IM_MAX(IM_MIN(celsius, max_temp), min_temp);
+                            value = IM_DIV(((celsius - min_temp) * 255), (max_temp - min_temp));
+                        }
 
                         int t_x = x - MAIN_FB()->x;
                         int t_y = y - MAIN_FB()->y;
