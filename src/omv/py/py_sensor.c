@@ -568,7 +568,7 @@ static mp_obj_t py_sensor_set_color_palette(mp_obj_t palette_obj) {
             nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid color palette!"));
             break;
     }
-    return mp_const_true;
+    return mp_const_none;
 }
 
 static mp_obj_t py_sensor_get_color_palette() {
