@@ -272,6 +272,9 @@ int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
 // Set color palette
 int sensor_set_color_palette(const uint16_t *color_palette);
 
+// Get color palette
+const uint16_t *sensor_get_color_palette();
+
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
 #endif /* __SENSOR_H__ */

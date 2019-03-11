@@ -260,6 +260,7 @@ Q(set_special_effect)
 Q(set_lens_correction)
 Q(ioctl)
 Q(set_color_palette)
+Q(get_color_palette)
 Q(__write_reg)
 Q(__read_reg)
 
