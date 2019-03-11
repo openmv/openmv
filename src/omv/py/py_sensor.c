@@ -482,8 +482,8 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
 
         case IOCTL_LEPTON_SET_ATTRIBUTE: {
             size_t data_len;
-            int command = mp_obj_get_int(args[0]);
-            uint16_t *data = (uint16_t *) mp_obj_str_get_data(args[1], &data_len);
+            int command = mp_obj_get_int(args[1]);
+            uint16_t *data = (uint16_t *) mp_obj_str_get_data(args[2], &data_len);
             PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
             if (sensor_ioctl(request, command, data, data_len / sizeof(uint16_t)) != 0) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
@@ -492,14 +492,14 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
         }
 
         case IOCTL_LEPTON_GET_ATTRIBUTE: {
-            int command = mp_obj_get_int(args[0]);
-            size_t data_len = mp_obj_get_int(args[1]);
+            int command = mp_obj_get_int(args[1]);
+            size_t data_len = mp_obj_get_int(args[2]);
             PY_ASSERT_TRUE_MSG(data_len > 0, "0 bytes transferred!");
             uint16_t *data = xalloc(data_len * sizeof(uint16_t));
             if (sensor_ioctl(request, command, data, data_len) != 0) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
             }
-            ret_obj = mp_obj_new_bytearray_by_ref(data_len, data);
+            ret_obj = mp_obj_new_bytearray_by_ref(data_len * sizeof(uint16_t), data);
             break;
         }
 
