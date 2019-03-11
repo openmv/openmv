@@ -427,6 +427,7 @@ Q(to_rgb565)
 Q(to_rainbow)
 // duplicate Q(copy)
 // duplicate Q(rgb_channel)
+Q(color_palette)
 
 // Compress (in place)
 Q(compress)
