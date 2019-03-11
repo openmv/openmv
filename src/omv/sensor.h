@@ -148,6 +148,7 @@ typedef struct _sensor {
     gainceiling_t gainceiling;  // AGC gainceiling
 
     // Sensor function pointers
+    void (*init0)               (sensor_t *sensor);
     int  (*reset)               (sensor_t *sensor);
     int  (*sleep)               (sensor_t *sensor, int enable);
     int  (*read_reg)            (sensor_t *sensor, uint8_t reg_addr);

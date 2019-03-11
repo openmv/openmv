@@ -610,9 +610,23 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
     return 0;
 }
 
+void init0(sensor_t *sensor)
+{
+    radiometry = false;
+    h_res = 0;
+    v_res = 0;
+    h_mirror = false;
+    v_flip = false;
+    measurement_mode = false;
+    min_temp = -17.7778; // 0F
+    max_temp = 37.7778; // 100F
+    memset(&LEPHandle, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
+}
+
 int lepton_init(sensor_t *sensor)
 {
     sensor->gs_bpp              = sizeof(uint8_t);
+    sensor->init0               = init0;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->snapshot            = snapshot;

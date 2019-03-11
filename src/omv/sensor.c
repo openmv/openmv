@@ -201,6 +201,10 @@ void sensor_init0()
 
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled;
+
+    if (sensor.init0 != NULL) {
+        sensor.init0(&sensor);
+    }
 }
 
 int sensor_init()
