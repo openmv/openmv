@@ -510,6 +510,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
             }
             ret_obj = mp_obj_new_float((((float) temp) / 100) - 273.15f);
+            break;
         }
 
         case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
@@ -548,9 +549,10 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             break;
         }
 
-        default:
+        default: {
             nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Operation not supported!"));
             break;
+        }
     }
     return ret_obj;
 }
