@@ -40,6 +40,7 @@
 #define VOSPI_FIRST_SEGMENT     (1)
 #define LEPTON_TIMEOUT          (1000)
 
+static bool radiometry = false;
 static int h_res = 0;
 static int v_res = 0;
 static bool h_mirror = false;
@@ -228,9 +229,19 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     }
 
     switch (request) {
-        case IOCTL_LEPTON_GET_TYPE: {
+        case IOCTL_LEPTON_GET_WIDTH: {
+            int *width = va_arg(ap, int *);
+            *width = h_res;
+            break;
+        }
+        case IOCTL_LEPTON_GET_HEIGHT: {
+            int *height = va_arg(ap, int *);
+            *height = v_res;
+            break;
+        }
+        case IOCTL_LEPTON_GET_RADIOMETRY: {
             int *type = va_arg(ap, int *);
-            *type = (h_res == 80) ? 1 : 3;
+            *type = radiometry;
             break;
         }
         case IOCTL_LEPTON_GET_REFRESH: {
@@ -300,8 +311,13 @@ static int reset(sensor_t *sensor)
     DCMI_RESET_HIGH();
     systick_sleep(1000);
 
+    LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
-    h_res = v_res = h_mirror = v_flip = 0;
+    radiometry = false;
+    h_res = 0;
+    v_res = 0;
+    h_mirror = false;
+    v_flip = false;
     memset(&LEPHandle, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
@@ -339,13 +355,15 @@ static int reset(sensor_t *sensor)
         }
     }
 
-    if (LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
+    if (LEP_GetRadEnableState(&LEPHandle, &rad) != LEP_OK
         || LEP_GetAgcROI(&LEPHandle, &roi) != LEP_OK
+        || LEP_SetRadEnableState(&LEPHandle, LEP_RAD_DISABLE) != LEP_OK
         || LEP_SetAgcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK
         || LEP_SetAgcCalcEnableState(&LEPHandle, LEP_AGC_ENABLE) != LEP_OK) {
         return -1;
     }
 
+    radiometry = rad == LEP_RAD_ENABLE;
     h_res = roi.endCol + 1;
     v_res = roi.endRow + 1;
 
