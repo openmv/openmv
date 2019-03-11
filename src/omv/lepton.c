@@ -480,6 +480,10 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         vospi_seg = VOSPI_FIRST_SEGMENT;
         HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
 
+        // Snapshot start tick
+        uint32_t tick_start = HAL_GetTick();
+        bool reset_tried = false;
+
         do {
             if (vospi_resync == true) {
                 lepton_sync();
@@ -490,6 +494,30 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 frame_ready = false;
             } else {
                 __WFI();
+            }
+            if ((HAL_GetTick() - tick_start) >= 20000) {
+                // Timeout error.
+                return -1;
+            }
+            if ((!reset_tried) && ((HAL_GetTick() - tick_start) >= 10000)) {
+                reset_tried = true;
+
+                // The FLIR lepton might have crashed so reset it (it does this).
+                bool temp_h_mirror = h_mirror;
+                bool temp_v_flip = v_flip;
+                int ret = reset(sensor);
+                h_mirror = temp_h_mirror;
+                v_flip = temp_v_flip;
+
+                if (ret < 0) {
+                    return -1;
+                }
+
+                // Reset the VOSPI interface again.
+                HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
+                vospi_pid = VOSPI_FIRST_PACKET;
+                vospi_seg = VOSPI_FIRST_SEGMENT;
+                HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
             }
         } while (vospi_pid < vospi_packets); // only checking one volatile var so atomic.
 
