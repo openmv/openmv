@@ -748,6 +748,11 @@ int sensor_set_color_palette(const uint16_t *color_palette)
     return 0;
 }
 
+const uint16_t *sensor_get_color_palette()
+{
+    return sensor.color_palette;
+}
+
 void DCMI_VsyncExtiCallback()
 {
     __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_IRQ_LINE);
