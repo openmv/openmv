@@ -578,7 +578,7 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                             if (!radiometry) value = (value - 8192) + kelvin;
                             float celsius = (value * 0.01f) - 273.15f;
                             celsius = IM_MAX(IM_MIN(celsius, max_temp), min_temp);
-                            value = IM_DIV(((celsius - min_temp) * 255), (max_temp - min_temp));
+                            value = IM_MAX(IM_MIN(IM_DIV(((celsius - min_temp) * 255), (max_temp - min_temp)), 255), 0);
                         }
 
                         int t_x = x - MAIN_FB()->x;
