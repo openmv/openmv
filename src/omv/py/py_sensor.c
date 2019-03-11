@@ -509,7 +509,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             if (sensor_ioctl(request, &temp) != 0) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
             }
-            ret_obj = mp_obj_new_int(temp);
+            ret_obj = mp_obj_new_float((((float) temp) / 100) - 273.15f);
         }
 
         case IOCTL_LEPTON_SET_MEASUREMENT_MODE:
