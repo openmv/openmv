@@ -1096,6 +1096,16 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
     bool copy = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy), false);
     int channel = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
+    int palette = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), COLOR_PALETTE_RAINBOW);
+    const uint16_t *color_palette = NULL;
+
+    if (palette == COLOR_PALETTE_RAINBOW) {
+        color_palette = rainbow_table;
+    } else if (palette == COLOR_PALETTE_IRONBOW) {
+        color_palette = ironbow_table;
+    } else {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid color palette!"));
+    }
 
     image_t out;
     out.w = arg_img->w;
@@ -1113,7 +1123,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                     uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
                     for (int x = 0, xx = out.w; x < xx; x++) {
                         IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                            rainbow_table[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX]);
+                            color_palette[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX]);
                     }
                 }
             } else {
@@ -1136,7 +1146,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                     uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
                     for (int x = 0, xx = out.w; x < xx; x++) {
                         IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                            rainbow_table[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX]);
+                            color_palette[IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) * COLOR_GRAYSCALE_MAX]);
                     }
                 }
 
@@ -1154,7 +1164,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                     uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
                     for (int x = 0, xx = out.w; x < xx; x++) {
                         IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                            rainbow_table[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)]);
+                            color_palette[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)]);
                     }
                 }
             } else {
@@ -1177,7 +1187,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                     uint16_t *out_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&out, y);
                     for (int x = 0, xx = out.w; x < xx; x++) {
                         IMAGE_PUT_RGB565_PIXEL_FAST(out_row_ptr, x,
-                            rainbow_table[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)]);
+                            color_palette[IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)]);
                     }
                 }
 
@@ -1194,19 +1204,19 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
                     switch (channel) {
                         case 0: {
-                            pixel = rainbow_table[COLOR_RGB565_TO_R8(pixel)];
+                            pixel = color_palette[COLOR_RGB565_TO_R8(pixel)];
                             break;
                         }
                         case 1: {
-                            pixel = rainbow_table[COLOR_RGB565_TO_G8(pixel)];
+                            pixel = color_palette[COLOR_RGB565_TO_G8(pixel)];
                             break;
                         }
                         case 2: {
-                            pixel = rainbow_table[COLOR_RGB565_TO_B8(pixel)];
+                            pixel = color_palette[COLOR_RGB565_TO_B8(pixel)];
                             break;
                         }
                         default: {
-                            pixel = rainbow_table[COLOR_RGB565_TO_GRAYSCALE(pixel)];
+                            pixel = color_palette[COLOR_RGB565_TO_GRAYSCALE(pixel)];
                             break;
                         }
                     }
