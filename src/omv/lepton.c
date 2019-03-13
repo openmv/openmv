@@ -39,15 +39,17 @@
 #define VOSPI_FIRST_PACKET      (0)
 #define VOSPI_FIRST_SEGMENT     (1)
 #define LEPTON_TIMEOUT          (1000)
+#define DEFAULT_MIN_TEMP        (-17.7778f)
+#define DEFAULT_MAX_TEMP        (37.7778f)
 
 static bool radiometry = false;
 static int h_res = 0;
 static int v_res = 0;
-static bool h_mirror = false;
 static bool v_flip = false;
+static bool h_mirror = false;
 static bool measurement_mode = false;
-static float min_temp = -17.7778; // 0F
-static float max_temp = 37.7778; // 100F
+static float min_temp = DEFAULT_MIN_TEMP;
+static float max_temp = DEFAULT_MAX_TEMP;
 
 static SPI_HandleTypeDef SPIHandle;
 static DMA_HandleTypeDef DMAHandle;
@@ -61,6 +63,7 @@ static uint8_t *vospi_buffer = &_vospi_buf;
 static volatile uint32_t vospi_pid = 0;
 static volatile uint32_t vospi_seg = 1;
 static uint32_t vospi_packets = 60;
+static int lepton_reset(sensor_t *sensor, bool measurement_mode);
 
 void LEPTON_SPI_IRQHandler(void)
 {
@@ -292,13 +295,9 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
         }
         case IOCTL_LEPTON_SET_MEASUREMENT_MODE: {
             int enabled = va_arg(ap, int);
-            bool old_measurement_mode = measurement_mode;
-            measurement_mode = enabled != 0;
-            if (measurement_mode != old_measurement_mode) {
-                ret = sensor->reset(sensor);
-            }
-            if (ret < 0) {
-                measurement_mode = old_measurement_mode;
+            if (measurement_mode != enabled) {
+                measurement_mode = enabled;
+                ret = lepton_reset(sensor, measurement_mode);
             }
             break;
         }
@@ -331,7 +330,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 }
 
 
-static int reset(sensor_t *sensor)
+static int lepton_reset(sensor_t *sensor, bool measurement_mode)
 {
     DCMI_PWDN_LOW();
     systick_sleep(10);
@@ -347,11 +346,6 @@ static int reset(sensor_t *sensor)
 
     LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
-    radiometry = false;
-    h_res = 0;
-    v_res = 0;
-    h_mirror = false;
-    v_flip = false;
     memset(&LEPHandle, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
@@ -402,9 +396,9 @@ static int reset(sensor_t *sensor)
         }
     }
 
-    radiometry = rad == LEP_RAD_ENABLE;
     h_res = roi.endCol + 1;
     v_res = roi.endRow + 1;
+    radiometry = (rad == LEP_RAD_ENABLE);
 
     if (v_res > 60) {
         vospi_packets = 240;
@@ -415,6 +409,19 @@ static int reset(sensor_t *sensor)
     // resync and enable DMA before the first snapshot.
     vospi_resync = true;
     return 0;
+}
+
+static int reset(sensor_t *sensor)
+{
+    h_res = 0;
+    v_res = 0;
+    v_flip = false;
+    h_mirror = false;
+    radiometry = false;
+    measurement_mode = false;
+    min_temp = DEFAULT_MIN_TEMP;
+    max_temp = DEFAULT_MAX_TEMP;
+    return lepton_reset(sensor, false);
 }
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
