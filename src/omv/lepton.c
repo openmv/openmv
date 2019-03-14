@@ -510,7 +510,7 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 // The FLIR lepton might have crashed so reset it (it does this).
                 bool temp_h_mirror = h_mirror;
                 bool temp_v_flip = v_flip;
-                int ret = reset(sensor);
+                int ret = lepton_reset(sensor, measurement_mode);
                 h_mirror = temp_h_mirror;
                 v_flip = temp_v_flip;
 
