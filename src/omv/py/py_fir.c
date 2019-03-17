@@ -151,6 +151,7 @@ static float calculate_Ta() // ambient temp
 
 static void calculate_To(float Ta, float *To)
 {
+    fb_alloc_mark();
     int16_t *v_ir = fb_alloc(64 * sizeof(int16_t));
     // Read IR sensor result
     test_ack(soft_i2c_write_bytes(FIR_MODULE_ADDR,
@@ -190,6 +191,7 @@ static void calculate_To(float Ta, float *To)
         To[i] = sqrtf(sqrtf((v_ir_comp/alpha_comp_ij)+Tak4))-273.15f;
     }
     fb_free();
+    fb_alloc_free_till_mark();
 }
 
 static mp_obj_t py_fir_deinit()
@@ -260,6 +262,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             b_ij = xalloc(64 * sizeof(*b_ij));
             alpha_ij = xalloc(64 * sizeof(*alpha_ij));
 
+            fb_alloc_mark();
             uint8_t *eeprom = fb_alloc(256 * sizeof(uint8_t));
             // Read the whole eeprom.
             test_ack(soft_i2c_write_bytes(FIR_EEPROM_ADDR,
@@ -336,6 +339,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                 powf(2,b_i_scale+(3-ADC_resolution));
 
             fb_free();
+            fb_alloc_free_till_mark();
             return mp_const_none;
         }
         case FIR_MLX90640:
@@ -363,6 +367,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             error |= MLX90640_SetResolution(MLX90640_ADDR, ADC_resolution);
             error |= MLX90640_SetRefreshRate(MLX90640_ADDR, IR_refresh_rate);
 
+            fb_alloc_mark();
             uint16_t *eeprom = fb_alloc(832 * sizeof(uint16_t));
             error |= MLX90640_DumpEE(MLX90640_ADDR, eeprom);
             error |= MLX90640_ExtractParameters(eeprom, (paramsMLX90640 *) alpha_ij);
@@ -370,6 +375,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             PY_ASSERT_TRUE_MSG(error == 0, "Failed to init the MLX90640!");
 
             fb_free();
+            fb_alloc_free_till_mark();
             return mp_const_none;
         }
         case FIR_AMG8833:
@@ -441,11 +447,13 @@ mp_obj_t py_fir_read_ta()
         case FIR_SHIELD: return mp_obj_new_float(calculate_Ta());
         case FIR_MLX90640:
         {
+            fb_alloc_mark();
             uint16_t *data = fb_alloc(834 * sizeof(uint16_t));
             PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                                "Failed to read the MLX90640 sensor data!");
             mp_obj_t result = mp_obj_new_float(MLX90640_GetTa(data, (paramsMLX90640 *) alpha_ij));
             fb_free();
+            fb_alloc_free_till_mark();
             return result;
         }
         case FIR_AMG8833:
@@ -468,6 +476,7 @@ mp_obj_t py_fir_read_ir()
         case FIR_NONE: return mp_const_none;
         case FIR_SHIELD:
         {
+            fb_alloc_mark();
             float *To = fb_alloc(64 * sizeof(float)), *To_rot = fb_alloc(64 * sizeof(float));
             float Ta = calculate_Ta();
             float min = FLT_MAX, max = FLT_MIN;
@@ -496,10 +505,12 @@ mp_obj_t py_fir_read_ir()
 
             fb_free();
             fb_free();
+            fb_alloc_free_till_mark();
             return mp_obj_new_tuple(4, tuple);
         }
         case FIR_MLX90640:
         {
+            fb_alloc_mark();
             uint16_t *data = fb_alloc(834 * sizeof(uint16_t));
             // Calculate 1st sub-frame...
             PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
@@ -533,6 +544,7 @@ mp_obj_t py_fir_read_ir()
 
             fb_free();
             fb_free();
+            fb_alloc_free_till_mark();
             return mp_obj_new_tuple(4, tuple);
         }
         case FIR_AMG8833:
@@ -545,6 +557,7 @@ mp_obj_t py_fir_read_ir()
             float Ta = temp * 0.0625;
 
             test_ack(soft_i2c_write_bytes(AMG8833_ADDR, (uint8_t [1]){0x80}, 1, true));
+            fb_alloc_mark();
             int16_t *data = fb_alloc(64 * sizeof(int16_t));
             test_ack(soft_i2c_read_bytes(AMG8833_ADDR, (uint8_t *) data, 128, true));
             float To[64], min = FLT_MAX, max = FLT_MIN;
@@ -569,6 +582,7 @@ mp_obj_t py_fir_read_ir()
             }
 
             fb_free();
+            fb_alloc_free_till_mark();
             return mp_obj_new_tuple(4, tuple);
         }
     }
@@ -647,6 +661,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     mp_obj_t *arg_To;
     mp_obj_get_array_fixed_n(args[1], width*height, &arg_To);
 
+    fb_alloc_mark();
     float *To = fb_alloc(width*height * sizeof(float)), min = FLT_MAX, max = FLT_MIN;
     for (int i=0; i<width*height; i++) {
         float temp = To[i] = mp_obj_get_float(arg_To[i]);
@@ -711,6 +726,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         }
     }
     fb_free();
+    fb_alloc_free_till_mark();
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
