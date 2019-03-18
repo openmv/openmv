@@ -6095,11 +6095,13 @@ static mp_obj_t py_image_find_template(uint n_args, const mp_obj_t *args, mp_map
     // Find template
     rectangle_t r;
     float corr;
+    fb_alloc_mark();
     if (search == SEARCH_DS) {
         corr = imlib_template_match_ds(arg_img, arg_template, &r);
     } else {
         corr = imlib_template_match_ex(arg_img, arg_template, &roi, step, &r);
     }
+    fb_alloc_free_till_mark();
 
     if (corr > arg_thresh) {
         mp_obj_t rec_obj[4] = {
@@ -6130,7 +6132,9 @@ static mp_obj_t py_image_find_features(uint n_args, const mp_obj_t *args, mp_map
             "Region of interest is smaller than detector window!");
 
     // Detect objects
+    fb_alloc_mark();
     array_t *objects_array = imlib_detect_objects(arg_img, cascade, &roi);
+    fb_alloc_free_till_mark();
 
     // Add detected objects to a new Python list...
     mp_obj_t objects_list = mp_obj_new_list(0, NULL);
@@ -6209,7 +6213,9 @@ static mp_obj_t py_image_find_keypoints(uint n_args, const mp_obj_t *args, mp_ma
     #endif
 
     // Find keypoints
+    fb_alloc_mark();
     array_t *kpts = orb_find_keypoints(arg_img, normalized, threshold, scale_factor, max_keypoints, corner_detector, &roi);
+    fb_alloc_free_till_mark();
 
     if (array_length(kpts)) {
         py_kp_obj_t *kp_obj = m_new_obj(py_kp_obj_t);
@@ -6245,11 +6251,15 @@ static mp_obj_t py_image_find_edges(uint n_args, const mp_obj_t *args, mp_map_t 
 
     switch (edge_type) {
         case EDGE_SIMPLE: {
+            fb_alloc_mark();
             imlib_edge_simple(arg_img, &roi, thresh[0], thresh[1]);
+            fb_alloc_free_till_mark();
             break;
         }
         case EDGE_CANNY: {
+            fb_alloc_mark();
             imlib_edge_canny(arg_img, &roi, thresh[0], thresh[1]);
+            fb_alloc_free_till_mark();
             break;
         }
 
@@ -6270,7 +6280,9 @@ static mp_obj_t py_image_find_hog(uint n_args, const mp_obj_t *args, mp_map_t *k
 
     int size = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_size), 8);
 
+    fb_alloc_mark();
     imlib_find_hog(arg_img, &roi, size);
+    fb_alloc_free_till_mark();
 
     return args[0];
 }
@@ -7389,6 +7401,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
         mp_obj_t match_list = mp_obj_new_list(0, NULL);
 
         if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
+            fb_alloc_mark();
             int *match = fb_alloc(array_length(kpts1->kpts) * sizeof(int) * 2);
 
             // Match the two keypoint sets
@@ -7405,6 +7418,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
 
             // Free match list
             fb_free();
+            fb_alloc_free_till_mark();
 
             if (filter_outliers == true) {
                 count = orb_filter_keypoints(kpts2->kpts, &r, &c);

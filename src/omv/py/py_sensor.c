@@ -149,15 +149,17 @@ static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_
             break;
     }
 
-    fb_alloc_mark();
-    img.pixels = fb_alloc0(image_size(&img));
-    return py_image_from_struct(&img);
+    // Alloc image first (could fail) then alloc RAM so that there's no leak on failure.
+    mp_obj_t r = py_image_from_struct(&img);
+    // Don't mark before on purpose.
+    ((image_t *) py_image_cobj(r))->pixels = fb_alloc0(image_size(&img));
+    return r;
 }
 
 static mp_obj_t py_sensor_dealloc_extra_fb()
 {
     fb_free();
-    fb_alloc_free_till_mark();
+    // Don't free till mark aftwards on purpose.
     return mp_const_none;
 }
 
