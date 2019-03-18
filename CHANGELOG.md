@@ -1,4 +1,17 @@
 # Change Log
+## [3.3](https://github.com/openmv/openmv/releases/tag/v3.3) (2019-03-18)
+* Update FatFS to FF13C.
+* Update FLIR and MT9V034 drivers.
+* Add new libraries and examples.
+* Add masking functions.
+* Add configurable color palettes.
+* Add FLIR measurement mode (AGC disabled).
+* Add py TV module support.
+* Fix H7 ADC bug.
+* Fix JPEG MCU boundaries.
+* Fix exFAT bug.
+* Fix fb_alloc_mark bug. 
+
 ## [3.2](https://github.com/openmv/openmv/releases/tag/v3.2) (2018-11-04)
 * Fix column buffer bug in CMSIS-NN library.
 * Fix H7 SPI clock source.
