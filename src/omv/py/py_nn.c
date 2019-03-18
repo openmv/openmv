@@ -41,8 +41,6 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     bool dry_run = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_dry_run), false);
 
     mp_obj_t output_list = mp_obj_new_list(0, NULL);
-    fb_alloc_mark();
-
     if (dry_run == false) {
         nn_run_network(net, img, &roi, softmax);
     } else {
@@ -52,8 +50,6 @@ STATIC mp_obj_t py_net_forward(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     for (int i=0; i<net->output_size; i++) {
         mp_obj_list_append(output_list, mp_obj_new_float(((float) (net->output_data[i] + 128)) / 255));
     }
-
-    fb_alloc_free_till_mark();
     return output_list;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_net_forward_obj, 2, py_net_forward);
@@ -184,8 +180,6 @@ STATIC mp_obj_t py_net_search(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     list_t out;
     list_init(&out, sizeof(py_nn_class_obj_list_lnk_data_t));
 
-    fb_alloc_mark();
-
     for (float scale = 1; scale >= arg_min_scale; scale *= arg_scale_mul) {
         // Either provide a subtle offset to center multiple detection windows or center the only detection window.
         for (int y = roi.y + ((arg_y_overlap != -1) ? (fmodf(roi.h, (roi.h * scale)) / 2) : ((roi.h - (roi.h * scale)) / 2));
@@ -260,8 +254,6 @@ STATIC mp_obj_t py_net_search(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
             }
         }
     }
-
-    fb_alloc_free_till_mark();
 
     // Merge all overlapping and same detections and average them.
 

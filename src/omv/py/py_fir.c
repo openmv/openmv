@@ -190,7 +190,6 @@ static void calculate_To(float Ta, float *To)
         // To[i] = sqrtf(sqrtf((v_ir_comp/((alpha_comp_ij*(1-(ks4*273.15f)))+sx))+Ta4))-273.15f;
         To[i] = sqrtf(sqrtf((v_ir_comp/alpha_comp_ij)+Tak4))-273.15f;
     }
-    fb_free();
     fb_alloc_free_till_mark();
 }
 
@@ -338,7 +337,6 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             b_cp = ((int8_t)eeprom[CAL_BCP]) /
                 powf(2,b_i_scale+(3-ADC_resolution));
 
-            fb_free();
             fb_alloc_free_till_mark();
             return mp_const_none;
         }
@@ -374,7 +372,6 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             PY_ASSERT_TRUE_MSG(error == 0, "Failed to init the MLX90640!");
 
-            fb_free();
             fb_alloc_free_till_mark();
             return mp_const_none;
         }
@@ -452,7 +449,6 @@ mp_obj_t py_fir_read_ta()
             PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                                "Failed to read the MLX90640 sensor data!");
             mp_obj_t result = mp_obj_new_float(MLX90640_GetTa(data, (paramsMLX90640 *) alpha_ij));
-            fb_free();
             fb_alloc_free_till_mark();
             return result;
         }
@@ -503,8 +499,6 @@ mp_obj_t py_fir_read_ir()
                 mp_obj_list_append(tuple[1], mp_obj_new_float(To[i]));
             }
 
-            fb_free();
-            fb_free();
             fb_alloc_free_till_mark();
             return mp_obj_new_tuple(4, tuple);
         }
@@ -542,8 +536,6 @@ mp_obj_t py_fir_read_ir()
                 }
             }
 
-            fb_free();
-            fb_free();
             fb_alloc_free_till_mark();
             return mp_obj_new_tuple(4, tuple);
         }
@@ -581,7 +573,6 @@ mp_obj_t py_fir_read_ir()
                 }
             }
 
-            fb_free();
             fb_alloc_free_till_mark();
             return mp_obj_new_tuple(4, tuple);
         }
@@ -725,7 +716,6 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             }
         }
     }
-    fb_free();
     fb_alloc_free_till_mark();
     return mp_const_none;
 }

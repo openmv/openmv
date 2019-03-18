@@ -338,8 +338,6 @@ static mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
             for (int i=0; i<b_pad; i++) {
                 lcd_write_data(width*2, zero);
             }
-            fb_free();
-            fb_free();
             fb_alloc_free_till_mark();
             return mp_const_none;
     }
@@ -358,7 +356,6 @@ static mp_obj_t py_lcd_clear()
             for (int i=0; i<height; i++) {
                 lcd_write_data(width*2, zero);
             }
-            fb_free();
             fb_alloc_free_till_mark();
             return mp_const_none;
     }
