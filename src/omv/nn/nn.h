@@ -27,7 +27,7 @@ typedef enum {
 } network_type_t;
 
 #define NN_LAYER_BASE   \
-    layer_type_t type;  \
+    uint32_t type;      \
     uint32_t n, c, h, w;\
     struct _layer *prev;\
     struct _layer *next \
@@ -62,7 +62,7 @@ typedef struct {
 
 typedef struct {
     NN_LAYER_BASE;
-    pool_type_t ptype;
+    uint32_t ptype;
     uint32_t krn_dim;
     uint32_t krn_str;
     uint32_t krn_pad;

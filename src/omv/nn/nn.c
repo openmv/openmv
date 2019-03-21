@@ -94,7 +94,7 @@ int nn_load_network(nn_t *net, const char *path)
     layer_t *prev_layer = NULL;
     for (int i=0; i<net->n_layers; i++) {
         layer_t *layer;
-        layer_type_t layer_type;
+        uint32_t layer_type;
 
         // Read layer type
         read_data(&fp, &layer_type, 4);
