@@ -63,30 +63,43 @@ static uint8_t *get_mcu()
         case 0:
             for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + MCU_H); y++) {
                 for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++) {
-                    *Y0++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(jpeg_enc.img, x, y));
+                    if (x >= jpeg_enc.img_w || y >= jpeg_enc.img_h) {
+                        *Y0++ = 0;
+                    } else {
+                        *Y0++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(jpeg_enc.img, x, y));
+                    }
                 }
             }
             break;
         case 1:
             for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + MCU_H); y++) {
                 for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++) {
-                    *Y0++ = jpeg_enc.pixels8[y * jpeg_enc.img_w + x];
+                    if (x >= jpeg_enc.img_w || y >= jpeg_enc.img_h) {
+                        *Y0++ = 0;
+                    } else {
+                        *Y0++ = jpeg_enc.pixels8[y * jpeg_enc.img_w + x];
+                    }
                 }
             }
             break;
         case 2: {
             for (int y=jpeg_enc.y_offset, idx=0; y<(jpeg_enc.y_offset + MCU_H); y++) {
                 for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++, idx++) {
-                    int ofs = y * jpeg_enc.img_w + x;
-                    Y0[idx] = COLOR_RGB565_TO_Y(jpeg_enc.pixels16[ofs]) - 128;
-                    CB[idx] = COLOR_RGB565_TO_U(jpeg_enc.pixels16[ofs]) - 128;
-                    CR[idx] = COLOR_RGB565_TO_V(jpeg_enc.pixels16[ofs]) - 128;
+                    if (x >= jpeg_enc.img_w || y >= jpeg_enc.img_h) {
+                        Y0[idx] = CB[idx] = CR[idx] = 0;
+                    } else {
+                        int ofs = y * jpeg_enc.img_w + x;
+                        Y0[idx] = COLOR_RGB565_TO_Y(jpeg_enc.pixels16[ofs]) - 128;
+                        CB[idx] = COLOR_RGB565_TO_U(jpeg_enc.pixels16[ofs]) - 128;
+                        CR[idx] = COLOR_RGB565_TO_V(jpeg_enc.pixels16[ofs]) - 128;
+                    }
                 }
             }
             break;
         }
         case 3: {
             uint16_t rgbbuf[64];
+            // Bayer to rgb565 takes care of zero padding.
             imlib_bayer_to_rgb565(jpeg_enc.img, 8, 8, jpeg_enc.x_offset, jpeg_enc.y_offset, rgbbuf); 
             for (int y=0, idx=0; y<8; y++) {
                 for (int x=0; x<8; x++, idx++) {
@@ -111,12 +124,15 @@ void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData)
 {
     HAL_JPEG_Pause(hjpeg, JPEG_PAUSE_RESUME_INPUT);
     if ((hjpeg->JpegOutCount+1024) > hjpeg->OutDataLength) {
+        // JPEG buffer overflow.
         jpeg_enc.overflow = true;
         HAL_JPEG_Abort(hjpeg);
         HAL_JPEG_ConfigInputBuffer(hjpeg, NULL, 0);
     } else if (jpeg_enc.y_offset == jpeg_enc.img_h) {
+        // Compression is done.
         HAL_JPEG_ConfigInputBuffer(hjpeg, NULL, 0);
     } else {
+        // Set the next MCU.
         HAL_JPEG_ConfigInputBuffer(hjpeg, get_mcu(), jpeg_enc.mcu_size);
     }
     HAL_JPEG_Resume(hjpeg, JPEG_PAUSE_RESUME_INPUT);
@@ -143,11 +159,16 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     JPEG_Handle.Instance = JPEG;
     HAL_JPEG_Init(&JPEG_Handle);
 
+    uint32_t pad_w = src->w;
+    if (pad_w % 8 != 0) {
+        pad_w += (8 - (pad_w % 8));
+    }
+
     jpeg_enc.img      = src;
     jpeg_enc.img_w    = src->w;
     jpeg_enc.img_h    = src->h;
     jpeg_enc.img_bpp  = src->bpp;
-    jpeg_enc.mcu_row  = src->w / MCU_W;
+    jpeg_enc.mcu_row  = pad_w / MCU_W;
     jpeg_enc.out_size = 0;
     jpeg_enc.x_offset = 0;
     jpeg_enc.y_offset = 0;
@@ -176,16 +197,14 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     }
 
     if (HAL_JPEG_ConfigEncoding(&JPEG_Handle, &JPEG_Info) != HAL_OK) {
-        return true;
         // Initialization error
-        //nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "JPEG config failed!!"));
+        return true;
     }
 
     // NOTE: output buffer size is stored in dst->bpp
     if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 100) != HAL_OK) {
-        return true;
         // Initialization error
-        //nlr_jump(mp_obj_new_exception_msg(&mp_type_RuntimeError, "JPEG encode failed!!"));
+        return true;
     }
 
     // Set output size
