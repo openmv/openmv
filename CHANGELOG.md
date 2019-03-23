@@ -1,4 +1,8 @@
 # Change Log
+## [3.3.1](https://github.com/openmv/openmv/releases/tag/v3.3.1) (2019-03-23)
+* Fix NN enum size bug.
+* Fix H7 JPEG encoder bug.
+
 ## [3.3](https://github.com/openmv/openmv/releases/tag/v3.3) (2019-03-18)
 * Update FatFS to FF13C.
 * Update FLIR and MT9V034 drivers.
