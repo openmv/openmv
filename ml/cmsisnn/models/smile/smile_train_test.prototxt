@@ -59,7 +59,7 @@ layer {
   }
 }
 layer {
-    name: "dropout"
+    name: "dropout1"
     type: "Dropout"
     bottom: "conv1"
     top: "conv1"
@@ -113,7 +113,7 @@ layer {
   }
 }
 layer {
-    name: "dropout"
+    name: "dropout2"
     type: "Dropout"
     bottom: "conv2"
     top: "conv2"
@@ -161,7 +161,7 @@ layer {
   }
 }
 layer {
-    name: "dropout"
+    name: "dropout3"
     type: "Dropout"
     bottom: "conv3"
     top: "conv3"
