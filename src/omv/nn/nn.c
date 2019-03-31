@@ -381,19 +381,34 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
 
             case LAYER_TYPE_CONV: {
                 conv_func_t conv_func = NULL;
+                conv_func_nonsquare_t conv_func_nonsquare = NULL;
                 conv_layer_t *conv_layer = (conv_layer_t *) layer;
                 if (prev_layer->c % 4 != 0 ||
                     conv_layer->n % 2 != 0 || prev_layer->h % 2 != 0) {
-                    conv_func = arm_convolve_HWC_q7_basic;
                     if (prev_layer->c == 3) {
                         conv_func = arm_convolve_HWC_q7_RGB;
+                    } else if (prev_layer->w == prev_layer->h) {
+                        conv_func = arm_convolve_HWC_q7_basic;
+                    } else {
+                        conv_func_nonsquare = arm_convolve_HWC_q7_basic_nonsquare;
                     }
                 } else {
-                    conv_func = arm_convolve_HWC_q7_fast;
+                    if (prev_layer->w == prev_layer->h) {
+                        conv_func = arm_convolve_HWC_q7_fast;
+                    } else {
+                        conv_func_nonsquare = arm_convolve_HWC_q7_fast_nonsquare;
+                    }
                 }
-                conv_func(input_buffer, prev_layer->h, prev_layer->c, conv_layer->wt, conv_layer->c, 
-                        conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_str, conv_layer->bias,
-                        conv_layer->l_shift, conv_layer->r_shift, output_buffer, conv_layer->h, (q15_t*)col_buffer, NULL); 
+                if (conv_func) {
+                    conv_func(input_buffer, prev_layer->h, prev_layer->c, conv_layer->wt, conv_layer->c,
+                            conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_str, conv_layer->bias,
+                            conv_layer->l_shift, conv_layer->r_shift, output_buffer, conv_layer->h, (q15_t*)col_buffer, NULL);
+                } else {
+                    conv_func_nonsquare(input_buffer, prev_layer->w, prev_layer->h, prev_layer->c, conv_layer->wt, conv_layer->c,
+                            conv_layer->krn_dim, conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_pad, conv_layer->krn_str,
+                            conv_layer->krn_str, conv_layer->bias, conv_layer->l_shift, conv_layer->r_shift, output_buffer,
+                            conv_layer->w, conv_layer->h, (q15_t*)col_buffer, NULL);
+                }
                 break;
             }
 
@@ -405,14 +420,28 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
 
             case LAYER_TYPE_POOL: {
                 pool_func_t pool_func = NULL;
+                pool_func_nonsquare_t pool_func_nonsquare = NULL;
                 pool_layer_t *pool_layer = (pool_layer_t *) layer;
                 if (pool_layer->ptype == POOL_TYPE_MAX) {
-                    pool_func = arm_maxpool_q7_HWC;
+                    if (prev_layer->w == prev_layer->h) {
+                        pool_func = arm_maxpool_q7_HWC;
+                    } else {
+                        pool_func_nonsquare = arm_maxpool_q7_HWC_nonsquare;
+                    }
                 } else {
-                    pool_func = arm_avepool_q7_HWC;
+                    if (prev_layer->w == prev_layer->h) {
+                        pool_func = arm_avepool_q7_HWC;
+                    } else {
+                        pool_func_nonsquare = arm_avepool_q7_HWC_nonsquare;
+                    }
                 }
-                pool_func(input_buffer, prev_layer->h, prev_layer->c, pool_layer->krn_dim,
-                        pool_layer->krn_pad, pool_layer->krn_str, layer->w, col_buffer, output_buffer);
+                if (pool_func) {
+                    pool_func(input_buffer, prev_layer->h, prev_layer->c, pool_layer->krn_dim,
+                            pool_layer->krn_pad, pool_layer->krn_str, layer->w, col_buffer, output_buffer);
+                } else {
+                    pool_func_nonsquare(input_buffer, prev_layer->w, prev_layer->h, prev_layer->c, pool_layer->krn_dim,
+                            pool_layer->krn_pad, pool_layer->krn_str, layer->w, layer->h, col_buffer, output_buffer);
+                }
                 break;
             }
 
@@ -468,6 +497,13 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
 #define POOL_FUNC_2STR(pool_func)\
         (pool_func == arm_maxpool_q7_HWC) ? "arm_maxpool_q7_HWC" : "arm_avepool_q7_HWC"
 
+#define CONV_FUNC_NONSQ_2STR(conv_func)\
+        (conv_func == arm_convolve_HWC_q7_basic_nonsquare) ? "arm_convolve_HWC_q7_basic_nonsquare":\
+        "arm_convolve_HWC_q7_fast_nonsquare"
+
+#define POOL_FUNC_NONSQ_2STR(pool_func)\
+        (pool_func == arm_maxpool_q7_HWC_nonsquare) ? "arm_maxpool_q7_HWC_nonsquare" : "arm_avepool_q7_HWC_nonsquare"
+
 int nn_dry_run_network(nn_t *net, image_t *img, bool softmax)
 {
     uint32_t layer_idx = 0;
@@ -505,22 +541,41 @@ int nn_dry_run_network(nn_t *net, image_t *img, bool softmax)
 
             case LAYER_TYPE_CONV: {
                 conv_func_t conv_func = NULL;
+                conv_func_nonsquare_t conv_func_nonsquare = NULL;
                 conv_layer_t *conv_layer = (conv_layer_t *) layer;
                 if (prev_layer->c % 4 != 0 ||
                     conv_layer->n % 2 != 0 || prev_layer->h % 2 != 0) {
-                    conv_func = arm_convolve_HWC_q7_basic;
                     if (prev_layer->c == 3) {
                         conv_func = arm_convolve_HWC_q7_RGB;
+                    } else if (prev_layer->w == prev_layer->h) {
+                        conv_func = arm_convolve_HWC_q7_basic;
+                    } else {
+                        conv_func_nonsquare = arm_convolve_HWC_q7_basic_nonsquare;
                     }
                 } else {
-                    conv_func = arm_convolve_HWC_q7_fast;
+                    if (prev_layer->w == prev_layer->h) {
+                        conv_func = arm_convolve_HWC_q7_fast;
+                    } else {
+                        conv_func_nonsquare = arm_convolve_HWC_q7_fast_nonsquare;
+                    }
                 }
-                printf("forward: %s(%s, %lu, %lu, %s, %lu, %lu, %lu, %lu, %s, %lu, %lu, %s, %lu, %s, %p);\n",
-                        CONV_FUNC_2STR(conv_func), BUFFER_2STR(input_buffer),
-                        prev_layer->h, prev_layer->c, "conv_wt", conv_layer->c, 
-                        conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_str,
-                        "conv_bias", conv_layer->l_shift, conv_layer->r_shift,
-                        BUFFER_2STR(output_buffer), conv_layer->h, "col_buffer", NULL);
+
+                if (conv_func) {
+                    printf("forward: %s(%s, %lu, %lu, %s, %lu, %lu, %lu, %lu, %s, %lu, %lu, %s, %lu, %s, %p);\n",
+                            CONV_FUNC_2STR(conv_func), BUFFER_2STR(input_buffer),
+                            prev_layer->h, prev_layer->c, "conv_wt", conv_layer->c,
+                            conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_str,
+                            "conv_bias", conv_layer->l_shift, conv_layer->r_shift,
+                            BUFFER_2STR(output_buffer), conv_layer->h, "col_buffer", NULL);
+                } else {
+                    printf("forward: %s(%s, %lu, %lu, %lu, %s, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %s, %lu, %lu, \
+                        %s, %lu, %lu, %s, %p);\n",
+                            CONV_FUNC_NONSQ_2STR(conv_func_nonsquare), BUFFER_2STR(input_buffer),
+                            prev_layer->w, prev_layer->h, prev_layer->c, "conv_wt", conv_layer->c,
+                            conv_layer->krn_dim, conv_layer->krn_dim, conv_layer->krn_pad, conv_layer->krn_pad,
+                            conv_layer->krn_str, conv_layer->krn_str, "conv_bias", conv_layer->l_shift, conv_layer->r_shift,
+                            BUFFER_2STR(output_buffer), conv_layer->w, conv_layer->h, "col_buffer", NULL);
+                }
                 break;
             }
 
@@ -533,16 +588,32 @@ int nn_dry_run_network(nn_t *net, image_t *img, bool softmax)
 
             case LAYER_TYPE_POOL: {
                 pool_func_t pool_func = NULL;
+                pool_func_nonsquare_t pool_func_nonsquare = NULL;
                 pool_layer_t *pool_layer = (pool_layer_t *) layer;
                 if (pool_layer->ptype == POOL_TYPE_MAX) {
-                    pool_func = arm_maxpool_q7_HWC;
+                    if (prev_layer->w == prev_layer->h) {
+                        pool_func = arm_maxpool_q7_HWC;
+                    } else {
+                        pool_func_nonsquare = arm_maxpool_q7_HWC_nonsquare;
+                    }
                 } else {
-                    pool_func = arm_avepool_q7_HWC;
+                    if (prev_layer->w == prev_layer->h) {
+                        pool_func = arm_avepool_q7_HWC;
+                    } else {
+                        pool_func_nonsquare = arm_avepool_q7_HWC_nonsquare;
+                    }
                 }
-                printf("forward: %s(%s, %lu, %lu, %lu, %lu, %lu, %lu, %s, %s);\n",
-                        POOL_FUNC_2STR(pool_func), BUFFER_2STR(input_buffer),
-                        prev_layer->h, prev_layer->c, pool_layer->krn_dim,
-                        pool_layer->krn_pad, pool_layer->krn_str, layer->w, "col_buffer", BUFFER_2STR(output_buffer));
+                if (pool_func) {
+                    printf("forward: %s(%s, %lu, %lu, %lu, %lu, %lu, %lu, %s, %s);\n",
+                            POOL_FUNC_2STR(pool_func), BUFFER_2STR(input_buffer),
+                            prev_layer->h, prev_layer->c, pool_layer->krn_dim,
+                            pool_layer->krn_pad, pool_layer->krn_str, layer->w, "col_buffer", BUFFER_2STR(output_buffer));
+                } else {
+                    printf("forward: %s(%s, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %lu, %s, %s);\n",
+                            POOL_FUNC_NONSQ_2STR(pool_func_nonsquare), BUFFER_2STR(input_buffer),
+                            prev_layer->w, prev_layer->h, prev_layer->c, pool_layer->krn_dim,
+                            pool_layer->krn_pad, pool_layer->krn_str, layer->w, layer->h, "col_buffer", BUFFER_2STR(output_buffer));
+                }
                 break;
             }
 
