@@ -180,7 +180,7 @@ extern    "C"
    * @param[in]       dim_im_out_y output tensor dimension y
    * @param[in,out]   bufferA      pointer to buffer space for input
    * @param[in,out]   bufferB      pointer to buffer space for output
-   * @return     The function returns <code>ARM_MATH_SUCCESS</code> 
+   * @return     The function returns <code>ARM_MATH_SUCCESS</code>
    */
 
     arm_status arm_convolve_HWC_q7_basic_nonsquare(const q7_t * Im_in,
@@ -219,9 +219,9 @@ extern    "C"
    * @param[in]       out_shift   amount of right-shift for output
    * @param[in,out]   Im_out      pointer to output tensor
    * @param[in]       dim_im_out  output tensor dimension
-   * @param[in,out]   bufferA     pointer to buffer space for input 
+   * @param[in,out]   bufferA     pointer to buffer space for input
    * @param[in,out]   bufferB     pointer to buffer space for output
-   * @return     The function returns <code>ARM_MATH_SUCCESS</code> 
+   * @return     The function returns <code>ARM_MATH_SUCCESS</code>
    *
    */
 
@@ -236,9 +236,9 @@ extern    "C"
                                           const q15_t * bias,
                                           const uint16_t bias_shift,
                                           const uint16_t out_shift,
-                                          q15_t * Im_out, 
-                                          const uint16_t dim_im_out, 
-                                          q15_t * bufferA, 
+                                          q15_t * Im_out,
+                                          const uint16_t dim_im_out,
+                                          q15_t * bufferA,
                                           q7_t * bufferB);
 
   /**
@@ -256,7 +256,7 @@ extern    "C"
    * @param[in]       out_shift   amount of right-shift for output
    * @param[in,out]   Im_out      pointer to output tensor
    * @param[in]       dim_im_out  output tensor dimension
-   * @param[in,out]   bufferA     pointer to buffer space for input 
+   * @param[in,out]   bufferA     pointer to buffer space for input
    * @param[in,out]   bufferB     pointer to buffer space for output
    * @return     The function returns either
    * <code>ARM_MATH_SIZE_MISMATCH</code> or <code>ARM_MATH_SUCCESS</code> based on the outcome of size checking.
@@ -278,9 +278,9 @@ extern    "C"
                                         const q7_t * bias,
                                         const uint16_t bias_shift,
                                         const uint16_t out_shift,
-                                        q7_t * Im_out, 
-                                        const uint16_t dim_im_out, 
-                                        q15_t * bufferA, 
+                                        q7_t * Im_out,
+                                        const uint16_t dim_im_out,
+                                        q15_t * bufferA,
                                         q7_t * bufferB);
 
   /**
@@ -303,7 +303,7 @@ extern    "C"
    * @param[in,out]   Im_out       pointer to output tensor
    * @param[in]       dim_im_out_x output tensor dimension x
    * @param[in]       dim_im_out_y output tensor dimension y
-   * @param[in,out]   bufferA      pointer to buffer space for input 
+   * @param[in,out]   bufferA      pointer to buffer space for input
    * @param[in,out]   bufferB      pointer to buffer space for output
    * @return     The function returns either
    * <code>ARM_MATH_SIZE_MISMATCH</code> or <code>ARM_MATH_SUCCESS</code> based on the outcome of size checking.
@@ -355,7 +355,7 @@ extern    "C"
    * @param[in,out]   Im_out       pointer to output tensor
    * @param[in]       dim_im_out_x output tensor dimension x
    * @param[in]       dim_im_out_y output tensor dimension y
-   * @param[in,out]   bufferA      pointer to buffer space for input 
+   * @param[in,out]   bufferA      pointer to buffer space for input
    * @param[in,out]   bufferB      pointer to buffer space for output
    * @return     The function returns either
    * <code>ARM_MATH_SIZE_MISMATCH</code> or <code>ARM_MATH_SUCCESS</code> based on the outcome of size checking.
@@ -950,6 +950,35 @@ extern    "C"
                                  q7_t * Im_out);
 
   /**
+   * @brief Q7 max pooling nonsquare function
+   * @param[in]       Im_in         pointer to input tensor
+   * @param[in]       dim_im_in_x   input tensor dimention x
+   * @param[in]       dim_im_in_x   input tensor dimention y
+   * @param[in]       ch_im_in      number of input tensor channels
+   * @param[in]       dim_kernel    filter kernel size
+   * @param[in]       padding       padding sizes
+   * @param[in]       stride        convolution stride
+   * @param[in]       dim_im_out_x  output tensor dimension x
+   * @param[in]       dim_im_out_y  output tensor dimension y
+   * @param[in,out]   bufferA       pointer to buffer space for input
+   * @param[in,out]   Im_out        pointer to output tensor
+   * @return none.
+   *
+   */
+
+    void      arm_maxpool_q7_HWC_nonsquare(q7_t * Im_in,
+                                 const uint16_t dim_im_in_x,
+                                 const uint16_t dim_im_in_y,
+                                 const uint16_t ch_im_in,
+                                 const uint16_t dim_kernel,
+                                 const uint16_t padding,
+                                 const uint16_t stride,
+                                 const uint16_t dim_im_out_x,
+                                 const uint16_t dim_im_out_y,
+                                 q7_t * bufferA,
+                                 q7_t * Im_out);
+
+  /**
    * @brief Q7 average pooling function
    * @param[in]       Im_in       pointer to input tensor
    * @param[in]       dim_im_in   input tensor dimention
@@ -973,6 +1002,34 @@ extern    "C"
                                  const uint16_t dim_im_out, 
                                  q7_t * bufferA, 
                                  q7_t * Im_out);
+
+  /**
+   * @brief Q7 average pooling nonsquare function
+   * @param[in]       Im_in       pointer to input tensor
+   * @param[in]       dim_im_in   input tensor dimention
+   * @param[in]       ch_im_in    number of input tensor channels
+   * @param[in]       dim_kernel  filter kernel size
+   * @param[in]       padding     padding sizes
+   * @param[in]       stride      convolution stride
+   * @param[in]       dim_im_out  output tensor dimension
+   * @param[in,out]   bufferA     pointer to buffer space for input
+   * @param[in,out]   Im_out      pointer to output tensor
+   * @return none.
+   *
+   */
+
+    void      arm_avepool_q7_HWC_nonsquare(q7_t * Im_in,
+                                 const uint16_t dim_im_in_x,
+                                 const uint16_t dim_im_in_y,
+                                 const uint16_t ch_im_in,
+                                 const uint16_t dim_kernel,
+                                 const uint16_t padding,
+                                 const uint16_t stride,
+                                 const uint16_t dim_im_out_x,
+                                 const uint16_t dim_im_out_y,
+                                 q7_t * bufferA,
+                                 q7_t * Im_out);
+
 
 /**
  * @defgroup Softmax Softmax Functions
