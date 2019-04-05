@@ -17,6 +17,19 @@ MAV_OPTICAL_FLOW_confidence_threshold = 0.1  # Below 0.1 or so (YMMV) and the re
 
 ##############################################################################
 
+# LED control
+led = pyb.LED(2) # Red LED = 1, Green LED = 2, Blue LED = 3, IR LEDs = 4.
+led_state = 0
+
+def update_led():
+    global led_state
+    led_state = led_state + 1
+    if led_state == 10:
+        led.on()
+    elif led_state >= 20:
+        led.off()
+        led_state = 0
+
 # Link Setup
 
 uart = pyb.UART(3, uart_baudrate, timeout_char = 1000)
@@ -66,6 +79,7 @@ def send_optical_flow_packet(x, y, c):
                        checksum(temp, MAV_OPTICAL_FLOW_extra_crc))
     packet_sequence += 1
     uart.write(temp)
+    update_led()
 
 sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
