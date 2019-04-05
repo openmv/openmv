@@ -91,11 +91,8 @@ while(True):
     sub_pixel_x = int(-displacement.x_translation() * 35)
     sub_pixel_y = int(displacement.y_translation() * 53)
 
-    if(displacement.response() > MAV_OPTICAL_FLOW_confidence_threshold):
-        send_optical_flow_packet(sub_pixel_x, sub_pixel_y, displacement.response())
+    send_optical_flow_packet(sub_pixel_x, sub_pixel_y, displacement.response())
 
-        print("{0:+f}x {1:+f}y {2} {3} FPS".format(sub_pixel_x, sub_pixel_y,
-              displacement.response(),
-              clock.fps()))
-    else:
-        print(clock.fps())
+    print("{0:+f}x {1:+f}y {2} {3} FPS".format(sub_pixel_x, sub_pixel_y,
+          displacement.response(),
+          clock.fps()))
