@@ -49,8 +49,8 @@ def send_optical_flow_packet(x, y, c):
                        0,
                        0,
                        0,
-                       int(x * 10),
-                       int(y * 10),
+                       int(x),
+                       int(y),
                        MAV_OPTICAL_FLOW_id,
                        int(c * 255))
     temp = struct.pack("<bbbbb26s",
@@ -88,8 +88,8 @@ while(True):
     extra_fb.replace(img)
 
     # Offset results are noisy without filtering so we drop some accuracy.
-    sub_pixel_x = int(displacement.x_translation() * 5) / 5.0
-    sub_pixel_y = int(displacement.y_translation() * 5) / 5.0
+    sub_pixel_x = int(-displacement.x_translation() * 35)
+    sub_pixel_y = int(displacement.y_translation() * 53)
 
     if(displacement.response() > MAV_OPTICAL_FLOW_confidence_threshold):
         send_optical_flow_packet(sub_pixel_x, sub_pixel_y, displacement.response())
