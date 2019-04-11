@@ -308,6 +308,7 @@ int ini_handler_callback(void *user, const char *section, const char *name, cons
             };
 
             MP_STATE_PORT(pyb_stdio_uart) = pyb_uart_type.make_new((mp_obj_t) &pyb_uart_type, MP_ARRAY_SIZE(args), 0, args);
+            uart_attach_to_repl(MP_STATE_PORT(pyb_stdio_uart), true);
         }
     } else if (MATCH("BoardConfig", "WiFiDebug")) {
         openmv_config->wifidbg = ini_is_true(value);
