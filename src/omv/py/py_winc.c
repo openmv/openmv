@@ -491,6 +491,12 @@ static int py_winc_socket_settimeout(mod_network_socket_obj_t *socket, mp_uint_t
     return 0;
 }
 
+static int py_winc_socket_ioctl(mod_network_socket_obj_t *socket, mp_uint_t request, mp_uint_t arg, int *_errno)
+{
+    *_errno = EIO;
+    return -1;
+}
+
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_winc_connect_obj, 1,   py_winc_connect);
 static MP_DEFINE_CONST_FUN_OBJ_KW(py_winc_start_ap_obj,1,   py_winc_start_ap);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_disconnect_obj,    py_winc_disconnect);
@@ -551,5 +557,5 @@ const mod_network_nic_type_t mod_network_nic_type_winc = {
     .recvfrom   = py_winc_socket_recvfrom,
     .setsockopt = py_winc_socket_setsockopt,
     .settimeout = py_winc_socket_settimeout,
-    //.ioctl = winc_socket_ioctl,
+    .ioctl      = py_winc_socket_ioctl,
 };
