@@ -394,6 +394,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	utime_mphal.o       \
 	modonewire.o        \
 	uos_dupterm.o       \
+	modframebuf.o       \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
