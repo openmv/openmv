@@ -21,10 +21,8 @@ int cambus_init()
     /* Configure I2C */
     I2CHandle.Instance             = SCCB_I2C;
     I2CHandle.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
-    #if defined(MCU_SERIES_F7)
-    I2CHandle.Init.Timing          = 0x1090699B; // 100KHz, rise time = 100ns, fall time = 20ns
-    #elif defined(MCU_SERIES_H7)
-    I2CHandle.Init.Timing          = 0x40604E73; // 100KHz, rise time = 100ns, fall time = 20ns
+    #if defined(SCCB_TIMING)
+    I2CHandle.Init.Timing          = SCCB_TIMING;
     #else
     I2CHandle.Init.ClockSpeed      = I2C_FREQUENCY;
     I2CHandle.Init.DutyCycle       = I2C_DUTYCYCLE_2;
