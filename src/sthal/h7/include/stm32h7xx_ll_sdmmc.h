@@ -683,8 +683,8 @@ typedef struct
 /* SDMMC Initialization Frequency (400KHz max) for IP CLK 200MHz*/
 #define SDMMC_INIT_CLK_DIV ((uint8_t)0xFA)
 
-/* SDMMC Default Speed Frequency (25Mhz max) for IP CLK 200MHz*/
-#define SDMMC_NSpeed_CLK_DIV ((uint8_t)0x4)
+/* SDMMC Default Speed Frequency (25Mhz max) for IP CLK 100MHz*/
+#define SDMMC_NSpeed_CLK_DIV ((uint8_t)0x1)
 
 /**
   * @}
