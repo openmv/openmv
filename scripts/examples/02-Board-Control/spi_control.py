@@ -11,6 +11,9 @@ cs  = Pin("P3", Pin.OUT_OD)
 rst = Pin("P7", Pin.OUT_PP)
 rs  = Pin("P8", Pin.OUT_PP)
 # The hardware SPI bus for your OpenMV Cam is always SPI bus 2.
+
+# NOTE: The SPI clock frequency will not always be the requested frequency. The hardware only supports
+# frequencies that are the bus frequency divided by a prescaler (which can be 2, 4, 8, 16, 32, 64, 128 or 256).
 spi = SPI(2, SPI.MASTER, baudrate=int(1000000000/66), polarity=0, phase=0)
 
 def write_command_byte(c):
