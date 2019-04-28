@@ -206,16 +206,19 @@ STATIC mp_obj_t py_net_search(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
                                     int pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(arg_img, a, b));
                                     sum += pixel;
                                     sum_2 += pixel * pixel;
+                                    break;
                                 }
                                 case IMAGE_BPP_GRAYSCALE: {
                                     int pixel = IMAGE_GET_GRAYSCALE_PIXEL(arg_img, a, b);
                                     sum += pixel;
                                     sum_2 += pixel * pixel;
+                                    break;
                                 }
                                 case IMAGE_BPP_RGB565: {
                                     int pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL(arg_img, a, b));
                                     sum += pixel;
                                     sum_2 += pixel * pixel;
+                                    break;
                                 }
                             }
                         }
