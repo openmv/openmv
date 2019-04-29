@@ -313,6 +313,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	mpthreadport.o          \
 	)
 
+# object file for frozen bytecode (frozen .mpy files)
+ifneq ($(FROZEN_MPY_DIR),)
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,frozen_mpy.o)
+endif
+
 #------------- MicroPy Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	utils/pyexec.o          \
