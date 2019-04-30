@@ -1,4 +1,17 @@
 # Change Log
+## [3.4](https://github.com/openmv/openmv/releases/tag/v3.4) (2019-04-30)
+* Update NN models.
+* Add SSD1306 OLED driver.
+* Add more Python examples.
+* Upgrade H7 clock to 480MHz.
+* Fix ctrl-c on REPL UART.
+* Fix WINC crashing on select/poll calls.
+* Fix SCCB/I2C timing for F7&H7 (set to ~100KHz).
+* Fix H7 SD clock.
+* Fix broken OpenMV-2 firmware.
+* Fix binary function in RGB565 mode.
+* Fix frozen modules build.
+
 ## [3.3.1](https://github.com/openmv/openmv/releases/tag/v3.3.1) (2019-03-23)
 * Fix NN enum size bug.
 * Fix H7 JPEG encoder bug.
