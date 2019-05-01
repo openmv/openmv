@@ -1,4 +1,7 @@
 # Change Log
+## [3.4.1](https://github.com/openmv/openmv/releases/tag/v3.4.1) (2019-05-02)
+* This patch release fixes an issue with Lepton clock.
+
 ## [3.4](https://github.com/openmv/openmv/releases/tag/v3.4) (2019-04-30)
 * Update NN models.
 * Add SSD1306 OLED driver.
