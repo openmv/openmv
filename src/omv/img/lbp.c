@@ -53,14 +53,14 @@ const static uint8_t uniform_tbl[256] = {
 uint8_t *imlib_lbp_desc(image_t *image, rectangle_t *roi)
 {
     int s = image->w; //stride
-    int RY = roi->h/LBP_NUM_REGIONS;
     int RX = roi->w/LBP_NUM_REGIONS;
+    int RY = roi->h/LBP_NUM_REGIONS;
     uint8_t *data = image->data;
     uint8_t *desc = xalloc0(LBP_DESC_SIZE);
 
-    for (int y=roi->y; y<(roi->y+image->h)-3; y++) {
-        int y_idx = (y-roi->y)/RY*LBP_NUM_REGIONS;
-        for (int x=roi->x; x<(roi->x+image->w)-3; x++) {
+    for (int y=roi->y; y<(roi->y+roi->h)-3; y++) {
+        int y_idx = ((y-roi->y)/RY)*LBP_NUM_REGIONS;
+        for (int x=roi->x; x<(roi->x+roi->w)-3; x++) {
             uint8_t lbp=0;
             uint8_t p = data[(y+1)*s+x+1];
             int hist_idx = y_idx+(x-roi->x)/RX;
