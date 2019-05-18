@@ -97,6 +97,27 @@ class SSD1306:
     def text(self, string, x, y, col=1):
         self.framebuf.text(string, x, y, col)
 
+class SSD1306_I2C(SSD1306):
+    def __init__(self, width, height, i2c, addr=0x3c, external_vcc=False):
+        self.i2c = i2c
+        self.addr = addr
+        self.temp = bytearray(2)
+        super().__init__(width, height, external_vcc)
+
+    def write_cmd(self, cmd):
+        self.temp[0] = 0x80 # Co=1, D/C#=0
+        self.temp[1] = cmd
+        self.i2c.writeto(self.addr, self.temp)
+
+    def write_data(self, buf):
+        self.temp[0] = self.addr << 1
+        self.temp[1] = 0x40 # Co=0, D/C#=1
+        self.i2c.start()
+        self.i2c.write(self.temp)
+        self.i2c.write(buf)
+        self.i2c.stop()
+        
+        
 
 class SSD1306_SPI(SSD1306):
     def __init__(self, width, height, spi, dc, res, cs, external_vcc=False):
