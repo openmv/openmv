@@ -311,6 +311,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	machine_i2c.o           \
 	pybthread.o             \
 	mpthreadport.o          \
+	posix_helpers.o         \
 	)
 
 # object file for frozen bytecode (frozen .mpy files)
@@ -327,6 +328,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	libc/string0.o          \
 	netutils/netutils.o     \
 	timeutils/timeutils.o   \
+	berkeley-db-1.xx/btree/*.o \
+	berkeley-db-1.xx/mpool/*.o \
+	embed/abort_.o             \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
@@ -400,6 +404,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modonewire.o        \
 	uos_dupterm.o       \
 	modframebuf.o       \
+	modbtree.o          \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
