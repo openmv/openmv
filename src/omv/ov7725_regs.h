@@ -106,7 +106,7 @@
 #define COM8_AEC_EN             0x01 /* AEC Enable */
 #define COM8_SET_AGC(r, x)      ((r&0xFB)|((x&0x1)<<2))
 #define COM8_SET_AWB(r, x)      ((r&0xFD)|((x&0x1)<<1))
-#define COM8_SET_AEC(r, x)      ((r&0xFE)|((x&0x1)<<0))
+#define COM8_SET_AEC(r, x)      ((r&0x7E)|((x&0x1)<<7)|((x&0x1)<<0))
 
 #define COM9                    0x14 /* Common Control 9 */
 #define COM9_HISTO_AVG          0x80 /* Histogram or average based AEC/AGC selection */
@@ -285,7 +285,7 @@
 #define GAM6                    0x83 /* Gamma Curve 6th Segment Input End Point 0x30 Output Value */
 #define GAM7                    0x84 /* Gamma Curve 7th Segment Input End Point 0x38 Output Value */
 #define GAM8                    0x85 /* Gamma Curve 8th Segment Input End Point 0x40 Output Value */
-#define GAM9                    0x86 /* Gamma Curve 9th Segment Input End Point 0x48 Output Value */
+#define GAM9                    0x86 /* Gamma Curve 9th Segment Input Enpd Point 0x48 Output Value */
 #define GAM10                   0x87 /* Gamma Curve 10th Segment Input End Point 0x50 Output Value */
 #define GAM11                   0x88 /* Gamma Curve 11th Segment Input End Point 0x60 Output Value */
 #define GAM12                   0x89 /* Gamma Curve 12th Segment Input End Point 0x70 Output Value */
