@@ -30,6 +30,9 @@
 // Sensor PLL register value.
 #define OMV_OV7725_PLL_CONFIG   (0x41)  // x4
 
+// Sensor Banding Filter Value
+#define OMV_OV7725_BANDING      (0x7F)
+
 // Bootloader LED GPIO port/pin
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)

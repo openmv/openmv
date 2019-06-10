@@ -86,7 +86,7 @@ static const uint8_t default_regs[][2] = {
     {SLOP,          0x20},
 
     {DM_LNL,        0x00},
-    {BDBASE,        0x7f},
+    {BDBASE,        OMV_OV7725_BANDING}, // {BDBASE, 0x7f}
     {BDSTEP,        0x03},
 
     {LC_RADI,       0x10},
