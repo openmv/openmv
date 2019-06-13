@@ -4,10 +4,7 @@ class ModbusRTU():
         self.SLAVE_ID = slave_id
         self.uart = uart
         self.uart.init(19200, bits=8, parity=0, stop=1, timeout=1, timeout_char=4)
-        self.HOLDING_REGISTERS = [
-            11,22,23,44,55,66,77,88,99,10,
-            32,23,32,23,54,45,54,34,43,43,
-            23,11,22,23,44,55,66,77,88,43]
+        self.HOLDING_REGISTERS = [0]*30
     def any(self):
         return self.uart.any()
     def crc16(self, data):
