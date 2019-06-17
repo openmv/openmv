@@ -91,7 +91,6 @@ SECTIONS
   } >OMV_FB_MEMORY
 
   /* Misc DMA buffers kept in uncachable region */
-  /* NOTE: on H7 DMA buffers are kept in cached AXI RAM and cache maintenance is performed */
   .dma_memory (NOLOAD) :
   {
     . = ALIGN(4);
