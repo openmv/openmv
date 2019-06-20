@@ -299,6 +299,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	wdt.o                   \
 	mphalport.o             \
 	sdcard.o                \
+	sdram.o                 \
 	fatfs_port.o            \
 	extint.o                \
 	modpyb.o                \
