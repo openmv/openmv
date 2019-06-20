@@ -19,6 +19,7 @@ matrix:
     - env: TARGET=OPENMV2
     - env: TARGET=OPENMV3
     - env: TARGET=OPENMV4
+    - env: TARGET=OPENMV4R
 
 before_install:
   # update submodules 
