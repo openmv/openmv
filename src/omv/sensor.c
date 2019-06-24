@@ -307,8 +307,6 @@ int sensor_init()
     switch (sensor.slv_addr)
     {
     case OV7725_SLV_ADDR:
-        cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
-        break;
     case OV2640_SLV_ADDR:
         cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
         break;
