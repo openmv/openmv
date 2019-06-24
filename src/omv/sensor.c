@@ -423,7 +423,7 @@ int sensor_shutdown(int enable)
     return 0;
 }
 
-int sensor_read_reg(uint8_t reg_addr)
+int sensor_read_reg(uint16_t reg_addr)
 {
     if (sensor.read_reg == NULL) {
         // Operation not supported
@@ -432,7 +432,7 @@ int sensor_read_reg(uint8_t reg_addr)
     return sensor.read_reg(&sensor, reg_addr);
 }
 
-int sensor_write_reg(uint8_t reg_addr, uint16_t reg_data)
+int sensor_write_reg(uint16_t reg_addr, uint16_t reg_data)
 {
     if (sensor.write_reg == NULL) {
         // Operation not supported
