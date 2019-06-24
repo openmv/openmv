@@ -85,7 +85,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
             cambus_writeb2(sensor->slv_addr, 0x501f, 0x00);//ISP YUV
             break;
         case PIXFORMAT_BAYER:
-//        	reg = 0x00;//TODO: fix order
+//            reg = 0x00;//TODO: fix order
             break;
         default:
             return -1;
@@ -172,9 +172,9 @@ static int set_hmirror(sensor_t *sensor, int enable)
     uint8_t reg;
     int ret = cambus_readb2(sensor->slv_addr, 0x3821, &reg);
     if (enable){
-    	ret |= cambus_writeb2(sensor->slv_addr, 0x3821, reg&0x06);
+        ret |= cambus_writeb2(sensor->slv_addr, 0x3821, reg&0x06);
     } else {
-    	ret |= cambus_writeb2(sensor->slv_addr, 0x3821, reg|0xF9);
+        ret |= cambus_writeb2(sensor->slv_addr, 0x3821, reg|0xF9);
     }
     return ret;
 }
@@ -184,9 +184,9 @@ static int set_vflip(sensor_t *sensor, int enable)
     uint8_t reg;
     int ret = cambus_readb2(sensor->slv_addr, 0x3820, &reg);
     if (enable){
-    	ret |= cambus_writeb2(sensor->slv_addr, 0x3820, reg&0xF9);
+        ret |= cambus_writeb2(sensor->slv_addr, 0x3820, reg&0xF9);
     } else {
-    	ret |= cambus_writeb2(sensor->slv_addr, 0x3820, reg|0x06);
+        ret |= cambus_writeb2(sensor->slv_addr, 0x3820, reg|0x06);
     }
     return ret;
 }
