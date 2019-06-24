@@ -14,6 +14,7 @@ SRCS += $(addprefix ,   \
 	ov9650.c            \
 	ov2640.c            \
 	ov7725.c            \
+	ov5640.c            \
 	mt9v034.c           \
 	lepton.c            \
 	sensor.c            \
