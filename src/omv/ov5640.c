@@ -59,7 +59,7 @@ static int sleep(sensor_t *sensor, int enable)
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint8_t reg_data;
-    if (cambus_readb(sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (cambus_readb2(sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
