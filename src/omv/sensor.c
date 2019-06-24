@@ -14,6 +14,7 @@
 #include "ov9650.h"
 #include "ov2640.h"
 #include "ov7725.h"
+#include "ov5640.h"
 #include "mt9v034.h"
 #include "lepton.h"
 #include "sensor.h"
@@ -21,8 +22,6 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-#define OV_CHIP_ID      (0x0A)
-#define ON_CHIP_ID      (0x00)
 #define MAX_XFER_SIZE   (0xFFFC*4)
 
 sensor_t           sensor     = {0};
@@ -305,38 +304,56 @@ int sensor_init()
     // Set default snapshot function.
     sensor.snapshot = sensor_snapshot;
 
-    if (sensor.slv_addr == LEPTON_ID) {
+    switch (sensor.slv_addr) {
+    case OV7725_SLV_ADDR:
+        cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+        break;
+    case OV2640_SLV_ADDR:
+        cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+        break;
+    case MT9V034_SLV_ADDR:
+        cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
+        break;
+    case LEPTON_SLV_ADDR:
         sensor.chip_id = LEPTON_ID;
+        break;
+    case OV5640_SLV_ADDR:
+        cambus_readb2(sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+        break;
+    default:
+        return -3;
+        break;
+    }
+
+    switch (sensor.chip_id)
+    {
+    case OV7725_ID:
+        init_ret = ov7725_init(&sensor);
+        break;
+    case MT9V034_ID:
+        if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
+            return -3;
+        }
+        init_ret = mt9v034_init(&sensor);
+        break;
+    case LEPTON_ID:
         if (extclk_config(LEPTON_XCLK_FREQ) != 0) {
             return -3;
         }
         init_ret = lepton_init(&sensor);
-    } else {
-        // Read ON semi sensor ID.
-        cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
-        if (sensor.chip_id == MT9V034_ID) {
-            if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
-                return -3;
-            }
-            init_ret = mt9v034_init(&sensor);
-        } else { // Read OV sensor ID.
-            cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
-            // Initialize sensor struct.
-            switch (sensor.chip_id) {
-                case OV9650_ID:
-                    init_ret = ov9650_init(&sensor);
-                    break;
-                case OV2640_ID:
-                    init_ret = ov2640_init(&sensor);
-                    break;
-                case OV7725_ID:
-                    init_ret = ov7725_init(&sensor);
-                    break;
-                default:
-                    // Sensor is not supported.
-                    return -3;
-            }
-        }
+        break;
+    case OV5640_ID:
+        init_ret = ov5640_init(&sensor);
+        break;
+    case OV2640_ID:
+        init_ret = ov2640_init(&sensor);
+        break;
+    case OV9650_ID:
+        init_ret = ov9650_init(&sensor);
+        break;
+    default:
+        return -3;
+        break;
     }
 
     if (init_ret != 0 ) {
