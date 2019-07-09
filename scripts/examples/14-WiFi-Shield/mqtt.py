@@ -5,6 +5,7 @@
 # 2) Install the mosquitto client on PC and run the following command:
 #    mosquitto_sub -h test.mosquitto.org -t "openmv/test" -v
 #
+# Note: If the mosquitto broker is down (OSError -12) try a different one (ex: broker.hivemq.com)
 import time, network
 from mqtt import MQTTClient
 
