@@ -148,7 +148,7 @@ static int sleep(sensor_t *sensor, int enable)
     return 0;
 }
 
-static int read_reg(sensor_t *sensor, uint8_t reg_addr)
+static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint16_t reg_data;
 
@@ -159,7 +159,7 @@ static int read_reg(sensor_t *sensor, uint8_t reg_addr)
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint8_t reg_addr, uint16_t reg_data)
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
     return cambus_writew(sensor->slv_addr, reg_addr, reg_data);
 }
