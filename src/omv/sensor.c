@@ -62,6 +62,7 @@ const int resolution[][2] = {
     {720,  480 },    /* WVGA      */
     {752,  480 },    /* WVGA2     */
     {800,  600 },    /* SVGA      */
+    {1024, 768 },    /* XGA       */
     {1280, 1024},    /* SXGA      */
     {1600, 1200},    /* UXGA      */
 };
@@ -346,6 +347,9 @@ int sensor_init()
         init_ret = ov5640_init(&sensor);
         break;
     case OV2640_ID:
+        if (extclk_config(OV2640_XCLK_FREQ) != 0) {
+            return -3;
+        }
         init_ret = ov2640_init(&sensor);
         break;
     case OV9650_ID:
@@ -996,7 +1000,13 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 break;
             case PIXFORMAT_JPEG:
                 // Read the number of data items transferred
-                MAIN_FB()->bpp = (MAX_XFER_SIZE - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+                MAIN_FB()->bpp = ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+                // Remove trailing zeros...
+                if (MAIN_FB()->bpp) {
+                    while (!MAIN_FB()->pixels[MAIN_FB()->bpp - 1]) {
+                        MAIN_FB()->bpp -= 1;
+                    }
+                }
                 break;
             default:
                 break;
