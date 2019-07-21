@@ -9,6 +9,5 @@
 #ifndef __OV2640_H__
 #define __OV2640_H__
 #include "sensor.h"
-#define OV2640_XCLK_FREQ 24000000
 int ov2640_init(sensor_t *sensor);
 #endif // __OV2640_H__

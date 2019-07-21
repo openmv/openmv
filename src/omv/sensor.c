@@ -347,9 +347,6 @@ int sensor_init()
         init_ret = ov5640_init(&sensor);
         break;
     case OV2640_ID:
-        if (extclk_config(OV2640_XCLK_FREQ) != 0) {
-            return -3;
-        }
         init_ret = ov2640_init(&sensor);
         break;
     case OV9650_ID:

@@ -34,7 +34,7 @@ static const uint8_t default_regs[][2] = {
     {0x2e,          0xdf},
     {BANK_SEL,      BANK_SEL_SENSOR},
     {0x3c,          0x32},
-    {CLKRC,         0x00},
+    {CLKRC,         CLKRC_DOUBLE},
     {COM2,          COM2_OUT_DRIVE_3x},
     {REG04,         REG04_SET(REG04_HFLIP_IMG | REG04_VFLIP_IMG | REG04_VREF_EN | REG04_HREF_EN)},
     {COM8,          COM8_SET(COM8_BNDF_EN | COM8_AGC_EN | COM8_AEC_EN)},
@@ -651,8 +651,8 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
         if (COM7_GET_RES(reg) == COM7_RES_CIF) t_line = 400 + 195;
 
         ret |= cambus_readb(sensor->slv_addr, CLKRC, &reg);
-        int pll_mult = (reg & CLKRC_DOUBLE) ? 2 : 1;
-        int clk_rc = (reg & CLKRC_DIVIDER_MASK) + 1;
+        int pll_mult = ((reg & CLKRC_DOUBLE) ? 2 : 1) * 3;
+        int clk_rc = (reg & CLKRC_DIVIDER_MASK) + 2;
 
         ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
         ret |= cambus_readb(sensor->slv_addr, IMAGE_MODE, &reg);
@@ -662,7 +662,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
         if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_RAW10) t_pclk = 1;
         if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_RGB565) t_pclk = 2;
 
-        int exposure = IM_MAX(IM_MIN(((exposure_us*(((OV2640_XCLK_FREQ/clk_rc)*pll_mult)/1000000))/t_pclk)/t_line,0xFFFF),0x0000);
+        int exposure = IM_MAX(IM_MIN(((exposure_us*(((OMV_XCLK_FREQUENCY/clk_rc)*pll_mult)/1000000))/t_pclk)/t_line,0xFFFF),0x0000);
 
         ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, BANK_SEL_SENSOR);
 
@@ -709,8 +709,8 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     if (COM7_GET_RES(reg) == COM7_RES_CIF) t_line = 400 + 195;
 
     ret |= cambus_readb(sensor->slv_addr, CLKRC, &reg);
-    int pll_mult = (reg & CLKRC_DOUBLE) ? 2 : 1;
-    int clk_rc = (reg & CLKRC_DIVIDER_MASK) + 1;
+    int pll_mult = ((reg & CLKRC_DOUBLE) ? 2 : 1) * 3;
+    int clk_rc = (reg & CLKRC_DIVIDER_MASK) + 2;
 
     ret |= cambus_writeb(sensor->slv_addr, BANK_SEL, BANK_SEL_DSP);
     ret |= cambus_readb(sensor->slv_addr, IMAGE_MODE, &reg);
@@ -721,7 +721,7 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     if (IMAGE_MODE_GET_FMT(reg) == IMAGE_MODE_RGB565) t_pclk = 2;
 
     uint16_t exposure = ((aec_1510 & 0x3F) << 10) + ((aec_92 & 0xFF) << 2) + ((aec_10 & 0x3) << 0);
-    *exposure_us = (exposure*t_line*t_pclk)/(((OV2640_XCLK_FREQ/clk_rc)*pll_mult)/1000000);
+    *exposure_us = (exposure*t_line*t_pclk)/(((OMV_XCLK_FREQUENCY/clk_rc)*pll_mult)/1000000);
 
     return ret;
 }
