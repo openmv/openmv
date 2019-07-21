@@ -275,6 +275,12 @@ static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_k
                       (self->_cobj.w * self->_cobj.h) * sizeof(uint16_t));
             break;
         }
+        case IMAGE_BPP_BAYER: {
+            mp_printf(print, "{\"w\":%d, \"h\":%d, \"type\"=\"bayer\", \"size\":%d}",
+                      self->_cobj.w, self->_cobj.h,
+                      (self->_cobj.w * self->_cobj.h) * sizeof(uint8_t));
+            break;
+        }
         default: {
             if((self->_cobj.data[0] == 0xFE) && (self->_cobj.data[self->_cobj.bpp-1] == 0xFE)) { // for ide
                 print->print_strn(print->data, (const char *) self->_cobj.data, self->_cobj.bpp);
