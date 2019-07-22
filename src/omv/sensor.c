@@ -22,7 +22,7 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-#define MAX_XFER_SIZE   (0xFFFC*4)
+#define MAX_XFER_SIZE   (0xFFFF*4)
 
 sensor_t           sensor     = {0};
 TIM_HandleTypeDef  TIMHandle  = {0};
