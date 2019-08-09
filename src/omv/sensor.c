@@ -22,7 +22,7 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
-#define MAX_XFER_SIZE   (0xFFFC*4)
+#define MAX_XFER_SIZE   (0xFFFF*4)
 
 sensor_t           sensor     = {0};
 TIM_HandleTypeDef  TIMHandle  = {0};
@@ -62,6 +62,7 @@ const int resolution[][2] = {
     {720,  480 },    /* WVGA      */
     {752,  480 },    /* WVGA2     */
     {800,  600 },    /* SVGA      */
+    {1024, 768 },    /* XGA       */
     {1280, 1024},    /* SXGA      */
     {1600, 1200},    /* UXGA      */
 };
@@ -996,7 +997,13 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 break;
             case PIXFORMAT_JPEG:
                 // Read the number of data items transferred
-                MAIN_FB()->bpp = (MAX_XFER_SIZE - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+                MAIN_FB()->bpp = ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+                // Remove trailing zeros...
+                if (MAIN_FB()->bpp) {
+                    while (!MAIN_FB()->pixels[MAIN_FB()->bpp - 1]) {
+                        MAIN_FB()->bpp -= 1;
+                    }
+                }
                 break;
             default:
                 break;
