@@ -12,20 +12,22 @@
 #include "mutex.h"
 
 typedef struct framebuffer {
-    int x,y;
-    int w,h;
-    int u,v;
-    int bpp;
+    int32_t x,y;
+    int32_t w,h;
+    int32_t u,v;
+    int32_t bpp;
+    int32_t padding;
+    // NOTE: This buffer must be aligned on a 16 byte boundary
     uint8_t pixels[];
 } framebuffer_t;
 
 extern framebuffer_t *fb_framebuffer;
 
 typedef struct jpegbuffer {
-    int w,h;
-    int size;
-    int enabled;
-    int quality;
+    int32_t w,h;
+    int32_t size;
+    int32_t enabled;
+    int32_t quality;
     mutex_t lock;
     uint8_t pixels[];
 } jpegbuffer_t;
