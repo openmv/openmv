@@ -998,12 +998,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             case PIXFORMAT_JPEG:
                 // Read the number of data items transferred
                 MAIN_FB()->bpp = ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
-                // Remove trailing zeros...
-                if (MAIN_FB()->bpp) {
-                    while (!MAIN_FB()->pixels[MAIN_FB()->bpp - 1]) {
-                        MAIN_FB()->bpp -= 1;
-                    }
-                }
+                #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                // In JPEG mode, the DMA uses the frame buffer memory directly instead of the line buffer, which is
+                // located in a cacheable region and therefore must be invalidated before the CPU can access it again.
+                // Note: The frame buffer address is 32-byte aligned, and the size is a multiple of 32-bytes for all boards.
+                SCB_InvalidateDCache_by_Addr((uint32_t*)MAIN_FB()->pixels, OMV_RAW_BUF_SIZE);
+                #endif
                 break;
             default:
                 break;
