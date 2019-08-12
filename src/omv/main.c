@@ -469,10 +469,7 @@ soft_reset:
     servo_init();
     usbdbg_init();
     sdcard_init();
-
-    if (first_soft_reset) {
-        rtc_init_start(false);
-    }
+    rtc_init_start(false);
 
     // Initialize the sensor and check the result after
     // mounting the file-system to log errors (if any).
