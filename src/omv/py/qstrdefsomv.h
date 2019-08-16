@@ -446,6 +446,12 @@ Q(compressed)
 Q(compressed_for_ide)
 // duplicate Q(quality)
 
+// Encode for IDE (in place)
+Q(jpeg_encode_for_ide)
+
+// Encoded for IDE (out of place)
+Q(jpeg_encoded_for_ide)
+
 // Copy
 // duplicate Q(copy)
 Q(crop)

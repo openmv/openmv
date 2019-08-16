@@ -9,6 +9,7 @@
 #ifndef __FRAMEBUFFER_H__
 #define __FRAMEBUFFER_H__
 #include <stdint.h>
+#include "imlib.h"
 #include "mutex.h"
 
 typedef struct framebuffer {
@@ -43,6 +44,10 @@ extern jpegbuffer_t *jpeg_fb_framebuffer;
 
 // Use this macro to get a pointer to the free SRAM area located after the framebuffer.
 #define JPEG_FB_PIXELS()    (JPEG_FB()->pixels + JPEG_FB()->size)
+
+// Encode jpeg data for transmission over a text channel.
+int encode_for_ide_new_size(image_t *img);
+void encode_for_ide(uint8_t *ptr, image_t *img);
 
 // Returns the main frame buffer size, factoring in pixel formats.
 uint32_t fb_buffer_size();
