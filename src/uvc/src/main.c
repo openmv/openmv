@@ -50,6 +50,20 @@ int printf(const char *fmt, ...)
     return 0;
 }
 
+NORETURN void nlr_jump(void *val)
+{
+    __fatal_error();
+}
+
+void *mp_obj_new_exception_msg(const void *exc_type, const char *msg)
+{
+    return NULL;
+}
+
+const void *mp_type_MemoryError = NULL;
+
+const void *mp_sys_stdout_print = NULL;
+
 static uint8_t frame_index = 0;
 static uint8_t format_index = 0;
 

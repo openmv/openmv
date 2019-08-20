@@ -219,7 +219,7 @@ static const uint8_t default_regs[][2] = {
 //    {COM1,      0x06 | 0x80},
 //    {HSTART,    0x11},
 //    {HSTOP,     0x43},
-//    {VSTART,    0x00},
+//    {VSTART,    0x01}, // 0x01 fixes issue with garbage pixels in the image...
 //    {VSTOP,     0x97},
 //    {REG32,     0x09},
 //    {BANK_SEL,  BANK_SEL_DSP},
@@ -237,7 +237,7 @@ static const uint8_t svga_regs[][2] = {
     {COM1,      0x0A | 0x80},
     {HSTART,    0x11},
     {HSTOP,     0x43},
-    {VSTART,    0x00},
+    {VSTART,    0x01}, // 0x01 fixes issue with garbage pixels in the image...
     {VSTOP,     0x97},
     {REG32,     0x09},
     {BANK_SEL,  BANK_SEL_DSP},
@@ -305,8 +305,6 @@ static const uint8_t jpeg_regs[][2] = {
     {R_BYPASS,      R_BYPASS_DSP_EN},
     {IMAGE_MODE,    IMAGE_MODE_JPEG_EN},
     {0xd7,          0x03},
-    {0xe1,          0x77},
-    {QS,            0x0c},
     {RESET,         0x00},
     {R_BYPASS,      R_BYPASS_DSP_EN},
     {0,             0},
@@ -432,6 +430,10 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
 
+    if ((w % 4) || (h % 4)) { // w/h must be divisble by 4
+        return 1;
+    }
+
     // Looks really bad.
     /* if ((w <= CIF_WIDTH) && (h <= CIF_HEIGHT)) {
         regs = cif_regs;
@@ -452,13 +454,15 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         ret |= cambus_writeb(sensor->slv_addr, regs[i][0], regs[i][1]);
     }
 
-    uint16_t div = IM_MIN(IM_MIN(sensor_w / w, sensor_h / h), 8);
+    uint64_t tmp_div = IM_MIN(sensor_w / w, sensor_h / h);
+    uint16_t log_div = IM_MIN(IM_LOG2(tmp_div) - 1, 3);
+    uint16_t div = 1 << log_div;
     uint16_t w_mul = w * div;
     uint16_t h_mul = h * div;
     uint16_t x_off = (sensor_w - w_mul) / 2;
     uint16_t y_off = (sensor_h - h_mul) / 2;
 
-    ret |= cambus_writeb(sensor->slv_addr, CTRLI, CTRLI_LP_DP | CTRLI_V_DIV_SET(div - 1) | CTRLI_H_DIV_SET(div - 1));
+    ret |= cambus_writeb(sensor->slv_addr, CTRLI, CTRLI_LP_DP | CTRLI_V_DIV_SET(log_div) | CTRLI_H_DIV_SET(log_div));
     ret |= cambus_writeb(sensor->slv_addr, HSIZE, HSIZE_SET(w_mul));
     ret |= cambus_writeb(sensor->slv_addr, VSIZE, VSIZE_SET(h_mul));
     ret |= cambus_writeb(sensor->slv_addr, XOFFL, XOFFL_SET(x_off));

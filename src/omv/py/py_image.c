@@ -1276,41 +1276,11 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
     uint8_t *buffer = fb_alloc_all(&size);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    PY_ASSERT_TRUE_MSG(((((out.bpp * 8) + 5) / 6) + 2) <= image_size(arg_img), "Can't compress in place!");
-    uint8_t *ptr = arg_img->data;
+    int new_size = encode_for_ide_new_size(&out);
+    PY_ASSERT_TRUE_MSG(new_size <= image_size(arg_img), "Can't compress in place!");
+    encode_for_ide(arg_img->data, &out);
 
-    *ptr++ = 0xFE;
-
-    for(int i = 0, j = (out.bpp / 3) * 3; i < j; i += 3) {
-        int x = 0;
-        x |= out.data[i + 0] << 0;
-        x |= out.data[i + 1] << 8;
-        x |= out.data[i + 2] << 16;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 18) & 0x3F);
-    }
-
-    if((out.bpp % 3) == 2) { // 2 bytes -> 16-bits -> 24-bits sent
-        int x = 0;
-        x |= out.data[out.bpp - 2] << 0;
-        x |= out.data[out.bpp - 1] << 8;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
-    }
-
-    if((out.bpp % 3) == 1) { // 1 byte -> 8-bits -> 16-bits sent
-        int x = 0;
-        x |= out.data[out.bpp - 1] << 0;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-    }
-
-    *ptr++ = 0xFE;
-
-    out.bpp = (((out.bpp * 8) + 5) / 6) + 2;
+    out.bpp = new_size;
     arg_img->bpp = out.bpp;
     fb_alloc_free_till_mark();
 
@@ -1353,47 +1323,53 @@ static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, m
     uint8_t *buffer = fb_alloc_all(&size);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    uint8_t *temp = xalloc((((out.bpp * 8) + 5) / 6) + 2);
-    uint8_t *ptr = temp;
+    int new_size = encode_for_ide_new_size(&out);
+    uint8_t *temp = xalloc(new_size);
+    encode_for_ide(temp, &out);
 
-    *ptr++ = 0xFE;
-
-    for(int i = 0, j = (out.bpp / 3) * 3; i < j; i += 3) {
-        int x = 0;
-        x |= out.data[i + 0] << 0;
-        x |= out.data[i + 1] << 8;
-        x |= out.data[i + 2] << 16;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 18) & 0x3F);
-    }
-
-    if((out.bpp % 3) == 2) { // 2 bytes -> 16-bits -> 24-bits sent
-        int x = 0;
-        x |= out.data[out.bpp - 2] << 0;
-        x |= out.data[out.bpp - 1] << 8;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x0F);
-    }
-
-    if((out.bpp % 3) == 1) { // 1 byte -> 8-bits -> 16-bits sent
-        int x = 0;
-        x |= out.data[out.bpp - 1] << 0;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x03);
-    }
-
-    *ptr++ = 0xFE;
-
-    out.bpp = (((out.bpp * 8) + 5) / 6) + 2;
+    out.bpp = new_size;
     out.data = temp;
     fb_alloc_free_till_mark();
 
     return py_image_from_struct(&out);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_for_ide_obj, 1, py_image_compressed_for_ide);
+
+static mp_obj_t py_image_jpeg_encode_for_ide(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(arg_img->bpp >= IMAGE_BPP_JPEG, "Image format is not supported!");
+    PY_ASSERT_TRUE_MSG(MAIN_FB()->pixels == arg_img->data, "Can't compress in place!");
+
+    int new_size = encode_for_ide_new_size(arg_img);
+    fb_alloc_mark();
+    uint8_t *temp = fb_alloc(new_size);
+    encode_for_ide(temp, arg_img);
+
+    MAIN_FB()->bpp = 0;
+    PY_ASSERT_TRUE_MSG(new_size <= fb_avail(), "The new image won't fit in the main frame buffer!");
+    MAIN_FB()->bpp = new_size;
+    arg_img->bpp = new_size;
+
+    memcpy(arg_img->data, temp, new_size);
+    fb_alloc_free_till_mark();
+
+    return img_obj;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_jpeg_encode_for_ide_obj, py_image_jpeg_encode_for_ide);
+
+static mp_obj_t py_image_jpeg_encoded_for_ide(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(arg_img->bpp >= IMAGE_BPP_JPEG, "Image format is not supported!");
+
+    int new_size = encode_for_ide_new_size(arg_img);
+    uint8_t *temp = xalloc(new_size);
+    encode_for_ide(temp, arg_img);
+
+    return py_image(arg_img->w, arg_img->h, new_size, temp);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_jpeg_encoded_for_ide_obj, py_image_jpeg_encoded_for_ide);
 
 static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *kw_args, bool mode)
 {
@@ -6320,6 +6296,8 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_compress_for_ide),    MP_ROM_PTR(&py_image_compress_for_ide_obj)},
     {MP_ROM_QSTR(MP_QSTR_compressed),          MP_ROM_PTR(&py_image_compressed_obj)},
     {MP_ROM_QSTR(MP_QSTR_compressed_for_ide),  MP_ROM_PTR(&py_image_compressed_for_ide_obj)},
+    {MP_ROM_QSTR(MP_QSTR_jpeg_encode_for_ide), MP_ROM_PTR(&py_image_jpeg_encode_for_ide_obj)},
+    {MP_ROM_QSTR(MP_QSTR_jpeg_encoded_for_ide),MP_ROM_PTR(&py_image_jpeg_encoded_for_ide_obj)},
     {MP_ROM_QSTR(MP_QSTR_copy),                MP_ROM_PTR(&py_image_copy_obj)},
     {MP_ROM_QSTR(MP_QSTR_crop),                MP_ROM_PTR(&py_image_crop_obj)},
     {MP_ROM_QSTR(MP_QSTR_scale),               MP_ROM_PTR(&py_image_crop_obj)},
