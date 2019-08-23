@@ -398,8 +398,12 @@ int sensor_reset()
     sensor.framerate   = 0;
     sensor.gainceiling = 0;
     sensor.vsync_gpio  = NULL;
+
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
+
+    // Restore shutdown state on reset.
+    sensor_shutdown(false);
 
     // Call sensor-specific reset function
     if (sensor.reset(&sensor) != 0) {
