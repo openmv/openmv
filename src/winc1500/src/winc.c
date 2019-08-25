@@ -316,10 +316,10 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
             ip_obtained = true;
             async_request_done = true;
             tstrM2MIPConfig *ipconfig = (tstrM2MIPConfig*)msg;
-            memcpy(ifconfig.ip_addr, &ipconfig->u32StaticIP, WINC_IP_ADDR_LEN);
-            memcpy(ifconfig.subnet_addr, &ipconfig->u32SubnetMask, WINC_IP_ADDR_LEN);
-            memcpy(ifconfig.gateway_addr, &ipconfig->u32Gateway, WINC_IP_ADDR_LEN);
-            memcpy(ifconfig.dns_addr, &ipconfig->u32DNS, WINC_IP_ADDR_LEN);
+            memcpy(ifconfig.ip_addr, &ipconfig->u32StaticIP, WINC_IPV4_ADDR_LEN);
+            memcpy(ifconfig.subnet_addr, &ipconfig->u32SubnetMask, WINC_IPV4_ADDR_LEN);
+            memcpy(ifconfig.gateway_addr, &ipconfig->u32Gateway, WINC_IPV4_ADDR_LEN);
+            memcpy(ifconfig.dns_addr, &ipconfig->u32DNS, WINC_IPV4_ADDR_LEN);
             break;
         }
 
@@ -564,10 +564,10 @@ int winc_ifconfig(winc_ifconfig_t *rifconfig, bool set)
         memcpy(&ifconfig, rifconfig, sizeof(winc_ifconfig_t));
     } else {
         // Copy the ifconfig info stored from the DHCP request.
-        memcpy(rifconfig->ip_addr, ifconfig.ip_addr, WINC_IP_ADDR_LEN);
-        memcpy(rifconfig->subnet_addr, ifconfig.subnet_addr, WINC_IP_ADDR_LEN);
-        memcpy(rifconfig->gateway_addr, ifconfig.gateway_addr, WINC_IP_ADDR_LEN);
-        memcpy(rifconfig->dns_addr, ifconfig.dns_addr, WINC_IP_ADDR_LEN);
+        memcpy(rifconfig->ip_addr, ifconfig.ip_addr, WINC_IPV4_ADDR_LEN);
+        memcpy(rifconfig->subnet_addr, ifconfig.subnet_addr, WINC_IPV4_ADDR_LEN);
+        memcpy(rifconfig->gateway_addr, ifconfig.gateway_addr, WINC_IPV4_ADDR_LEN);
+        memcpy(rifconfig->dns_addr, ifconfig.dns_addr, WINC_IPV4_ADDR_LEN);
     }
     return 0;
 }
