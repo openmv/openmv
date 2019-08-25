@@ -65,6 +65,14 @@ typedef struct {
     char    ssid[WINC_MAX_SSID_LEN];
 } winc_scan_result_t;
 
+typedef struct {
+    int8_t  rssi;
+    uint8_t security;
+    char    ssid[WINC_MAX_SSID_LEN];
+    uint8_t ip_addr[WINC_IPV4_ADDR_LEN];
+    uint8_t mac_addr[WINC_MAC_ADDR_LEN];
+} winc_netinfo_t;
+
 typedef int (*winc_scan_callback_t) (winc_scan_result_t *, void *);
 
 typedef struct {
@@ -100,6 +108,7 @@ int winc_isconnected();
 int winc_connected_sta(uint32_t *sta_ip);
 int winc_wait_for_sta(uint32_t *sta_ip, uint32_t timeout);
 int winc_ifconfig(winc_ifconfig_t *ifconfig, bool set);
+int winc_netinfo(winc_netinfo_t *netinfo);
 int winc_scan(winc_scan_callback_t cb, void *arg);
 int winc_get_rssi();
 int winc_fw_version(winc_fwver_t *wfwver);

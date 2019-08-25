@@ -219,6 +219,34 @@ static mp_obj_t py_winc_ifconfig(size_t n_args, const mp_obj_t *args)
     }
 }
 
+static mp_obj_t py_winc_netinfo(mp_obj_t self_in)
+{
+    winc_netinfo_t netinfo;
+    winc_netinfo(&netinfo);
+
+    // Format MAC address
+    VSTR_FIXED(mac_vstr, 18);
+    vstr_printf(&mac_vstr, "%02x:%02x:%02x:%02x:%02x:%02x",
+            netinfo.mac_addr[0], netinfo.mac_addr[1], netinfo.mac_addr[2],
+            netinfo.mac_addr[3], netinfo.mac_addr[4], netinfo.mac_addr[5]);
+
+    // Format IP address
+    VSTR_FIXED(ip_vstr, 16);
+    vstr_printf(&ip_vstr, "%d.%d.%d.%d", netinfo.ip_addr[0],
+            netinfo.ip_addr[1], netinfo.ip_addr[2], netinfo.ip_addr[3]);
+
+    // Add connection info
+
+    mp_obj_t tuple[5] = {
+        mp_obj_new_int(netinfo.rssi),
+        mp_obj_new_int(netinfo.security),
+        mp_obj_new_str(netinfo.ssid, strlen(netinfo.ssid)),
+        mp_obj_new_str(mac_vstr.buf, mac_vstr.len),
+        mp_obj_new_str(ip_vstr.buf, ip_vstr.len),
+    };
+    return mp_obj_new_tuple(5, tuple);
+}
+
 static int winc_scan_callback(winc_scan_result_t *scan_result, void *arg)
 {
     mp_obj_t scan_list = (mp_obj_t) arg;
@@ -502,6 +530,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_isconnected_obj,   py_winc_isconnected)
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_connected_sta_obj, py_winc_connected_sta);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_winc_wait_for_sta_obj,  py_winc_wait_for_sta);
 static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_winc_ifconfig_obj, 1, 2, py_winc_ifconfig);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_netinfo_obj,       py_winc_netinfo);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_scan_obj,          py_winc_scan);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_get_rssi_obj,      py_winc_get_rssi);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_fw_version_obj,    py_winc_fw_version);
@@ -516,6 +545,7 @@ static const mp_map_elem_t winc_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_connected_sta), (mp_obj_t)&py_winc_connected_sta_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_wait_for_sta),  (mp_obj_t)&py_winc_wait_for_sta_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_ifconfig),      (mp_obj_t)&py_winc_ifconfig_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_netinfo),       (mp_obj_t)&py_winc_netinfo_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_scan),          (mp_obj_t)&py_winc_scan_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_rssi),          (mp_obj_t)&py_winc_get_rssi_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fw_version),    (mp_obj_t)&py_winc_fw_version_obj },
