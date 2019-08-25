@@ -67,7 +67,7 @@ static int client_fd = -1;
 static int server_fd = -1;
 static int udpbcast_fd = -1;
 static int udpbcast_time = 0;
-static uint8_t ip_addr[WINC_IP_ADDR_LEN] = {};
+static uint8_t ip_addr[WINC_IPV4_ADDR_LEN] = {};
 static char udpbcast_string[UDPCAST_STRING_SIZE] = {};
 static winc_socket_buf_t sockbuf;
 
@@ -98,7 +98,7 @@ int wifidbg_init(wifidbg_config_t *config)
             return -3;
         }
 
-        memcpy(ip_addr, ifconfig.ip_addr, WINC_IP_ADDR_LEN);
+        memcpy(ip_addr, ifconfig.ip_addr, WINC_IPV4_ADDR_LEN);
 
     } else { // AP Mode
 
@@ -115,7 +115,7 @@ int wifidbg_init(wifidbg_config_t *config)
             return -2;
         }
 
-        memcpy(ip_addr, SERVER_ADDR, WINC_IP_ADDR_LEN);
+        memcpy(ip_addr, SERVER_ADDR, WINC_IPV4_ADDR_LEN);
     }
 
     snprintf(udpbcast_string, UDPCAST_STRING_SIZE, UDPCAST_STRING,

@@ -10,7 +10,7 @@
 #define __WINC_H__
 #include <stdint.h>
 #include <stdbool.h>
-#define WINC_IP_ADDR_LEN        (4)
+#define WINC_IPV4_ADDR_LEN      (4)
 #define WINC_MAC_ADDR_LEN       (6)
 #define WINC_MAX_SSID_LEN       (33)
 #define WINC_MAX_PSK_LEN        (65)
@@ -51,10 +51,10 @@ typedef enum {
 } winc_security_t;
 
 typedef struct {
-    uint8_t ip_addr[WINC_IP_ADDR_LEN];
-    uint8_t subnet_addr[WINC_IP_ADDR_LEN];
-    uint8_t gateway_addr[WINC_IP_ADDR_LEN];
-    uint8_t dns_addr[WINC_IP_ADDR_LEN];
+    uint8_t ip_addr[WINC_IPV4_ADDR_LEN];
+    uint8_t subnet_addr[WINC_IPV4_ADDR_LEN];
+    uint8_t gateway_addr[WINC_IPV4_ADDR_LEN];
+    uint8_t dns_addr[WINC_IPV4_ADDR_LEN];
 } winc_ifconfig_t;
 
 typedef struct {
