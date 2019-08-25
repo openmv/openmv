@@ -324,6 +324,23 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
         }
 
         case M2M_WIFI_RESP_CONN_INFO: {
+            // Connection info
+            tstrM2MConnInfo *con_info = (tstrM2MConnInfo*) msg;
+            winc_netinfo_t *netinfo = (winc_netinfo_t *) async_request_data;
+
+            // Set rssi and security
+            netinfo->rssi = con_info->s8RSSI;
+            netinfo->security = con_info->u8SecType;
+
+            // Copy IP address.
+            memcpy(netinfo->ip_addr, con_info->au8IPAddr, WINC_IPV4_ADDR_LEN);
+
+            // Get MAC Address.
+            memcpy(netinfo->mac_addr, con_info->au8MACAddress, WINC_MAC_ADDR_LEN);
+
+            // Copy SSID.
+            strncpy(netinfo->ssid, con_info->acSSID, WINC_MAX_SSID_LEN-1);
+
             async_request_done = true;
 			break;
         }
@@ -569,6 +586,22 @@ int winc_ifconfig(winc_ifconfig_t *rifconfig, bool set)
         memcpy(rifconfig->gateway_addr, ifconfig.gateway_addr, WINC_IPV4_ADDR_LEN);
         memcpy(rifconfig->dns_addr, ifconfig.dns_addr, WINC_IPV4_ADDR_LEN);
     }
+    return 0;
+}
+
+int winc_netinfo(winc_netinfo_t *netinfo)
+{
+    async_request_done = false;
+    async_request_data = netinfo;
+
+    // Request connection info
+    m2m_wifi_get_connection_info();
+
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
+    }
+
     return 0;
 }
 
