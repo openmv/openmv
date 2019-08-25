@@ -94,7 +94,7 @@ int wifidbg_init(wifidbg_config_t *config)
 
         winc_ifconfig_t ifconfig;
 
-        if (winc_ifconfig(&ifconfig) < 0) {
+        if (winc_ifconfig(&ifconfig, false) < 0) {
             return -3;
         }
 

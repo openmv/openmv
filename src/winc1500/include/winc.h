@@ -9,6 +9,7 @@
 #ifndef __WINC_H__
 #define __WINC_H__
 #include <stdint.h>
+#include <stdbool.h>
 #define WINC_IP_ADDR_LEN        (4)
 #define WINC_MAC_ADDR_LEN       (6)
 #define WINC_MAX_SSID_LEN       (33)
@@ -50,11 +51,10 @@ typedef enum {
 } winc_security_t;
 
 typedef struct {
-    int8_t  rssi;
-    uint8_t security;
-    char    ssid[WINC_MAX_SSID_LEN];
     uint8_t ip_addr[WINC_IP_ADDR_LEN];
-    uint8_t mac_addr[WINC_MAC_ADDR_LEN];
+    uint8_t subnet_addr[WINC_IP_ADDR_LEN];
+    uint8_t gateway_addr[WINC_IP_ADDR_LEN];
+    uint8_t dns_addr[WINC_IP_ADDR_LEN];
 } winc_ifconfig_t;
 
 typedef struct {
@@ -99,7 +99,7 @@ int winc_disconnect();
 int winc_isconnected();
 int winc_connected_sta(uint32_t *sta_ip);
 int winc_wait_for_sta(uint32_t *sta_ip, uint32_t timeout);
-int winc_ifconfig(winc_ifconfig_t *ifconfig);
+int winc_ifconfig(winc_ifconfig_t *ifconfig, bool set);
 int winc_scan(winc_scan_callback_t cb, void *arg);
 int winc_get_rssi();
 int winc_fw_version(winc_fwver_t *wfwver);

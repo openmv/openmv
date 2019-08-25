@@ -23,10 +23,12 @@
 static volatile bool ip_obtained = false;
 static volatile bool wlan_connected = false;
 static volatile uint32_t connected_sta_ip = false;
+static volatile bool use_static_ip = false;
 
 static void *async_request_data;
 static uint8_t async_request_type=0;
 static volatile bool async_request_done = false;
+static winc_ifconfig_t ifconfig;
 
 typedef struct {
     int size;
@@ -291,7 +293,17 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
             tstrM2mWifiStateChanged *wifi_state = (tstrM2mWifiStateChanged *)msg;
             if (wifi_state->u8CurrState == M2M_WIFI_CONNECTED) {
                 wlan_connected = true;
-                m2m_wifi_request_dhcp_client();
+                if (use_static_ip) {
+                    tstrM2MIPConfig ipconfig;
+                    ipconfig.u32StaticIP = *((uint32_t*)ifconfig.ip_addr);
+                    ipconfig.u32SubnetMask = *((uint32_t*)ifconfig.subnet_addr);
+                    ipconfig.u32Gateway = *((uint32_t*)ifconfig.gateway_addr);
+                    ipconfig.u32DNS = *((uint32_t*)ifconfig.dns_addr);
+                    m2m_wifi_set_static_ip(&ipconfig);
+                    // NOTE: the async request is done because there's
+                    // no DHCP request/response when using a static IP.
+                    async_request_done = true;
+                }
             } else if (wifi_state->u8CurrState == M2M_WIFI_DISCONNECTED) {
                 ip_obtained = false;
                 wlan_connected = false;
@@ -303,27 +315,15 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
         case M2M_WIFI_REQ_DHCP_CONF: {
             ip_obtained = true;
             async_request_done = true;
+            tstrM2MIPConfig *ipconfig = (tstrM2MIPConfig*)msg;
+            memcpy(ifconfig.ip_addr, &ipconfig->u32StaticIP, WINC_IP_ADDR_LEN);
+            memcpy(ifconfig.subnet_addr, &ipconfig->u32SubnetMask, WINC_IP_ADDR_LEN);
+            memcpy(ifconfig.gateway_addr, &ipconfig->u32Gateway, WINC_IP_ADDR_LEN);
+            memcpy(ifconfig.dns_addr, &ipconfig->u32DNS, WINC_IP_ADDR_LEN);
             break;
         }
 
         case M2M_WIFI_RESP_CONN_INFO: {
-            // Connection info
-            tstrM2MConnInfo	*con_info = (tstrM2MConnInfo*) msg;
-            winc_ifconfig_t *ifconfig = (winc_ifconfig_t *) async_request_data;
-
-            // Set rssi and security
-            ifconfig->rssi      = con_info->s8RSSI;
-            ifconfig->security  = con_info->u8SecType;
-
-    	    // Get MAC Address.
-	        m2m_wifi_get_mac_address(ifconfig->mac_addr);
-            
-            // Copy IP address.
-            memcpy(ifconfig->ip_addr, con_info->au8IPAddr, WINC_IP_ADDR_LEN);
-
-            // Copy SSID.
-            strncpy(ifconfig->ssid, con_info->acSSID, WINC_MAX_SSID_LEN-1);
-
             async_request_done = true;
 			break;
         }
@@ -404,6 +404,12 @@ int winc_init(winc_mode_t winc_mode)
 	// Initialize the BSP.
 	nm_bsp_init();
 
+    // Use DHCP by default.
+    use_static_ip = false;
+
+    // Reset ifconfig info.
+    memset(&ifconfig, 0, sizeof(winc_ifconfig_t));
+
     switch (winc_mode) {
         case WINC_MODE_BSP: {
 	        // Initialize the BSP and return.
@@ -463,6 +469,11 @@ int winc_init(winc_mode_t winc_mode)
 
 int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t channel)
 {
+    async_request_data = &ifconfig;
+
+    //Disable/Enable DHCP client before connecting.
+    m2m_wifi_enable_dhcp(!use_static_ip);
+
     // Connect to AP
     if (m2m_wifi_connect((char*)ssid, strlen(ssid), security, (void*)key, M2M_WIFI_CH_ALL) != 0) {
         return -1;
@@ -546,19 +557,18 @@ int winc_wait_for_sta(uint32_t *sta_ip, uint32_t timeout)
     return 0; 
 }
 
-int winc_ifconfig(winc_ifconfig_t *ifconfig)
+int winc_ifconfig(winc_ifconfig_t *rifconfig, bool set)
 {
-    async_request_done = false;
-    async_request_data = ifconfig;
-	
-    // Request connection info
-    m2m_wifi_get_connection_info();
-
-	while (async_request_done == false) {
-		// Handle pending events from network controller.
-		m2m_wifi_handle_events(NULL);
-	}
-
+    if (set) {
+        use_static_ip = true;
+        memcpy(&ifconfig, rifconfig, sizeof(winc_ifconfig_t));
+    } else {
+        // Copy the ifconfig info stored from the DHCP request.
+        memcpy(rifconfig->ip_addr, ifconfig.ip_addr, WINC_IP_ADDR_LEN);
+        memcpy(rifconfig->subnet_addr, ifconfig.subnet_addr, WINC_IP_ADDR_LEN);
+        memcpy(rifconfig->gateway_addr, ifconfig.gateway_addr, WINC_IP_ADDR_LEN);
+        memcpy(rifconfig->dns_addr, ifconfig.dns_addr, WINC_IP_ADDR_LEN);
+    }
     return 0;
 }
 

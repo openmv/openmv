@@ -193,32 +193,30 @@ static mp_obj_t py_winc_wait_for_sta(mp_obj_t self_in, mp_obj_t timeout_in)
     return sta_list;
 }
 
-static mp_obj_t py_winc_ifconfig(mp_obj_t self_in)
+static mp_obj_t py_winc_ifconfig(size_t n_args, const mp_obj_t *args)
 {
     winc_ifconfig_t ifconfig;
-    mp_obj_t ifconfig_list= mp_obj_new_list(0, NULL);
-
-    winc_ifconfig(&ifconfig);
-
-    // Format MAC address
-    VSTR_FIXED(mac_vstr, 18);
-    vstr_printf(&mac_vstr, "%02x:%02x:%02x:%02x:%02x:%02x",
-            ifconfig.mac_addr[0], ifconfig.mac_addr[1], ifconfig.mac_addr[2],
-            ifconfig.mac_addr[3], ifconfig.mac_addr[4], ifconfig.mac_addr[5]);
-
-    // Format IP address
-    VSTR_FIXED(ip_vstr, 16);
-    vstr_printf(&ip_vstr, "%d.%d.%d.%d", ifconfig.ip_addr[0],
-            ifconfig.ip_addr[1], ifconfig.ip_addr[2], ifconfig.ip_addr[3]);
-
-    // Add connection info
-    mp_obj_list_append(ifconfig_list, mp_obj_new_int(ifconfig.rssi));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_int(ifconfig.security));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(ifconfig.ssid, strlen(ifconfig.ssid)));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(mac_vstr.buf, mac_vstr.len));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(ip_vstr.buf, ip_vstr.len));
-
-    return ifconfig_list;
+    if (n_args == 1) {
+        // get ifconfig info
+        winc_ifconfig(&ifconfig, false);
+        mp_obj_t tuple[4] = {
+            netutils_format_ipv4_addr(ifconfig.ip_addr, NETUTILS_BIG),
+            netutils_format_ipv4_addr(ifconfig.subnet_addr, NETUTILS_BIG),
+            netutils_format_ipv4_addr(ifconfig.gateway_addr, NETUTILS_BIG),
+            netutils_format_ipv4_addr(ifconfig.dns_addr, NETUTILS_BIG),
+        };
+        return mp_obj_new_tuple(4, tuple);
+    } else {
+        // set ifconfig info
+        mp_obj_t *items;
+        mp_obj_get_array_fixed_n(args[1], 4, &items);
+        netutils_parse_ipv4_addr(items[0], ifconfig.ip_addr, NETUTILS_BIG);
+        netutils_parse_ipv4_addr(items[1], ifconfig.subnet_addr, NETUTILS_BIG);
+        netutils_parse_ipv4_addr(items[2], ifconfig.gateway_addr, NETUTILS_BIG);
+        netutils_parse_ipv4_addr(items[3], ifconfig.dns_addr, NETUTILS_BIG);
+        winc_ifconfig(&ifconfig, true);
+        return mp_const_none;
+    }
 }
 
 static int winc_scan_callback(winc_scan_result_t *scan_result, void *arg)
@@ -503,7 +501,7 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_disconnect_obj,    py_winc_disconnect);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_isconnected_obj,   py_winc_isconnected);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_connected_sta_obj, py_winc_connected_sta);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_winc_wait_for_sta_obj,  py_winc_wait_for_sta);
-static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_ifconfig_obj,      py_winc_ifconfig);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_winc_ifconfig_obj, 1, 2, py_winc_ifconfig);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_scan_obj,          py_winc_scan);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_get_rssi_obj,      py_winc_get_rssi);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_fw_version_obj,    py_winc_fw_version);
