@@ -150,7 +150,7 @@ void fb_free()
 {
     if (pointer < &_fballoc) {
         #if defined(FB_ALLOC_STATS)
-        alloc_bytes = *((uint32_t *) pointer);
+        alloc_bytes -= *((uint32_t *) pointer);
         #endif
         pointer += *((uint32_t *) pointer); // Get size and pop.
     }
@@ -160,7 +160,7 @@ void fb_free_all()
 {
     while (pointer < &_fballoc) {
         #if defined(FB_ALLOC_STATS)
-        alloc_bytes = *((uint32_t *) pointer);
+        alloc_bytes -= *((uint32_t *) pointer);
         #endif
         pointer += *((uint32_t *) pointer); // Get size and pop.
     }
