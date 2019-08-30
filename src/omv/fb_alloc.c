@@ -15,6 +15,7 @@ static char *pointer = &_fballoc;
 static int marks = 0;
 #if defined(FB_ALLOC_STATS)
 static uint32_t alloc_bytes;
+static uint32_t alloc_bytes_peak;
 #endif
 
 __weak NORETURN void fb_alloc_fail()
@@ -56,6 +57,7 @@ void fb_alloc_mark()
     marks += 1;
     #if defined(FB_ALLOC_STATS)
     alloc_bytes = 0;
+    alloc_bytes_peak = 0;
     #endif
 }
 
@@ -69,7 +71,7 @@ void fb_alloc_free_till_mark()
     }
     marks -= 1;
     #if defined(FB_ALLOC_STATS)
-    printf("Total allocated FB memory: %lu bytes\n", alloc_bytes);
+    printf("fb_alloc peak memory: %lu\n", alloc_bytes_peak);
     #endif
 }
 
@@ -94,6 +96,9 @@ void *fb_alloc(uint32_t size)
     pointer = new_pointer;
     #if defined(FB_ALLOC_STATS)
     alloc_bytes += size;
+    if (alloc_bytes > alloc_bytes_peak) {
+        alloc_bytes_peak = alloc_bytes;
+    }
     printf("fb_alloc %lu bytes\n", size);
     #endif
     return result;
@@ -125,6 +130,9 @@ void *fb_alloc_all(uint32_t *size)
     pointer = new_pointer;
     #if defined(FB_ALLOC_STATS)
     alloc_bytes += *size;
+    if (alloc_bytes > alloc_bytes_peak) {
+        alloc_bytes_peak = alloc_bytes;
+    }
     printf("fb_alloc_all %lu bytes\n", *size);
     #endif
     return result;
@@ -141,6 +149,9 @@ void *fb_alloc0_all(uint32_t *size)
 void fb_free()
 {
     if (pointer < &_fballoc) {
+        #if defined(FB_ALLOC_STATS)
+        alloc_bytes = *((uint32_t *) pointer);
+        #endif
         pointer += *((uint32_t *) pointer); // Get size and pop.
     }
 }
@@ -148,6 +159,9 @@ void fb_free()
 void fb_free_all()
 {
     while (pointer < &_fballoc) {
+        #if defined(FB_ALLOC_STATS)
+        alloc_bytes = *((uint32_t *) pointer);
+        #endif
         pointer += *((uint32_t *) pointer); // Get size and pop.
     }
     marks = 0;
