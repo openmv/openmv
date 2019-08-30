@@ -75,6 +75,11 @@ ifeq ($(STACK_PROTECTOR), 1)
 CFLAGS += -fstack-protector-all -DSTACK_PROTECTOR
 endif
 
+# Enable debug printf
+ifeq ($(FB_ALLOC_STATS), 1)
+CFLAGS += -DFB_ALLOC_STATS
+endif
+
 # Compiler Flags
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
