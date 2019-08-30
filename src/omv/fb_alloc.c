@@ -13,6 +13,9 @@
 extern char _fballoc;
 static char *pointer = &_fballoc;
 static int marks = 0;
+#if defined(FB_ALLOC_STATS)
+static uint32_t alloc_bytes;
+#endif
 
 __weak NORETURN void fb_alloc_fail()
 {
@@ -51,6 +54,9 @@ void fb_alloc_mark()
     *((uint32_t *) new_pointer) = sizeof(uint32_t); // Save size.
     pointer = new_pointer;
     marks += 1;
+    #if defined(FB_ALLOC_STATS)
+    alloc_bytes = 0;
+    #endif
 }
 
 void fb_alloc_free_till_mark()
@@ -62,6 +68,9 @@ void fb_alloc_free_till_mark()
         if (size == sizeof(uint32_t)) break; // Break on first marker.
     }
     marks -= 1;
+    #if defined(FB_ALLOC_STATS)
+    printf("Total allocated FB memory: %lu bytes\n", alloc_bytes);
+    #endif
 }
 
 // returns null pointer without error if size==0
@@ -83,6 +92,10 @@ void *fb_alloc(uint32_t size)
     // size is always 4/8/12/etc. so the value below must be 8 or more.
     *((uint32_t *) new_pointer) = size + sizeof(uint32_t); // Save size.
     pointer = new_pointer;
+    #if defined(FB_ALLOC_STATS)
+    alloc_bytes += size;
+    printf("fb_alloc %lu bytes\n", size);
+    #endif
     return result;
 }
 
@@ -110,6 +123,10 @@ void *fb_alloc_all(uint32_t *size)
     // size is always 4/8/12/etc. so the value below must be 8 or more.
     *((uint32_t *) new_pointer) = *size + sizeof(uint32_t); // Save size.
     pointer = new_pointer;
+    #if defined(FB_ALLOC_STATS)
+    alloc_bytes += *size;
+    printf("fb_alloc_all %lu bytes\n", *size);
+    #endif
     return result;
 }
 
