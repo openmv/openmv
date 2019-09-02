@@ -111,6 +111,9 @@
 // Enable find_apriltags() (64 KB)
 //#define IMLIB_ENABLE_APRILTAGS
 
+// Enable high res find_apriltags() - uses more RAM
+// #define IMLIB_ENABLE_HIGH_RES_APRILTAGS
+
 // Enable find_datamatrices() (26 KB)
 //#define IMLIB_ENABLE_DATAMATRICES
 

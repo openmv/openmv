@@ -5545,7 +5545,9 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
+#ifndef IMLIB_ENABLE_HIGH_RES_APRILTAGS
     PY_ASSERT_TRUE_MSG((roi.w * roi.h) < 65536, "The maximum supported resolution for find_apriltags() is < 64K pixels.");
+#endif
     if ((roi.w < 4) || (roi.h < 4)) {
         return mp_obj_new_list(0, NULL);
     }
