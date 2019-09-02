@@ -9134,10 +9134,14 @@ struct ufrec
 {
     // the parent of this node. If a node's parent is its own index,
     // then it is a root.
+#ifdef IMLIB_ENABLE_HIGH_RES_APRILTAGS
+    uint32_t parent;
+#else
     uint16_t parent;
+#endif
 };
 
-static inline unionfind_t *unionfind_create(uint16_t maxid)
+static inline unionfind_t *unionfind_create(uint32_t maxid)
 {
     unionfind_t *uf = (unionfind_t*) fb_alloc(sizeof(unionfind_t));
     uf->data = (struct ufrec*) fb_alloc((maxid+1) * sizeof(struct ufrec));
@@ -9154,7 +9158,7 @@ static inline void unionfind_destroy()
 }
 
 /*
-static inline uint16_t unionfind_get_representative(unionfind_t *uf, uint16_t id)
+static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id)
 {
     // base case: a node is its own parent
     if (uf->data[id].parent == id)
@@ -9172,9 +9176,9 @@ static inline uint16_t unionfind_get_representative(unionfind_t *uf, uint16_t id
 
 // this one seems to be every-so-slightly faster than the recursive
 // version above.
-static inline uint16_t unionfind_get_representative(unionfind_t *uf, uint16_t id)
+static inline uint32_t unionfind_get_representative(unionfind_t *uf, uint32_t id)
 {
-    uint16_t root = id;
+    uint32_t root = id;
 
     // chase down the root
     while (uf->data[root].parent != root) {
@@ -9187,7 +9191,7 @@ static inline uint16_t unionfind_get_representative(unionfind_t *uf, uint16_t id
     // (e.g. image segmentation), we are actually faster not doing
     // this...
     while (uf->data[id].parent != root) {
-        uint16_t tmp = uf->data[id].parent;
+        uint32_t tmp = uf->data[id].parent;
         uf->data[id].parent = root;
         id = tmp;
     }
@@ -9195,10 +9199,10 @@ static inline uint16_t unionfind_get_representative(unionfind_t *uf, uint16_t id
     return root;
 }
 
-static inline uint16_t unionfind_connect(unionfind_t *uf, uint16_t aid, uint16_t bid)
+static inline uint32_t unionfind_connect(unionfind_t *uf, uint32_t aid, uint32_t bid)
 {
-    uint16_t aroot = unionfind_get_representative(uf, aid);
-    uint16_t broot = unionfind_get_representative(uf, bid);
+    uint32_t aroot = unionfind_get_representative(uf, aid);
+    uint32_t broot = unionfind_get_representative(uf, bid);
 
     if (aroot != broot)
         uf->data[broot].parent = aroot;
@@ -10475,9 +10479,11 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
             DO_CONN(1, 0);
             DO_CONN(0, 1);
 
+#ifdef IMLIB_ENABLE_HIGH_RES_APRILTAGS
             // do 8 connectivity
-            // DO_CONN(-1, 1);
-            // DO_CONN(1, 1);
+            DO_CONN(-1, 1);
+            DO_CONN(1, 1);
+#endif
         }
     }
 #undef DO_CONN
