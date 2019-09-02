@@ -202,7 +202,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     }
 
     // NOTE: output buffer size is stored in dst->bpp
-    if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 100) != HAL_OK) {
+    if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 10000) != HAL_OK) {
         // Initialization error
         return true;
     }
