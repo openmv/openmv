@@ -55,6 +55,9 @@
 #define JPEG_QUALITY_LOW        50
 #define JPEG_QUALITY_HIGH       90
 
+// FB Heap Block Size
+#define OMV_UMM_BLOCK_SIZE      256
+
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
