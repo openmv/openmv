@@ -4246,7 +4246,7 @@ static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_ki
     mp_printf(print,
               "{\"x\":%d, \"y\":%d, \"w\":%d, \"h\":%d,"
               " \"pixels\":%d, \"cx\":%d, \"cy\":%d, \"rotation\":%f, \"code\":%d, \"count\":%d,"
-              " \"perimeter\":%d, \"roundness:%f\"}",
+              " \"perimeter\":%d, \"roundness\":%f}",
               mp_obj_get_int(self->x),
               mp_obj_get_int(self->y),
               mp_obj_get_int(self->w),
