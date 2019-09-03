@@ -10632,6 +10632,8 @@ struct quick_decode_entry
     uint16_t id;      // the tag ID (a small integer)
     uint8_t hamming;  // how many errors corrected?
     uint8_t rotation; // number of rotations [0, 3]
+    bool hmirror;
+    bool vflip;
 };
 
 struct quick_decode
@@ -10655,6 +10657,42 @@ static uint64_t rotate90(uint64_t w, uint32_t d)
     for (int32_t r = d-1; r >=0; r--) {
         for (int32_t c = 0; c < d; c++) {
             int32_t b = r + d*c;
+
+            wr = wr << 1;
+
+            if ((w & (((uint64_t) 1) << b))!=0)
+                wr |= 1;
+        }
+    }
+
+    return wr;
+}
+
+static uint64_t hmirror_code(uint64_t w, uint32_t d)
+{
+    uint64_t wr = 0;
+
+    for (int32_t r = d-1; r >=0; r--) {
+        for (int32_t c = 0; c < d; c++) {
+            int32_t b = c + d*r;
+
+            wr = wr << 1;
+
+            if ((w & (((uint64_t) 1) << b))!=0)
+                wr |= 1;
+        }
+    }
+
+    return wr;
+}
+
+static uint64_t vflip_code(uint64_t w, uint32_t d)
+{
+    uint64_t wr = 0;
+
+    for (int32_t r = 0; r < d; r++) {
+        for (int32_t c = d-1; c >=0; c--) {
+            int32_t b = c + d*r;
 
             wr = wr << 1;
 
@@ -10754,6 +10792,68 @@ static void quick_decode_codeword(apriltag_family_t *tf, uint64_t rcode,
                 entry->id = i;
                 entry->hamming = hamming;
                 entry->rotation = ridx;
+                entry->hmirror = false;
+                entry->vflip = false;
+                return;
+            }
+        }
+
+        rcode = rotate90(rcode, tf->d);
+    }
+
+    rcode = hmirror_code(rcode, tf->d); // handle hmirror
+
+    for (int ridx = 0; ridx < 4; ridx++) {
+
+        for (int i = 0, j = tf->ncodes; i < j; i++) {
+            int hamming = popcount64c(tf->codes[i] ^ rcode);
+            if(hamming <= threshold) {
+                entry->rcode = rcode;
+                entry->id = i;
+                entry->hamming = hamming;
+                entry->rotation = ridx;
+                entry->hmirror = true;
+                entry->vflip = false;
+                return;
+            }
+        }
+
+        rcode = rotate90(rcode, tf->d);
+    }
+
+    rcode = vflip_code(rcode, tf->d); // handle hmirror+vflip
+
+    for (int ridx = 0; ridx < 4; ridx++) {
+
+        for (int i = 0, j = tf->ncodes; i < j; i++) {
+            int hamming = popcount64c(tf->codes[i] ^ rcode);
+            if(hamming <= threshold) {
+                entry->rcode = rcode;
+                entry->id = i;
+                entry->hamming = hamming;
+                entry->rotation = ridx;
+                entry->hmirror = true;
+                entry->vflip = true;
+                return;
+            }
+        }
+
+        rcode = rotate90(rcode, tf->d);
+    }
+
+    rcode = hmirror_code(rcode, tf->d); // handle vflip
+
+    for (int ridx = 0; ridx < 4; ridx++) {
+
+        for (int i = 0, j = tf->ncodes; i < j; i++) {
+            int hamming = popcount64c(tf->codes[i] ^ rcode);
+            if(hamming <= threshold) {
+                entry->rcode = rcode;
+                entry->id = i;
+                entry->hamming = hamming;
+                entry->rotation = ridx;
+                entry->hmirror = false;
+                entry->vflip = true;
                 return;
             }
         }
@@ -10765,6 +10865,8 @@ static void quick_decode_codeword(apriltag_family_t *tf, uint64_t rcode,
     entry->id = 65535;
     entry->hamming = 255;
     entry->rotation = 0;
+    entry->hmirror = false;
+    entry->vflip = false;
 }
 
 static inline int detection_compare_function(const void *_a, const void *_b)
@@ -11492,9 +11594,21 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
                     MATD_EL(R, 1, 1) = c;
                     MATD_EL(R, 2, 2) = 1;
 
-                    det->H = matd_op("M*M", quad->H, R);
+                    matd_t *RHMirror = matd_create(3,3);
+                    MATD_EL(RHMirror, 0, 0) = entry.hmirror ? -1 : 1;
+                    MATD_EL(RHMirror, 1, 1) = 1;
+                    MATD_EL(RHMirror, 2, 2) = entry.hmirror ? -1 : 1;
+
+                    matd_t *RVFlip = matd_create(3,3);
+                    MATD_EL(RVFlip, 0, 0) = 1;
+                    MATD_EL(RVFlip, 1, 1) = entry.vflip ? -1 : 1;
+                    MATD_EL(RVFlip, 2, 2) = entry.vflip ? -1 : 1;
+
+                    det->H = matd_op("M*M*M*M", quad->H, R, RHMirror, RVFlip);
 
                     matd_destroy(R);
+                    matd_destroy(RHMirror);
+                    matd_destroy(RVFlip);
 
                     homography_project(det->H, 0, 0, &det->c[0], &det->c[1]);
 
