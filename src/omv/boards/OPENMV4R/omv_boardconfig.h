@@ -65,7 +65,8 @@
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss, stack and heap
 #define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
 #define OMV_FB_MEMORY           DRAM        // Framebuffer, fb_alloc
-#define OMV_FB_JPEG_MEMORY                  // JPEG buffer memory.
+#define OMV_JPEG_MEMORY         DRAM        // JPEG buffer memory buffer.
+#define OMV_JPEG_MEMORY_OFFSET  (31M)       // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
 
 #define OMV_FB_SIZE             (30M)       // FB memory: header + VGA/GS image
