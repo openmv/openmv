@@ -29,6 +29,9 @@ MEMORY
   #if defined(OMV_AXI_SRAM_ORIGIN)
   AXI_SRAM (xrw)    : ORIGIN = OMV_AXI_SRAM_ORIGIN, LENGTH = OMV_AXI_SRAM_LENGTH
   #endif
+  #if defined(OMV_DRAM_ORIGIN)
+  DRAM (xrw)        : ORIGIN = OMV_DRAM_ORIGIN,     LENGTH = OMV_DRAM_LENGTH
+  #endif
   FLASH_TEXT (rx)   : ORIGIN = OMV_TEXT_ORIGIN,     LENGTH = OMV_TEXT_LENGTH
 }
 
@@ -88,6 +91,12 @@ SECTIONS
     . = ALIGN(4);
     _fballoc = .;
 
+    #if defined(OMV_FB_JPEG_MEMORY)
+    . = ALIGN(4);
+    _jpeg_buf = .;      // IDE JPEG buffer
+    . = . + OMV_JPEG_BUF_SIZE;
+    #endif
+
   } >OMV_FB_MEMORY
 
   /* Misc DMA buffers kept in uncachable region */
@@ -111,7 +120,7 @@ SECTIONS
     . = . + OMV_FFS_BUF_SIZE;
     #endif
 
-    #if !defined(OMV_JPEG_MEMORY)
+    #if !defined(OMV_JPEG_MEMORY) && !defined(OMV_FB_JPEG_MEMORY)
     . = ALIGN(4);
     _jpeg_buf = .;      // IDE JPEG buffer
     . = . + OMV_JPEG_BUF_SIZE;
