@@ -398,6 +398,12 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
 
 int main(void)
 {
+    #if MICROPY_HW_SDRAM_SIZE
+    bool sdram_ok = false;
+    #if MICROPY_HW_SDRAM_STARTUP_TEST
+    bool sdram_pass = false;
+    #endif
+    #endif
     int sensor_init_ret = 0;
     bool sdcard_mounted = false;
     bool first_soft_reset = true;
@@ -412,6 +418,13 @@ int main(void)
     //  - Configure the Systick to generate an interrupt each 1 msec
     //  NOTE: The bootloader enables the CCM/DTCM memory.
     HAL_Init();
+
+    #if MICROPY_HW_SDRAM_SIZE
+    sdram_ok = sdram_init();
+    #if MICROPY_HW_SDRAM_STARTUP_TEST
+    sdram_pass = sdram_test(false);
+    #endif
+    #endif
 
     // Basic sub-system init
     led_init();
@@ -560,6 +573,22 @@ soft_reset:
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
         pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
     }
+
+    // report if SDRAM failed
+    #if MICROPY_HW_SDRAM_SIZE
+    if (first_soft_reset && (!sdram_ok)) {
+        char buf[512];
+        snprintf(buf, sizeof(buf), "Failed to init sdram!");
+        __fatal_error(buf);
+    }
+    #if MICROPY_HW_SDRAM_STARTUP_TEST
+    if (first_soft_reset && (!sdram_pass)) {
+        char buf[512];
+        snprintf(buf, sizeof(buf), "SDRAM failed testing!");
+        __fatal_error(buf);
+    }
+    #endif
+    #endif
 
     // check sensor init result
     if (first_soft_reset && sensor_init_ret != 0) {

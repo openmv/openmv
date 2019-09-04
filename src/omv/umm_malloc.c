@@ -7,6 +7,7 @@
 #include <string.h>
 #include "fb_alloc.h"
 #include "umm_malloc.h"
+#include "omv_boardconfig.h"
 
 NORETURN  void umm_alloc_fail()
 {
@@ -109,7 +110,7 @@ UMM_H_ATTPACKPRE typedef struct umm_block_t {
   } header;
   union {
     umm_ptr free;
-    unsigned char data[16];
+    unsigned char data[OMV_UMM_BLOCK_SIZE];
   } body;
 } UMM_H_ATTPACKSUF umm_block;
 
