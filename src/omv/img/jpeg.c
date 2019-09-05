@@ -1,16 +1,15 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Minimalistic JPEG baseline encoder.
  * Ported from public domain JPEG writer by Jon Olick - http://jonolick.com
- *
- * DCT implementation is based on Arai, Agui, and Nakajima's algorithm for
- * scaled DCT.
- *
+ * DCT implementation is based on Arai, Agui, and Nakajima's algorithm for scaled DCT.
  */
-
 #include <stdio.h>
 #include STM32_HAL_H
 #include <arm_math.h>

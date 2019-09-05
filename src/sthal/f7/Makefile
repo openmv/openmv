@@ -1,5 +1,11 @@
-# Sources
-#SRCS = $(wildcard src/*.c)
+# This file is part of the OpenMV project.
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+# STHAL Makefile
 SRCS = $(addprefix src/,\
 stm32f7xx_hal_adc.c\
 stm32f7xx_hal_adc_ex.c\
