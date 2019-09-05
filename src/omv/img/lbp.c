@@ -1,14 +1,15 @@
 /*
-* This file is part of the OpenMV project.
-* Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
-* This work is licensed under the MIT license, see the file LICENSE for details.
-*
-* LBPu2⁄8,2 Operator.
-* Note: The distance function uses weights optimized for face recognition.
-* Note: See Timo Ahonen's "Face Recognition with Local Binary Patterns" 
-*
-*/
-
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * LBPu2 8,2 Operator.
+ * Note: The distance function uses weights optimized for face recognition.
+ * Note: See Timo Ahonen's "Face Recognition with Local Binary Patterns".
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

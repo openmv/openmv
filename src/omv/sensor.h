@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Sensor abstraction layer.
- *
  */
 #ifndef __SENSOR_H__
 #define __SENSOR_H__
@@ -12,22 +14,22 @@
 #include <stdarg.h>
 #include "imlib.h"
 
-#define OV7725_SLV_ADDR       (0x42)
-#define OV2640_SLV_ADDR       (0x60)
-#define MT9V034_SLV_ADDR      (0xB8)
-#define LEPTON_SLV_ADDR       (0x54)
-#define OV5640_SLV_ADDR       (0x78)
+#define OV7725_SLV_ADDR     (0x42)
+#define OV2640_SLV_ADDR     (0x60)
+#define MT9V034_SLV_ADDR    (0xB8)
+#define LEPTON_SLV_ADDR     (0x54)
+#define OV5640_SLV_ADDR     (0x78)
 
-#define OV_CHIP_ID      (0x0A)
-#define OV5640_CHIP_ID  (0x300A)
-#define ON_CHIP_ID      (0x00)
+#define OV_CHIP_ID          (0x0A)
+#define OV5640_CHIP_ID      (0x300A)
+#define ON_CHIP_ID          (0x00)
 
-#define OV9650_ID       (0x96)
-#define OV2640_ID       (0x26)
-#define OV7725_ID       (0x77)
-#define OV5640_ID       (0x56)
-#define MT9V034_ID      (0x13)
-#define LEPTON_ID       (0x54)
+#define OV9650_ID           (0x96)
+#define OV2640_ID           (0x26)
+#define OV7725_ID           (0x77)
+#define OV5640_ID           (0x56)
+#define MT9V034_ID          (0x13)
+#define LEPTON_ID           (0x54)
 
 typedef enum {
     PIXFORMAT_INVALID = 0,

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+# This file is part of the OpenMV project.
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+# This scripts uses Saleae Logic to capture openmv I/O data and compare it to known values.
+
 import sys
 import saleae
 import argparse

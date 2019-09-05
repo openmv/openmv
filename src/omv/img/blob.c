@@ -1,12 +1,16 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Blob detection code.
  */
-
 #include "imlib.h"
 
-typedef struct xylr
-{
+typedef struct xylr {
     int16_t x, y, l, r, t_l, b_l;
 }
 xylr_t;

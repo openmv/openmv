@@ -1,5 +1,13 @@
-#! /usr/bin/env python
-# Simple script to visualize GC
+#!/usr/bin/env python2
+# This file is part of the OpenMV project.
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+# A simple script to visualize GC
+
 from PIL import Image
 import sys, os,time, serial
 

@@ -1,6 +1,9 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Template matching with NCC (Normalized Cross Correlation) using exhaustive and diamond search.
@@ -9,7 +12,6 @@
  * Briechle, Kai, and Uwe D. Hanebeck. "Template matching using fast normalized cross correlation." Aerospace
  * Lewis, J. P. "Fast normalized cross-correlation."
  * Zhu, Shan, and Kai-Kuang Ma. "A new diamond search algorithm for fast block-matching motion estimation."
- *
  */
 #include <stdio.h>
 #include <float.h>
