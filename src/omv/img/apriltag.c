@@ -47,18 +47,12 @@ The views and conclusions contained in the software and documentation are those
 of the authors and should not be interpreted as representing official policies,
 either expressed or implied, of the Regents of The University of Michigan.
 */
-#define printf(format, ...)
 #define fprintf(format, ...)
 #define free(ptr) ({ umm_free(ptr); })
 #define malloc(size) ({ void *_r = umm_malloc(size); if(!_r) umm_alloc_fail(); _r; })
 #define realloc(ptr, size) ({ void *_r = umm_realloc((ptr), (size)); if(!_r) umm_alloc_fail(); _r; })
 #define calloc(num, item_size) ({ void *_r = umm_calloc((num), (item_size)); if(!_r) umm_alloc_fail(); _r; })
 #define assert(expression)
-#define double float
-#undef DBL_MIN
-#define DBL_MIN FLT_MIN
-#undef DBL_MAX
-#define DBL_MAX FLT_MAX
 #define sqrt(x) fast_sqrtf(x)
 #define sqrtf(x) fast_sqrtf(x)
 #define floor(x) fast_floorf(x)
@@ -632,14 +626,14 @@ void zarray_vmap(zarray_t *za, void (*f)())
 #define min(A, B) (A < B ? A : B)
 
   /* DEPRECATE, threshold meaningless without context.
-static inline int dequals(double a, double b)
+static inline int dequals(float a, float b)
 {
-    double thresh = 1e-9;
+    float thresh = 1e-9;
     return (fabs(a-b) < thresh);
 }
   */
 
-static inline int dequals_mag(double a, double b, double thresh)
+static inline int dequals_mag(float a, float b, float thresh)
 {
     return (fabs(a-b) < thresh);
 }
@@ -654,12 +648,12 @@ static inline float fsq(float v)
     return v*v;
 }
 
-static inline double sq(double v)
+static inline float sq(float v)
 {
     return v*v;
 }
 
-static inline double sgn(double v)
+static inline float sgn(float v)
 {
     return (v>=0) ? 1 : -1;
 }
@@ -688,36 +682,36 @@ static inline int irand(int bound)
 }
 
 /** Map vin to [0, 2*PI) **/
-static inline double mod2pi_positive(double vin)
+static inline float mod2pi_positive(float vin)
 {
     return vin - M_TWOPI * floor(vin / M_TWOPI);
 }
 
 /** Map vin to [-PI, PI) **/
-static inline double mod2pi(double vin)
+static inline float mod2pi(float vin)
 {
     return mod2pi_positive(vin + M_PI) - M_PI;
 }
 
 /** Return vin such that it is within PI degrees of ref **/
-static inline double mod2pi_ref(double ref, double vin)
+static inline float mod2pi_ref(float ref, float vin)
 {
     return ref + mod2pi(vin - ref);
 }
 
 /** Map vin to [0, 360) **/
-static inline double mod360_positive(double vin)
+static inline float mod360_positive(float vin)
 {
     return vin - 360 * floor(vin / 360);
 }
 
 /** Map vin to [-180, 180) **/
-static inline double mod360(double vin)
+static inline float mod360(float vin)
 {
     return mod360_positive(vin + 180) - 180;
 }
 
-static inline int theta_to_int(double theta, int max)
+static inline int theta_to_int(float theta, int max)
 {
     theta = mod2pi_ref(M_PI, theta);
     int v = (int) (theta / M_TWOPI * max);
@@ -755,7 +749,7 @@ static inline int iclamp(int v, int minv, int maxv)
     return imax(minv, imin(v, maxv));
 }
 
-static inline double dclamp(double a, double min, double max)
+static inline float dclamp(float a, float min, float max)
 {
     if (a < min)
         return min;
@@ -775,9 +769,9 @@ static inline int fltcmp (float f1, float f2)
         return  0;
 }
 
-static inline int dblcmp (double d1, double d2)
+static inline int dblcmp (float d1, float d2)
 {
-    double epsilon = d1-d2;
+    float epsilon = d1-d2;
     if (epsilon < 0.0)
         return -1;
     else if (epsilon > 0.0)
@@ -790,11 +784,11 @@ static inline int dblcmp (double d1, double d2)
 //////// "svd22.h"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void svd22(const double A[4], double U[4], double S[2], double V[4]);
+void svd22(const float A[4], float U[4], float S[2], float V[4]);
 
 // for the matrix [a b; b d]
-void svd_sym_singular_values(double A00, double A01, double A11,
-                             double *Lmin, double *Lmax);
+void svd_sym_singular_values(float A00, float A01, float A11,
+                             float *Lmin, float *Lmax);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "svd22.c"
@@ -858,26 +852,26 @@ B3/B0 = tan(P-T)
 
 B2/B1 = tan(P+T)
  **/
-void svd22(const double A[4], double U[4], double S[2], double V[4])
+void svd22(const float A[4], float U[4], float S[2], float V[4])
 {
-    double A00 = A[0];
-    double A01 = A[1];
-    double A10 = A[2];
-    double A11 = A[3];
+    float A00 = A[0];
+    float A01 = A[1];
+    float A10 = A[2];
+    float A11 = A[3];
 
-    double B0 = A00 + A11;
-    double B1 = A00 - A11;
-    double B2 = A01 + A10;
-    double B3 = A01 - A10;
+    float B0 = A00 + A11;
+    float B1 = A00 - A11;
+    float B2 = A01 + A10;
+    float B3 = A01 - A10;
 
-    double PminusT = atan2(B3, B0);
-    double PplusT = atan2(B2, B1);
+    float PminusT = atan2(B3, B0);
+    float PplusT = atan2(B2, B1);
 
-    double P = (PminusT + PplusT) / 2;
-    double T = (-PminusT + PplusT) / 2;
+    float P = (PminusT + PplusT) / 2;
+    float T = (-PminusT + PplusT) / 2;
 
-    double CP = cos(P), SP = sin(P);
-    double CT = cos(T), ST = sin(T);
+    float CP = cos(P), SP = sin(P);
+    float CT = cos(T), ST = sin(T);
 
     U[0] = CT;
     U[1] = -ST;
@@ -891,8 +885,8 @@ void svd22(const double A[4], double U[4], double S[2], double V[4])
 
     // C0 = e+f. There are two ways to compute C0; we pick the one
     // that is better conditioned.
-    double CPmT = cos(P-T), SPmT = sin(P-T);
-    double C0 = 0;
+    float CPmT = cos(P-T), SPmT = sin(P-T);
+    float C0 = 0;
     if (fabs(CPmT) > fabs(SPmT))
         C0 = B0 / CPmT;
     else
@@ -900,16 +894,16 @@ void svd22(const double A[4], double U[4], double S[2], double V[4])
 
     // C1 = e-f. There are two ways to compute C1; we pick the one
     // that is better conditioned.
-    double CPpT = cos(P+T), SPpT = sin(P+T);
-    double C1 = 0;
+    float CPpT = cos(P+T), SPpT = sin(P+T);
+    float C1 = 0;
     if (fabs(CPpT) > fabs(SPpT))
         C1 = B1 / CPpT;
     else
         C1 = B2 / SPpT;
 
     // e and f are the singular values
-    double e = (C0 + C1) / 2;
-    double f = (C0 - C1) / 2;
+    float e = (C0 + C1) / 2;
+    float f = (C0 - C1) / 2;
 
     if (e < 0) {
         e = -e;
@@ -942,7 +936,7 @@ void svd22(const double A[4], double U[4], double S[2], double V[4])
         S[1] = e;
 
         // exchange columns of U and V
-        double tmp[2];
+        float tmp[2];
         tmp[0] = U[0];
         tmp[1] = U[2];
         U[0] = U[1];
@@ -959,7 +953,7 @@ void svd22(const double A[4], double U[4], double S[2], double V[4])
     }
 
     /*
-    double SM[4] = { S[0], 0, 0, S[1] };
+    float SM[4] = { S[0], 0, 0, S[1] };
 
     doubles_print_mat(U, 2, 2, "%20.10g");
     doubles_print_mat(SM, 2, 2, "%20.10g");
@@ -967,15 +961,15 @@ void svd22(const double A[4], double U[4], double S[2], double V[4])
     printf("A:\n");
     doubles_print_mat(A, 2, 2, "%20.10g");
 
-    double SVt[4];
+    float SVt[4];
     doubles_mat_ABt(SM, 2, 2, V, 2, 2, SVt, 2, 2);
-    double USVt[4];
+    float USVt[4];
     doubles_mat_AB(U, 2, 2, SVt, 2, 2, USVt, 2, 2);
 
     printf("USVt\n");
     doubles_print_mat(USVt, 2, 2, "%20.10g");
 
-    double diff[4];
+    float diff[4];
     for (int i = 0; i < 4; i++)
         diff[i] = A[i] - USVt[i];
 
@@ -988,26 +982,26 @@ void svd22(const double A[4], double U[4], double S[2], double V[4])
 
 
 // for the matrix [a b; b d]
-void svd_sym_singular_values(double A00, double A01, double A11,
-                             double *Lmin, double *Lmax)
+void svd_sym_singular_values(float A00, float A01, float A11,
+                             float *Lmin, float *Lmax)
 {
-    double A10 = A01;
+    float A10 = A01;
 
-    double B0 = A00 + A11;
-    double B1 = A00 - A11;
-    double B2 = A01 + A10;
-    double B3 = A01 - A10;
+    float B0 = A00 + A11;
+    float B1 = A00 - A11;
+    float B2 = A01 + A10;
+    float B3 = A01 - A10;
 
-    double PminusT = atan2(B3, B0);
-    double PplusT = atan2(B2, B1);
+    float PminusT = atan2(B3, B0);
+    float PplusT = atan2(B2, B1);
 
-    double P = (PminusT + PplusT) / 2;
-    double T = (-PminusT + PplusT) / 2;
+    float P = (PminusT + PplusT) / 2;
+    float T = (-PminusT + PplusT) / 2;
 
     // C0 = e+f. There are two ways to compute C0; we pick the one
     // that is better conditioned.
-    double CPmT = cos(P-T), SPmT = sin(P-T);
-    double C0 = 0;
+    float CPmT = cos(P-T), SPmT = sin(P-T);
+    float C0 = 0;
     if (fabs(CPmT) > fabs(SPmT))
         C0 = B0 / CPmT;
     else
@@ -1015,16 +1009,16 @@ void svd_sym_singular_values(double A00, double A01, double A11,
 
     // C1 = e-f. There are two ways to compute C1; we pick the one
     // that is better conditioned.
-    double CPpT = cos(P+T), SPpT = sin(P+T);
-    double C1 = 0;
+    float CPpT = cos(P+T), SPpT = sin(P+T);
+    float C1 = 0;
     if (fabs(CPpT) > fabs(SPpT))
         C1 = B1 / CPpT;
     else
         C1 = B2 / SPpT;
 
     // e and f are the singular values
-    double e = (C0 + C1) / 2;
-    double f = (C0 - C1) / 2;
+    float e = (C0 + C1) / 2;
+    float f = (C0 - C1) / 2;
 
     *Lmin = fmin(e, f);
     *Lmax = fmax(e, f);
@@ -1035,7 +1029,7 @@ void svd_sym_singular_values(double A00, double A01, double A11,
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
- * Defines a matrix structure for holding double-precision values with
+ * Defines a matrix structure for holding float-precision values with
  * data in row-major order (i.e. index = row*ncols + col).
  *
  * nrows and ncols are 1-based counts with the exception that a scalar (non-matrix)
@@ -1044,11 +1038,11 @@ void svd_sym_singular_values(double A00, double A01, double A11,
 typedef struct
 {
     unsigned int nrows, ncols;
-    double data[];
-//    double *data;
+    float data[];
+//    float *data;
 } matd_t;
 
-#define MATD_ALLOC(name, nrows, ncols) double name ## _storage [nrows*ncols]; matd_t name = { .nrows = nrows, .ncols = ncols, .data = &name ## _storage };
+#define MATD_ALLOC(name, nrows, ncols) float name ## _storage [nrows*ncols]; matd_t name = { .nrows = nrows, .ncols = ncols, .data = &name ## _storage };
 
 /**
  * Defines a small value which can be used in place of zero for approximating
@@ -1064,7 +1058,7 @@ typedef struct
 #define MATD_EL(m, row, col) (m)->data[((row)*(m)->ncols + (col))]
 
 /**
- * Creates a double matrix with the given number of rows and columns (or a scalar
+ * Creates a float matrix with the given number of rows and columns (or a scalar
  * in the case where rows=0 and/or cols=0). All data elements will be initialized
  * to zero. It is the caller's responsibility to call matd_destroy() on the
  * returned matrix.
@@ -1072,16 +1066,16 @@ typedef struct
 matd_t *matd_create(int rows, int cols);
 
 /**
- * Creates a double matrix with the given number of rows and columns (or a scalar
+ * Creates a float matrix with the given number of rows and columns (or a scalar
  * in the case where rows=0 and/or cols=0). All data elements will be initialized
  * using the supplied array of data, which must contain at least rows*cols elements,
  * arranged in row-major order (i.e. index = row*ncols + col). It is the caller's
  * responsibility to call matd_destroy() on the returned matrix.
  */
-matd_t *matd_create_data(int rows, int cols, const double *data);
+matd_t *matd_create_data(int rows, int cols, const float *data);
 
 /**
- * Creates a double matrix with the given number of rows and columns (or a scalar
+ * Creates a float matrix with the given number of rows and columns (or a scalar
  * in the case where rows=0 and/or cols=0). All data elements will be initialized
  * using the supplied array of float data, which must contain at least rows*cols elements,
  * arranged in row-major order (i.e. index = row*ncols + col). It is the caller's
@@ -1106,31 +1100,31 @@ matd_t *matd_identity(int dim);
  * and B must both have specific dimensions. However, if A is a
  * scalar, there are no restrictions on the size of B.
  */
-matd_t *matd_create_scalar(double v);
+matd_t *matd_create_scalar(float v);
 
 /**
  * Retrieves the cell value for matrix 'm' at the given zero-based row and column index.
  * Performs more thorough validation checking than MATD_EL().
  */
-double matd_get(const matd_t *m, int row, int col);
+float matd_get(const matd_t *m, int row, int col);
 
 /**
  * Assigns the given value to the matrix cell at the given zero-based row and
  * column index. Performs more thorough validation checking than MATD_EL().
  */
-void matd_put(matd_t *m, int row, int col, double value);
+void matd_put(matd_t *m, int row, int col, float value);
 
 /**
  * Retrieves the scalar value of the given element ('m' must be a scalar).
  * Performs more thorough validation checking than MATD_EL().
  */
-double matd_get_scalar(const matd_t *m);
+float matd_get_scalar(const matd_t *m);
 
 /**
  * Assigns the given value to the supplied scalar element ('m' must be a scalar).
  * Performs more thorough validation checking than MATD_EL().
  */
-void matd_put_scalar(matd_t *m, double value);
+void matd_put_scalar(matd_t *m, float value);
 
 /**
  * Creates an exact copy of the supplied matrix 'm'. It is the caller's
@@ -1197,13 +1191,13 @@ void matd_subtract_inplace(matd_t *a, const matd_t *b);
  * returns the result as a new matrix of the same dimensions. It is the caller's
  * responsibility to call matd_destroy() on the returned matrix.
  */
-matd_t *matd_scale(const matd_t *a, double s);
+matd_t *matd_scale(const matd_t *a, float s);
 
 /**
  * Scales all cell values of matrix 'a' by the given scale factor 's' and
  * overwrites the contents of 'a' with the results.
  */
-void matd_scale_inplace(matd_t *a, double s);
+void matd_scale_inplace(matd_t *a, float s);
 
 /**
  * Multiplies the two supplied matrices together (matrix product), and returns the
@@ -1223,7 +1217,7 @@ matd_t *matd_transpose(const matd_t *a);
 /**
  * Calculates the determinant of the supplied matrix 'a'.
  */
-double matd_det(const matd_t *a);
+float matd_det(const matd_t *a);
 
 /**
  * Attempts to compute an inverse of the supplied matrix 'a' and return it as
@@ -1237,9 +1231,9 @@ double matd_det(const matd_t *a);
  **/
 matd_t *matd_inverse(const matd_t *a);
 
-static inline void matd_set_data(matd_t *m, const double *data)
+static inline void matd_set_data(matd_t *m, const float *data)
 {
-    memcpy(m->data, data, m->nrows * m->ncols * sizeof(double));
+    memcpy(m->data, data, m->nrows * m->ncols * sizeof(float));
 }
 
 /**
@@ -1276,27 +1270,27 @@ static inline int matd_is_vector_len(const matd_t *a, int len)
 /**
  * Calculates the magnitude of the supplied matrix 'a'.
  */
-double matd_vec_mag(const matd_t *a);
+float matd_vec_mag(const matd_t *a);
 
 /**
  * Calculates the magnitude of the distance between the points represented by
  * matrices 'a' and 'b'. Both 'a' and 'b' must be vectors and have the same
  * dimension (although one may be a row vector and one may be a column vector).
  */
-double matd_vec_dist(const matd_t *a, const matd_t *b);
+float matd_vec_dist(const matd_t *a, const matd_t *b);
 
 
 /**
  * Same as matd_vec_dist, but only uses the first 'n' terms to compute distance
  */
-double matd_vec_dist_n(const matd_t *a, const matd_t *b, int n);
+float matd_vec_dist_n(const matd_t *a, const matd_t *b, int n);
 
 /**
  * Calculates the dot product of two vectors. Both 'a' and 'b' must be vectors
  * and have the same dimension (although one may be a row vector and one may be
  * a column vector).
  */
-double matd_vec_dot_product(const matd_t *a, const matd_t *b);
+float matd_vec_dot_product(const matd_t *a, const matd_t *b);
 
 /**
  * Calculates the normalization of the supplied vector 'a' (i.e. a unit vector
@@ -1315,7 +1309,7 @@ matd_t *matd_vec_normalize(const matd_t *a);
  */
 matd_t *matd_crossproduct(const matd_t *a, const matd_t *b);
 
-double matd_err_inf(const matd_t *a, const matd_t *b);
+float matd_err_inf(const matd_t *a, const matd_t *b);
 
 /**
  * Creates a new matrix by applying a series of matrix operations, as expressed
@@ -1402,7 +1396,7 @@ typedef struct
 
 matd_plu_t *matd_plu(const matd_t *a);
 void matd_plu_destroy(matd_plu_t *mlu);
-double matd_plu_det(const matd_plu_t *lu);
+float matd_plu_det(const matd_plu_t *lu);
 matd_t *matd_plu_p(const matd_plu_t *lu);
 matd_t *matd_plu_l(const matd_plu_t *lu);
 matd_t *matd_plu_u(const matd_plu_t *lu);
@@ -1415,7 +1409,7 @@ matd_t *matd_solve(matd_t *A, matd_t *b);
 // Cholesky Factorization
 
 /**
- * Creates a double matrix with the Cholesky lower triangular matrix
+ * Creates a float matrix with the Cholesky lower triangular matrix
  * of A. A must be symmetric, positive definite. It is the caller's
  * responsibility to call matd_destroy() on the returned matrix.
  */
@@ -1433,12 +1427,12 @@ void matd_chol_destroy(matd_chol_t *chol);
 // only sensible on PSD matrices
 matd_t *matd_chol_inverse(matd_t *a);
 
-void matd_ltransposetriangle_solve(matd_t *u, const double *b, double *x);
-void matd_ltriangle_solve(matd_t *u, const double *b, double *x);
-void matd_utriangle_solve(matd_t *u, const double *b, double *x);
+void matd_ltransposetriangle_solve(matd_t *u, const float *b, float *x);
+void matd_ltriangle_solve(matd_t *u, const float *b, float *x);
+void matd_utriangle_solve(matd_t *u, const float *b, float *x);
 
 
-double matd_max(matd_t *m);
+float matd_max(matd_t *m);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "matd.c"
@@ -1447,7 +1441,7 @@ double matd_max(matd_t *m);
 // a matd_t with rows=0 cols=0 is a SCALAR.
 
 // to ease creating mati, matf, etc. in the future.
-#define TYPE double
+#define TYPE float
 
 matd_t *matd_create(int rows, int cols)
 {
@@ -1457,7 +1451,7 @@ matd_t *matd_create(int rows, int cols)
     if (rows == 0 || cols == 0)
         return matd_create_scalar(0);
 
-    matd_t *m = calloc(1, sizeof(matd_t) + (rows*cols*sizeof(double)));
+    matd_t *m = calloc(1, sizeof(matd_t) + (rows*cols*sizeof(float)));
     m->nrows = rows;
     m->ncols = cols;
 
@@ -1466,7 +1460,7 @@ matd_t *matd_create(int rows, int cols)
 
 matd_t *matd_create_scalar(TYPE v)
 {
-    matd_t *m = calloc(1, sizeof(matd_t) + sizeof(double));
+    matd_t *m = calloc(1, sizeof(matd_t) + sizeof(float));
     m->nrows = 0;
     m->ncols = 0;
     m->data[0] = v;
@@ -1493,7 +1487,7 @@ matd_t *matd_create_dataf(int rows, int cols, const float *data)
 
     matd_t *m = matd_create(rows, cols);
     for (int i = 0; i < rows * cols; i++)
-        m->data[i] = (double)data[i];
+        m->data[i] = (float)data[i];
 
     return m;
 }
@@ -1595,12 +1589,12 @@ void matd_print(const matd_t *m, const char *fmt)
     assert(fmt != NULL);
 
     if (matd_is_scalar(m)) {
-        printf(fmt, MATD_EL(m, 0, 0));
+        printf(fmt, (double) MATD_EL(m, 0, 0));
         printf("\n");
     } else {
         for (int i = 0; i < m->nrows; i++) {
             for (int j = 0; j < m->ncols; j++) {
-                printf(fmt, MATD_EL(m, i, j));
+                printf(fmt, (double) MATD_EL(m, i, j));
             }
             printf("\n");
         }
@@ -1613,12 +1607,12 @@ void matd_print_transpose(const matd_t *m, const char *fmt)
     assert(fmt != NULL);
 
     if (matd_is_scalar(m)) {
-        printf(fmt, MATD_EL(m, 0, 0));
+        printf(fmt, (double) MATD_EL(m, 0, 0));
         printf("\n");
     } else {
         for (int j = 0; j < m->ncols; j++) {
             for (int i = 0; i < m->nrows; i++) {
-                printf(fmt, MATD_EL(m, i, j));
+                printf(fmt, (double) MATD_EL(m, i, j));
             }
             printf("\n");
         }
@@ -1660,7 +1654,7 @@ matd_t *matd_multiply(const matd_t *a, const matd_t *b)
     return m;
 }
 
-matd_t *matd_scale(const matd_t *a, double s)
+matd_t *matd_scale(const matd_t *a, float s)
 {
     assert(a != NULL);
 
@@ -1678,7 +1672,7 @@ matd_t *matd_scale(const matd_t *a, double s)
     return m;
 }
 
-void matd_scale_inplace(matd_t *a, double s)
+void matd_scale_inplace(matd_t *a, float s)
 {
     assert(a != NULL);
 
@@ -1794,7 +1788,7 @@ matd_t *matd_transpose(const matd_t *a)
 }
 
 static
-double matd_det_general(const matd_t *a)
+float matd_det_general(const matd_t *a)
 {
     // Use LU decompositon to calculate the determinant
     matd_plu_t *mlu = matd_plu(a);
@@ -1803,7 +1797,7 @@ double matd_det_general(const matd_t *a)
 
     // The determinants of the L and U matrices are the products of
     // their respective diagonal elements
-    double detL = 1; double detU = 1;
+    float detL = 1; float detU = 1;
     for (int i = 0; i < a->nrows; i++) {
         detL *= matd_get(L, i, i);
         detU *= matd_get(U, i, i);
@@ -1814,7 +1808,7 @@ double matd_det_general(const matd_t *a)
     // where epsilon is just the sign of the corresponding permutation
     // (which is +1 for an even number of permutations and is −1
     // for an uneven number of permutations).
-    double det = mlu->pivsign * detL * detU;
+    float det = mlu->pivsign * detL * detU;
 
     // Cleanup
     matd_plu_destroy(mlu);
@@ -1824,7 +1818,7 @@ double matd_det_general(const matd_t *a)
     return det;
 }
 
-double matd_det(const matd_t *a)
+float matd_det(const matd_t *a)
 {
     assert(a != NULL);
     assert(a->nrows == a->ncols);
@@ -1854,10 +1848,10 @@ double matd_det(const matd_t *a)
 
         case 4: {
             // 4x4 matrix
-            double m00 = MATD_EL(a,0,0), m01 = MATD_EL(a,0,1), m02 = MATD_EL(a,0,2), m03 = MATD_EL(a,0,3);
-            double m10 = MATD_EL(a,1,0), m11 = MATD_EL(a,1,1), m12 = MATD_EL(a,1,2), m13 = MATD_EL(a,1,3);
-            double m20 = MATD_EL(a,2,0), m21 = MATD_EL(a,2,1), m22 = MATD_EL(a,2,2), m23 = MATD_EL(a,2,3);
-            double m30 = MATD_EL(a,3,0), m31 = MATD_EL(a,3,1), m32 = MATD_EL(a,3,2), m33 = MATD_EL(a,3,3);
+            float m00 = MATD_EL(a,0,0), m01 = MATD_EL(a,0,1), m02 = MATD_EL(a,0,2), m03 = MATD_EL(a,0,3);
+            float m10 = MATD_EL(a,1,0), m11 = MATD_EL(a,1,1), m12 = MATD_EL(a,1,2), m13 = MATD_EL(a,1,3);
+            float m20 = MATD_EL(a,2,0), m21 = MATD_EL(a,2,1), m22 = MATD_EL(a,2,2), m23 = MATD_EL(a,2,3);
+            float m30 = MATD_EL(a,3,0), m31 = MATD_EL(a,3,1), m32 = MATD_EL(a,3,2), m33 = MATD_EL(a,3,3);
 
             return m00 * m11 * m22 * m33 - m00 * m11 * m23 * m32 -
                 m00 * m21 * m12 * m33 + m00 * m21 * m13 * m32 + m00 * m31 * m12 * m23 -
@@ -1900,11 +1894,11 @@ matd_t *matd_inverse(const matd_t *x)
 
     switch(x->nrows) {
         case 1: {
-            double det = x->data[0];
+            float det = x->data[0];
             if (det == 0)
                 return NULL;
 
-            double invdet = 1.0 / det;
+            float invdet = 1.0 / det;
 
             m = matd_create(x->nrows, x->nrows);
             MATD_EL(m, 0, 0) = 1.0 * invdet;
@@ -1912,11 +1906,11 @@ matd_t *matd_inverse(const matd_t *x)
         }
 
         case 2: {
-            double det = x->data[0] * x->data[3] - x->data[1] * x->data[2];
+            float det = x->data[0] * x->data[3] - x->data[1] * x->data[2];
             if (det == 0)
                 return NULL;
 
-            double invdet = 1.0 / det;
+            float invdet = 1.0 / det;
 
             m = matd_create(x->nrows, x->nrows);
             MATD_EL(m, 0, 0) = MATD_EL(x, 1, 1) * invdet;
@@ -2115,7 +2109,7 @@ static matd_t *matd_op_recurse(const char *expr, int *pos, matd_t *acc, matd_t *
 //            case '.': {
 //                const char *start = &expr[*pos];
 //                char *end;
-//                double s = strtod(start, &end);
+//                float s = strtod(start, &end);
 //                (*pos) += (end - start);
 //                matd_t *rhs = matd_create_scalar(s);
 //                garb[*garbpos] = rhs;
@@ -2246,19 +2240,19 @@ matd_t *matd_op(const char *expr, ...)
     return res_copy;
 }
 
-double matd_vec_mag(const matd_t *a)
+float matd_vec_mag(const matd_t *a)
 {
     assert(a != NULL);
     assert(matd_is_vector(a));
 
-    double mag = 0.0;
+    float mag = 0.0;
     int len = a->nrows*a->ncols;
     for (int i = 0; i < len; i++)
         mag += sq(a->data[i]);
     return sqrt(mag);
 }
 
-double matd_vec_dist(const matd_t *a, const matd_t *b)
+float matd_vec_dist(const matd_t *a, const matd_t *b)
 {
     assert(a != NULL);
     assert(b != NULL);
@@ -2269,7 +2263,7 @@ double matd_vec_dist(const matd_t *a, const matd_t *b)
     return matd_vec_dist_n(a, b, lena);
 }
 
-double matd_vec_dist_n(const matd_t *a, const matd_t *b, int n)
+float matd_vec_dist_n(const matd_t *a, const matd_t *b, int n)
 {
     assert(a != NULL);
     assert(b != NULL);
@@ -2280,7 +2274,7 @@ double matd_vec_dist_n(const matd_t *a, const matd_t *b, int n)
 
     assert(n <= lena && n <= lenb);
 
-    double mag = 0.0;
+    float mag = 0.0;
     for (int i = 0; i < n; i++)
         mag += sq(a->data[i] - b->data[i]);
     return sqrt(mag);
@@ -2290,12 +2284,12 @@ double matd_vec_dist_n(const matd_t *a, const matd_t *b, int n)
 static inline int max_idx(const matd_t *A, int row, int maxcol)
 {
     int maxi = 0;
-    double maxv = -1;
+    float maxv = -1;
 
     for (int i = 0; i < maxcol; i++) {
         if (i == row)
             continue;
-        double v = fabs(MATD_EL(A, row, i));
+        float v = fabs(MATD_EL(A, row, i));
         if (v > maxv) {
             maxi = i;
             maxv = v;
@@ -2305,7 +2299,7 @@ static inline int max_idx(const matd_t *A, int row, int maxcol)
     return maxi;
 }
 
-double matd_vec_dot_product(const matd_t *a, const matd_t *b)
+float matd_vec_dot_product(const matd_t *a, const matd_t *b)
 {
     assert(a != NULL);
     assert(b != NULL);
@@ -2314,7 +2308,7 @@ double matd_vec_dot_product(const matd_t *a, const matd_t *b)
     int bdim = b->ncols*b->nrows;
     assert(adim == bdim);
 
-    double acc = 0;
+    float acc = 0;
     for (int i = 0; i < adim; i++) {
         acc += a->data[i] * b->data[i];
     }
@@ -2327,7 +2321,7 @@ matd_t *matd_vec_normalize(const matd_t *a)
     assert(a != NULL);
     assert(matd_is_vector(a));
 
-    double mag = matd_vec_mag(a);
+    float mag = matd_vec_mag(a);
     assert(mag > 0);
 
     matd_t *b = matd_create(a->nrows, a->ncols);
@@ -2428,15 +2422,15 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
             //
             int vlen = A->nrows - hhidx;
 
-            double v[vlen];
+            float v[vlen];
 
-            double mag2 = 0;
+            float mag2 = 0;
             for (int i = 0; i < vlen; i++) {
                 v[i] = MATD_EL(B, hhidx+i, hhidx);
                 mag2 += v[i]*v[i];
             }
 
-            double oldv0 = v[0];
+            float oldv0 = v[0];
             if (oldv0 < 0)
                 v[0] -= sqrt(mag2);
             else
@@ -2445,7 +2439,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
             mag2 += -oldv0*oldv0 + v[0]*v[0];
 
             // normalize v
-            double mag = sqrt(mag2);
+            float mag = sqrt(mag2);
 
             // this case arises with matrices of all zeros, for example.
             if (mag == 0)
@@ -2465,7 +2459,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
             // Implementation: take each row of LS, compute dot product with n,
             // subtract n (scaled by dot product) from it.
             for (int i = 0; i < LS->nrows; i++) {
-                double dot = 0;
+                float dot = 0;
                 for (int j = 0; j < vlen; j++)
                     dot += MATD_EL(LS, i, hhidx+j) * v[j];
                 for (int j = 0; j < vlen; j++)
@@ -2474,7 +2468,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
             //  B = matd_op("M*F", Q, B); // should be Q', but Q is symmetric.
             for (int i = 0; i < B->ncols; i++) {
-                double dot = 0;
+                float dot = 0;
                 for (int j = 0; j < vlen; j++)
                     dot += MATD_EL(B, hhidx+j, i) * v[j];
                 for (int j = 0; j < vlen; j++)
@@ -2485,15 +2479,15 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
         if (hhidx+2 < A->ncols) {
             int vlen = A->ncols - hhidx - 1;
 
-            double v[vlen];
+            float v[vlen];
 
-            double mag2 = 0;
+            float mag2 = 0;
             for (int i = 0; i < vlen; i++) {
                 v[i] = MATD_EL(B, hhidx, hhidx+i+1);
                 mag2 += v[i]*v[i];
             }
 
-            double oldv0 = v[0];
+            float oldv0 = v[0];
             if (oldv0 < 0)
                 v[0] -= sqrt(mag2);
             else
@@ -2502,7 +2496,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
             mag2 += -oldv0*oldv0 + v[0]*v[0];
 
             // compute magnitude of ([1 0 0..]+v)
-            double mag = sqrt(mag2);
+            float mag = sqrt(mag2);
 
             // this case can occur when the vectors are already perpendicular
             if (mag == 0)
@@ -2519,7 +2513,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
             //  RS = matd_op("F*M", RS, Q);
             for (int i = 0; i < RS->nrows; i++) {
-                double dot = 0;
+                float dot = 0;
                 for (int j = 0; j < vlen; j++)
                     dot += MATD_EL(RS, i, hhidx+1+j) * v[j];
                 for (int j = 0; j < vlen; j++)
@@ -2528,7 +2522,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
             //   B = matd_op("F*M", B, Q); // should be Q', but Q is symmetric.
             for (int i = 0; i < B->nrows; i++) {
-                double dot = 0;
+                float dot = 0;
                 for (int j = 0; j < vlen; j++)
                     dot += MATD_EL(B, i, hhidx+1+j) * v[j];
                 for (int j = 0; j < vlen; j++)
@@ -2544,9 +2538,9 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
     assert(maxiters > 0); // reassure clang
     int iter;
 
-    double maxv; // maximum non-zero value being reduced this iteration
+    float maxv; // maximum non-zero value being reduced this iteration
 
-    double tol = 1E-5; // 1E-10;
+    float tol = 1E-5; // 1E-10;
 
     // which method will we use to find the largest off-diagonal
     // element of B?
@@ -2595,7 +2589,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
                 // the magnitude of the largest off-diagonal element
                 // in this row.
-                double thismaxv;
+                float thismaxv;
 
                 // row 'lastmaxi' and 'lastmaxj' have been completely
                 // changed. compute from scratch.
@@ -2625,7 +2619,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
                 // check column lastmaxi. Is it now the maximum?
                 if (lastmaxi != rowi) {
-                    double v = fabs(MATD_EL(B, rowi, lastmaxi));
+                    float v = fabs(MATD_EL(B, rowi, lastmaxi));
                     if (v > thismaxv) {
                         thismaxv = v;
                         maxrowidx[rowi] = lastmaxi;
@@ -2634,7 +2628,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
                 // check column lastmaxj
                 if (lastmaxj != rowi) {
-                    double v = fabs(MATD_EL(B, rowi, lastmaxj));
+                    float v = fabs(MATD_EL(B, rowi, lastmaxj));
                     if (v > thismaxv) {
                         thismaxv = v;
                         maxrowidx[rowi] = lastmaxj;
@@ -2669,7 +2663,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
                     if (i == j)
                         continue;
 
-                    double v = fabs(MATD_EL(B, i, j));
+                    float v = fabs(MATD_EL(B, i, j));
 
                     if (v > maxv) {
                         maxi = i;
@@ -2691,19 +2685,19 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
         // Now, solve the 2x2 SVD problem for the matrix
         // [ A0 A1 ]
         // [ A2 A3 ]
-        double A0 = MATD_EL(B, maxi, maxi);
-        double A1 = MATD_EL(B, maxi, maxj);
-        double A2 = MATD_EL(B, maxj, maxi);
-        double A3 = MATD_EL(B, maxj, maxj);
+        float A0 = MATD_EL(B, maxi, maxi);
+        float A1 = MATD_EL(B, maxi, maxj);
+        float A2 = MATD_EL(B, maxj, maxi);
+        float A3 = MATD_EL(B, maxj, maxj);
 
         if (1) {
-            double AQ[4];
+            float AQ[4];
             AQ[0] = A0;
             AQ[1] = A1;
             AQ[2] = A2;
             AQ[3] = A3;
 
-            double U[4], S[2], V[4];
+            float U[4], S[2], V[4];
             svd22(AQ, U, S, V);
 
 /*  Reference (slow) implementation...
@@ -2731,8 +2725,8 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
             //  LS = matd_op("F*M", LS, QL);
             for (int i = 0; i < LS->nrows; i++) {
-                double vi = MATD_EL(LS, i, maxi);
-                double vj = MATD_EL(LS, i, maxj);
+                float vi = MATD_EL(LS, i, maxi);
+                float vj = MATD_EL(LS, i, maxj);
 
                 MATD_EL(LS, i, maxi) = U[0]*vi + U[2]*vj;
                 MATD_EL(LS, i, maxj) = U[1]*vi + U[3]*vj;
@@ -2740,8 +2734,8 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
             //  RS = matd_op("F*M", RS, QR); // remember we'll transpose RS.
             for (int i = 0; i < RS->nrows; i++) {
-                double vi = MATD_EL(RS, i, maxi);
-                double vj = MATD_EL(RS, i, maxj);
+                float vi = MATD_EL(RS, i, maxi);
+                float vj = MATD_EL(RS, i, maxj);
 
                 MATD_EL(RS, i, maxi) = V[0]*vi + V[2]*vj;
                 MATD_EL(RS, i, maxj) = V[1]*vi + V[3]*vj;
@@ -2750,8 +2744,8 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
             // B = matd_op("M'*F*M", QL, B, QR);
             // The QL matrix mixes rows of B.
             for (int i = 0; i < B->ncols; i++) {
-                double vi = MATD_EL(B, maxi, i);
-                double vj = MATD_EL(B, maxj, i);
+                float vi = MATD_EL(B, maxi, i);
+                float vj = MATD_EL(B, maxj, i);
 
                 MATD_EL(B, maxi, i) = U[0]*vi + U[2]*vj;
                 MATD_EL(B, maxj, i) = U[1]*vi + U[3]*vj;
@@ -2759,8 +2753,8 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
             // The QR matrix mixes columns of B.
             for (int i = 0; i < B->nrows; i++) {
-                double vi = MATD_EL(B, i, maxi);
-                double vj = MATD_EL(B, i, maxj);
+                float vi = MATD_EL(B, i, maxi);
+                float vj = MATD_EL(B, i, maxj);
 
                 MATD_EL(B, i, maxi) = V[0]*vi + V[2]*vj;
                 MATD_EL(B, i, maxj) = V[1]*vi + V[3]*vj;
@@ -2770,7 +2764,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
 
     if (!(flags & MATD_SVD_NO_WARNINGS) && iter == maxiters) {
         printf("WARNING: maximum iters (maximum = %d, matrix %d x %d, max=%.15f)\n",
-               iter, A->nrows, A->ncols, maxv);
+               iter, A->nrows, A->ncols, (double) maxv);
 
 //        matd_print(A, "%15f");
     }
@@ -2778,7 +2772,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
     // them all positive by flipping the corresponding columns of
     // U/LS.
     int idxs[A->ncols];
-    double vals[A->ncols];
+    float vals[A->ncols];
     for (int i = 0; i < A->ncols; i++) {
         idxs[i] = i;
         vals[i] = MATD_EL(B, i, i);
@@ -2795,7 +2789,7 @@ static matd_svd_t matd_svd_tall(matd_t *A, int flags)
                 idxs[i] = idxs[i+1];
                 idxs[i+1] = tmpi;
 
-                double tmpv = vals[i];
+                float tmpv = vals[i];
                 vals[i] = vals[i+1];
                 vals[i+1] = tmpv;
 
@@ -2877,7 +2871,7 @@ matd_svd_t matd_svd_flags(matd_t *A, int flags)
 
 /*
   matd_t *check = matd_op("M*M*M'-M", res.U, res.S, res.V, A);
-  double maxerr = 0;
+  float maxerr = 0;
 
   for (int i = 0; i < check->nrows; i++)
   for (int j = 0; j < check->ncols; j++)
@@ -2919,7 +2913,7 @@ matd_plu_t *matd_plu(const matd_t *a)
             int kmax = i < j ? i : j; // min(i,j)
 
             // compute dot product of row i with column j (up through element kmax)
-            double acc = 0;
+            float acc = 0;
             for (int k = 0; k < kmax; k++)
                 acc += MATD_EL(lu, i, k) * MATD_EL(lu, k, j);
 
@@ -2948,7 +2942,7 @@ matd_plu_t *matd_plu(const matd_t *a)
             pivsign = -pivsign;
         }
 
-        double LUjj = MATD_EL(lu, j, j);
+        float LUjj = MATD_EL(lu, j, j);
 
         // If our pivot is very small (which means the matrix is
         // singular or nearly singular), replace with a new pivot of the
@@ -2987,10 +2981,10 @@ void matd_plu_destroy(matd_plu_t *mlu)
     free(mlu);
 }
 
-double matd_plu_det(const matd_plu_t *mlu)
+float matd_plu_det(const matd_plu_t *mlu)
 {
     matd_t *lu = mlu->lu;
-    double det = mlu->pivsign;
+    float det = mlu->pivsign;
 
     if (lu->nrows == lu->ncols) {
         for (int i = 0; i < lu->ncols; i++)
@@ -3058,7 +3052,7 @@ matd_t *matd_plu_solve(const matd_plu_t *mlu, const matd_t *b)
     // solve Ly = b
     for (int k = 0; k < mlu->lu->nrows; k++) {
         for (int i = k+1; i < mlu->lu->nrows; i++) {
-            double LUik = -MATD_EL(mlu->lu, i, k);
+            float LUik = -MATD_EL(mlu->lu, i, k);
             for (int t = 0; t < b->ncols; t++)
                 MATD_EL(x, i, t) += MATD_EL(x, k, t) * LUik;
         }
@@ -3066,12 +3060,12 @@ matd_t *matd_plu_solve(const matd_plu_t *mlu, const matd_t *b)
 
     // solve Ux = y
     for (int k = mlu->lu->ncols-1; k >= 0; k--) {
-        double LUkk = 1.0 / MATD_EL(mlu->lu, k, k);
+        float LUkk = 1.0 / MATD_EL(mlu->lu, k, k);
         for (int t = 0; t < b->ncols; t++)
             MATD_EL(x, k, t) *= LUkk;
 
         for (int i = 0; i < k; i++) {
-            double LUik = -MATD_EL(mlu->lu, i, k);
+            float LUik = -MATD_EL(mlu->lu, i, k);
             for (int t = 0; t < b->ncols; t++)
                 MATD_EL(x, i, t) += MATD_EL(x, k, t) *LUik;
         }
@@ -3098,9 +3092,9 @@ static int randi()
     return v;
 }
 
-static double randf()
+static float randf()
 {
-    double v = 1.0 *random() / RAND_MAX;
+    float v = 1.0 *random() / RAND_MAX;
     return 2*v - 1;
 }
 
@@ -3133,7 +3127,7 @@ int main(int argc, char *argv[])
 
         }
 
-/*        matd_t *A = matd_create_data(2, 5, (double[]) { 1, 5, 2, 6,
+/*        matd_t *A = matd_create_data(2, 5, (float[]) { 1, 5, 2, 6,
           3, 3, 0, 7,
           1, 1, 0, -2,
           4, 0, 9, 9, 2, 6, 1, 3, 2, 5, 5, 4, -1, 2, 5, 9, 8, 2 });
@@ -3169,8 +3163,8 @@ int main(int argc, char *argv[])
 
         matd_svd22_impl(A->data, &s);
 
-        memcpy(U->data, s.U, 4*sizeof(double));
-        memcpy(V->data, s.V, 4*sizeof(double));
+        memcpy(U->data, s.U, 4*sizeof(float));
+        memcpy(V->data, s.V, 4*sizeof(float));
         MATD_EL(S,0,0) = s.S[0];
         MATD_EL(S,1,1) = s.S[1];
 
@@ -3187,7 +3181,7 @@ int main(int argc, char *argv[])
 
         matd_t *USV = matd_op("M*M*M'", U, S, V);
 
-        double maxerr = 0;
+        float maxerr = 0;
         for (int i = 0; i < 4; i++)
             maxerr = fmax(maxerr, fabs(USV->data[i] - A->data[i]));
 
@@ -3210,13 +3204,13 @@ int main(int argc, char *argv[])
 #endif
 
 // XXX NGV Cholesky
-/*static double *matd_cholesky_raw(double *A, int n)
+/*static float *matd_cholesky_raw(float *A, int n)
   {
-  double *L = (double*)calloc(n * n, sizeof(double));
+  float *L = (float*)calloc(n * n, sizeof(float));
 
   for (int i = 0; i < n; i++) {
   for (int j = 0; j < (i+1); j++) {
-  double s = 0;
+  float s = 0;
   for (int k = 0; k < j; k++)
   s += L[i * n + k] * L[j * n + k];
   L[i * n + j] = (i == j) ?
@@ -3231,7 +3225,7 @@ int main(int argc, char *argv[])
   matd_t *matd_cholesky(const matd_t *A)
   {
   assert(A->nrows == A->ncols);
-  double *L_data = matd_cholesky_raw(A->data, A->nrows);
+  float *L_data = matd_cholesky_raw(A->data, A->nrows);
   matd_t *L = matd_create_data(A->nrows, A->ncols, L_data);
   free(L_data);
   return L;
@@ -3258,7 +3252,7 @@ MATD_EL(U, i, j) = 0;
     int is_spd = 1; // (A->nrows == A->ncols);
 
     for (int i = 0; i < N; i++) {
-        double d = MATD_EL(U, i, i);
+        float d = MATD_EL(U, i, i);
         is_spd &= (d > 0);
 
         if (d < MATD_EPS)
@@ -3269,7 +3263,7 @@ MATD_EL(U, i, j) = 0;
             MATD_EL(U, i, j) *= d;
 
         for (int j = i+1; j < N; j++) {
-            double s = MATD_EL(U, i, j);
+            float s = MATD_EL(U, i, j);
 
             if (s == 0)
                 continue;
@@ -3312,7 +3306,7 @@ void matd_ltriangle_solve(matd_t *L, const TYPE *b, TYPE *x)
     int n = L->ncols;
 
     for (int i = 0; i < n; i++) {
-        double acc = b[i];
+        float acc = b[i];
 
         for (int j = 0; j < i; j++) {
             acc -= MATD_EL(L, i, j)*x[j];
@@ -3326,9 +3320,9 @@ void matd_ltriangle_solve(matd_t *L, const TYPE *b, TYPE *x)
 void matd_utriangle_solve(matd_t *u, const TYPE *b, TYPE *x)
 {
     for (int i = u->ncols-1; i >= 0; i--) {
-        double bi = b[i];
+        float bi = b[i];
 
-        double diag = MATD_EL(u, i, i);
+        float diag = MATD_EL(u, i, i);
 
         for (int j = i+1; j < u->ncols; j++)
             bi -= MATD_EL(u, i, j)*x[j];
@@ -3364,12 +3358,12 @@ matd_t *matd_chol_solve(const matd_chol_t *chol, const matd_t *b)
 
     // solve Ux = y
     for (int k = u->ncols-1; k >= 0; k--) {
-        double LUkk = 1.0 / MATD_EL(u, k, k);
+        float LUkk = 1.0 / MATD_EL(u, k, k);
         for (int t = 0; t < b->ncols; t++)
             MATD_EL(x, k, t) *= LUkk;
 
         for (int i = 0; i < k; i++) {
-            double LUik = -MATD_EL(u, i, k);
+            float LUik = -MATD_EL(u, i, k);
             for (int t = 0; t < b->ncols; t++)
                 MATD_EL(x, i, t) += MATD_EL(x, k, t) *LUik;
         }
@@ -3403,9 +3397,9 @@ matd_t *matd_chol_inverse(matd_t *a)
     return inv;
 }
 
-double matd_max(matd_t *m)
+float matd_max(matd_t *m)
 {
-    double d = -DBL_MAX;
+    float d = -FLT_MAX;
     for(int x=0; x<m->nrows; x++) {
         for(int y=0; y<m->ncols; y++) {
             if(MATD_EL(m, x, y) > d)
@@ -3516,12 +3510,12 @@ double matd_max(matd_t *m)
 
 matd_t *homography_compute(zarray_t *correspondences, int flags);
 
-//void homography_project(const matd_t *H, double x, double y, double *ox, double *oy);
-static inline void homography_project(const matd_t *H, double x, double y, double *ox, double *oy)
+//void homography_project(const matd_t *H, float x, float y, float *ox, float *oy);
+static inline void homography_project(const matd_t *H, float x, float y, float *ox, float *oy)
 {
-    double xx = MATD_EL(H, 0, 0)*x + MATD_EL(H, 0, 1)*y + MATD_EL(H, 0, 2);
-    double yy = MATD_EL(H, 1, 0)*x + MATD_EL(H, 1, 1)*y + MATD_EL(H, 1, 2);
-    double zz = MATD_EL(H, 2, 0)*x + MATD_EL(H, 2, 1)*y + MATD_EL(H, 2, 2);
+    float xx = MATD_EL(H, 0, 0)*x + MATD_EL(H, 0, 1)*y + MATD_EL(H, 0, 2);
+    float yy = MATD_EL(H, 1, 0)*x + MATD_EL(H, 1, 1)*y + MATD_EL(H, 1, 2);
+    float zz = MATD_EL(H, 2, 0)*x + MATD_EL(H, 2, 1)*y + MATD_EL(H, 2, 2);
 
     *ox = xx / zz;
     *oy = yy / zz;
@@ -3552,7 +3546,7 @@ static inline void homography_project(const matd_t *H, double x, double y, doubl
 // R20 = H20
 // R21 = H21
 // TZ  = H22
-matd_t *homography_to_pose(const matd_t *H, double fx, double fy, double cx, double cy);
+matd_t *homography_to_pose(const matd_t *H, float fx, float fy, float cx, float cy);
 
 // Similar to above
 // Recover the model view matrix assuming that the projection matrix is:
@@ -3562,7 +3556,7 @@ matd_t *homography_to_pose(const matd_t *H, double fx, double fy, double cx, dou
 // [ 0  0  C  D ]
 // [ 0  0 -1  0 ]
 
-matd_t *homography_to_model_view(const matd_t *H, double F, double G, double A, double B, double C, double D);
+matd_t *homography_to_model_view(const matd_t *H, float F, float G, float A, float B, float C, float D);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "homography.c"
@@ -3574,8 +3568,8 @@ matd_t *homography_compute(zarray_t *correspondences, int flags)
 {
     // compute centroids of both sets of points (yields a better
     // conditioned information matrix)
-    double x_cx = 0, x_cy = 0;
-    double y_cx = 0, y_cy = 0;
+    float x_cx = 0, x_cy = 0;
+    float y_cx = 0, y_cy = 0;
 
     for (int i = 0; i < zarray_size(correspondences); i++) {
         float *c;
@@ -3603,17 +3597,17 @@ matd_t *homography_compute(zarray_t *correspondences, int flags)
         zarray_get_volatile(correspondences, i, &c);
 
         // (below world is "x", and image is "y")
-        double worldx = c[0] - x_cx;
-        double worldy = c[1] - x_cy;
-        double imagex = c[2] - y_cx;
-        double imagey = c[3] - y_cy;
+        float worldx = c[0] - x_cx;
+        float worldy = c[1] - x_cy;
+        float imagex = c[2] - y_cx;
+        float imagey = c[3] - y_cy;
 
-        double a03 = -worldx;
-        double a04 = -worldy;
-        double a05 = -1;
-        double a06 = worldx*imagey;
-        double a07 = worldy*imagey;
-        double a08 = imagey;
+        float a03 = -worldx;
+        float a04 = -worldy;
+        float a05 = -1;
+        float a06 = worldx*imagey;
+        float a07 = worldy*imagey;
+        float a08 = imagey;
 
         MATD_EL(A, 3, 3) += a03*a03;
         MATD_EL(A, 3, 4) += a03*a04;
@@ -3637,12 +3631,12 @@ matd_t *homography_compute(zarray_t *correspondences, int flags)
         MATD_EL(A, 7, 8) += a07*a08;
         MATD_EL(A, 8, 8) += a08*a08;
 
-        double a10 = worldx;
-        double a11 = worldy;
-        double a12 = 1;
-        double a16 = -worldx*imagex;
-        double a17 = -worldy*imagex;
-        double a18 = -imagex;
+        float a10 = worldx;
+        float a11 = worldy;
+        float a12 = 1;
+        float a16 = -worldx*imagex;
+        float a17 = -worldy*imagex;
+        float a18 = -imagex;
 
         MATD_EL(A, 0, 0) += a10*a10;
         MATD_EL(A, 0, 1) += a10*a11;
@@ -3666,12 +3660,12 @@ matd_t *homography_compute(zarray_t *correspondences, int flags)
         MATD_EL(A, 7, 8) += a17*a18;
         MATD_EL(A, 8, 8) += a18*a18;
 
-        double a20 = -worldx*imagey;
-        double a21 = -worldy*imagey;
-        double a22 = -imagey;
-        double a23 = worldx*imagex;
-        double a24 = worldy*imagex;
-        double a25 = imagex;
+        float a20 = -worldx*imagey;
+        float a21 = -worldy*imagey;
+        float a22 = -imagey;
+        float a23 = worldx*imagex;
+        float a24 = worldy*imagex;
+        float a25 = imagex;
 
         MATD_EL(A, 0, 0) += a20*a20;
         MATD_EL(A, 0, 1) += a20*a21;
@@ -3708,7 +3702,7 @@ matd_t *homography_compute(zarray_t *correspondences, int flags)
 
         if (1) {
             matd_t *Ainv = matd_inverse(A);
-            double scale = 0;
+            float scale = 0;
 
             for (int i = 0; i < 9; i++)
                 scale += sq(MATD_EL(Ainv, i, 0));
@@ -3721,7 +3715,7 @@ matd_t *homography_compute(zarray_t *correspondences, int flags)
             matd_destroy(Ainv);
         } else {
 
-            matd_t *b = matd_create_data(9, 1, (double[]) { 1, 0, 0, 0, 0, 0, 0, 0, 0 });
+            matd_t *b = matd_create_data(9, 1, (float[]) { 1, 0, 0, 0, 0, 0, 0, 0, 0 });
             matd_t *Ainv = NULL;
 
             if (0) {
@@ -3734,7 +3728,7 @@ matd_t *homography_compute(zarray_t *correspondences, int flags)
                 matd_chol_destroy(chol);
             }
 
-            double scale = 0;
+            float scale = 0;
 
             for (int i = 0; i < 9; i++)
                 scale += sq(MATD_EL(Ainv, i, 0));
@@ -3808,24 +3802,24 @@ matd_t *homography_compute(zarray_t *correspondences, int flags)
 // R21 = H21
 // TZ  = H22
 
-matd_t *homography_to_pose(const matd_t *H, double fx, double fy, double cx, double cy)
+matd_t *homography_to_pose(const matd_t *H, float fx, float fy, float cx, float cy)
 {
     // Note that every variable that we compute is proportional to the scale factor of H.
-    double R20 = MATD_EL(H, 2, 0);
-    double R21 = MATD_EL(H, 2, 1);
-    double TZ  = MATD_EL(H, 2, 2);
-    double R00 = (MATD_EL(H, 0, 0) - cx*R20) / fx;
-    double R01 = (MATD_EL(H, 0, 1) - cx*R21) / fx;
-    double TX  = (MATD_EL(H, 0, 2) - cx*TZ)  / fx;
-    double R10 = (MATD_EL(H, 1, 0) - cy*R20) / fy;
-    double R11 = (MATD_EL(H, 1, 1) - cy*R21) / fy;
-    double TY  = (MATD_EL(H, 1, 2) - cy*TZ)  / fy;
+    float R20 = MATD_EL(H, 2, 0);
+    float R21 = MATD_EL(H, 2, 1);
+    float TZ  = MATD_EL(H, 2, 2);
+    float R00 = (MATD_EL(H, 0, 0) - cx*R20) / fx;
+    float R01 = (MATD_EL(H, 0, 1) - cx*R21) / fx;
+    float TX  = (MATD_EL(H, 0, 2) - cx*TZ)  / fx;
+    float R10 = (MATD_EL(H, 1, 0) - cy*R20) / fy;
+    float R11 = (MATD_EL(H, 1, 1) - cy*R21) / fy;
+    float TY  = (MATD_EL(H, 1, 2) - cy*TZ)  / fy;
 
     // compute the scale by requiring that the rotation columns are unit length
     // (Use geometric average of the two length vectors we have)
-    double length1 = sqrtf(R00*R00 + R10*R10 + R20*R20);
-    double length2 = sqrtf(R01*R01 + R11*R11 + R21*R21);
-    double s = 1.0 / sqrtf(length1 * length2);
+    float length1 = sqrtf(R00*R00 + R10*R10 + R20*R20);
+    float length2 = sqrtf(R01*R01 + R11*R11 + R21*R21);
+    float s = 1.0 / sqrtf(length1 * length2);
 
     // get sign of S by requiring the tag to be in front the camera;
     // we assume camera looks in the -Z direction.
@@ -3843,9 +3837,9 @@ matd_t *homography_to_pose(const matd_t *H, double fx, double fy, double cx, dou
     TY  *= s;
 
     // now recover [R02 R12 R22] by noting that it is the cross product of the other two columns.
-    double R02 = R10*R21 - R20*R11;
-    double R12 = R20*R01 - R00*R21;
-    double R22 = R00*R11 - R10*R01;
+    float R02 = R10*R21 - R20*R11;
+    float R12 = R20*R01 - R00*R21;
+    float R22 = R00*R11 - R10*R01;
 
     // Improve rotation matrix by applying polar decomposition.
     if (1) {
@@ -3853,7 +3847,7 @@ matd_t *homography_to_pose(const matd_t *H, double fx, double fy, double cx, dou
         // "proper", but probably increases the reprojection error. An
         // iterative alignment step would be superior.
 
-        matd_t *R = matd_create_data(3, 3, (double[]) { R00, R01, R02,
+        matd_t *R = matd_create_data(3, 3, (float[]) { R00, R01, R02,
                                                        R10, R11, R12,
                                                        R20, R21, R22 });
 
@@ -3879,7 +3873,7 @@ matd_t *homography_to_pose(const matd_t *H, double fx, double fy, double cx, dou
         matd_destroy(R);
     }
 
-    return matd_create_data(4, 4, (double[]) { R00, R01, R02, TX,
+    return matd_create_data(4, 4, (float[]) { R00, R01, R02, TX,
                                                R10, R11, R12, TY,
                                                R20, R21, R22, TZ,
                                                 0, 0, 0, 1 });
@@ -3893,24 +3887,24 @@ matd_t *homography_to_pose(const matd_t *H, double fx, double fy, double cx, dou
 // [ 0  0  C  D ]
 // [ 0  0 -1  0 ]
 
-matd_t *homography_to_model_view(const matd_t *H, double F, double G, double A, double B, double C, double D)
+matd_t *homography_to_model_view(const matd_t *H, float F, float G, float A, float B, float C, float D)
 {
     // Note that every variable that we compute is proportional to the scale factor of H.
-    double R20 = -MATD_EL(H, 2, 0);
-    double R21 = -MATD_EL(H, 2, 1);
-    double TZ  = -MATD_EL(H, 2, 2);
-    double R00 = (MATD_EL(H, 0, 0) - A*R20) / F;
-    double R01 = (MATD_EL(H, 0, 1) - A*R21) / F;
-    double TX  = (MATD_EL(H, 0, 2) - A*TZ)  / F;
-    double R10 = (MATD_EL(H, 1, 0) - B*R20) / G;
-    double R11 = (MATD_EL(H, 1, 1) - B*R21) / G;
-    double TY  = (MATD_EL(H, 1, 2) - B*TZ)  / G;
+    float R20 = -MATD_EL(H, 2, 0);
+    float R21 = -MATD_EL(H, 2, 1);
+    float TZ  = -MATD_EL(H, 2, 2);
+    float R00 = (MATD_EL(H, 0, 0) - A*R20) / F;
+    float R01 = (MATD_EL(H, 0, 1) - A*R21) / F;
+    float TX  = (MATD_EL(H, 0, 2) - A*TZ)  / F;
+    float R10 = (MATD_EL(H, 1, 0) - B*R20) / G;
+    float R11 = (MATD_EL(H, 1, 1) - B*R21) / G;
+    float TY  = (MATD_EL(H, 1, 2) - B*TZ)  / G;
 
     // compute the scale by requiring that the rotation columns are unit length
     // (Use geometric average of the two length vectors we have)
-    double length1 = sqrtf(R00*R00 + R10*R10 + R20*R20);
-    double length2 = sqrtf(R01*R01 + R11*R11 + R21*R21);
-    double s = 1.0 / sqrtf(length1 * length2);
+    float length1 = sqrtf(R00*R00 + R10*R10 + R20*R20);
+    float length2 = sqrtf(R01*R01 + R11*R11 + R21*R21);
+    float s = 1.0 / sqrtf(length1 * length2);
 
     // get sign of S by requiring the tag to be in front of the camera
     // (which is Z < 0) for our conventions.
@@ -3928,13 +3922,13 @@ matd_t *homography_to_model_view(const matd_t *H, double F, double G, double A, 
     TY  *= s;
 
     // now recover [R02 R12 R22] by noting that it is the cross product of the other two columns.
-    double R02 = R10*R21 - R20*R11;
-    double R12 = R20*R01 - R00*R21;
-    double R22 = R00*R11 - R10*R01;
+    float R02 = R10*R21 - R20*R11;
+    float R12 = R20*R01 - R00*R21;
+    float R22 = R00*R11 - R10*R01;
 
     // TODO XXX: Improve rotation matrix by applying polar decomposition.
 
-    return matd_create_data(4, 4, (double[]) { R00, R01, R02, TX,
+    return matd_create_data(4, 4, (float[]) { R00, R01, R02, TX,
         R10, R11, R12, TY,
         R20, R21, R22, TZ,
         0, 0, 0, 1 });
@@ -3942,23 +3936,23 @@ matd_t *homography_to_model_view(const matd_t *H, double F, double G, double A, 
 
 // Only uses the upper 3x3 matrix.
 /*
-static void matrix_to_quat(const matd_t *R, double q[4])
+static void matrix_to_quat(const matd_t *R, float q[4])
 {
     // see: "from quaternion to matrix and back"
 
     // trace: get the same result if R is 4x4 or 3x3:
-    double T = MATD_EL(R, 0, 0) + MATD_EL(R, 1, 1) + MATD_EL(R, 2, 2) + 1;
-    double S = 0;
+    float T = MATD_EL(R, 0, 0) + MATD_EL(R, 1, 1) + MATD_EL(R, 2, 2) + 1;
+    float S = 0;
 
-    double m0  = MATD_EL(R, 0, 0);
-    double m1  = MATD_EL(R, 1, 0);
-    double m2  = MATD_EL(R, 2, 0);
-    double m4  = MATD_EL(R, 0, 1);
-    double m5  = MATD_EL(R, 1, 1);
-    double m6  = MATD_EL(R, 2, 1);
-    double m8  = MATD_EL(R, 0, 2);
-    double m9  = MATD_EL(R, 1, 2);
-    double m10 = MATD_EL(R, 2, 2);
+    float m0  = MATD_EL(R, 0, 0);
+    float m1  = MATD_EL(R, 1, 0);
+    float m2  = MATD_EL(R, 2, 0);
+    float m4  = MATD_EL(R, 0, 1);
+    float m5  = MATD_EL(R, 1, 1);
+    float m6  = MATD_EL(R, 2, 1);
+    float m8  = MATD_EL(R, 0, 2);
+    float m9  = MATD_EL(R, 1, 2);
+    float m10 = MATD_EL(R, 2, 2);
 
     if (T > 0.0000001) {
         S = sqrtf(T) * 2;
@@ -3987,19 +3981,19 @@ static void matrix_to_quat(const matd_t *R, double q[4])
         q[0] = (m4 - m1 ) / S;
     }
 
-    double mag2 = 0;
+    float mag2 = 0;
     for (int i = 0; i < 4; i++)
         mag2 += q[i]*q[i];
-    double norm = 1.0 / sqrtf(mag2);
+    float norm = 1.0 / sqrtf(mag2);
     for (int i = 0; i < 4; i++)
         q[i] *= norm;
 }
 */
 
 // overwrites upper 3x3 area of matrix M. Doesn't touch any other elements of M.
-void quat_to_matrix(const double q[4], matd_t *M)
+void quat_to_matrix(const float q[4], matd_t *M)
 {
-    double w = q[0], x = q[1], y = q[2], z = q[3];
+    float w = q[0], x = q[1], y = q[2], z = q[3];
 
     MATD_EL(M, 0, 0) = w*w + x*x - y*y - z*z;
     MATD_EL(M, 0, 1) = 2*x*y - 2*w*z;
@@ -4020,10 +4014,10 @@ void quat_to_matrix(const double q[4], matd_t *M)
 
 // This library tries to avoid needless proliferation of types.
 //
-// A point is a double[2]. (Note that when passing a double[2] as an
+// A point is a float[2]. (Note that when passing a float[2] as an
 // argument, it is passed by pointer, not by value.)
 //
-// A polygon is a zarray_t of double[2]. (Note that in this case, the
+// A polygon is a zarray_t of float[2]. (Note that in this case, the
 // zarray contains the actual vertex data, and not merely a pointer to
 // some other data. IMPORTANT: A polygon must be specified in CCW
 // order.  It is implicitly closed (do not list the same point at the
@@ -4040,21 +4034,21 @@ typedef struct
 {
     // Internal representation: a point that the line goes through (p) and
     // the direction of the line (u).
-    double p[2];
-    double u[2]; // always a unit vector
+    float p[2];
+    float u[2]; // always a unit vector
 } g2d_line_t;
 
 // initialize a line object.
-void g2d_line_init_from_points(g2d_line_t *line, const double p0[2], const double p1[2]);
+void g2d_line_init_from_points(g2d_line_t *line, const float p0[2], const float p1[2]);
 
 // The line defines a one-dimensional coordinate system whose origin
 // is p. Where is q? (If q is not on the line, the point nearest q is
 // returned.
-double g2d_line_get_coordinate(const g2d_line_t *line, const double q[2]);
+float g2d_line_get_coordinate(const g2d_line_t *line, const float q[2]);
 
 // Intersect two lines. The intersection, if it exists, is written to
 // p (if not NULL), and 1 is returned. Else, zero is returned.
-int g2d_line_intersect_line(const g2d_line_t *linea, const g2d_line_t *lineb, double *p);
+int g2d_line_intersect_line(const g2d_line_t *linea, const g2d_line_t *lineb, float *p);
 
 ////////////////////////////////////////////////////////////////////
 // Line Segments. line.p is always one endpoint; p1 is the other
@@ -4062,35 +4056,35 @@ int g2d_line_intersect_line(const g2d_line_t *linea, const g2d_line_t *lineb, do
 typedef struct
 {
     g2d_line_t line;
-    double p1[2];
+    float p1[2];
 } g2d_line_segment_t;
 
-void g2d_line_segment_init_from_points(g2d_line_segment_t *seg, const double p0[2], const double p1[2]);
+void g2d_line_segment_init_from_points(g2d_line_segment_t *seg, const float p0[2], const float p1[2]);
 
 // Intersect two segments. The intersection, if it exists, is written
 // to p (if not NULL), and 1 is returned. Else, zero is returned.
-int g2d_line_segment_intersect_segment(const g2d_line_segment_t *sega, const g2d_line_segment_t *segb, double *p);
+int g2d_line_segment_intersect_segment(const g2d_line_segment_t *sega, const g2d_line_segment_t *segb, float *p);
 
-void g2d_line_segment_closest_point(const g2d_line_segment_t *seg, const double *q, double *p);
-double g2d_line_segment_closest_point_distance(const g2d_line_segment_t *seg, const double *q);
+void g2d_line_segment_closest_point(const g2d_line_segment_t *seg, const float *q, float *p);
+float g2d_line_segment_closest_point_distance(const g2d_line_segment_t *seg, const float *q);
 
 ////////////////////////////////////////////////////////////////////
 // Polygons
 
-zarray_t *g2d_polygon_create_data(double v[][2], int sz);
+zarray_t *g2d_polygon_create_data(float v[][2], int sz);
 
 zarray_t *g2d_polygon_create_zeros(int sz);
 
 zarray_t *g2d_polygon_create_empty();
 
-void g2d_polygon_add(zarray_t *poly, double v[2]);
+void g2d_polygon_add(zarray_t *poly, float v[2]);
 
 // Takes a polygon in either CW or CCW and modifies it (if necessary)
 // to be CCW.
 void g2d_polygon_make_ccw(zarray_t *poly);
 
 // Return 1 if point q lies within poly.
-int g2d_polygon_contains_point(const zarray_t *poly, double q[2]);
+int g2d_polygon_contains_point(const zarray_t *poly, float q[2]);
 
 // Do the edges of the polygons cross? (Does not test for containment).
 int g2d_polygon_intersects_polygon(const zarray_t *polya, const zarray_t *polyb);
@@ -4102,28 +4096,28 @@ int g2d_polygon_contains_polygon(const zarray_t *polya, const zarray_t *polyb);
 int g2d_polygon_overlaps_polygon(const zarray_t *polya, const zarray_t *polyb);
 
 // returns the number of points written to x. see comments.
-int g2d_polygon_rasterize(const zarray_t *poly, double y, double *x);
+int g2d_polygon_rasterize(const zarray_t *poly, float y, float *x);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "g2d.c"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-double g2d_distance(const double a[2], const double b[2])
+float g2d_distance(const float a[2], const float b[2])
 {
     return sqrtf(sq(a[0]-b[0]) + sq(a[1]-b[1]));
 }
 
 zarray_t *g2d_polygon_create_empty()
 {
-    return zarray_create(sizeof(double[2]));
+    return zarray_create(sizeof(float[2]));
 }
 
-void g2d_polygon_add(zarray_t *poly, double v[2])
+void g2d_polygon_add(zarray_t *poly, float v[2])
 {
     zarray_add(poly, v);
 }
 
-zarray_t *g2d_polygon_create_data(double v[][2], int sz)
+zarray_t *g2d_polygon_create_data(float v[][2], int sz)
 {
     zarray_t *points = g2d_polygon_create_empty();
 
@@ -4135,9 +4129,9 @@ zarray_t *g2d_polygon_create_data(double v[][2], int sz)
 
 zarray_t *g2d_polygon_create_zeros(int sz)
 {
-    zarray_t *points = zarray_create(sizeof(double[2]));
+    zarray_t *points = zarray_create(sizeof(float[2]));
 
-    double z[2] = { 0, 0 };
+    float z[2] = { 0, 0 };
 
     for (int i = 0; i < sz; i++)
         zarray_add(points, z);
@@ -4149,22 +4143,22 @@ void g2d_polygon_make_ccw(zarray_t *poly)
 {
     // Step one: we want the points in counter-clockwise order.
     // If the points are in clockwise order, we'll reverse them.
-    double total_theta = 0;
-    double last_theta = 0;
+    float total_theta = 0;
+    float last_theta = 0;
 
     // Count the angle accumulated going around the polygon. If
     // the sum is +2pi, it's CCW. Otherwise, we'll get -2pi.
     int sz = zarray_size(poly);
 
     for (int i = 0; i <= sz; i++) {
-        double p0[2], p1[2];
+        float p0[2], p1[2];
         zarray_get(poly, i % sz, &p0);
         zarray_get(poly, (i+1) % sz, &p1);
 
-        double this_theta = atan2(p1[1]-p0[1], p1[0]-p0[0]);
+        float this_theta = atan2(p1[1]-p0[1], p1[0]-p0[0]);
 
         if (i > 0) {
-            double dtheta = mod2pi(this_theta-last_theta);
+            float dtheta = mod2pi(this_theta-last_theta);
             total_theta += dtheta;
         }
 
@@ -4176,7 +4170,7 @@ void g2d_polygon_make_ccw(zarray_t *poly)
     // reverse order if necessary.
     if (!ccw) {
         for (int i = 0; i < sz / 2; i++) {
-            double a[2], b[2];
+            float a[2], b[2];
 
             zarray_get(poly, i, a);
             zarray_get(poly, sz-1-i, b);
@@ -4186,23 +4180,23 @@ void g2d_polygon_make_ccw(zarray_t *poly)
     }
 }
 
-int g2d_polygon_contains_point_ref(const zarray_t *poly, double q[2])
+int g2d_polygon_contains_point_ref(const zarray_t *poly, float q[2])
 {
     // use winding. If the point is inside the polygon, we'll wrap
     // around it (accumulating 6.28 radians). If we're outside the
     // polygon, we'll accumulate zero.
     int psz = zarray_size(poly);
 
-    double acc_theta = 0;
+    float acc_theta = 0;
 
-    double last_theta;
+    float last_theta;
 
     for (int i = 0; i <= psz; i++) {
-        double p[2];
+        float p[2];
 
         zarray_get(poly, i % psz, &p);
 
-        double this_theta = atan2(q[1]-p[1], q[0]-p[0]);
+        float this_theta = atan2(q[1]-p[1], q[0]-p[0]);
 
         if (i != 0)
             acc_theta += mod2pi(this_theta - last_theta);
@@ -4217,8 +4211,8 @@ int g2d_polygon_contains_point_ref(const zarray_t *poly, double q[2])
 // sort by x coordinate, ascending
 static int g2d_convex_hull_sort(const void *_a, const void *_b)
 {
-    double *a = (double*) _a;
-    double *b = (double*) _b;
+    float *a = (float*) _a;
+    float *b = (float*) _b;
 
     if (a[0] < b[0])
         return -1;
@@ -4239,13 +4233,13 @@ zarray_t *g2d_convex_hull2(const zarray_t *points)
     int hout = 0;
 
     for (int hin = 1; hin < hsz; hin++) {
-        double *p;
+        float *p;
         zarray_get_volatile(hull, i, &p);
 
         // Everything to the right of hin is already convex. We now
         // add one point, p, which begins "connected" by two
         // (coincident) edges from the last right-most point to p.
-        double *last;
+        float *last;
         zarray_get_volatile(hull, hout, &last);
 
         // We now remove points from the convex hull by moving
@@ -4255,11 +4249,11 @@ zarray_t *g2d_convex_hull2(const zarray_t *points)
 }
 */
 
-// creates and returns a zarray(double[2]). The resulting polygon is
+// creates and returns a zarray(float[2]). The resulting polygon is
 // CCW and implicitly closed. Unnecessary colinear points are omitted.
 zarray_t *g2d_convex_hull(const zarray_t *points)
 {
-    zarray_t *hull = zarray_create(sizeof(double[2]));
+    zarray_t *hull = zarray_create(sizeof(float[2]));
 
     // gift-wrap algorithm.
 
@@ -4269,9 +4263,9 @@ zarray_t *g2d_convex_hull(const zarray_t *points)
     // must have at least 2 points. (XXX need 3?)
     assert(insz >= 2);
 
-    double *pleft = NULL;
+    float *pleft = NULL;
     for (int i = 0; i < insz; i++) {
-        double *p;
+        float *p;
         zarray_get_volatile(points, i, &p);
 
         if (pleft == NULL || p[0] < pleft[0])
@@ -4288,13 +4282,13 @@ zarray_t *g2d_convex_hull(const zarray_t *points)
     // written to use only addition/subtraction/multiply. No division
     // or sqrts. This guarantees exact results for integer-coordinate
     // polygons (no rounding/precision problems).
-    double *p = pleft;
+    float *p = pleft;
 
     while (1) {
         assert(p != NULL);
 
-        double *q = NULL;
-        double n0 = 0, n1 = 0; // the normal to the line (p, q) (not
+        float *q = NULL;
+        float n0 = 0, n1 = 0; // the normal to the line (p, q) (not
                        // necessarily unit length).
 
         // Search for the point q for which the line (p,q) is most "to
@@ -4302,7 +4296,7 @@ zarray_t *g2d_convex_hull(const zarray_t *points)
         // point that is to the right of our current line, we change
         // lines.)
         for (int i = 0; i < insz; i++) {
-            double *thisq;
+            float *thisq;
             zarray_get_volatile(points, i, &thisq);
 
             if (thisq == p)
@@ -4316,8 +4310,8 @@ zarray_t *g2d_convex_hull(const zarray_t *points)
                 n1 = -q[0] + p[0];
             } else {
                 // we already have a line (p,q). is point thisq RIGHT OF line (p, q)?
-                double e0 = thisq[0] - p[0], e1 = thisq[1] - p[1];
-                double dot = e0*n0 + e1*n1;
+                float e0 = thisq[0] - p[0], e1 = thisq[1] - p[1];
+                float dot = e0*n0 + e1*n1;
 
                 if (dot > 0) {
                     // it is. change our line.
@@ -4340,11 +4334,11 @@ zarray_t *g2d_convex_hull(const zarray_t *points)
 
         // is this new point colinear with the last two?
         if (zarray_size(hull) > 1) {
-            double *o;
+            float *o;
             zarray_get_volatile(hull, zarray_size(hull) - 2, &o);
 
-            double e0 = o[0] - p[0];
-            double e1 = o[1] - p[1];
+            float e0 = o[0] - p[0];
+            float e1 = o[1] - p[1];
 
             if (n0*e0 + n1*e1 == 0)
                 colinear = 1;
@@ -4363,13 +4357,13 @@ zarray_t *g2d_convex_hull(const zarray_t *points)
 }
 
 // Find point p on the boundary of poly that is closest to q.
-void g2d_polygon_closest_boundary_point(const zarray_t *poly, const double q[2], double *p)
+void g2d_polygon_closest_boundary_point(const zarray_t *poly, const float q[2], float *p)
 {
     int psz = zarray_size(poly);
-    double min_dist = HUGE_VALF;
+    float min_dist = HUGE_VALF;
 
     for (int i = 0; i < psz; i++) {
-        double *p0, *p1;
+        float *p0, *p1;
 
         zarray_get_volatile(poly, i, &p0);
         zarray_get_volatile(poly, (i+1) % psz, &p1);
@@ -4377,18 +4371,18 @@ void g2d_polygon_closest_boundary_point(const zarray_t *poly, const double q[2],
         g2d_line_segment_t seg;
         g2d_line_segment_init_from_points(&seg, p0, p1);
 
-        double thisp[2];
+        float thisp[2];
         g2d_line_segment_closest_point(&seg, q, thisp);
 
-        double dist = g2d_distance(q, thisp);
+        float dist = g2d_distance(q, thisp);
         if (dist < min_dist) {
-            memcpy(p, thisp, sizeof(double[2]));
+            memcpy(p, thisp, sizeof(float[2]));
             min_dist = dist;
         }
     }
 }
 
-int g2d_polygon_contains_point(const zarray_t *poly, double q[2])
+int g2d_polygon_contains_point(const zarray_t *poly, float q[2])
 {
     // use winding. If the point is inside the polygon, we'll wrap
     // around it (accumulating 6.28 radians). If we're outside the
@@ -4400,7 +4394,7 @@ int g2d_polygon_contains_point(const zarray_t *poly, double q[2])
     int quad_acc = 0;
 
     for (int i = 0; i <= psz; i++) {
-        double *p;
+        float *p;
 
         zarray_get_volatile(poly, i % psz, &p);
 
@@ -4441,7 +4435,7 @@ int g2d_polygon_contains_point(const zarray_t *poly, double q[2])
                 case 2:
                 {
                     // get the previous point.
-                    double *p0;
+                    float *p0;
                     zarray_get_volatile(poly, i-1, &p0);
 
                     // Consider the points p0 and p (the points around the
@@ -4452,10 +4446,10 @@ int g2d_polygon_contains_point(const zarray_t *poly, double q[2])
                     // -PI radians. We can test this by computing the dot
                     // product of vector (p0-q) with the vector
                     // perpendicular to vector (p-q)
-                    double nx = p[1] - q[1];
-                    double ny = -p[0] + q[0];
+                    float nx = p[1] - q[1];
+                    float ny = -p[0] + q[0];
 
-                    double dot = nx*(p0[0]-q[0]) + ny*(p0[1]-q[1]);
+                    float dot = nx*(p0[0]-q[0]) + ny*(p0[1]-q[1]);
                     if (dot < 0)
                         quad_acc -= 2;
                     else
@@ -4479,19 +4473,19 @@ int g2d_polygon_contains_point(const zarray_t *poly, double q[2])
     return v;
 }
 
-void g2d_line_init_from_points(g2d_line_t *line, const double p0[2], const double p1[2])
+void g2d_line_init_from_points(g2d_line_t *line, const float p0[2], const float p1[2])
 {
     line->p[0] = p0[0];
     line->p[1] = p0[1];
     line->u[0] = p1[0]-p0[0];
     line->u[1] = p1[1]-p0[1];
-    double mag = sqrtf(sq(line->u[0]) + sq(line->u[1]));
+    float mag = sqrtf(sq(line->u[0]) + sq(line->u[1]));
 
     line->u[0] /= mag;
     line->u[1] /= mag;
 }
 
-double g2d_line_get_coordinate(const g2d_line_t *line, const double q[2])
+float g2d_line_get_coordinate(const g2d_line_t *line, const float q[2])
 {
     return (q[0]-line->p[0])*line->u[0] + (q[1]-line->p[1])*line->u[1];
 }
@@ -4499,14 +4493,14 @@ double g2d_line_get_coordinate(const g2d_line_t *line, const double q[2])
 // Compute intersection of two line segments. If they intersect,
 // result is stored in p and 1 is returned. Otherwise, zero is
 // returned. p may be NULL.
-int g2d_line_intersect_line(const g2d_line_t *linea, const g2d_line_t *lineb, double *p)
+int g2d_line_intersect_line(const g2d_line_t *linea, const g2d_line_t *lineb, float *p)
 {
     // this implementation is many times faster than the original,
     // mostly due to avoiding a general-purpose LU decomposition in
     // Matrix.inverse().
-    double m00, m01, m10, m11;
-    double i00, i01;
-    double b00, b10;
+    float m00, m01, m10, m11;
+    float i00, i01;
+    float b00, b10;
 
     m00 = linea->u[0];
     m01= -lineb->u[0];
@@ -4514,7 +4508,7 @@ int g2d_line_intersect_line(const g2d_line_t *linea, const g2d_line_t *lineb, do
     m11= -lineb->u[1];
 
     // determinant of m
-    double det = m00*m11-m01*m10;
+    float det = m00*m11-m01*m10;
 
     // parallel lines?
     if (fabs(det) < 0.00000001)
@@ -4527,7 +4521,7 @@ int g2d_line_intersect_line(const g2d_line_t *linea, const g2d_line_t *lineb, do
     b00 = lineb->p[0] - linea->p[0];
     b10 = lineb->p[1] - linea->p[1];
 
-    double x00; //, x10;
+    float x00; //, x10;
     x00 = i00*b00+i01*b10;
 
     if (p != NULL) {
@@ -4539,7 +4533,7 @@ int g2d_line_intersect_line(const g2d_line_t *linea, const g2d_line_t *lineb, do
 }
 
 
-void g2d_line_segment_init_from_points(g2d_line_segment_t *seg, const double p0[2], const double p1[2])
+void g2d_line_segment_init_from_points(g2d_line_segment_t *seg, const float p0[2], const float p1[2])
 {
     g2d_line_init_from_points(&seg->line, p0, p1);
     seg->p1[0] = p1[0];
@@ -4547,11 +4541,11 @@ void g2d_line_segment_init_from_points(g2d_line_segment_t *seg, const double p0[
 }
 
 // Find the point p on segment seg that is closest to point q.
-void g2d_line_segment_closest_point(const g2d_line_segment_t *seg, const double *q, double *p)
+void g2d_line_segment_closest_point(const g2d_line_segment_t *seg, const float *q, float *p)
 {
-    double a = g2d_line_get_coordinate(&seg->line, seg->line.p);
-    double b = g2d_line_get_coordinate(&seg->line, seg->p1);
-    double c = g2d_line_get_coordinate(&seg->line, q);
+    float a = g2d_line_get_coordinate(&seg->line, seg->line.p);
+    float b = g2d_line_get_coordinate(&seg->line, seg->p1);
+    float c = g2d_line_get_coordinate(&seg->line, q);
 
     if (a < b)
         c = dclamp(c, a, b);
@@ -4565,16 +4559,16 @@ void g2d_line_segment_closest_point(const g2d_line_segment_t *seg, const double 
 // Compute intersection of two line segments. If they intersect,
 // result is stored in p and 1 is returned. Otherwise, zero is
 // returned. p may be NULL.
-int g2d_line_segment_intersect_segment(const g2d_line_segment_t *sega, const g2d_line_segment_t *segb, double *p)
+int g2d_line_segment_intersect_segment(const g2d_line_segment_t *sega, const g2d_line_segment_t *segb, float *p)
 {
-    double tmp[2];
+    float tmp[2];
 
     if (!g2d_line_intersect_line(&sega->line, &segb->line, tmp))
         return 0;
 
-    double a = g2d_line_get_coordinate(&sega->line, sega->line.p);
-    double b = g2d_line_get_coordinate(&sega->line, sega->p1);
-    double c = g2d_line_get_coordinate(&sega->line, tmp);
+    float a = g2d_line_get_coordinate(&sega->line, sega->line.p);
+    float b = g2d_line_get_coordinate(&sega->line, sega->p1);
+    float c = g2d_line_get_coordinate(&sega->line, tmp);
 
     // does intersection lie on the first line?
     if ((c<a && c<b) || (c>a && c>b))
@@ -4599,16 +4593,16 @@ int g2d_line_segment_intersect_segment(const g2d_line_segment_t *sega, const g2d
 // Compute intersection of a line segment and a line. If they
 // intersect, result is stored in p and 1 is returned. Otherwise, zero
 // is returned. p may be NULL.
-int g2d_line_segment_intersect_line(const g2d_line_segment_t *seg, const g2d_line_t *line, double *p)
+int g2d_line_segment_intersect_line(const g2d_line_segment_t *seg, const g2d_line_t *line, float *p)
 {
-    double tmp[2];
+    float tmp[2];
 
     if (!g2d_line_intersect_line(&seg->line, line, tmp))
         return 0;
 
-    double a = g2d_line_get_coordinate(&seg->line, seg->line.p);
-    double b = g2d_line_get_coordinate(&seg->line, seg->p1);
-    double c = g2d_line_get_coordinate(&seg->line, tmp);
+    float a = g2d_line_get_coordinate(&seg->line, seg->line.p);
+    float b = g2d_line_get_coordinate(&seg->line, seg->p1);
+    float c = g2d_line_get_coordinate(&seg->line, tmp);
 
     // does intersection lie on the first line?
     if ((c<a && c<b) || (c>a && c>b))
@@ -4629,7 +4623,7 @@ int g2d_polygon_intersects_polygon(const zarray_t *polya, const zarray_t *polyb)
 
     // dumb N^2 method.
     for (int ia = 0; ia < zarray_size(polya); ia++) {
-        double pa0[2], pa1[2];
+        float pa0[2], pa1[2];
         zarray_get(polya, ia, pa0);
         zarray_get(polya, (ia+1)%zarray_size(polya), pa1);
 
@@ -4637,7 +4631,7 @@ int g2d_polygon_intersects_polygon(const zarray_t *polya, const zarray_t *polyb)
         g2d_line_segment_init_from_points(&sega, pa0, pa1);
 
         for (int ib = 0; ib < zarray_size(polyb); ib++) {
-            double pb0[2], pb1[2];
+            float pb0[2], pb1[2];
             zarray_get(polyb, ib, pb0);
             zarray_get(polyb, (ib+1)%zarray_size(polyb), pb1);
 
@@ -4661,17 +4655,17 @@ int g2d_polygon_contains_polygon(const zarray_t *polya, const zarray_t *polyb)
 
     // if none of the edges cross, then the polygon is either fully
     // contained or fully outside.
-    double p[2];
+    float p[2];
     zarray_get(polyb, 0, p);
 
     return g2d_polygon_contains_point(polya, p);
 }
 
 // compute a point that is inside the polygon. (It may not be *far* inside though)
-void g2d_polygon_get_interior_point(const zarray_t *poly, double *p)
+void g2d_polygon_get_interior_point(const zarray_t *poly, float *p)
 {
     // take the first three points, which form a triangle. Find the middle point
-    double a[2], b[2], c[2];
+    float a[2], b[2], c[2];
 
     zarray_get(poly, 0, a);
     zarray_get(poly, 1, b);
@@ -4689,7 +4683,7 @@ int g2d_polygon_overlaps_polygon(const zarray_t *polya, const zarray_t *polyb)
 
     // if none of the edges cross, then the polygon is either fully
     // contained or fully outside.
-    double p[2];
+    float p[2];
     g2d_polygon_get_interior_point(polyb, p);
 
     if (g2d_polygon_contains_point(polya, p))
@@ -4705,8 +4699,8 @@ int g2d_polygon_overlaps_polygon(const zarray_t *polya, const zarray_t *polyb)
 
 static int double_sort_up(const void *_a, const void *_b)
 {
-    double a = *((double*) _a);
-    double b = *((double*) _b);
+    float a = *((float*) _a);
+    float b = *((float*) _b);
 
     if (a < b)
         return -1;
@@ -4725,15 +4719,15 @@ static int double_sort_up(const void *_a, const void *_b)
 /*
   To rasterize, do something like this:
 
-  double res = 0.099;
-  for (double y = y0; y < y1; y += res) {
-  double xs[zarray_size(poly)];
+  float res = 0.099;
+  for (float y = y0; y < y1; y += res) {
+  float xs[zarray_size(poly)];
 
   int xsz = g2d_polygon_rasterize(poly, y, xs);
   int xpos = 0;
   int inout = 0; // start off "out"
 
-  for (double x = x0; x < x1; x += res) {
+  for (float x = x0; x < x1; x += res) {
       while (x > xs[xpos] && xpos < xsz) {
         xpos++;
         inout ^= 1;
@@ -4748,14 +4742,14 @@ static int double_sort_up(const void *_a, const void *_b)
 */
 
 // returns the number of x intercepts
-int g2d_polygon_rasterize(const zarray_t *poly, double y, double *x)
+int g2d_polygon_rasterize(const zarray_t *poly, float y, float *x)
 {
     int sz = zarray_size(poly);
 
     g2d_line_t line;
     if (1) {
-        double p0[2] = { 0, y };
-        double p1[2] = { 1, y };
+        float p0[2] = { 0, y };
+        float p1[2] = { 1, y };
 
         g2d_line_init_from_points(&line, p0, p1);
     }
@@ -4764,18 +4758,18 @@ int g2d_polygon_rasterize(const zarray_t *poly, double y, double *x)
 
     for (int i = 0; i < sz; i++) {
         g2d_line_segment_t seg;
-        double *p0, *p1;
+        float *p0, *p1;
         zarray_get_volatile(poly, i, &p0);
         zarray_get_volatile(poly, (i+1)%sz, &p1);
 
         g2d_line_segment_init_from_points(&seg, p0, p1);
 
-        double q[2];
+        float q[2];
         if (g2d_line_segment_intersect_line(&seg, &line, q))
             x[xpos++] = q[0];
     }
 
-    qsort(x, xpos, sizeof(double), double_sort_up);
+    qsort(x, xpos, sizeof(float), double_sort_up);
 
     return xpos;
 }
@@ -4797,7 +4791,7 @@ int main(int argc, char *argv[])
 {
     timeprofile_t *tp = timeprofile_create();
 
-    zarray_t *polya = g2d_polygon_create_data((double[][2]) {
+    zarray_t *polya = g2d_polygon_create_data((float[][2]) {
             { 0, 0},
             { 4, 0},
             { 2, 2},
@@ -4805,17 +4799,17 @@ int main(int argc, char *argv[])
             { 1, 5},
             { -2,4} }, 6);
 
-    zarray_t *polyb = g2d_polygon_create_data((double[][2]) {
+    zarray_t *polyb = g2d_polygon_create_data((float[][2]) {
             { .1, .1},
             { .5, .1},
             { .1, .5 } }, 3);
 
-    zarray_t *polyc = g2d_polygon_create_data((double[][2]) {
+    zarray_t *polyc = g2d_polygon_create_data((float[][2]) {
             { 3, 0},
             { 5, 0},
             { 5, 1} }, 3);
 
-    zarray_t *polyd = g2d_polygon_create_data((double[][2]) {
+    zarray_t *polyd = g2d_polygon_create_data((float[][2]) {
             { 5, 5},
             { 6, 6},
             { 5, 6} }, 3);
@@ -4829,7 +4823,7 @@ int main(int argc, char *argv[])
   0      A---B
   01234
 */
-    zarray_t *polyE = g2d_polygon_create_data((double[][2]) {
+    zarray_t *polyE = g2d_polygon_create_data((float[][2]) {
             {0,0}, {4,0}, {4, 1}, {1,1},
                                   {1,2}, {3,2}, {3,3}, {1,3},
                                                        {1,4}, {4,4}, {4,5}, {0,5}}, 12);
@@ -4842,7 +4836,7 @@ int main(int argc, char *argv[])
         int niters = 100000;
 
         for (int i = 0; i < niters; i++) {
-            double q[2];
+            float q[2];
             q[0] = 10.0f * random() / RAND_MAX - 2;
             q[1] = 10.0f * random() / RAND_MAX - 2;
 
@@ -4852,7 +4846,7 @@ int main(int argc, char *argv[])
         timeprofile_stamp(tp, "fast");
 
         for (int i = 0; i < niters; i++) {
-            double q[2];
+            float q[2];
             q[0] = 10.0f * random() / RAND_MAX - 2;
             q[1] = 10.0f * random() / RAND_MAX - 2;
 
@@ -4862,7 +4856,7 @@ int main(int argc, char *argv[])
         timeprofile_stamp(tp, "slow");
 
         for (int i = 0; i < niters; i++) {
-            double q[2];
+            float q[2];
             q[0] = 10.0f * random() / RAND_MAX - 2;
             q[1] = 10.0f * random() / RAND_MAX - 2;
 
@@ -4878,14 +4872,14 @@ int main(int argc, char *argv[])
     if (1) {
         zarray_t *poly = polyE;
 
-        double res = 0.399;
-        for (double y = 5.2; y >= -.5; y -= res) {
-            double xs[zarray_size(poly)];
+        float res = 0.399;
+        for (float y = 5.2; y >= -.5; y -= res) {
+            float xs[zarray_size(poly)];
 
             int xsz = g2d_polygon_rasterize(poly, y, xs);
             int xpos = 0;
             int inout = 0; // start off "out"
-            for (double x = -3; x < 6; x += res) {
+            for (float x = -3; x < 6; x += res) {
                 while (x > xs[xpos] && xpos < xsz) {
                     xpos++;
                     inout ^= 1;
@@ -4898,8 +4892,8 @@ int main(int argc, char *argv[])
             }
             printf("\n");
 
-            for (double x = -3; x < 6; x += res) {
-                double q[2] = {x, y};
+            for (float x = -3; x < 6; x += res) {
+                float q[2] = {x, y};
                 if (g2d_polygon_contains_point(poly, q))
                     printf("X");
                 else
@@ -4913,7 +4907,7 @@ int main(int argc, char *argv[])
 
 /*
 // CW order
-double p[][2] =  { { 0, 0},
+float p[][2] =  { { 0, 0},
 { -2, 4},
 {1, 5},
 {1, 2},
@@ -4921,7 +4915,7 @@ double p[][2] =  { { 0, 0},
 {4, 0} };
 */
 
-     double q[2] = { 10, 10 };
+     float q[2] = { 10, 10 };
      printf("0==%d\n", g2d_polygon_contains_point(polya, q));
 
      q[0] = 1; q[1] = 1;
@@ -4945,7 +4939,7 @@ double p[][2] =  { { 0, 0},
          zarray_t *hull = g2d_convex_hull(polyE);
 
          for (int k = 0; k < zarray_size(hull); k++) {
-             double *h;
+             float *h;
              zarray_get_volatile(hull, k, &h);
 
              printf("%15f, %15f\n", h[0], h[1]);
@@ -4953,10 +4947,10 @@ double p[][2] =  { { 0, 0},
      }
 
      for (int i = 0; i < 100000; i++) {
-         zarray_t *points = zarray_create(sizeof(double[2]));
+         zarray_t *points = zarray_create(sizeof(float[2]));
 
          for (int j = 0; j < 100; j++) {
-             double q[2];
+             float q[2];
              q[0] = 10.0f * random() / RAND_MAX - 2;
              q[1] = 10.0f * random() / RAND_MAX - 2;
 
@@ -4965,12 +4959,12 @@ double p[][2] =  { { 0, 0},
 
          zarray_t *hull = g2d_convex_hull(points);
          for (int j = 0; j < zarray_size(points); j++) {
-             double *q;
+             float *q;
              zarray_get_volatile(points, j, &q);
 
              int on_edge;
 
-             double p[2];
+             float p[2];
              g2d_polygon_closest_boundary_point(hull, q, p);
              if (g2d_distance(q, p) < .00001)
                  on_edge = 1;
@@ -5048,8 +5042,8 @@ struct image_u32
 
 // Computes the cholesky factorization of A, putting the lower
 // triangular matrix into R.
-static inline void mat33_chol(const double *A,
-                              double *R)
+static inline void mat33_chol(const float *A,
+                              float *R)
 {
     // A[0] = R[0]*R[0]
     R[0] = sqrt(A[0]);
@@ -5074,8 +5068,8 @@ static inline void mat33_chol(const double *A,
     R[5] = 0;
 }
 
-static inline void mat33_lower_tri_inv(const double *A,
-                                       double *R)
+static inline void mat33_lower_tri_inv(const float *A,
+                                       float *R)
 {
     // A[0]*R[0] = 1
     R[0] = 1 / A[0];
@@ -5097,17 +5091,17 @@ static inline void mat33_lower_tri_inv(const double *A,
 }
 
 
-static inline void mat33_sym_solve(const double *A,
-                                   const double *B,
-                                   double *R)
+static inline void mat33_sym_solve(const float *A,
+                                   const float *B,
+                                   float *R)
 {
-    double L[9];
+    float L[9];
     mat33_chol(A, L);
 
-    double M[9];
+    float M[9];
     mat33_lower_tri_inv(L, M);
 
-    double tmp[3];
+    float tmp[3];
     tmp[0] = M[0]*B[0];
     tmp[1] = M[3]*B[0] + M[4]*B[1];
     tmp[2] = M[6]*B[0] + M[7]*B[1] + M[8]*B[2];
@@ -5275,11 +5269,11 @@ struct apriltag_detection
     matd_t *H;
 
     // The center of the detection in image pixel coordinates.
-    double c[2];
+    float c[2];
 
     // The corners of the tag in image pixel coordinates. These always
     // wrap counter-clock wise around the tag.
-    double p[4][2];
+    float p[4][2];
 };
 
 // don't forget to add a family!
@@ -9257,7 +9251,7 @@ struct remove_vertex
     int i;           // which vertex to remove?
     int left, right; // left vertex, right vertex
 
-    double err;
+    float err;
 };
 
 struct segment
@@ -9271,9 +9265,9 @@ struct segment
 
 struct line_fit_pt
 {
-    double Mx, My;
-    double Mxx, Myy, Mxy;
-    double W; // total weight
+    float Mx, My;
+    float Mxx, Myy, Mxy;
+    float W; // total weight
 };
 
 static inline void ptsort(struct pt *pts, int sz)
@@ -9376,12 +9370,12 @@ static inline void ptsort(struct pt *pts, int sz)
 //
 // fit a line to the points [i0, i1] (inclusive). i0, i1 are both [0,
 // sz) if i1 < i0, we treat this as a wrap around.
-void fit_line(struct line_fit_pt *lfps, int sz, int i0, int i1, double *lineparm, double *err, double *mse)
+void fit_line(struct line_fit_pt *lfps, int sz, int i0, int i1, float *lineparm, float *err, float *mse)
 {
     assert(i0 != i1);
     assert(i0 >= 0 && i1 >= 0 && i0 < sz && i1 < sz);
 
-    double Mx, My, Mxx, Myy, Mxy, W;
+    float Mx, My, Mxx, Myy, Mxy, W;
     int N; // how many points are included in the set?
 
     if (i0 < i1) {
@@ -9426,34 +9420,34 @@ void fit_line(struct line_fit_pt *lfps, int sz, int i0, int i1, double *lineparm
 
     assert(N >= 2);
 
-    double Ex = Mx / W;
-    double Ey = My / W;
-    double Cxx = Mxx / W - Ex*Ex;
-    double Cxy = Mxy / W - Ex*Ey;
-    double Cyy = Myy / W - Ey*Ey;
+    float Ex = Mx / W;
+    float Ey = My / W;
+    float Cxx = Mxx / W - Ex*Ex;
+    float Cxy = Mxy / W - Ex*Ey;
+    float Cyy = Myy / W - Ey*Ey;
 
-    double nx, ny;
+    float nx, ny;
 
     if (1) {
         // on iOS about 5% of total CPU spent in these trig functions.
         // 85 ms per frame on 5S, example.pnm
         //
-        // XXX this was using the double-precision atan2. Was there a case where
+        // XXX this was using the float-precision atan2. Was there a case where
         // we needed that precision? Seems doubtful.
-        double normal_theta = .5 * atan2f(-2*Cxy, (Cyy - Cxx));
+        float normal_theta = .5 * atan2f(-2*Cxy, (Cyy - Cxx));
         nx = cosf(normal_theta);
         ny = sinf(normal_theta);
     } else {
         // 73.5 ms per frame on 5S, example.pnm
-        double ty = -2*Cxy;
-        double tx = (Cyy - Cxx);
-        double mag = ty*ty + tx*tx;
+        float ty = -2*Cxy;
+        float tx = (Cyy - Cxx);
+        float mag = ty*ty + tx*tx;
 
         if (mag == 0) {
             nx = 1;
             ny = 0;
         } else {
-            double norm = sqrtf(ty*ty + tx*tx);
+            float norm = sqrtf(ty*ty + tx*tx);
             tx /= norm;
 
             // ty is now sin(2theta)
@@ -9512,8 +9506,8 @@ int pt_compare_theta(const void *_a, const void *_b)
 
 int err_compare_descending(const void *_a, const void *_b)
 {
-    const double *a =  _a;
-    const double *b =  _b;
+    const float *a =  _a;
+    const float *b =  _b;
 
     return ((*a) < (*b)) ? 1 : -1;
 }
@@ -9557,7 +9551,7 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
 
 //    printf("sz %5d, ksz %3d\n", sz, ksz);
 
-    double *errs = fb_alloc(sz * sizeof(double));
+    float *errs = fb_alloc(sz * sizeof(float));
 
     for (int i = 0; i < sz; i++) {
         fit_line(lfps, sz, (i + sz - ksz) % sz, (i + ksz) % sz, NULL, &errs[i], NULL);
@@ -9565,12 +9559,12 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
 
     // apply a low-pass filter to errs
     if (1) {
-        double *y = fb_alloc(sz * sizeof(double));
+        float *y = fb_alloc(sz * sizeof(float));
 
         // how much filter to apply?
 
         // XXX Tunable
-        double sigma = 1; // was 3
+        float sigma = 1; // was 3
 
         // cutoff = exp(-j*j/(2*sigma*sigma));
         // log(cutoff) = -j*j / (2*sigma*sigma)
@@ -9581,7 +9575,7 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
         // 'cutoff'.
 
         // XXX Tunable (though not super useful to change)
-        double cutoff = 0.05;
+        float cutoff = 0.05;
         int fsz = sqrt(-log(cutoff)*2*sigma*sigma) + 1;
         fsz = 2*fsz + 1;
 
@@ -9595,7 +9589,7 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
         }
 
         for (int iy = 0; iy < sz; iy++) {
-            double acc = 0;
+            float acc = 0;
 
             for (int i = 0; i < fsz; i++) {
                 acc += errs[(iy + i - fsz / 2 + sz) % sz] * f[i];
@@ -9604,12 +9598,12 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
         }
 
         fb_free(); // f
-        memcpy(errs, y, sz * sizeof(double));
+        memcpy(errs, y, sz * sizeof(float));
         fb_free(); // y
     }
 
     int *maxima = fb_alloc(sz * sizeof(int));
-    double *maxima_errs = fb_alloc(sz * sizeof(double));
+    float *maxima_errs = fb_alloc(sz * sizeof(float));
     int nmaxima = 0;
 
     for (int i = 0; i < sz; i++) {
@@ -9628,13 +9622,13 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
     int max_nmaxima = td->qtp.max_nmaxima;
 
     if (nmaxima > max_nmaxima) {
-        double *maxima_errs_copy = fb_alloc(nmaxima * sizeof(double));
-        memcpy(maxima_errs_copy, maxima_errs, nmaxima * sizeof(double));
+        float *maxima_errs_copy = fb_alloc(nmaxima * sizeof(float));
+        memcpy(maxima_errs_copy, maxima_errs, nmaxima * sizeof(float));
 
         // throw out all but the best handful of maxima. Sorts descending.
-        qsort(maxima_errs_copy, nmaxima, sizeof(double), err_compare_descending);
+        qsort(maxima_errs_copy, nmaxima, sizeof(float), err_compare_descending);
 
-        double maxima_thresh = maxima_errs_copy[max_nmaxima];
+        float maxima_thresh = maxima_errs_copy[max_nmaxima];
         int out = 0;
         for (int in = 0; in < nmaxima; in++) {
             if (maxima_errs[in] <= maxima_thresh)
@@ -9651,14 +9645,14 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
     fb_free(); // errs
 
     int best_indices[4];
-    double best_error = HUGE_VALF;
+    float best_error = HUGE_VALF;
 
-    double err01, err12, err23, err30;
-    double mse01, mse12, mse23, mse30;
-    double params01[4], params12[4], params23[4], params30[4];
+    float err01, err12, err23, err30;
+    float mse01, mse12, mse23, mse30;
+    float params01[4], params12[4], params23[4], params30[4];
 
     // disallow quads where the angle is less than a critical value.
-    double max_dot = cos(td->qtp.critical_rad); //25*M_PI/180);
+    float max_dot = cos(td->qtp.critical_rad); //25*M_PI/180);
 
     for (int m0 = 0; m0 < nmaxima - 3; m0++) {
         int i0 = maxima[m0];
@@ -9678,7 +9672,7 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
                 if (mse12 > td->qtp.max_line_fit_mse)
                     continue;
 
-                double dot = params01[2]*params12[2] + params01[3]*params12[3];
+                float dot = params01[2]*params12[2] + params01[3]*params12[3];
                 if (fabs(dot) > max_dot)
                     continue;
 
@@ -9693,7 +9687,7 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
                     if (mse30 > td->qtp.max_line_fit_mse)
                         continue;
 
-                    double err = err01 + err12 + err23 + err30;
+                    float err = err01 + err12 + err23 + err30;
                     if (err < best_error) {
                         best_error = err;
                         best_indices[0] = i0;
@@ -9751,17 +9745,17 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
     // (Only helps a small amount. The actual noise values here don't
     // matter much at all, but we want them [-1, 1]. (XXX with
     // fixed-point, should range be bigger?)
-    double cx = (xmin + xmax) * 0.5 + 0.05118;
-    double cy = (ymin + ymax) * 0.5 + -0.028581;
+    float cx = (xmin + xmax) * 0.5 + 0.05118;
+    float cy = (ymin + ymax) * 0.5 + -0.028581;
 
-    double dot = 0;
+    float dot = 0;
 
     for (int pidx = 0; pidx < zarray_size(cluster); pidx++) {
         struct pt *p;
         zarray_get_volatile(cluster, pidx, &p);
 
-        double dx = p->x - cx;
-        double dy = p->y - cy;
+        float dx = p->x - cx;
+        float dy = p->y - cy;
 
         p->theta = atan2f(dy, dx);
 
@@ -9877,10 +9871,10 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
 
         if (0) {
             // we now undo our fixed-point arithmetic.
-            double delta = 0.5;
-            double x = p->x * .5 + delta;
-            double y = p->y * .5 + delta;
-            double W;
+            float delta = 0.5;
+            float x = p->x * .5 + delta;
+            float y = p->y * .5 + delta;
+            float W;
 
             for (int dy = -1; dy <= 1; dy++) {
                 int iy = y + dy;
@@ -9902,8 +9896,8 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
 
                     W = sqrtf(grad_x*grad_x + grad_y*grad_y) + 1;
 
-//                    double fx = x + dx, fy = y + dy;
-                    double fx = ix + .5, fy = iy + .5;
+//                    float fx = x + dx, fy = y + dy;
+                    float fx = ix + .5, fy = iy + .5;
                     lfps[i].Mx  += W * fx;
                     lfps[i].My  += W * fy;
                     lfps[i].Mxx += W * fx * fx;
@@ -9914,11 +9908,11 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
             }
         } else {
             // we now undo our fixed-point arithmetic.
-            double delta = 0.5; // adjust for pixel center bias
-            double x = p->x * .5 + delta;
-            double y = p->y * .5 + delta;
+            float delta = 0.5; // adjust for pixel center bias
+            float x = p->x * .5 + delta;
+            float y = p->y * .5 + delta;
             int ix = x, iy = y;
-            double W = 1;
+            float W = 1;
 
             if (ix > 0 && ix+1 < im->width && iy > 0 && iy+1 < im->height) {
                 int grad_x = im->buf[iy * im->stride + ix + 1] -
@@ -9931,7 +9925,7 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
                 W = sqrt(grad_x*grad_x + grad_y*grad_y) + 1;
             }
 
-            double fx = x, fy = y;
+            float fx = x, fy = y;
             lfps[i].Mx  += W * fx;
             lfps[i].My  += W * fy;
             lfps[i].Mxx += W * fx * fx;
@@ -9966,7 +9960,7 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
         res = 1;
 
     } else {
-        double lines[4][4];
+        float lines[4][4];
 
         for (int i = 0; i < 4; i++) {
             int i0 = indices[i];
@@ -9985,7 +9979,7 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
                 }
             }
 
-            double err;
+            float err;
             fit_line(lfps, sz, i0, i1, lines[i], NULL, &err);
 
             if (err > td->qtp.max_line_fit_mse) {
@@ -10010,22 +10004,22 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
             // We want the unit vector, so we need the perpendiculars. Thus, below
             // we have swapped the x and y components and flipped the y components.
 
-            double A00 =  lines[i][3],  A01 = -lines[(i+1)&3][3];
-            double A10 =  -lines[i][2],  A11 = lines[(i+1)&3][2];
-            double B0 = -lines[i][0] + lines[(i+1)&3][0];
-            double B1 = -lines[i][1] + lines[(i+1)&3][1];
+            float A00 =  lines[i][3],  A01 = -lines[(i+1)&3][3];
+            float A10 =  -lines[i][2],  A11 = lines[(i+1)&3][2];
+            float B0 = -lines[i][0] + lines[(i+1)&3][0];
+            float B1 = -lines[i][1] + lines[(i+1)&3][1];
 
-            double det = A00 * A11 - A10 * A01;
+            float det = A00 * A11 - A10 * A01;
 
             // inverse.
-            double W00 = A11 / det, W01 = -A01 / det;
+            float W00 = A11 / det, W01 = -A01 / det;
             if (fabs(det) < 0.001) {
                 res = 0;
                 goto finish;
             }
 
             // solve
-            double L0 = W00*B0 + W01*B1;
+            float L0 = W00*B0 + W01*B1;
 
             // compute intersection
             quad->p[i][0] = lines[i][0] + L0*A00;
@@ -10034,11 +10028,11 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
             if (0) {
                 // we should get the same intersection starting
                 // from point p1 and moving L1*u1.
-                double W10 = -A10 / det, W11 = A00 / det;
-                double L1 = W10*B0 + W11*B1;
+                float W10 = -A10 / det, W11 = A00 / det;
+                float L1 = W10*B0 + W11*B1;
 
-                double x = lines[(i+1)&3][0] - L1*A10;
-                double y = lines[(i+1)&3][1] - L1*A11;
+                float x = lines[(i+1)&3][0] - L1*A10;
+                float y = lines[(i+1)&3][1] - L1*A11;
                 assert(fabs(x - quad->p[i][0]) < 0.001 &&
                        fabs(y - quad->p[i][1]) < 0.001);
             }
@@ -10049,10 +10043,10 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
 
     // reject quads that are too small
     if (1) {
-        double area = 0;
+        float area = 0;
 
         // get area of triangle formed by points 0, 1, 2, 0
-        double length[3], p;
+        float length[3], p;
         for (int i = 0; i < 3; i++) {
             int idxa = i; // 0, 1, 2,
             int idxb = (i+1) % 3; // 1, 2, 0
@@ -10087,17 +10081,17 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
 
     // reject quads whose cumulative angle change isn't equal to 2PI
     if (1) {
-        double total = 0;
+        float total = 0;
 
         for (int i = 0; i < 4; i++) {
             int i0 = i, i1 = (i+1)&3, i2 = (i+2)&3;
 
-            double theta0 = atan2f(quad->p[i0][1] - quad->p[i1][1],
+            float theta0 = atan2f(quad->p[i0][1] - quad->p[i1][1],
                                    quad->p[i0][0] - quad->p[i1][0]);
-            double theta1 = atan2f(quad->p[i2][1] - quad->p[i1][1],
+            float theta1 = atan2f(quad->p[i2][1] - quad->p[i1][1],
                                    quad->p[i2][0] - quad->p[i1][0]);
 
-            double dtheta = theta0 - theta1;
+            float dtheta = theta0 - theta1;
             if (dtheta < 0)
                 dtheta += 2*M_PI;
 
@@ -10118,7 +10112,7 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
     // coordinates in which (0,0) is the lower left corner. But each
     // pixel actually spans from to [x, x+1), [y, y+1) the mean value of which
     // is +.5 higher than x & y.
-/*    double delta = .5;
+/*    float delta = .5;
       for (int i = 0; i < 4; i++) {
       quad->p[i][0] += delta;
       quad->p[i][1] += delta;
@@ -10601,9 +10595,9 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
 
 struct graymodel
 {
-    double A[3][3];
-    double B[3];
-    double C[3];
+    float A[3][3];
+    float B[3];
+    float C[3];
 };
 
 void graymodel_init(struct graymodel *gm)
@@ -10611,7 +10605,7 @@ void graymodel_init(struct graymodel *gm)
     memset(gm, 0, sizeof(struct graymodel));
 }
 
-void graymodel_add(struct graymodel *gm, double x, double y, double gray)
+void graymodel_add(struct graymodel *gm, float x, float y, float gray)
 {
     // update upper right entries of A = J'J
     gm->A[0][0] += x*x;
@@ -10629,10 +10623,10 @@ void graymodel_add(struct graymodel *gm, double x, double y, double gray)
 
 void graymodel_solve(struct graymodel *gm)
 {
-    mat33_sym_solve((double*) gm->A, gm->B, gm->C);
+    mat33_sym_solve((float*) gm->A, gm->B, gm->C);
 }
 
-double graymodel_interpolate(struct graymodel *gm, double x, double y)
+float graymodel_interpolate(struct graymodel *gm, float x, float y)
 {
     return gm->C[0]*x + gm->C[1]*y + gm->C[2];
 }
@@ -10935,7 +10929,7 @@ void apriltag_detector_destroy(apriltag_detector_t *td)
 struct evaluate_quad_ret
 {
     int64_t rcode;
-    double  score;
+    float  score;
     matd_t  *H, *Hinv;
 
     int decode_status;
@@ -10983,7 +10977,7 @@ int quad_update_homographies(struct quad *quad)
 // compute a "score" for a quad that is independent of tag family
 // encoding (but dependent upon the tag geometry) by considering the
 // contrast around the exterior of the tag.
-double quad_goodness(apriltag_family_t *family, image_u8_t *im, struct quad *quad)
+float quad_goodness(apriltag_family_t *family, image_u8_t *im, struct quad *quad)
 {
     // when sampling from the white border, how much white border do
     // we actually consider valid, measured in bit-cell units? (the
@@ -10994,15 +10988,15 @@ double quad_goodness(apriltag_family_t *family, image_u8_t *im, struct quad *qua
     float white_border = 1;
 
     // in tag coordinates, how big is each bit cell?
-    double bit_size = 2.0 / (2*family->black_border + family->d);
-//    double inv_bit_size = 1.0 / bit_size;
+    float bit_size = 2.0 / (2*family->black_border + family->d);
+//    float inv_bit_size = 1.0 / bit_size;
 
     int32_t xmin = INT32_MAX, xmax = 0, ymin = INT32_MAX, ymax = 0;
 
     for (int i = 0; i < 4; i++) {
-        double tx = (i == 0 || i == 3) ? -1 - bit_size : 1 + bit_size;
-        double ty = (i == 0 || i == 1) ? -1 - bit_size : 1 + bit_size;
-        double x, y;
+        float tx = (i == 0 || i == 3) ? -1 - bit_size : 1 + bit_size;
+        float ty = (i == 0 || i == 1) ? -1 - bit_size : 1 + bit_size;
+        float x, y;
 
         homography_project(quad->H, tx, ty, &x, &y);
         xmin = imin(xmin, x);
@@ -11034,16 +11028,16 @@ double quad_goodness(apriltag_family_t *family, image_u8_t *im, struct quad *qua
         // projections. Begin by evaluating the homogeneous position
         // [(xmin - .5f), y, 1]. Then, we'll update as we stride in
         // the +x direction.
-        double Hx = MATD_EL(Hinv, 0, 0) * (.5 + (int) xmin) +
+        float Hx = MATD_EL(Hinv, 0, 0) * (.5 + (int) xmin) +
             MATD_EL(Hinv, 0, 1) * (y + .5) + MATD_EL(Hinv, 0, 2);
-        double Hy = MATD_EL(Hinv, 1, 0) * (.5 + (int) xmin) +
+        float Hy = MATD_EL(Hinv, 1, 0) * (.5 + (int) xmin) +
             MATD_EL(Hinv, 1, 1) * (y + .5) + MATD_EL(Hinv, 1, 2);
-        double Hh = MATD_EL(Hinv, 2, 0) * (.5 + (int) xmin) +
+        float Hh = MATD_EL(Hinv, 2, 0) * (.5 + (int) xmin) +
             MATD_EL(Hinv, 2, 1) * (y + .5) + MATD_EL(Hinv, 2, 2);
 
         for (int x = xmin; x <= xmax;  x++) {
             // project the pixel center.
-            double tx, ty;
+            float tx, ty;
 
             // divide by homogeneous coordinate
             tx = Hx / Hh;
@@ -11087,7 +11081,7 @@ double quad_goodness(apriltag_family_t *family, image_u8_t *im, struct quad *qua
 
 
     // score = average margin between white and black pixels near border.
-    double margin = 1.0 * W1 / Wn - 1.0 * B1 / Bn;
+    float margin = 1.0 * W1 / Wn - 1.0 * B1 / Bn;
 //    printf("margin %f: W1 %f, B1 %f\n", margin, W1, B1);
 
     return margin;
@@ -11151,7 +11145,7 @@ float quad_decode(apriltag_family_t *family, image_u8_t *im, struct quad *quad, 
         1, 0,
         0
 
-        // XXX double-counts the corners.
+        // XXX float-counts the corners.
     };
 
     struct graymodel whitemodel, blackmodel;
@@ -11164,13 +11158,13 @@ float quad_decode(apriltag_family_t *family, image_u8_t *im, struct quad *quad, 
         int is_white = pattern[4];
 
         for (int i = 0; i < 2*family->black_border + family->d; i++) {
-            double tagx01 = (pattern[0] + i*pattern[2]) / (2*family->black_border + family->d);
-            double tagy01 = (pattern[1] + i*pattern[3]) / (2*family->black_border + family->d);
+            float tagx01 = (pattern[0] + i*pattern[2]) / (2*family->black_border + family->d);
+            float tagy01 = (pattern[1] + i*pattern[3]) / (2*family->black_border + family->d);
 
-            double tagx = 2*(tagx01-0.5);
-            double tagy = 2*(tagy01-0.5);
+            float tagx = 2*(tagx01-0.5);
+            float tagy = 2*(tagy01-0.5);
 
-            double px, py;
+            float px, py;
             homography_project(quad->H, tagx, tagy, &px, &py);
 
             // don't round
@@ -11212,14 +11206,14 @@ float quad_decode(apriltag_family_t *family, image_u8_t *im, struct quad *quad, 
         int bitx = bitidx % family->d;
         int bity = bitidx / family->d;
 
-        double tagx01 = (family->black_border + bitx + 0.5) / (2*family->black_border + family->d);
-        double tagy01 = (family->black_border + bity + 0.5) / (2*family->black_border + family->d);
+        float tagx01 = (family->black_border + bitx + 0.5) / (2*family->black_border + family->d);
+        float tagy01 = (family->black_border + bity + 0.5) / (2*family->black_border + family->d);
 
         // scale to [-1, 1]
-        double tagx = 2*(tagx01-0.5);
-        double tagy = 2*(tagy01-0.5);
+        float tagx = 2*(tagx01-0.5);
+        float tagy = 2*(tagy01-0.5);
 
-        double px, py;
+        float px, py;
         homography_project(quad->H, tagx, tagy, &px, &py);
 
         rcode = (rcode << 1);
@@ -11233,7 +11227,7 @@ float quad_decode(apriltag_family_t *family, image_u8_t *im, struct quad *quad, 
 
         int v = im->buf[iy*im->stride + ix];
 
-        double thresh = (graymodel_interpolate(&blackmodel, tagx, tagy) + graymodel_interpolate(&whitemodel, tagx, tagy)) / 2.0;
+        float thresh = (graymodel_interpolate(&blackmodel, tagx, tagy) + graymodel_interpolate(&whitemodel, tagx, tagy)) / 2.0;
         if (v > thresh) {
             white_score += (v - thresh);
             white_score_count ++;
@@ -11252,12 +11246,12 @@ float quad_decode(apriltag_family_t *family, image_u8_t *im, struct quad *quad, 
     return fmin(white_score / white_score_count, black_score / black_score_count);
 }
 
-double score_goodness(apriltag_family_t *family, image_u8_t *im, struct quad *quad, void *user)
+float score_goodness(apriltag_family_t *family, image_u8_t *im, struct quad *quad, void *user)
 {
     return quad_goodness(family, im, quad);
 }
 
-double score_decodability(apriltag_family_t *family, image_u8_t *im, struct quad *quad, void *user)
+float score_decodability(apriltag_family_t *family, image_u8_t *im, struct quad *quad, void *user)
 {
     struct quick_decode_entry entry;
 
@@ -11268,13 +11262,13 @@ double score_decodability(apriltag_family_t *family, image_u8_t *im, struct quad
 }
 
 // returns score of best quad
-double optimize_quad_generic(apriltag_family_t *family, image_u8_t *im, struct quad *quad0,
+float optimize_quad_generic(apriltag_family_t *family, image_u8_t *im, struct quad *quad0,
                              float *stepsizes, int nstepsizes,
-                             double (*score)(apriltag_family_t *family, image_u8_t *im, struct quad *quad, void *user),
+                             float (*score)(apriltag_family_t *family, image_u8_t *im, struct quad *quad, void *user),
                              void *user)
 {
     struct quad *best_quad = quad_copy(quad0);
-    double best_score = score(family, im, best_quad, user);
+    float best_score = score(family, im, best_quad, user);
 
     for (int stepsize_idx = 0; stepsize_idx < nstepsizes; stepsize_idx++)  {
 
@@ -11300,7 +11294,7 @@ double optimize_quad_generic(apriltag_family_t *family, image_u8_t *im, struct q
                 int nsteps = 1;
 
                 struct quad *this_best_quad = NULL;
-                double this_best_score = best_score;
+                float this_best_score = best_score;
 
                 for (int sx = -nsteps; sx <= nsteps; sx++) {
                     for (int sy = -nsteps; sy <= nsteps; sy++) {
@@ -11313,7 +11307,7 @@ double optimize_quad_generic(apriltag_family_t *family, image_u8_t *im, struct q
                         if (quad_update_homographies(this_quad))
                             continue;
 
-                        double this_score = score(family, im, this_quad, user);
+                        float this_score = score(family, im, this_quad, user);
 
                         if (this_score > this_best_score) {
                             quad_destroy(this_best_quad);
@@ -11345,15 +11339,15 @@ double optimize_quad_generic(apriltag_family_t *family, image_u8_t *im, struct q
 
 static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct quad *quad)
 {
-    double lines[4][4]; // for each line, [Ex Ey nx ny]
+    float lines[4][4]; // for each line, [Ex Ey nx ny]
 
     for (int edge = 0; edge < 4; edge++) {
         int a = edge, b = (edge + 1) & 3; // indices of the end points.
 
         // compute the normal to the current line estimate
-        double nx = quad->p[b][1] - quad->p[a][1];
-        double ny = -quad->p[b][0] + quad->p[a][0];
-        double mag = sqrt(nx*nx + ny*ny);
+        float nx = quad->p[b][1] - quad->p[a][1];
+        float ny = -quad->p[b][0] + quad->p[a][0];
+        float mag = sqrt(nx*nx + ny*ny);
         nx /= mag;
         ny /= mag;
 
@@ -11363,21 +11357,21 @@ static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct qu
         int nsamples = imax(16, mag / 8); // XXX tunable
 
         // stats for fitting a line...
-        double Mx = 0, My = 0, Mxx = 0, Mxy = 0, Myy = 0, N = 0;
+        float Mx = 0, My = 0, Mxx = 0, Mxy = 0, Myy = 0, N = 0;
 
         for (int s = 0; s < nsamples; s++) {
             // compute a point along the line... Note, we're avoiding
             // sampling *right* at the corners, since those points are
             // the least reliable.
-            double alpha = (1.0 + s) / (nsamples + 1);
-            double x0 = alpha*quad->p[a][0] + (1-alpha)*quad->p[b][0];
-            double y0 = alpha*quad->p[a][1] + (1-alpha)*quad->p[b][1];
+            float alpha = (1.0 + s) / (nsamples + 1);
+            float x0 = alpha*quad->p[a][0] + (1-alpha)*quad->p[b][0];
+            float y0 = alpha*quad->p[a][1] + (1-alpha)*quad->p[b][1];
 
             // search along the normal to this line, looking at the
             // gradients along the way. We're looking for a strong
             // response.
-            double Mn = 0;
-            double Mcount = 0;
+            float Mn = 0;
+            float Mcount = 0;
 
             // XXX tunable: how far to search?  We want to search far
             // enough that we find the best edge, but not so far that
@@ -11387,10 +11381,10 @@ static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct qu
             // search on another pixel in the first place. Likewise,
             // for very small tags, we don't want the range to be too
             // big.
-            double range = 1.0 + 1;
+            float range = 1.0 + 1;
 
             // XXX tunable step size.
-            for (double n = -range; n <= range; n +=  0.25) {
+            for (float n = -range; n <= range; n +=  0.25) {
                 // Because of the guaranteed winding order of the
                 // points in the quad, we will start inside the white
                 // portion of the quad and work our way outward.
@@ -11399,7 +11393,7 @@ static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct qu
                 // how far +/- to look? Small values compute the
                 // gradient more precisely, but are more sensitive to
                 // noise.
-                double grange = 1;
+                float grange = 1;
                 int x1 = x0 + (n + grange)*nx;
                 int y1 = y0 + (n + grange)*ny;
                 if (x1 < 0 || x1 >= im_orig->width || y1 < 0 || y1 >= im_orig->height)
@@ -11416,7 +11410,7 @@ static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct qu
                 if (g1 < g2) // reject points whose gradient is "backwards". They can only hurt us.
                     continue;
 
-                double weight = (g2 - g1)*(g2 - g1); // XXX tunable. What shape for weight=f(g2-g1)?
+                float weight = (g2 - g1)*(g2 - g1); // XXX tunable. What shape for weight=f(g2-g1)?
 
                 // compute weighted average of the gradient at this point.
                 Mn += weight*n;
@@ -11427,11 +11421,11 @@ static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct qu
             if (Mcount == 0)
                 continue;
 
-            double n0 = Mn / Mcount;
+            float n0 = Mn / Mcount;
 
             // where is the point along the line?
-            double bestx = x0 + n0*nx;
-            double besty = y0 + n0*ny;
+            float bestx = x0 + n0*nx;
+            float besty = y0 + n0*ny;
 
             // update our line fit statistics
             Mx += bestx;
@@ -11443,12 +11437,12 @@ static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct qu
         }
 
         // fit a line
-        double Ex = Mx / N, Ey = My / N;
-        double Cxx = Mxx / N - Ex*Ex;
-        double Cxy = Mxy / N - Ex*Ey;
-        double Cyy = Myy / N - Ey*Ey;
+        float Ex = Mx / N, Ey = My / N;
+        float Cxx = Mxx / N - Ex*Ex;
+        float Cxy = Mxy / N - Ex*Ey;
+        float Cyy = Myy / N - Ey*Ey;
 
-        double normal_theta = .5 * atan2f(-2*Cxy, (Cyy - Cxx));
+        float normal_theta = .5 * atan2f(-2*Cxy, (Cyy - Cxx));
         nx = cosf(normal_theta);
         ny = sinf(normal_theta);
         lines[edge][0] = Ex;
@@ -11461,19 +11455,19 @@ static void refine_edges(apriltag_detector_t *td, image_u8_t *im_orig, struct qu
     for (int i = 0; i < 4; i++) {
 
         // solve for the intersection of lines (i) and (i+1)&3.
-        double A00 =  lines[i][3],  A01 = -lines[(i+1)&3][3];
-        double A10 =  -lines[i][2],  A11 = lines[(i+1)&3][2];
-        double B0 = -lines[i][0] + lines[(i+1)&3][0];
-        double B1 = -lines[i][1] + lines[(i+1)&3][1];
+        float A00 =  lines[i][3],  A01 = -lines[(i+1)&3][3];
+        float A10 =  -lines[i][2],  A11 = lines[(i+1)&3][2];
+        float B0 = -lines[i][0] + lines[(i+1)&3][0];
+        float B1 = -lines[i][1] + lines[(i+1)&3][1];
 
-        double det = A00 * A11 - A10 * A01;
+        float det = A00 * A11 - A10 * A01;
 
         // inverse.
         if (fabs(det) > 0.001) {
             // solve
-            double W00 = A11 / det, W01 = -A01 / det;
+            float W00 = A11 / det, W01 = -A01 / det;
 
-            double L0 = W00*B0 + W01*B1;
+            float L0 = W00*B0 + W01*B1;
 
             // compute intersection
             quad->p[i][0] = lines[i][0] + L0*A00;
@@ -11494,7 +11488,7 @@ void apriltag_detection_destroy(apriltag_detection_t *det)
     free(det);
 }
 
-int prefer_smaller(int pref, double q0, double q1)
+int prefer_smaller(int pref, float q0, float q1)
 {
     if (pref)     // already prefer something? exit.
         return pref;
@@ -11549,7 +11543,7 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
                 apriltag_family_t *family;
                 zarray_get(td->tag_families, famidx, &family);
 
-                double goodness = 0;
+                float goodness = 0;
 
                 // since the geometry of tag families can vary, start any
                 // optimization process over with the original quad.
@@ -11594,8 +11588,8 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
                     det->goodness = goodness;
                     det->decision_margin = decision_margin;
 
-                    double theta = -entry.rotation * M_PI / 2.0;
-                    double c = cos(theta), s = sin(theta);
+                    float theta = -entry.rotation * M_PI / 2.0;
+                    float c = cos(theta), s = sin(theta);
 
                     // Fix the rotation of our homography to properly orient the tag
                     matd_t *R = matd_create(3,3);
@@ -11631,7 +11625,7 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
                         int tcx = (i == 1 || i == 2) ? 1 : -1;
                         int tcy = (i < 2) ? 1 : -1;
 
-                        double p[2];
+                        float p[2];
 
                         homography_project(det->H, tcx, tcy, &p[0], &p[1]);
 
