@@ -10478,7 +10478,7 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
             DO_CONN(1, 0);
             DO_CONN(0, 1);
 
-#ifdef IMLIB_ENABLE_HIGH_RES_APRILTAGS
+#ifdef IMLIB_ENABLE_FINE_APRILTAGS
             // do 8 connectivity
             DO_CONN(-1, 1);
             DO_CONN(1, 1);
