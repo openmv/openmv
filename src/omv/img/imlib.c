@@ -559,14 +559,14 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
     return vflipped;
 }
 
-static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
+static void imlib_read_pixels(FIL *fp, image_t *img, int n_lines, img_read_settings_t *rs)
 {
     switch (rs->format) {
         case FORMAT_BMP:
-            bmp_read_pixels(fp, img, line_start, line_end, &rs->bmp_rs);
+            bmp_read_pixels(fp, img, n_lines, &rs->bmp_rs);
             break;
         case FORMAT_PNM:
-            ppm_read_pixels(fp, img, line_start, line_end, &rs->ppm_rs);
+            ppm_read_pixels(fp, img, n_lines, &rs->ppm_rs);
             break;
         default: // won't happen
             break;
@@ -603,7 +603,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         }
         for (int i=0; i<img->h; i+=temp.h) { // goes past end
             int lines = IM_MIN(temp.h, img->h-i);
-            imlib_read_pixels(&fp, &temp, 0, lines, &rs);
+            imlib_read_pixels(&fp, &temp, lines, &rs);
             for (int j=0; j<lines; j++) {
                 if (!vflipped) {
                     op(img, i+j, temp.pixels+(temp.w*temp.bpp*j), data, false);
