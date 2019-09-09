@@ -81,15 +81,13 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
 }
 
 // This function reads the pixel values of an image.
-void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_read_settings_t *rs)
+void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs)
 {
     if (rs->bmp_bpp == 8) {
         if ((rs->bmp_h < 0) && (rs->bmp_w >= 0) && (img->w == rs->bmp_row_bytes)) {
-            read_data(fp, // Super Fast - Zoom, Zoom!
-                      img->pixels + (line_start * img->w),
-                      (line_end - line_start) * img->w);
+            read_data(fp, img->pixels, n_lines * img->w);
         } else {
-            for (int i = line_start; i < line_end; i++) {
+            for (int i = 0; i < n_lines; i++) {
                 for (int j = 0; j < rs->bmp_row_bytes; j++) {
                     uint8_t pixel;
                     read_byte(fp, &pixel);
@@ -112,7 +110,7 @@ void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_re
             }
         }
     } else if (rs->bmp_bpp == 16) {
-        for (int i = line_start; i < line_end; i++) {
+        for (int i = 0; i < n_lines; i++) {
             for (int j = 0, jj = rs->bmp_row_bytes / 2; j < jj; j++) {
                 uint16_t pixel;
                 read_word(fp, &pixel);
@@ -135,7 +133,7 @@ void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_re
             }
         }
     } else if (rs->bmp_bpp == 24) {
-        for (int i = line_start; i < line_end; i++) {
+        for (int i = 0; i < n_lines; i++) {
             for (int j = 0, jj = rs->bmp_row_bytes / 3; j < jj; j++) {
                 uint8_t r, g, b;
                 read_byte(fp, &r);
@@ -173,7 +171,7 @@ void bmp_read(image_t *img, const char *path)
     file_buffer_on(&fp);
     bmp_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) img->pixels = xalloc(img->w * img->h * img->bpp);
-    bmp_read_pixels(&fp, img, 0, img->h, &rs);
+    bmp_read_pixels(&fp, img, img->h, &rs);
     file_buffer_off(&fp);
     file_close(&fp);
 }
