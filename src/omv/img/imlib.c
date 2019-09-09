@@ -594,20 +594,21 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         // window is equal to an image in size. However, since this is not the
         // case we shrink the window size to how many lines we're buffering.
         temp.pixels = alloc;
-        temp.h = (size / (temp.w * temp.bpp)); // round down
+        // Set the max buffer height to image height.
+        temp.h = IM_MIN(img->h, (size / (temp.w * temp.bpp)));
         // This should never happen unless someone forgot to free.
         if ((!temp.pixels) || (!temp.h)) {
             nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
                                                "Not enough memory available!"));
         }
         for (int i=0; i<img->h; i+=temp.h) { // goes past end
-            int can_do = IM_MIN(temp.h, img->h-i);
-            imlib_read_pixels(&fp, &temp, 0, can_do, &rs);
-            for (int j=0; j<can_do; j++) {
+            int lines = IM_MIN(temp.h, img->h-i);
+            imlib_read_pixels(&fp, &temp, 0, lines, &rs);
+            for (int j=0; j<lines; j++) {
                 if (!vflipped) {
                     op(img, i+j, temp.pixels+(temp.w*temp.bpp*j), data, false);
                 } else {
-                    op(img, (img->h-i-can_do)+j, temp.pixels+(temp.w*temp.bpp*j), data, true);
+                    op(img, (img->h-i-lines)+j, temp.pixels+(temp.w*temp.bpp*j), data, true);
                 }
             }
         }
