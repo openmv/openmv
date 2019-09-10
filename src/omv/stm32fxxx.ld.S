@@ -42,23 +42,23 @@ _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
 #if defined(OMV_FFS_MEMORY)
 #if !defined(OMV_FFS_MEMORY_OFFSET)
-#define OMV_FFS_MEMORY_OFFSET   (0)
+#define OMV_FFS_MEMORY_OFFSET           (0)
 #endif
-_ffs_cache  = ORIGIN(OMV_FFS_MEMORY) + OMV_FFS_MEMORY_OFFSET;
+_ffs_cache          = ORIGIN(OMV_FFS_MEMORY) + OMV_FFS_MEMORY_OFFSET;
 #endif
 
 #if defined(OMV_JPEG_MEMORY)
 #if !defined(OMV_JPEG_MEMORY_OFFSET)
-#define OMV_JPEG_MEMORY_OFFSET   (0)
+#define OMV_JPEG_MEMORY_OFFSET          (0)
 #endif
-_jpeg_buf  = ORIGIN(OMV_JPEG_MEMORY) + OMV_JPEG_MEMORY_OFFSET;
+_jpeg_buf           = ORIGIN(OMV_JPEG_MEMORY) + OMV_JPEG_MEMORY_OFFSET;
 #endif
 
 #if defined(OMV_VOSPI_MEMORY)
 #if !defined(OMV_VOSPI_MEMORY_OFFSET)
-#define OMV_VOSPI_MEMORY_OFFSET   (0)
+#define OMV_VOSPI_MEMORY_OFFSET         (0)
 #endif
-_vospi_buf  = ORIGIN(OMV_VOSPI_MEMORY) + OMV_VOSPI_MEMORY_OFFSET;
+_vospi_buf          = ORIGIN(OMV_VOSPI_MEMORY) + OMV_VOSPI_MEMORY_OFFSET;
 #endif
 
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
@@ -107,6 +107,11 @@ SECTIONS
   /* Misc DMA buffers kept in uncachable region */
   .dma_memory (NOLOAD) :
   {
+    #if defined(OMV_FB_OVERLAY_MEMORY)
+    . = ALIGN(4) + OMV_FB_OVERLAY_MEMORY_OFFSET;
+    _fballoc_overlay = .;
+    #endif
+
     . = ALIGN(4);
     _line_buf = .;      // Image line buffer.
     . = . + OMV_LINE_BUF_SIZE;

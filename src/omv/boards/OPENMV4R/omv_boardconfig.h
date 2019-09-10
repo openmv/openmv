@@ -70,6 +70,8 @@
 #define OMV_JPEG_MEMORY         DRAM        // JPEG buffer memory buffer.
 #define OMV_JPEG_MEMORY_OFFSET  (31M)       // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
+#define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // _fballoc_overlay memory.
+#define OMV_FB_OVERLAY_MEMORY_OFFSET    (480*1024)  // _fballoc_overlay
 
 #define OMV_FB_SIZE             (30M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (1M)        // minimum fb alloc size
@@ -97,9 +99,10 @@
 #define OMV_AXI_SRAM_LENGTH     512K
 #define OMV_DRAM_ORIGIN         0xC0000000
 #define OMV_DRAM_LENGTH         32M
+#define OMV_FB_OVERLAY_MEMORY_ORIGIN    OMV_AXI_SRAM_ORIGIN
 
 // Use the MPU to set an uncacheable memory region.
-#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN)
+#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
 #define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_32KB
 
 /* SCCB/I2C */
