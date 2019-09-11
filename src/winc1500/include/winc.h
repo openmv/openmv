@@ -18,6 +18,7 @@
 #define WINC_MAX_PSK_LEN        (65)
 #define WINC_MAX_BOARD_NAME_LEN (33)
 #define WINC_SOCKBUF_SIZE       (1400)
+#define WINC_REQUEST_TIMEOUT    (5000)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
     struct sockaddr addr; \

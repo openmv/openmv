@@ -10,7 +10,7 @@
  */
 #include <string.h>
 #include <stdarg.h>
-#include <errno.h>
+#include "mperrno.h"
 
 #include "py/nlr.h"
 #include "py/objtuple.h"
@@ -356,7 +356,7 @@ static int py_winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
     uint8_t type;
 
     if (socket->u_param.domain != MOD_NETWORK_AF_INET) {
-        *_errno = EAFNOSUPPORT;
+        *_errno = MP_EAFNOSUPPORT;
         return -1;
     }
 
@@ -370,7 +370,7 @@ static int py_winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
             break;
 
         default:
-            *_errno = EINVAL;
+            *_errno = MP_EINVAL;
             return -1;
     }
 
@@ -455,7 +455,13 @@ static int py_winc_socket_connect(mod_network_socket_obj_t *socket, byte *ip, mp
 static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byte *buf, mp_uint_t len, int *_errno)
 {
     int ret = winc_socket_send(socket->fd, buf, len, socket->timeout);
-    if (ret < 0) {
+    if (ret == SOCK_ERR_TIMEOUT) {
+        // The socket is Not closed on timeout when calling
+        // WINC1500 functions that actually accept a timeout.
+        *_errno = MP_ETIMEDOUT;
+        return 0;
+    } else if (ret < 0) {
+        // Close the socket on any other errors.
         *_errno = ret;
         py_winc_socket_close(socket);
         return -1;
@@ -466,7 +472,13 @@ static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byt
 static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno)
 {
     int ret = winc_socket_recv(socket->fd, buf, len, &socket->sockbuf, socket->timeout);
-    if (ret < 0) {
+    if (ret == SOCK_ERR_TIMEOUT) {
+        // The socket is Not closed on timeout when calling
+        // WINC1500 functions that actually accept a timeout.
+        *_errno = MP_ETIMEDOUT;
+        return 0;
+    } else if (ret < 0) {
+        // Close the socket on any other errors.
         *_errno = ret;
         py_winc_socket_close(socket);
         return -1;
@@ -493,7 +505,13 @@ static mp_uint_t py_winc_socket_recvfrom(mod_network_socket_obj_t *socket,
     sockaddr addr;
     int ret = winc_socket_recvfrom(socket->fd, buf, len, &addr, socket->timeout);
     UNPACK_SOCKADDR((&addr), ip, *port);
-    if (ret < 0) {
+    if (ret == SOCK_ERR_TIMEOUT) {
+        // The socket is Not closed on timeout when calling
+        // WINC1500 functions that actually accept a timeout.
+        *_errno = MP_ETIMEDOUT;
+        return 0;
+    } else if (ret < 0) {
+        // Close the socket on any other errors.
         *_errno = ret;
         py_winc_socket_close(socket);
         return -1;
@@ -515,13 +533,21 @@ static int py_winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
 
 static int py_winc_socket_settimeout(mod_network_socket_obj_t *socket, mp_uint_t timeout_ms, int *_errno)
 {
+    if (timeout_ms == UINT32_MAX) {
+        // no timeout is given, set the socket to blocking mode.
+        timeout_ms = 0;
+    } else if (timeout_ms == 0) {
+        // non-blocking mode, set the timeout to a small number other than zero.
+        timeout_ms = 10;
+    } // otherwise, timeout is provided.
+
     socket->timeout = timeout_ms;
     return 0;
 }
 
 static int py_winc_socket_ioctl(mod_network_socket_obj_t *socket, mp_uint_t request, mp_uint_t arg, int *_errno)
 {
-    *_errno = EIO;
+    *_errno = MP_EIO;
     return -1;
 }
 
