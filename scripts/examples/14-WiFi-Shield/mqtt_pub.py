@@ -1,11 +1,12 @@
 # MQTT Example.
-# This example shows how to use the MQTT library.
+# This example shows how to use the MQTT library to publish to a topic.
 #
 # 1) Copy the mqtt.py library to OpenMV storage.
-# 2) Install the mosquitto client on PC and run the following command:
+# 2) Run this script on the OpenMV camera.
+# 3) Install the mosquitto client on PC and run the following command:
 #    mosquitto_sub -h test.mosquitto.org -t "openmv/test" -v
 #
-# Note: If the mosquitto broker is down (OSError -12) try a different one (ex: broker.hivemq.com)
+# NOTE: If the mosquitto broker is unreachable, try another broker (For example: broker.hivemq.com)
 import time, network
 from mqtt import MQTTClient
 
