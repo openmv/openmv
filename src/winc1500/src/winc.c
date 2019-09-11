@@ -410,8 +410,9 @@ static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout)
     while (async_request_done == false) {
         // Handle pending events from network controller.
         m2m_wifi_handle_events(NULL);
+        // timeout == 0 in blocking mode.
         if (timeout && ((HAL_GetTick() - tick_start) >= timeout)) {
-            return -ETIMEDOUT;
+            return SOCK_ERR_TIMEOUT;
         }
     }
 
@@ -699,14 +700,14 @@ int winc_gethostbyname(const char *name, uint8_t *out_ip)
     uint32_t ip=0;
     ret = WINC1500_EXPORT(gethostbyname)((uint8_t*) name);
     if (ret == SOCK_ERR_NO_ERROR) {
-        ret = winc_async_request(0, &ip, 5000);
+        ret = winc_async_request(0, &ip, WINC_REQUEST_TIMEOUT);
     } else {
         return -1;
     }
 
     if (ip == 0) {
         // unknown host
-        return -ENOENT;
+        return ENOENT;
     }
 
     out_ip[0] = ip;
@@ -733,7 +734,7 @@ int winc_socket_bind(int fd, sockaddr *addr)
     int ret = WINC1500_EXPORT(bind)(fd, addr, sizeof(*addr));
     if (ret == SOCK_ERR_NO_ERROR) {
         // Do async request
-        ret = winc_async_request(SOCKET_MSG_BIND, &ret, 1000);
+        ret = winc_async_request(SOCKET_MSG_BIND, &ret, WINC_REQUEST_TIMEOUT);
     }
 
     return ret;
@@ -745,7 +746,7 @@ int winc_socket_listen(int fd, uint32_t backlog)
     int ret = WINC1500_EXPORT(listen)(fd, backlog);
     if (ret == SOCK_ERR_NO_ERROR) {
         // Do async request
-        ret = winc_async_request(SOCKET_MSG_LISTEN, &ret, 1000);
+        ret = winc_async_request(SOCKET_MSG_LISTEN, &ret, WINC_REQUEST_TIMEOUT);
     }
 
     return ret;
