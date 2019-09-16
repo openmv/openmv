@@ -1,4 +1,25 @@
 # Change Log
+## [3.5](https://github.com/openmv/openmv/releases/tag/v3.5) (2019-09-16)
+* Fix H7 RTC bugs.
+* Fix binary ops bug.
+* Fix H7 deepsleep mode.
+* Fix JPEG mode bugs.
+* Fix H7 DMA bug.
+* Fix LBP ROI bug.
+* Update OV2640 driver.
+* Add support for OV5640.
+* Add new SDRAM board support.
+* Add new libraries and examples.
+* Add FB alloc statistics, enable with (FB_ALLOC_STATS=1).
+* Add support for H7 FDCAN.
+* Enable btree module.
+* AprilTag: support flipped/mirrored images.
+* AprilTag: support high resolution images.
+* WINC1500: Add netinfo function.
+* WINC1500: Support static IPs.
+* WINC1500: Fix timeout issues with WINC wrapper.
+* WINC1500: Fix accept() hardfault on unbound sockets.
+
 ## [3.4.1](https://github.com/openmv/openmv/releases/tag/v3.4.1) (2019-05-02)
 * This patch release fixes an issue with Lepton clock.
 
