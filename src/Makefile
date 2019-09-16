@@ -303,6 +303,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pyb_i2c.o               \
 	spi.o                   \
 	can.o                   \
+	fdcan.o                 \
+	pyb_can.o               \
 	pin.o                   \
 	pin_defs_stm32.o        \
 	pin_named_pins.o        \

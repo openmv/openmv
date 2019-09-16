@@ -664,7 +664,7 @@ soft_reset:
     timer_deinit();
     uart_deinit();
     #if MICROPY_HW_ENABLE_CAN
-    can_deinit();
+    can_deinit_all();
     #endif
     pyb_thread_deinit();
 
