@@ -466,15 +466,10 @@ soft_reset:
     pin_init0();
     extint_init0();
     timer_init0();
-    #if MICROPY_HW_ENABLE_CAN
     can_init0();
-    #endif
     i2c_init0();
     spi_init0();
     uart_init0();
-    MP_STATE_PORT(pyb_stdio_uart) = NULL; // need to zero
-    dac_init();
-    pyb_usb_init0();
     sensor_init0();
     fb_alloc_init0();
     file_buffer_init0();
@@ -485,6 +480,12 @@ soft_reset:
     usbdbg_init();
     sdcard_init();
     rtc_init_start(false);
+
+    pyb_usb_init0();
+    MP_STATE_PORT(pyb_stdio_uart) = NULL;
+    // Activate USB_VCP(0) on dupterm slot 1 for the REPL
+    MP_STATE_VM(dupterm_objs[1]) = MP_OBJ_FROM_PTR(&pyb_usb_vcp_obj);
+    usb_vcp_attach_to_repl(&pyb_usb_vcp_obj, true);
 
     // Initialize the sensor and check the result after
     // mounting the file-system to log errors (if any).
@@ -662,7 +663,7 @@ soft_reset:
     // soft reset
     storage_flush();
     timer_deinit();
-    uart_deinit();
+    uart_deinit_all();
     #if MICROPY_HW_ENABLE_CAN
     can_deinit_all();
     #endif
