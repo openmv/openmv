@@ -1,7 +1,6 @@
 #include STM32_HAL_H
 #include "stdint.h"
 #include "stdbool.h"
-#include "systick.h"
 
 void systick_sleep(volatile uint32_t ms)
 {
