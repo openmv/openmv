@@ -130,11 +130,12 @@ void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData)
     } else if (jpeg_enc.y_offset == jpeg_enc.img_h) {
         // Compression is done.
         HAL_JPEG_ConfigInputBuffer(hjpeg, NULL, 0);
+        HAL_JPEG_Resume(hjpeg, JPEG_PAUSE_RESUME_INPUT);
     } else {
         // Set the next MCU.
         HAL_JPEG_ConfigInputBuffer(hjpeg, get_mcu(), jpeg_enc.mcu_size);
+        HAL_JPEG_Resume(hjpeg, JPEG_PAUSE_RESUME_INPUT);
     }
-    HAL_JPEG_Resume(hjpeg, JPEG_PAUSE_RESUME_INPUT);
 }
 
 void HAL_JPEG_DataReadyCallback (JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength)
@@ -201,7 +202,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     }
 
     // NOTE: output buffer size is stored in dst->bpp
-    if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 10000) != HAL_OK) {
+    if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 3000) != HAL_OK) {
         // Initialization error
         return true;
     }
