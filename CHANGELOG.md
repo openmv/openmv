@@ -1,5 +1,8 @@
 # Change Log
-## [3.5](https://github.com/openmv/openmv/releases/tag/v3.5) (2019-09-16)
+## [3.4.3](https://github.com/openmv/openmv/releases/tag/v3.4.3) (2019-09-27)
+* Fix delay when JPEG encoding overflows (affects H7).
+
+## [3.4.2](https://github.com/openmv/openmv/releases/tag/v3.4.2) (2019-09-16)
 * Fix H7 RTC bugs.
 * Fix binary ops bug.
 * Fix H7 deepsleep mode.
