@@ -286,7 +286,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pendsv.o                \
 	bufhelper.o             \
 	usb.o                   \
-	gchelper.o              \
 	gccollect.o             \
 	help.o                  \
 	flash.o                 \
@@ -299,9 +298,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	dma.o                   \
 	uart.o                  \
 	systick.o               \
+	powerctrl.o             \
 	i2c.o                   \
 	pyb_i2c.o               \
 	spi.o                   \
+	pyb_spi.o               \
 	can.o                   \
 	fdcan.o                 \
 	pyb_can.o               \
@@ -327,6 +328,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	modnetwork.o            \
 	modmachine.o            \
 	machine_i2c.o           \
+	machine_spi.o           \
+	machine_uart.o          \
 	pybthread.o             \
 	mpthreadport.o          \
 	posix_helpers.o         \
@@ -339,10 +342,12 @@ endif
 
 #------------- MicroPy Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
+	utils/mpirq.o           \
 	utils/pyexec.o          \
 	utils/printf.o          \
 	utils/interrupt_char.o  \
 	utils/sys_stdio_mphal.o \
+	utils/gchelper_m3.o     \
 	libc/string0.o          \
 	netutils/netutils.o     \
 	timeutils/timeutils.o   \
@@ -352,32 +357,33 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
-	math.o          \
-	roundf.o        \
-	asinfacosf.o    \
-	atanf.o         \
-	atan2f.o        \
-	fmodf.o         \
-	log1pf.o        \
-	acoshf.o        \
-	asinhf.o        \
-	atanhf.o        \
-	kf_rem_pio2.o   \
-	kf_sin.o        \
-	kf_cos.o        \
-	kf_tan.o        \
-	ef_rem_pio2.o   \
-	erf_lgamma.o    \
-	sf_sin.o        \
-	sf_cos.o        \
-	sf_tan.o        \
-	sf_frexp.o      \
-	sf_modf.o       \
-	sf_ldexp.o      \
-	sf_erf.o        \
-	wf_lgamma.o     \
-	wf_tgamma.o     \
-	nearbyintf.o    \
+	math.o              \
+	roundf.o            \
+	asinfacosf.o        \
+	atanf.o             \
+	atan2f.o            \
+	fmodf.o             \
+	log1pf.o            \
+	acoshf.o            \
+	asinhf.o            \
+	atanhf.o            \
+	kf_rem_pio2.o       \
+	kf_sin.o            \
+	kf_cos.o            \
+	kf_tan.o            \
+	ef_rem_pio2.o       \
+	erf_lgamma.o        \
+	sf_sin.o            \
+	sf_cos.o            \
+	sf_tan.o            \
+	sf_frexp.o          \
+	sf_modf.o           \
+	sf_ldexp.o          \
+	sf_erf.o            \
+	wf_lgamma.o         \
+	wf_tgamma.o         \
+	nearbyintf.o        \
+	thumb_vfp_sqrtf.o   \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
@@ -427,7 +433,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
 	ff.o                \
-	option/unicode.o    \
+	ffunicode.o         \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\

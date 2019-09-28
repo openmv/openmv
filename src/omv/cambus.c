@@ -9,8 +9,9 @@
  * SCCB (I2C like) driver.
  */
 #include <stdbool.h>
+#include <stddef.h>
 #include STM32_HAL_H
-#include <systick.h>
+#include "systick.h"
 #include "omv_boardconfig.h"
 #include "cambus.h"
 #define I2C_FREQUENCY   (100000)
