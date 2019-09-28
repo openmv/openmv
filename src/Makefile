@@ -34,6 +34,7 @@ MAKE    = $(Q)make
 CAT     = $(Q)cat
 
 # Targets
+TARGET ?= OPENMV3
 OPENMV = openmv
 BOOTLOADER = bootloader
 UVC = uvc
@@ -42,6 +43,7 @@ FIRMWARE = firmware
 # Directories
 TOP_DIR=$(shell pwd)
 BUILD=$(TOP_DIR)/build
+FW_DIR=$(BUILD)/bin
 CMSIS_DIR=cmsis
 STUSB_DIR=stusb
 MICROPY_DIR=micropython
@@ -51,15 +53,11 @@ MLX_DIR=mlx
 WINC1500_DIR=winc1500
 BOOTLDR_DIR=bootloader
 UVC_DIR=uvc
+OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
+MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/boards/$(TARGET)/
 
 # Additional qstr definitions for OpenMV
 OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/py/qstrdefsomv.h
-
-# Target
-TARGET ?= OPENMV3
-FW_DIR=$(TOP_DIR)/../firmware/$(TARGET)
-OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
-MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/boards/$(TARGET)/
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -514,6 +512,9 @@ all: $(OPENMV)
 $(BUILD):
 	$(MKDIR) -p $@
 
+$(FW_DIR):
+	$(MKDIR) -p $@
+
 BOOTLOADER_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(BOOTLDR_DIR)              BUILD=$(BUILD)/$(BOOTLDR_DIR)  CFLAGS="$(BOOTLDR_CFLAGS) -MMD"
 
@@ -554,7 +555,7 @@ $(UVC): FIRMWARE_OBJS UVC_OBJS
 	$(PYTHON) $(MKDFU) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
 
 # This target generates a combined bootloader+main firmware image.
-$(OPENMV): $(BOOTLOADER) $(UVC) $(FIRMWARE) | $(BUILD)
+$(OPENMV): $(BOOTLOADER) $(UVC) $(FIRMWARE) | $(BUILD) $(FW_DIR)
 	$(CAT) $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
 	$(PYTHON) $(MKDFU) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
