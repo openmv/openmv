@@ -85,12 +85,12 @@ jobs:
           - OPENMV4R_WORKSPACE
           - WINC1500_WORKSPACE
       script:
-        - zip -r firmware.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4R WINC1500   
+        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4R WINC1500   
       deploy:
         provider: releases
         api_key:
           secure: "$GH_TOKEN"
-        file: firmware.zip
+        file: firmware_${TRAVIS_TAG}.zip
         skip_cleanup: true
         on:
           tags: true
