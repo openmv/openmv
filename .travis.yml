@@ -12,10 +12,6 @@ stages:
   - build
   - deploy
 
-branches:
-  only:
-    - master
-
 cache:
   directories:
     - "${HOME}/persist"
