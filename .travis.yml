@@ -76,7 +76,7 @@ jobs:
           name: WINC1500_WORKSPACE # workspace names are escaped.
           paths: ~/build/$TARGET
       script:
-        - cp -rf firmware/WINC1500 ~/build/$TARGET
+        - cp -rf src/winc1500/firmware ~/build/$TARGET
 
     - stage: deploy
       git:
