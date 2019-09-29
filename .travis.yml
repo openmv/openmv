@@ -1,10 +1,16 @@
+os: linux
 dist: trusty
 sudo: required
 language: c
+stage: build
 
 notifications:
   email:
     on_success: never
+
+stages:
+  - build
+  - deploy
 
 branches:
   only:
@@ -14,30 +20,82 @@ cache:
   directories:
     - "${HOME}/persist"
 
-matrix:
-  include:
-    - env: TARGET=OPENMV2
-    - env: TARGET=OPENMV3
-    - env: TARGET=OPENMV4
-    - env: TARGET=OPENMV4R
-
-before_install:
+script:
   # update submodules 
   - git submodule update --init --recursive
   # install ARM GCC
   - pushd .
   - cd ~ && mkdir gcc && cd gcc
-  - GCC_URL="https://developer.arm.com/-/media/Files/downloads/gnu-rm/7-2017q4/gcc-arm-none-eabi-7-2017-q4-major-linux.tar.bz2"
+  - GCC_URL="https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/7-2018q2/gcc-arm-none-eabi-7-2018-q2-update-linux.tar.bz2"
   - wget -O gcc.tar.bz2 ${GCC_URL}
   - tar -jxf gcc.tar.bz2 --strip 1
   - exportline="export PATH=\$HOME/gcc/bin:\$PATH"
   - if grep -Fxq "$exportline" ~/.profile; then echo nothing to do ; else echo $exportline >> ~/.profile; fi
   - . ~/.profile
   - popd
-  
-
-before_script:
   - arm-none-eabi-gcc --version
-
-script:
+  # build firmware
   - make -j5 TARGET=$TARGET -C src
+  - mkdir ~/build/$TARGET
+  - cp -r src/build/bin/* ~/build/$TARGET
+
+jobs:
+  include:
+    - stage: build
+      env: TARGET=OPENMV2
+      workspaces:
+        create:
+          name: OPENMV2_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+
+    - stage: build
+      env: TARGET=OPENMV3
+      workspaces:
+        create:
+          name: OPENMV3_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+
+    - stage: build
+      env: TARGET=OPENMV4
+      workspaces:
+        create:
+          name: OPENMV4_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+
+    - stage: build
+      env: TARGET=OPENMV4R
+      workspaces:
+        create:
+          name: OPENMV4R_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+
+    - stage: build
+      env: TARGET=WINC1500
+      workspaces:
+        create:
+          name: WINC1500_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+      script:
+        - cp -rf firmware/WINC1500 ~/build/$TARGET
+
+    - stage: deploy
+      git:
+        clone: false
+      workspaces:
+        use:
+          - OPENMV2_WORKSPACE
+          - OPENMV3_WORKSPACE
+          - OPENMV4_WORKSPACE
+          - OPENMV4R_WORKSPACE
+          - WINC1500_WORKSPACE
+      script:
+        - zip -r firmware.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4R WINC1500   
+      deploy:
+        provider: releases
+        api_key:
+          secure: "$GH_TOKEN"
+        file: firmware.zip
+        skip_cleanup: true
+        on:
+          tags: true
+        draft: true
