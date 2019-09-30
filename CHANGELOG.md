@@ -1,4 +1,9 @@
 # Change Log
+## [3.5.0-beta.1](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.1) (2019-09-30)
+* Update to MicroPython 1.11.
+* Update examples.
+* Fix SPI WFI bug on F7.
+
 ## [3.4.3](https://github.com/openmv/openmv/releases/tag/v3.4.3) (2019-09-27)
 * Fix delay when JPEG encoding overflows (affects H7).
 
