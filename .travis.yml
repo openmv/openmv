@@ -90,6 +90,7 @@ jobs:
         provider: releases
         api_key:
           secure: "$GH_TOKEN"
+        name: ${TRAVIS_TAG}
         file: firmware_${TRAVIS_TAG}.zip
         skip_cleanup: true
         on:
