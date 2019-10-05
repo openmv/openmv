@@ -154,7 +154,7 @@ static float calculate_Ta() // ambient temp
 static void calculate_To(float Ta, float *To)
 {
     fb_alloc_mark();
-    int16_t *v_ir = fb_alloc(64 * sizeof(int16_t));
+    int16_t *v_ir = fb_alloc(64 * sizeof(int16_t), FB_ALLOC_NO_HINT);
     // Read IR sensor result
     test_ack(soft_i2c_write_bytes(FIR_MODULE_ADDR,
         (uint8_t [4]){FIR_READ_CMD, 0x00, 0x01, 0x40}, 4, false));
@@ -264,7 +264,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             alpha_ij = xalloc(64 * sizeof(*alpha_ij));
 
             fb_alloc_mark();
-            uint8_t *eeprom = fb_alloc(256 * sizeof(uint8_t));
+            uint8_t *eeprom = fb_alloc(256 * sizeof(uint8_t), FB_ALLOC_NO_HINT);
             // Read the whole eeprom.
             test_ack(soft_i2c_write_bytes(FIR_EEPROM_ADDR,
                 (uint8_t [1]){0x00}, 1, false));
@@ -368,7 +368,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             error |= MLX90640_SetRefreshRate(MLX90640_ADDR, IR_refresh_rate);
 
             fb_alloc_mark();
-            uint16_t *eeprom = fb_alloc(832 * sizeof(uint16_t));
+            uint16_t *eeprom = fb_alloc(832 * sizeof(uint16_t), FB_ALLOC_NO_HINT);
             error |= MLX90640_DumpEE(MLX90640_ADDR, eeprom);
             error |= MLX90640_ExtractParameters(eeprom, (paramsMLX90640 *) alpha_ij);
 
@@ -447,7 +447,7 @@ mp_obj_t py_fir_read_ta()
         case FIR_MLX90640:
         {
             fb_alloc_mark();
-            uint16_t *data = fb_alloc(834 * sizeof(uint16_t));
+            uint16_t *data = fb_alloc(834 * sizeof(uint16_t), FB_ALLOC_NO_HINT);
             PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                                "Failed to read the MLX90640 sensor data!");
             mp_obj_t result = mp_obj_new_float(MLX90640_GetTa(data, (paramsMLX90640 *) alpha_ij));
@@ -475,7 +475,7 @@ mp_obj_t py_fir_read_ir()
         case FIR_SHIELD:
         {
             fb_alloc_mark();
-            float *To = fb_alloc(64 * sizeof(float)), *To_rot = fb_alloc(64 * sizeof(float));
+            float *To = fb_alloc(64 * sizeof(float), FB_ALLOC_NO_HINT), *To_rot = fb_alloc(64 * sizeof(float), FB_ALLOC_NO_HINT);
             float Ta = calculate_Ta();
             float min = FLT_MAX, max = FLT_MIN;
 
@@ -507,12 +507,12 @@ mp_obj_t py_fir_read_ir()
         case FIR_MLX90640:
         {
             fb_alloc_mark();
-            uint16_t *data = fb_alloc(834 * sizeof(uint16_t));
+            uint16_t *data = fb_alloc(834 * sizeof(uint16_t), FB_ALLOC_NO_HINT);
             // Calculate 1st sub-frame...
             PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
                                "Failed to read the MLX90640 sensor data!");
             float Ta = MLX90640_GetTa(data, (paramsMLX90640 *) alpha_ij);
-            float *To = fb_alloc0(768 * sizeof(float));
+            float *To = fb_alloc0(768 * sizeof(float), FB_ALLOC_NO_HINT);
             MLX90640_CalculateTo(data, (paramsMLX90640 *) alpha_ij, 0.95, Ta - 8, To);
             // Calculate 2nd sub-frame...
             PY_ASSERT_TRUE_MSG(MLX90640_GetFrameData(MLX90640_ADDR, data) >= 0,
@@ -552,7 +552,7 @@ mp_obj_t py_fir_read_ir()
 
             test_ack(soft_i2c_write_bytes(AMG8833_ADDR, (uint8_t [1]){0x80}, 1, true));
             fb_alloc_mark();
-            int16_t *data = fb_alloc(64 * sizeof(int16_t));
+            int16_t *data = fb_alloc(64 * sizeof(int16_t), FB_ALLOC_NO_HINT);
             test_ack(soft_i2c_read_bytes(AMG8833_ADDR, (uint8_t *) data, 128, true));
             float To[64], min = FLT_MAX, max = FLT_MIN;
             for (int i = 0; i < 64; i++) {
@@ -655,7 +655,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     mp_obj_get_array_fixed_n(args[1], width*height, &arg_To);
 
     fb_alloc_mark();
-    float *To = fb_alloc(width*height * sizeof(float)), min = FLT_MAX, max = FLT_MIN;
+    float *To = fb_alloc(width*height * sizeof(float), FB_ALLOC_NO_HINT), min = FLT_MAX, max = FLT_MIN;
     for (int i=0; i<width*height; i++) {
         float temp = To[i] = mp_obj_get_float(arg_To[i]);
         min = IM_MIN(min, temp);

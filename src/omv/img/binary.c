@@ -17,7 +17,7 @@ void imlib_binary(image_t *out, image_t *img, list_t *thresholds, bool invert, b
     bmp.w = img->w;
     bmp.h = img->h;
     bmp.bpp = IMAGE_BPP_BINARY;
-    bmp.data = fb_alloc0(image_size(&bmp));
+    bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
 
     for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
         color_thresholds_list_lnk_data_t lnk_data;
@@ -677,7 +677,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows);
+            buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
@@ -731,7 +731,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows);
+            buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
@@ -787,7 +787,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             break;
         }
         case IMAGE_BPP_RGB565: {
-            buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows);
+            buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
@@ -886,7 +886,7 @@ void imlib_top_hat(image_t *img, int ksize, int threshold, image_t *mask)
     temp.w = img->w;
     temp.h = img->h;
     temp.bpp = img->bpp;
-    temp.data = fb_alloc(image_size(img));
+    temp.data = fb_alloc(image_size(img), FB_ALLOC_NO_HINT);
     memcpy(temp.data, img->data, image_size(img));
     imlib_open(&temp, ksize, threshold, mask);
     imlib_difference(img, NULL, &temp, 0, mask);
@@ -899,7 +899,7 @@ void imlib_black_hat(image_t *img, int ksize, int threshold, image_t *mask)
     temp.w = img->w;
     temp.h = img->h;
     temp.bpp = img->bpp;
-    temp.data = fb_alloc(image_size(img));
+    temp.data = fb_alloc(image_size(img), FB_ALLOC_NO_HINT);
     memcpy(temp.data, img->data, image_size(img));
     imlib_close(&temp, ksize, threshold, mask);
     imlib_difference(img, NULL, &temp, 0, mask);

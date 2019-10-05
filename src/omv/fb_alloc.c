@@ -91,7 +91,7 @@ void fb_alloc_free_till_mark()
 }
 
 // returns null pointer without error if size==0
-void *fb_alloc(uint32_t size)
+void *fb_alloc(uint32_t size, int hints)
 {
     if (!size) {
         return NULL;
@@ -117,7 +117,8 @@ void *fb_alloc(uint32_t size)
     printf("fb_alloc %lu bytes\n", size);
     #endif
     #if defined(OMV_FB_OVERLAY_MEMORY)
-    if (((uint32_t) (pointer_overlay - OMV_FB_OVERLAY_MEMORY_ORIGIN)) >= size) {
+    if ((!(hints & FB_ALLOC_PREFER_SIZE))
+    && (((uint32_t) (pointer_overlay - OMV_FB_OVERLAY_MEMORY_ORIGIN)) >= size)) {
         // Return overlay memory instead.
         pointer_overlay -= size;
         result = pointer_overlay;
@@ -128,14 +129,14 @@ void *fb_alloc(uint32_t size)
 }
 
 // returns null pointer without error if passed size==0
-void *fb_alloc0(uint32_t size)
+void *fb_alloc0(uint32_t size, int hints)
 {
-    void *mem = fb_alloc(size);
+    void *mem = fb_alloc(size, hints);
     memset(mem, 0, size); // does nothing if size is zero.
     return mem;
 }
 
-void *fb_alloc_all(uint32_t *size)
+void *fb_alloc_all(uint32_t *size, int hints)
 {
     uint32_t temp = pointer - ((char *) MAIN_FB_PIXELS()) - sizeof(uint32_t);
 
@@ -145,8 +146,10 @@ void *fb_alloc_all(uint32_t *size)
     }
 
     #if defined(OMV_FB_OVERLAY_MEMORY)
-    *size = (uint32_t) (pointer_overlay - OMV_FB_OVERLAY_MEMORY_ORIGIN);
-    temp = IM_MIN(temp, *size);
+    if (!(hints & FB_ALLOC_PREFER_SIZE)) {
+        *size = (uint32_t) (pointer_overlay - OMV_FB_OVERLAY_MEMORY_ORIGIN);
+        temp = IM_MIN(temp, *size);
+    }
     #endif
     *size = (temp / sizeof(uint32_t)) * sizeof(uint32_t); // Round Down
     char *result = pointer - *size;
@@ -163,18 +166,20 @@ void *fb_alloc_all(uint32_t *size)
     printf("fb_alloc_all %lu bytes\n", *size);
     #endif
     #if defined(OMV_FB_OVERLAY_MEMORY)
-    // Return overlay memory instead.
-    pointer_overlay -= *size;
-    result = pointer_overlay;
+    if (!(hints & FB_ALLOC_PREFER_SIZE)) {
+        // Return overlay memory instead.
+        pointer_overlay -= *size;
+        result = pointer_overlay;
+    }
     *new_pointer |= FB_OVERLAY_MEMORY_FLAG; // Add flag.
     #endif
     return result;
 }
 
 // returns null pointer without error if returned size==0
-void *fb_alloc0_all(uint32_t *size)
+void *fb_alloc0_all(uint32_t *size, int hints)
 {
-    void *mem = fb_alloc_all(size);
+    void *mem = fb_alloc_all(size, hints);
     memset(mem, 0, *size); // does nothing if size is zero.
     return mem;
 }

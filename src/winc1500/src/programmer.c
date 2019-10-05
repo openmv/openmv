@@ -22,7 +22,7 @@ int burn_firmware(const char *path)
     UINT bytes = 0, bytes_out=0;
 
     int ret = M2M_ERR_FAIL;
-    uint8_t	*buf = fb_alloc(FLASH_SECTOR_SZ);
+    uint8_t	*buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
     if (f_open_helper(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
@@ -68,8 +68,8 @@ int verify_firmware(const char *path)
     UINT bytes = 0, bytes_out=0;
 
     int ret = M2M_ERR_FAIL;
-    uint8_t	*file_buf = fb_alloc(FLASH_SECTOR_SZ);
-    uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ);
+    uint8_t	*file_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
+    uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
     if (f_open_helper(&fp, path, FA_READ|FA_OPEN_EXISTING) != FR_OK) {
         goto error;
@@ -123,7 +123,7 @@ int dump_firmware(const char *path)
     UINT bytes = 0, bytes_out=0;
 
     int ret = M2M_ERR_FAIL;
-    uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ);
+    uint8_t	*flash_buf = fb_alloc(FLASH_SECTOR_SZ, FB_ALLOC_NO_HINT);
 
     if (f_open_helper(&fp, path, FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
         goto error;

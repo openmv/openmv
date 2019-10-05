@@ -503,7 +503,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
         out.w = img->w;
         out.h = img->h;
         out.bpp = IMAGE_BPP_BINARY;
-        out.data = fb_alloc0(image_size(&out));
+        out.data = fb_alloc0(image_size(&out), FB_ALLOC_NO_HINT);
 
         if (mask) {
             for (int y = 0, yy = out.h; y < yy; y++) {

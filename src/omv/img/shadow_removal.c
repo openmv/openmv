@@ -163,9 +163,9 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int sc
         imlib_remove_shadows_line_op_state_t state;
 
         for (int i = 0; i < imlib_remove_shadows_kernel_size; i++) {
-            state.img_lines[i] = fb_alloc(img->w * sizeof(uint16_t));
-            state.other_lines[i] = fb_alloc(img->w * sizeof(uint16_t));
-            state.out_lines[i] = fb_alloc(img->w * sizeof(uint16_t));
+            state.img_lines[i] = fb_alloc(img->w * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            state.other_lines[i] = fb_alloc(img->w * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            state.out_lines[i] = fb_alloc(img->w * sizeof(uint16_t), FB_ALLOC_NO_HINT);
         }
 
         state.lines_processed = 0;
@@ -185,7 +185,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int sc
         temp_image.w = img->w;
         temp_image.h = img->h;
         temp_image.bpp = img->bpp;
-        temp_image.data = fb_alloc(image_size(img));
+        temp_image.data = fb_alloc(image_size(img), FB_ALLOC_NO_HINT);
 
         memcpy(temp_image.data, img->data, image_size(img));
 
@@ -199,9 +199,9 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int sc
         h.LBinCount = COLOR_L_MAX - COLOR_L_MIN + 1;
         h.ABinCount = COLOR_A_MAX - COLOR_A_MIN + 1;
         h.BBinCount = COLOR_B_MAX - COLOR_B_MIN + 1;
-        h.LBins = fb_alloc(h.LBinCount * sizeof(float));
-        h.ABins = fb_alloc(h.ABinCount * sizeof(float));
-        h.BBins = fb_alloc(h.BBinCount * sizeof(float));
+        h.LBins = fb_alloc(h.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+        h.ABins = fb_alloc(h.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+        h.BBins = fb_alloc(h.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
         imlib_get_histogram(&h, &temp_image, &r, NULL, false);
 
         statistics_t s;
@@ -245,7 +245,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int sc
             temp_image_2.w = temp_image.w;
             temp_image_2.h = temp_image.h;
             temp_image_2.bpp = temp_image.bpp;
-            temp_image_2.data = fb_alloc(image_size(&temp_image));
+            temp_image_2.data = fb_alloc(image_size(&temp_image), FB_ALLOC_NO_HINT);
 
             memcpy(temp_image_2.data, temp_image.data, image_size(&temp_image));
             imlib_erode(&temp_image_2, 3, 48, NULL);

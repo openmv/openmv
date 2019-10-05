@@ -6266,7 +6266,7 @@ dmtxMatrix3Print(DmtxMatrix3 m)
 
 void imlib_find_datamatrices(list_t *out, image_t *ptr, rectangle_t *roi, int effort)
 {
-    uint8_t *grayscale_image = (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->data : fb_alloc(roi->w * roi->h);
+    uint8_t *grayscale_image = (ptr->bpp == IMAGE_BPP_GRAYSCALE) ? ptr->data : fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
     umm_init_x(fb_avail());
 
     DmtxImage *image = dmtxImageCreate(grayscale_image,

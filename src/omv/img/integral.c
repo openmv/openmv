@@ -18,7 +18,7 @@ void imlib_integral_image_alloc(i_image_t *sum, int w, int h)
 {
     sum->w = w;
     sum->h = h;
-    sum->data = fb_alloc(w * h * sizeof(*sum->data));
+    sum->data = fb_alloc(w * h * sizeof(*sum->data), FB_ALLOC_NO_HINT);
 }
 
 void imlib_integral_image_free(i_image_t *sum)
