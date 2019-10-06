@@ -102,7 +102,7 @@ int CLAHE (kz_pixel_t* pImage, unsigned int uiXRes, unsigned int uiYRes,
     if (fCliplimit == 1.0) return 0;      /* is OK, immediately returns original image. */
     if (uiNrBins == 0) uiNrBins = 128;    /* default value when not specified */
 
-    pulMapArray=(unsigned long *)fb_alloc(sizeof(unsigned long)*uiNrX*uiNrY*uiNrBins);
+    pulMapArray=(unsigned long *)fb_alloc(sizeof(unsigned long)*uiNrX*uiNrY*uiNrBins, FB_ALLOC_NO_HINT);
     if (pulMapArray == 0) return -8;      /* Not enough memory! (try reducing uiNrBins) */
 
     uiXSize = uiXRes/uiNrX; uiYSize = uiYRes/uiNrY;  /* Actual size of contextual regions */
@@ -327,7 +327,7 @@ void imlib_clahe_histeq(image_t *img, float clip_limit, image_t *mask)
     temp.w = img->w;
     temp.h = img->h;
     temp.bpp = img->bpp;
-    temp.data = fb_alloc0(pImageW * pImageH * sizeof(kz_pixel_t));
+    temp.data = fb_alloc0(pImageW * pImageH * sizeof(kz_pixel_t), FB_ALLOC_NO_HINT);
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {

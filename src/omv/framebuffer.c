@@ -102,7 +102,7 @@ void fb_update_jpeg_buffer()
             image_t out = { .w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp, .data=MAIN_FB()->pixels };
             int new_size = encode_for_ide_new_size(&out);
             fb_alloc_mark();
-            uint8_t *temp = fb_alloc(new_size);
+            uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
             encode_for_ide(temp, &out);
             (MP_PYTHON_PRINTER)->print_strn((MP_PYTHON_PRINTER)->data, (const char *) temp, new_size);
             fb_alloc_free_till_mark();

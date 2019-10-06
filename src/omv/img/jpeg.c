@@ -1268,7 +1268,7 @@ void jpeg_write(image_t *img, const char *path, int quality)
         write_data(&fp, img->pixels, img->bpp);
     } else {
         uint32_t size;
-        uint8_t *buffer = fb_alloc_all(&size);
+        uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
         image_t out = { .w=img->w, .h=img->h, .bpp=size, .pixels=buffer };
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of

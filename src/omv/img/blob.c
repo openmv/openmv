@@ -141,13 +141,13 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
     bmp.w = ptr->w;
     bmp.h = ptr->h;
     bmp.bpp = IMAGE_BPP_BINARY;
-    bmp.data = fb_alloc0(image_size(&bmp));
+    bmp.data = fb_alloc0(image_size(&bmp), FB_ALLOC_NO_HINT);
 
     uint16_t *x_hist_bins = NULL;
-    if (x_hist_bins_max) x_hist_bins = fb_alloc(ptr->w * sizeof(uint16_t));
+    if (x_hist_bins_max) x_hist_bins = fb_alloc(ptr->w * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
     uint16_t *y_hist_bins = NULL;
-    if (y_hist_bins_max) y_hist_bins = fb_alloc(ptr->h * sizeof(uint16_t));
+    if (y_hist_bins_max) y_hist_bins = fb_alloc(ptr->h * sizeof(uint16_t), FB_ALLOC_NO_HINT);
 
     lifo_t lifo;
     size_t lifo_len;

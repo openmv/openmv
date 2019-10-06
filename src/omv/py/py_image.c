@@ -787,7 +787,7 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
             PY_ASSERT_TRUE_MSG((out.w >= (sizeof(uint32_t)/sizeof(uint8_t))) || copy,
                                "Can't convert to bitmap in place!");
             fb_alloc_mark();
-            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out), FB_ALLOC_NO_HINT);
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
@@ -804,7 +804,7 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
             PY_ASSERT_TRUE_MSG((out.w >= (sizeof(uint32_t)/sizeof(uint16_t))) || copy,
                                "Can't convert to bitmap in place!");
             fb_alloc_mark();
-            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out), FB_ALLOC_NO_HINT);
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
@@ -881,7 +881,7 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
 
                 MAIN_FB()->w = 0;
@@ -984,7 +984,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
 
                 MAIN_FB()->w = 0;
@@ -1024,7 +1024,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
 
                 MAIN_FB()->w = 0;
@@ -1132,7 +1132,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
 
                 MAIN_FB()->w = 0;
@@ -1172,7 +1172,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
 
                 MAIN_FB()->w = 0;
@@ -1250,7 +1250,7 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
 
     uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size);
+    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     PY_ASSERT_TRUE_MSG(out.bpp <= image_size(arg_img), "Can't compress in place!");
@@ -1274,7 +1274,7 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
 
     uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size);
+    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     int new_size = encode_for_ide_new_size(&out);
@@ -1301,7 +1301,7 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
 
     uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size);
+    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     uint8_t *temp = xalloc(out.bpp);
@@ -1321,7 +1321,7 @@ static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, m
 
     uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size);
+    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     int new_size = encode_for_ide_new_size(&out);
@@ -1344,7 +1344,7 @@ static mp_obj_t py_image_jpeg_encode_for_ide(mp_obj_t img_obj)
 
     int new_size = encode_for_ide_new_size(arg_img);
     fb_alloc_mark();
-    uint8_t *temp = fb_alloc(new_size);
+    uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
     encode_for_ide(temp, arg_img);
 
     MAIN_FB()->bpp = 0;
@@ -1439,7 +1439,7 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     if (in_place) {
         memcpy(&temp, arg_img, sizeof(image_t));
         fb_alloc_mark();
-        temp.data = fb_alloc(image_size(&temp));
+        temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
         memcpy(temp.data, arg_img->data, image_size(&temp));
         arg_img = &temp;
         if (copy_to_fb) {
@@ -1919,7 +1919,7 @@ STATIC mp_obj_t py_image_mask_rectangle(uint n_args, const mp_obj_t *args, mp_ma
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.bpp = IMAGE_BPP_BINARY;
-    temp.data = fb_alloc0(image_size(&temp));
+    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
 
     imlib_draw_rectangle(&temp, arg_rx, arg_ry, arg_rw, arg_rh, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
@@ -1953,7 +1953,7 @@ STATIC mp_obj_t py_image_mask_circle(uint n_args, const mp_obj_t *args, mp_map_t
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.bpp = IMAGE_BPP_BINARY;
-    temp.data = fb_alloc0(image_size(&temp));
+    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
 
     imlib_draw_circle(&temp, arg_cx, arg_cy, arg_cr, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
@@ -1993,7 +1993,7 @@ STATIC mp_obj_t py_image_mask_ellipse(uint n_args, const mp_obj_t *args, mp_map_
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.bpp = IMAGE_BPP_BINARY;
-    temp.data = fb_alloc0(image_size(&temp));
+    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
 
     imlib_draw_ellipse(&temp, arg_cx, arg_cy, arg_rx, arg_ry, arg_r, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
@@ -2798,7 +2798,7 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
     fb_alloc_mark();
 
-    int *arg_krn = fb_alloc(n * sizeof(int));
+    int *arg_krn = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -2843,14 +2843,14 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
 
     fb_alloc_mark();
 
-    int *pascal = fb_alloc(n * sizeof(int));
+    int *pascal = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
     pascal[0] = 1;
 
     for (int i = 0; i < k_2; i++) { // Compute a row of pascal's triangle.
         pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
     }
 
-    int *arg_krn = fb_alloc(n * n * sizeof(int));
+    int *arg_krn = fb_alloc(n * n * sizeof(int), FB_ALLOC_NO_HINT);
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -2899,14 +2899,14 @@ STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *
 
     fb_alloc_mark();
 
-    int *pascal = fb_alloc(n * sizeof(int));
+    int *pascal = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
     pascal[0] = 1;
 
     for (int i = 0; i < k_2; i++) { // Compute a row of pascal's triangle.
         pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
     }
 
-    int *arg_krn = fb_alloc(n * n * sizeof(int));
+    int *arg_krn = fb_alloc(n * n * sizeof(int), FB_ALLOC_NO_HINT);
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -3710,9 +3710,9 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile)
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
     fb_alloc_mark();
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3748,9 +3748,9 @@ mp_obj_t py_histogram_get_threshold(mp_obj_t self_in)
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
     fb_alloc_mark();
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3786,9 +3786,9 @@ mp_obj_t py_histogram_get_statistics(mp_obj_t self_in)
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
     fb_alloc_mark();
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3891,7 +3891,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
@@ -3907,7 +3907,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
@@ -3931,9 +3931,9 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.BBinCount = py_helper_keyword_int(n_args, args, n_args, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
             PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
             list_free(&thresholds);
             break;
@@ -3992,7 +3992,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
@@ -4008,7 +4008,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
@@ -4032,9 +4032,9 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.BBinCount = py_helper_keyword_int(n_args, args, n_args, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
             PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
             list_free(&thresholds);
             break;
@@ -7354,7 +7354,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
 
         if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
             fb_alloc_mark();
-            int *match = fb_alloc(array_length(kpts1->kpts) * sizeof(int) * 2);
+            int *match = fb_alloc(array_length(kpts1->kpts) * sizeof(int) * 2, FB_ALLOC_NO_HINT);
 
             // Match the two keypoint sets
             count = orb_match_keypoints(kpts1->kpts, kpts2->kpts, match, threshold, &r, &c, &theta);

@@ -9,6 +9,7 @@
 #include <mp.h>
 #include "fb_alloc.h"
 #include "framebuffer.h"
+#include "omv_boardconfig.h"
 
 extern char _fballoc;
 static char *pointer = &_fballoc;
@@ -16,6 +17,11 @@ static int marks = 0;
 #if defined(FB_ALLOC_STATS)
 static uint32_t alloc_bytes;
 static uint32_t alloc_bytes_peak;
+#endif
+#if defined(OMV_FB_OVERLAY_MEMORY)
+#define FB_OVERLAY_MEMORY_FLAG 0x1
+extern char _fballoc_overlay;
+static char *pointer_overlay = &_fballoc_overlay;
 #endif
 
 __weak NORETURN void fb_alloc_fail()
@@ -29,11 +35,14 @@ void fb_alloc_init0()
 {
     pointer = &_fballoc;
     marks = 0;
+    #if defined(OMV_FB_OVERLAY_MEMORY)
+    pointer_overlay = &_fballoc_overlay;
+    #endif
 }
 
 uint32_t fb_avail()
 {
-    int32_t temp = pointer - ((char *) MAIN_FB_PIXELS()) - sizeof(uint32_t);
+    uint32_t temp = pointer - ((char *) MAIN_FB_PIXELS()) - sizeof(uint32_t);
 
     return (temp < sizeof(uint32_t)) ? 0 : temp;
 }
@@ -65,7 +74,13 @@ void fb_alloc_free_till_mark()
 {
     if (!marks) return;
     while (pointer < &_fballoc) {
-        int size = *((uint32_t *) pointer);
+        uint32_t size = *((uint32_t *) pointer);
+        #if defined(OMV_FB_OVERLAY_MEMORY)
+        if (size & FB_OVERLAY_MEMORY_FLAG) { // Check for fast flag.
+            size &= ~FB_OVERLAY_MEMORY_FLAG; // Remove it.
+            pointer_overlay += size - sizeof(uint32_t);
+        }
+        #endif
         pointer += size; // Get size and pop.
         if (size == sizeof(uint32_t)) break; // Break on first marker.
     }
@@ -76,7 +91,7 @@ void fb_alloc_free_till_mark()
 }
 
 // returns null pointer without error if size==0
-void *fb_alloc(uint32_t size)
+void *fb_alloc(uint32_t size, int hints)
 {
     if (!size) {
         return NULL;
@@ -101,26 +116,41 @@ void *fb_alloc(uint32_t size)
     }
     printf("fb_alloc %lu bytes\n", size);
     #endif
+    #if defined(OMV_FB_OVERLAY_MEMORY)
+    if ((!(hints & FB_ALLOC_PREFER_SIZE))
+    && (((uint32_t) (pointer_overlay - OMV_FB_OVERLAY_MEMORY_ORIGIN)) >= size)) {
+        // Return overlay memory instead.
+        pointer_overlay -= size;
+        result = pointer_overlay;
+        *new_pointer |= FB_OVERLAY_MEMORY_FLAG; // Add flag.
+    }
+    #endif
     return result;
 }
 
 // returns null pointer without error if passed size==0
-void *fb_alloc0(uint32_t size)
+void *fb_alloc0(uint32_t size, int hints)
 {
-    void *mem = fb_alloc(size);
+    void *mem = fb_alloc(size, hints);
     memset(mem, 0, size); // does nothing if size is zero.
     return mem;
 }
 
-void *fb_alloc_all(uint32_t *size)
+void *fb_alloc_all(uint32_t *size, int hints)
 {
-    int32_t temp = pointer - ((char *) MAIN_FB_PIXELS()) - sizeof(uint32_t);
+    uint32_t temp = pointer - ((char *) MAIN_FB_PIXELS()) - sizeof(uint32_t);
 
     if (temp < sizeof(uint32_t)) {
         *size = 0;
         return NULL;
     }
 
+    #if defined(OMV_FB_OVERLAY_MEMORY)
+    if (!(hints & FB_ALLOC_PREFER_SIZE)) {
+        *size = (uint32_t) (pointer_overlay - OMV_FB_OVERLAY_MEMORY_ORIGIN);
+        temp = IM_MIN(temp, *size);
+    }
+    #endif
     *size = (temp / sizeof(uint32_t)) * sizeof(uint32_t); // Round Down
     char *result = pointer - *size;
     char *new_pointer = result - sizeof(uint32_t);
@@ -135,13 +165,21 @@ void *fb_alloc_all(uint32_t *size)
     }
     printf("fb_alloc_all %lu bytes\n", *size);
     #endif
+    #if defined(OMV_FB_OVERLAY_MEMORY)
+    if (!(hints & FB_ALLOC_PREFER_SIZE)) {
+        // Return overlay memory instead.
+        pointer_overlay -= *size;
+        result = pointer_overlay;
+    }
+    *new_pointer |= FB_OVERLAY_MEMORY_FLAG; // Add flag.
+    #endif
     return result;
 }
 
 // returns null pointer without error if returned size==0
-void *fb_alloc0_all(uint32_t *size)
+void *fb_alloc0_all(uint32_t *size, int hints)
 {
-    void *mem = fb_alloc_all(size);
+    void *mem = fb_alloc_all(size, hints);
     memset(mem, 0, *size); // does nothing if size is zero.
     return mem;
 }
@@ -149,20 +187,34 @@ void *fb_alloc0_all(uint32_t *size)
 void fb_free()
 {
     if (pointer < &_fballoc) {
-        #if defined(FB_ALLOC_STATS)
-        alloc_bytes -= *((uint32_t *) pointer);
+        uint32_t size = *((uint32_t *) pointer);
+        #if defined(OMV_FB_OVERLAY_MEMORY)
+        if (size & FB_OVERLAY_MEMORY_FLAG) { // Check for fast flag.
+            size &= ~FB_OVERLAY_MEMORY_FLAG; // Remove it.
+            pointer_overlay += size - sizeof(uint32_t);
+        }
         #endif
-        pointer += *((uint32_t *) pointer); // Get size and pop.
+        #if defined(FB_ALLOC_STATS)
+        alloc_bytes -= size;
+        #endif
+        pointer += size; // Get size and pop.
     }
 }
 
 void fb_free_all()
 {
     while (pointer < &_fballoc) {
-        #if defined(FB_ALLOC_STATS)
-        alloc_bytes -= *((uint32_t *) pointer);
+        uint32_t size = *((uint32_t *) pointer);
+        #if defined(OMV_FB_OVERLAY_MEMORY)
+        if (size & FB_OVERLAY_MEMORY_FLAG) { // Check for fast flag.
+            size &= ~FB_OVERLAY_MEMORY_FLAG; // Remove it.
+            pointer_overlay += size - sizeof(uint32_t);
+        }
         #endif
-        pointer += *((uint32_t *) pointer); // Get size and pop.
+        #if defined(FB_ALLOC_STATS)
+        alloc_bytes -= size;
+        #endif
+        pointer += size; // Get size and pop.
     }
     marks = 0;
 }

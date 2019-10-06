@@ -364,9 +364,9 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
 
     fb_alloc_mark();
 
-    q7_t *buffer1     = fb_alloc(net->max_scrbuf_size);
+    q7_t *buffer1     = fb_alloc(net->max_scrbuf_size, FB_ALLOC_NO_HINT);
     q7_t *buffer2     = buffer1 + net->max_layer_size;
-    q7_t *col_buffer  = fb_alloc(net->max_colbuf_size);
+    q7_t *col_buffer  = fb_alloc(net->max_colbuf_size, FB_ALLOC_NO_HINT);
 
     while (layer != NULL) {
         layer_t *prev_layer = layer->prev;
@@ -374,7 +374,7 @@ int nn_run_network(nn_t *net, image_t *img, rectangle_t *roi, bool softmax)
         switch (layer->type) {
             case LAYER_TYPE_DATA: {
                 data_layer_t *data_layer = (data_layer_t *) layer;
-                input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w);
+                input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w, FB_ALLOC_NO_HINT);
                 nn_transform_input(data_layer, img, input_data, roi);
                 // Set image data as input buffer for the next layer.
                 input_buffer = input_data;
@@ -528,7 +528,7 @@ int nn_dry_run_network(nn_t *net, image_t *img, bool softmax)
 
     fb_alloc_mark();
 
-    q7_t *buffer1     = fb_alloc(net->max_scrbuf_size);
+    q7_t *buffer1     = fb_alloc(net->max_scrbuf_size, FB_ALLOC_NO_HINT);
     q7_t *buffer2     = buffer1 + net->max_layer_size;
 
     while (layer != NULL) {
@@ -537,7 +537,7 @@ int nn_dry_run_network(nn_t *net, image_t *img, bool softmax)
             case LAYER_TYPE_DATA: {
                 data_layer_t *data_layer = (data_layer_t *) layer;
                 // Set image data as input buffer for the next layer.
-                input_buffer = input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w);
+                input_buffer = input_data = fb_alloc(data_layer->c * data_layer->h * data_layer->w, FB_ALLOC_NO_HINT);
                 output_buffer = buffer1;
                 break;
             }

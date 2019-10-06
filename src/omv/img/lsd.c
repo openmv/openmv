@@ -2626,7 +2626,7 @@ float * lsd(int * n_out, unsigned char * img, int X, int Y)
 
 void imlib_lsd_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int merge_distance, unsigned int max_theta_diff)
 {
-    uint8_t *grayscale_image = fb_alloc(roi->w * roi->h);
+    uint8_t *grayscale_image = fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
     uint8_t *grayscale_image_tmp = grayscale_image;
     umm_init_x(fb_avail());
 
