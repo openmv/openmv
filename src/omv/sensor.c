@@ -807,7 +807,6 @@ static void sensor_check_buffsize()
             sensor_set_pixformat(PIXFORMAT_BAYER);
         }
     }
-
 }
 
 // This function is called back after each line transfer is complete,

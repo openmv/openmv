@@ -464,9 +464,36 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
     }
 }
 
+static int sensor_check_buffsize(sensor_t *sensor)
+{
+    int bpp=0;
+    switch (sensor->pixformat) {
+        case PIXFORMAT_BAYER:
+        case PIXFORMAT_GRAYSCALE:
+            bpp = 1;
+            break;
+        case PIXFORMAT_YUV422:
+        case PIXFORMAT_RGB565:
+            bpp = 2;
+            break;
+        default:
+            break;
+    }
+
+    if ((MAIN_FB()->w * MAIN_FB()->h * bpp) > OMV_RAW_BUF_SIZE) {
+        return -1;
+    }
+
+    return 0;
+}
+
 static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
 {
     fb_update_jpeg_buffer();
+
+    if (sensor_check_buffsize(sensor) == -1) {
+        return -1;
+    }
 
     if ((!h_res) || (!v_res) || (!sensor->framesize) || (!sensor->pixformat)) {
         return -1;
