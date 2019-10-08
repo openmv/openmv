@@ -135,10 +135,10 @@ void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs
     } else if (rs->bmp_bpp == 24) {
         for (int i = 0; i < n_lines; i++) {
             for (int j = 0, jj = rs->bmp_row_bytes / 3; j < jj; j++) {
-                uint8_t r, g, b;
-                read_byte(fp, &r);
-                read_byte(fp, &g);
+                uint8_t b, g, r;
                 read_byte(fp, &b);
+                read_byte(fp, &g);
+                read_byte(fp, &r);
                 uint16_t pixel = IM_RGB565(IM_R825(r), IM_G826(g), IM_B825(b));
                 if (j < img->w) {
                     if (rs->bmp_h < 0) { // vertical flip
