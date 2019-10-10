@@ -377,7 +377,7 @@
 
 #define TYPEPROGRAM_BYTE              FLASH_TYPEPROGRAM_BYTE
 #define TYPEPROGRAM_HALFWORD          FLASH_TYPEPROGRAM_HALFWORD
-#define TYPEPROGRAM_WORD              FLASH_TYPEPROGRAM_WORD
+#define TYPEPROGRAM_WORD              FLASH_TYPEPROGRAM_FLASHWORD
 #define TYPEPROGRAM_DOUBLEWORD        FLASH_TYPEPROGRAM_DOUBLEWORD
 #define TYPEERASE_SECTORS             FLASH_TYPEERASE_SECTORS
 #define TYPEERASE_PAGES               FLASH_TYPEERASE_PAGES
@@ -569,6 +569,8 @@
 #define GPIO_AF0_LPTIM                            GPIO_AF0_LPTIM1
 #define GPIO_AF1_LPTIM                            GPIO_AF1_LPTIM1
 #define GPIO_AF2_LPTIM                            GPIO_AF2_LPTIM1
+
+#define GPIO_AF10_OTG_FS                          GPIO_AF10_OTG1_FS
 
 #if defined(STM32L0) || defined(STM32L4) || defined(STM32F4) || defined(STM32F2) || defined(STM32F7) || defined(STM32G4) || defined(STM32H7)
 #define  GPIO_SPEED_LOW                           GPIO_SPEED_FREQ_LOW
