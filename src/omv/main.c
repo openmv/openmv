@@ -124,7 +124,7 @@ static const char fresh_selftest_py[] =
 "    # Test VBAT\n"
 "    vbat = adc.read_core_vbat()\n"
 "    vbat_diff = abs(vbat-3.3)\n"
-"    if (vbat_diff > 0.1):\n"
+"    if (vbat_diff > 0.15):\n"
 "        raise Exception('INTERNAL ADC TEST FAILED VBAT=%fv'%vbat)\n"
 "\n"
 "    # Test VREF\n"
