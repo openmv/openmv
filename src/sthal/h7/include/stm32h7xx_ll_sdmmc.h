@@ -694,14 +694,14 @@ typedef struct
                                              SDMMC_CMD_WAITINT  | SDMMC_CMD_WAITPEND |\
                                              SDMMC_CMD_CPSMEN   | SDMMC_CMD_CMDSUSPEND))
 
-/* SDMMC Initialization Frequency (400KHz max) for Peripheral CLK 200MHz*/
-#define SDMMC_INIT_CLK_DIV ((uint8_t)0xFA)
+/* SDMMC Initialization Frequency (800KHz max) for IP CLK 48MHz*/
+#define SDMMC_INIT_CLK_DIV ((uint8_t)0x3C)
 
-/* SDMMC Default Speed Frequency (25Mhz max) for Peripheral CLK 200MHz*/
-#define SDMMC_NSpeed_CLK_DIV ((uint8_t)0x4)
+/* SDMMC Default Speed Frequency (48Mhz max) for IP CLK 48MHz*/
+#define SDMMC_NSpeed_CLK_DIV ((uint8_t)0x0)
 
-/* SDMMC High Speed Frequency (50Mhz max) for Peripheral CLK 200MHz*/
-#define SDMMC_HSpeed_CLK_DIV ((uint8_t)0x2)
+/* SDMMC High Speed Frequency (48Mhz max) for IP CLK 48MHz*/
+#define SDMMC_HSpeed_CLK_DIV ((uint8_t)0x0)
 /**
   * @}
   */
