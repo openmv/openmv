@@ -3440,6 +3440,10 @@ static uint32_t JPEG_Process(JPEG_HandleTypeDef *hjpeg)
     return JPEG_PROCESS_DONE;
   }
 
+  if (__HAL_JPEG_GET_FLAG(hjpeg, JPEG_FLAG_COF) == RESET)
+  {
+    return JPEG_PROCESS_DONE;
+  }
 
   return JPEG_PROCESS_ONGOING;
 }
