@@ -189,7 +189,16 @@ void SystemClock_Config(void)
     /* The voltage scaling allows optimizing the power consumption when the device is
        clocked below the maximum system frequency, to update the voltage scaling value
        regarding system frequency refer to product datasheet.  */
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    #if defined(MCU_SERIES_H7)
+    // Enable VSCALE0 for revision V devices.
+    if (HAL_GetREVID() >= 0x2003) {
+        __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+    } else {
+    #else
+    if (1) {
+    #endif
+        __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    }
 
     // Wait for PWR_FLAG_VOSRDY
     #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
