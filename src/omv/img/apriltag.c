@@ -10,6 +10,7 @@
  */
 #include <float.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include "imlib.h"
 
 #ifdef IMLIB_ENABLE_APRILTAGS

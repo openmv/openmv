@@ -9,6 +9,7 @@
  * Data Matrix Encoding/Decoding Library.
  */
 #include <float.h>
+#include <stdio.h>
 #include "imlib.h"
 #ifdef IMLIB_ENABLE_DATAMATRICES
 #pragma GCC diagnostic push
