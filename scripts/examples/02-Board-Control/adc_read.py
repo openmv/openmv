@@ -1,6 +1,6 @@
-# Read ADC Example
+# ADC Read Example.
 #
-# This example shows how to read the ADC on your OpenMV Cam.
+# This example shows how to use the ADC to read an analog pin.
 
 import time
 from pyb import ADC
