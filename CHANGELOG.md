@@ -1,4 +1,18 @@
 # Change Log
+## [3.5.0-beta.2](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.2) (2019-10-12)
+* Update to CMSIS v5.4.0
+* Update to H7 HAL v1.5
+* Update ADC driver to work with new H7 HAL.
+* Enable VSCALE0 for rev V devices.
+* Enable PLL3 for ADC and SPI123v and use PLL2 for FMC (outputs 200MHz).
+* Add support for 32-bit SDRAM @100MHz.
+* Fix BMP bug when reading 24-bit images.
+* Update ADC examples
+* Add new ADC example for internal channels.
+* Add Arduino UART example.
+* Update Arduino SPI example to use callbacks.
+* Add PWM channel 3 and servo 3 to pwm and servo examples.
+
 ## [3.5.0-beta.1](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.1) (2019-09-30)
 * Update to MicroPython 1.11.
 * Update examples.
