@@ -92,6 +92,12 @@ void HAL_MspInit(void)
     #ifdef ENABLE_GPIO_BANK_G
     __GPIOG_CLK_ENABLE();
     #endif
+    #ifdef ENABLE_GPIO_BANK_H
+    __GPIOH_CLK_ENABLE();
+    #endif
+    #ifdef ENABLE_GPIO_BANK_I
+    __GPIOI_CLK_ENABLE();
+    #endif
 
     #if defined(STM32F769xx)
     __GPIOF_CLK_ENABLE();
