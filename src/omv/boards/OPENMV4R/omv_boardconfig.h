@@ -247,5 +247,7 @@
 // Enable additional GPIO banks for DRAM...
 #define ENABLE_GPIO_BANK_F
 #define ENABLE_GPIO_BANK_G
+#define ENABLE_GPIO_BANK_H
+#define ENABLE_GPIO_BANK_I
 
 #endif //__OMV_BOARDCONFIG_H__
