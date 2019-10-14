@@ -2,38 +2,31 @@
  *
  * \file
  *
- * \brief BSD alike socket interface.
+ * \brief BSD compatible socket interface.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
  * \page License
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * Subject to your compliance with these terms, you may use Microchip
+ * software and any derivatives exclusively with Microchip products.
+ * It is your responsibility to comply with third party license terms applicable
+ * to your use of third party software (including open source software) that
+ * may accompany Microchip software.
  *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * 3. The name of Atmel may not be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE
- * EXPRESSLY AND SPECIFICALLY DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+ * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+ * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+ * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+ * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+ * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+ * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+ * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+ * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+ * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+ * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
  *
  * \asf_license_stop
  *
@@ -76,6 +69,7 @@ MACROS
 #define SSL_FLAGS_3_RESERVD					NBIT3
 #define SSL_FLAGS_CACHE_SESSION				NBIT4
 #define SSL_FLAGS_NO_TX_COPY				NBIT5
+#define SSL_FLAGS_CHECK_SNI					NBIT6
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
 PRIVATE DATA TYPES
@@ -161,6 +155,7 @@ NMI_API void Socket_ReadSocketData(SOCKET sock, tstrSocketRecvMsg *pstrRecv,uint
 				u8SetRxDone = 0;
 				u16Read		= gastrSockets[sock].u16UserBufferSize;
 			}
+			
 			if(hif_receive(u32Address, gastrSockets[sock].pu8UserBuffer, u16Read, u8SetRxDone) == M2M_SUCCESS)
 			{
 				pstrRecv->pu8Buffer			= gastrSockets[sock].pu8UserBuffer;
@@ -172,6 +167,16 @@ NMI_API void Socket_ReadSocketData(SOCKET sock, tstrSocketRecvMsg *pstrRecv,uint
 
 				u16ReadCount -= u16Read;
 				u32Address += u16Read;
+
+				if((!gastrSockets[sock].bIsUsed) && (u16ReadCount))
+				{
+					M2M_DBG("Application Closed Socket While Rx Is not Complete\n");
+					if(hif_receive(0, NULL, 0, 1) == M2M_SUCCESS)
+						M2M_DBG("hif_receive Success\n");
+					else
+						M2M_DBG("hif_receive Fail\n");
+					break;
+				}
 			}
 			else
 			{
@@ -202,8 +207,8 @@ Date
 		17 July 2012
 *********************************************************************/
 static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
-{
-	if(u8OpCode == SOCKET_CMD_BIND)
+{	
+	if((u8OpCode == SOCKET_CMD_BIND) || (u8OpCode == SOCKET_CMD_SSL_BIND))
 	{
 		tstrBindReply		strBindReply;
 		tstrSocketBindMsg	strBind;
@@ -234,8 +239,9 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 		{
 			if(strAcceptReply.sConnectedSock >= 0)
 			{
-				gastrSockets[strAcceptReply.sConnectedSock].u8SSLFlags 	= 0;
-				gastrSockets[strAcceptReply.sConnectedSock].bIsUsed 	= 1;
+				gastrSockets[strAcceptReply.sConnectedSock].u8SSLFlags 		= gastrSockets[strAcceptReply.sListenSock].u8SSLFlags;
+				gastrSockets[strAcceptReply.sConnectedSock].bIsUsed 		= 1;
+				gastrSockets[strAcceptReply.sConnectedSock].u16DataOffset 	= strAcceptReply.u16AppDataOffset - M2M_HIF_HDR_OFFSET;
 
 				/* The session ID is used to distinguish different socket connections
 					by comparing the assigned session ID to the one reported by the firmware*/
@@ -275,7 +281,6 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 		tstrDnsReply	strDnsReply;
 		if(hif_receive(u32Address, (uint8*)&strDnsReply, sizeof(tstrDnsReply), 0) == M2M_SUCCESS)
 		{
-			strDnsReply.u32HostIP = strDnsReply.u32HostIP;
 			if(gpfAppResolveCb)
 				gpfAppResolveCb((uint8*)strDnsReply.acHostName, strDnsReply.u32HostIP);
 		}
@@ -330,6 +335,8 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 				}
 				else
 				{
+					/* Don't tidy up here. Application must call close().
+					*/
 					strRecvMsg.s16BufferSize	= s16RecvStatus;
 					strRecvMsg.pu8Buffer		= NULL;
 					if(gpfAppSocketCb)
@@ -340,7 +347,12 @@ static void m2m_ip_cb(uint8 u8OpCode, uint16 u16BufferSize,uint32 u32Address)
 			{
 				M2M_DBG("Discard recv callback %d %d \r\n",u16SessionID , gastrSockets[sock].u16SessionID);
 				if(u16ReadSize < u16BufferSize)
-					hif_receive(0, NULL, 0, 1);
+				{
+					if(hif_receive(0, NULL, 0, 1) == M2M_SUCCESS)
+						M2M_DBG("hif_receive Success\n");
+					else
+						M2M_DBG("hif_receive Fail\n");
+				}
 			}
 		}
 	}
@@ -408,12 +420,12 @@ Date
 *********************************************************************/
 void socketInit(void)
 {
-	if(gbSocketInit==0)
+	if(gbSocketInit == 0)
 	{
 		m2m_memset((uint8*)gastrSockets, 0, MAX_SOCKET * sizeof(tstrSocket));
 		hif_register_cb(M2M_REQ_GROUP_IP,m2m_ip_cb);
-		gbSocketInit=1;
-		gu16SessionID = 0;
+		gbSocketInit	= 1;
+		gu16SessionID	= 0;
 	}
 }
 /*********************************************************************
@@ -438,9 +450,9 @@ void socketDeinit(void)
 {	
 	m2m_memset((uint8*)gastrSockets, 0, MAX_SOCKET * sizeof(tstrSocket));
 	hif_register_cb(M2M_REQ_GROUP_IP, NULL);
-	gpfAppSocketCb = NULL;
-	gpfAppResolveCb = NULL;
-	gbSocketInit = 0;
+	gpfAppSocketCb	= NULL;
+	gpfAppResolveCb	= NULL;
+	gbSocketInit	= 0;
 }
 /*********************************************************************
 Function
@@ -454,7 +466,7 @@ Return
 Author
 		Ahmed Ezzat
 
-Versio
+Version
 		1.0
 
 Date
@@ -488,54 +500,66 @@ Date
 *********************************************************************/
 SOCKET WINC1500_EXPORT(socket)(uint16 u16Domain, uint8 u8Type, uint8 u8Flags)
 {
-	SOCKET		sock = -1;
-	uint8		u8Count,u8SocketCount = MAX_SOCKET;
-	volatile tstrSocket	*pstrSock;
-	
+	SOCKET					sock = -1;
+	uint8					u8SockID;
+	uint8					u8Count;
+	volatile tstrSocket		*pstrSock;
+	static volatile uint8	u8NextTcpSock	= 0;
+	static volatile uint8	u8NextUdpSock	= 0;
+
 	/* The only supported family is the AF_INET for UDP and TCP transport layer protocols. */
 	if(u16Domain == AF_INET)
 	{
 		if(u8Type == SOCK_STREAM)
 		{
-			u8SocketCount = TCP_SOCK_MAX;
-			u8Count = 0;
+			for(u8Count = 0; u8Count < TCP_SOCK_MAX; u8Count ++)
+			{
+				u8SockID	= u8NextTcpSock;
+				pstrSock	= &gastrSockets[u8NextTcpSock];
+				u8NextTcpSock = (u8NextTcpSock + 1) % TCP_SOCK_MAX;
+				if(!pstrSock->bIsUsed)
+				{
+					sock = (SOCKET)u8SockID;
+					break;
+				}
+			}
 		}
 		else if(u8Type == SOCK_DGRAM)
 		{
-			/*--- UDP SOCKET ---*/
-			u8SocketCount = MAX_SOCKET;
-			u8Count = TCP_SOCK_MAX;
-		}
-		else
-			return sock;
-
-		for(;u8Count < u8SocketCount; u8Count ++)
-		{
-			pstrSock = &gastrSockets[u8Count];
-			if(pstrSock->bIsUsed == 0)
+			volatile tstrSocket	*pastrUDPSockets = &gastrSockets[TCP_SOCK_MAX];
+			for(u8Count = 0; u8Count < UDP_SOCK_MAX; u8Count ++)
 			{
-				m2m_memset((uint8*)pstrSock, 0, sizeof(tstrSocket));
-
-				pstrSock->bIsUsed = 1;
-
-				/* The session ID is used to distinguish different socket connections
-					by comparing the assigned session ID to the one reported by the firmware*/
-				++gu16SessionID;
-				if(gu16SessionID == 0)
-					++gu16SessionID;
-				
-				pstrSock->u16SessionID = gu16SessionID;
-				M2M_DBG("1 Socket %d session ID = %d\r\n",u8Count, gu16SessionID );
-				sock = (SOCKET)u8Count;
-
-				if(u8Flags & SOCKET_FLAGS_SSL)
+				u8SockID		= u8NextUdpSock;
+				pstrSock		= &pastrUDPSockets[u8NextUdpSock];
+				u8NextUdpSock	= (u8NextUdpSock + 1) % UDP_SOCK_MAX;
+				if(!pstrSock->bIsUsed)
 				{
-					tstrSSLSocketCreateCmd	strSSLCreate;
-					strSSLCreate.sslSock = sock;
-					pstrSock->u8SSLFlags = SSL_FLAGS_ACTIVE | SSL_FLAGS_NO_TX_COPY;
-					SOCKET_REQUEST(SOCKET_CMD_SSL_CREATE, (uint8*)&strSSLCreate, sizeof(tstrSSLSocketCreateCmd), 0, 0, 0);
+					sock = (SOCKET)(u8SockID + TCP_SOCK_MAX);
+					break;
 				}
-				break;
+			}
+		}
+
+		if(sock >= 0)
+		{
+			m2m_memset((uint8*)pstrSock, 0, sizeof(tstrSocket));
+			pstrSock->bIsUsed = 1;
+
+			/* The session ID is used to distinguish different socket connections
+				by comparing the assigned session ID to the one reported by the firmware*/
+			++gu16SessionID;
+			if(gu16SessionID == 0)
+				++gu16SessionID;
+				
+			pstrSock->u16SessionID = gu16SessionID;
+            M2M_INFO("Socket %d session ID = %d\r\n",sock, gu16SessionID );
+
+			if(u8Flags & SOCKET_FLAGS_SSL)
+			{
+				tstrSSLSocketCreateCmd	strSSLCreate;
+				strSSLCreate.sslSock = sock;
+				pstrSock->u8SSLFlags = SSL_FLAGS_ACTIVE | SSL_FLAGS_NO_TX_COPY;
+				SOCKET_REQUEST(SOCKET_CMD_SSL_CREATE, (uint8*)&strSSLCreate, sizeof(tstrSSLSocketCreateCmd), 0, 0, 0);
 			}
 		}
 	}
@@ -566,18 +590,19 @@ sint8 WINC1500_EXPORT(bind)(SOCKET sock, struct sockaddr *pstrAddr, uint8 u8Addr
 	if((pstrAddr != NULL) && (sock >= 0) && (gastrSockets[sock].bIsUsed == 1) && (u8AddrLen != 0))
 	{
 		tstrBindCmd			strBind;
+		uint8				u8CMD = SOCKET_CMD_BIND;
+		if(gastrSockets[sock].u8SSLFlags & SSL_FLAGS_ACTIVE)
+		{
+			u8CMD = SOCKET_CMD_SSL_BIND;
+		}
 
 		/* Build the bind request. */
 		strBind.sock = sock;
 		m2m_memcpy((uint8 *)&strBind.strAddr, (uint8 *)pstrAddr, sizeof(tstrSockAddr));
-
-		strBind.strAddr.u16Family	= strBind.strAddr.u16Family;
-		strBind.strAddr.u16Port		= strBind.strAddr.u16Port;
-		strBind.strAddr.u32IPAddr	= strBind.strAddr.u32IPAddr;
 		strBind.u16SessionID		= gastrSockets[sock].u16SessionID;
 		
 		/* Send the request. */
-		s8Ret = SOCKET_REQUEST(SOCKET_CMD_BIND, (uint8*)&strBind,sizeof(tstrBindCmd) , NULL , 0, 0);
+		s8Ret = SOCKET_REQUEST(u8CMD, (uint8*)&strBind,sizeof(tstrBindCmd) , NULL , 0, 0);
 		if(s8Ret != SOCK_ERR_NO_ERROR)
 		{
 			s8Ret = SOCK_ERR_INVALID;
@@ -878,15 +903,13 @@ Date
 sint8 WINC1500_EXPORT(close)(SOCKET sock)
 {
 	sint8	s8Ret = SOCK_ERR_INVALID_ARG;
+    M2M_INFO("Sock to delete <%d>\n", sock);
 	if(sock >= 0 && (gastrSockets[sock].bIsUsed == 1))
 	{
 		uint8	u8Cmd = SOCKET_CMD_CLOSE;
 		tstrCloseCmd strclose;
 		strclose.sock = sock; 
 		strclose.u16SessionID		= gastrSockets[sock].u16SessionID;
-		
-		gastrSockets[sock].bIsUsed = 0;
-		gastrSockets[sock].u16SessionID =0;
 		
 		if(gastrSockets[sock].u8SSLFlags & SSL_FLAGS_ACTIVE)
 		{
@@ -1042,11 +1065,7 @@ sint8 WINC1500_EXPORT(gethostbyname)(uint8 * pcHostName)
 	uint8	u8HostNameSize = (uint8)m2m_strlen(pcHostName);
 	if(u8HostNameSize <= HOSTNAME_MAX_SIZE)
 	{
-		s8Err = SOCKET_REQUEST(SOCKET_CMD_DNS_RESOLVE|M2M_REQ_DATA_PKT, (uint8*)pcHostName, u8HostNameSize + 1, NULL,0, 0);
-		if(s8Err != SOCK_ERR_NO_ERROR)
-		{
-			s8Err = SOCK_ERR_INVALID;
-		}
+		s8Err = SOCKET_REQUEST(SOCKET_CMD_DNS_RESOLVE, (uint8*)pcHostName, u8HostNameSize + 1, NULL,0, 0);
 	}
 	return s8Err;
 }
@@ -1098,6 +1117,19 @@ static sint8 sslSetSockOpt(SOCKET sock, uint8  u8Opt, const void *pvOptVal, uint
 				else
 				{
 					gastrSockets[sock].u8SSLFlags &= ~SSL_FLAGS_CACHE_SESSION;
+				}
+				s8Ret = SOCK_ERR_NO_ERROR;
+			}
+			else if(u8Opt == SO_SSL_ENABLE_SNI_VALIDATION)
+			{
+				int	optVal = *((int*)pvOptVal);
+				if(optVal)
+				{
+					gastrSockets[sock].u8SSLFlags |= SSL_FLAGS_CHECK_SNI;
+				}
+				else
+				{
+					gastrSockets[sock].u8SSLFlags &= ~SSL_FLAGS_CHECK_SNI;
 				}
 				s8Ret = SOCK_ERR_NO_ERROR;
 			}
@@ -1245,10 +1277,10 @@ sint8 m2m_ping_req(uint32 u32DstIP, uint8 u8TTL, tpfPingCb fpPingCb)
 }
 /*********************************************************************
 Function
-	sslSetActiveCipherSuites
+	sslEnableCertExpirationCheck
 
 Description
-	Send Ping request.
+	Enable/Disable TLS Certificate Expiration Check.
 
 Return
 	
@@ -1259,17 +1291,34 @@ Version
 	1.0
 
 Date
-	4 June 2015
-*********************************************************************/
-sint8 sslSetActiveCipherSuites(uint32 u32SslCsBMP)
-{
-	sint8	s8Ret = SOCK_ERR_INVALID_ARG;
-	if(u32SslCsBMP != 0)
-	{
-		tstrSslSetActiveCsList	strCsList;
 	
-		strCsList.u32CsBMP = u32SslCsBMP;
-		s8Ret = SOCKET_REQUEST(SOCKET_CMD_SSL_SET_CS_LIST, (uint8*)&strCsList, sizeof(tstrSslSetActiveCsList), NULL, 0, 0);
-	}
-	return s8Ret;
+*********************************************************************/
+sint8 WINC1500_EXPORT(sslEnableCertExpirationCheck)(tenuSslCertExpSettings enuValidationSetting)
+{
+	tstrSslCertExpSettings	strSettings;
+	strSettings.u32CertExpValidationOpt = (uint32)enuValidationSetting;
+	return SOCKET_REQUEST(SOCKET_CMD_SSL_EXP_CHECK, (uint8*)&strSettings, sizeof(tstrSslCertExpSettings), NULL, 0, 0);
+}
+
+/*********************************************************************
+Function
+		IsSocketReady
+
+Description 
+
+Return
+		None.
+
+Author
+
+
+Version
+		1.0
+
+Date
+		24 Apr 2018
+*********************************************************************/
+uint8 IsSocketReady(void)
+{
+    return gbSocketInit;
 }

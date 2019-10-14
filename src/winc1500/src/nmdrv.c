@@ -4,36 +4,29 @@
  *
  * \brief This module contains NMC1000 M2M driver APIs implementation.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
  * \page License
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * Subject to your compliance with these terms, you may use Microchip
+ * software and any derivatives exclusively with Microchip products.
+ * It is your responsibility to comply with third party license terms applicable
+ * to your use of third party software (including open source software) that
+ * may accompany Microchip software.
  *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * 3. The name of Atmel may not be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE
- * EXPRESSLY AND SPECIFICALLY DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+ * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+ * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+ * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+ * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+ * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+ * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+ * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+ * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+ * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+ * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
  *
  * \asf_license_stop
  *
@@ -78,9 +71,10 @@ sint8 nm_get_firmware_info(tstrM2mRev* M2mRev)
 	M2mRev->u8FirmwareMinor = M2M_GET_FW_MINOR(reg);
 	M2mRev->u8FirmwarePatch = M2M_GET_FW_PATCH(reg);
 	M2mRev->u32Chipid	= nmi_get_chipid();
+	M2mRev->u16FirmwareSvnNum = 0;
 	
 	curr_firm_ver   = M2M_MAKE_VERSION(M2mRev->u8FirmwareMajor, M2mRev->u8FirmwareMinor,M2mRev->u8FirmwarePatch);
-	curr_drv_ver    = M2M_MAKE_VERSION(M2M_DRIVER_VERSION_MAJOR_NO, M2M_DRIVER_VERSION_MINOR_NO, M2M_DRIVER_VERSION_PATCH_NO);
+	curr_drv_ver    = M2M_MAKE_VERSION(M2M_RELEASE_VERSION_MAJOR_NO, M2M_RELEASE_VERSION_MINOR_NO, M2M_RELEASE_VERSION_PATCH_NO);
 	min_req_drv_ver = M2M_MAKE_VERSION(M2mRev->u8DriverMajor, M2mRev->u8DriverMinor,M2mRev->u8DriverPatch);
 	if(curr_drv_ver <  min_req_drv_ver) {
 		/*The current driver version should be larger or equal 
@@ -125,7 +119,7 @@ sint8 nm_get_firmware_full_info(tstrM2mRev* pstrRev)
 						if(ret == M2M_SUCCESS)
 						{
 							curr_firm_ver   = M2M_MAKE_VERSION(pstrRev->u8FirmwareMajor, pstrRev->u8FirmwareMinor,pstrRev->u8FirmwarePatch);
-							curr_drv_ver    = M2M_MAKE_VERSION(M2M_DRIVER_VERSION_MAJOR_NO, M2M_DRIVER_VERSION_MINOR_NO, M2M_DRIVER_VERSION_PATCH_NO);
+							curr_drv_ver    = M2M_MAKE_VERSION(M2M_RELEASE_VERSION_MAJOR_NO, M2M_RELEASE_VERSION_MINOR_NO, M2M_RELEASE_VERSION_PATCH_NO);
 							min_req_drv_ver = M2M_MAKE_VERSION(pstrRev->u8DriverMajor, pstrRev->u8DriverMinor,pstrRev->u8DriverPatch);
 							if((curr_firm_ver == 0)||(min_req_drv_ver == 0)||(min_req_drv_ver == 0)){
 								ret = M2M_ERR_FAIL;
@@ -189,7 +183,7 @@ sint8 nm_get_ota_firmware_info(tstrM2mRev* pstrRev)
 						if(ret == M2M_SUCCESS)
 						{
 							curr_firm_ver   = M2M_MAKE_VERSION(pstrRev->u8FirmwareMajor, pstrRev->u8FirmwareMinor,pstrRev->u8FirmwarePatch);
-							curr_drv_ver    = M2M_MAKE_VERSION(M2M_DRIVER_VERSION_MAJOR_NO, M2M_DRIVER_VERSION_MINOR_NO, M2M_DRIVER_VERSION_PATCH_NO);
+							curr_drv_ver    = M2M_MAKE_VERSION(M2M_RELEASE_VERSION_MAJOR_NO, M2M_RELEASE_VERSION_MINOR_NO, M2M_RELEASE_VERSION_PATCH_NO);
 							min_req_drv_ver = M2M_MAKE_VERSION(pstrRev->u8DriverMajor, pstrRev->u8DriverMinor,pstrRev->u8DriverPatch);
 							if((curr_firm_ver == 0)||(min_req_drv_ver == 0)||(min_req_drv_ver == 0)){
 								ret = M2M_ERR_FAIL;
@@ -206,7 +200,7 @@ sint8 nm_get_ota_firmware_info(tstrM2mRev* pstrRev)
 							}
 						}
 					}else{
-						ret = M2M_ERR_FAIL;
+						ret = M2M_ERR_INVALID;
 					}
 				}
 			}else{
@@ -232,7 +226,7 @@ EXIT:
 *	@date	10 Oct 2014
 *	@version	1.0
 */
-sint8 nm_drv_init_download_mode()
+sint8 nm_drv_init_download_mode(void)
 {
 	sint8 ret = M2M_SUCCESS;
 
@@ -243,11 +237,13 @@ sint8 nm_drv_init_download_mode()
 	}
 
 	/**
-		reset the chip and halt the cpu in case of no wait efuse is set.
+		TODO:reset the chip and halt the cpu in case of no wait efuse is set (add the no wait effuse check)
 	*/
-	chip_reset_and_cpu_halt();
-
-
+	if(!ISNMC3000(GET_CHIPID()))
+	{
+		/*Execute that function only for 1500A/B, no room in 3000, but it may be needed in 3400 no wait*/
+		chip_reset_and_cpu_halt();
+	}
 
 #ifdef CONF_WINC_USE_SPI
 	/* Must do this after global reset to set SPI data packet size. */
@@ -263,29 +259,9 @@ ERR1:
 	return ret;
 }
 
-/*
-*	@fn		nm_drv_init
-*	@brief	Initialize NMC1000 driver
-*	@return	M2M_SUCCESS in case of success and Negative error code in case of failure
-*   @param [in]	arg
-*				Generic argument
-*	@author	M. Abdelmawla
-*	@date	15 July 2012
-*	@version	1.0
-*/
-sint8 nm_drv_init(void * arg)
+sint8 nm_drv_init_hold(void)
 {
 	sint8 ret = M2M_SUCCESS;
-	uint8 u8Mode;
-	
-	if(NULL != arg) {
-		u8Mode = *((uint8 *)arg);
-		if((u8Mode < M2M_WIFI_MODE_NORMAL)||(u8Mode >= M2M_WIFI_MODE_MAX)) {
-			u8Mode = M2M_WIFI_MODE_NORMAL;
-		}
-	} else {
-		u8Mode = M2M_WIFI_MODE_NORMAL;
-	}
 	
 	ret = nm_bus_iface_init(NULL);
 	if (M2M_SUCCESS != ret) {
@@ -297,10 +273,9 @@ sint8 nm_drv_init(void * arg)
 	return;
 #endif
 	
-	
 #ifdef NO_HW_CHIP_EN
 	ret = chip_wake();
-	nm_bsp_sleep(10);
+
 	if (M2M_SUCCESS != ret) {
 		M2M_ERR("[nmi start]: fail chip_wakeup\n");
 		goto ERR2;
@@ -318,15 +293,28 @@ sint8 nm_drv_init(void * arg)
 	/* Must do this after global reset to set SPI data packet size. */
 	nm_spi_init();
 #endif
-#ifdef NO_HW_CHIP_EN
-	/*return power save to default value*/
-	chip_idle();
 
-	ret = cpu_start();
-	if (M2M_SUCCESS != ret) {
-		goto ERR2;
-	}
+	return ret;
+#ifdef NO_HW_CHIP_EN
+ERR2:
+	nm_bus_iface_deinit();
 #endif
+ERR1:
+	return ret;
+}
+
+sint8 nm_drv_init_start(void * arg)
+{
+	sint8 ret = M2M_SUCCESS;
+	uint8 u8Mode = M2M_WIFI_MODE_NORMAL;
+
+	if(NULL != arg) {
+		u8Mode = *((uint8 *)arg);
+		if((u8Mode < M2M_WIFI_MODE_NORMAL)||(u8Mode >= M2M_WIFI_MODE_MAX)) {
+			u8Mode = M2M_WIFI_MODE_NORMAL;
+		}
+	}
+
 	ret = wait_for_bootrom(u8Mode);
 	if (M2M_SUCCESS != ret) {
 		goto ERR2;
@@ -348,11 +336,36 @@ sint8 nm_drv_init(void * arg)
 		M2M_ERR("failed to enable interrupts..\n");
 		goto ERR2;
 	}
-	
+
 	return ret;
 ERR2:
 	nm_bus_iface_deinit();
+#ifdef CONF_WINC_USE_SPI
+	nm_spi_deinit();
+#endif
 ERR1:
+	return ret;
+}
+
+/*
+*	@fn		nm_drv_init
+*	@brief	Initialize NMC1000 driver
+*	@return	M2M_SUCCESS in case of success and Negative error code in case of failure
+*   @param [in]	arg
+*				Generic argument
+*	@author	M. Abdelmawla
+*	@date	15 July 2012
+*	@version	1.0
+*/
+sint8 nm_drv_init(void * arg)
+{
+	sint8 ret = M2M_SUCCESS;
+
+	ret = nm_drv_init_hold();
+
+	if(ret == M2M_SUCCESS)
+		ret = nm_drv_init_start(arg);
+
 	return ret;
 }
 
