@@ -51,8 +51,10 @@ static mp_obj_t py_winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp
 
     // Init WINC
     winc_mode_t winc_mode = args[0].u_int;
-    if (winc_init(winc_mode) != 0) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "failed to init WINC1500 module"));
+    int error = winc_init(winc_mode);
+    if (error != 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError,
+                    "Failed to initialize WINC1500 module: %s\n", winc_strerror(error)));
     }
 
     switch (winc_mode) {
