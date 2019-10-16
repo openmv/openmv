@@ -419,8 +419,39 @@ static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout)
     return SOCK_ERR_NO_ERROR;
 }
 
+const char *winc_strerror(int error)
+{
+    static const char *winc_errors[]={
+        "Success.",
+        "Error sending packet!",
+        "Error receiving packet!",
+        "Memory alloc failed!",
+        "Timeout!",
+        "Init failed!",
+        "Bus error!",
+        "Not ready!",
+        "Firmware error!",
+        "SPI bus error!",
+        "Burn firmware failed!",
+        "Ack.",
+        "Failed!.",
+        "Firmware version mismatch. Please update WINC1500 firmware, see Examples->14-WiFi-Shield->fw_update.py",
+        "Scan in progress.",
+        "Invalid Arg",
+    };
+
+    error = -error;
+    if (error > (sizeof(winc_errors)/sizeof(winc_errors[0]))) {
+        return "unknown error";
+    } else {
+        return winc_errors[error];
+    }
+}
+
 int winc_init(winc_mode_t winc_mode)
 {
+    int error = 0;
+
 	// Initialize the BSP.
 	nm_bsp_init();
 
@@ -433,13 +464,15 @@ int winc_init(winc_mode_t winc_mode)
     switch (winc_mode) {
         case WINC_MODE_BSP: {
 	        // Initialize the BSP and return.
+            m2m_wifi_init_hold();
             break;
         }
 
         case WINC_MODE_FIRMWARE: {
             // Enter download mode.
-            if (m2m_wifi_download_mode() != M2M_SUCCESS) {
-                return -1;
+            error = m2m_wifi_download_mode();
+            if (error != M2M_SUCCESS) {
+                return error;
             }
             break;
         }
@@ -456,8 +489,9 @@ int winc_init(winc_mode_t winc_mode)
             }
 
             // Initialize Wi-Fi driver with data and status callbacks.
-            if (m2m_wifi_init(&param) != M2M_SUCCESS) {
-                return -1;
+            error = m2m_wifi_init(&param);
+            if (error != M2M_SUCCESS) {
+                return error;
             }
 
             uint8_t mac_addr_valid;

@@ -103,6 +103,7 @@ typedef struct {
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 
+const char *winc_strerror(int error);
 int winc_init(winc_mode_t winc_mode);
 int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t channel);
 int winc_start_ap(const char *ssid, uint8_t security, const char *key, uint16_t channel);
