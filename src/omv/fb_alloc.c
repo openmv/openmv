@@ -170,8 +170,8 @@ void *fb_alloc_all(uint32_t *size, int hints)
         // Return overlay memory instead.
         pointer_overlay -= *size;
         result = pointer_overlay;
+        *new_pointer |= FB_OVERLAY_MEMORY_FLAG; // Add flag.
     }
-    *new_pointer |= FB_OVERLAY_MEMORY_FLAG; // Add flag.
     #endif
     return result;
 }
