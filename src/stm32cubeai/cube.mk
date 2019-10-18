@@ -4,8 +4,8 @@
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
-# Overwrite OMV_QSTR_DEFS
-OMV_QSTR_DEFS = $(TOP_DIR)/stm32cubeai/qstrdefscubeai.h
+# Append to OMV_QSTR_DEFS
+OMV_QSTR_DEFS += $(TOP_DIR)/stm32cubeai/qstrdefscubeai.h
 
 
 #CFLAGS += '-DMP_CONFIGFILE=<$(TOP_DIR)/stm32cubeai/mpconfigportcubeai.h>'
