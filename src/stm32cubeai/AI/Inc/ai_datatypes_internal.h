@@ -26,6 +26,7 @@
 #include "ai_platform.h"
 #include "ai_platform_interface.h"
 
+
 /*!
  * @defgroup datatypes_internal Internal Datatypes
  * @brief Data structures used internally to implement neural networks
@@ -73,65 +74,117 @@
          9,8,7,6,5,4,3,2,1,0
 
 #define AI_PTR_ALIGN(ptr, alignment) \
-  ( (((ai_uptr)(ptr))+((alignment)-1))&(~((alignment)-1)) )
+  ( (((ai_uptr)(ptr))+((ai_uptr)(alignment)-1))&(~((ai_uptr)(alignment)-1)) )
 
 
-#define AI_DIMENSION(item_, pos_) \
-  ((item_).dimension[(pos_)])
+/*!  AI_STORAGE_KLASS SECTION              ************************************/
+#define AI_STORAGE_KLASS_TYPE(s_) \
+  ( (s_)->type )
 
-/******************************************************************************/
-#define AI_BITS_TO_BYTES(bits_) \
-  (((bits_)+0x7) >> 3)
+#define AI_STORAGE_KLASS_SIZE(s_) \
+  ( (s_)->size )
 
-#define AI_BYTES_TO_BITS(bytes_) \
-  ((bytes_) << 3)
+#define AI_STORAGE_KLASS_DATA(s_, type_) \
+  ( (type_*)((s_)->data) )
 
-/******************************************************************************/
+#define AI_STORAGE_KLASS_COPY(dst_, dst_type_, src_, src_type_) \
+{ \
+  AI_ASSERT(AI_STORAGE_KLASS_SIZE(src_)>=AI_STORAGE_KLASS_SIZE(dst_)) \
+  AI_STORAGE_KLASS_SIZE(dst_) = AI_STORAGE_KLASS_SIZE(src_); \
+  for (ai_size i=0; i<AI_STORAGE_KLASS_SIZE(dst_); i++ ) { \
+    AI_STORAGE_KLASS_DATA(dst_, dst_type_)[i] = \
+      AI_STORAGE_KLASS_DATA(src_, src_type_)[i]; \
+  } \
+}
+
+#define AI_STORAGE_KLASS_DUMP(s_, pfx_, post_, fmt_, type_) \
+{ \
+  AI_ASSERT(s_) \
+  printf(pfx_, AI_STORAGE_KLASS_SIZE(s_)); \
+  for ( ai_u32 i=0; i<AI_STORAGE_KLASS_SIZE(s_); i++ ) { \
+    if ( (i % 8)==0 ) printf("\n      "); \
+    printf(fmt_, AI_STORAGE_KLASS_DATA(s_, type_)[i]); \
+  } \
+  printf(post_); \
+}
+
+/*!  AI_SHAPES SECTION                     ************************************/
 #define AI_SHAPE_2D_H(shape_) \
-  AI_DIMENSION((shape_), AI_SHAPE_2D_HEIGHT)
+  AI_SHAPE_ELEM(shape_, AI_SHAPE_2D_HEIGHT)
 
 #define AI_SHAPE_2D_W(shape_) \
-  AI_DIMENSION((shape_), AI_SHAPE_2D_WIDTH)
+  AI_SHAPE_ELEM(shape_, AI_SHAPE_2D_WIDTH)
 
-#define AI_SHAPE_ND_SIZE(shape_) \
-  ((shape_).size)
+#define AI_SHAPE_ELEM(shape_, pos_) \
+  AI_STORAGE_KLASS_DATA(shape_, ai_shape_dimension)[pos_]
 
-#define AI_SHAPE_ND_ELEM(shape_, pos_) \
-  AI_DIMENSION(shape_, pos_)
+#define AI_SHAPE_SIZE(shape_) \
+  AI_STORAGE_KLASS_SIZE(shape_)
 
-/******************************************************************************/
-#define AI_STRIDE_2D_H(stride_) \
-  AI_DIMENSION((stride_), AI_SHAPE_2D_HEIGHT)
+#define AI_SHAPE_CLONE(dst_, src_) \
+  AI_STORAGE_KLASS_COPY(dst_, ai_shape_dimension, src_, ai_shape_dimension)
 
-
-#define AI_STRIDE_2D_W(stride_) \
-  AI_DIMENSION((stride_), AI_SHAPE_2D_WIDTH)
-
-#define AI_STRIDE_ND_SIZE(stride_) \
-  ((stride_).size)
-
-#define AI_STRIDE_ND_ELEM(stride_, pos_) \
-  AI_DIMENSION(stride_, pos_)
-
-/******************************************************************************/
-//#define AI_SHAPE_BATCH(shape)       AI_DIMENSION((shape), AI_SHAPE_BATCH_CHANNEL)
-#define AI_SHAPE_H(shape)           AI_DIMENSION((shape), AI_SHAPE_HEIGHT)
-#define AI_SHAPE_W(shape)           AI_DIMENSION((shape), AI_SHAPE_WIDTH)
-#define AI_SHAPE_CH(shape)          AI_DIMENSION((shape), AI_SHAPE_CHANNEL)
-#define AI_SHAPE_IN_CH(shape)       AI_DIMENSION((shape), AI_SHAPE_IN_CHANNEL)
+//#define AI_SHAPE_BATCH(shape_)      AI_SHAPE_ELEM((shape_), AI_SHAPE_BATCH_CHANNEL)
+#define AI_SHAPE_H(shape_)          AI_SHAPE_ELEM((shape_), AI_SHAPE_HEIGHT)
+#define AI_SHAPE_W(shape_)          AI_SHAPE_ELEM((shape_), AI_SHAPE_WIDTH)
+#define AI_SHAPE_CH(shape_)         AI_SHAPE_ELEM((shape_), AI_SHAPE_CHANNEL)
+#define AI_SHAPE_IN_CH(shape_)      AI_SHAPE_ELEM((shape_), AI_SHAPE_IN_CHANNEL)
 
 #define AI_CONV_SHAPE_H             AI_SHAPE_W
 #define AI_CONV_SHAPE_W             AI_SHAPE_CH
 #define AI_CONV_SHAPE_CH            AI_SHAPE_H
 #define AI_CONV_SHAPE_IN_CH         AI_SHAPE_IN_CH
 
-//#define AI_STRIDE_BATCH(stride)     AI_DIMENSION((stride), AI_SHAPE_BATCH_CHANNEL)
-#define AI_STRIDE_H(stride)         AI_DIMENSION((stride), AI_SHAPE_HEIGHT)
-#define AI_STRIDE_W(stride)         AI_DIMENSION((stride), AI_SHAPE_WIDTH)
-#define AI_STRIDE_CH(stride)        AI_DIMENSION((stride), AI_SHAPE_CHANNEL)
-#define AI_STRIDE_IN_CH(stride)     AI_DIMENSION((stride), AI_SHAPE_IN_CHANNEL)
+/*!  AI_STRIDES SECTION                     ***********************************/
+#define AI_STRIDE_2D_H(stride_) \
+  AI_STRIDE_ELEM((stride_), AI_SHAPE_2D_HEIGHT)
 
 
+#define AI_STRIDE_2D_W(stride_) \
+  AI_STRIDE_ELEM((stride_), AI_SHAPE_2D_WIDTH)
+
+#define AI_STRIDE_ELEM(stride_, pos_) \
+  AI_STORAGE_KLASS_DATA(stride_, ai_stride_dimension)[pos_]
+
+#define AI_STRIDE_SIZE(stride_) \
+  AI_STORAGE_KLASS_SIZE(stride_)
+
+#define AI_STRIDE_CLONE(dst_, src_) \
+  AI_STORAGE_KLASS_COPY(dst_, ai_stride_dimension, src_, ai_stride_dimension)
+
+//#define AI_STRIDE_BATCH(stride)     AI_STRIDE_ELEM((stride), AI_SHAPE_BATCH_CHANNEL)
+#define AI_STRIDE_H(stride)         AI_STRIDE_ELEM((stride), AI_SHAPE_HEIGHT)
+#define AI_STRIDE_W(stride)         AI_STRIDE_ELEM((stride), AI_SHAPE_WIDTH)
+#define AI_STRIDE_CH(stride)        AI_STRIDE_ELEM((stride), AI_SHAPE_CHANNEL)
+#define AI_STRIDE_IN_CH(stride)     AI_STRIDE_ELEM((stride), AI_SHAPE_IN_CHANNEL)
+
+/*!  AI_TENSORS SECTION                     ***********************************/
+#define AI_TENSOR_KLASS(tensor_) \
+  ( (tensor_) ? (tensor_)->klass : NULL ) 
+
+#define AI_TENSOR_SHAPE(tensor_) \
+  ( &((tensor_)->shape) ) 
+
+#define AI_TENSOR_STRIDE(tensor_) \
+  ( &((tensor_)->stride) )
+
+#define AI_TENSOR_INFO(tensor_) \
+  ( &((tensor_)->info) )
+
+#define AI_TENSOR_DATA(tensor_) \
+  ( (tensor_) ? (tensor_)->data : NULL )
+
+#define AI_TENSOR_ID(tensor_) \
+  ( (tensor_) ? AI_TENSOR_INFO(tensor_)->id : 0 )
+
+#define AI_TENSOR_FLAGS(tensor_) \
+  ( (tensor_) ? AI_TENSOR_INFO(tensor_)->flags : 0 )
+
+
+#define AI_TENSOR_DATA_SIZE(tensor_) \
+  ( (tensor_) ? AI_TENSOR_INFO(tensor_)->data_size : 0 )
+  
+/*!  AI_OFFSETS SECTION                     ***********************************/
 //#define AI_OFFSET_BATCH(b, stride)  ((ai_ptr_offset)(b)  * AI_STRIDE_BATCH(stride))
 #define AI_OFFSET_H(y, stride)      ((ai_ptr_offset)(y)  * AI_STRIDE_H(stride))
 #define AI_OFFSET_W(x, stride)      ((ai_ptr_offset)(x)  * AI_STRIDE_W(stride))
@@ -150,14 +203,27 @@
 
 /** Tensors datatypes defines handlers ****************************************/
 #define AI_TENSOR_SIZE(tensor_) \
-  ( AI_SHAPE_H((tensor_)->shape) * AI_SHAPE_W((tensor_)->shape) * \
-    AI_SHAPE_CH((tensor_)->shape) * AI_SHAPE_IN_CH((tensor_)->shape) )
+  ( AI_SHAPE_H(AI_TENSOR_SHAPE(tensor_)) * AI_SHAPE_W(AI_TENSOR_SHAPE(tensor_)) * \
+    AI_SHAPE_CH(AI_TENSOR_SHAPE(tensor_)) * AI_SHAPE_IN_CH(AI_TENSOR_SHAPE(tensor_)) )
 
 #define AI_TENSOR_BYTE_SIZE(tensor_) \
-  ( AI_SHAPE_H((tensor_)->shape) * AI_STRIDE_H((tensor_)->stride) )
+  ( AI_SHAPE_H(AI_TENSOR_SHAPE(tensor_)) * AI_STRIDE_H(AI_TENSOR_STRIDE(tensor_)) )
 
 /******************************************************************************/
 
+/** Integer tensor info extraction ********************************************/
+#define AI_INTQ_INFO_LIST_SCALE_ARRAY(list_, type_) \
+  ( ((list_) && (list_)->info) \
+    ? ((type_*)((list_)->info->scale)) : NULL )
+
+#define AI_INTQ_INFO_LIST_ZEROPOINT_ARRAY(list_, type_) \
+  ( ((list_) && (list_)->info) \
+    ? ((type_*)((list_)->info->zeropoint)) : NULL )
+
+#define AI_KLASS_GET_INTQ_INFO_LIST(tensor_) \
+  ((ai_intq_info_list*)((tensor_)->klass))    
+    
+    
 AI_API_DECLARE_BEGIN
 
 /*!
@@ -207,10 +273,15 @@ typedef ai_bool (*func_copy_tensor)(ai_tensor* dst, const ai_tensor* src);
  * @return true if shape0 and shape1 have same dimensions. false otherwise
  */
 AI_DECLARE_STATIC
-ai_bool ai_shape_is_same(const ai_shape* shape0, const ai_shape* shape1) {
+ai_bool ai_shape_is_same(
+  const ai_shape* shape0, const ai_shape* shape1)
+{
   AI_ASSERT(shape0 && shape1)
-  for (ai_size i = 0; i < AI_SHAPE_MAX_DIMENSION; ++i) {
-    if ( shape0->dimension[i]!=shape1->dimension[i] )
+  AI_ASSERT(AI_SHAPE_SIZE(shape0)==AI_SHAPE_SIZE(shape1))
+  ai_size dim = AI_SHAPE_SIZE(shape0);
+  while ( dim>0 ) {
+    dim--;
+    if ( AI_SHAPE_ELEM(shape0, dim)!=AI_SHAPE_ELEM(shape1, dim) )
       return false;
   }
   return true;
@@ -225,10 +296,15 @@ ai_bool ai_shape_is_same(const ai_shape* shape0, const ai_shape* shape1) {
 *  smallers or equal of the shape1 ones). false otherwise
  */
 AI_DECLARE_STATIC
-ai_bool ai_shape_is_subshape(const ai_shape* shape0, const ai_shape* shape1) {
+ai_bool ai_shape_is_subshape(
+  const ai_shape* shape0, const ai_shape* shape1)
+{
   AI_ASSERT(shape0 && shape1)
-  for (ai_size i = 0; i < AI_SHAPE_MAX_DIMENSION; ++i) {
-    if ( shape0->dimension[i]>shape1->dimension[i] )
+  AI_ASSERT(AI_SHAPE_SIZE(shape0)==AI_SHAPE_SIZE(shape1))
+  ai_size dim = AI_SHAPE_SIZE(shape0);
+  while ( dim ) {
+    dim--;
+    if ( AI_SHAPE_ELEM(shape0, dim)>AI_SHAPE_ELEM(shape1, dim) )
       return false;
   }
   return true;
@@ -240,13 +316,16 @@ ai_bool ai_shape_is_subshape(const ai_shape* shape0, const ai_shape* shape1) {
  * @param shape the tensor shape
  */
 AI_DECLARE_STATIC
-ai_size ai_shape_get_size(const ai_shape* shape) {
+ai_size ai_shape_get_size(const ai_shape* shape)
+{
   AI_ASSERT(shape)
+  AI_ASSERT(AI_SHAPE_SIZE(shape)==AI_SHAPE_MAX_DIMENSION)
+  ai_size dim = AI_SHAPE_SIZE(shape);
   ai_size size = 1;
-  for (ai_size i = 0; i < AI_SHAPE_MAX_DIMENSION; ++i) {
-    size *= shape->dimension[i];
+  while ( dim>0 ) {
+    dim--;
+     size *= AI_SHAPE_ELEM(shape, dim);
   }
-
   return size;
 }
 
@@ -256,11 +335,10 @@ ai_size ai_shape_get_size(const ai_shape* shape) {
  * @param shape the tensor shape
  */
 AI_DECLARE_STATIC
-ai_size ai_shape_get_npixels(const ai_shape* shape) {
+ai_size ai_shape_get_npixels(const ai_shape* shape)
+{
   AI_ASSERT(shape)
-  const ai_size npixels =
-      shape->dimension[AI_SHAPE_WIDTH] * shape->dimension[AI_SHAPE_HEIGHT];
-
+  const ai_size npixels = AI_SHAPE_W(shape) * AI_SHAPE_H(shape);
   return npixels;
 }
 

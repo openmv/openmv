@@ -26,7 +26,7 @@
 
 #define STM32_DOT_INLINE_OPTIM
 
-#define AI_FLOAT_EPSILON_2      (6.19209290e-5F)  /* Used for small calculation 
+#define AI_FLOAT_TOLERANCE      (6.19209290e-5F)  /* Used for small calculation
                                                      noise issues */
 #define AI_FLOAT_EPSILON        (1.19209290e-7F)
 #define AI_I8_EPSILON           (0.00787401F)     /* 1/(2^7 - 1)  */
@@ -36,10 +36,17 @@
 
 #define AI_MIN(x,y)             ( ((x)<(y)) ? (x) : (y) )
 #define AI_MAX(x,y)             ( ((x)>(y)) ? (x) : (y) )
+#define AI_SIGN(x)              (((x)>0) ? 1 : -1)
 #define AI_CLAMP(x, min, max)   AI_MIN(AI_MAX(x,min), max)
-#define AI_ROUND(x)             round(x)
 #define AI_ABS(x)               fabsf(x)
 #define AI_ABS_DIFF(x, y)       ( ((x)>(y)) ? ((x)-(y)) : ((y)-(x)) )
+#define AI_NEG(x)               ( -1 * (x) )
+#define AI_RECIPROCAL(x)        ( 1.0f / (x) )
+#define AI_CEIL(x)              ceilf(x)
+#define AI_FLOOR(x)             floorf(x)
+#define AI_FLOOR_DIV(x, y)      AI_FLOOR((x)/(y))  /* floor division: x // y */
+#define AI_FLOOR_MOD(x, y)      fmodf(x, y)
+#define AI_ROUND(x)             roundf(x)
 
 #if defined(STM32_DOT_INLINE_OPTIM)
 
@@ -94,13 +101,25 @@ void __ai_math_dot_array(
           ai_math_dot_array(dst, src0, src1, size)
 
 #endif
-            
-#define AI_MATH_SQRT(x)         ai_math_sqrt(x)
+
+#define AI_MATH_ACOS(x)         acosf(x)
+#define AI_MATH_ACOSH(x)        acoshf(x)
+#define AI_MATH_ASIN(x)         asinf(x)
+#define AI_MATH_ASINH(x)        asinhf(x)
+#define AI_MATH_ATAN(x)         atanf(x)
+#define AI_MATH_ATANH(x)        atanhf(x)
+#define AI_MATH_COS(x)          cosf(x)
+#define AI_MATH_COSH(x)         coshf(x)
+#define AI_MATH_ERF(x)          erff(x)
 #define AI_MATH_EXP(x)          expf(x)
-#define AI_MATH_POW(x, e)       powf((x), (e))
-#define AI_MATH_TANH(x)         tanhf(x)
-#define AI_MATH_SIGN(x)         (((x)>0) ? 1 : -1)
 #define AI_MATH_LOG(x)          logf(x)
+#define AI_MATH_POW(x, e)       powf((x), (e))
+#define AI_MATH_RSQRT(x)        (1.0f / AI_MATH_SQRT(x))
+#define AI_MATH_SIN(x)          sinf(x)
+#define AI_MATH_SINH(x)         sinhf(x)
+#define AI_MATH_SQRT(x)         ai_math_sqrt(x)
+#define AI_MATH_TAN(x)          tanf(x)
+#define AI_MATH_TANH(x)         tanhf(x)
 
 #define AI_MATH_RELU_TEST(x, thr, min, max) \
   ( ((x)<(thr)) ? (min) : (max) )
@@ -132,11 +151,14 @@ void __ai_math_dot_array(
 #define AI_MATH_SELU(x, alpha, scale) \
   ((scale)*AI_MATH_ELU(x, alpha))
 
+#define AI_MATH_SCALED_TANH(x, alpha, beta) \
+  ((alpha)*AI_MATH_TANH((beta)*(x)))
+
 #define AI_MATH_SIGMOID(x) \
   (1.0f / (1.0f + AI_MATH_EXP(-(x))))
 
-#define AI_MATH_HARD_SIGMOID(x) \
-  (AI_MAX(0.0f, AI_MIN(1.0f, (x) * 0.2f + 0.5f)))
+#define AI_MATH_HARD_SIGMOID(x, alpha, beta) \
+  (AI_MAX(0.0f, AI_MIN(1.0f, (x) * (alpha) + (beta))))
 
 #define AI_MATH_SOFT_PLUS(x) \
   AI_MATH_LOG(AI_MATH_EXP(x)+1.0f)
@@ -266,6 +288,8 @@ AI_INTERFACE_ENTRY
 ai_float ai_fast_prelu(const ai_float x, const ai_float slope);
 
 AI_INTERFACE_ENTRY ai_float ai_div(const ai_float a, const ai_float b);
+AI_INTERFACE_ENTRY ai_float ai_floor_div(const ai_float a, const ai_float b);
+AI_INTERFACE_ENTRY ai_float ai_floor_mod(const ai_float a, const ai_float b);
 AI_INTERFACE_ENTRY ai_float ai_max(const ai_float a, const ai_float b);
 AI_INTERFACE_ENTRY ai_float ai_min(const ai_float a, const ai_float b);
 AI_INTERFACE_ENTRY ai_float ai_mul(const ai_float a, const ai_float b);

@@ -51,8 +51,8 @@ LAYER_ENTRY(NL, 10009, ai_layer_nl, NULL)
 LAYER_ENTRY(NORM, 10010, ai_layer_norm, forward_norm)
 /*!< Merged Conv2d / Pool layer */
 LAYER_ENTRY(OPTIMIZED_CONV2D, 10011, ai_layer_conv2d_nl_pool, forward_conv2d_nl_pool)
-/*!< Permute Tensor layer */
-LAYER_ENTRY(PERMUTE, 10012, ai_layer_permute, forward_permute)
+/*!< Transpose Tensor layer */
+LAYER_ENTRY(TRANSPOSE, 10012, ai_layer_transpose, forward_transpose)
 /*!< Pooling layer */
 LAYER_ENTRY(POOL, 10013, ai_layer_pool, forward_pool)
 /*!< Softmax layer */

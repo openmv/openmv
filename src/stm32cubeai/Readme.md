@@ -14,7 +14,7 @@ Starting from a trained network model, such as a *.h5 saved model* from Keras, C
 
 > Note: It is recommended to use Linux to build the firmware. Even if it is still possible to do it with Windows, you may run into some issues, for example because of symbolic links in the project. If you're on Windows, you can use [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install-win10), it will provide a full Linux environnement and the compilation will be painless.
 
-- stm32ai command line to generate the optimized code. [Download from ST website]( https://www.st.com/en/embedded-software/x-cube-ai.html)
+- stm32ai command line to generate the optimized code. **Version 4.1.0**  [Download from ST website]( https://www.st.com/en/embedded-software/x-cube-ai.html)
 
 If you have the extension already enabled in Cube.MX, just add
  `<home>/STM32Cube/Repository/Packs/STMicroelectronics/X-CUBE-AI/<version>/Utilities/<operating-system>/`

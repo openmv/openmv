@@ -124,15 +124,25 @@
           AI_STRINGIFY_ARG(minor) "." \
           AI_STRINGIFY_ARG(micro) \
 
-#define AI_PACK(...)                    __VA_ARGS__
+#define AI_PACK(...) \
+  __VA_ARGS__
+
+
+#define AI_PACK_TENSORS_PTR(...) \
+  AI_PACK(__VA_ARGS__)
+
+#define AI_PACK_INFO(size_)   (ai_tensor_info[1]) { { \
+    .buffer = (ai_buffer[size_])AI_STRUCT_INIT, \
+    .state = (ai_tensor_state[size_])AI_STRUCT_INIT, \
+} }
 
 #define AI_CR                         "\r\n"
 
-#ifdef HAS_AI_DEBUG
-#define AI_DEBUG(expr)                expr
+#if (defined HAS_AI_DEBUG || defined HAS_DEBUG_LIB)
+#define AI_DEBUG(...)                __VA_ARGS__
 #else
-#define AI_DEBUG(expr)                AI_WRAP_FUNC(AI_NOP)
-#endif  /* HAS_AI_DEBUG */
+#define AI_DEBUG(...)                AI_WRAP_FUNC(AI_NOP)
+#endif
 
 #define AI_FLAG_NONE                  (0x0)
 #define AI_FLAG_SET(mask, flag)       (mask) |= (flag)

@@ -66,33 +66,7 @@ void    node_convert(ai_node *pNode);
  * @return a condverted stride datastruct
  */
 AI_INTERNAL_API
-ai_stride core_shape_to_stride(const ai_shape* in);
+void core_shape_to_stride(ai_stride* out, const ai_shape* in);
 
-/*!
- * @brief Convert a shape 2D struct into a stride struct
- * @ingroup core_convert
- * @param[in] in a pointer to a shape to convert
- * @return a condverted stride datastruct
- */
-AI_INTERNAL_API
-ai_stride core_shape_2d_to_stride(const ai_shape_2d* in);
-
-/*!
- * @brief Convert a shape struct into a ND stride struct (multi dimensional)
- * @ingroup core_convert
- * @param[in] in a pointer to a shape to convert
- * @return a condverted ND stride datastruct
- */
-AI_INTERNAL_API
-ai_stride_nd core_shape_to_stride_nd(const ai_shape* in);
-
-/*!
- * @brief Convert a shape 2D struct into a ND stride struct (multi dimensional)
- * @ingroup core_convert
- * @param[in] in a pointer to a shape 2D to convert
- * @return a condverted ND stride datastruct
- */
-AI_INTERNAL_API
-ai_stride_nd core_shape_2d_to_stride_nd(const ai_shape_2d* in);
 
 #endif    /*__CORE_CONVERT_H_*/

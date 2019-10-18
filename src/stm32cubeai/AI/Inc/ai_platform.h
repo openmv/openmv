@@ -22,7 +22,6 @@
 #define __AI_PLATFORM_H__
 #pragma once
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #define AI_PLATFORM_API_MAJOR           1
@@ -34,6 +33,7 @@
 #define AI_API_DECLARE_BEGIN extern "C" {
 #define AI_API_DECLARE_END }
 #else
+#include <stdbool.h>
 #define AI_API_DECLARE_BEGIN    /* AI_API_DECLARE_BEGIN */
 #define AI_API_DECLARE_END      /* AI_API_DECLARE_END */
 #endif
@@ -63,28 +63,28 @@
   #define AI_ALIGNED(x)         __attribute__((aligned(x)))
 #else
   /* Dynamic libraries are not supported by the compiler */
-  #define AI_API_ENTRY          /* AI_API_ENTRY */
-  #define AI_ALIGNED(x)         /* AI_ALIGNED(x) */
+  #define AI_API_ENTRY                /* AI_API_ENTRY */
+  #define AI_ALIGNED(x)               /* AI_ALIGNED(x) */
 #endif
 
-#define AI_HANDLE_PTR(ptr_)             ((ai_handle)(ptr_))
-#define AI_HANDLE_NULL                  AI_HANDLE_PTR(0)
+#define AI_HANDLE_PTR(ptr_)           ((ai_handle)(ptr_))
+#define AI_HANDLE_NULL                AI_HANDLE_PTR(0)
 
-#define AI_HANDLE_FUNC_PTR(func)  ((ai_handle_func)(func))
+#define AI_HANDLE_FUNC_PTR(func)      ((ai_handle_func)(func))
 
-#define AI_UNUSED(x)    (void)(x);
+#define AI_UNUSED(x)                  (void)(x);
 
-#define AI_DEPRECATED   /* AI_DEPRECATED */
+#define AI_DEPRECATED                 /* AI_DEPRECATED */
 
-#define AI_LEGACY       /* AI_LEGACY */
+#define AI_LEGACY                     /* AI_LEGACY */
 
 #ifndef __GNUC__
-  #define AI_STRUCT_INIT  {0}
+  #define AI_STRUCT_INIT              {0}
 #else
-#define AI_STRUCT_INIT  {}
+  #define AI_STRUCT_INIT              {}
 #endif
 
-#define AI_ERROR_FMT   AIU32_FMT
+#define AI_ERROR_FMT                  AIU32_FMT
 
 #define AI_IS_UNSIGNED(type) \
   ((((type)0) - 1) > 0)
@@ -97,6 +97,18 @@
   .params = params_, \
   .activations = activations_ }
 
+/*! ai_intq_info struct handlers **********************************************/
+#define AI_INTQ_INFO_LIST_FLAGS(list_) \
+  ( (list_) ? (list_)->flags : 0 )
+
+#define AI_INTQ_INFO_LIST_SCALE(list_, type_, pos_) \
+  ( ((list_) && (list_)->info && ((pos_)<(list_)->size)) \
+    ? ((type_*)((list_)->info->scale))[(pos_)] : 0 )
+
+#define AI_INTQ_INFO_LIST_ZEROPOINT(list_, type_, pos_) \
+  ( ((list_) && (list_)->info && ((pos_)<(list_)->size)) \
+    ? ((type_*)((list_)->info->zeropoint))[(pos_)] : 0 )
+
 /*! ai_buffer format handlers *************************************************/
 
 /*!
@@ -107,6 +119,13 @@
  */
 typedef int32_t ai_buffer_format;
 
+/*! ai_buffer_meta flags ******************************************************/
+#define AI_BUFFER_META_HAS_INTQ_INFO        (0x1U << 0)
+#define AI_BUFFER_META_FLAG_SCALE_FLOAT     (0x1U << 0)
+#define AI_BUFFER_META_FLAG_ZEROPOINT_U8    (0x1U << 1)
+#define AI_BUFFER_META_FLAG_ZEROPOINT_S8    (0x1U << 2)
+
+/*! ai_buffer format variable flags *******************************************/
 #define AI_BUFFER_FMT_TYPE_NONE          (0x0)
 #define AI_BUFFER_FMT_TYPE_FLOAT         (0x1)
 #define AI_BUFFER_FMT_TYPE_Q             (0x2)
@@ -175,6 +194,30 @@ typedef int32_t ai_buffer_format;
 #define AI_BUFFER_DATA(buf_, type_) \
   ((type_*)((buf_)->data))
 
+#define AI_BUFFER_META_INFO(buf_) \
+  ((buf_)->meta_info)
+
+#define AI_BUFFER_META_INFO_INTQ(meta_) \
+  ((meta_) && ((meta_)->flags & AI_BUFFER_META_HAS_INTQ_INFO)) \
+    ? ((meta_)->intq_info) : NULL
+
+#define AI_BUFFER_META_INFO_INTQ_GET_SCALE(meta_, pos_) \
+  ( (AI_BUFFER_META_INFO_INTQ(meta_)) \
+    ? AI_INTQ_INFO_LIST_SCALE(AI_BUFFER_META_INFO_INTQ(meta_), ai_float, pos_) \
+    : 0 )
+
+#define AI_BUFFER_META_INFO_INTQ_GET_ZEROPOINT(meta_, pos_) \
+  ( (AI_BUFFER_META_INFO_INTQ(meta_)) \
+    ? ((AI_INTQ_INFO_LIST_FLAGS(AI_BUFFER_META_INFO_INTQ(meta_))&AI_BUFFER_META_FLAG_ZEROPOINT_U8) \
+      ? AI_INTQ_INFO_LIST_ZEROPOINT(AI_BUFFER_META_INFO_INTQ(meta_), ai_u8, pos_) \
+      : AI_INTQ_INFO_LIST_ZEROPOINT(AI_BUFFER_META_INFO_INTQ(meta_), ai_i8, pos_) ) \
+    : 0 )
+
+#define AI_BUFFER_META_INFO_INIT(flags_, intq_info_) { \
+  .flags = (flags_), \
+  .intq_info = AI_PACK(intq_info_) \
+}
+
 #define AI_BUFFER_SIZE(buf_) \
   (((buf_)->width) * ((buf_)->height) * ((buf_)->channels))
 
@@ -188,7 +231,8 @@ typedef int32_t ai_buffer_format;
   .height = (h_), \
   .width = (w_), \
   .channels = (ch_), \
-  .data = (ai_handle)(data_) \
+  .data = (ai_handle)(data_), \
+  .meta_info = NULL \
 }
 
 #define AI_BUFFER_OBJ_INIT_STATIC(type_, format_, h_, w_, ch_, n_batches_, ...) \
@@ -197,7 +241,8 @@ typedef int32_t ai_buffer_format;
   .height = (h_), \
   .width = (w_), \
   .channels = (ch_), \
-  .data = (ai_handle)((type_[(h_)*(w_)*(ch_)*(n_batches_)]){__VA_ARGS__}) \
+  .data = (ai_handle)((type_[(h_)*(w_)*(ch_)*(n_batches_)]){__VA_ARGS__}), \
+  .meta_info = NULL \
 }
 
 /*!
@@ -269,6 +314,7 @@ typedef int64_t ai_i64;
 
 typedef uint32_t    ai_signature;
 
+/******************************************************************************/
 /*!
  * @struct ai_error
  * @ingroup ai_platform
@@ -278,6 +324,43 @@ typedef struct ai_error_ {
   ai_u32   type : 8;    /*!< Error type represented by @ref ai_error_type */
   ai_u32   code : 24;   /*!< Error code represented by @ref ai_error_code */
 } ai_error;
+
+/******************************************************************************/
+/*!
+ * @struct ai_intq_info
+ * @ingroup ai_platform
+ * @brief an element of the ai_intq_info_list entry. It reports an array for the
+ * scale and zeropoint values for each buffer. Optional flags are also present
+ */
+typedef struct ai_intq_info_ {
+  ai_float*       scale;
+  ai_handle       zeropoint;
+} ai_intq_info;
+
+/*!
+ * @struct ai_intq_info_list
+ * @ingroup ai_platform
+ * @brief list reporting meta info for quantized networks integer support
+ * when size > 1 it means a per channel out quantization
+ */
+typedef struct ai_intq_info_list_ {
+  ai_u16          flags;  /*!< optional flags to store intq info attributes */
+  ai_u16          size;   /*!< number of elements in the the intq_info list  */
+  ai_intq_info*   info;    /*!< pointer to an array of metainfo associated to the intq_info list */
+} ai_intq_info_list;
+
+/******************************************************************************/
+/*!
+ * @struct ai_buffer_meta_info
+ * @ingroup ai_platform
+ * @brief Optional meta attributes associated with the I/O buffer.
+ * This datastruct is used also for network querying, where the data field may
+ * may be NULL.
+ */
+typedef struct ai_buffer_meta_info_ {
+  ai_u32                  flags;      /*!< meta info flags */
+  ai_intq_info_list*      intq_info;  /*!< meta info related to integer format */
+} ai_buffer_meta_info;
 
 /*!
  * @struct ai_buffer
@@ -293,6 +376,7 @@ typedef struct ai_buffer_ {
   ai_u16                  width;      /*!< buffer width dimension */
   ai_u32                  channels;   /*!< buffer number of channels */
   ai_handle               data;       /*!< pointer to buffer data */
+  ai_buffer_meta_info*    meta_info;  /*!< pointer to buffer metadata info */
 } ai_buffer;
 
 /* enums section */

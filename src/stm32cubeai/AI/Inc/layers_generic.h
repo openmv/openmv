@@ -30,14 +30,6 @@
  *
  */
 
-#define AI_ASSERT_SHAPE_MATCH(x,y) \
-    do{\
-        AI_ASSERT(AI_SHAPE_H(y) == 1 || AI_SHAPE_H(x)==1 || AI_SHAPE_H(y)==AI_SHAPE_H(x))\
-        AI_ASSERT(AI_SHAPE_W(y) == 1 || AI_SHAPE_W(x)==1 || AI_SHAPE_W(y)==AI_SHAPE_W(x))\
-        AI_ASSERT(AI_SHAPE_CH(y) == 1 || AI_SHAPE_CH(x)==1|| AI_SHAPE_CH(y)==AI_SHAPE_CH(x))\
-        AI_ASSERT(AI_SHAPE_IN_CH(y) == 1 || AI_SHAPE_IN_CH(x)==1|| AI_SHAPE_IN_CH(y)==AI_SHAPE_IN_CH(x))\
-    }while(0)
-
 AI_API_DECLARE_BEGIN
 
 /*!
@@ -96,18 +88,6 @@ typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_slice_ {
   AI_CONST ai_array* ends;    /*!< Ending indices (exclusive) of corrisponding axis in axes*/
 } ai_layer_slice;
 
-/*!
- * @struct ai_layer_transpose
- * @ingroup layers_generic
- * @brief Transpose layer definition
- *
- * This layer defines the params of a transpose layer. It is intended to be used
- * by his associated forward function @ref forward_transpose
- */
-typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_transpose_ {
-  AI_LAYER_COMMON_FIELDS_DECLARE
-  ai_array* perm;    /*!< Axes permutation order */
-} ai_layer_transpose;
 
 /*!
  * @struct ai_layer_tile
@@ -164,7 +144,7 @@ typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_instanceNormaization_{
 typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_pad_{
   AI_LAYER_COMMON_FIELDS_DECLARE
   ai_pad_mode  mode;   /*!< pad mode */
-  ai_shape_nd  pads;   /*!< Number of padding to add or remove at the beginning and end of each axis */
+  ai_shape     pads;   /*!< Number of padding to add or remove at the beginning and end of each axis */
   ai_float     value;  /*!< Indicates the value to be filled */
 } ai_layer_pad;
 /*!
@@ -187,17 +167,17 @@ typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_add_ {
 } ai_layer_add;
 
 /*!
- * @struct ai_layer_permute
+ * @struct ai_layer_transpose
  * @ingroup layers_generic
- * @brief Permute layer datastruct declaration. This defines the params of a
- * permute layer. It is intended to be used by his associated forward function
- * @ref forward_permute
+ * @brief Transpose layer datastruct declaration. This defines the params of a
+ * transpose layer. It is intended to be used by his associated forward function
+ * @ref forward_transpose
  */
-typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_permute_ {
+typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_transpose_ {
   AI_LAYER_COMMON_FIELDS_DECLARE
-  ai_shape out_mapping;       /*!< permute output mapping order, i.e. it is a
+  ai_shape out_mapping;       /*!< transpose output mapping order. I.e. tt is a
                                    permutation of the input tensor shape */
-} ai_layer_permute;
+} ai_layer_transpose;
 
 
 #define AI_TIME_DISTRIBUTED_AXIS    (AI_SHAPE_HEIGHT)
@@ -286,13 +266,13 @@ AI_INTERNAL_API
 void forward_add(ai_layer* layer);
 
 /*!
- * @brief Permute a tensor along a pivot and save permuted values into an output
+ * @brief Transpose a tensor along a pivot and save transposed values into an output
  * tensor
  * @ingroup layers_generic
- * @param layer the permute layer
+ * @param layer the transpose layer
  */
 AI_INTERNAL_API
-void forward_permute(ai_layer* layer);
+void forward_transpose(ai_layer* layer);
 
 /*!
  * @brief TimeDistrubuted forward layer function. This forward function
@@ -319,14 +299,6 @@ void forward_concat(ai_layer* layer);
  */
 AI_INTERNAL_API
 void forward_slice(ai_layer* layer);
-
-/*!
- * @brief Transpose an input tensor
- * @ingroup layers_generic
- * @param layer the transposed layer
- */
-AI_INTERNAL_API
-void forward_transpose(ai_layer* layer);
 
 /*!
  * @brief Tile an input tensors
@@ -369,14 +341,6 @@ AI_INTERNAL_API
 void forward_instanceNormalization(ai_layer* layer);
 
 /*!
- * @brief Hardmax on an input tensors
- * @ingroup layers_generic
- * @param layer the hardmax layer
- */
-AI_INTERNAL_API
-void forward_hardmax(ai_layer* layer);
-
-/*!
  * @brief Apply an elementwise transformation to the input tensors
  * @ingroup layers_generic
  * @param layer the elementwise layer
@@ -391,6 +355,16 @@ void forward_eltwise(ai_layer* layer);
  */
 AI_INTERNAL_API
 void forward_reduce(ai_layer* layer);
+
+
+/*!
+ * @brief Apply an elementwise addition to the input tensors
+ * @ingroup layers_generic
+ * @param layer the elementwise layer
+ */
+AI_INTERNAL_API
+void forward_add_integer(ai_layer* layer);
+
 
 AI_API_DECLARE_END
 

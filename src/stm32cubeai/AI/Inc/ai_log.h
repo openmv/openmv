@@ -11,8 +11,13 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <stdbool.h>
 #include <stdarg.h>
+
+#ifdef __cplusplus
+extern "C" {
+#else
+#include <stdbool.h>
+#endif
 
 /*!
  * @defgroup log Core logger class definition and implementation
@@ -43,6 +48,7 @@
 #define LOG_INFO          (0x4)
 #define LOG_DEBUG         (0x5)
 #define LOG_TRACE         (0x6)
+
 
 /*!
  * @typedef log_LockFn
@@ -126,5 +132,9 @@ void ai_log_set_fp(FILE *fp);
  */
 void ai_log_log(const uint8_t level, const char *file,
   const int line, const char *fmt, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif    /*AI_LOG_H_*/

@@ -29,7 +29,6 @@
 #endif
 #include "ai_platform.h"
 #include "ai_common_config.h"
-#include "ai_datatypes_internal.h"
 
 #include "core_common.h"
 #include "core_convert.h"
@@ -38,19 +37,6 @@
 #define AI_OPTIM_DICT8_DOT_ARRAY_F32    (1)
 #define AI_OPTIM_DICT8_DTCM             (1)
 #define AI_OPTIM_FUNC_MP_ARRAY_F32      (0)
-
-
-/* Basic sanity checks for generic layer datastructs */
-#define ASSERT_LAYER_SANITY(l) \
-  do { \
-    AI_ASSERT((l)->tensors && (l)->tensors->chain) \
-    ASSERT_TENSOR_DATA_SANITY(GET_TENSOR_IN((l)->tensors, 0)) \
-    ASSERT_TENSOR_DATA_SANITY(GET_TENSOR_OUT((l)->tensors, 0)) \
-    AI_ASSERT(ai_shape_get_size(&GET_TENSOR_IN((l)->tensors, 0)->shape) <= \
-              GET_TENSOR_IN((l)->tensors, 0)->data->size)  \
-    AI_ASSERT(ai_shape_get_size(&GET_TENSOR_OUT((l)->tensors, 0)->shape) <= \
-              GET_TENSOR_OUT((l)->tensors, 0)->data->size) \
-  } while (0);
 
 
 #define AI_LAYER_OBJ(obj_) \

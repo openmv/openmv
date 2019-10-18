@@ -31,7 +31,7 @@
   func_nl     nl_func;           /*!< function pointer to non linear transform */ \
   ai_shape_2d filter_stride;     /*!< filter stride, how much the filter moves */ \
   ai_shape_2d dilation;          /*!< dilation value along axis of the filter */ \
-  ai_shape_nd filter_pad;        /*!< filter pad 4d */
+  ai_shape    filter_pad;        /*!< filter pad 4d */
 
 /*!
  * @defgroup layers_conv2d Convolutive Layers Definitions
@@ -87,7 +87,7 @@ typedef AI_ALIGNED_TYPE(struct, 4) ai_layer_conv2d_nl_pool_ {
 
   ai_shape_2d pool_size;    /*!< pooling size */
   ai_shape_2d pool_stride;  /*!< pooling stride */
-  ai_shape_nd pool_pad;     /*!< pooling pad */
+  ai_shape    pool_pad;     /*!< pooling pad */
 
   func_pool pool_func;      /*!< function pointer to pooling transform */
 } ai_layer_conv2d_nl_pool;
@@ -164,6 +164,32 @@ void forward_conv2d_fixed(ai_layer *pLayer);
  */
 AI_INTERNAL_API
 void forward_conv2d_nl_pool_fixed(ai_layer *pLayer);
+
+/*!
+ * @brief Computes the activations of a integer quantized 2D convolutional layer.
+ * @ingroup layers_conv2d
+ * @param layer the convolutional (conv) layer
+ */
+AI_INTERNAL_API
+void forward_conv2d_integer(ai_layer *pLayer);
+
+/*!
+ * @brief Computes the activations of a integer @ref ai_layer_conv2d_nl_pool layer.
+ * The @ref ai_layer_conv2d_nl_pool is a fused conv2D + optional nonlinear
+ * layer + optional pooling / nonlinearity (average, max)
+ * @ingroup layers_conv2d
+ * @param layer see @ai_layer_conv2d_nl_pool
+ */
+AI_INTERNAL_API
+void forward_conv2d_nl_pool_integer(ai_layer *pLayer);
+
+/*!
+ * @brief Computes the activations of a integer dense (fully connected) layer.
+ * @ingroup layers_dense
+ * @param layer the dense layer
+ */
+AI_INTERNAL_API
+void forward_dense_integer(ai_layer *pLayer);
 
 AI_API_DECLARE_END
 
