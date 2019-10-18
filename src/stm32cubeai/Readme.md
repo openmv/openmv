@@ -152,8 +152,8 @@ while(True):
               nn_input_sz,
               nn_input_sz))
 
-    # Cleanup image and binarize it (you may uptade the theshold)
-    img.histeq(adaptive=True, clip_limit=2).binary([(0,180)])
+    # Binarize the image
+    img.midpoint(2, bias=0.5, threshold=True, offset=5, invert=True)
 
     # [CUBE.AI] Run the inference
     out = net.predict(img)
