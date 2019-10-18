@@ -120,7 +120,7 @@ Open OpenMV IDE. From the toolbar select `Tools > Run Bootloader`. Select the fi
 
 Open OpenMV IDE, and click the *Connect* button on the bottom-right side.
 
-You can start from this sample code, running the MNIST example we used bellow (The code is provided as `sample_script.py` in this directory)
+You can start from this example code, running the MNIST example we used bellow (The code is provided as `example_script.py` in this directory)
 
 ```python
 # STM32 CUBE.AI on OpenMV MNIST Example
@@ -131,9 +131,9 @@ sensor.reset()                      # Reset and initialize the sensor.
 sensor.set_contrast(3)
 sensor.set_brightness(0)
 sensor.set_auto_gain(True)
-sensor.set_auto_exposure(False, exposure_us=700)
+sensor.set_auto_exposure(True)
 sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to Grayscale
-sensor.set_framesize(sensor.QQVGA)   # Set frame size to 160x120
+sensor.set_framesize(sensor.QQQVGA)   # Set frame size to 80x60
 sensor.skip_frames(time = 2000)     # Wait for settings take effect.
 clock = time.clock()                # Create a clock object to track the FPS.
 
@@ -152,7 +152,7 @@ while(True):
               nn_input_sz,
               nn_input_sz))
 
-    # Binarize the image
+    # Binarize the image 
     img.midpoint(2, bias=0.5, threshold=True, offset=5, invert=True)
 
     # [CUBE.AI] Run the inference
@@ -160,7 +160,6 @@ while(True):
     print('Network argmax output: {}'.format( out.index(max(out)) ))
     img.draw_string(0, 0, str(out.index(max(out))))
     print('FPS {}'.format(clock.fps())) # Note: OpenMV Cam runs about half as fast when connected
-
 ```
 
 The code should yield the following output:
