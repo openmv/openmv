@@ -4,6 +4,9 @@
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
 
+# Enable CUBE-AI builtin module
+CFLAGS += -DCUBEAI
+
 # Append to OMV_QSTR_DEFS
 OMV_QSTR_DEFS += $(TOP_DIR)/stm32cubeai/qstrdefscubeai.h
 
@@ -21,4 +24,4 @@ FIRM_OBJ += $(addprefix $(BUILD)/stm32cubeai/,\
 	py_st_nn.o                      \
 	)
 
-FIRM_OBJ += -l:NetworkRuntime410_CM7_GCC.a -Lstm32cubeai/AI/Lib -lc -lm
+LIBS += -l:NetworkRuntime410_CM7_GCC.a -Lstm32cubeai/AI/Lib -lc -lm
