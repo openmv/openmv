@@ -10,5 +10,6 @@
  */
 
 // ST neural network
+Q(nn_st)
 Q(loadnnst)
 Q(predict)

@@ -488,6 +488,14 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 
 UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
+
+ifeq ($(CUBEAI), 1)
+CFLAGS += -DCUBEAI
+include $(TOP_DIR)/stm32cubeai/cube.mk
+else
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/ConvolutionFunctions/*.o)
+endif
+
 ###################################################
 #Export Variables
 export Q
@@ -521,12 +529,6 @@ BOOTLOADER_OBJS: FIRMWARE_OBJS
 UVC_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(UVC_DIR)                  BUILD=$(BUILD)/$(UVC_DIR)      CFLAGS="$(UVC_CFLAGS) -MMD"
 
-ifeq ($(CUBEAI),)
-FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/nn/ConvolutionFunctions/*.o)
-else
-include $(TOP_DIR)/stm32cubeai/cube.mk
-endif
-
 FIRMWARE_OBJS:
 	$(MAKE)  -C $(CMSIS_DIR)                BUILD=$(BUILD)/$(CMSIS_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 	$(MAKE)  -C $(STHAL_DIR)                BUILD=$(BUILD)/$(STHAL_DIR)    CFLAGS="$(CFLAGS) -MMD"
@@ -535,7 +537,7 @@ FIRMWARE_OBJS:
 	$(MAKE)  -C $(MLX_DIR)                  BUILD=$(BUILD)/$(MLX_DIR)      CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(WINC1500_DIR)             BUILD=$(BUILD)/$(WINC1500_DIR) CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(OMV_DIR)                  BUILD=$(BUILD)/$(OMV_DIR)      CFLAGS="$(CFLAGS) -MMD"
-ifneq ($(CUBEAI),)
+ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(TOP_DIR)/stm32cubeai      BUILD=$(BUILD)/stm32cubeai CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 endif
 

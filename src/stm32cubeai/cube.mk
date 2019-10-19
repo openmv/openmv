@@ -8,10 +8,6 @@
 OMV_QSTR_DEFS += $(TOP_DIR)/stm32cubeai/qstrdefscubeai.h
 
 
-#CFLAGS += '-DMP_CONFIGFILE=<$(TOP_DIR)/stm32cubeai/mpconfigportcubeai.h>'
-# Ugly way to make it work on Windows
-CFLAGS += '-DMP_CONFIGFILE=<../../../stm32cubeai/mpconfigportcubeai.h>'
-
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/BasicMathFunctions/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
 
