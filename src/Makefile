@@ -287,6 +287,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	help.o                  \
 	flash.o                 \
 	flashbdev.o             \
+	spibdev.o               \
 	storage.o               \
 	rtc.o                   \
 	irq.o                   \
@@ -299,6 +300,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	i2c.o                   \
 	pyb_i2c.o               \
 	spi.o                   \
+	qspi.o                  \
 	pyb_spi.o               \
 	can.o                   \
 	fdcan.o                 \
@@ -331,6 +333,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	mpthreadport.o          \
 	posix_helpers.o         \
 	)
+
+# board object files
+FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/boards/$(TARGET)/*.o)
 
 # object file for frozen bytecode (frozen .mpy files)
 ifneq ($(FROZEN_MPY_DIR),)
