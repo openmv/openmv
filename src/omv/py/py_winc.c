@@ -97,6 +97,10 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
     // get ssid
     const char *ssid = mp_obj_str_get_str(args[0].u_obj);
 
+    if (strlen(ssid) == 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError, "SSID can't be empty!"));
+    }
+
     // get key and sec
     const char *key = NULL;
     mp_uint_t security = M2M_WIFI_SEC_OPEN;
@@ -104,6 +108,10 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
     if (args[1].u_obj != mp_const_none) {
         key = mp_obj_str_get_str(args[1].u_obj);
         security = args[2].u_int;
+    }
+
+    if (security != M2M_WIFI_SEC_OPEN && strlen(key) == 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError, "Key can't be empty!"));
     }
 
     // connect to AP
