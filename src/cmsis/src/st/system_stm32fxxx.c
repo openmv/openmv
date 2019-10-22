@@ -192,6 +192,7 @@ void SystemClock_Config(void)
     #if defined(MCU_SERIES_H7)
     // Enable VSCALE0 for revision V devices.
     if (HAL_GetREVID() >= 0x2003) {
+        __HAL_RCC_SYSCFG_CLK_ENABLE();
         __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
     } else {
     #else
