@@ -180,7 +180,7 @@ void SystemClock_Config(void)
 
     #if defined(MCU_SERIES_H7)
     /* Supply configuration update enable */
-    MODIFY_REG(PWR->CR3, PWR_CR3_SCUEN, 0);
+    HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
     #else
     /* Enable Power Control clock */
     __PWR_CLK_ENABLE();
@@ -192,6 +192,7 @@ void SystemClock_Config(void)
     #if defined(MCU_SERIES_H7)
     // Enable VSCALE0 for revision V devices.
     if (HAL_GetREVID() >= 0x2003) {
+        __HAL_RCC_SYSCFG_CLK_ENABLE();
         __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
     } else {
     #else
@@ -201,11 +202,8 @@ void SystemClock_Config(void)
     }
 
     // Wait for PWR_FLAG_VOSRDY
-    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
-    //while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
-    //}
-    #elif defined(MCU_SERIES_H7)
-    while ((PWR->D3CR & (PWR_D3CR_VOSRDY)) != PWR_D3CR_VOSRDY) {
+    #if defined(MCU_SERIES_H7)
+    while (__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY) == RESET) {
     }
     #endif
 
