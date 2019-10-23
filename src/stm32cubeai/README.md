@@ -229,6 +229,8 @@ img = sensor.snapshot()
 output = net.predict(img)
 ```
 
-## License information
+## License informations
 
-This software is under MIT License. See LICENSE file for more information.
+- The python wrapper i.e the sources files `nn_st.c`, `nn_st.h`, `py_st_nn.c` are under MIT License. See LICENSE file for more information.  
+- All files (header file and compiled library) present in the AI directory are under the [SLA0044](www.st.com/SLA0044) licence. See AI/LICENCE for more information.
+
