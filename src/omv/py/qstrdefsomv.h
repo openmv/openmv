@@ -1174,3 +1174,30 @@ Q(draw_ir)
 // duplicate Q(scale)
 Q(pixformat)
 // duplciate Q(copy_to_fb)
+
+// TensorFlow Module
+Q(tf)
+// duplicate Q(load)
+Q(classify)
+// Model Object
+Q(tf_model)
+// duplicate Q(len)
+// duplicate Q(height)
+// duplicate Q(width)
+Q(channels)
+
+// Classify
+// duplicate Q(classify)
+// duplicate Q(roi)
+// duplicate Q(min_scale)
+// duplicate Q(scale_mul)
+// duplicate Q(x_overlap)
+// duplicate Q(y_overlap)
+
+// Class Object
+Q(tf_classification)
+// duplicate Q(x)
+// duplicate Q(y)
+// duplicate Q(w)
+// duplicate Q(h)
+Q(output)

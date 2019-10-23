@@ -75,8 +75,8 @@
 
 #define OMV_FB_SIZE             (30M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (1M)        // minimum fb alloc size
-#define OMV_STACK_SIZE          (7K)
-#define OMV_HEAP_SIZE           (240K)
+#define OMV_STACK_SIZE          (8K)
+#define OMV_HEAP_SIZE           (236K)
 
 #define OMV_LINE_BUF_SIZE       (11K)       // Image line buffer round(2592 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE        (12K)       // USB MSC bot data

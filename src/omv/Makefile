@@ -105,6 +105,7 @@ SRCS += $(addprefix py/, \
 	py_winc.c               \
 	py_cpufreq.c            \
 	py_nn.c                 \
+	py_tf.c                 \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
