@@ -128,6 +128,9 @@
 // Enable LENET (200+ KB).
 //#define IMLIB_ENABLE_LENET
 
+// Enable Tensor Flow
+//#define IMLIB_ENABLE_TF
+
 // Enable FAST (20+ KBs).
 //#define IMLIB_ENABLE_FAST
 

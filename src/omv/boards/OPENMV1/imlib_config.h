@@ -83,4 +83,7 @@
 // Enable LENET (200+ KB).
 //#define IMLIB_ENABLE_LENET
 
+// Enable Tensor Flow
+//#define IMLIB_ENABLE_TF
+
 #endif //__IMLIB_CONFIG_H__
