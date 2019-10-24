@@ -24,4 +24,4 @@ FIRM_OBJ += $(addprefix $(BUILD)/stm32cubeai/,\
 	py_st_nn.o                      \
 	)
 
-LIBS += -l:NetworkRuntime410_CM7_GCC.a -Lstm32cubeai/AI/Lib -lc -lm
+LIBS += -l:NetworkRuntime_CM7_GCC.a -Lstm32cubeai/AI/Lib -lc -lm
