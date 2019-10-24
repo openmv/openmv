@@ -42,6 +42,31 @@ To start the shell, double-click `C:\MINGW\msys\1.0\msys.bat`
 > Every subsequent command shown in this document should be run in MinGW shell. Note that in MinGW the `C:\` directory is located in `/c/`  
 > **Important note for Windows users:** It's recommended to do the compilation in the C:\ directory directly as the compilation might fail if the path to the object files is too long (`CreateProcess` has a limit of 32k characters). Moreover, be extra careful with symbolic links present in the project.
 
+## Step 0 - Install the necessary files
+
+You need to install the headers and library from Cube.AI into the project.
+
+Inside stm32cubeai directory, run:
+
+```bash
+mkdir -p AI/{Inc,Lib}
+mkdir data
+```
+
+Then copy (or symlink) the files from Cube.AI to the AI directory:
+
+```bash
+# If X-CUBE-AI has been installed from STM32Cube
+cp ~/STM32Cube/Repository/Packs/STMicroelectronics/X-CUBE-AI/4.1.0/Middlewares/ST/AI/Inc/* ./AI/Inc/
+cp ~/STM32Cube/Repository/Packs/STMicroelectronics/X-CUBE-AI/4.1.0/Middlewares/ST/AI/lib/ABI2.1/STM32H7/NetworkRuntime410_CM7_IAR.a ./AI/Lib/NetworkRuntime410_CM7_GCC.a
+
+# If X-CUBE-AI has been downloaded from ST website
+cp <cube-ai-path>/Middlewares/ST/AI/Inc/* ./AI/Inc/
+cp <cube-ai-path>/Middlewares/ST/AI/lib/ABI2.1/STM32H7/NetworkRuntime410_CM7_IAR.a ./NetworkRuntime410_CM7_GCC.a
+```
+
+> Note: On Windows, STM32Cube is usually installed in `C:\Users\name\`, on Linux it's in the `home` directory
+
 ## Step 1 - Generate the code for the network
 
 ### Code generation
