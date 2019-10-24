@@ -58,11 +58,11 @@ Then copy (or symlink) the files from Cube.AI to the AI directory:
 ```bash
 # If X-CUBE-AI has been installed from STM32Cube
 cp ~/STM32Cube/Repository/Packs/STMicroelectronics/X-CUBE-AI/<version>/Middlewares/ST/AI/Inc/* ./AI/Inc/
-cp ~/STM32Cube/Repository/Packs/STMicroelectronics/X-CUBE-AI/<version>/Middlewares/ST/AI/lib/ABI2.1/STM32H7/NetworkRuntime410_CM7_IAR.a ./AI/Lib/NetworkRuntime410_CM7_GCC.a
+cp ~/STM32Cube/Repository/Packs/STMicroelectronics/X-CUBE-AI/<version>/Middlewares/ST/AI/lib/ABI2.1/STM32H7/NetworkRuntime410_CM7_IAR.a ./AI/Lib/NetworkRuntime_CM7_GCC.a
 
 # If X-CUBE-AI has been downloaded from ST website
 cp <cube-ai-path>/Middlewares/ST/AI/Inc/* ./AI/Inc/
-cp <cube-ai-path>/Middlewares/ST/AI/lib/ABI2.1/STM32H7/NetworkRuntime410_CM7_IAR.a ./NetworkRuntime410_CM7_GCC.a
+cp <cube-ai-path>/Middlewares/ST/AI/lib/ABI2.1/STM32H7/NetworkRuntime410_CM7_IAR.a ./NetworkRuntime_CM7_GCC.a
 ```
 
 > Note: On Windows, STM32Cube is usually installed in `C:\Users\name\`, on Linux it's in the `home` directory
