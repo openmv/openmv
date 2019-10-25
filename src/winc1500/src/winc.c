@@ -849,7 +849,7 @@ int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sock
 
         int recv_bytes;
         // Set recv to the maximum possible packet size.
-        int ret = WINC1500_EXPORT(recv)(fd, sockbuf->buf, SOCKET_BUFFER_MAX_LENGTH, timeout);
+        int ret = WINC1500_EXPORT(recv)(fd, sockbuf->buf, WINC_SOCKBUF_MAX_SIZE, timeout);
         if (ret == SOCK_ERR_NO_ERROR) {
             // Do async request
             // sockbuf->size is the actual size of the recv'd packet.
