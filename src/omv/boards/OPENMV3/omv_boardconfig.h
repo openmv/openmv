@@ -69,7 +69,7 @@
 #define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
 #define OMV_VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE    (32K)   // Flash filesystem cache
-#define OMV_JPEG_BUF_SIZE   (23 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_JPEG_BUF_SIZE   (22 * 1024) // IDE JPEG buffer (header + data).
 
 #define OMV_BOOT_ORIGIN     0x08000000
 #define OMV_BOOT_LENGTH     32K

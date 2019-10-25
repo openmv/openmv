@@ -16,6 +16,7 @@ endif
 
 # Commands
 CC      = $(Q)arm-none-eabi-gcc
+CXX     = $(Q)arm-none-eabi-g++
 AS      = $(Q)arm-none-eabi-as
 LD      = $(Q)arm-none-eabi-ld
 AR      = $(Q)arm-none-eabi-ar
@@ -50,6 +51,7 @@ MICROPY_DIR=micropython
 OMV_DIR=omv
 LEPTON_DIR=lepton
 MLX_DIR=mlx
+TENSORFLOW_DIR=libtf
 WINC1500_DIR=winc1500
 BOOTLDR_DIR=bootloader
 UVC_DIR=uvc
@@ -119,6 +121,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX_DIR)/include/
+OMV_CFLAGS += -I$(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 
 UVC_CFLAGS = $(CFLAGS)
@@ -261,6 +264,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_winc.o                               \
 	py_cpufreq.o                            \
 	py_nn.o                                 \
+	py_tf.o                                 \
 	)
 
 
@@ -447,6 +451,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
 ifeq ($(CUBEAI), 1)
 include $(TOP_DIR)/stm32cubeai/cube.mk
 endif
+
+FIRM_OBJ += $(wildcard $(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/*.a)
 
 # Bootloader object files
 BOOT_OBJ += $(wildcard $(BUILD)/$(BOOTLDR_DIR)/src/*.o)
