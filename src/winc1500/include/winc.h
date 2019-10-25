@@ -17,7 +17,12 @@
 #define WINC_MAX_SSID_LEN       (33)
 #define WINC_MAX_PSK_LEN        (65)
 #define WINC_MAX_BOARD_NAME_LEN (33)
-#define WINC_SOCKBUF_SIZE       (1400)
+// NOTE: Due to the way the WINC1500 HIF is designed, a single recv() call reads all the data received on the socket, which
+// can result in multiple callbacks if the received data is more than the buffer size passed to the recv() call. As a result,
+// the async call handler will keep overwriting the user-provided buffer in subsequent callbacks. The socket buffer is used
+// as workaround to this issue to allow receiving partial packets. Note the maximum size of WINC internal socket buffer seems
+// to change with host-driver/firmware updates. It's very important to make sure this value is still valid after an update.
+#define WINC_SOCKBUF_MAX_SIZE   (1480)
 #define WINC_REQUEST_TIMEOUT    (5000)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
@@ -97,7 +102,7 @@ typedef struct {
 typedef struct {
     int idx;
     int size;
-    uint8_t buf[WINC_SOCKBUF_SIZE];
+    uint8_t buf[WINC_SOCKBUF_MAX_SIZE];
 } winc_socket_buf_t;
 
 typedef struct sockaddr sockaddr;
