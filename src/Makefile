@@ -91,6 +91,7 @@ CFLAGS += -DFB_ALLOC_STATS
 endif
 
 # Compiler Flags
+include $(MP_BOARD_CONFIG_DIR)/mpconfigboard.mk
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
 CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -DARM_NN_TRUNCATE\
@@ -336,6 +337,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pybthread.o             \
 	mpthreadport.o          \
 	posix_helpers.o         \
+	mbedtls/mbedtls_port.o  \
 	)
 
 # board object files
@@ -348,18 +350,18 @@ endif
 
 #------------- MicroPy Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
-	utils/mpirq.o           \
-	utils/pyexec.o          \
-	utils/printf.o          \
-	utils/interrupt_char.o  \
-	utils/sys_stdio_mphal.o \
-	utils/gchelper_m3.o     \
-	libc/string0.o          \
-	netutils/netutils.o     \
-	timeutils/timeutils.o   \
-	berkeley-db-1.xx/btree/*.o \
-	berkeley-db-1.xx/mpool/*.o \
-	embed/abort_.o             \
+	utils/mpirq.o               \
+	utils/pyexec.o              \
+	utils/printf.o              \
+	utils/interrupt_char.o      \
+	utils/sys_stdio_mphal.o     \
+	utils/gchelper_m3.o         \
+	libc/string0.o              \
+	netutils/netutils.o         \
+	timeutils/timeutils.o       \
+	berkeley-db-1.xx/btree/*.o  \
+	berkeley-db-1.xx/mpool/*.o  \
+	embed/abort_.o              \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
@@ -396,6 +398,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
 	readline.o               \
 	)
 
+#------------- mbedtls -------------------#
+FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/lib/mbedtls/library/*.o)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	core/src/usbd_core.o                \
@@ -435,6 +439,8 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	uos_dupterm.o       \
 	modframebuf.o       \
 	modbtree.o          \
+	moducryptolib.o     \
+	modussl_mbedtls.o   \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
@@ -447,6 +453,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
 	dht/dht.o           \
 	memory/spiflash.o   \
 	)
+
 
 ifeq ($(CUBEAI), 1)
 include $(TOP_DIR)/stm32cubeai/cube.mk
