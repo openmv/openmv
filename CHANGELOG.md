@@ -1,4 +1,15 @@
 # Change Log
+## [3.5.0-beta.3](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.3) (2019-10-25)
+* Update WINC1500 to firmware v19.6.1 and host driver v19.3.0.
+* Add STM32Cube.AI support.
+* Fix fb_alloc bug introduced in v3.5.0-beta.2.
+* Enable QSPI internal storage for OpenMV-4R2.
+* Switch to VSCALE1 before entering low-power mode.
+* Add support for TensorFlow Lite for Microcontrollers.
+* Enable mod USSL with MBEDTLS.
+* Update HTTP/S client examples.
+* Fix Makefile order dependency issue causing non-parallel builds to fail.
+
 ## [3.5.0-beta.2](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.2) (2019-10-12)
 * Update to CMSIS v5.4.0
 * Update to H7 HAL v1.5
@@ -12,6 +23,7 @@
 * Add Arduino UART example.
 * Update Arduino SPI example to use callbacks.
 * Add PWM channel 3 and servo 3 to pwm and servo examples.
+* Fix Lepton Hardfault when setting VGA/RGB565.
 
 ## [3.5.0-beta.1](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.1) (2019-09-30)
 * Update to MicroPython 1.11.
