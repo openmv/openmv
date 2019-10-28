@@ -5,8 +5,7 @@ import sensor, image, time, cpufreq
 
 sensor.reset()                          # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
-sensor.set_framesize(sensor.QQVGA)      # Set frame size to QVGA (320x240)
-sensor.skip_frames(time = 2000)         # Wait for settings take effect.
+sensor.set_framesize(sensor.QVGA)       # Set frame size to QVGA (320x240)
 clock = time.clock()                    # Create a clock object to track the FPS.
 
 def test_image_processing():
@@ -17,6 +16,7 @@ def test_image_processing():
 
 print("\nFrequency Scaling Test...")
 for f in cpufreq.get_supported_frequencies():
+    print("Testing CPU Freq: %dMHz..." %(f))
     cpufreq.set_frequency(f)
     clock.reset()
     test_image_processing()
