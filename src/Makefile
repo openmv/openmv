@@ -443,6 +443,16 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modussl_mbedtls.o   \
 	)
 
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/ulab/,\
+	code/fft.o          \
+	code/linalg.o       \
+	code/ndarray.o      \
+	code/numerical.o    \
+	code/poly.o         \
+	code/ulab.o         \
+	code/vectorise.o    \
+	)
+
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
 	ff.o                \
 	ffunicode.o         \
