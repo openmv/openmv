@@ -1179,6 +1179,7 @@ Q(pixformat)
 Q(tf)
 // duplicate Q(load)
 Q(classify)
+Q(segment)
 // Model Object
 Q(tf_model)
 // duplicate Q(len)
@@ -1201,3 +1202,7 @@ Q(tf_classification)
 // duplicate Q(w)
 // duplicate Q(h)
 Q(output)
+
+// Segment
+// duplicate Q(segment)
+// duplicate Q(roi)
