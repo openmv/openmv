@@ -248,10 +248,100 @@ typedef struct _py_image_obj_t {
     image_t _cobj;
 } py_image_obj_t;
 
+typedef struct _mp_obj_py_image_it_t {
+    mp_obj_base_t base;
+    mp_fun_1_t iternext;
+    mp_obj_t py_image;
+    size_t cur;
+} mp_obj_py_image_it_t;
+
 void *py_image_cobj(mp_obj_t img_obj)
 {
     PY_ASSERT_TYPE(img_obj, &py_image_type);
     return &((py_image_obj_t *)img_obj)->_cobj;
+}
+
+mp_obj_t py_image_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
+    py_image_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    switch (op) {
+        case MP_UNARY_OP_LEN: {
+            image_t *img = &self->_cobj;
+            if (img->bpp >= IMAGE_BPP_JPEG) {
+                // For JPEG images we create a 1D array.
+                return mp_obj_new_int(img->bpp); //size in bytes is stored in bpp.
+            } else {
+                // For other formats, 2D array is created.
+                return mp_obj_new_int(img->h);
+            }
+        }
+        default:
+            return MP_OBJ_NULL; // op not supported
+    }
+}
+
+// image iterator
+STATIC mp_obj_t py_image_it_iternext(mp_obj_t self_in)
+{
+    mp_obj_py_image_it_t *self = MP_OBJ_TO_PTR(self_in);
+    py_image_obj_t *image = MP_OBJ_TO_PTR(self->py_image);
+    image_t *img = &image->_cobj;
+    switch (img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            if (self->cur >= img->h) {
+                return MP_OBJ_STOP_ITERATION;
+            } else {
+                mp_obj_t row = mp_obj_new_list(0, NULL);
+                for (int i=0; i<img->w; i++) {
+                    mp_obj_list_append(row, mp_obj_new_int(IMAGE_GET_BINARY_PIXEL(img, i, self->cur)));
+                }
+                self->cur++;
+                return row;
+            }
+        }
+        case IMAGE_BPP_BAYER:
+        case IMAGE_BPP_GRAYSCALE: {
+            if (self->cur >= img->h) {
+                return MP_OBJ_STOP_ITERATION;
+            } else {
+                mp_obj_t row = mp_obj_new_list(0, NULL);
+                for (int i=0; i<img->w; i++) {
+                    mp_obj_list_append(row, mp_obj_new_int(IMAGE_GET_GRAYSCALE_PIXEL(img, i, self->cur)));
+                }
+                self->cur++;
+                return row;
+            }
+        }
+        case IMAGE_BPP_RGB565: {
+            if (self->cur >= img->h) {
+                return MP_OBJ_STOP_ITERATION;
+            } else {
+                mp_obj_t row = mp_obj_new_list(0, NULL);
+                for (int i=0; i<img->w; i++) {
+                    mp_obj_list_append(row, mp_obj_new_int(IMAGE_GET_RGB565_PIXEL(img, i, self->cur)));
+                }
+                self->cur++;
+                return row;
+            }
+        }
+        default: {// JPEG
+            if (self->cur >= img->bpp) {
+                return MP_OBJ_STOP_ITERATION;
+            } else {
+                return mp_obj_new_int(img->pixels[self->cur++]);
+            }
+        }
+    }
+}
+
+STATIC mp_obj_t py_image_getiter(mp_obj_t o_in, mp_obj_iter_buf_t *iter_buf)
+{
+    assert(sizeof(mp_obj_image_it_t) <= sizeof(mp_obj_iter_buf_t));
+    mp_obj_py_image_it_t *o = (mp_obj_py_image_it_t*)iter_buf;
+    o->base.type = &mp_type_polymorph_iter;
+    o->iternext = py_image_it_iternext;
+    o->py_image = o_in;
+    o->cur = 0;
+    return MP_OBJ_FROM_PTR(o);
 }
 
 static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
@@ -6584,6 +6674,8 @@ static const mp_obj_type_t py_image_type = {
     .print = py_image_print,
     .buffer_p = { .get_buffer = py_image_get_buffer },
     .subscr = py_image_subscr,
+    .getiter = py_image_getiter,
+    .unary_op = py_image_unary_op,
     .locals_dict = (mp_obj_t) &locals_dict
 };
 
