@@ -5,6 +5,7 @@
 
 #include <mp.h>
 #include "py_helper.h"
+#include "py_image.h"
 #include "ff_wrapper.h"
 #include "libtf.h"
 #include "libtf_person_detect_model_data.h"
@@ -114,6 +115,43 @@ static const mp_obj_type_t py_tf_classification_type = {
 };
 
 static const mp_obj_type_t py_tf_model_type;
+
+STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool mode)
+{
+    const char *path = mp_obj_str_get_str(path_obj);
+    py_tf_model_obj_t *tf_model = m_new_obj(py_tf_model_obj_t);
+    tf_model->base.type = &py_tf_model_type;
+
+    if (!strcmp(path, "person_detection")) {
+        tf_model->model_data = (unsigned char *) g_person_detect_model_data;
+        tf_model->model_data_len = g_person_detect_model_data_len;
+    } else {
+        FIL fp;
+        file_read_open(&fp, path);
+        tf_model->model_data_len = f_size(&fp);
+        tf_model->model_data = mode
+            ? fb_alloc(tf_model->model_data_len, FB_ALLOC_NO_HINT)
+            : xalloc(tf_model->model_data_len);
+        read_data(&fp, tf_model->model_data, tf_model->model_data_len);
+        file_close(&fp);
+    }
+
+    fb_alloc_mark();
+    uint32_t tensor_arena_size;
+    uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
+
+    PY_ASSERT_FALSE_MSG(libtf_get_input_data_hwc(tf_model->model_data,
+                                                 tensor_arena,
+                                                 tensor_arena_size,
+                                                 &tf_model->height,
+                                                 &tf_model->width,
+                                                 &tf_model->channels),
+                        "Unable to read model height, width, and channels!");
+
+    fb_alloc_free_till_mark();
+
+    return tf_model;
+}
 
 typedef struct py_tf_input_data_callback_data {
     image_t *img;
@@ -254,16 +292,16 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 2, kw_args, &roi);
 
-    float arg_min_scale = py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_min_scale), 1.0f);
+    float arg_min_scale = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_min_scale), 1.0f);
     PY_ASSERT_TRUE_MSG((0.0f < arg_min_scale) && (arg_min_scale <= 1.0f), "0 < min_scale <= 1");
 
-    float arg_scale_mul = py_helper_keyword_float(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale_mul), 0.5f);
+    float arg_scale_mul = py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale_mul), 0.5f);
     PY_ASSERT_TRUE_MSG((0.0f <= arg_scale_mul) && (arg_scale_mul < 1.0f), "0 <= scale_mul < 1");
 
-    float arg_x_overlap = py_helper_keyword_float(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_overlap), 0.0f);
+    float arg_x_overlap = py_helper_keyword_float(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_overlap), 0.0f);
     PY_ASSERT_TRUE_MSG(((0.0f <= arg_x_overlap) && (arg_x_overlap < 1.0f)) || (arg_x_overlap == -1.0f), "0 <= x_overlap < 1");
 
-    float arg_y_overlap = py_helper_keyword_float(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_overlap), 0.0f);
+    float arg_y_overlap = py_helper_keyword_float(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_overlap), 0.0f);
     PY_ASSERT_TRUE_MSG(((0.0f <= arg_y_overlap) && (arg_y_overlap < 1.0f)) || (arg_y_overlap == -1.0f), "0 <= y_overlap < 1");
 
     fb_alloc_mark();
@@ -271,34 +309,7 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     if (MP_OBJ_IS_TYPE(args[0], &py_tf_model_type)) {
         arg_model = (py_tf_model_obj_t *) args[0];
     } else {
-        const char *path = mp_obj_str_get_str(args[0]);
-        arg_model = m_new_obj(py_tf_model_obj_t);
-        arg_model->base.type = &py_tf_model_type;
-
-        if (!strcmp(path, "person_detection")) {
-            arg_model->model_data = (unsigned char *) g_person_detect_model_data;
-            arg_model->model_data_len = g_person_detect_model_data_len;
-        } else {
-            FIL fp;
-            file_read_open(&fp, path);
-            arg_model->model_data_len = f_size(&fp);
-            arg_model->model_data = fb_alloc(arg_model->model_data_len, FB_ALLOC_NO_HINT);
-            read_data(&fp, arg_model->model_data, arg_model->model_data_len);
-            file_close(&fp);
-        }
-
-        uint32_t tensor_arena_size;
-        uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
-
-        PY_ASSERT_FALSE_MSG(libtf_get_input_data_hwc(arg_model->model_data,
-                                                     tensor_arena,
-                                                     tensor_arena_size,
-                                                     &arg_model->height,
-                                                     &arg_model->width,
-                                                     &arg_model->channels),
-                            "Unable to read model height, width, and channels!");
-
-        fb_free(); // Free just the fb_alloc_all() - not fb_alloc() above.
+        arg_model = int_py_tf_load(args[0], true);
     }
 
     uint32_t tensor_arena_size;
@@ -359,6 +370,78 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_classify_obj, 2, py_tf_classify);
 
+typedef struct py_tf_segment_output_data_callback_data {
+    mp_obj_t out;
+} py_tf_segment_output_data_callback_data_t;
+
+STATIC void py_tf_segment_output_data_callback(void *callback_data,
+                                               unsigned char *model_output,
+                                               const unsigned int output_height,
+                                               const unsigned int output_width,
+                                               const unsigned int output_channels)
+{
+    py_tf_segment_output_data_callback_data_t *arg = (py_tf_segment_output_data_callback_data_t *) callback_data;
+
+    arg->out = mp_obj_new_list(output_channels, NULL);
+    for (unsigned int i = 0; i < output_channels; i++) {
+        image_t img = {
+            .w = output_width,
+            .h = output_height,
+            .bpp = IMAGE_BPP_GRAYSCALE,
+            .pixels = xalloc(output_width * output_height * sizeof(uint8_t))
+        };
+        ((mp_obj_list_t *) arg->out)->items[i] = py_image_from_struct(&img);
+        for (unsigned int y = 0; i < output_height; y++) {
+            unsigned int row = y * output_width * output_channels;
+            uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&img, y);
+            for (unsigned int x = 0; i < output_width; x++) {
+                unsigned int col = x * output_channels;
+                IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, model_output[row + col + i]);
+            }
+        }
+    }
+}
+
+STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    py_tf_model_obj_t *arg_model;
+    image_t *arg_img = py_helper_arg_to_image_mutable(args[1]);
+
+    rectangle_t roi;
+    py_helper_keyword_rectangle_roi(arg_img, n_args, args, 2, kw_args, &roi);
+
+    fb_alloc_mark();
+
+    if (MP_OBJ_IS_TYPE(args[0], &py_tf_model_type)) {
+        arg_model = (py_tf_model_obj_t *) args[0];
+    } else {
+        arg_model = int_py_tf_load(args[0], true);
+    }
+
+    uint32_t tensor_arena_size;
+    uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
+
+    py_tf_input_data_callback_data_t py_tf_input_data_callback_data;
+    py_tf_input_data_callback_data.img = arg_img;
+    py_tf_input_data_callback_data.roi = &roi;
+
+    py_tf_segment_output_data_callback_data_t py_tf_segment_output_data_callback_data;
+
+    PY_ASSERT_FALSE_MSG(libtf_invoke(arg_model->model_data,
+                                     tensor_arena,
+                                     tensor_arena_size,
+                                     py_tf_input_data_callback,
+                                     &py_tf_input_data_callback_data,
+                                     py_tf_segment_output_data_callback,
+                                     &py_tf_segment_output_data_callback_data),
+                        "Model segmentation failed!");
+
+    fb_alloc_free_till_mark();
+
+    return py_tf_segment_output_data_callback_data.out;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_segment_obj, 2, py_tf_segment);
+
 mp_obj_t py_tf_len(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->model_data_len); }
 mp_obj_t py_tf_height(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->height); }
 mp_obj_t py_tf_width(mp_obj_t self_in) { return mp_obj_new_int(((py_tf_model_obj_t *) self_in)->width); }
@@ -374,7 +457,8 @@ STATIC const mp_rom_map_elem_t locals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_height), MP_ROM_PTR(&py_tf_height_obj) },
     { MP_ROM_QSTR(MP_QSTR_width), MP_ROM_PTR(&py_tf_width_obj) },
     { MP_ROM_QSTR(MP_QSTR_channels), MP_ROM_PTR(&py_tf_channels_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_tf_classify_obj) }
+    { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment), MP_ROM_PTR(&py_tf_segment_obj) }
 };
 
 STATIC MP_DEFINE_CONST_DICT(locals_dict, locals_dict_table);
@@ -388,37 +472,7 @@ STATIC const mp_obj_type_t py_tf_model_type = {
 
 STATIC mp_obj_t py_tf_load(mp_obj_t path_obj)
 {
-    const char *path = mp_obj_str_get_str(path_obj);
-    py_tf_model_obj_t *tf_model = m_new_obj(py_tf_model_obj_t);
-    tf_model->base.type = &py_tf_model_type;
-
-    if (!strcmp(path, "person_detection")) {
-        tf_model->model_data = (unsigned char *) g_person_detect_model_data;
-        tf_model->model_data_len = g_person_detect_model_data_len;
-    } else {
-        FIL fp;
-        file_read_open(&fp, path);
-        tf_model->model_data_len = f_size(&fp);
-        tf_model->model_data = xalloc(tf_model->model_data_len);
-        read_data(&fp, tf_model->model_data, tf_model->model_data_len);
-        file_close(&fp);
-    }
-
-    fb_alloc_mark();
-    uint32_t tensor_arena_size;
-    uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
-
-    PY_ASSERT_FALSE_MSG(libtf_get_input_data_hwc(tf_model->model_data,
-                                                 tensor_arena,
-                                                 tensor_arena_size,
-                                                 &tf_model->height,
-                                                 &tf_model->width,
-                                                 &tf_model->channels),
-                        "Unable to read model height, width, and channels!");
-
-    fb_alloc_free_till_mark();
-
-    return tf_model;
+    return int_py_tf_load(path_obj, false);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_load_obj, py_tf_load);
 
@@ -429,9 +483,11 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
 #ifdef IMLIB_ENABLE_TF
     { MP_ROM_QSTR(MP_QSTR_load),     MP_ROM_PTR(&py_tf_load_obj) },
     { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),  MP_ROM_PTR(&py_tf_segment_obj) },
 #else
     { MP_ROM_QSTR(MP_QSTR_load),     MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_func_unavailable_obj) }
+    { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),  MP_ROM_PTR(&py_func_unavailable_obj) }
 #endif // IMLIB_ENABLE_TF
 };
 
