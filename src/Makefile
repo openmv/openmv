@@ -538,6 +538,7 @@ export TOP_DIR
 export BUILD
 export TARGET
 export STARTUP
+export FROZEN_MPY_DIR
 ###################################################
 all: $(OPENMV)
 
