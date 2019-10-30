@@ -137,6 +137,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool mode)
     }
 
     fb_alloc_mark();
+
     uint32_t tensor_arena_size;
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
 
@@ -151,6 +152,21 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool mode)
     fb_alloc_free_till_mark();
 
     return tf_model;
+}
+
+STATIC mp_obj_t py_tf_load_xalloc(mp_obj_t path_obj)
+{
+    return int_py_tf_load(path_obj, false);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_load_obj, py_tf_load_xalloc);
+
+STATIC py_tf_model_obj_t *py_tf_load_fb_alloc(mp_obj_t path_obj)
+{
+    if (MP_OBJ_IS_TYPE(path_obj, &py_tf_model_type)) {
+        return (py_tf_model_obj_t *) path_obj;
+    } else {
+        return (py_tf_model_obj_t *) int_py_tf_load(path_obj, true);
+    }
 }
 
 typedef struct py_tf_input_data_callback_data {
@@ -286,7 +302,9 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
 
 STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    py_tf_model_obj_t *arg_model;
+    fb_alloc_mark();
+
+    py_tf_model_obj_t *arg_model = py_tf_load_fb_alloc(args[0]);
     image_t *arg_img = py_helper_arg_to_image_mutable(args[1]);
 
     rectangle_t roi;
@@ -303,14 +321,6 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
     float arg_y_overlap = py_helper_keyword_float(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_overlap), 0.0f);
     PY_ASSERT_TRUE_MSG(((0.0f <= arg_y_overlap) && (arg_y_overlap < 1.0f)) || (arg_y_overlap == -1.0f), "0 <= y_overlap < 1");
-
-    fb_alloc_mark();
-
-    if (MP_OBJ_IS_TYPE(args[0], &py_tf_model_type)) {
-        arg_model = (py_tf_model_obj_t *) args[0];
-    } else {
-        arg_model = int_py_tf_load(args[0], true);
-    }
 
     uint32_t tensor_arena_size;
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
@@ -404,19 +414,13 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
 
 STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    py_tf_model_obj_t *arg_model;
+    fb_alloc_mark();
+
+    py_tf_model_obj_t *arg_model = py_tf_load_fb_alloc(args[0]);
     image_t *arg_img = py_helper_arg_to_image_mutable(args[1]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 2, kw_args, &roi);
-
-    fb_alloc_mark();
-
-    if (MP_OBJ_IS_TYPE(args[0], &py_tf_model_type)) {
-        arg_model = (py_tf_model_obj_t *) args[0];
-    } else {
-        arg_model = int_py_tf_load(args[0], true);
-    }
 
     uint32_t tensor_arena_size;
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
@@ -469,12 +473,6 @@ STATIC const mp_obj_type_t py_tf_model_type = {
     .print = py_tf_model_print,
     .locals_dict = (mp_obj_t) &locals_dict
 };
-
-STATIC mp_obj_t py_tf_load(mp_obj_t path_obj)
-{
-    return int_py_tf_load(path_obj, false);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_load_obj, py_tf_load);
 
 #endif // IMLIB_ENABLE_TF
 
