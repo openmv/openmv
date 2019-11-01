@@ -10,7 +10,7 @@ from pyb import CAN
 TRANSMITTER = True
 
 can = CAN(2, CAN.NORMAL)
-# Set a different baudrate (default is 250Kbps)
+# Set a different baudrate (default is 125Kbps)
 # NOTE: The following parameters are for the H7 only.
 #
 # can.init(CAN.NORMAL, prescaler=32, sjw=1, bs1=8, bs2=3) # 125Kbps
