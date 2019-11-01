@@ -12,6 +12,7 @@ ifeq ($(V), 1)
 Q =
 else
 Q = @
+MAKEFLAGS += --silent
 endif
 
 # Commands
