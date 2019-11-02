@@ -17,7 +17,7 @@ import sensor, time, image
 sensor.reset()
 
 # Sensor settings
-sensor.set_contrast(1)
+sensor.set_contrast(3)
 sensor.set_gainceiling(16)
 # HQVGA and GRAYSCALE are the best for face tracking.
 sensor.set_framesize(sensor.HQVGA)
