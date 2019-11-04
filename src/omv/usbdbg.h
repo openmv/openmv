@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * USB debug support.
- *
  */
 #ifndef __USBDBG_H__
 #define __USBDBG_H__
@@ -18,8 +20,8 @@
   * the IDE will Not connect if the major version number is different.
   */
 #define FIRMWARE_VERSION_MAJOR      (3)
-#define FIRMWARE_VERSION_MINOR      (4)
-#define FIRMWARE_VERSION_PATCH      (2)
+#define FIRMWARE_VERSION_MINOR      (5)
+#define FIRMWARE_VERSION_PATCH      (0)
 
 /**
   * To add a new debugging command, increment the last command value used.

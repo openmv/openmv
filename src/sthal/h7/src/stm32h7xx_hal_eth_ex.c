@@ -2,36 +2,18 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_eth_ex.c
   * @author  MCD Application Team
-  * @version V1.2.0
-  * @date   29-December-2017
   * @brief   ETH HAL Extended module driver.
   *
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
@@ -340,15 +322,15 @@ HAL_StatusTypeDef HAL_ETHEx_GetRxVLANConfig(ETH_HandleTypeDef *heth, ETH_RxVLANC
     return HAL_ERROR;
   }
 
-  pVlanConfig->InnerVLANTagInStatus = (FunctionalState)(READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_EIVLRXS) >> 31);
+  pVlanConfig->InnerVLANTagInStatus = ((READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_EIVLRXS) >> 31) == 0U) ? DISABLE : ENABLE;
   pVlanConfig->StripInnerVLANTag  = READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_EIVLS);
-  pVlanConfig->InnerVLANTag = (FunctionalState)(READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_ERIVLT) >> 27);
-  pVlanConfig->DoubleVLANProcessing = (FunctionalState)(READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_EDVLP) >> 26);
-  pVlanConfig->VLANTagHashTableMatch = (FunctionalState)(READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_VTHM) >> 25);
-  pVlanConfig->VLANTagInStatus = (FunctionalState)(READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_EVLRXS) >> 24);
+  pVlanConfig->InnerVLANTag = ((READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_ERIVLT) >> 27) == 0U) ? DISABLE : ENABLE;
+  pVlanConfig->DoubleVLANProcessing = ((READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_EDVLP) >> 26) == 0U) ? DISABLE : ENABLE;
+  pVlanConfig->VLANTagHashTableMatch = ((READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_VTHM) >> 25) == 0U) ? DISABLE : ENABLE;
+  pVlanConfig->VLANTagInStatus = ((READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_EVLRXS) >> 24) == 0U) ? DISABLE : ENABLE;
   pVlanConfig->StripVLANTag = READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_EVLS);
   pVlanConfig->VLANTypeCheck = READ_BIT(heth->Instance->MACVTR, (ETH_MACVTR_DOVLTC | ETH_MACVTR_ERSVLM | ETH_MACVTR_ESVL));
-  pVlanConfig->VLANTagInverceMatch = (FunctionalState)(READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_VTIM) >> 17);
+  pVlanConfig->VLANTagInverceMatch = ((READ_BIT(heth->Instance->MACVTR, ETH_MACVTR_VTIM) >> 17) == 0U) ? DISABLE : ENABLE;
 
   return HAL_OK;
 }
@@ -369,15 +351,15 @@ HAL_StatusTypeDef HAL_ETHEx_SetRxVLANConfig(ETH_HandleTypeDef *heth, ETH_RxVLANC
   }
 
   /* Write config to MACVTR */
-  MODIFY_REG(heth->Instance->MACVTR, ETH_MACRXVLAN_MASK, ((uint32_t)(pVlanConfig->InnerVLANTagInStatus << 31) |
+  MODIFY_REG(heth->Instance->MACVTR, ETH_MACRXVLAN_MASK, (((uint32_t)pVlanConfig->InnerVLANTagInStatus << 31) |
                                                           pVlanConfig->StripInnerVLANTag |
-                                                            (uint32_t)(pVlanConfig->InnerVLANTag << 27) |
-                                                              (uint32_t)(pVlanConfig->DoubleVLANProcessing << 26) |
-                                                                (uint32_t)(pVlanConfig->VLANTagHashTableMatch << 25) |
-                                                                  (uint32_t)(pVlanConfig->VLANTagInStatus << 24) |
+                                                            ((uint32_t)pVlanConfig->InnerVLANTag << 27) |
+                                                              ((uint32_t)pVlanConfig->DoubleVLANProcessing << 26) |
+                                                                ((uint32_t)pVlanConfig->VLANTagHashTableMatch << 25) |
+                                                                  ((uint32_t)pVlanConfig->VLANTagInStatus << 24) |
                                                                     pVlanConfig->StripVLANTag |
                                                                       pVlanConfig->VLANTypeCheck |
-                                                                        (uint32_t)(pVlanConfig->VLANTagInverceMatch << 17)));
+                                                                        ((uint32_t)pVlanConfig->VLANTagInverceMatch << 17)));
 
   return HAL_OK;
 }
@@ -414,14 +396,14 @@ HAL_StatusTypeDef HAL_ETHEx_GetTxVLANConfig(ETH_HandleTypeDef *heth, uint32_t VL
 
   if(VLANTag == ETH_INNER_TX_VLANTAG)
   {
-    pVlanConfig->SourceTxDesc = (FunctionalState)(READ_BIT(heth->Instance->MACIVIR, ETH_MACVIR_VLTI) >> 20);
-    pVlanConfig->SVLANType = (FunctionalState)(READ_BIT(heth->Instance->MACIVIR, ETH_MACVIR_CSVL) >> 19);
+    pVlanConfig->SourceTxDesc = ((READ_BIT(heth->Instance->MACIVIR, ETH_MACVIR_VLTI) >> 20) == 0U) ? DISABLE : ENABLE;
+    pVlanConfig->SVLANType = ((READ_BIT(heth->Instance->MACIVIR, ETH_MACVIR_CSVL) >> 19) == 0U) ? DISABLE : ENABLE;
     pVlanConfig->VLANTagControl = READ_BIT(heth->Instance->MACIVIR, (ETH_MACVIR_VLP | ETH_MACVIR_VLC));
   }
   else
   {
-    pVlanConfig->SourceTxDesc = (FunctionalState)(READ_BIT(heth->Instance->MACVIR, ETH_MACVIR_VLTI) >> 20);
-    pVlanConfig->SVLANType = (FunctionalState)(READ_BIT(heth->Instance->MACVIR, ETH_MACVIR_CSVL) >> 19);
+    pVlanConfig->SourceTxDesc = ((READ_BIT(heth->Instance->MACVIR, ETH_MACVIR_VLTI) >> 20) == 0U) ? DISABLE : ENABLE;
+    pVlanConfig->SVLANType = ((READ_BIT(heth->Instance->MACVIR, ETH_MACVIR_CSVL) >> 19) == 0U) ? DISABLE : ENABLE;
     pVlanConfig->VLANTagControl = READ_BIT(heth->Instance->MACVIR, (ETH_MACVIR_VLP | ETH_MACVIR_VLC));
   }
 
@@ -443,16 +425,16 @@ HAL_StatusTypeDef HAL_ETHEx_SetTxVLANConfig(ETH_HandleTypeDef *heth, uint32_t VL
 {
   if(VLANTag == ETH_INNER_TX_VLANTAG)
   {
-    MODIFY_REG(heth->Instance->MACIVIR, ETH_MACTXVLAN_MASK, ((uint32_t)(pVlanConfig->SourceTxDesc << 20) |
-                                                            (uint32_t)(pVlanConfig->SVLANType << 19) |
+    MODIFY_REG(heth->Instance->MACIVIR, ETH_MACTXVLAN_MASK, (((uint32_t)pVlanConfig->SourceTxDesc << 20) |
+                                                            ((uint32_t)pVlanConfig->SVLANType << 19) |
                                                               pVlanConfig->VLANTagControl));
     /* Enable Double VLAN processing */
     SET_BIT(heth->Instance->MACVTR, ETH_MACVTR_EDVLP);
   }
   else
   {
-    MODIFY_REG(heth->Instance->MACVIR, ETH_MACTXVLAN_MASK, ((uint32_t)(pVlanConfig->SourceTxDesc << 20) |
-                                                            (uint32_t)(pVlanConfig->SVLANType << 19) |
+    MODIFY_REG(heth->Instance->MACVIR, ETH_MACTXVLAN_MASK, (((uint32_t)pVlanConfig->SourceTxDesc << 20) |
+                                                            ((uint32_t)pVlanConfig->SVLANType << 19) |
                                                               pVlanConfig->VLANTagControl));
   }
 

@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * PPM/PGM reader/writer.
- *
  */
 #include <stdio.h>
 #include <ff.h>
@@ -67,10 +69,10 @@ void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_setting
 }
 
 // This function reads the pixel values of an image.
-void ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, ppm_read_settings_t *rs)
+void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs)
 {
     if (rs->ppm_fmt == '2') {
-        for (int i = line_start; i < line_end; i++) {
+        for (int i = 0; i < n_lines; i++) {
             for (int j = 0; j < img->w; j++) {
                 uint32_t pixel;
                 read_int(fp, &pixel, rs);
@@ -78,7 +80,7 @@ void ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, ppm_re
             }
         }
     } else if (rs->ppm_fmt == '3') {
-        for (int i = line_start; i < line_end; i++) {
+        for (int i = 0; i < n_lines; i++) {
             for (int j = 0; j < img->w; j++) {
                 uint32_t r, g, b;
                 read_int(fp, &r, rs);
@@ -90,11 +92,9 @@ void ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, ppm_re
             }
         }
     } else if (rs->ppm_fmt == '5') {
-        read_data(fp, // Super Fast - Zoom, Zoom!
-                  img->pixels + (line_start * img->w),
-                  (line_end - line_start) * img->w);
+        read_data(fp, img->pixels, n_lines * img->w);
     } else if (rs->ppm_fmt == '6') {
-        for (int i = line_start; i < line_end; i++) {
+        for (int i = 0; i < n_lines; i++) {
             for (int j = 0; j < img->w; j++) {
                 uint8_t r, g, b;
                 read_byte(fp, &r);
@@ -116,7 +116,7 @@ void ppm_read(image_t *img, const char *path)
     file_buffer_on(&fp);
     ppm_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) img->pixels = xalloc(img->w * img->h * img->bpp);
-    ppm_read_pixels(&fp, img, 0, img->h, &rs);
+    ppm_read_pixels(&fp, img, img->h, &rs);
     file_buffer_off(&fp);
     file_close(&fp);
 }

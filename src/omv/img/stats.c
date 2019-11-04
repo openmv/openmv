@@ -1,8 +1,13 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Statistics functions.
  */
-
 #include "imlib.h"
 
 #ifdef IMLIB_ENABLE_GET_SIMILARITY
@@ -116,11 +121,11 @@ void imlib_get_similarity(image_t *img, const char *path, image_t *other, int sc
 
     int int_h_blocks = h_blocks * sizeof(int);
     imlib_similatiry_line_op_state_t state;
-    state.sumBucketsOfX = fb_alloc0(int_h_blocks);
-    state.sumBucketsOfY = fb_alloc0(int_h_blocks);
-    state.sum2BucketsOfX = fb_alloc0(int_h_blocks);
-    state.sum2BucketsOfY = fb_alloc0(int_h_blocks);
-    state.sum2Buckets = fb_alloc0(int_h_blocks);
+    state.sumBucketsOfX = fb_alloc0(int_h_blocks, FB_ALLOC_NO_HINT);
+    state.sumBucketsOfY = fb_alloc0(int_h_blocks, FB_ALLOC_NO_HINT);
+    state.sum2BucketsOfX = fb_alloc0(int_h_blocks, FB_ALLOC_NO_HINT);
+    state.sum2BucketsOfY = fb_alloc0(int_h_blocks, FB_ALLOC_NO_HINT);
+    state.sum2Buckets = fb_alloc0(int_h_blocks, FB_ALLOC_NO_HINT);
     state.similarity_sum = 0.0f;
     state.similarity_sum_2 = 0.0f;
     state.similarity_min = FLT_MAX;
@@ -857,14 +862,14 @@ bool imlib_get_regression(find_lines_list_lnk_data_t *out, image_t *ptr, rectang
             }
         }
     } else { // Theil-Sen Estimator
-        int *x_histogram = fb_alloc0(ptr->w * sizeof(int)); // Not roi so we don't have to adjust, we can burn the RAM.
-        int *y_histogram = fb_alloc0(ptr->h * sizeof(int)); // Not roi so we don't have to adjust, we can burn the RAM.
+        int *x_histogram = fb_alloc0(ptr->w * sizeof(int), FB_ALLOC_NO_HINT); // Not roi so we don't have to adjust, we can burn the RAM.
+        int *y_histogram = fb_alloc0(ptr->h * sizeof(int), FB_ALLOC_NO_HINT); // Not roi so we don't have to adjust, we can burn the RAM.
 
-        long long *x_delta_histogram = fb_alloc0((2 * ptr->w) * sizeof(long long)); // Not roi so we don't have to adjust, we can burn the RAM.
-        long long *y_delta_histogram = fb_alloc0((2 * ptr->h) * sizeof(long long)); // Not roi so we don't have to adjust, we can burn the RAM.
+        long long *x_delta_histogram = fb_alloc0((2 * ptr->w) * sizeof(long long), FB_ALLOC_NO_HINT); // Not roi so we don't have to adjust, we can burn the RAM.
+        long long *y_delta_histogram = fb_alloc0((2 * ptr->h) * sizeof(long long), FB_ALLOC_NO_HINT); // Not roi so we don't have to adjust, we can burn the RAM.
 
         uint32_t size;
-        point_t *points = (point_t *) fb_alloc_all(&size);
+        point_t *points = (point_t *) fb_alloc_all(&size, FB_ALLOC_NO_HINT);
         size_t points_max = size / sizeof(point_t);
         size_t points_count = 0;
 

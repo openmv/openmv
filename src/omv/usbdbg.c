@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * USB debug support.
- *
+ * USB debugger.
  */
 #include "mp.h"
 #include "imlib.h"
@@ -170,7 +172,7 @@ void usbdbg_data_out(void *buffer, int length)
                     // Interrupt running REPL
                     // Note: setting pendsv explicitly here because the VM is probably
                     // waiting in REPL and the soft interrupt flag will not be checked.
-                    pendsv_nlr_jump_hard(mp_const_ide_interrupt);
+                    pendsv_nlr_jump(mp_const_ide_interrupt);
                 }
             }
             break;
@@ -259,7 +261,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
                 // interrupt running code by raising an exception
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-                pendsv_nlr_jump_hard(mp_const_ide_interrupt);
+                pendsv_nlr_jump(mp_const_ide_interrupt);
             }
             cmd = USBDBG_NONE;
             break;

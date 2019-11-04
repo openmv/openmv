@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Sensor Python module.
- *
  */
 #include <stdarg.h>
 #include "mp.h"
@@ -45,9 +47,6 @@ static mp_obj_t py_sensor_flush() {
 static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
     // Snapshot image
     mp_obj_t image = py_image(0, 0, 0, 0);
-
-    // Sanity checks
-    PY_ASSERT_TRUE_MSG((sensor.pixformat != PIXFORMAT_JPEG), "Operation not supported on JPEG");
 
     if (sensor.snapshot(&sensor, (image_t*) py_image_cobj(image), NULL)==-1) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
@@ -152,7 +151,7 @@ static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_
     // Alloc image first (could fail) then alloc RAM so that there's no leak on failure.
     mp_obj_t r = py_image_from_struct(&img);
     // Don't mark before on purpose.
-    ((image_t *) py_image_cobj(r))->pixels = fb_alloc0(image_size(&img));
+    ((image_t *) py_image_cobj(r))->pixels = fb_alloc0(image_size(&img), FB_ALLOC_NO_HINT);
     return r;
 }
 
@@ -683,6 +682,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_WVGA),                MP_OBJ_NEW_SMALL_INT(FRAMESIZE_WVGA)},     /* 720x480   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_WVGA2),               MP_OBJ_NEW_SMALL_INT(FRAMESIZE_WVGA2)},    /* 752x480   */
     { MP_OBJ_NEW_QSTR(MP_QSTR_SVGA),                MP_OBJ_NEW_SMALL_INT(FRAMESIZE_SVGA)},     /* 800x600   */
+    { MP_OBJ_NEW_QSTR(MP_QSTR_XGA),                 MP_OBJ_NEW_SMALL_INT(FRAMESIZE_XGA)},      /* 1024x768  */
     { MP_OBJ_NEW_QSTR(MP_QSTR_SXGA),                MP_OBJ_NEW_SMALL_INT(FRAMESIZE_SXGA)},     /* 1280x1024 */
     { MP_OBJ_NEW_QSTR(MP_QSTR_UXGA),                MP_OBJ_NEW_SMALL_INT(FRAMESIZE_UXGA)},     /* 1600x1200 */
 

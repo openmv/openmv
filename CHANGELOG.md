@@ -1,4 +1,59 @@
 # Change Log
+## [3.5.0-beta.3](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.3) (2019-10-25)
+* Update WINC1500 to firmware v19.6.1 and host driver v19.3.0.
+* Add STM32Cube.AI support.
+* Fix fb_alloc bug introduced in v3.5.0-beta.2.
+* Enable QSPI internal storage for OpenMV-4R2.
+* Switch to VSCALE1 before entering low-power mode.
+* Add support for TensorFlow Lite for Microcontrollers.
+* Enable mod USSL with MBEDTLS.
+* Update HTTP/S client examples.
+* Fix Makefile order dependency issue causing non-parallel builds to fail.
+
+## [3.5.0-beta.2](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.2) (2019-10-12)
+* Update to CMSIS v5.4.0
+* Update to H7 HAL v1.5
+* Update ADC driver to work with new H7 HAL.
+* Enable VSCALE0 for rev V devices.
+* Enable PLL3 for ADC and SPI123v and use PLL2 for FMC (outputs 200MHz).
+* Add support for 32-bit SDRAM @100MHz.
+* Fix BMP bug when reading 24-bit images.
+* Update ADC examples
+* Add new ADC example for internal channels.
+* Add Arduino UART example.
+* Update Arduino SPI example to use callbacks.
+* Add PWM channel 3 and servo 3 to pwm and servo examples.
+* Fix Lepton Hardfault when setting VGA/RGB565.
+
+## [3.5.0-beta.1](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.1) (2019-09-30)
+* Update to MicroPython 1.11.
+* Update examples.
+* Fix SPI WFI bug on F7.
+
+## [3.4.3](https://github.com/openmv/openmv/releases/tag/v3.4.3) (2019-09-27)
+* Fix delay when JPEG encoding overflows (affects H7).
+
+## [3.4.2](https://github.com/openmv/openmv/releases/tag/v3.4.2) (2019-09-16)
+* Fix H7 RTC bugs.
+* Fix binary ops bug.
+* Fix H7 deepsleep mode.
+* Fix JPEG mode bugs.
+* Fix H7 DMA bug.
+* Fix LBP ROI bug.
+* Update OV2640 driver.
+* Add support for OV5640.
+* Add new SDRAM board support.
+* Add new libraries and examples.
+* Add FB alloc statistics, enable with (FB_ALLOC_STATS=1).
+* Add support for H7 FDCAN.
+* Enable btree module.
+* AprilTag: support flipped/mirrored images.
+* AprilTag: support high resolution images.
+* WINC1500: Add netinfo function.
+* WINC1500: Support static IPs.
+* WINC1500: Fix timeout issues with WINC wrapper.
+* WINC1500: Fix accept() hardfault on unbound sockets.
+
 ## [3.4.1](https://github.com/openmv/openmv/releases/tag/v3.4.1) (2019-05-02)
 * This patch release fixes an issue with Lepton clock.
 

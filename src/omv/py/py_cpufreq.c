@@ -1,12 +1,13 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * CPU frequency scaling module.
- *
  */
-
 #include <stdlib.h>
 #include <string.h>
 #include <mp.h>
@@ -20,7 +21,7 @@
 #define ARRAY_LENGTH(x) (sizeof(x)/sizeof(x[0]))
 
 #if defined(STM32H7)
-static const uint32_t cpufreq_freqs[] = {100, 200, 400};
+static const uint32_t cpufreq_freqs[] = {120, 240, 480};
 #elif defined(STM32F7)
 static const uint32_t cpufreq_pllq[] = {5, 6, 7, 8, 9};
 static const uint32_t cpufreq_freqs[] = {120, 144, 168, 192, 216};
@@ -108,7 +109,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
             RCC_CLOCKTYPE_D1PCLK1 | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2  | RCC_CLOCKTYPE_D3PCLK1);
 
     switch (cpufreq) {
-        case 100:
+        case 120:
             RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV4; // D1CPRE
             RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;   // HPRE
             RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;   // D2PPRE1
@@ -117,7 +118,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
             RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;   // D3PPRE
             break;
 
-        case 200:
+        case 240:
             RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV2; // D1CPRE
             RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;   // HPRE
             RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;   // D2PPRE1
@@ -126,7 +127,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
             RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;   // D3PPRE
             break;
 
-        case 400:
+        case 480:
             RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV1; // D1CPRE
             RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV2;   // HPRE
             RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;   // D2PPRE1

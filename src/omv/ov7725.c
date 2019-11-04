@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * OV7725 driver.
- *
  */
 #include <stdint.h>
 #include <stdlib.h>
@@ -179,7 +181,7 @@ static int sleep(sensor_t *sensor, int enable)
     return cambus_writeb(sensor->slv_addr, COM2, reg) | ret;
 }
 
-static int read_reg(sensor_t *sensor, uint8_t reg_addr)
+static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint8_t reg_data;
     if (cambus_readb(sensor->slv_addr, reg_addr, &reg_data) != 0) {
@@ -188,7 +190,7 @@ static int read_reg(sensor_t *sensor, uint8_t reg_addr)
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint8_t reg_addr, uint16_t reg_data)
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
     return cambus_writeb(sensor->slv_addr, reg_addr, reg_data);
 }

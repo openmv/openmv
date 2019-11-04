@@ -1,16 +1,18 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Board configuration and pin definitions.
- *
  */
 #ifndef __OMV_BOARDCONFIG_H__
 #define __OMV_BOARDCONFIG_H__
 
 // Architecture info
-#define OMV_ARCH_STR            "OMV4R H7 16384 SDRAM" // 33 chars max
+#define OMV_ARCH_STR            "OMV4R H7 32768 SDRAM" // 33 chars max
 #define OMV_BOARD_TYPE          "H7"
 #define OMV_UNIQUE_ID_ADDR      0x1FF1E800
 
@@ -38,7 +40,7 @@
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
 // RAW buffer size
-#define OMV_RAW_BUF_SIZE        (409600)
+#define OMV_RAW_BUF_SIZE        (31457280)
 
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (1)
@@ -49,11 +51,14 @@
 
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
-#define JPEG_QUALITY_THRESH     (320*240*2)
+#define JPEG_QUALITY_THRESH     (1920*1080*2)
 
 // Low and high JPEG QS.
 #define JPEG_QUALITY_LOW        50
 #define JPEG_QUALITY_HIGH       90
+
+// FB Heap Block Size
+#define OMV_UMM_BLOCK_SIZE      256
 
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
@@ -61,19 +66,22 @@
 #define OMV_FFS_MEMORY          CCM         // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss, stack and heap
 #define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
-#define OMV_FB_MEMORY           AXI_SRAM    // Framebuffer, fb_alloc
-#define OMV_JPEG_MEMORY         SRAM3       // JPEG buffer memory.
+#define OMV_FB_MEMORY           DRAM        // Framebuffer, fb_alloc
+#define OMV_JPEG_MEMORY         DRAM        // JPEG buffer memory buffer.
+#define OMV_JPEG_MEMORY_OFFSET  (31M)       // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
+#define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // _fballoc_overlay memory.
+#define OMV_FB_OVERLAY_MEMORY_OFFSET    (480*1024)  // _fballoc_overlay
 
-#define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE       (96K)       // minimum fb alloc size
-#define OMV_STACK_SIZE          (7K)
-#define OMV_HEAP_SIZE           (240K)
+#define OMV_FB_SIZE             (30M)       // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE       (1M)        // minimum fb alloc size
+#define OMV_STACK_SIZE          (8K)
+#define OMV_HEAP_SIZE           (237K)
 
-#define OMV_LINE_BUF_SIZE       (3K)        // Image line buffer round(640 * 2BPP * 2 buffers).
+#define OMV_LINE_BUF_SIZE       (11K)       // Image line buffer round(2592 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE        (12K)       // USB MSC bot data
 #define OMV_VFS_BUF_SIZE        (1K)        // VFS sturct + FATFS file buffer (624 bytes)
-#define OMV_JPEG_BUF_SIZE       (32 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_JPEG_BUF_SIZE       (1024*1024) // IDE JPEG buffer (header + data).
 
 #define OMV_BOOT_ORIGIN         0x08000000
 #define OMV_BOOT_LENGTH         128K
@@ -89,10 +97,13 @@
 #define OMV_SRAM4_LENGTH        64K
 #define OMV_AXI_SRAM_ORIGIN     0x24000000
 #define OMV_AXI_SRAM_LENGTH     512K
+#define OMV_DRAM_ORIGIN         0xC0000000
+#define OMV_DRAM_LENGTH         32M
+#define OMV_FB_OVERLAY_MEMORY_ORIGIN    OMV_AXI_SRAM_ORIGIN
 
 // Use the MPU to set an uncacheable memory region.
-#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+(496*1024))
-#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_16KB
+#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
+#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_32KB
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
@@ -232,5 +243,11 @@
 #define LEPTON_SPI_MISO_PORT        (GPIOB)
 #define LEPTON_SPI_MOSI_PORT        (GPIOB)
 #define LEPTON_SPI_SSEL_PORT        (GPIOA)
+
+// Enable additional GPIO banks for DRAM...
+#define ENABLE_GPIO_BANK_F
+#define ENABLE_GPIO_BANK_G
+#define ENABLE_GPIO_BANK_H
+#define ENABLE_GPIO_BANK_I
 
 #endif //__OMV_BOARDCONFIG_H__

@@ -180,7 +180,7 @@ void SystemClock_Config(void)
 
     #if defined(MCU_SERIES_H7)
     /* Supply configuration update enable */
-    MODIFY_REG(PWR->CR3, PWR_CR3_SCUEN, 0);
+    HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
     #else
     /* Enable Power Control clock */
     __PWR_CLK_ENABLE();
@@ -189,14 +189,21 @@ void SystemClock_Config(void)
     /* The voltage scaling allows optimizing the power consumption when the device is
        clocked below the maximum system frequency, to update the voltage scaling value
        regarding system frequency refer to product datasheet.  */
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    #if defined(MCU_SERIES_H7)
+    // Enable VSCALE0 for revision V devices.
+    if (HAL_GetREVID() >= 0x2003) {
+        __HAL_RCC_SYSCFG_CLK_ENABLE();
+        __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+    } else {
+    #else
+    if (1) {
+    #endif
+        __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    }
 
     // Wait for PWR_FLAG_VOSRDY
-    #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
-    //while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {
-    //}
-    #elif defined(MCU_SERIES_H7)
-    while ((PWR->D3CR & (PWR_D3CR_VOSRDY)) != PWR_D3CR_VOSRDY) {
+    #if defined(MCU_SERIES_H7)
+    while (__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY) == RESET) {
     }
     #endif
 
@@ -230,11 +237,12 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
     RCC_OscInitStruct.PLL.PLLR = 2;
     #elif defined (STM32H743xx)// 480MHz/48MHz
+    //PLL1 48MHz for USB, SDMMC and FDCAN
     flash_latency = FLASH_LATENCY_2;
     RCC_OscInitStruct.PLL.PLLM = 3;
     RCC_OscInitStruct.PLL.PLLN = 240;
     RCC_OscInitStruct.PLL.PLLP = 2;
-    RCC_OscInitStruct.PLL.PLLQ = 20; // 48MHz for SD, USB and CAN
+    RCC_OscInitStruct.PLL.PLLQ = 20;
     RCC_OscInitStruct.PLL.PLLR = 2;
     RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
     RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
@@ -246,8 +254,9 @@ void SystemClock_Config(void)
     }
 
     #if defined(STM32H743xx)
+    // PLL2 200MHz for FMC and QSPI.
     PeriphClkInitStruct.PLL2.PLL2M = 3;
-    PeriphClkInitStruct.PLL2.PLL2N = 80;
+    PeriphClkInitStruct.PLL2.PLL2N = 100;
     PeriphClkInitStruct.PLL2.PLL2P = 2;
     PeriphClkInitStruct.PLL2.PLL2Q = 2;
     PeriphClkInitStruct.PLL2.PLL2R = 2;
@@ -255,11 +264,30 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
     PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
 
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USB | RCC_PERIPHCLK_SPI123 |
-                                               RCC_PERIPHCLK_FDCAN;
+    // PLL3 160MHz for ADC and SPI123
+    PeriphClkInitStruct.PLL3.PLL3M = 3;
+    PeriphClkInitStruct.PLL3.PLL3N = 80;
+    PeriphClkInitStruct.PLL3.PLL3P = 2;
+    PeriphClkInitStruct.PLL3.PLL3Q = 2;
+    PeriphClkInitStruct.PLL3.PLL3R = 2;
+    PeriphClkInitStruct.PLL3.PLL3RGE = RCC_PLL3VCIRANGE_2;
+    PeriphClkInitStruct.PLL3.PLL3VCOSEL = RCC_PLL3VCOWIDE;
+    PeriphClkInitStruct.PLL3.PLL3FRACN = 0;
+
+    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_FDCAN
+                                              |RCC_PERIPHCLK_SPI3|RCC_PERIPHCLK_SPI2
+                                              |RCC_PERIPHCLK_SDMMC|RCC_PERIPHCLK_I2C2
+                                              |RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_USB
+                                              |RCC_PERIPHCLK_QSPI|RCC_PERIPHCLK_FMC;
     PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
-    PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL2;
+    PeriphClkInitStruct.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL;
     PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
+    PeriphClkInitStruct.FmcClockSelection = RCC_FMCCLKSOURCE_PLL2;
+    PeriphClkInitStruct.QspiClockSelection = RCC_QSPICLKSOURCE_PLL2;
+    PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLL3;
+    PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL3;
+    PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+    PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         // Initialization Error

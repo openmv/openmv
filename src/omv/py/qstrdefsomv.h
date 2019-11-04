@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * qstrs specific to openmv
- *
  */
 
 // OMV Module
@@ -195,6 +197,7 @@ Q(QQVGA2)
 Q(WVGA)
 Q(WVGA2)
 Q(SVGA)
+Q(XGA)
 Q(SXGA)
 Q(UXGA)
 
@@ -345,6 +348,7 @@ Q(isconnected)
 Q(connected_sta)
 Q(wait_for_sta)
 Q(ifconfig)
+Q(netinfo)
 Q(fw_version)
 Q(fw_dump)
 Q(fw_update)
@@ -444,6 +448,12 @@ Q(compressed)
 // Compressed for IDE (out of place)
 Q(compressed_for_ide)
 // duplicate Q(quality)
+
+// Encode for IDE (in place)
+Q(jpeg_encode_for_ide)
+
+// Encoded for IDE (out of place)
+Q(jpeg_encoded_for_ide)
 
 // Copy
 // duplicate Q(copy)
@@ -1164,3 +1174,35 @@ Q(draw_ir)
 // duplicate Q(scale)
 Q(pixformat)
 // duplciate Q(copy_to_fb)
+
+// TensorFlow Module
+Q(tf)
+// duplicate Q(load)
+Q(classify)
+Q(segment)
+// Model Object
+Q(tf_model)
+// duplicate Q(len)
+// duplicate Q(height)
+// duplicate Q(width)
+Q(channels)
+
+// Classify
+// duplicate Q(classify)
+// duplicate Q(roi)
+// duplicate Q(min_scale)
+// duplicate Q(scale_mul)
+// duplicate Q(x_overlap)
+// duplicate Q(y_overlap)
+
+// Class Object
+Q(tf_classification)
+// duplicate Q(x)
+// duplicate Q(y)
+// duplicate Q(w)
+// duplicate Q(h)
+Q(output)
+
+// Segment
+// duplicate Q(segment)
+// duplicate Q(roi)

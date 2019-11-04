@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * main function.
- *
  */
 #include <stdio.h>
 #include <stdbool.h>
@@ -122,7 +124,7 @@ static const char fresh_selftest_py[] =
 "    # Test VBAT\n"
 "    vbat = adc.read_core_vbat()\n"
 "    vbat_diff = abs(vbat-3.3)\n"
-"    if (vbat_diff > 0.1):\n"
+"    if (vbat_diff > 0.15):\n"
 "        raise Exception('INTERNAL ADC TEST FAILED VBAT=%fv'%vbat)\n"
 "\n"
 "    # Test VREF\n"
@@ -398,6 +400,12 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
 
 int main(void)
 {
+    #if MICROPY_HW_SDRAM_SIZE
+    bool sdram_ok = false;
+    #if MICROPY_HW_SDRAM_STARTUP_TEST
+    bool sdram_pass = false;
+    #endif
+    #endif
     int sensor_init_ret = 0;
     bool sdcard_mounted = false;
     bool first_soft_reset = true;
@@ -412,6 +420,13 @@ int main(void)
     //  - Configure the Systick to generate an interrupt each 1 msec
     //  NOTE: The bootloader enables the CCM/DTCM memory.
     HAL_Init();
+
+    #if MICROPY_HW_SDRAM_SIZE
+    sdram_ok = sdram_init();
+    #if MICROPY_HW_SDRAM_STARTUP_TEST
+    sdram_pass = sdram_test(false);
+    #endif
+    #endif
 
     // Basic sub-system init
     led_init();
@@ -451,15 +466,10 @@ soft_reset:
     pin_init0();
     extint_init0();
     timer_init0();
-    #if MICROPY_HW_ENABLE_CAN
     can_init0();
-    #endif
     i2c_init0();
     spi_init0();
     uart_init0();
-    MP_STATE_PORT(pyb_stdio_uart) = NULL; // need to zero
-    dac_init();
-    pyb_usb_init0();
     sensor_init0();
     fb_alloc_init0();
     file_buffer_init0();
@@ -469,10 +479,13 @@ soft_reset:
     servo_init();
     usbdbg_init();
     sdcard_init();
+    rtc_init_start(false);
 
-    if (first_soft_reset) {
-        rtc_init_start(false);
-    }
+    pyb_usb_init0();
+    MP_STATE_PORT(pyb_stdio_uart) = NULL;
+    // Activate USB_VCP(0) on dupterm slot 1 for the REPL
+    MP_STATE_VM(dupterm_objs[1]) = MP_OBJ_FROM_PTR(&pyb_usb_vcp_obj);
+    usb_vcp_attach_to_repl(&pyb_usb_vcp_obj, true);
 
     // Initialize the sensor and check the result after
     // mounting the file-system to log errors (if any).
@@ -564,6 +577,22 @@ soft_reset:
         pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
     }
 
+    // report if SDRAM failed
+    #if MICROPY_HW_SDRAM_SIZE
+    if (first_soft_reset && (!sdram_ok)) {
+        char buf[512];
+        snprintf(buf, sizeof(buf), "Failed to init sdram!");
+        __fatal_error(buf);
+    }
+    #if MICROPY_HW_SDRAM_STARTUP_TEST
+    if (first_soft_reset && (!sdram_pass)) {
+        char buf[512];
+        snprintf(buf, sizeof(buf), "SDRAM failed testing!");
+        __fatal_error(buf);
+    }
+    #endif
+    #endif
+
     // check sensor init result
     if (first_soft_reset && sensor_init_ret != 0) {
         char buf[512];
@@ -634,9 +663,9 @@ soft_reset:
     // soft reset
     storage_flush();
     timer_deinit();
-    uart_deinit();
+    uart_deinit_all();
     #if MICROPY_HW_ENABLE_CAN
-    can_deinit();
+    can_deinit_all();
     #endif
     pyb_thread_deinit();
 

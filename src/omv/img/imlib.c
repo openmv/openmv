@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Image library.
- *
  */
 #include <stdlib.h>
 #include <mp.h>
@@ -557,14 +559,14 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
     return vflipped;
 }
 
-static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
+static void imlib_read_pixels(FIL *fp, image_t *img, int n_lines, img_read_settings_t *rs)
 {
     switch (rs->format) {
         case FORMAT_BMP:
-            bmp_read_pixels(fp, img, line_start, line_end, &rs->bmp_rs);
+            bmp_read_pixels(fp, img, n_lines, &rs->bmp_rs);
             break;
         case FORMAT_PNM:
-            ppm_read_pixels(fp, img, line_start, line_end, &rs->ppm_rs);
+            ppm_read_pixels(fp, img, n_lines, &rs->ppm_rs);
             break;
         default: // won't happen
             break;
@@ -575,7 +577,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
 {
     if (path) {
         uint32_t size = fb_avail() / 2;
-        void *alloc = fb_alloc(size); // We have to do this before the read.
+        void *alloc = fb_alloc(size, FB_ALLOC_NO_HINT); // We have to do this before the read.
         // This code reads a window of an image in at a time and then executes
         // the line operation on each line in that window before moving to the
         // next window. The vflipped part is here because BMP files can be saved
@@ -592,20 +594,21 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         // window is equal to an image in size. However, since this is not the
         // case we shrink the window size to how many lines we're buffering.
         temp.pixels = alloc;
-        temp.h = (size / (temp.w * temp.bpp)); // round down
+        // Set the max buffer height to image height.
+        temp.h = IM_MIN(img->h, (size / (temp.w * temp.bpp)));
         // This should never happen unless someone forgot to free.
         if ((!temp.pixels) || (!temp.h)) {
             nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
                                                "Not enough memory available!"));
         }
         for (int i=0; i<img->h; i+=temp.h) { // goes past end
-            int can_do = IM_MIN(temp.h, img->h-i);
-            imlib_read_pixels(&fp, &temp, 0, can_do, &rs);
-            for (int j=0; j<can_do; j++) {
+            int lines = IM_MIN(temp.h, img->h-i);
+            imlib_read_pixels(&fp, &temp, lines, &rs);
+            for (int j=0; j<lines; j++) {
                 if (!vflipped) {
                     op(img, i+j, temp.pixels+(temp.w*temp.bpp*j), data, false);
                 } else {
-                    op(img, (img->h-i-can_do)+j, temp.pixels+(temp.w*temp.bpp*j), data, true);
+                    op(img, (img->h-i-lines)+j, temp.pixels+(temp.w*temp.bpp*j), data, true);
                 }
             }
         }
@@ -642,7 +645,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
     } else {
         switch(img->bpp) {
             case IMAGE_BPP_BINARY: {
-                uint32_t *row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img));
+                uint32_t *row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img), FB_ALLOC_NO_HINT);
 
                 for (int i=0, ii=img->w; i<ii; i++) {
                     IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, i, scalar);
@@ -656,7 +659,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
                 break;
             }
             case IMAGE_BPP_GRAYSCALE: {
-                uint8_t *row_ptr = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img));
+                uint8_t *row_ptr = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img), FB_ALLOC_NO_HINT);
 
                 for (int i=0, ii=img->w; i<ii; i++) {
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, i, scalar);
@@ -670,7 +673,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
                 break;
             }
             case IMAGE_BPP_RGB565: {
-                uint16_t *row_ptr = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img));
+                uint16_t *row_ptr = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img), FB_ALLOC_NO_HINT);
 
                 for (int i=0, ii=img->w; i<ii; i++) {
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, i, scalar);
@@ -734,18 +737,18 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
         case FORMAT_DONT_CARE:
             // Path doesn't have an extension.
             if (IM_IS_JPEG(img)) {
-                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".jpg");
                 jpeg_write(img, new_path, quality);
                 fb_free();
             } else if (IM_IS_BAYER(img)) {
                 FIL fp;
-                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".raw");
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".raw");
                 file_write_open(&fp, new_path);
                 write_data(&fp, img->pixels, img->w * img->h);
                 file_close(&fp);
                 fb_free();
             } else { // RGB or GS, save as BMP.
-                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".bmp");
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".bmp");
                 bmp_write_subimg(img, new_path, roi);
                 fb_free();
             }
@@ -809,7 +812,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
             // Create a temp copy of the image to pull pixels from.
-            uint32_t *tmp = fb_alloc(((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+            uint32_t *tmp = fb_alloc(((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h, FB_ALLOC_NO_HINT);
             memcpy(tmp, img->data, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
             memset(img->data, 0, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
 
@@ -842,7 +845,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
         }
         case IMAGE_BPP_GRAYSCALE: {
             // Create a temp copy of the image to pull pixels from.
-            uint8_t *tmp = fb_alloc(img->w * img->h * sizeof(uint8_t));
+            uint8_t *tmp = fb_alloc(img->w * img->h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
             memcpy(tmp, img->data, img->w * img->h * sizeof(uint8_t));
             memset(img->data, 0, img->w * img->h * sizeof(uint8_t));
 
@@ -875,7 +878,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
         }
         case IMAGE_BPP_RGB565: {
             // Create a temp copy of the image to pull pixels from.
-            uint16_t *tmp = fb_alloc(img->w * img->h * sizeof(uint16_t));
+            uint16_t *tmp = fb_alloc(img->w * img->h * sizeof(uint16_t), FB_ALLOC_NO_HINT);
             memcpy(tmp, img->data, img->w * img->h * sizeof(uint16_t));
             memset(img->data, 0, img->w * img->h * sizeof(uint16_t));
 
@@ -989,7 +992,7 @@ void imlib_sepconv3(image_t *img, const int8_t *krn, const float m, const int b)
 {
     int ksize = 3;
     // TODO: Support RGB
-    int *buffer = fb_alloc(img->w * 2 * sizeof(*buffer));
+    int *buffer = fb_alloc(img->w * 2 * sizeof(*buffer), FB_ALLOC_NO_HINT);
 
     // NOTE: This doesn't deal with borders right now. Adding if
     // statements in the inner loop will slow it down significantly.

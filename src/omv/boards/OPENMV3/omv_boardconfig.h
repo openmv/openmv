@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Board configuration and pin definitions.
- *
  */
 #ifndef __OMV_BOARDCONFIG_H__
 #define __OMV_BOARDCONFIG_H__
@@ -48,6 +50,9 @@
 #define JPEG_QUALITY_LOW        35
 #define JPEG_QUALITY_HIGH       60
 
+// FB Heap Block Size
+#define OMV_UMM_BLOCK_SIZE      16
+
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
@@ -64,7 +69,7 @@
 #define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
 #define OMV_VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE    (32K)   // Flash filesystem cache
-#define OMV_JPEG_BUF_SIZE   (23 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_JPEG_BUF_SIZE   (22 * 1024) // IDE JPEG buffer (header + data).
 
 #define OMV_BOOT_ORIGIN     0x08000000
 #define OMV_BOOT_LENGTH     32K

@@ -1,8 +1,13 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2018 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Image math operations.
  */
-
 #include "imlib.h"
 
 #ifdef IMLIB_ENABLE_MATH_OPS
@@ -13,7 +18,7 @@ void imlib_gamma_corr(image_t *img, float gamma, float contrast, float brightnes
         case IMAGE_BPP_BINARY: {
             float pScale = COLOR_BINARY_MAX - COLOR_BINARY_MIN;
             float pDiv = 1 / pScale;
-            int *p_lut = fb_alloc((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(int));
+            int *p_lut = fb_alloc((COLOR_BINARY_MAX - COLOR_BINARY_MIN + 1) * sizeof(int), FB_ALLOC_NO_HINT);
 
             for (int i = COLOR_BINARY_MIN; i <= COLOR_BINARY_MAX; i++) {
                 int p = ((fast_powf(i * pDiv, gamma) * contrast) + brightness) * pScale;
@@ -35,7 +40,7 @@ void imlib_gamma_corr(image_t *img, float gamma, float contrast, float brightnes
         case IMAGE_BPP_GRAYSCALE: {
             float pScale = COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN;
             float pDiv = 1 / pScale;
-            int *p_lut = fb_alloc((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(int));
+            int *p_lut = fb_alloc((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN + 1) * sizeof(int), FB_ALLOC_NO_HINT);
 
             for (int i = COLOR_GRAYSCALE_MIN; i <= COLOR_GRAYSCALE_MAX; i++) {
                 int p = ((fast_powf(i * pDiv, gamma) * contrast) + brightness) * pScale;
@@ -61,9 +66,9 @@ void imlib_gamma_corr(image_t *img, float gamma, float contrast, float brightnes
             float rDiv = 1 / rScale;
             float gDiv = 1 / gScale;
             float bDiv = 1 / bScale;
-            int *r_lut = fb_alloc((COLOR_R5_MAX - COLOR_R5_MIN + 1) * sizeof(int));
-            int *g_lut = fb_alloc((COLOR_G6_MAX - COLOR_G6_MIN + 1) * sizeof(int));
-            int *b_lut = fb_alloc((COLOR_B5_MAX - COLOR_B5_MIN + 1) * sizeof(int));
+            int *r_lut = fb_alloc((COLOR_R5_MAX - COLOR_R5_MIN + 1) * sizeof(int), FB_ALLOC_NO_HINT);
+            int *g_lut = fb_alloc((COLOR_G6_MAX - COLOR_G6_MIN + 1) * sizeof(int), FB_ALLOC_NO_HINT);
+            int *b_lut = fb_alloc((COLOR_B5_MAX - COLOR_B5_MIN + 1) * sizeof(int), FB_ALLOC_NO_HINT);
 
             for (int i = COLOR_R5_MIN; i <= COLOR_R5_MAX; i++) {
                 int r = ((fast_powf(i * rDiv, gamma) * contrast) + brightness) * rScale;
@@ -218,7 +223,7 @@ void imlib_replace(image_t *img, const char *path, image_t *other, int scalar, b
 
     if (in_place) {
         memcpy(&temp, other, sizeof(image_t));
-        temp.data = fb_alloc(image_size(&temp));
+        temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
         memcpy(temp.data, other->data, image_size(&temp));
         other = &temp;
     }

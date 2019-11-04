@@ -1,8 +1,13 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Hough Transform feature extraction.
  */
-
 #include "imlib.h"
 
 #ifdef IMLIB_ENABLE_FIND_LINES
@@ -21,7 +26,7 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
         if (hough_divide > 4) fb_alloc_fail(); // support 1, 2, 4
     }
 
-    uint32_t *acc = fb_alloc0(sizeof(uint32_t) * theta_size * r_size);
+    uint32_t *acc = fb_alloc0(sizeof(uint32_t) * theta_size * r_size, FB_ALLOC_NO_HINT);
 
     switch (ptr->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -365,9 +370,9 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
     list_init(out, sizeof(find_lines_list_lnk_data_t));
 
     const int r_diag_len = fast_roundf(fast_sqrtf((roi->w * roi->w) + (roi->h * roi->h))) * 2;
-    int *theta_buffer = fb_alloc(sizeof(int) * r_diag_len);
-    uint32_t *mag_buffer = fb_alloc(sizeof(uint32_t) * r_diag_len);
-    point_t *point_buffer = fb_alloc(sizeof(point_t) * r_diag_len);
+    int *theta_buffer = fb_alloc(sizeof(int) * r_diag_len, FB_ALLOC_NO_HINT);
+    uint32_t *mag_buffer = fb_alloc(sizeof(uint32_t) * r_diag_len, FB_ALLOC_NO_HINT);
+    point_t *point_buffer = fb_alloc(sizeof(point_t) * r_diag_len, FB_ALLOC_NO_HINT);
 
     for (size_t i = 0; list_size(&temp_out); i++) {
         find_lines_list_lnk_data_t lnk_data;
@@ -456,8 +461,8 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                         uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin,
                         unsigned int r_min, unsigned int r_max, unsigned int r_step)
 {
-    uint16_t *theta_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h);
-    uint16_t *magnitude_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h);
+    uint16_t *theta_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h, FB_ALLOC_NO_HINT);
+    uint16_t *magnitude_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h, FB_ALLOC_NO_HINT);
 
     switch (ptr->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -689,7 +694,7 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
             if (hough_divide > 4) fb_alloc_fail(); // support 1, 2, 4
         }
 
-        uint32_t *acc = fb_alloc0(sizeof(uint32_t) * a_size * b_size);
+        uint32_t *acc = fb_alloc0(sizeof(uint32_t) * a_size * b_size, FB_ALLOC_NO_HINT);
 
         for (int y = 0, yy = roi->h; y < yy; y++) {
             for (int x = 0, xx = roi->w; x < xx; x++) {

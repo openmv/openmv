@@ -1,8 +1,13 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2018 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Basic drawing functions.
  */
-
 #include "font.h"
 #include "imlib.h"
 
@@ -498,7 +503,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
         out.w = img->w;
         out.h = img->h;
         out.bpp = IMAGE_BPP_BINARY;
-        out.data = fb_alloc0(image_size(&out));
+        out.data = fb_alloc0(image_size(&out), FB_ALLOC_NO_HINT);
 
         if (mask) {
             for (int y = 0, yy = out.h; y < yy; y++) {

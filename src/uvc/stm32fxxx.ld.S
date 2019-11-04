@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Linker script for STM32F4xx Devices.
- *
  */
 
 /* Entry Point */
@@ -29,6 +31,9 @@ MEMORY
   #if defined(OMV_AXI_SRAM_ORIGIN)
   AXI_SRAM (xrw)    : ORIGIN = OMV_AXI_SRAM_ORIGIN, LENGTH = OMV_AXI_SRAM_LENGTH
   #endif
+  #if defined(OMV_DRAM_ORIGIN)
+  DRAM (xrw)        : ORIGIN = OMV_DRAM_ORIGIN,     LENGTH = OMV_DRAM_LENGTH
+  #endif
   FLASH_TEXT (rx)   : ORIGIN = OMV_TEXT_ORIGIN,     LENGTH = OMV_TEXT_LENGTH
 }
 
@@ -36,15 +41,24 @@ _estack     = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
 #if defined(OMV_FFS_MEMORY)
-_ffs_cache  = ORIGIN(OMV_FFS_MEMORY);
+#if !defined(OMV_FFS_MEMORY_OFFSET)
+#define OMV_FFS_MEMORY_OFFSET           (0)
+#endif
+_ffs_cache          = ORIGIN(OMV_FFS_MEMORY) + OMV_FFS_MEMORY_OFFSET;
 #endif
 
 #if defined(OMV_JPEG_MEMORY)
-_jpeg_buf  = ORIGIN(OMV_JPEG_MEMORY);
+#if !defined(OMV_JPEG_MEMORY_OFFSET)
+#define OMV_JPEG_MEMORY_OFFSET          (0)
+#endif
+_jpeg_buf           = ORIGIN(OMV_JPEG_MEMORY) + OMV_JPEG_MEMORY_OFFSET;
 #endif
 
 #if defined(OMV_VOSPI_MEMORY)
-_vospi_buf  = ORIGIN(OMV_VOSPI_MEMORY);
+#if !defined(OMV_VOSPI_MEMORY_OFFSET)
+#define OMV_VOSPI_MEMORY_OFFSET         (0)
+#endif
+_vospi_buf          = ORIGIN(OMV_VOSPI_MEMORY) + OMV_VOSPI_MEMORY_OFFSET;
 #endif
 
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
@@ -82,13 +96,18 @@ SECTIONS
 
     . = ALIGN(4);
     _fballoc = .;
-
+    . = ALIGN(4);
   } >OMV_FB_MEMORY
 
   /* Misc DMA buffers kept in uncachable region */
   /* NOTE: on H7 DMA buffers are kept in cached AXI RAM and cache maintenance is performed */
   .dma_memory (NOLOAD) :
   {
+    #if defined(OMV_FB_OVERLAY_MEMORY)
+    . = ALIGN(4) + OMV_FB_OVERLAY_MEMORY_OFFSET;
+    _fballoc_overlay = .;
+    #endif
+
     . = ALIGN(4);
     _line_buf = .;      // Image line buffer.
     . = . + OMV_LINE_BUF_SIZE;

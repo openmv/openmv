@@ -1,16 +1,15 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Minimalistic JPEG baseline encoder.
  * Ported from public domain JPEG writer by Jon Olick - http://jonolick.com
- *
- * DCT implementation is based on Arai, Agui, and Nakajima's algorithm for
- * scaled DCT.
- *
+ * DCT implementation is based on Arai, Agui, and Nakajima's algorithm for scaled DCT.
  */
-
 #include <stdio.h>
 #include STM32_HAL_H
 #include <arm_math.h>
@@ -131,11 +130,12 @@ void HAL_JPEG_GetDataCallback(JPEG_HandleTypeDef *hjpeg, uint32_t NbDecodedData)
     } else if (jpeg_enc.y_offset == jpeg_enc.img_h) {
         // Compression is done.
         HAL_JPEG_ConfigInputBuffer(hjpeg, NULL, 0);
+        HAL_JPEG_Resume(hjpeg, JPEG_PAUSE_RESUME_INPUT);
     } else {
         // Set the next MCU.
         HAL_JPEG_ConfigInputBuffer(hjpeg, get_mcu(), jpeg_enc.mcu_size);
+        HAL_JPEG_Resume(hjpeg, JPEG_PAUSE_RESUME_INPUT);
     }
-    HAL_JPEG_Resume(hjpeg, JPEG_PAUSE_RESUME_INPUT);
 }
 
 void HAL_JPEG_DataReadyCallback (JPEG_HandleTypeDef *hjpeg, uint8_t *pDataOut, uint32_t OutDataLength)
@@ -202,7 +202,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     }
 
     // NOTE: output buffer size is stored in dst->bpp
-    if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 100) != HAL_OK) {
+    if (HAL_JPEG_Encode(&JPEG_Handle, get_mcu(), jpeg_enc.mcu_size, dst->pixels, dst->bpp, 3000) != HAL_OK) {
         // Initialization error
         return true;
     }
@@ -1268,7 +1268,7 @@ void jpeg_write(image_t *img, const char *path, int quality)
         write_data(&fp, img->pixels, img->bpp);
     } else {
         uint32_t size;
-        uint8_t *buffer = fb_alloc_all(&size);
+        uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
         image_t out = { .w=img->w, .h=img->h, .bpp=size, .pixels=buffer };
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of

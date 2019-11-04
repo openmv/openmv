@@ -37,8 +37,8 @@ s = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
 s.bind([HOST, PORT])
 s.listen(5)
 
-# Set server socket to non-blocking
-s.settimeout(0)
+# Set server socket to blocking
+s.setblocking(True)
 
 def start_streaming(s):
     print ('Waiting for connections..')

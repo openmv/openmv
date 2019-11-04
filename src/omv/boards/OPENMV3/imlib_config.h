@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Image library configuration.
- *
  */
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
@@ -114,6 +116,12 @@
 // Enable find_apriltags() (64 KB)
 #define IMLIB_ENABLE_APRILTAGS
 
+// Enable fine find_apriltags() - (8-way connectivity versus 4-way connectivity)
+// #define IMLIB_ENABLE_FINE_APRILTAGS
+
+// Enable high res find_apriltags() - uses more RAM
+// #define IMLIB_ENABLE_HIGH_RES_APRILTAGS
+
 // Enable find_datamatrices() (26 KB)
 #define IMLIB_ENABLE_DATAMATRICES
 
@@ -125,6 +133,9 @@
 
 // Enable CMSIS NN
 #define IMLIB_ENABLE_CNN
+
+// Enable Tensor Flow
+#define IMLIB_ENABLE_TF
 
 // Enable FAST (20+ KBs).
 #define IMLIB_ENABLE_FAST

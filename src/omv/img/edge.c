@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Edge Detection.
- *
  */
 #include <stdio.h>
 #include <math.h>
@@ -36,7 +38,7 @@ void imlib_edge_canny(image_t *src, rectangle_t *roi, int low_thresh, int high_t
 {
     int w = src->w;
 
-    gvec_t *gm = fb_alloc0(roi->w*roi->h*sizeof*gm);
+    gvec_t *gm = fb_alloc0(roi->w*roi->h*sizeof*gm, FB_ALLOC_NO_HINT);
 
     //1. Noise Reduction with a Gaussian filter
     imlib_sepconv3(src, kernel_gauss_3, 1.0f/16.0f, 0.0f);

@@ -2,42 +2,24 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_cortex.h
   * @author  MCD Application Team
-  * @version V1.2.0
-  * @date   29-December-2017
   * @brief   Header file of CORTEX HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32H7xx_HAL_CORTEX_H
-#define __STM32H7xx_HAL_CORTEX_H
+#ifndef STM32H7xx_HAL_CORTEX_H
+#define STM32H7xx_HAL_CORTEX_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -255,6 +237,17 @@ typedef struct
 #define  MPU_REGION_NUMBER5    ((uint8_t)0x05)
 #define  MPU_REGION_NUMBER6    ((uint8_t)0x06)
 #define  MPU_REGION_NUMBER7    ((uint8_t)0x07)
+#if !defined(CORE_CM4)
+#define  MPU_REGION_NUMBER8    ((uint8_t)0x08)
+#define  MPU_REGION_NUMBER9    ((uint8_t)0x09)
+#define  MPU_REGION_NUMBER10   ((uint8_t)0x0A)
+#define  MPU_REGION_NUMBER11   ((uint8_t)0x0B)
+#define  MPU_REGION_NUMBER12   ((uint8_t)0x0C)
+#define  MPU_REGION_NUMBER13   ((uint8_t)0x0D)
+#define  MPU_REGION_NUMBER14   ((uint8_t)0x0E)
+#define  MPU_REGION_NUMBER15   ((uint8_t)0x0F)
+#endif /* !defined(CORE_CM4) */
+
 /**
   * @}
   */
@@ -279,8 +272,11 @@ typedef struct
 /** @defgroup CORTEX_CPU_Identifier CORTEX_CPU_Identifier
   * @{
   */
-#define CM7_CPUID        (uint32_t)0x00000003
+#define CM7_CPUID        ((uint32_t)0x00000003)
 
+#if defined(DUAL_CORE)
+#define CM4_CPUID        ((uint32_t)0x00000001)
+#endif /*DUAL_CORE*/
 /**
   * @}
   */
@@ -310,6 +306,8 @@ uint32_t HAL_SYSTICK_Config(uint32_t TicksNumb);
  */
 /* Peripheral Control functions ***********************************************/
 #if (__MPU_PRESENT == 1)
+void HAL_MPU_Enable(uint32_t MPU_Control);
+void HAL_MPU_Disable(void);
 void HAL_MPU_ConfigRegion(MPU_Region_InitTypeDef *MPU_Init);
 #endif /* __MPU_PRESENT */
 uint32_t HAL_NVIC_GetPriorityGrouping(void);
@@ -345,11 +343,11 @@ uint32_t HAL_GetCurrentCPUID(void);
                                        ((GROUP) == NVIC_PRIORITYGROUP_3) || \
                                        ((GROUP) == NVIC_PRIORITYGROUP_4))
 
-#define IS_NVIC_PREEMPTION_PRIORITY(PRIORITY)  ((PRIORITY) < 0x10)
+#define IS_NVIC_PREEMPTION_PRIORITY(PRIORITY)  ((PRIORITY) < 0x10UL)
 
-#define IS_NVIC_SUB_PRIORITY(PRIORITY)         ((PRIORITY) < 0x10)
+#define IS_NVIC_SUB_PRIORITY(PRIORITY)         ((PRIORITY) < 0x10UL)
 
-#define IS_NVIC_DEVICE_IRQ(IRQ)                ((IRQ) >= 0x00)
+#define IS_NVIC_DEVICE_IRQ(IRQ)                (((int32_t)IRQ) >= 0x00)
 
 #define IS_SYSTICK_CLK_SOURCE(SOURCE) (((SOURCE) == SYSTICK_CLKSOURCE_HCLK) || \
                                        ((SOURCE) == SYSTICK_CLKSOURCE_HCLK_DIV8))
@@ -381,14 +379,33 @@ uint32_t HAL_GetCurrentCPUID(void);
                                                   ((TYPE) == MPU_REGION_PRIV_RO)     || \
                                                   ((TYPE) == MPU_REGION_PRIV_RO_URO))
 
-#define IS_MPU_REGION_NUMBER(NUMBER)    (((NUMBER) == MPU_REGION_NUMBER0) || \
-                                         ((NUMBER) == MPU_REGION_NUMBER1) || \
-                                         ((NUMBER) == MPU_REGION_NUMBER2) || \
-                                         ((NUMBER) == MPU_REGION_NUMBER3) || \
-                                         ((NUMBER) == MPU_REGION_NUMBER4) || \
-                                         ((NUMBER) == MPU_REGION_NUMBER5) || \
-                                         ((NUMBER) == MPU_REGION_NUMBER6) || \
+#if !defined(CORE_CM4)
+#define IS_MPU_REGION_NUMBER(NUMBER)    (((NUMBER) == MPU_REGION_NUMBER0)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER1)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER2)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER3)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER4)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER5)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER6)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER7)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER8)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER9)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER10) || \
+                                         ((NUMBER) == MPU_REGION_NUMBER11) || \
+                                         ((NUMBER) == MPU_REGION_NUMBER12) || \
+                                         ((NUMBER) == MPU_REGION_NUMBER13) || \
+                                         ((NUMBER) == MPU_REGION_NUMBER14) || \
+                                         ((NUMBER) == MPU_REGION_NUMBER15))
+#else
+#define IS_MPU_REGION_NUMBER(NUMBER)    (((NUMBER) == MPU_REGION_NUMBER0)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER1)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER2)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER3)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER4)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER5)  || \
+                                         ((NUMBER) == MPU_REGION_NUMBER6)  || \
                                          ((NUMBER) == MPU_REGION_NUMBER7))
+#endif /* !defined(CORE_CM4) */
 
 #define IS_MPU_REGION_SIZE(SIZE)    (((SIZE) == MPU_REGION_SIZE_32B)   || \
                                      ((SIZE) == MPU_REGION_SIZE_64B)   || \
@@ -426,51 +443,6 @@ uint32_t HAL_GetCurrentCPUID(void);
   * @}
   */
 
-/* Private functions ---------------------------------------------------------*/
-/** @defgroup CORTEX_Private_Functions CORTEX Private Functions
-  * @brief    CORTEX private  functions
-  * @{
-  */
-
-#if (__MPU_PRESENT == 1)
-/**
-  * @brief  Disables the MPU
-  * @retval None
-  */
-__STATIC_INLINE void HAL_MPU_Disable(void)
-{
-  /* Disable fault exceptions */
-  SCB->SHCSR &= ~SCB_SHCSR_MEMFAULTENA_Msk;
-
-  /* Disable the MPU */
-  MPU->CTRL  &= ~MPU_CTRL_ENABLE_Msk;
-}
-
-/**
-  * @brief  Enables the MPU
-  * @param  MPU_Control: Specifies the control mode of the MPU during hard fault,
-  *          NMI, FAULTMASK and privileged access to the default memory
-  *          This parameter can be one of the following values:
-  *            @arg MPU_HFNMI_PRIVDEF_NONE
-  *            @arg MPU_HARDFAULT_NMI
-  *            @arg MPU_PRIVILEGED_DEFAULT
-  *            @arg MPU_HFNMI_PRIVDEF
-  * @retval None
-  */
-__STATIC_INLINE void HAL_MPU_Enable(uint32_t MPU_Control)
-{
-  /* Enable the MPU */
-  MPU->CTRL   = MPU_Control | MPU_CTRL_ENABLE_Msk;
-
-  /* Enable fault exceptions */
-  SCB->SHCSR |= SCB_SHCSR_MEMFAULTENA_Msk;
-}
-#endif /* __MPU_PRESENT */
-
-/**
-  * @}
-  */
-
 /**
   * @}
   */
@@ -483,7 +455,7 @@ __STATIC_INLINE void HAL_MPU_Enable(uint32_t MPU_Control)
 }
 #endif
 
-#endif /* __STM32H7xx_HAL_CORTEX_H */
+#endif /* STM32H7xx_HAL_CORTEX_H */
 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

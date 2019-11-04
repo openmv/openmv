@@ -1,8 +1,13 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Image processing library.
  */
-
 #ifndef __IMLIB_H__
 #define __IMLIB_H__
 #include <stdbool.h>
@@ -1146,11 +1151,11 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
 
 /* Image file functions */
 void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);
-void ppm_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, ppm_read_settings_t *rs);
+void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs);
 void ppm_read(image_t *img, const char *path);
 void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r);
 bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_settings_t *rs);
-void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_read_settings_t *rs);
+void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs);
 void bmp_read(image_t *img, const char *path);
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc);

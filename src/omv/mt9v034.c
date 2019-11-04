@@ -1,12 +1,13 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * MT9V034 driver.
- *
  */
-
 #include STM32_HAL_H
 #include "cambus.h"
 #include "mt9v034.h"
@@ -148,7 +149,7 @@ static int sleep(sensor_t *sensor, int enable)
     return 0;
 }
 
-static int read_reg(sensor_t *sensor, uint8_t reg_addr)
+static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint16_t reg_data;
 
@@ -159,7 +160,7 @@ static int read_reg(sensor_t *sensor, uint8_t reg_addr)
     return reg_data;
 }
 
-static int write_reg(sensor_t *sensor, uint8_t reg_addr, uint16_t reg_data)
+static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
     return cambus_writew(sensor->slv_addr, reg_addr, reg_data);
 }

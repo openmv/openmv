@@ -1,10 +1,12 @@
-/*/
+/*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * WINC1500 driver.
- *
  */
 #include "winc.h"
 #include "common.h"
@@ -23,10 +25,12 @@
 static volatile bool ip_obtained = false;
 static volatile bool wlan_connected = false;
 static volatile uint32_t connected_sta_ip = false;
+static volatile bool use_static_ip = false;
 
 static void *async_request_data;
 static uint8_t async_request_type=0;
 static volatile bool async_request_done = false;
+static winc_ifconfig_t ifconfig;
 
 typedef struct {
     int size;
@@ -291,7 +295,17 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
             tstrM2mWifiStateChanged *wifi_state = (tstrM2mWifiStateChanged *)msg;
             if (wifi_state->u8CurrState == M2M_WIFI_CONNECTED) {
                 wlan_connected = true;
-                m2m_wifi_request_dhcp_client();
+                if (use_static_ip) {
+                    tstrM2MIPConfig ipconfig;
+                    ipconfig.u32StaticIP = *((uint32_t*)ifconfig.ip_addr);
+                    ipconfig.u32SubnetMask = *((uint32_t*)ifconfig.subnet_addr);
+                    ipconfig.u32Gateway = *((uint32_t*)ifconfig.gateway_addr);
+                    ipconfig.u32DNS = *((uint32_t*)ifconfig.dns_addr);
+                    m2m_wifi_set_static_ip(&ipconfig);
+                    // NOTE: the async request is done because there's
+                    // no DHCP request/response when using a static IP.
+                    async_request_done = true;
+                }
             } else if (wifi_state->u8CurrState == M2M_WIFI_DISCONNECTED) {
                 ip_obtained = false;
                 wlan_connected = false;
@@ -303,26 +317,31 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
         case M2M_WIFI_REQ_DHCP_CONF: {
             ip_obtained = true;
             async_request_done = true;
+            tstrM2MIPConfig *ipconfig = (tstrM2MIPConfig*)msg;
+            memcpy(ifconfig.ip_addr, &ipconfig->u32StaticIP, WINC_IPV4_ADDR_LEN);
+            memcpy(ifconfig.subnet_addr, &ipconfig->u32SubnetMask, WINC_IPV4_ADDR_LEN);
+            memcpy(ifconfig.gateway_addr, &ipconfig->u32Gateway, WINC_IPV4_ADDR_LEN);
+            memcpy(ifconfig.dns_addr, &ipconfig->u32DNS, WINC_IPV4_ADDR_LEN);
             break;
         }
 
         case M2M_WIFI_RESP_CONN_INFO: {
             // Connection info
-            tstrM2MConnInfo	*con_info = (tstrM2MConnInfo*) msg;
-            winc_ifconfig_t *ifconfig = (winc_ifconfig_t *) async_request_data;
+            tstrM2MConnInfo *con_info = (tstrM2MConnInfo*) msg;
+            winc_netinfo_t *netinfo = (winc_netinfo_t *) async_request_data;
 
             // Set rssi and security
-            ifconfig->rssi      = con_info->s8RSSI;
-            ifconfig->security  = con_info->u8SecType;
+            netinfo->rssi = con_info->s8RSSI;
+            netinfo->security = con_info->u8SecType;
 
-    	    // Get MAC Address.
-	        m2m_wifi_get_mac_address(ifconfig->mac_addr);
-            
             // Copy IP address.
-            memcpy(ifconfig->ip_addr, con_info->au8IPAddr, WINC_IP_ADDR_LEN);
+            memcpy(netinfo->ip_addr, con_info->au8IPAddr, WINC_IPV4_ADDR_LEN);
+
+            // Get MAC Address.
+            memcpy(netinfo->mac_addr, con_info->au8MACAddress, WINC_MAC_ADDR_LEN);
 
             // Copy SSID.
-            strncpy(ifconfig->ssid, con_info->acSSID, WINC_MAX_SSID_LEN-1);
+            strncpy(netinfo->ssid, con_info->acSSID, WINC_MAX_SSID_LEN-1);
 
             async_request_done = true;
 			break;
@@ -391,29 +410,69 @@ static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout)
     while (async_request_done == false) {
         // Handle pending events from network controller.
         m2m_wifi_handle_events(NULL);
+        // timeout == 0 in blocking mode.
         if (timeout && ((HAL_GetTick() - tick_start) >= timeout)) {
-            return -ETIMEDOUT;
+            return SOCK_ERR_TIMEOUT;
         }
     }
 
     return SOCK_ERR_NO_ERROR;
 }
 
+const char *winc_strerror(int error)
+{
+    static const char *winc_errors[]={
+        "Success.",
+        "Error sending packet!",
+        "Error receiving packet!",
+        "Memory alloc failed!",
+        "Timeout!",
+        "Init failed!",
+        "Bus error!",
+        "Not ready!",
+        "Firmware error!",
+        "SPI bus error!",
+        "Burn firmware failed!",
+        "Ack.",
+        "Failed!.",
+        "Firmware version mismatch. Please update WINC1500 firmware, see Examples->14-WiFi-Shield->fw_update.py",
+        "Scan in progress.",
+        "Invalid Arg",
+    };
+
+    error = -error;
+    if (error > (sizeof(winc_errors)/sizeof(winc_errors[0]))) {
+        return "unknown error";
+    } else {
+        return winc_errors[error];
+    }
+}
+
 int winc_init(winc_mode_t winc_mode)
 {
+    int error = 0;
+
 	// Initialize the BSP.
 	nm_bsp_init();
+
+    // Use DHCP by default.
+    use_static_ip = false;
+
+    // Reset ifconfig info.
+    memset(&ifconfig, 0, sizeof(winc_ifconfig_t));
 
     switch (winc_mode) {
         case WINC_MODE_BSP: {
 	        // Initialize the BSP and return.
+            m2m_wifi_init_hold();
             break;
         }
 
         case WINC_MODE_FIRMWARE: {
             // Enter download mode.
-            if (m2m_wifi_download_mode() != M2M_SUCCESS) {
-                return -1;
+            error = m2m_wifi_download_mode();
+            if (error != M2M_SUCCESS) {
+                return error;
             }
             break;
         }
@@ -430,8 +489,9 @@ int winc_init(winc_mode_t winc_mode)
             }
 
             // Initialize Wi-Fi driver with data and status callbacks.
-            if (m2m_wifi_init(&param) != M2M_SUCCESS) {
-                return -1;
+            error = m2m_wifi_init(&param);
+            if (error != M2M_SUCCESS) {
+                return error;
             }
 
             uint8_t mac_addr_valid;
@@ -463,6 +523,11 @@ int winc_init(winc_mode_t winc_mode)
 
 int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t channel)
 {
+    async_request_data = &ifconfig;
+
+    //Disable/Enable DHCP client before connecting.
+    m2m_wifi_enable_dhcp(!use_static_ip);
+
     // Connect to AP
     if (m2m_wifi_connect((char*)ssid, strlen(ssid), security, (void*)key, M2M_WIFI_CH_ALL) != 0) {
         return -1;
@@ -546,18 +611,33 @@ int winc_wait_for_sta(uint32_t *sta_ip, uint32_t timeout)
     return 0; 
 }
 
-int winc_ifconfig(winc_ifconfig_t *ifconfig)
+int winc_ifconfig(winc_ifconfig_t *rifconfig, bool set)
+{
+    if (set) {
+        use_static_ip = true;
+        memcpy(&ifconfig, rifconfig, sizeof(winc_ifconfig_t));
+    } else {
+        // Copy the ifconfig info stored from the DHCP request.
+        memcpy(rifconfig->ip_addr, ifconfig.ip_addr, WINC_IPV4_ADDR_LEN);
+        memcpy(rifconfig->subnet_addr, ifconfig.subnet_addr, WINC_IPV4_ADDR_LEN);
+        memcpy(rifconfig->gateway_addr, ifconfig.gateway_addr, WINC_IPV4_ADDR_LEN);
+        memcpy(rifconfig->dns_addr, ifconfig.dns_addr, WINC_IPV4_ADDR_LEN);
+    }
+    return 0;
+}
+
+int winc_netinfo(winc_netinfo_t *netinfo)
 {
     async_request_done = false;
-    async_request_data = ifconfig;
-	
+    async_request_data = netinfo;
+
     // Request connection info
     m2m_wifi_get_connection_info();
 
-	while (async_request_done == false) {
-		// Handle pending events from network controller.
-		m2m_wifi_handle_events(NULL);
-	}
+    while (async_request_done == false) {
+        // Handle pending events from network controller.
+        m2m_wifi_handle_events(NULL);
+    }
 
     return 0;
 }
@@ -654,14 +734,14 @@ int winc_gethostbyname(const char *name, uint8_t *out_ip)
     uint32_t ip=0;
     ret = WINC1500_EXPORT(gethostbyname)((uint8_t*) name);
     if (ret == SOCK_ERR_NO_ERROR) {
-        ret = winc_async_request(0, &ip, 5000);
+        ret = winc_async_request(0, &ip, WINC_REQUEST_TIMEOUT);
     } else {
         return -1;
     }
 
     if (ip == 0) {
         // unknown host
-        return -ENOENT;
+        return ENOENT;
     }
 
     out_ip[0] = ip;
@@ -688,7 +768,7 @@ int winc_socket_bind(int fd, sockaddr *addr)
     int ret = WINC1500_EXPORT(bind)(fd, addr, sizeof(*addr));
     if (ret == SOCK_ERR_NO_ERROR) {
         // Do async request
-        ret = winc_async_request(SOCKET_MSG_BIND, &ret, 1000);
+        ret = winc_async_request(SOCKET_MSG_BIND, &ret, WINC_REQUEST_TIMEOUT);
     }
 
     return ret;
@@ -700,7 +780,7 @@ int winc_socket_listen(int fd, uint32_t backlog)
     int ret = WINC1500_EXPORT(listen)(fd, backlog);
     if (ret == SOCK_ERR_NO_ERROR) {
         // Do async request
-        ret = winc_async_request(SOCKET_MSG_LISTEN, &ret, 1000);
+        ret = winc_async_request(SOCKET_MSG_LISTEN, &ret, WINC_REQUEST_TIMEOUT);
     }
 
     return ret;
@@ -769,7 +849,7 @@ int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sock
 
         int recv_bytes;
         // Set recv to the maximum possible packet size.
-        int ret = WINC1500_EXPORT(recv)(fd, sockbuf->buf, SOCKET_BUFFER_MAX_LENGTH, timeout);
+        int ret = WINC1500_EXPORT(recv)(fd, sockbuf->buf, WINC_SOCKBUF_MAX_SIZE, timeout);
         if (ret == SOCK_ERR_NO_ERROR) {
             // Do async request
             // sockbuf->size is the actual size of the recv'd packet.
