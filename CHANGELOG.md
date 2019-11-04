@@ -1,4 +1,31 @@
 # Change Log
+## [3.5.0](https://github.com/openmv/openmv/releases/tag/v3.5.0) (2019-11-04)
+* Update CMSIS to v5.4.0
+* Update H7 HAL to v1.5
+* Update MicroPython to 1.11.
+* Update WINC1500 firmware to v19.6.1.
+* Update WINC1500 host driver to v19.3.0.
+* Add STM32Cube.AI support.
+* Add TensorFlow Lite for microcontrollers.
+* Add built-in person detector with TF Lite.
+* Add ulab and openrv libraries.
+* Add support for 32-bit SDRAM @100MHz.
+* Add Arduino UART example.
+* Add new ADC example for internal channels.
+* Add new HTTPs client examples.
+* Fix fb_alloc bug introduced in v3.5.0-beta.2.
+* Fix ADC driver to work with new H7 HAL.
+* Fix BMP bug when reading 24-bit images.
+* Fix Lepton Hardfault when setting VGA/RGB565.
+* Fix SPI WFI bug on F7.
+* Fix cpufreq H7 frequencies.
+* Fix Makefile order dependency issues.
+* Fix VSCALE0 low-power mode.
+* Enable mod USSL with MBEDTLS.
+* Enable QSPI internal storage for OpenMV-4R2.
+* Enable VSCALE0 for rev V devices.
+* All the modules in scripts/libraries are now frozen.
+
 ## [3.5.0-beta.3](https://github.com/openmv/openmv/releases/tag/v3.5.0-beta.3) (2019-10-25)
 * Update WINC1500 to firmware v19.6.1 and host driver v19.3.0.
 * Add STM32Cube.AI support.
