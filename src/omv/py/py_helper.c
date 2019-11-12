@@ -22,28 +22,28 @@ MP_DEFINE_CONST_FUN_OBJ_KW(py_func_unavailable_obj, 1, py_func_unavailable);
 image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE(arg_img), "Image format is not supported!");
+    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE(arg_img), "Image is not mutable!");
     return arg_img;
 }
 
 image_t *py_helper_arg_to_image_mutable_bayer(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE_BAYER(arg_img), "Image format is not supported!");
+    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE_BAYER(arg_img), "Image is not mutable Bayer!");
     return arg_img;
 }
 
 image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(arg_img->bpp == IMAGE_BPP_GRAYSCALE, "Image format is not supported!");
+    PY_ASSERT_TRUE_MSG(arg_img->bpp == IMAGE_BPP_GRAYSCALE, "Image is not grayscale!");
     return arg_img;
 }
 
 image_t *py_helper_arg_to_image_color(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(arg_img->bpp == IMAGE_BPP_RGB565, "Image format is not supported!");
+    PY_ASSERT_TRUE_MSG(arg_img->bpp == IMAGE_BPP_RGB565, "Image is not RGB565!");
     return arg_img;
 }
 
