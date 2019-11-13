@@ -29,7 +29,7 @@ image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg)
 image_t *py_helper_arg_to_image_mutable_bayer(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);
-    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE_BAYER(arg_img), "Image is not mutable Bayer!");
+    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE_BAYER(arg_img), "Image is not mutable!");
     return arg_img;
 }
 
