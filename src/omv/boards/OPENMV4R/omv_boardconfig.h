@@ -49,6 +49,9 @@
 #define OMV_ENABLE_MT9V034      (1)
 #define OMV_ENABLE_LEPTON       (1)
 
+// Enable WiFi debug
+#define OMV_ENABLE_WIFIDBG      (1)
+
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH     (1920*1080*2)
