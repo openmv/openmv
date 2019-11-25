@@ -444,6 +444,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modussl_mbedtls.o   \
 	)
 
+ifeq ($(MICROPY_PY_ULAB), 1)
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/ulab/,\
 	code/fft.o          \
 	code/linalg.o       \
@@ -453,6 +454,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/ulab/,\
 	code/ulab.o         \
 	code/vectorise.o    \
 	)
+endif
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
 	ff.o                \
