@@ -1178,8 +1178,11 @@ Q(pixformat)
 // TensorFlow Module
 Q(tf)
 // duplicate Q(load)
+Q(load_to_fb)
+Q(free_from_fb)
 Q(classify)
 Q(segment)
+
 // Model Object
 Q(tf_model)
 // duplicate Q(len)

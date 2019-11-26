@@ -12,6 +12,17 @@
 
 #ifdef IMLIB_ENABLE_TF
 
+#define PY_TF_PUTCHAR_BUFFER_LEN 1023
+
+extern char *py_tf_putchar_buffer;
+extern size_t py_tf_putchar_buffer_len;
+
+STATIC void alloc_putchar_buffer()
+{
+    py_tf_putchar_buffer = (char *) fb_alloc0(PY_TF_PUTCHAR_BUFFER_LEN + 1, FB_ALLOC_NO_HINT);
+    py_tf_putchar_buffer_len = PY_TF_PUTCHAR_BUFFER_LEN;
+}
+
 // TF Model Object
 typedef struct py_tf_model_obj {
     mp_obj_base_t base;
@@ -116,8 +127,12 @@ static const mp_obj_type_t py_tf_classification_type = {
 
 static const mp_obj_type_t py_tf_model_type;
 
-STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool mode)
+STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_mode)
 {
+    if (!helper_mode) {
+        fb_alloc_mark();
+    }
+
     const char *path = mp_obj_str_get_str(path_obj);
     py_tf_model_obj_t *tf_model = m_new_obj(py_tf_model_obj_t);
     tf_model->base.type = &py_tf_model_type;
@@ -129,14 +144,16 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool mode)
         FIL fp;
         file_read_open(&fp, path);
         tf_model->model_data_len = f_size(&fp);
-        tf_model->model_data = mode
+        tf_model->model_data = alloc_mode
             ? fb_alloc(tf_model->model_data_len, FB_ALLOC_NO_HINT)
             : xalloc(tf_model->model_data_len);
         read_data(&fp, tf_model->model_data, tf_model->model_data_len);
         file_close(&fp);
     }
 
-    fb_alloc_mark();
+    if (!helper_mode) {
+        alloc_putchar_buffer();
+    }
 
     uint32_t tensor_arena_size;
     uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
@@ -147,25 +164,44 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool mode)
                                                  &tf_model->height,
                                                  &tf_model->width,
                                                  &tf_model->channels),
-                        "Unable to read model height, width, and channels!");
+                        py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
 
-    fb_alloc_free_till_mark();
+    fb_free(); // free fb_alloc_all()
+
+    if (!helper_mode) {
+        fb_free(); // free alloc_putchar_buffer()
+    }
+
+    // In this mode we leave the model allocated on the frame buffer.
+    // py_tf_free_from_fb() must be called to free the model allocated on the frame buffer.
+    // On error everything is cleaned because of fb_alloc_mark().
+
+    if ((!helper_mode) && alloc_mode) {
+        fb_alloc_free_till_mark();
+    }
 
     return tf_model;
 }
 
-STATIC mp_obj_t py_tf_load_xalloc(mp_obj_t path_obj)
+STATIC mp_obj_t py_tf_load(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    return int_py_tf_load(path_obj, false);
+    return int_py_tf_load(args[0], py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_load_to_fb), false), false);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_tf_load_obj, py_tf_load_xalloc);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_load_obj, 1, py_tf_load);
 
-STATIC py_tf_model_obj_t *py_tf_load_fb_alloc(mp_obj_t path_obj)
+STATIC mp_obj_t py_tf_free_from_fb()
+{
+    fb_alloc_free_till_mark();
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tf_free_from_fb_obj, py_tf_free_from_fb);
+
+STATIC py_tf_model_obj_t *py_tf_load_alloc(mp_obj_t path_obj)
 {
     if (MP_OBJ_IS_TYPE(path_obj, &py_tf_model_type)) {
         return (py_tf_model_obj_t *) path_obj;
     } else {
-        return (py_tf_model_obj_t *) int_py_tf_load(path_obj, true);
+        return (py_tf_model_obj_t *) int_py_tf_load(path_obj, true, true);
     }
 }
 
@@ -303,8 +339,9 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
 STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     fb_alloc_mark();
+    alloc_putchar_buffer();
 
-    py_tf_model_obj_t *arg_model = py_tf_load_fb_alloc(args[0]);
+    py_tf_model_obj_t *arg_model = py_tf_load_alloc(args[0]);
     image_t *arg_img = py_helper_arg_to_image_mutable(args[1]);
 
     rectangle_t roi;
@@ -359,7 +396,7 @@ STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
                                                      &py_tf_input_data_callback_data,
                                                      py_tf_classify_output_data_callback,
                                                      &py_tf_classify_output_data_callback_data),
-                                        "Model classification failed!");
+                                        py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
 
                     py_tf_classification_obj_t *o = m_new_obj(py_tf_classification_obj_t);
                     o->base.type = &py_tf_classification_type;
@@ -415,8 +452,9 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
 STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     fb_alloc_mark();
+    alloc_putchar_buffer();
 
-    py_tf_model_obj_t *arg_model = py_tf_load_fb_alloc(args[0]);
+    py_tf_model_obj_t *arg_model = py_tf_load_alloc(args[0]);
     image_t *arg_img = py_helper_arg_to_image_mutable(args[1]);
 
     rectangle_t roi;
@@ -438,7 +476,7 @@ STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
                                      &py_tf_input_data_callback_data,
                                      py_tf_segment_output_data_callback,
                                      &py_tf_segment_output_data_callback_data),
-                        "Model segmentation failed!");
+                        py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
 
     fb_alloc_free_till_mark();
 
@@ -479,13 +517,15 @@ STATIC const mp_obj_type_t py_tf_model_type = {
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_tf) },
 #ifdef IMLIB_ENABLE_TF
-    { MP_ROM_QSTR(MP_QSTR_load),     MP_ROM_PTR(&py_tf_load_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_tf_classify_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),  MP_ROM_PTR(&py_tf_segment_obj) },
+    { MP_ROM_QSTR(MP_QSTR_load),            MP_ROM_PTR(&py_tf_load_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_from_fb),    MP_ROM_PTR(&py_tf_free_from_fb_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),        MP_ROM_PTR(&py_tf_classify_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),         MP_ROM_PTR(&py_tf_segment_obj) },
 #else
-    { MP_ROM_QSTR(MP_QSTR_load),     MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_classify), MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_segment),  MP_ROM_PTR(&py_func_unavailable_obj) }
+    { MP_ROM_QSTR(MP_QSTR_load),            MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_free_from_fb),    MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_classify),        MP_ROM_PTR(&py_func_unavailable_obj) },
+    { MP_ROM_QSTR(MP_QSTR_segment),         MP_ROM_PTR(&py_func_unavailable_obj) }
 #endif // IMLIB_ENABLE_TF
 };
 
