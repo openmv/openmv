@@ -8,6 +8,7 @@
 #
 # NOTE: Older fimware versions are no longer supported by the host driver.
 # NOTE: The latest firmware (19.6.1) only works on ATWINC1500-MR210PB.
+# NOTE: Firmware is at <openmv-ide-install-dir>/share/qtcreator/firmware/WINC1500/winc_19_6_1.bin
 
 import network
 
