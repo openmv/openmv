@@ -992,20 +992,18 @@ void imlib_sepconv3(image_t *img, const int8_t *krn, const float m, const int b)
 {
     int ksize = 3;
     // TODO: Support RGB
-    int *buffer = fb_alloc(img->w * 2 * sizeof(*buffer), FB_ALLOC_NO_HINT);
+    int *buffer = fb_alloc(img->w * sizeof(*buffer) * 2, FB_ALLOC_NO_HINT);
 
     // NOTE: This doesn't deal with borders right now. Adding if
     // statements in the inner loop will slow it down significantly.
     for (int y=0; y<img->h-ksize; y++) {
-        for (int x=0; x<img->w-ksize; x+=ksize) {
-            for (int k=0; k<ksize; k++) {
-                int acc=0;
-                //if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j))
-                acc = __SMLAD(krn[0], IM_GET_GS_PIXEL(img, x+k, y+0), acc);
-                acc = __SMLAD(krn[1], IM_GET_GS_PIXEL(img, x+k, y+1), acc);
-                acc = __SMLAD(krn[2], IM_GET_GS_PIXEL(img, x+k, y+2), acc);
-                buffer[((y%2)*img->w) + x+k] = acc;
-            }
+        for (int x=0; x<img->w; x++) {
+            int acc=0;
+            //if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j))
+            acc = __SMLAD(krn[0], IM_GET_GS_PIXEL(img, x, y + 0), acc);
+            acc = __SMLAD(krn[1], IM_GET_GS_PIXEL(img, x, y + 1), acc);
+            acc = __SMLAD(krn[2], IM_GET_GS_PIXEL(img, x, y + 2), acc);
+            buffer[((y%2)*img->w) + x] = acc;
         }
         if (y > 0) {
             // flush buffer
