@@ -335,7 +335,7 @@ STATIC mp_obj_t py_image_it_iternext(mp_obj_t self_in)
 
 STATIC mp_obj_t py_image_getiter(mp_obj_t o_in, mp_obj_iter_buf_t *iter_buf)
 {
-    assert(sizeof(mp_obj_image_it_t) <= sizeof(mp_obj_iter_buf_t));
+    assert(sizeof(mp_obj_py_image_it_t) <= sizeof(mp_obj_iter_buf_t));
     mp_obj_py_image_it_t *o = (mp_obj_py_image_it_t*)iter_buf;
     o->base.type = &mp_type_polymorph_iter;
     o->iternext = py_image_it_iternext;
