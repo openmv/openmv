@@ -42,10 +42,10 @@ typedef struct {
     uint16_t b;
 } edge;
 
-inline int min (int a, int b) { return (a < b) ? a : b; }
-inline int max (int a, int b) { return (a > b) ? a : b; }
-inline float minf (float a, float b) { return (a < b) ? a : b; }
-inline float maxf (float a, float b) { return (a > b) ? a : b; }
+static inline int min (int a, int b) { return (a < b) ? a : b; }
+static inline int max (int a, int b) { return (a > b) ? a : b; }
+static inline float minf (float a, float b) { return (a < b) ? a : b; }
+static inline float maxf (float a, float b) { return (a > b) ? a : b; }
 extern uint32_t rng_randint(uint32_t min, uint32_t max);
 
 static universe *universe_create(int elements)

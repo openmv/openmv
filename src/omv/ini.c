@@ -276,8 +276,8 @@ ini_fgetc(FIL *fp)
 char *
 ini_fgets(char *dst, int max, FIL *fp)
 {
-    int c;
     char *p;
+    int c=EOF;
 
     /* get max bytes or upto a newline */
 
