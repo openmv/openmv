@@ -1,4 +1,10 @@
 # Change Log
+## [3.5.1](https://github.com/openmv/openmv/releases/tag/v3.5.1) (2019-12-06)
+* Update ulab submodule.
+* Update Tensorflow library.
+* Fix sepconv3 bug.
+* Fix debug build errors.
+
 ## [3.5.0](https://github.com/openmv/openmv/releases/tag/v3.5.0) (2019-11-04)
 * Update CMSIS to v5.4.0
 * Update H7 HAL to v1.5
