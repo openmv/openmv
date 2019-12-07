@@ -28,14 +28,14 @@ class MQTTClient:
         self.lw_retain = False
 
     def _send_str(self, s):
-        self.sock.send(struct.pack("!H", len(s)))
-        self.sock.send(s)
+        self.sock.write(struct.pack("!H", len(s)))
+        self.sock.write(s)
 
     def _recv_len(self):
         n = 0
         sh = 0
         while 1:
-            b = self.sock.recv(1)[0]
+            b = self.sock.read(1)[0]
             n |= (b & 0x7f) << sh
             if not b & 0x80:
                 return n
@@ -84,8 +84,8 @@ class MQTTClient:
             i += 1
         premsg[i] = sz
 
-        self.sock.send(premsg[0:i + 2])
-        self.sock.send(msg)
+        self.sock.write(premsg[0:i + 2])
+        self.sock.write(msg)
         #print(hex(len(msg)), hexlify(msg, ":"))
         self._send_str(self.client_id)
         if self.lw_topic:
@@ -94,18 +94,18 @@ class MQTTClient:
         if self.user is not None:
             self._send_str(self.user)
             self._send_str(self.pswd)
-        resp = self.sock.recv(4)
+        resp = self.sock.read(4)
         assert resp[0] == 0x20 and resp[1] == 0x02
         if resp[3] != 0:
             raise MQTTException(resp[3])
         return resp[2] & 1
 
     def disconnect(self):
-        self.sock.send(b"\xe0\0")
+        self.sock.write(b"\xe0\0")
         self.sock.close()
 
     def ping(self):
-        self.sock.send(b"\xc0\0")
+        self.sock.write(b"\xc0\0")
 
     def publish(self, topic, msg, retain=False, qos=0):
         pkt = bytearray(b"\x30\0\0\0")
@@ -121,21 +121,21 @@ class MQTTClient:
             i += 1
         pkt[i] = sz
         #print(hex(len(pkt)), hexlify(pkt, ":"))
-        self.sock.send(pkt[0:i + 1])
+        self.sock.write(pkt[0:i + 1])
         self._send_str(topic)
         if qos > 0:
             self.pid += 1
             pid = self.pid
             struct.pack_into("!H", pkt, 0, pid)
-            self.sock.send(pkt[0:2])
-        self.sock.send(msg)
+            self.sock.write(pkt[0:2])
+        self.sock.write(msg)
         if qos == 1:
             while 1:
                 op = self.wait_msg()
                 if op == 0x40:
-                    sz = self.sock.recv(1)
+                    sz = self.sock.read(1)
                     assert sz == b"\x02"
-                    rcv_pid = self.sock.recv(2)
+                    rcv_pid = self.sock.read(2)
                     rcv_pid = rcv_pid[0] << 8 | rcv_pid[1]
                     if pid == rcv_pid:
                         return
@@ -148,13 +148,13 @@ class MQTTClient:
         self.pid += 1
         struct.pack_into("!BH", pkt, 1, 2 + 2 + len(topic) + 1, self.pid)
         #print(hex(len(pkt)), hexlify(pkt, ":"))
-        self.sock.send(pkt)
+        self.sock.write(pkt)
         self._send_str(topic)
-        self.sock.send(qos.to_bytes(1, "little"))
+        self.sock.write(qos.to_bytes(1, "little"))
         while 1:
             op = self.wait_msg()
             if op == 0x90:
-                resp = self.sock.recv(4)
+                resp = self.sock.read(4)
                 #print(resp)
                 assert resp[1] == pkt[2] and resp[2] == pkt[3]
                 if resp[3] == 0x80:
@@ -166,32 +166,32 @@ class MQTTClient:
     # set by .set_callback() method. Other (internal) MQTT
     # messages processed internally.
     def wait_msg(self):
-        res = self.sock.recv(1)
+        res = self.sock.read(1)
         if res == b"":
             return None
         self.sock.setblocking(True)
         if res == b"\xd0":  # PINGRESP
-            sz = self.sock.recv(1)[0]
+            sz = self.sock.read(1)[0]
             assert sz == 0
             return None
         op = res[0]
         if op & 0xf0 != 0x30:
             return op
         sz = self._recv_len()
-        topic_len = self.sock.recv(2)
+        topic_len = self.sock.read(2)
         topic_len = (topic_len[0] << 8) | topic_len[1]
-        topic = self.sock.recv(topic_len)
+        topic = self.sock.read(topic_len)
         sz -= topic_len + 2
         if op & 6:
-            pid = self.sock.recv(2)
+            pid = self.sock.read(2)
             pid = pid[0] << 8 | pid[1]
             sz -= 2
-        msg = self.sock.recv(sz)
+        msg = self.sock.read(sz)
         self.cb(topic, msg)
         if op & 6 == 2:
             pkt = bytearray(b"\x40\x02\0\0")
             struct.pack_into("!H", pkt, 2, pid)
-            self.sock.send(pkt)
+            self.sock.write(pkt)
         elif op & 6 == 4:
             assert 0
 
