@@ -1,4 +1,10 @@
 # Change Log
+## [3.5.2](https://github.com/openmv/openmv/releases/tag/v3.5.2) (2019-12-17)
+* Fix H7 timer bug.
+* Update timer test scripts.
+* Enable DBGMCU in sleep modes.
+* Fix MQTT module to work with SSL sockets.
+
 ## [3.5.1](https://github.com/openmv/openmv/releases/tag/v3.5.1) (2019-12-06)
 * Update ulab submodule.
 * Update Tensorflow library.
