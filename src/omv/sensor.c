@@ -138,7 +138,7 @@ static int dcmi_config(uint32_t jpeg_mode)
     // Associate the DMA handle to the DCMI handle
     __HAL_LINKDMA(&DCMIHandle, DMA_Handle, DMAHandle);
 
-   // Initialize the DCMI
+    // Initialize the DCMI
     HAL_DCMI_DeInit(&DCMIHandle);
     if (HAL_DCMI_Init(&DCMIHandle) != HAL_OK) {
         // Initialization Error
