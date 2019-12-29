@@ -297,10 +297,14 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
                 wlan_connected = true;
                 if (use_static_ip) {
                     tstrM2MIPConfig ipconfig;
-                    ipconfig.u32StaticIP = *((uint32_t*)ifconfig.ip_addr);
-                    ipconfig.u32SubnetMask = *((uint32_t*)ifconfig.subnet_addr);
-                    ipconfig.u32Gateway = *((uint32_t*)ifconfig.gateway_addr);
-                    ipconfig.u32DNS = *((uint32_t*)ifconfig.dns_addr);
+                    uint8_t *p8_ip_addr = (uint8_t *)&ifconfig.ip_addr;
+                    uint8_t *p8_subnet_addr = (uint8_t *)&ifconfig.subnet_addr;
+                    uint8_t *p8_gateway_addr = (uint8_t *)&ifconfig.gateway_addr;
+                    uint8_t *p8_dns_addr = (uint8_t *)&ifconfig.dns_addr;
+                    ipconfig.u32StaticIP = *((uint32_t*)p8_ip_addr);
+                    ipconfig.u32SubnetMask = *((uint32_t*)p8_subnet_addr);
+                    ipconfig.u32Gateway = *((uint32_t*)p8_gateway_addr);
+                    ipconfig.u32DNS = *((uint32_t*)p8_dns_addr);
                     m2m_wifi_set_static_ip(&ipconfig);
                     // NOTE: the async request is done because there's
                     // no DHCP request/response when using a static IP.
