@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include "imlib.h"
 
+// Enable new code optimizations
+#define OPTIMIZED
+
 #ifdef IMLIB_ENABLE_APRILTAGS
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
@@ -10126,6 +10129,34 @@ int fit_quad(apriltag_detector_t *td, image_u8_t *im, zarray_t *cluster, struct 
     return res;
 }
 
+#ifdef OPTIMIZED
+#define DO_UNIONFIND(dx, dy) if (im->buf[y*s + dy*s + x + dx] == v) { broot = unionfind_get_representative(uf, y*w + dy*w + x + dx); if (aroot != broot) uf->data[broot].parent = aroot; }
+
+static void do_unionfind_line(unionfind_t *uf, image_u8_t *im, int h, int w, int s, int y)
+{
+    assert(y+1 < im->height);
+    uint8_t v, *p;
+    p = &im->buf[y*s + 1];
+    for (int x = 1; x < w - 1; x++) {
+        v = *p++; //im->buf[y*s + x];
+
+        if (v == 127)
+            continue;
+        uint32_t broot;
+        uint32_t aroot = unionfind_get_representative(uf, y*w+x);
+        // (dx,dy) pairs for 8 connectivity:
+        //          (REFERENCE) (1, 0)
+        // (-1, 1)    (0, 1)    (1, 1)
+        //
+        DO_UNIONFIND(1, 0);
+        DO_UNIONFIND(0, 1);
+        if (v == 255) {
+            DO_UNIONFIND(-1, 1);
+            DO_UNIONFIND(1, 1);
+        }
+    }
+}
+#else // not optimized
 #define DO_UNIONFIND(dx, dy) if (im->buf[y*s + dy*s + x + dx] == v) unionfind_connect(uf, y*w + x, y*w + dy*w + x + dx);
 
 static void do_unionfind_line(unionfind_t *uf, image_u8_t *im, int h, int w, int s, int y)
@@ -10151,6 +10182,7 @@ static void do_unionfind_line(unionfind_t *uf, image_u8_t *im, int h, int w, int
     }
 }
 #undef DO_UNIONFIND
+#endif // OPTIMIZED
 
 image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
 {
@@ -10201,22 +10233,44 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
     // first, collect min/max statistics for each tile
     for (int ty = 0; ty < th; ty++) {
         for (int tx = 0; tx < tw; tx++) {
-            uint8_t max = 0, min = 255;
-
-            for (int dy = 0; dy < tilesz; dy++) {
-
-                for (int dx = 0; dx < tilesz; dx++) {
-
-                    uint8_t v = im->buf[(ty*tilesz+dy)*s + tx*tilesz + dx];
-                    if (v < min)
-                        min = v;
-                    if (v > max)
-                        max = v;
-                }
+#if defined( OPTIMIZED ) && (defined(ARM_MATH_CM7) || defined(ARM_MATH_CM4))
+        uint32_t tmp, max32 = 0, min32 = 0xffffffff;
+        for (int dy=0; dy < tilesz; dy++) {
+            uint32_t v = *(uint32_t *)&im->buf[(ty*tilesz+dy)*s + tx*tilesz];
+            tmp = __USUB8(v, max32);
+            max32 = __SEL(v, max32);
+            tmp = __USUB8(min32, v);
+            min32 = __SEL(v, min32);
+        }
+        // find the min/max of the 4 remaining values
+        tmp = max32 >> 16;
+        __USUB8(max32, tmp); // 4->2
+        max32 = __SEL(max32, tmp);
+        tmp = max32 >> 8;
+        __USUB8(max32, tmp); // 2->1
+        max32 = __SEL(max32, tmp);
+        tmp = min32 >> 16;
+        __USUB8(min32, tmp);
+        min32 = __SEL(tmp, min32); // 4-->2
+        tmp = min32 >> 8;
+        __USUB8(min32, tmp);
+        min32 = __SEL(tmp, min32); // 2-->1
+        im_max[ty*tw+tx] = (uint8_t)max32;
+        im_min[ty*tw+tx] = (uint8_t)min32;
+#else
+        uint8_t max = 0, min = 255;
+        for (int dy = 0; dy < tilesz; dy++) {
+            for (int dx = 0; dx < tilesz; dx++) {
+                uint8_t v = im->buf[(ty*tilesz+dy)*s + tx*tilesz + dx];
+                if (v < min)
+                    min = v;
+                if (v > max)
+                    max = v;
             }
-
-            im_max[ty*tw+tx] = max;
-            im_min[ty*tw+tx] = min;
+        }
+        im_max[ty*tw+tx] = max;
+        im_min[ty*tw+tx] = min;
+#endif
         }
     }
 
@@ -10256,7 +10310,46 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
         fb_free(); // im_min_tmp
         fb_free(); // im_max_tmp
     }
+#if defined( OPTIMIZED ) && (defined(ARM_MATH_CM7) || defined(ARM_MATH_CM4))
+    if ((s & 0x3) == 0 && tilesz == 4) // if each line is a multiple of 4, we can do this faster
+    {
+        const uint32_t lowcontrast = 0x7f7f7f7f;
+        const int s32 = s/4; // pitch for 32-bit values
+        const int minmax = td->qtp.min_white_black_diff; // local var to avoid constant dereferencing of the pointer
+        for (int ty = 0; ty < th; ty++) {
+            for (int tx = 0; tx < tw; tx++) {
 
+                int min = im_min[ty*tw + tx];
+                int max = im_max[ty*tw + tx];
+
+                // low contrast region? (no edges)
+                if (max - min < minmax) {
+                    uint32_t *d32 = (uint32_t *)&threshim->buf[ty*tilesz*s + tx*tilesz];
+                    d32[0] = d32[s32] = d32[s32*2] = d32[s32*3] = lowcontrast;
+                    continue;
+                } // if low contrast
+                    // otherwise, actually threshold this tile.
+
+                    // argument for biasing towards dark; specular highlights
+                    // can be substantially brighter than white tag parts
+                    uint32_t thresh32 = (min + (max - min) / 2) + 1; // plus 1 to make GT become GE for the __USUB8 and __SEL instructions
+                    uint32_t u32tmp;
+                    thresh32 *= 0x01010101; // spread value to all 4 slots
+                        for (int dy = 0; dy < tilesz; dy++) {
+                        uint32_t *d32 = (uint32_t *)&threshim->buf[(ty*tilesz+dy)*s + tx*tilesz];
+                            uint32_t *s32 = (uint32_t *)&im->buf[(ty*tilesz+dy)*s + tx*tilesz];
+                            // process 4 pixels at a time
+                            u32tmp = s32[0];
+                            u32tmp = __USUB8(u32tmp, thresh32);
+                            u32tmp = __SEL(0xffffffff, 0x00000000); // 4 thresholded pixels
+                            d32[0] = u32tmp;
+                    } // dy
+            } // tx
+        } // ty
+    }
+    else // need to do it the slow way
+#endif // OPTIMIZED
+    {
     for (int ty = 0; ty < th; ty++) {
         for (int tx = 0; tx < tw; tx++) {
 
@@ -10297,6 +10390,7 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
                 }
             }
         }
+    }
     }
 
     // we skipped over the non-full-sized tiles above. Fix those now.
