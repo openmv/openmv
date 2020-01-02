@@ -12,7 +12,7 @@ blue_led  = LED(3)
 def tick(timer):            
     blue_led.toggle()
     
-tim = Timer(2, freq=1)      # create a timer object using timer 4 - trigger at 1Hz
+tim = Timer(2, freq=1)      # create a timer object using timer 2 - trigger at 1Hz
 tim.callback(tick)          # set the callback to our tick function
 
 while (True):
