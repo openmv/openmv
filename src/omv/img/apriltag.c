@@ -9594,10 +9594,19 @@ int quad_segment_maxima(apriltag_detector_t *td, zarray_t *cluster, struct line_
 
         for (int iy = 0; iy < sz; iy++) {
             float acc = 0;
-
+#ifdef OPTIMIZED
+            int index = (iy - fsz/2 + sz) % sz;
+            for (int i = 0; i < fsz; i++) {
+                acc += errs[index] * f[i];
+                index++;
+                if (index >= sz) // faster to compare than divide (%)
+                   index -= sz;
+            }
+#else
             for (int i = 0; i < fsz; i++) {
                 acc += errs[(iy + i - fsz / 2 + sz) % sz] * f[i];
             }
+#endif
             y[iy] = acc;
         }
 
@@ -10281,6 +10290,97 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
         uint8_t *im_max_tmp = fb_alloc(tw*th*sizeof(uint8_t), FB_ALLOC_NO_HINT);
         uint8_t *im_min_tmp = fb_alloc(tw*th*sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
+#ifdef OPTIMIZED
+        // Checking boundaries on every pixel wastes significant time; just break it into 5 pieces
+        // (center, top, bottom, left right)
+        // First pass does the entire center area
+        int ty, tx, dy, dx;
+        for (ty = 1; ty < th-1; ty++) {
+            for (tx = 1; tx < tw-1; tx++) {
+                uint8_t max = 0, min = 255;
+                for (dy = -1; dy <= 1; dy++) {
+                    for (dx = -1; dx <= 1; dx++) {
+                        uint8_t m = im_max[(ty+dy)*tw+tx+dx];
+                        if (m > max)
+                            max = m;
+                        m = im_min[(ty+dy)*tw+tx+dx];
+                        if (m < min)
+                            min = m;
+                    }
+                }
+                im_max_tmp[ty*tw + tx] = max;
+                im_min_tmp[ty*tw + tx] = min;
+            }
+        }
+        // top edge
+        ty = 0;
+        for (tx = 1; tx < tw-1; tx++) {
+            uint8_t max = 0, min = 255;
+            for (dy = 0; dy <= 1; dy++) {
+                for (dx = -1; dx <= 1; dx++) {
+                    uint8_t m = im_max[(ty+dy)*tw+tx+dx];
+                    if (m > max)
+                        max = m;
+                    m = im_min[(ty+dy)*tw+tx+dx];
+                    if (m < min)
+                        min = m;
+                }
+            }
+            im_max_tmp[ty*tw + tx] = max;
+            im_min_tmp[ty*tw + tx] = min;
+        }
+        // bottom edge
+        ty = th-1;
+        for (tx = 1; tx < tw-1; tx++) {
+            uint8_t max = 0, min = 255;
+            for (dy = -1; dy <= 0; dy++) {
+                for (dx = -1; dx <= 1; dx++) {
+                    uint8_t m = im_max[(ty+dy)*tw+tx+dx];
+                    if (m > max)
+                        max = m;
+                    m = im_min[(ty+dy)*tw+tx+dx];
+                    if (m < min)
+                        min = m;
+                }
+            }
+            im_max_tmp[ty*tw + tx] = max;
+            im_min_tmp[ty*tw + tx] = min;
+        }
+        // left edge
+        tx = 0;
+        for (ty = 1; ty < th-1; ty++) {
+            uint8_t max = 0, min = 255;
+            for (dy = -1; dy <= 1; dy++) {
+                for (dx = 0; dx <= 1; dx++) {
+                    uint8_t m = im_max[(ty+dy)*tw+tx+dx];
+                    if (m > max)
+                        max = m;
+                    m = im_min[(ty+dy)*tw+tx+dx];
+                    if (m < min)
+                        min = m;
+                }
+            }
+            im_max_tmp[ty*tw + tx] = max;
+            im_min_tmp[ty*tw + tx] = min;
+        }
+        // right edge
+        tx = tw-1;
+        for (ty = 1; ty < th-1; ty++) {
+            uint8_t max = 0, min = 255;
+            for (dy = -1; dy <= 1; dy++) {
+                for (dx = -1; dx <= 0; dx++) {
+                    uint8_t m = im_max[(ty+dy)*tw+tx+dx];
+                    if (m > max)
+                        max = m;
+                    m = im_min[(ty+dy)*tw+tx+dx];
+                    if (m < min)
+                        min = m;
+                }
+            }
+            im_max_tmp[ty*tw + tx] = max;
+            im_min_tmp[ty*tw + tx] = min;
+        }
+#else
         for (int ty = 0; ty < th; ty++) {
             for (int tx = 0; tx < tw; tx++) {
                 uint8_t max = 0, min = 255;
@@ -10305,6 +10405,7 @@ image_u8_t *threshold(apriltag_detector_t *td, image_u8_t *im)
                 im_min_tmp[ty*tw + tx] = min;
             }
         }
+#endif
         memcpy(im_max, im_max_tmp, tw*th*sizeof(uint8_t));
         memcpy(im_min, im_min_tmp, tw*th*sizeof(uint8_t));
         fb_free(); // im_min_tmp
