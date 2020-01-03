@@ -70,28 +70,50 @@ static uint8_t *get_mcu()
                 }
             }
             break;
-        case 1:
-            for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + MCU_H); y++) {
-                for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++) {
-                    if (x >= jpeg_enc.img_w || y >= jpeg_enc.img_h) {
-                        *Y0++ = 0;
-                    } else {
+        case 1: {
+            int dx=MCU_W, dy=MCU_H;
+            uint32_t *s32, *d32;
+            if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
+                dx = jpeg_enc.img_w - jpeg_enc.x_offset;
+            if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
+                dy = jpeg_enc.img_h - jpeg_enc.y_offset;
+            if (dx != MCU_W || dy != MCU_H) // partial MCU, fill with 0's to start
+                memset(mcubuf, 0, 64);
+            for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
+                if (dx != MCU_W) {
+                    for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
                         *Y0++ = jpeg_enc.pixels8[y * jpeg_enc.img_w + x];
                     }
+                    Y0 += (MCU_W - dx);
+                } else { // full 8x8
+                    s32 = (uint32_t *)&jpeg_enc.pixels8[(y * jpeg_enc.img_w) + jpeg_enc.x_offset];
+                    d32 = (uint32_t *)Y0;
+                    d32[0] = s32[0]; d32[1] = s32[1]; // copy 8 pixels
+                    Y0 += 8;
                 }
+            }
             }
             break;
         case 2: {
-            for (int y=jpeg_enc.y_offset, idx=0; y<(jpeg_enc.y_offset + MCU_H); y++) {
-                for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++, idx++) {
-                    if (x >= jpeg_enc.img_w || y >= jpeg_enc.img_h) {
-                        Y0[idx] = CB[idx] = CR[idx] = 0;
-                    } else {
-                        int ofs = y * jpeg_enc.img_w + x;
-                        Y0[idx] = COLOR_RGB565_TO_Y(jpeg_enc.pixels16[ofs]) - 128;
-                        CB[idx] = COLOR_RGB565_TO_U(jpeg_enc.pixels16[ofs]) - 128;
-                        CR[idx] = COLOR_RGB565_TO_V(jpeg_enc.pixels16[ofs]) - 128;
-                    }
+            int dx=MCU_W, dy=MCU_H;
+            uint16_t *pPixels, pixel;
+            int r, g, b;
+            if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
+                dx = jpeg_enc.img_w - jpeg_enc.x_offset;
+            if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
+                dy = jpeg_enc.img_h - jpeg_enc.y_offset;
+            if (dx != MCU_W || dy != MCU_H) // partial MCU, fill with 0's to start
+                memset(mcubuf, 0, 192);
+            for (int y=jpeg_enc.y_offset, idx=0; y<(jpeg_enc.y_offset + dy); y++) {
+                pPixels = &jpeg_enc.pixels16[(y * jpeg_enc.img_w) + jpeg_enc.x_offset];
+                for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++, idx++) {
+                    pixel = *pPixels++;
+                    r = rb528_table[(pixel >> 3) & 0x1f];
+                    g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
+                    b = rb528_table[(pixel >> 8) & 0x1f];
+                    Y0[idx] = (uint8_t)fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f));
+                    CB[idx] = (uint8_t)fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f)) - 128;
+                    CR[idx] = (uint8_t)fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f)) - 128;
                 }
             }
             break;
