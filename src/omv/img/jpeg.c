@@ -73,17 +73,14 @@ static uint8_t *get_mcu()
         case 1: {
             int dx=MCU_W, dy=MCU_H;
             uint32_t *s32, *d32;
-            int bSmall = 0; // truncated MCU
             if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
                 dx = jpeg_enc.img_w - jpeg_enc.x_offset;
             if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
                 dy = jpeg_enc.img_h - jpeg_enc.y_offset;
-            if (dx != MCU_W || dy != MCU_H) { // partial MCU, fill with 0's to start
-                bSmall = 1;
+            if (dx != MCU_W || dy != MCU_H) // partial MCU, fill with 0's to start
                 memset(mcubuf, 0, 64);
-            }
             for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
-                if (bSmall) {
+                if (dx != MCU_W) {
                     for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
                         *Y0++ = jpeg_enc.pixels8[y * jpeg_enc.img_w + x];
                     }
