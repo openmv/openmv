@@ -111,24 +111,68 @@ static uint8_t *get_mcu()
                     r = rb528_table[(pixel >> 3) & 0x1f];
                     g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
                     b = rb528_table[(pixel >> 8) & 0x1f];
-                    Y0[idx] = (uint8_t)fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f));
-                    CB[idx] = (uint8_t)fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f)) - 128;
-                    CR[idx] = (uint8_t)fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f)) - 128;
+                    Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) -128; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) -128; // 0.5*r + -0.418688*g + -0.081312*b
                 }
             }
             break;
         }
         case 3: {
-            uint16_t rgbbuf[64];
+            uint16_t pixel, rgbbuf[64];
+            int r, g, b;
+            if (jpeg_enc.x_offset + 8 >= jpeg_enc.img_w || jpeg_enc.y_offset + 8 >= jpeg_enc.img_h || jpeg_enc.x_offset == 0 || jpeg_enc.y_offset == 0) { // use slow method on edges
             // Bayer to rgb565 takes care of zero padding.
             imlib_bayer_to_rgb565(jpeg_enc.img, 8, 8, jpeg_enc.x_offset, jpeg_enc.y_offset, rgbbuf); 
             for (int y=0, idx=0; y<8; y++) {
                 for (int x=0; x<8; x++, idx++) {
-                    Y0[idx] = COLOR_RGB565_TO_Y(rgbbuf[idx]) - 128;
-                    CB[idx] = COLOR_RGB565_TO_U(rgbbuf[idx]) - 128;
-                    CR[idx] = COLOR_RGB565_TO_V(rgbbuf[idx]) - 128;
-                }
-            }
+                    pixel = rgbbuf[idx];
+                    r = rb528_table[(pixel >> 3) & 0x1f];
+                    g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
+                    b = rb528_table[(pixel >> 8) & 0x1f];
+                    Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) -128; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) -128; // 0.5*r + -0.418688*g + -0.081312*b
+                } // for x
+            } // for y
+            } else { // use faster method for center part
+            uint8_t *s;
+            int pitch = jpeg_enc.img->w; // keep in local var
+            for (int y=0, idx=0; y<8; y++) {
+                s = (uint8_t*)jpeg_enc.img->pixels;
+                s += (jpeg_enc.y_offset+y)*jpeg_enc.img->w + jpeg_enc.x_offset;
+                for (int x=0; x<8; x++, idx++, s++) {
+                  if ((y & 1) == 0) { // even rows
+                      if ((x & 1) == 0) { // even cols
+                         b = s[0];
+                         g = s[-1] + s[1] + s[-pitch] + s[pitch];
+                         r = s[-1-pitch] + s[1-pitch] + s[pitch-1] + s[pitch+1];
+                         g >>= 2; r >>= 2;
+                      } else { // odd cols
+                         g = s[0];
+                         b = s[-1] + s[1];
+                         r = s[-pitch] + s[pitch];
+                         b >>= 1; r >>= 1;
+                      }
+                  } else { // odd rows
+                      if ((x & 1) == 0) { // even cols
+                         g = s[0];
+                         r = s[-1] + s[1];
+                         b = s[-pitch] + s[pitch];
+                         r >>= 1; b >>= 1;
+                      } else  { // odd cols
+                         r = s[0];
+                         g = s[-1] + s[1] + s[-pitch] + s[pitch];
+                         b = s[-1-pitch] + s[1-pitch] + s[pitch-1] + s[pitch+1];
+                         g >>= 2; b >>= 2;
+                      }
+                  }
+                  Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                  CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) -128; // -0.168736*r + -0.331264*g + 0.5*b
+                  CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) -128; // 0.5*r + -0.418688*g + -0.081312*b
+                } // for x
+            } // for y
+            } // fast vs slow method
             break;
         }
     }
