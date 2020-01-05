@@ -73,6 +73,12 @@ typedef enum {
     FRAMESIZE_XGA,      // 1024x768
     FRAMESIZE_SXGA,     // 1280x1024
     FRAMESIZE_UXGA,     // 1600x1200
+    FRAMESIZE_HD,       // 1280x720
+    FRAMESIZE_FHD,      // 1920x1080
+    FRAMESIZE_QHD,      // 2560x1440
+    FRAMESIZE_QXGA,     // 2048x1536
+    FRAMESIZE_WQXGA,    // 2560x1600
+    FRAMESIZE_WQXGA2,   // 2592x1944
 } framesize_t;
 
 typedef enum {
