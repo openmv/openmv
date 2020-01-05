@@ -433,7 +433,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t h = resolution[framesize][1];
 
     if ((w % 4) || (h % 4)) { // w/h must be divisble by 4
-        return 1;
+        return -1;
     }
 
     // Looks really bad.
@@ -493,7 +493,7 @@ static int set_contrast(sensor_t *sensor, int level)
     int ret=0;
 
     level += (NUM_CONTRAST_LEVELS / 2) + 1;
-    if (level < 0 || level > NUM_CONTRAST_LEVELS) {
+    if (level <= 0 || level > NUM_CONTRAST_LEVELS) {
         return -1;
     }
 
@@ -513,7 +513,7 @@ static int set_brightness(sensor_t *sensor, int level)
     int ret=0;
 
     level += (NUM_BRIGHTNESS_LEVELS / 2) + 1;
-    if (level < 0 || level > NUM_BRIGHTNESS_LEVELS) {
+    if (level <= 0 || level > NUM_BRIGHTNESS_LEVELS) {
         return -1;
     }
 
@@ -533,7 +533,7 @@ static int set_saturation(sensor_t *sensor, int level)
     int ret=0;
 
     level += (NUM_SATURATION_LEVELS / 2) + 1;
-    if (level < 0 || level > NUM_SATURATION_LEVELS) {
+    if (level <= 0 || level > NUM_SATURATION_LEVELS) {
         return -1;
     }
 
