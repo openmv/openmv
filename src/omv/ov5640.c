@@ -40,14 +40,14 @@ static const uint8_t default_regs[][3] = {
 
 // https://github.com/ArduCAM/Arduino/blob/master/ArduCAM/ov5640_regs.h
 
-    { 0x47, 0x40, 0x21 }, // { 0x47, 0x40, 0x20 },
+    { 0x47, 0x40, 0x20 },
 
     { 0x40, 0x50, 0x6e },
     { 0x40, 0x51, 0x8f },
 
     { 0x30, 0x08, 0x42 },
     { 0x31, 0x03, 0x03 },
-    { 0x30, 0x17, 0x7f },
+    { 0x30, 0x17, 0xff }, // { 0x30, 0x17, 0x7f },
     { 0x30, 0x18, 0xff },
     { 0x30, 0x2c, 0x02 },
     { 0x31, 0x08, 0x01 },
@@ -110,7 +110,7 @@ static const uint8_t default_regs[][3] = {
     { 0x38, 0x14, 0x31 },
     { 0x38, 0x15, 0x31 },
 
-    { 0x30, 0x34, 0x1a },
+    { 0x30, 0x34, 0x18 }, // { 0x30, 0x34, 0x1a },
     { 0x30, 0x35, 0x11 }, // { 0x30, 0x35, 0x21 },
     { 0x30, 0x36, 0x69 }, // { 0x30, 0x36, 0x46 },
     { 0x30, 0x37, 0x13 },
@@ -157,7 +157,7 @@ static const uint8_t default_regs[][3] = {
     { 0x44, 0x07, 0x04 },
     { 0x46, 0x0b, 0x35 },
     { 0x46, 0x0c, 0x22 },
-    { 0x38, 0x24, 0x01 },
+    { 0x38, 0x24, 0x02 }, // { 0x38, 0x24, 0x01 },
     { 0x50, 0x01, 0xa3 },
 
     { 0x34, 0x06, 0x01 },
@@ -418,7 +418,7 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
-    uint8_t reg;
+    uint8_t reg, reg2;
     int ret = 0;
 
     if ((pixformat == PIXFORMAT_JPEG)
@@ -466,7 +466,15 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 
     if (pixformat == PIXFORMAT_JPEG) {
         bool high_res = (resolution[sensor->framesize][0] > 1280) || (resolution[sensor->framesize][1] > 960);
-        ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, high_res ? 0xF : 0x4);
+        ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, high_res ? 0x10 : 0x4);
+
+        if (sensor->pixformat != PIXFORMAT_JPEG) { // We have to double this.
+            ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_H, &reg);
+            ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_L, &reg2);
+            uint16_t sensor_hts = ((((reg << 8) | reg2) - HSYNC_TIME) * 2) + HSYNC_TIME;
+            ret |= cambus_writeb2(sensor->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
+            ret |= cambus_writeb2(sensor->slv_addr, TIMING_HTS_L, sensor_hts);
+        }
     }
 
     return ret;
@@ -485,8 +493,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     if ((sensor->pixformat == PIXFORMAT_JPEG)
     && ((framesize == FRAMESIZE_QQCIF) // doesn't work with jpeg, unknown why
     || (framesize == FRAMESIZE_QQSIF) // doesn't work with jpeg, not a multiple of 8
-    || (sensor->framesize == FRAMESIZE_HQQQVGA) // doesn't work with jpeg, unknown why
-    || (sensor->framesize == FRAMESIZE_HQQVGA) // doesn't work with jpeg, unknown why
+    || (framesize == FRAMESIZE_HQQQVGA) // doesn't work with jpeg, unknown why
+    || (framesize == FRAMESIZE_HQQVGA) // doesn't work with jpeg, unknown why
     || (w % 8) // w/h must be divisble by 8
     || (h % 8))) {
         return -1;
@@ -548,7 +556,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Step 5: Compute total frame time.
 
-    uint16_t sensor_hts = (sensor_w * 2) + HSYNC_TIME; // 2 bytes per pixel
+    uint16_t sensor_hts = (sensor_w * ((sensor->pixformat == PIXFORMAT_JPEG) ? 1 : 2)) + HSYNC_TIME;
     uint16_t sensor_vts = sensor_h + VYSNC_TIME;
 
     uint16_t sensor_x_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
@@ -603,7 +611,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Step 7: Adjust JPEG quality.
 
-    ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0xC);
+    ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0x10);
 
     // Delay 300 ms
     systick_sleep(300);
@@ -889,7 +897,7 @@ int ov5640_init(sensor_t *sensor)
     sensor->set_lens_correction = set_lens_correction;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 1);
