@@ -56,18 +56,40 @@ static uint8_t *get_mcu()
     uint8_t *Y0 = mcubuf;
     uint8_t *CB = mcubuf + 64;
     uint8_t *CR = mcubuf + 128;
+    // Expand 4 bits to 32 for binary to grayscale 4 pixels at a time
+    const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
+    0xff00ff, 0xffff00, 0xffffff, 0xff000000, 0xff0000ff, 0xff00ff00,
+    0xff00ffff, 0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff};
 
     // Copy 8x8 MCUs
     switch (jpeg_enc.img_bpp) {
-        case 0:
-            for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + MCU_H); y++) {
-                for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++) {
-                    if (x >= jpeg_enc.img_w || y >= jpeg_enc.img_h) {
-                        *Y0++ = 0;
-                    } else {
+        case 0: {
+            int dx=MCU_W, dy=MCU_H;
+            if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
+                dx = jpeg_enc.img_w - jpeg_enc.x_offset;
+            if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
+                dy = jpeg_enc.img_h - jpeg_enc.y_offset;
+            if (dx != MCU_W || dy != MCU_H) // edge case
+            {
+                memset(Y0, 0, 64); // all empty spots will be 0
+                for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
+                    for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
                         *Y0++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(jpeg_enc.img, x, y));
                     }
                 }
+            } else { // full sized (8x8) MCU
+                int iPitch = ((jpeg_enc.img->w + 31) >> 3) & 0xfffc;
+                uint8_t u8Pixels;
+                uint32_t *d32 = (uint32_t *)Y0;
+                for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + 8); y++) {
+                    // read 8 binary pixels in one shot
+                    int index = (y * iPitch) + (jpeg_enc.x_offset>>3); // get byte offset
+                    uint8_t *s = &jpeg_enc.img->data[index];
+                    u8Pixels = s[0]; // get 8 binary pixels (1 byte)
+                    *d32++ = u32Expand[u8Pixels & 0xf]; // first 4 pixels
+                    *d32++ = u32Expand[u8Pixels >> 4]; // second 4 pixels
+                } // for y
+            } // full MCU
             }
             break;
         case 1: {
