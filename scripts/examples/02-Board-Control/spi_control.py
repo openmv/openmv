@@ -49,7 +49,7 @@ write_command(0x11) # Sleep Exit
 time.sleep(120)
 
 # Memory Data Access Control
-write_command(0x36, 0xC0)
+write_command(0x36, 0xC8)
 
 # Interface Pixel Format
 write_command(0x3A, 0x05)
@@ -72,3 +72,4 @@ while(True):
 
     print(clock.fps()) # Note: Your OpenMV Cam runs about half as fast while
     # connected to your computer. The FPS should increase once disconnected.
+
