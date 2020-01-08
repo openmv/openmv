@@ -72,4 +72,3 @@ while(True):
 
     print(clock.fps()) # Note: Your OpenMV Cam runs about half as fast while
     # connected to your computer. The FPS should increase once disconnected.
-
