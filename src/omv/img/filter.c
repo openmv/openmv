@@ -96,10 +96,14 @@ void imlib_histeq(image_t *img, image_t *mask)
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     if (mask && (!image_get_mask_pixel(mask, x, y))) continue;
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
-                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x,
-                        imlib_yuv_to_rgb(fast_floorf(s * hist[COLOR_RGB565_TO_Y(pixel) - COLOR_Y_MIN]),
-                                         COLOR_RGB565_TO_U(pixel),
-                                         COLOR_RGB565_TO_V(pixel)));
+                    int r = COLOR_RGB565_TO_R8(pixel);
+                    int g = COLOR_RGB565_TO_G8(pixel);
+                    int b = COLOR_RGB565_TO_B8(pixel);
+                    uint8_t y, u, v;
+                    y = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    u = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15);  // -0.168736*r + -0.331264*g + 0.5*b
+                    v = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15);  // 0.5*r + -0.418688*g + -0.081312*b
+                    IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, imlib_yuv_to_rgb(fast_floorf(s * hist[y]), u,v));
                 }
             }
 
