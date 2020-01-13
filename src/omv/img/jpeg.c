@@ -56,6 +56,8 @@ static uint8_t *get_mcu()
     uint8_t *Y0 = mcubuf;
     uint8_t *CB = mcubuf + 64;
     uint8_t *CR = mcubuf + 128;
+    int r, g, b; // to separate RGB565 into R8,G8,B8
+    int dx=MCU_W, dy=MCU_H; // width and height of MCU can be truncated if we're at bottom or right edge
     // Expand 4 bits to 32 for binary to grayscale; process 4 pixels at a time
     const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
     0xff00ff, 0xffff00, 0xffffff, 0xff000000, 0xff0000ff, 0xff00ff00,
@@ -64,13 +66,11 @@ static uint8_t *get_mcu()
     // Copy 8x8 MCUs
     switch (jpeg_enc.img_bpp) {
         case 0: {
-            int dx=MCU_W, dy=MCU_H; // width and height of MCU can be truncated if we're at bottom or right edge
             if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
                 dx = jpeg_enc.img_w - jpeg_enc.x_offset; // fewer than 8 wide
             if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
                 dy = jpeg_enc.img_h - jpeg_enc.y_offset; // fewer than 8 tall
-            if (dx != MCU_W || dy != MCU_H) // edge case (bottom or right),
-            {
+            if (dx != MCU_W || dy != MCU_H) { // edge case (bottom or right),
                 memset(Y0, 0, 64); // all empty spots will be 0
                 for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
                     for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
@@ -93,33 +93,30 @@ static uint8_t *get_mcu()
             }
             break;
         case 1: {
-            int dx=MCU_W, dy=MCU_H; // width and height of MCU can be truncated if we're at bottom or right edge
-            uint32_t *s32, *d32;
-            if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
-                dx = jpeg_enc.img_w - jpeg_enc.x_offset; // fewer than 8 wide
-            if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
-                dy = jpeg_enc.img_h - jpeg_enc.y_offset; // fewer than 8 tall
-            if (dx != MCU_W || dy != MCU_H) // partial MCU, fill with 0's to start
-                memset(mcubuf, 0, 64);
-            for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
-                if (dx != MCU_W) {
-                    for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
-                        *Y0++ = jpeg_enc.pixels8[y * jpeg_enc.img_w + x];
+                uint32_t *s32, *d32;
+                if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
+                    dx = jpeg_enc.img_w - jpeg_enc.x_offset; // fewer than 8 wide
+                if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
+                    dy = jpeg_enc.img_h - jpeg_enc.y_offset; // fewer than 8 tall
+                if (dx != MCU_W || dy != MCU_H) // partial MCU, fill with 0's to start
+                    memset(Y0, 0, 64);
+                for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
+                    if (dx != MCU_W) {
+                        for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
+                            *Y0++ = jpeg_enc.pixels8[y * jpeg_enc.img_w + x];
+                        }
+                        Y0 += (MCU_W - dx);
+                    } else { // full 8x8
+                        s32 = (uint32_t *)&jpeg_enc.pixels8[(y * jpeg_enc.img_w) + jpeg_enc.x_offset];
+                        d32 = (uint32_t *)Y0;
+                        d32[0] = s32[0]; d32[1] = s32[1]; // copy 8 pixels
+                        Y0 += 8;
                     }
-                    Y0 += (MCU_W - dx);
-                } else { // full 8x8
-                    s32 = (uint32_t *)&jpeg_enc.pixels8[(y * jpeg_enc.img_w) + jpeg_enc.x_offset];
-                    d32 = (uint32_t *)Y0;
-                    d32[0] = s32[0]; d32[1] = s32[1]; // copy 8 pixels
-                    Y0 += 8;
                 }
-            }
             }
             break;
         case 2: {
-            int dx=MCU_W, dy=MCU_H; // width and height of MCU can be truncated if we're at bottom or right edge
             uint16_t *pPixels, pixel;
-            int r, g, b;
             if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
                 dx = jpeg_enc.img_w - jpeg_enc.x_offset; // fewer than 8 wide
             if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
@@ -144,7 +141,6 @@ static uint8_t *get_mcu()
         }
         case 3: {
             uint16_t pixel, rgbbuf[64];
-            int r, g, b;
             if (jpeg_enc.x_offset + 8 >= jpeg_enc.img_w || jpeg_enc.y_offset + 8 >= jpeg_enc.img_h || jpeg_enc.x_offset == 0 || jpeg_enc.y_offset == 0) { // use slow method on edges
             // Bayer to rgb565 takes care of zero padding.
             imlib_bayer_to_rgb565(jpeg_enc.img, 8, 8, jpeg_enc.x_offset, jpeg_enc.y_offset, rgbbuf); 
