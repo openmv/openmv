@@ -445,13 +445,14 @@ float * lsd(int * n_out, unsigned char * img, int X, int Y);
 #endif /* !TRUE */
 
 /** Label for pixels with undefined gradient. */
-#define NOTDEF -512.0 // -1024.0
+#define NOTDEF -512.0f // -1024.0f
+#define NOTDEF_INT -29335
 
 /** 3/2 pi */
-#define M_3_2_PI 4.71238898038
+#define M_3_2_PI 4.71238898038f
 
 /** 2 pi */
-#define M_2__PI  6.28318530718
+#define M_2__PI  6.28318530718f
 
 /** Label for pixels not used in yet. */
 #define NOTUSED 0
@@ -1190,7 +1191,7 @@ static image_int ll_angle( image_char in, float threshold,
         (*modgrad)->data[adr] = norm; /* store gradient norm */
 
         if( norm <= threshold ) /* norm too small, gradient no defined */
-          g->data[adr] = radToDeg(NOTDEF); /* gradient angle not defined */
+          g->data[adr] = NOTDEF_INT; //radToDeg(NOTDEF); /* gradient angle not defined */
         else
           {
             /* gradient angle computation */
@@ -1286,6 +1287,36 @@ static int isaligned( int x, int y, image_int angles, float theta,
 
   return theta <= prec;
 }
+
+static int isaligned_fast(int angle, float theta,
+                      float prec )
+{
+  float a;
+
+  if (angle == NOTDEF_INT) return FALSE;
+
+  /* angle at pixel (x,y) */
+  a = degToRad(angle);
+
+  /* pixels whose level-line angle is not defined
+     are considered as NON-aligned */
+//  if( a == NOTDEF ) return FALSE;  /* there is no need to call the function
+//                                      'double_equal' here because there is
+//                                      no risk of problems related to the
+//                                      comparison doubles, we are only
+//                                      interested in the exact NOTDEF value */
+
+  /* it is assumed that 'theta' and 'a' are in the range [-pi,pi] */
+  theta -= a;
+  if( theta < 0.0 ) theta = -theta;
+  if( theta > M_3_2_PI )
+    {
+      theta -= M_2__PI;
+      if( theta < 0.0 ) theta = -theta;
+    }
+
+  return theta <= prec;
+} /* isaligned_fast() */
 
 /*----------------------------------------------------------------------------*/
 /** Absolute value angle difference.
@@ -1864,7 +1895,7 @@ static float rect_nfa(struct rect * rec, image_int angles, float logNT)
         i->x < (int) angles->xsize && i->y < (int) angles->ysize )
       {
         ++pts; /* total number of pixels counter */
-        if( isaligned(i->x, i->y, angles, rec->theta, rec->prec) )
+        if( isaligned_fast((float)angles->data[(i->y*angles->xsize)+i->x], rec->theta, rec->prec) )
           ++alg; /* aligned points counter */
       }
   ri_del(i); /* delete iterator */
@@ -2076,7 +2107,9 @@ static void region_grow( int x, int y, image_int angles, struct lsd_point * reg,
 {
   float sumdx,sumdy;
   int xx,yy,i;
-
+  int l_size; // local copy
+  float l_angle; // local copy
+  int xsize = used->xsize;
   /* check parameters */
   if( x < 0 || y < 0 || x >= (int) angles->xsize || y >= (int) angles->ysize )
     error("region_grow: (x,y) out of the image.");
@@ -2089,35 +2122,50 @@ static void region_grow( int x, int y, image_int angles, struct lsd_point * reg,
     error("region_grow: invalid image 'used'.");
 
   /* first point of the region */
-  *reg_size = 1;
+  l_size = 1;
   reg[0].x = x;
   reg[0].y = y;
-  *reg_angle = degToRad(angles->data[x+y*angles->xsize]);  /* region's angle */
-  sumdx = cos(*reg_angle);
-  sumdy = sin(*reg_angle);
+  l_angle = degToRad(angles->data[x+y*angles->xsize]);  /* region's angle */
+  sumdx = cos(l_angle);
+  sumdy = sin(l_angle);
   used->data[x+y*used->xsize] = USED;
 
   /* try neighbors as new region points */
-  for(i=0; i<*reg_size; i++)
-    for(xx=reg[i].x-1; xx<=reg[i].x+1; xx++)
-      for(yy=reg[i].y-1; yy<=reg[i].y+1; yy++)
-        if( xx>=0 && yy>=0 && xx<(int)used->xsize && yy<(int)used->ysize &&
-            used->data[xx+yy*used->xsize] != USED &&
-            isaligned(xx,yy,angles,*reg_angle,prec) )
+  for(i=0; i<l_size; i++) {
+    int dx=3, dy=3; // assume 3x3 region to try
+    int ty = reg[i].y-1;
+    int tx = reg[i].x-1;
+    if (tx < 0) {
+       tx = 0; dx--;
+    } else if (tx+dx >= xsize) {
+       dx--;
+    }
+    if (ty < 0) {
+       ty = 0; dy--;
+    } else if (ty+dy >= used->ysize) {
+       dy--;
+    }
+    for(xx=tx; xx<tx+dx; xx++)
+      for(yy=ty; yy<ty+dy; yy++)
+        if( used->data[xx+yy*xsize] != USED &&
+            isaligned_fast((float)angles->data[(yy*xsize)+xx],l_angle,prec) )
           {
             /* add point */
-            used->data[xx+yy*used->xsize] = USED;
-            reg[*reg_size].x = xx;
-            reg[*reg_size].y = yy;
-            ++(*reg_size);
+            used->data[xx+yy*xsize] = USED;
+            reg[l_size].x = xx;
+            reg[l_size].y = yy;
+            ++l_size;
 
             /* update region's angle */
-            int16_t angle = angles->data[xx+yy*angles->xsize] % 360;
+            int16_t angle = angles->data[xx+yy*xsize] % 360;
             if (angle < 0) angle += 360;
             sumdx += cos_table[angle];
             sumdy += sin_table[angle];
-            *reg_angle = atan2(sumdy,sumdx);
+            l_angle = atan2(sumdy,sumdx);
           }
+   }
+   *reg_size = l_size;
+   *reg_angle = l_angle;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -2479,7 +2527,8 @@ float * LineSegmentDetection( int * n_out,
   /* search for line segments */
   for(; list_p != NULL; list_p = list_p->next )
     if( used->data[ list_p->x + list_p->y * used->xsize ] == NOTUSED &&
-        degToRad(angles->data[ list_p->x + list_p->y * angles->xsize ]) != NOTDEF )
+        angles->data[ list_p->x + list_p->y * angles->xsize ] != NOTDEF_INT )
+//        degToRad(angles->data[ list_p->x + list_p->y * angles->xsize ]) != NOTDEF )
        /* there is no risk of float comparison problems here
           because we are only interested in the exact NOTDEF value */
       {
