@@ -56,71 +56,91 @@ static uint8_t *get_mcu()
     uint8_t *Y0 = mcubuf;
     uint8_t *CB = mcubuf + 64;
     uint8_t *CR = mcubuf + 128;
+    int r, g, b; // to separate RGB565 into R8,G8,B8
+    int dx=MCU_W, dy=MCU_H; // width and height of MCU can be truncated if we're at bottom or right edge
+    // Expand 4 bits to 32 for binary to grayscale; process 4 pixels at a time
+    const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
+    0xff00ff, 0xffff00, 0xffffff, 0xff000000, 0xff0000ff, 0xff00ff00,
+    0xff00ffff, 0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff};
 
     // Copy 8x8 MCUs
     switch (jpeg_enc.img_bpp) {
-        case 0:
-            for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + MCU_H); y++) {
-                for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + MCU_W); x++) {
-                    if (x >= jpeg_enc.img_w || y >= jpeg_enc.img_h) {
-                        *Y0++ = 0;
-                    } else {
+        case 0: {
+            if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
+                dx = jpeg_enc.img_w - jpeg_enc.x_offset; // fewer than 8 wide
+            if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
+                dy = jpeg_enc.img_h - jpeg_enc.y_offset; // fewer than 8 tall
+            if (dx != MCU_W || dy != MCU_H) { // edge case (bottom or right),
+                memset(Y0, 0, 64); // all empty spots will be 0
+                for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
+                    for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
                         *Y0++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(jpeg_enc.img, x, y));
                     }
                 }
+            } else { // full sized (8x8) MCU
+                int iPitch = ((jpeg_enc.img->w + 31) >> 3) & 0xfffc; // dword align
+                uint8_t u8Pixels;
+                uint32_t *d32 = (uint32_t *)Y0;
+                for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + 8); y++) {
+                    // read 8 binary pixels in one shot
+                    int index = (y * iPitch) + (jpeg_enc.x_offset>>3); // get byte offset
+                    uint8_t *s = &jpeg_enc.img->data[index];
+                    u8Pixels = s[0]; // get 8 binary pixels (1 byte)
+                    *d32++ = u32Expand[u8Pixels & 0xf]; // first 4 pixels
+                    *d32++ = u32Expand[u8Pixels >> 4];  // second 4 pixels
+                } // for y
+            } // full MCU
             }
             break;
         case 1: {
-            int dx=MCU_W, dy=MCU_H;
-            uint32_t *s32, *d32;
-            if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
-                dx = jpeg_enc.img_w - jpeg_enc.x_offset;
-            if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
-                dy = jpeg_enc.img_h - jpeg_enc.y_offset;
-            if (dx != MCU_W || dy != MCU_H) // partial MCU, fill with 0's to start
-                memset(mcubuf, 0, 64);
-            for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
-                if (dx != MCU_W) {
-                    for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
-                        *Y0++ = jpeg_enc.pixels8[y * jpeg_enc.img_w + x];
+                uint32_t *s32, *d32;
+                if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
+                    dx = jpeg_enc.img_w - jpeg_enc.x_offset; // fewer than 8 wide
+                if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
+                    dy = jpeg_enc.img_h - jpeg_enc.y_offset; // fewer than 8 tall
+                if (dx != MCU_W || dy != MCU_H) // partial MCU, fill with 0's to start
+                    memset(Y0, 0, 64);
+                for (int y=jpeg_enc.y_offset; y<(jpeg_enc.y_offset + dy); y++) {
+                    if (dx != MCU_W) {
+                        for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
+                            *Y0++ = jpeg_enc.pixels8[y * jpeg_enc.img_w + x];
+                        }
+                        Y0 += (MCU_W - dx);
+                    } else { // full 8x8
+                        s32 = (uint32_t *)&jpeg_enc.pixels8[(y * jpeg_enc.img_w) + jpeg_enc.x_offset];
+                        d32 = (uint32_t *)Y0;
+                        d32[0] = s32[0]; d32[1] = s32[1]; // copy 8 pixels
+                        Y0 += 8;
                     }
-                    Y0 += (MCU_W - dx);
-                } else { // full 8x8
-                    s32 = (uint32_t *)&jpeg_enc.pixels8[(y * jpeg_enc.img_w) + jpeg_enc.x_offset];
-                    d32 = (uint32_t *)Y0;
-                    d32[0] = s32[0]; d32[1] = s32[1]; // copy 8 pixels
-                    Y0 += 8;
                 }
-            }
             }
             break;
         case 2: {
-            int dx=MCU_W, dy=MCU_H;
             uint16_t *pPixels, pixel;
-            int r, g, b;
             if (jpeg_enc.x_offset+dx > jpeg_enc.img_w)
-                dx = jpeg_enc.img_w - jpeg_enc.x_offset;
+                dx = jpeg_enc.img_w - jpeg_enc.x_offset; // fewer than 8 wide
             if (jpeg_enc.y_offset+dy > jpeg_enc.img_h)
-                dy = jpeg_enc.img_h - jpeg_enc.y_offset;
+                dy = jpeg_enc.img_h - jpeg_enc.y_offset; // fewer than 8 tall
             if (dx != MCU_W || dy != MCU_H) // partial MCU, fill with 0's to start
-                memset(mcubuf, 0, 192);
+                memset(mcubuf, 0, 192); // faster than using a per pixel conditional statement
             for (int y=jpeg_enc.y_offset, idx=0; y<(jpeg_enc.y_offset + dy); y++) {
                 pPixels = &jpeg_enc.pixels16[(y * jpeg_enc.img_w) + jpeg_enc.x_offset];
                 for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++, idx++) {
-                    pixel = *pPixels++;
-                    r = rb528_table[(pixel >> 3) & 0x1f];
+                    pixel = *pPixels++; // get RGB565 pixel
+                    r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
                     g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
                     b = rb528_table[(pixel >> 8) & 0x1f];
+                    // faster to keep all calculations in integer math with 15-bit fractions
                     Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
                     CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) -128; // -0.168736*r + -0.331264*g + 0.5*b
                     CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) -128; // 0.5*r + -0.418688*g + -0.081312*b
                 }
+                idx += (MCU_W - dx); // increment the dest pointer properly for partial MCUs (output width is always 8)
             }
             break;
         }
         case 3: {
             uint16_t pixel, rgbbuf[64];
-            int r, g, b;
             if (jpeg_enc.x_offset + 8 >= jpeg_enc.img_w || jpeg_enc.y_offset + 8 >= jpeg_enc.img_h || jpeg_enc.x_offset == 0 || jpeg_enc.y_offset == 0) { // use slow method on edges
             // Bayer to rgb565 takes care of zero padding.
             imlib_bayer_to_rgb565(jpeg_enc.img, 8, 8, jpeg_enc.x_offset, jpeg_enc.y_offset, rgbbuf); 
@@ -130,6 +150,7 @@ static uint8_t *get_mcu()
                     r = rb528_table[(pixel >> 3) & 0x1f];
                     g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
                     b = rb528_table[(pixel >> 8) & 0x1f];
+                    // faster to keep all calculations in integer math with 15-bit fractions
                     Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
                     CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) -128; // -0.168736*r + -0.331264*g + 0.5*b
                     CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) -128; // 0.5*r + -0.418688*g + -0.081312*b
@@ -167,6 +188,7 @@ static uint8_t *get_mcu()
                          g >>= 2; b >>= 2;
                       }
                   }
+                  // faster to keep all calculations in integer math with 15-bit fractions
                   Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
                   CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) -128; // -0.168736*r + -0.331264*g + 0.5*b
                   CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) -128; // 0.5*r + -0.418688*g + -0.081312*b

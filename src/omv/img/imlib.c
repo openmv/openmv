@@ -355,7 +355,8 @@ int8_t imlib_rgb565_to_y(uint16_t pixel)
     int g = COLOR_RGB565_TO_G8(pixel);
     int b = COLOR_RGB565_TO_B8(pixel);
 
-    return fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f)) - 128;
+    return (int8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - 128; // .299*r + .587*g + .114*b
+//    return fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f)) - 128;
 }
 
 int8_t imlib_rgb565_to_u(uint16_t pixel)
@@ -364,7 +365,8 @@ int8_t imlib_rgb565_to_u(uint16_t pixel)
     int g = COLOR_RGB565_TO_G8(pixel);
     int b = COLOR_RGB565_TO_B8(pixel);
 
-    return fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f));
+    return (int8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15); // -0.168736*r + -0.331264*g + 0.5*b
+//    return fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f));
 }
 
 int8_t imlib_rgb565_to_v(uint16_t pixel)
@@ -373,7 +375,8 @@ int8_t imlib_rgb565_to_v(uint16_t pixel)
     int g = COLOR_RGB565_TO_G8(pixel);
     int b = COLOR_RGB565_TO_B8(pixel);
 
-    return fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f));
+    return (int8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15); // 0.5*r + -0.418688*g + -0.081312*b
+//    return fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f));
 }
 
 // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
