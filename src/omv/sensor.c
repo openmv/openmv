@@ -352,6 +352,9 @@ int sensor_init()
         init_ret = lepton_init(&sensor);
         break;
     case OV5640_ID:
+        if (extclk_config(OV5640_XCLK_FREQ) != 0) {
+            return -3;
+        }
         init_ret = ov5640_init(&sensor);
         break;
     case OV2640_ID:
@@ -832,29 +835,33 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         switch (sensor.pixformat) {
             case PIXFORMAT_BAYER:
                 dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                for (int i=0; i<MAIN_FB()->w; i++) {
-                    dst[i] = src[MAIN_FB()->x + i];
+                src += MAIN_FB()->x;
+                for (int i = MAIN_FB()->w; i; i--) {
+                    *dst++ = *src++;
                 }
                 break;
             case PIXFORMAT_GRAYSCALE:
                 dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
                 if (sensor.gs_bpp == 1) {
+                    src += MAIN_FB()->x;
                     // 1BPP GRAYSCALE.
-                    for (int i=0; i<MAIN_FB()->w; i++) {
-                        dst[i] = src[MAIN_FB()->x + i];
+                    for (int i = MAIN_FB()->w; i; i--) {
+                        *dst++ = *src++;
                     }
                 } else {
+                    src16 += MAIN_FB()->x;
                     // Extract Y channel from YUV.
-                    for (int i=0; i<MAIN_FB()->w; i++) {
-                        dst[i] = src[MAIN_FB()->x * 2 + i * 2];
+                    for (int i = MAIN_FB()->w; i; i--) {
+                        *dst++ = *src16++;
                     }
                 }
                 break;
             case PIXFORMAT_YUV422:
             case PIXFORMAT_RGB565:
                 dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                for (int i=0; i<MAIN_FB()->w; i++) {
-                    dst16[i] = src16[MAIN_FB()->x + i];
+                src16 += MAIN_FB()->x;
+                for (int i = MAIN_FB()->w; i; i--) {
+                    *dst16++ = *src16++;
                 }
                 break;
             case PIXFORMAT_JPEG:

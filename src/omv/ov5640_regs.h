@@ -17,6 +17,8 @@
 
 #define SYSTEM_CTROL0       0x3008
 
+#define SC_PLL_CONTRL2      0x3036
+
 #define SCCB_SYSTEM_CTRL_1  0x3103
 
 #define AWB_R_GAIN_H        0x3400
@@ -29,6 +31,10 @@
 #define AWB_B_GAIN_L        0x3405
 
 #define AWB_MANUAL_CONTROL  0x3406
+
+#define AEC_PK_EXPOSURE_0   0x3500
+#define AEC_PK_EXPOSURE_1   0x3501
+#define AEC_PK_EXPOSURE_2   0x3502
 
 #define AEC_PK_MANUAL       0x3503
 

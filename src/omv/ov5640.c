@@ -40,14 +40,12 @@ static const uint8_t default_regs[][3] = {
 
 // https://github.com/ArduCAM/Arduino/blob/master/ArduCAM/ov5640_regs.h
 
-    { 0x47, 0x40, 0x21 }, // { 0x47, 0x40, 0x20 },
-
+    { 0x47, 0x40, 0x20 },
     { 0x40, 0x50, 0x6e },
     { 0x40, 0x51, 0x8f },
-
     { 0x30, 0x08, 0x42 },
     { 0x31, 0x03, 0x03 },
-    { 0x30, 0x17, 0x7f },
+    { 0x30, 0x17, 0xff }, // { 0x30, 0x17, 0x7f },
     { 0x30, 0x18, 0xff },
     { 0x30, 0x2c, 0x02 },
     { 0x31, 0x08, 0x01 },
@@ -71,14 +69,11 @@ static const uint8_t default_regs[][3] = {
     { 0x36, 0x20, 0x52 },
     { 0x37, 0x1b, 0x20 },
     { 0x47, 0x1c, 0x50 },
-
     { 0x3a, 0x18, 0x00 },
     { 0x3a, 0x19, 0xf8 },
-
     { 0x36, 0x35, 0x1c },
     { 0x36, 0x34, 0x40 },
     { 0x36, 0x22, 0x01 },
-
     { 0x3c, 0x04, 0x28 },
     { 0x3c, 0x05, 0x98 },
     { 0x3c, 0x06, 0x00 },
@@ -87,10 +82,8 @@ static const uint8_t default_regs[][3] = {
     { 0x3c, 0x09, 0x1c },
     { 0x3c, 0x0a, 0x9c },
     { 0x3c, 0x0b, 0x40 },
-
     { 0x38, 0x20, 0x47 }, // { 0x38, 0x20, 0x41 },
     { 0x38, 0x21, 0x01 },
-
     { 0x38, 0x00, 0x00 },
     { 0x38, 0x01, 0x00 },
     { 0x38, 0x02, 0x00 },
@@ -109,19 +102,16 @@ static const uint8_t default_regs[][3] = {
     { 0x38, 0x13, 0x06 },
     { 0x38, 0x14, 0x31 },
     { 0x38, 0x15, 0x31 },
-
     { 0x30, 0x34, 0x1a },
     { 0x30, 0x35, 0x11 }, // { 0x30, 0x35, 0x21 },
-    { 0x30, 0x36, 0x69 }, // { 0x30, 0x36, 0x46 },
+    { 0x30, 0x36, 0x50 }, // { 0x30, 0x36, 0x46 },
     { 0x30, 0x37, 0x13 },
     { 0x30, 0x38, 0x00 },
     { 0x30, 0x39, 0x00 },
-
     { 0x38, 0x0c, 0x07 },
     { 0x38, 0x0d, 0x68 },
     { 0x38, 0x0e, 0x03 },
     { 0x38, 0x0f, 0xd8 },
-
     { 0x3c, 0x01, 0xb4 },
     { 0x3c, 0x00, 0x04 },
     { 0x3a, 0x08, 0x00 },
@@ -130,19 +120,16 @@ static const uint8_t default_regs[][3] = {
     { 0x3a, 0x0a, 0x00 },
     { 0x3a, 0x0b, 0x7b },
     { 0x3a, 0x0d, 0x08 },
-
     { 0x3a, 0x00, 0x38 }, // { 0x3a, 0x00, 0x3c },
     { 0x3a, 0x02, 0x05 },
     { 0x3a, 0x03, 0xc4 },
     { 0x3a, 0x14, 0x05 },
     { 0x3a, 0x15, 0xc4 },
-
     { 0x36, 0x18, 0x00 },
     { 0x36, 0x12, 0x29 },
     { 0x37, 0x08, 0x64 },
     { 0x37, 0x09, 0x52 },
     { 0x37, 0x0c, 0x03 },
-
     { 0x40, 0x01, 0x02 },
     { 0x40, 0x04, 0x02 },
     { 0x30, 0x00, 0x00 },
@@ -157,9 +144,8 @@ static const uint8_t default_regs[][3] = {
     { 0x44, 0x07, 0x04 },
     { 0x46, 0x0b, 0x35 },
     { 0x46, 0x0c, 0x22 },
-    { 0x38, 0x24, 0x01 },
+    { 0x38, 0x24, 0x02 }, // { 0x38, 0x24, 0x01 },
     { 0x50, 0x01, 0xa3 },
-
     { 0x34, 0x06, 0x01 },
     { 0x34, 0x00, 0x06 },
     { 0x34, 0x01, 0x80 },
@@ -167,7 +153,6 @@ static const uint8_t default_regs[][3] = {
     { 0x34, 0x03, 0x00 },
     { 0x34, 0x04, 0x06 },
     { 0x34, 0x05, 0x00 },
-
     { 0x51, 0x80, 0xff },
     { 0x51, 0x81, 0xf2 },
     { 0x51, 0x82, 0x00 },
@@ -199,7 +184,6 @@ static const uint8_t default_regs[][3] = {
     { 0x51, 0x9c, 0x06 },
     { 0x51, 0x9d, 0x82 },
     { 0x51, 0x9e, 0x38 },
-
     { 0x53, 0x81, 0x1e },
     { 0x53, 0x82, 0x5b },
     { 0x53, 0x83, 0x14 },
@@ -211,7 +195,6 @@ static const uint8_t default_regs[][3] = {
     { 0x53, 0x89, 0x1c },
     { 0x53, 0x8a, 0x01 },
     { 0x53, 0x8b, 0x98 },
-
     { 0x53, 0x00, 0x08 },
     { 0x53, 0x01, 0x30 },
     { 0x53, 0x02, 0x3f },
@@ -224,7 +207,6 @@ static const uint8_t default_regs[][3] = {
     { 0x53, 0x0a, 0x30 },
     { 0x53, 0x0b, 0x04 },
     { 0x53, 0x0c, 0x06 },
-
     { 0x54, 0x80, 0x01 },
     { 0x54, 0x81, 0x06 },
     { 0x54, 0x82, 0x12 },
@@ -242,14 +224,12 @@ static const uint8_t default_regs[][3] = {
     { 0x54, 0x8e, 0xdd },
     { 0x54, 0x8f, 0xf0 },
     { 0x54, 0x90, 0x15 },
-
     { 0x55, 0x80, 0x06 },
     { 0x55, 0x83, 0x40 },
     { 0x55, 0x84, 0x20 },
     { 0x55, 0x89, 0x10 },
     { 0x55, 0x8a, 0x00 },
     { 0x55, 0x8b, 0xf8 },
-
     { 0x50, 0x00, 0xa7 },
     { 0x58, 0x00, 0x20 },
     { 0x58, 0x01, 0x19 },
@@ -313,7 +293,6 @@ static const uint8_t default_regs[][3] = {
     { 0x58, 0x3b, 0x2a },
     { 0x58, 0x3c, 0x46 },
     { 0x58, 0x3d, 0xCE },
-
     { 0x56, 0x88, 0x22 },
     { 0x56, 0x89, 0x22 },
     { 0x56, 0x8a, 0x42 },
@@ -322,22 +301,30 @@ static const uint8_t default_regs[][3] = {
     { 0x56, 0x8d, 0x24 },
     { 0x56, 0x8e, 0x22 },
     { 0x56, 0x8f, 0x22 },
-
     { 0x50, 0x25, 0x00 },
-
     { 0x3a, 0x0f, 0x30 },
     { 0x3a, 0x10, 0x28 },
     { 0x3a, 0x1b, 0x30 },
     { 0x3a, 0x1e, 0x28 },
     { 0x3a, 0x11, 0x61 },
     { 0x3a, 0x1f, 0x10 },
-
     { 0x40, 0x05, 0x1a },
     { 0x34, 0x06, 0x00 },
     { 0x35, 0x03, 0x00 },
     { 0x30, 0x08, 0x02 },
 
 // OpenMV Custom.
+
+    { 0x3a, 0x02, 0x07 },
+    { 0x3a, 0x03, 0xae },
+    { 0x3a, 0x08, 0x01 },
+    { 0x3a, 0x09, 0x27 },
+    { 0x3a, 0x0a, 0x00 },
+    { 0x3a, 0x0b, 0xf6 },
+    { 0x3a, 0x0e, 0x06 },
+    { 0x3a, 0x0d, 0x08 },
+    { 0x3a, 0x14, 0x07 },
+    { 0x3a, 0x15, 0xae },
 
 // End.
 
@@ -418,14 +405,14 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
-    uint8_t reg;
+    uint8_t pll, reg, reg2;
     int ret = 0;
 
-    if ((pixformat == PIXFORMAT_JPEG)
-    && ((sensor->framesize == FRAMESIZE_QQCIF) // doesn't work with jpeg, unknown why
-    || (sensor->framesize == FRAMESIZE_QQSIF) // doesn't work with jpeg, not a multiple of 8
-    || (sensor->framesize == FRAMESIZE_HQQQVGA) // doesn't work with jpeg, unknown why
-    || (sensor->framesize == FRAMESIZE_HQQVGA) // doesn't work with jpeg, unknown why
+    if (((pixformat == PIXFORMAT_BAYER) || (pixformat == PIXFORMAT_JPEG))
+    && ((sensor->framesize == FRAMESIZE_QQCIF) // doesn't work with bayer/jpeg, unknown why
+    || (sensor->framesize == FRAMESIZE_QQSIF) // doesn't work with bayer/jpeg, not a multiple of 8
+    || (sensor->framesize == FRAMESIZE_HQQQVGA) // doesn't work with bayer/jpeg, unknown why
+    || (sensor->framesize == FRAMESIZE_HQQVGA) // doesn't work with bayer/jpeg, unknown why
     || (resolution[sensor->framesize][0] % 8) // w/h must be divisble by 8
     || (resolution[sensor->framesize][1] % 8))) {
         return -1;
@@ -435,19 +422,23 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         case PIXFORMAT_RGB565:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x61);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
+            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
             break;
-        case PIXFORMAT_YUV422:
         case PIXFORMAT_GRAYSCALE:
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x10);
+        case PIXFORMAT_YUV422:
+            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x30);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
+            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
             break;
         case PIXFORMAT_BAYER:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x00);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
+            pll = (resolution[sensor->framesize][0] > 2048) ? 0x64 : 0x50; // 40 MHz vs 32 MHz (jpeg can go faster at higher reses)
             break;
         case PIXFORMAT_JPEG:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x30);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
+            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
             break;
         default:
             return -1;
@@ -466,15 +457,23 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 
     if (pixformat == PIXFORMAT_JPEG) {
         bool high_res = (resolution[sensor->framesize][0] > 1280) || (resolution[sensor->framesize][1] > 960);
-        ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, high_res ? 0xF : 0x4);
+        ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, high_res ? 0x10 : 0x4);
+
+        if (sensor->pixformat != PIXFORMAT_JPEG) { // We have to double this.
+            ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_H, &reg);
+            ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_L, &reg2);
+            uint16_t sensor_hts = ((((reg << 8) | reg2) - HSYNC_TIME) * 2) + HSYNC_TIME;
+            ret |= cambus_writeb2(sensor->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
+            ret |= cambus_writeb2(sensor->slv_addr, TIMING_HTS_L, sensor_hts);
+        }
     }
 
-    return ret;
+    return cambus_writeb2(sensor->slv_addr, SC_PLL_CONTRL2, pll) | ret;
 }
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
-    uint8_t reg;
+    uint8_t pll, reg;
     uint16_t sensor_w = 0;
     uint16_t sensor_h = 0;
     uint16_t sensor_div = 0;
@@ -482,11 +481,11 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
 
-    if ((sensor->pixformat == PIXFORMAT_JPEG)
-    && ((framesize == FRAMESIZE_QQCIF) // doesn't work with jpeg, unknown why
-    || (framesize == FRAMESIZE_QQSIF) // doesn't work with jpeg, not a multiple of 8
-    || (sensor->framesize == FRAMESIZE_HQQQVGA) // doesn't work with jpeg, unknown why
-    || (sensor->framesize == FRAMESIZE_HQQVGA) // doesn't work with jpeg, unknown why
+    if (((sensor->pixformat == PIXFORMAT_BAYER) || (sensor->pixformat == PIXFORMAT_JPEG))
+    && ((framesize == FRAMESIZE_QQCIF) // doesn't work with bayer/jpeg, unknown why
+    || (framesize == FRAMESIZE_QQSIF) // doesn't work with bayer/jpeg, not a multiple of 8
+    || (framesize == FRAMESIZE_HQQQVGA) // doesn't work with bayer/jpeg, unknown why
+    || (framesize == FRAMESIZE_HQQVGA) // doesn't work with bayer/jpeg, unknown why
     || (w % 8) // w/h must be divisble by 8
     || (h % 8))) {
         return -1;
@@ -502,7 +501,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         sensor_w = 2560;
         sensor_h = 1440;
         sensor_div = 2;
-    } else if ((w <= 1280) && (h <= 960)) {
+    } else if ((w < 1280) && (h < 960)) { // < and not <=
         sensor_w = 2560;
         sensor_h = 1600;
         sensor_div = 2;
@@ -548,7 +547,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Step 5: Compute total frame time.
 
-    uint16_t sensor_hts = (sensor_w * 2) + HSYNC_TIME; // 2 bytes per pixel
+    uint16_t sensor_hts = (sensor_w * ((sensor->pixformat == PIXFORMAT_JPEG) ? 1 : 2)) + HSYNC_TIME;
     uint16_t sensor_vts = sensor_h + VYSNC_TIME;
 
     uint16_t sensor_x_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
@@ -603,7 +602,29 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Step 7: Adjust JPEG quality.
 
-    ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0xC);
+    ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0x10);
+
+    // Step 8: Adjust PLL freq.
+
+    switch (sensor->pixformat) {
+        case PIXFORMAT_RGB565:
+            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            break;
+        case PIXFORMAT_GRAYSCALE:
+        case PIXFORMAT_YUV422:
+            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            break;
+        case PIXFORMAT_BAYER:
+            pll = (w > 2048) ? 0x64 : 0x50; // 40 MHz vs 32 MHz (jpeg can go faster at higher reses)
+            break;
+        case PIXFORMAT_JPEG:
+            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            break;
+        default:
+            return -1;
+    }
+
+    ret |= cambus_writeb2(sensor->slv_addr, SC_PLL_CONTRL2, pll);
 
     // Delay 300 ms
     systick_sleep(300);
@@ -749,12 +770,69 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
 
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
-    return 0;
+    uint8_t reg, pll, hts_h, hts_l, vts_h, vts_l;
+    int ret = cambus_readb2(sensor->slv_addr, AEC_PK_MANUAL, &reg);
+    ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFE) | ((enable == 0) << 0));
+
+    if ((enable == 0) && (exposure_us >= 0)) {
+        ret |= cambus_readb2(sensor->slv_addr, SC_PLL_CONTRL2, &pll);
+
+        ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_H, &hts_h);
+        ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_L, &hts_l);
+
+        ret |= cambus_readb2(sensor->slv_addr, TIMING_VTS_H, &vts_h);
+        ret |= cambus_readb2(sensor->slv_addr, TIMING_VTS_L, &vts_l);
+
+        uint16_t hts = (hts_h << 8) | hts_l;
+        uint16_t vts = (vts_h << 8) | vts_l;
+
+        // "/ 3" -> SC_PLL_CONTRL3[3:0] (pll pre-divider)
+        // "/ 1" -> SC_PLL_CONTRL1[7:4] (system clock divider)
+        // "/ 2" -> SC_PLL_CONTRL3[4] (pll root divider)
+        // "/ 10" -> SYSTEM_CTROL0[3:0] (bit mode)
+        // "/ 1" -> SYSTEM_ROOT_DIVIDER[5:4] (pclk root divider)
+        int pclk_freq = (((((OV5640_XCLK_FREQ / 3) * pll) / 1) / 2) / 10) / 1;
+        int clocks_per_us = pclk_freq / 1000000;
+        int exposure = IM_MAX(IM_MIN((exposure_us * clocks_per_us) / hts, 0xFFFF), 0x0000);
+
+        int new_vts = IM_MAX(exposure, vts);
+
+        ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_EXPOSURE_0, exposure >> 12);
+        ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_EXPOSURE_1, exposure >> 4);
+        ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_EXPOSURE_2, exposure << 4);
+
+        ret |= cambus_writeb2(sensor->slv_addr, TIMING_VTS_H, new_vts >> 8);
+        ret |= cambus_writeb2(sensor->slv_addr, TIMING_VTS_L, new_vts);
+    }
+
+    return ret;
 }
 
 static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 {
-    return 0;
+    uint8_t pll, aec_0, aec_1, aec_2, hts_h, hts_l;
+    int ret = cambus_readb2(sensor->slv_addr, SC_PLL_CONTRL2, &pll);
+
+    ret |= cambus_readb2(sensor->slv_addr, AEC_PK_EXPOSURE_0, &aec_0);
+    ret |= cambus_readb2(sensor->slv_addr, AEC_PK_EXPOSURE_1, &aec_1);
+    ret |= cambus_readb2(sensor->slv_addr, AEC_PK_EXPOSURE_2, &aec_2);
+
+    ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_H, &hts_h);
+    ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_L, &hts_l);
+
+    uint32_t aec = ((aec_0 << 16) | (aec_1 << 8) | aec_2) >> 4;
+    uint16_t hts = (hts_h << 8) | hts_l;
+
+    // "/ 3" -> SC_PLL_CONTRL3[3:0] (pll pre-divider)
+    // "/ 1" -> SC_PLL_CONTRL1[7:4] (system clock divider)
+    // "/ 2" -> SC_PLL_CONTRL3[4] (pll root divider)
+    // "/ 10" -> SYSTEM_CTROL0[3:0] (bit mode)
+    // "/ 1" -> SYSTEM_ROOT_DIVIDER[5:4] (pclk root divider)
+    int pclk_freq = (((((OV5640_XCLK_FREQ / 3) * pll) / 1) / 2) / 10) / 1;
+    int clocks_per_us = pclk_freq / 1000000;
+    *exposure_us = (aec * hts) / clocks_per_us;
+
+    return ret;
 }
 
 static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
@@ -815,7 +893,7 @@ static int set_vflip(sensor_t *sensor, int enable)
 {
     uint8_t reg;
     int ret = cambus_readb2(sensor->slv_addr, TIMING_TC_REG_20, &reg);
-    if (enable){
+    if (!enable){
         ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_20, reg|0x06);
     } else {
         ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_20, reg&0xF9);
@@ -863,7 +941,7 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 int ov5640_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 1;
+    sensor->gs_bpp              = 2;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
@@ -889,7 +967,7 @@ int ov5640_init(sensor_t *sensor)
     sensor->set_lens_correction = set_lens_correction;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 1);
