@@ -40,8 +40,8 @@
 #define sin(x) sinf(x)
 #define pow(x,y) powf((x),(y))
 #define sinh(x) sinhf(x)
-#define radToDeg(x) ((x) * (180.0 / PI))
-#define degToRad(x) ((x) * (PI / 180.0))
+#define radToDeg(x) ((x) * (180.0f / PI))
+#define degToRad(x) ((x) * (PI / 180.0f))
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //////// "lsd.h"
@@ -428,12 +428,12 @@ float * lsd(int * n_out, unsigned char * img, int X, int Y);
 
 /** ln(10) */
 #ifndef M_LN10
-#define M_LN10 2.30258509299404568402
+#define M_LN10 2.30258509299404568402f
 #endif /* !M_LN10 */
 
 /** PI */
 #ifndef M_PI
-#define M_PI   3.14159265358979323846
+#define M_PI   3.14159265358979323846f
 #endif /* !M_PI */
 
 #ifndef FALSE
@@ -491,7 +491,7 @@ struct lsd_point {int16_t x,y;};
 /*----------------------------------------------------------------------------*/
 /** Doubles relative error factor
  */
-#define RELATIVE_ERROR_FACTOR 100.0
+#define RELATIVE_ERROR_FACTOR 100.0f
 
 /*----------------------------------------------------------------------------*/
 /** Compare doubles by relative error.
@@ -512,6 +512,9 @@ static int double_equal(float a, float b)
   if( a == b ) return TRUE;
 
   abs_diff = fabs(a-b);
+  // For the numbers we work with, this is valid test that avoids some calculations.
+  // The error threshold tested below is 1/1000 of the diff/max_val 
+  if (abs_diff > 0.1f) return FALSE;
   aa = fabs(a);
   bb = fabs(b);
   abs_max = aa > bb ? aa : bb;
@@ -930,7 +933,7 @@ static void gaussian_kernel(ntuple_list kernel, float sigma, float mean)
     }
 
   /* normalization */
-  if( sum >= 0.0 ) for(i=0;i<kernel->dim;i++) kernel->values[i] /= sum;
+  if( sum >= 0.0f ) for(i=0;i<kernel->dim;i++) kernel->values[i] /= sum;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -1293,7 +1296,7 @@ static int isaligned_fast(int angle, float theta,
 {
   float a;
 
-  if (angle == NOTDEF_INT) return FALSE;
+  if (angle == NOTDEF_INT) return FALSE; // faster to test the integer value
 
   /* angle at pixel (x,y) */
   a = degToRad(angle);
@@ -1722,10 +1725,10 @@ static void ri_del(rect_iter * iter)
 
     See details in \ref rect_iter
  */
-static int ri_end(rect_iter * i)
+static inline int ri_end(rect_iter * i)
 {
   /* check input */
-  if( i == NULL ) error("ri_end: NULL iterator.");
+//  if( i == NULL ) error("ri_end: NULL iterator.");
 
   /* if the current x value is larger than the largest
      x value in the rectangle (vx[2]), we know the full
@@ -1741,7 +1744,7 @@ static int ri_end(rect_iter * i)
 static void ri_inc(rect_iter * i)
 {
   /* check input */
-  if( i == NULL ) error("ri_inc: NULL iterator.");
+//  if( i == NULL ) error("ri_inc: NULL iterator.");
 
   /* if not at end of exploration,
      increase y value for next pixel in the 'column' */
@@ -1875,30 +1878,91 @@ static rect_iter * ri_ini(struct rect * r)
 
   return i;
 }
+// We don't need to spend time allocating and freeing the interator structure
+// since we only use 1 at a time and it's small enough to safely use as a stack var
+void ri_ini_fast(rect_iter *i, struct rect * r)
+{
+  float vx[4],vy[4];
+  int n,offset;
+
+  /* build list of rectangle corners ordered
+     in a circular way around the rectangle */
+  vx[0] = r->x1 - r->dy * r->width / 2.0;
+  vy[0] = r->y1 + r->dx * r->width / 2.0;
+  vx[1] = r->x2 - r->dy * r->width / 2.0;
+  vy[1] = r->y2 + r->dx * r->width / 2.0;
+  vx[2] = r->x2 + r->dy * r->width / 2.0;
+  vy[2] = r->y2 - r->dx * r->width / 2.0;
+  vx[3] = r->x1 + r->dy * r->width / 2.0;
+  vy[3] = r->y1 - r->dx * r->width / 2.0;
+
+  /* compute rotation of index of corners needed so that the first
+     point has the smaller x.
+
+     if one side is vertical, thus two corners have the same smaller x
+     value, the one with the largest y value is selected as the first.
+   */
+  if( r->x1 < r->x2 && r->y1 <= r->y2 ) offset = 0;
+  else if( r->x1 >= r->x2 && r->y1 < r->y2 ) offset = 1;
+  else if( r->x1 > r->x2 && r->y1 >= r->y2 ) offset = 2;
+  else offset = 3;
+
+  /* apply rotation of index. */
+  for(n=0; n<4; n++)
+    {
+      i->vx[n] = vx[(n+offset) & 3];
+      i->vy[n] = vy[(n+offset) & 3];
+    }
+
+  /* Set an initial condition.
+
+     The values are set to values that will cause 'ri_inc' (that will
+     be called immediately) to initialize correctly the first 'column'
+     and compute the limits 'ys' and 'ye'.
+
+     'y' is set to the integer value of vy[0], the starting corner.
+
+     'ys' and 'ye' are set to very small values, so 'ri_inc' will
+     notice that it needs to start a new 'column'.
+
+     The smallest integer coordinate inside of the rectangle is
+     'ceil(vx[0])'. The current 'x' value is set to that value minus
+     one, so 'ri_inc' (that will increase x by one) will advance to
+     the first 'column'.
+   */
+  i->x = (int) ceil(i->vx[0]) - 1;
+  i->y = (int) ceil(i->vy[0]);
+  i->ys = i->ye = -FLT_MAX;
+
+  /* advance to the first pixel */
+  ri_inc(i);
+    
+} /* ri_ini_fast() */
 
 /*----------------------------------------------------------------------------*/
 /** Compute a rectangle's NFA value.
  */
 static float rect_nfa(struct rect * rec, image_int angles, float logNT)
 {
-  rect_iter * i;
+  rect_iter i;
   int pts = 0;
   int alg = 0;
-
+  int xsize = angles->xsize, ysize = angles->ysize;
   /* check parameters */
-  if( rec == NULL ) error("rect_nfa: invalid rectangle.");
-  if( angles == NULL ) error("rect_nfa: invalid 'angles'.");
+//  if( rec == NULL ) error("rect_nfa: invalid rectangle.");
+//  if( angles == NULL ) error("rect_nfa: invalid 'angles'.");
 
   /* compute the total number of pixels and of aligned points in 'rec' */
-  for(i=ri_ini(rec); !ri_end(i); ri_inc(i)) /* rectangle iterator */
-    if( i->x >= 0 && i->y >= 0 &&
-        i->x < (int) angles->xsize && i->y < (int) angles->ysize )
+  ri_ini_fast(&i, rec);
+  for(; !ri_end(&i); ri_inc(&i)) /* rectangle iterator */
+    if( i.x >= 0 && i.y >= 0 &&
+        i.x < xsize && i.y < ysize )
       {
         ++pts; /* total number of pixels counter */
-        if( isaligned_fast((float)angles->data[(i->y*angles->xsize)+i->x], rec->theta, rec->prec) )
+        if( isaligned_fast((float)angles->data[(i.y*xsize)+i.x], rec->theta, rec->prec) )
           ++alg; /* aligned points counter */
       }
-  ri_del(i); /* delete iterator */
+//  ri_del(i); /* delete iterator */
 
   return nfa(pts,alg,rec->p,logNT); /* compute NFA value */
 }
@@ -2014,7 +2078,7 @@ static void region2rect( struct lsd_point * reg, int reg_size,
 {
   float x,y,dx,dy,l,w,theta,weight,sum,l_min,l_max,w_min,w_max;
   int i;
-
+  int ix,iy,isum,iweight;
   /* check parameters */
   if( reg == NULL ) error("region2rect: invalid region.");
   if( reg_size <= 1 ) error("region2rect: region size <= 1.");
@@ -2032,15 +2096,17 @@ static void region2rect( struct lsd_point * reg, int reg_size,
      where G(i) is the norm of the gradient of pixel i
      and x_i,y_i are its coordinates.
    */
-  x = y = sum = 0.0;
+//  x = y = sum = 0.0;
+  ix = iy = isum = 0; // integers are faster since the source data is integer
   for(i=0; i<reg_size; i++)
     {
-      weight = modgrad->data[ reg[i].x + reg[i].y * modgrad->xsize ];
-      x += (float) reg[i].x * weight;
-      y += (float) reg[i].y * weight;
-      sum += weight;
+      iweight = modgrad->data[ reg[i].x + reg[i].y * modgrad->xsize ];
+      ix += reg[i].x * iweight;
+      iy += reg[i].y * iweight;
+      isum += iweight;
     }
-  if( sum <= 0.0 ) error("region2rect: weights sum equal to zero.");
+  if( isum <= 0 ) error("region2rect: weights sum equal to zero.");
+  x = (float)ix; y = (float)iy; sum = (float)isum;
   x /= sum;
   y /= sum;
 
@@ -2113,13 +2179,13 @@ static void region_grow( int x, int y, image_int angles, struct lsd_point * reg,
   /* check parameters */
   if( x < 0 || y < 0 || x >= (int) angles->xsize || y >= (int) angles->ysize )
     error("region_grow: (x,y) out of the image.");
-  if( angles == NULL || angles->data == NULL )
-    error("region_grow: invalid image 'angles'.");
-  if( reg == NULL ) error("region_grow: invalid 'reg'.");
-  if( reg_size == NULL ) error("region_grow: invalid pointer 'reg_size'.");
-  if( reg_angle == NULL ) error("region_grow: invalid pointer 'reg_angle'.");
-  if( used == NULL || used->data == NULL )
-    error("region_grow: invalid image 'used'.");
+//  if( angles == NULL || angles->data == NULL )
+//    error("region_grow: invalid image 'angles'.");
+//  if( reg == NULL ) error("region_grow: invalid 'reg'.");
+//  if( reg_size == NULL ) error("region_grow: invalid pointer 'reg_size'.");
+//  if( reg_angle == NULL ) error("region_grow: invalid pointer 'reg_angle'.");
+//  if( used == NULL || used->data == NULL )
+//    error("region_grow: invalid image 'used'.");
 
   /* first point of the region */
   l_size = 1;
