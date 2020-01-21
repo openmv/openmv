@@ -150,6 +150,18 @@ extern int py_image_descriptor_from_roi(image_t *image, const char *path, rectan
 void usbdbg_data_out(void *buffer, int length)
 {
     switch (cmd) {
+        case USBDBG_FB_ENABLE: {
+            uint32_t enable = *((int32_t*)buffer);
+            JPEG_FB()->enabled = enable;
+            if (enable == 0) {
+                // When disabling framebuffer, the IDE might still be holding FB lock.
+                // If the IDE is not the current lock owner, this operation is ignored.
+                mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+            }
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         case USBDBG_SCRIPT_EXEC:
             // check if GC is locked before allocating memory for vstr. If GC was locked
             // at least once before the script is fully uploaded xfer_bytes will be less
@@ -216,6 +228,31 @@ void usbdbg_data_out(void *buffer, int length)
             py_image_descriptor_from_roi(&image, path, roi);
             break;
         }
+
+        case USBDBG_ATTR_WRITE: {
+            /* write sensor attribute */
+            int32_t attr= *((int32_t*)buffer);
+            int32_t val = *((int32_t*)buffer+1);
+            switch (attr) {
+                case ATTR_CONTRAST:
+                    sensor_set_contrast(val);
+                    break;
+                case ATTR_BRIGHTNESS:
+                    sensor_set_brightness(val);
+                    break;
+                case ATTR_SATURATION:
+                    sensor_set_saturation(val);
+                    break;
+                case ATTR_GAINCEILING:
+                    sensor_set_gainceiling(val);
+                    break;
+                default:
+                    break;
+            }
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         default: /* error */
             break;
     }
@@ -283,43 +320,18 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             xfer_length =length;
             break;
 
-        case USBDBG_ATTR_WRITE: {
-            /* write sensor attribute */
-            int16_t attr= *((int16_t*)buffer);
-            int16_t val = *((int16_t*)buffer+1);
-            switch (attr) {
-                case ATTR_CONTRAST:
-                    sensor_set_contrast(val);
-                    break;
-                case ATTR_BRIGHTNESS:
-                    sensor_set_brightness(val);
-                    break;
-                case ATTR_SATURATION:
-                    sensor_set_saturation(val);
-                    break;
-                case ATTR_GAINCEILING:
-                    sensor_set_gainceiling(val);
-                    break;
-                default:
-                    break;
-            }
-            cmd = USBDBG_NONE;
+        case USBDBG_ATTR_WRITE:
+            xfer_bytes = 0;
+            xfer_length =length;
             break;
-        }
 
         case USBDBG_SYS_RESET:
             NVIC_SystemReset();
             break;
 
         case USBDBG_FB_ENABLE: {
-            int16_t enable = *((int16_t*)buffer);
-            JPEG_FB()->enabled = enable;
-            if (enable == 0) {
-                // When disabling framebuffer, the IDE might still be holding FB lock.
-                // If the IDE is not the current lock owner, this operation is ignored.
-                mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
-            }
-            cmd = USBDBG_NONE;
+            xfer_bytes = 0;
+            xfer_length = length;
             break;
         }
 
