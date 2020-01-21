@@ -170,7 +170,8 @@ def save_descriptor(port, x, y, w, h, path):
 def set_attr(port, attr, value):
     try:
         idx = __port.index(port)
-        __serial[idx].write(struct.pack("<BBIhh", __USBDBG_CMD, __USBDBG_ATTR_WRITE, 0, attr, value))
+        __serial[idx].write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_ATTR_WRITE, 8))
+        __serial[idx].write(struct.pack("<II", attr, value))
     except:
         pass
 
@@ -246,7 +247,8 @@ def fw_version(port):
 def enable_fb(port, enable):
     try:
         idx = __port.index(port)
-        __serial[idx].write(struct.pack("<BBIH", __USBDBG_CMD, __USBDBG_FB_ENABLE, 0, enable))
+        __serial[idx].write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FB_ENABLE, 4))
+        __serial[idx].write(struct.pack("<I", enable))
     except:
         pass
 

@@ -128,7 +128,8 @@ def save_descriptor(x, y, w, h, path):
     __serial.write(buf)
 
 def set_attr(attr, value):
-    __serial.write(struct.pack("<BBIhh", __USBDBG_CMD, __USBDBG_ATTR_WRITE, 0, attr, value))
+    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_ATTR_WRITE, 8))
+    __serial.write(struct.pack("<II", attr, value))
 
 def get_attr(attr):
     __serial.write(struct.pack("<BBIh", __USBDBG_CMD, __USBDBG_ATTR_READ, 1, attr))
@@ -163,7 +164,8 @@ def fw_version():
     return struct.unpack("III", __serial.read(12))
 
 def enable_fb(enable):
-    __serial.write(struct.pack("<BBIH", __USBDBG_CMD, __USBDBG_FB_ENABLE, 0, enable))
+    __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FB_ENABLE, 4))
+    __serial.write(struct.pack("<I", enable))
 
 def arch_str():
     __serial.write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_ARCH_STR, 64))
