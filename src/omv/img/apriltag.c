@@ -10705,7 +10705,7 @@ zarray_t *apriltag_quad_thresh(apriltag_detector_t *td, image_u8_t *im, bool ove
         while (entry) {
           // free any leaked cluster (zarray_add_fail_ok)
           bool leaked = true;
-          for (int j = 0; j < sz; j++) {
+          for (int j = 0; j < sz && leaked; j++) {
               zarray_t *cluster;
               zarray_get(clusters, j, &cluster);
               leaked &= entry->cluster != cluster;
