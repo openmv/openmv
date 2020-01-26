@@ -364,15 +364,17 @@ static int reset(sensor_t *sensor)
 
 static int sleep(sensor_t *sensor, int enable)
 {
+    uint8_t reg;
+    int ret = cambus_readb(sensor->slv_addr, COM2, &reg);
+
     if (enable) {
-        DCMI_PWDN_HIGH();
-        systick_sleep(1);
+        reg |= COM2_STDBY;
     } else {
-        DCMI_PWDN_LOW();
-        systick_sleep(1);
+        reg &= ~COM2_STDBY;
     }
 
-    return 0;
+    // Write back register
+    return cambus_writeb(sensor->slv_addr, COM2, reg) | ret;
 }
 
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
