@@ -167,6 +167,7 @@ typedef struct _sensor {
     framesize_t framesize;      // Frame size
     framerate_t framerate;      // Frame rate
     gainceiling_t gainceiling;  // AGC gainceiling
+    bool transpose;             // Transpose Image
 
     // Sensor function pointers
     int  (*reset)               (sensor_t *sensor);
@@ -277,6 +278,12 @@ int sensor_set_hmirror(int enable);
 
 // Enable/disable the vflip mode.
 int sensor_set_vflip(int enable);
+
+// Enable/disable the transpose mode.
+void sensor_set_transpose(bool enable);
+
+// Get transpose mode state.
+bool sensor_get_transpose();
 
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);

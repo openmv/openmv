@@ -45,12 +45,23 @@ static mp_obj_t py_sensor_flush() {
 }
 
 static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args) {
-    // Snapshot image
     mp_obj_t image = py_image(0, 0, 0, 0);
 
-    if (sensor.snapshot(&sensor, (image_t*) py_image_cobj(image), NULL)==-1) {
+    if (sensor.snapshot(&sensor, (image_t*) py_image_cobj(image), NULL) == -1) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
         return mp_const_false;
+    }
+
+    // Transpose after capturing the image because transposing while capturing
+    // the image in the DCMI line callback has to fast and transposing is
+    // inherently slow.
+    if (sensor_get_transpose()) {
+        image_t *img = py_image_cobj(image);
+        fb_alloc_mark();
+        imlib_replace(img, NULL, img, 0, false, false, true, NULL);
+        fb_alloc_free_till_mark();
+        MAIN_FB()->w = img->w;
+        MAIN_FB()->h = img->h;
     }
 
     return image;
@@ -69,9 +80,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
 
     if (!n_args) {
         while ((systick_current_millis() - millis) < time) { // 32-bit math handles wrap arrounds...
-            if (sensor.snapshot(&sensor, NULL, NULL) == -1) {
-                nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
-            }
+            py_sensor_snapshot(0, NULL, NULL);
         }
     } else {
         for (int i = 0, j = mp_obj_get_int(args[0]); i < j; i++) {
@@ -79,9 +88,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
                 break;
             }
 
-            if (sensor.snapshot(&sensor, NULL, NULL) == -1) {
-                nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout!!"));
-            }
+            py_sensor_snapshot(0, NULL, NULL);
         }
     }
 
@@ -387,6 +394,15 @@ static mp_obj_t py_sensor_set_vflip(mp_obj_t enable) {
     return mp_const_none;
 }
 
+static mp_obj_t py_sensor_set_transpose(mp_obj_t enable) {
+    sensor_set_transpose(mp_obj_is_true(enable));
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_get_transpose() {
+    return mp_obj_new_bool(sensor_get_transpose());
+}
+
 static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde) {
     if (sensor_set_special_effect(mp_obj_get_int(sde)) != 0) {
         return mp_const_false;
@@ -628,6 +644,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_set_auto_whitebal_obj,1,py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_rgb_gain_db_obj,     py_sensor_get_rgb_gain_db);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_hmirror_obj,         py_sensor_set_hmirror);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vflip_obj,           py_sensor_set_vflip);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_transpose_obj,       py_sensor_set_transpose);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_transpose_obj,       py_sensor_get_transpose);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_set_lens_correction);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_output_obj,    py_sensor_set_vsync_output);
@@ -745,6 +763,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_rgb_gain_db),     (mp_obj_t)&py_sensor_get_rgb_gain_db_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_hmirror),         (mp_obj_t)&py_sensor_set_hmirror_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vflip),           (mp_obj_t)&py_sensor_set_vflip_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_transpose),       (mp_obj_t)&py_sensor_set_transpose_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_transpose),       (mp_obj_t)&py_sensor_get_transpose_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_lens_correction), (mp_obj_t)&py_sensor_set_lens_correction_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vsync_output),    (mp_obj_t)&py_sensor_set_vsync_output_obj },

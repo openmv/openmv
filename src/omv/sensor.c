@@ -414,6 +414,7 @@ int sensor_reset()
     sensor.framesize   = 0;
     sensor.framerate   = 0;
     sensor.gainceiling = -1;
+    sensor.transpose   = false;
     sensor.vsync_gpio  = NULL;
 
     // Reset default color palette.
@@ -722,6 +723,16 @@ int sensor_set_vflip(int enable)
         return -1;
     }
     return 0;
+}
+
+void sensor_set_transpose(bool enable)
+{
+    sensor.transpose = enable;
+}
+
+bool sensor_get_transpose()
+{
+    return sensor.transpose;
 }
 
 int sensor_set_special_effect(sde_t sde)
