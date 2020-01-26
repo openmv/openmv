@@ -171,9 +171,16 @@ static mp_obj_t py_sensor_dealloc_extra_fb()
 
 static mp_obj_t py_sensor_set_pixformat(mp_obj_t pixformat) {
     if (sensor_set_pixformat(mp_obj_get_int(pixformat)) != 0) {
-        PY_ASSERT_TRUE_MSG(0, "Pixel format is not supported!");
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Pixel format is not supported!"));
     }
-    return mp_const_true;
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_get_pixformat() {
+    if (sensor.pixformat == PIXFORMAT_INVALID) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Pixel format not set yet!"));
+    }
+    return mp_obj_new_int(sensor.pixformat);
 }
 
 static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
@@ -209,7 +216,14 @@ static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
     if (sensor_set_framesize(mp_obj_get_int(framesize)) != 0) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to set framesize!"));
     }
-    return mp_const_true;
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_get_framesize() {
+    if (sensor.framesize == FRAMESIZE_INVALID) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Frame size not set yet!"));
+    }
+    return mp_obj_new_int(sensor.framesize);
 }
 
 static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj) {
@@ -627,9 +641,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,              py_sensor_ge
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_alloc_extra_fb_obj,      py_sensor_alloc_extra_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_dealloc_extra_fb_obj,    py_sensor_dealloc_extra_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_set_pixformat);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_pixformat_obj,       py_sensor_get_pixformat);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,       py_sensor_set_framerate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_set_framesize);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_windowing_obj,         py_sensor_set_windowing);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framesize_obj,       py_sensor_get_framesize);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_windowing_obj,       py_sensor_set_windowing);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj,     py_sensor_set_gainceiling);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj,        py_sensor_set_contrast);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,      py_sensor_set_brightness);
@@ -748,8 +764,10 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_alloc_extra_fb),      (mp_obj_t)&py_sensor_alloc_extra_fb_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_dealloc_extra_fb),    (mp_obj_t)&py_sensor_dealloc_extra_fb_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_pixformat),       (mp_obj_t)&py_sensor_set_pixformat_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_pixformat),       (mp_obj_t)&py_sensor_get_pixformat_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framerate),       (mp_obj_t)&py_sensor_set_framerate_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framesize),       (mp_obj_t)&py_sensor_set_framesize_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_framesize),       (mp_obj_t)&py_sensor_get_framesize_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_windowing),       (mp_obj_t)&py_sensor_set_windowing_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_gainceiling),     (mp_obj_t)&py_sensor_set_gainceiling_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_contrast),        (mp_obj_t)&py_sensor_set_contrast_obj },
