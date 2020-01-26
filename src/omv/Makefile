@@ -19,10 +19,11 @@ SRCS += $(addprefix ,   \
 	usbdbg.c            \
 	wifidbg.c           \
 	cambus.c            \
-	ov9650.c            \
 	ov2640.c            \
-	ov7725.c            \
 	ov5640.c            \
+	ov7690.c            \
+	ov7725.c            \
+	ov9650.c            \
 	mt9v034.c           \
 	lepton.c            \
 	sensor.c            \

@@ -16,6 +16,7 @@
 #include "ov9650.h"
 #include "ov2640.h"
 #include "ov7725.h"
+#include "ov7690.h"
 #include "ov5640.h"
 #include "mt9v034.h"
 #include "lepton.h"
@@ -314,10 +315,13 @@ int sensor_init()
     sensor.snapshot = sensor_snapshot;
 
     switch (sensor.slv_addr) {
-    case OV7725_SLV_ADDR:
+    case OV2640_SLV_ADDR:
         cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
         break;
-    case OV2640_SLV_ADDR:
+    case OV5640_SLV_ADDR:
+        cambus_readb2(sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+        break;
+    case OV7725_SLV_ADDR: // Same for OV7690.
         cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
         break;
     case MT9V034_SLV_ADDR:
@@ -326,18 +330,32 @@ int sensor_init()
     case LEPTON_SLV_ADDR:
         sensor.chip_id = LEPTON_ID;
         break;
-    case OV5640_SLV_ADDR:
-        cambus_readb2(sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
-        break;
     default:
         return -3;
         break;
     }
 
-    switch (sensor.chip_id)
-    {
+    switch (sensor.chip_id) {
+    case OV2640_ID:
+        init_ret = ov2640_init(&sensor);
+        break;
+    case OV5640_ID:
+        if (extclk_config(OV5640_XCLK_FREQ) != 0) {
+            return -3;
+        }
+        init_ret = ov5640_init(&sensor);
+        break;
     case OV7725_ID:
         init_ret = ov7725_init(&sensor);
+        break;
+    case OV7690_ID:
+        if (extclk_config(OV7690_XCLK_FREQ) != 0) {
+            return -3;
+        }
+        init_ret = ov7690_init(&sensor);
+        break;
+    case OV9650_ID:
+        init_ret = ov9650_init(&sensor);
         break;
     case MT9V034_ID:
         if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
@@ -350,18 +368,6 @@ int sensor_init()
             return -3;
         }
         init_ret = lepton_init(&sensor);
-        break;
-    case OV5640_ID:
-        if (extclk_config(OV5640_XCLK_FREQ) != 0) {
-            return -3;
-        }
-        init_ret = ov5640_init(&sensor);
-        break;
-    case OV2640_ID:
-        init_ret = ov2640_init(&sensor);
-        break;
-    case OV9650_ID:
-        init_ret = ov9650_init(&sensor);
         break;
     default:
         return -3;
@@ -407,7 +413,7 @@ int sensor_reset()
     sensor.pixformat   = 0;
     sensor.framesize   = 0;
     sensor.framerate   = 0;
-    sensor.gainceiling = 0;
+    sensor.gainceiling = -1;
     sensor.vsync_gpio  = NULL;
 
     // Reset default color palette.
