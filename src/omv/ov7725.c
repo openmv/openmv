@@ -282,7 +282,7 @@ static int set_framerate(sensor_t *sensor, framerate_t framerate)
 
 static int set_contrast(sensor_t *sensor, int level)
 {
-    level += (NUM_CONTRAST_LEVELS / 2);
+    level += NUM_CONTRAST_LEVELS / 2;
     if (level < 0 || level >= NUM_CONTRAST_LEVELS) {
         return -1;
     }
@@ -293,7 +293,7 @@ static int set_contrast(sensor_t *sensor, int level)
 static int set_brightness(sensor_t *sensor, int level)
 {
     int ret=0;
-    level += (NUM_BRIGHTNESS_LEVELS / 2);
+    level += NUM_BRIGHTNESS_LEVELS / 2;
     if (level < 0 || level >= NUM_BRIGHTNESS_LEVELS) {
         return -1;
     }
@@ -306,7 +306,7 @@ static int set_brightness(sensor_t *sensor, int level)
 static int set_saturation(sensor_t *sensor, int level)
 {
     int ret=0;
-    level += (NUM_SATURATION_LEVELS / 2 );
+    level += NUM_SATURATION_LEVELS / 2;
     if (level < 0 || level >= NUM_SATURATION_LEVELS) {
         return -1;
     }
