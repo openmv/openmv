@@ -192,6 +192,7 @@ SECTIONS
   ._stack (NOLOAD) :
   {
     . = ALIGN(4);
+    _sstack  = .;
     . = . + _stack_size;
   } >OMV_MAIN_MEMORY
 
