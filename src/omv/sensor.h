@@ -167,6 +167,8 @@ typedef struct _sensor {
     framesize_t framesize;      // Frame size
     framerate_t framerate;      // Frame rate
     gainceiling_t gainceiling;  // AGC gainceiling
+    bool hmirror;               // Horizontal Mirror
+    bool vflip;                 // Vertical Flip
     bool transpose;             // Transpose Image
 
     // Sensor function pointers
@@ -276,8 +278,14 @@ int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db)
 // Enable/disable the hmirror mode.
 int sensor_set_hmirror(int enable);
 
+// Get hmirror status.
+bool sensor_get_hmirror();
+
 // Enable/disable the vflip mode.
 int sensor_set_vflip(int enable);
+
+// Get vflip status.
+bool sensor_get_vflip();
 
 // Enable/disable the transpose mode.
 void sensor_set_transpose(bool enable);

@@ -414,6 +414,8 @@ int sensor_reset()
     sensor.framesize   = 0;
     sensor.framerate   = 0;
     sensor.gainceiling = -1;
+    sensor.hmirror     = false;
+    sensor.vflip       = false;
     sensor.transpose   = false;
     sensor.vsync_gpio  = NULL;
 
@@ -705,6 +707,11 @@ int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db)
 
 int sensor_set_hmirror(int enable)
 {
+    if (sensor.hmirror == ((bool) enable)) {
+        /* no change */
+        return 0;
+    }
+
     /* call the sensor specific function */
     if (sensor.set_hmirror == NULL
         || sensor.set_hmirror(&sensor, enable) != 0) {
@@ -714,8 +721,18 @@ int sensor_set_hmirror(int enable)
     return 0;
 }
 
+bool sensor_get_hmirror()
+{
+    return sensor.hmirror;
+}
+
 int sensor_set_vflip(int enable)
 {
+    if (sensor.vflip == ((bool) enable)) {
+        /* no change */
+        return 0;
+    }
+
     /* call the sensor specific function */
     if (sensor.set_vflip == NULL
         || sensor.set_vflip(&sensor, enable) != 0) {
@@ -723,6 +740,11 @@ int sensor_set_vflip(int enable)
         return -1;
     }
     return 0;
+}
+
+bool sensor_get_vflip()
+{
+    return sensor.vflip;
 }
 
 void sensor_set_transpose(bool enable)
