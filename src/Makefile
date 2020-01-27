@@ -285,7 +285,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	usbd_desc.o             \
 	usbd_cdc_interface.o    \
 	usbd_hid_interface.o    \
-	usbd_msc_storage.o      \
+	usbd_msc_interface.o    \
 	pendsv.o                \
 	bufhelper.o             \
 	usb.o                   \
@@ -335,9 +335,12 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	machine_i2c.o           \
 	machine_spi.o           \
 	machine_uart.o          \
+	machine_adc.o           \
+	machine_timer.o         \
 	pybthread.o             \
 	mpthreadport.o          \
 	posix_helpers.o         \
+	softtimer.o             \
 	mbedtls/mbedtls_port.o  \
 	)
 
@@ -409,7 +412,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	class/src/usbd_cdc_msc_hid.o        \
 	class/src/usbd_msc_bot.o            \
 	class/src/usbd_msc_scsi.o           \
-	class/src/usbd_msc_data.o           \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
@@ -428,6 +430,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	vfs_fat_file.o      \
 	vfs_reader.o        \
 	vfs_fat_diskio.o    \
+	vfs_blockdev.o      \
 	virtpin.o           \
 	machine_mem.o       \
 	machine_i2c.o       \

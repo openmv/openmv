@@ -64,7 +64,6 @@
 #include "usbd_desc.h"
 #include "usbd_cdc_msc_hid.h"
 #include "usbd_cdc_interface.h"
-#include "usbd_msc_storage.h"
 
 #include "py_sensor.h"
 #include "py_image.h"
@@ -484,9 +483,6 @@ soft_reset:
 
     pyb_usb_init0();
     MP_STATE_PORT(pyb_stdio_uart) = NULL;
-    // Activate USB_VCP(0) on dupterm slot 1 for the REPL
-    MP_STATE_VM(dupterm_objs[1]) = MP_OBJ_FROM_PTR(&pyb_usb_vcp_obj);
-    usb_vcp_attach_to_repl(&pyb_usb_vcp_obj, true);
 
     // Initialize the sensor and check the result after
     // mounting the file-system to log errors (if any).
@@ -502,7 +498,7 @@ soft_reset:
     // Initialize storage
     if (sdcard_is_present()) {
         // Init the vfs object
-        vfs_fat->flags = 0;
+        vfs_fat->blockdev.flags = 0;
         sdcard_init_vfs(vfs_fat, 1);
 
         // Try to mount the SD card
@@ -520,7 +516,7 @@ soft_reset:
         storage_init();
 
         // init the vfs object
-        vfs_fat->flags = 0;
+        vfs_fat->blockdev.flags = 0;
         pyb_flash_init_vfs(vfs_fat);
 
         // Try to mount the flash
@@ -579,7 +575,7 @@ soft_reset:
 
     // Init USB device to default setting if it was not already configured
     if (!(pyb_usb_flags & PYB_USB_FLAG_USB_MODE_CALLED)) {
-        pyb_usb_dev_init(USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, NULL);
+        pyb_usb_dev_init(pyb_usb_dev_detect(), USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
     }
 
     // report if SDRAM failed
