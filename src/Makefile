@@ -51,6 +51,7 @@ STUSB_DIR=stusb
 MICROPY_DIR=micropython
 OMV_DIR=omv
 LEPTON_DIR=lepton
+ST_DIR=st
 MLX_DIR=mlx
 TENSORFLOW_DIR=libtf
 WINC1500_DIR=winc1500
@@ -122,6 +123,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/nn/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
+OMV_CFLAGS += -I$(TOP_DIR)/$(ST_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
@@ -165,6 +167,7 @@ endif
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(ST_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
 
@@ -268,6 +271,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_cpufreq.o                            \
 	py_nn.o                                 \
 	py_tf.o                                 \
+	py_imu.o                                \
 	)
 
 
@@ -523,6 +527,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	)
 
 UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
+UVC_OBJ += $(wildcard $(BUILD)/$(ST_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
 
 ###################################################
@@ -558,6 +563,7 @@ FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(STHAL_DIR)                BUILD=$(BUILD)/$(STHAL_DIR)    CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MICROPY_DIR)/ports/stm32  BUILD=$(BUILD)/$(MICROPY_DIR)  BOARD=$(TARGET) QSTR_DEFS="$(OMV_QSTR_DEFS)"
 	$(MAKE)  -C $(LEPTON_DIR)               BUILD=$(BUILD)/$(LEPTON_DIR)   CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(ST_DIR)                   BUILD=$(BUILD)/$(ST_DIR)       CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX_DIR)                  BUILD=$(BUILD)/$(MLX_DIR)      CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(WINC1500_DIR)             BUILD=$(BUILD)/$(WINC1500_DIR) CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(OMV_DIR)                  BUILD=$(BUILD)/$(OMV_DIR)      CFLAGS="$(CFLAGS) -MMD"

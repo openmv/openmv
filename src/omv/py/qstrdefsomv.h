@@ -1223,3 +1223,9 @@ Q(output)
 // Segment
 // duplicate Q(segment)
 // duplicate Q(roi)
+
+// IMU Module
+Q(imu)
+Q(acceleration_mg)
+Q(angular_rate_mdps)
+Q(temperature_c)
