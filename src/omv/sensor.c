@@ -409,15 +409,16 @@ int sensor_init()
 int sensor_reset()
 {
     // Reset the sesnor state
-    sensor.sde         = 0;
-    sensor.pixformat   = 0;
-    sensor.framesize   = 0;
-    sensor.framerate   = 0;
-    sensor.gainceiling = -1;
-    sensor.hmirror     = false;
-    sensor.vflip       = false;
-    sensor.transpose   = false;
-    sensor.vsync_gpio  = NULL;
+    sensor.sde           = 0;
+    sensor.pixformat     = 0;
+    sensor.framesize     = 0;
+    sensor.framerate     = 0;
+    sensor.gainceiling   = -1;
+    sensor.hmirror       = false;
+    sensor.vflip         = false;
+    sensor.transpose     = false;
+    sensor.auto_rotation = true;
+    sensor.vsync_gpio    = NULL;
 
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
@@ -718,6 +719,8 @@ int sensor_set_hmirror(int enable)
         /* operation not supported */
         return -1;
     }
+    sensor.hmirror = enable;
+    systick_sleep(100); // wait for the camera to settle
     return 0;
 }
 
@@ -739,6 +742,8 @@ int sensor_set_vflip(int enable)
         /* operation not supported */
         return -1;
     }
+    sensor.vflip = enable;
+    systick_sleep(100); // wait for the camera to settle
     return 0;
 }
 
@@ -755,6 +760,16 @@ void sensor_set_transpose(bool enable)
 bool sensor_get_transpose()
 {
     return sensor.transpose;
+}
+
+void sensor_set_auto_rotation(bool enable)
+{
+    sensor.auto_rotation = enable;
+}
+
+bool sensor_get_auto_rotation()
+{
+    return sensor.auto_rotation;
 }
 
 int sensor_set_special_effect(sde_t sde)

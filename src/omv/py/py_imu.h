@@ -11,7 +11,7 @@
 #ifndef __PY_IMU_H__
 #define __PY_IMU_H__
 void py_imu_init();
-float py_imu_xy_rotation(); // in radians
-float py_imu_yz_rotation(); // in radians
-float py_imu_zx_rotation(); // in radians
+float py_imu_xy_rotation(); // in degrees
+float py_imu_yz_rotation(); // in degrees
+float py_imu_zx_rotation(); // in degrees
 #endif // __PY_IMU_H__

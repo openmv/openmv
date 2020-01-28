@@ -205,14 +205,14 @@ float py_imu_xy_rotation()
 {
 #if defined(OMV_ENABLE_IMU)
     if (HAL_SPI_GetState(&SPIHandle) != HAL_SPI_STATE_READY) {
-        return 0;
+        return 270; // output when the camera is mounted upright
     }
 
     axis3bit16_t data_raw_acceleration = {};
     lsm6ds3tr_c_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
     float x = lsm6ds3tr_c_from_fs2g_to_mg(data_raw_acceleration.i16bit[0]);
     float y = lsm6ds3tr_c_from_fs2g_to_mg(data_raw_acceleration.i16bit[1]);
-    return fast_atan2f(y, x);
+    return IM_RAD2DEG(fast_atan2f(y, x));
 #else
     return 0;
 #endif
@@ -222,14 +222,14 @@ float py_imu_yz_rotation()
 {
 #if defined(OMV_ENABLE_IMU)
     if (HAL_SPI_GetState(&SPIHandle) != HAL_SPI_STATE_READY) {
-        return 0;
+        return 180; // output when the camera is mounted upright
     }
 
     axis3bit16_t data_raw_acceleration = {};
     lsm6ds3tr_c_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
     float y = lsm6ds3tr_c_from_fs2g_to_mg(data_raw_acceleration.i16bit[1]);
     float z = lsm6ds3tr_c_from_fs2g_to_mg(data_raw_acceleration.i16bit[2]);
-    return fast_atan2f(z, y);
+    return IM_RAD2DEG(fast_atan2f(z, y));
 #else
     return 0;
 #endif
@@ -246,7 +246,7 @@ float py_imu_zx_rotation()
     lsm6ds3tr_c_acceleration_raw_get(&dev_ctx, data_raw_acceleration.u8bit);
     float z = lsm6ds3tr_c_from_fs2g_to_mg(data_raw_acceleration.i16bit[2]);
     float x = lsm6ds3tr_c_from_fs2g_to_mg(data_raw_acceleration.i16bit[0]);
-    return fast_atan2f(x, z);
+    return IM_RAD2DEG(fast_atan2f(x, z));
 #else
     return 0;
 #endif

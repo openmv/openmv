@@ -170,6 +170,7 @@ typedef struct _sensor {
     bool hmirror;               // Horizontal Mirror
     bool vflip;                 // Vertical Flip
     bool transpose;             // Transpose Image
+    bool auto_rotation;         // Rotate Image Automatically
 
     // Sensor function pointers
     int  (*reset)               (sensor_t *sensor);
@@ -292,6 +293,12 @@ void sensor_set_transpose(bool enable);
 
 // Get transpose mode state.
 bool sensor_get_transpose();
+
+// Enable/disable the auto rotation mode.
+void sensor_set_auto_rotation(bool enable);
+
+// Get transpose mode state.
+bool sensor_get_auto_rotation();
 
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);
