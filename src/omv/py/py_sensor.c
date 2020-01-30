@@ -50,20 +50,20 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
     // To prevent oscillation there is a 20 degree dead-zone between each state.
     // This means there is a 70 degree active-zone.
     if (sensor_get_auto_rotation()) {
-        float deg = py_imu_xy_rotation();
-        if ((235 < deg) && (deg < 305)) { // center is 270, upright
+        float roll = py_imu_roll_rotation();
+        if ((325 < roll) || (roll < 35) ) { // center is 0/360, upright
             sensor_set_hmirror(false);
             sensor_set_vflip(false);
             sensor_set_transpose(false);
-        } else if ((145 < deg) && (deg < 215)) { // center is 180, rotated right
+        } else if ((235 < roll) && (roll < 305)) { // center is 270, rotated right
             sensor_set_hmirror(true);
             sensor_set_vflip(false);
             sensor_set_transpose(true);
-        } else if ((55 < deg) && (deg < 125)) { // center is 90, upside down
+        } else if ((145 < roll) && (roll < 215)) { // center is 180, upside down
             sensor_set_hmirror(true);
             sensor_set_vflip(true);
             sensor_set_transpose(false);
-        } else if ((325 < deg) || (deg < 35)) { // center is 0, rotated left
+        } else if ((55 < roll) && (roll < 125)) { // center is 90, rotated left
             sensor_set_hmirror(false);
             sensor_set_vflip(true);
             sensor_set_transpose(true);
