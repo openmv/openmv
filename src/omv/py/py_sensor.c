@@ -77,18 +77,6 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
         return mp_const_false;
     }
 
-    // Transpose after capturing the image because transposing while capturing
-    // the image in the DCMI line callback has to fast and transposing is
-    // inherently slow.
-    if (sensor_get_transpose()) {
-        image_t *img = py_image_cobj(image);
-        fb_alloc_mark();
-        imlib_replace(img, NULL, img, 0, false, false, true, NULL);
-        fb_alloc_free_till_mark();
-        MAIN_FB()->w = img->w;
-        MAIN_FB()->h = img->h;
-    }
-
     return image;
 }
 
@@ -442,7 +430,9 @@ static mp_obj_t py_sensor_get_vflip() {
 }
 
 static mp_obj_t py_sensor_set_transpose(mp_obj_t enable) {
-    sensor_set_transpose(mp_obj_is_true(enable));
+    if (sensor_set_transpose(mp_obj_is_true(enable)) != 0) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Cannot transpose in JPEG mode!"));
+    }
     return mp_const_none;
 }
 
@@ -451,7 +441,9 @@ static mp_obj_t py_sensor_get_transpose() {
 }
 
 static mp_obj_t py_sensor_set_auto_rotation(mp_obj_t enable) {
-    sensor_set_auto_rotation(mp_obj_is_true(enable));
+    if (sensor_set_auto_rotation(mp_obj_is_true(enable)) != 0) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Cannot auto rotate in JPEG mode!"));
+    }
     return mp_const_none;
 }
 

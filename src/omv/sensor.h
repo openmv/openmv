@@ -289,13 +289,13 @@ int sensor_set_vflip(int enable);
 bool sensor_get_vflip();
 
 // Enable/disable the transpose mode.
-void sensor_set_transpose(bool enable);
+int sensor_set_transpose(bool enable);
 
 // Get transpose mode state.
 bool sensor_get_transpose();
 
 // Enable/disable the auto rotation mode.
-void sensor_set_auto_rotation(bool enable);
+int sensor_set_auto_rotation(bool enable);
 
 // Get transpose mode state.
 bool sensor_get_auto_rotation();
