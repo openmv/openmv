@@ -1303,11 +1303,11 @@ static int isaligned_fast(int angle, float theta,
 
   /* pixels whose level-line angle is not defined
      are considered as NON-aligned */
-//  if( a == NOTDEF ) return FALSE;  /* there is no need to call the function
-//                                      'double_equal' here because there is
-//                                      no risk of problems related to the
-//                                      comparison doubles, we are only
-//                                      interested in the exact NOTDEF value */
+  if( a == NOTDEF ) return FALSE;  /* there is no need to call the function
+                                      'double_equal' here because there is
+                                      no risk of problems related to the
+                                      comparison doubles, we are only
+                                      interested in the exact NOTDEF value */
 
   /* it is assumed that 'theta' and 'a' are in the range [-pi,pi] */
   theta -= a;
