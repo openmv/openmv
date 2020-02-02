@@ -12,7 +12,7 @@ rtc.datetime((2014, 5, 1, 4, 13, 0, 0, 0))
 print(rtc.datetime())
 
 # Enable RTC interrupts every 5 seconds.
-rtc.wakeup(2000)
+rtc.wakeup(5000)
 
 # Enter Stop Mode.
 # Note the IDE will disconnect.
