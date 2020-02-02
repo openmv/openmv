@@ -866,7 +866,6 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
         .realloc = realloc,
         .overflow = false,
     };
-    quality = 35; // DEBUG
 
     // Initialize quantization tables
     jpeg_init(quality);
