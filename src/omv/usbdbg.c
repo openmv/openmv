@@ -84,6 +84,13 @@ void usbdbg_data_in(void *buffer, int length)
             break;
         }
 
+        case USBDBG_SENSOR_ID: {
+            int sensor_id = sensor_get_id();
+            memcpy(buffer, &sensor_id, 4);
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         case USBDBG_TX_BUF: {
             uint8_t *tx_buf = usb_cdc_tx_buf(length);
             memcpy(buffer, tx_buf, length);
@@ -337,6 +344,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
         case USBDBG_TX_BUF:
         case USBDBG_TX_BUF_LEN:
+            xfer_bytes = 0;
+            xfer_length = length;
+            break;
+
+        case USBDBG_SENSOR_ID:
             xfer_bytes = 0;
             xfer_length = length;
             break;
