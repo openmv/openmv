@@ -22,6 +22,11 @@
 
 #define TIME_JPEG   (0)
 
+// Expand 4 bits to 32 for binary to grayscale; process 4 pixels at a time
+const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
+    0xff00ff, 0xffff00, 0xffffff, 0xff000000, 0xff0000ff, 0xff00ff00,
+    0xff00ffff, 0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff};
+
 #if (OMV_HARDWARE_JPEG == 1)
 
 #define MCU_W                       (8)
@@ -58,10 +63,6 @@ static uint8_t *get_mcu()
     uint8_t *CR = mcubuf + 128;
     int r, g, b; // to separate RGB565 into R8,G8,B8
     int dx=MCU_W, dy=MCU_H; // width and height of MCU can be truncated if we're at bottom or right edge
-    // Expand 4 bits to 32 for binary to grayscale; process 4 pixels at a time
-    const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
-    0xff00ff, 0xffff00, 0xffffff, 0xff000000, 0xff0000ff, 0xff00ff00,
-    0xff00ffff, 0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff};
 
     // Copy 8x8 MCUs
     switch (jpeg_enc.img_bpp) {
@@ -805,28 +806,54 @@ void jpeg_get_mcu(image_t *img, int mcu_w, int mcu_h, int x_offs, int y_offs, in
     switch (bpp) {
         case 0: {
             uint8_t *mcu = (uint8_t*) buf;
-            for (int y=y_offs; y<y_offs+mcu_h; y++) {
-                for (int x=x_offs; x<x_offs+mcu_w; x++) {
-                    if (x >= img->w || y >= img->h) {
-                        *mcu++ = 0;
-                    } else {
-                        *mcu++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(img, x, y)) - 128;
+            if (y_offs+mcu_h > img->h || x_offs+mcu_w > img->w) { // clipped
+                for (int y=y_offs; y<y_offs+mcu_h; y++) {
+                    for (int x=x_offs; x<x_offs+mcu_w; x++) {
+                        if (x >= img->w || y >= img->h) {
+                            *mcu++ = 0;
+                        } else {
+                            *mcu++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(img, x, y)) - 128;
+                        }
                     }
                 }
-            }
+            } // clipped
+            else {
+                int iPitch = ((img->w + 31) >> 3) & 0xfffc; // dword align
+                uint8_t u8Pixels;
+                uint32_t *d32 = (uint32_t *)mcu;
+                for (int y=y_offs; y<(y_offs + 8); y++) {
+                    // read 8 binary pixels in one shot
+                    int index = (y * iPitch) + (x_offs>>3); // get byte offset
+                    uint8_t *s = &img->data[index];
+                    u8Pixels = s[0]; // get 8 binary pixels (1 byte)
+                    *d32++ = u32Expand[u8Pixels & 0xf]; // first 4 pixels
+                    *d32++ = u32Expand[u8Pixels >> 4];  // second 4 pixels
+                } // for y
+            } // not clipped
             break;
         }
         case 1: {
             uint8_t *mcu = (uint8_t*) buf;
             //memset(mcu, 0, 64);
-            for (int y=y_offs; y<y_offs+mcu_h; y++) {
-                for (int x=x_offs; x<x_offs+mcu_w; x++) {
-                    if (x >= img->w || y >= img->h) {
-                        *mcu++ = 0;
-                    } else {
-                        *mcu++ = IMAGE_GET_GRAYSCALE_PIXEL(img, x, y) - 128;
+            if (y_offs+mcu_h > img->h || x_offs+mcu_w > img->w) { // truncated MCU
+                for (int y=y_offs; y<y_offs+mcu_h; y++) {
+                    for (int x=x_offs; x<x_offs+mcu_w; x++) {
+                        if (x >= img->w || y >= img->h) {
+                            *mcu++ = 0;
+                        } else {
+                            *mcu++ = IMAGE_GET_GRAYSCALE_PIXEL(img, x, y) - 128;
+                        }
                     }
                 }
+            } // needs to be clipped
+            else // no need to check bounds per pixel
+            {
+                for (int y=y_offs; y<y_offs+mcu_h; y++) {
+                    uint8_t *pRow = &img->data[(y * img->w) + x_offs];
+                    for (int x=x_offs; x<x_offs+mcu_w; x++) {
+                        *mcu++ = *pRow++ - 128;
+                    }
+                } 
             }
             break;
         }
