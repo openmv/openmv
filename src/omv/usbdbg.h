@@ -48,7 +48,8 @@ enum usbdbg_cmd {
     USBDBG_SYS_RESET        =0x0C,
     USBDBG_FB_ENABLE        =0x0D,
     USBDBG_TX_BUF_LEN       =0x8E,
-    USBDBG_TX_BUF           =0x8F
+    USBDBG_TX_BUF           =0x8F,
+    USBDBG_SENSOR_ID        =0x90
 };
 void usbdbg_init();
 bool usbdbg_script_ready();
