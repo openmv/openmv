@@ -15,7 +15,7 @@
 #define IMLIB_ENABLE_LAB_LUT
 
 // Enable YUV LUT
-#define IMLIB_ENABLE_YUV_LUT
+//#define IMLIB_ENABLE_YUV_LUT
 
 // Enable mean pooling
 #define IMLIB_ENABLE_MEAN_POOLING
