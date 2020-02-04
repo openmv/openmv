@@ -560,6 +560,9 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
     _row_ptr + ((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT); \
 })
 
+#define RGB565_TO_Y_FAST(pixel) \
+  (((pixel & 0x1f00) >> 5) + (pixel & 0xf8) + ((pixel & 0x7) << 6) + ((pixel & 0xe000) >> 10)) / 4;
+
 #define IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) \
 ({ \
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
