@@ -838,11 +838,34 @@ typedef struct xylf
 }
 xylf_t;
 
+static void lifo_enqueue_fast(lifo_t *ptr, void *data)
+{
+// we know the structure size is 8 bytes, so don't waste time calling memcpy
+    uint32_t *d = (uint32_t *)(ptr->data + (ptr->len * ptr->data_len));
+    uint32_t *s = (uint32_t *)data;
+//    memcpy(ptr->data + (ptr->len * ptr->data_len), data, ptr->data_len);
+    d[0] = s[0]; d[1] = s[1]; // copy 8 bytes
+    ptr->len += 1;
+}
+
+static void lifo_dequeue_fast(lifo_t *ptr, void *data)
+{
+    // we know the structure size is 8 bytes, so don't waste time calling memcpy
+    uint32_t *s = (uint32_t *)(ptr->data + ((ptr->len-1) * ptr->data_len));
+    uint32_t *d = (uint32_t *)data;
+//    if (data) {
+//        memcpy(data, ptr->data + ((ptr->len - 1) * ptr->data_len), ptr->data_len);
+//    }
+    d[0] = s[0]; d[1] = s[1]; // copy 8 bytes
+    ptr->len -= 1;
+}
+
 static void flood_fill_seed(struct quirc *q, int x, int y, int from, int to,
                             span_func_t func, void *user_data,
                             int depth)
 {
     (void) depth; // unused
+    uint8_t from8 = from, to8=to;
 
     lifo_t lifo;
     size_t lifo_len;
@@ -854,34 +877,34 @@ static void flood_fill_seed(struct quirc *q, int x, int y, int from, int to,
         int i;
         quirc_pixel_t *row = q->pixels + y * q->w;
 
-        while (left > 0 && row[left - 1] == from)
+        while (left > 0 && row[left - 1] == from8)
             left--;
 
-        while (right < q->w - 1 && row[right + 1] == from)
+        while (right < q->w - 1 && row[right + 1] == from8)
             right++;
 
         /* Fill the extent */
         for (i = left; i <= right; i++)
-            row[i] = to;
+            row[i] = to8;
 
         if (func)
             func(user_data, y, left, right);
 
         for(;;) {
-            if (lifo_size(&lifo) < lifo_len) {
+            if (/*lifo_size(&lifo)*/ lifo.len < lifo_len) {
                 /* Seed new flood-fills */
                 if (y > 0) {
                     row = q->pixels + (y - 1) * q->w;
 
                     bool recurse = false;
                     for (i = left; i <= right; i++)
-                        if (row[i] == from) {
+                        if (row[i] == from8) {
                             xylf_t context;
                             context.x = x;
                             context.y = y;
                             context.l = left;
                             context.r = right;
-                            lifo_enqueue(&lifo, &context);
+                            lifo_enqueue_fast(&lifo, &context);
                             x = i;
                             y = y - 1;
                             recurse = true;
@@ -896,13 +919,13 @@ static void flood_fill_seed(struct quirc *q, int x, int y, int from, int to,
 
                     bool recurse = false;
                     for (i = left; i <= right; i++)
-                        if (row[i] == from) {
+                        if (row[i] == from8) {
                             xylf_t context;
                             context.x = x;
                             context.y = y;
                             context.l = left;
                             context.r = right;
-                            lifo_enqueue(&lifo, &context);
+                            lifo_enqueue_fast(&lifo, &context);
                             x = i;
                             y = y + 1;
                             recurse = true;
@@ -913,13 +936,13 @@ static void flood_fill_seed(struct quirc *q, int x, int y, int from, int to,
                 }
             }
 
-            if (!lifo_size(&lifo)) {
+            if (!lifo.len /*lifo_size(&lifo)*/) {
                 lifo_free(&lifo);
                 return;
             }
 
             xylf_t context;
-            lifo_dequeue(&lifo, &context);
+            lifo_dequeue_fast(&lifo, &context);
             x = context.x;
             y = context.y;
             left = context.l;
@@ -942,7 +965,9 @@ static void threshold(struct quirc *q)
     int avg_w = 0;
     int avg_u = 0;
     int threshold_s = q->w / THRESHOLD_S_DEN;
+    int fracmul, fracmul2;
     quirc_pixel_t *row = q->pixels;
+    int width = q->w;
 
     /*
      * Ensure a sane, non-zero value for threshold_s.
@@ -953,42 +978,49 @@ static void threshold(struct quirc *q)
     if (threshold_s < THRESHOLD_S_MIN)
         threshold_s = THRESHOLD_S_MIN;
 
+    fracmul = (32768 * (threshold_s - 1)) / threshold_s; // to use multipy instead of divide (not too many bits or we'll overflow)
+    // to get the effect used below (a fraction of threshold_s-1/threshold_s
+    // The second constant is to reduce the averaged values to compare with the current pixel
+    fracmul2 = (0x100000 * (100 - THRESHOLD_T)) / (200 * threshold_s); // use as many bits as possible without overflowing
+    
     for (y = 0; y < q->h; y++) {
         int row_average[q->w];
 
         memset(row_average, 0, sizeof(row_average));
 
-        for (x = 0; x < q->w; x++) {
+        for (x = 0; x < width; x++) {
             int w, u;
 
             if (y & 1) {
                 w = x;
-                u = q->w - 1 - x;
+                u = width - 1 - x;
             } else {
-                w = q->w - 1 - x;
+                w = width - 1 - x;
                 u = x;
             }
 
-            avg_w = (avg_w * (threshold_s - 1)) /
-                threshold_s + row[w];
-            avg_u = (avg_u * (threshold_s - 1)) /
-                threshold_s + row[u];
+//            avg_w = (avg_w * (threshold_s - 1)) / threshold_s + row[w];
+//            avg_u = (avg_u * (threshold_s - 1)) / threshold_s + row[u];
+            // The original mul/div operation sought to reduce the average value by a small fraction (e.g. 1/79)
+            // This mul/shift approximation achieves the same goal with only a small percentage difference
+            avg_w = ((avg_w * fracmul) >> 15) + row[w];
+            avg_u = ((avg_u * fracmul) >> 15) + row[u];
 
             row_average[w] += avg_w;
             row_average[u] += avg_u;
         }
 
-        for (x = 0; x < q->w; x++) {
-            if (row[x] < row_average[x] *
-                (100 - THRESHOLD_T) / (200 * threshold_s))
+        for (x = 0; x < width; x++) {
+            //            if (row[x] < row_average[x] * (100 - THRESHOLD_T) / (200 * threshold_s))
+            if (row[x] < ((row_average[x] * fracmul2) >> 20))
                 row[x] = QUIRC_PIXEL_BLACK;
             else
                 row[x] = QUIRC_PIXEL_WHITE;
         }
 
-        row += q->w;
+        row += width;
     }
-}
+} /* threshold() */
 
 static void area_count(void *user_data, int y, int left, int right)
 {
@@ -1146,21 +1178,25 @@ static void record_capstone(struct quirc *q, int ring, int stone)
 
 static void test_capstone(struct quirc *q, int x, int y, int *pb)
 {
-    int ring_right = region_code(q, x - pb[4], y);
-    int stone = region_code(q, x - pb[4] - pb[3] - pb[2], y);
-    int ring_left = region_code(q, x - pb[4] - pb[3] -
+    int ring_right, ring_left, stone;
+    ring_right = region_code(q, x - pb[4], y);
+    ring_left = region_code(q, x - pb[4] - pb[3] -
                     pb[2] - pb[1] - pb[0],
                     y);
     struct quirc_region *stone_reg;
     struct quirc_region *ring_reg;
     int ratio;
 
-    if (ring_left < 0 || ring_right < 0 || stone < 0)
+    if (ring_left < 0 || ring_right < 0)// || stone < 0)
         return;
 
     /* Left and ring of ring should be connected */
-    if (ring_left != ring_right)
+    if (ring_left != ring_right) // <-- most of the time, it exits here
         return;
+
+    stone = region_code(q, x - pb[4] - pb[3] - pb[2], y);
+    if (stone < 0)
+       return;
 
     /* Ring should be disconnected from stone */
     if (ring_left == stone)
@@ -1185,16 +1221,17 @@ static void finder_scan(struct quirc *q, int y)
 {
     quirc_pixel_t *row = q->pixels + y * q->w;
     int x;
-    int last_color = 0;
-    int run_length = 0;
+    uint8_t color, last_color;
+    int run_length = 1;
     int run_count = 0;
     int pb[5];
 
     memset(pb, 0, sizeof(pb));
-    for (x = 0; x < q->w; x++) {
-        int color = row[x] ? 1 : 0;
+    last_color = row[0];
+    for (x = 1; x < q->w; x++) {
+        color = row[x];
 
-        if (x && color != last_color) {
+        if (/* x && */ color != last_color) {
             memmove(pb, pb + 1, sizeof(pb[0]) * 4);
             pb[4] = run_length;
             run_length = 0;
@@ -2947,9 +2984,11 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
         case IMAGE_BPP_GRAYSCALE: {
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
-                }
+                memcpy(grayscale_image, &row_ptr[roi->x], roi->w);
+                grayscale_image += roi->w;
+//                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+//                    *(grayscale_image++) = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+//                }
             }
             break;
         }
@@ -2957,7 +2996,7 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    *(grayscale_image++) = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                 }
             }
             break;
