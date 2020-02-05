@@ -9,6 +9,8 @@
  * main function.
  */
 #include STM32_HAL_H
+#include <stdbool.h>
+#include "sdram.h"
 #include "usbd_core.h"
 #include "usbd_desc.h"
 #include "usbd_uvc.h"
@@ -135,9 +137,6 @@ int main()
 {
     HAL_Init();
 
-    // Re-enable IRQs (disabled by bootloader)
-    __enable_irq();
-
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_PULLUP;
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
@@ -146,6 +145,20 @@ int main()
     GPIO_InitStructure.Pin = OMV_BOOTLDR_LED_PIN;
     HAL_GPIO_Init(OMV_BOOTLDR_LED_PORT, &GPIO_InitStructure);
     HAL_GPIO_WritePin(OMV_BOOTLDR_LED_PORT, OMV_BOOTLDR_LED_PIN, GPIO_PIN_SET);
+
+    // Re-enable IRQs (disabled by bootloader)
+    __enable_irq();
+
+    #ifdef OMV_SDRAM_SIZE
+    if (!sdram_init()) {
+        __fatal_error();
+    }
+    #if (OMV_SDRAM_TEST == 1)
+    if (!sdram_test(false)) {
+        __fatal_error();
+    }
+    #endif
+    #endif
 
     sensor_init0();
     fb_alloc_init0();
