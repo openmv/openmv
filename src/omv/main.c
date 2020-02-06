@@ -213,9 +213,12 @@ void NORETURN __fatal_error(const char *msg) {
         const char *hdr = "FATAL ERROR:\n";
         f_write(&fp, hdr, strlen(hdr), &bytes);
         f_write(&fp, msg, strlen(msg), &bytes);
+        f_close(&fp);
+        storage_flush();
+        // Initialize the USB device if it's not already initialize to allow
+        // the host to mount the filesystem and access the error log.
+        pyb_usb_dev_init(pyb_usb_dev_detect(), USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
     }
-    f_close(&fp);
-    storage_flush();
 
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
@@ -568,9 +571,12 @@ soft_reset:
 
     // Run boot script(s)
     if (first_soft_reset) {
-        // Execute the boot.py script before initializing the USB dev
-        // to override the USB mode if required, otherwise VCP+MSC is used.
+        // Execute the boot.py script before initializing the USB dev to
+        // override the USB mode if required, otherwise VCP+MSC is used.
         exec_boot_script("/boot.py", false, false);
+        // Execute the selftests.py script before the filesystem is mounted
+        // to avoid corrupting the filesystem when selftests.py is removed.
+        exec_boot_script("/selftest.py", true, false);
     }
 
     // Init USB device to default setting if it was not already configured
@@ -610,9 +616,8 @@ soft_reset:
         timer_tim5_init(100);
     }
 
-    // Run boot script(s)
+    // Run main script if it exists.
     if (first_soft_reset) {
-        exec_boot_script("/selftest.py", true, false);
         exec_boot_script("/main.py", false, true);
     }
 
