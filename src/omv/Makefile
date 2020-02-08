@@ -25,6 +25,7 @@ SRCS += $(addprefix ,   \
 	ov5640.c            \
 	mt9v034.c           \
 	lepton.c            \
+	hm01b0.c            \
 	sensor.c            \
 	stm32fxxx_hal_msp.c \
 	soft_i2c.c          \
