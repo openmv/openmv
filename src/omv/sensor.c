@@ -19,6 +19,7 @@
 #include "ov5640.h"
 #include "mt9v034.h"
 #include "lepton.h"
+#include "hm01b0.h"
 #include "sensor.h"
 #include "systick.h"
 #include "framebuffer.h"
@@ -329,6 +330,13 @@ int sensor_init()
     case OV5640_SLV_ADDR:
         cambus_readb2(sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
         break;
+    #if (OMV_SENSOR_HM01B0 == 1)
+    case HM01B0_SLV_ADDR:
+        cambus_readb2(sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
+        // TODO fix when manf. ID is known.
+        sensor.chip_id = HM01B0_ID;
+        break;
+    #endif //(OMV_SENSOR_HM01B0 == 1)
     default:
         return -3;
         break;
@@ -363,6 +371,11 @@ int sensor_init()
     case OV9650_ID:
         init_ret = ov9650_init(&sensor);
         break;
+    #if (OMV_SENSOR_HM01B0 == 1)
+    case HM01B0_ID:
+        init_ret = hm01b0_init(&sensor);
+        break;
+    #endif //(OMV_SENSOR_HM01B0 == 1)
     default:
         return -3;
         break;
