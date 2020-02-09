@@ -19,7 +19,7 @@
 #define MT9V034_SLV_ADDR    (0xB8)
 #define LEPTON_SLV_ADDR     (0x54)
 #define OV5640_SLV_ADDR     (0x78)
-#define HM01B0_SLV_ADDR     (0x48)
+#define HM01B0_SLV_ADDR     (0x24)
 
 // Chip ID registers.
 #define OV_CHIP_ID          (0x0A)
@@ -33,7 +33,7 @@
 #define OV5640_ID           (0x56)
 #define MT9V034_ID          (0x13)
 #define LEPTON_ID           (0x54)
-#define HM01B0_ID           (0xAA) // TODO fix this with valid manf. ID.
+#define HM01B0_ID           (0xB0)
 
 typedef enum {
     PIXFORMAT_INVALID = 0,

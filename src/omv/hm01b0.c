@@ -138,11 +138,8 @@ static int reset(sensor_t *sensor)
     // Set PCLK polarity.
     ret |= cambus_writeb2(sensor->slv_addr, PCLK_POLARITY, (0x20 | PCLK_FALLING_EDGE));
     
-    // TODO: Set mode to streaming ?
+    // Set mode to streaming
     ret |= cambus_writeb2(sensor->slv_addr, MODE_SELECT, HIMAX_MODE_STREAMING);
-
-    // Delay 300 ms TODO is this required ?
-    systick_sleep(300);
 
     return ret;
 }
@@ -165,10 +162,8 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
     int ret = 0;
     switch (pixformat) {
-        case PIXFORMAT_GRAYSCALE:
-            // assuming the sensor is in GS mode by default.
+        case PIXFORMAT_BAYER:
             break;
-        // Won't support any other format for now.
         default:
             return -1;
     }
