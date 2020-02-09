@@ -333,8 +333,6 @@ int sensor_init()
     #if (OMV_SENSOR_HM01B0 == 1)
     case HM01B0_SLV_ADDR:
         cambus_readb2(sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
-        // TODO fix when manf. ID is known.
-        sensor.chip_id = HM01B0_ID;
         break;
     #endif //(OMV_SENSOR_HM01B0 == 1)
     default:
