@@ -76,9 +76,9 @@ const int resolution[][2] = {
     {2592, 1944},    /* WQXGA2    */
 };
 
-#if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 static int extclk_config(int frequency)
 {
+    #if (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
     /* TCLK (PCLK * 2) */
     int tclk = DCMI_TIM_PCLK_FREQ() * 2;
 
@@ -112,10 +112,10 @@ static int extclk_config(int frequency)
     || (HAL_TIM_PWM_Start(&TIMHandle, DCMI_TIM_CHANNEL) != HAL_OK)) {
         return -1;
     }
+    #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 
     return 0;
 }
-#endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
 
 static int dcmi_config(uint32_t jpeg_mode)
 {
@@ -253,6 +253,9 @@ int sensor_init()
     // Pass through the MCO1 clock with source input set to HSE (12MHz).
     // Note MCO1 is multiplexed on OPENMV2/TIM1 only.
     HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_HSE, RCC_MCODIV_1);
+    #elif (OMV_XCLK_SOURCE == OMV_XCLK_OSC)
+    // An external oscillator is used for the sensor clock.
+    // Nothing to do.
     #else
     #error "OMV_XCLK_SOURCE is not set!"
     #endif
