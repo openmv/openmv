@@ -426,6 +426,10 @@ int main(void)
     //  NOTE: The bootloader enables the CCM/DTCM memory.
     HAL_Init();
 
+    #if defined(MICROPY_BOARD_EARLY_INIT)
+    MICROPY_BOARD_EARLY_INIT();
+    #endif
+
     #if MICROPY_HW_SDRAM_SIZE
     sdram_ok = sdram_init();
     #if MICROPY_HW_SDRAM_STARTUP_TEST
