@@ -30,6 +30,7 @@
 #include "socket/include/socket.h"
 #include "driver/include/m2m_wifi.h"
 
+#if MICROPY_PY_WINC1500
 typedef struct _winc_obj_t {
     mp_obj_base_t base;
 } winc_obj_t;
@@ -625,3 +626,4 @@ const mod_network_nic_type_t mod_network_nic_type_winc = {
     .settimeout = py_winc_socket_settimeout,
     .ioctl      = py_winc_socket_ioctl,
 };
+#endif // MICROPY_PY_WINC1500
