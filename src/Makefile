@@ -52,6 +52,7 @@ MICROPY_DIR=micropython
 OMV_DIR=omv
 LEPTON_DIR=lepton
 MLX_DIR=mlx
+ST_DIR=st
 TENSORFLOW_DIR=libtf
 WINC1500_DIR=winc1500
 BOOTLDR_DIR=bootloader
@@ -123,6 +124,7 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX_DIR)/include/
+OMV_CFLAGS += -I$(TOP_DIR)/$(ST_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 
@@ -166,6 +168,7 @@ endif
 FIRM_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(ST_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
 
 #------------- OpenMV Objects ----------------#
@@ -181,10 +184,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	usbdbg.o                                \
 	wifidbg.o                               \
 	cambus.o                                \
-	ov9650.o                                \
 	ov2640.o                                \
-	ov7725.o                                \
 	ov5640.o                                \
+	ov7690.o                                \
+	ov7725.o                                \
+	ov9650.o                                \
 	mt9v034.o                               \
 	lepton.o                                \
 	hm01b0.o                                \
@@ -256,6 +260,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/nn/,\
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_helper.o                             \
 	py_omv.o                                \
+	py_imu.o                                \
 	py_sensor.o                             \
 	py_image.o                              \
 	py_time.o                               \
@@ -499,10 +504,11 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	framebuffer.o                           \
 	array.o                                 \
 	cambus.o                                \
-	ov9650.o                                \
 	ov2640.o                                \
-	ov7725.o                                \
 	ov5640.o                                \
+	ov7690.o                                \
+	ov7725.o                                \
+	ov9650.o                                \
 	mt9v034.o                               \
 	lepton.o                                \
 	hm01b0.o                                \
@@ -527,6 +533,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 
 UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
+UVC_OBJ += $(wildcard $(BUILD)/$(ST_DIR)/src/*.o)
 
 ###################################################
 #Export Variables
@@ -562,6 +569,7 @@ FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(MICROPY_DIR)/ports/stm32  BUILD=$(BUILD)/$(MICROPY_DIR)  BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)"
 	$(MAKE)  -C $(LEPTON_DIR)               BUILD=$(BUILD)/$(LEPTON_DIR)   CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX_DIR)                  BUILD=$(BUILD)/$(MLX_DIR)      CFLAGS="$(CFLAGS) -MMD"
+	$(MAKE)  -C $(ST_DIR)                   BUILD=$(BUILD)/$(ST_DIR)       CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(WINC1500_DIR)             BUILD=$(BUILD)/$(WINC1500_DIR) CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(OMV_DIR)                  BUILD=$(BUILD)/$(OMV_DIR)      CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(CUBEAI), 1)

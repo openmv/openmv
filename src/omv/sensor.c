@@ -16,6 +16,7 @@
 #include "ov9650.h"
 #include "ov2640.h"
 #include "ov7725.h"
+#include "ov7690.h"
 #include "ov5640.h"
 #include "mt9v034.h"
 #include "lepton.h"
@@ -318,10 +319,13 @@ int sensor_init()
     sensor.snapshot = sensor_snapshot;
 
     switch (sensor.slv_addr) {
-    case OV7725_SLV_ADDR:
+    case OV2640_SLV_ADDR:
         cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
         break;
-    case OV2640_SLV_ADDR:
+    case OV5640_SLV_ADDR:
+        cambus_readb2(sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+        break;
+    case OV7725_SLV_ADDR: // Same for OV7690.
         cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
         break;
     case MT9V034_SLV_ADDR:
@@ -330,23 +334,39 @@ int sensor_init()
     case LEPTON_SLV_ADDR:
         sensor.chip_id = LEPTON_ID;
         break;
-    case OV5640_SLV_ADDR:
-        cambus_readb2(sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
-        break;
     #if (OMV_SENSOR_HM01B0 == 1)
     case HM01B0_SLV_ADDR:
         cambus_readb2(sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
         break;
-    #endif //(OMV_SENSOR_HM01B0 == 1)
+    #endif // (OMV_SENSOR_HM01B0 == 1)
     default:
         return -3;
         break;
     }
 
-    switch (sensor.chip_id)
-    {
+    switch (sensor.chip_id) {
+    case OV2640_ID:
+        init_ret = ov2640_init(&sensor);
+        break;
+    case OV5640_ID:
+        if (extclk_config(OV5640_XCLK_FREQ) != 0) {
+            return -3;
+        }
+        init_ret = ov5640_init(&sensor);
+        break;
     case OV7725_ID:
         init_ret = ov7725_init(&sensor);
+        break;
+    #if (OMV_ENABLE_OV7690 == 1)
+    case OV7690_ID:
+        if (extclk_config(OV7690_XCLK_FREQ) != 0) {
+            return -3;
+        }
+        init_ret = ov7690_init(&sensor);
+        break;
+    #endif // (OMV_ENABLE_OV7690 == 1)
+    case OV9650_ID:
+        init_ret = ov9650_init(&sensor);
         break;
     case MT9V034_ID:
         if (extclk_config(MT9V034_XCLK_FREQ) != 0) {
@@ -360,23 +380,11 @@ int sensor_init()
         }
         init_ret = lepton_init(&sensor);
         break;
-    case OV5640_ID:
-        if (extclk_config(OV5640_XCLK_FREQ) != 0) {
-            return -3;
-        }
-        init_ret = ov5640_init(&sensor);
-        break;
-    case OV2640_ID:
-        init_ret = ov2640_init(&sensor);
-        break;
-    case OV9650_ID:
-        init_ret = ov9650_init(&sensor);
-        break;
     #if (OMV_SENSOR_HM01B0 == 1)
     case HM01B0_ID:
         init_ret = hm01b0_init(&sensor);
         break;
-    #endif //(OMV_SENSOR_HM01B0 == 1)
+    #endif // (OMV_SENSOR_HM01B0 == 1)
     default:
         return -3;
         break;
@@ -417,12 +425,16 @@ int sensor_init()
 int sensor_reset()
 {
     // Reset the sesnor state
-    sensor.sde         = 0;
-    sensor.pixformat   = 0;
-    sensor.framesize   = 0;
-    sensor.framerate   = 0;
-    sensor.gainceiling = 0;
-    sensor.vsync_gpio  = NULL;
+    sensor.sde           = 0;
+    sensor.pixformat     = 0;
+    sensor.framesize     = 0;
+    sensor.framerate     = 0;
+    sensor.gainceiling   = 0;
+    sensor.hmirror       = false;
+    sensor.vflip         = false;
+    sensor.transpose     = false;
+    sensor.auto_rotation = sensor.chip_id == OV7690_ID;
+    sensor.vsync_gpio    = NULL;
 
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
@@ -495,6 +507,10 @@ int sensor_set_pixformat(pixformat_t pixformat)
     if (sensor.pixformat == pixformat) {
         // No change
         return 0;
+    }
+
+    if ((sensor.transpose || sensor.auto_rotation) && (pixformat == PIXFORMAT_JPEG)) {
+        return -1;
     }
 
     if (sensor.set_pixformat == NULL
@@ -712,24 +728,78 @@ int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db)
 
 int sensor_set_hmirror(int enable)
 {
+    if (sensor.hmirror == ((bool) enable)) {
+        /* no change */
+        return 0;
+    }
+
     /* call the sensor specific function */
     if (sensor.set_hmirror == NULL
         || sensor.set_hmirror(&sensor, enable) != 0) {
         /* operation not supported */
         return -1;
     }
+    sensor.hmirror = enable;
+    systick_sleep(100); // wait for the camera to settle
     return 0;
+}
+
+bool sensor_get_hmirror()
+{
+    return sensor.hmirror;
 }
 
 int sensor_set_vflip(int enable)
 {
+    if (sensor.vflip == ((bool) enable)) {
+        /* no change */
+        return 0;
+    }
+
     /* call the sensor specific function */
     if (sensor.set_vflip == NULL
         || sensor.set_vflip(&sensor, enable) != 0) {
         /* operation not supported */
         return -1;
     }
+    sensor.vflip = enable;
+    systick_sleep(100); // wait for the camera to settle
     return 0;
+}
+
+bool sensor_get_vflip()
+{
+    return sensor.vflip;
+}
+
+int sensor_set_transpose(bool enable)
+{
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        return -1;
+    }
+
+    sensor.transpose = enable;
+    return 0;
+}
+
+bool sensor_get_transpose()
+{
+    return sensor.transpose;
+}
+
+int sensor_set_auto_rotation(bool enable)
+{
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        return -1;
+    }
+
+    sensor.auto_rotation = enable;
+    return 0;
+}
+
+bool sensor_get_auto_rotation()
+{
+    return sensor.auto_rotation;
 }
 
 int sensor_set_special_effect(sde_t sde)
@@ -846,42 +916,84 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 
     // Skip lines outside the window.
     if (line >= MAIN_FB()->y && line <= (MAIN_FB()->y + MAIN_FB()->h)) {
-        switch (sensor.pixformat) {
-            case PIXFORMAT_BAYER:
-                dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                src += MAIN_FB()->x;
-                for (int i = MAIN_FB()->w; i; i--) {
-                    *dst++ = *src++;
-                }
-                break;
-            case PIXFORMAT_GRAYSCALE:
-                dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                if (sensor.gs_bpp == 1) {
+        if (!sensor.transpose) {
+            switch (sensor.pixformat) {
+                case PIXFORMAT_BAYER:
+                    dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
                     src += MAIN_FB()->x;
-                    // 1BPP GRAYSCALE.
                     for (int i = MAIN_FB()->w; i; i--) {
                         *dst++ = *src++;
                     }
-                } else {
-                    src16 += MAIN_FB()->x;
-                    // Extract Y channel from YUV.
-                    for (int i = MAIN_FB()->w; i; i--) {
-                        *dst++ = *src16++;
+                    break;
+                case PIXFORMAT_GRAYSCALE:
+                    dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                    if (sensor.gs_bpp == 1) {
+                        src += MAIN_FB()->x;
+                        // 1BPP GRAYSCALE.
+                        for (int i = MAIN_FB()->w; i; i--) {
+                            *dst++ = *src++;
+                        }
+                    } else {
+                        src16 += MAIN_FB()->x;
+                        // Extract Y channel from YUV.
+                        for (int i = MAIN_FB()->w; i; i--) {
+                            *dst++ = *src16++;
+                        }
                     }
-                }
-                break;
-            case PIXFORMAT_YUV422:
-            case PIXFORMAT_RGB565:
-                dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                src16 += MAIN_FB()->x;
-                for (int i = MAIN_FB()->w; i; i--) {
-                    *dst16++ = *src16++;
-                }
-                break;
-            case PIXFORMAT_JPEG:
-                break;
-            default:
-                break;
+                    break;
+                case PIXFORMAT_YUV422:
+                case PIXFORMAT_RGB565:
+                    dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                    src16 += MAIN_FB()->x;
+                    for (int i = MAIN_FB()->w; i; i--) {
+                        *dst16++ = *src16++;
+                    }
+                    break;
+                case PIXFORMAT_JPEG:
+                default:
+                    break;
+            }
+        } else {
+            switch (sensor.pixformat) {
+                case PIXFORMAT_BAYER:
+                    dst += line - MAIN_FB()->y;
+                    src += MAIN_FB()->x;
+                    for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                        *dst = *src++;
+                        dst += h;
+                    }
+                    break;
+                case PIXFORMAT_GRAYSCALE:
+                    dst += line - MAIN_FB()->y;
+                    if (sensor.gs_bpp == 1) {
+                        src += MAIN_FB()->x;
+                        // 1BPP GRAYSCALE.
+                        for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                            *dst = *src++;
+                            dst += h;
+                        }
+                    } else {
+                        src16 += MAIN_FB()->x;
+                        // Extract Y channel from YUV.
+                        for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                            *dst = *src16++;
+                            dst += h;
+                        }
+                    }
+                    break;
+                case PIXFORMAT_YUV422:
+                case PIXFORMAT_RGB565:
+                    dst16 += line - MAIN_FB()->y;
+                    src16 += MAIN_FB()->x;
+                    for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                        *dst16 = *src16++;
+                        dst16 += h;
+                    }
+                    break;
+                case PIXFORMAT_JPEG:
+                default:
+                    break;
+            }
         }
     }
 
@@ -1039,6 +1151,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 break;
             default:
                 break;
+        }
+
+        // Fix resolution if transposed.
+        if (sensor->transpose) {
+            MAIN_FB()->w = MAIN_FB()->v; // v==h -> w
+            MAIN_FB()->h = MAIN_FB()->u; // u==w -> h
         }
 
         // Set the user image.

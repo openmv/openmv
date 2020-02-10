@@ -10,27 +10,28 @@
  */
 #ifndef __SENSOR_H__
 #define __SENSOR_H__
-#include <stdint.h>
 #include <stdarg.h>
 #include "imlib.h"
 
-#define OV7725_SLV_ADDR     (0x42)
 #define OV2640_SLV_ADDR     (0x60)
+#define OV5640_SLV_ADDR     (0x78)
+#define OV7725_SLV_ADDR     (0x42)
 #define MT9V034_SLV_ADDR    (0xB8)
 #define LEPTON_SLV_ADDR     (0x54)
-#define OV5640_SLV_ADDR     (0x78)
 #define HM01B0_SLV_ADDR     (0x24)
 
-// Chip ID registers.
-#define OV_CHIP_ID          (0x0A)
+// Chip ID Registers
 #define OV5640_CHIP_ID      (0x300A)
+#define OV_CHIP_ID          (0x0A)
 #define ON_CHIP_ID          (0x00)
 #define HIMAX_CHIP_ID       (0x0001)
 
-#define OV9650_ID           (0x96)
+// Chip ID Values
 #define OV2640_ID           (0x26)
-#define OV7725_ID           (0x77)
 #define OV5640_ID           (0x56)
+#define OV7690_ID           (0x76)
+#define OV7725_ID           (0x77)
+#define OV9650_ID           (0x96)
 #define MT9V034_ID          (0x13)
 #define LEPTON_ID           (0x54)
 #define HM01B0_ID           (0xB0)
@@ -170,6 +171,10 @@ typedef struct _sensor {
     framesize_t framesize;      // Frame size
     framerate_t framerate;      // Frame rate
     gainceiling_t gainceiling;  // AGC gainceiling
+    bool hmirror;               // Horizontal Mirror
+    bool vflip;                 // Vertical Flip
+    bool transpose;             // Transpose Image
+    bool auto_rotation;         // Rotate Image Automatically
 
     // Sensor function pointers
     int  (*reset)               (sensor_t *sensor);
@@ -278,8 +283,26 @@ int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db)
 // Enable/disable the hmirror mode.
 int sensor_set_hmirror(int enable);
 
+// Get hmirror status.
+bool sensor_get_hmirror();
+
 // Enable/disable the vflip mode.
 int sensor_set_vflip(int enable);
+
+// Get vflip status.
+bool sensor_get_vflip();
+
+// Enable/disable the transpose mode.
+int sensor_set_transpose(bool enable);
+
+// Get transpose mode state.
+bool sensor_get_transpose();
+
+// Enable/disable the auto rotation mode.
+int sensor_set_auto_rotation(bool enable);
+
+// Get transpose mode state.
+bool sensor_get_auto_rotation();
 
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);
