@@ -560,7 +560,7 @@ soft_reset:
     memset(&openmv_config, 0, sizeof(openmv_config));
     // Parse config, and init wifi if enabled.
     ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
-    #if defined(OMV_ENABLE_WIFIDBG)
+    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
     if (openmv_config.wifidbg == true &&
             wifidbg_init(&openmv_config.wifidbg_config) != 0) {
         openmv_config.wifidbg = false;
