@@ -446,7 +446,9 @@ int main(void)
     __enable_irq();
 
 soft_reset:
+    #if defined(MICROPY_HW_LED4)
     led_state(LED_IR, 0);
+    #endif
     led_state(LED_RED, 1);
     led_state(LED_GREEN, 1);
     led_state(LED_BLUE, 1);
@@ -475,7 +477,9 @@ soft_reset:
     pin_init0();
     extint_init0();
     timer_init0();
+    #if MICROPY_HW_ENABLE_CAN
     can_init0();
+    #endif
     i2c_init0();
     spi_init0();
     uart_init0();
