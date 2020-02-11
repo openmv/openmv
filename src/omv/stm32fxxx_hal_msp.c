@@ -216,6 +216,32 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
 
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 {
+    #if defined(IMU_SPI)
+    if (hspi->Instance == IMU_SPI) {
+        IMU_SPI_CLK_ENABLE();
+
+        GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.Pull      = GPIO_PULLUP;
+        GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+        GPIO_InitStructure.Alternate = IMU_SPI_AF;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_LOW;
+
+        GPIO_InitStructure.Pin       = IMU_SPI_SCLK_PIN;
+        HAL_GPIO_Init(IMU_SPI_SCLK_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Pin       = IMU_SPI_MISO_PIN;
+        HAL_GPIO_Init(IMU_SPI_MISO_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Pin       = IMU_SPI_MOSI_PIN;
+        HAL_GPIO_Init(IMU_SPI_MOSI_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Mode      = GPIO_MODE_OUTPUT_PP;
+
+        GPIO_InitStructure.Pin       = IMU_SPI_SSEL_PIN;
+        HAL_GPIO_Init(IMU_SPI_SSEL_PORT, &GPIO_InitStructure);
+    }
+    #endif
+
     #if defined(LEPTON_SPI)
     if (hspi->Instance == LEPTON_SPI) {
         LEPTON_SPI_CLK_ENABLE();

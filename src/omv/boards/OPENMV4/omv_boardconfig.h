@@ -49,6 +49,9 @@
 #define OMV_ENABLE_MT9V034      (1)
 #define OMV_ENABLE_LEPTON       (1)
 
+// Enable IMU sensor
+#define OMV_ENABLE_IMU          (1)
+
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (1)
 
@@ -240,5 +243,29 @@
 #define LEPTON_SPI_MISO_PORT        (GPIOB)
 #define LEPTON_SPI_MOSI_PORT        (GPIOB)
 #define LEPTON_SPI_SSEL_PORT        (GPIOA)
+
+// The IMU sensor is on the same SPI bus pins as the camera module interface
+// SPI bus. While the buses overlap both devices will never be in-use at once.
+
+#define IMU_SPI                     (SPI1)
+#define IMU_SPI_AF                  (GPIO_AF5_SPI1)
+// SPI1/2/3 clock source is PLL2 (160MHz/16 == 10MHz).
+#define IMU_SPI_PRESCALER           (SPI_BAUDRATEPRESCALER_16)
+
+#define IMU_SPI_RESET()             __HAL_RCC_SPI1_FORCE_RESET()
+#define IMU_SPI_RELEASE()           __HAL_RCC_SPI1_RELEASE_RESET()
+
+#define IMU_SPI_CLK_ENABLE()        __HAL_RCC_SPI1_CLK_ENABLE()
+#define IMU_SPI_CLK_DISABLE()       __HAL_RCC_SPI1_CLK_DISABLE()
+
+#define IMU_SPI_SCLK_PIN            (GPIO_PIN_3)
+#define IMU_SPI_MISO_PIN            (GPIO_PIN_4)
+#define IMU_SPI_MOSI_PIN            (GPIO_PIN_5)
+#define IMU_SPI_SSEL_PIN            (GPIO_PIN_15)
+
+#define IMU_SPI_SCLK_PORT           (GPIOB)
+#define IMU_SPI_MISO_PORT           (GPIOB)
+#define IMU_SPI_MOSI_PORT           (GPIOB)
+#define IMU_SPI_SSEL_PORT           (GPIOA)
 
 #endif //__OMV_BOARDCONFIG_H__
