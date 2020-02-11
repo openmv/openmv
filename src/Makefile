@@ -119,6 +119,9 @@ MP_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 ifeq ($(MICROPY_PY_WINC1500), 1)
 MP_CFLAGS += -DMICROPY_PY_WINC1500=1
 endif
+ifeq ($(MICROPY_PY_IMU), 1)
+MP_CFLAGS += -DMICROPY_PY_IMU=1
+endif
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
@@ -134,6 +137,10 @@ OMV_CFLAGS += -I$(TOP_DIR)/$(WINC1500_DIR)/include/
 UVC_CFLAGS = $(CFLAGS)
 UVC_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 UVC_CFLAGS += -I$(TOP_DIR)/$(UVC_DIR)/include/
+ifeq ($(MICROPY_PY_IMU), 1)
+# UVC firmware needs the IMU driver.
+UVC_CFLAGS += -DMICROPY_PY_IMU=1
+endif
 
 BOOTLDR_CFLAGS = $(CFLAGS)
 BOOTLDR_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
@@ -171,7 +178,9 @@ endif
 FIRM_OBJ += $(wildcard $(BUILD)/$(STHAL_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
+ifeq ($(MICROPY_PY_IMU), 1)
 FIRM_OBJ += $(wildcard $(BUILD)/$(ST_DIR)/src/*.o)
+endif
 ifeq ($(MICROPY_PY_WINC1500), 1)
 FIRM_OBJ += $(wildcard $(BUILD)/$(WINC1500_DIR)/src/*.o)
 endif
@@ -536,7 +545,9 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 
 UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
+ifeq ($(MICROPY_PY_IMU), 1)
 UVC_OBJ += $(wildcard $(BUILD)/$(ST_DIR)/src/*.o)
+endif
 
 ###################################################
 #Export Variables
@@ -572,7 +583,9 @@ FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(MICROPY_DIR)/ports/stm32  BUILD=$(BUILD)/$(MICROPY_DIR)  BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)"
 	$(MAKE)  -C $(LEPTON_DIR)               BUILD=$(BUILD)/$(LEPTON_DIR)   CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX_DIR)                  BUILD=$(BUILD)/$(MLX_DIR)      CFLAGS="$(CFLAGS) -MMD"
+ifeq ($(MICROPY_PY_IMU), 1)
 	$(MAKE)  -C $(ST_DIR)                   BUILD=$(BUILD)/$(ST_DIR)       CFLAGS="$(CFLAGS) -MMD"
+endif
 ifeq ($(MICROPY_PY_WINC1500), 1)
 	$(MAKE)  -C $(WINC1500_DIR)             BUILD=$(BUILD)/$(WINC1500_DIR) CFLAGS="$(CFLAGS) -MMD"
 endif
