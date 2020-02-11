@@ -410,7 +410,9 @@ int main(void)
     #endif
     #endif
     int sensor_init_ret = 0;
+    #if MICROPY_HW_ENABLE_SDCARD
     bool sdcard_mounted = false;
+    #endif
     bool first_soft_reset = true;
 
     // Uncomment to disable write buffer to get precise faults.
@@ -481,7 +483,9 @@ soft_reset:
     py_tv_init0();
     servo_init();
     usbdbg_init();
+    #if MICROPY_HW_ENABLE_SDCARD
     sdcard_init();
+    #endif
     rtc_init_start(false);
 
     pyb_usb_init0();
@@ -498,6 +502,7 @@ soft_reset:
     // Remove the BASEPRI masking (if any)
     irq_set_base_priority(0);
 
+    #if MICROPY_HW_ENABLE_SDCARD
     // Initialize storage
     if (sdcard_is_present()) {
         // Init the vfs object
@@ -514,8 +519,11 @@ soft_reset:
             pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
         }
     }
+    #endif
 
+    #if MICROPY_HW_ENABLE_SDCARD
     if (sdcard_mounted == false) {
+    #endif
         storage_init();
 
         // init the vfs object
@@ -536,7 +544,9 @@ soft_reset:
 
         // Set USB medium to flash
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_FLASH;
+    #if MICROPY_HW_ENABLE_SDCARD
     }
+    #endif
 
     // Mark FS as OpenMV disk.
     f_touch("/.openmv_disk");
