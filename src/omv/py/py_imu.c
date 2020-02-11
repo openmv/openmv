@@ -14,7 +14,7 @@
 #include "py_helper.h"
 #include "py_imu.h"
 
-#if defined(OMV_ENABLE_IMU)
+#if MICROPY_PY_IMU
 
 typedef union {
   int16_t i16bit[3];
@@ -203,11 +203,8 @@ STATIC mp_obj_t py_imu_read_reg(mp_obj_t addr)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imu_read_reg_obj, py_imu_read_reg);
 
-#endif
-
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_imu) },
-#if defined(OMV_ENABLE_IMU)
     { MP_ROM_QSTR(MP_QSTR_acceleration_mg),     MP_ROM_PTR(&py_imu_acceleration_mg_obj) },
     { MP_ROM_QSTR(MP_QSTR_angular_rate_mdps),   MP_ROM_PTR(&py_imu_angular_rate_mdps_obj) },
     { MP_ROM_QSTR(MP_QSTR_temperature_c),       MP_ROM_PTR(&py_imu_temperature_c_obj) },
@@ -216,16 +213,6 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_sleep),               MP_ROM_PTR(&py_imu_sleep_obj) },
     { MP_ROM_QSTR(MP_QSTR___write_reg),         MP_ROM_PTR(&py_imu_write_reg_obj) },
     { MP_ROM_QSTR(MP_QSTR___read_reg),          MP_ROM_PTR(&py_imu_read_reg_obj) },
-#else
-    { MP_ROM_QSTR(MP_QSTR_acceleration_mg),     MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_angular_rate_mdps),   MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_temperature_c),       MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_roll),                MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_pitch),               MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR_sleep),               MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR___write_reg),         MP_ROM_PTR(&py_func_unavailable_obj) },
-    { MP_ROM_QSTR(MP_QSTR___read_reg),          MP_ROM_PTR(&py_func_unavailable_obj) },
-#endif
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
@@ -237,7 +224,6 @@ const mp_obj_module_t imu_module = {
 
 void py_imu_init()
 {
-#if defined(OMV_ENABLE_IMU)
     HAL_SPI_Init(&SPIHandle);
 
     uint8_t whoamI = 0, rst = 1;
@@ -270,31 +256,23 @@ void py_imu_init()
 
     lsm6ds3tr_c_xl_full_scale_set(&dev_ctx, LSM6DS3TR_C_8g);
     lsm6ds3tr_c_gy_full_scale_set(&dev_ctx, LSM6DS3TR_C_2000dps);
-#endif
 }
 
 float py_imu_roll_rotation()
 {
-#if defined(OMV_ENABLE_IMU)
     if (test_not_ready()) {
         return 0; // output when the camera is mounted upright
     }
 
     return py_imu_get_roll();
-#else
-    return 0; // output when the camera is mounted upright
-#endif
 }
 
 float py_imu_pitch_rotation()
 {
-#if defined(OMV_ENABLE_IMU)
     if (test_not_ready()) {
         return 0; // output when the camera is mounted upright
     }
 
     return py_imu_get_pitch();
-#else
-    return 0; // output when the camera is mounted upright
-#endif
 }
+#endif //MICROPY_PY_IMU

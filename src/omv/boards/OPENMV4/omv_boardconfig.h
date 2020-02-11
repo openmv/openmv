@@ -49,9 +49,6 @@
 #define OMV_ENABLE_MT9V034      (1)
 #define OMV_ENABLE_LEPTON       (1)
 
-// Enable IMU sensor
-#define OMV_ENABLE_IMU          (1)
-
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (1)
 
