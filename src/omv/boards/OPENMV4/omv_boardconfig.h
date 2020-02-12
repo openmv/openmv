@@ -49,6 +49,9 @@
 #define OMV_ENABLE_MT9V034      (1)
 #define OMV_ENABLE_LEPTON       (1)
 
+// Enable OV7690
+#define OMV_ENABLE_OV7690       (1)
+
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (1)
 
