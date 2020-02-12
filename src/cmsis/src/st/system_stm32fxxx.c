@@ -265,7 +265,7 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.PLL3.PLL3FRACN = OMV_OSC_PLL3FRAC;
     #endif
 
-    #if defined(STM32H743xx) || defined(STM32H747xx)
+    #if defined(STM32H743xx)
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_FDCAN
                                               |RCC_PERIPHCLK_SPI3|RCC_PERIPHCLK_SPI2
                                               |RCC_PERIPHCLK_SDMMC|RCC_PERIPHCLK_I2C2
