@@ -417,12 +417,16 @@ int sensor_init()
 int sensor_reset()
 {
     // Reset the sesnor state
-    sensor.sde         = 0;
-    sensor.pixformat   = 0;
-    sensor.framesize   = 0;
-    sensor.framerate   = 0;
-    sensor.gainceiling = 0;
-    sensor.vsync_gpio  = NULL;
+    sensor.sde           = 0;
+    sensor.pixformat     = 0;
+    sensor.framesize     = 0;
+    sensor.framerate     = 0;
+    sensor.gainceiling   = 0;
+    sensor.hmirror       = false;
+    sensor.vflip         = false;
+    sensor.transpose     = false;
+    sensor.auto_rotation = false;
+    sensor.vsync_gpio    = NULL;
 
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
@@ -495,6 +499,10 @@ int sensor_set_pixformat(pixformat_t pixformat)
     if (sensor.pixformat == pixformat) {
         // No change
         return 0;
+    }
+
+    if ((sensor.transpose || sensor.auto_rotation) && (pixformat == PIXFORMAT_JPEG)) {
+        return -1;
     }
 
     if (sensor.set_pixformat == NULL
@@ -712,24 +720,78 @@ int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db)
 
 int sensor_set_hmirror(int enable)
 {
+    if (sensor.hmirror == ((bool) enable)) {
+        /* no change */
+        return 0;
+    }
+
     /* call the sensor specific function */
     if (sensor.set_hmirror == NULL
         || sensor.set_hmirror(&sensor, enable) != 0) {
         /* operation not supported */
         return -1;
     }
+    sensor.hmirror = enable;
+    systick_sleep(100); // wait for the camera to settle
     return 0;
+}
+
+bool sensor_get_hmirror()
+{
+    return sensor.hmirror;
 }
 
 int sensor_set_vflip(int enable)
 {
+    if (sensor.vflip == ((bool) enable)) {
+        /* no change */
+        return 0;
+    }
+
     /* call the sensor specific function */
     if (sensor.set_vflip == NULL
         || sensor.set_vflip(&sensor, enable) != 0) {
         /* operation not supported */
         return -1;
     }
+    sensor.vflip = enable;
+    systick_sleep(100); // wait for the camera to settle
     return 0;
+}
+
+bool sensor_get_vflip()
+{
+    return sensor.vflip;
+}
+
+int sensor_set_transpose(bool enable)
+{
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        return -1;
+    }
+
+    sensor.transpose = enable;
+    return 0;
+}
+
+bool sensor_get_transpose()
+{
+    return sensor.transpose;
+}
+
+int sensor_set_auto_rotation(bool enable)
+{
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        return -1;
+    }
+
+    sensor.auto_rotation = enable;
+    return 0;
+}
+
+bool sensor_get_auto_rotation()
+{
+    return sensor.auto_rotation;
 }
 
 int sensor_set_special_effect(sde_t sde)
@@ -846,42 +908,84 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 
     // Skip lines outside the window.
     if (line >= MAIN_FB()->y && line <= (MAIN_FB()->y + MAIN_FB()->h)) {
-        switch (sensor.pixformat) {
-            case PIXFORMAT_BAYER:
-                dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                src += MAIN_FB()->x;
-                for (int i = MAIN_FB()->w; i; i--) {
-                    *dst++ = *src++;
-                }
-                break;
-            case PIXFORMAT_GRAYSCALE:
-                dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                if (sensor.gs_bpp == 1) {
+        if (!sensor.transpose) {
+            switch (sensor.pixformat) {
+                case PIXFORMAT_BAYER:
+                    dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
                     src += MAIN_FB()->x;
-                    // 1BPP GRAYSCALE.
                     for (int i = MAIN_FB()->w; i; i--) {
                         *dst++ = *src++;
                     }
-                } else {
-                    src16 += MAIN_FB()->x;
-                    // Extract Y channel from YUV.
-                    for (int i = MAIN_FB()->w; i; i--) {
-                        *dst++ = *src16++;
+                    break;
+                case PIXFORMAT_GRAYSCALE:
+                    dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                    if (sensor.gs_bpp == 1) {
+                        src += MAIN_FB()->x;
+                        // 1BPP GRAYSCALE.
+                        for (int i = MAIN_FB()->w; i; i--) {
+                            *dst++ = *src++;
+                        }
+                    } else {
+                        src16 += MAIN_FB()->x;
+                        // Extract Y channel from YUV.
+                        for (int i = MAIN_FB()->w; i; i--) {
+                            *dst++ = *src16++;
+                        }
                     }
-                }
-                break;
-            case PIXFORMAT_YUV422:
-            case PIXFORMAT_RGB565:
-                dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                src16 += MAIN_FB()->x;
-                for (int i = MAIN_FB()->w; i; i--) {
-                    *dst16++ = *src16++;
-                }
-                break;
-            case PIXFORMAT_JPEG:
-                break;
-            default:
-                break;
+                    break;
+                case PIXFORMAT_YUV422:
+                case PIXFORMAT_RGB565:
+                    dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                    src16 += MAIN_FB()->x;
+                    for (int i = MAIN_FB()->w; i; i--) {
+                        *dst16++ = *src16++;
+                    }
+                    break;
+                case PIXFORMAT_JPEG:
+                default:
+                    break;
+            }
+        } else {
+            switch (sensor.pixformat) {
+                case PIXFORMAT_BAYER:
+                    dst += line - MAIN_FB()->y;
+                    src += MAIN_FB()->x;
+                    for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                        *dst = *src++;
+                        dst += h;
+                    }
+                    break;
+                case PIXFORMAT_GRAYSCALE:
+                    dst += line - MAIN_FB()->y;
+                    if (sensor.gs_bpp == 1) {
+                        src += MAIN_FB()->x;
+                        // 1BPP GRAYSCALE.
+                        for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                            *dst = *src++;
+                            dst += h;
+                        }
+                    } else {
+                        src16 += MAIN_FB()->x;
+                        // Extract Y channel from YUV.
+                        for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                            *dst = *src16++;
+                            dst += h;
+                        }
+                    }
+                    break;
+                case PIXFORMAT_YUV422:
+                case PIXFORMAT_RGB565:
+                    dst16 += line - MAIN_FB()->y;
+                    src16 += MAIN_FB()->x;
+                    for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                        *dst16 = *src16++;
+                        dst16 += h;
+                    }
+                    break;
+                case PIXFORMAT_JPEG:
+                default:
+                    break;
+            }
         }
     }
 
@@ -1039,6 +1143,12 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 break;
             default:
                 break;
+        }
+
+        // Fix resolution if transposed.
+        if (sensor->transpose) {
+            MAIN_FB()->w = MAIN_FB()->v; // v==h -> w
+            MAIN_FB()->h = MAIN_FB()->u; // u==w -> h
         }
 
         // Set the user image.
