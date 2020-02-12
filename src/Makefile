@@ -198,10 +198,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	usbdbg.o                                \
 	wifidbg.o                               \
 	cambus.o                                \
-	ov9650.o                                \
 	ov2640.o                                \
-	ov7725.o                                \
 	ov5640.o                                \
+	ov7690.o                                \
+	ov7725.o                                \
+	ov9650.o                                \
 	mt9v034.o                               \
 	lepton.o                                \
 	hm01b0.o                                \
@@ -517,10 +518,11 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	framebuffer.o                           \
 	array.o                                 \
 	cambus.o                                \
-	ov9650.o                                \
 	ov2640.o                                \
-	ov7725.o                                \
 	ov5640.o                                \
+	ov7690.o                                \
+	ov7725.o                                \
+	ov9650.o                                \
 	mt9v034.o                               \
 	lepton.o                                \
 	hm01b0.o                                \
