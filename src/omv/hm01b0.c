@@ -19,7 +19,7 @@
 #include "omv_boardconfig.h"
 #define HIMAX_BOOT_RETRY        (10)
 
-#if (OMV_SENSOR_HM01B0 == 1)
+#if (OMV_ENABLE_HM01B0 == 1)
 static const uint16_t default_regs[][2] = {
     {BLC_TGT,           0x08},          //  BLC target :8  at 8 bit mode
     {BLC2_TGT,          0x08},          //  BLI target :8  at 8 bit mode
@@ -221,4 +221,4 @@ int hm01b0_init(sensor_t *sensor)
 
     return 0;
 }
-#endif //(OMV_SENSOR_HM01B0 == 1)
+#endif //(OMV_ENABLE_HM01B0 == 1)

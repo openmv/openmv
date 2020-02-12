@@ -334,11 +334,11 @@ int sensor_init()
     case LEPTON_SLV_ADDR:
         sensor.chip_id = LEPTON_ID;
         break;
-    #if (OMV_SENSOR_HM01B0 == 1)
+    #if (OMV_ENABLE_HM01B0 == 1)
     case HM01B0_SLV_ADDR:
         cambus_readb2(sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
         break;
-    #endif //(OMV_SENSOR_HM01B0 == 1)
+    #endif //(OMV_ENABLE_HM01B0 == 1)
     default:
         return -3;
         break;
@@ -380,11 +380,11 @@ int sensor_init()
         }
         init_ret = lepton_init(&sensor);
         break;
-    #if (OMV_SENSOR_HM01B0 == 1)
+    #if (OMV_ENABLE_HM01B0 == 1)
     case HM01B0_ID:
         init_ret = hm01b0_init(&sensor);
         break;
-    #endif //(OMV_SENSOR_HM01B0 == 1)
+    #endif //(OMV_ENABLE_HM01B0 == 1)
     default:
         return -3;
         break;
