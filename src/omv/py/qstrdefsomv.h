@@ -137,6 +137,7 @@ Q(OV2640)
 Q(OV7725)
 Q(MT9V034)
 Q(LEPTON)
+Q(HM01B0)
 Q(value)
 Q(shutdown)
 
