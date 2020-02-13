@@ -433,7 +433,11 @@ int sensor_reset()
     sensor.hmirror       = false;
     sensor.vflip         = false;
     sensor.transpose     = false;
+    #if MICROPY_PY_IMU
+    sensor.auto_rotation = sensor.chip_id == OV7690_ID;
+    #else
     sensor.auto_rotation = false;
+    #endif // MICROPY_PY_IMU
     sensor.vsync_gpio    = NULL;
 
     // Reset default color palette.

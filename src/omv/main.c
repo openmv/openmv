@@ -70,6 +70,7 @@
 #include "py_lcd.h"
 #include "py_fir.h"
 #include "py_tv.h"
+#include "py_imu.h"
 
 #include "framebuffer.h"
 
@@ -495,6 +496,9 @@ soft_reset:
     // mounting the file-system to log errors (if any).
     if (first_soft_reset) {
         sensor_init_ret = sensor_init();
+        #if MICROPY_PY_IMU
+        if ((!sensor_init_ret) && (sensor_get_id() == OV7690_ID)) py_imu_init();
+        #endif // MICROPY_PY_IMU
     }
 
     mod_network_init();
