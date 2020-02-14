@@ -275,4 +275,4 @@ float py_imu_pitch_rotation()
 
     return py_imu_get_pitch();
 }
-#endif //MICROPY_PY_IMU
+#endif // MICROPY_PY_IMU

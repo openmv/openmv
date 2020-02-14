@@ -70,7 +70,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
             sensor_set_transpose(true);
         }
     }
-#endif //MICROPY_PY_IMU
+#endif // MICROPY_PY_IMU
 
     mp_obj_t image = py_image(0, 0, 0, 0);
 
