@@ -49,6 +49,7 @@ write_command(0x11) # Sleep Exit
 time.sleep(120)
 
 # Memory Data Access Control
+# Write 0xC8 for BGR mode.
 write_command(0x36, 0xC0)
 
 # Interface Pixel Format

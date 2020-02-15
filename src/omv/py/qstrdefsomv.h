@@ -83,6 +83,7 @@ Q(set_backlight)
 Q(get_backlight)
 Q(display)
 Q(clear)
+Q(bgr)
 
 // tv Module
 Q(tv)
