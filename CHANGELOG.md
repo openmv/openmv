@@ -1,4 +1,17 @@
 # Change Log
+## [3.6](https://github.com/openmv/openmv/releases/tag/v3.6) (2020-2-7)
+* Fix H7 DAC timed write bug.
+* Fix self-tests bug.
+* Fix H7 I2C timings.
+* Fix TIM4 reserved bug.
+* Update to MicroPython v1.12
+* Support for 32MBs QSPI flash.
+* Bootloader QSPI flash support.
+* OMV4+ UVC support.
+* OV5640 sensor driver.
+* Optimized LSD, AprilTags, QRCode and JPEG.
+* Updated py_tf tensorflow docs.
+
 ## [3.5.2](https://github.com/openmv/openmv/releases/tag/v3.5.2) (2019-12-17)
 * Fix H7 timer bug.
 * Update timer test scripts.

@@ -12,7 +12,7 @@
 #define __OMV_BOARDCONFIG_H__
 
 // Architecture info
-#define OMV_ARCH_STR            "OMV4R H7 32768 SDRAM" // 33 chars max
+#define OMV_ARCH_STR            "OMV4P H7 32768 SDRAM" // 33 chars max
 #define OMV_BOARD_TYPE          "H7"
 #define OMV_UNIQUE_ID_ADDR      0x1FF1E800
 
@@ -84,6 +84,8 @@
 #define OMV_FB_ALLOC_SIZE       (1M)        // minimum fb alloc size
 #define OMV_STACK_SIZE          (8K)
 #define OMV_HEAP_SIZE           (237K)
+#define OMV_SDRAM_SIZE          (32 * 1024 * 1024) // This needs to be here for UVC firmware.
+#define OMV_SDRAM_TEST          (0)
 
 #define OMV_LINE_BUF_SIZE       (11K)       // Image line buffer round(2592 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE        (12K)       // USB MSC bot data

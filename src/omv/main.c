@@ -70,6 +70,7 @@
 #include "py_lcd.h"
 #include "py_fir.h"
 #include "py_tv.h"
+#include "py_imu.h"
 
 #include "framebuffer.h"
 
@@ -213,9 +214,12 @@ void NORETURN __fatal_error(const char *msg) {
         const char *hdr = "FATAL ERROR:\n";
         f_write(&fp, hdr, strlen(hdr), &bytes);
         f_write(&fp, msg, strlen(msg), &bytes);
+        f_close(&fp);
+        storage_flush();
+        // Initialize the USB device if it's not already initialize to allow
+        // the host to mount the filesystem and access the error log.
+        pyb_usb_dev_init(pyb_usb_dev_detect(), USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
     }
-    f_close(&fp);
-    storage_flush();
 
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
@@ -407,7 +411,9 @@ int main(void)
     #endif
     #endif
     int sensor_init_ret = 0;
+    #if MICROPY_HW_ENABLE_SDCARD
     bool sdcard_mounted = false;
+    #endif
     bool first_soft_reset = true;
 
     // Uncomment to disable write buffer to get precise faults.
@@ -478,7 +484,9 @@ soft_reset:
     py_tv_init0();
     servo_init();
     usbdbg_init();
+    #if MICROPY_HW_ENABLE_SDCARD
     sdcard_init();
+    #endif
     rtc_init_start(false);
 
     pyb_usb_init0();
@@ -488,6 +496,9 @@ soft_reset:
     // mounting the file-system to log errors (if any).
     if (first_soft_reset) {
         sensor_init_ret = sensor_init();
+        #if MICROPY_PY_IMU
+        if ((!sensor_init_ret) && (sensor_get_id() == OV7690_ID)) py_imu_init();
+        #endif // MICROPY_PY_IMU
     }
 
     mod_network_init();
@@ -495,6 +506,7 @@ soft_reset:
     // Remove the BASEPRI masking (if any)
     irq_set_base_priority(0);
 
+    #if MICROPY_HW_ENABLE_SDCARD
     // Initialize storage
     if (sdcard_is_present()) {
         // Init the vfs object
@@ -511,8 +523,11 @@ soft_reset:
             pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_SDCARD;
         }
     }
+    #endif
 
+    #if MICROPY_HW_ENABLE_SDCARD
     if (sdcard_mounted == false) {
+    #endif
         storage_init();
 
         // init the vfs object
@@ -533,7 +548,9 @@ soft_reset:
 
         // Set USB medium to flash
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_FLASH;
+    #if MICROPY_HW_ENABLE_SDCARD
     }
+    #endif
 
     // Mark FS as OpenMV disk.
     f_touch("/.openmv_disk");
@@ -557,7 +574,7 @@ soft_reset:
     memset(&openmv_config, 0, sizeof(openmv_config));
     // Parse config, and init wifi if enabled.
     ini_parse(&vfs_fat->fatfs, "/openmv.config", ini_handler_callback, &openmv_config);
-    #if defined(OMV_ENABLE_WIFIDBG)
+    #if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
     if (openmv_config.wifidbg == true &&
             wifidbg_init(&openmv_config.wifidbg_config) != 0) {
         openmv_config.wifidbg = false;
@@ -568,9 +585,12 @@ soft_reset:
 
     // Run boot script(s)
     if (first_soft_reset) {
-        // Execute the boot.py script before initializing the USB dev
-        // to override the USB mode if required, otherwise VCP+MSC is used.
+        // Execute the boot.py script before initializing the USB dev to
+        // override the USB mode if required, otherwise VCP+MSC is used.
         exec_boot_script("/boot.py", false, false);
+        // Execute the selftests.py script before the filesystem is mounted
+        // to avoid corrupting the filesystem when selftests.py is removed.
+        exec_boot_script("/selftest.py", true, false);
     }
 
     // Init USB device to default setting if it was not already configured
@@ -610,9 +630,8 @@ soft_reset:
         timer_tim5_init(100);
     }
 
-    // Run boot script(s)
+    // Run main script if it exists.
     if (first_soft_reset) {
-        exec_boot_script("/selftest.py", true, false);
         exec_boot_script("/main.py", false, true);
     }
 

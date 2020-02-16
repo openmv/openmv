@@ -204,7 +204,9 @@ static mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
             systick_sleep(120);
 
             // Memory Data Access Control
-            lcd_write_command(0x36, 1, (uint8_t []) {0xC0});
+            uint8_t madctl = 0xC0;
+            uint8_t bgr = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bgr), 0);
+            lcd_write_command(0x36, 1, (uint8_t []) {madctl | (bgr<<3)});
 
             // Interface Pixel Format
             lcd_write_command(0x3A, 1, (uint8_t []) {0x05});

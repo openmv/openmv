@@ -33,7 +33,7 @@
 
 #include STM32_HAL_H
 
-#if defined(OMV_ENABLE_WIFIDBG)
+#if OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
 
 #ifndef MIN
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -247,4 +247,4 @@ void wifidbg_dispatch()
 }
 #else
 void wifidbg_dispatch(){};
-#endif // #defined(OMV_ENABLE_WIFIDBG)
+#endif // OMV_ENABLE_WIFIDBG && MICROPY_PY_WINC1500
