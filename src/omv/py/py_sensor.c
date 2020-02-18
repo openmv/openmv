@@ -213,7 +213,8 @@ static mp_obj_t py_sensor_get_framesize() {
     return mp_obj_new_int(sensor.framesize);
 }
 
-static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj) {
+static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj)
+{
     int x, y, w, h;
     int res_w = resolution[sensor.framesize][0];
     int res_h = resolution[sensor.framesize][1];
@@ -248,10 +249,18 @@ static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj) {
     }
 
     if (sensor_set_windowing(x, y, w, h) != 0) {
-        return mp_const_false;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to set windowing!"));
     }
 
-    return mp_const_true;
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_get_windowing()
+{
+    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(MAIN_FB()->x),
+                                              mp_obj_new_int(MAIN_FB()->y),
+                                              mp_obj_new_int(MAIN_FB()->u),
+                                              mp_obj_new_int(MAIN_FB()->v)});
 }
 
 static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling) {
@@ -648,6 +657,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_pixformat_obj,       py_sensor_ge
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_set_framesize);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framesize_obj,       py_sensor_get_framesize);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_windowing_obj,       py_sensor_set_windowing);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_windowing_obj,       py_sensor_get_windowing);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj,     py_sensor_set_gainceiling);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_contrast_obj,        py_sensor_set_contrast);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_brightness_obj,      py_sensor_set_brightness);
@@ -775,6 +785,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framesize),       (mp_obj_t)&py_sensor_set_framesize_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_framesize),       (mp_obj_t)&py_sensor_get_framesize_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_windowing),       (mp_obj_t)&py_sensor_set_windowing_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_windowing),       (mp_obj_t)&py_sensor_get_windowing_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_gainceiling),     (mp_obj_t)&py_sensor_set_gainceiling_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_contrast),        (mp_obj_t)&py_sensor_set_contrast_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_brightness),      (mp_obj_t)&py_sensor_set_brightness_obj },
