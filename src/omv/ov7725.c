@@ -275,11 +275,6 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     return ret;
 }
 
-static int set_framerate(sensor_t *sensor, framerate_t framerate)
-{
-    return 0;
-}
-
 static int set_contrast(sensor_t *sensor, int level)
 {
     level += (NUM_CONTRAST_LEVELS / 2);
@@ -589,7 +584,6 @@ int ov7725_init(sensor_t *sensor)
     sensor->write_reg           = write_reg;
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
-    sensor->set_framerate       = set_framerate;
     sensor->set_contrast        = set_contrast;
     sensor->set_brightness      = set_brightness;
     sensor->set_saturation      = set_saturation;

@@ -289,13 +289,6 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     return 0;
 }
 
-static int set_framerate(sensor_t *sensor, framerate_t framerate)
-{
-    /* Write framerate register */
-    cambus_writeb(sensor->slv_addr, REG_CLKRC, framerate);
-    return 0;
-}
-
 static int set_brightness(sensor_t *sensor, int level)
 {
     int i;
@@ -526,7 +519,6 @@ int ov9650_init(sensor_t *sensor)
     sensor->reset               = reset;
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
-    sensor->set_framerate       = set_framerate;
     sensor->set_brightness      = set_brightness;
     sensor->set_gainceiling     = set_gainceiling;
     sensor->set_auto_gain       = set_auto_gain;

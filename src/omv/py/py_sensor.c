@@ -16,7 +16,6 @@
 #include "xalloc.h"
 #include "py_assert.h"
 #include "py_image.h"
-#include "py_sensor.h"
 #include "py_imu.h"
 #include "omv_boardconfig.h"
 #include "py_helper.h"
@@ -198,35 +197,6 @@ static mp_obj_t py_sensor_get_pixformat() {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Pixel format not set yet!"));
     }
     return mp_obj_new_int(sensor.pixformat);
-}
-
-static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
-    framerate_t fr;
-    switch (mp_obj_get_int(framerate)) {
-        case 2:
-            fr = FRAMERATE_2FPS;
-            break;
-        case 8:
-            fr = FRAMERATE_8FPS;
-            break;
-        case 15:
-            fr = FRAMERATE_15FPS;
-            break;
-        case 30:
-            fr = FRAMERATE_30FPS;
-            break;
-        case 60:
-            fr = FRAMERATE_60FPS;
-            break;
-        default:
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid framerate"));
-            break;
-    }
-
-    if (sensor_set_framerate(fr) != 0) {
-        return mp_const_false;
-    }
-    return mp_const_true;
 }
 
 static mp_obj_t py_sensor_set_framesize(mp_obj_t framesize) {
@@ -661,11 +631,6 @@ static mp_obj_t py_sensor_read_reg(mp_obj_t addr) {
     return mp_obj_new_int(sensor_read_reg(mp_obj_get_int(addr)));
 }
 
-//static void py_sensor_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
-//    mp_printf(print, "<Sensor MID:0x%.2X%.2X PID:0x%.2X VER:0x%.2X>",
-//            sensor.id.MIDH, sensor.id.MIDL, sensor.id.PID, sensor.id.VER);
-//}
-
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_reset_obj,               py_sensor_reset);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_sleep_obj,               py_sensor_sleep);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_shutdown_obj,            py_sensor_shutdown);
@@ -680,7 +645,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_alloc_extra_fb_obj,      py_sensor_al
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_dealloc_extra_fb_obj,    py_sensor_dealloc_extra_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_set_pixformat);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_pixformat_obj,       py_sensor_get_pixformat);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,       py_sensor_set_framerate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_set_framesize);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framesize_obj,       py_sensor_get_framesize);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_windowing_obj,       py_sensor_set_windowing);
@@ -808,7 +772,6 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_dealloc_extra_fb),    (mp_obj_t)&py_sensor_dealloc_extra_fb_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_pixformat),       (mp_obj_t)&py_sensor_set_pixformat_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_pixformat),       (mp_obj_t)&py_sensor_get_pixformat_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_set_framerate),       (mp_obj_t)&py_sensor_set_framerate_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framesize),       (mp_obj_t)&py_sensor_set_framesize_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_framesize),       (mp_obj_t)&py_sensor_get_framesize_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_windowing),       (mp_obj_t)&py_sensor_set_windowing_obj },
