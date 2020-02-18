@@ -176,7 +176,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
     // py_tf_free_from_fb() must be called to free the model allocated on the frame buffer.
     // On error everything is cleaned because of fb_alloc_mark().
 
-    if ((!helper_mode) && alloc_mode) {
+    if ((!helper_mode) && (!alloc_mode)) {
         fb_alloc_free_till_mark();
     }
 
