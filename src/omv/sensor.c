@@ -428,7 +428,6 @@ int sensor_reset()
     sensor.sde           = 0;
     sensor.pixformat     = 0;
     sensor.framesize     = 0;
-    sensor.framerate     = 0;
     sensor.gainceiling   = 0;
     sensor.hmirror       = false;
     sensor.vflip         = false;
@@ -568,26 +567,6 @@ int sensor_set_framesize(framesize_t framesize)
     // Set MAIN FB backup width and height.
     MAIN_FB()->u = resolution[framesize][0];
     MAIN_FB()->v = resolution[framesize][1];
-    return 0;
-}
-
-int sensor_set_framerate(framerate_t framerate)
-{
-    if (sensor.framerate == framerate) {
-       /* no change */
-        return 0;
-    }
-
-    /* call the sensor specific function */
-    if (sensor.set_framerate == NULL
-        || sensor.set_framerate(&sensor, framerate) != 0) {
-        /* operation not supported */
-        return -1;
-    }
-
-    /* set the frame rate */
-    sensor.framerate = framerate;
-
     return 0;
 }
 

@@ -65,7 +65,6 @@
 #include "usbd_cdc_msc_hid.h"
 #include "usbd_cdc_interface.h"
 
-#include "py_sensor.h"
 #include "py_image.h"
 #include "py_lcd.h"
 #include "py_fir.h"
