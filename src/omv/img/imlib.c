@@ -819,13 +819,14 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
             memcpy(tmp, img->data, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
             memset(img->data, 0, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            for (int y = 0, yy = halfHeight; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                uint32_t *row_ptr2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
                 float zoomedY = newY * zoom;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0, xx = halfWidth; x < xx; x++) {
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
                     float zoomedX = newX * zoom;
@@ -835,10 +836,19 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
                     int sourceX = halfWidth + fast_floorf(theta * zoomedX);
                     int sourceY = halfHeight + fast_floorf(theta * zoomedY);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
-                        uint32_t *ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
-                        int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                    if ((0 <= sourceX) && (0 <= sourceY)) {
+                        uint32_t *ptr;
+                        int pixel;
+                        ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
                         IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, img->w-1-sourceX);
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, img->w-1-x, pixel);
+                        ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * (img->h-1-sourceY));
+                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, x, pixel);
+                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, img->w-1-sourceX);
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, img->w-1-x, pixel);
                     }
                 }
             }
@@ -852,13 +862,14 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
             memcpy(tmp, img->data, img->w * img->h * sizeof(uint8_t));
             memset(img->data, 0, img->w * img->h * sizeof(uint8_t));
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            for (int y = 0, yy = halfHeight; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                uint8_t *row_ptr2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, img->h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
                 float zoomedY = newY * zoom;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0, xx = halfWidth; x < xx; x++) {
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
                     float zoomedX = newX * zoom;
@@ -868,10 +879,18 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
                     int sourceX = halfWidth + fast_floorf(theta * zoomedX);
                     int sourceY = halfHeight + fast_floorf(theta * zoomedY);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
-                        uint8_t *ptr = tmp + (img->w * sourceY);
-                        int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX);
-                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
+                    if ((0 <= sourceX) && (0 <= sourceY)) {
+                        uint8_t *ptr, pixel;
+                        ptr = tmp + (img->w * sourceY); // top 2 pixels
+                        pixel = ptr[sourceX];
+                        row_ptr[x] = pixel;
+                        pixel = ptr[img->w - 1 - sourceX];
+                        row_ptr[img->w - 1 - x] = pixel;
+                        ptr = tmp + (img->w * (img->h - 1 - sourceY)); // bottom 2 pixels
+                        pixel = ptr[sourceX];
+                        row_ptr2[x] = pixel;
+                        pixel = ptr[img->w - 1 - sourceX];
+                        row_ptr2[img->w - 1 - x] = pixel;
                     }
                 }
             }
@@ -885,13 +904,14 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
             memcpy(tmp, img->data, img->w * img->h * sizeof(uint16_t));
             memset(img->data, 0, img->w * img->h * sizeof(uint16_t));
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            for (int y = 0, yy = halfHeight; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                uint16_t *row_ptr2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, img->h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
                 float zoomedY = newY * zoom;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0, xx = halfWidth; x < xx; x++) {
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
                     float zoomedX = newX * zoom;
@@ -901,10 +921,20 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
                     int sourceX = halfWidth + fast_floorf(theta * zoomedX);
                     int sourceY = halfHeight + fast_floorf(theta * zoomedY);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
-                        uint16_t *ptr = tmp + (img->w * sourceY);
-                        int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX);
-                        IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
+                    if ((0 <= sourceX) && (0 <= sourceY)) {
+                    // plot the 4 symmetrical pixels
+                        uint16_t *ptr;
+                        int pixel;
+                        ptr = tmp + (img->w * sourceY); // top 2 pixels
+                        pixel = ptr[sourceX];
+                        row_ptr[x] = pixel;
+                        pixel = ptr[img->w - 1 - sourceX];
+                        row_ptr[img->w - 1 - x] = pixel;
+                        ptr = tmp + (img->w * (img->h - 1 - sourceY)); // bottom 2 pixels
+                        pixel = ptr[sourceX];
+                        row_ptr2[x] = pixel;
+                        pixel = ptr[img->w - 1 - sourceX];
+                        row_ptr2[img->w - 1 - x] = pixel; 
                     }
                 }
             }

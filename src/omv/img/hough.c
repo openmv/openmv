@@ -463,6 +463,13 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 {
     uint16_t *theta_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h, FB_ALLOC_NO_HINT);
     uint16_t *magnitude_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h, FB_ALLOC_NO_HINT);
+    find_circles_list_lnk_data_t *big_list, *small_list;
+    int iBigHead, iBigTail, iSmallHead, iSmallTail, iBigSize, iSmallSize;
+    
+    iBigHead = iBigTail = iSmallHead = iSmallTail = 0;
+    iBigSize = iSmallSize = 1000; // start lists at a reasonable size
+    big_list = (find_circles_list_lnk_data_t *)xalloc(1000 * sizeof(find_circles_list_lnk_data_t));
+    small_list = (find_circles_list_lnk_data_t *)xalloc(1000 * sizeof(find_circles_list_lnk_data_t));
 
     switch (ptr->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -601,43 +608,43 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
                     row_ptr -= ptr->w;
 
-                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
                     x_acc += pixel * +1; // x[0,0] -> pixel * +1
                     y_acc += pixel * +1; // y[0,0] -> pixel * +1
 
-                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                                          // x[0,1] -> pixel * 0
                     y_acc += pixel * +2; // y[0,1] -> pixel * +2
 
-                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
                     x_acc += pixel * -1; // x[0,2] -> pixel * -1
                     y_acc += pixel * +1; // y[0,2] -> pixel * +1
 
                     row_ptr += ptr->w;
 
-                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
                     x_acc += pixel * +2; // x[1,0] -> pixel * +2
                                          // y[1,0] -> pixel * 0
 
-                    // pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    // pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                     // x[1,1] -> pixel * 0
                     // y[1,1] -> pixel * 0
 
-                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
                     x_acc += pixel * -2; // x[1,2] -> pixel * -2
                                          // y[1,2] -> pixel * 0
 
                     row_ptr += ptr->w;
 
-                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
                     x_acc += pixel * +1; // x[2,0] -> pixel * +1
                     y_acc += pixel * -1; // y[2,0] -> pixel * -1
 
-                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                                          // x[2,1] -> pixel * 0
                     y_acc += pixel * -2; // y[2,1] -> pixel * -2
 
-                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
                     x_acc += pixel * -1; // x[2,2] -> pixel * -1
                     y_acc += pixel * -1; // y[2,2] -> pixel * -1
 
@@ -683,6 +690,7 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
     for (int r = r_min, rr = r_max; r < rr; r += r_step) { // ignore r = 0/1
         int a_size, b_size, hough_divide = 1; // divides a and b accumulators
+        int hough_shift = 0;
         int w_size = roi->w - (2 * r);
         int h_size = roi->h - (2 * r);
 
@@ -691,10 +699,17 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
             b_size = 1 + ((h_size + hough_divide - 1) / hough_divide) + 1; // top & bottom padding
             if ((sizeof(uint32_t) * a_size * b_size) <= fb_avail()) break;
             hough_divide = hough_divide << 1; // powers of 2...
+            hough_shift++;
             if (hough_divide > 4) fb_alloc_fail(); // support 1, 2, 4
         }
 
         uint32_t *acc = fb_alloc0(sizeof(uint32_t) * a_size * b_size, FB_ALLOC_NO_HINT);
+        int16_t rcos[360], rsin[360];
+        for (int i=0; i<360; i++)
+        {
+            rcos[i] = (int16_t)roundf(r * cos_table[i]);
+            rsin[i] = (int16_t)roundf(r * sin_table[i]);
+        }
 
         for (int y = 0, yy = roi->h; y < yy; y++) {
             for (int x = 0, xx = roi->w; x < xx; x++) {
@@ -707,11 +722,11 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                 // Only graidents pointing inside of the circle sum up to produce a large magnitude.
 
                 for (;;) { // Hi to lo edge direction
-                    int a = fast_roundf(x + (r * cos_table[theta])) - r;
+                    int a = x + rcos[theta] - r;
                     if ((a < 0) || (w_size <= a)) break; // circle doesn't fit in the window
-                    int b = fast_roundf(y + (r * sin_table[theta])) - r;
+                    int b = y + rsin[theta] - r;
                     if ((b < 0) || (h_size <= b)) break; // circle doesn't fit in the window
-                    int acc_index = (((b / hough_divide) + 1) * a_size) + ((a / hough_divide) + 1); // add offset
+                    int acc_index = (((b >> hough_shift) + 1) * a_size) + ((a >> hough_shift) + 1); // add offset
 
                     int acc_value = acc[acc_index] += magnitude;
                     acc[acc_index] = acc_value;
@@ -719,11 +734,11 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                 }
 
                 for (;;) { // Lo to hi edge direction
-                    int a = fast_roundf(x + (r * cos_table[(theta + 180) % 360])) - r;
+                    int a = x - rcos[theta] - r;
                     if ((a < 0) || (w_size <= a)) break; // circle doesn't fit in the window
-                    int b = fast_roundf(y + (r * sin_table[(theta + 180) % 360])) - r;
+                    int b = y - rsin[theta] - r;
                     if ((b < 0) || (h_size <= b)) break; // circle doesn't fit in the window
-                    int acc_index = (((b / hough_divide) + 1) * a_size) + ((a / hough_divide) + 1); // add offset
+                    int acc_index = (((b >> hough_shift) + 1) * a_size) + ((a >> hough_shift) + 1); // add offset
 
                     int acc_value = acc[acc_index] += magnitude;
                     acc[acc_index] = acc_value;
@@ -736,23 +751,39 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
             uint32_t *row_ptr = acc + (a_size * y);
 
             for (int x = 1, xx = a_size - 1; x < xx; x++) {
-                if ((row_ptr[x] >= threshold)
-                &&  (row_ptr[x] >= row_ptr[x-a_size-1])
-                &&  (row_ptr[x] >= row_ptr[x-a_size])
-                &&  (row_ptr[x] >= row_ptr[x-a_size+1])
-                &&  (row_ptr[x] >= row_ptr[x-1])
-                &&  (row_ptr[x] >= row_ptr[x+1])
-                &&  (row_ptr[x] >= row_ptr[x+a_size-1])
-                &&  (row_ptr[x] >= row_ptr[x+a_size])
-                &&  (row_ptr[x] >= row_ptr[x+a_size+1])) {
+                find_circles_list_lnk_data_t *pFC;
+                uint32_t val = row_ptr[x];
 
-                    find_circles_list_lnk_data_t lnk_data;
-                    lnk_data.magnitude = row_ptr[x];
-                    lnk_data.p.x = ((x - 1) * hough_divide) + r + roi->x; // remove offset
-                    lnk_data.p.y = ((y - 1) * hough_divide) + r + roi->y; // remove offset
-                    lnk_data.r = r;
+                if ((val >= threshold)
+                &&  (val >= row_ptr[x-a_size-1])
+                &&  (val >= row_ptr[x-a_size])
+                &&  (val >= row_ptr[x-a_size+1])
+                &&  (val >= row_ptr[x-1])
+                &&  (val >= row_ptr[x+1])
+                &&  (val >= row_ptr[x+a_size-1])
+                &&  (val >= row_ptr[x+a_size])
+                &&  (val >= row_ptr[x+a_size+1])) {
 
-                    list_push_back(out, &lnk_data);
+//                    find_circles_list_lnk_data_t lnk_data;
+//                    lnk_data.magnitude = row_ptr[x];
+//                    lnk_data.p.x = ((x - 1) * hough_divide) + r + roi->x; // remove offset
+//                    lnk_data.p.y = ((y - 1) * hough_divide) + r + roi->y; // remove offset
+//                    lnk_data.r = r;
+
+//                    list_push_back(out, &lnk_data);
+                    pFC = &big_list[iBigHead];
+                    pFC->magnitude = row_ptr[x];
+                    pFC->p.x = ((x - 1) * hough_divide) + r + roi->x; // remove offset
+                    pFC->p.y = ((y - 1) * hough_divide) + r + roi->y; // remove offset
+                    pFC->r = r;
+                    iBigHead++;
+                    if (iBigHead >= iBigSize) // time to grow the list
+                    {
+                        iBigSize += 1000;
+                        big_list = xrealloc(big_list, iBigSize*sizeof(find_circles_list_lnk_data_t));
+                    }
+                    if (val > row_ptr[x+1])
+                       x++; // can skip the next pixel
                 }
             }
         }
@@ -766,16 +797,26 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
     for (;;) { // Merge overlapping.
         bool merge_occured = false;
 
-        list_t out_temp;
-        list_init(&out_temp, sizeof(find_circles_list_lnk_data_t));
+//        list_t out_temp;
+//        list_init(&out_temp, sizeof(find_circles_list_lnk_data_t));
+        iSmallHead = iSmallTail = 0; // re-init shorter output list
 
-        while (list_size(out)) {
+        while (iBigHead != iBigTail/*list_size(out)*/) {
             find_circles_list_lnk_data_t lnk_data;
-            list_pop_front(out, &lnk_data);
+            int bigcount;
+//            list_pop_front(out, &lnk_data);
+            lnk_data = big_list[iBigTail++];
+            if (iBigTail >= iBigSize) iBigTail = 0;
+            if (iBigHead >= iBigTail)
+                bigcount = iBigHead - iBigTail;
+            else
+                bigcount = iBigHead + (iBigSize - iBigTail);
 
-            for (size_t k = 0, l = list_size(out); k < l; k++) {
+            for (size_t k = 0, l = bigcount/*list_size(out)*/; k < l; k++) {
                 find_circles_list_lnk_data_t tmp_data;
-                list_pop_front(out, &tmp_data);
+//                list_pop_front(out, &tmp_data);
+                tmp_data = big_list[iBigTail++];
+                if (iBigTail >= iBigSize) iBigTail = 0;
 
                 bool x_diff_ok = abs(lnk_data.p.x - tmp_data.p.x) < x_margin;
                 bool y_diff_ok = abs(lnk_data.p.y - tmp_data.p.y) < y_margin;
@@ -789,18 +830,33 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                     lnk_data.magnitude = magnitude / 2;
                     merge_occured = true;
                 } else {
-                    list_push_back(out, &tmp_data);
+//                    list_push_back(out, &tmp_data);
+                    big_list[iBigHead++] = tmp_data;
+                    if (iBigHead >= iBigSize) iBigHead = 0;
                 }
             }
 
-            list_push_back(&out_temp, &lnk_data);
+//            list_push_back(&out_temp, &lnk_data);
+            small_list[iSmallHead++] = lnk_data;
+            if (iSmallHead >= iSmallSize)
+            {
+                iSmallSize += 1000;
+                small_list = xrealloc(small_list, iSmallSize * sizeof(find_circles_list_lnk_data_t));
+            }
         }
 
-        list_copy(out, &out_temp);
+//        list_copy(out, &out_temp);
+        memcpy(big_list, small_list, iSmallHead * sizeof(find_circles_list_lnk_data_t));
+        iBigHead = iSmallHead;
+        iBigTail = 0;
 
         if (!merge_occured) {
             break;
         }
     }
+    for (int i=0; i<iSmallHead; i++)
+        list_push_back(out, &small_list[i]);
+    xfree(big_list);
+    xfree(small_list);
 }
 #endif //IMLIB_ENABLE_FIND_CIRCLES
