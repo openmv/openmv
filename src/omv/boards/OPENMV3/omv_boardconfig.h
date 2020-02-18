@@ -53,6 +53,14 @@
 // FB Heap Block Size
 #define OMV_UMM_BLOCK_SIZE      16
 
+//PLL1 216MHz/48MHz
+#define OMV_OSC_PLL1M           (12)
+#define OMV_OSC_PLL1N           (432)
+#define OMV_OSC_PLL1P           (2)
+#define OMV_OSC_PLL1Q           (9)
+#define OMV_OSC_PLL1R           (2)
+#define OMV_FLASH_LATENCY       (FLASH_LATENCY_7)
+
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).

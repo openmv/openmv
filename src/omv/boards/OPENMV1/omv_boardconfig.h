@@ -27,6 +27,13 @@
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_2)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
+//PLL1 168MHz/48MHz
+#define OMV_OSC_PLL1M           (12)
+#define OMV_OSC_PLL1N           (336)
+#define OMV_OSC_PLL1P           (2)
+#define OMV_OSC_PLL1Q           (7)
+#define OMV_FLASH_LATENCY       (FLASH_LATENCY_5)
+
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 #define OMV_BOOT_ORIGIN     0x08000000
 #define OMV_BOOT_LENGTH     16K

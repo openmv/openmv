@@ -177,7 +177,6 @@ void SystemInit(void)
 
 void SystemClock_Config(void)
 {
-    uint32_t flash_latency;
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
     #if defined(MCU_SERIES_H7)
@@ -222,64 +221,51 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-
-    #if   defined (STM32F407xx) // 168MHz/48MHz
-    flash_latency = FLASH_LATENCY_5;
-    RCC_OscInitStruct.PLL.PLLM = 12;
-    RCC_OscInitStruct.PLL.PLLN = 336;
-    RCC_OscInitStruct.PLL.PLLQ = 7;
-    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-    #elif defined (STM32F427xx)// 192MHz/48MHz
-    flash_latency = FLASH_LATENCY_7;
-    RCC_OscInitStruct.PLL.PLLM = 12;
-    RCC_OscInitStruct.PLL.PLLN = 384;
-    RCC_OscInitStruct.PLL.PLLQ = 8;
-    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-    #elif defined (STM32F765xx)// 216MHz/48MHz
-    flash_latency = FLASH_LATENCY_7;
-    RCC_OscInitStruct.PLL.PLLM = 12;
-    RCC_OscInitStruct.PLL.PLLN = 432;
-    RCC_OscInitStruct.PLL.PLLQ = 9;
-    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-    RCC_OscInitStruct.PLL.PLLR = 2;
-    #elif defined (STM32H743xx)// 480MHz/48MHz
-    //PLL1 48MHz for USB, SDMMC and FDCAN
-    flash_latency = FLASH_LATENCY_2;
-    RCC_OscInitStruct.PLL.PLLM = 3;
-    RCC_OscInitStruct.PLL.PLLN = 240;
-    RCC_OscInitStruct.PLL.PLLP = 2;
-    RCC_OscInitStruct.PLL.PLLQ = 20;
-    RCC_OscInitStruct.PLL.PLLR = 2;
-    RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_2;
-    RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
-    RCC_OscInitStruct.PLL.PLLFRACN = 0;
+    RCC_OscInitStruct.PLL.PLLM = OMV_OSC_PLL1M;
+    RCC_OscInitStruct.PLL.PLLN = OMV_OSC_PLL1N;
+    RCC_OscInitStruct.PLL.PLLQ = OMV_OSC_PLL1Q;
+    RCC_OscInitStruct.PLL.PLLP = OMV_OSC_PLL1P;
+    #if defined(OMV_OSC_PLL1R)
+    RCC_OscInitStruct.PLL.PLLR = OMV_OSC_PLL1R;
     #endif
+    #if defined(OMV_OSC_PLL1VCI)
+    RCC_OscInitStruct.PLL.PLLRGE = OMV_OSC_PLL1VCI;
+    #endif
+    #if defined(OMV_OSC_PLL1VCO)
+    RCC_OscInitStruct.PLL.PLLVCOSEL = OMV_OSC_PLL1VCO;
+    #endif
+    #if defined(OMV_OSC_PLL1FRAC)
+    RCC_OscInitStruct.PLL.PLLFRACN = OMV_OSC_PLL1FRAC;
+    #endif
+
     if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_RCC_OscConfig");
     }
 
-    #if defined(STM32H743xx)
-    // PLL2 200MHz for FMC and QSPI.
-    PeriphClkInitStruct.PLL2.PLL2M = 3;
-    PeriphClkInitStruct.PLL2.PLL2N = 100;
-    PeriphClkInitStruct.PLL2.PLL2P = 2;
-    PeriphClkInitStruct.PLL2.PLL2Q = 2;
-    PeriphClkInitStruct.PLL2.PLL2R = 2;
-    PeriphClkInitStruct.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_2;
-    PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOWIDE;
-    PeriphClkInitStruct.PLL2.PLL2FRACN = 0;
+    #if defined(OMV_OSC_PLL2M)
+    PeriphClkInitStruct.PLL2.PLL2M = OMV_OSC_PLL2M;
+    PeriphClkInitStruct.PLL2.PLL2N = OMV_OSC_PLL2N;
+    PeriphClkInitStruct.PLL2.PLL2P = OMV_OSC_PLL2P;
+    PeriphClkInitStruct.PLL2.PLL2Q = OMV_OSC_PLL2Q;
+    PeriphClkInitStruct.PLL2.PLL2R = OMV_OSC_PLL2R;
+    PeriphClkInitStruct.PLL2.PLL2RGE = OMV_OSC_PLL2VCI;
+    PeriphClkInitStruct.PLL2.PLL2VCOSEL = OMV_OSC_PLL2VCO;
+    PeriphClkInitStruct.PLL2.PLL2FRACN = OMV_OSC_PLL2FRAC;
+    #endif
 
-    // PLL3 160MHz for ADC and SPI123
-    PeriphClkInitStruct.PLL3.PLL3M = 3;
-    PeriphClkInitStruct.PLL3.PLL3N = 80;
-    PeriphClkInitStruct.PLL3.PLL3P = 2;
-    PeriphClkInitStruct.PLL3.PLL3Q = 2;
-    PeriphClkInitStruct.PLL3.PLL3R = 2;
-    PeriphClkInitStruct.PLL3.PLL3RGE = RCC_PLL3VCIRANGE_2;
-    PeriphClkInitStruct.PLL3.PLL3VCOSEL = RCC_PLL3VCOWIDE;
-    PeriphClkInitStruct.PLL3.PLL3FRACN = 0;
+    #if defined(OMV_OSC_PLL3M)
+    PeriphClkInitStruct.PLL3.PLL3M = OMV_OSC_PLL3M;
+    PeriphClkInitStruct.PLL3.PLL3N = OMV_OSC_PLL3N;
+    PeriphClkInitStruct.PLL3.PLL3P = OMV_OSC_PLL3P;
+    PeriphClkInitStruct.PLL3.PLL3Q = OMV_OSC_PLL3Q;
+    PeriphClkInitStruct.PLL3.PLL3R = OMV_OSC_PLL3R;
+    PeriphClkInitStruct.PLL3.PLL3RGE = OMV_OSC_PLL3VCI;
+    PeriphClkInitStruct.PLL3.PLL3VCOSEL = OMV_OSC_PLL3VCO;
+    PeriphClkInitStruct.PLL3.PLL3FRACN = OMV_OSC_PLL3FRAC;
+    #endif
 
+    #if defined(STM32H743xx) || defined(STM32H747xx)
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_FDCAN
                                               |RCC_PERIPHCLK_SPI3|RCC_PERIPHCLK_SPI2
                                               |RCC_PERIPHCLK_SDMMC|RCC_PERIPHCLK_I2C2
@@ -327,7 +313,7 @@ void SystemClock_Config(void)
     RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
     #endif
 
-    if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, flash_latency) != HAL_OK) {
+    if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, OMV_FLASH_LATENCY) != HAL_OK) {
         // Initialization Error
         __fatal_error("HAL_RCC_ClockConfig");
     }
