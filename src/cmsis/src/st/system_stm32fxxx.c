@@ -213,9 +213,13 @@ void SystemClock_Config(void)
     #endif
 
     /* Enable HSE Oscillator and activate PLL with HSE as source */
+    #if defined(OMV_OSC_HSE_STATE)
     RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+    #endif
+    #if defined(OMV_OSC_HSI_STATE)
     RCC_OscInitStruct.HSIState = RCC_HSI_OFF;
-    #if defined(MCU_SERIES_H7)
+    #endif
+    #if defined(OMV_OSC_CSI_STATE)
     RCC_OscInitStruct.CSIState = RCC_CSI_OFF;
     #endif
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;

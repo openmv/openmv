@@ -35,6 +35,12 @@
 #define OMV_OSC_PLL1N           (336)
 #define OMV_OSC_PLL1P           (2)
 #define OMV_OSC_PLL1Q           (7)
+
+// HSE/HSI/CSI State
+#define OMV_OSC_HSE_STATE       (RCC_HSE_ON)
+#define OMV_OSC_HSI_STATE       (RCC_HSI_OFF)
+
+// Flash Latency
 #define OMV_FLASH_LATENCY       (FLASH_LATENCY_5)
 
 // Linker script constants (see the linker script template stm32fxxx.ld.S).

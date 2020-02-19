@@ -93,6 +93,12 @@
 #define OMV_OSC_PLL3VCO         (RCC_PLL3VCOWIDE)
 #define OMV_OSC_PLL3FRAC        (0)
 
+// HSE/HSI/CSI State
+#define OMV_OSC_HSE_STATE       (RCC_HSE_BYPASS)
+#define OMV_OSC_HSI_STATE       (RCC_HSI_OFF)
+#define OMV_OSC_CSI_STATE       (RCC_CSI_OFF)
+
+// Flash Latency
 #define OMV_FLASH_LATENCY       (FLASH_LATENCY_2)
 
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
