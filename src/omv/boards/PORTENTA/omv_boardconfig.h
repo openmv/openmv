@@ -150,14 +150,8 @@
 #define SCCB_SDA_PIN            (GPIO_PIN_7)
 #define SCCB_TIMING             (0x20D09DE7) // Frequency: 100KHz Rise Time: 100ns Fall Time: 20ns
 
-#define DCMI_RESET_PIN          (GPIO_PIN_10)
-#define DCMI_RESET_PORT         (GPIOA)
-
 #define DCMI_PWDN_PIN           (GPIO_PIN_14)
 #define DCMI_PWDN_PORT          (GPIOJ)
-
-#define DCMI_FSIN_PIN           (GPIO_PIN_5)
-#define DCMI_FSIN_PORT          (GPIOB)
 
 #define DCMI_D0_PIN             (GPIO_PIN_9)
 #define DCMI_D1_PIN             (GPIO_PIN_10)
@@ -185,14 +179,29 @@
 #define DCMI_VSYNC_PORT         (GPIOI)
 #define DCMI_PXCLK_PORT         (GPIOA)
 
+#if defined(DCMI_RESET_PIN)
 #define DCMI_RESET_LOW()        HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_RESET)
 #define DCMI_RESET_HIGH()       HAL_GPIO_WritePin(DCMI_RESET_PORT, DCMI_RESET_PIN, GPIO_PIN_SET)
+#else
+#define DCMI_RESET_LOW()
+#define DCMI_RESET_HIGH()
+#endif
 
+#if defined(DCMI_PWDN_PIN)
 #define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
 #define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
+#else
+#define DCMI_PWDN_LOW()
+#define DCMI_PWDN_HIGH()
+#endif
 
+#if defined(DCMI_FSIN_PIN)
 #define DCMI_FSIN_LOW()         HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_RESET)
 #define DCMI_FSIN_HIGH()        HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_SET)
+#else
+#define DCMI_FSIN_LOW()
+#define DCMI_FSIN_HIGH()
+#endif
 
 #define DCMI_VSYNC_IRQN         EXTI9_5_IRQn
 #define DCMI_VSYNC_IRQ_LINE     (7)
