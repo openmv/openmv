@@ -213,8 +213,9 @@
 #define I2C_SPIN_DELAY          32
 
 // Enable additional GPIO banks for DRAM...
-#define ENABLE_GPIO_BANK_F
-#define ENABLE_GPIO_BANK_G
-#define ENABLE_GPIO_BANK_H
-#define ENABLE_GPIO_BANK_I
+#define OMV_ENABLE_GPIO_BANK_F
+#define OMV_ENABLE_GPIO_BANK_G
+#define OMV_ENABLE_GPIO_BANK_H
+#define OMV_ENABLE_GPIO_BANK_I
+#define OMV_ENABLE_GPIO_BANK_J
 #endif //__OMV_BOARDCONFIG_H__

@@ -86,27 +86,26 @@ void HAL_MspInit(void)
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-    #ifdef ENABLE_GPIO_BANK_F
+    #ifdef OMV_ENABLE_GPIO_BANK_F
     __GPIOF_CLK_ENABLE();
     #endif
-    #ifdef ENABLE_GPIO_BANK_G
+    #ifdef OMV_ENABLE_GPIO_BANK_G
     __GPIOG_CLK_ENABLE();
     #endif
-    #ifdef ENABLE_GPIO_BANK_H
+    #ifdef OMV_ENABLE_GPIO_BANK_H
     __GPIOH_CLK_ENABLE();
     #endif
-    #ifdef ENABLE_GPIO_BANK_I
+    #ifdef OMV_ENABLE_GPIO_BANK_I
     __GPIOI_CLK_ENABLE();
     #endif
-
-    #if defined(STM32F769xx)
-    __GPIOF_CLK_ENABLE();
-    __GPIOG_CLK_ENABLE();
-    __GPIOH_CLK_ENABLE();
-    __GPIOI_CLK_ENABLE();
+    #ifdef OMV_ENABLE_GPIO_BANK_J
     __GPIOJ_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_K
     __GPIOK_CLK_ENABLE();
+    #endif
 
+    #if defined (OMV_HARDWARE_JPEG)
     /* Enable JPEG clock */
     __HAL_RCC_JPEG_CLK_ENABLE();
     #endif

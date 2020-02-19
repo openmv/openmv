@@ -346,9 +346,9 @@
 #define QSPIF_D3_GPIO_CLK_ENABLE()   __HAL_RCC_GPIOF_CLK_ENABLE()
 
 // Enable additional GPIO banks for DRAM...
-#define ENABLE_GPIO_BANK_F
-#define ENABLE_GPIO_BANK_G
-#define ENABLE_GPIO_BANK_H
-#define ENABLE_GPIO_BANK_I
+#define OMV_ENABLE_GPIO_BANK_F
+#define OMV_ENABLE_GPIO_BANK_G
+#define OMV_ENABLE_GPIO_BANK_H
+#define OMV_ENABLE_GPIO_BANK_I
 
 #endif //__OMV_BOARDCONFIG_H__
