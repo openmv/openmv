@@ -130,11 +130,15 @@ void HAL_MspInit(void)
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
 
+    #if defined(DCMI_RESET_PIN)
     GPIO_InitStructure.Pin = DCMI_RESET_PIN;
     HAL_GPIO_Init(DCMI_RESET_PORT, &GPIO_InitStructure);
+    #endif
 
+    #if defined(DCMI_PWDN_PIN)
     GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
     HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
+    #endif
 
     #if defined(DCMI_FSYNC_PIN)
     GPIO_InitStructure.Pin = DCMI_FSYNC_PIN;
