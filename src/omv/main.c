@@ -415,6 +415,10 @@ int main(void)
     #endif
     bool first_soft_reset = true;
 
+    #if defined(MICROPY_BOARD_EARLY_INIT)
+    MICROPY_BOARD_EARLY_INIT();
+    #endif
+
     // Uncomment to disable write buffer to get precise faults.
     // NOTE: Cache should be disabled on M7.
     //SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
@@ -425,10 +429,6 @@ int main(void)
     //  - Configure the Systick to generate an interrupt each 1 msec
     //  NOTE: The bootloader enables the CCM/DTCM memory.
     HAL_Init();
-
-    #if defined(MICROPY_BOARD_EARLY_INIT)
-    MICROPY_BOARD_EARLY_INIT();
-    #endif
 
     #if MICROPY_HW_SDRAM_SIZE
     sdram_ok = sdram_init();
