@@ -153,8 +153,8 @@
 #define DCMI_RESET_PIN          (GPIO_PIN_10)
 #define DCMI_RESET_PORT         (GPIOA)
 
-#define DCMI_PWDN_PIN           (GPIO_PIN_7)
-#define DCMI_PWDN_PORT          (GPIOD)
+#define DCMI_PWDN_PIN           (GPIO_PIN_14)
+#define DCMI_PWDN_PORT          (GPIOJ)
 
 #define DCMI_FSIN_PIN           (GPIO_PIN_5)
 #define DCMI_FSIN_PORT          (GPIOB)
