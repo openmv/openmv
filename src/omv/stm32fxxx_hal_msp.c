@@ -68,11 +68,15 @@ void HAL_MspInit(void)
     /* Enable I/D cache */
     #if defined(MCU_SERIES_F7) ||\
         defined(MCU_SERIES_H7)
-    // Invalidate CPU cache
+    /* Disable and Invalidate I-Cache */
+    SCB_DisableICache();
     SCB_InvalidateICache();
-    SCB_InvalidateDCache();
 
-    // Enable the CPU Cache
+    /* Disable, Clean and Invalidate D-Cache */
+    SCB_DisableDCache();
+    SCB_CleanInvalidateDCache();
+
+    // Enable the CPU Caches
     SCB_EnableICache();
     SCB_EnableDCache();
     #endif
