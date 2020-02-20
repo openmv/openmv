@@ -150,8 +150,8 @@
 #define SCCB_SDA_PIN            (GPIO_PIN_7)
 #define SCCB_TIMING             (0x20D09DE7) // Frequency: 100KHz Rise Time: 100ns Fall Time: 20ns
 
-#define DCMI_PWDN_PIN           (GPIO_PIN_14)
-#define DCMI_PWDN_PORT          (GPIOJ)
+#define DCMI_PWDN_PIN           (GPIO_PIN_4)
+#define DCMI_PWDN_PORT          (GPIOD)
 
 #define DCMI_D0_PIN             (GPIO_PIN_9)
 #define DCMI_D1_PIN             (GPIO_PIN_10)
