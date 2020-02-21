@@ -697,7 +697,8 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
         }
 
         uint32_t *acc = fb_alloc0(sizeof(uint32_t) * a_size * b_size, FB_ALLOC_NO_HINT);
-        int16_t rcos[360], rsin[360];
+        int16_t *rcos = fb_alloc(sizeof(int16_t)*360, FB_ALLOC_NO_HINT);
+        int16_t *rsin = fb_alloc(sizeof(int16_t)*360, FB_ALLOC_NO_HINT);
         for (int i=0; i<360; i++)
         {
             rcos[i] = (int16_t)roundf(r * cos_table[i]);
@@ -768,7 +769,8 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                 }
             }
         }
-
+        fb_free(); // rsin
+        fb_free(); // rcos
         fb_free(); // acc
     }
 
