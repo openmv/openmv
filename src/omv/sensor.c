@@ -1061,9 +1061,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         // Enable DMA IRQ
         HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
 
-        #if defined(DCMI_FSIN_PIN)
-        if (sensor->chip_id == MT9V034_ID) {
-            DCMI_FSIN_HIGH();
+        #if defined(DCMI_FSYNC_PIN)
+        if (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_FSYNC)) {
+            DCMI_FSYNC_HIGH();
         }
         #endif
 
@@ -1096,9 +1096,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             }
         }
 
-        #if defined(DCMI_FSIN_PIN)
-        if (sensor->chip_id == MT9V034_ID) {
-            DCMI_FSIN_LOW();
+        #if defined(DCMI_FSYNC_PIN)
+        if (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_FSYNC)) {
+            DCMI_FSYNC_LOW();
         }
         #endif
 
