@@ -153,6 +153,9 @@
 #define DCMI_PWDN_PIN           (GPIO_PIN_4)
 #define DCMI_PWDN_PORT          (GPIOD)
 
+#define DCMI_FSIN_PIN           (GPIO_PIN_13)
+#define DCMI_FSIN_PORT          (GPIOC)
+
 #define DCMI_D0_PIN             (GPIO_PIN_9)
 #define DCMI_D1_PIN             (GPIO_PIN_10)
 #define DCMI_D2_PIN             (GPIO_PIN_11)
