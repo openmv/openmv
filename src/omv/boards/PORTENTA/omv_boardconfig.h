@@ -73,6 +73,9 @@
 #define OMV_OSC_PLL1VCO         (RCC_PLL1VCOWIDE)
 #define OMV_OSC_PLL1FRAC        (0)
 
+// Core VBAT for selftests
+#define OMV_CORE_VBAT           "3.3"
+
 // PLL2 180MHz for FMC and QSPI.
 #define OMV_OSC_PLL2M           (3)
 #define OMV_OSC_PLL2N           (40)
