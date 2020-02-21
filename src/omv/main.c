@@ -123,7 +123,7 @@ static const char fresh_selftest_py[] =
 "    adc  = pyb.ADCAll(12)\n"
 "    # Test VBAT\n"
 "    vbat = adc.read_core_vbat()\n"
-"    vbat_diff = abs(vbat-3.3)\n"
+"    vbat_diff = abs(vbat-"OMV_CORE_VBAT")\n"
 "    if (vbat_diff > 0.15):\n"
 "        raise Exception('INTERNAL ADC TEST FAILED VBAT=%fv'%vbat)\n"
 "\n"
