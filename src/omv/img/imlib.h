@@ -1065,7 +1065,7 @@ typedef struct find_lines_list_lnk_data {
 
 typedef struct find_circles_list_lnk_data {
     point_t p;
-    uint32_t r, magnitude;
+    uint16_t r, magnitude;
 } find_circles_list_lnk_data_t;
 
 typedef struct find_rects_list_lnk_data {
