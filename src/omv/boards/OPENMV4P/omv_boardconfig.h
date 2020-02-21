@@ -67,6 +67,9 @@
 // FB Heap Block Size
 #define OMV_UMM_BLOCK_SIZE      256
 
+// Core VBAT for selftests
+#define OMV_CORE_VBAT           "3.3"
+
 //PLL1 48MHz for USB, SDMMC and FDCAN
 #define OMV_OSC_PLL1M           (3)
 #define OMV_OSC_PLL1N           (240)
