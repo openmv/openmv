@@ -137,9 +137,9 @@ void HAL_MspInit(void)
     GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
     HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
 
-    #if defined(DCMI_FSIN_PIN)
-    GPIO_InitStructure.Pin = DCMI_FSIN_PIN;
-    HAL_GPIO_Init(DCMI_FSIN_PORT, &GPIO_InitStructure);
+    #if defined(DCMI_FSYNC_PIN)
+    GPIO_InitStructure.Pin = DCMI_FSYNC_PIN;
+    HAL_GPIO_Init(DCMI_FSYNC_PORT, &GPIO_InitStructure);
     #endif
 }
 

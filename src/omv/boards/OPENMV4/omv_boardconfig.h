@@ -163,8 +163,8 @@
 #define DCMI_PWDN_PIN           (GPIO_PIN_7)
 #define DCMI_PWDN_PORT          (GPIOD)
 
-#define DCMI_FSIN_PIN           (GPIO_PIN_5)
-#define DCMI_FSIN_PORT          (GPIOB)
+#define DCMI_FSYNC_PIN          (GPIO_PIN_5)
+#define DCMI_FSYNC_PORT         (GPIOB)
 
 #define DCMI_D0_PIN             (GPIO_PIN_6)
 #define DCMI_D1_PIN             (GPIO_PIN_7)
@@ -198,8 +198,8 @@
 #define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
 #define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
 
-#define DCMI_FSIN_LOW()         HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_RESET)
-#define DCMI_FSIN_HIGH()        HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_SET)
+#define DCMI_FSYNC_LOW()        HAL_GPIO_WritePin(DCMI_FSYNC_PORT, DCMI_FSYNC_PIN, GPIO_PIN_RESET)
+#define DCMI_FSYNC_HIGH()       HAL_GPIO_WritePin(DCMI_FSYNC_PORT, DCMI_FSYNC_PIN, GPIO_PIN_SET)
 
 #define DCMI_VSYNC_IRQN         EXTI9_5_IRQn
 #define DCMI_VSYNC_IRQ_LINE     (7)
