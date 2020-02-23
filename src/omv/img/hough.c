@@ -601,43 +601,43 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
                     row_ptr -= ptr->w;
 
-                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
                     x_acc += pixel * +1; // x[0,0] -> pixel * +1
                     y_acc += pixel * +1; // y[0,0] -> pixel * +1
 
-                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                                          // x[0,1] -> pixel * 0
                     y_acc += pixel * +2; // y[0,1] -> pixel * +2
 
-                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
                     x_acc += pixel * -1; // x[0,2] -> pixel * -1
                     y_acc += pixel * +1; // y[0,2] -> pixel * +1
 
                     row_ptr += ptr->w;
 
-                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
                     x_acc += pixel * +2; // x[1,0] -> pixel * +2
                                          // y[1,0] -> pixel * 0
 
-                    // pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    // pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                     // x[1,1] -> pixel * 0
                     // y[1,1] -> pixel * 0
 
-                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
                     x_acc += pixel * -2; // x[1,2] -> pixel * -2
                                          // y[1,2] -> pixel * 0
 
                     row_ptr += ptr->w;
 
-                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x - 1));
                     x_acc += pixel * +1; // x[2,0] -> pixel * +1
                     y_acc += pixel * -1; // y[2,0] -> pixel * -1
 
-                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                                          // x[2,1] -> pixel * 0
                     y_acc += pixel * -2; // y[2,1] -> pixel * -2
 
-                    pixel = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
+                    pixel = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x + 1));
                     x_acc += pixel * -1; // x[2,2] -> pixel * -1
                     y_acc += pixel * -1; // y[2,2] -> pixel * -1
 
@@ -714,7 +714,6 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
                 // We have to do the below step twice because the gradient may be pointing inside or outside the circle.
                 // Only graidents pointing inside of the circle sum up to produce a large magnitude.
-
                 for (;;) { // Hi to lo edge direction
                     int a = x + rcos[theta] - r;
                     if ((a < 0) || (w_size <= a)) break; // circle doesn't fit in the window
@@ -743,10 +742,9 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
         for (int y = 1, yy = b_size - 1; y < yy; y++) {
             uint32_t *row_ptr = acc + (a_size * y);
-
+            uint32_t val;
             for (int x = 1, xx = a_size - 1; x < xx; x++) {
-                uint32_t val = row_ptr[x];
-
+                val = row_ptr[x];
                 if ((val >= threshold)
                 &&  (val >= row_ptr[x-a_size-1])
                 &&  (val >= row_ptr[x-a_size])
@@ -759,8 +757,8 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
                     find_circles_list_lnk_data_t lnk_data;
                     lnk_data.magnitude = val;
-                    lnk_data.p.x = ((x - 1) * hough_divide) + r + roi->x; // remove offset
-                    lnk_data.p.y = ((y - 1) * hough_divide) + r + roi->y; // remove offset
+                    lnk_data.p.x = ((x - 1) << hough_shift) + r + roi->x; // remove offset
+                    lnk_data.p.y = ((y - 1) << hough_shift) + r + roi->y; // remove offset
                     lnk_data.r = r;
 
                     list_push_back(out, &lnk_data);
@@ -769,6 +767,7 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                 }
             }
         }
+
         fb_free(); // rsin
         fb_free(); // rcos
         fb_free(); // acc
