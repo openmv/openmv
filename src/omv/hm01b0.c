@@ -174,10 +174,8 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret=0;
-    uint16_t w = resolution[framesize][0];
-    uint16_t h = resolution[framesize][1];
 
-    if ((w != 320) || (h != 240)) {
+    if (framesize != FRAMESIZE_QVGA) {
         ret = -1;
     }
 
@@ -213,10 +211,10 @@ int hm01b0_init(sensor_t *sensor)
     sensor->set_vflip           = set_vflip;
 
     // Set sensor flags
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 1);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 0);
-    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_HSYNC, 0);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
 
     return 0;
