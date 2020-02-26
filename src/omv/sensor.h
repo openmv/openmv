@@ -18,7 +18,7 @@
 #define OV7725_SLV_ADDR     (0x42)
 #define MT9V034_SLV_ADDR    (0xB8)
 #define LEPTON_SLV_ADDR     (0x54)
-#define HM01B0_SLV_ADDR     (0x24)
+#define HM01B0_SLV_ADDR     (0x48)
 
 // Chip ID Registers
 #define OV5640_CHIP_ID      (0x300A)

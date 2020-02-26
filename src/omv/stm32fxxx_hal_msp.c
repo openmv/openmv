@@ -68,11 +68,15 @@ void HAL_MspInit(void)
     /* Enable I/D cache */
     #if defined(MCU_SERIES_F7) ||\
         defined(MCU_SERIES_H7)
-    // Invalidate CPU cache
+    /* Disable and Invalidate I-Cache */
+    SCB_DisableICache();
     SCB_InvalidateICache();
-    SCB_InvalidateDCache();
 
-    // Enable the CPU Cache
+    /* Disable, Clean and Invalidate D-Cache */
+    SCB_DisableDCache();
+    SCB_CleanInvalidateDCache();
+
+    // Enable the CPU Caches
     SCB_EnableICache();
     SCB_EnableDCache();
     #endif
@@ -86,27 +90,26 @@ void HAL_MspInit(void)
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-    #ifdef ENABLE_GPIO_BANK_F
+    #ifdef OMV_ENABLE_GPIO_BANK_F
     __GPIOF_CLK_ENABLE();
     #endif
-    #ifdef ENABLE_GPIO_BANK_G
+    #ifdef OMV_ENABLE_GPIO_BANK_G
     __GPIOG_CLK_ENABLE();
     #endif
-    #ifdef ENABLE_GPIO_BANK_H
+    #ifdef OMV_ENABLE_GPIO_BANK_H
     __GPIOH_CLK_ENABLE();
     #endif
-    #ifdef ENABLE_GPIO_BANK_I
+    #ifdef OMV_ENABLE_GPIO_BANK_I
     __GPIOI_CLK_ENABLE();
     #endif
-
-    #if defined(STM32F769xx)
-    __GPIOF_CLK_ENABLE();
-    __GPIOG_CLK_ENABLE();
-    __GPIOH_CLK_ENABLE();
-    __GPIOI_CLK_ENABLE();
+    #ifdef OMV_ENABLE_GPIO_BANK_J
     __GPIOJ_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_K
     __GPIOK_CLK_ENABLE();
+    #endif
 
+    #if defined (OMV_HARDWARE_JPEG)
     /* Enable JPEG clock */
     __HAL_RCC_JPEG_CLK_ENABLE();
     #endif
@@ -131,11 +134,15 @@ void HAL_MspInit(void)
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
 
+    #if defined(DCMI_RESET_PIN)
     GPIO_InitStructure.Pin = DCMI_RESET_PIN;
     HAL_GPIO_Init(DCMI_RESET_PORT, &GPIO_InitStructure);
+    #endif
 
+    #if defined(DCMI_PWDN_PIN)
     GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
     HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
+    #endif
 
     #if defined(DCMI_FSYNC_PIN)
     GPIO_InitStructure.Pin = DCMI_FSYNC_PIN;

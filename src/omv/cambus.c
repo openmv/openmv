@@ -45,7 +45,7 @@ int cambus_init()
 
 int cambus_scan()
 {
-    for (uint8_t addr=0x08; addr<=0x77; addr++) {
+    for (uint8_t addr=0x09; addr<=0x77; addr++) {
         __disable_irq();
         if (HAL_I2C_IsDeviceReady(&I2CHandle, addr << 1, 10, I2C_TIMEOUT) == HAL_OK) {
             __enable_irq();
