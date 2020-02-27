@@ -17,16 +17,16 @@
 
 static void delay(void)
 {
-    for(volatile int i=0; i<I2C_SPIN_DELAY; i++);
+    for(volatile int i=0; i<SOFT_I2C_SPIN_DELAY; i++);
 }
 
 static void i2c_start(void)
 {
     /* The start of data transmission occurs when
        SIO_D is driven low while SIO_C is high */
-    I2C_SIOD_L();
+    SOFT_I2C_SIOD_L();
     delay();
-    I2C_SIOC_L();
+    SOFT_I2C_SIOC_L();
     delay();
 }
 
@@ -34,9 +34,9 @@ static void i2c_stop(void)
 {
     /* The stop of data transmission occurs when
        SIO_D is driven high while SIO_C is high */
-    I2C_SIOC_H();
+    SOFT_I2C_SIOC_H();
     delay();
-    I2C_SIOD_H();
+    SOFT_I2C_SIOD_H();
     delay();
 }
 
@@ -44,29 +44,29 @@ static uint8_t i2c_read_byte(char ack)
 {
     uint8_t data = 0;
 
-    I2C_SIOD_H();
+    SOFT_I2C_SIOD_H();
     delay();
 
     for(char i=0; i<8; i++) {
-        I2C_SIOC_H();
+        SOFT_I2C_SIOC_H();
         delay();
-        data += data + I2C_SIOD_READ();
+        data += data + SOFT_I2C_SIOD_READ();
         delay();
-        I2C_SIOC_L();
+        SOFT_I2C_SIOC_L();
         delay();
     }
 
     /* Write ACK */
-    I2C_SIOD_WRITE(ack);
+    SOFT_I2C_SIOD_WRITE(ack);
     delay();
 
-    I2C_SIOC_H();
+    SOFT_I2C_SIOC_H();
     delay();
 
-    I2C_SIOC_L();
+    SOFT_I2C_SIOC_L();
     delay();
 
-    I2C_SIOD_L();
+    SOFT_I2C_SIOD_L();
     delay();
     return data;
 }
@@ -76,28 +76,28 @@ static char i2c_write_byte(uint8_t data)
     char i;
 
     for(i=0; i<8; i++) {
-        I2C_SIOD_WRITE((data >> (7 - i)) & 1);
+        SOFT_I2C_SIOD_WRITE((data >> (7 - i)) & 1);
         delay();
-        I2C_SIOC_H();
+        SOFT_I2C_SIOC_H();
         delay();
-        I2C_SIOC_L();
+        SOFT_I2C_SIOC_L();
         delay();
     }
 
-    I2C_SIOD_H();
+    SOFT_I2C_SIOD_H();
     delay();
 
-    I2C_SIOC_H();
+    SOFT_I2C_SIOC_H();
     delay();
 
     /* Read ACK */
-    i = I2C_SIOD_READ();
+    i = SOFT_I2C_SIOD_READ();
     delay();
 
-    I2C_SIOC_L();
+    SOFT_I2C_SIOC_L();
     delay();
 
-    I2C_SIOD_L();
+    SOFT_I2C_SIOD_L();
     delay();
     return i;
 }
@@ -114,9 +114,9 @@ int soft_i2c_read_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
     if (stop) {
         i2c_stop();
     } else {
-        I2C_SIOD_H();
+        SOFT_I2C_SIOD_H();
         delay();
-        I2C_SIOC_H();
+        SOFT_I2C_SIOC_H();
         delay();
     }
     MICROPY_END_ATOMIC_SECTION(atomic_state);
@@ -135,9 +135,9 @@ int soft_i2c_write_bytes(uint8_t slv_addr, uint8_t *buf, int len, bool stop)
     if (stop) {
         i2c_stop();
     } else {
-        I2C_SIOD_H();
+        SOFT_I2C_SIOD_H();
         delay();
-        I2C_SIOC_H();
+        SOFT_I2C_SIOC_H();
         delay();
     }
     MICROPY_END_ATOMIC_SECTION(atomic_state);
@@ -151,13 +151,13 @@ void soft_i2c_init()
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_OD;
 
-    GPIO_InitStructure.Pin = I2C_SIOC_PIN;
-    I2C_SIOC_H(); // Set first to prevent glitches.
-    HAL_GPIO_Init(I2C_PORT, &GPIO_InitStructure);
+    GPIO_InitStructure.Pin = SOFT_I2C_SIOC_PIN;
+    SOFT_I2C_SIOC_H(); // Set first to prevent glitches.
+    HAL_GPIO_Init(SOFT_I2C_PORT, &GPIO_InitStructure);
 
-    GPIO_InitStructure.Pin = I2C_SIOD_PIN;
-    I2C_SIOD_H(); // Set first to prevent glitches.
-    HAL_GPIO_Init(I2C_PORT, &GPIO_InitStructure);
+    GPIO_InitStructure.Pin = SOFT_I2C_SIOD_PIN;
+    SOFT_I2C_SIOD_H(); // Set first to prevent glitches.
+    HAL_GPIO_Init(SOFT_I2C_PORT, &GPIO_InitStructure);
 
     for(volatile int i=0; i<1000; i++);
 
@@ -169,6 +169,6 @@ void soft_i2c_init()
 void soft_i2c_deinit()
 {
     for(volatile int i=0; i<1000; i++);
-    HAL_GPIO_DeInit(I2C_PORT, I2C_SIOC_PIN);
-    HAL_GPIO_DeInit(I2C_PORT, I2C_SIOD_PIN);
+    HAL_GPIO_DeInit(SOFT_I2C_PORT, SOFT_I2C_SIOC_PIN);
+    HAL_GPIO_DeInit(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN);
 }
