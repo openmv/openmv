@@ -359,7 +359,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             alpha_ij = xalloc(sizeof(paramsMLX90640));
 
-            MLX90640_I2CFreqSet(I2C_SPIN_DELAY);
+            MLX90640_I2CFreqSet(SOFT_I2C_SPIN_DELAY);
             MLX90640_I2CInit();
 
             int error = 0;
