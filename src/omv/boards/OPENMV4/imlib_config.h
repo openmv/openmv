@@ -77,6 +77,9 @@
 // Enable invariant table
 //#define IMLIB_ENABLE_INVARIANT_TABLE
 
+// Enable lens_corr()
+#define IMLIB_ENABLE_LENS_CORR
+
 // Enable rotation_corr()
 #define IMLIB_ENABLE_ROTATION_CORR
 
