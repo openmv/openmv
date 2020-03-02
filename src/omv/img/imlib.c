@@ -803,25 +803,31 @@ void imlib_zero(image_t *img, image_t *mask, bool invert)
     }
 }
 
+#ifdef IMLIB_ENABLE_LENS_CORR
 // A simple algorithm for correcting lens distortion.
 // See http://www.tannerhelland.com/4743/simple-algorithm-correcting-lens-distortion/
 void imlib_lens_corr(image_t *img, float strength, float zoom)
 {
+    int w = img->w;
+    int h = img->h;
+    int halfWidth = w / 2;
+    int halfHeight = h / 2;
+    float lens_corr_radius = strength / fast_sqrtf((w * w) + (h * h));
     zoom = 1 / zoom;
-    int halfWidth = img->w / 2;
-    int halfHeight = img->h / 2;
-    float lens_corr_radius = strength / fast_sqrtf((img->w * img->w) + (img->h * img->h));
+
+    // Create a tmp copy of the image to pull pixels from.
+    size_t size = image_size(img);
+    void *data = fb_alloc(size, FB_ALLOC_NO_HINT);
+    memcpy(data, img->data, size);
+    memset(img->data, 0, size);
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            // Create a temp copy of the image to pull pixels from.
-            uint32_t *tmp = fb_alloc(((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h, FB_ALLOC_NO_HINT);
-            memcpy(tmp, img->data, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
-            memset(img->data, 0, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+            uint32_t *tmp = (uint32_t *) data;
 
             for (int y = 0, yy = halfHeight; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
-                uint32_t *row_ptr2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, img->h-1-y);
+                uint32_t *row_ptr2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
                 float zoomedY = newY * zoom;
@@ -832,39 +838,33 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
                     float zoomedX = newX * zoom;
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
-                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
+                    float theta = fast_atanf(r) / r; // r is never 0
+                    int sourceX = halfWidth + fast_roundf(theta * zoomedX); // rounding is necessary
+                    int sourceY = halfHeight + fast_roundf(theta * zoomedY); // rounding is necessary
 
-                    if ((0 <= sourceX) && (0 <= sourceY)) {
-                        uint32_t *ptr;
-                        int pixel;
-                        ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                    if ((0 <= sourceX) && (0 <= sourceY)) { // plot the 4 symmetrical pixels
+                        uint32_t *ptr, pixel;
+                        ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
                         pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
                         IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
-                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, img->w-1-sourceX);
-                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, img->w-1-x, pixel);
-                        ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * (img->h-1-sourceY));
+                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, w-1-sourceX);
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w-1-x, pixel);
+                        ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * (h-1-sourceY));
                         pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
                         IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, x, pixel);
-                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, img->w-1-sourceX);
-                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, img->w-1-x, pixel);
+                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, w-1-sourceX);
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, w-1-x, pixel);
                     }
                 }
             }
-
-            fb_free();
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            // Create a temp copy of the image to pull pixels from.
-            uint8_t *tmp = fb_alloc(img->w * img->h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
-            memcpy(tmp, img->data, img->w * img->h * sizeof(uint8_t));
-            memset(img->data, 0, img->w * img->h * sizeof(uint8_t));
+            uint8_t *tmp = (uint8_t *) data;
 
             for (int y = 0, yy = halfHeight; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
-                uint8_t *row_ptr2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, img->h-1-y);
+                uint8_t *row_ptr2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
                 float zoomedY = newY * zoom;
@@ -875,38 +875,33 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
                     float zoomedX = newX * zoom;
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
-                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
+                    float theta = fast_atanf(r) / r; // r is never 0
+                    int sourceX = halfWidth + fast_roundf(theta * zoomedX); // rounding is necessary
+                    int sourceY = halfHeight + fast_roundf(theta * zoomedY); // rounding is necessary
 
-                    if ((0 <= sourceX) && (0 <= sourceY)) {
+                    if ((0 <= sourceX) && (0 <= sourceY)) { // plot the 4 symmetrical pixels
                         uint8_t *ptr, pixel;
-                        ptr = tmp + (img->w * sourceY); // top 2 pixels
+                        ptr = tmp + (w * sourceY); // top 2 pixels
                         pixel = ptr[sourceX];
                         row_ptr[x] = pixel;
-                        pixel = ptr[img->w - 1 - sourceX];
-                        row_ptr[img->w - 1 - x] = pixel;
-                        ptr = tmp + (img->w * (img->h - 1 - sourceY)); // bottom 2 pixels
+                        pixel = ptr[w - 1 - sourceX];
+                        row_ptr[w - 1 - x] = pixel;
+                        ptr = tmp + (w * (h - 1 - sourceY)); // bottom 2 pixels
                         pixel = ptr[sourceX];
                         row_ptr2[x] = pixel;
-                        pixel = ptr[img->w - 1 - sourceX];
-                        row_ptr2[img->w - 1 - x] = pixel;
+                        pixel = ptr[w - 1 - sourceX];
+                        row_ptr2[w - 1 - x] = pixel;
                     }
                 }
             }
-
-            fb_free();
             break;
         }
         case IMAGE_BPP_RGB565: {
-            // Create a temp copy of the image to pull pixels from.
-            uint16_t *tmp = fb_alloc(img->w * img->h * sizeof(uint16_t), FB_ALLOC_NO_HINT);
-            memcpy(tmp, img->data, img->w * img->h * sizeof(uint16_t));
-            memset(img->data, 0, img->w * img->h * sizeof(uint16_t));
+            uint16_t *tmp = (uint16_t *) data;
 
             for (int y = 0, yy = halfHeight; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
-                uint16_t *row_ptr2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, img->h-1-y);
+                uint16_t *row_ptr2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
                 float zoomedY = newY * zoom;
@@ -917,36 +912,35 @@ void imlib_lens_corr(image_t *img, float strength, float zoom)
                     float zoomedX = newX * zoom;
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
-                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
+                    float theta = fast_atanf(r) / r; // r is never 0
+                    int sourceX = halfWidth + fast_roundf(theta * zoomedX); // rounding is necessary
+                    int sourceY = halfHeight + fast_roundf(theta * zoomedY); // rounding is necessary
 
-                    if ((0 <= sourceX) && (0 <= sourceY)) {
-                    // plot the 4 symmetrical pixels
-                        uint16_t *ptr;
-                        int pixel;
-                        ptr = tmp + (img->w * sourceY); // top 2 pixels
+                    if ((0 <= sourceX) && (0 <= sourceY)) { // plot the 4 symmetrical pixels
+                        uint16_t *ptr, pixel;
+                        ptr = tmp + (w * sourceY); // top 2 pixels
                         pixel = ptr[sourceX];
                         row_ptr[x] = pixel;
-                        pixel = ptr[img->w - 1 - sourceX];
-                        row_ptr[img->w - 1 - x] = pixel;
-                        ptr = tmp + (img->w * (img->h - 1 - sourceY)); // bottom 2 pixels
+                        pixel = ptr[w - 1 - sourceX];
+                        row_ptr[w - 1 - x] = pixel;
+                        ptr = tmp + (w * (h - 1 - sourceY)); // bottom 2 pixels
                         pixel = ptr[sourceX];
                         row_ptr2[x] = pixel;
-                        pixel = ptr[img->w - 1 - sourceX];
-                        row_ptr2[img->w - 1 - x] = pixel; 
+                        pixel = ptr[w - 1 - sourceX];
+                        row_ptr2[w - 1 - x] = pixel; 
                     }
                 }
             }
-
-            fb_free();
             break;
         }
         default: {
             break;
         }
     }
+
+    fb_free();
 }
+#endif //IMLIB_ENABLE_LENS_CORR
 
 ////////////////////////////////////////////////////////////////////////////////
 
