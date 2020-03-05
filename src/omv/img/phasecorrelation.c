@@ -332,7 +332,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
             }
         }
 
-        imlib_rotation_corr(&img0_fixed, 0, 0, *rotation, 0, 0, *scale);
+        imlib_rotation_corr(&img0_fixed, 0, 0, *rotation, 0, 0, *scale, 60, NULL);
     } else {
         memcpy(&img0_fixed, img0, sizeof(image_t));
         memcpy(&roi0_fixed, roi0, sizeof(rectangle_t));
