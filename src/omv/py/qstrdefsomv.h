@@ -814,6 +814,8 @@ Q(z_rotation)
 Q(x_translation)
 Q(y_translation)
 // duplicate Q(zoom)
+Q(fov)
+Q(corners)
 
 // Structural Similarity
 Q(get_similarity)
@@ -940,7 +942,7 @@ Q(x_hist_bins_max)
 Q(y_hist_bins_max)
 // Blob Object
 Q(blob)
-Q(corners)
+// duplicate Q(corners)
 Q(min_corners)
 Q(rect)
 Q(x)
