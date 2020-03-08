@@ -3148,6 +3148,8 @@ static mp_obj_t py_image_linpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     image_t *arg_img =
         py_helper_arg_to_image_mutable(args[0]);
+    PY_ASSERT_FALSE_MSG(arg_img->w % 2, "Width must be even!");
+    PY_ASSERT_FALSE_MSG(arg_img->h % 2, "Height must be even!");
     bool arg_reverse =
         py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse), false);
 
@@ -3164,6 +3166,8 @@ static mp_obj_t py_image_logpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     image_t *arg_img =
         py_helper_arg_to_image_mutable(args[0]);
+    PY_ASSERT_FALSE_MSG(arg_img->w % 2, "Width must be even!");
+    PY_ASSERT_FALSE_MSG(arg_img->h % 2, "Height must be even!");
     bool arg_reverse =
         py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse), false);
 
