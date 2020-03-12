@@ -120,7 +120,16 @@ void imlib_histeq(image_t *img, image_t *mask)
 // ksize == 1 -> 3x3 kernel
 // ...
 // ksize == n -> ((n*2)+1)x((n*2)+1) kernel
-
+//
+// To speed up this filter, we can help in two ways:
+// 1) For the 'center portion' of the image area, we don't need to check
+//   the x+y values against the boundary conditions on each pixel.
+// 2) In that same region we can take advantage of the filter property being
+//   the sum of all of the pixels by subtracting the last left edge values
+//   and adding the new right edge values instead of re-calculating the sum
+//   of every pixel. This will allow very large filters to be used without
+//   much change in performance.
+//
 #ifdef IMLIB_ENABLE_MEAN
 void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset, bool invert, image_t *mask)
 {
@@ -130,13 +139,14 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
     buf.h = brows;
     buf.bpp = img->bpp;
 
-    float over_n = 1.0f / (((ksize*2)+1)*((ksize*2)+1));
+    int32_t over32_n = 65536 / (((ksize*2)+1)*((ksize*2)+1));
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
             buf.data = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
+                int pixel, acc = 0;
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
                 uint32_t *buf_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows));
 
@@ -146,19 +156,27 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         continue; // Short circuit.
                     }
 
-                    int acc = 0;
+                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y <= img->h-ksize) {
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y + j);
+                            acc -= IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x - ksize - 1);
+                            acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x + ksize);
+                        }
+                    } else {
+                        acc = 0;
 
-                    for (int j = -ksize; j <= ksize; j++) {
-                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
-                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
+                                IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
 
-                        for (int k = -ksize; k <= ksize; k++) {
-                            acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
-                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                            for (int k = -ksize; k <= ksize; k++) {
+                                acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
+                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                            }
                         }
                     }
 
-                    int pixel = fast_floorf(acc * over_n);
+                    pixel = (int)((acc * over32_n)>>16);
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -192,6 +210,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
             buf.data = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
+                int pixel, acc = 0;
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                 uint8_t *buf_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows));
 
@@ -200,20 +219,26 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x));
                         continue; // Short circuit.
                     }
+                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y <= img->h-ksize) {
+                        for (int j = -ksize; j<= ksize; j++) {
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y+j);
+                            acc -= IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x-ksize-1);
+                            acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x+ksize); 
+                        }
+                    } else {
+                        acc = 0;
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
+                                IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
 
-                    int acc = 0;
-
-                    for (int j = -ksize; j <= ksize; j++) {
-                        uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
-                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
-
-                        for (int k = -ksize; k <= ksize; k++) {
-                            acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
-                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                for (int k = -ksize; k <= ksize; k++) {
+                                acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
+                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                            }
                         }
                     }
 
-                    int pixel = fast_floorf(acc * over_n);
+                    pixel = (int)((acc * over32_n)>>16);
 
                     if (threshold) {
                         if (((pixel - offset) < IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x)) ^ invert) {
@@ -244,37 +269,54 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
             break;
         }
         case IMAGE_BPP_RGB565: {
+            int pixel, r, g, b, r_acc, g_acc, b_acc;
             buf.data = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img) * brows, FB_ALLOC_NO_HINT);
 
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                 uint16_t *buf_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&buf, (y % brows));
 
+                r_acc = g_acc = b_acc = 0;
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     if (mask && (!image_get_mask_pixel(mask, x, y))) {
                         IMAGE_PUT_RGB565_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                         continue; // Short circuit.
                     }
-
-                    int r_acc = 0, g_acc = 0, b_acc = 0;
-
-                    for (int j = -ksize; j <= ksize; j++) {
-                        uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
+                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y <= img->h-ksize) {
+                       for (int j= -ksize; j<=ksize; j++) {
+                           uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y+j);
+                           // subtract last left-most pixel from the sums
+                           pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x-ksize-1);
+                           r_acc -= COLOR_RGB565_TO_R5(pixel);
+                           g_acc -= COLOR_RGB565_TO_G6(pixel);
+                           b_acc -= COLOR_RGB565_TO_B5(pixel);
+                           // add new right edge pixel to the sums
+                           pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr, x+ksize);
+                           r_acc += COLOR_RGB565_TO_R5(pixel);
+                           g_acc += COLOR_RGB565_TO_G6(pixel);
+                           b_acc += COLOR_RGB565_TO_B5(pixel);
+                        }
+                    } else { // check bounds and do full sum calculations
+                        r_acc = g_acc = b_acc = 0;
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
                             IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
 
-                        for (int k = -ksize; k <= ksize; k++) {
-                            int pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
-                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
-                            r_acc += COLOR_RGB565_TO_R5(pixel);
-                            g_acc += COLOR_RGB565_TO_G6(pixel);
-                            b_acc += COLOR_RGB565_TO_B5(pixel);
+                            for (int k = -ksize; k <= ksize; k++) {
+                                pixel = IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
+                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                                r_acc += COLOR_RGB565_TO_R5(pixel);
+                                g_acc += COLOR_RGB565_TO_G6(pixel);
+                                b_acc += COLOR_RGB565_TO_B5(pixel);
+                            }
                         }
                     }
-
-                    int pixel = COLOR_R5_G6_B5_TO_RGB565(fast_floorf(r_acc * over_n),
-                                                         fast_floorf(g_acc * over_n),
-                                                         fast_floorf(b_acc * over_n));
-
+                    int pixel;
+                    r = (int)((r_acc * over32_n)>>16);
+                    g = (int)((g_acc * over32_n)>>16);
+                    b = (int)((b_acc * over32_n)>>16);
+                    pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                     
                     if (threshold) {
                         if (((COLOR_RGB565_TO_Y(pixel) - offset) < COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x))) ^ invert) {
                             pixel = COLOR_RGB565_BINARY_MAX;
