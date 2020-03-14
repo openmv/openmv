@@ -156,7 +156,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         continue; // Short circuit.
                     }
 
-                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y <= img->h-ksize) {
+                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y < img->h-ksize) {
                         for (int j = -ksize; j <= ksize; j++) {
                             uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y + j);
                             acc -= IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr, x - ksize - 1);
@@ -219,7 +219,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x));
                         continue; // Short circuit.
                     }
-                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y <= img->h-ksize) {
+                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y < img->h-ksize) {
                         for (int j = -ksize; j<= ksize; j++) {
                             uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y+j);
                             acc -= IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr, x-ksize-1);
@@ -282,7 +282,7 @@ void imlib_mean_filter(image_t *img, const int ksize, bool threshold, int offset
                         IMAGE_PUT_RGB565_PIXEL_FAST(buf_row_ptr, x, IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                         continue; // Short circuit.
                     }
-                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y <= img->h-ksize) {
+                    if (!mask && x > ksize && x < img->w-ksize && y >= ksize && y < img->h-ksize) {
                        for (int j= -ksize; j<=ksize; j++) {
                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y+j);
                            // subtract last left-most pixel from the sums
