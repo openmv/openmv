@@ -90,7 +90,7 @@ jobs:
       deploy:
         provider: releases
         api_key:
-          secure: "$GH_TOKEN"
+            secure: lE3IuL9TA5LMCSefXm8BO4Eo9+M8DjIuNG2bmZlL7/ucY1i9OmGp56pnLcRwZ5slQbKX+hzNtTFDqb7eLGn1hpzYEZHl8VEjZLRoXqZC7JmQm7EmRRljpXSEoWCxee6kUOaltNAoycmTy0JtmnFdflJ+lXWQ8Pw/GVu91SXGjDWldNJLcLOcCl8CXEr8pwt5WUsRgQ7NYwj+Fd1vQ7ii7yPEwJNHsUHpWRezKorTgYKuphXOkWSLhbsc9HaGfbNKocgoU3hpDE445MKEa+PnBGMsqWQYXag9QA/vY1olKrB3ICzIV8rhARH9h6jJ0c0fnHtaR6pnp9IC11ZpvUTzsj/Dw7doUNHtUwQtBPmTWjm3FQAWLqJJKmo1zXIXUKyc32NTsnKBAdu9jI2i1/1wopATGQzlds4oqPHFzr7OLfZUFf/b19UC9GqnBuEV2Q4pFZJV5c853UNQ7qio39rD5ykJPNKlK1aeKv1Z4+5Yi/pHmVYKyqx1bPQX7qHYKgGQ7PYNa5InPMDWrDG7v5FRoVNFSffpMpk3hqjbjti6KT7YvL6rCQN8A5dp00m/cVizx3xj/CS1rXJUbGDkoV3PxYPUmUN+2NQsS9NDQfVQxWKwIGjJkOjTZsrFwNGQAzujR0rfuYAyp0mcvWjXGW7hKMZrYCMK7rxEOA4Dka3ndIo=
         name: ${TRAVIS_TAG}
         file: firmware_${TRAVIS_TAG}.zip
         skip_cleanup: true
