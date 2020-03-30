@@ -1,4 +1,14 @@
 # Change Log
+## [3.6.1](https://github.com/openmv/openmv/releases/tag/v3.6.1) (2020-3-30)
+* Add support for OV7690 and HM01B0 sensors.
+* Add support for Portenta-H747.
+* Optimized image filters, lens correction and find_circles.
+* Add BGR argument to lcd init (fixes an issue with some LCDs).
+* Move clock configuration to board config file.
+* Fix hardfault on disable D cache. 
+* Fix Tensorflow stack overflow issue.
+* Fix load_to_fb bug.
+
 ## [3.6](https://github.com/openmv/openmv/releases/tag/v3.6) (2020-2-7)
 * Fix H7 DAC timed write bug.
 * Fix self-tests bug.
