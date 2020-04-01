@@ -422,23 +422,23 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         case PIXFORMAT_RGB565:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x61);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
-            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            pll = 0x64; // 40 MHz
             break;
         case PIXFORMAT_GRAYSCALE:
         case PIXFORMAT_YUV422:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x10);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
-            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            pll = 0x64; // 40 MHz
             break;
         case PIXFORMAT_BAYER:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x00);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
-            pll = (resolution[sensor->framesize][0] > 2048) ? 0x64 : 0x50; // 40 MHz vs 32 MHz (jpeg can go faster at higher reses)
+            pll = 0x64; // 40 MHz (jpeg can go faster at higher reses)
             break;
         case PIXFORMAT_JPEG:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x30);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
-            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            pll = 0x64; // 40 MHz
             break;
         default:
             return -1;
@@ -605,25 +605,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0x10);
 
     // Step 8: Adjust PLL freq.
-
-    switch (sensor->pixformat) {
-        case PIXFORMAT_RGB565:
-            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
-            break;
-        case PIXFORMAT_GRAYSCALE:
-        case PIXFORMAT_YUV422:
-//            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
-            pll = 0x64;
-            break;
-        case PIXFORMAT_BAYER:
-            pll = (w > 2048) ? 0x64 : 0x50; // 40 MHz vs 32 MHz (jpeg can go faster at higher reses)
-            break;
-        case PIXFORMAT_JPEG:
-            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
-            break;
-        default:
-            return -1;
-    }
+    pll = 0x64; // 40 Mhz
 
     ret |= cambus_writeb2(sensor->slv_addr, SC_PLL_CONTRL2, pll);
 
