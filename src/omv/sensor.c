@@ -904,23 +904,35 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                 case PIXFORMAT_BAYER:
                     dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
                     src += MAIN_FB()->x;
-                    for (int i = MAIN_FB()->w; i; i--) {
-                        *dst++ = *src++;
-                    }
+                    memcpy(dst, src, MAIN_FB()->w);
                     break;
                 case PIXFORMAT_GRAYSCALE:
                     dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                    src += MAIN_FB()->x;
                     if (sensor.gs_bpp == 1) {
-                        src += MAIN_FB()->x;
                         // 1BPP GRAYSCALE.
-                        for (int i = MAIN_FB()->w; i; i--) {
-                            *dst++ = *src++;
-                        }
+                        memcpy(dst, src, MAIN_FB()->w);
                     } else {
+                        uint32_t tmp1, tmp2, pix, *s, *d;
                         src16 += MAIN_FB()->x;
+                        s = (uint32_t *)src16;
+                        d = (uint32_t *)dst;
                         // Extract Y channel from YUV.
-                        for (int i = MAIN_FB()->w; i; i--) {
-                            *dst++ = *src16++;
+                        if (((uint32_t)dst & 3) == 0 && ((uint32_t)src16 & 3) == 0) {
+                            for (int i = MAIN_FB()->w; i>=4; i-=4) {
+                            // destination mem is cached; coalesce the writes to improve throughput
+                               tmp1 = *s++;
+                               tmp2 = *s++;
+                               pix = tmp1 & 0xff; // merge 4 pixels to not saturate CPU write buffer
+                               pix |= ((tmp1 >> 8) & 0xff00);
+                               pix |= ((tmp2 & 0xff) << 16); 
+                               pix |= ((tmp2 & 0xff0000) << 8);
+                               *d++ = pix;
+                            }
+                        } else {
+                            for (int i = MAIN_FB()->w; i; i--) {
+                                *dst++ = (uint8_t)*src16++; // low byte is Y channel
+                            }
                         }
                     }
                     break;
@@ -928,9 +940,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                 case PIXFORMAT_RGB565:
                     dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
                     src16 += MAIN_FB()->x;
-                    for (int i = MAIN_FB()->w; i; i--) {
-                        *dst16++ = *src16++;
-                    }
+                    memcpy(dst16, src16, MAIN_FB()->w * sizeof(uint16_t));
                     break;
                 case PIXFORMAT_JPEG:
                 default:
