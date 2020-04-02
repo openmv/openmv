@@ -908,9 +908,9 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                     break;
                 case PIXFORMAT_GRAYSCALE:
                     dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
-                    src += MAIN_FB()->x;
                     if (sensor.gs_bpp == 1) {
                         // 1BPP GRAYSCALE.
+                        src += MAIN_FB()->x;
                         memcpy(dst, src, MAIN_FB()->w);
                     } else {
                         uint32_t tmp1, tmp2, pix, *s, *d;
