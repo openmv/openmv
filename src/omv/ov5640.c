@@ -422,23 +422,23 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         case PIXFORMAT_RGB565:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x61);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
-            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            pll = 0x64; // 40 MHz
             break;
         case PIXFORMAT_GRAYSCALE:
         case PIXFORMAT_YUV422:
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x30);
+            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x10);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
-            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            pll = 0x64; // 40 MHz
             break;
         case PIXFORMAT_BAYER:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x00);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
-            pll = (resolution[sensor->framesize][0] > 2048) ? 0x64 : 0x50; // 40 MHz vs 32 MHz (jpeg can go faster at higher reses)
+            pll = 0x64; // 40 MHz (jpeg can go faster at higher reses)
             break;
         case PIXFORMAT_JPEG:
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x30);
             ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
-            pll = (resolution[sensor->framesize][0] > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
+            pll = 0x64; // 40 MHz
             break;
         default:
             return -1;
@@ -547,7 +547,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Step 5: Compute total frame time.
 
-    uint16_t sensor_hts = (sensor_w * ((sensor->pixformat == PIXFORMAT_JPEG) ? 1 : 2)) + HSYNC_TIME;
+    uint16_t sensor_hts = (sensor_w * ((sensor->pixformat == PIXFORMAT_GRAYSCALE || sensor->pixformat == PIXFORMAT_JPEG) ? 1 : 2)) + HSYNC_TIME;
     uint16_t sensor_vts = sensor_h + VYSNC_TIME;
 
     uint16_t sensor_x_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
@@ -605,24 +605,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0x10);
 
     // Step 8: Adjust PLL freq.
-
-    switch (sensor->pixformat) {
-        case PIXFORMAT_RGB565:
-            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
-            break;
-        case PIXFORMAT_GRAYSCALE:
-        case PIXFORMAT_YUV422:
-            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
-            break;
-        case PIXFORMAT_BAYER:
-            pll = (w > 2048) ? 0x64 : 0x50; // 40 MHz vs 32 MHz (jpeg can go faster at higher reses)
-            break;
-        case PIXFORMAT_JPEG:
-            pll = (w > 2048) ? 0x50 : 0x64; // 32 MHz vs 40 MHz
-            break;
-        default:
-            return -1;
-    }
+    pll = 0x64; // 40 Mhz
 
     ret |= cambus_writeb2(sensor->slv_addr, SC_PLL_CONTRL2, pll);
 
@@ -936,7 +919,7 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 int ov5640_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 2;
+    sensor->gs_bpp              = 1;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
