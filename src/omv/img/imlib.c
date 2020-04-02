@@ -420,6 +420,7 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
 {
     int r, g, b;
     for (int y=yoffs; y<yoffs+h; y++) {
+    if (xoffs & 1 || y == 0 || y >= yoffs+h-1) {
         for (int x=xoffs; x<xoffs+w; x++) {
             if ((y % 2) == 0) { // Even row
                 if ((x % 2) == 0) { // Even col
@@ -471,8 +472,66 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
             g = IM_G826(g);
             b = IM_B825(b);
             *rgbbuf++ = IM_RGB565(r, g, b);
-        }
-    }
+        } // for x
+    } else { // faster way
+        uint32_t l0,l1,l2; // 3 lines we're working with
+        uint16_t *s = (uint16_t *)&img->pixels[(y * img->w) + xoffs];
+        uint32_t r, g, b, w2 = img->w/2;
+        l0 = s[-w2]; l1 = s[0]; l2 = s[w2];
+        s++;
+        if (y & 1) { // odd lines
+            b = ((l0 & 0xff) + (l2 & 0xff)) >> 4;
+            g = (l1 & 0xff) >> 2;
+            r = (l1 & 0xff00) >> 11;
+            *rgbbuf++ = IM_RGB565(r, g, b); // first col is different
+            for (int x = xoffs+1; x < xoffs+w-1; x+=2) {
+                l0 |= (s[-w2] << 16);
+                l1 |= (s[0] << 16);
+                l2 |= (s[w2] << 16);
+                s++;
+                r = (l1 & 0xff00) >> 11; // (1, 0) pixel
+                g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 4;
+                b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 5;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                g = (l1 & 0xff0000) >> 18; // (0,0) pixel
+                b = (((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 4;
+                r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 4;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                // prepare for the next set of source pixels
+                l0 >>= 16; l1 >>= 16; l2 >>= 16; 
+            } // for x
+            // last col
+            g = ((l0 >> 8) + (l2 >> 8)) >> 3; // re-use blue
+            r = (l1 >> 11);
+            *rgbbuf++ = IM_RGB565(r, g, b);
+        } else { // even lines
+            b = (l1 & 0xff) >> 3;
+            g = ((l0 & 0xff) + (l2 & 0xff)) >> 3;
+            r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12; // first col is different
+            *rgbbuf++ = IM_RGB565(r, g, b);
+            for (int x = xoffs+1; x < xoffs+w-1; x+=2) {
+                l0 |= (s[-w2] << 16);
+                l1 |= (s[0] << 16);
+                l2 |= (s[w2] << 16);
+                s++;
+                g = (l1 & 0xff00) >> 10; // (1, 0) pixel
+                b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 4;
+                r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                b = (l1 & 0xff0000) >> 19; // (0,0) pixel
+                g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 4;
+                r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 5;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                // prepare for the next set of source pixels
+                l0 >>= 16; l1 >>= 16; l2 >>= 16; 
+            } // for x
+            // last col
+            g = (l1 >> 10); // re-use blue
+            r = ((l0 >> 8) + (l2 >> 8)) >> 4;
+            *rgbbuf++ = IM_RGB565(r, g, b);
+        } // even lines
+    } // faster way
+    } // for y
 }
 ////////////////////////////////////////////////////////////////////////////////
 
