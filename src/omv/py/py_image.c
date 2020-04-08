@@ -633,6 +633,13 @@ static mp_obj_t py_image_size(mp_obj_t img_obj)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
 
+static mp_obj_t py_image_bytearray(mp_obj_t img_obj)
+{
+    image_t *arg_img = (image_t *) py_image_cobj(img_obj);
+    return mp_obj_new_bytearray_by_ref(image_size(arg_img), arg_img->data);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_bytearray_obj, py_image_bytearray);
+
 STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
@@ -6377,6 +6384,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_image_height_obj)},
     {MP_ROM_QSTR(MP_QSTR_format),              MP_ROM_PTR(&py_image_format_obj)},
     {MP_ROM_QSTR(MP_QSTR_size),                MP_ROM_PTR(&py_image_size_obj)},
+    {MP_ROM_QSTR(MP_QSTR_bytearray),           MP_ROM_PTR(&py_image_bytearray_obj)},
     {MP_ROM_QSTR(MP_QSTR_get_pixel),           MP_ROM_PTR(&py_image_get_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_set_pixel),           MP_ROM_PTR(&py_image_set_pixel_obj)},
 #ifdef IMLIB_ENABLE_MEAN_POOLING
