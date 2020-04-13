@@ -417,11 +417,11 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
     }
 }
 
-static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
+static int safe_map_pixel(int dst_bpp, int src_bpp, int pixel)
 {
-    switch (dst->bpp) {
+    switch (dst_bpp) {
         case IMAGE_BPP_BINARY: {
-            switch (src->bpp) {
+            switch (src_bpp) {
                 case IMAGE_BPP_BINARY: {
                     return pixel;
                 }
@@ -437,7 +437,7 @@ static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
             }
         }
         case IMAGE_BPP_GRAYSCALE: {
-            switch (src->bpp) {
+            switch (src_bpp) {
                 case IMAGE_BPP_BINARY: {
                     return COLOR_BINARY_TO_GRAYSCALE(pixel);
                 }
@@ -453,7 +453,7 @@ static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
             }
         }
         case IMAGE_BPP_RGB565: {
-            switch (src->bpp) {
+            switch (src_bpp) {
                 case IMAGE_BPP_BINARY: {
                     return COLOR_BINARY_TO_RGB565(pixel);
                 }
@@ -474,20 +474,52 @@ static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
     }
 }
 
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, float alpha, image_t *mask)
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, float alpha, image_t *mask, const uint16_t *color_palette)
 {
-    float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale), beta = 1 - alpha;
+    float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
+
+    const float neg_alpha = 1.0f - alpha;
+    const int img_bpp = img->bpp;
+    const int xx = fast_floorf(other->w * x_scale);
 
     for (int y = 0, yy = fast_floorf(other->h * y_scale); y < yy; y++) {
         int other_y = fast_floorf(y * over_yscale);
 
-        for (int x = 0, xx = fast_floorf(other->w * x_scale); x < xx; x++) {
+        for (int x = 0; x < xx; x++) {
             int other_x = fast_floorf(x * over_xscale);
 
             if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
-                int pixel = safe_map_pixel(img, other, imlib_get_pixel(other, other_x, other_y));
-                imlib_set_pixel(img, x_off + x, y_off + y, (alpha == 1) ? pixel :
-                                (pixel * alpha) + (imlib_get_pixel(img, x_off + x, y_off + y) * beta));
+
+                int other_pixel = imlib_get_pixel(other, other_x, other_y);
+                other_pixel = color_palette
+                    ? safe_map_pixel(img_bpp, IMAGE_BPP_RGB565, color_palette[other_pixel] )
+                    : safe_map_pixel(img_bpp, other->bpp, other_pixel);
+                int img_pixel = imlib_get_pixel(img, x_off + x, y_off + y);
+				
+                int result_pixel;
+                switch (img_bpp) {
+                    case IMAGE_BPP_BINARY: {
+                        result_pixel = (other_pixel*alpha + img_pixel*neg_alpha)>=0.5?1:0;
+                        break;
+                    }
+                    case IMAGE_BPP_GRAYSCALE: {
+                        result_pixel = other_pixel*alpha + img_pixel*neg_alpha;
+                        break;
+                    }
+                    case IMAGE_BPP_RGB565: {
+                        int r = COLOR_RGB565_TO_R5(other_pixel)*alpha + COLOR_RGB565_TO_R5(img_pixel)*neg_alpha;
+                        int g = COLOR_RGB565_TO_G6(other_pixel)*alpha + COLOR_RGB565_TO_G6(img_pixel)*neg_alpha;
+                        int b = COLOR_RGB565_TO_B5(other_pixel)*alpha + COLOR_RGB565_TO_B5(img_pixel)*neg_alpha;
+                        result_pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                        break;
+                    }
+                    default: {
+                        result_pixel = 0;
+                        break;
+                    }
+                }
+
+                imlib_set_pixel(img, x_off + x, y_off + y, result_pixel);
             }
         }
     }
