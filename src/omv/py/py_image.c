@@ -1933,8 +1933,23 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 1), "Error: 0 <= alpha <= 256!");
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 3, kw_args);
+    int palette = py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), -1);
 
-    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk);
+    const uint16_t *color_palette = NULL;
+
+    if(palette!=-1) {
+        if (palette == COLOR_PALETTE_RAINBOW) {
+            color_palette = rainbow_table;
+        } else if (palette == COLOR_PALETTE_IRONBOW) {
+            color_palette = ironbow_table;
+        } else {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid color palette!"));
+        }
+
+        if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify color palette when passing a grayscale image!"));
+    }
+
+    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk, color_palette);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_image_obj, 3, py_image_draw_image);
