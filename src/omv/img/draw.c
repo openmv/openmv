@@ -480,9 +480,11 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
 
     const float neg_alpha = 1.0f - alpha;
     const int img_bpp = img->bpp;
+    const int other_bpp = other->bpp;
     const int xx = fast_floorf(other->w * x_scale);
+    const int yy = fast_floorf(other->h * y_scale);
 
-    for (int y = 0, yy = fast_floorf(other->h * y_scale); y < yy; y++) {
+    for (int y = 0; y < yy; y++) {
         int other_y = fast_floorf(y * over_yscale);
 
         for (int x = 0; x < xx; x++) {
@@ -492,8 +494,8 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
 
                 int other_pixel = imlib_get_pixel(other, other_x, other_y);
                 other_pixel = color_palette
-                    ? safe_map_pixel(img_bpp, IMAGE_BPP_RGB565, color_palette[other_pixel] )
-                    : safe_map_pixel(img_bpp, other->bpp, other_pixel);
+                    ? safe_map_pixel(img_bpp, IMAGE_BPP_RGB565, color_palette[other_pixel])
+                    : safe_map_pixel(img_bpp, other_bpp, other_pixel);
                 int img_pixel = imlib_get_pixel(img, x_off + x, y_off + y);
 				
                 int result_pixel;

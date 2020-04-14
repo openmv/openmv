@@ -1933,11 +1933,11 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 1), "Error: 0 <= alpha <= 256!");
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 3, kw_args);
-    int palette = py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), -1);
+    int palette = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), -1);
 
     const uint16_t *color_palette = NULL;
 
-    if(palette!=-1) {
+    if (palette != -1) {
         if (palette == COLOR_PALETTE_RAINBOW) {
             color_palette = rainbow_table;
         } else if (palette == COLOR_PALETTE_IRONBOW) {
