@@ -420,6 +420,9 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
 {
     int r, g, b;
     for (int y=yoffs; y<yoffs+h; y++) {
+// The faster routine needs to start on an even column
+// and not next to the top or bottom edge to avoid boundary checks on each pixel
+    if (xoffs & 1 || y == 0 || y >= yoffs+h-1) {
         for (int x=xoffs; x<xoffs+w; x++) {
             if ((y % 2) == 0) { // Even row
                 if ((x % 2) == 0) { // Even col
@@ -471,8 +474,97 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
             g = IM_G826(g);
             b = IM_B825(b);
             *rgbbuf++ = IM_RGB565(r, g, b);
-        }
-    }
+        } // for x
+    } else { // faster way
+//
+// Theory of operation:
+// The Bayer pattern from the sensor looks like this:
+// +---+---+---+---+---+---+
+// | B | G | B | G | B | G |
+// +---+---+---+---+---+---+
+// | G |*R*|*G*| R | G | R | * = Example of current pair of pixels being processed
+// +---+---+---+---+---+---+ Each iteration below will advance 2 pixels to the right
+// | B | G | B | G | B | G |
+// +---+---+---+---+---+---+
+// | G | R | G | R | G | R |
+// +---+---+---+---+---+---+
+// Each of the color stimuli above is stored as 1 byte
+// The slower algorithm above reads each byte around the current pixel individually to
+// average the colors together to simulate the colors not present at the current pixel
+// e.g. At location 0,0, only the blue value is present; red and green must be estimated from
+// neighboring pixels
+//
+// The optimized algorithm below minimizes memory accesses by reading 2 bytes at a time
+// and re-using the last pair as it progresses from left to right. Since the ARM CPU enforces a
+// memory policy of generating an exception on unaligned reads, we read 16-bits at a time and
+// OR them into a 32-bit variable to hold on to the pixels left and right of the current pair.
+// This way we can work on 2 pixels at a time from 3 32-bit variables containing 3 lines of 4 pixels.
+// The variables l0,l1,l2 hold the 4 pixels (left, current left, current_right, right)
+// in lines above the current (l0), current (l1) and below (l2)
+// This algorithm assumes that the starting x is 0 (it doesn't have to be).
+// The starting and ending pixel are treated like absolute sensor edges, so they are less accurate
+// than the middle pixels.
+//
+        uint32_t l0,l1,l2; // 3 lines we're working with
+        uint16_t *s = (uint16_t *)&img->pixels[(y * img->w) + xoffs];
+        uint32_t r, g, b, w2 = img->w/2;
+        l0 = s[-w2]; l1 = s[0]; l2 = s[w2];
+        s++;
+// For each pixel, the R8 G8 B8 values are directly shifted into R5 G6 B5
+// to save a step when creating the RGB565 output
+        if (y & 1) { // odd lines (G R G R G R)
+            b = ((l0 & 0xff) + (l2 & 0xff)) >> 4; // left edge pixel
+            g = (l1 & 0xff) >> 2;
+            r = (l1 & 0xff00) >> 11;
+            *rgbbuf++ = IM_RGB565(r, g, b); // first col is treated differently
+            for (int x = xoffs+1; x < xoffs+w-1; x+=2) { // 'middle' pixels can use neighbors from 3x3 grid
+                l0 |= (s[-w2] << 16); // shift last pixel pairs into upper 16 bits
+                l1 |= (s[0] << 16);   // of the 3 line variables
+                l2 |= (s[w2] << 16);
+                s++; // advance source pointer one pair of pixels
+                r = (l1 & 0xff00) >> 11; // (1, 0) red pixel at current-left
+                g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 4;
+                b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 5;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                g = (l1 & 0xff0000) >> 18; // (0,0) green pixel at current-right
+                b = (((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 4;
+                r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 4;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                // prepare for the next set of source pixels
+                l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+            } // for x
+            // last col
+            g = ((l0 >> 8) + (l2 >> 8)) >> 3; // re-use blue from last pixel in loop
+            r = (l1 >> 11);
+            *rgbbuf++ = IM_RGB565(r, g, b);
+        } else { // even lines (B G B G B G)
+            b = (l1 & 0xff) >> 3;
+            g = ((l0 & 0xff) + (l2 & 0xff)) >> 3;
+            r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12; // first pixel is different
+            *rgbbuf++ = IM_RGB565(r, g, b);
+            for (int x = xoffs+1; x < xoffs+w-1; x+=2) { // middle part
+                l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits 
+                l1 |= (s[0] << 16);
+                l2 |= (s[w2] << 16);
+                s++;
+                g = (l1 & 0xff00) >> 10; // (1, 0) green pixel at current-left
+                b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 4;
+                r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                b = (l1 & 0xff0000) >> 19; // (0,0) blue pixel at current-right
+                g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 4;
+                r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 5;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                // prepare for the next set of source pixels
+                l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+            } // for x
+            // last col
+            g = (l1 >> 10); // re-use blue pixel from last column of loop
+            r = ((l0 >> 8) + (l2 >> 8)) >> 4;
+            *rgbbuf++ = IM_RGB565(r, g, b); // last pixel
+        } // even lines
+    } // faster way
+    } // for y
 }
 ////////////////////////////////////////////////////////////////////////////////
 
