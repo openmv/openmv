@@ -11,28 +11,42 @@
 #include "font.h"
 #include "imlib.h"
 
-// Get pixel (handles boundary check and image type check).
-int imlib_get_pixel(image_t *img, int x, int y)
-{
-    if ((0 <= x) && (x < img->w) && (0 <= y) && (y < img->h)) {
-        switch(img->bpp) {
-            case IMAGE_BPP_BINARY: {
-                return IMAGE_GET_BINARY_PIXEL(img, x, y);
-            }
-            case IMAGE_BPP_GRAYSCALE: {
-                return IMAGE_GET_GRAYSCALE_PIXEL(img, x, y);
-            }
-            case IMAGE_BPP_RGB565: {
-                return IMAGE_GET_RGB565_PIXEL(img, x, y);
-            }
-            default: {
-                return -1;
-            }
+void* imlib_compute_row_ptr(image_t *img, int y) {
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            return IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+        }
+        case IMAGE_BPP_RGB565: {
+            return IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+        }
+        default: {
+            // This shouldn't happen, at least we return a valid memory block
+            return img->data;
         }
     }
-
-    return -1;
 }
+
+inline int imlib_get_pixel_fast(int img_bpp, void *row_ptr, int x)
+{
+    switch(img_bpp) {
+        case IMAGE_BPP_BINARY: {
+            return IMAGE_GET_BINARY_PIXEL_FAST((uint32_t*)row_ptr, x);
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return IMAGE_GET_GRAYSCALE_PIXEL_FAST((uint8_t*)row_ptr, x);
+        }
+        case IMAGE_BPP_RGB565: {
+            return IMAGE_GET_RGB565_PIXEL_FAST((uint16_t*)row_ptr, x);
+        }
+        default: {
+            return -1;
+        }
+    }
+}
+
 
 // Set pixel (handles boundary check and image type check).
 void imlib_set_pixel(image_t *img, int x, int y, int p)
@@ -474,55 +488,152 @@ static int safe_map_pixel(int dst_bpp, int src_bpp, int pixel)
     }
 }
 
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, float alpha, image_t *mask, const uint16_t *color_palette)
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask, const uint16_t *color_palette)
 {
-    float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
+    // Scaler to convert from img scale to other scale
+    const float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
 
-    const float neg_alpha = 1.0f - alpha;
+    // Packaed alpha for SMUAD calls
+    const uint32_t va = (alpha << 16) + (256 - alpha);
+
     const int img_bpp = img->bpp;
     const int other_bpp = other->bpp;
-    const int xx = fast_floorf(other->w * x_scale);
-    const int yy = fast_floorf(other->h * y_scale);
 
-    for (int y = 0; y < yy; y++) {
-        int other_y = fast_floorf(y * over_yscale);
+    // Left or top of other is out of bounds
+    int other_x_start = (x_off < 0) ? -x_off : 0;
+    int other_y_start = (y_off < 0) ? -y_off : 0;
+    
+    // Scaled other size
+    const int other_width_scaled = fast_floorf(abs(other->w * x_scale));
+    const int other_height_scaled = fast_floorf(abs(other->h * y_scale));
 
-        for (int x = 0; x < xx; x++) {
-            int other_x = fast_floorf(x * over_xscale);
+    // Right or bottom of image is out of bounds
+    int other_x_end = (x_off + other_width_scaled >= img->w) ? img->w - x_off : other_width_scaled;
+    int other_y_end = (y_off + other_height_scaled >= img->h) ? img->h - y_off : other_height_scaled;
 
-            if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
+    // Check bounds are within img
+    if (other_x_start + x_off >= img->w || other_y_start + y_off >= img->h) return;
+    if (other_x_end + x_off <= 0 || other_y_end + y_off <= 0) return;
 
-                int other_pixel = imlib_get_pixel(other, other_x, other_y);
-                other_pixel = color_palette
-                    ? safe_map_pixel(img_bpp, IMAGE_BPP_RGB565, color_palette[other_pixel])
-                    : safe_map_pixel(img_bpp, other_bpp, other_pixel);
-                int img_pixel = imlib_get_pixel(img, x_off + x, y_off + y);
-				
-                int result_pixel;
-                switch (img_bpp) {
-                    case IMAGE_BPP_BINARY: {
-                        result_pixel = (other_pixel*alpha + img_pixel*neg_alpha)>=0.5?1:0;
-                        break;
-                    }
-                    case IMAGE_BPP_GRAYSCALE: {
-                        result_pixel = other_pixel*alpha + img_pixel*neg_alpha;
-                        break;
-                    }
-                    case IMAGE_BPP_RGB565: {
-                        int r = COLOR_RGB565_TO_R5(other_pixel)*alpha + COLOR_RGB565_TO_R5(img_pixel)*neg_alpha;
-                        int g = COLOR_RGB565_TO_G6(other_pixel)*alpha + COLOR_RGB565_TO_G6(img_pixel)*neg_alpha;
-                        int b = COLOR_RGB565_TO_B5(other_pixel)*alpha + COLOR_RGB565_TO_B5(img_pixel)*neg_alpha;
-                        result_pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
-                        break;
-                    }
-                    default: {
-                        result_pixel = 0;
-                        break;
+    // If scaling is negative we essentially flip the other coordinates so they work from bottom left instead of bottom right
+    if (over_xscale < 0) {
+        other_x_start -= other_width_scaled;
+        other_x_end -= other_width_scaled;
+        x_off += other_width_scaled;
+    }
+
+    if (over_yscale < 0) {
+        other_y_start -= other_height_scaled;
+        other_y_end -= other_height_scaled;
+        y_off += other_height_scaled;
+    }
+
+    switch(img_bpp) {
+        case IMAGE_BPP_BINARY: {
+            // Iterate the img area to be updated
+            for (int y = other_y_start; y < other_y_end; y++) {
+                uint32_t *img_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_off + y);
+
+                const int other_y = fast_floorf(y * over_yscale);
+                void *other_row_ptr = imlib_compute_row_ptr(other, other_y);
+
+                for (int x = other_x_start; x < other_x_end; x++) {
+                    const int other_x = fast_floorf(x * over_xscale);
+
+                    if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
+                        const uint32_t other_pixel = safe_map_pixel(IMAGE_BPP_BINARY, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
+                        
+                        uint32_t result_pixel;
+                        if (alpha==256) {
+                            result_pixel = other_pixel;
+                        }
+                        else {
+                            const uint32_t img_pixel = IMAGE_GET_BINARY_PIXEL_FAST(img_row_ptr, x_off + x);
+                            
+                            const uint32_t vgs = (other_pixel << 16) + img_pixel;
+                            result_pixel = __SMUAD(va, vgs)>>8;
+                        }
+
+                        IMAGE_PUT_BINARY_PIXEL_FAST(img_row_ptr, x_off + x, result_pixel);
                     }
                 }
-
-                imlib_set_pixel(img, x_off + x, y_off + y, result_pixel);
             }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            // Iterate the img area to be updated
+            for (int y = other_y_start; y < other_y_end; y++) {
+                // Pre-add x_off here to save adding it inside the central loop
+                uint8_t *img_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_off + y) + x_off;
+
+                const int other_y = fast_floorf(y * over_yscale);
+                void *other_row_ptr = imlib_compute_row_ptr(other, other_y);
+
+                for (int x = other_x_start; x < other_x_end; x++) {
+                    const int other_x = fast_floorf(x * over_xscale);
+
+                    if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
+                        const uint8_t other_pixel = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
+
+                        uint8_t result_pixel;
+                        if (alpha==256) {
+                            result_pixel = other_pixel;
+                        }
+                        else {
+                            const uint8_t img_pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(img_row_ptr,  x);
+                            
+                            const uint32_t vgs = (other_pixel << 16) + img_pixel;
+                            result_pixel = __SMUAD(va, vgs)>>8;
+                        }
+
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(img_row_ptr, x, result_pixel);
+                    }
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            // Iterate the img area to be updated
+            for (int y = other_y_start; y < other_y_end; y++) {
+                // Pre-add x_off here to save adding it inside the central loop
+                uint16_t *img_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_off + y) + x_off;
+                
+                const int other_y = fast_floorf(y * over_yscale);
+                void *other_row_ptr = imlib_compute_row_ptr(other, other_y);
+
+                for (int x = other_x_start; x < other_x_end; x++) {
+                    const int other_x = fast_floorf(x * over_xscale);
+
+                    if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
+                        uint32_t other_pixel = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x);
+                        other_pixel = color_palette
+                            ? color_palette[other_pixel]
+                            : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, other_pixel);
+                        
+                        uint16_t result_pixel;
+                        if (alpha==256) {
+                            result_pixel = other_pixel;
+                        }
+                        else {
+                            const uint16_t img_pixel = IMAGE_GET_RGB565_PIXEL_FAST(img_row_ptr, x);
+                            
+                            const uint32_t vr = (COLOR_RGB565_TO_R5(other_pixel) << 16) + COLOR_RGB565_TO_R5(img_pixel);
+                            const uint32_t vg = (COLOR_RGB565_TO_G6(other_pixel) << 16) + COLOR_RGB565_TO_G6(img_pixel);
+                            const uint32_t vb = (COLOR_RGB565_TO_B5(other_pixel) << 16) + COLOR_RGB565_TO_B5(img_pixel);
+                            const uint8_t r = __SMUAD(va, vr)>>8;
+                            const uint8_t g = __SMUAD(va, vg)>>8;
+                            const uint8_t b = __SMUAD(va, vb)>>8;
+
+                            result_pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                        }
+                        IMAGE_PUT_RGB565_PIXEL_FAST(img_row_ptr, x, result_pixel);
+                    }
+                }
+            }
+            break;
+        }
+        default: {
+            break;
         }
     }
 }
