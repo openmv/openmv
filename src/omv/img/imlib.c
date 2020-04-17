@@ -570,7 +570,7 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
 //
 // Convert a row of Bayer pixels into grayscale output
 //
-void bayer_to_y(image_t *img, int x_offset, int y_offset, int width, uint8_t *Y)
+void imlib_bayer_to_y(image_t *img, int x_offset, int y_offset, int width, uint8_t *Y)
 {
             uint16_t *s;
             uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
@@ -702,11 +702,11 @@ void bayer_to_y(image_t *img, int x_offset, int y_offset, int width, uint8_t *Y)
                     *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
                 }
             } // even line
-} /* bayer_to_y() */
+} /* imlib_bayer_to_y() */
 //
 // Convert a row of Bayer pixels into binary output
 //
-void bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, uint8_t *binary)
+void imlib_bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, uint8_t *binary)
 {
             uint16_t *s;
             uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
@@ -851,7 +851,7 @@ void bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, uint8_
                     IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
                 }
             } // even line
-} /* bayer_to_binary() */
+} /* imlib_bayer_to_binary() */
 
 ////////////////////////////////////////////////////////////////////////////////
 
