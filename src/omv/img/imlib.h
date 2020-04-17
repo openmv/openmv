@@ -1151,6 +1151,8 @@ int8_t imlib_rgb565_to_v(uint16_t pixel);
 uint16_t imlib_lab_to_rgb(uint8_t l, int8_t a, int8_t b);
 uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v);
 void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf);
+void imlib_bayer_to_y(image_t *img, int x_offset, int y_offset, int width, uint8_t *Y);
+void imlib_bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, uint8_t *binary);
 
 /* Image file functions */
 void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);

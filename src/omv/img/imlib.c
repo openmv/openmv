@@ -566,6 +566,293 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
     } // faster way
     } // for y
 }
+
+//
+// Convert a row of Bayer pixels into grayscale output
+//
+void imlib_bayer_to_y(image_t *img, int x_offset, int y_offset, int width, uint8_t *Y)
+{
+            uint16_t *s;
+            uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
+            int x, xx, r, g, b = 0;
+            int pitch = img->w; // keep in local var
+            int w2 = pitch/2; // pitch for a uint16_t pointer
+            x = x_offset; xx = x_offset+width;
+            if (y_offset < 1 || y_offset >= img->h-1) { // top or bottom lines
+                uint8_t *s8 = (uint8_t *)&img->pixels[(y_offset * pitch) + x_offset];
+                if (y_offset & 1) { // odd line (y == img->h-1)
+                    int bLastPixel = 0;
+                    if (((x_offset+width) & 1) == 0 && x_offset+width >= img->w) { // flag to not read past the bottom-right edge
+                        xx--; // make the loop stop on an even pixel
+                        bLastPixel = 1;
+                    }
+                    for (; x<xx; x++) {
+                        if (x & 1) { // odd pixels
+                            g = (s8[-1] + s8[1]) >>1;
+                            r = s8[0];
+                            b = (s8[-pitch-1] + s8[-pitch+1]) >> 1;
+                        } else { // even pixels
+                            g = s8[0];
+                            b = s8[-pitch];
+                            r = (s8[-1] + s8[1]) >> 1;
+                        }
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    } // for x
+                    if (bLastPixel) { // 1 more pixel to process
+                        r = s8[0]; // on a red pixel
+                        g = (s8[-pitch] + s8[-1]) >> 1; // and re-use the previous blue
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    }
+                } else { // even line (y==0)
+                    if (x == 0) { // left edge special case
+                        b = s8[0];
+                        g = s8[pitch];
+                        r = s8[pitch+1];
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        x++;
+                    }
+                    for (; x<xx; x++) {
+                        if (x & 1) { // odd pixels
+                            b = (s8[-1] + s8[1]) >>1;
+                            g = s8[0];
+                            r = s8[pitch];
+                        } else { // even pixels
+                            b = s8[0];
+                            g = (s8[1] + s8[-1]) >> 1;
+                            r = s8[pitch];
+                        }
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    } // for x
+                } // even line
+                return;
+            } // edge case; need to check boundary conditions
+// middle of image can be converted without checking boundary conditions on each pixel
+            s = (uint16_t*)&img->pixels[(y_offset * pitch) + (x_offset & 0xfffe)];
+            if (x_offset == 0) { // don't read past left edge; repeat pixels instead
+                l0 = s[-w2] | (s[-w2] << 16); // prep current and left pixels
+                l1 = s[0] | (s[0] << 16);
+                l2 = s[w2] | (s[w2] << 16);
+            } else {
+                l0 = s[-w2-1] | (s[-w2] << 16); // prep current and left pixels
+                l1 = s[-1] | (s[0] << 16);
+                l2 = s[w2-1] | (s[w2] << 16);
+            }
+            x = x_offset; xx = x_offset+width;
+            s++;
+            if (y_offset & 1) { // odd line
+                if (x_offset & 1) // starting on an odd pixel, capture it differently
+                {
+                    r = (l1 >> 24); // (1, 0) red pixel
+                    g = ((l0 >> 24) + (l2 >> 24)) >> 1;
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    x++; // advance to next pixel
+                }
+                for (; x<xx-1; x+=2) {
+                    g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    // faster to keep all calculations in integer math with 15-bit fractions
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                    l1 |= (s[0] << 16);
+                    l2 |= (s[w2] << 16);
+                    s++;
+                    r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
+                    g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
+                    b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                } // for x
+                if (x < xx) { // one final pixel to do
+                    g = (l1 >> 16) & 0xff; // (0, 0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g
+                }
+            } else { // even line
+                if (x_offset & 1) // starting on an odd pixel, capture it differently
+                {
+                    g = (l1 >> 8) & 0xff; // (1, 0) green pixel
+                    r = (((l0 >> 8) & 0xff) + ((l2 >> 8) && 0xff)) >> 1;
+                    b = (((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 1;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    x++; // advance to next pixel
+                }
+                for (; x<xx-1; x+=2) {
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    // prepare for the next set of source pixels
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                    l1 |= (s[0] << 16);
+                    l2 |= (s[w2] << 16);
+                    s++;
+                    g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
+                    b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
+                    r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                } // for x
+                if (x < xx) { // one final pixel to do
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                }
+            } // even line
+} /* imlib_bayer_to_y() */
+//
+// Convert a row of Bayer pixels into binary output
+//
+void imlib_bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, uint8_t *binary)
+{
+            uint16_t *s;
+            uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
+            int x, xx, r, g, b = 0;
+            uint8_t pixel;
+            int pitch = img->w; // keep in local var
+            int w2 = pitch/2; // pitch for a uint16_t pointer
+            x = x_offset; xx = x_offset+width;
+            if (y_offset < 1 || y_offset >= img->h-1) { // top or bottom lines
+                uint8_t *s8 = (uint8_t *)&img->pixels[(y_offset * pitch) + x_offset];
+                if (y_offset & 1) { // odd line (y == img->h-1)
+                    int bLastPixel = 0;
+                    if (((x_offset+width) & 1) == 0 && x_offset+width >= img->w) { // flag to not read past the bottom-right edge
+                        xx--; // make the loop stop on an even pixel
+                        bLastPixel = 1;
+                    }
+                    for (; x<xx; x++) {
+                        if (x & 1) { // odd pixels
+                            g = (s8[-1] + s8[1]) >>1;
+                            r = s8[0];
+                            b = (s8[-pitch-1] + s8[-pitch+1]) >> 1;
+                        } else { // even pixels
+                            g = s8[0];
+                            b = s8[-pitch];
+                            r = (s8[-1] + s8[1]) >> 1;
+                        }
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    } // for x
+                    if (bLastPixel) { // 1 more pixel to process
+                        r = s8[0]; // on a red pixel
+                        g = (s8[-pitch] + s8[-1]) >> 1; // and re-use the previous blue
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    }
+                } else { // even line (y==0)
+                    if (x == 0) { // left edge special case
+                        b = s8[0];
+                        g = s8[pitch];
+                        r = s8[pitch+1];
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                        x++;
+                    }
+                    for (; x<xx; x++) {
+                        if (x & 1) { // odd pixels
+                            b = (s8[-1] + s8[1]) >>1;
+                            g = s8[0];
+                            r = s8[pitch];
+                        } else { // even pixels
+                            b = s8[0];
+                            g = (s8[1] + s8[-1]) >> 1;
+                            r = s8[pitch];
+                        }
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    } // for x
+                } // even line
+                return;
+            } // edge case; need to check boundary conditions
+// middle of image can be converted without checking boundary conditions on each pixel
+            s = (uint16_t*)&img->pixels[(y_offset * pitch) + (x_offset & 0xfffe)];
+            if (x_offset == 0) { // don't read past left edge; repeat pixels instead
+                l0 = s[-w2] | (s[-w2] << 16); // prep current and left pixels
+                l1 = s[0] | (s[0] << 16);
+                l2 = s[w2] | (s[w2] << 16);
+            } else {
+                l0 = s[-w2-1] | (s[-w2] << 16); // prep current and left pixels
+                l1 = s[-1] | (s[0] << 16);
+                l2 = s[w2-1] | (s[w2] << 16);
+            }
+            x = x_offset; xx = x_offset+width;
+            s++;
+            if (y_offset & 1) { // odd line
+                if (x_offset & 1) // starting on an odd pixel, capture it differently
+                {
+                    r = (l1 >> 24); // (1, 0) red pixel
+                    g = ((l0 >> 24) + (l2 >> 24)) >> 1;
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    x++; // advance to next pixel
+                }
+                for (; x<xx-1; x+=2) {
+                    g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    // faster to keep all calculations in integer math with 15-bit fractions
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                    l1 |= (s[0] << 16);
+                    l2 |= (s[w2] << 16);
+                    s++;
+                    r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
+                    g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
+                    b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x+1, (pixel >> 7));
+                } // for x
+                if (x < xx) { // one final pixel to do
+                    g = (l1 >> 16) & 0xff; // (0, 0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x+1, (pixel >> 7));
+                }
+            } else { // even line
+                if (x_offset & 1) // starting on an odd pixel, capture it differently
+                {
+                    g = (l1 >> 8) & 0xff; // (1, 0) green pixel
+                    r = (((l0 >> 8) & 0xff) + ((l2 >> 8) && 0xff)) >> 1;
+                    b = (((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 1;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    x++; // advance to next pixel
+                }
+                for (; x<xx-1; x+=2) {
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    // prepare for the next set of source pixels
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                    l1 |= (s[0] << 16);
+                    l2 |= (s[w2] << 16);
+                    s++;
+                    g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
+                    b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
+                    r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x+1, (pixel >> 7));
+                } // for x
+                if (x < xx) { // one final pixel to do
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                }
+            } // even line
+} /* imlib_bayer_to_binary() */
+
 ////////////////////////////////////////////////////////////////////////////////
 
 static save_image_format_t imblib_parse_extension(image_t *img, const char *path)
