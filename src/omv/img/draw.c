@@ -515,7 +515,7 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
     if (other_x_start + x_off >= img->w || other_y_start + y_off >= img->h) return;
     if (other_x_end + x_off <= 0 || other_y_end + y_off <= 0) return;
 
-    // If scaling is negative we essentially flip the other coordinates so they work from bottom left instead of bottom right
+    // If scaling is negative we essentially flip the other coordinates so they work from bottom right instead of top left
     if (over_xscale < 0) {
         other_x_start -= other_width_scaled;
         other_x_end -= other_width_scaled;
