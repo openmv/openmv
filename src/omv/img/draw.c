@@ -491,7 +491,7 @@ static int safe_map_pixel(int dst_bpp, int src_bpp, int pixel)
 void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask, const uint16_t *color_palette)
 {
     // Scaler to convert from img scale to other scale
-    const float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
+    const float over_xscale = IM_DIV(1.0f, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
 
     // Packaed alpha for SMUAD calls
     const uint32_t va = (alpha << 16) + (256 - alpha);
@@ -504,8 +504,8 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
     int other_y_start = (y_off < 0) ? -y_off : 0;
     
     // Scaled other size
-    const int other_width_scaled = fast_floorf(abs(other->w * x_scale));
-    const int other_height_scaled = fast_floorf(abs(other->h * y_scale));
+    int other_width_scaled = fast_floorf(abs(other->w * x_scale));
+    int other_height_scaled = fast_floorf(abs(other->h * y_scale));
 
     // Right or bottom of image is out of bounds
     int other_x_end = (x_off + other_width_scaled >= img->w) ? img->w - x_off : other_width_scaled;
@@ -517,12 +517,14 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
 
     // If scaling is negative we essentially flip the other coordinates so they work from bottom right instead of top left
     if (over_xscale < 0) {
+        other_width_scaled--;
         other_x_start -= other_width_scaled;
         other_x_end -= other_width_scaled;
         x_off += other_width_scaled;
     }
 
     if (over_yscale < 0) {
+        other_height_scaled--;
         other_y_start -= other_height_scaled;
         other_y_end -= other_height_scaled;
         y_off += other_height_scaled;
@@ -549,9 +551,7 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                         }
                         else {
                             const uint32_t img_pixel = IMAGE_GET_BINARY_PIXEL_FAST(img_row_ptr, x_off + x);
-                            
-                            const uint32_t vgs = (other_pixel << 16) + img_pixel;
-                            result_pixel = __SMUAD(va, vgs)>>8;
+                            result_pixel = img_pixel & other_pixel;
                         }
 
                         IMAGE_PUT_BINARY_PIXEL_FAST(img_row_ptr, x_off + x, result_pixel);
