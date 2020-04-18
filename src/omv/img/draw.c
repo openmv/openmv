@@ -532,29 +532,22 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
 
     switch(img_bpp) {
         case IMAGE_BPP_BINARY: {
-            // Iterate the img area to be updated
-            for (int y = other_y_start; y < other_y_end; y++) {
-                uint32_t *img_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_off + y);
+            // If alpha is less that 128 on a bitmap we're just copying the image back to the image, so do nothing
+            if (alpha >= 128) {
+                // Iterate the img area to be updated
+                for (int y = other_y_start; y < other_y_end; y++) {
+                    uint32_t *img_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_off + y);
 
-                const int other_y = fast_floorf(y * over_yscale);
-                void *other_row_ptr = imlib_compute_row_ptr(other, other_y);
+                    const int other_y = fast_floorf(y * over_yscale);
+                    void *other_row_ptr = imlib_compute_row_ptr(other, other_y);
 
-                for (int x = other_x_start; x < other_x_end; x++) {
-                    const int other_x = fast_floorf(x * over_xscale);
+                    for (int x = other_x_start; x < other_x_end; x++) {
+                        const int other_x = fast_floorf(x * over_xscale);
 
-                    if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
-                        const uint32_t other_pixel = safe_map_pixel(IMAGE_BPP_BINARY, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
-                        
-                        uint32_t result_pixel;
-                        if (alpha==256) {
-                            result_pixel = other_pixel;
+                        if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
+                            uint32_t result_pixel = safe_map_pixel(IMAGE_BPP_BINARY, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
+                            IMAGE_PUT_BINARY_PIXEL_FAST(img_row_ptr, x_off + x, result_pixel);
                         }
-                        else {
-                            const uint32_t img_pixel = IMAGE_GET_BINARY_PIXEL_FAST(img_row_ptr, x_off + x);
-                            result_pixel = img_pixel & other_pixel;
-                        }
-
-                        IMAGE_PUT_BINARY_PIXEL_FAST(img_row_ptr, x_off + x, result_pixel);
                     }
                 }
             }
