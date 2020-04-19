@@ -206,6 +206,9 @@ void sensor_init0()
     memset(MAIN_FB(), 0, sizeof(*MAIN_FB()));
     memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
 
+    // Skip the first frame.
+    MAIN_FB()->bpp = -1;
+
     // Set default quality
     JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
 
