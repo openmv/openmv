@@ -757,8 +757,8 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
                         for (int j = -ksize; j <= ksize; j++) {
                             uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,y+j);
                             // subtract old left edge and add new right edge to sum
-                            acc -= (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x-ksize-1) >> 7);
-                            acc += (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x+ksize) >> 7);
+                            acc -= (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x-ksize-1) & 1); // values have already been thresholded to 0x00 or 0xFF
+                            acc += (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x+ksize) & 1);
                         } // for j
                     } else { // slower way which checks boundaries per pixel
                         acc = e_or_d ? 0 : -1; // Don't count center pixel...
