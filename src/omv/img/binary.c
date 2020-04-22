@@ -682,25 +682,32 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
                 uint32_t *buf_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows));
+                int acc = 0;
 
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_BINARY_PIXEL_FAST(buf_row_ptr, x, pixel);
 
-                    if ((mask && (!image_get_mask_pixel(mask, x, y)))
-                    || (pixel == e_or_d)) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) {
                         continue; // Short circuit.
                     }
+                    if (x > ksize && x < img->w-ksize && y >= ksize && y < img->h-ksize) { // faster
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,y+j);
+                            // subtract old left column and add new right column
+                            acc -= IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,x-ksize-1);
+                            acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,x+ksize);
+                        }
+                    } else { // slower (checks boundaries per pixel)
+                        acc = e_or_d ? 0 : -1; // Don't count center pixel...
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
+                                IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
 
-                    int acc = e_or_d ? 0 : -1; // Don't count center pixel...
-
-                    for (int j = -ksize; j <= ksize; j++) {
-                        uint32_t *k_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img,
-                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
-
-                        for (int k = -ksize; k <= ksize; k++) {
-                            acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
-                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                            for (int k = -ksize; k <= ksize; k++) {
+                                acc += IMAGE_GET_BINARY_PIXEL_FAST(k_row_ptr,
+                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)));
+                            }
                         }
                     }
 
@@ -736,26 +743,34 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                 uint8_t *buf_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows));
+                int acc = 0;
 
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(buf_row_ptr, x, pixel);
 
-                    if ((mask && (!image_get_mask_pixel(mask, x, y)))
-                    || (COLOR_GRAYSCALE_TO_BINARY(pixel) == e_or_d)) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) {
                         continue; // Short circuit.
                     }
 
-                    int acc = e_or_d ? 0 : -1; // Don't count center pixel...
+                    if (x > ksize && x < img->w-ksize && y >= ksize && y < img->h-ksize) { // faster
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,y+j);
+                            // subtract old left edge and add new right edge to sum
+                            acc -= (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x-ksize-1) & 1); // values have already been thresholded to 0x00 or 0xFF
+                            acc += (IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,x+ksize) & 1);
+                        } // for j
+                    } else { // slower way which checks boundaries per pixel
+                        acc = e_or_d ? 0 : -1; // Don't count center pixel...
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
+                                IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
 
-                    for (int j = -ksize; j <= ksize; j++) {
-                        uint8_t *k_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img,
-                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
-
-                        for (int k = -ksize; k <= ksize; k++) {
-                            acc += COLOR_GRAYSCALE_TO_BINARY(IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
-                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1))));
-                        }
+                            for (int k = -ksize; k <= ksize; k++) {
+                                acc += ((IMAGE_GET_GRAYSCALE_PIXEL_FAST(k_row_ptr,
+                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)))) >> 7);
+                            }  // for k
+                        } // for j
                     }
 
                     if (!e_or_d) {
@@ -792,25 +807,33 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                 uint16_t *buf_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&buf, (y % brows));
+                int acc = 0;
 
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
                     IMAGE_PUT_RGB565_PIXEL_FAST(buf_row_ptr, x, pixel);
 
-                    if ((mask && (!image_get_mask_pixel(mask, x, y)))
-                    || (COLOR_RGB565_TO_BINARY(pixel) == e_or_d)) {
+                    if (mask && (!image_get_mask_pixel(mask, x, y))) {
                         continue; // Short circuit.
                     }
 
-                    int acc = e_or_d ? 0 : -1; // Don't count center pixel...
+                    if (x > ksize && x < img->w-ksize && y >= ksize && y < img->h-ksize) { // faster
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,y+j);
+                            // subtract old left column and add new right column
+                            acc -= IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,x-ksize-1) & 1; // already 0 or FFFF
+                            acc += IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,x+ksize) & 1; // (pre-thresholded)
+                        }
+                    } else { // need to check boundary conditions for each pixel
+                        acc = e_or_d ? 0 : -1; // Don't count center pixel...
+                        for (int j = -ksize; j <= ksize; j++) {
+                            uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
+                                IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
 
-                    for (int j = -ksize; j <= ksize; j++) {
-                        uint16_t *k_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img,
-                            IM_MIN(IM_MAX(y + j, 0), (img->h - 1)));
-
-                        for (int k = -ksize; k <= ksize; k++) {
-                            acc += COLOR_RGB565_TO_BINARY(IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
-                                IM_MIN(IM_MAX(x + k, 0), (img->w - 1))));
+                            for (int k = -ksize; k <= ksize; k++) {
+                                acc += (IMAGE_GET_RGB565_PIXEL_FAST(k_row_ptr,
+                                    IM_MIN(IM_MAX(x + k, 0), (img->w - 1)))) & 1; // already 0 or FFFF
+                            }
                         }
                     }
 
