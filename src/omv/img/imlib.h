@@ -1283,7 +1283,7 @@ void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness
 void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotation, int c, int thickness, bool fill);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, float scale, int x_spacing, int y_spacing, bool mono_space,
                        int char_rotation, bool char_hmirror, bool char_vflip, int string_rotation, bool string_hmirror, bool string_hflip);
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, float alpha, image_t *mask, const uint16_t *color_palette);
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask, const uint16_t *color_palette);
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);
