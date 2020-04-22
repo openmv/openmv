@@ -493,9 +493,6 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
     // Scaler to convert from img scale to other scale
     const float over_xscale = IM_DIV(1.0f, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
 
-    // Packaed alpha for SMUAD calls
-    const uint32_t va = (alpha << 16) + (256 - alpha);
-
     const int img_bpp = img->bpp;
     const int other_bpp = other->bpp;
 
@@ -554,6 +551,9 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
+            // Packaed alpha for SMUAD calls
+            const uint32_t va = (alpha << 16) + (256 - alpha);
+
             // Iterate the img area to be updated
             for (int y = other_y_start; y < other_y_end; y++) {
                 // Pre-add x_off here to save adding it inside the central loop
@@ -586,6 +586,8 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
             break;
         }
         case IMAGE_BPP_RGB565: {
+            alpha >>= 3;
+            uint32_t alpha_complement = 32 - alpha;
             // Iterate the img area to be updated
             for (int y = other_y_start; y < other_y_end; y++) {
                 // Pre-add x_off here to save adding it inside the central loop
@@ -603,21 +605,51 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                             ? color_palette[other_pixel]
                             : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, other_pixel);
                         
-                        uint16_t result_pixel;
-                        if (alpha==256) {
+                        uint32_t result_pixel;
+                        if (alpha==32) { //256
                             result_pixel = other_pixel;
                         }
                         else {
-                            const uint16_t img_pixel = IMAGE_GET_RGB565_PIXEL_FAST(img_row_ptr, x);
-                            
-                            const uint32_t vr = (COLOR_RGB565_TO_R5(other_pixel) << 16) + COLOR_RGB565_TO_R5(img_pixel);
-                            const uint32_t vg = (COLOR_RGB565_TO_G6(other_pixel) << 16) + COLOR_RGB565_TO_G6(img_pixel);
-                            const uint32_t vb = (COLOR_RGB565_TO_B5(other_pixel) << 16) + COLOR_RGB565_TO_B5(img_pixel);
-                            const uint8_t r = __SMUAD(va, vr)>>8;
-                            const uint8_t g = __SMUAD(va, vg)>>8;
-                            const uint8_t b = __SMUAD(va, vb)>>8;
+                            uint32_t img_pixel = IMAGE_GET_RGB565_PIXEL_FAST(img_row_ptr, x);
+                            // 0000000000000000-gggbbbbbrrrrrggg
 
-                            result_pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                            // ** Extract green component of pixel to high word **
+                            img_pixel = img_pixel | (img_pixel << 16);
+                            // gggbbbbbrrrrrggg-gggbbbbbrrrrrggg
+                            // Rotate to fix endianness
+                            img_pixel = __ROR(img_pixel, 8);
+                            // rrrrrggggggbbbbb-rrrrrggggggbbbbb
+                            // Clear 5 bits per component a multiply
+                            img_pixel &= 0x7E0F81F;
+                            // 00000gggggg00000-rrrrr000000bbbbb
+
+                            // ** Extract green component of pixel to high word **
+                            other_pixel = other_pixel | (other_pixel << 16);                            
+                            // gggbbbbbrrrrrggg-gggbbbbbrrrrrggg
+                            // Rotate to fix endianness
+                            other_pixel = __ROR(other_pixel, 8);
+                            // rrrrrggggggbbbbb-rrrrrggggggbbbbb
+                            // Clear 5 bits per component for the multiply
+                            other_pixel &= 0x7E0F81F;
+                            // 00000gggggg00000-rrrrr000000bbbbb
+
+                            // Combine foreground and background with alpha applied
+                            result_pixel = (img_pixel * alpha_complement) + (other_pixel * alpha);
+                            // GGGGGG.....RRRRR-.....0BBBBB..... (.'s are remainders)
+
+                            // Round component values
+                            result_pixel >>= 5;
+                            // 00000GGGGGG.....-RRRRR.....0BBBBB
+                            result_pixel &= 0x7E0F81F;
+                            // 00000GGGGGG00000-RRRRR000000BBBBB
+
+                            // Merge green component back to low word
+                            result_pixel = result_pixel | (result_pixel >> 16); 
+                            // 00000GGGGGG00000-RRRRRGGGGGGBBBBB
+                            // Switch endianness
+                            result_pixel = __REV16(result_pixel);
+                            // GGG0000000000GGG-GGGGBBBBBRRRRRGG
+                            // Don't bother rounding off high word it'll get removed on store
                         }
                         IMAGE_PUT_RGB565_PIXEL_FAST(img_row_ptr, x, result_pixel);
                     }
