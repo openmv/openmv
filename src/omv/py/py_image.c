@@ -1954,6 +1954,10 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
         }
     }
 
+    if (color_palette) {
+        if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify color palette when passing a grayscale image!"));
+    }
+
     imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk, color_palette);
     return args[0];
 }

@@ -21,13 +21,10 @@ while(True):
     clock.tick()
 
     img = sensor.snapshot()
-    small_img = img.mean_pooled(4, 4) # Makes a copy.
-
+    img_copy = img.copy()
+    
     img.to_rgb565()
 
-    x = (img.width()//2)-(small_img.width()//2)
-    y = (img.height()//2)-(small_img.height()//2)
-    
-    img.draw_image(small_img, x, y, x_scale=2, y_scale=2, color_palette=palette)
+    img.draw_image(img_copy, 0, 0, color_palette=palette)
 
     print(clock.fps())
