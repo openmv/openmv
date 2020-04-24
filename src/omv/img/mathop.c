@@ -113,7 +113,13 @@ void imlib_negate(image_t *img)
         case IMAGE_BPP_BINARY: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint32_t *data = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                int x = 0, xx = img->w;
+                uint32_t *s = data;
+                for (; x < xx-31; x += 32) { // do it faster with bit access
+                    s[0] = ~s[0]; // invert 32 bits (pixels) in one shot
+                    s++;
+                }
+                for (; x < xx; x++) {
                     int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, x);
                     int p = (COLOR_BINARY_MAX - COLOR_BINARY_MIN) - dataPixel;
                     IMAGE_PUT_BINARY_PIXEL_FAST(data, x, p);
@@ -124,7 +130,14 @@ void imlib_negate(image_t *img)
         case IMAGE_BPP_GRAYSCALE: {
             for (int y = 0, yy = img->h; y < yy; y++) {
                 uint8_t *data = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                int x = 0, xx = img->w;
+                uint32_t a, b, *s = (uint32_t *)data;
+                for (; x < xx-7; x+= 8) { // process a pair of 4 pixels at a time
+                    a = s[0]; b = s[1]; // read 8 pixels
+                    s[0] = ~a; s[1] = ~b;
+                    s += 2;
+                }
+                for (; x < xx; x++) {
                     int dataPixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(data, x);
                     int p = (COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) - dataPixel;
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(data, x, p);
@@ -137,10 +150,7 @@ void imlib_negate(image_t *img)
                 uint16_t *data = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                 for (int x = 0, xx = img->w; x < xx; x++) {
                     int dataPixel = IMAGE_GET_RGB565_PIXEL_FAST(data, x);
-                    int r = (COLOR_R5_MAX - COLOR_R5_MIN) - COLOR_RGB565_TO_R5(dataPixel);
-                    int g = (COLOR_G6_MAX - COLOR_G6_MIN) - COLOR_RGB565_TO_G6(dataPixel);
-                    int b = (COLOR_B5_MAX - COLOR_B5_MIN) - COLOR_RGB565_TO_B5(dataPixel);
-                    IMAGE_PUT_RGB565_PIXEL_FAST(data, x, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
+                    IMAGE_PUT_RGB565_PIXEL_FAST(data, x, ~dataPixel);
                 }
             }
             break;
@@ -258,8 +268,8 @@ static void imlib_add_line_op(image_t *img, int line, void *other, void *data, b
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
                     int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, i);
                     int otherPixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), i);
-                    int p = dataPixel + otherPixel;
-                    p = IM_MIN(p, COLOR_BINARY_MAX);
+                    int p = dataPixel | otherPixel; //dataPixel + otherPixel;
+//                    p = IM_MIN(p, COLOR_BINARY_MAX);
                     IMAGE_PUT_BINARY_PIXEL_FAST(data, i, p);
                 }
             }
@@ -674,7 +684,7 @@ static void imlib_difference_line_op(image_t *img, int line, void *other, void *
                 if ((!mask) || image_get_mask_pixel(mask, i, line)) {
                     int dataPixel = IMAGE_GET_BINARY_PIXEL_FAST(data, i);
                     int otherPixel = IMAGE_GET_BINARY_PIXEL_FAST(((uint32_t *) other), i);
-                    int p = abs(dataPixel - otherPixel);
+                    int p = dataPixel ^ otherPixel; // abs(dataPixel - otherPixel);
                     IMAGE_PUT_BINARY_PIXEL_FAST(data, i, p);
                 }
             }
