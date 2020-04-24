@@ -690,6 +690,8 @@ soft_reset:
     // soft reset
     storage_flush();
     timer_deinit();
+    i2c_deinit_all();
+    spi_deinit_all();
     uart_deinit_all();
     #if MICROPY_HW_ENABLE_CAN
     can_deinit_all();
