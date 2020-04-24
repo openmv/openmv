@@ -1062,20 +1062,21 @@ dmtxDecodeGetProp(DmtxDecode *dec, int prop)
 extern unsigned char *
 dmtxDecodeGetCache(DmtxDecode *dec, int x, int y)
 {
-   int width, height;
+//   int width, height;
 
    assert(dec != NULL);
 
 /* if(dec.cacheComplete == DmtxFalse)
       CacheImage(); */
 
-   width = dmtxDecodeGetProp(dec, DmtxPropWidth);
-   height = dmtxDecodeGetProp(dec, DmtxPropHeight);
+// Scale is always 1, so we can do it quicker
+//   width = dmtxDecodeGetProp(dec, DmtxPropWidth);
+//   height = dmtxDecodeGetProp(dec, DmtxPropHeight);
 
-   if(x < 0 || x >= width || y < 0 || y >= height)
+   if(x < 0 || x >= dec->image->width || y < 0 || y >= dec->image->height)
       return NULL;
 
-   return &(dec->cache[y * width + x]);
+   return &(dec->cache[y * dec->image->width + x]);
 }
 
 /**
@@ -2759,6 +2760,24 @@ RightAngleTrueness(DmtxVector2 c0, DmtxVector2 c1, DmtxVector2 c2, float angle)
    return dmtxVector2Dot(&vA, &vB);
 }
 
+void Matrix3VMultFast(DmtxVector2 *vIn, DmtxMatrix3 m)
+{
+   float w;
+   float x, y;
+    
+   w = vIn->X*m[0][2] + vIn->Y*m[1][2] + m[2][2];
+   if(fabsf(w) <= DmtxAlmostZero) {
+      vIn->X = FLT_MAX;
+      vIn->Y = FLT_MAX;
+      return;
+   }
+
+   x = (vIn->X*m[0][0] + vIn->Y*m[1][0] + m[2][0])/w;
+   y = (vIn->X*m[0][1] + vIn->Y*m[1][1] + m[2][1])/w;
+   vIn->X = x; vIn->Y = y;
+   return;
+}
+
 /**
  * \brief  Read color of Data Matrix module location
  * \param  dec
@@ -2783,18 +2802,40 @@ ReadModuleColor(DmtxDecode *dec, DmtxRegion *reg, int symbolRow, int symbolCol,
    symbolRows = dmtxGetSymbolAttribute(DmtxSymAttribSymbolRows, sizeIdx);
    symbolCols = dmtxGetSymbolAttribute(DmtxSymAttribSymbolCols, sizeIdx);
 
-   color = 0;
-   for(i = 0; i < 5; i++) {
+   color = colorTmp = 0;
+    if (dec->image->channelCount == 1) // quicker for grayscale
+    {
+        int x, y;
+        for(i = 0; i < 5; i++) {
 
-      p.X = (1.0/symbolCols) * (symbolCol + sampleX[i]);
-      p.Y = (1.0/symbolRows) * (symbolRow + sampleY[i]);
+           p.X = (1.0/symbolCols) * (symbolCol + sampleX[i]);
+           p.Y = (1.0/symbolRows) * (symbolRow + sampleY[i]);
 
-      dmtxMatrix3VMultiplyBy(&p, reg->fit2raw);
+//           dmtxMatrix3VMultiplyBy(&p, reg->fit2raw);
+            Matrix3VMultFast(&p, reg->fit2raw);
+            x = (int)(p.X + 0.5f);
+            y = (int)(p.Y + 0.5f);
+            if (x >= 0 && y >= 0 && x < dec->image->width && y < dec->image->height)
+                colorTmp = dec->image->pxl[(dec->image->height - 1 - y) * dec->image->rowSizeBytes + x];
+ //          err = dmtxDecodeGetPixelValue(dec, (int)(p.X + 0.5), (int)(p.Y + 0.5),
+ //                colorPlane, &colorTmp);
+           color += colorTmp;
+        }
+    }
+    else
+    {
+       for(i = 0; i < 5; i++) {
 
-      err = dmtxDecodeGetPixelValue(dec, (int)(p.X + 0.5), (int)(p.Y + 0.5),
-            colorPlane, &colorTmp);
-      color += colorTmp;
-   }
+          p.X = (1.0/symbolCols) * (symbolCol + sampleX[i]);
+          p.Y = (1.0/symbolRows) * (symbolRow + sampleY[i]);
+
+          dmtxMatrix3VMultiplyBy(&p, reg->fit2raw);
+
+          err = dmtxDecodeGetPixelValue(dec, (int)(p.X + 0.5), (int)(p.Y + 0.5),
+                colorPlane, &colorTmp);
+          color += colorTmp;
+       }
+    }
 
    return color/5;
 }
@@ -3017,15 +3058,30 @@ GetPointFlow(DmtxDecode *dec, int colorPlane, DmtxPixelLoc loc, int arrive)
    int xAdjust, yAdjust;
    int color, colorPattern[8];
    DmtxPointFlow flow;
-
-   for(patternIdx = 0; patternIdx < 8; patternIdx++) {
-      xAdjust = loc.X + dmtxPatternX[patternIdx];
-      yAdjust = loc.Y + dmtxPatternY[patternIdx];
-      err = dmtxDecodeGetPixelValue(dec, xAdjust, yAdjust, colorPlane,
-            &colorPattern[patternIdx]);
-      if(err == DmtxFail)
-         return dmtxBlankEdge;
-   }
+    
+    // check boundary conditions outside of the loop
+    if (loc.X <= 0 || loc.Y <= 0 || loc.X >= dec->image->width-1 || loc.Y >= dec->image->height-1)
+        return dmtxBlankEdge; // one or more pixels are past an edge
+    if (dec->image->channelCount == 1) // grayscale, do it quicker
+    {
+        uint8_t *s;
+        s = &dec->image->pxl[(dec->image->height - 1 - loc.Y) * dec->image->rowSizeBytes + loc.X];
+        for (patternIdx=0; patternIdx < 8; patternIdx++)
+        {
+            colorPattern[patternIdx] = s[dmtxPatternX[patternIdx] - dmtxPatternY[patternIdx] * dec->image->rowSizeBytes];
+        }
+    }
+    else
+    {
+       for(patternIdx = 0; patternIdx < 8; patternIdx++) {
+          xAdjust = loc.X + dmtxPatternX[patternIdx];
+          yAdjust = loc.Y + dmtxPatternY[patternIdx];
+          err = dmtxDecodeGetPixelValue(dec, xAdjust, yAdjust, colorPlane,
+                &colorPattern[patternIdx]);
+          if(err == DmtxFail)
+             return dmtxBlankEdge;
+       }
+    }
 
    /* Calculate this pixel's flow intensity for each direction (-45, 0, 45, 90) */
    compassMax = 0;
@@ -3034,26 +3090,12 @@ GetPointFlow(DmtxDecode *dec, int colorPlane, DmtxPixelLoc loc, int arrive)
       /* Add portion from each position in the convolution matrix pattern */
       for(patternIdx = 0; patternIdx < 8; patternIdx++) {
 
-         coefficientIdx = (patternIdx - compass + 8) % 8;
-         if(coefficient[coefficientIdx] == 0)
-            continue;
-
          color = colorPattern[patternIdx];
+         coefficientIdx = (patternIdx - compass + 8) % 8;
+//         if(coefficient[coefficientIdx] == 0)
+//            continue;
 
-         switch(coefficient[coefficientIdx]) {
-            case 2:
-               mag[compass] += color;
-               /* Fall through */
-            case 1:
-               mag[compass] += color;
-               break;
-            case -2:
-               mag[compass] -= color;
-               /* Fall through */
-            case -1:
-               mag[compass] -= color;
-               break;
-         }
+         mag[compass] += color * coefficient[coefficientIdx];
       }
 
       /* Identify strongest compass flow */
