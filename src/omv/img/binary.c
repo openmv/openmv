@@ -728,7 +728,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             }
 
             // Copy any remaining lines from the buffer image...
-            for (int y = img->h - ksize, yy = img->h; y < yy; y++) {
+            for (int y = IM_MAX(img->h - ksize, 0), yy = img->h; y < yy; y++) {
                 memcpy(IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y),
                        IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&buf, (y % brows)),
                        IMAGE_BINARY_LINE_LEN_BYTES(img));
@@ -792,7 +792,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             }
 
             // Copy any remaining lines from the buffer image...
-            for (int y = img->h - ksize, yy = img->h; y < yy; y++) {
+            for (int y = IM_MAX(img->h - ksize, 0), yy = img->h; y < yy; y++) {
                 memcpy(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y),
                        IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&buf, (y % brows)),
                        IMAGE_GRAYSCALE_LINE_LEN_BYTES(img));
@@ -856,7 +856,7 @@ static void imlib_erode_dilate(image_t *img, int ksize, int threshold, int e_or_
             }
 
             // Copy any remaining lines from the buffer image...
-            for (int y = img->h - ksize, yy = img->h; y < yy; y++) {
+            for (int y = IM_MAX(img->h - ksize, 0), yy = img->h; y < yy; y++) {
                 memcpy(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y),
                        IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&buf, (y % brows)),
                        IMAGE_RGB565_LINE_LEN_BYTES(img));
