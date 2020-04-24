@@ -20,7 +20,7 @@ image_t *py_helper_arg_to_image_color(const mp_obj_t arg);
 image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, uint arg_index,
                                             mp_map_t *kw_args, mp_obj_t kw, image_t *default_val);
 image_t *py_helper_keyword_to_image_mutable_mask(uint n_args, const mp_obj_t *args, uint arg_index,
-                                            mp_map_t *kw_args);
+                                                 mp_map_t *kw_args);
 image_t *py_helper_keyword_to_image_mutable_color_palette(uint n_args, const mp_obj_t *args, uint arg_index,
                                             mp_map_t *kw_args);
 void py_helper_keyword_rectangle(image_t *img, uint n_args, const mp_obj_t *args, uint arg_index,
@@ -30,7 +30,7 @@ void py_helper_keyword_rectangle_roi(image_t *img, uint n_args, const mp_obj_t *
 int py_helper_keyword_int(uint n_args, const mp_obj_t *args, uint arg_index,
                           mp_map_t *kw_args, mp_obj_t kw, int default_val);
 int py_helper_keyword_int_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
-                            mp_map_t *kw_args, mp_obj_t kw, int* value);
+                                mp_map_t *kw_args, mp_obj_t kw, int* value);
 float py_helper_keyword_float(uint n_args, const mp_obj_t *args, uint arg_index,
                               mp_map_t *kw_args, mp_obj_t kw, float default_val);
 void py_helper_keyword_int_array(uint n_args, const mp_obj_t *args, uint arg_index,
