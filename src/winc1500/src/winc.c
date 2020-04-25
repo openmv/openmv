@@ -184,6 +184,8 @@ static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
                         pstrRecv->s16BufferSize, rfrom->addr.sin_addr.s_addr, rfrom->addr.sin_port);
 			} else {
                 rfrom->size = pstrRecv->s16BufferSize;
+                rfrom->addr.sin_port = 0;
+                rfrom->addr.sin_addr.s_addr = 0;
 				debug_printf("recvfrom error:%d\n", pstrRecv->s16BufferSize);
 			}
             async_request_done = true;
@@ -820,23 +822,34 @@ int winc_socket_connect(int fd, sockaddr *addr, uint32_t timeout)
 
 int winc_socket_send(int fd, const uint8_t *buf, uint32_t len, uint32_t timeout)
 {
+    uint32_t tick_start = HAL_GetTick();
+
     int bytes = 0;
 
     while (bytes < len) {
         // Split the packet into smaller ones.
         int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH); 
-        int ret = WINC1500_EXPORT(send)(fd, (uint8_t*)buf + bytes, n, timeout);
+        int ret = WINC1500_EXPORT(send)(fd, (uint8_t*)buf + bytes, n, 0);
 
         if (ret == SOCK_ERR_NO_ERROR) {
             // Do async request
-            ret = winc_async_request(SOCKET_MSG_SEND, &n, timeout);
+            int async_ret;
+            ret = winc_async_request(SOCKET_MSG_SEND, &async_ret, timeout);
 
             // Check sent bytes returned from async request.
-            if (ret != SOCK_ERR_NO_ERROR || n <= 0) {
-                return (n <= 0)? n : ret;
+            if (ret != SOCK_ERR_NO_ERROR || async_ret <= 0) {
+                return (ret != SOCK_ERR_NO_ERROR) ? ret : async_ret;
             }
+
+            bytes += async_ret;
+        } else if (ret == SOCK_ERR_BUFFER_FULL) {
+            // timeout == 0 in blocking mode.
+            if (timeout && ((HAL_GetTick() - tick_start) >= timeout)) {
+                break;
+            }
+        } else { // another error
+            return ret;
         }
-        bytes += n;
     }
 
     return bytes;
@@ -856,8 +869,9 @@ int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sock
             ret = winc_async_request(SOCKET_MSG_RECV, &recv_bytes, timeout);
         }
 
+        // Check received bytes returned from async request.
         if (ret != SOCK_ERR_NO_ERROR || recv_bytes <= 0) {
-            return (recv_bytes <= 0)? recv_bytes : ret;
+            return (ret != SOCK_ERR_NO_ERROR) ? ret : recv_bytes;
         }
 
         sockbuf->size = recv_bytes;
@@ -872,17 +886,43 @@ int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sock
 
 int winc_socket_sendto(int fd, const uint8_t *buf, uint32_t len, sockaddr *addr, uint32_t timeout)
 {
-    int ret = WINC1500_EXPORT(sendto)(fd, (uint8_t*)buf, len, 0, addr, sizeof(*addr));
-    if (ret == SOCK_ERR_NO_ERROR) {
-        // Do async request
-        ret = winc_async_request(SOCKET_MSG_SENDTO, &ret, timeout);
+    uint32_t tick_start = HAL_GetTick();
+
+    int bytes = 0;
+
+    while (bytes < len) {
+        // Split the packet into smaller ones.
+        int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH); 
+        int ret = WINC1500_EXPORT(sendto)(fd, (uint8_t*)buf + bytes, n, 0, addr, sizeof(*addr));
+
+        if (ret == SOCK_ERR_NO_ERROR) {
+            // Do async request
+            int async_ret; // sendto always returns 0.
+            ret = winc_async_request(SOCKET_MSG_SENDTO, &async_ret, timeout);
+
+            // Check sent bytes returned from async request.
+            if (ret != SOCK_ERR_NO_ERROR || async_ret < 0) {
+                return (ret != SOCK_ERR_NO_ERROR) ? ret : async_ret;
+            }
+
+            bytes += n;
+        } else if (ret == SOCK_ERR_BUFFER_FULL) {
+            // timeout == 0 in blocking mode.
+            if (timeout && ((HAL_GetTick() - tick_start) >= timeout)) {
+                break;
+            }
+        } else { // another error
+            return ret;
+        }
     }
 
-    return ret;
+    return bytes;
 }
 
 int winc_socket_recvfrom(int fd, uint8_t *buf, uint32_t len, sockaddr *addr, uint32_t timeout)
 {
+    memset(addr, 0, sizeof(sockaddr));
+
     recv_from_t rfrom;
     int ret = WINC1500_EXPORT(recvfrom)(fd, buf, len, timeout);
     if (ret == SOCK_ERR_NO_ERROR) {
@@ -890,8 +930,9 @@ int winc_socket_recvfrom(int fd, uint8_t *buf, uint32_t len, sockaddr *addr, uin
         ret = winc_async_request(SOCKET_MSG_RECVFROM, &rfrom, timeout);
     }
 
+    // Check received bytes returned from async request.
     if (ret != SOCK_ERR_NO_ERROR || rfrom.size <= 0) {
-        return (rfrom.size <= 0)? rfrom.size : ret;
+        return (ret != SOCK_ERR_NO_ERROR) ? ret : rfrom.size;
     }
 
     *addr = *((struct sockaddr*) &rfrom.addr);
