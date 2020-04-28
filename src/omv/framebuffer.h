@@ -19,7 +19,7 @@ typedef struct framebuffer {
     int32_t w,h;
     int32_t u,v;
     int32_t bpp;
-    int32_t padding;
+    int32_t fb_streaming_disable;
     // NOTE: This buffer must be aligned on a 16 byte boundary
     uint8_t pixels[];
 } framebuffer_t;
@@ -46,6 +46,10 @@ extern jpegbuffer_t *jpeg_fb_framebuffer;
 
 // Use this macro to get a pointer to the free SRAM area located after the framebuffer.
 #define JPEG_FB_PIXELS()    (JPEG_FB()->pixels + JPEG_FB()->size)
+
+// Force fb streaming to the IDE off.
+void set_fb_streaming_disabled(bool en);
+bool is_fb_streaming_disabled();
 
 // Encode jpeg data for transmission over a text channel.
 int encode_for_ide_new_size(image_t *img);
