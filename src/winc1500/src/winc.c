@@ -306,6 +306,8 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
                     m2m_wifi_set_static_ip(&ipconfig);
                     // NOTE: the async request is done because there's
                     // no DHCP request/response when using a static IP.
+                    // Set the ip_obtained flag to true anyway...
+                    ip_obtained = true;
                     async_request_done = true;
                 }
             } else if (wifi_state->u8CurrState == M2M_WIFI_DISCONNECTED) {
@@ -580,6 +582,8 @@ int winc_start_ap(const char *ssid, uint8_t security, const char *key, uint16_t 
 
 int winc_disconnect()
 {
+    ip_obtained = false;
+    wlan_connected = false;
     return m2m_wifi_disconnect();
 }
 
