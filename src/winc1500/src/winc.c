@@ -410,6 +410,7 @@ static int winc_async_request(uint8_t msg_type, void *ret, uint32_t timeout)
 
     // Wait for async request to finish.
     while (async_request_done == false) {
+        __WFI();
         // Handle pending events from network controller.
         m2m_wifi_handle_events(NULL);
         // timeout == 0 in blocking mode.
@@ -537,6 +538,7 @@ int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t c
 
     async_request_done = false;
 	while (async_request_done == false) {
+		__WFI();
 		// Handle pending events from network controller.
 		m2m_wifi_handle_events(NULL);
 	}
@@ -602,6 +604,7 @@ int winc_wait_for_sta(uint32_t *sta_ip, uint32_t timeout)
 {
     uint32_t tick_start = HAL_GetTick();
     while (connected_sta_ip == 0) {
+        __WFI();
         // Handle pending events from network controller.
         m2m_wifi_handle_events(NULL);
         if (timeout && ((HAL_GetTick() - tick_start) >= timeout)) {
@@ -637,6 +640,7 @@ int winc_netinfo(winc_netinfo_t *netinfo)
     m2m_wifi_get_connection_info();
 
     while (async_request_done == false) {
+        __WFI();
         // Handle pending events from network controller.
         m2m_wifi_handle_events(NULL);
     }
@@ -654,6 +658,7 @@ int winc_scan(winc_scan_callback_t cb, void *arg)
 	m2m_wifi_request_scan(M2M_WIFI_CH_ALL);
 
 	while (async_request_done == false) {
+		__WFI();
 		// Handle pending events from network controller.
 		m2m_wifi_handle_events(NULL);
 	}
@@ -671,6 +676,7 @@ int winc_get_rssi()
     m2m_wifi_req_curr_rssi();
 
 	while (async_request_done == false) {
+		__WFI();
 		// Handle pending events from network controller.
 		m2m_wifi_handle_events(NULL);
 	}
@@ -827,21 +833,19 @@ int winc_socket_send(int fd, const uint8_t *buf, uint32_t len, uint32_t timeout)
     int bytes = 0;
 
     while (bytes < len) {
+        // Do async request (clean out any messages - but ignore them).
+        int async_ret;
+        async_request_data = &async_ret;
+        async_request_done = false;
+        async_request_type = SOCKET_MSG_SEND;
+        m2m_wifi_handle_events(NULL);
+
         // Split the packet into smaller ones.
         int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH); 
         int ret = WINC1500_EXPORT(send)(fd, (uint8_t*)buf + bytes, n, 0);
 
         if (ret == SOCK_ERR_NO_ERROR) {
-            // Do async request
-            int async_ret;
-            ret = winc_async_request(SOCKET_MSG_SEND, &async_ret, timeout);
-
-            // Check sent bytes returned from async request.
-            if (ret != SOCK_ERR_NO_ERROR || async_ret <= 0) {
-                return (ret != SOCK_ERR_NO_ERROR) ? ret : async_ret;
-            }
-
-            bytes += async_ret;
+            bytes += n;
         } else if (ret == SOCK_ERR_BUFFER_FULL) {
             // timeout == 0 in blocking mode.
             if (timeout && ((HAL_GetTick() - tick_start) >= timeout)) {
@@ -891,20 +895,18 @@ int winc_socket_sendto(int fd, const uint8_t *buf, uint32_t len, sockaddr *addr,
     int bytes = 0;
 
     while (bytes < len) {
+        // Do async request (clean out any messages - but ignore them).
+        int async_ret;
+        async_request_data = &async_ret;
+        async_request_done = false;
+        async_request_type = SOCKET_MSG_SENDTO;
+        m2m_wifi_handle_events(NULL);
+
         // Split the packet into smaller ones.
         int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH); 
         int ret = WINC1500_EXPORT(sendto)(fd, (uint8_t*)buf + bytes, n, 0, addr, sizeof(*addr));
 
         if (ret == SOCK_ERR_NO_ERROR) {
-            // Do async request
-            int async_ret; // sendto always returns 0.
-            ret = winc_async_request(SOCKET_MSG_SENDTO, &async_ret, timeout);
-
-            // Check sent bytes returned from async request.
-            if (ret != SOCK_ERR_NO_ERROR || async_ret < 0) {
-                return (ret != SOCK_ERR_NO_ERROR) ? ret : async_ret;
-            }
-
             bytes += n;
         } else if (ret == SOCK_ERR_BUFFER_FULL) {
             // timeout == 0 in blocking mode.
