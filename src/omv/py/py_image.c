@@ -1931,11 +1931,11 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 256), "Error: 0 <= alpha <= 256!");
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 3, kw_args);
-    int palette = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), -1);
-
+    
     const uint16_t *color_palette = NULL;
-
-    if (palette != -1) {
+    int palette;
+    
+    if (py_helper_keyword_int_maybe(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
         if (palette == COLOR_PALETTE_RAINBOW) {
             color_palette = rainbow_table;
         } else if (palette == COLOR_PALETTE_IRONBOW) {
@@ -1943,7 +1943,17 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
         } else {
             nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid color palette!"));
         }
+    } else {
+        image_t *arg_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, offset + 4, kw_args);
+        
+        if (arg_palette) {
+            if (arg_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Palette must be an RGB565 format image!"));
+            if ((arg_palette->w * arg_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Palette image must have 256 pixels!"));
+            color_palette = (uint16_t*)arg_palette->data;
+        }
+    }
 
+    if (color_palette) {
         if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify color palette when passing a grayscale image!"));
     }
 

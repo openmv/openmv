@@ -67,6 +67,12 @@ image_t *py_helper_keyword_to_image_mutable_mask(uint n_args, const mp_obj_t *ar
     return py_helper_keyword_to_image_mutable(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_mask), NULL);
 }
 
+image_t *py_helper_keyword_to_image_mutable_color_palette(uint n_args, const mp_obj_t *args, uint arg_index,
+                                                          mp_map_t *kw_args)
+{
+    return py_helper_keyword_to_image_mutable(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), NULL);
+}
+
 void py_helper_keyword_rectangle(image_t *img, uint n_args, const mp_obj_t *args, uint arg_index,
                                  mp_map_t *kw_args, mp_obj_t kw, rectangle_t *r)
 {
@@ -122,6 +128,20 @@ int py_helper_keyword_int(uint n_args, const mp_obj_t *args, uint arg_index,
     }
 
     return default_val;
+}
+
+int py_helper_keyword_int_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
+                                mp_map_t *kw_args, mp_obj_t kw, int* value)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg) {
+        return mp_obj_get_int_maybe(kw_arg->value, value);
+    } else if (n_args > arg_index) {
+        return mp_obj_get_int_maybe(args[arg_index], value);
+    }
+
+    return false;
 }
 
 float py_helper_keyword_float(uint n_args, const mp_obj_t *args, uint arg_index,
