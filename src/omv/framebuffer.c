@@ -18,6 +18,16 @@ framebuffer_t *fb_framebuffer = (framebuffer_t *) &_fb_base;
 extern char _jpeg_buf;
 jpegbuffer_t *jpeg_fb_framebuffer = (jpegbuffer_t *) &_jpeg_buf;
 
+void set_fb_streaming_disabled(bool en)
+{
+    MAIN_FB()->fb_streaming_disable = en;
+}
+
+bool is_fb_streaming_disabled()
+{
+    return MAIN_FB()->fb_streaming_disable;
+}
+
 int encode_for_ide_new_size(image_t *img)
 {
     return (((img->bpp * 8) + 5) / 6) + 2;
@@ -82,64 +92,66 @@ void fb_update_jpeg_buffer()
 {
     static int overflow_count = 0;
 
-    if ((MAIN_FB()->bpp > 3) && JPEG_FB()->enabled) {
-        bool does_not_fit = false;
-        // Lock FB
-        if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
-            if((OMV_JPEG_BUF_SIZE-64) < MAIN_FB()->bpp) {
-                // image won't fit. so don't copy.
-                JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
-                does_not_fit = true;
-            } else {
-                memcpy(JPEG_FB()->pixels, MAIN_FB()->pixels, MAIN_FB()->bpp);
-                JPEG_FB()->w = MAIN_FB()->w; JPEG_FB()->h = MAIN_FB()->h; JPEG_FB()->size = MAIN_FB()->bpp;
+    if ((!MAIN_FB()->fb_streaming_disable) && JPEG_FB()->enabled) {
+        if (MAIN_FB()->bpp > 3) {
+            bool does_not_fit = false;
+            // Lock FB
+            if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
+                if((OMV_JPEG_BUF_SIZE-64) < MAIN_FB()->bpp) {
+                    // image won't fit. so don't copy.
+                    JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
+                    does_not_fit = true;
+                } else {
+                    memcpy(JPEG_FB()->pixels, MAIN_FB()->pixels, MAIN_FB()->bpp);
+                    JPEG_FB()->w = MAIN_FB()->w; JPEG_FB()->h = MAIN_FB()->h; JPEG_FB()->size = MAIN_FB()->bpp;
+                }
+
+                // Unlock the framebuffer mutex
+                mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
             }
-
-            // Unlock the framebuffer mutex
-            mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
-        }
-        if (does_not_fit) {
-            image_t out = { .w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp, .data=MAIN_FB()->pixels };
-            int new_size = encode_for_ide_new_size(&out);
-            fb_alloc_mark();
-            uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
-            encode_for_ide(temp, &out);
-            (MP_PYTHON_PRINTER)->print_strn((MP_PYTHON_PRINTER)->data, (const char *) temp, new_size);
-            fb_alloc_free_till_mark();
-        }
-    } else if ((MAIN_FB()->bpp >= 0) && JPEG_FB()->enabled) {
-        // Lock FB
-        if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
-            // Set JPEG src and dst images.
-            image_t src = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp,     .pixels=MAIN_FB()->pixels};
-            image_t dst = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=(OMV_JPEG_BUF_SIZE-64),  .pixels=JPEG_FB()->pixels};
-
-            // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
-            bool overflow = jpeg_compress(&src, &dst, JPEG_FB()->quality, false);
-            if (overflow == true) {
-                // JPEG buffer overflowed, reduce JPEG quality for the next frame
-                // and skip the current frame. The IDE doesn't receive this frame.
-                if (JPEG_FB()->quality > 1) {
-                    // Keep this quality for the next n frames
-                    overflow_count = 60;
-                    JPEG_FB()->quality = IM_MAX(1, (JPEG_FB()->quality/2));
-                }
-                JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
-            } else {
-                if (overflow_count) {
-                    overflow_count--;
-                }
-                // No buffer overflow, increase quality up to max quality based on frame size
-                if (overflow_count == 0 && JPEG_FB()->quality
-                       < ((fb_buffer_size() > JPEG_QUALITY_THRESH) ? JPEG_QUALITY_LOW:JPEG_QUALITY_HIGH)) {
-                    JPEG_FB()->quality++;
-                }
-                // Set FB from JPEG image
-                JPEG_FB()->w = dst.w; JPEG_FB()->h = dst.h; JPEG_FB()->size = dst.bpp;
+            if (does_not_fit) {
+                image_t out = { .w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp, .data=MAIN_FB()->pixels };
+                int new_size = encode_for_ide_new_size(&out);
+                fb_alloc_mark();
+                uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
+                encode_for_ide(temp, &out);
+                (MP_PYTHON_PRINTER)->print_strn((MP_PYTHON_PRINTER)->data, (const char *) temp, new_size);
+                fb_alloc_free_till_mark();
             }
+        } else if (MAIN_FB()->bpp >= 0) {
+            // Lock FB
+            if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
+                // Set JPEG src and dst images.
+                image_t src = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp,     .pixels=MAIN_FB()->pixels};
+                image_t dst = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=(OMV_JPEG_BUF_SIZE-64),  .pixels=JPEG_FB()->pixels};
 
-            // Unlock the framebuffer mutex
-            mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
+                // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
+                bool overflow = jpeg_compress(&src, &dst, JPEG_FB()->quality, false);
+                if (overflow == true) {
+                    // JPEG buffer overflowed, reduce JPEG quality for the next frame
+                    // and skip the current frame. The IDE doesn't receive this frame.
+                    if (JPEG_FB()->quality > 1) {
+                        // Keep this quality for the next n frames
+                        overflow_count = 60;
+                        JPEG_FB()->quality = IM_MAX(1, (JPEG_FB()->quality/2));
+                    }
+                    JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
+                } else {
+                    if (overflow_count) {
+                        overflow_count--;
+                    }
+                    // No buffer overflow, increase quality up to max quality based on frame size
+                    if (overflow_count == 0 && JPEG_FB()->quality
+                           < ((fb_buffer_size() > JPEG_QUALITY_THRESH) ? JPEG_QUALITY_LOW:JPEG_QUALITY_HIGH)) {
+                        JPEG_FB()->quality++;
+                    }
+                    // Set FB from JPEG image
+                    JPEG_FB()->w = dst.w; JPEG_FB()->h = dst.h; JPEG_FB()->size = dst.bpp;
+                }
+
+                // Unlock the framebuffer mutex
+                mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
+            }
         }
     }
 }

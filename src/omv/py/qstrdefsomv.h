@@ -18,6 +18,7 @@ Q(version_string)
 Q(arch)
 Q(board_type)
 Q(board_id)
+Q(disable_fb)
 
 // Image module
 Q(image)
