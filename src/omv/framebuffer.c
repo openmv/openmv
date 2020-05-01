@@ -18,22 +18,22 @@ framebuffer_t *fb_framebuffer = (framebuffer_t *) &_fb_base;
 extern char _jpeg_buf;
 jpegbuffer_t *jpeg_fb_framebuffer = (jpegbuffer_t *) &_jpeg_buf;
 
-void set_fb_streaming_disabled(bool en)
+void fb_set_streaming_enabled(bool enable)
 {
-    MAIN_FB()->fb_streaming_disable = en;
+    MAIN_FB()->streaming_enabled = enable;
 }
 
-bool is_fb_streaming_disabled()
+bool fb_get_streaming_enabled()
 {
-    return MAIN_FB()->fb_streaming_disable;
+    return MAIN_FB()->streaming_enabled;
 }
 
-int encode_for_ide_new_size(image_t *img)
+int fb_encode_for_ide_new_size(image_t *img)
 {
     return (((img->bpp * 8) + 5) / 6) + 2;
 }
 
-void encode_for_ide(uint8_t *ptr, image_t *img)
+void fb_encode_for_ide(uint8_t *ptr, image_t *img)
 {
     *ptr++ = 0xFE;
 
@@ -92,7 +92,7 @@ void fb_update_jpeg_buffer()
 {
     static int overflow_count = 0;
 
-    if ((!MAIN_FB()->fb_streaming_disable) && JPEG_FB()->enabled) {
+    if ((!MAIN_FB()->streaming_enabled) && JPEG_FB()->enabled) {
         if (MAIN_FB()->bpp > 3) {
             bool does_not_fit = false;
             // Lock FB
@@ -111,10 +111,10 @@ void fb_update_jpeg_buffer()
             }
             if (does_not_fit) {
                 image_t out = { .w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp, .data=MAIN_FB()->pixels };
-                int new_size = encode_for_ide_new_size(&out);
+                int new_size = fb_encode_for_ide_new_size(&out);
                 fb_alloc_mark();
                 uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
-                encode_for_ide(temp, &out);
+                fb_encode_for_ide(temp, &out);
                 (MP_PYTHON_PRINTER)->print_strn((MP_PYTHON_PRINTER)->data, (const char *) temp, new_size);
                 fb_alloc_free_till_mark();
             }
