@@ -1374,9 +1374,9 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
     uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    int new_size = encode_for_ide_new_size(&out);
+    int new_size = fb_encode_for_ide_new_size(&out);
     PY_ASSERT_TRUE_MSG(new_size <= image_size(arg_img), "Can't compress in place!");
-    encode_for_ide(arg_img->data, &out);
+    fb_encode_for_ide(arg_img->data, &out);
 
     out.bpp = new_size;
     arg_img->bpp = out.bpp;
@@ -1421,9 +1421,9 @@ static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, m
     uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    int new_size = encode_for_ide_new_size(&out);
+    int new_size = fb_encode_for_ide_new_size(&out);
     uint8_t *temp = xalloc(new_size);
-    encode_for_ide(temp, &out);
+    fb_encode_for_ide(temp, &out);
 
     out.bpp = new_size;
     out.data = temp;
@@ -1439,10 +1439,10 @@ static mp_obj_t py_image_jpeg_encode_for_ide(mp_obj_t img_obj)
     PY_ASSERT_TRUE_MSG(arg_img->bpp >= IMAGE_BPP_JPEG, "Image format is not supported!");
     PY_ASSERT_TRUE_MSG(MAIN_FB()->pixels == arg_img->data, "Can't compress in place!");
 
-    int new_size = encode_for_ide_new_size(arg_img);
+    int new_size = fb_encode_for_ide_new_size(arg_img);
     fb_alloc_mark();
     uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
-    encode_for_ide(temp, arg_img);
+    fb_encode_for_ide(temp, arg_img);
 
     MAIN_FB()->bpp = 0;
     PY_ASSERT_TRUE_MSG(new_size <= fb_avail(), "The new image won't fit in the main frame buffer!");
@@ -1461,9 +1461,9 @@ static mp_obj_t py_image_jpeg_encoded_for_ide(mp_obj_t img_obj)
     image_t *arg_img = py_image_cobj(img_obj);
     PY_ASSERT_TRUE_MSG(arg_img->bpp >= IMAGE_BPP_JPEG, "Image format is not supported!");
 
-    int new_size = encode_for_ide_new_size(arg_img);
+    int new_size = fb_encode_for_ide_new_size(arg_img);
     uint8_t *temp = xalloc(new_size);
-    encode_for_ide(temp, arg_img);
+    fb_encode_for_ide(temp, arg_img);
 
     return py_image(arg_img->w, arg_img->h, new_size, temp);
 }
