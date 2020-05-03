@@ -82,6 +82,14 @@ static void resolve_callback(uint8_t *host, uint32_t ip)
  */
 static void socket_callback(SOCKET sock, uint8_t msg_type, void *msg)
 {
+    // Close Socket on SEND/SENDTO Error.
+    // The next SEND/SENDTO operation on the socket will return SOCK_ERR_INVALID_ARG and fail.
+
+    if (((msg_type == SOCKET_MSG_SEND) || (msg_type == SOCKET_MSG_SENDTO))
+    && ((*((int16_t *) msg)) < 0)) {
+        WINC1500_EXPORT(close)(sock);
+    }
+
     if (async_request_type != msg_type) {
         debug_printf("spurious message received!"
                 " expected: (%d) received: (%d)\n", async_request_type, msg_type);
