@@ -33,3 +33,17 @@ You can find examples that run on the OpenMV Cam under `File->Examples->Remote C
   * Provides Python code for connecting your OpenMV Cam to a Windows, Mac, or Linux computer (or RaspberryPi/Beaglebone, etc.) with python programmatically over USB VCP or Ethernet/WiFi (i.e. with sockets).
 * Arduino Interface Library for I2C, SPI, UART Comms - comming soon!
 * RaspberryPi Interface Library for I2C, SPI, UART Comms - comming soon!
+
+#### Note 
+
+If you only need to read `print()` output from a script running on the OpenMV Cam over USB then you only need to open the OpenMV Cam's Virtual COM Port and read lines of text from the serial port. For example (using [pyserial](https://pythonhosted.org/pyserial/index.html)):
+
+    import serial
+
+    ser = serial.Serial("COM3", timeout=1, dsrdtr=False)
+
+    while True:
+        line = ser.readline().strip()
+        if line: print(line)
+
+The above code works for Windows, Mac, or Linux. You just need to change the above port name to the same name of the USB VCP port the OpenMV Cam shows up as (it will be under `/dev/` on Mac or Linux). Note that if you are opening the USB VCP port using another serial library and/or language make sure to set the DTR line to false - otherwise the OpenMV Cam will suppress printed output.
