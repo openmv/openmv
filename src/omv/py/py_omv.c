@@ -52,9 +52,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_omv_board_id_obj, py_omv_board_id);
 static mp_obj_t py_omv_disable_fb(uint n_args, const mp_obj_t *args)
 {
     if (!n_args) {
-        return mp_obj_new_bool(fb_get_streaming_enabled());
+        return mp_obj_new_bool(!fb_get_streaming_enabled());
     }
-    fb_set_streaming_enabled(mp_obj_get_int(args[0]));
+    fb_set_streaming_enabled(!mp_obj_get_int(args[0]));
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_omv_disable_fb_obj, 0, 1, py_omv_disable_fb);
