@@ -92,7 +92,7 @@ void fb_update_jpeg_buffer()
 {
     static int overflow_count = 0;
 
-    if ((!MAIN_FB()->streaming_enabled) && JPEG_FB()->enabled) {
+    if (MAIN_FB()->streaming_enabled && JPEG_FB()->enabled) {
         if (MAIN_FB()->bpp > 3) {
             bool does_not_fit = false;
             // Lock FB

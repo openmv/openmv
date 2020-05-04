@@ -196,9 +196,6 @@ static int dma_config()
 
 void sensor_init0()
 {
-    // Init FB mutex
-    mutex_init(&JPEG_FB()->lock);
-
     // Save fb_enabled flag state
     int fb_enabled = JPEG_FB()->enabled;
 
@@ -209,11 +206,14 @@ void sensor_init0()
     // Skip the first frame.
     MAIN_FB()->bpp = -1;
 
+    // Enable streaming.
+    MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
+
     // Set default quality
     JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
 
     // Set fb_enabled
-    JPEG_FB()->enabled = fb_enabled;
+    JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
 }
 
 int sensor_init()
