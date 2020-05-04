@@ -1933,31 +1933,62 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
         py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 3, kw_args);
     
     const uint16_t *color_palette = NULL;
-    int palette;
-    
-    if (py_helper_keyword_int_maybe(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
-        if (palette == COLOR_PALETTE_RAINBOW) {
-            color_palette = rainbow_table;
-        } else if (palette == COLOR_PALETTE_IRONBOW) {
-            color_palette = ironbow_table;
-        } else {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid color palette!"));
-        }
-    } else {
-        image_t *arg_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, offset + 4, kw_args);
+    {
+        int palette;
         
-        if (arg_palette) {
-            if (arg_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Palette must be an RGB565 format image!"));
-            if ((arg_palette->w * arg_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Palette image must have 256 pixels!"));
-            color_palette = (uint16_t*)arg_palette->data;
+        if (py_helper_keyword_int_maybe(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
+            if (palette == COLOR_PALETTE_RAINBOW) {
+                color_palette = rainbow_table;
+            } else if (palette == COLOR_PALETTE_IRONBOW) {
+                color_palette = ironbow_table;
+            } else {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pre-defined color palette!"));
+            }
+        } else {
+            image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, offset + 4, kw_args);
+            
+            if (arg_color_palette) {
+                if (arg_color_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be an RGB565 format image!"));
+                if ((arg_color_palette->w * arg_color_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette image must have 256 pixels!"));
+
+                color_palette = (uint16_t*)arg_color_palette->data;
+            }
+        }
+
+        if (color_palette) {
+            if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify a color palette when passing a grayscale image!"));
         }
     }
 
-    if (color_palette) {
-        if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify color palette when passing a grayscale image!"));
+    const uint8_t *alpha_palette = NULL;
+    {
+        image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, offset + 5, kw_args);
+        
+        if (arg_alpha_palette) {
+            if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify an alpha palette when passing a grayscale image!"));
+            if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be an grayscale format image!"));
+            if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette image must have 256 pixels!"));
+
+            alpha_palette = (uint8_t*)arg_alpha_palette->data;
+        }
     }
 
-    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk, color_palette);
+    if ((color_palette || alpha_palette) && arg_img->bpp != IMAGE_BPP_RGB565) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Palettes must be used with color images!"));
+    }
+
+    image_hint_type hint =
+        py_helper_keyword_int(n_args, args, offset + 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
+
+    if (hint && arg_msk) {
+        // This check is only performed if there is a hint for backwards compatiblity with old draw image where dimesions were not enforced.
+        if (arg_msk->w != arg_other->w || arg_msk->h != arg_other->h) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Mask must have same dimensions as image"));
+        }
+    }
+
+    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk, color_palette, alpha_palette, hint);
+    
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_image_obj, 3, py_image_draw_image);
@@ -7594,6 +7625,8 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE93),              MP_ROM_INT(BARCODE_CODE93)},
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
 #endif
+    {MP_ROM_QSTR(MP_QSTR_INTERPOLATE_BILINEAR),MP_ROM_INT(INTERPOLATE_BILINEAR)},
+    {MP_ROM_QSTR(MP_QSTR_IMAGE_CENTER),        MP_ROM_INT(IMAGE_CENTER)},
     {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_image_imagewriter_obj)},
     {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_image_imagereader_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_grayscale), MP_ROM_PTR(&py_image_binary_to_grayscale_obj)},

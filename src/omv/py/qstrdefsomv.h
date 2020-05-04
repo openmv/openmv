@@ -450,6 +450,7 @@ Q(to_rainbow)
 // duplicate Q(copy)
 // duplicate Q(rgb_channel)
 Q(color_palette)
+Q(alpha_palette)
 
 // Compress (in place)
 Q(compress)
@@ -551,6 +552,9 @@ Q(draw_image)
 // duplicate Q(y_scale)
 Q(alpha)
 // duplicate Q(mask)
+Q(hint)
+Q(INTERPOLATE_BILINEAR)
+Q(IMAGE_CENTER)
 
 // Draw Keypoints
 Q(draw_keypoints)
