@@ -1,4 +1,18 @@
 # Change Log
+## [3.6.2](https://github.com/openmv/openmv/releases/tag/v3.6.2) (2020-5-04)
+* Optimized Bayer to RGB565/YCBCR.
+* Optimized datamatrix ops and binary ops.
+* Improved WiFi throughput.
+* Add raw data RD/WR access to the image object.
+* Support draw image with custom palettes.
+* Add new OpenMV RPC Interface Library.
+* Fix H7 SPI DMA bugs.
+* Fix H7 SPI and I2C DMA Deinit.
+* Fix and update draw_image.
+* Updated tensorflow library to support int8
+* Fix H7 FDCAN bugs.
+* Fix bug in filters corrupting memory if y size less than k_size.
+
 ## [3.6.1](https://github.com/openmv/openmv/releases/tag/v3.6.1) (2020-3-30)
 * Add support for OV7690 and HM01B0 sensors.
 * Add support for Portenta-H747.
