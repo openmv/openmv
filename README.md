@@ -12,6 +12,10 @@ The first generation of OpenMV cameras is based on STM32 ARM Cortex-M Digital Si
 
 The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then. For more information, please visit [https://openmv.io](https://openmv.io)
 
+## Building Firmware
+
+For information on how to build the firmware for the OpenMV Cam please see our [Firmware Guide](src/README.md).
+
 ## Interface Library
 
 The OpenMV Cam comes built-in with an RPC (Remote Python/Procedure Call) library which makes it easy to connect the OpenMV Cam to your computer, a SBC (single board computer) like the RaspberryPi or Beaglebone, or a microcontroller like the Arduino or ESP8266/32. The RPC Interface Library works over:
@@ -33,3 +37,17 @@ You can find examples that run on the OpenMV Cam under `File->Examples->Remote C
   * Provides Python code for connecting your OpenMV Cam to a Windows, Mac, or Linux computer (or RaspberryPi/Beaglebone, etc.) with python programmatically over USB VCP or Ethernet/WiFi (i.e. with sockets).
 * Arduino Interface Library for I2C, SPI, UART Comms - comming soon!
 * RaspberryPi Interface Library for I2C, SPI, UART Comms - comming soon!
+
+#### Note 
+
+If you only need to read `print()` output from a script running on the OpenMV Cam over USB then you only need to open the OpenMV Cam's Virtual COM Port and read lines of text from the serial port. For example (using [pyserial](https://pythonhosted.org/pyserial/index.html)):
+
+    import serial
+
+    ser = serial.Serial("COM3", timeout=1, dsrdtr=False)
+
+    while True:
+        line = ser.readline().strip()
+        if line: print(line)
+
+The above code works for Windows, Mac, or Linux. You just need to change the above port name to the same name of the USB VCP port the OpenMV Cam shows up as (it will be under `/dev/` on Mac or Linux). Note that if you are opening the USB VCP port using another serial library and/or language make sure to set the DTR line to false - otherwise the OpenMV Cam will suppress printed output.
