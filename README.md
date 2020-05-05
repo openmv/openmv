@@ -12,6 +12,10 @@ The first generation of OpenMV cameras is based on STM32 ARM Cortex-M Digital Si
 
 The OpenMV project was successfully funded via Kickstarter back in 2015 and has come a long way since then. For more information, please visit [https://openmv.io](https://openmv.io)
 
+## Building Firmware
+
+For information on how to build the firmware for the OpenMV Cam please see our [Firmware Guide](src/README.md).
+
 ## Interface Library
 
 The OpenMV Cam comes built-in with an RPC (Remote Python/Procedure Call) library which makes it easy to connect the OpenMV Cam to your computer, a SBC (single board computer) like the RaspberryPi or Beaglebone, or a microcontroller like the Arduino or ESP8266/32. The RPC Interface Library works over:
