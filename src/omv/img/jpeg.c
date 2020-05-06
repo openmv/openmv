@@ -55,9 +55,6 @@ const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
 // The variables l0,l1,l2 hold the 4 pixels (left, current left, current_right, right)
 // in lines above the current (l0), current (l1) and below (l2)
 //
-// NB: This function assumes that the start x/y offsets of the block are not 0 so that special
-// checks for pixel boundaries don't slow it down
-//
 static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0, uint8_t *CB, uint8_t *CR, int bYUV)
 {
             uint16_t *s;
@@ -83,11 +80,19 @@ static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0
                    prev_offset = w2; // use the next line twice
                 else if (y+y_offset == img->h-1) // bottom line
                    next_offset = -w2; // use previous line twice                   
-                l0 = s[prev_offset-1] | (s[prev_offset] << 16); // prep current and left pixels
-                l1 = (s[0] << 16);
-                if (y+y_offset != 0 || x_offset != 0)
-                     l1 |= s[-1]; // don´t read past top left corner
-                l2 = s[next_offset-1] | (s[next_offset] << 16);
+                // Prepare current pixels
+                if (x_offset == 0) { // left edge, don't read beyond it
+                    l0 = s[prev_offset];
+                    l1 = s[0];
+                    l2 = s[next_offset];
+                    l0 |= (l0 << 16); // use them twice
+                    l1 |= (l1 << 16);
+                    l2 |= (l2 << 16); // since we're missing the actual ones
+                } else { // the rest of the image is ok to read the -1 pixel
+                    l0 = s[prev_offset-1] | (s[prev_offset] << 16);
+                    l1 = s[-1] | (s[0] << 16);
+                    l2 = s[next_offset-1] | (s[next_offset] << 16);
+                }
                 s++;
                 if (y & 1) { // odd line
                     for (x=0; x<8; x+=2, idx+=2) {
