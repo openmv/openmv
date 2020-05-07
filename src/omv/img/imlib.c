@@ -586,6 +586,13 @@ void imlib_bayer_to_y(image_t *img, int x_offset, int y_offset, int width, uint8
                         xx--; // make the loop stop on an even pixel
                         bLastPixel = 1;
                     }
+                    if (x == 0) { // special case of starting from left edge
+                        g = s8[0];
+                        b = s8[-pitch];
+                        r = s8[1];
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        x++;
+                    } // x == 0
                     for (; x<xx; x++) {
                         if (x & 1) { // odd pixels
                             g = (s8[-1] + s8[1]) >>1;
@@ -722,6 +729,14 @@ void imlib_bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, 
                     if (((x_offset+width) & 1) == 0 && x_offset+width >= img->w) { // flag to not read past the bottom-right edge
                         xx--; // make the loop stop on an even pixel
                         bLastPixel = 1;
+                    }
+                    if (x == 0) { // special case of starting from left edge
+                        g = s8[0];
+                        b = s8[-pitch];
+                        r = s8[1];
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                        x++;
                     }
                     for (; x<xx; x++) {
                         if (x & 1) { // odd pixels
