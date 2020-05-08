@@ -358,15 +358,15 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS][6] = {
 static int reset(sensor_t *sensor)
 {
     // Reset all registers
-    int ret = cambus_writeb2(sensor->slv_addr, SCCB_SYSTEM_CTRL_1, 0x11);
-    ret |= cambus_writeb2(sensor->slv_addr, SYSTEM_CTROL0, 0x82);
+    int ret = cambus_writeb2(&sensor->i2c, sensor->slv_addr, SCCB_SYSTEM_CTRL_1, 0x11);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, SYSTEM_CTROL0, 0x82);
 
     // Delay 5 ms
     systick_sleep(5);
 
     // Write default regsiters
     for (int i = 0; default_regs[i][0]; i++) {
-        ret |= cambus_writeb2(sensor->slv_addr, (default_regs[i][0] << 8) | (default_regs[i][1] << 0), default_regs[i][2]);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, (default_regs[i][0] << 8) | (default_regs[i][1] << 0), default_regs[i][2]);
     }
 
     // Delay 300 ms
@@ -378,7 +378,7 @@ static int reset(sensor_t *sensor)
 static int sleep(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb2(sensor->slv_addr, SYSTEM_CTROL0, &reg);
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, SYSTEM_CTROL0, &reg);
 
     if (enable) {
         reg |= 0x40;
@@ -386,13 +386,13 @@ static int sleep(sensor_t *sensor, int enable)
         reg &= ~0x40;
     }
 
-    return cambus_writeb2(sensor->slv_addr, SYSTEM_CTROL0, reg) | ret;
+    return cambus_writeb2(&sensor->i2c, sensor->slv_addr, SYSTEM_CTROL0, reg) | ret;
 }
 
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint8_t reg_data;
-    if (cambus_readb2(sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (cambus_readb2(&sensor->i2c, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
@@ -400,7 +400,7 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 
 static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
-    return cambus_writeb2(sensor->slv_addr, reg_addr, reg_data);
+    return cambus_writeb2(&sensor->i2c, sensor->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
@@ -420,55 +420,55 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 
     switch (pixformat) {
         case PIXFORMAT_RGB565:
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x61);
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x61);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
             pll = 0x64; // 40 MHz
             break;
         case PIXFORMAT_GRAYSCALE:
         case PIXFORMAT_YUV422:
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x10);
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x10);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
             pll = 0x64; // 40 MHz
             break;
         case PIXFORMAT_BAYER:
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x00);
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x00);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
             pll = 0x64; // 40 MHz (jpeg can go faster at higher reses)
             break;
         case PIXFORMAT_JPEG:
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL, 0x30);
-            ret |= cambus_writeb2(sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x30);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
             pll = 0x64; // 40 MHz
             break;
         default:
             return -1;
     }
 
-    ret |= cambus_readb2(sensor->slv_addr, TIMING_TC_REG_21, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_21, (reg & 0xDF) | ((pixformat == PIXFORMAT_JPEG) ? 0x20 : 0x00));
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_21, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_21, (reg & 0xDF) | ((pixformat == PIXFORMAT_JPEG) ? 0x20 : 0x00));
 
-    ret |= cambus_readb2(sensor->slv_addr, SYSTEM_RESET_02, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, SYSTEM_RESET_02, (reg & 0xE3) | ((pixformat == PIXFORMAT_JPEG) ? 0x00 : 0x1C));
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, SYSTEM_RESET_02, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, SYSTEM_RESET_02, (reg & 0xE3) | ((pixformat == PIXFORMAT_JPEG) ? 0x00 : 0x1C));
 
-    ret |= cambus_readb2(sensor->slv_addr, CLOCK_ENABLE_02, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, CLOCK_ENABLE_02, (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00));
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, CLOCK_ENABLE_02, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, CLOCK_ENABLE_02, (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00));
 
     // Adjust JPEG quality.
 
     if (pixformat == PIXFORMAT_JPEG) {
         bool high_res = (resolution[sensor->framesize][0] > 1280) || (resolution[sensor->framesize][1] > 960);
-        ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, high_res ? 0x10 : 0x4);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, JPEG_CTRL07, high_res ? 0x10 : 0x4);
 
         if (sensor->pixformat != PIXFORMAT_JPEG) { // We have to double this.
-            ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_H, &reg);
-            ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_L, &reg2);
+            ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_H, &reg);
+            ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_L, &reg2);
             uint16_t sensor_hts = ((((reg << 8) | reg2) - HSYNC_TIME) * 2) + HSYNC_TIME;
-            ret |= cambus_writeb2(sensor->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
-            ret |= cambus_writeb2(sensor->slv_addr, TIMING_HTS_L, sensor_hts);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_L, sensor_hts);
         }
     }
 
-    return cambus_writeb2(sensor->slv_addr, SC_PLL_CONTRL2, pll) | ret;
+    return cambus_writeb2(&sensor->i2c, sensor->slv_addr, SC_PLL_CONTRL2, pll) | ret;
 }
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
@@ -555,59 +555,59 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Step 6: Write regs.
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_HS_H, sensor_ws >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_HS_L, sensor_ws);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HS_H, sensor_ws >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HS_L, sensor_ws);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_VS_H, sensor_hs >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_VS_L, sensor_hs);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VS_H, sensor_hs >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VS_L, sensor_hs);
     
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_HW_H, sensor_we >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_HW_L, sensor_we);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HW_H, sensor_we >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HW_L, sensor_we);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_VH_H, sensor_he >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_VH_L, sensor_he);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VH_H, sensor_he >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VH_L, sensor_he);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_DVPHO_H, w >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_DVPHO_L, w);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_DVPHO_H, w >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_DVPHO_L, w);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_DVPVO_H, h >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_DVPVO_L, h);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_DVPVO_H, h >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_DVPVO_L, h);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_HTS_L, sensor_hts);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_L, sensor_hts);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_VTS_H, sensor_vts >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_VTS_L, sensor_vts);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VTS_H, sensor_vts >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VTS_L, sensor_vts);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_HOFFSET_H, x_off >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_HOFFSET_L, x_off);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HOFFSET_H, x_off >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HOFFSET_L, x_off);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_VOFFSET_H, y_off >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_VOFFSET_L, y_off);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VOFFSET_H, y_off >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VOFFSET_L, y_off);
 
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_X_INC, sensor_x_inc);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_Y_INC, sensor_y_inc);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_X_INC, sensor_x_inc);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_Y_INC, sensor_y_inc);
 
-    ret |= cambus_readb2(sensor->slv_addr, TIMING_TC_REG_20, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_20, (reg & 0xFE) | (sensor_div > 1));
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_20, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_20, (reg & 0xFE) | (sensor_div > 1));
 
-    ret |= cambus_readb2(sensor->slv_addr, TIMING_TC_REG_21, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_21, (reg & 0xFE) | (sensor_div > 1));
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_21, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_21, (reg & 0xFE) | (sensor_div > 1));
 
-    ret |= cambus_writeb2(sensor->slv_addr, VFIFO_HSIZE_H, w >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, VFIFO_HSIZE_L, w);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, VFIFO_HSIZE_H, w >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, VFIFO_HSIZE_L, w);
 
-    ret |= cambus_writeb2(sensor->slv_addr, VFIFO_VSIZE_H, h >> 8);
-    ret |= cambus_writeb2(sensor->slv_addr, VFIFO_VSIZE_L, h);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, VFIFO_VSIZE_H, h >> 8);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, VFIFO_VSIZE_L, h);
 
     // Step 7: Adjust JPEG quality.
 
-    ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0x10);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0x10);
 
     // Step 8: Adjust PLL freq.
     pll = 0x64; // 40 Mhz
 
-    ret |= cambus_writeb2(sensor->slv_addr, SC_PLL_CONTRL2, pll);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, SC_PLL_CONTRL2, pll);
 
     // Delay 300 ms
     systick_sleep(300);
@@ -624,11 +624,11 @@ static int set_contrast(sensor_t *sensor, int level)
         return -1;
     }
 
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x03); // start group 3
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5586, (new_level + 5) << 2);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5585, contrast_regs[new_level][0]);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x13); // end group 3
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0xa3); // launch group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x03); // start group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5586, (new_level + 5) << 2);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5585, contrast_regs[new_level][0]);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x13); // end group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0xa3); // launch group 3
 
     return ret;
 }
@@ -642,11 +642,11 @@ static int set_brightness(sensor_t *sensor, int level)
         return -1;
     }
 
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x03); // start group 3
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5587, abs(level) << 4);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5588, (level < 0) ? 0x09 : 0x01);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x13); // end group 3
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0xa3); // launch group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x03); // start group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5587, abs(level) << 4);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5588, (level < 0) ? 0x09 : 0x01);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x13); // end group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0xa3); // launch group 3
 
     return ret;
 }
@@ -660,20 +660,20 @@ static int set_saturation(sensor_t *sensor, int level)
         return -1;
     }
 
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x03); // start group 3
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5581, 0x1c);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5582, 0x5a);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5583, 0x06);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5584, saturation_regs[new_level][0]);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5585, saturation_regs[new_level][1]);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5586, saturation_regs[new_level][2]);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5587, saturation_regs[new_level][3]);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5588, saturation_regs[new_level][4]);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x5589, saturation_regs[new_level][5]);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x558b, 0x98);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x558a, 0x01);
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x13); // end group 3
-    ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0xa3); // launch group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x03); // start group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5581, 0x1c);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5582, 0x5a);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5583, 0x06);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5584, saturation_regs[new_level][0]);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5585, saturation_regs[new_level][1]);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5586, saturation_regs[new_level][2]);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5587, saturation_regs[new_level][3]);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5588, saturation_regs[new_level][4]);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5589, saturation_regs[new_level][5]);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x558b, 0x98);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x558a, 0x01);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x13); // end group 3
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0xa3); // launch group 3
 
     return ret;
 }
@@ -688,9 +688,9 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
         return -1;
     }
 
-    ret |= cambus_readb2(sensor->slv_addr, AEC_GAIN_CEILING_H, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (new_gainceiling >> 8));
-    ret |= cambus_writeb2(sensor->slv_addr, AEC_GAIN_CEILING_L, new_gainceiling);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_GAIN_CEILING_H, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (new_gainceiling >> 8));
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_GAIN_CEILING_L, new_gainceiling);
 
     return ret;
 }
@@ -698,8 +698,8 @@ static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 static int set_quality(sensor_t *sensor, int qs)
 {
     uint8_t reg;
-    int ret = cambus_readb2(sensor->slv_addr, JPEG_CTRL07, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, JPEG_CTRL07, (reg & 0xC0) | (qs >> 2));
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, JPEG_CTRL07, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, JPEG_CTRL07, (reg & 0xC0) | (qs >> 2));
 
     return ret;
 }
@@ -707,28 +707,28 @@ static int set_quality(sensor_t *sensor, int qs)
 static int set_colorbar(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb2(sensor->slv_addr, PRE_ISP_TEST, &reg);
-    return cambus_writeb2(sensor->slv_addr, PRE_ISP_TEST, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, PRE_ISP_TEST, &reg);
+    return cambus_writeb2(&sensor->i2c, sensor->slv_addr, PRE_ISP_TEST, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
 }
 
 static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
 {
     uint8_t reg;
-    int ret = cambus_readb2(sensor->slv_addr, AEC_PK_MANUAL, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFD) | ((enable == 0) << 1));
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_PK_MANUAL, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFD) | ((enable == 0) << 1));
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         int gain = IM_MAX(IM_MIN(fast_expf((gain_db / 20.0) * fast_log(10.0)) * 16.0, 1023), 0);
 
-        ret |= cambus_readb2(sensor->slv_addr, AEC_PK_REAL_GAIN_H, &reg);
-        ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_REAL_GAIN_H, (reg & 0xFC) | (gain >> 8));
-        ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_REAL_GAIN_L, gain);
+        ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_PK_REAL_GAIN_H, &reg);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_PK_REAL_GAIN_H, (reg & 0xFC) | (gain >> 8));
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_PK_REAL_GAIN_L, gain);
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
         int gain_ceiling = IM_MAX(IM_MIN(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)) * 16.0, 1023), 0);
 
-        ret |= cambus_readb2(sensor->slv_addr, AEC_GAIN_CEILING_H, &reg);
-        ret |= cambus_writeb2(sensor->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (gain_ceiling >> 8));
-        ret |= cambus_writeb2(sensor->slv_addr, AEC_GAIN_CEILING_L, gain_ceiling);
+        ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_GAIN_CEILING_H, &reg);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_GAIN_CEILING_H, (reg & 0xFC) | (gain_ceiling >> 8));
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_GAIN_CEILING_L, gain_ceiling);
     }
 
     return ret;
@@ -738,8 +738,8 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
 {
     uint8_t gainh, gainl;
 
-    int ret = cambus_readb2(sensor->slv_addr, AEC_PK_REAL_GAIN_H, &gainh);
-    ret |= cambus_readb2(sensor->slv_addr, AEC_PK_REAL_GAIN_L, &gainl);
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_PK_REAL_GAIN_H, &gainh);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_PK_REAL_GAIN_L, &gainl);
 
     *gain_db = 20.0 * (fast_log((((gainh & 0x3) << 8) | gainl) / 16.0) / fast_log(10.0));
 
@@ -749,17 +749,17 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
     uint8_t reg, pll, hts_h, hts_l, vts_h, vts_l;
-    int ret = cambus_readb2(sensor->slv_addr, AEC_PK_MANUAL, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFE) | ((enable == 0) << 0));
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_PK_MANUAL, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFE) | ((enable == 0) << 0));
 
     if ((enable == 0) && (exposure_us >= 0)) {
-        ret |= cambus_readb2(sensor->slv_addr, SC_PLL_CONTRL2, &pll);
+        ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, SC_PLL_CONTRL2, &pll);
 
-        ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_H, &hts_h);
-        ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_L, &hts_l);
+        ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_H, &hts_h);
+        ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_L, &hts_l);
 
-        ret |= cambus_readb2(sensor->slv_addr, TIMING_VTS_H, &vts_h);
-        ret |= cambus_readb2(sensor->slv_addr, TIMING_VTS_L, &vts_l);
+        ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_VTS_H, &vts_h);
+        ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_VTS_L, &vts_l);
 
         uint16_t hts = (hts_h << 8) | hts_l;
         uint16_t vts = (vts_h << 8) | vts_l;
@@ -775,12 +775,12 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 
         int new_vts = IM_MAX(exposure, vts);
 
-        ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_EXPOSURE_0, exposure >> 12);
-        ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_EXPOSURE_1, exposure >> 4);
-        ret |= cambus_writeb2(sensor->slv_addr, AEC_PK_EXPOSURE_2, exposure << 4);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_PK_EXPOSURE_0, exposure >> 12);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_PK_EXPOSURE_1, exposure >> 4);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AEC_PK_EXPOSURE_2, exposure << 4);
 
-        ret |= cambus_writeb2(sensor->slv_addr, TIMING_VTS_H, new_vts >> 8);
-        ret |= cambus_writeb2(sensor->slv_addr, TIMING_VTS_L, new_vts);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VTS_H, new_vts >> 8);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VTS_L, new_vts);
     }
 
     return ret;
@@ -789,14 +789,14 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 {
     uint8_t pll, aec_0, aec_1, aec_2, hts_h, hts_l;
-    int ret = cambus_readb2(sensor->slv_addr, SC_PLL_CONTRL2, &pll);
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, SC_PLL_CONTRL2, &pll);
 
-    ret |= cambus_readb2(sensor->slv_addr, AEC_PK_EXPOSURE_0, &aec_0);
-    ret |= cambus_readb2(sensor->slv_addr, AEC_PK_EXPOSURE_1, &aec_1);
-    ret |= cambus_readb2(sensor->slv_addr, AEC_PK_EXPOSURE_2, &aec_2);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_PK_EXPOSURE_0, &aec_0);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_PK_EXPOSURE_1, &aec_1);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AEC_PK_EXPOSURE_2, &aec_2);
 
-    ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_H, &hts_h);
-    ret |= cambus_readb2(sensor->slv_addr, TIMING_HTS_L, &hts_l);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_H, &hts_h);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_L, &hts_l);
 
     uint32_t aec = ((aec_0 << 16) | (aec_1 << 8) | aec_2) >> 4;
     uint16_t hts = (hts_h << 8) | hts_l;
@@ -816,8 +816,8 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
 {
     uint8_t reg;
-    int ret = cambus_readb2(sensor->slv_addr, AWB_MANUAL_CONTROL, &reg);
-    ret |= cambus_writeb2(sensor->slv_addr, AWB_MANUAL_CONTROL, (reg & 0xFE) | (enable == 0));
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, AWB_MANUAL_CONTROL, &reg);
+    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AWB_MANUAL_CONTROL, (reg & 0xFE) | (enable == 0));
 
     if ((enable == 0) && (!isnanf(r_gain_db)) && (!isnanf(g_gain_db)) && (!isnanf(b_gain_db))
                       && (!isinff(r_gain_db)) && (!isinff(g_gain_db)) && (!isinff(b_gain_db))) {
@@ -826,12 +826,12 @@ static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, floa
         int g_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((g_gain_db / 20.0) * fast_log(10.0))), 4095), 0);
         int b_gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((b_gain_db / 20.0) * fast_log(10.0))), 4095), 0);
 
-        ret |= cambus_writeb2(sensor->slv_addr, AWB_R_GAIN_H, r_gain >> 8);
-        ret |= cambus_writeb2(sensor->slv_addr, AWB_R_GAIN_L, r_gain);
-        ret |= cambus_writeb2(sensor->slv_addr, AWB_G_GAIN_H, g_gain >> 8);
-        ret |= cambus_writeb2(sensor->slv_addr, AWB_G_GAIN_L, g_gain);
-        ret |= cambus_writeb2(sensor->slv_addr, AWB_B_GAIN_H, b_gain >> 8);
-        ret |= cambus_writeb2(sensor->slv_addr, AWB_B_GAIN_L, b_gain);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AWB_R_GAIN_H, r_gain >> 8);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AWB_R_GAIN_L, r_gain);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AWB_G_GAIN_H, g_gain >> 8);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AWB_G_GAIN_L, g_gain);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AWB_B_GAIN_H, b_gain >> 8);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AWB_B_GAIN_L, b_gain);
     }
 
     return ret;
@@ -841,12 +841,12 @@ static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db,
 {
     uint8_t redh, redl, greenh, greenl, blueh, bluel;
 
-    int ret = cambus_readb2(sensor->slv_addr, AWB_R_GAIN_H, &redh);
-    ret |= cambus_readb2(sensor->slv_addr, AWB_R_GAIN_L, &redl);
-    ret |= cambus_readb2(sensor->slv_addr, AWB_G_GAIN_H, &greenh);
-    ret |= cambus_readb2(sensor->slv_addr, AWB_G_GAIN_L, &greenl);
-    ret |= cambus_readb2(sensor->slv_addr, AWB_B_GAIN_H, &blueh);
-    ret |= cambus_readb2(sensor->slv_addr, AWB_B_GAIN_L, &bluel);
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, AWB_R_GAIN_H, &redh);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AWB_R_GAIN_L, &redl);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AWB_G_GAIN_H, &greenh);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AWB_G_GAIN_L, &greenl);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AWB_B_GAIN_H, &blueh);
+    ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, AWB_B_GAIN_L, &bluel);
 
     *r_gain_db = 20.0 * (fast_log(((redh & 0xF) << 8) | redl) / fast_log(10.0));
     *g_gain_db = 20.0 * (fast_log(((greenh & 0xF) << 8) | greenl) / fast_log(10.0));
@@ -858,11 +858,11 @@ static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db,
 static int set_hmirror(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb2(sensor->slv_addr, TIMING_TC_REG_21, &reg);
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_21, &reg);
     if (enable){
-        ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_21, reg|0x06);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_21, reg|0x06);
     } else {
-        ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_21, reg&0xF9);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_21, reg&0xF9);
     }
     return ret;
 }
@@ -870,11 +870,11 @@ static int set_hmirror(sensor_t *sensor, int enable)
 static int set_vflip(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb2(sensor->slv_addr, TIMING_TC_REG_20, &reg);
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_20, &reg);
     if (!enable){
-        ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_20, reg|0x06);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_20, reg|0x06);
     } else {
-        ret |= cambus_writeb2(sensor->slv_addr, TIMING_TC_REG_20, reg&0xF9);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_TC_REG_20, reg&0xF9);
     }
     return ret;
 }
@@ -885,22 +885,22 @@ static int set_special_effect(sensor_t *sensor, sde_t sde)
 
     switch (sde) {
         case SDE_NEGATIVE:
-            ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x03); // start group 3
-            ret |= cambus_writeb2(sensor->slv_addr, 0x5580, 0x40);
-            ret |= cambus_writeb2(sensor->slv_addr, 0x5003, 0x08);
-            ret |= cambus_writeb2(sensor->slv_addr, 0x5583, 0x40); // sat U
-            ret |= cambus_writeb2(sensor->slv_addr, 0x5584, 0x10); // sat V
-            ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x13); // end group 3
-            ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0xa3); // latch group 3
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x03); // start group 3
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5580, 0x40);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5003, 0x08);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5583, 0x40); // sat U
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5584, 0x10); // sat V
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x13); // end group 3
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0xa3); // latch group 3
             break;
         case SDE_NORMAL:
-            ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x03); // start group 3
-            ret |= cambus_writeb2(sensor->slv_addr, 0x5580, 0x06);
-            ret |= cambus_writeb2(sensor->slv_addr, 0x5583, 0x40); // sat U
-            ret |= cambus_writeb2(sensor->slv_addr, 0x5584, 0x10); // sat V
-            ret |= cambus_writeb2(sensor->slv_addr, 0x5003, 0x08);
-            ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0x13); // end group 3
-            ret |= cambus_writeb2(sensor->slv_addr, 0x3212, 0xa3); // latch group 3
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x03); // start group 3
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5580, 0x06);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5583, 0x40); // sat U
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5584, 0x10); // sat V
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x5003, 0x08);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0x13); // end group 3
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, 0x3212, 0xa3); // latch group 3
             break;
         default:
             return -1;
@@ -912,8 +912,8 @@ static int set_special_effect(sensor_t *sensor, sde_t sde)
 static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
 {
     uint8_t reg;
-    int ret = cambus_readb2(sensor->slv_addr, ISP_CONTROL_00, &reg);
-    return cambus_writeb2(sensor->slv_addr, ISP_CONTROL_00, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
+    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, ISP_CONTROL_00, &reg);
+    return cambus_writeb2(&sensor->i2c, sensor->slv_addr, ISP_CONTROL_00, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
 }
 
 int ov5640_init(sensor_t *sensor)

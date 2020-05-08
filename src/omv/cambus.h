@@ -11,14 +11,17 @@
 #ifndef __CAMBUS_H__
 #define __CAMBUS_H__
 #include <stdint.h>
-int cambus_init();
-int cambus_scan();
-int cambus_readb(uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data);
-int cambus_writeb(uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data);
-int cambus_readb2(uint8_t slv_addr, uint16_t reg_addr,  uint8_t *reg_data);
-int cambus_writeb2(uint8_t slv_addr, uint16_t reg_addr, uint8_t reg_data);
-int cambus_readw(uint8_t slv_addr, uint8_t reg_addr,  uint16_t *reg_data);
-int cambus_writew(uint8_t slv_addr, uint8_t reg_addr, uint16_t reg_data);
-int cambus_readw2(uint8_t slv_addr, uint16_t reg_addr,  uint16_t *reg_data);
-int cambus_writew2(uint8_t slv_addr, uint16_t reg_addr, uint16_t reg_data);
+#include STM32_HAL_H
+
+int cambus_init(I2C_HandleTypeDef *i2c, I2C_TypeDef *instance, uint32_t timing);
+int cambus_deinit(I2C_HandleTypeDef *i2c);
+int cambus_scan(I2C_HandleTypeDef *i2c);
+int cambus_readb(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data);
+int cambus_writeb(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data);
+int cambus_readb2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr,  uint8_t *reg_data);
+int cambus_writeb2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t reg_data);
+int cambus_readw(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr,  uint16_t *reg_data);
+int cambus_writew(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint16_t reg_data);
+int cambus_readw2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr,  uint16_t *reg_data);
+int cambus_writew2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint16_t reg_data);
 #endif // __CAMBUS_H__

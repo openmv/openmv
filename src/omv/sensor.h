@@ -167,6 +167,8 @@ typedef struct _sensor {
     bool transpose;             // Transpose Image
     bool auto_rotation;         // Rotate Image Automatically
 
+    I2C_HandleTypeDef i2c;      // SCCB/I2C bus.
+
     // Sensor function pointers
     int  (*reset)               (sensor_t *sensor);
     int  (*sleep)               (sensor_t *sensor, int enable);
