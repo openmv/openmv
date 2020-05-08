@@ -227,10 +227,6 @@ int sensor_init()
     DCMI_PWDN_LOW();
     systick_sleep(10);
 
-    // Initialize the camera bus.
-    cambus_init();
-    systick_sleep(10);
-
     // Configure the sensor external clock (XCLK) to XCLK_FREQ.
     //
     // Max pixclk is 2.5 * HCLK:
@@ -281,8 +277,12 @@ int sensor_init()
     DCMI_RESET_LOW();
     systick_sleep(10);
 
+    // Initialize the camera bus.
+    cambus_init(&sensor.i2c, SCCB_I2C, SCCB_TIMING);
+    systick_sleep(10);
+
     /* Probe the sensor */
-    sensor.slv_addr = cambus_scan();
+    sensor.slv_addr = cambus_scan(&sensor.i2c);
     if (sensor.slv_addr == 0) {
         /* Sensor has been held in reset,
            so the reset line is active low */
@@ -293,21 +293,21 @@ int sensor_init()
         systick_sleep(10);
 
         /* Probe again to set the slave addr */
-        sensor.slv_addr = cambus_scan();
+        sensor.slv_addr = cambus_scan(&sensor.i2c);
         if (sensor.slv_addr == 0) {
             sensor.pwdn_pol = ACTIVE_LOW;
 
             DCMI_PWDN_HIGH();
             systick_sleep(10);
 
-            sensor.slv_addr = cambus_scan();
+            sensor.slv_addr = cambus_scan(&sensor.i2c);
             if (sensor.slv_addr == 0) {
                 sensor.reset_pol = ACTIVE_HIGH;
 
                 DCMI_RESET_LOW();
                 systick_sleep(10);
 
-                sensor.slv_addr = cambus_scan();
+                sensor.slv_addr = cambus_scan(&sensor.i2c);
                 if (sensor.slv_addr == 0) {
                     return -2;
                 }
@@ -323,23 +323,23 @@ int sensor_init()
 
     switch (sensor.slv_addr) {
     case OV2640_SLV_ADDR:
-        cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+        cambus_readb(&sensor.i2c, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
         break;
     case OV5640_SLV_ADDR:
-        cambus_readb2(sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+        cambus_readb2(&sensor.i2c, sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
         break;
     case OV7725_SLV_ADDR: // Same for OV7690.
-        cambus_readb(sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+        cambus_readb(&sensor.i2c, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
         break;
     case MT9V034_SLV_ADDR:
-        cambus_readb(sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
+        cambus_readb(&sensor.i2c, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
         break;
     case LEPTON_SLV_ADDR:
         sensor.chip_id = LEPTON_ID;
         break;
     #if (OMV_ENABLE_HM01B0 == 1)
     case HM01B0_SLV_ADDR:
-        cambus_readb2(sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
+        cambus_readb2(&sensor.i2c, sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
         break;
     #endif //(OMV_ENABLE_HM01B0 == 1)
     default:

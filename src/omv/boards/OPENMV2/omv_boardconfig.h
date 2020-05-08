@@ -107,6 +107,7 @@
 #define SCCB_PORT               (GPIOB)
 #define SCCB_SCL_PIN            (GPIO_PIN_8)
 #define SCCB_SDA_PIN            (GPIO_PIN_9)
+#define SCCB_TIMING             (0) // ignored
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
