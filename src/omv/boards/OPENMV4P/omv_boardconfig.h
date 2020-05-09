@@ -163,7 +163,7 @@
 #define SCCB_PORT               (GPIOB)
 #define SCCB_SCL_PIN            (GPIO_PIN_8)
 #define SCCB_SDA_PIN            (GPIO_PIN_9)
-#define SCCB_TIMING             (0x20D09DE7) // Frequency: 100KHz Rise Time: 100ns Fall Time: 20ns
+#define SCCB_TIMING             (I2C_TIMING_STANDARD)
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)

@@ -12,6 +12,23 @@
 #define __CAMBUS_H__
 #include <stdint.h>
 #include STM32_HAL_H
+#if defined(STM32F4)
+#define I2C_TIMING_STANDARD     (0)
+#define I2C_TIMING_FULL         (0)
+#define I2C_TIMING_FAST         (0)
+#elif defined(STM32F7)
+// These timing values are for f_I2CCLK=54MHz and are only approximate
+#define I2C_TIMING_STANDARD     (0x1090699B)
+#define I2C_TIMING_FULL         (0x70330309)
+#define I2C_TIMING_FAST         (0x50100103)
+#elif defined(STM32H7)
+// I2C timing obtained from the CUBEMX.
+#define I2C_TIMING_STANDARD     (0x20D09DE7)
+#define I2C_TIMING_FULL         (0x40900C22)
+#define I2C_TIMING_FAST         (0x4030040B)
+#else
+#error "no I2C timings for this MCU"
+#endif
 
 int cambus_init(I2C_HandleTypeDef *i2c, I2C_TypeDef *instance, uint32_t timing);
 int cambus_deinit(I2C_HandleTypeDef *i2c);
