@@ -36,6 +36,12 @@
 #define HSYNC_TIME              252
 #define VYSNC_TIME              24
 
+static int16_t readout_x = 0;
+static int16_t readout_y = 0;
+
+static uint16_t readout_w = ACTIVE_SENSOR_WIDTH;
+static uint16_t readout_h = ACTIVE_SENSOR_HEIGHT;
+
 static const uint8_t default_regs[][3] = {
 
 // https://github.com/ArduCAM/Arduino/blob/master/ArduCAM/ov5640_regs.h
@@ -104,7 +110,7 @@ static const uint8_t default_regs[][3] = {
     { 0x38, 0x15, 0x31 },
     { 0x30, 0x34, 0x1a },
     { 0x30, 0x35, 0x11 }, // { 0x30, 0x35, 0x21 },
-    { 0x30, 0x36, 0x50 }, // { 0x30, 0x36, 0x46 },
+    { 0x30, 0x36, 0x64 }, // { 0x30, 0x36, 0x46 },
     { 0x30, 0x37, 0x13 },
     { 0x30, 0x38, 0x00 },
     { 0x30, 0x39, 0x00 },
@@ -357,6 +363,12 @@ static const uint8_t saturation_regs[NUM_SATURATION_LEVELS][6] = {
 
 static int reset(sensor_t *sensor)
 {
+    readout_x = 0;
+    readout_y = 0;
+
+    readout_w = ACTIVE_SENSOR_WIDTH;
+    readout_h = ACTIVE_SENSOR_HEIGHT;
+
     // Reset all registers
     int ret = cambus_writeb2(&sensor->i2c, sensor->slv_addr, SCCB_SYSTEM_CTRL_1, 0x11);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, SYSTEM_CTROL0, 0x82);
@@ -405,7 +417,7 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
-    uint8_t pll, reg, reg2;
+    uint8_t reg;
     int ret = 0;
 
     if (((pixformat == PIXFORMAT_BAYER) || (pixformat == PIXFORMAT_JPEG))
@@ -422,23 +434,19 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         case PIXFORMAT_RGB565:
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x61);
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
-            pll = 0x64; // 40 MHz
             break;
         case PIXFORMAT_GRAYSCALE:
         case PIXFORMAT_YUV422:
-            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x10);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x30);
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
-            pll = 0x64; // 40 MHz
             break;
         case PIXFORMAT_BAYER:
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x00);
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
-            pll = 0x64; // 40 MHz (jpeg can go faster at higher reses)
             break;
         case PIXFORMAT_JPEG:
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x30);
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
-            pll = 0x64; // 40 MHz
             break;
         default:
             return -1;
@@ -456,27 +464,16 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     // Adjust JPEG quality.
 
     if (pixformat == PIXFORMAT_JPEG) {
-        bool high_res = (resolution[sensor->framesize][0] > 1280) || (resolution[sensor->framesize][1] > 960);
+        bool high_res = (resolution[sensor->framesize][0] > (readout_w / 2)) || (resolution[sensor->framesize][1] > (readout_h / 2));
         ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, JPEG_CTRL07, high_res ? 0x10 : 0x4);
-
-        if (sensor->pixformat != PIXFORMAT_JPEG) { // We have to double this.
-            ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_H, &reg);
-            ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_L, &reg2);
-            uint16_t sensor_hts = ((((reg << 8) | reg2) - HSYNC_TIME) * 2) + HSYNC_TIME;
-            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
-            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_L, sensor_hts);
-        }
     }
 
-    return cambus_writeb2(&sensor->i2c, sensor->slv_addr, SC_PLL_CONTRL2, pll) | ret;
+    return ret;
 }
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
-    uint8_t pll, reg;
-    uint16_t sensor_w = 0;
-    uint16_t sensor_h = 0;
-    uint16_t sensor_div = 0;
+    uint8_t reg;
     int ret = 0;
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
@@ -491,76 +488,59 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         return -1;
     }
 
+    readout_w = IM_MAX(readout_w, w);
+    readout_h = IM_MAX(readout_h, h);
+
+    int readout_x_max = (ACTIVE_SENSOR_WIDTH - readout_w) / 2;
+    int readout_y_max = (ACTIVE_SENSOR_HEIGHT - readout_h) / 2;
+    readout_x = IM_MAX(IM_MIN(readout_x, readout_x_max), -readout_x_max);
+    readout_y = IM_MAX(IM_MIN(readout_y, readout_y_max), -readout_y_max);
+
     // Step 1: Determine readout area and subsampling amount.
 
-    if ((w <= 320) && (h <= 240)) {
-        sensor_w = 2560;
-        sensor_h = 1440;
-        sensor_div = 2;
-    } else if ((w <= 640) && (h <= 480)) {
-        sensor_w = 2560;
-        sensor_h = 1440;
-        sensor_div = 2;
-    } else if ((w < 1280) && (h < 960)) { // < and not <=
-        sensor_w = 2560;
-        sensor_h = 1600;
-        sensor_div = 2;
-    } else if ((w <= 2560) && (h <= 1920)) {
-        sensor_w = 2560;
-        sensor_h = 1600;
+    uint16_t sensor_div = 0;
+
+    if ((w > (readout_w / 2)) || (h > (readout_h / 2))) {
         sensor_div = 1;
     } else {
-        sensor_w = ACTIVE_SENSOR_WIDTH;
-        sensor_h = ACTIVE_SENSOR_HEIGHT;
-        sensor_div = 1;
+        sensor_div = 2;
     }
 
     // Step 2: Determine horizontal and vertical start and end points.
 
-    uint16_t old_sensor_w = sensor_w;
-    uint16_t old_sensor_h = sensor_h;
+    uint16_t sensor_w = readout_w + DUMMY_WIDTH_BUFFER; // camera hardware needs dummy pixels to sync
+    uint16_t sensor_h = readout_h + DUMMY_HEIGHT_BUFFER; // camera hardware needs dummy lines to sync
 
-    sensor_w += DUMMY_WIDTH_BUFFER; // camera hardware needs dummy pixels to sync
-    sensor_h += DUMMY_HEIGHT_BUFFER; // camera hardware needs dummy lines to sync
-
-    uint16_t sensor_ws = (((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) * 2) + DUMMY_COLUMNS; // must be multiple of 2
+    uint16_t sensor_ws = IM_MAX(IM_MIN((((ACTIVE_SENSOR_WIDTH - sensor_w) / 4) + (readout_x / 2)) * 2, ACTIVE_SENSOR_WIDTH - sensor_w), -(DUMMY_WIDTH_BUFFER / 2)) + DUMMY_COLUMNS; // must be multiple of 2
     uint16_t sensor_we = sensor_ws + sensor_w - 1;
 
-    uint16_t sensor_hs = (((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) * 2) + DUMMY_LINES; // must be multiple of 2
+    uint16_t sensor_hs = IM_MAX(IM_MIN((((ACTIVE_SENSOR_HEIGHT - sensor_h) / 4) - (readout_y / 2)) * 2, ACTIVE_SENSOR_HEIGHT - sensor_h), -(DUMMY_HEIGHT_BUFFER / 2)) + DUMMY_LINES; // must be multiple of 2
     uint16_t sensor_he = sensor_hs + sensor_h - 1;
 
-    // Step 3: Apply the division.
+    // Step 3: Determine scaling window offset.
 
-    old_sensor_w /= sensor_div;
-    old_sensor_h /= sensor_div;
-
-    sensor_w /= sensor_div;
-    sensor_h /= sensor_div;
-
-    // Step 4: Determine scaling window offset.
-
-    float ratio = IM_MIN(old_sensor_w / ((float) w), old_sensor_h / ((float) h));
+    float ratio = IM_MIN((readout_w / sensor_div) / ((float) w), (readout_h / sensor_div) / ((float) h));
     uint16_t w_mul = w * ratio;
     uint16_t h_mul = h * ratio;
-    uint16_t x_off = (sensor_w - w_mul) / 2;
-    uint16_t y_off = (sensor_h - h_mul) / 2;
+    uint16_t x_off = ((sensor_w / sensor_div) - w_mul) / 2;
+    uint16_t y_off = ((sensor_h / sensor_div) - h_mul) / 2;
 
-    // Step 5: Compute total frame time.
+    // Step 4: Compute total frame time.
 
-    uint16_t sensor_hts = (sensor_w * ((sensor->pixformat == PIXFORMAT_GRAYSCALE || sensor->pixformat == PIXFORMAT_JPEG) ? 1 : 2)) + HSYNC_TIME;
-    uint16_t sensor_vts = sensor_h + VYSNC_TIME;
+    uint16_t sensor_hts = IM_MAX((sensor_w / sensor_div) + HSYNC_TIME, (SENSOR_WIDTH + HSYNC_TIME) / 2); // Fix to prevent crashing.
+    uint16_t sensor_vts = IM_MAX((sensor_h / sensor_div) + VYSNC_TIME, (SENSOR_HEIGHT + VYSNC_TIME) / 8); // Fix to prevent crashing.
 
     uint16_t sensor_x_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
     uint16_t sensor_y_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
 
-    // Step 6: Write regs.
+    // Step 5: Write regs.
 
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HS_H, sensor_ws >> 8);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HS_L, sensor_ws);
 
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VS_H, sensor_hs >> 8);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_VS_L, sensor_hs);
-    
+
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HW_H, sensor_we >> 8);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HW_L, sensor_we);
 
@@ -600,17 +580,9 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, VFIFO_VSIZE_H, h >> 8);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, VFIFO_VSIZE_L, h);
 
-    // Step 7: Adjust JPEG quality.
+    // Adjust JPEG quality.
 
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0x10);
-
-    // Step 8: Adjust PLL freq.
-    pll = 0x64; // 40 Mhz
-
-    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, SC_PLL_CONTRL2, pll);
-
-    // Delay 300 ms
-    systick_sleep(300);
 
     return ret;
 }
@@ -769,7 +741,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
         // "/ 2" -> SC_PLL_CONTRL3[4] (pll root divider)
         // "/ 10" -> SYSTEM_CTROL0[3:0] (bit mode)
         // "/ 1" -> SYSTEM_ROOT_DIVIDER[5:4] (pclk root divider)
-        int pclk_freq = (((((OV5640_XCLK_FREQ / 3) * pll) / 1) / 2) / 10) / 1;
+        int pclk_freq = ((((((OV5640_XCLK_FREQ / 3) * pll) / 1) / 2) / 10) / 1) * 2;
         int clocks_per_us = pclk_freq / 1000000;
         int exposure = IM_MAX(IM_MIN((exposure_us * clocks_per_us) / hts, 0xFFFF), 0x0000);
 
@@ -806,7 +778,7 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     // "/ 2" -> SC_PLL_CONTRL3[4] (pll root divider)
     // "/ 10" -> SYSTEM_CTROL0[3:0] (bit mode)
     // "/ 1" -> SYSTEM_ROOT_DIVIDER[5:4] (pclk root divider)
-    int pclk_freq = (((((OV5640_XCLK_FREQ / 3) * pll) / 1) / 2) / 10) / 1;
+    int pclk_freq = ((((((OV5640_XCLK_FREQ / 3) * pll) / 1) / 2) / 10) / 1) * 2;
     int clocks_per_us = pclk_freq / 1000000;
     *exposure_us = (aec * hts) / clocks_per_us;
 
@@ -916,10 +888,48 @@ static int set_lens_correction(sensor_t *sensor, int enable, int radi, int coef)
     return cambus_writeb2(&sensor->i2c, sensor->slv_addr, ISP_CONTROL_00, (reg & 0x7F) | (enable ? 0x80 : 0x00)) | ret;
 }
 
+static int ioctl(sensor_t *sensor, int request, va_list ap)
+{
+    int ret = 0;
+
+    switch (request) {
+        case IOCTL_SET_READOUT_WINDOW: {
+            int tmp_readout_x = va_arg(ap, int);
+            int tmp_readout_y = va_arg(ap, int);
+            int tmp_readout_w = IM_MAX(IM_MIN(va_arg(ap, int), ACTIVE_SENSOR_WIDTH), resolution[sensor->framesize][0]);
+            int tmp_readout_h = IM_MAX(IM_MIN(va_arg(ap, int), ACTIVE_SENSOR_HEIGHT), resolution[sensor->framesize][1]);
+            int readout_x_max = (ACTIVE_SENSOR_WIDTH - tmp_readout_w) / 2;
+            int readout_y_max = (ACTIVE_SENSOR_HEIGHT - tmp_readout_h) / 2;
+            tmp_readout_x = IM_MAX(IM_MIN(tmp_readout_x, readout_x_max), -readout_x_max);
+            tmp_readout_y = IM_MAX(IM_MIN(tmp_readout_y, readout_y_max), -readout_y_max);
+            bool changed = (tmp_readout_x != readout_x) || (tmp_readout_y != readout_y) || (tmp_readout_w != readout_w) || (tmp_readout_h != readout_h);
+            readout_x = tmp_readout_x;
+            readout_y = tmp_readout_y;
+            readout_w = tmp_readout_w;
+            readout_h = tmp_readout_h;
+            if (changed && (sensor->framesize != FRAMESIZE_INVALID)) set_framesize(sensor, sensor->framesize);
+            break;
+        }
+        case IOCTL_GET_READOUT_WINDOW: {
+            *va_arg(ap, int *) = readout_x;
+            *va_arg(ap, int *) = readout_y;
+            *va_arg(ap, int *) = readout_w;
+            *va_arg(ap, int *) = readout_h;
+            break;
+        }
+        default: {
+            ret = -1;
+            break;
+        }
+    }
+
+    return ret;
+}
+
 int ov5640_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 1;
+    sensor->gs_bpp              = 2;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
@@ -942,6 +952,7 @@ int ov5640_init(sensor_t *sensor)
     sensor->set_vflip           = set_vflip;
     sensor->set_special_effect  = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
+    sensor->ioctl               = ioctl;
 
     // Set sensor flags
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 1);
