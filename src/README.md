@@ -104,9 +104,15 @@ After building the firmware the output will appear under `src/build/bin` where y
 * uvc.dfu - Alternative UVC DFU Image (not directly used)
 * uvc.elf - Alternative UVC ELF Image (used to generate the BIN/DFU Files)
 
-Next, if you have Linux running inside of a Virtual Machine you will want to use shared folders to make the `src/build/bin` folder inside of your Virtual Machine visible to your host OS. With VMware you can do this by going to `Player->Manage->Virtual Machine Settings->Options->Shared Folders` and adding a shared folder link on the host OS to the `src/build/bin` folder on the guest OS. After doing this OpenMV IDE will then be able to read the newly compiled binaries.
+Next, if you have Linux running inside of a Virtual Machine you will want to use shared folders to make the `src/build/bin` folder inside of your Virtual Machine visible to your host OS. With VMware you can do this by going to `Player->Manage->Virtual Machine Settings->Options->Shared Folders` and adding a shared folder named `shared` on the host OS. The shared folder will appear in Linux (using Ubuntu) under `/mnt/hgfs/shared/`. Any files you copy to that path will appear in the host OS inside of the shared folder you created. To copy firmware after you compile into that folder just add `&& mv build/bin/* /mnt/hgfs/shared/` to your `make` command to compile firmware.
+
+After doing this OpenMV IDE will then be able to read the newly compiled binaries under the shared folder path you created.
 
 To update your OpenMV Cam's firmware you want to load the `firmware.bin` file onto your OpenMV Cam using the `Tools->Run Bootloader` command in OpenMV IDE. Please make sure to only load firmware meant for your model of the OpenMV Cam onto it. The IDE does not check this. If you accidentally load the wrong firmware your OpenMV Cam will just crash without being damaged when trying to execute the main firmware image and you can then just use the bootloader onboard again to load the correct `firmware.bin`.
+
+### About Building
+
+To build the firmware faster we recommend passing `-j4` or higher depending on how many cores your computer has with make. E.g. `make -j4 TARGET=...`. Additionally, if you have issues with files not being recompiled correctly when building do `make clean` before building the firmware. We recommend using `make clean` regularly whenever you pull new changes or edit MicroPython QSTR files.
 
 ### About The Binaries
 
