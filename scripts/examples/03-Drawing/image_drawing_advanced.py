@@ -26,14 +26,14 @@ x = 100
 y = 50
 
 # Bounce direction
-xd = .1
-yd = .1
+xd = 1
+yd = 1
 
 # Small image scaling
 rescale = 1.0
-rd = 0.01
+rd = 0.1
 max_rescale = 5
-min_rescale = -max_rescale
+min_rescale = rd * 2
 
 # Boundary to bounce within
 xmin = -sensor.width() / SMALL_IMAGE_SCALE - 8
@@ -81,11 +81,11 @@ while(True):
 
     apply_mask = CYCLE_MASK and ((value_mixer >> 9) & 1)
     if apply_mask:
-        img.draw_image(small_img, int(x), int(y), mask=small_img.to_bitmap(copy=True), x_scale=-rescale, y_scale=rescale, alpha=240, hint=image.IMAGE_HINT_BILINEAR | image.IMAGE_HINT_CENTER)
+        img.draw_image(small_img, int(x), int(y), mask=small_img.to_bitmap(copy=True), x_scale=rescale, y_scale=rescale, alpha=240, hint=image.IMAGE_HINT_BILINEAR | image.IMAGE_HINT_CENTER)
         status += 'alpha:240 '
         status += '+mask '
     else:
-        img.draw_image(small_img, int(x), int(y), x_scale=-rescale, y_scale=rescale, alpha=128, hint=image.IMAGE_HINT_BILINEAR | image.IMAGE_HINT_CENTER)
+        img.draw_image(small_img, int(x), int(y), x_scale=rescale, y_scale=rescale, alpha=128, hint=image.IMAGE_HINT_BILINEAR | image.IMAGE_HINT_CENTER)
         status += 'alpha:128 '
 
     img.draw_string(8, 0, status, mono_space = False)

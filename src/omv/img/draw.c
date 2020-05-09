@@ -581,9 +581,8 @@ inline bool pixel_to_binary(int bpp, uint32_t pixel) {
  */
 static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, uint8_t *other_row_ptr, int other_bpp, void *mask_row_ptr, int mask_bpp, int other_x_start, int other_x_end, float over_xscale)
 {
-    // generate line
     for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
-        float other_x_float = x * over_xscale;
+        float other_x_float = (x + 0.5) * over_xscale;
         uint32_t other_x = fast_floorf(other_x_float);
         uint32_t weight_x = fast_floorf((other_x_float - other_x) * alpha);
         bool mask1 = true, mask2 = true;
@@ -625,7 +624,7 @@ static void int_generate_cache_line_rgb565(uint32_t *cache_line, int alpha, cons
 {
     // generate line
     for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
-        float other_x_float = x * over_xscale;
+        float other_x_float = (x + 0.5) * over_xscale;
         uint32_t other_x = fast_floorf(other_x_float);
         uint32_t weight_x = fast_floorf((other_x_float - other_x) * alpha);
         bool mask1 = true, mask2 = true;
@@ -683,8 +682,8 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
     }
 
     // Scaled other size
-    int other_width_scaled = fast_floorf(fast_fabsf(x_scale) * other->w);
-    int other_height_scaled = fast_floorf(fast_fabsf(y_scale) * other->h);
+    int other_width_scaled = fast_floorf(x_scale * other->w);
+    int other_height_scaled = fast_floorf(y_scale * other->h);
 
     // Center other if hint is set
     if (hint & IMAGE_HINT_CENTER) {
@@ -706,21 +705,6 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
     // Check bounds are within img
     if (other_x_start + x_off >= img->w || other_y_start + y_off >= img->h) return;
     if (other_x_end + x_off <= 0 || other_y_end + y_off <= 0) return;
-
-    // If scaling is negative we essentially flip the other coordinates so they work from bottom right instead of top left
-    if (over_xscale < 0) {
-        other_width_scaled--;
-        other_x_start -= other_width_scaled;
-        other_x_end -= other_width_scaled;
-        x_off += other_width_scaled;
-    }
-
-    if (over_yscale < 0) {
-        other_height_scaled--;
-        other_y_start -= other_height_scaled;
-        other_y_end -= other_height_scaled;
-        y_off += other_height_scaled;
-    }
 
     // If we're linear interpolating the last pixel will overflow if we land on it, we want to land just before it.
     if (hint & IMAGE_HINT_BILINEAR) {
@@ -782,25 +766,22 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                     uint8_t *img_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_off + y) + x_off;
 
                     // calculate y offset in other
-                    float other_y_float = y * over_yscale;
+                    float other_y_float = (y + 0.5) * over_yscale;
 
                     // Calculate weighting between top and bottom pixel
                     int other_y = fast_floorf(other_y_float);
                     int weight_y = fast_floorf((other_y_float - other_y) * 256);
-
-                    // Invert the y weighting if the image is flipped in the y direction
-                    if (y_scale < 0) weight_y = 256 - weight_y;
                     uint32_t y_interpolate = (weight_y << 16) + (256 - weight_y);
 
                     // If we've moved to the next line in the other image then generate the new cache line
-                    if (last_other_y != other_y) {      
+                    if (last_other_y != other_y) {
                         last_other_y = other_y;
                         
                         // Move to next line.  Swap y+1 cache line to y
                         uint16_t *cache_line_temp = cache_line_top;
                         cache_line_top = cache_line_bottom;
                         cache_line_bottom = cache_line_temp;
-                    
+
                         // And generate a new y+1
                         other_row_ptr = imlib_compute_row_ptr(other, other_y + 1);
                         mask_row_ptr = mask ? imlib_compute_row_ptr(mask, other_y + 1) : NULL;
@@ -897,14 +878,11 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                     uint16_t *img_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_off + y) + x_off;
 
                     // calculate y offset in other
-                    float other_y_float = y * over_yscale;
+                    float other_y_float = (y + 0.5) * over_yscale;
 
                     // Calculate weighting between top and bottom pixel
                     int other_y = fast_floorf(other_y_float);
                     int weight_y = fast_floorf((other_y_float - other_y) * 256);
-
-                    // Invert the y weighting if the image is flipped in the y direction
-                    if (y_scale < 0) weight_y = 256 - weight_y;
                     uint32_t y_interpolate = ((256 - weight_y) << 16) + weight_y;
 
                     // Weighting is 0->128 for blendops to prevent overflow
@@ -915,7 +893,6 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                     
                     if (last_other_y != other_y) {      
                         uint32_t *cache_line_temp = cache_line_top;
-                        
                         cache_line_top = cache_line_bottom;
                         cache_line_bottom = cache_line_temp;
                         
