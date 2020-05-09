@@ -553,8 +553,8 @@ Q(draw_image)
 Q(alpha)
 // duplicate Q(mask)
 Q(hint)
-Q(INTERPOLATE_BILINEAR)
-Q(IMAGE_CENTER)
+Q(IMAGE_HINT_BILINEAR)
+Q(IMAGE_HINT_CENTER)
 
 // Draw Keypoints
 Q(draw_keypoints)

@@ -1142,9 +1142,9 @@ typedef struct find_barcodes_list_lnk_data {
 } find_barcodes_list_lnk_data_t;
 
 typedef enum image_hint {
-    INTERPOLATE_BILINEAR = 1,
-    IMAGE_CENTER = 128
-} image_hint_type;
+    IMAGE_HINT_BILINEAR = 1,
+    IMAGE_HINT_CENTER = 128
+} image_hint_t;
 
 
 /* Color space functions */
@@ -1290,7 +1290,7 @@ void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotati
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, float scale, int x_spacing, int y_spacing, bool mono_space,
                        int char_rotation, bool char_hmirror, bool char_vflip, int string_rotation, bool string_hmirror, bool string_hflip);
 void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask,
-                      const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_type hint);
+                      const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint);
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);

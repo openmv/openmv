@@ -1977,7 +1977,7 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Palettes must be used with color images!"));
     }
 
-    image_hint_type hint =
+    image_hint_t hint =
         py_helper_keyword_int(n_args, args, offset + 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
 
     if (hint && arg_msk) {
@@ -7625,8 +7625,8 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE93),              MP_ROM_INT(BARCODE_CODE93)},
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
 #endif
-    {MP_ROM_QSTR(MP_QSTR_INTERPOLATE_BILINEAR),MP_ROM_INT(INTERPOLATE_BILINEAR)},
-    {MP_ROM_QSTR(MP_QSTR_IMAGE_CENTER),        MP_ROM_INT(IMAGE_CENTER)},
+    {MP_ROM_QSTR(MP_QSTR_IMAGE_HINT_BILINEAR),MP_ROM_INT(IMAGE_HINT_BILINEAR)},
+    {MP_ROM_QSTR(MP_QSTR_IMAGE_HINT_CENTER),        MP_ROM_INT(IMAGE_HINT_CENTER)},
     {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_image_imagewriter_obj)},
     {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_image_imagereader_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_grayscale), MP_ROM_PTR(&py_image_binary_to_grayscale_obj)},

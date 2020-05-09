@@ -566,7 +566,7 @@ inline bool pixel_to_binary(int bpp, uint32_t pixel) {
 }
 
 /**
- * Used by INTERPOLATE_BILINEAR to generate a grayscale linear interpolated row.
+ * Used by IMAGE_HINT_BILINEAR to generate a grayscale linear interpolated row.
  * The drawing algorithm will later apply the vertical interpolation between two cached lines.
  *
  * @param cache_line Where to write the line
@@ -586,19 +586,19 @@ static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, u
         float other_x_float = x * over_xscale;
         uint32_t other_x = fast_floorf(other_x_float);
         uint32_t weight_x = fast_floorf((other_x_float - other_x) * alpha);
-
         bool mask1 = true, mask2 = true;
+
         if (mask_row_ptr) {
             mask1 = pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
             mask2 = pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
         }
+
         uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
         uint32_t alpha2 = mask2 ? weight_x : 0;
-
         uint32_t other_pixel1 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x)) * alpha1;
         uint32_t other_pixel2 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x + 1)) * alpha2;
         
-        // Image alpha is the remining alpha after applying other alpha
+        // Image alpha is the remaining alpha after applying other alpha
         uint32_t img_alpha = 256 - (alpha1 + alpha2);
 
         // Note img_alpha is now 0->128 to fit into a byte
@@ -608,7 +608,7 @@ static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, u
 
 
 /**
- * Used by INTERPOLATE_BILINEAR to generate a RGB888 linear interpolated row.
+ * Used by IMAGE_HINT_BILINEAR to generate a RGB888 linear interpolated row.
  * The drawing algorithm will later apply the vertical interpolation between two cached lines.
  *
  * @param cache_line Where to write the line
@@ -637,7 +637,6 @@ static void int_generate_cache_line_rgb565(uint32_t *cache_line, int alpha, cons
 
         uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
         uint32_t alpha2 = mask2 ? weight_x : 0;
-
         uint32_t other_pixel1 = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x);
         uint32_t other_pixel2 = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x + 1);
 
@@ -651,7 +650,7 @@ static void int_generate_cache_line_rgb565(uint32_t *cache_line, int alpha, cons
         other_pixel2 = color_palette ? color_palette[other_pixel2] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, other_pixel2);
         other_pixel2 = draw_scaleop_RGB565_to_RGB888(other_pixel2, alpha2);
         
-        // Image alpha is the remining alpha after applying other alpha
+        // Image alpha is the remaining alpha after applying other alpha
         uint32_t img_alpha = 128 - (alpha1 + alpha2);
 
         cache_line[i] = ((other_pixel1 + other_pixel2) << 8) + img_alpha; // RGBA8888
@@ -671,16 +670,16 @@ static void int_generate_cache_line_rgb565(uint32_t *cache_line, int alpha, cons
  * @param mask Mask image, if interpolating must be the same size as the other image.
  * @param color_palette Color palette for transforming grayscale images to RGB565.
  * @param alpha_palette Alpha palette for masking grayscale images.
- * @param hint Rendering hint.  e.g. INTERPOLATE_BILINEAR, IMAGE_CENTER
+ * @param hint Rendering hint.  e.g. IMAGE_HINT_BILINEAR, IMAGE_HINT_CENTER
  */
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask, const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_type hint)
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask, const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint)
 {
     // If alpha is 0 then nothing changes
     if (alpha == 0) return;
 
-    if (hint & INTERPOLATE_BILINEAR) {
+    if (hint & IMAGE_HINT_BILINEAR) {
         // Cannot interpolate a 1x1 pixel.
-        if (other->w <= 1 || other->h <= 1) hint &= ~INTERPOLATE_BILINEAR;
+        if (other->w <= 1 || other->h <= 1) hint &= ~IMAGE_HINT_BILINEAR;
     }
 
     // Scaled other size
@@ -688,7 +687,7 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
     int other_height_scaled = fast_floorf(fast_fabsf(y_scale) * other->h);
 
     // Center other if hint is set
-    if (hint & IMAGE_CENTER) {
+    if (hint & IMAGE_HINT_CENTER) {
         x_off -= other_width_scaled >> 1;
         y_off -= other_height_scaled >> 1;
     }
@@ -724,7 +723,7 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
     }
 
     // If we're linear interpolating the last pixel will overflow if we land on it, we want to land just before it.
-    if (hint & INTERPOLATE_BILINEAR) {
+    if (hint & IMAGE_HINT_BILINEAR) {
         over_xscale *= (float)(other->w - 1) / other->w;
         over_yscale *= (float)(other->h - 1) / other->h;
     }
@@ -757,7 +756,9 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            if (hint & INTERPOLATE_BILINEAR) {
+            if (hint & IMAGE_HINT_BILINEAR) {
+                fb_alloc_mark();
+
                 // Allocate cache lines
                 int bytes_per_img_line = img->w * sizeof(uint8_t) * 2; // (1 byte graysclae + 1 byte alpha) = * 2
                 uint16_t *cache_line_1 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
@@ -834,10 +835,8 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                     }
                 }
                 // De-allocate cache lines
-                fb_free(cache_line_1);
-                fb_free(cache_line_2);
-            }
-            else {
+                fb_alloc_free_till_mark();
+            } else {
                 // 00000000otheralph00000000imgalpha
                 uint32_t packed_alpha = (alpha << 16) + (256 - alpha);
 
@@ -872,7 +871,9 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
             // Alpha is 0->128
             alpha >>= 1;
 
-            if (hint & INTERPOLATE_BILINEAR) {
+            if (hint & IMAGE_HINT_BILINEAR) {
+                fb_alloc_mark();
+
                 // Allocate cache lines
                 int bytes_per_img_line = img->w * 4; // (3 bytes RGB888 + 1 byte alpha) = * 4
                 uint32_t *cache_line_1 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
@@ -957,10 +958,8 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                 }
                 
                 // De-allocate cache lines
-                fb_free(cache_line_1);
-                fb_free(cache_line_2);
-            }
-            else {
+                fb_alloc_free_till_mark();
+            } else {
                 uint32_t va = __PKHBT((128 - alpha), alpha, 16);
 
                 // Iterate the img area to be updated
@@ -979,6 +978,7 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
 
                             if (alpha_palette) {
                                 uint32_t temp_alpha = (alpha * alpha_palette[result_pixel]) >> 8;
+                                
                                 va = __PKHBT((128 - temp_alpha), temp_alpha, 16);
                             }
                             result_pixel = color_palette ? color_palette[result_pixel] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, result_pixel);
