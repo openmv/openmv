@@ -246,12 +246,11 @@ float imlib_template_match_ex(image_t *f, image_t *t, rectangle_t *roi, int step
         // The mean of the current patch
         uint32_t f_sum = imlib_integral_lookup(&sum, u, v, t->w, t->h);
         uint32_t f_sumsq = imlib_integral_lookup(&sumsq, u, v, t->w, t->h);
-        uint32_t f_mean = f_sum / (float) (t->w*t->h);
 
         // Normalized sum of squares of the image
         for (int y=v; y<(v+t->h); y++) {
             for (int x=u; x<(u+t->w); x++) {
-                int a = (int)f->data[y*f->w+x]-f_mean;
+                int a = (int)f->data[y*f->w+x];
                 int b = (int)t->data[(y-v)*t->w+(x-u)]-t_mean;
                 num += a*b;
             }
