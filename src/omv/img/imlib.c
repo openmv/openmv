@@ -1388,8 +1388,8 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
         }
     }
     
-    fb_free(precalculated_table);
-    fb_free();
+    fb_free(); // precalculated_table
+    fb_free(); // data
 }
 #endif //IMLIB_ENABLE_LENS_CORR
 
