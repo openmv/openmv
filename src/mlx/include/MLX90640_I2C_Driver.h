@@ -18,8 +18,9 @@
 #define _MLX90640_I2C_Driver_H_
 
 #include <stdint.h>
+#include STM32_HAL_H
 
-    void MLX90640_I2CInit(void);
+    void MLX90640_I2CInit(I2C_HandleTypeDef *i2c);
     int MLX90640_I2CRead(uint8_t slaveAddr,uint16_t startAddress, uint16_t nMemAddressRead, uint16_t *data);
     int MLX90640_I2CWrite(uint8_t slaveAddr,uint16_t writeAddress, uint16_t data);
     void MLX90640_I2CFreqSet(int freq);

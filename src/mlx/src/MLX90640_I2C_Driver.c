@@ -14,94 +14,38 @@
  * limitations under the License.
  *
  */
-/*#include "mbed.h"
+#include <stdio.h>
+#include STM32_HAL_H
+#include "cambus.h"
 #include "MLX90640_I2C_Driver.h"
 
-I2C i2c(p9, p10);
+static I2C_HandleTypeDef *hi2c;
 
-void MLX90640_I2CInit()
+void MLX90640_I2CInit(I2C_HandleTypeDef *i2c)
 {   
-    i2c.stop();
+    hi2c = i2c;
 }
 
 int MLX90640_I2CRead(uint8_t slaveAddr, uint16_t startAddress, uint16_t nMemAddressRead, uint16_t *data)
 {
-    uint8_t sa;                           
-    int ack = 0;                               
-    int cnt = 0;
-    int i = 0;
-    char cmd[2] = {0,0};
-    char i2cData[1664] = {0};
-    uint16_t *p;
-    
-    p = data;
-    sa = (slaveAddr << 1);
-    cmd[0] = startAddress >> 8;
-    cmd[1] = startAddress & 0x00FF;
-    
-    i2c.stop();
-    wait_us(5);    
-    ack = i2c.write(sa, cmd, 2, 1);
-    
-    if (ack != 0x00)
-    {
+	uint8_t* p = (uint8_t*) data;
+    if (cambus_readw_bytes(hi2c, (slaveAddr<<1), startAddress, p, nMemAddressRead*2) != 0) {
         return -1;
-    }
-             
-    sa = sa | 0x01;
-    ack = i2c.read(sa, i2cData, 2*nMemAddressRead, 0);
-    
-    if (ack != 0x00)
-    {
-        return -1; 
-    }          
-    i2c.stop();   
-    
-    for(cnt=0; cnt < nMemAddressRead; cnt++)
-    {
-        i = cnt << 1;
-        *p++ = (uint16_t)i2cData[i]*256 + (uint16_t)i2cData[i+1];
-    }
-    
-    return 0;   
-} 
+	}
 
-void MLX90640_I2CFreqSet(int freq)
-{
-    i2c.frequency(1000*freq);
-}
+	for(int cnt=0; cnt < nMemAddressRead*2; cnt+=2) {
+		uint8_t tempBuffer = p[cnt+1];
+		p[cnt+1] = p[cnt];
+		p[cnt] = tempBuffer;
+	}
+
+	return 0;   
+} 
 
 int MLX90640_I2CWrite(uint8_t slaveAddr, uint16_t writeAddress, uint16_t data)
 {
-    uint8_t sa;
-    int ack = 0;
-    char cmd[4] = {0,0,0,0};
-    uint16_t dataCheck;
-    
-
-    sa = (slaveAddr << 1);
-    cmd[0] = writeAddress >> 8;
-    cmd[1] = writeAddress & 0x00FF;
-    cmd[2] = data >> 8;
-    cmd[3] = data & 0x00FF;
-
-    i2c.stop();
-    wait_us(5);    
-    ack = i2c.write(sa, cmd, 4, 0);
-    
-    if (ack != 0x00)
-    {
+	if (cambus_writew2(hi2c, (slaveAddr << 1), writeAddress, data) != 0) {
         return -1;
-    }         
-    i2c.stop();   
-    
-    MLX90640_I2CRead(slaveAddr,writeAddress,1, &dataCheck);
-    
-    if ( dataCheck != data)
-    {
-        return -2;
-    }    
-    
-    return 0;
-}*/
-
+	}         
+	return 0;
+}
