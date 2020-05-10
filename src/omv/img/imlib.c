@@ -1220,10 +1220,10 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
     memcpy(data, img->data, size);
     memset(img->data, 0, size);
 
-    float *precalculated = fb_alloc((int)maximum_radius * sizeof(float), FB_ALLOC_NO_HINT);
+    float *precalculated_table = fb_alloc((int)maximum_radius * sizeof(float), FB_ALLOC_NO_HINT);
     for(int i=0; i < (int)maximum_radius; i++) {
         float r = lens_corr_radius * i;
-        precalculated[i] = (fast_atanf(r) / r) * zoom;
+        precalculated_table[i] = (fast_atanf(r) / r) * zoom;
     }
 
     switch(img->bpp) {
@@ -1240,9 +1240,9 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
 
-                    float theta = precalculated[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceX = x_off + fast_roundf(theta * newX); // rounding is necessary
-                    int sourceY = y_off + fast_roundf(theta * newY); // rounding is necessary
+                    float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
+                    int sourceX = x_off + fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY = y_off + fast_roundf(precalculated * newY); // rounding is necessary
 
                     // plot the 4 symmetrical pixels
                     uint32_t *ptr, pixel;
@@ -1292,9 +1292,9 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
 
-                    float theta = precalculated[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceX = x_off + fast_roundf(theta * newX); // rounding is necessary
-                    int sourceY = y_off + fast_roundf(theta * newY); // rounding is necessary
+                    float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
+                    int sourceX = x_off + fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY = y_off + fast_roundf(precalculated * newY); // rounding is necessary
 
                     // plot the 4 symmetrical pixels
                     uint8_t *ptr, pixel;
@@ -1344,9 +1344,9 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
 
-                    float theta = precalculated[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceX = x_off + fast_roundf(theta * newX); // rounding is necessary
-                    int sourceY = y_off + fast_roundf(theta * newY); // rounding is necessary
+                    float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
+                    int sourceX = x_off + fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY = y_off + fast_roundf(precalculated * newY); // rounding is necessary
 
                     // plot the 4 symmetrical pixels
                     uint16_t *ptr, pixel;
@@ -1388,7 +1388,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
         }
     }
     
-    fb_free(precalculated);
+    fb_free(precalculated_table);
     fb_free();
 }
 #endif //IMLIB_ENABLE_LENS_CORR
