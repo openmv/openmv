@@ -1226,6 +1226,11 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
         precalculated_table[i] = (fast_atanf(r) / r) * zoom;
     }
 
+    int down_adj = halfHeight + y_off;
+    int up_adj = h - 1 - halfHeight + y_off;
+    int right_adj = halfWidth + x_off;
+    int left_adj = w - 1 - halfWidth + x_off;
+
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
             uint32_t *tmp = (uint32_t *) data;
@@ -1241,15 +1246,15 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX2 = newX * newX;
 
                     float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceX = halfWidth + fast_roundf(precalculated * newX); // rounding is necessary
-                    int sourceY = halfHeight + fast_roundf(precalculated * newY); // rounding is necessary
+                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
 
                     // plot the 4 symmetrical pixels
                     uint32_t *ptr, pixel;
-                    int sourceY_down = sourceY + y_off;
-                    int sourceY_up = h - 1 - sourceY + y_off;
-                    int sourceX_right = sourceX + x_off;
-                    int sourceX_left = w - 1 - sourceX + x_off;
+                    int sourceY_down = down_adj + sourceY;
+                    int sourceY_up = up_adj - sourceY;
+                    int sourceX_right = right_adj + sourceX;
+                    int sourceX_left = left_adj - sourceX;
 
                     if (sourceY_down >= 0 && sourceY_down < h) {
                         ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY_down);
@@ -1294,18 +1299,19 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX2 = newX * newX;
 
                     float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceX = halfWidth + fast_roundf(precalculated * newX); // rounding is necessary
-                    int sourceY = halfHeight + fast_roundf(precalculated * newY); // rounding is necessary
+                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
 
                     // plot the 4 symmetrical pixels
                     uint8_t *ptr;
-                    int sourceY_down = sourceY + y_off;
-                    int sourceY_up = h - 1 - sourceY + y_off;
-                    int sourceX_right = sourceX + x_off;
-                    int sourceX_left = w - 1 - sourceX + x_off;
+                    int sourceY_down = down_adj + sourceY;
+                    int sourceY_up = up_adj - sourceY;
+                    int sourceX_right = right_adj + sourceX;
+                    int sourceX_left = left_adj - sourceX;
 
+                    // top 2 pixels
                     if (sourceY_down >= 0 && sourceY_down < h) {
-                        ptr = tmp + (w * sourceY_down); // top 2 pixels
+                        ptr = tmp + (w * sourceY_down);
                         if (sourceX_right >= 0 && sourceX_right < w) {
                             row_ptr[x] = ptr[sourceX_right];
                         }
@@ -1315,8 +1321,9 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                         }
                     }
 
+                    // bottom 2 pixels
                     if (sourceY_up >= 0 && sourceY_up < h) {
-                        ptr = tmp + (w * sourceY_up); // bottom 2 pixels
+                        ptr = tmp + (w * sourceY_up);
                         if (sourceX_right >= 0 && sourceX_right < w) {
                             row_ptr2[x] = ptr[sourceX_right];
                         }
@@ -1343,18 +1350,19 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX2 = newX * newX;
 
                     float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceX = halfWidth + fast_roundf(precalculated * newX); // rounding is necessary
-                    int sourceY = halfHeight + fast_roundf(precalculated * newY); // rounding is necessary
+                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
 
                     // plot the 4 symmetrical pixels
                     uint16_t *ptr;
-                    int sourceY_down = sourceY + y_off;
-                    int sourceY_up = h - 1 - sourceY + y_off;
-                    int sourceX_right = sourceX + x_off;
-                    int sourceX_left = w - 1 - sourceX + x_off;
+                    int sourceY_down = down_adj + sourceY;
+                    int sourceY_up = up_adj - sourceY;
+                    int sourceX_right = right_adj + sourceX;
+                    int sourceX_left = left_adj - sourceX;
 
+                    // top 2 pixels
                     if (sourceY_down >= 0 && sourceY_down < h) {
-                        ptr = tmp + (w * sourceY_down); // top 2 pixels
+                        ptr = tmp + (w * sourceY_down);
                         if (sourceX_right >= 0 && sourceX_right < w) {
                             row_ptr[x] = ptr[sourceX_right];
                         }
@@ -1364,8 +1372,9 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                         }
                     }
 
+                    // bottom 2 pixels
                     if (sourceY_up >= 0 && sourceY_up < h) {
-                        ptr = tmp + (w * sourceY_up); // bottom 2 pixels
+                        ptr = tmp + (w * sourceY_up);
                         if (sourceX_right >= 0 && sourceX_right < w) {
                             row_ptr2[x] = ptr[sourceX_right];
                         }
