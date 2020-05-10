@@ -466,11 +466,57 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
     int request = mp_obj_get_int(args[0]);
 
     switch (request) {
-        case IOCTL_SET_TRIGGERED_MODE:
+        case IOCTL_SET_READOUT_WINDOW: {
+            if (n_args < 2) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+            }
+
+            int x, y, w, h;
+
+            mp_obj_t *array;
+            mp_uint_t array_len;
+            mp_obj_get_array(args[1], &array_len, &array);
+
+            if (array_len == 4) {
+                x = mp_obj_get_int(array[0]);
+                y = mp_obj_get_int(array[1]);
+                w = mp_obj_get_int(array[2]);
+                h = mp_obj_get_int(array[3]);
+            } else if (array_len == 2) {
+                w = mp_obj_get_int(array[0]);
+                h = mp_obj_get_int(array[1]);
+                x = 0;
+                y = 0;
+            } else {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                    "The tuple/list must either be (x, y, w, h) or (w, h)"));
+            }
+
+            if (sensor_ioctl(request, x, y, w, h) != 0) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+            }
+
+            break;
+        }
+
+        case IOCTL_GET_READOUT_WINDOW: {
+            int x, y, w, h;
+            if (sensor_ioctl(request, &x, &y, &w, &h) != 0) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
+            }
+            ret_obj = mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(x),
+                                                         mp_obj_new_int(y),
+                                                         mp_obj_new_int(w),
+                                                         mp_obj_new_int(h)});
+            break;
+        }
+
+        case IOCTL_SET_TRIGGERED_MODE: {
             if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
                 nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Sensor control failed!"));
             }
             break;
+        }
 
         case IOCTL_GET_TRIGGERED_MODE: {
             int enabled;
@@ -755,6 +801,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_PALETTE_IRONBOW),     MP_OBJ_NEW_SMALL_INT(COLOR_PALETTE_IRONBOW)},
 
     // IOCTLs
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_SET_READOUT_WINDOW),            MP_OBJ_NEW_SMALL_INT(IOCTL_SET_READOUT_WINDOW)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_GET_READOUT_WINDOW),            MP_OBJ_NEW_SMALL_INT(IOCTL_GET_READOUT_WINDOW)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_SET_TRIGGERED_MODE),            MP_OBJ_NEW_SMALL_INT(IOCTL_SET_TRIGGERED_MODE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_GET_TRIGGERED_MODE),            MP_OBJ_NEW_SMALL_INT(IOCTL_GET_TRIGGERED_MODE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_WIDTH),              MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_WIDTH)},
