@@ -1282,17 +1282,17 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
             for (int y = 0; y < halfHeight; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                 uint8_t *row_ptr2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, h-1-y);
-                int newY = y - halfHeight; // from big to small value
-                int newY2 = newY * newY; // 
+                int newY = y - halfHeight;
+                int newY2 = newY * newY;
                 float zoomedY = newY * zoom;
 
                 for (int x = 0; x < halfWidth; x++) {
-                    int newX = x - halfWidth; // from big to small value
+                    int newX = x - halfWidth;
                     int newX2 = newX * newX;
                     float zoomedX = newX * zoom;
 
-                    float r = lens_corr_radius * fast_sqrtf(newX2 + newY2); // length of ray
-                    float theta = fast_atanf(r) / r; // r is never 
+                    float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
+                    float theta = fast_atanf(r) / r;
                     int sourceX = halfWidth + fast_roundf(theta * zoomedX); // rounding is necessary
                     int sourceY = halfHeight + fast_roundf(theta * zoomedY); // rounding is necessary
 
