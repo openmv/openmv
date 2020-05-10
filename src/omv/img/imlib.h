@@ -1331,7 +1331,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int sc
 void imlib_chrominvar(image_t *img);
 void imlib_illuminvar(image_t *img);
 // Lens/Rotation Correction
-void imlib_lens_corr(image_t *img, float strength, float zoom);
+void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, float y_corr);
 void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
                          float z_rotation, float x_translation, float y_translation,
                          float zoom, float fov, float *corners);

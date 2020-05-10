@@ -806,6 +806,8 @@ Q(logpolar)
 Q(lens_corr)
 Q(strength)
 Q(zoom)
+Q(x_corr)
+Q(y_corr)
 
 // Rotation Correction
 Q(rotation_corr)
