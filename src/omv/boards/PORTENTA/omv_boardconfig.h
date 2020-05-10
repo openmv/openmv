@@ -240,7 +240,7 @@
 #define SOFT_I2C_SIOD_READ()         HAL_GPIO_ReadPin (SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN)
 #define SOFT_I2C_SIOD_WRITE(bit)     HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, bit);
 
-#define SOFT_I2C_SPIN_DELAY          32
+#define SOFT_I2C_SPIN_DELAY          64
 
 // Enable additional GPIO banks for DRAM...
 #define OMV_ENABLE_GPIO_BANK_F
