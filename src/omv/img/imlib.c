@@ -1206,8 +1206,8 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
     int h = img->h;
     int halfWidth = w / 2;
     int halfHeight = h / 2;
-    float maximum_radius = fast_sqrtf((w * w) + (h * h));
-    float lens_corr_radius = strength / maximum_radius;
+    float maximum_diameter = fast_sqrtf((w * w) + (h * h));
+    float lens_corr_diameter = strength / maximum_diameter;
     zoom = 1 / zoom;
 
     // Convert percentage offset to pixels from center of image
@@ -1220,9 +1220,11 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
     memcpy(data, img->data, size);
     memset(img->data, 0, size);
 
-    float *precalculated_table = fb_alloc((int)maximum_radius * sizeof(float), FB_ALLOC_NO_HINT);
-    for(int i=0; i < (int)maximum_radius; i++) {
-        float r = lens_corr_radius * i;
+    int maximum_radius = fast_ceilf(maximum_diameter / 2);
+    float *precalculated_table = fb_alloc(maximum_radius * sizeof(float), FB_ALLOC_NO_HINT);
+    
+    for(int i=0; i < maximum_radius; i++) {
+        float r = lens_corr_diameter * i;
         precalculated_table[i] = (fast_atanf(r) / r) * zoom;
     }
 
