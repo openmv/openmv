@@ -155,6 +155,20 @@
 #define SCCB_SCL_PIN            (GPIO_PIN_8)
 #define SCCB_SDA_PIN            (GPIO_PIN_9)
 #define SCCB_TIMING             (I2C_TIMING_STANDARD)
+#define SCCB_FORCE_RESET()      __HAL_RCC_I2C1_FORCE_RESET()
+#define SCCB_RELEASE_RESET()    __HAL_RCC_I2C1_RELEASE_RESET()
+
+/* FIR I2C */
+#define FIR_I2C                 (I2C2)
+#define FIR_I2C_AF              (GPIO_AF4_I2C2)
+#define FIR_I2C_CLK_ENABLE()    __I2C2_CLK_ENABLE()
+#define FIR_I2C_CLK_DISABLE()   __I2C2_CLK_DISABLE()
+#define FIR_I2C_PORT            (GPIOB)
+#define FIR_I2C_SCL_PIN         (GPIO_PIN_10)
+#define FIR_I2C_SDA_PIN         (GPIO_PIN_11)
+#define FIR_I2C_TIMING          (I2C_TIMING_FULL)
+#define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C2_FORCE_RESET()
+#define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C2_RELEASE_RESET()
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
