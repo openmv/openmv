@@ -579,7 +579,7 @@ inline bool pixel_to_binary(int bpp, uint32_t pixel) {
  * @param other_x_end End x pixel (exclusive) location in source/mask image.
  * @param over_x_scale Scale from other scale to image scale.
  */
-static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, uint8_t *other_row_ptr, int other_bpp, void *mask_row_ptr, int mask_bpp, int other_x_start, int other_x_end, float over_xscale)
+static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, uint8_t *other_row_ptr, int other_bpp, void *mask_row_ptr, int mask_bpp, int other_x_start, int other_x_end, float over_xscale, const uint8_t *alpha_palette)
 {
     for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
         float other_x_float = (x + 0.5) * over_xscale;
@@ -594,8 +594,16 @@ static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, u
 
         uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
         uint32_t alpha2 = mask2 ? weight_x : 0;
-        uint32_t other_pixel1 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x)) * alpha1;
-        uint32_t other_pixel2 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x + 1)) * alpha2;
+        uint32_t other_pixel1 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
+        uint32_t other_pixel2 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x + 1));
+
+        if (alpha_palette) {
+            alpha1 = alpha1 * alpha_palette[other_pixel1] >> 8;
+            alpha2 = alpha2 * alpha_palette[other_pixel2] >> 8;
+        }
+
+        other_pixel1 *= alpha1;
+        other_pixel2 *= alpha2;
         
         // Image alpha is the remaining alpha after applying other alpha
         uint32_t img_alpha = 256 - (alpha1 + alpha2);
@@ -755,7 +763,7 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                 uint8_t *other_row_ptr = imlib_compute_row_ptr(other, temp_other_y);
                 void *mask_row_ptr = mask ? imlib_compute_row_ptr(mask, temp_other_y) : NULL;
 
-                int_generate_cache_line_grayscale(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale);
+                int_generate_cache_line_grayscale(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, alpha_palette);
 
                 // Used to detect when other starts rendering from the next line
                 int last_other_y = -1;
@@ -785,7 +793,7 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                         // And generate a new y+1
                         other_row_ptr = imlib_compute_row_ptr(other, other_y + 1);
                         mask_row_ptr = mask ? imlib_compute_row_ptr(mask, other_y + 1) : NULL;
-                        int_generate_cache_line_grayscale(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale);
+                        int_generate_cache_line_grayscale(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, alpha_palette);
                     }
 
                     // Draw the line to img
@@ -946,13 +954,13 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                     float other_y_float = y * over_yscale;
                     int other_y = fast_floorf(other_y_float);
                     uint16_t *other_row_ptr = imlib_compute_row_ptr(other, other_y);
-
+                    
                     for (int x = other_x_start; x < other_x_end; x++) {
                         int other_x = fast_floorf(x * over_xscale);
 
                         if (!mask || image_get_mask_pixel(mask, other_x, other_y)) {
                             uint32_t result_pixel = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x);
-
+                            
                             if (alpha_palette) {
                                 uint32_t temp_alpha = (alpha * alpha_palette[result_pixel]) >> 8;
                                 

@@ -1964,6 +1964,10 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
         }
     }
 
+    if (color_palette && arg_img->bpp != IMAGE_BPP_RGB565) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palettes must be used with color images!"));
+    }
+
     const uint8_t *alpha_palette = NULL;
     {
         image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, offset + 5, kw_args);
@@ -1972,13 +1976,10 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
             if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify an alpha palette when passing a grayscale image!"));
             if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be an grayscale format image!"));
             if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette image must have 256 pixels!"));
+            if (arg_img->bpp != IMAGE_BPP_GRAYSCALE && arg_img->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palettes must be used with color images!"));
 
             alpha_palette = (uint8_t*)arg_alpha_palette->data;
         }
-    }
-
-    if ((color_palette || alpha_palette) && arg_img->bpp != IMAGE_BPP_RGB565) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Palettes must be used with color images!"));
     }
 
     image_hint_t hint =
