@@ -842,7 +842,13 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                         if (!mask || image_get_mask_pixel(mask, other_x, other_y)) {
                             uint8_t result_pixel = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
 
-                            if (alpha != 256) {
+                            if (alpha_palette) {
+                                uint32_t temp_alpha = (alpha * alpha_palette[result_pixel]) >> 8;
+                                
+                                packed_alpha = (temp_alpha << 16) + (256 - temp_alpha);
+                            }
+
+                            if (packed_alpha & 0x1ff) {
                                 uint8_t img_pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(img_row_ptr,  x);
                                 uint32_t vgs = (result_pixel << 16) + img_pixel;
 
@@ -968,7 +974,7 @@ void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float 
                             }
                             result_pixel = color_palette ? color_palette[result_pixel] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, result_pixel);
                             
-                            if (va & 0xff) {
+                            if (va & 0x1ff) {
                                 // Blend img to other pixel
                                 uint16_t img_pixel = IMAGE_GET_RGB565_PIXEL_FAST(img_row_ptr, x);
                                 uint32_t r_ta = COLOR_RGB565_TO_R5(result_pixel);
