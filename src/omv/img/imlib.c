@@ -1237,39 +1237,38 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
                     float theta = fast_atanf(r) / r; // r is never 0
-                    int sourceX = halfWidth + fast_roundf(theta * zoomedX); // rounding is necessary
-                    int sourceY = halfHeight + fast_roundf(theta * zoomedY); // rounding is necessary
+                    int sourceX = halfWidth + x_off +  fast_roundf(theta * zoomedX); // rounding is necessary
+                    int sourceY = halfHeight + y_off + fast_roundf(theta * zoomedY); // rounding is necessary
 
-                    if ((0 <= sourceX) && (0 <= sourceY)) { // plot the 4 symmetrical pixels
-                        uint32_t *ptr, pixel;
-                        int sourceY_adj = sourceY + y_off;
-                        if (sourceY_adj >= 0 && sourceY_adj < h) {
-                            ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY_adj);
-                            int sourceX_adj = sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_adj);
-                                IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
-                            }
-                            sourceX_adj = w - 1 - sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_adj);
-                                IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w - 1 - x, pixel);
-                            }
+                    // plot the 4 symmetrical pixels
+                    uint32_t *ptr, pixel;
+                    int sourceX_adj = w - 1 - sourceX;
+
+                    if (sourceY >= 0 && sourceY < h) {
+                        ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                        if (sourceX >= 0 && sourceX < w) {
+                            pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                        }
+                        
+                        if (sourceX_adj >= 0 && sourceX_adj < w) {
+                            pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_adj);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w - 1 - x, pixel);
+                        }
+                    }
+
+                    int sourceY_adj = h - 1 - sourceY;
+
+                    if (sourceY_adj >= 0 && sourceY_adj < h) {
+                        ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY_adj);
+                        if (sourceX >= 0 && sourceX < w) {
+                            pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, x, pixel);
                         }
 
-                        sourceY_adj = h - 1 - sourceY + y_off;
-                        if (sourceY_adj >= 0 && sourceY_adj < h) {
-                            ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY_adj);
-                            int sourceX_adj = sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_adj);
-                                IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, x, pixel);
-                            }
-                            sourceX_adj = w - 1 - sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, w - 1 - sourceX_adj);
-                                IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, w - 1 - x, pixel);
-                            }
+                        if (sourceX_adj >= 0 && sourceX_adj < w) {
+                            pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, w - 1 - sourceX_adj);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, w - 1 - x, pixel);
                         }
                     }
                 }
@@ -1293,39 +1292,38 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
                     float theta = fast_atanf(r) / r;
-                    int sourceX = halfWidth + fast_roundf(theta * zoomedX); // rounding is necessary
-                    int sourceY = halfHeight + fast_roundf(theta * zoomedY); // rounding is necessary
+                    int sourceX = halfWidth + x_off + fast_roundf(theta * zoomedX); // rounding is necessary
+                    int sourceY = halfHeight + y_off + fast_roundf(theta * zoomedY); // rounding is necessary
 
-                    if ((0 <= sourceX) && (0 <= sourceY)) { // plot the 4 symmetrical pixels
-                        uint8_t *ptr, pixel;
-                        int sourceY_adj = sourceY + y_off;
-                        if (sourceY_adj >= 0 && sourceY_adj < h) {
-                            ptr = tmp + (w * sourceY_adj); // top 2 pixels
-                            int sourceX_adj = sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = ptr[sourceX_adj];
-                                row_ptr[x] = pixel;
-                            }
-                            sourceX_adj = w - 1 - sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = ptr[sourceX_adj];
-                                row_ptr[w - 1 - x] = pixel;
-                            }
+                    // plot the 4 symmetrical pixels
+                    uint8_t *ptr, pixel;
+                    int sourceX_adj = w - 1 - sourceX;
+
+                    if (sourceY >= 0 && sourceY < h) {
+                        ptr = tmp + (w * sourceY); // top 2 pixels
+                        if (sourceX >= 0 && sourceX < w) {
+                            pixel = ptr[sourceX];
+                            row_ptr[x] = pixel;
                         }
 
-                        sourceY_adj = h - 1 - sourceY + y_off;
-                        if (sourceY_adj >= 0 && sourceY_adj < h) {
-                            ptr = tmp + (w * sourceY_adj); // bottom 2 pixels
-                            int sourceX_adj = sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = ptr[sourceX_adj];
-                                row_ptr2[x] = pixel;
-                            }
-                            sourceX_adj = w - 1 - sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = ptr[sourceX_adj];
-                                row_ptr2[w - 1 - x] = pixel;
-                            }
+                        if (sourceX_adj >= 0 && sourceX_adj < w) {
+                            pixel = ptr[sourceX_adj];
+                            row_ptr[w - 1 - x] = pixel;
+                        }
+                    }
+
+                    int sourceY_adj = h - 1 - sourceY;
+
+                    if (sourceY_adj >= 0 && sourceY_adj < h) {
+                        ptr = tmp + (w * sourceY_adj); // bottom 2 pixels
+                        if (sourceX >= 0 && sourceX < w) {
+                            pixel = ptr[sourceX];
+                            row_ptr2[x] = pixel;
+                        }
+
+                        if (sourceX_adj >= 0 && sourceX_adj < w) {
+                            pixel = ptr[sourceX_adj];
+                            row_ptr2[w - 1 - x] = pixel;
                         }
                     }
                 }
@@ -1349,39 +1347,38 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
 
                     float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
                     float theta = fast_atanf(r) / r; // r is never 0
-                    int sourceX = halfWidth + fast_roundf(theta * zoomedX); // rounding is necessary
-                    int sourceY = halfHeight + fast_roundf(theta * zoomedY); // rounding is necessary
+                    int sourceX = halfWidth + x_off + fast_roundf(theta * zoomedX); // rounding is necessary
+                    int sourceY = halfHeight + y_off + fast_roundf(theta * zoomedY); // rounding is necessary
 
-                    if ((0 <= sourceX) && (0 <= sourceY)) { // plot the 4 symmetrical pixels
-                        uint16_t *ptr, pixel;
+                    // plot the 4 symmetrical pixels
+                    uint16_t *ptr, pixel;
+                    int sourceX_adj = w - 1 - sourceX;
 
-                        int sourceY_adj = sourceY + y_off;
-                        if (sourceY_adj >= 0 && sourceY_adj < h) {
-                            ptr = tmp + (w * sourceY_adj); // top 2 pixels
-                            int sourceX_adj = sourceX + x_off;
-                            if (sourceX_adj >= 0 && x < w) {
-                                pixel = ptr[sourceX_adj];
-                                row_ptr[x] = pixel;
-                            }
-                            sourceX_adj = w - 1 - sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = ptr[sourceX_adj];
-                                row_ptr[sourceX_adj] = pixel;
-                            }
+                    if (sourceY >= 0 && sourceY < h) {
+                        ptr = tmp + (w * sourceY); // top 2 pixels
+                        if (sourceX >= 0 && x < w) {
+                            pixel = ptr[sourceX];
+                            row_ptr[x] = pixel;
                         }
-                        sourceY_adj = h - 1 - sourceY + y_off;
-                        if (sourceY_adj >= 0 && sourceY_adj < h) {
-                            ptr = tmp + (w * sourceY_adj); // bottom 2 pixels
-                            int sourceX_adj = sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = ptr[sourceX_adj];
-                                row_ptr2[x] = pixel;
-                            }
-                            sourceX_adj = w - 1 - sourceX + x_off;
-                            if (sourceX_adj >= 0 && sourceX_adj < w) {
-                                pixel = ptr[sourceX_adj];
-                                row_ptr2[w - 1 - x] = pixel;
-                            }
+
+                        if (sourceX_adj >= 0 && sourceX_adj < w) {
+                            pixel = ptr[sourceX_adj];
+                            row_ptr[sourceX_adj] = pixel;
+                        }
+                    }
+                    
+                    int sourceY_adj = h - 1 - sourceY;
+
+                    if (sourceY_adj >= 0 && sourceY_adj < h) {
+                        ptr = tmp + (w * sourceY_adj); // bottom 2 pixels
+                        if (sourceX >= 0 && sourceX < w) {
+                            pixel = ptr[sourceX];
+                            row_ptr2[x] = pixel;
+                        }
+
+                        if (sourceX_adj >= 0 && sourceX_adj < w) {
+                            pixel = ptr[sourceX_adj];
+                            row_ptr2[w - 1 - x] = pixel;
                         }
                     }
                 }
