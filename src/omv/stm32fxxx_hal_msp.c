@@ -172,13 +172,36 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
 
         GPIO_InitStructure.Pin = SCCB_SDA_PIN;
         HAL_GPIO_Init(SCCB_PORT, &GPIO_InitStructure);
+    } else if (hi2c->Instance == FIR_I2C) {
+        /* Enable I2C clock */
+        FIR_I2C_CLK_ENABLE();
+
+        /* Configure FIR I2C GPIOs */
+        GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.Pull      = GPIO_NOPULL;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
+        GPIO_InitStructure.Mode      = GPIO_MODE_AF_OD;
+        GPIO_InitStructure.Alternate = FIR_I2C_AF;
+
+        GPIO_InitStructure.Pin = FIR_I2C_SCL_PIN;
+        HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Pin = FIR_I2C_SDA_PIN;
+        HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
     }
+
 }
 
 void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
 {
     if (hi2c->Instance == SCCB_I2C) {
+        SCCB_FORCE_RESET();
+        SCCB_RELEASE_RESET();
         SCCB_CLK_DISABLE();
+    } else if (hi2c->Instance == FIR_I2C) {
+        FIR_I2C_FORCE_RESET();
+        FIR_I2C_RELEASE_RESET();
+        FIR_I2C_CLK_DISABLE();
     }
 }
 

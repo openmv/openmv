@@ -164,6 +164,20 @@
 #define SCCB_SCL_PIN            (GPIO_PIN_8)
 #define SCCB_SDA_PIN            (GPIO_PIN_9)
 #define SCCB_TIMING             (I2C_TIMING_STANDARD)
+#define SCCB_FORCE_RESET()      __HAL_RCC_I2C1_FORCE_RESET()
+#define SCCB_RELEASE_RESET()    __HAL_RCC_I2C1_RELEASE_RESET()
+
+/* FIR I2C */
+#define FIR_I2C                 (I2C2)
+#define FIR_I2C_AF              (GPIO_AF4_I2C2)
+#define FIR_I2C_CLK_ENABLE()    __I2C2_CLK_ENABLE()
+#define FIR_I2C_CLK_DISABLE()   __I2C2_CLK_DISABLE()
+#define FIR_I2C_PORT            (GPIOB)
+#define FIR_I2C_SCL_PIN         (GPIO_PIN_10)
+#define FIR_I2C_SDA_PIN         (GPIO_PIN_11)
+#define FIR_I2C_TIMING          (I2C_TIMING_FULL)
+#define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C2_FORCE_RESET()
+#define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C2_RELEASE_RESET()
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
@@ -262,7 +276,7 @@
 #define SOFT_I2C_SIOD_READ()         HAL_GPIO_ReadPin (SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN)
 #define SOFT_I2C_SIOD_WRITE(bit)     HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, bit);
 
-#define SOFT_I2C_SPIN_DELAY          128
+#define SOFT_I2C_SPIN_DELAY         64
 
 #define LEPTON_SPI                  (SPI3)
 #define LEPTON_SPI_AF               (GPIO_AF6_SPI3)

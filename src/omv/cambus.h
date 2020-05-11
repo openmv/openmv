@@ -41,4 +41,8 @@ int cambus_readw(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr,  ui
 int cambus_writew(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint16_t reg_data);
 int cambus_readw2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr,  uint16_t *reg_data);
 int cambus_writew2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint16_t reg_data);
+int cambus_read_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *buf, int len);
+int cambus_write_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *buf, int len);
+int cambus_readw_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t *buf, int len);
+int cambus_writew_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t *buf, int len);
 #endif // __CAMBUS_H__
