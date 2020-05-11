@@ -1220,7 +1220,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
     memcpy(data, img->data, size);
     memset(img->data, 0, size);
 
-    int maximum_radius = fast_ceilf(maximum_diameter / 2);
+    int maximum_radius = fast_ceilf(maximum_diameter / 2) + 1; // +1 inclusive of final value
     float *precalculated_table = fb_alloc(maximum_radius * sizeof(float), FB_ALLOC_NO_HINT);
     
     for(int i=0; i < maximum_radius; i++) {
