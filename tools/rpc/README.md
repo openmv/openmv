@@ -94,7 +94,7 @@ If you need to cancel the `stream_writer` just raise an exception in the `call_b
 
 ## class rpc_master():
 
-The `rpc_master` master is a pure virtual class and not meant to be used directly. Specific interface classes should reimplement `rpc_master`.
+The `rpc_master` is a pure virtual class and not meant to be used directly. Specific interface classes should reimplement `rpc_master`.
 
 #### call(name, data=bytes(), send_timeout=1000, recv_timeout=1000):
 
@@ -104,11 +104,11 @@ Note that a new packet that includes a copy of `data` will be created internally
 
 ## class rpc_slave():
 
-The `rpc_slave` master is a pure virtual class and not meant to be used directly. Specific interface classes should reimplement `rpc_slave`.
+The `rpc_slave` is a pure virtual class and not meant to be used directly. Specific interface classes should reimplement `rpc_slave`.
 
 #### register_callback(cb):
 
-Registers a call back that can be executed by the master device. The call back should take one argument which will be a memoryview object and it should return a `bytes()` like object as the result. The call back should return in less than 1 second if possible.
+Registers a call back that can be executed by the master device. The call back should take one argument which will be a `memoryview` object and it should return a `bytes()` like object as the result. The call back should return in less than 1 second if possible.
 
 #### schedule_callback(cb):
 
@@ -126,7 +126,7 @@ After you execute `loop()` it is not possible to execute long running operations
 
     interface.loop()
 
-`schedule_callback` in particular allows you to use the `get_bytes` and `put_bytes` methods for cut-through data transfer between one device and another without the cost of packetization which limits the size of the data removed inside the `rpc` library without running out of memory on the OpenMV Cam.
+`schedule_callback` in particular allows you to use the `get_bytes` and `put_bytes` methods for cut-through data transfer between one device and another without the cost of packetization which limits the size of the data moved inside the `rpc` library without running out of memory on the OpenMV Cam.
 
 #### setup_loop_callback(cb):
 
