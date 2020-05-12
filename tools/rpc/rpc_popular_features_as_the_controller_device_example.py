@@ -7,6 +7,10 @@
 import json, rpc, serial, serial.tools.list_ports, struct, sys
 from datetime import datetime
 
+# Fix Python 2.x.
+try: input = raw_input
+except NameError: pass
+
 ##############################################################
 # Choose the interface you wish to control an OpenMV Cam over.
 ##############################################################
@@ -20,7 +24,7 @@ for port, desc, hwid in serial.tools.list_ports.comports():
     print("{} : {} [{}]".format(port, desc, hwid))
 sys.stdout.write("\nPlease enter a port name: ")
 sys.stdout.flush()
-interface = rpc.rpc_usb_vcp_master(port=raw_input())
+interface = rpc.rpc_usb_vcp_master(port=input())
 print("")
 sys.stdout.flush()
 

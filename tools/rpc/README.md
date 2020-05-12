@@ -10,6 +10,10 @@ The OpenMV Cam `rpc` library on the computer only depends on [pyserial](https://
 
     pip install pyserial
 
+However, the examples depend on [pygame](https://www.pygame.org/news) so you need to install pygame too:
+
+    pip install pygame
+
 Because the interface library is implemented in pure python with no external dependencies it works on Windows, Mac, and Linux.
 
 # How to use the Library
