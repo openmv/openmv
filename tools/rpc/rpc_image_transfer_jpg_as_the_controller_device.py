@@ -6,6 +6,10 @@
 
 import io, pygame, rpc, serial, serial.tools.list_ports, socket, struct, sys
 
+# Fix Python 2.x.
+try: input = raw_input
+except NameError: pass
+
 # The RPC library above is installed on your OpenMV Cam and provides mutliple classes for
 # allowing your OpenMV Cam to control over USB or WIFI.
 
@@ -22,7 +26,7 @@ for port, desc, hwid in serial.tools.list_ports.comports():
     print("{} : {} [{}]".format(port, desc, hwid))
 sys.stdout.write("\nPlease enter a port name: ")
 sys.stdout.flush()
-interface = rpc.rpc_usb_vcp_master(port=raw_input())
+interface = rpc.rpc_usb_vcp_master(port=input())
 print("")
 sys.stdout.flush()
 

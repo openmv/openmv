@@ -60,7 +60,9 @@ class rpc:
     def _set_packet(self, magic_value, payload=bytes()): # private
         new_payload = bytearray(len(payload) + 4)
         new_payload[:2] = struct.pack("<H", magic_value)
-        new_payload[2:-2] = payload
+        # Fix Python 3.x.
+        try: new_payload[2:-2] = payload
+        except TypeError: new_payload[2:-2] = payload.encode()
         new_payload[-2:] = struct.pack("<H", self.__crc_16(new_payload, len(payload) + 2))
         return new_payload
 
