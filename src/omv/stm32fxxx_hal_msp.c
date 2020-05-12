@@ -179,7 +179,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
         /* Configure FIR I2C GPIOs */
         GPIO_InitTypeDef GPIO_InitStructure;
         GPIO_InitStructure.Pull      = GPIO_NOPULL;
-        GPIO_InitStructure.Speed     = GPIO_SPEED_LOW;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
         GPIO_InitStructure.Mode      = GPIO_MODE_AF_OD;
         GPIO_InitStructure.Alternate = FIR_I2C_AF;
 
