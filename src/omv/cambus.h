@@ -33,6 +33,7 @@
 int cambus_init(I2C_HandleTypeDef *i2c, I2C_TypeDef *instance, uint32_t timing);
 int cambus_deinit(I2C_HandleTypeDef *i2c);
 int cambus_scan(I2C_HandleTypeDef *i2c);
+int cambus_gencall(I2C_HandleTypeDef *i2c, uint8_t cmd);
 int cambus_readb(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr,  uint8_t *reg_data);
 int cambus_writeb(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data);
 int cambus_readb2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr,  uint8_t *reg_data);

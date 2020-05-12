@@ -65,6 +65,14 @@ int cambus_scan(I2C_HandleTypeDef *i2c)
     return 0;
 }
 
+int cambus_gencall(I2C_HandleTypeDef *i2c, uint8_t cmd)
+{
+    if (HAL_I2C_Master_Transmit(i2c, 0x00, &cmd, 1, I2C_TIMEOUT) != HAL_OK) {
+        return -1;
+    }
+    return 0;
+}
+
 int cambus_readb(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *reg_data)
 {
     int ret = 0;
