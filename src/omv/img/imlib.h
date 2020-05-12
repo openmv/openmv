@@ -259,7 +259,7 @@ extern const uint8_t g826_table[256];
     __typeof__ (r5) _r5 = (r5); \
     __typeof__ (g6) _g6 = (g6); \
     __typeof__ (b5) _b5 = (b5); \
-    (_r5 << 3) | (_g6 >> 3) | ((_g6 & 0x7) << 13) | (_b5 << 8); \
+    __REV16((_r5 << 11) | (_g6 << 5) | _b5); \
 })
 
 #define COLOR_R8_G8_B8_TO_RGB565(r8, g8, b8) COLOR_R5_G6_B5_TO_RGB565(COLOR_R8_TO_R5(r8), COLOR_G8_TO_G6(g8), COLOR_B8_TO_B5(b8))
@@ -1141,6 +1141,12 @@ typedef struct find_barcodes_list_lnk_data {
     int quality;
 } find_barcodes_list_lnk_data_t;
 
+typedef enum image_hint {
+    IMAGE_HINT_BILINEAR = 1,
+    IMAGE_HINT_CENTER = 128
+} image_hint_t;
+
+
 /* Color space functions */
 int8_t imlib_rgb565_to_l(uint16_t pixel);
 int8_t imlib_rgb565_to_a(uint16_t pixel);
@@ -1283,7 +1289,8 @@ void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness
 void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotation, int c, int thickness, bool fill);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, float scale, int x_spacing, int y_spacing, bool mono_space,
                        int char_rotation, bool char_hmirror, bool char_vflip, int string_rotation, bool string_hmirror, bool string_hflip);
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask, const uint16_t *color_palette);
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask,
+                      const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint);
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);

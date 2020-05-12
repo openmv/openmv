@@ -22,7 +22,9 @@ image_t *py_helper_keyword_to_image_mutable(uint n_args, const mp_obj_t *args, u
 image_t *py_helper_keyword_to_image_mutable_mask(uint n_args, const mp_obj_t *args, uint arg_index,
                                                  mp_map_t *kw_args);
 image_t *py_helper_keyword_to_image_mutable_color_palette(uint n_args, const mp_obj_t *args, uint arg_index,
-                                            mp_map_t *kw_args);
+                                                          mp_map_t *kw_args);
+image_t *py_helper_keyword_to_image_mutable_alpha_palette(uint n_args, const mp_obj_t *args, uint arg_index,
+                                                          mp_map_t *kw_args);
 void py_helper_keyword_rectangle(image_t *img, uint n_args, const mp_obj_t *args, uint arg_index,
                                  mp_map_t *kw_args, mp_obj_t kw, rectangle_t *r);
 void py_helper_keyword_rectangle_roi(image_t *img, uint n_args, const mp_obj_t *args, uint arg_index,
