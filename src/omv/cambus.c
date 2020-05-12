@@ -39,6 +39,26 @@ int cambus_init(I2C_HandleTypeDef *i2c, I2C_TypeDef *instance, uint32_t timing)
         return -1;
     }
 
+    if (timing == I2C_TIMING_FAST) {
+        // Enable FAST mode plus.
+        if (instance == I2C1) {
+            #if defined(I2C_FASTMODEPLUS_I2C1)
+            HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C1);
+            #endif
+        } else if (instance == I2C2) {
+            #if defined(I2C_FASTMODEPLUS_I2C2)
+            HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C2);
+            #endif
+        } else if (instance == I2C3) {
+            #if defined(I2C_FASTMODEPLUS_I2C3)
+            HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C3);
+            #endif
+        } else {
+            #if defined(I2C_FASTMODEPLUS_I2C4)
+            HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C4);
+            #endif
+        }
+    }
     return 0;
 }
 
