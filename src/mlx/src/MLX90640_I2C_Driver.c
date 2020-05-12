@@ -26,6 +26,15 @@ void MLX90640_I2CInit(I2C_HandleTypeDef *i2c)
     hi2c = i2c;
 }
 
+int MLX90640_I2CGeneralReset()
+{
+    if (cambus_gencall(hi2c, 0x06) != 0) {
+        return -1;
+	}
+
+    return 0;
+}
+
 int MLX90640_I2CRead(uint8_t slaveAddr, uint16_t startAddress, uint16_t nMemAddressRead, uint16_t *data)
 {
 	uint8_t* p = (uint8_t*) data;
@@ -44,7 +53,8 @@ int MLX90640_I2CRead(uint8_t slaveAddr, uint16_t startAddress, uint16_t nMemAddr
 
 int MLX90640_I2CWrite(uint8_t slaveAddr, uint16_t writeAddress, uint16_t data)
 {
-	if (cambus_writew2(hi2c, (slaveAddr << 1), writeAddress, data) != 0) {
+    data = (data >> 8) | (data << 8);
+	if (cambus_writew_bytes(hi2c, (slaveAddr << 1), writeAddress, (uint8_t*) &data, 2) != 0) {
         return -1;
 	}         
 	return 0;
