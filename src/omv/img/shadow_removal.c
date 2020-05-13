@@ -202,7 +202,7 @@ void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int sc
         h.LBins = fb_alloc(h.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
         h.ABins = fb_alloc(h.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
         h.BBins = fb_alloc(h.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
-        imlib_get_histogram(&h, &temp_image, &r, NULL, false);
+        imlib_get_histogram(&h, &temp_image, &r, NULL, false, NULL);
 
         statistics_t s;
         imlib_get_statistics(&s, temp_image.bpp, &h);

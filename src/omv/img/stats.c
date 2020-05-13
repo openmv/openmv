@@ -146,7 +146,7 @@ void imlib_get_similarity(image_t *img, const char *path, image_t *other, int sc
 }
 #endif //IMLIB_ENABLE_GET_SIMILARITY
 
-void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_t *thresholds, bool invert)
+void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_t *thresholds, bool invert, image_t *other)
 {
     switch(ptr->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -157,27 +157,55 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_
 
             if ((!thresholds) || (!list_size(thresholds))) {
                 // Fast histogram code when no color thresholds list...
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
-                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                        int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
-                        ((uint32_t *) out->LBins)[fast_floorf((pixel - COLOR_BINARY_MIN) * mult)]++;
+                if (!other) {
+                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
+                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
+                            ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_BINARY_MIN) * mult)]++; // needs to be roundf
+                        }
+                    }
+                } else {
+                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y), *other_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(other, y);
+                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) ^ IMAGE_GET_BINARY_PIXEL_FAST(other_row_ptr, x);
+                            ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_BINARY_MIN) * mult)]++; // needs to be roundf
+                        }
                     }
                 }
             } else {
                 // Reset pixel count.
                 pixel_count = 0;
-                for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
-                    color_thresholds_list_lnk_data_t lnk_data;
-                    iterator_get(thresholds, it, &lnk_data);
+                if (!other) {
+                    for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
+                        color_thresholds_list_lnk_data_t lnk_data;
+                        iterator_get(thresholds, it, &lnk_data);
 
-                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
-                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
-                            if (COLOR_THRESHOLD_BINARY(pixel, &lnk_data, invert)) {
-                                ((uint32_t *) out->LBins)[fast_floorf((pixel - COLOR_BINARY_MIN) * mult)]++;
-                                pixel_count++;
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                            uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
+                            for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x);
+                                if (COLOR_THRESHOLD_BINARY(pixel, &lnk_data, invert)) {
+                                    ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_BINARY_MIN) * mult)]++; // needs to be roundf
+                                    pixel_count++;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
+                        color_thresholds_list_lnk_data_t lnk_data;
+                        iterator_get(thresholds, it, &lnk_data);
+
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                            uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y), *other_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(other, y);
+                            for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) ^ IMAGE_GET_BINARY_PIXEL_FAST(other_row_ptr, x);
+                                if (COLOR_THRESHOLD_BINARY(pixel, &lnk_data, invert)) {
+                                    ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_BINARY_MIN) * mult)]++; // needs to be roundf
+                                    pixel_count++;
+                                }
                             }
                         }
                     }
@@ -200,27 +228,55 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_
 
             if ((!thresholds) || (!list_size(thresholds))) {
                 // Fast histogram code when no color thresholds list...
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
-                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                        int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
-                        ((uint32_t *) out->LBins)[fast_floorf((pixel - COLOR_GRAYSCALE_MIN) * mult)]++;
+                if (!other) {
+                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                        uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
+                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                            int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+                            ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_GRAYSCALE_MIN) * mult)]++; // needs to be roundf
+                        }
+                    }
+                } else {
+                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                        uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y), *other_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(other, y);
+                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                            int pixel = abs(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x) - IMAGE_GET_GRAYSCALE_PIXEL_FAST(other_row_ptr, x));
+                            ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_GRAYSCALE_MIN) * mult)]++; // needs to be roundf
+                        }
                     }
                 }
             } else {
                 // Reset pixel count.
                 pixel_count = 0;
-                for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
-                    color_thresholds_list_lnk_data_t lnk_data;
-                    iterator_get(thresholds, it, &lnk_data);
+                if (!other) {
+                    for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
+                        color_thresholds_list_lnk_data_t lnk_data;
+                        iterator_get(thresholds, it, &lnk_data);
 
-                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                        uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
-                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                            int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
-                            if (COLOR_THRESHOLD_GRAYSCALE(pixel, &lnk_data, invert)) {
-                                ((uint32_t *) out->LBins)[fast_floorf((pixel - COLOR_GRAYSCALE_MIN) * mult)]++;
-                                pixel_count++;
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                            uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
+                            for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
+                                if (COLOR_THRESHOLD_GRAYSCALE(pixel, &lnk_data, invert)) {
+                                    ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_GRAYSCALE_MIN) * mult)]++; // needs to be roundf
+                                    pixel_count++;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
+                        color_thresholds_list_lnk_data_t lnk_data;
+                        iterator_get(thresholds, it, &lnk_data);
+
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                            uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y), *other_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(other, y);
+                            for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                                int pixel = abs(IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x) - IMAGE_GET_GRAYSCALE_PIXEL_FAST(other_row_ptr, x));
+                                if (COLOR_THRESHOLD_GRAYSCALE(pixel, &lnk_data, invert)) {
+                                    ((uint32_t *) out->LBins)[fast_roundf((pixel - COLOR_GRAYSCALE_MIN) * mult)]++; // needs to be roundf
+                                    pixel_count++;
+                                }
                             }
                         }
                     }
@@ -247,31 +303,71 @@ void imlib_get_histogram(histogram_t *out, image_t *ptr, rectangle_t *roi, list_
 
             if ((!thresholds) || (!list_size(thresholds))) {
                 // Fast histogram code when no color thresholds list...
-                for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                    uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
-                    for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                        int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
-                        ((uint32_t *) out->LBins)[fast_floorf((COLOR_RGB565_TO_L(pixel) - COLOR_L_MIN) * l_mult)]++;
-                        ((uint32_t *) out->ABins)[fast_floorf((COLOR_RGB565_TO_A(pixel) - COLOR_A_MIN) * a_mult)]++;
-                        ((uint32_t *) out->BBins)[fast_floorf((COLOR_RGB565_TO_B(pixel) - COLOR_B_MIN) * b_mult)]++;
+                if (!other) {
+                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                        uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
+                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                            int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                            ((uint32_t *) out->LBins)[fast_roundf((COLOR_RGB565_TO_L(pixel) - COLOR_L_MIN) * l_mult)]++; // needs to be roundf
+                            ((uint32_t *) out->ABins)[fast_roundf((COLOR_RGB565_TO_A(pixel) - COLOR_A_MIN) * a_mult)]++; // needs to be roundf
+                            ((uint32_t *) out->BBins)[fast_roundf((COLOR_RGB565_TO_B(pixel) - COLOR_B_MIN) * b_mult)]++; // needs to be roundf
+                        }
+                    }
+                } else {
+                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                        uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y), *other_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(other, y);
+                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                            int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), other_pixel = IMAGE_GET_RGB565_PIXEL_FAST(other_row_ptr, x);
+                            int r = abs(COLOR_RGB565_TO_R5(pixel) - COLOR_RGB565_TO_R5(other_pixel));
+                            int g = abs(COLOR_RGB565_TO_G6(pixel) - COLOR_RGB565_TO_G6(other_pixel));
+                            int b = abs(COLOR_RGB565_TO_B5(pixel) - COLOR_RGB565_TO_B5(other_pixel));
+                            pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                            ((uint32_t *) out->LBins)[fast_roundf((COLOR_RGB565_TO_L(pixel) - COLOR_L_MIN) * l_mult)]++; // needs to be roundf
+                            ((uint32_t *) out->ABins)[fast_roundf((COLOR_RGB565_TO_A(pixel) - COLOR_A_MIN) * a_mult)]++; // needs to be roundf
+                            ((uint32_t *) out->BBins)[fast_roundf((COLOR_RGB565_TO_B(pixel) - COLOR_B_MIN) * b_mult)]++; // needs to be roundf
+                        }
                     }
                 }
             } else {
                 // Reset pixel count.
                 pixel_count = 0;
-                for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
-                    color_thresholds_list_lnk_data_t lnk_data;
-                    iterator_get(thresholds, it, &lnk_data);
+                if (!other) {
+                    for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
+                        color_thresholds_list_lnk_data_t lnk_data;
+                        iterator_get(thresholds, it, &lnk_data);
 
-                    for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                        uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
-                        for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                            int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
-                            if (COLOR_THRESHOLD_RGB565(pixel, &lnk_data, invert)) {
-                                ((uint32_t *) out->LBins)[fast_floorf((COLOR_RGB565_TO_L(pixel) - COLOR_L_MIN) * l_mult)]++;
-                                ((uint32_t *) out->ABins)[fast_floorf((COLOR_RGB565_TO_A(pixel) - COLOR_A_MIN) * a_mult)]++;
-                                ((uint32_t *) out->BBins)[fast_floorf((COLOR_RGB565_TO_B(pixel) - COLOR_B_MIN) * b_mult)]++;
-                                pixel_count++;
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                            uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
+                            for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x);
+                                if (COLOR_THRESHOLD_RGB565(pixel, &lnk_data, invert)) {
+                                    ((uint32_t *) out->LBins)[fast_roundf((COLOR_RGB565_TO_L(pixel) - COLOR_L_MIN) * l_mult)]++; // needs to be roundf
+                                    ((uint32_t *) out->ABins)[fast_roundf((COLOR_RGB565_TO_A(pixel) - COLOR_A_MIN) * a_mult)]++; // needs to be roundf
+                                    ((uint32_t *) out->BBins)[fast_roundf((COLOR_RGB565_TO_B(pixel) - COLOR_B_MIN) * b_mult)]++; // needs to be roundf
+                                    pixel_count++;
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    for (list_lnk_t *it = iterator_start_from_head(thresholds); it; it = iterator_next(it)) {
+                        color_thresholds_list_lnk_data_t lnk_data;
+                        iterator_get(thresholds, it, &lnk_data);
+
+                        for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
+                            uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y), *other_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(other, y);
+                            for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
+                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x), other_pixel = IMAGE_GET_RGB565_PIXEL_FAST(other_row_ptr, x);
+                                int r = abs(COLOR_RGB565_TO_R5(pixel) - COLOR_RGB565_TO_R5(other_pixel));
+                                int g = abs(COLOR_RGB565_TO_G6(pixel) - COLOR_RGB565_TO_G6(other_pixel));
+                                int b = abs(COLOR_RGB565_TO_B5(pixel) - COLOR_RGB565_TO_B5(other_pixel));
+                                pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                                if (COLOR_THRESHOLD_RGB565(pixel, &lnk_data, invert)) {
+                                    ((uint32_t *) out->LBins)[fast_roundf((COLOR_RGB565_TO_L(pixel) - COLOR_L_MIN) * l_mult)]++; // needs to be roundf
+                                    ((uint32_t *) out->ABins)[fast_roundf((COLOR_RGB565_TO_A(pixel) - COLOR_A_MIN) * a_mult)]++; // needs to be roundf
+                                    ((uint32_t *) out->BBins)[fast_roundf((COLOR_RGB565_TO_B(pixel) - COLOR_B_MIN) * b_mult)]++; // needs to be roundf
+                                    pixel_count++;
+                                }
                             }
                         }
                     }

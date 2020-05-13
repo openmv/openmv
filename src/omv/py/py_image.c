@@ -1943,17 +1943,17 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     float arg_y_scale =
         py_helper_keyword_float(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), 1.0f);
     PY_ASSERT_TRUE_MSG((0.0f <= arg_y_scale), "Error: 0.0 <= y_scale!");
-    
+
     int arg_alpha =
         py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 256);
     PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 256), "Error: 0 <= alpha <= 256!");
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 3, kw_args);
-    
+
     const uint16_t *color_palette = NULL;
     {
         int palette;
-        
+
         if (py_helper_keyword_int_maybe(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
             if (palette == COLOR_PALETTE_RAINBOW) {
                 color_palette = rainbow_table;
@@ -1964,7 +1964,7 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
             }
         } else {
             image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, offset + 4, kw_args);
-            
+
             if (arg_color_palette) {
                 if (arg_color_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be an RGB565 format image!"));
                 if ((arg_color_palette->w * arg_color_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette image must have 256 pixels!"));
@@ -1985,7 +1985,7 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     const uint8_t *alpha_palette = NULL;
     {
         image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, offset + 5, kw_args);
-        
+
         if (arg_alpha_palette) {
             if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify an alpha palette when passing a grayscale image!"));
             if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be an grayscale format image!"));
@@ -2007,7 +2007,7 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     }
 
     imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk, color_palette, alpha_palette, hint);
-    
+
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_image_obj, 3, py_image_draw_image);
@@ -4063,6 +4063,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
     py_helper_keyword_thresholds(n_args, args, 1, kw_args, &thresholds);
     bool invert = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    image_t *other = py_helper_keyword_to_image_mutable(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_difference), NULL);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 3, kw_args, &roi);
@@ -4081,7 +4082,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4097,7 +4098,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4121,7 +4122,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4164,6 +4165,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
     py_helper_keyword_thresholds(n_args, args, 1, kw_args, &thresholds);
     bool invert = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    image_t *other = py_helper_keyword_to_image_mutable(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_difference), NULL);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 3, kw_args, &roi);
@@ -4182,7 +4184,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4198,7 +4200,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4222,7 +4224,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
