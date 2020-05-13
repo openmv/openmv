@@ -12329,7 +12329,13 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                          float x_translation, float y_translation,
                          float zoom, float fov, float *corners)
 {
-    umm_init_x(8000); // 400 20 byte heap blocks...
+    // Create a tmp copy of the image to pull pixels from.
+    size_t size = image_size(img);
+    void *data = fb_alloc(size, FB_ALLOC_NO_HINT);
+    memcpy(data, img->data, size);
+    memset(img->data, 0, size);
+
+    umm_init_x(fb_avail());
 
     int w = img->w;
     int h = img->h;
@@ -12378,7 +12384,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
     matd_t *T3 = matd_op("M*M", A2, T2);
     matd_t *T4 = matd_inverse(T3);
 
-    if (corners) {
+    if (T4 && corners) {
         float corr[4];
         zarray_t *correspondences = zarray_create(sizeof(float[4]));
 
@@ -12395,7 +12401,7 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
         zarray_add(correspondences, &corr);
 
         corr[0] = w - 1;
-        corr[1] = h- 1;
+        corr[1] = h - 1;
         corr[2] = corners[4];
         corr[3] = corners[5];
         zarray_add(correspondences, &corr);
@@ -12406,9 +12412,13 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
         corr[3] = corners[7];
         zarray_add(correspondences, &corr);
 
-        matd_t *H = homography_compute(correspondences, HOMOGRAPHY_COMPUTE_FLAG_SVD);
+        matd_t *H = homography_compute(correspondences, HOMOGRAPHY_COMPUTE_FLAG_INVERSE);
 
-        if (T4 && H) {
+        if (!H) { // try again...
+            H = homography_compute(correspondences, HOMOGRAPHY_COMPUTE_FLAG_SVD);
+        }
+
+        if (H) {
             matd_t *T5 = matd_op("M*M", H, T4);
             matd_destroy(H);
             matd_destroy(T4);
@@ -12418,90 +12428,150 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
         zarray_destroy(correspondences);
     }
 
-    // Create a tmp copy of the image to pull pixels from.
-    size_t size = image_size(img);
-    void *data = fb_alloc(size, FB_ALLOC_NO_HINT);
-    memcpy(data, img->data, size);
-    memset(img->data, 0, size);
-
     if (T4) {
         float T4_00 = MATD_EL(T4, 0, 0), T4_01 = MATD_EL(T4, 0, 1), T4_02 = MATD_EL(T4, 0, 2);
         float T4_10 = MATD_EL(T4, 1, 0), T4_11 = MATD_EL(T4, 1, 1), T4_12 = MATD_EL(T4, 1, 2);
         float T4_20 = MATD_EL(T4, 2, 0), T4_21 = MATD_EL(T4, 2, 1), T4_22 = MATD_EL(T4, 2, 2);
 
-        switch(img->bpp) {
-            case IMAGE_BPP_BINARY: {
-                uint32_t *tmp = (uint32_t *) data;
+        if ((fast_fabsf(T4_20) < MATD_EPS) && (fast_fabsf(T4_21) < MATD_EPS)) { // warp affine
+            T4_00 /= T4_22;
+            T4_01 /= T4_22;
+            T4_02 /= T4_22;
+            T4_10 /= T4_22;
+            T4_11 /= T4_22;
+            T4_12 /= T4_22;
+            switch(img->bpp) {
+                case IMAGE_BPP_BINARY: {
+                    uint32_t *tmp = (uint32_t *) data;
 
-                for (int y = 0, yy = h; y < yy; y++) {
-                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
-                    for (int x = 0, xx = w; x < xx; x++) {
-                        float xxx = T4_00*x + T4_01*y + T4_02;
-                        float yyy = T4_10*x + T4_11*y + T4_12;
-                        float zzz = T4_20*x + T4_21*y + T4_22;
-                        int sourceX = fast_roundf(xxx / zzz);
-                        int sourceY = fast_roundf(yyy / zzz);
+                    for (int y = 0, yy = h; y < yy; y++) {
+                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = w; x < xx; x++) {
+                            int sourceX = fast_roundf(T4_00*x + T4_01*y + T4_02);
+                            int sourceY = fast_roundf(T4_10*x + T4_11*y + T4_12);
 
-                        if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                            uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
-                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
-                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
+                                uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                                IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                            }
                         }
                     }
+                    break;
                 }
-                break;
-            }
-            case IMAGE_BPP_GRAYSCALE: {
-                uint8_t *tmp = (uint8_t *) data;
+                case IMAGE_BPP_GRAYSCALE: {
+                    uint8_t *tmp = (uint8_t *) data;
 
-                for (int y = 0, yy = h; y < yy; y++) {
-                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
-                    for (int x = 0, xx = w; x < xx; x++) {
-                        float xxx = T4_00*x + T4_01*y + T4_02;
-                        float yyy = T4_10*x + T4_11*y + T4_12;
-                        float zzz = T4_20*x + T4_21*y + T4_22;
-                        int sourceX = fast_roundf(xxx / zzz);
-                        int sourceY = fast_roundf(yyy / zzz);
+                    for (int y = 0, yy = h; y < yy; y++) {
+                        uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = w; x < xx; x++) {
+                            int sourceX = fast_roundf(T4_00*x + T4_01*y + T4_02);
+                            int sourceY = fast_roundf(T4_10*x + T4_11*y + T4_12);
 
-                        if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                            uint8_t *ptr = tmp + (w * sourceY);
-                            int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX);
-                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
+                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
+                                uint8_t *ptr = tmp + (w * sourceY);
+                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX);
+                                IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
+                            }
                         }
                     }
+                    break;
                 }
-                break;
-            }
-            case IMAGE_BPP_RGB565: {
-                uint16_t *tmp = (uint16_t *) data;
+                case IMAGE_BPP_RGB565: {
+                    uint16_t *tmp = (uint16_t *) data;
 
-                for (int y = 0, yy = h; y < yy; y++) {
-                    uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
-                    for (int x = 0, xx = w; x < xx; x++) {
-                        float xxx = T4_00*x + T4_01*y + T4_02;
-                        float yyy = T4_10*x + T4_11*y + T4_12;
-                        float zzz = T4_20*x + T4_21*y + T4_22;
-                        int sourceX = fast_roundf(xxx / zzz);
-                        int sourceY = fast_roundf(yyy / zzz);
+                    for (int y = 0, yy = h; y < yy; y++) {
+                        uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = w; x < xx; x++) {
+                            int sourceX = fast_roundf(T4_00*x + T4_01*y + T4_02);
+                            int sourceY = fast_roundf(T4_10*x + T4_11*y + T4_12);
 
-                        if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                            uint16_t *ptr = tmp + (w * sourceY);
-                            int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX);
-                            IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
+                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
+                                uint16_t *ptr = tmp + (w * sourceY);
+                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX);
+                                IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
+                            }
                         }
                     }
+                    break;
                 }
-                break;
+                default: {
+                    break;
+                }
             }
-            default: {
-                break;
+        } else { // warp persepective
+            switch(img->bpp) {
+                case IMAGE_BPP_BINARY: {
+                    uint32_t *tmp = (uint32_t *) data;
+
+                    for (int y = 0, yy = h; y < yy; y++) {
+                        uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = w; x < xx; x++) {
+                            float xxx = T4_00*x + T4_01*y + T4_02;
+                            float yyy = T4_10*x + T4_11*y + T4_12;
+                            float zzz = T4_20*x + T4_21*y + T4_22;
+                            int sourceX = fast_roundf(xxx / zzz);
+                            int sourceY = fast_roundf(yyy / zzz);
+
+                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
+                                uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                                IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    uint8_t *tmp = (uint8_t *) data;
+
+                    for (int y = 0, yy = h; y < yy; y++) {
+                        uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = w; x < xx; x++) {
+                            float xxx = T4_00*x + T4_01*y + T4_02;
+                            float yyy = T4_10*x + T4_11*y + T4_12;
+                            float zzz = T4_20*x + T4_21*y + T4_22;
+                            int sourceX = fast_roundf(xxx / zzz);
+                            int sourceY = fast_roundf(yyy / zzz);
+
+                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
+                                uint8_t *ptr = tmp + (w * sourceY);
+                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX);
+                                IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    uint16_t *tmp = (uint16_t *) data;
+
+                    for (int y = 0, yy = h; y < yy; y++) {
+                        uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                        for (int x = 0, xx = w; x < xx; x++) {
+                            float xxx = T4_00*x + T4_01*y + T4_02;
+                            float yyy = T4_10*x + T4_11*y + T4_12;
+                            float zzz = T4_20*x + T4_21*y + T4_22;
+                            int sourceX = fast_roundf(xxx / zzz);
+                            int sourceY = fast_roundf(yyy / zzz);
+
+                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
+                                uint16_t *ptr = tmp + (w * sourceY);
+                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX);
+                                IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
+                            }
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
             }
         }
 
         matd_destroy(T4);
     }
-
-    fb_free();
 
     matd_destroy(T3);
     matd_destroy(T2);
@@ -12515,6 +12585,8 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
     matd_destroy(A1);
 
     fb_free(); // umm_init_x();
+
+    fb_free();
 }
 #endif //IMLIB_ENABLE_ROTATION_CORR
 #pragma GCC diagnostic pop
