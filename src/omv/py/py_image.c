@@ -3273,8 +3273,13 @@ STATIC mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *
         py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom), 1.0f);
     PY_ASSERT_TRUE_MSG(arg_zoom > 0.0f, "Zoom must be > 0!");
 
+    float arg_x_corr =
+        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_corr), 0.0f);
+    float arg_y_corr =
+        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_corr), 0.0f);
+
     fb_alloc_mark();
-    imlib_lens_corr(arg_img, arg_strength, arg_zoom);
+    imlib_lens_corr(arg_img, arg_strength, arg_zoom, arg_x_corr, arg_y_corr);
     fb_alloc_free_till_mark();
     return args[0];
 }
