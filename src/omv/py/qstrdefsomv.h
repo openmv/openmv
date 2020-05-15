@@ -1217,6 +1217,8 @@ Q(tf_model)
 // duplicate Q(height)
 // duplicate Q(width)
 Q(channels)
+Q(signed)
+Q(is_float)
 
 // Classify
 // duplicate Q(classify)
