@@ -124,7 +124,7 @@
 #define OMV_FB_SIZE             (30M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (1M)        // minimum fb alloc size
 #define OMV_STACK_SIZE          (15K)
-#define OMV_HEAP_SIZE           (230K)
+#define OMV_HEAP_SIZE           (229K)
 #define OMV_SDRAM_SIZE          (32 * 1024 * 1024) // This needs to be here for UVC firmware.
 #define OMV_SDRAM_TEST          (0)
 
