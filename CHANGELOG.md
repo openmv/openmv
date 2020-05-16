@@ -1,4 +1,15 @@
 # Change Log
+## [3.6.3](https://github.com/openmv/openmv/releases/tag/v3.6.3) (2020-5-16)
+* Update TF to support uint8/int8/float32
+* Re-enable TF on OMV3/F7.
+* Improved imlib lens correction.
+* Fix rotation correction bug.
+* Update MLX90640 driver.
+* Improved FIR sensors support.
+* Support higher framerate on OV5640.
+* Improved drawing and blending functions.
+* Fix Bayer to YCBCR edge bug.
+
 ## [3.6.2](https://github.com/openmv/openmv/releases/tag/v3.6.2) (2020-5-04)
 * Optimized Bayer to RGB565/YCBCR.
 * Optimized datamatrix ops and binary ops.
