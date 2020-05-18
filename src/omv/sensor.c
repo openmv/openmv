@@ -59,7 +59,7 @@ const int resolution[][2] = {
     {64,   32  },    /* 64x32     */
     {64,   64  },    /* 64x64     */
     {128,  64  },    /* 128x64    */
-    {128,  128 },    /* 128x64    */
+    {128,  128 },    /* 128x128   */
     // Other
     {128,  160 },    /* LCD       */
     {128,  160 },    /* QQVGA2    */
@@ -525,6 +525,8 @@ int sensor_set_pixformat(pixformat_t pixformat)
         return -1;
     }
 
+    systick_sleep(100); // wait for the camera to settle
+
     // Set pixel format
     sensor.pixformat = pixformat;
 
@@ -552,6 +554,8 @@ int sensor_set_framesize(framesize_t framesize)
         // Operation not supported
         return -1;
     }
+
+    systick_sleep(100); // wait for the camera to settle
 
     // Set framebuffer size
     sensor.framesize = framesize;
@@ -888,10 +892,57 @@ static void sensor_check_buffsize()
     }
 }
 
+// ARM Cortex-M4/M7 Processors can access memory using unaligned 32-bit reads/writes.
+void *unaligned_2_to_1_memcpy(void *dest, void *src, size_t n)
+{
+    uint32_t *dest32 = (uint32_t *) dest;
+    uint32_t *src32 = (uint32_t *) src;
+
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+    for (; n > 4; n -= 4) {
+        uint32_t tmp1 = *src32++;
+        uint32_t tmp2 = *src32++;
+        *dest32++ = (tmp1 & 0xff) | ((tmp1 >> 8) & 0xff00) | ((tmp2 & 0xff) << 16) | ((tmp2 & 0xff0000) << 8);
+    }
+#endif
+
+    uint8_t *dest8 = (uint8_t *) dest32;
+    uint16_t *src16 = (uint16_t *) src32;
+
+    for (; n > 0; n -= 1) {
+        *dest8++ = *src16++;
+    }
+
+    return dest;
+}
+
+// ARM Cortex-M4/M7 Processors can access memory using unaligned 32-bit reads/writes.
+void *unaligned_memcpy(void *dest, void *src, size_t n)
+{
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+    uint32_t *dest32 = (uint32_t *) dest;
+    uint32_t *src32 = (uint32_t *) src;
+
+    for (; n > 4; n -= 4) {
+        *dest32++ = *src32++;
+    }
+
+    uint8_t *dest8 = (uint8_t *) dest32;
+    uint8_t *src8 = (uint8_t *) src32;
+
+    for (; n > 0; n -= 1) {
+        *dest8++ = *src8++;
+    }
+
+    return dest;
+#else
+    return memcpy(dest, src, n);
+#endif
+}
+
 // This function is called back after each line transfer is complete,
 // with a pointer to the line buffer that was used. At this point the
 // DMA transfers the next line to the other half of the line buffer.
-// Note:  For JPEG this function is called once (and ignored) at the end of the transfer.
 void DCMI_DMAConvCpltUser(uint32_t addr)
 {
     uint8_t *src = (uint8_t*) addr;
@@ -900,6 +951,35 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
     uint16_t *src16 = (uint16_t*) addr;
     uint16_t *dst16 = (uint16_t*) dest_fb;
 
+    if (sensor.pixformat == PIXFORMAT_JPEG) {
+        if (sensor.chip_id == OV5640_ID) {
+            // JPEG MODE 4:
+            //
+            // The width and height are fixed in each frame. The first two bytes are valid data
+            // length in every line, followed by valid image data. Dummy data (0xFF) may be used as
+            // padding at each line end if the current valid image data is less than the line width.
+            //
+            // In this mode line holds the size of all jpeg data transferred.
+            //
+            uint16_t size = __REV16(*src16);
+            unaligned_memcpy(MAIN_FB()->pixels + line, src16 + 1, size);
+            line += size;
+        } else {
+            // JPEG MODE 3:
+            //
+            // Compression data is transmitted with programmable width. The last line width maybe
+            // different from the other line (there is no dummy data). In each frame, the line
+            // number may be different.
+            //
+            // In this mode line will be incremented by one after 262,140 Bytes have been
+            // transferred. If 524,280‬ Bytes have been transferred line will be incremented again.
+            // The DMA counter must be used to get the amount of data transferred between.
+            //
+            line += 1;
+        }
+        return;
+    }
+
     // Skip lines outside the window.
     if (line >= MAIN_FB()->y && line <= (MAIN_FB()->y + MAIN_FB()->h)) {
         if (!sensor.transpose) {
@@ -907,45 +987,26 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                 case PIXFORMAT_BAYER:
                     dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
                     src += MAIN_FB()->x;
-                    memcpy(dst, src, MAIN_FB()->w);
+                    unaligned_memcpy(dst, src, MAIN_FB()->w);
                     break;
                 case PIXFORMAT_GRAYSCALE:
                     dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
                     if (sensor.gs_bpp == 1) {
                         // 1BPP GRAYSCALE.
                         src += MAIN_FB()->x;
-                        memcpy(dst, src, MAIN_FB()->w);
+                        unaligned_memcpy(dst, src, MAIN_FB()->w);
                     } else {
-                        uint32_t tmp1, tmp2, pix, *s, *d;
-                        src16 += MAIN_FB()->x;
-                        s = (uint32_t *)src16;
-                        d = (uint32_t *)dst;
                         // Extract Y channel from YUV.
-                        if (((uint32_t)dst & 3) == 0 && ((uint32_t)src16 & 3) == 0) {
-                            for (int i = MAIN_FB()->w; i>=4; i-=4) {
-                            // destination mem is cached; coalesce the writes to improve throughput
-                               tmp1 = *s++;
-                               tmp2 = *s++;
-                               pix = tmp1 & 0xff; // merge 4 pixels to not saturate CPU write buffer
-                               pix |= ((tmp1 >> 8) & 0xff00);
-                               pix |= ((tmp2 & 0xff) << 16); 
-                               pix |= ((tmp2 & 0xff0000) << 8);
-                               *d++ = pix;
-                            }
-                        } else {
-                            for (int i = MAIN_FB()->w; i; i--) {
-                                *dst++ = (uint8_t)*src16++; // low byte is Y channel
-                            }
-                        }
+                        src16 += MAIN_FB()->x;
+                        unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->w);
                     }
                     break;
                 case PIXFORMAT_YUV422:
                 case PIXFORMAT_RGB565:
                     dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
                     src16 += MAIN_FB()->x;
-                    memcpy(dst16, src16, MAIN_FB()->w * sizeof(uint16_t));
+                    unaligned_memcpy(dst16, src16, MAIN_FB()->w * sizeof(uint16_t));
                     break;
-                case PIXFORMAT_JPEG:
                 default:
                     break;
             }
@@ -986,7 +1047,6 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                         dst16 += h;
                     }
                     break;
-                case PIXFORMAT_JPEG:
                 default:
                     break;
             }
@@ -1049,9 +1109,17 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_JPEG:
-            // Sensor has hardware JPEG set max frame size.
-            length = MAX_XFER_SIZE;
-            addr = (uint32_t) (MAIN_FB()->pixels);
+            if (sensor->chip_id == OV5640_ID) {
+                // The JPEG image needs to be transferred to the line buffer.
+                // There is no small limit on the amount of data transferred.
+                length = w * h;
+                addr = (uint32_t) &_line_buf;
+            } else {
+                // The JPEG image will be directly transferred to the frame buffer.
+                // The DCMI hardware can transfer up to 524,280‬ bytes.
+                length = MAX_XFER_SIZE * 2;
+                addr = (uint32_t) (MAIN_FB()->pixels);
+            }
             break;
         default:
             return -1;
@@ -1080,7 +1148,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         }
         #endif
 
-        if (sensor->pixformat == PIXFORMAT_JPEG) {
+        if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id != OV5640_ID)) {
             // Start a regular transfer
             HAL_DCMI_Start_DMA(&DCMIHandle,
                     DCMI_MODE_SNAPSHOT, addr, length/4);
@@ -1137,13 +1205,17 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 break;
             case PIXFORMAT_JPEG:
                 // Read the number of data items transferred
-                MAIN_FB()->bpp = ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
-                #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-                // In JPEG mode, the DMA uses the frame buffer memory directly instead of the line buffer, which is
-                // located in a cacheable region and therefore must be invalidated before the CPU can access it again.
-                // Note: The frame buffer address is 32-byte aligned, and the size is a multiple of 32-bytes for all boards.
-                SCB_InvalidateDCache_by_Addr((uint32_t*)MAIN_FB()->pixels, OMV_RAW_BUF_SIZE);
-                #endif
+                if (sensor->chip_id == OV5640_ID) {
+                    MAIN_FB()->bpp = line;
+                } else {
+                    MAIN_FB()->bpp = (line * MAX_XFER_SIZE) + ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+                    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                    // In JPEG mode, the DMA uses the frame buffer memory directly instead of the line buffer, which is
+                    // located in a cacheable region and therefore must be invalidated before the CPU can access it again.
+                    // Note: The frame buffer address is 32-byte aligned, and the size is a multiple of 32-bytes for all boards.
+                    SCB_InvalidateDCache_by_Addr((uint32_t*)MAIN_FB()->pixels, OMV_RAW_BUF_SIZE);
+                    #endif
+                }
                 break;
             default:
                 break;
