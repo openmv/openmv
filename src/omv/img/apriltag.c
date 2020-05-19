@@ -44649,9 +44649,9 @@ const apriltag_family_t tag36h8 = {
         0x0000000fb5800a24UL,
         0x00000007d12c6617UL,
         0x00000008092dffbaUL,
-        0x00000006bef3f9a0UL
+        0x00000006bef3f9a0UL,
     }
-}
+};
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48023,7 +48023,7 @@ void imlib_find_apriltags(list_t *out, image_t *ptr, rectangle_t *roi, apriltag_
     }
 
     if (families & TAG36H8) {
-        apriltag_detector_add_family(td, (apriltag_families_t *) &tag36h8);
+        apriltag_detector_add_family(td, (apriltag_family_t *) &tag36h8);
     }
 
     if (families & TAG36H10) {
