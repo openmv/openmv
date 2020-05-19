@@ -8608,7 +8608,6 @@ const apriltag_family_t tag36h8 = {
     .d = 6,
     .h = 8,
     .codes = {
-        .codes = {
         0x0000000b5b26d174UL,
         0x0000000b95b5d739UL,
         0x0000000bd044dcfeUL,
@@ -44650,7 +44649,7 @@ const apriltag_family_t tag36h8 = {
         0x0000000fb5800a24UL,
         0x00000007d12c6617UL,
         0x00000008092dffbaUL,
-        0x00000006bef3f9a0UL,
+        0x00000006bef3f9a0UL
     }
 }
 
