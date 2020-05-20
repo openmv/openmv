@@ -146,7 +146,7 @@ static const uint8_t default_regs[][3] = {
     { 0x30, 0x2e, 0x00 },
     { 0x43, 0x00, 0x30 },
     { 0x50, 0x1f, 0x00 },
-    { 0x47, 0x13, 0x03 },
+    { 0x47, 0x13, 0x04 }, // { 0x47, 0x13, 0x03 },
     { 0x44, 0x07, 0x04 },
     { 0x46, 0x0b, 0x35 },
     { 0x46, 0x0c, 0x22 },
@@ -331,6 +331,8 @@ static const uint8_t default_regs[][3] = {
     { 0x3a, 0x0d, 0x08 },
     { 0x3a, 0x14, 0x07 },
     { 0x3a, 0x15, 0xae },
+    { 0x44, 0x01, 0x0d }, // | Read SRAM enable when blanking | Read SRAM at first blanking
+    { 0x47, 0x23, 0x01 }, // DVP JPEG Mode456 Skip Line Number
 
 // End.
 
@@ -420,13 +422,14 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     uint8_t reg;
     int ret = 0;
 
-    if (((pixformat == PIXFORMAT_BAYER) || (pixformat == PIXFORMAT_JPEG))
+    if ((((pixformat == PIXFORMAT_BAYER) || (pixformat == PIXFORMAT_JPEG))
     && ((sensor->framesize == FRAMESIZE_QQCIF) // doesn't work with bayer/jpeg, unknown why
     || (sensor->framesize == FRAMESIZE_QQSIF) // doesn't work with bayer/jpeg, not a multiple of 8
     || (sensor->framesize == FRAMESIZE_HQQQVGA) // doesn't work with bayer/jpeg, unknown why
     || (sensor->framesize == FRAMESIZE_HQQVGA) // doesn't work with bayer/jpeg, unknown why
     || (resolution[sensor->framesize][0] % 8) // w/h must be divisble by 8
-    || (resolution[sensor->framesize][1] % 8))) {
+    || (resolution[sensor->framesize][1] % 8)))
+    || (sensor->framesize == FRAMESIZE_QQQQVGA)) { // Doesn't work for anything
         return -1;
     }
 
@@ -461,13 +464,6 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, CLOCK_ENABLE_02, &reg);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, CLOCK_ENABLE_02, (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00));
 
-    // Adjust JPEG quality.
-
-    if (pixformat == PIXFORMAT_JPEG) {
-        bool high_res = (resolution[sensor->framesize][0] > (readout_w / 2)) || (resolution[sensor->framesize][1] > (readout_h / 2));
-        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, JPEG_CTRL07, high_res ? 0x10 : 0x4);
-    }
-
     return ret;
 }
 
@@ -478,15 +474,18 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
 
-    if (((sensor->pixformat == PIXFORMAT_BAYER) || (sensor->pixformat == PIXFORMAT_JPEG))
+    if ((((sensor->pixformat == PIXFORMAT_BAYER) || (sensor->pixformat == PIXFORMAT_JPEG))
     && ((framesize == FRAMESIZE_QQCIF) // doesn't work with bayer/jpeg, unknown why
     || (framesize == FRAMESIZE_QQSIF) // doesn't work with bayer/jpeg, not a multiple of 8
     || (framesize == FRAMESIZE_HQQQVGA) // doesn't work with bayer/jpeg, unknown why
     || (framesize == FRAMESIZE_HQQVGA) // doesn't work with bayer/jpeg, unknown why
     || (w % 8) // w/h must be divisble by 8
-    || (h % 8))) {
+    || (h % 8)))
+    || (framesize == FRAMESIZE_QQQQVGA)) { // Doesn't work for anything
         return -1;
     }
+
+    // Step 0: Clamp readout settings.
 
     readout_w = IM_MAX(readout_w, w);
     readout_h = IM_MAX(readout_h, h);
@@ -506,6 +505,12 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         sensor_div = 2;
     }
 
+    uint16_t sensor_hts_mul = 1;
+
+    if (w > 640) { // Slow Down
+        sensor_hts_mul = 2;
+    }
+
     // Step 2: Determine horizontal and vertical start and end points.
 
     uint16_t sensor_w = readout_w + DUMMY_WIDTH_BUFFER; // camera hardware needs dummy pixels to sync
@@ -520,6 +525,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     // Step 3: Determine scaling window offset.
 
     float ratio = IM_MIN((readout_w / sensor_div) / ((float) w), (readout_h / sensor_div) / ((float) h));
+
     uint16_t w_mul = w * ratio;
     uint16_t h_mul = h * ratio;
     uint16_t x_off = ((sensor_w / sensor_div) - w_mul) / 2;
@@ -527,7 +533,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Step 4: Compute total frame time.
 
-    uint16_t sensor_hts = IM_MAX((sensor_w / sensor_div) + HSYNC_TIME, (SENSOR_WIDTH + HSYNC_TIME) / 2); // Fix to prevent crashing.
+    uint16_t sensor_hts = IM_MAX(((sensor_w / sensor_div) * sensor_hts_mul) + HSYNC_TIME, (SENSOR_WIDTH + HSYNC_TIME) / 2); // Fix to prevent crashing.
     uint16_t sensor_vts = IM_MAX((sensor_h / sensor_div) + VYSNC_TIME, (SENSOR_HEIGHT + VYSNC_TIME) / 8); // Fix to prevent crashing.
 
     uint16_t sensor_x_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
@@ -579,10 +585,6 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, VFIFO_VSIZE_H, h >> 8);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, VFIFO_VSIZE_L, h);
-
-    // Adjust JPEG quality.
-
-    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, JPEG_CTRL07, (sensor_div > 1) ? 0x4 : 0x10);
 
     return ret;
 }
