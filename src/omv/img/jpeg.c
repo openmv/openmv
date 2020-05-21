@@ -60,10 +60,13 @@ static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0
             uint16_t *s;
             uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
             uint8_t u8YDelta, u8UVDelta;
-            int x, y, dy=8, idx, r, g, b;
+            int x, y, dy=8, idx, x_end, r, g, b;
             int pitch = img->w; // keep in local var
             int w2 = pitch/2; // pitch for a uint16_t pointer
             int prev_offset, next_offset;
+            x_end = -1; // assume we don't need this
+            if (x_offset + 8 >= img->w) // right edge of Bayer data
+               x_end = 6; // keep it from reading past right edge
             if (bYUV) {
                 u8YDelta = 0x80;
                 u8UVDelta = 0x00;
@@ -104,9 +107,13 @@ static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0
                         CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
                         CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
                         l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
-                        l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
-                        l1 |= (s[0] << 16);
-                        l2 |= (s[next_offset] << 16);
+                        if (x == x_end) {
+                            l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
+                        } else {
+                            l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                            l1 |= (s[0] << 16);
+                            l2 |= (s[next_offset] << 16);
+                        }
                         s++;
                         r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
                         g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
@@ -125,9 +132,13 @@ static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0
                         CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
                         // prepare for the next set of source pixels
                         l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
-                        l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
-                        l1 |= (s[0] << 16);
-                        l2 |= (s[next_offset] << 16);
+                        if (x == x_end) { // check for right edge
+                            l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
+                        } else {
+                            l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                            l1 |= (s[0] << 16);
+                            l2 |= (s[next_offset] << 16);
+                        }
                         s++;
                         g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
                         b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
