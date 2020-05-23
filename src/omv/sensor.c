@@ -8,20 +8,17 @@
  *
  * Sensor abstraction layer.
  */
-#include <stdlib.h>
-#include <string.h>
 #include "mp.h"
 #include "irq.h"
 #include "cambus.h"
-#include "ov9650.h"
 #include "ov2640.h"
+#include "ov5640.h"
 #include "ov7725.h"
 #include "ov7690.h"
-#include "ov5640.h"
+#include "ov9650.h"
 #include "mt9v034.h"
 #include "lepton.h"
 #include "hm01b0.h"
-#include "sensor.h"
 #include "systick.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
@@ -33,9 +30,10 @@ TIM_HandleTypeDef  TIMHandle  = {0};
 DMA_HandleTypeDef  DMAHandle  = {0};
 DCMI_HandleTypeDef DCMIHandle = {0};
 
-static volatile int line = 0;
 extern uint8_t _line_buf;
 static uint8_t *dest_fb = NULL;
+static volatile int line = 0;
+static volatile bool waiting_for_data = false;
 
 const int resolution[][2] = {
     {0,    0   },
@@ -118,6 +116,40 @@ static int extclk_config(int frequency)
     return 0;
 }
 
+static int dma_config()
+{
+    // DMA Stream configuration
+    DMAHandle.Instance                  = DMA2_Stream1;             /* Select the DMA instance          */
+    #if defined(MCU_SERIES_H7)
+    DMAHandle.Init.Request              = DMA_REQUEST_DCMI;         /* DMA Channel                      */
+    #else
+    DMAHandle.Init.Channel              = DMA_CHANNEL_1;            /* DMA Channel                      */
+    #endif
+    DMAHandle.Init.Direction            = DMA_PERIPH_TO_MEMORY;     /* Peripheral to memory transfer    */
+    DMAHandle.Init.MemInc               = DMA_MINC_ENABLE;          /* Memory increment mode Enable     */
+    DMAHandle.Init.PeriphInc            = DMA_PINC_DISABLE;         /* Peripheral increment mode Enable */
+    DMAHandle.Init.PeriphDataAlignment  = DMA_PDATAALIGN_WORD;      /* Peripheral data alignment : Word */
+    DMAHandle.Init.MemDataAlignment     = DMA_MDATAALIGN_WORD;      /* Memory data alignment : Word     */
+    DMAHandle.Init.Mode                 = DMA_NORMAL;               /* Normal DMA mode                  */
+    DMAHandle.Init.Priority             = DMA_PRIORITY_HIGH;        /* Priority level : high            */
+    DMAHandle.Init.FIFOMode             = DMA_FIFOMODE_ENABLE;      /* FIFO mode enabled                */
+    DMAHandle.Init.FIFOThreshold        = DMA_FIFO_THRESHOLD_FULL;  /* FIFO threshold full              */
+    DMAHandle.Init.MemBurst             = DMA_MBURST_INC4;          /* Memory burst                     */
+    DMAHandle.Init.PeriphBurst          = DMA_PBURST_SINGLE;        /* Peripheral burst                 */
+
+    // Initialize the DMA stream
+    HAL_DMA_DeInit(&DMAHandle);
+    if (HAL_DMA_Init(&DMAHandle) != HAL_OK) {
+        // Initialization Error
+        return -1;
+    }
+
+    // Configure and enable DMA IRQ Channel
+    NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
+    HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+    return 0;
+}
+
 static int dcmi_config(uint32_t jpeg_mode)
 {
     // DCMI configuration
@@ -131,7 +163,7 @@ static int dcmi_config(uint32_t jpeg_mode)
     // PXCLK clock polarity
     DCMIHandle.Init.PCKPolarity = SENSOR_HW_FLAGS_GET(&sensor, SENSOR_HW_FLAGS_PIXCK) ?
                                     DCMI_PCKPOLARITY_RISING : DCMI_PCKPOLARITY_FALLING;
-
+    // Setup capture parameters.
     DCMIHandle.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE;    // Enable Hardware synchronization
     DCMIHandle.Init.CaptureRate = DCMI_CR_ALL_FRAME;        // Capture rate all frames
     DCMIHandle.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; // Capture 8 bits on every pixel clock
@@ -159,43 +191,23 @@ static int dcmi_config(uint32_t jpeg_mode)
     return 0;
 }
 
-static int dma_config()
+static void abort_dcmi()
 {
-    // DMA Stream configuration
-    DMAHandle.Instance                  = DMA2_Stream1;             /* Select the DMA instance          */
-    #if defined(MCU_SERIES_H7)
-    DMAHandle.Init.Request              = DMA_REQUEST_DCMI;         /* DMA Channel                      */
-    #else
-    DMAHandle.Init.Channel              = DMA_CHANNEL_1;            /* DMA Channel                      */
-    #endif
-    DMAHandle.Init.Direction            = DMA_PERIPH_TO_MEMORY;     /* Peripheral to memory transfer    */
-    DMAHandle.Init.MemInc               = DMA_MINC_ENABLE;          /* Memory increment mode Enable     */
-    DMAHandle.Init.PeriphInc            = DMA_PINC_DISABLE;         /* Peripheral increment mode Enable */
-    DMAHandle.Init.PeriphDataAlignment  = DMA_PDATAALIGN_WORD;      /* Peripheral data alignment : Word */
-    DMAHandle.Init.MemDataAlignment     = DMA_MDATAALIGN_WORD;      /* Memory data alignment : Word     */
-    DMAHandle.Init.Mode                 = DMA_NORMAL;               /* Normal DMA mode                  */
-    DMAHandle.Init.Priority             = DMA_PRIORITY_HIGH;        /* Priority level : high            */
-    DMAHandle.Init.FIFOMode             = DMA_FIFOMODE_ENABLE;      /* FIFO mode enabled                */
-    DMAHandle.Init.FIFOThreshold        = DMA_FIFO_THRESHOLD_FULL;  /* FIFO threshold full              */
-    DMAHandle.Init.MemBurst             = DMA_MBURST_INC4;          /* Memory burst                     */
-    DMAHandle.Init.PeriphBurst          = DMA_PBURST_SINGLE;        /* Peripheral burst                 */
+    DCMI->CR &= ~DCMI_CR_ENABLE;
+    HAL_DMA_Abort(&DMAHandle);
+}
 
-    // Configure and disable DMA IRQ Channel
-    NVIC_SetPriority(DMA2_Stream1_IRQn, IRQ_PRI_DMA21);
-    HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
-
-    // Initialize the DMA stream
-    HAL_DMA_DeInit(&DMAHandle);
-    if (HAL_DMA_Init(&DMAHandle) != HAL_OK) {
-        // Initialization Error
-        return -1;
+void check_abort_dcmi()
+{
+    if (DCMI->CR & DCMI_CR_ENABLE) {
+        abort_dcmi();
     }
-
-    return 0;
 }
 
 void sensor_init0()
 {
+    check_abort_dcmi();
+
     // Save fb_enabled flag state
     int fb_enabled = JPEG_FB()->enabled;
 
@@ -427,6 +439,8 @@ int sensor_init()
 
 int sensor_reset()
 {
+    check_abort_dcmi();
+
     // Reset the sesnor state
     sensor.sde           = 0;
     sensor.pixformat     = 0;
@@ -453,9 +467,6 @@ int sensor_reset()
         return -1;
     }
 
-    // Just in case there's a running DMA request.
-    HAL_DMA_Abort(&DMAHandle);
-
     // Disable VSYNC EXTI IRQ
     HAL_NVIC_DisableIRQ(DCMI_VSYNC_IRQN);
     return 0;
@@ -468,6 +479,8 @@ int sensor_get_id()
 
 int sensor_sleep(int enable)
 {
+    check_abort_dcmi();
+
     if (sensor.sleep == NULL
         || sensor.sleep(&sensor, enable) != 0) {
         // Operation not supported
@@ -478,6 +491,8 @@ int sensor_sleep(int enable)
 
 int sensor_shutdown(int enable)
 {
+    check_abort_dcmi();
+
     if (enable) {
         DCMI_PWDN_HIGH();
     } else {
@@ -519,6 +534,8 @@ int sensor_set_pixformat(pixformat_t pixformat)
         return -1;
     }
 
+    check_abort_dcmi();
+
     if (sensor.set_pixformat == NULL
         || sensor.set_pixformat(&sensor, pixformat) != 0) {
         // Operation not supported
@@ -547,6 +564,8 @@ int sensor_set_framesize(framesize_t framesize)
         // No change
         return 0;
     }
+
+    check_abort_dcmi();
 
     // Call the sensor specific function
     if (sensor.set_framesize == NULL
@@ -824,7 +843,10 @@ int sensor_set_lens_correction(int enable, int radi, int coef)
 
 int sensor_ioctl(int request, ... /* arg */)
 {
+    check_abort_dcmi();
+
     int ret = -1;
+
     if (sensor.ioctl != NULL) {
         va_list ap;
         va_start(ap, request);
@@ -832,6 +854,7 @@ int sensor_ioctl(int request, ... /* arg */)
         ret = sensor.ioctl(&sensor, request, ap);
         va_end(ap);
     }
+
     return ret;
 }
 
@@ -898,6 +921,7 @@ void *unaligned_2_to_1_memcpy(void *dest, void *src, size_t n)
     uint32_t *dest32 = (uint32_t *) dest;
     uint32_t *src32 = (uint32_t *) src;
 
+// TODO: Make this faster using only 32-bit aligned reads/writes with data shifting.
 #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
     for (; n > 4; n -= 4) {
         uint32_t tmp1 = *src32++;
@@ -919,6 +943,7 @@ void *unaligned_2_to_1_memcpy(void *dest, void *src, size_t n)
 // ARM Cortex-M4/M7 Processors can access memory using unaligned 32-bit reads/writes.
 void *unaligned_memcpy(void *dest, void *src, size_t n)
 {
+// TODO: Make this faster using only 32-bit aligned reads/writes with data shifting.
 #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
     uint32_t *dest32 = (uint32_t *) dest;
     uint32_t *src32 = (uint32_t *) src;
@@ -940,13 +965,38 @@ void *unaligned_memcpy(void *dest, void *src, size_t n)
 #endif
 }
 
+// Stop allowing new data in on the end of the frame and let snapshot know that the frame has been
+// received. Note that DCMI_DMAConvCpltUser() is called before DCMI_IT_FRAME is enabled by
+// DCMI_DMAXferCplt() so this means that the last line of data is *always* transferred before
+// waiting_for_data is set to false.
+void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+    waiting_for_data = false;
+}
+
 // This function is called back after each line transfer is complete,
 // with a pointer to the line buffer that was used. At this point the
 // DMA transfers the next line to the other half of the line buffer.
 void DCMI_DMAConvCpltUser(uint32_t addr)
 {
+    // If snapshot was not already waiting to receive data then we have missed this frame and have
+    // to drop it. So, abort this and future transfers. Snapshot will restart the process.
+    if (!waiting_for_data) {
+        DCMI->CR &= ~DCMI_CR_ENABLE;
+        HAL_DMA_Abort_IT(&DMAHandle);
+        return;
+    }
+
+    // We are transferring the image from the DCMI hardware to line buffers so that we have more
+    // control to post process the image data before writing it to the frmae buffer. This requires
+    // more CPU, but, allows us to crop and rotate the image as the data is received.
+
+    // Additionally, the line buffers act as very large fifos which hide SDRAM memory access times
+    // on the OpenMV Cam H7 Plus. When SDRAM refreshes the row you are trying to write to the fifo
+    // depth on the DCMI hardware and DMA hardware is not enough to prevent data loss.
+
     uint8_t *src = (uint8_t*) addr;
-    uint8_t *dst = dest_fb;
+    uint8_t *dst = (uint8_t*) dest_fb;
 
     uint16_t *src16 = (uint16_t*) addr;
     uint16_t *dst16 = (uint16_t*) dest_fb;
@@ -959,7 +1009,11 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             // length in every line, followed by valid image data. Dummy data (0xFF) may be used as
             // padding at each line end if the current valid image data is less than the line width.
             //
-            // In this mode line holds the size of all jpeg data transferred.
+            // In this mode `line` holds the size of all jpeg data transferred.
+            //
+            // Note: We are using this mode for the OV5640 because it allows us to use the line
+            // buffers to fifo the JPEG image data input so we can handle SDRAM refresh hiccups
+            // that will cause data loss if we make the DMA hardware write directly to the FB.
             //
             uint16_t size = __REV16(*src16);
             unaligned_memcpy(MAIN_FB()->pixels + line, src16 + 1, size);
@@ -971,16 +1025,21 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             // different from the other line (there is no dummy data). In each frame, the line
             // number may be different.
             //
-            // In this mode line will be incremented by one after 262,140 Bytes have been
+            // In this mode `line` will be incremented by one after 262,140 Bytes have been
             // transferred. If 524,280‬ Bytes have been transferred line will be incremented again.
             // The DMA counter must be used to get the amount of data transferred between.
+            //
+            // Note: In this mode the JPEG image data is written directly to the frame buffer. This
+            // is not optimal. However, it works okay for the OV2640 since the PCLK is much lower
+            // than the OV5640 PCLK. The OV5640 drops data in this mode. Hence using mode 4 above.
             //
             line += 1;
         }
         return;
     }
 
-    // Skip lines outside the window.
+    // Implement per line, per pixel cropping, and image transposing (for image rotation) in
+    // in software using the CPU to transfer the image from the line buffers to the frame buffer.
     if (line >= MAIN_FB()->y && line <= (MAIN_FB()->y + MAIN_FB()->h)) {
         if (!sensor.transpose) {
             switch (sensor.pixformat) {
@@ -1060,10 +1119,18 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 // uses the DCMI and DMA to capture frames and each line is processed in the DCMI_DMAConvCpltUser function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
 {
-    uint32_t frame = 0;
     bool streaming = (streaming_cb != NULL); // Streaming mode.
-    bool doublebuf = false; // Use double buffers in streaming mode.
-    uint32_t addr, length, tick_start;
+    uint32_t frame = 0;
+
+    // In streaming mode the image pointer must be valid.
+    if (streaming) {
+        if (image == NULL) {
+            return -1;
+        }
+
+        // Clear the first image in to not trigger the streaming_cb in double buffer mode.
+        image->pixels = NULL;
+    }
 
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
@@ -1089,9 +1156,15 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
     // done in the line function using the diemensions stored in MAIN_FB()->x,y,w,h.
     uint32_t w = resolution[sensor->framesize][0];
     uint32_t h = resolution[sensor->framesize][1];
+    uint32_t length, addr;
 
     // Setup the size and address of the transfer
     switch (sensor->pixformat) {
+        case PIXFORMAT_GRAYSCALE:
+            // 1/2BPP Grayscale.
+            length = (w * h * sensor->gs_bpp);
+            addr = (uint32_t) &_line_buf;
+            break;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             // RGB/YUV read 2 bytes per pixel.
@@ -1103,15 +1176,10 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             length = (w * h * 1);
             addr = (uint32_t) &_line_buf;
             break;
-        case PIXFORMAT_GRAYSCALE:
-            // 1/2BPP Grayscale.
-            length = (w * h * sensor->gs_bpp);
-            addr = (uint32_t) &_line_buf;
-            break;
         case PIXFORMAT_JPEG:
             if (sensor->chip_id == OV5640_ID) {
                 // The JPEG image needs to be transferred to the line buffer.
-                // There is no small limit on the amount of data transferred.
+                // There is no limit on the amount of data transferred.
                 length = w * h;
                 addr = (uint32_t) &_line_buf;
             } else {
@@ -1125,73 +1193,136 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             return -1;
     }
 
-    if (streaming_cb) {
-        image->pixels = NULL;
-    }
-
     // If two frames fit in ram, use double buffering in streaming mode.
-    doublebuf = ((length*2) <= OMV_RAW_BUF_SIZE);
+    bool doublebuf = ((length*2) <= OMV_RAW_BUF_SIZE);
 
     do {
-        // Clear line counter
+        // Clear the line counter variable before we allow more data to be received.
         line = 0;
 
-        // Snapshot start tick
-        tick_start = HAL_GetTick();
+        // If DCMI_DMAConvCpltUser() happens before waiting_for_data = true; below then the
+        // transfer is stopped and it will be re-enabled again right afterwards. We know the
+        // transfer was stopped by checking DCMI_CR_ENABLE.
 
-        // Enable DMA IRQ
-        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+        waiting_for_data = true;
 
+        // We will be in one of the following states now:
+        // 1. No transfer is currently running right now and DCMI_CR_ENABLE is not set.
+        // 2. A transfer is running and we are waiting for the data to be received.
+
+        // We are not using DCMI_CR_CAPTURE because while this bit when cleared stops the capture...
+        // It does not actually go low. DCMI_CR_ENABLE stops the capture when cleared and stays low.
+        //
+        // When DCMI_CR_ENABLE is cleared during a DCMI transfer the hardware will automatically
+        // wait for the start of the next frame when it's re-enabled again below. So, we do not
+        // need to wait till there's no frame happening before enabling.
+        if (!(DCMI->CR & DCMI_CR_ENABLE)) {
+            // Note that HAL_DCMI_Start_DMA and HAL_DCMI_Start_DMA_MB are effectively the same
+            // method. The only difference between them is how large the DMA transfer size gets
+            // set at. For both of them DMA doesn't actually care how much data the DCMI hardware
+            // generates. It's just trying to move fixed size DMA transfers from the DCMI hardware
+            // to one memory address or another memory address. After transfering X bytes to one
+            // address it will switch to the next address and transfer X bytes again. Both of these
+            // methods set the addresses right after each other. So, effectively DMA is just writing
+            // data to a circular buffer with an interrupt every time 1/2 of it is written.
+            if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id != OV5640_ID)) {
+                // Start a transfer where the whole frame buffer is located where the DMA is writing
+                // data to. We only use this for JPEG mode for the OV2640. Since we don't know the
+                // line size of data being transfered we just examine how much data was transferred
+                // once DMA hardware stalls waiting for data. Note that because we are writing
+                // directly to the frame buffer we do not have the option of aborting the transfer
+                // if we are not ready to move data from a line buffer to the frame buffer.
+                HAL_DCMI_Start_DMA(&DCMIHandle,
+                        DCMI_MODE_SNAPSHOT, addr, length/4);
+                // In this mode the DMA hardware is just treating the frame buffer as two large
+                // DMA buffers. At the end of the frame less data may be transferred than requested.
+            } else {
+                // Start a multibuffer transfer (line by line). The DMA hardware will ping-pong
+                // transferring data between the uncached line buffers. Since data is continously
+                // being captured the ping-ponging will stop at the end of the frame and then
+                // continue when the next frame starts.
+                HAL_DCMI_Start_DMA_MB(&DCMIHandle,
+                        DCMI_MODE_CONTINUOUS, addr, length/4, h);
+            }
+        }
+
+        // Let the camera know we want to trigger it now.
         #if defined(DCMI_FSYNC_PIN)
         if (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_FSYNC)) {
             DCMI_FSYNC_HIGH();
         }
         #endif
 
-        if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id != OV5640_ID)) {
-            // Start a regular transfer
-            HAL_DCMI_Start_DMA(&DCMIHandle,
-                    DCMI_MODE_SNAPSHOT, addr, length/4);
-        } else {
-            // Start a multibuffer transfer (line by line)
-            HAL_DCMI_Start_DMA_MB(&DCMIHandle,
-                    DCMI_MODE_SNAPSHOT, addr, length/4, h);
-        }
+        // DCMI_DMAConvCpltUser() will start triggering now. Since waiting_for_data = true; the
+        // data will be transferred to the frame buffer.
 
+        // Before we wait for the next frame try to get some work done. If we are in double buffer
+        // mode then we can start processing the previous image buffer.
         if (streaming_cb && doublebuf && image->pixels != NULL) {
             // Call streaming callback function with previous frame.
             // Note: Image pointer should Not be NULL in streaming mode.
             streaming = streaming_cb(image);
         }
 
-        // Wait for frame
-        while ((DCMI->CR & DCMI_CR_CAPTURE) != 0) {
-            // Wait for interrupt
+        // In camera sensor JPEG mode 4 we will not necessarily see every line in the frame and
+        // in camera sensor JPEG mode 3 we will definately not see every line in the frame. Given
+        // this, we need to enable the end of frame interrupt before we have finished necessarily
+        // finished transferring all JEPG data. This works as long as the end of the frame comes
+        // much later after all JPEG data has been transferred. If this is violated the JPEG image
+        // will be corrupted.
+        if (DCMI->CR & DCMI_JPEG_ENABLE) {
+            __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
+        }
+
+        // Wait for the frame data. __WFI() below will exit right on time because of DCMI_IT_FRAME.
+        // While waiting SysTick will trigger allowing us to timeout.
+        for (uint32_t tick_start = HAL_GetTick(); waiting_for_data; ) {
             __WFI();
 
+            // If we haven't exited this loop before the timeout then we need to abort the transfer.
             if ((HAL_GetTick() - tick_start) >= 3000) {
-                // Sensor timeout, most likely a HW issue.
-                // Abort the DMA request.
-                HAL_DMA_Abort(&DMAHandle);
+                waiting_for_data = false;
+                abort_dcmi();
                 return -1;
             }
         }
 
+        // We have to abort the JPEG data transfer since it will be stuck waiting for data.
+        // line will contain how many transfers we completed.
+        // The DMA counter must be used to get the number of remaining words to be transferred.
+        if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id != OV5640_ID)) {
+            abort_dcmi();
+        }
+
+        // We're done receiving data.
         #if defined(DCMI_FSYNC_PIN)
         if (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_FSYNC)) {
             DCMI_FSYNC_LOW();
         }
         #endif
 
-        // Abort DMA transfer.
-        // Note: In JPEG mode the DMA will still be waiting for data since
-        // the max frame size is set, so we need to abort the DMA transfer.
-        HAL_DMA_Abort(&DMAHandle);
+        // After the above loop we have received all data in the frame. The DCMI hardware is left
+        // running to look for the start of the next frame which it needs to sync to to capture
+        // data. If it misses the start of the frame then the DCMI hardware will not capture that
+        // frame. Assuming our processing is fast enough to start waiting for data again before
+        // DCMI_DMAConvCpltUser() is called we can receive the next frame. If we are not fast
+        // enough DCMI_DMAConvCpltUser() will automatically abort the transfer on being called.
+        //
+        // In the case of the OV2640 in JPEG mode since we are writing to the main FB we do not
+        // put the DCMI hardware into continous mode. So, we will drop frames more easily in that
+        // mode and may be able to only achieve 1/2 the max FPS.
 
-        // Disable DMA IRQ
-        HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn);
+        //
+        // Next, prepare the frame buffer w/h/bpp values given the image type.
+        //
 
-        // Fix the BPP
+        // Fix resolution if transposed.
+        if (sensor->transpose) {
+            MAIN_FB()->w = MAIN_FB()->v; // v==h -> w
+            MAIN_FB()->h = MAIN_FB()->u; // u==w -> h
+        }
+
+        // Fix the BPP.
         switch (sensor->pixformat) {
             case PIXFORMAT_GRAYSCALE:
                 MAIN_FB()->bpp = 1;
@@ -1204,10 +1335,13 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 MAIN_FB()->bpp = 3;
                 break;
             case PIXFORMAT_JPEG:
-                // Read the number of data items transferred
                 if (sensor->chip_id == OV5640_ID) {
+                    // Line contains the sum of all the bytes transferred from the line buffers
+                    // while in DCMI_DMAConvCpltUser().
                     MAIN_FB()->bpp = line;
                 } else {
+                    // line contains the number of MAX_XFER_SIZE transfers completed. To get the number of bytes transferred
+                    // within a transfer we have to look at the DMA counter and see how much data was moved.
                     MAIN_FB()->bpp = (line * MAX_XFER_SIZE) + ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
                     #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
                     // In JPEG mode, the DMA uses the frame buffer memory directly instead of the line buffer, which is
@@ -1221,11 +1355,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 break;
         }
 
-        // Fix resolution if transposed.
-        if (sensor->transpose) {
-            MAIN_FB()->w = MAIN_FB()->v; // v==h -> w
-            MAIN_FB()->h = MAIN_FB()->u; // u==w -> h
-        }
+        //
+        // Finally, return an image object.
+        //
 
         // Set the user image.
         if (image != NULL) {
@@ -1251,7 +1383,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                         // Next frame will be transfered to the first half.
                         dest_fb = MAIN_FB()->pixels;
                     }
-                    frame ^= 1; // Switch frame buffers.
+
+                    // Switch frame buffers.
+                    frame ^= 1;
                 }
             }
         }

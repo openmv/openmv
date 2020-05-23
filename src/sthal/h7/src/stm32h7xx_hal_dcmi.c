@@ -569,8 +569,8 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
   hdcmi->DMA_Handle->XferAbortCallback = NULL;
 
   /* Reset transfer counters value */
-  hdcmi->XferCount = 0;
-  hdcmi->XferTransferNumber = 0;
+  hdcmi->XferCount = 1U;
+  hdcmi->XferTransferNumber = 1U;
 
   if(Length <= 0xFFFFU)
   {
@@ -593,7 +593,7 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
     hdcmi->DMA_Handle->XferM1CpltCallback = DCMI_DMAXferCplt;
 
     /* Initialize transfer parameters */
-    hdcmi->XferCount = 1;
+    hdcmi->XferCount = 1U;
     hdcmi->XferSize = Length;
     hdcmi->pBuffPtr = pData;
 
@@ -605,7 +605,6 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
     }
 
     /* Update DCMI counter  and transfer number*/
-    hdcmi->XferCount = (hdcmi->XferCount - 2U);
     hdcmi->XferTransferNumber = hdcmi->XferCount;
 
     /* Update second memory address */
@@ -670,10 +669,11 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA_MB(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI
   hdcmi->DMA_Handle->XferM1CpltCallback = DCMI_DMAXferCplt;
 
   /* Initialise transfer parameters */
-  hdcmi->XferCount = Count-2;
+  hdcmi->XferCount = Count;
   hdcmi->XferSize = Length/Count;
   hdcmi->pBuffPtr = pData;
-    
+  hdcmi->XferTransferNumber = Count;
+
   /* Update second memory address */
   SecondMemAddress = (uint32_t)(pData + (4*hdcmi->XferSize));
 
@@ -1178,10 +1178,17 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
     DCMI_DMAConvCpltUser(stream->M0AR);
   }
 
-  if (__HAL_DCMI_GET_FLAG(hdcmi, DCMI_FLAG_FRAMERI) != RESET) {
+  /* Check if the frame is transferred */
+  if (hdcmi->XferCount == 0) {
+    /* Reload XferCount */
+    hdcmi->XferCount = hdcmi->XferTransferNumber;
     /* Re-enable frame interrupt */
     __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_FRAME);
-    hdcmi->State= HAL_DCMI_STATE_READY;
+
+    /* When snapshot mode, set dcmi state to ready */
+    if((hdcmi->Instance->CR & DCMI_CR_CM) == DCMI_MODE_SNAPSHOT) {
+      hdcmi->State= HAL_DCMI_STATE_READY;
+    }
   }
 }
 
