@@ -226,7 +226,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
 {
     py_tf_input_data_callback_data_t *arg = (py_tf_input_data_callback_data_t *) callback_data;
     int shift = signed_or_unsigned ? 128 : 0;
-    float fscale = 1.0f / (signed_or_unsigned ? 128.0f: 255.0f);
+    float fscale = 1.0f / 255.0f;
 
     float xscale = input_width / ((float) arg->roi->w);
     float yscale = input_height / ((float) arg->roi->h);
@@ -248,7 +248,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                             if (!is_float) {
                                 ((uint8_t *) model_input)[index] = COLOR_BINARY_TO_GRAYSCALE(pixel) ^ shift;
                             } else {
-                                ((float *) model_input)[index] = (COLOR_BINARY_TO_GRAYSCALE(pixel) - shift) * fscale;
+                                ((float *) model_input)[index] = COLOR_BINARY_TO_GRAYSCALE(pixel) * fscale;
                             }
                             break;
                         }
@@ -260,9 +260,9 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                                 ((uint8_t *) model_input)[index_3 + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
                                 ((uint8_t *) model_input)[index_3 + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
                             } else {
-                                ((float *) model_input)[index_3 + 0] = (COLOR_RGB565_TO_R8(pixel) - shift) * fscale;
-                                ((float *) model_input)[index_3 + 1] = (COLOR_RGB565_TO_G8(pixel) - shift) * fscale;
-                                ((float *) model_input)[index_3 + 2] = (COLOR_RGB565_TO_B8(pixel) - shift) * fscale;
+                                ((float *) model_input)[index_3 + 0] = COLOR_RGB565_TO_R8(pixel) * fscale;
+                                ((float *) model_input)[index_3 + 1] = COLOR_RGB565_TO_G8(pixel) * fscale;
+                                ((float *) model_input)[index_3 + 2] = COLOR_RGB565_TO_B8(pixel) * fscale;
                             }
                             break;
                         }
@@ -286,7 +286,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                             if (!is_float) {
                                 ((uint8_t *) model_input)[index] = pixel ^ shift;
                             } else {
-                                ((float *) model_input)[index] = (pixel - shift) * fscale;
+                                ((float *) model_input)[index] = pixel * fscale;
                             }
                             break;
                         }
@@ -298,9 +298,9 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                                 ((uint8_t *) model_input)[index_3 + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
                                 ((uint8_t *) model_input)[index_3 + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
                             } else {
-                                ((float *) model_input)[index_3 + 0] = (COLOR_RGB565_TO_R8(pixel) - shift) * fscale;
-                                ((float *) model_input)[index_3 + 1] = (COLOR_RGB565_TO_G8(pixel) - shift) * fscale;
-                                ((float *) model_input)[index_3 + 2] = (COLOR_RGB565_TO_B8(pixel) - shift) * fscale;
+                                ((float *) model_input)[index_3 + 0] = COLOR_RGB565_TO_R8(pixel) * fscale;
+                                ((float *) model_input)[index_3 + 1] = COLOR_RGB565_TO_G8(pixel) * fscale;
+                                ((float *) model_input)[index_3 + 2] = COLOR_RGB565_TO_B8(pixel) * fscale;
                             }
                             break;
                         }
@@ -324,7 +324,7 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                             if (!is_float) {
                                 ((uint8_t *) model_input)[index] = COLOR_RGB565_TO_GRAYSCALE(pixel) ^ shift;
                             } else {
-                                ((float *) model_input)[index] = (COLOR_RGB565_TO_GRAYSCALE(pixel) - shift) * fscale;
+                                ((float *) model_input)[index] = COLOR_RGB565_TO_GRAYSCALE(pixel) * fscale;
                             }
                             break;
                         }
@@ -335,9 +335,9 @@ STATIC void py_tf_input_data_callback(void *callback_data,
                                 ((uint8_t *) model_input)[index_3 + 1] = COLOR_RGB565_TO_G8(pixel) ^ shift;
                                 ((uint8_t *) model_input)[index_3 + 2] = COLOR_RGB565_TO_B8(pixel) ^ shift;
                             } else {
-                                ((float *) model_input)[index_3 + 0] = (COLOR_RGB565_TO_R8(pixel) - shift) * fscale;
-                                ((float *) model_input)[index_3 + 1] = (COLOR_RGB565_TO_G8(pixel) - shift) * fscale;
-                                ((float *) model_input)[index_3 + 2] = (COLOR_RGB565_TO_B8(pixel) - shift) * fscale;
+                                ((float *) model_input)[index_3 + 0] = COLOR_RGB565_TO_R8(pixel) * fscale;
+                                ((float *) model_input)[index_3 + 1] = COLOR_RGB565_TO_G8(pixel) * fscale;
+                                ((float *) model_input)[index_3 + 2] = COLOR_RGB565_TO_B8(pixel) * fscale;
                             }
                             break;
                         }
@@ -369,7 +369,6 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
 {
     py_tf_classify_output_data_callback_data_t *arg = (py_tf_classify_output_data_callback_data_t *) callback_data;
     int shift = signed_or_unsigned ? 128 : 0;
-    float fscale = signed_or_unsigned ? 127.0f: 255.0f;
 
     PY_ASSERT_TRUE_MSG(output_height == 1, "Expected model output height to be 1!");
     PY_ASSERT_TRUE_MSG(output_width == 1, "Expected model output width to be 1!");
@@ -379,7 +378,7 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
         if (!is_float) {
             ((mp_obj_list_t *) arg->out)->items[i] = mp_obj_new_float((((uint8_t *) model_output)[i] ^ shift) / 255.0f);
         } else {
-            ((mp_obj_list_t *) arg->out)->items[i] = mp_obj_new_float(((((float *) model_output)[i] * fscale) + shift) / 255.0f);
+            ((mp_obj_list_t *) arg->out)->items[i] = mp_obj_new_float(((float *) model_output)[i]);
         }
     }
 }
@@ -479,7 +478,6 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
 {
     py_tf_segment_output_data_callback_data_t *arg = (py_tf_segment_output_data_callback_data_t *) callback_data;
     int shift = signed_or_unsigned ? 128 : 0;
-    float fscale = signed_or_unsigned ? 127.0f: 255.0f;
 
     arg->out = mp_obj_new_list(output_channels, NULL);
     for (unsigned int i = 0; i < output_channels; i++) {
@@ -498,7 +496,7 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
                 if (!is_float) {
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, ((uint8_t *) model_output)[row + col + i] ^ shift);
                 } else {
-                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, ((((float *) model_output)[i] * fscale) + shift));
+                    IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, ((float *) model_output)[i] * 255);
                 }
             }
         }
