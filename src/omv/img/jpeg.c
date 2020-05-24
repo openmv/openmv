@@ -895,8 +895,8 @@ void jpeg_get_mcu(image_t *img, int mcu_w, int mcu_h, int x_offs, int y_offs, in
                     int index = (y * iPitch) + (x_offs>>3); // get byte offset
                     uint8_t *s = &img->data[index];
                     u8Pixels = s[0]; // get 8 binary pixels (1 byte)
-                    *d32++ = u32Expand[u8Pixels & 0xf]; // first 4 pixels
-                    *d32++ = u32Expand[u8Pixels >> 4];  // second 4 pixels
+                    *d32++ = u32Expand[u8Pixels & 0xf] ^ 0x80808080; // first 4 pixels
+                    *d32++ = u32Expand[u8Pixels >> 4] ^ 0x80808080;  // second 4 pixels
                 } // for y
             } // not clipped
             break;
