@@ -895,8 +895,8 @@ void jpeg_get_mcu(image_t *img, int mcu_w, int mcu_h, int x_offs, int y_offs, in
                     int index = (y * iPitch) + (x_offs>>3); // get byte offset
                     uint8_t *s = &img->data[index];
                     u8Pixels = s[0]; // get 8 binary pixels (1 byte)
-                    *d32++ = u32Expand[u8Pixels & 0xf]; // first 4 pixels
-                    *d32++ = u32Expand[u8Pixels >> 4];  // second 4 pixels
+                    *d32++ = u32Expand[u8Pixels & 0xf] ^ 0x80808080; // first 4 pixels
+                    *d32++ = u32Expand[u8Pixels >> 4] ^ 0x80808080;  // second 4 pixels
                 } // for y
             } // not clipped
             break;
@@ -920,8 +920,8 @@ void jpeg_get_mcu(image_t *img, int mcu_w, int mcu_h, int x_offs, int y_offs, in
                 uint32_t *mcu32 = (uint32_t *)mcu;
                 for (int y=y_offs; y<y_offs+mcu_h; y++) {
                     uint32_t *pRow = (uint32_t *)&img->data[(y * img->w) + x_offs];
-                    mcu32[0] = pRow[0] - 0x80808080; // do 4 pixels at a time and "subtract" 128
-                    mcu32[1] = pRow[1] - 0x80808080;
+                    mcu32[0] = pRow[0] ^ 0x80808080; // do 4 pixels at a time and "subtract" 128
+                    mcu32[1] = pRow[1] ^ 0x80808080;
                     mcu32 += 2;
                 } 
             }
