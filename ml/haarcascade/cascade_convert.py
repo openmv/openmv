@@ -191,7 +191,7 @@ def cascade_binary(path, n_stages, name):
         idx = int(f.childNodes[0].nodeValue.split()[2])
         rects = feature[idx].getElementsByTagName('_')
         for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            l = (map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
 
     # write rects
@@ -199,7 +199,7 @@ def cascade_binary(path, n_stages, name):
         idx = int(f.childNodes[0].nodeValue.split()[2])
         rects = feature[idx].getElementsByTagName('_')
         for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            l = (map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
 
     # print cascade info
