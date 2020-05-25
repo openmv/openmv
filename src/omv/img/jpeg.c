@@ -920,8 +920,8 @@ void jpeg_get_mcu(image_t *img, int mcu_w, int mcu_h, int x_offs, int y_offs, in
                 uint32_t *mcu32 = (uint32_t *)mcu;
                 for (int y=y_offs; y<y_offs+mcu_h; y++) {
                     uint32_t *pRow = (uint32_t *)&img->data[(y * img->w) + x_offs];
-                    mcu32[0] = pRow[0] - 0x80808080; // do 4 pixels at a time and "subtract" 128
-                    mcu32[1] = pRow[1] - 0x80808080;
+                    mcu32[0] = pRow[0] ^ 0x80808080; // do 4 pixels at a time and "subtract" 128
+                    mcu32[1] = pRow[1] ^ 0x80808080;
                     mcu32 += 2;
                 } 
             }
