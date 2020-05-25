@@ -317,8 +317,8 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
   hdcmi->DMA_Handle->XferAbortCallback = NULL;
 
   /* Reset transfer counters value */
-  hdcmi->XferCount = 0U;
-  hdcmi->XferTransferNumber = 0U;
+  hdcmi->XferCount = 1U;
+  hdcmi->XferTransferNumber = 1U;
 
   if(Length <= 0xFFFFU)
   {
@@ -343,7 +343,6 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
     }
 
     /* Update DCMI counter  and transfer number*/
-    hdcmi->XferCount = (hdcmi->XferCount - 2U);
     hdcmi->XferTransferNumber = hdcmi->XferCount;
 
     /* Update second memory address */
@@ -376,7 +375,7 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA_MB(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI
 
   /* Lock the DCMI peripheral state */
   hdcmi->State = HAL_DCMI_STATE_BUSY;
-  
+
   /* Enable DCMI by setting DCMIEN bit */
   __HAL_DCMI_ENABLE(hdcmi);
 
@@ -392,23 +391,23 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA_MB(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI
 
   /* Set the dma abort callback */
   hdcmi->DMA_Handle->XferAbortCallback = NULL;
-  
+
   /* DCMI_DOUBLE_BUFFER Mode */
   /* Set the DMA memory1 conversion complete callback */
   hdcmi->DMA_Handle->XferM1CpltCallback = DCMI_DMAXferCplt;
 
   /* Initialise transfer parameters */
   hdcmi->pBuffPtr = pData;
-  hdcmi->XferCount = (Count - 2);
+  hdcmi->XferCount = Count;
   hdcmi->XferSize = Length/Count;
-  hdcmi->XferTransferNumber = 0;
+  hdcmi->XferTransferNumber = Count;
 
   /* Update second memory address */
   SecondMemAddress = (uint32_t)(pData + (4U*hdcmi->XferSize));
 
   /* Start DMA multi buffer transfer */
   HAL_DMAEx_MultiBufferStart_IT(hdcmi->DMA_Handle, (uint32_t)&hdcmi->Instance->DR, (uint32_t)pData, SecondMemAddress, hdcmi->XferSize);
-  
+
 
   /* Enable Capture */
   hdcmi->Instance->CR |= DCMI_CR_CAPTURE;
@@ -877,12 +876,14 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
   }
 
   /* Check if the frame is transferred */
-  if(hdcmi->XferCount == hdcmi->XferTransferNumber) {
+  if(hdcmi->XferCount == 0) {
+    /* Reload XferCount */
+    hdcmi->XferCount = hdcmi->XferTransferNumber;
     /* Enable the Frame interrupt */
     __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_FRAME);
-    
+
     /* When snapshot mode, set dcmi state to ready */
-    if((hdcmi->Instance->CR & DCMI_CR_CM) == DCMI_MODE_SNAPSHOT) {  
+    if((hdcmi->Instance->CR & DCMI_CR_CM) == DCMI_MODE_SNAPSHOT) {
       hdcmi->State= HAL_DCMI_STATE_READY;
     }
   }

@@ -332,7 +332,7 @@ static const uint8_t default_regs[][3] = {
     { 0x3a, 0x14, 0x07 },
     { 0x3a, 0x15, 0xae },
     { 0x44, 0x01, 0x0d }, // | Read SRAM enable when blanking | Read SRAM at first blanking
-    { 0x47, 0x23, 0x01 }, // DVP JPEG Mode456 Skip Line Number
+    { 0x47, 0x23, 0x03 }, // DVP JPEG Mode456 Skip Line Number
 
 // End.
 
