@@ -196,20 +196,18 @@ static int dcmi_config(uint32_t jpeg_mode)
 
 static void dcmi_abort()
 {
-    DCMI->CR &= ~DCMI_CR_ENABLE;
-    HAL_DMA_Abort(&DMAHandle);
-}
+    // This stops the DCMI hardware from generating DMA requests immediately and then stops the DMA
+    // hardware. Note that HAL_DMA_Abort is a blocking operation. Do not use this in an interrupt.
 
-void check_dcmi_abort()
-{
     if (DCMI->CR & DCMI_CR_ENABLE) {
-        dcmi_abort();
+        DCMI->CR &= ~DCMI_CR_ENABLE;
+        HAL_DMA_Abort(&DMAHandle);
     }
 }
 
 void sensor_init0()
 {
-    check_dcmi_abort();
+    dcmi_abort();
 
     // Save fb_enabled flag state
     int fb_enabled = JPEG_FB()->enabled;
@@ -442,7 +440,7 @@ int sensor_init()
 
 int sensor_reset()
 {
-    check_dcmi_abort();
+    dcmi_abort();
 
     // Reset the sensor state
     sensor.sde           = 0;
@@ -482,7 +480,7 @@ int sensor_get_id()
 
 int sensor_sleep(int enable)
 {
-    check_dcmi_abort();
+    dcmi_abort();
 
     if (sensor.sleep == NULL
         || sensor.sleep(&sensor, enable) != 0) {
@@ -494,7 +492,7 @@ int sensor_sleep(int enable)
 
 int sensor_shutdown(int enable)
 {
-    check_dcmi_abort();
+    dcmi_abort();
 
     if (enable) {
         DCMI_PWDN_HIGH();
@@ -537,7 +535,7 @@ int sensor_set_pixformat(pixformat_t pixformat)
         return -1;
     }
 
-    check_dcmi_abort();
+    dcmi_abort();
 
     if (sensor.set_pixformat == NULL
         || sensor.set_pixformat(&sensor, pixformat) != 0) {
@@ -568,7 +566,7 @@ int sensor_set_framesize(framesize_t framesize)
         return 0;
     }
 
-    check_dcmi_abort();
+    dcmi_abort();
 
     // Call the sensor specific function
     if (sensor.set_framesize == NULL
@@ -846,7 +844,7 @@ int sensor_set_lens_correction(int enable, int radi, int coef)
 
 int sensor_ioctl(int request, ... /* arg */)
 {
-    check_dcmi_abort();
+    dcmi_abort();
 
     int ret = -1;
 
@@ -1214,8 +1212,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         // 1. No transfer is currently running right now and DCMI_CR_ENABLE is not set.
         // 2. A transfer is running and we are waiting for the data to be received.
 
-        // We are not using DCMI_CR_CAPTURE because while this bit when cleared stops the capture...
-        // It does not actually go low. DCMI_CR_ENABLE stops the capture when cleared and stays low.
+        // We are not using DCMI_CR_CAPTURE because when this bit is cleared to stop the continuous transfer it does not actually go
+        // low until the end of the frame (yes, you read that right). DCMI_CR_ENABLE stops the capture when cleared and stays low.
         //
         // When DCMI_CR_ENABLE is cleared during a DCMI transfer the hardware will automatically
         // wait for the start of the next frame when it's re-enabled again below. So, we do not
