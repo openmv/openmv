@@ -42,6 +42,8 @@ static int16_t readout_y = 0;
 static uint16_t readout_w = ACTIVE_SENSOR_WIDTH;
 static uint16_t readout_h = ACTIVE_SENSOR_HEIGHT;
 
+static uint16_t hts_target = 0;
+
 static const uint8_t default_regs[][3] = {
 
 // https://github.com/ArduCAM/Arduino/blob/master/ArduCAM/ov5640_regs.h
@@ -371,6 +373,8 @@ static int reset(sensor_t *sensor)
     readout_w = ACTIVE_SENSOR_WIDTH;
     readout_h = ACTIVE_SENSOR_HEIGHT;
 
+    hts_target = 0;
+
     // Reset all registers
     int ret = cambus_writeb2(&sensor->i2c, sensor->slv_addr, SCCB_SYSTEM_CTRL_1, 0x11);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, SYSTEM_CTROL0, 0x82);
@@ -417,28 +421,67 @@ static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
     return cambus_writeb2(&sensor->i2c, sensor->slv_addr, reg_addr, reg_data);
 }
 
+// HTS (Horizontal Time) is the readout width plus the HSYNC_TIME time. However, if this value gets
+// too low the OV5640 will crash. The minimum was determined empirically with testing...
+// Additionally, when the image width gets too large we need to slow down the line transfer rate by
+// increasing HTS so that DCMI_DMAConvCpltUser() can keep up with the data rate.
+//
+// WARNING! IF YOU CHANGE ANYTHING HERE RETEST WITH **ALL** RESOLUTIONS FOR THE AFFECTED MODE!
+static int calculate_hts(sensor_t *sensor, uint16_t width)
+{
+    uint16_t hts = hts_target;
+
+    if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) || (sensor->pixformat == PIXFORMAT_BAYER) || (sensor->pixformat == PIXFORMAT_JPEG)) {
+        if (width <= 1280) hts = IM_MAX((width * 2) + 8, hts_target);
+    } else {
+        if (width > 640) hts = IM_MAX((width * 2) + 8, hts_target);
+    }
+
+    return IM_MAX(hts + HSYNC_TIME, (SENSOR_WIDTH + HSYNC_TIME) / 2); // Fix to prevent crashing.
+}
+
+// VTS (Vertical Time) is the readout height plus the VYSNC_TIME time. However, if this value gets
+// too low the OV5640 will crash. The minimum was determined empirically with testing...
+//
+// WARNING! IF YOU CHANGE ANYTHING HERE RETEST WITH **ALL** RESOLUTIONS FOR THE AFFECTED MODE!
+static int calculate_vts(sensor_t *sensor, uint16_t readout_height)
+{
+    return IM_MAX(readout_height + VYSNC_TIME, (SENSOR_HEIGHT + VYSNC_TIME) / 8); // Fix to prevent crashing.
+}
+
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 {
     uint8_t reg;
     int ret = 0;
 
-    if ((((pixformat == PIXFORMAT_BAYER) || (pixformat == PIXFORMAT_JPEG))
-    && ((sensor->framesize == FRAMESIZE_QQCIF) // doesn't work with bayer/jpeg, unknown why
-    || (sensor->framesize == FRAMESIZE_QQSIF) // doesn't work with bayer/jpeg, not a multiple of 8
-    || (sensor->framesize == FRAMESIZE_HQQQVGA) // doesn't work with bayer/jpeg, unknown why
-    || (sensor->framesize == FRAMESIZE_HQQVGA) // doesn't work with bayer/jpeg, unknown why
-    || (resolution[sensor->framesize][0] % 8) // w/h must be divisble by 8
-    || (resolution[sensor->framesize][1] % 8)))
-    || (sensor->framesize == FRAMESIZE_QQQQVGA)) { // Doesn't work for anything
+    // Not a multiple of 8. The JPEG encoder on the OV5640 can't handle this.
+    if ((pixformat == PIXFORMAT_JPEG) && ((resolution[sensor->framesize][0] % 8) || (resolution[sensor->framesize][1] % 8))) {
+        return -1;
+    }
+
+    // Readout speed too fast. The DCMI_DMAConvCpltUser() line callback overhead is too much to handle the line transfer speed.
+    // If we were to slow the pixclk down these resolutions would work. As of right now, the image shakes and scrolls with
+    // the current line transfer speed. Note that there's an overhead to the DCMI_DMAConvCpltUser() function. It's not the
+    // memory copy operation that's too slow. It's that there's too much overhead in the DCMI_DMAConvCpltUser() method
+    // to even have time to start the line transfer. If it were possible to slow the line readout speed of the OV5640
+    // this would enable these resolutions below. However, there's nothing in the datasheet that when modified does this.
+    if (((pixformat == PIXFORMAT_GRAYSCALE) || (pixformat == PIXFORMAT_BAYER) || (pixformat == PIXFORMAT_JPEG))
+    && ((sensor->framesize == FRAMESIZE_QQCIF)
+    || (sensor->framesize == FRAMESIZE_QQSIF)
+    || (sensor->framesize == FRAMESIZE_HQQQVGA)
+    || (sensor->framesize == FRAMESIZE_HQQVGA))) {
         return -1;
     }
 
     switch (pixformat) {
+        case PIXFORMAT_GRAYSCALE:
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x10);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
+            break;
         case PIXFORMAT_RGB565:
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x61);
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
             break;
-        case PIXFORMAT_GRAYSCALE:
         case PIXFORMAT_YUV422:
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x30);
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
@@ -464,6 +507,13 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     ret |= cambus_readb2(&sensor->i2c, sensor->slv_addr, CLOCK_ENABLE_02, &reg);
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, CLOCK_ENABLE_02, (reg & 0xD7) | ((pixformat == PIXFORMAT_JPEG) ? 0x28 : 0x00));
 
+    if (hts_target) {
+        uint16_t sensor_hts = calculate_hts(sensor, resolution[sensor->framesize][0]);
+
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_H, sensor_hts >> 8);
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, TIMING_HTS_L, sensor_hts);
+    }
+
     return ret;
 }
 
@@ -474,14 +524,32 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
 
-    if ((((sensor->pixformat == PIXFORMAT_BAYER) || (sensor->pixformat == PIXFORMAT_JPEG))
-    && ((framesize == FRAMESIZE_QQCIF) // doesn't work with bayer/jpeg, unknown why
-    || (framesize == FRAMESIZE_QQSIF) // doesn't work with bayer/jpeg, not a multiple of 8
-    || (framesize == FRAMESIZE_HQQQVGA) // doesn't work with bayer/jpeg, unknown why
-    || (framesize == FRAMESIZE_HQQVGA) // doesn't work with bayer/jpeg, unknown why
-    || (w % 8) // w/h must be divisble by 8
-    || (h % 8)))
-    || (framesize == FRAMESIZE_QQQQVGA)) { // Doesn't work for anything
+    // Not a multiple of 8. The JPEG encoder on the OV5640 can't handle this.
+    if ((sensor->pixformat == PIXFORMAT_JPEG) && ((w % 8) || (h % 8))) {
+        return -1;
+    }
+
+    // Readout speed too fast. The DCMI_DMAConvCpltUser() line callback overhead is too much to handle the line transfer speed.
+    // If we were to slow the pixclk down these resolutions would work. As of right now, the image shakes and scrolls with
+    // the current line transfer speed. Note that there's an overhead to the DCMI_DMAConvCpltUser() function. It's not the
+    // memory copy operation that's too slow. It's that there's too much overhead in the DCMI_DMAConvCpltUser() method
+    // to even have time to start the line transfer. If it were possible to slow the line readout speed of the OV5640
+    // this would enable these resolutions below. However, there's nothing in the datasheet that when modified does this.
+    if (((sensor->pixformat == PIXFORMAT_GRAYSCALE) || (sensor->pixformat == PIXFORMAT_BAYER) || (sensor->pixformat == PIXFORMAT_JPEG))
+    && ((framesize == FRAMESIZE_QQCIF)
+    || (framesize == FRAMESIZE_QQSIF)
+    || (framesize == FRAMESIZE_HQQQVGA)
+    || (framesize == FRAMESIZE_HQQVGA))) {
+        return -1;
+    }
+
+    // Generally doesn't work for anything.
+    if (framesize == FRAMESIZE_QQQQVGA) {
+        return -1;
+    }
+
+    // Invalid resolution.
+    if ((w > ACTIVE_SENSOR_WIDTH) || (h > ACTIVE_SENSOR_HEIGHT)) {
         return -1;
     }
 
@@ -503,12 +571,6 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         sensor_div = 1;
     } else {
         sensor_div = 2;
-    }
-
-    uint16_t sensor_hts_mul = 1;
-
-    if (w > 640) { // Slow Down
-        sensor_hts_mul = 2;
     }
 
     // Step 2: Determine horizontal and vertical start and end points.
@@ -533,8 +595,10 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Step 4: Compute total frame time.
 
-    uint16_t sensor_hts = IM_MAX(((sensor_w / sensor_div) * sensor_hts_mul) + HSYNC_TIME, (SENSOR_WIDTH + HSYNC_TIME) / 2); // Fix to prevent crashing.
-    uint16_t sensor_vts = IM_MAX((sensor_h / sensor_div) + VYSNC_TIME, (SENSOR_HEIGHT + VYSNC_TIME) / 8); // Fix to prevent crashing.
+    hts_target = sensor_w / sensor_div;
+
+    uint16_t sensor_hts = calculate_hts(sensor, w);
+    uint16_t sensor_vts = calculate_vts(sensor, sensor_h / sensor_div);
 
     uint16_t sensor_x_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
     uint16_t sensor_y_inc = (((sensor_div * 2) - 1) << 4) | (1 << 0); // odd[7:4]/even[3:0] pixel inc on the bayer pattern
@@ -931,7 +995,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 int ov5640_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
-    sensor->gs_bpp              = 2;
+    sensor->gs_bpp              = 1;
     sensor->reset               = reset;
     sensor->sleep               = sleep;
     sensor->read_reg            = read_reg;
