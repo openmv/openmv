@@ -80,7 +80,7 @@ def cascade_info_old(path):
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
     #read cascade size
-    size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
+    size = list(map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
 
     n_rectangles = 0
     for f in feature:
@@ -240,7 +240,6 @@ def cascade_binary_old(path, n_stages, name):
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
     # read cascade size
-    size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
 
     # open output file with the specified name or xml file name
     if not name:
@@ -288,14 +287,14 @@ def cascade_binary_old(path, n_stages, name):
     for f in feature:
         rects = f.getElementsByTagName('_')
         for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            l = list(map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
 
     # write rects
     for f in feature:
         rects = f.getElementsByTagName('_')
         for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            l = list(map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
 
     # print cascade info
@@ -335,7 +334,7 @@ def cascade_header(path, n_stages, name):
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
     # read cascade size
-    size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
+    size = list(map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
 
     # open output file with the specified name or xml file name
     if not name:
