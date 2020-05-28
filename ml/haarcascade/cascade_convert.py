@@ -240,6 +240,8 @@ def cascade_binary_old(path, n_stages, name):
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
     # read cascade size
+    size = list(map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
+
 
     # open output file with the specified name or xml file name
     if not name:
