@@ -224,9 +224,11 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
+    uint8_t reg;
     int ret=0;
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
+    bool vflip;
 
     // Write MSBs
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, HOUTSIZE, w>>2);
@@ -234,6 +236,12 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 
     // Write LSBs
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, EXHCH, ((w&0x3) | ((h&0x1) << 2)));
+
+    // Sample VFLIP
+    ret |= cambus_readb(&sensor->i2c, sensor->slv_addr, COM3, &reg);
+    vflip = reg & COM3_VFLIP;
+    ret |= cambus_readb(&sensor->i2c, sensor->slv_addr, HREF, &reg);
+    ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, HREF, (reg & 0xBF) | (vflip ? 0x40 : 0x00));
 
     if ((w <= 320) && (h <= 240)) {
         // Set QVGA Resolution
@@ -245,7 +253,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         // Set QVGA Window Size
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, HSTART, 0x3F);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, HSIZE,  0x50);
-        ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, VSTART, 0x03);
+        ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, VSTART, 0x03 - vflip);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, VSIZE,  0x78);
 
         // Enable auto-scaling/zooming factors
@@ -260,7 +268,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         // Set VGA Window Size
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, HSTART, 0x23);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, HSIZE,  0xA0);
-        ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, VSTART, 0x07);
+        ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, VSTART, 0x07 - vflip);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, VSIZE,  0xF0);
 
         // Disable auto-scaling/zooming factors
@@ -539,6 +547,8 @@ static int set_vflip(sensor_t *sensor, int enable)
     uint8_t reg;
     int ret = cambus_readb(&sensor->i2c, sensor->slv_addr, COM3, &reg);
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, COM3, COM3_SET_FLIP(reg, enable));
+    // Apply new vertical flip setting.
+    ret |= set_framesize(sensor, sensor->framesize);
 
     return ret;
 }

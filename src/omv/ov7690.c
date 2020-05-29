@@ -265,14 +265,20 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
+    uint8_t reg;
     int ret=0;
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
+    bool vflip;
 
     if (((w > 640) || (h > 480))
     || (sensor->pixformat && (sensor->pixformat == PIXFORMAT_BAYER) && (framesize != FRAMESIZE_VGA))) { // bayer for vga only
         return -1;
     }
+
+    // Sample VFLIP
+    ret |= cambus_readb(&sensor->i2c, sensor->slv_addr, REG0C, &reg);
+    vflip = !(reg & 0x80);
 
     if ((w <= 320) && (h <= 240)) {
         // Set QVGA Resolution
@@ -282,7 +288,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REG12, reg);
 
         // Set QVGA Window Size
-        ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REG19, 0x03);
+        ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REG19, 0x03 - vflip);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REGC8, 0x02);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REGC9, 0x80);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REGCA, 0x00);
@@ -295,7 +301,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REG12, reg);
 
         // Set VGA Window Size
-        ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REG19, 0x0b);
+        ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REG19, 0x0b - vflip);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REGC8, 0x02);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REGC9, 0x80);
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REGCA, 0x01);
@@ -546,6 +552,8 @@ static int set_vflip(sensor_t *sensor, int enable)
     uint8_t reg;
     int ret = cambus_readb(&sensor->i2c, sensor->slv_addr, REG0C, &reg);
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, REG0C, (reg & 0x7F) | ((enable == 0) << 7));
+    // Apply new vertical flip setting.
+    ret |= set_framesize(sensor, sensor->framesize);
 
     return ret;
 }
