@@ -386,12 +386,12 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     if ((enable == 0) && (exposure_us >= 0)) {
         ret |= cambus_readb(&sensor->i2c, sensor->slv_addr, REG_COM7, &reg);
         int t_line = 0, t_pclk = (reg & REG_COM7_RGB) ? 2 : 1;
-    
+
         if (reg & REG_COM7_VGA) t_line = 640 + 160;
         if (reg & REG_COM7_CIF) t_line = 352 + 168;
         if (reg & REG_COM7_QVGA) t_line = 320 + 80;
         if (reg & REG_COM7_QCIF) t_line = 176 + 84;
-    
+
         ret |= cambus_readb(&sensor->i2c, sensor->slv_addr, REG_CLKRC, &reg);
         int pll_mult = (reg & REG_CLKRC_DOUBLE) ? 2 : 1;
         int clk_rc = ((reg & REG_CLKRC_DIVIDER_MASK) + 1) * 2;

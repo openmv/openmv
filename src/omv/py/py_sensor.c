@@ -77,7 +77,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
     mp_obj_t image = py_image(0, 0, 0, 0);
 
     if (sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), NULL) == -1) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout"));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Capture Failed"));
     }
 
     return image;

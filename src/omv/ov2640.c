@@ -419,9 +419,6 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
         ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, regs[i][0], regs[i][1]);
     }
 
-    // Delay 300 ms
-    systick_sleep(300);
-
     return ret;
 }
 
@@ -434,7 +431,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t w = resolution[framesize][0];
     uint16_t h = resolution[framesize][1];
 
-    if ((w % 4) || (h % 4)) { // w/h must be divisble by 4
+    if ((w % 4) || (h % 4) || (w > UXGA_WIDTH) || (h > UXGA_HEIGHT)) { // w/h must be divisble by 4
         return -1;
     }
 
@@ -478,9 +475,6 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, ZMHH, ZMHH_OUTW_SET(w) | ZMHH_OUTH_SET(h));
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, R_DVP_SP, div);
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, RESET, 0x00);
-
-    // Delay 300 ms
-    systick_sleep(300);
 
     return ret;
 }
