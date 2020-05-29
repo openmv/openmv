@@ -695,11 +695,11 @@ STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
         }
         case IMAGE_BPP_BAYER:
             if (arg_rgbtuple) {
-                int pixel = IMAGE_GET_GRAYSCALE_PIXEL(arg_img, arg_x, arg_y); // Correct!
+                uint16_t pixel; imlib_bayer_to_rgb565(arg_img, 1, 1, arg_x, arg_y, &pixel);
                 mp_obj_t pixel_tuple[3];
-                pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(COLOR_GRAYSCALE_TO_RGB565(pixel)));
-                pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(COLOR_GRAYSCALE_TO_RGB565(pixel)));
-                pixel_tuple[2] = mp_obj_new_int(COLOR_RGB565_TO_B8(COLOR_GRAYSCALE_TO_RGB565(pixel)));
+                pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(pixel));
+                pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(pixel));
+                pixel_tuple[2] = mp_obj_new_int(COLOR_RGB565_TO_B8(pixel));
                 return mp_obj_new_tuple(3, pixel_tuple);
             } else {
                 return mp_obj_new_int(IMAGE_GET_GRAYSCALE_PIXEL(arg_img, arg_x, arg_y)); // Correct!
