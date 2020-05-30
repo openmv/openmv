@@ -24,8 +24,44 @@
 
 extern sensor_t sensor;
 
+#if MICROPY_PY_IMU
+static void do_auto_rotation(int pitch_deadzone, int roll_activezone) {
+    if (sensor_get_auto_rotation()) {
+        float pitch = py_imu_pitch_rotation();
+        if (((pitch <= (90 - pitch_deadzone)) || ((90 + pitch_deadzone) < pitch))
+        && ((pitch <= (270 - pitch_deadzone)) || ((270 + pitch_deadzone) < pitch))) { // disable when 90 or 270
+            float roll = py_imu_roll_rotation();
+            if (((360 - roll_activezone) <= roll) || (roll < (0 + roll_activezone)) ) { // center is 0/360, upright
+                sensor_set_hmirror(false);
+                sensor_set_vflip(false);
+                sensor_set_transpose(false);
+            } else if (((270 - roll_activezone) <= roll) && (roll < (270 + roll_activezone))) { // center is 270, rotated right
+                sensor_set_hmirror(true);
+                sensor_set_vflip(false);
+                sensor_set_transpose(true);
+            } else if (((180 - roll_activezone) <= roll) && (roll < (180 + roll_activezone))) { // center is 180, upside down
+                sensor_set_hmirror(true);
+                sensor_set_vflip(true);
+                sensor_set_transpose(false);
+            } else if (((90 - roll_activezone) <= roll) && (roll < (90 + roll_activezone))) { // center is 90, rotated left
+                sensor_set_hmirror(false);
+                sensor_set_vflip(true);
+                sensor_set_transpose(true);
+            }
+        }
+    }
+}
+#endif // MICROPY_PY_IMU
+
 static mp_obj_t py_sensor_reset() {
     PY_ASSERT_FALSE_MSG(sensor_reset() != 0, "Reset Failed");
+#if MICROPY_PY_IMU
+    // +-10 degree dead-zone around pitch 90/270.
+    // +-45 degree active-zone around roll 0/90/180/270/360.
+    do_auto_rotation(10, 45);
+    // We're setting the dead-zone on pitch because roll readings are invalid there.
+    // We're setting the full range on roll to set the initial state.
+#endif // MICROPY_PY_IMU
     return mp_const_none;
 }
 
@@ -47,31 +83,11 @@ static mp_obj_t py_sensor_flush() {
 static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
 #if MICROPY_PY_IMU
-    // To prevent oscillation there is a 20 degree dead-zone between each state.
-    // This means there is a 70 degree active-zone.
-    if (sensor_get_auto_rotation()) {
-        float pitch = py_imu_pitch_rotation();
-        if (((pitch < 80) || (100 < pitch)) && ((pitch < 260) || (280 < pitch))) { // disable when 90 or 270
-            float roll = py_imu_roll_rotation();
-            if ((325 < roll) || (roll < 35) ) { // center is 0/360, upright
-                sensor_set_hmirror(false);
-                sensor_set_vflip(false);
-                sensor_set_transpose(false);
-            } else if ((235 < roll) && (roll < 305)) { // center is 270, rotated right
-                sensor_set_hmirror(true);
-                sensor_set_vflip(false);
-                sensor_set_transpose(true);
-            } else if ((145 < roll) && (roll < 215)) { // center is 180, upside down
-                sensor_set_hmirror(true);
-                sensor_set_vflip(true);
-                sensor_set_transpose(false);
-            } else if ((55 < roll) && (roll < 125)) { // center is 90, rotated left
-                sensor_set_hmirror(false);
-                sensor_set_vflip(true);
-                sensor_set_transpose(true);
-            }
-        }
-    }
+    // +-10 degree dead-zone around pitch 90/270.
+    // +-35 degree active-zone around roll 0/90/180/270/360.
+    do_auto_rotation(10, 35);
+    // We're setting the dead-zone on pitch because roll readings are invalid there.
+    // We're not setting the full range on roll to prevent oscillation.
 #endif // MICROPY_PY_IMU
 
     mp_obj_t image = py_image(0, 0, 0, 0);
