@@ -223,7 +223,7 @@ def cascade_binary_old(path, n_stages, name):
         n_stages = max_stages
 
     # read stages
-    stages = [len(t.childNodes)/2 for t in trees][0:n_stages]
+    stages = [len(t.childNodes)//2 for t in trees][0:n_stages]
     stage_threshold = xmldoc.getElementsByTagName('stage_threshold')[0:n_stages]
 
     # total number of features
