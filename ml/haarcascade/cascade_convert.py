@@ -33,7 +33,7 @@ def cascade_info(path):
     stages_elements = xmldoc.getElementsByTagName('stages')
     stages = []
     for node in stages_elements[0].childNodes:
-        if node.nodeType is 1:
+        if node.nodeType == 1:
             stages.append(int(node.getElementsByTagName('maxWeakCount')[0].childNodes[0].nodeValue))
     stage_threshold = xmldoc.getElementsByTagName('stageThreshold')[0:n_stages]
 
@@ -65,7 +65,7 @@ def cascade_info_old(path):
     n_stages = len(trees)
 
     # read stages
-    stages = [len(t.childNodes)/2 for t in trees][0:n_stages]
+    stages = [len(t.childNodes)//2 for t in trees][0:n_stages]
     stage_threshold = xmldoc.getElementsByTagName('stage_threshold')[0:n_stages]
 
     # total number of features
@@ -118,12 +118,12 @@ def cascade_binary(path, n_stages, name):
     stages_elements = xmldoc.getElementsByTagName('stages')
     stages = []
     for node in stages_elements[0].childNodes:
-        if node.nodeType is 1:
+        if node.nodeType == 1:
             stages.append(int(node.getElementsByTagName('maxWeakCount')[0].childNodes[0].nodeValue))
     stage_threshold = xmldoc.getElementsByTagName('stageThreshold')[0:n_stages]
 
     # total number of features
-    n_features = sum(stages)
+    n_features = int(sum(stages))
 
     # read features threshold
     internal_nodes = xmldoc.getElementsByTagName('internalNodes')[0:n_features]
