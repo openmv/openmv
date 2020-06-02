@@ -37,7 +37,7 @@ DCMI_HandleTypeDef DCMIHandle = {0};
 
 extern uint8_t _line_buf;
 static uint8_t *dest_fb = NULL;
-static volatile int line = 0;
+static volatile int offset = 0;
 static volatile bool jpeg_buffer_overflow = false;
 static volatile bool waiting_for_data = false;
 
@@ -206,6 +206,15 @@ static void dcmi_abort()
         DCMI->CR &= ~DCMI_CR_ENABLE;
         HAL_DMA_Abort(&DMAHandle);
     }
+}
+
+// Returns true if a crop is being applied to the frame buffer.
+static bool cropped()
+{
+    return MAIN_FB()->x // needs to be zero if not being cropped.
+        || MAIN_FB()->y // needs to be zero if not being cropped.
+        || (MAIN_FB()->u != resolution[sensor.framesize][0])  // should be equal to the resolution if not cropped.
+        || (MAIN_FB()->v != resolution[sensor.framesize][1]); // should be equal to the resolution if not cropped.
 }
 
 void sensor_init0()
@@ -527,14 +536,9 @@ int sensor_write_reg(uint16_t reg_addr, uint16_t reg_data)
 
 int sensor_set_pixformat(pixformat_t pixformat)
 {
-    if ((pixformat == PIXFORMAT_JPEG)
-    && (MAIN_FB()->x // non-zero
-    ||  MAIN_FB()->y // non-zero
-    || (MAIN_FB()->u != resolution[sensor.framesize][0]) // it was changed
-    || (MAIN_FB()->v != resolution[sensor.framesize][1]) // it was changed
-    || sensor.transpose
-    || sensor.auto_rotation)) {
-        return -1;
+    if (sensor.pixformat == pixformat) {
+        // No change
+        return 0;
     }
 
     // sensor_check_buffsize() will switch from PIXFORMAT_BAYER to PIXFORMAT_RGB565 to try to fit
@@ -542,6 +546,10 @@ int sensor_set_pixformat(pixformat_t pixformat)
     // and that would be bigger than the RAM buffer we would just switch back.
     //
     // So, just short-circuit doing any work.
+    //
+    // This code is explicitly here to allow users to set the resolution to RGB565 and have it
+    // switch to BAYER only once even though they are setting the resolution to RGB565 repeatedly
+    // in a loop. Only RGB565->BAYER has this problem and needs this fix because of sensor_check_buffsize().
     if ((sensor.pixformat == PIXFORMAT_BAYER)
     &&  (pixformat == PIXFORMAT_RGB565)
     &&  (MAIN_FB()->u * MAIN_FB()->v * 2 > OMV_RAW_BUF_SIZE)
@@ -550,9 +558,9 @@ int sensor_set_pixformat(pixformat_t pixformat)
         return 0;
     }
 
-    if (sensor.pixformat == pixformat) {
-        // No change
-        return 0;
+    // Cropping and transposing (and thus auto rotation) don't work in JPEG mode.
+    if ((pixformat == PIXFORMAT_JPEG) && (cropped() || sensor.transpose || sensor.auto_rotation)) {
+        return -1;
     }
 
     dcmi_abort();
@@ -939,8 +947,8 @@ static void sensor_check_buffsize()
         sensor_set_pixformat(PIXFORMAT_BAYER);
         bpp = 1;
 
-        // MAIN_FB() fits, we are done.
-        if ((MAIN_FB()->u * MAIN_FB()->v * bpp) <= OMV_RAW_BUF_SIZE) {
+        // MAIN_FB() fits, we are done (bpp is 1).
+        if (MAIN_FB()->u * MAIN_FB()->v <= OMV_RAW_BUF_SIZE) {
             return;
         }
     }
@@ -1093,7 +1101,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             // length in every line, followed by valid image data. Dummy data (0xFF) may be used as
             // padding at each line end if the current valid image data is less than the line width.
             //
-            // In this mode `line` holds the size of all jpeg data transferred.
+            // In this mode `offset` holds the size of all jpeg data transferred.
             //
             // Note: We are using this mode for the OV5640 because it allows us to use the line
             // buffers to fifo the JPEG image data input so we can handle SDRAM refresh hiccups
@@ -1101,12 +1109,12 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             //
             uint16_t size = __REV16(*src16);
             // Prevent a buffer overflow when writing the jpeg data.
-            if (line + size > OMV_RAW_BUF_SIZE) {
+            if (offset + size > OMV_RAW_BUF_SIZE) {
                 jpeg_buffer_overflow = true;
                 return;
             }
-            unaligned_memcpy(MAIN_FB()->pixels + line, src16 + 1, size);
-            line += size;
+            unaligned_memcpy(MAIN_FB()->pixels + offset, src16 + 1, size);
+            offset += size;
         } else {
             // JPEG MODE 3:
             //
@@ -1114,7 +1122,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             // different from the other line (there is no dummy data). In each frame, the line
             // number may be different.
             //
-            // In this mode `line` will be incremented by one after 262,140 Bytes have been
+            // In this mode `offset` will be incremented by one after 262,140 Bytes have been
             // transferred. If 524,280 Bytes have been transferred line will be incremented again.
             // The DMA counter must be used to get the amount of data transferred between.
             //
@@ -1122,23 +1130,23 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             // is not optimal. However, it works okay for the OV2640 since the PCLK is much lower
             // than the OV5640 PCLK. The OV5640 drops data in this mode. Hence using mode 4 above.
             //
-            line += 1;
+            offset += 1;
         }
         return;
     }
 
     // Implement per line, per pixel cropping, and image transposing (for image rotation) in
     // in software using the CPU to transfer the image from the line buffers to the frame buffer.
-    if (line >= MAIN_FB()->y && line <= (MAIN_FB()->y + MAIN_FB()->h)) {
+    if (offset >= MAIN_FB()->y && offset <= (MAIN_FB()->y + MAIN_FB()->h)) {
         if (!sensor.transpose) {
             switch (sensor.pixformat) {
                 case PIXFORMAT_BAYER:
-                    dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                    dst += (offset - MAIN_FB()->y) * MAIN_FB()->w;
                     src += MAIN_FB()->x;
                     unaligned_memcpy(dst, src, MAIN_FB()->w);
                     break;
                 case PIXFORMAT_GRAYSCALE:
-                    dst += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                    dst += (offset - MAIN_FB()->y) * MAIN_FB()->w;
                     if (sensor.gs_bpp == 1) {
                         // 1BPP GRAYSCALE.
                         src += MAIN_FB()->x;
@@ -1151,7 +1159,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                     break;
                 case PIXFORMAT_YUV422:
                 case PIXFORMAT_RGB565:
-                    dst16 += (line - MAIN_FB()->y) * MAIN_FB()->w;
+                    dst16 += (offset - MAIN_FB()->y) * MAIN_FB()->w;
                     src16 += MAIN_FB()->x;
                     unaligned_memcpy(dst16, src16, MAIN_FB()->w * sizeof(uint16_t));
                     break;
@@ -1161,7 +1169,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         } else {
             switch (sensor.pixformat) {
                 case PIXFORMAT_BAYER:
-                    dst += line - MAIN_FB()->y;
+                    dst += offset - MAIN_FB()->y;
                     src += MAIN_FB()->x;
                     for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
                         *dst = *src++;
@@ -1169,7 +1177,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                     }
                     break;
                 case PIXFORMAT_GRAYSCALE:
-                    dst += line - MAIN_FB()->y;
+                    dst += offset - MAIN_FB()->y;
                     if (sensor.gs_bpp == 1) {
                         src += MAIN_FB()->x;
                         // 1BPP GRAYSCALE.
@@ -1188,7 +1196,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                     break;
                 case PIXFORMAT_YUV422:
                 case PIXFORMAT_RGB565:
-                    dst16 += line - MAIN_FB()->y;
+                    dst16 += offset - MAIN_FB()->y;
                     src16 += MAIN_FB()->x;
                     for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
                         *dst16 = *src16++;
@@ -1201,7 +1209,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         }
     }
 
-    line++;
+    offset++;
 }
 
 // This is the default snapshot function, which can be replaced in sensor_init functions. This function
@@ -1284,20 +1292,20 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             }
             break;
         default:
-            return -1; // Error out if the pixformat is not set.
+            return -2; // Error out if the pixformat is not set.
     }
 
     // Error out if the frame size wasn't set or the line width is larger than the camera line buffers.
     if ((!length) || (((length / h) > (OMV_LINE_BUF_SIZE / 2)) && (addr == ((uint32_t) &_line_buf)))) {
-        return -1;
+        return -3;
     }
 
     // If two frames fit in ram, use double buffering in streaming mode.
     doublebuf = ((length*2) <= OMV_RAW_BUF_SIZE);
 
     do {
-        // Clear the line counter variable before we allow more data to be received.
-        line = 0;
+        // Clear the offset counter variable before we allow more data to be received.
+        offset = 0;
 
         // Clear jpeg error flag before we allow more data to be received.
         jpeg_buffer_overflow = false;
@@ -1392,7 +1400,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 }
                 #endif
 
-                return -1;
+                return -4;
             }
         }
 
@@ -1412,7 +1420,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
 
         // The JPEG in the frame buffer is actually invalid.
         if (jpeg_buffer_overflow) {
-            return -1;
+            return -5;
         }
 
         // After the above loop we have received all data in the frame. The DCMI hardware is left
@@ -1450,13 +1458,13 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 break;
             case PIXFORMAT_JPEG:
                 if (sensor->chip_id == OV5640_ID) {
-                    // Line contains the sum of all the bytes transferred from the line buffers
+                    // Offset contains the sum of all the bytes transferred from the offset buffers
                     // while in DCMI_DMAConvCpltUser().
-                    MAIN_FB()->bpp = line;
+                    MAIN_FB()->bpp = offset;
                 } else {
-                    // line contains the number of MAX_XFER_SIZE transfers completed. To get the number of bytes transferred
+                    // Offset contains the number of MAX_XFER_SIZE transfers completed. To get the number of bytes transferred
                     // within a transfer we have to look at the DMA counter and see how much data was moved.
-                    MAIN_FB()->bpp = (line * MAX_XFER_SIZE) + ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+                    MAIN_FB()->bpp = (offset * MAX_XFER_SIZE) + ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
 
                     // DMA has most likely corrupted FB alloc state and or more.
                     if (MAIN_FB()->bpp > OMV_RAW_BUF_SIZE) {
