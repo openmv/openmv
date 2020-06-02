@@ -91,9 +91,11 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
 #endif // MICROPY_PY_IMU
 
     mp_obj_t image = py_image(0, 0, 0, 0);
+    // Note: OV2640 JPEG mode can __fatal_error().
+    int ret = sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), NULL);
 
-    if (sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), NULL) == -1) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_RuntimeError, "Sensor Timeout"));
+    if (ret < 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_RuntimeError, "Capture Failed: %d", ret));
     }
 
     return image;
@@ -111,7 +113,7 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
     uint32_t millis = systick_current_millis();
 
     if (!n_args) {
-        while ((systick_current_millis() - millis) < time) { // 32-bit math handles wrap arrounds...
+        while ((systick_current_millis() - millis) < time) { // 32-bit math handles wrap around...
             py_sensor_snapshot(0, NULL, NULL);
         }
     } else {

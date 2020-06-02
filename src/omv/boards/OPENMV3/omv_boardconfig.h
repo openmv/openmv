@@ -82,7 +82,7 @@
 #define OMV_STACK_SIZE      (4K)
 #define OMV_HEAP_SIZE       (54K)
 
-#define OMV_LINE_BUF_SIZE   (3K)    // Image line buffer round(640 * 2BPP * 2 buffers).
+#define OMV_LINE_BUF_SIZE   (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
 #define OMV_VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE    (32K)   // Flash filesystem cache

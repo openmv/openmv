@@ -230,6 +230,10 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t h = resolution[framesize][1];
     bool vflip;
 
+    if ((w > 640) || (h > 480)) {
+        return -1;
+    }
+
     // Write MSBs
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, HOUTSIZE, w>>2);
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, VOUTSIZE, h>>1);
