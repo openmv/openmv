@@ -1,4 +1,17 @@
 # Change Log
+## [3.6.4](https://github.com/openmv/openmv/releases/tag/v3.6.4) (2020-6-03)
+* Fix OV5640 imaging modes.
+* Fix floating point scaling in TensorFlow code.
+* Fix software JPEG encode of 1-bpp images.
+* Fix grayscale SW JPEG compression for YCbCr colorspace.
+* Fix flipped bayer images on OV7725 and OV7690.
+* Improved OV5640 FPS.
+* Improved sensor driver for higher FPS.
+* Harden sensor driver code.
+* Support debayering for get_pixel in bayer mode.
+* Update cascade converter to work with Python3.
+* Add rtsp support.
+
 ## [3.6.3](https://github.com/openmv/openmv/releases/tag/v3.6.3) (2020-5-16)
 * Update TF to support uint8/int8/float32
 * Re-enable TF on OMV3/F7.
