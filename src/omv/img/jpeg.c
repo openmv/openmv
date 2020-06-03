@@ -82,7 +82,7 @@ static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0
                 if (y+y_offset == 0) // top line, don't read the line below
                    prev_offset = w2; // use the next line twice
                 else if (y+y_offset == img->h-1) // bottom line
-                   next_offset = -w2; // use previous line twice                   
+                   next_offset = -w2; // use previous line twice
                 // Prepare current pixels
                 if (x_offset == 0) { // left edge, don't read beyond it
                     l0 = s[prev_offset];
@@ -265,7 +265,7 @@ static uint8_t *get_mcu()
             break;
         }
         case 3:
-            bayer_to_ycbcr(jpeg_enc.img, jpeg_enc.x_offset, jpeg_enc.y_offset, Y0, CB, CR, 0); 
+            bayer_to_ycbcr(jpeg_enc.img, jpeg_enc.x_offset, jpeg_enc.y_offset, Y0, CB, CR, 0);
             break;
     }
 
@@ -373,6 +373,15 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 #endif
 
     HAL_JPEG_DeInit(&JPEG_Handle);
+
+    if (!jpeg_enc.overflow) {
+        // Clean trailing data.
+        while ((dst->bpp >= 2)
+            && ((dst->pixels[dst->bpp-2] != 0xFF)
+            || (dst->pixels[dst->bpp-1] != 0xD9))) {
+            dst->bpp -= 1;
+        }
+    }
 
     return jpeg_enc.overflow;
 }
@@ -923,7 +932,7 @@ void jpeg_get_mcu(image_t *img, int mcu_w, int mcu_h, int x_offs, int y_offs, in
                     mcu32[0] = pRow[0] ^ 0x80808080; // do 4 pixels at a time and "subtract" 128
                     mcu32[1] = pRow[1] ^ 0x80808080;
                     mcu32 += 2;
-                } 
+                }
             }
             break;
         }
@@ -1095,7 +1104,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
 
-				pY += 2; pRow += 2;
+                                pY += 2; pRow += 2;
                             } // for tx
                         } // for ty
 
@@ -1161,14 +1170,14 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                                 b = rb528_table[(pixel >> 8) & 0x1f];
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[8] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
-                                
+
                                 pixel = pRow[1+src->w]; // bottom right
                                 r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
                                 g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
                                 b = rb528_table[(pixel >> 8) & 0x1f];
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[9] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
-				pY += 2; pU++; pV++; pRow += 2;
+                                pY += 2; pU++; pV++; pRow += 2;
                             } // for tx
                         } // for ty
 
