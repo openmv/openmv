@@ -33,11 +33,6 @@ mp_obj_t py_clock_fps(mp_obj_t clock_obj)
     clock->t_frame++;
     clock->t_ticks += (systick_current_millis()-clock->t_start);
     float fps = 1000.0f / (clock->t_ticks/(float)clock->t_frame);
-    if (clock->t_ticks >= 2000) {
-        // Reset the FPS clock every 2s
-        clock->t_frame = 0;
-        clock->t_ticks = 0;
-    }
     return mp_obj_new_float(fps);
 }
 
