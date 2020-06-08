@@ -226,31 +226,6 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     return ret;
 }
 
-static int set_contrast(sensor_t *sensor, int level)
-{
-    return 0;
-}
-
-static int set_brightness(sensor_t *sensor, int level)
-{
-    return 0;
-}
-
-static int set_saturation(sensor_t *sensor, int level)
-{
-    return 0;
-}
-
-static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
-{
-    return 0;
-}
-
-static int set_quality(sensor_t *sensor, int quality)
-{
-    return 0;
-}
-
 static int set_colorbar(sensor_t *sensor, int enable)
 {
     uint16_t test;
@@ -260,11 +235,6 @@ static int set_colorbar(sensor_t *sensor, int enable)
           | ((enable != 0) ? (MT9V034_TEST_PATTERN_ENABLE | MT9V034_TEST_PATTERN_GRAY_VERTICAL) : 0));
     ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
     return ret;
-}
-
-static int set_special_effect(sensor_t *sensor, sde_t sde)
-{
-    return 0;
 }
 
 static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
@@ -346,16 +316,6 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     return ret;
 }
 
-static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
-{
-    return 0;
-}
-
-static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
-{
-    return 0;
-}
-
 static int set_hmirror(sensor_t *sensor, int enable)
 {
     uint16_t read_mode;
@@ -422,21 +382,13 @@ int mt9v034_init(sensor_t *sensor)
     sensor->write_reg           = write_reg;
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
-    sensor->set_contrast        = set_contrast;
-    sensor->set_brightness      = set_brightness;
-    sensor->set_saturation      = set_saturation;
-    sensor->set_gainceiling     = set_gainceiling;
-    sensor->set_quality         = set_quality;
     sensor->set_colorbar        = set_colorbar;
     sensor->set_auto_gain       = set_auto_gain;
     sensor->get_gain_db         = get_gain_db;
     sensor->set_auto_exposure   = set_auto_exposure;
     sensor->get_exposure_us     = get_exposure_us;
-    sensor->set_auto_whitebal   = set_auto_whitebal;
-    sensor->get_rgb_gain_db     = get_rgb_gain_db;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
-    sensor->set_special_effect  = set_special_effect;
     sensor->set_lens_correction = set_lens_correction;
     sensor->ioctl               = ioctl;
 
