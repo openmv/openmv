@@ -423,7 +423,7 @@ int main(void)
     // NOTE: Cache should be disabled on M7.
     //SCnSCB->ACTLR |= SCnSCB_ACTLR_DISDEFWBUF_Msk;
 
-    // STM32F4xx HAL library initialization:
+    // STM32Fxxx HAL library initialization:
     //  - Set NVIC Group Priority to 4
     //  - Configure the Flash prefetch, instruction and Data caches
     //  - Configure the Systick to generate an interrupt each 1 msec
