@@ -603,7 +603,7 @@ mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int alpha = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
     PY_ASSERT_TRUE_MSG((0 <= alpha) && (alpha <= 256), "Error: 0 <= alpha <= 256!");
 
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args, 
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args,
                                                   MP_OBJ_NEW_QSTR(MP_QSTR_scale));
     if (scale_obj) {
         mp_obj_t *arg_scale;
@@ -788,7 +788,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         arg_other->h = image.h;
         arg_other->bpp = image.bpp;
     }
- 
+
     mp_obj_t snapshot = py_image_from_struct(&image);
 
     mp_obj_t *new_args = xalloc((2 + n_args) * sizeof(mp_obj_t));

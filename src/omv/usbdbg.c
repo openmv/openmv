@@ -197,12 +197,8 @@ void usbdbg_data_out(void *buffer, int length)
             break;
 
         case USBDBG_TEMPLATE_SAVE: {
-            image_t image ={
-                .w = MAIN_FB()->w,
-                .h = MAIN_FB()->h,
-                .bpp = MAIN_FB()->bpp,
-                .pixels = MAIN_FB()->pixels
-            };
+            image_t image;
+            framebuffer_initialize_image(&image);
 
             // null terminate the path
             length = (length == 64) ? 63:length;
@@ -218,12 +214,8 @@ void usbdbg_data_out(void *buffer, int length)
         }
 
         case USBDBG_DESCRIPTOR_SAVE: {
-            image_t image ={
-                .w = MAIN_FB()->w,
-                .h = MAIN_FB()->h,
-                .bpp = MAIN_FB()->bpp,
-                .pixels = MAIN_FB()->pixels
-            };
+            image_t image;
+            framebuffer_initialize_image(&image);
 
             // null terminate the path
             length = (length == 64) ? 63:length;
@@ -358,5 +350,3 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             break;
     }
 }
-
-
