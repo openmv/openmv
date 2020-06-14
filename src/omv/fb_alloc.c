@@ -12,7 +12,7 @@
 #include "omv_boardconfig.h"
 
 extern char _fballoc;
-static char *pointer = &_fballoc;
+static char *pointer = &_fballoc, *pointer_tmp = &_fballoc;
 static int marks = 0;
 #if defined(FB_ALLOC_STATS)
 static uint32_t alloc_bytes;
@@ -33,7 +33,7 @@ __weak NORETURN void fb_alloc_fail()
 
 void fb_alloc_init0()
 {
-    pointer = &_fballoc;
+    pointer = &_fballoc, pointer_tmp = &_fballoc;
     marks = 0;
     #if defined(OMV_FB_OVERLAY_MEMORY)
     pointer_overlay = &_fballoc_overlay;
@@ -217,4 +217,12 @@ void fb_free_all()
         pointer += size; // Get size and pop.
     }
     marks = 0;
+}
+
+void fb_alloc_test_allocation_changed(void (*callback)(void))
+{
+    if (pointer_tmp != pointer) {
+        callback();
+        pointer_tmp = pointer;
+    }
 }

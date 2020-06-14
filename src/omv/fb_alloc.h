@@ -23,4 +23,6 @@ void *fb_alloc_all(uint32_t *size, int hints); // returns pointer and sets size
 void *fb_alloc0_all(uint32_t *size, int hints); // returns pointer and sets size
 void fb_free();
 void fb_free_all();
+// Executes callback if the allocation changed since the last call (excluding init0).
+void fb_alloc_test_allocation_changed(void (*callback)(void));
 #endif /* __FF_ALLOC_H__ */
