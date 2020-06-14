@@ -36,10 +36,15 @@ DMA_HandleTypeDef  DMAHandle  = {0};
 DCMI_HandleTypeDef DCMIHandle = {0};
 
 extern uint8_t _line_buf;
-static uint8_t *dest_fb = NULL;
-static volatile int offset = 0;
-static volatile bool jpeg_buffer_overflow = false;
-static volatile bool waiting_for_data = false;
+extern char _fballoc;
+extern char *fb_alloc_pointer;
+
+static char *fb_alloc_pointer_tmp = &_fballoc;
+static uint32_t frame = 0;
+static volatile uint32_t int_frame = 0;
+static volatile int offset[2] = {0, 0};
+static volatile bool jpeg_buffer_overflow[2] = {false, false};
+static volatile bool waiting_for_data[2] = {false, false};
 
 const int resolution[][2] = {
     {0,    0   },
@@ -203,6 +208,8 @@ static void dcmi_abort()
     // hardware. Note that HAL_DMA_Abort is a blocking operation. Do not use this in an interrupt.
 
     if (DCMI->CR & DCMI_CR_ENABLE) {
+        waiting_for_data[0] = false; // must be cleared before disabling the hardware
+        waiting_for_data[1] = false; // must be cleared before disabling the hardware
         DCMI->CR &= ~DCMI_CR_ENABLE;
         HAL_DMA_Abort(&DMAHandle);
     }
@@ -215,6 +222,66 @@ static bool cropped()
         || MAIN_FB()->y // needs to be zero if not being cropped.
         || (MAIN_FB()->u != resolution[sensor.framesize][0])  // should be equal to the resolution if not cropped.
         || (MAIN_FB()->v != resolution[sensor.framesize][1]); // should be equal to the resolution if not cropped.
+}
+
+// When double buffering is enabled we will cut the raw frame buffer size in half. All
+// functions that want to know the frame buffer size query this so they all will see half.
+uint32_t per_fb_framebuffer_raw_size()
+{
+    // The amount of space we have in the frame buffer includes how much is fb_alloc'ed. If the user
+    // allocates fixed frame buffers on the stack we will reduce the framebuffer size as necessary.
+    uint32_t size = (uint32_t) (fb_alloc_pointer_tmp - ((char *) MAIN_FB_START()));
+    // We don't want to give all of the frame buffer RAM to the frame buffer. So, we will limit the
+    // maximum amount of RAM we return.
+    size = IM_MIN(size, OMV_RAW_BUF_SIZE);
+    // Now divide the remaining by how many buffers we have.
+    size /= (sensor.doublebuf ? 2 : 1);
+    // Needs to be a multiple of 16 for DMA transfers...
+    return (size / 16) * 16;
+}
+
+// This gets the size of entire framebuffer given the pixformat, framesize, and double buffering.
+uint32_t fb_framebuffer_total_size()
+{
+    if (!sensor.doublebuf) {
+        // While per_fb_framebuffer_raw_size() will tell us the total size of the space reserved for the
+        // framebuffer we don't always need this much RAM. So, we will compute how much is actually used
+        // by the framebuffer.
+
+        image_t img;
+        fb_initialize_image(&img);
+        return image_size(&img);
+    } else {
+        // In double buffer mode the amount of space used is the maximum size of the first frame
+        // buffer (per_fb_framebuffer_raw_size) plus how much the driver is using of the second.
+        uint32_t bpp = 1;
+
+        // Unless it's defiantly 2 bytes per pixel assume everything else (e.g. JPEG) is 1 byte
+        // per pixel. This gives us a nice upper-bound on actual bytes in use.
+        switch (sensor.pixformat) {
+            case PIXFORMAT_RGB565:
+            case PIXFORMAT_YUV422:
+                bpp = 2;
+                break;
+            default:
+                break;
+        }
+
+        return (MAIN_FB()->u * MAIN_FB()->v * bpp) + per_fb_framebuffer_raw_size();
+    }
+}
+
+// If not in double buffering mode frame is always 0. In double buffering mode this returns the
+// address of the start of pixels for one of the frame buffers.
+static uint8_t *fb_framebuffer_pixels(int toggle)
+{
+    return MAIN_FB_START() + (sensor.doublebuf ? (per_fb_framebuffer_raw_size() * toggle) : 0); // toggle is 0 or 1.
+}
+
+// Returns the byte address of the current frame buffer pixel region start.
+uint8_t *current_fb_framebuffer_pixels()
+{
+    return fb_framebuffer_pixels(frame);
 }
 
 void sensor_init0()
@@ -458,6 +525,11 @@ int sensor_reset()
     sensor.sde           = 0;
     sensor.pixformat     = 0;
     sensor.framesize     = 0;
+    #if MICROPY_HW_SDRAM_SIZE
+    sensor.doublebuf     = true;
+    #else
+    sensor.doublebuf     = false;
+    #endif
     sensor.gainceiling   = 0;
     sensor.hmirror       = false;
     sensor.vflip         = false;
@@ -550,10 +622,11 @@ int sensor_set_pixformat(pixformat_t pixformat)
     // This code is explicitly here to allow users to set the resolution to RGB565 and have it
     // switch to BAYER only once even though they are setting the resolution to RGB565 repeatedly
     // in a loop. Only RGB565->BAYER has this problem and needs this fix because of sensor_check_buffsize().
+    uint32_t size = per_fb_framebuffer_raw_size();
     if ((sensor.pixformat == PIXFORMAT_BAYER)
     &&  (pixformat == PIXFORMAT_RGB565)
-    &&  (MAIN_FB()->u * MAIN_FB()->v * 2 > OMV_RAW_BUF_SIZE)
-    &&  (MAIN_FB()->u * MAIN_FB()->v * 1 <= OMV_RAW_BUF_SIZE)) {
+    &&  (MAIN_FB()->u * MAIN_FB()->v * 2 > size)
+    &&  (MAIN_FB()->u * MAIN_FB()->v * 1 <= size)) {
         // No change
         return 0;
     }
@@ -624,12 +697,28 @@ int sensor_set_windowing(int x, int y, int w, int h)
         return -1;
     }
 
+    dcmi_abort();
+
     // We force everything to be a multiple of 2 so that when you switch between
     // grayscale/rgb565/bayer/jpeg the frame doesn't need to move around for bayer to work.
     MAIN_FB()->x = (x / 2) * 2;
     MAIN_FB()->y = (y / 2) * 2;
     MAIN_FB()->w = MAIN_FB()->u = (w / 2) * 2;
     MAIN_FB()->h = MAIN_FB()->v = (h / 2) * 2;
+
+    return 0;
+}
+
+int sensor_set_doublebuf(bool enable)
+{
+    if (sensor.doublebuf == enable) {
+        // No change
+        return 0;
+    }
+
+    dcmi_abort();
+
+    sensor.doublebuf = enable;
 
     return 0;
 }
@@ -812,7 +901,9 @@ bool sensor_get_vflip()
 
 int sensor_set_transpose(bool enable)
 {
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
+    if ((sensor.pixformat == PIXFORMAT_JPEG)
+    // The OV5640 camera sensor runs too fast to do this.
+    || (sensor.chip_id == OV5640_ID)) {
         return -1;
     }
 
@@ -827,7 +918,9 @@ bool sensor_get_transpose()
 
 int sensor_set_auto_rotation(bool enable)
 {
-    if (sensor.pixformat == PIXFORMAT_JPEG) {
+    if ((sensor.pixformat == PIXFORMAT_JPEG)
+    // The OV5640 camera sensor runs too fast to do this.
+    || (sensor.chip_id == OV5640_ID)) {
         return -1;
     }
 
@@ -919,8 +1012,9 @@ void DCMI_VsyncExtiCallback()
 
 // To make the user experience better we automatically shrink the size of the MAIN_FB() to fit
 // within the RAM we have onboard the system.
-static void sensor_check_buffsize()
+void sensor_check_buffsize()
 {
+    uint32_t size = per_fb_framebuffer_raw_size();
     uint32_t bpp;
 
     switch (sensor.pixformat) {
@@ -938,7 +1032,7 @@ static void sensor_check_buffsize()
     }
 
     // MAIN_FB() fits, we are done.
-    if ((MAIN_FB()->u * MAIN_FB()->v * bpp) <= OMV_RAW_BUF_SIZE) {
+    if ((MAIN_FB()->u * MAIN_FB()->v * bpp) <= size) {
         return;
     }
 
@@ -948,7 +1042,7 @@ static void sensor_check_buffsize()
         bpp = 1;
 
         // MAIN_FB() fits, we are done (bpp is 1).
-        if (MAIN_FB()->u * MAIN_FB()->v <= OMV_RAW_BUF_SIZE) {
+        if ((MAIN_FB()->u * MAIN_FB()->v) <= size) {
             return;
         }
     }
@@ -995,7 +1089,7 @@ static void sensor_check_buffsize()
     }
 
     // Crop the frame buffer while keeping the aspect ratio and keeping the width/height even.
-    while (((MAIN_FB()->u * MAIN_FB()->v * bpp) > OMV_RAW_BUF_SIZE) || (MAIN_FB()->u % 2)  || (MAIN_FB()->v % 2)) {
+    while (((MAIN_FB()->u * MAIN_FB()->v * bpp) > size) || (MAIN_FB()->u % 2) || (MAIN_FB()->v % 2)) {
         MAIN_FB()->u -= u_sub;
         MAIN_FB()->v -= v_sub;
     }
@@ -1063,7 +1157,11 @@ void *unaligned_memcpy(void *dest, void *src, size_t n)
 // waiting_for_data is set to false.
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
-    waiting_for_data = false;
+    waiting_for_data[int_frame] = false;
+    // Switch the frame buffer pointer once we are done receiving the frame. In double buffer mode
+    // fb_framebuffer_pixels() will return a different address for the two buffers while in single buffer
+    // mode fb_framebuffer_pixels() will return the same address.
+    int_frame ^= 1;
 }
 
 // This function is called back after each line transfer is complete,
@@ -1073,7 +1171,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
 {
     // If snapshot was not already waiting to receive data then we have missed this frame and have
     // to drop it. So, abort this and future transfers. Snapshot will restart the process.
-    if (!waiting_for_data) {
+    if (!waiting_for_data[int_frame]) {
         DCMI->CR &= ~DCMI_CR_ENABLE;
         HAL_DMA_Abort_IT(&DMAHandle); // Note: Use HAL_DMA_Abort_IT and not HAL_DMA_Abort inside an interrupt.
         return;
@@ -1088,10 +1186,10 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
     // depth on the DCMI hardware and DMA hardware is not enough to prevent data loss.
 
     uint8_t *src = (uint8_t*) addr;
-    uint8_t *dst = (uint8_t*) dest_fb;
+    uint8_t *dst = (uint8_t*) fb_framebuffer_pixels(int_frame);
 
-    uint16_t *src16 = (uint16_t*) addr;
-    uint16_t *dst16 = (uint16_t*) dest_fb;
+    uint16_t *src16 = (uint16_t*) src;
+    uint16_t *dst16 = (uint16_t*) dst;
 
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         if (sensor.chip_id == OV5640_ID) {
@@ -1109,12 +1207,12 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             //
             uint16_t size = __REV16(*src16);
             // Prevent a buffer overflow when writing the jpeg data.
-            if (offset + size > OMV_RAW_BUF_SIZE) {
-                jpeg_buffer_overflow = true;
+            if ((offset[int_frame] + size) > per_fb_framebuffer_raw_size()) {
+                jpeg_buffer_overflow[int_frame] = true;
                 return;
             }
-            unaligned_memcpy(MAIN_FB()->pixels + offset, src16 + 1, size);
-            offset += size;
+            unaligned_memcpy(dst + offset[int_frame], src16 + 1, size);
+            offset[int_frame] += size;
         } else {
             // JPEG MODE 3:
             //
@@ -1130,38 +1228,38 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             // is not optimal. However, it works okay for the OV2640 since the PCLK is much lower
             // than the OV5640 PCLK. The OV5640 drops data in this mode. Hence using mode 4 above.
             //
-            offset += 1;
+            offset[int_frame] += 1;
         }
         return;
     }
 
     // Implement per line, per pixel cropping, and image transposing (for image rotation) in
     // in software using the CPU to transfer the image from the line buffers to the frame buffer.
-    if (offset >= MAIN_FB()->y && offset <= (MAIN_FB()->y + MAIN_FB()->h)) {
+    if (offset[int_frame] >= MAIN_FB()->y && offset[int_frame] <= (MAIN_FB()->y + MAIN_FB()->v)) {
         if (!sensor.transpose) {
             switch (sensor.pixformat) {
                 case PIXFORMAT_BAYER:
-                    dst += (offset - MAIN_FB()->y) * MAIN_FB()->w;
+                    dst += (offset[int_frame] - MAIN_FB()->y) * MAIN_FB()->u;
                     src += MAIN_FB()->x;
-                    unaligned_memcpy(dst, src, MAIN_FB()->w);
+                    unaligned_memcpy(dst, src, MAIN_FB()->u);
                     break;
                 case PIXFORMAT_GRAYSCALE:
-                    dst += (offset - MAIN_FB()->y) * MAIN_FB()->w;
+                    dst += (offset[int_frame] - MAIN_FB()->y) * MAIN_FB()->u;
                     if (sensor.gs_bpp == 1) {
                         // 1BPP GRAYSCALE.
                         src += MAIN_FB()->x;
-                        unaligned_memcpy(dst, src, MAIN_FB()->w);
+                        unaligned_memcpy(dst, src, MAIN_FB()->u);
                     } else {
                         // Extract Y channel from YUV.
                         src16 += MAIN_FB()->x;
-                        unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->w);
+                        unaligned_2_to_1_memcpy(dst, src16, MAIN_FB()->u);
                     }
                     break;
                 case PIXFORMAT_YUV422:
                 case PIXFORMAT_RGB565:
-                    dst16 += (offset - MAIN_FB()->y) * MAIN_FB()->w;
+                    dst16 += (offset[int_frame] - MAIN_FB()->y) * MAIN_FB()->u;
                     src16 += MAIN_FB()->x;
-                    unaligned_memcpy(dst16, src16, MAIN_FB()->w * sizeof(uint16_t));
+                    unaligned_memcpy(dst16, src16, MAIN_FB()->u * sizeof(uint16_t));
                     break;
                 default:
                     break;
@@ -1169,26 +1267,26 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         } else {
             switch (sensor.pixformat) {
                 case PIXFORMAT_BAYER:
-                    dst += offset - MAIN_FB()->y;
+                    dst += offset[int_frame] - MAIN_FB()->y;
                     src += MAIN_FB()->x;
-                    for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
                         *dst = *src++;
                         dst += h;
                     }
                     break;
                 case PIXFORMAT_GRAYSCALE:
-                    dst += offset - MAIN_FB()->y;
+                    dst += offset[int_frame] - MAIN_FB()->y;
                     if (sensor.gs_bpp == 1) {
                         src += MAIN_FB()->x;
                         // 1BPP GRAYSCALE.
-                        for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                        for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
                             *dst = *src++;
                             dst += h;
                         }
                     } else {
                         src16 += MAIN_FB()->x;
                         // Extract Y channel from YUV.
-                        for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                        for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
                             *dst = *src16++;
                             dst += h;
                         }
@@ -1196,9 +1294,9 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                     break;
                 case PIXFORMAT_YUV422:
                 case PIXFORMAT_RGB565:
-                    dst16 += offset - MAIN_FB()->y;
+                    dst16 += offset[int_frame] - MAIN_FB()->y;
                     src16 += MAIN_FB()->x;
-                    for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                    for (int i = MAIN_FB()->u, h = MAIN_FB()->v; i; i--) {
                         *dst16 = *src16++;
                         dst16 += h;
                     }
@@ -1209,26 +1307,30 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
         }
     }
 
-    offset++;
+    offset[int_frame]++;
 }
 
 // This is the default snapshot function, which can be replaced in sensor_init functions. This function
 // uses the DCMI and DMA to capture frames and each line is processed in the DCMI_DMAConvCpltUser function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
 {
-    uint32_t frame = 0;
-    bool streaming = (streaming_cb != NULL); // Streaming mode.
-    bool doublebuf = false;
+    bool streaming = streaming_cb != NULL; // Streaming mode.
     uint32_t addr, length, tick_start;
 
     // In streaming mode the image pointer must be valid.
-    if (streaming) {
-        if (image == NULL) {
-            return -1;
-        }
+    if (streaming && (image == NULL)) return -1;
 
-        // Clear the first image in to not trigger the streaming_cb in double buffer mode.
-        image->pixels = NULL;
+    // Invalidate image pixels.
+    if (image) image->pixels = NULL;
+
+    // If a user statically allocates buffers we will respect these when trying to figure out how
+    // much available space is in the frame buffer. However, with double buffering we have to
+    // disable the DCMI callbacks before modifying our saved pointer value. We have to save a
+    // backup copy of the fb_alloc_pointer pointer for double buffering mode since fb_alloc_pointer
+    // can change when a frame is being processed by other image library functions.
+    if (fb_alloc_pointer_tmp != fb_alloc_pointer) {
+        dcmi_abort(); // abort before changing the pointer
+        fb_alloc_pointer_tmp = fb_alloc_pointer;
     }
 
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
@@ -1239,10 +1341,6 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
     // Make sure the raw frame fits into the FB. It will be switched from RGB565 to BAYER
     // first to save space before being cropped until it fits.
     sensor_check_buffsize();
-
-    // Set the current frame buffer target used in the DMA line callback
-    // (DCMI_DMAConvCpltUser function), in both snapshot and streaming modes.
-    dest_fb = MAIN_FB()->pixels;
 
     // The user may have changed the MAIN_FB width or height on the last image so we need
     // to restore that here. We don't have to restore bpp because that's taken care of
@@ -1260,22 +1358,22 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
     uint32_t w = resolution[sensor->framesize][0];
     uint32_t h = resolution[sensor->framesize][1];
 
-    // Setup the size and address of the transfer
+    // Setup the size and address of the transfer.
     switch (sensor->pixformat) {
         case PIXFORMAT_GRAYSCALE:
             // 1/2BPP Grayscale.
-            length = (w * h * sensor->gs_bpp);
+            length = w * h * sensor->gs_bpp;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_RGB565:
         case PIXFORMAT_YUV422:
             // RGB/YUV read 2 bytes per pixel.
-            length = (w * h * 2);
+            length = w * h * 2;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_BAYER:
-            // BAYER/RAW: 1 byte per pixel
-            length = (w * h * 1);
+            // BAYER/RAW 1 byte per pixel
+            length = w * h * 1;
             addr = (uint32_t) &_line_buf;
             break;
         case PIXFORMAT_JPEG:
@@ -1288,7 +1386,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 // The JPEG image will be directly transferred to the frame buffer.
                 // The DCMI hardware can transfer up to 524,280‬ bytes.
                 length = MAX_XFER_SIZE * 2;
-                addr = (uint32_t) (MAIN_FB()->pixels);
+                addr = (uint32_t) NULL; // set below
             }
             break;
         default:
@@ -1300,25 +1398,59 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         return -3;
     }
 
-    // If two frames fit in ram, use double buffering in streaming mode.
-    doublebuf = ((length*2) <= OMV_RAW_BUF_SIZE);
-
     do {
-        // Clear the offset counter variable before we allow more data to be received.
-        offset = 0;
 
-        // Clear jpeg error flag before we allow more data to be received.
-        jpeg_buffer_overflow = false;
+        // Sync to whatever the interrupt driver is pointing at. In single buffer mode while we use
+        // two sets of flags the frame buffer is always in the same place. Anyway, in single buffer
+        // mode the waiting_for_data will always be false when entering the loop. Us making it high
+        // just prevents the continuous transfer from aborting.
+        //
+        // In double buffer mode waiting_for_data will be false on the first iteration of the loop.
+        // Afterwards it will be high on each loop entry if we are able to keep up which will cause
+        // the spin loop to exit immediately.
+        frame = int_frame;
 
-        // If DCMI_DMAConvCpltUser() happens before waiting_for_data = true; below then the
-        // transfer is stopped and it will be re-enabled again right afterwards. We know the
-        // transfer was stopped by checking DCMI_CR_ENABLE.
+        if ((!waiting_for_data[frame])
+        // In double buffer mode the frame is fresh still if the DCMI hardware is still running.
+        // It's fine to just grab that frame. This optimization is not acceptable for single
+        // buffer mode as we would never set the waiting_for_data flag to true...
+        && ((!sensor->doublebuf) || (!(DCMI->CR & DCMI_CR_ENABLE)))) {
+            // Clear the offset counter variable before we allow more data to be received.
+            offset[frame] = 0;
 
-        waiting_for_data = true;
+            // Clear jpeg error flag before we allow more data to be received.
+            jpeg_buffer_overflow[frame] = false;
+
+            // If DCMI_DMAConvCpltUser() happens before waiting_for_data = true; below then the
+            // transfer is stopped and it will be re-enabled again right afterwards. We know the
+            // transfer was stopped by checking DCMI_CR_ENABLE.
+            waiting_for_data[frame] = true;
+        }
+
+        // Kickoff a transfer to the next image data buffer if it's not already accepting data.
+        // This is the work-horse that starts the next double buffer transfer each frame.
+        if (sensor->doublebuf && (!waiting_for_data[frame ^ 1])) {
+            offset[frame ^ 1] = 0;
+            jpeg_buffer_overflow[frame ^ 1] = false;
+            waiting_for_data[frame ^ 1] = true;
+        }
+
+        // Get the frame buffer address.
+        uint8_t *pixels = current_fb_framebuffer_pixels();
+
+        // In the special case of JPEG mode on the OV2640 we need to set the address of where the
+        // DMA hardware will drop data ourselves...
+        if (!addr) {
+            addr = (uint32_t) pixels;
+        }
 
         // We will be in one of the following states now:
         // 1. No transfer is currently running right now and DCMI_CR_ENABLE is not set.
         // 2. A transfer is running and we are waiting for the data to be received.
+        //
+        // Note that while we sample DCMI_CR_ENABLE again below this is used to restart the DCMI
+        // transfer and has nothing to do with our policy decision on if a a frame is fresh or
+        // not which we decide in the logic above.
 
         // We are not using DCMI_CR_CAPTURE because when this bit is cleared to stop the continuous transfer it does not actually go
         // low until the end of the frame (yes, you read that right). DCMI_CR_ENABLE stops the capture when cleared and stays low.
@@ -1366,14 +1498,6 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         // DCMI_DMAConvCpltUser() will start triggering now. Since waiting_for_data = true; the
         // data will be transferred to the frame buffer.
 
-        // Before we wait for the next frame try to get some work done. If we are in double buffer
-        // mode then we can start processing the previous image buffer.
-        if (streaming_cb && doublebuf && image->pixels != NULL) {
-            // Call streaming callback function with previous frame.
-            // Note: Image pointer should Not be NULL in streaming mode.
-            streaming = streaming_cb(image);
-        }
-
         // In camera sensor JPEG mode 4 we will not necessarily see every line in the frame and
         // in camera sensor JPEG mode 3 we will definitely not see every line in the frame. Given
         // this, we need to enable the end of frame interrupt before we have necessarily
@@ -1384,16 +1508,22 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
         }
 
+        // We have plenty of time right now to execute a call back before we wait for the image to
+        // be received. The call back will be executed on the second time around the loop.
+        if (streaming_cb && image->pixels) {
+            streaming = streaming_cb(image);
+        }
+
         // Wait for the frame data. __WFI() below will exit right on time because of DCMI_IT_FRAME.
         // While waiting SysTick will trigger allowing us to timeout.
-        for (tick_start = HAL_GetTick(); waiting_for_data; ) {
+        for (tick_start = HAL_GetTick(); waiting_for_data[frame]; ) {
             __WFI();
 
             // If we haven't exited this loop before the timeout then we need to abort the transfer.
             if ((HAL_GetTick() - tick_start) >= 3000) {
-                waiting_for_data = false;
                 dcmi_abort();
 
+                // We're done receiving data.
                 #if defined(DCMI_FSYNC_PIN)
                 if (SENSOR_HW_FLAGS_GET(sensor, SENSOR_HW_FLAGS_FSYNC)) {
                     DCMI_FSYNC_LOW();
@@ -1418,8 +1548,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         }
         #endif
 
-        // The JPEG in the frame buffer is actually invalid.
-        if (jpeg_buffer_overflow) {
+        // The JPEG in the frame buffer is actually invalid as we experienced a buffer overflow.
+        // That said, don't abort the DCMI transfer as the next frame could be valid...
+        if (jpeg_buffer_overflow[frame]) {
             return -5;
         }
 
@@ -1449,8 +1580,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             case PIXFORMAT_GRAYSCALE:
                 MAIN_FB()->bpp = 1;
                 break;
-            case PIXFORMAT_YUV422:
             case PIXFORMAT_RGB565:
+            case PIXFORMAT_YUV422:
                 MAIN_FB()->bpp = 2;
                 break;
             case PIXFORMAT_BAYER:
@@ -1460,14 +1591,14 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                 if (sensor->chip_id == OV5640_ID) {
                     // Offset contains the sum of all the bytes transferred from the offset buffers
                     // while in DCMI_DMAConvCpltUser().
-                    MAIN_FB()->bpp = offset;
+                    MAIN_FB()->bpp = offset[frame];
                 } else {
                     // Offset contains the number of MAX_XFER_SIZE transfers completed. To get the number of bytes transferred
                     // within a transfer we have to look at the DMA counter and see how much data was moved.
-                    MAIN_FB()->bpp = (offset * MAX_XFER_SIZE) + ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
+                    MAIN_FB()->bpp = (offset[frame] * MAX_XFER_SIZE) + (((MAX_XFER_SIZE / 4) - __HAL_DMA_GET_COUNTER(&DMAHandle)) * 4);
 
                     // DMA has most likely corrupted FB alloc state and or more.
-                    if (MAIN_FB()->bpp > OMV_RAW_BUF_SIZE) {
+                    if (MAIN_FB()->bpp > per_fb_framebuffer_raw_size()) {
                         __fatal_error("JPEG Overflow!");
                     }
 
@@ -1475,15 +1606,18 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                     // In JPEG mode, the DMA uses the frame buffer memory directly instead of the line buffer, which is
                     // located in a cacheable region and therefore must be invalidated before the CPU can access it again.
                     // Note: The frame buffer address is 32-byte aligned, and the size is a multiple of 32-bytes for all boards.
-                    SCB_InvalidateDCache_by_Addr((uint32_t*)MAIN_FB()->pixels, OMV_RAW_BUF_SIZE);
+                    SCB_InvalidateDCache_by_Addr((uint32_t *) pixels, per_fb_framebuffer_raw_size());
                     #endif
                 }
+
                 // Clean trailing data.
-                while ((MAIN_FB()->bpp >= 2)
-                   && ((MAIN_FB()->pixels[MAIN_FB()->bpp-2] != 0xFF)
-                    || (MAIN_FB()->pixels[MAIN_FB()->bpp-1] != 0xD9))) {
-                    MAIN_FB()->bpp -= 1;
+                uint32_t bpp = MAIN_FB()->bpp;
+
+                while ((bpp >= 2) && ((pixels[bpp-2] != 0xFF) || (pixels[bpp-1] != 0xD9))) {
+                    bpp -= 1;
                 }
+
+                MAIN_FB()->bpp = bpp;
                 break;
             default:
                 break;
@@ -1498,32 +1632,10 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             image->w = MAIN_FB()->w;
             image->h = MAIN_FB()->h;
             image->bpp = MAIN_FB()->bpp;
-            image->pixels = MAIN_FB()->pixels;
-
-            if (streaming_cb) {
-                // In streaming mode, either switch frame buffers in double buffer mode,
-                // or call the streaming callback with the main FB in single buffer mode.
-                if (doublebuf == false) {
-                    // In single buffer mode, call streaming callback.
-                    streaming = streaming_cb(image);
-                } else {
-                    // In double buffer mode, switch frame buffers.
-                    if (frame == 0) {
-                        image->pixels = MAIN_FB()->pixels;
-                        // Next frame will be transferred to the second half.
-                        dest_fb = MAIN_FB()->pixels + length;
-                    } else {
-                        image->pixels = MAIN_FB()->pixels + length;
-                        // Next frame will be transferred to the first half.
-                        dest_fb = MAIN_FB()->pixels;
-                    }
-
-                    // Switch frame buffers.
-                    frame ^= 1;
-                }
-            }
+            image->pixels = pixels;
         }
-    } while (streaming == true);
+
+    } while (streaming);
 
     return 0;
 }

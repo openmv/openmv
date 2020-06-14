@@ -163,6 +163,7 @@ typedef struct _sensor {
     sde_t sde;                  // Special digital effects
     pixformat_t pixformat;      // Pixel format
     framesize_t framesize;      // Frame size
+    bool doublebuf;             // Double buffering
     gainceiling_t gainceiling;  // AGC gainceiling
     bool hmirror;               // Horizontal Mirror
     bool vflip;                 // Vertical Flip
@@ -201,6 +202,15 @@ typedef struct _sensor {
 // Resolution table
 extern const int resolution[][2];
 
+// This gets the size of entire framebuffer max byte allocation for 1 image buffer.
+uint32_t per_fb_framebuffer_raw_size();
+
+// This gets the size of entire framebuffer given the pixformat, framesize, and double buffering.
+uint32_t fb_framebuffer_total_size();
+
+// Returns the byte address of the current frame buffer pixel region start.
+uint8_t *current_fb_framebuffer_pixels();
+
 // Initialize the sensor hardware and probe the image sensor.
 int sensor_init();
 
@@ -233,6 +243,9 @@ int sensor_set_framesize(framesize_t framesize);
 
 // Set window size.
 int sensor_set_windowing(int x, int y, int w, int h);
+
+// Enable/disable the double buffering mode.
+int sensor_set_doublebuf(bool enable);
 
 // Set the sensor contrast level (from -3 to +3).
 int sensor_set_contrast(int level);
@@ -313,6 +326,10 @@ int sensor_set_color_palette(const uint16_t *color_palette);
 // Get color palette
 const uint16_t *sensor_get_color_palette();
 
+// Adjusts the image to fit the FB.
+void sensor_check_buffsize();
+
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+
 #endif /* __SENSOR_H__ */

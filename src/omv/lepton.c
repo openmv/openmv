@@ -459,36 +459,16 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
     }
 }
 
-static int sensor_check_buffsize(sensor_t *sensor)
-{
-    int bpp=0;
-    switch (sensor->pixformat) {
-        case PIXFORMAT_BAYER:
-        case PIXFORMAT_GRAYSCALE:
-            bpp = 1;
-            break;
-        case PIXFORMAT_YUV422:
-        case PIXFORMAT_RGB565:
-            bpp = 2;
-            break;
-        default:
-            break;
-    }
-
-    if ((MAIN_FB()->w * MAIN_FB()->h * bpp) > OMV_RAW_BUF_SIZE) {
-        return -1;
-    }
-
-    return 0;
-}
-
 static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
 {
+    // Compress the framebuffer for the IDE preview, only if it's not the first frame,
+    // the framebuffer is enabled and the image sensor does not support JPEG encoding.
+    // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
     fb_update_jpeg_buffer();
 
-    if (sensor_check_buffsize(sensor) == -1) {
-        return -1;
-    }
+    // Make sure the raw frame fits into the FB. It will be switched from RGB565 to BAYER
+    // first to save space before being cropped until it fits.
+    sensor_check_buffsize();
 
     if ((!h_res) || (!v_res) || (!sensor->framesize) || (!sensor->pixformat)) {
         return -1;

@@ -8,9 +8,12 @@
  *
  * Framebuffer functions.
  */
+#include <stdio.h>
 #include "mpprint.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+
+#define CONSERVATIVE_JPEG_BUF_SIZE  (OMV_JPEG_BUF_SIZE-64)
 
 extern char _fb_base;
 framebuffer_t *fb_framebuffer = (framebuffer_t *) &_fb_base;
@@ -67,24 +70,24 @@ void fb_encode_for_ide(uint8_t *ptr, image_t *img)
     *ptr++ = 0xFE;
 }
 
-uint32_t fb_buffer_size()
+void fb_initialize_image(image_t *img)
 {
-    switch (MAIN_FB()->bpp) {
-        case IMAGE_BPP_BINARY: {
-            return ((MAIN_FB()->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * MAIN_FB()->h;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            return (MAIN_FB()->w * MAIN_FB()->h) * sizeof(uint8_t);
-        }
-        case IMAGE_BPP_RGB565: {
-            return (MAIN_FB()->w * MAIN_FB()->h) * sizeof(uint16_t);
-        }
-        case IMAGE_BPP_BAYER: {
-            return MAIN_FB()->w * MAIN_FB()->h;
-        }
-        default: { // JPEG
-            return MAIN_FB()->bpp;
-        }
+    img->w = MAIN_FB()->w;
+    img->h = MAIN_FB()->h;
+    img->bpp = MAIN_FB()->bpp;
+    img->pixels = current_fb_framebuffer_pixels();
+}
+
+static void initialize_jpeg_buf_from_image(image_t *img)
+{
+    if (!img) {
+        JPEG_FB()->w = 0;
+        JPEG_FB()->h = 0;
+        JPEG_FB()->size = 0;
+    } else {
+        JPEG_FB()->w = img->w;
+        JPEG_FB()->h = img->h;
+        JPEG_FB()->size = img->bpp;
     }
 }
 
@@ -92,42 +95,41 @@ void fb_update_jpeg_buffer()
 {
     static int overflow_count = 0;
 
+    image_t src;
+    fb_initialize_image(&src);
+
     if (MAIN_FB()->streaming_enabled && JPEG_FB()->enabled) {
-        if (MAIN_FB()->bpp > 3) {
+        if (src.bpp > 3) {
             bool does_not_fit = false;
-            // Lock FB
+
             if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
-                if((OMV_JPEG_BUF_SIZE-64) < MAIN_FB()->bpp) {
-                    // image won't fit. so don't copy.
-                    JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
+                if(CONSERVATIVE_JPEG_BUF_SIZE < src.bpp) {
+                    initialize_jpeg_buf_from_image(NULL);
                     does_not_fit = true;
                 } else {
-                    memcpy(JPEG_FB()->pixels, MAIN_FB()->pixels, MAIN_FB()->bpp);
-                    JPEG_FB()->w = MAIN_FB()->w; JPEG_FB()->h = MAIN_FB()->h; JPEG_FB()->size = MAIN_FB()->bpp;
+                    initialize_jpeg_buf_from_image(&src);
+                    memcpy(JPEG_FB()->pixels, src.pixels, src.bpp);
                 }
 
-                // Unlock the framebuffer mutex
                 mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
             }
+
             if (does_not_fit) {
-                image_t out = { .w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp, .data=MAIN_FB()->pixels };
-                int new_size = fb_encode_for_ide_new_size(&out);
+                printf("Warning: JPEG too big! Trying framebuffer transfer using fallback method!\n");
+                int new_size = fb_encode_for_ide_new_size(&src);
                 fb_alloc_mark();
                 uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
-                fb_encode_for_ide(temp, &out);
+                fb_encode_for_ide(temp, &src);
                 (MP_PYTHON_PRINTER)->print_strn((MP_PYTHON_PRINTER)->data, (const char *) temp, new_size);
                 fb_alloc_free_till_mark();
             }
-        } else if (MAIN_FB()->bpp >= 0) {
-            // Lock FB
+        } else if (src.bpp >= 0) {
             if (mutex_try_lock(&JPEG_FB()->lock, MUTEX_TID_OMV)) {
-                // Set JPEG src and dst images.
-                image_t src = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=MAIN_FB()->bpp,     .pixels=MAIN_FB()->pixels};
-                image_t dst = {.w=MAIN_FB()->w, .h=MAIN_FB()->h, .bpp=(OMV_JPEG_BUF_SIZE-64),  .pixels=JPEG_FB()->pixels};
-
+                image_t dst = {.w=src.w, .h=src.h, .bpp=CONSERVATIVE_JPEG_BUF_SIZE, .pixels=JPEG_FB()->pixels};
                 // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
                 bool overflow = jpeg_compress(&src, &dst, JPEG_FB()->quality, false);
-                if (overflow == true) {
+
+                if (overflow) {
                     // JPEG buffer overflowed, reduce JPEG quality for the next frame
                     // and skip the current frame. The IDE doesn't receive this frame.
                     if (JPEG_FB()->quality > 1) {
@@ -135,21 +137,25 @@ void fb_update_jpeg_buffer()
                         overflow_count = 60;
                         JPEG_FB()->quality = IM_MAX(1, (JPEG_FB()->quality/2));
                     }
-                    JPEG_FB()->w = 0; JPEG_FB()->h = 0; JPEG_FB()->size = 0;
+
+                    initialize_jpeg_buf_from_image(NULL);
                 } else {
                     if (overflow_count) {
                         overflow_count--;
                     }
-                    // No buffer overflow, increase quality up to max quality based on frame size
-                    if (overflow_count == 0 && JPEG_FB()->quality
-                           < ((fb_buffer_size() > JPEG_QUALITY_THRESH) ? JPEG_QUALITY_LOW:JPEG_QUALITY_HIGH)) {
+
+                    // Dynamically adjust our quality if the image is huge.
+                    bool big_frame_buffer = image_size(&src) > JPEG_QUALITY_THRESH;
+                    int jpeg_quality_max = big_frame_buffer ? JPEG_QUALITY_LOW : JPEG_QUALITY_HIGH;
+
+                    // No buffer overflow, increase quality up to max quality based on frame size...
+                    if ((!overflow_count) && (JPEG_FB()->quality < jpeg_quality_max)) {
                         JPEG_FB()->quality++;
                     }
-                    // Set FB from JPEG image
-                    JPEG_FB()->w = dst.w; JPEG_FB()->h = dst.h; JPEG_FB()->size = dst.bpp;
+
+                    initialize_jpeg_buf_from_image(&dst);
                 }
 
-                // Unlock the framebuffer mutex
                 mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_OMV);
             }
         }

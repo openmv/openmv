@@ -77,8 +77,8 @@
 #define OMV_MAIN_MEMORY     CCM     // data, bss, stack and heap
 #define OMV_DMA_MEMORY      CCM     // Misc DMA buffers
 
-#define OMV_FB_SIZE         (301K)  // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE   (83K)   // minimum fb alloc size
+#define OMV_FB_SIZE         (300K)  // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE   (84K)   // minimum fb alloc size
 #define OMV_STACK_SIZE      (4K)
 #define OMV_HEAP_SIZE       (54K)
 

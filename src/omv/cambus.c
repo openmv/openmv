@@ -74,12 +74,9 @@ int cambus_deinit(I2C_HandleTypeDef *i2c)
 int cambus_scan(I2C_HandleTypeDef *i2c)
 {
     for (uint8_t addr=0x09; addr<=0x77; addr++) {
-        __disable_irq();
         if (HAL_I2C_IsDeviceReady(i2c, addr << 1, 10, I2C_TIMEOUT) == HAL_OK) {
-            __enable_irq();
             return (addr << 1);
         }
-        __enable_irq();
     }
 
     return 0;
@@ -97,12 +94,10 @@ int cambus_readb(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uin
 {
     int ret = 0;
 
-    __disable_irq();
     if((HAL_I2C_Master_Transmit(i2c, slv_addr, &reg_addr, 1, I2C_TIMEOUT) != HAL_OK)
     || (HAL_I2C_Master_Receive (i2c, slv_addr, reg_data, 1, I2C_TIMEOUT) != HAL_OK)) {
         ret = -1;
     }
-    __enable_irq();
     return ret;
 }
 
@@ -111,47 +106,39 @@ int cambus_writeb(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, ui
     int ret=0;
     uint8_t buf[] = {reg_addr, reg_data};
 
-    __disable_irq();
     if(HAL_I2C_Master_Transmit(i2c, slv_addr, buf, 2, I2C_TIMEOUT) != HAL_OK) {
         ret = -1;
     }
-    __enable_irq();
     return ret;
 }
 
 int cambus_readb2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t *reg_data)
 {
     int ret=0;
-    __disable_irq();
     if (HAL_I2C_Mem_Read(i2c, slv_addr, reg_addr,
                 I2C_MEMADD_SIZE_16BIT, reg_data, 1, I2C_TIMEOUT) != HAL_OK) {
         ret = -1;
     }
-    __enable_irq();
     return ret;
 }
 
 int cambus_writeb2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t reg_data)
 {
     int ret=0;
-    __disable_irq();
     if (HAL_I2C_Mem_Write(i2c, slv_addr, reg_addr,
                 I2C_MEMADD_SIZE_16BIT, &reg_data, 1, I2C_TIMEOUT) != HAL_OK) {
         ret = -1;
     }
-    __enable_irq();
     return ret;
 }
 
 int cambus_readw(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint16_t *reg_data)
 {
     int ret=0;
-    __disable_irq();
     if (HAL_I2C_Mem_Read(i2c, slv_addr, reg_addr,
                 I2C_MEMADD_SIZE_8BIT, (uint8_t*) reg_data, 2, I2C_TIMEOUT) != HAL_OK) {
         ret = -1;
     }
-    __enable_irq();
     *reg_data = (*reg_data >> 8) | (*reg_data << 8);
     return ret;
 }
@@ -160,24 +147,20 @@ int cambus_writew(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, ui
 {
     int ret=0;
     reg_data = (reg_data >> 8) | (reg_data << 8);
-    __disable_irq();
     if (HAL_I2C_Mem_Write(i2c, slv_addr, reg_addr,
                 I2C_MEMADD_SIZE_8BIT, (uint8_t*) &reg_data, 2, I2C_TIMEOUT) != HAL_OK) {
         ret = -1;
     }
-    __enable_irq();
     return ret;
 }
 
 int cambus_readw2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint16_t *reg_data)
 {
     int ret=0;
-    __disable_irq();
     if (HAL_I2C_Mem_Read(i2c, slv_addr, reg_addr,
                 I2C_MEMADD_SIZE_16BIT, (uint8_t*) reg_data, 2, I2C_TIMEOUT) != HAL_OK) {
         ret = -1;
     }
-    __enable_irq();
     *reg_data = (*reg_data >> 8) | (*reg_data << 8);
     return ret;
 }
@@ -186,12 +169,10 @@ int cambus_writew2(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, 
 {
     int ret=0;
     reg_data = (reg_data >> 8) | (reg_data << 8);
-    __disable_irq();
     if (HAL_I2C_Mem_Write(i2c, slv_addr, reg_addr,
                 I2C_MEMADD_SIZE_16BIT, (uint8_t*) &reg_data, 2, I2C_TIMEOUT) != HAL_OK) {
         ret = -1;
     }
-    __enable_irq();
     return ret;
 }
 

@@ -236,6 +236,10 @@ void image_copy(image_t *dst, image_t *src)
 
 size_t image_size(image_t *ptr)
 {
+    if (ptr->bpp < 0) {
+        return 0;
+    }
+
     switch (ptr->bpp) {
         case IMAGE_BPP_BINARY: {
             return IMAGE_BINARY_LINE_LEN_BYTES(ptr) * ptr->h;
@@ -543,7 +547,7 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
             r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12; // first pixel is different
             *rgbbuf++ = IM_RGB565(r, g, b);
             for (int x = xoffs+1; x < xoffs+w-1; x+=2) { // middle part
-                l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits 
+                l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
                 l1 |= (s[0] << 16);
                 l2 |= (s[w2] << 16);
                 s++;
@@ -1222,7 +1226,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
 
     int maximum_radius = fast_ceilf(maximum_diameter / 2) + 1; // +1 inclusive of final value
     float *precalculated_table = fb_alloc(maximum_radius * sizeof(float), FB_ALLOC_NO_HINT);
-    
+
     for(int i=0; i < maximum_radius; i++) {
         float r = lens_corr_diameter * i;
         precalculated_table[i] = (fast_atanf(r) / r) * zoom;
@@ -1263,7 +1267,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                             uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_right);
                             IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
                         }
-                        
+
                         if (sourceX_left >= 0 && sourceX_left < w) {
                             uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_left);
                             IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w - 1 - x, pixel);
@@ -1392,7 +1396,7 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
             break;
         }
     }
-    
+
     fb_free(); // precalculated_table
     fb_free(); // data
 }

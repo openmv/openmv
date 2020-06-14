@@ -10,9 +10,8 @@
  */
 #ifndef __FRAMEBUFFER_H__
 #define __FRAMEBUFFER_H__
-#include <stdint.h>
-#include "imlib.h"
 #include "mutex.h"
+#include "sensor.h"
 
 typedef struct framebuffer {
     int32_t x,y;
@@ -41,11 +40,11 @@ extern jpegbuffer_t *jpeg_fb_framebuffer;
 #define MAIN_FB()           (fb_framebuffer)
 #define JPEG_FB()           (jpeg_fb_framebuffer)
 
-// Use this macro to get a pointer to the free SRAM area located after the framebuffer.
-#define MAIN_FB_PIXELS()    (MAIN_FB()->pixels + fb_buffer_size())
-
-// Use this macro to get a pointer to the free SRAM area located after the framebuffer.
-#define JPEG_FB_PIXELS()    (JPEG_FB()->pixels + JPEG_FB()->size)
+// Use these macros to get the start/end addresses of the main or JPEG framebuffer.
+#define MAIN_FB_START()     (MAIN_FB()->pixels)
+#define JPEG_FB_START()     (JPEG_FB()->pixels)
+#define MAIN_FB_END()       (MAIN_FB()->pixels + fb_framebuffer_total_size())
+#define JPEG_FB_END()       (JPEG_FB()->pixels + JPEG_FB()->size)
 
 // Force fb streaming to the IDE off.
 void fb_set_streaming_enabled(bool enable);
@@ -55,9 +54,10 @@ bool fb_get_streaming_enabled();
 int fb_encode_for_ide_new_size(image_t *img);
 void fb_encode_for_ide(uint8_t *ptr, image_t *img);
 
-// Returns the main frame buffer size, factoring in pixel formats.
-uint32_t fb_buffer_size();
+// Initializes an image_t struct with the frame buffer.
+void fb_initialize_image(image_t *img);
 
 // Transfers the frame buffer to the jpeg frame buffer if not locked.
 void fb_update_jpeg_buffer();
+
 #endif /* __FRAMEBUFFER_H__ */
