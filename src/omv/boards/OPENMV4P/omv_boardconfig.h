@@ -44,7 +44,7 @@
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
 // RAW buffer size
-#define OMV_RAW_BUF_SIZE        (31457280)
+#define OMV_RAW_BUF_SIZE        (20971520)
 
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (1)
@@ -121,8 +121,8 @@
 #define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // _fballoc_overlay memory.
 #define OMV_FB_OVERLAY_MEMORY_OFFSET    (480*1024)  // _fballoc_overlay
 
-#define OMV_FB_SIZE             (30M)       // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE       (1M)        // minimum fb alloc size
+#define OMV_FB_SIZE             (20M)       // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE       (11M)       // minimum fb alloc size
 #define OMV_STACK_SIZE          (15K)
 #define OMV_HEAP_SIZE           (229K)
 #define OMV_SDRAM_SIZE          (32 * 1024 * 1024) // This needs to be here for UVC firmware.
