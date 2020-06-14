@@ -603,7 +603,7 @@ mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int alpha = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
     PY_ASSERT_TRUE_MSG((0 <= alpha) && (alpha <= 256), "Error: 0 <= alpha <= 256!");
 
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args, 
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args,
                                                   MP_OBJ_NEW_QSTR(MP_QSTR_scale));
     if (scale_obj) {
         mp_obj_t *arg_scale;
@@ -766,14 +766,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     image.data = NULL;
 
     if (copy_to_fb) {
-        MAIN_FB()->w = 0;
-        MAIN_FB()->h = 0;
-        MAIN_FB()->bpp = 0;
-        PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-        image.data = MAIN_FB()->pixels;
+        py_point_to_fb(&image);
     } else if (arg_other) {
         PY_ASSERT_TRUE_MSG((image_size(&image) <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
         image.data = arg_other->data;
@@ -784,18 +777,14 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     // Zero the image we are about to draw on.
     memset(image.data, 0, image_size(&image));
 
-    if (MAIN_FB()->pixels == image.data) {
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-    }
+    py_update_fb(&image);
 
     if (arg_other) {
         arg_other->w = image.w;
         arg_other->h = image.h;
         arg_other->bpp = image.bpp;
     }
- 
+
     mp_obj_t snapshot = py_image_from_struct(&image);
 
     mp_obj_t *new_args = xalloc((2 + n_args) * sizeof(mp_obj_t));

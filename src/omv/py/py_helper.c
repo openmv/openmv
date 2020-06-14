@@ -8,7 +8,9 @@
  *
  * Python helper functions.
  */
+#include "framebuffer.h"
 #include "py_helper.h"
+#include "omv_boardconfig.h"
 
 extern void *py_image_cobj(mp_obj_t img_obj);
 
@@ -366,4 +368,26 @@ mp_obj_t py_helper_keyword_object(uint n_args, const mp_obj_t *args, uint arg_in
     } else {
         return NULL;
     }
+}
+
+bool py_located_in_fb(image_t *img)
+{
+    return MAIN_FB()->pixels == img->data;
+}
+
+void py_update_fb(image_t *img)
+{
+    if (py_located_in_fb(img)) {
+        MAIN_FB()->w = img->w;
+        MAIN_FB()->h = img->h;
+        MAIN_FB()->bpp = img->bpp;
+    }
+}
+
+void py_point_to_fb(image_t *img)
+{
+    PY_ASSERT_TRUE_MSG((image_size(img) <= OMV_RAW_BUF_SIZE),
+            "The image doesn't fit in the frame buffer!");
+    img->data = MAIN_FB()->pixels;
+    py_update_fb(img);
 }
