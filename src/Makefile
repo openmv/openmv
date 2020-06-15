@@ -477,6 +477,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/ulab/,\
 	code/poly.o         \
 	code/ulab.o         \
 	code/vectorise.o    \
+	code/create.o		\
+	code/approx.o		\
+	code/filter.o		\
+	code/compare.o		\
+	code/extras.o		\
 	)
 endif
 
