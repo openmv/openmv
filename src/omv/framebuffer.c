@@ -155,3 +155,16 @@ void fb_update_jpeg_buffer()
         }
     }
 }
+
+
+uint8_t *framebuffer_get_buffer()
+{
+    return fb_framebuffer->pixels;
+}
+
+void framebuffer_set(int32_t w, int32_t h, int32_t bpp)
+{
+    fb_framebuffer->w = w;
+    fb_framebuffer->h = h;
+    fb_framebuffer->bpp = bpp;
+}
