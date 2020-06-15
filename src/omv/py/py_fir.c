@@ -766,14 +766,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     image.data = NULL;
 
     if (copy_to_fb) {
-        MAIN_FB()->w = 0;
-        MAIN_FB()->h = 0;
-        MAIN_FB()->bpp = 0;
-        PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-        image.data = MAIN_FB()->pixels;
+        PY_ASSERT_TRUE_MSG((image_size(&image) <= framebuffer_get_size()), "The new image won't fit in the main frame buffer!");
+        image.data = framebuffer_get_buffer();
+        framebuffer_set(image.w, image.h, image.bpp);
     } else if (arg_other) {
         PY_ASSERT_TRUE_MSG((image_size(&image) <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
         image.data = arg_other->data;
@@ -784,10 +779,8 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     // Zero the image we are about to draw on.
     memset(image.data, 0, image_size(&image));
 
-    if (MAIN_FB()->pixels == image.data) {
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
+    if (framebuffer_get_buffer() == image.data) {
+        framebuffer_set(image.w, image.h, image.bpp);
     }
 
     if (arg_other) {
