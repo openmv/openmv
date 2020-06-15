@@ -156,6 +156,45 @@ void fb_update_jpeg_buffer()
     }
 }
 
+int32_t framebuffer_get_x()
+{
+    return fb_framebuffer->x;
+}
+
+int32_t framebuffer_get_y()
+{
+    return fb_framebuffer->y;
+}
+
+int32_t framebuffer_get_u()
+{
+    return fb_framebuffer->u;
+}
+
+int32_t framebuffer_get_v()
+{
+    return fb_framebuffer->v;
+}
+
+int32_t framebuffer_get_width()
+{
+    return fb_framebuffer->w;
+}
+
+int32_t framebuffer_get_height()
+{
+    return fb_framebuffer->h;
+}
+
+int32_t framebuffer_get_depth()
+{
+    return fb_framebuffer->bpp;
+}
+
+uint32_t framebuffer_get_size()
+{
+    return OMV_RAW_BUF_SIZE;
+}
 
 uint8_t *framebuffer_get_buffer()
 {
