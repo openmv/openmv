@@ -50,4 +50,7 @@ void py_helper_keyword_thresholds(uint n_args, const mp_obj_t *args, uint arg_in
 int py_helper_arg_to_ksize(const mp_obj_t arg);
 int py_helper_ksize_to_n(int ksize);
 mp_obj_t py_helper_keyword_object(uint n_args, const mp_obj_t *args, uint arg_index, mp_map_t *kw_args, mp_obj_t kw);
+bool py_helper_is_equal_to_framebuffer(image_t *img);
+void py_helper_update_framebuffer(image_t *img);
+void py_helper_set_to_framebuffer(image_t *img);
 #endif // __PY_HELPER__

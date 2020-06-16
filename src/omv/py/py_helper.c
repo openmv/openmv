@@ -8,6 +8,7 @@
  *
  * Python helper functions.
  */
+#include "framebuffer.h"
 #include "py_helper.h"
 
 extern void *py_image_cobj(mp_obj_t img_obj);
@@ -366,4 +367,24 @@ mp_obj_t py_helper_keyword_object(uint n_args, const mp_obj_t *args, uint arg_in
     } else {
         return NULL;
     }
+}
+
+bool py_helper_is_equal_to_framebuffer(image_t *img)
+{
+    return framebuffer_get_buffer() == img->data;
+}
+
+void py_helper_update_framebuffer(image_t *img)
+{
+    if (py_helper_is_equal_to_framebuffer(img)) {
+        framebuffer_set(img->w, img->h, img->bpp);
+    }
+}
+
+void py_helper_set_to_framebuffer(image_t *img)
+{
+    PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_size()),
+            "The image doesn't fit in the frame buffer!");
+    framebuffer_set(img->w, img->h, img->bpp);
+    img->data = framebuffer_get_buffer();
 }
