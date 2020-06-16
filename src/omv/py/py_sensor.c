@@ -141,15 +141,15 @@ static mp_obj_t py_sensor_height()
 
 static mp_obj_t py_sensor_get_fb()
 {
-    if (MAIN_FB()->bpp == 0) {
+    if (framebuffer_get_depth() == 0) {
         return mp_const_none;
     }
 
     image_t image = {
-        .w      = MAIN_FB()->w,
-        .h      = MAIN_FB()->h,
-        .bpp    = MAIN_FB()->bpp,
-        .pixels = MAIN_FB()->pixels
+        .w      = framebuffer_get_width(),
+        .h      = framebuffer_get_height(),
+        .bpp    = framebuffer_get_depth(),
+        .pixels = framebuffer_get_buffer()
     };
 
     return py_image_from_struct(&image);
@@ -280,10 +280,10 @@ static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj)
 
 static mp_obj_t py_sensor_get_windowing()
 {
-    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(MAIN_FB()->x),
-                                              mp_obj_new_int(MAIN_FB()->y),
-                                              mp_obj_new_int(MAIN_FB()->u),
-                                              mp_obj_new_int(MAIN_FB()->v)});
+    return mp_obj_new_tuple(4, (mp_obj_t []) {mp_obj_new_int(framebuffer_get_x()),
+                                              mp_obj_new_int(framebuffer_get_y()),
+                                              mp_obj_new_int(framebuffer_get_u()),
+                                              mp_obj_new_int(framebuffer_get_v())});
 }
 
 static mp_obj_t py_sensor_set_gainceiling(mp_obj_t gainceiling) {

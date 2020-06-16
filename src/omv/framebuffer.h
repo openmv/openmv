@@ -61,6 +61,17 @@ uint32_t fb_buffer_size();
 // Transfers the frame buffer to the jpeg frame buffer if not locked.
 void fb_update_jpeg_buffer();
 
+int32_t framebuffer_get_x();
+int32_t framebuffer_get_y();
+int32_t framebuffer_get_u();
+int32_t framebuffer_get_v();
+
+int32_t framebuffer_get_width();
+int32_t framebuffer_get_height();
+int32_t framebuffer_get_depth();
+
+uint32_t framebuffer_get_size();
+
 // Return the current buffer address.
 uint8_t *framebuffer_get_buffer();
 
