@@ -141,17 +141,12 @@ static mp_obj_t py_sensor_height()
 
 static mp_obj_t py_sensor_get_fb()
 {
-    if (framebuffer_get_depth() == 0) {
+    if (framebuffer_get_depth() < 0) {
         return mp_const_none;
     }
 
-    image_t image = {
-        .w      = framebuffer_get_width(),
-        .h      = framebuffer_get_height(),
-        .bpp    = framebuffer_get_depth(),
-        .pixels = framebuffer_get_buffer()
-    };
-
+    image_t image;
+    framebuffer_initialize_image(&image);
     return py_image_from_struct(&image);
 }
 
