@@ -70,40 +70,40 @@ static const uint16_t default_regs[][2] = {
     {AE_CTRL,           0x01},          //Automatic Exposure
     {AE_TARGET_MEAN,    0x3C},          //AE target mean          [Def: 0x3C]
     {AE_MIN_MEAN,       0x0A},          //AE min target mean      [Def: 0x0A]
-
-    {INTEGRATION_H,     0x00},          //Integration H           [Def: 0x01]
-    {INTEGRATION_L,     0x60},          //Integration L           [Def: 0x08]
-    {ANALOG_GAIN,       0x00},          //Analog Global Gain      [Def: 0x00]
-    {DAMPING_FACTOR,    0x20},          //Damping Factor          [Def: 0x20]
-    {DIGITAL_GAIN_H,    0x01},          //Digital Gain High       [Def: 0x01]
-    {DIGITAL_GAIN_L,    0x00},          //Digital Gain Low        [Def: 0x00]
-
     {CONVERGE_IN_TH,    0x03},          //Converge in threshold   [Def: 0x03]
     {CONVERGE_OUT_TH,   0x05},          //Converge out threshold  [Def: 0x05]
     {MAX_INTG_H,        0x01},          //Maximum INTG High Byte  [Def: 0x01]
     {MAX_INTG_L,        0x54},          //Maximum INTG Low Byte   [Def: 0x54]
     {MAX_AGAIN_FULL,    0x03},          //Maximum Analog gain in full frame mode [Def: 0x03]
     {MAX_AGAIN_BIN2,    0x04},          //Maximum Analog gain in bin2 mode       [Def: 0x04]
+    {MAX_DGAIN,         0xC0},
 
-    {0x210B,            0xC0},
-    {0x210E,            0x00},          //Flicker Control
-    {0x210F,            0x00},
-    {0x2110,            0x3C},
-    {0x2111,            0x00},
-    {0x2112,            0x32},
+    {INTEGRATION_H,     0x01},          //Integration H           [Def: 0x01]
+    {INTEGRATION_L,     0x08},          //Integration L           [Def: 0x08]
+    {ANALOG_GAIN,       0x00},          //Analog Global Gain      [Def: 0x00]
+    {DAMPING_FACTOR,    0x20},          //Damping Factor          [Def: 0x20]
+    {DIGITAL_GAIN_H,    0x01},          //Digital Gain High       [Def: 0x01]
+    {DIGITAL_GAIN_L,    0x00},          //Digital Gain Low        [Def: 0x00]
 
-    {0x2150,            0x30},
+    {FS_CTRL,           0x00},          //Flicker Control
+
+    {FS_60HZ_H,         0x00},
+    {FS_60HZ_L,         0x3C},
+    {FS_50HZ_H,         0x00},
+    {FS_50HZ_L,         0x32},
+
+    {MD_CTRL,           0x30},
     {0x0340,            0x02},
     {0x0341,            0x16},
     {0x0342,            0x01},
     {0x0343,            0x78},
-    {0x3010,            0x01},
+    {0x3010,            0x00},          // no full frame
     {0x0383,            0x01},
     {0x0387,            0x01},
     {0x0390,            0x00},
     {0x3011,            0x70},
     {0x3059,            0x02},
-    {0x3060,            0x01},
+    {0x3060,            0x0B},
     {IMG_ORIENTATION,   0x01},          // change the orientation
     {0x0104,            0x01},
 
@@ -163,6 +163,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     int ret = 0;
     switch (pixformat) {
         case PIXFORMAT_BAYER:
+        case PIXFORMAT_GRAYSCALE:
             break;
         default:
             return -1;
@@ -171,15 +172,110 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     return ret;
 }
 
+static const uint16_t QVGA_regs[][2] = {
+    {0x0383,            0x01},
+    {0x0387,            0x01},
+    {0x0390,            0x00},
+        //============= End of regs marker ==================
+    {0x0000,            0x00},
+
+};
+
+static const uint16_t QQVGA_regs[][2] = {
+    {0x0383,            0x03},
+    {0x0387,            0x03},
+    {0x0390,            0x03},
+        //============= End of regs marker ==================
+    {0x0000,            0x00},
+
+};
+
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret=0;
 
-    if (framesize != FRAMESIZE_QVGA) {
+    switch (framesize) {
+        case FRAMESIZE_QVGA:
+            for (int i=0; QVGA_regs[i][0] && ret == 0; i++) {
+                ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, QVGA_regs[i][0], QVGA_regs[i][1]);
+            }
+            break;
+        case FRAMESIZE_QQVGA:
+            for (int i=0; QQVGA_regs[i][0] && ret == 0; i++) {
+                ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, QQVGA_regs[i][0], QQVGA_regs[i][1]);
+            }
+            break;
+        default: 
         ret = -1;
+            
     }
 
     return ret;
+}
+
+static int set_contrast(sensor_t *sensor, int level)
+{
+    return 0;
+}
+
+static int set_brightness(sensor_t *sensor, int level)
+{
+    return 0;
+}
+
+static int set_saturation(sensor_t *sensor, int level)
+{
+    return 0;
+}
+
+static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
+{
+    return 0;
+}
+
+static int set_quality(sensor_t *sensor, int quality)
+{
+    return 0;
+}
+
+static int set_colorbar(sensor_t *sensor, int enable)
+{
+    return 0;
+}
+
+static int set_special_effect(sensor_t *sensor, sde_t sde)
+{
+    return 0;
+}
+
+static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
+{
+    return 0;
+}
+
+static int get_gain_db(sensor_t *sensor, float *gain_db)
+{
+    return 0;
+}
+
+static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
+{
+    return 0;
+}
+
+static int get_exposure_us(sensor_t *sensor, int *exposure_us)
+{
+    return 0;
+}
+
+static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
+{
+    return 0;
+}
+
+static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
+{
+    return 0;
 }
 
 static int set_hmirror(sensor_t *sensor, int enable)
@@ -207,6 +303,19 @@ int hm01b0_init(sensor_t *sensor)
     sensor->write_reg           = write_reg;
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
+    sensor->set_contrast        = set_contrast;
+    sensor->set_brightness      = set_brightness;
+    sensor->set_saturation      = set_saturation;
+    sensor->set_gainceiling     = set_gainceiling;
+    sensor->set_quality         = set_quality;
+    sensor->set_colorbar        = set_colorbar;
+    sensor->set_special_effect  = set_special_effect;
+    sensor->set_auto_gain       = set_auto_gain;
+    sensor->get_gain_db         = get_gain_db;
+    sensor->set_auto_exposure   = set_auto_exposure;
+    sensor->get_exposure_us     = get_exposure_us;
+    sensor->set_auto_whitebal   = set_auto_whitebal;
+    sensor->get_rgb_gain_db     = get_rgb_gain_db;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
 
