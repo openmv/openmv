@@ -1303,6 +1303,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
     // If two frames fit in ram, use double buffering in streaming mode.
     doublebuf = ((length*2) <= OMV_RAW_BUF_SIZE);
 
+    HAL_DCMI_EnableCrop(&DCMIHandle);
+    HAL_DCMI_ConfigCrop(&DCMIHandle,0,0,w-1,h-1);
     do {
         // Clear the offset counter variable before we allow more data to be received.
         offset = 0;
