@@ -25,10 +25,10 @@
 #define OMV_XCLK_OSC            (2U)
 
 // Sensor external clock source.
-#define OMV_XCLK_SOURCE         (OMV_XCLK_OSC)
+#define OMV_XCLK_SOURCE         (OMV_XCLK_TIM)
 
 // Sensor external clock timer frequency.
-#define OMV_XCLK_FREQUENCY      (12000000)
+#define OMV_XCLK_FREQUENCY      (6000000)
 
 // Sensor PLL register value.
 #define OMV_OV7725_PLL_CONFIG   (0x41)  // x4
@@ -64,10 +64,10 @@
 #define OMV_UMM_BLOCK_SIZE      16
 
 //PLL1 480MHz/48MHz for USB, SDMMC and FDCAN
-#define OMV_OSC_PLL1M           (9)
-#define OMV_OSC_PLL1N           (320)
+#define OMV_OSC_PLL1M           (5)
+#define OMV_OSC_PLL1N           (160)
 #define OMV_OSC_PLL1P           (2)
-#define OMV_OSC_PLL1Q           (20)
+#define OMV_OSC_PLL1Q           (10)
 #define OMV_OSC_PLL1R           (2)
 #define OMV_OSC_PLL1VCI         (RCC_PLL1VCIRANGE_2)
 #define OMV_OSC_PLL1VCO         (RCC_PLL1VCOWIDE)
@@ -77,8 +77,8 @@
 #define OMV_CORE_VBAT           "3.0"
 
 // PLL2 180MHz for FMC and QSPI.
-#define OMV_OSC_PLL2M           (3)
-#define OMV_OSC_PLL2N           (40)
+#define OMV_OSC_PLL2M           (5)
+#define OMV_OSC_PLL2N           (72)
 #define OMV_OSC_PLL2P           (2)
 #define OMV_OSC_PLL2Q           (2)
 #define OMV_OSC_PLL2R           (2)
@@ -87,10 +87,10 @@
 #define OMV_OSC_PLL2FRAC        (0)
 
 // PLL3 160MHz for ADC and SPI123
-#define OMV_OSC_PLL3M           (9)
-#define OMV_OSC_PLL3N           (320)
+#define OMV_OSC_PLL3M           (5)
+#define OMV_OSC_PLL3N           (160)
 #define OMV_OSC_PLL3P           (2)
-#define OMV_OSC_PLL3Q           (6)
+#define OMV_OSC_PLL3Q           (5)
 #define OMV_OSC_PLL3R           (2)
 #define OMV_OSC_PLL3VCI         (RCC_PLL3VCIRANGE_2)
 #define OMV_OSC_PLL3VCO         (RCC_PLL3VCOWIDE)
@@ -144,16 +144,16 @@
 #define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_16KB
 
 /* SCCB/I2C */
-#define SCCB_I2C                (I2C1)
-#define SCCB_AF                 (GPIO_AF4_I2C1)
-#define SCCB_CLK_ENABLE()       __I2C1_CLK_ENABLE()
-#define SCCB_CLK_DISABLE()      __I2C1_CLK_DISABLE()
-#define SCCB_PORT               (GPIOB)
-#define SCCB_SCL_PIN            (GPIO_PIN_6)
-#define SCCB_SDA_PIN            (GPIO_PIN_7)
+#define SCCB_I2C                (I2C3)
+#define SCCB_AF                 (GPIO_AF4_I2C3)
+#define SCCB_CLK_ENABLE()       __I2C3_CLK_ENABLE()
+#define SCCB_CLK_DISABLE()      __I2C3_CLK_DISABLE()
+#define SCCB_PORT               (GPIOH)
+#define SCCB_SCL_PIN            (GPIO_PIN_7)
+#define SCCB_SDA_PIN            (GPIO_PIN_8)
 #define SCCB_TIMING             (I2C_TIMING_STANDARD)
-#define SCCB_FORCE_RESET()      __HAL_RCC_I2C1_FORCE_RESET()
-#define SCCB_RELEASE_RESET()    __HAL_RCC_I2C1_RELEASE_RESET()
+#define SCCB_FORCE_RESET()      __HAL_RCC_I2C3_FORCE_RESET()
+#define SCCB_RELEASE_RESET()    __HAL_RCC_I2C3_RELEASE_RESET()
 
 /* FIR I2C */
 // TODO which I2C can be used for external sensors ?
@@ -168,11 +168,18 @@
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C2_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C2_RELEASE_RESET()
 
-#define DCMI_PWDN_PIN           (GPIO_PIN_4)
-#define DCMI_PWDN_PORT          (GPIOD)
+#define DCMI_PWDN_PIN           (GPIO_PIN_13)
+#define DCMI_PWDN_PORT          (GPIOC)
 
-#define DCMI_FSIN_PIN           (GPIO_PIN_13)
-#define DCMI_FSIN_PORT          (GPIOC)
+/* DCMI */
+#define DCMI_TIM                (TIM1)
+#define DCMI_TIM_PIN            (GPIO_PIN_1)
+#define DCMI_TIM_PORT           (GPIOK)
+#define DCMI_TIM_AF             (GPIO_AF1_TIM1)
+#define DCMI_TIM_CHANNEL        (TIM_CHANNEL_1)
+#define DCMI_TIM_CLK_ENABLE()   __TIM1_CLK_ENABLE()
+#define DCMI_TIM_CLK_DISABLE()  __TIM1_CLK_DISABLE()
+#define DCMI_TIM_PCLK_FREQ()    HAL_RCC_GetPCLK2Freq()
 
 #define DCMI_D0_PIN             (GPIO_PIN_9)
 #define DCMI_D1_PIN             (GPIO_PIN_10)
@@ -209,19 +216,11 @@
 #endif
 
 #if defined(DCMI_PWDN_PIN)
-#define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
-#define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
+#define DCMI_PWDN_LOW()         HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_SET)
+#define DCMI_PWDN_HIGH()        HAL_GPIO_WritePin(DCMI_PWDN_PORT, DCMI_PWDN_PIN, GPIO_PIN_RESET)
 #else
 #define DCMI_PWDN_LOW()
 #define DCMI_PWDN_HIGH()
-#endif
-
-#if defined(DCMI_FSIN_PIN)
-#define DCMI_FSIN_LOW()         HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_RESET)
-#define DCMI_FSIN_HIGH()        HAL_GPIO_WritePin(DCMI_FSIN_PORT, DCMI_FSIN_PIN, GPIO_PIN_SET)
-#else
-#define DCMI_FSIN_LOW()
-#define DCMI_FSIN_HIGH()
 #endif
 
 #define DCMI_VSYNC_IRQN         EXTI9_5_IRQn
