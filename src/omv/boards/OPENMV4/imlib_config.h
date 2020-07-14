@@ -131,9 +131,6 @@
 // Enable find_barcodes() (42 KB)
 #define IMLIB_ENABLE_BARCODES
 
-// Enable LENET (200+ KB).
-#define IMLIB_ENABLE_LENET
-
 // Enable CMSIS NN
 #define IMLIB_ENABLE_CNN
 
