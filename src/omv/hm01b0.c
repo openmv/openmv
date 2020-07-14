@@ -106,7 +106,7 @@ static const uint16_t default_regs[][2] = {
     {0x3011,               0x70},
     {0x3059,               0x02},
     {0x3060,               0x0B},
-    {IMG_ORIENTATION,      0x01},          // change the orientation
+    {IMG_ORIENTATION,      0x00},          // change the orientation
     {0x0104,               0x01},
 
     //============= End of regs marker ==================
