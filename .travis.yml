@@ -67,6 +67,13 @@ jobs:
           paths: ~/build/$TARGET
 
     - stage: build
+      env: TARGET=PORTENTA
+      workspaces:
+        create:
+          name: PORTENTA_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+
+    - stage: build
       env: TARGET=WINC1500
       workspaces:
         create:
@@ -84,9 +91,10 @@ jobs:
           - OPENMV3_WORKSPACE
           - OPENMV4_WORKSPACE
           - OPENMV4P_WORKSPACE
+          - PORTENTA_WORKSPACE
           - WINC1500_WORKSPACE
       script:
-        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P WINC1500
+        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA WINC1500
       deploy:
         provider: releases
         api_key:
