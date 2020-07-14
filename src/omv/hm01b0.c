@@ -195,6 +195,8 @@ static const uint16_t QQVGA_regs[][2] = {
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret=0;
+    uint16_t w = resolution[framesize][0];
+    uint16_t h = resolution[framesize][1];
 
     switch (framesize) {
         case FRAMESIZE_QVGA:
@@ -208,7 +210,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             }
             break;
         default: 
-        ret = -1;
+            if (w>320 || h>320) 
+                ret = -1;
             
     }
 
