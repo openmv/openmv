@@ -418,6 +418,8 @@ uint32_t HAL_CRC_Calculate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_t
 static uint32_t CRC_Handle_8(CRC_HandleTypeDef *hcrc, uint8_t pBuffer[], uint32_t BufferLength)
 {
   uint32_t i = 0; /* input data buffer index */
+  uint16_t data;
+  __IO uint16_t *pReg;
 
    /* Processing time optimization: 4 bytes are entered in a row with a single word write,
     * last bytes must be carefully fed to the CRC calculator to ensure a correct type
@@ -435,11 +437,16 @@ static uint32_t CRC_Handle_8(CRC_HandleTypeDef *hcrc, uint8_t pBuffer[], uint32_
      }
      if(BufferLength%4 == 2)
      {
-       *(__IO uint16_t*) (&hcrc->Instance->DR) = (uint16_t)((uint16_t)((uint16_t)(pBuffer[4*i])<<8) | (uint16_t)(pBuffer[4*i+1]));
+       data = (uint16_t)((uint16_t)((uint16_t)(pBuffer[4*i])<<8) | (uint16_t)(pBuffer[4*i+1]));
+       pReg = (__IO uint16_t*) (&hcrc->Instance->DR);
+       *pReg = data;
      }
      if(BufferLength%4 == 3)
      {
-       *(__IO uint16_t*) (&hcrc->Instance->DR) = (uint16_t)((uint16_t)((uint16_t)(pBuffer[4*i])<<8) | (uint16_t)(pBuffer[4*i+1]));
+       data = (uint16_t)((uint16_t)((uint16_t)(pBuffer[4*i])<<8) | (uint16_t)(pBuffer[4*i+1]));
+       pReg = (__IO uint16_t*) (&hcrc->Instance->DR);
+       *pReg = data;
+
        *(__IO uint8_t*) (&hcrc->Instance->DR) = pBuffer[4*i+2];
      }
    }
@@ -459,6 +466,8 @@ static uint32_t CRC_Handle_8(CRC_HandleTypeDef *hcrc, uint8_t pBuffer[], uint32_
 static uint32_t CRC_Handle_16(CRC_HandleTypeDef *hcrc, uint16_t pBuffer[], uint32_t BufferLength)
 {
   uint32_t i = 0;  /* input data buffer index */
+  __IO uint16_t *pReg;
+
 
   /* Processing time optimization: 2 HalfWords are entered in a row with a single word write,
    * in case of odd length, last HalfWord must be carefully fed to the CRC calculator to ensure
@@ -469,7 +478,8 @@ static uint32_t CRC_Handle_16(CRC_HandleTypeDef *hcrc, uint16_t pBuffer[], uint3
   }
   if((BufferLength%2) != 0)
   {
-     *(__IO uint16_t*) (&hcrc->Instance->DR) = pBuffer[2*i];
+     pReg = (__IO uint16_t*) (&hcrc->Instance->DR);
+     *pReg = pBuffer[2*i];
   }
 
   /* Return the CRC computed value */

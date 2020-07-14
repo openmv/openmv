@@ -131,14 +131,15 @@
 // Enable find_barcodes() (42 KB)
 #define IMLIB_ENABLE_BARCODES
 
-// Enable LENET (200+ KB).
-#define IMLIB_ENABLE_LENET
-
 // Enable CMSIS NN
+#if !defined(CUBEAI)
 #define IMLIB_ENABLE_CNN
+#endif
 
 // Enable Tensor Flow
+#if !defined(CUBEAI)
 #define IMLIB_ENABLE_TF
+#endif
 
 // Enable FAST (20+ KBs).
 #define IMLIB_ENABLE_FAST

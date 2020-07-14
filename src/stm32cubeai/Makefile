@@ -39,12 +39,6 @@ SRCS += $(addprefix data/,\
 	network.c             \
    )
 
-# CRC is needed for cubeai to work
-SRCS += $(addprefix ../sthal/h7/src/,\
-	stm32h7xx_hal_crc.c              \
-	stm32h7xx_hal_crc_ex.c           \
-   )
-
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
 
