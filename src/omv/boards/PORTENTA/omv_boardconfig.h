@@ -41,7 +41,7 @@
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
 // RAW buffer size
-#define OMV_RAW_BUF_SIZE        (409600)
+#define OMV_RAW_BUF_SIZE        (4*1024*1024)
 
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (1)
@@ -61,7 +61,7 @@
 #define JPEG_QUALITY_HIGH       90
 
 // FB Heap Block Size
-#define OMV_UMM_BLOCK_SIZE      16
+#define OMV_UMM_BLOCK_SIZE      256
 
 //PLL1 480MHz/48MHz for USB, SDMMC and FDCAN
 #define OMV_OSC_PLL1M           (5)
@@ -110,19 +110,24 @@
 #define OMV_FFS_MEMORY          CCM         // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss, stack and heap
 #define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
-#define OMV_FB_MEMORY           AXI_SRAM    // Framebuffer, fb_alloc
-#define OMV_JPEG_MEMORY         SRAM3       // JPEG buffer memory.
+#define OMV_FB_MEMORY           DRAM        // Framebuffer, fb_alloc
+#define OMV_JPEG_MEMORY         DRAM        // JPEG buffer memory buffer.
+#define OMV_JPEG_MEMORY_OFFSET  (7M)       // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
+#define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // _fballoc_overlay memory.
+#define OMV_FB_OVERLAY_MEMORY_OFFSET    (480*1024)  // _fballoc_overlay
 
-#define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE       (96K)       // minimum fb alloc size
-#define OMV_STACK_SIZE          (12K)
-#define OMV_HEAP_SIZE           (230K)
+#define OMV_FB_SIZE             (4M)       // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE       (3M)       // minimum fb alloc size
+#define OMV_STACK_SIZE          (15K)
+#define OMV_HEAP_SIZE           (226K)
+#define OMV_SDRAM_SIZE          (8 * 1024 * 1024) // This needs to be here for UVC firmware.
+#define OMV_SDRAM_TEST          (0)
 
-#define OMV_LINE_BUF_SIZE       (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
+#define OMV_LINE_BUF_SIZE       (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE        (12K)       // USB MSC bot data
 #define OMV_VFS_BUF_SIZE        (1K)        // VFS sturct + FATFS file buffer (624 bytes)
-#define OMV_JPEG_BUF_SIZE       (32 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_JPEG_BUF_SIZE       (1024*1024) // IDE JPEG buffer (header + data).
 
 #define OMV_BOOT_ORIGIN         0x08000000
 #define OMV_BOOT_LENGTH         128K
@@ -138,10 +143,13 @@
 #define OMV_SRAM4_LENGTH        64K
 #define OMV_AXI_SRAM_ORIGIN     0x24000000
 #define OMV_AXI_SRAM_LENGTH     512K
+#define OMV_DRAM_ORIGIN         0xC0000000
+#define OMV_DRAM_LENGTH         8M
+#define OMV_FB_OVERLAY_MEMORY_ORIGIN    OMV_AXI_SRAM_ORIGIN
 
 // Use the MPU to set an uncacheable memory region.
-#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+(496*1024))
-#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_16KB
+#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
+#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_32KB
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C3)
