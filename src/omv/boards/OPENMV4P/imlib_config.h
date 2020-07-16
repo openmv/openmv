@@ -132,9 +132,9 @@
 #define IMLIB_ENABLE_BARCODES
 
 // Enable CMSIS NN
-#if !defined(CUBEAI)
-#define IMLIB_ENABLE_CNN
-#endif
+// #if !defined(CUBEAI)
+// #define IMLIB_ENABLE_CNN
+// #endif
 
 // Enable Tensor Flow
 #if !defined(CUBEAI)
