@@ -1113,7 +1113,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                 jpeg_buffer_overflow = true;
                 return;
             }
-            unaligned_memcpy(MAIN_FB()->pixels + offset, src16 + 1, size);
+            unaligned_memcpy(dst + offset, src16 + 1, size);
             offset += size;
         } else {
             // JPEG MODE 3:
