@@ -437,6 +437,8 @@ static int calculate_hts(sensor_t *sensor, uint16_t width)
         if (width > 640) hts = IM_MAX((width * 2) + 8, hts_target);
     }
 
+    if (width <= 640) hts += 160; // Fix image quality at low resolutions.
+
     return IM_MAX(hts + HSYNC_TIME, (SENSOR_WIDTH + HSYNC_TIME) / 2); // Fix to prevent crashing.
 }
 
