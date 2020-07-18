@@ -239,9 +239,6 @@ void sensor_init0()
 
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
-
-    // Reset the sesnor state
-    memset(&sensor, 0, sizeof(sensor_t));
 }
 
 int sensor_init()
@@ -287,6 +284,9 @@ int sensor_init()
     #else
     #error "OMV_XCLK_SOURCE is not set!"
     #endif
+
+    /* Reset the sesnor state */
+    memset(&sensor, 0, sizeof(sensor_t));
 
     /* Some sensors have different reset polarities, and we can't know which sensor
        is connected before initializing cambus and probing the sensor, which in turn
