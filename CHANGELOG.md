@@ -1,4 +1,8 @@
 # Change Log
+## [3.6.6](https://github.com/openmv/openmv/releases/tag/v3.6.6) (2020-7-18)
+* Fix broken sensor_init0.
+* Add face recognition scripts.
+
 ## [3.6.5](https://github.com/openmv/openmv/releases/tag/v3.6.5) (2020-7-17)
 * Fix minor FPS counter bug.
 * Update ulab to the latest.
