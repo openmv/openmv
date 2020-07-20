@@ -16,6 +16,7 @@
 #define CONSERVATIVE_JPEG_BUF_SIZE  (OMV_JPEG_BUF_SIZE-64)
 
 extern char _fb_base;
+extern char _fballoc;
 framebuffer_t *framebuffer = (framebuffer_t *) &_fb_base;
 
 extern char _jpeg_buf;
@@ -197,9 +198,34 @@ int32_t framebuffer_get_depth()
     return framebuffer->bpp;
 }
 
-uint32_t framebuffer_get_size()
+uint32_t framebuffer_get_frame_size()
 {
-    return OMV_RAW_BUF_SIZE;
+    switch (framebuffer->bpp) {
+        case -1: {
+            // Invalid frame.
+            return 0;
+        }
+        case IMAGE_BPP_BINARY: {
+            return ((framebuffer->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * framebuffer->h;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return (framebuffer->w * framebuffer->h) * sizeof(uint8_t);
+        }
+        case IMAGE_BPP_RGB565: {
+            return (framebuffer->w * framebuffer->h) * sizeof(uint16_t);
+        }
+        case IMAGE_BPP_BAYER: {
+            return framebuffer->w * framebuffer->h;
+        }
+        default: { // JPEG
+            return framebuffer->bpp;
+        }
+    }
+}
+
+uint32_t framebuffer_get_buffer_size()
+{
+    return &_fballoc - (char *) framebuffer->pixels;
 }
 
 uint8_t *framebuffer_get_buffer()

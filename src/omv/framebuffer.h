@@ -60,7 +60,12 @@ int32_t framebuffer_get_width();
 int32_t framebuffer_get_height();
 int32_t framebuffer_get_depth();
 
-uint32_t framebuffer_get_size();
+// Return the size of the current frame (w * h * bpp) if the framebuffer is initialized,
+// otherwise return 0 if the framebuffer is unintialized or invalid (e.g. first frame).
+uint32_t framebuffer_get_frame_size();
+
+// Return the max frame size that fits the framebuffer (i.e OMV_RAW_BUF_SIZE - sizeof(framebuffer_t))
+uint32_t framebuffer_get_buffer_size();
 
 // Return the current buffer address.
 uint8_t *framebuffer_get_buffer();
