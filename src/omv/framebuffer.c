@@ -16,6 +16,7 @@
 #define CONSERVATIVE_JPEG_BUF_SIZE  (OMV_JPEG_BUF_SIZE-64)
 
 extern char _fb_base;
+extern char _fballoc;
 framebuffer_t *framebuffer = (framebuffer_t *) &_fb_base;
 
 extern char _jpeg_buf;
@@ -220,6 +221,11 @@ uint32_t framebuffer_get_frame_size()
             return framebuffer->bpp;
         }
     }
+}
+
+uint32_t framebuffer_get_buffer_size()
+{
+    return &_fballoc - (char *) framebuffer->pixels;
 }
 
 uint8_t *framebuffer_get_buffer()
