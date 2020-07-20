@@ -550,10 +550,11 @@ int sensor_set_pixformat(pixformat_t pixformat)
     // This code is explicitly here to allow users to set the resolution to RGB565 and have it
     // switch to BAYER only once even though they are setting the resolution to RGB565 repeatedly
     // in a loop. Only RGB565->BAYER has this problem and needs this fix because of sensor_check_buffsize().
+    uint32_t size = framebuffer_get_buffer_size();
     if ((sensor.pixformat == PIXFORMAT_BAYER)
     &&  (pixformat == PIXFORMAT_RGB565)
-    &&  (MAIN_FB()->u * MAIN_FB()->v * 2 > OMV_RAW_BUF_SIZE)
-    &&  (MAIN_FB()->u * MAIN_FB()->v * 1 <= OMV_RAW_BUF_SIZE)) {
+    &&  (MAIN_FB()->u * MAIN_FB()->v * 2 > size)
+    &&  (MAIN_FB()->u * MAIN_FB()->v * 1 <= size)) {
         // No change
         return 0;
     }
@@ -921,6 +922,7 @@ void DCMI_VsyncExtiCallback()
 // within the RAM we have onboard the system.
 static void sensor_check_buffsize()
 {
+    uint32_t size = framebuffer_get_buffer_size();
     uint32_t bpp;
 
     switch (sensor.pixformat) {
@@ -938,7 +940,7 @@ static void sensor_check_buffsize()
     }
 
     // MAIN_FB() fits, we are done.
-    if ((MAIN_FB()->u * MAIN_FB()->v * bpp) <= OMV_RAW_BUF_SIZE) {
+    if ((MAIN_FB()->u * MAIN_FB()->v * bpp) <= size) {
         return;
     }
 
@@ -948,7 +950,7 @@ static void sensor_check_buffsize()
         bpp = 1;
 
         // MAIN_FB() fits, we are done (bpp is 1).
-        if (MAIN_FB()->u * MAIN_FB()->v <= OMV_RAW_BUF_SIZE) {
+        if (MAIN_FB()->u * MAIN_FB()->v <= size) {
             return;
         }
     }
@@ -995,7 +997,7 @@ static void sensor_check_buffsize()
     }
 
     // Crop the frame buffer while keeping the aspect ratio and keeping the width/height even.
-    while (((MAIN_FB()->u * MAIN_FB()->v * bpp) > OMV_RAW_BUF_SIZE) || (MAIN_FB()->u % 2)  || (MAIN_FB()->v % 2)) {
+    while (((MAIN_FB()->u * MAIN_FB()->v * bpp) > size) || (MAIN_FB()->u % 2)  || (MAIN_FB()->v % 2)) {
         MAIN_FB()->u -= u_sub;
         MAIN_FB()->v -= v_sub;
     }
@@ -1109,7 +1111,7 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
             //
             uint16_t size = __REV16(*src16);
             // Prevent a buffer overflow when writing the jpeg data.
-            if (offset + size > OMV_RAW_BUF_SIZE) {
+            if (offset + size > framebuffer_get_buffer_size()) {
                 jpeg_buffer_overflow = true;
                 return;
             }
@@ -1301,7 +1303,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
     }
 
     // If two frames fit in ram, use double buffering in streaming mode.
-    doublebuf = ((length*2) <= OMV_RAW_BUF_SIZE);
+    doublebuf = ((length*2) <= framebuffer_get_buffer_size());
 
     #if OMV_ENABLE_HM01B0
         HAL_DCMI_EnableCrop(&DCMIHandle);
@@ -1471,8 +1473,9 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                     // within a transfer we have to look at the DMA counter and see how much data was moved.
                     MAIN_FB()->bpp = (offset * MAX_XFER_SIZE) + ((MAX_XFER_SIZE/4) - __HAL_DMA_GET_COUNTER(&DMAHandle))*4;
 
+                    uint32_t size = framebuffer_get_buffer_size();
                     // DMA has most likely corrupted FB alloc state and or more.
-                    if (MAIN_FB()->bpp > OMV_RAW_BUF_SIZE) {
+                    if (MAIN_FB()->bpp > size) {
                         __fatal_error("JPEG Overflow!");
                     }
 
@@ -1480,7 +1483,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                     // In JPEG mode, the DMA uses the frame buffer memory directly instead of the line buffer, which is
                     // located in a cacheable region and therefore must be invalidated before the CPU can access it again.
                     // Note: The frame buffer address is 32-byte aligned, and the size is a multiple of 32-bytes for all boards.
-                    SCB_InvalidateDCache_by_Addr((uint32_t*)MAIN_FB()->pixels, OMV_RAW_BUF_SIZE);
+                    SCB_InvalidateDCache_by_Addr((uint32_t*)MAIN_FB()->pixels, size);
                     #endif
                 }
                 // Clean trailing data.
