@@ -199,7 +199,27 @@ int32_t framebuffer_get_depth()
 
 uint32_t framebuffer_get_size()
 {
-    return OMV_RAW_BUF_SIZE;
+    switch (framebuffer->bpp) {
+        case -1: {
+            // Invalid frame.
+            return 0;
+        }
+        case IMAGE_BPP_BINARY: {
+            return ((framebuffer->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * framebuffer->h;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return (framebuffer->w * framebuffer->h) * sizeof(uint8_t);
+        }
+        case IMAGE_BPP_RGB565: {
+            return (framebuffer->w * framebuffer->h) * sizeof(uint16_t);
+        }
+        case IMAGE_BPP_BAYER: {
+            return framebuffer->w * framebuffer->h;
+        }
+        default: { // JPEG
+            return framebuffer->bpp;
+        }
+    }
 }
 
 uint8_t *framebuffer_get_buffer()
