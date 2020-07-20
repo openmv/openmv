@@ -1,4 +1,7 @@
 # Change Log
+## [3.6.7](https://github.com/openmv/openmv/releases/tag/v3.6.7) (2020-7-21)
+* Fix framebuffer bug introduced in 3.6.5.
+
 ## [3.6.6](https://github.com/openmv/openmv/releases/tag/v3.6.6) (2020-7-18)
 * Fix broken sensor_init0.
 * Add face recognition scripts.
