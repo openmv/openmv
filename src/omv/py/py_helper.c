@@ -383,7 +383,7 @@ void py_helper_update_framebuffer(image_t *img)
 
 void py_helper_set_to_framebuffer(image_t *img)
 {
-    PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_frame_size()),
+    PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_buffer_size()),
             "The image doesn't fit in the frame buffer!");
     framebuffer_set(img->w, img->h, img->bpp);
     img->data = framebuffer_get_buffer();
