@@ -16,7 +16,6 @@
 #define CONSERVATIVE_JPEG_BUF_SIZE  (OMV_JPEG_BUF_SIZE-64)
 
 extern char _fb_base;
-extern char _fballoc;
 framebuffer_t *framebuffer = (framebuffer_t *) &_fb_base;
 
 extern char _jpeg_buf;
@@ -200,32 +199,19 @@ int32_t framebuffer_get_depth()
 
 uint32_t framebuffer_get_frame_size()
 {
-    switch (framebuffer->bpp) {
-        case -1: {
-            // Invalid frame.
-            return 0;
-        }
-        case IMAGE_BPP_BINARY: {
-            return ((framebuffer->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * framebuffer->h;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            return (framebuffer->w * framebuffer->h) * sizeof(uint8_t);
-        }
-        case IMAGE_BPP_RGB565: {
-            return (framebuffer->w * framebuffer->h) * sizeof(uint16_t);
-        }
-        case IMAGE_BPP_BAYER: {
-            return framebuffer->w * framebuffer->h;
-        }
-        default: { // JPEG
-            return framebuffer->bpp;
-        }
-    }
+    image_t img;
+    framebuffer_initialize_image(&img);
+    return image_size(&img);
 }
 
 uint32_t framebuffer_get_buffer_size()
 {
-    return &_fballoc - (char *) framebuffer->pixels;
+    uint32_t size = (uint32_t) (fb_alloc_stack_pointer() - ((char *) framebuffer->pixels));
+    // We don't want to give all of the frame buffer RAM to the frame buffer. So, we will limit the
+    // maximum amount of RAM we return.
+    size = IM_MIN(size, OMV_RAW_BUF_SIZE);
+    // Needs to be a multiple of 32 for DMA transfers...
+    return (size / 32) * 32;
 }
 
 uint8_t *framebuffer_get_buffer()

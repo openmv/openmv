@@ -475,7 +475,7 @@ static int sensor_check_buffsize(sensor_t *sensor)
             break;
     }
 
-    if ((MAIN_FB()->w * MAIN_FB()->h * bpp) > OMV_RAW_BUF_SIZE) {
+    if ((MAIN_FB()->w * MAIN_FB()->h * bpp) > framebuffer_get_buffer_size()) {
         return -1;
     }
 

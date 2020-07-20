@@ -31,6 +31,11 @@ static char *fb_alloc_min_address()
     return (char *) (framebuffer_get_buffer() + framebuffer_get_frame_size());
 }
 
+char *fb_alloc_stack_pointer()
+{
+    return pointer;
+}
+
 __weak NORETURN void fb_alloc_fail()
 {
     nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
