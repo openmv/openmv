@@ -60,9 +60,9 @@ int32_t framebuffer_get_width();
 int32_t framebuffer_get_height();
 int32_t framebuffer_get_depth();
 
-// Return the size of the framebuffer (w * h * bpp) if the framebuffer is initialized,
+// Return the size of the current frame (w * h * bpp) if the framebuffer is initialized,
 // otherwise return 0 if the framebuffer is unintialized or invalid (e.g. first frame).
-uint32_t framebuffer_get_size();
+uint32_t framebuffer_get_frame_size();
 
 // Return the current buffer address.
 uint8_t *framebuffer_get_buffer();

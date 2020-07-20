@@ -28,7 +28,7 @@ static char *pointer_overlay = &_fballoc_overlay;
 
 static char *fb_alloc_min_address()
 {
-    return (char *) (framebuffer_get_buffer() + framebuffer_get_size());
+    return (char *) (framebuffer_get_buffer() + framebuffer_get_frame_size());
 }
 
 __weak NORETURN void fb_alloc_fail()

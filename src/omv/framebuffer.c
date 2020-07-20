@@ -197,7 +197,7 @@ int32_t framebuffer_get_depth()
     return framebuffer->bpp;
 }
 
-uint32_t framebuffer_get_size()
+uint32_t framebuffer_get_frame_size()
 {
     switch (framebuffer->bpp) {
         case -1: {
