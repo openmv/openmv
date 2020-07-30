@@ -18,6 +18,9 @@ ENTRY(Reset_Handler)
 MEMORY
 {
   CCM (xrw)         : ORIGIN = OMV_CCM_ORIGIN,      LENGTH = OMV_CCM_LENGTH
+  #if defined(OMV_ITCM_ORIGIN)
+  ITCM (xrw)        : ORIGIN = OMV_ITCM_ORIGIN,     LENGTH = OMV_ITCM_LENGTH
+  #endif
   SRAM1 (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,    LENGTH = OMV_SRAM1_LENGTH
   #if defined(OMV_SRAM2_ORIGIN)
   SRAM2 (xrw)       : ORIGIN = OMV_SRAM2_ORIGIN,    LENGTH = OMV_SRAM2_LENGTH

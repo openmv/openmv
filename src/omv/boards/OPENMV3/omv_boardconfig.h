@@ -75,13 +75,13 @@
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
 #define OMV_MAIN_MEMORY     CCM     // data, bss and heap
-#define OMV_STACK_MEMORY    CCM     // stack memory
+#define OMV_STACK_MEMORY    ITCM    // stack memory
 #define OMV_DMA_MEMORY      CCM     // Misc DMA buffers
 
 #define OMV_FB_SIZE         (300K)  // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE   (84K)   // minimum fb alloc size
-#define OMV_STACK_SIZE      (4K)
-#define OMV_HEAP_SIZE       (54K)
+#define OMV_STACK_SIZE      (16K)
+#define OMV_HEAP_SIZE       (58K)
 
 #define OMV_LINE_BUF_SIZE   (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
@@ -95,6 +95,8 @@
 #define OMV_TEXT_LENGTH     1920K
 #define OMV_CCM_ORIGIN      0x20000000
 #define OMV_CCM_LENGTH      128K    // Note DTCM/ITCM memory is not cacheable on M7
+#define OMV_ITCM_ORIGIN     0x00000000
+#define OMV_ITCM_LENGTH     16K
 #define OMV_SRAM1_ORIGIN    0x20020000
 #define OMV_SRAM1_LENGTH    384K
 
