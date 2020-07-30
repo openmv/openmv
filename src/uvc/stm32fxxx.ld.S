@@ -6,7 +6,7 @@
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Linker script for STM32F4xx Devices.
+ * Linker script for STM32 Devices.
  */
 
 /* Entry Point */
@@ -37,7 +37,6 @@ MEMORY
   FLASH_TEXT (rx)   : ORIGIN = OMV_TEXT_ORIGIN,     LENGTH = OMV_TEXT_LENGTH
 }
 
-_estack     = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
 #if defined(OMV_FFS_MEMORY)
@@ -100,7 +99,6 @@ SECTIONS
   } >OMV_FB_MEMORY
 
   /* Misc DMA buffers kept in uncachable region */
-  /* NOTE: on H7 DMA buffers are kept in cached AXI RAM and cache maintenance is performed */
   .dma_memory (NOLOAD) :
   {
     #if defined(OMV_FB_OVERLAY_MEMORY)
@@ -188,8 +186,12 @@ SECTIONS
   ._stack (NOLOAD) :
   {
     . = ALIGN(4);
+    _sstack  = .;
     . = . + _stack_size;
-  } >OMV_MAIN_MEMORY
+
+    . = ALIGN(4);
+    _estack  = .;
+  } >OMV_STACK_MEMORY
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }

@@ -74,7 +74,8 @@
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
-#define OMV_MAIN_MEMORY     CCM     // data, bss, stack and heap
+#define OMV_MAIN_MEMORY     CCM     // data, bss and heap
+#define OMV_STACK_MEMORY    CCM     // stack memory
 #define OMV_DMA_MEMORY      CCM     // Misc DMA buffers
 
 #define OMV_FB_SIZE         (300K)  // FB memory: header + VGA/GS image
