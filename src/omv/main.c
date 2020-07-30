@@ -460,8 +460,8 @@ soft_reset:
 
     // Stack limit should be less than real stack size, so we have a
     // chance to recover from limit hit. (Limit is measured in bytes)
-    mp_stack_set_top(&_ram_end);
-    mp_stack_set_limit((char*)&_ram_end - (char*)&_heap_end - 1024);
+    mp_stack_set_top(&_estack);
+    mp_stack_set_limit((char*)&_estack - (char*)&_sstack - 1024);
 
     // GC init
     gc_init(&_heap_start, &_heap_end);

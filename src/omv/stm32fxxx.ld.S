@@ -6,7 +6,7 @@
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Linker script for STM32F Devices.
+ * Linker script for STM32 Devices.
  */
 
 /* Entry Point */
@@ -37,7 +37,6 @@ MEMORY
   FLASH_TEXT (rx)   : ORIGIN = OMV_TEXT_ORIGIN,     LENGTH = OMV_TEXT_LENGTH
 }
 
-_estack     = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
 #if defined(OMV_FFS_MEMORY)
@@ -194,6 +193,9 @@ SECTIONS
     . = ALIGN(4);
     _sstack  = .;
     . = . + _stack_size;
+
+    . = ALIGN(4);
+    _estack  = .;
   } >OMV_MAIN_MEMORY
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
