@@ -196,7 +196,7 @@ SECTIONS
 
     . = ALIGN(4);
     _estack  = .;
-  } >OMV_MAIN_MEMORY
+  } >OMV_STACK_MEMORY
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }
