@@ -113,7 +113,7 @@
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_FFS_MEMORY          DTCM        // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss and heap
-#define OMV_STACK_MEMORY        SRAM1       // stack memory
+#define OMV_STACK_MEMORY        ITCM        // stack memory
 #define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
 #define OMV_FB_MEMORY           DRAM        // Framebuffer, fb_alloc
 #define OMV_JPEG_MEMORY         DRAM        // JPEG buffer memory buffer.
@@ -124,8 +124,8 @@
 
 #define OMV_FB_SIZE             (20M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (11M)       // minimum fb alloc size
-#define OMV_STACK_SIZE          (15K)
-#define OMV_HEAP_SIZE           (228K)
+#define OMV_STACK_SIZE          (64K)
+#define OMV_HEAP_SIZE           (246K)
 #define OMV_SDRAM_SIZE          (32 * 1024 * 1024) // This needs to be here for UVC firmware.
 #define OMV_SDRAM_TEST          (0)
 
@@ -140,6 +140,8 @@
 #define OMV_TEXT_LENGTH         1792K
 #define OMV_DTCM_ORIGIN         0x20000000  // Note accessible by CPU and MDMA only.
 #define OMV_DTCM_LENGTH         128K
+#define OMV_ITCM_ORIGIN         0x00000000
+#define OMV_ITCM_LENGTH         64K
 #define OMV_SRAM1_ORIGIN        0x30000000
 #define OMV_SRAM1_LENGTH        256K
 #define OMV_SRAM3_ORIGIN        0x30040000
