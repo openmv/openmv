@@ -328,6 +328,14 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             NVIC_SystemReset();
             break;
 
+        case USBDBG_SYS_RESET_TO_BL:{
+            RTC_HandleTypeDef RTCHandle;
+            RTCHandle.Instance = RTC;
+            HAL_RTCEx_BKUPWrite(&RTCHandle, RTC_BKP_DR0, 0xDF59);
+            NVIC_SystemReset();
+            break;
+        }
+
         case USBDBG_FB_ENABLE: {
             xfer_bytes = 0;
             xfer_length = length;

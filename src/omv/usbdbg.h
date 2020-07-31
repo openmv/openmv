@@ -46,6 +46,7 @@ enum usbdbg_cmd {
     USBDBG_ATTR_READ        =0x8A,
     USBDBG_ATTR_WRITE       =0x0B,
     USBDBG_SYS_RESET        =0x0C,
+    USBDBG_SYS_RESET_TO_BL  =0x0E,
     USBDBG_FB_ENABLE        =0x0D,
     USBDBG_TX_BUF_LEN       =0x8E,
     USBDBG_TX_BUF           =0x8F,
