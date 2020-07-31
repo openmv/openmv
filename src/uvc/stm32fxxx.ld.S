@@ -17,7 +17,7 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-  CCM (xrw)         : ORIGIN = OMV_CCM_ORIGIN,      LENGTH = OMV_CCM_LENGTH
+  DTCM (xrw)        : ORIGIN = OMV_DTCM_ORIGIN,     LENGTH = OMV_DTCM_LENGTH
   #if defined(OMV_ITCM_ORIGIN)
   ITCM (xrw)        : ORIGIN = OMV_ITCM_ORIGIN,     LENGTH = OMV_ITCM_LENGTH
   #endif

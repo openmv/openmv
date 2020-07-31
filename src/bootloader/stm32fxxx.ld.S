@@ -17,13 +17,13 @@ ENTRY(Reset_Handler)
 /* Specify the memory areas */
 MEMORY
 {
-  CCM (xrw)       : ORIGIN = OMV_CCM_ORIGIN,    LENGTH = OMV_CCM_LENGTH
+  DTCM (xrw)      : ORIGIN = OMV_DTCM_ORIGIN,   LENGTH = OMV_DTCM_LENGTH
   RAM (xrw)       : ORIGIN = OMV_SRAM1_ORIGIN,  LENGTH = OMV_SRAM1_LENGTH
   FLASH_TEXT (rx) : ORIGIN = OMV_BOOT_ORIGIN,   LENGTH = OMV_BOOT_LENGTH
 }
 
-_estack     = ORIGIN(CCM) + LENGTH(CCM);
-_ram_end    = ORIGIN(CCM) + LENGTH(CCM);
+_estack     = ORIGIN(DTCM) + LENGTH(DTCM);
+_ram_end    = ORIGIN(DTCM) + LENGTH(DTCM);
 _stack_size = (4K);       /* minimum amount of stack */
 
 /* Define output sections */
@@ -58,7 +58,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >CCM
+  } >DTCM
 
   /* Uninitialized data section */
   . = ALIGN(4);
@@ -75,7 +75,7 @@ SECTIONS
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
     _bss_end = _ebss; /* for gccollect */
-  } >CCM
+  } >DTCM
 
   /* Make sure there is enough RAM the stack and FS cache */
   .stack :
@@ -83,7 +83,7 @@ SECTIONS
     . = ALIGN(4);
     . = . + _stack_size;
     . = ALIGN(4);
-  } >CCM
+  } >DTCM
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
 }

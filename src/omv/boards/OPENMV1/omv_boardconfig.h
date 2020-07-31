@@ -50,8 +50,8 @@
 #define OMV_TEXT_LENGTH     448K
 #define OMV_SRAM1_ORIGIN    0x20000000
 #define OMV_SRAM1_LENGTH    128K
-#define OMV_CCM_ORIGIN      0x10000000
-#define OMV_CCM_LENGTH      64K
+#define OMV_DTCM_ORIGIN      0x10000000
+#define OMV_DTCM_LENGTH      64K
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)
