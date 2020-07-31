@@ -74,8 +74,8 @@
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 // Note: fb_alloc overwrites the line buffer which is only used during readout.
 #define OMV_FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
-#define OMV_MAIN_MEMORY     CCM     // data, bss and heap memory
-#define OMV_STACK_MEMORY    CCM     // stack memory
+#define OMV_MAIN_MEMORY     DTCM    // data, bss and heap memory
+#define OMV_STACK_MEMORY    DTCM    // stack memory
 #define OMV_DMA_MEMORY      SRAM2   // Misc DMA buffers
 
 #define OMV_FB_SIZE         (150K)  // FB memory: header + QVGA/GS image
@@ -93,8 +93,8 @@
 #define OMV_BOOT_LENGTH     16K
 #define OMV_TEXT_ORIGIN     0x08010000
 #define OMV_TEXT_LENGTH     960K
-#define OMV_CCM_ORIGIN      0x10000000
-#define OMV_CCM_LENGTH      64K
+#define OMV_DTCM_ORIGIN     0x10000000
+#define OMV_DTCM_LENGTH     64K
 #define OMV_SRAM1_ORIGIN    0x20000000
 #define OMV_SRAM1_LENGTH    163K
 #define OMV_SRAM2_ORIGIN    0x20028C00

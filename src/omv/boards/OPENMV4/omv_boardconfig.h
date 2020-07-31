@@ -110,7 +110,7 @@
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
-#define OMV_FFS_MEMORY          CCM         // Flash filesystem cache memory
+#define OMV_FFS_MEMORY          DTCM        // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss and heap memory
 #define OMV_STACK_MEMORY        SRAM1       // stack memory
 #define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
@@ -132,8 +132,8 @@
 #define OMV_BOOT_LENGTH         128K
 #define OMV_TEXT_ORIGIN         0x08040000
 #define OMV_TEXT_LENGTH         1792K
-#define OMV_CCM_ORIGIN          0x20000000  // Note accessible by CPU and MDMA only.
-#define OMV_CCM_LENGTH          128K
+#define OMV_DTCM_ORIGIN         0x20000000  // Note accessible by CPU and MDMA only.
+#define OMV_DTCM_LENGTH         128K
 #define OMV_SRAM1_ORIGIN        0x30000000
 #define OMV_SRAM1_LENGTH        256K
 #define OMV_SRAM3_ORIGIN        0x30040000
