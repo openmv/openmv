@@ -49,9 +49,15 @@
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (1)
 
-// Enable MT9V034 and LEPTON sensors
+// Enable sensor drivers
+#define OMV_ENABLE_OV2640       (1)
+#define OMV_ENABLE_OV5640       (1)
+#define OMV_ENABLE_OV7690       (0)
+#define OMV_ENABLE_OV7725       (1)
+#define OMV_ENABLE_OV9650       (1)
 #define OMV_ENABLE_MT9V034      (1)
 #define OMV_ENABLE_LEPTON       (1)
+#define OMV_ENABLE_HM01B0       (0)
 
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG      (1)

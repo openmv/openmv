@@ -18,7 +18,8 @@
 #include "omv_boardconfig.h"
 #include "common.h"
 
-#if defined(OMV_ENABLE_LEPTON)
+#if (OMV_ENABLE_LEPTON == 1)
+
 #include "crc16.h"
 #include "LEPTON_SDK.h"
 #include "LEPTON_AGC.h"
@@ -734,9 +735,4 @@ int lepton_init(sensor_t *sensor)
 
     return 0;
 }
-#else
-int lepton_init(sensor_t *sensor)
-{
-    return -1;
-}
-#endif //defined(OMV_ENABLE_LEPTON)
+#endif // (OMV_ENABLE_LEPTON == 1)

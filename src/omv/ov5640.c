@@ -18,6 +18,8 @@
 #include "systick.h"
 #include "omv_boardconfig.h"
 
+#if (OMV_ENABLE_OV5640 == 1)
+
 #define BLANK_LINES             8
 #define DUMMY_LINES             6
 
@@ -1031,3 +1033,4 @@ int ov5640_init(sensor_t *sensor)
 
     return 0;
 }
+#endif // (OMV_ENABLE_OV5640 == 1)
