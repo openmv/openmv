@@ -46,7 +46,14 @@
 // Enable hardware JPEG
 #define OMV_HARDWARE_JPEG       (1)
 
-// Enable HIMAX HM01B0 sensor
+// Enable sensor drivers
+#define OMV_ENABLE_OV2640       (0)
+#define OMV_ENABLE_OV5640       (0)
+#define OMV_ENABLE_OV7690       (0)
+#define OMV_ENABLE_OV7725       (0)
+#define OMV_ENABLE_OV9650       (0)
+#define OMV_ENABLE_MT9V034      (0)
+#define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (1)
 
 // Enable WiFi debug

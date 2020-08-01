@@ -18,6 +18,8 @@
 #include "systick.h"
 #include "omv_boardconfig.h"
 
+#if (OMV_ENABLE_OV2640 == 1)
+
 #define CIF_WIDTH       (400)
 #define CIF_HEIGHT      (296)
 
@@ -855,3 +857,4 @@ int ov2640_init(sensor_t *sensor)
 
     return 0;
 }
+#endif // (OMV_ENABLE_OV2640 == 1)

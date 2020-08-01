@@ -42,6 +42,16 @@
 // RAW buffer size
 #define OMV_RAW_BUF_SIZE        (307200)
 
+// Enable sensor drivers
+#define OMV_ENABLE_OV2640       (0)
+#define OMV_ENABLE_OV5640       (0)
+#define OMV_ENABLE_OV7690       (0)
+#define OMV_ENABLE_OV7725       (1)
+#define OMV_ENABLE_OV9650       (0)
+#define OMV_ENABLE_MT9V034      (0)
+#define OMV_ENABLE_LEPTON       (0)
+#define OMV_ENABLE_HM01B0       (0)
+
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH     (160*120*2)

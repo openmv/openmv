@@ -18,6 +18,8 @@
 #include "systick.h"
 #include "omv_boardconfig.h"
 
+#if (OMV_ENABLE_OV7725 == 1)
+
 static const uint8_t default_regs[][2] = {
 
 // From App Note.
@@ -623,3 +625,4 @@ int ov7725_init(sensor_t *sensor)
 
     return 0;
 }
+#endif // (OMV_ENABLE_OV7725 == 1)

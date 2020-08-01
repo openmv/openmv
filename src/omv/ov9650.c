@@ -18,6 +18,8 @@
 #include "ov9650_regs.h"
 #include "omv_boardconfig.h"
 
+#if (OMV_ENABLE_OV9650 == 1)
+
 #define NUM_BR_LEVELS       7
 
 static const uint8_t default_regs[][2] = {
@@ -539,3 +541,4 @@ int ov9650_init(sensor_t *sensor)
 
     return 0;
 }
+#endif // (OMV_ENABLE_OV9650 == 1)
