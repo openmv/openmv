@@ -239,6 +239,10 @@ void sensor_init0()
 
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
+#ifdef PORTENTA
+    cambus_init(&sensor.i2c, SCCB_I2C, SCCB_TIMING);
+#endif
+
 }
 
 int sensor_init()
