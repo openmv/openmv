@@ -239,9 +239,11 @@ void sensor_init0()
 
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
-#ifdef PORTENTA
+    #ifdef PORTENTA
+    // The Portenta board uses the same I2C bus for the sensor and
+    // user scripts. The I2C bus must be reinitialized on soft-reset.
     cambus_init(&sensor.i2c, SCCB_I2C, SCCB_TIMING);
-#endif
+    #endif
 
 }
 
