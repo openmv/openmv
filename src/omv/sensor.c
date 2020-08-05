@@ -237,44 +237,11 @@ void sensor_init0()
     // Set default quality
     JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
 
-#ifdef PORTENTA
-    I2C_HandleTypeDef i2c;
-    /* Configure I2C */
-
-    i2c.Instance             = SCCB_I2C;
-    i2c.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
-    i2c.Init.Timing          = SCCB_TIMING;
-    i2c.Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
-    i2c.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
-    i2c.Init.NoStretchMode   = I2C_NOSTRETCH_DISABLED;
-    i2c.Init.OwnAddress1     = 0xFE;
-    i2c.Init.OwnAddress2     = 0xFE;
-
-    HAL_I2C_Init(&i2c);
-
-    if (SCCB_TIMING == I2C_TIMING_FAST) {
-        // Enable FAST mode plus.
-        if (SCCB_I2C == I2C1) {
-            #if defined(I2C_FASTMODEPLUS_I2C1)
-            HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C1);
-            #endif
-        } else if (SCCB_I2C == I2C2) {
-            #if defined(I2C_FASTMODEPLUS_I2C2)
-            HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C2);
-            #endif
-        } else if (SCCB_I2C == I2C3) {
-            #if defined(I2C_FASTMODEPLUS_I2C3)
-            HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C3);
-            #endif
-        } else {
-            #if defined(I2C_FASTMODEPLUS_I2C4)
-            HAL_I2CEx_EnableFastModePlus(I2C_FASTMODEPLUS_I2C4);
-            #endif
-        }
-    }
-#endif
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
+#ifdef PORTENTA
+    cambus_init(&sensor.i2c, SCCB_I2C, SCCB_TIMING);
+#endif
 
 }
 
