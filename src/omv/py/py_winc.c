@@ -153,7 +153,9 @@ static mp_obj_t py_winc_start_ap(mp_uint_t n_args, const mp_obj_t *pos_args, mp_
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Missing WEP key!"));
     }
 
-    key = mp_obj_str_get_str(args[1].u_obj);
+    if (security != M2M_WIFI_SEC_OPEN) {
+        key = mp_obj_str_get_str(args[1].u_obj);
+    }
 
     // get channel
     mp_uint_t channel = args[3].u_int;
