@@ -196,6 +196,9 @@ typedef struct _sensor {
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
     int  (*ioctl)               (sensor_t *sensor, int request, va_list ap);
     int  (*snapshot)            (sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+    int  (*snapshot_start)      (sensor_t *sensor);
+    int  (*snapshot_check)      (sensor_t *sensor, bool *status);
+    int  (*snapshot_finish)     (sensor_t *sensor, image_t *image);
 } sensor_t;
 
 // Resolution table
@@ -315,4 +318,14 @@ const uint16_t *sensor_get_color_palette();
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+
+// Start a non-blocking snapshot
+int sensor_snapshot_start(sensor_t *sensor);
+
+// Checks if the non-blocking snapshot has finished
+int sensor_snapshot_check(sensor_t *sensor, bool *status);
+
+// Finish a non-blocking snapshot
+int sensor_snapshot_finish(sensor_t *sensor, image_t *image);
+
 #endif /* __SENSOR_H__ */

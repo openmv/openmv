@@ -101,6 +101,45 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
     return image;
 }
 
+static mp_obj_t py_sensor_snapshot_start()
+{
+#if MICROPY_PY_IMU
+    // +-10 degree dead-zone around pitch 90/270.
+    // +-35 degree active-zone around roll 0/90/180/270/360.
+    do_auto_rotation(10, 35);
+    // We're setting the dead-zone on pitch because roll readings are invalid there.
+    // We're not setting the full range on roll to prevent oscillation.
+#endif // MICROPY_PY_IMU
+
+    int ret = sensor.snapshot_start(&sensor);
+
+    if (ret < 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_RuntimeError, "Capture Start Failed: %d", ret));
+    }
+
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_snapshot_check()
+{
+    bool status;
+    sensor.snapshot_check(&sensor, &status);
+    return status ? mp_const_true : mp_const_false;
+}
+
+static mp_obj_t py_sensor_snapshot_finish()
+{
+    mp_obj_t image = py_image(0, 0, 0, 0);
+    // Note: OV2640 JPEG mode can __fatal_error().
+    int ret = sensor.snapshot_finish(&sensor, (image_t *) py_image_cobj(image));
+
+    if (ret < 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_RuntimeError, "Capture Finish Failed: %d", ret));
+    }
+
+    return image;
+}
+
 static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_time), MP_MAP_LOOKUP);
@@ -709,6 +748,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_sleep_obj,               py_sensor_sl
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_shutdown_obj,            py_sensor_shutdown);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_flush_obj,               py_sensor_flush);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_snapshot_obj, 0,        py_sensor_snapshot);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_start_obj,      py_sensor_snapshot_start);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_check_obj,      py_sensor_snapshot_check);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_snapshot_finish_obj,     py_sensor_snapshot_finish);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_sensor_skip_frames_obj, 0,     py_sensor_skip_frames);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_width_obj,               py_sensor_width);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_height_obj,              py_sensor_height);
@@ -839,6 +881,9 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_shutdown),            (mp_obj_t)&py_sensor_shutdown_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_flush),               (mp_obj_t)&py_sensor_flush_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_snapshot),            (mp_obj_t)&py_sensor_snapshot_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_snapshot_start),      (mp_obj_t)&py_sensor_snapshot_start_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_snapshot_check),      (mp_obj_t)&py_sensor_snapshot_check_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_snapshot_finish),     (mp_obj_t)&py_sensor_snapshot_finish_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_skip_frames),         (mp_obj_t)&py_sensor_skip_frames_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_width),               (mp_obj_t)&py_sensor_width_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_height),              (mp_obj_t)&py_sensor_height_obj },
