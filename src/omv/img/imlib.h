@@ -1159,6 +1159,7 @@ uint16_t imlib_yuv_to_rgb(uint8_t y, int8_t u, int8_t v);
 void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uint16_t *rgbbuf);
 void imlib_bayer_to_y(image_t *img, int x_offset, int y_offset, int width, uint8_t *Y);
 void imlib_bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, uint8_t *binary);
+bool imlib_pixel_to_binary(int bpp, uint32_t pixel);
 
 /* Image file functions */
 void ppm_read_geometry(FIL *fp, image_t *img, const char *path, ppm_read_settings_t *rs);
@@ -1282,6 +1283,7 @@ void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                           flood_fill_call_back_t cb, void *data);
 // Drawing Functions
 int imlib_get_pixel(image_t *img, int x, int y);
+int imlib_get_pixel_fast(int img_bpp, const void *row_ptr, int x);
 void imlib_set_pixel(image_t *img, int x, int y, int p);
 void imlib_draw_line(image_t *img, int x0, int y0, int x1, int y1, int c, int thickness);
 void imlib_draw_rectangle(image_t *img, int rx, int ry, int rw, int rh, int c, int thickness, bool fill);
