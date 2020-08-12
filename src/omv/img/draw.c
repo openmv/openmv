@@ -548,7 +548,8 @@ uint32_t draw_scaleop_RGB565_to_RGB888(uint32_t pixel, uint32_t scale)
  * @param pixel Pixel value.
  * @return pixel in binary format.
  */
-inline bool pixel_to_binary(int bpp, uint32_t pixel) {
+inline bool imlib_pixel_to_binary(int bpp, uint32_t pixel)
+{
     switch (bpp) {
         case IMAGE_BPP_BINARY: {
             return pixel;
@@ -588,8 +589,8 @@ static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, u
         bool mask1 = true, mask2 = true;
 
         if (mask_row_ptr) {
-            mask1 = pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
-            mask2 = pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
+            mask1 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
+            mask2 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
         }
 
         uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
@@ -638,8 +639,8 @@ static void int_generate_cache_line_rgb565(uint32_t *cache_line, int alpha, cons
         bool mask1 = true, mask2 = true;
 
         if (mask_row_ptr) {
-            mask1 = pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
-            mask2 = pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
+            mask1 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
+            mask2 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
         }
 
         uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
