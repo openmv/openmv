@@ -954,7 +954,9 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
         file_buffer_on(fp); // REMEMBER TO TURN THIS OFF LATER!
         vflipped = bmp_read_geometry(fp, img, path, &rs->bmp_rs);
     } else {
-        ff_unsupported_format(NULL);
+        rs->format = FORMAT_JPG;
+        file_read_open(fp, path);
+        jpeg_read_geometry(fp, img, path, &rs->jpg_rs);
     }
     imblib_parse_extension(img, path); // Enforce extension!
     return vflipped;

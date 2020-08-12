@@ -1345,13 +1345,12 @@ void jpeg_read(image_t *img, const char *path)
 
     // Do not use file_buffer_on() here.
     jpeg_read_geometry(&fp, img, path, &rs);
+
     if (!img->pixels) {
         img->pixels = xalloc(img->bpp);
     }
 
     jpeg_read_pixels(&fp, img);
-
-    // Do not use file_buffer_off() here.
     file_close(&fp);
 }
 
