@@ -204,7 +204,7 @@
 #define DCMI_PWDN_PIN           (GPIO_PIN_7)
 #define DCMI_PWDN_PORT          (GPIOD)
 
-#define DCMI_FSYNC_PIN          (GPIO_PIN_5)
+#define DCMI_FSYNC_PIN          (GPIO_PIN_4)
 #define DCMI_FSYNC_PORT         (GPIOB)
 
 #define DCMI_D0_PIN             (GPIO_PIN_6)
