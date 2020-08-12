@@ -972,6 +972,12 @@ typedef struct ppm_read_settings {
     uint8_t ppm_fmt;
 } ppm_read_settings_t;
 
+typedef struct jpg_read_settings {
+    int32_t jpg_w;
+    int32_t jpg_h;
+    int32_t jpg_size;
+} jpg_read_settings_t;
+
 typedef enum save_image_format {
     FORMAT_DONT_CARE,
     FORMAT_BMP,
@@ -981,10 +987,10 @@ typedef enum save_image_format {
 } save_image_format_t;
 
 typedef struct img_read_settings {
-    union
-    {
+    union {
         bmp_read_settings_t bmp_rs;
         ppm_read_settings_t ppm_rs;
+        jpg_read_settings_t jpg_rs;
     };
     save_image_format_t format;
 } img_read_settings_t;
@@ -1171,7 +1177,7 @@ void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs
 void bmp_read(image_t *img, const char *path);
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc);
-void jpeg_read_geometry(FIL *fp, image_t *img, const char *path);
+void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs);
 void jpeg_read_pixels(FIL *fp, image_t *img);
 void jpeg_read(image_t *img, const char *path);
 void jpeg_write(image_t *img, const char *path, int quality);

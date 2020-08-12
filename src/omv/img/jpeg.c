@@ -1288,7 +1288,7 @@ jpeg_overflow:
 #endif //defined OMV_HARDWARE_JPEG
 
 // This function inits the geometry values of an image.
-void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
+void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs)
 {
     for (;;) {
         uint16_t header;
@@ -1316,9 +1316,9 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path)
                 uint16_t height;
                 read_word(fp, &height);
                 height = IM_SWAP16(height);
-                img->w = width;
-                img->h = height;
-                img->bpp = f_size(fp);
+                rs->jpg_w = img->w = width;
+                rs->jpg_h = img->h = height;
+                rs->jpg_size = img->bpp = f_size(fp);
                 return;
             } else {
                 file_seek(fp, f_tell(fp) + size - 2);
@@ -1339,12 +1339,18 @@ void jpeg_read_pixels(FIL *fp, image_t *img)
 void jpeg_read(image_t *img, const char *path)
 {
     FIL fp;
+    jpg_read_settings_t rs;
+
     file_read_open(&fp, path);
+
     // Do not use file_buffer_on() here.
-    jpeg_read_geometry(&fp, img, path);
-    if (!img->pixels) img->pixels = xalloc(img->bpp);
+    jpeg_read_geometry(&fp, img, path, &rs);
+
+    if (!img->pixels) {
+        img->pixels = xalloc(img->bpp);
+    }
+
     jpeg_read_pixels(&fp, img);
-    // Do not use file_buffer_off() here.
     file_close(&fp);
 }
 
