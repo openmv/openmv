@@ -111,7 +111,7 @@ static mp_obj_t py_sensor_snapshot_start()
     // We're not setting the full range on roll to prevent oscillation.
 #endif // MICROPY_PY_IMU
 
-    int ret = sensor.snapshot_start(&sensor);
+    int ret = sensor.snapshot_start(&sensor, NULL);
 
     if (ret < 0) {
         nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_RuntimeError, "Capture Start Failed: %d", ret));
@@ -122,9 +122,7 @@ static mp_obj_t py_sensor_snapshot_start()
 
 static mp_obj_t py_sensor_snapshot_check()
 {
-    bool status;
-    sensor.snapshot_check(&sensor, &status);
-    return status ? mp_const_true : mp_const_false;
+    return sensor.snapshot_check(&sensor) ? mp_const_true : mp_const_false;
 }
 
 static mp_obj_t py_sensor_snapshot_finish()
