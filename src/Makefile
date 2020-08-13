@@ -68,6 +68,7 @@ OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/py/qstrdefsomv.h
 ifeq ($(DEBUG), 1)
 CFLAGS += -O0 -ggdb3
 else
+DEBUG=0
 CFLAGS += -O2 -ggdb3 -DNDEBUG
 endif
 
@@ -117,11 +118,21 @@ MP_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/
 MP_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/core/inc/
 MP_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/usbdev/class/inc/
 MP_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
+
+# In addition to CFLAGS, the following options are needed to set varilables
+# in MicroPython's Makefile, to enable or disable compiling additional modules.
+MICROPY_ARGS = BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)"
 ifeq ($(MICROPY_PY_WINC1500), 1)
 MP_CFLAGS += -DMICROPY_PY_WINC1500=1
+MICROPY_ARGS += MICROPY_PY_WINC1500=1
 endif
 ifeq ($(MICROPY_PY_IMU), 1)
 MP_CFLAGS += -DMICROPY_PY_IMU=1
+MICROPY_ARGS += MICROPY_PY_IMU=1
+endif
+ifeq ($(MICROPY_PY_ULAB), 1)
+MP_CFLAGS += -DMICROPY_PY_ULAB=1
+MICROPY_ARGS += MICROPY_PY_ULAB=1
 endif
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
@@ -588,7 +599,7 @@ $(FW_DIR):
 FIRMWARE_OBJS: | $(BUILD) $(FW_DIR)
 	$(MAKE)  -C $(CMSIS_DIR)                BUILD=$(BUILD)/$(CMSIS_DIR)    CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 	$(MAKE)  -C $(STHAL_DIR)                BUILD=$(BUILD)/$(STHAL_DIR)    CFLAGS="$(CFLAGS) -MMD"
-	$(MAKE)  -C $(MICROPY_DIR)/ports/stm32  BUILD=$(BUILD)/$(MICROPY_DIR)  BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)"
+	$(MAKE)  -C $(MICROPY_DIR)/ports/stm32  BUILD=$(BUILD)/$(MICROPY_DIR)  $(MICROPY_ARGS)
 	$(MAKE)  -C $(LEPTON_DIR)               BUILD=$(BUILD)/$(LEPTON_DIR)   CFLAGS="$(CFLAGS) -MMD"
 	$(MAKE)  -C $(MLX_DIR)                  BUILD=$(BUILD)/$(MLX_DIR)      CFLAGS="$(CFLAGS) -MMD"
 ifeq ($(MICROPY_PY_IMU), 1)
