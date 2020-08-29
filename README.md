@@ -35,7 +35,7 @@ You can find examples that run on the OpenMV Cam under `File->Examples->Remote C
 
 * [Generic Python Interface Library for USB and WiFi Comms](tools/rpc/README.md)
   * Provides Python code for connecting your OpenMV Cam to a Windows, Mac, or Linux computer (or RaspberryPi/Beaglebone, etc.) with python programmatically over USB VCP or Ethernet/WiFi (i.e. with sockets).
-* Arduino Interface Library for I2C, SPI, UART Comms - comming soon!
+* [Arduino Interface Library for I2C, SPI, UART Comms](https://github.com/openmv/openmv-arduino-rpc)
 * RaspberryPi Interface Library for I2C, SPI, UART Comms - comming soon!
 
 #### Note 
