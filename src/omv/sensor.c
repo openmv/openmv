@@ -111,6 +111,7 @@ static int extclk_config(int frequency)
     TIMOCHandle.OCPolarity  = TIM_OCPOLARITY_HIGH;
     TIMOCHandle.OCFastMode  = TIM_OCFAST_DISABLE;
     TIMOCHandle.OCIdleState = TIM_OCIDLESTATE_RESET;
+    TIMOCHandle.OCNIdleState= TIM_OCIDLESTATE_RESET;
 
     if ((HAL_TIM_PWM_Init(&TIMHandle) != HAL_OK)
     || (HAL_TIM_PWM_ConfigChannel(&TIMHandle, &TIMOCHandle, DCMI_TIM_CHANNEL) != HAL_OK)
