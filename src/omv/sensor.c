@@ -500,6 +500,18 @@ int sensor_reset()
     // Restore shutdown state on reset.
     sensor_shutdown(false);
 
+    // Hard-reset the sensor
+    if (sensor.reset_pol == ACTIVE_HIGH) {
+        DCMI_RESET_HIGH();
+        systick_sleep(10);
+        DCMI_RESET_LOW();
+    } else {
+        DCMI_RESET_LOW();
+        systick_sleep(10);
+        DCMI_RESET_HIGH();
+    }
+    systick_sleep(20);
+
     // Call sensor-specific reset function
     if (sensor.reset(&sensor) != 0) {
         return -1;
