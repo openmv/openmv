@@ -33,10 +33,16 @@ With the RPC Library you can easily get image processing results, stream RAW or 
 
 You can find examples that run on the OpenMV Cam under `File->Examples->Remote Control` in OpenMV IDE and online [here](scripts/examples/34-Remote-Control). Finally, OpenMV provides the following libraries for interfacing your OpenMV Cam to other systems below:
 
-* [Generic Python Interface Library for USB and WiFi Comms](tools/rpc/README.md)
-  * Provides Python code for connecting your OpenMV Cam to a Windows, Mac, or Linux computer (or RaspberryPi/Beaglebone, etc.) with python programmatically over USB VCP or Ethernet/WiFi (i.e. with sockets).
-* [Arduino Interface Library for I2C, SPI, UART Comms](https://github.com/openmv/openmv-arduino-rpc)
-* RaspberryPi Interface Library for I2C, SPI, UART Comms - comming soon!
+* [Generic Python Interface Library for USB VCP, Ethernet/WiFi, UART, Kvarser CAN, and I2C/SPI Comms](tools/rpc/README.md)
+  * Provides Python code for connecting your OpenMV Cam to a Windows, Mac, or Linux computer (or RaspberryPi/Beaglebone, etc.).
+    * Supports USB VCP on all systems. E.g. direct USB connection to the OpenMV Cam.
+    * Supports Ethernet/WiFi on all systems.
+    * Supports RS232/RS422/RS485/TTL UARTs on all systems. E.g. the old school DB9 port on the back of a PC, USB to serial RS232/RS422/RS485/TTL adapters, and TTL serial on I/O pins on SBCs like the RaspberryPi/Beaglebone.
+    * Supports Kvarser CAN on Windows and Linux (Kvarser does not support Mac).
+    * Supports I2C/SPI on Linux SBCs like the RaspberryPi/Beaglebone, etc. (coming soon)
+* [Arduino Interface Library for CAN, I2C, SPI, UART Comms](https://github.com/openmv/openmv-arduino-rpc)
+  * Works on all Arduino variants.
+  * CAN support via the MCP2515 over SPI or via the CAN peripheral on the ESP32.
 
 #### Note 
 

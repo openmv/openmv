@@ -16,6 +16,29 @@ However, the examples depend on [pygame](https://www.pygame.org/news) so you nee
 
 Because the interface library is implemented in pure python with no external dependencies it works on Windows, Mac, and Linux.
 
+## UART Support
+
+pySerial provides support for pure USB virtual COM ports, USB to RS232/RS422/RS485/TTL COM ports, and standard RS232/RS422/RS485/TTL COM ports. Please use the `rpc_usb_vcp_master` and `rpc_usb_vcp_slave` for pure USB virtual COM port communication and `rpc_uart_master` and `rpc_uart_slave` for USB to RS232/RS422/RS485/TTL COM ports and standard RS232/RS422/RS485/TTL COM ports.
+
+### USB to Serial Converter Issues
+
+Pure hardware RS232/RS422/RS485/TTL COM ports should work using the `rpc_uart_master` and `rpc_uart_slave` interfaces without issues. However, FTDI like USB to serial converter chips may add unexpected latency to communication. In particular, FTDI chips have a latency timer which is used to buffer bytes for transmission over USB to improve bandwidth... but, that also increases the worse case latency of a single byte being sent over USB to **16 ms** by default. You need to reduce the latency timer to **1 ms** as detailed below or the interface library will fail to work:
+
+* https://stackoverflow.com/questions/54230836/inconsistent-delay-in-reading-serial-data-in-python-3-7-2-using-pyserial
+* https://projectgus.com/2011/10/notes-on-ftdi-latency-with-arduino/
+
+## CAN Support
+
+You may use the RPC Interface Library over CAN using [Kvaser](https://www.kvaser.com/) hardware on Windows and Linux (Kvaser does not support Mac). You need to install the following:
+
+* For Windows
+  * [Kvaser Drivers for Windows](https://www.kvaser.com/download/?utm_source=software&utm_ean=7330130980013&utm_status=latest)
+  * [Kvaser CANlib SDK](https://www.kvaser.com/download/?utm_source=software&utm_ean=7330130980150&utm_status=latest)
+  * [Python module](https://www.kvaser.com/download/?utm_source=software&utm_ean=7330130981911&utm_status=latest)
+* For Linux
+  * [Kvaser Linux Drivers and SDK](https://www.kvaser.com/download/?utm_source=software&utm_ean=7330130980754&utm_status=latest)
+  * [Python module](https://www.kvaser.com/download/?utm_source=software&utm_ean=7330130981911&utm_status=latest)
+
 # How to use the Library
 
 Please checkout the following scripts for how to control your OpenMV Cam from the comptuer:
@@ -144,6 +167,22 @@ Starts execution of the `rpc` library on the slave to receive data. This method 
 
 `recv_timeout` defines how long to wait to receive a command from the master device before trying again. `send_timeout` defines how long the slave will wait for the master to receive the call back response before going back to trying to receive. The loop call back will be executed before trying to receive again.
 
+## rpc_uart_master(port, baudrate=9600)
+
+Creates a master implementation of the `rpc` library to communicate over a hardware RS232/RS422/RS485 or TTL COM port. `port` is the string name of the serial port. `baudrate` is the bits per second to run at.
+
+Please use the `rpc_usb_vcp_master` to talk to the OpenMV Cam over its USB interface. This class is for talking to the OpenMV Cam over its hardware UART.
+
+If you are using this class with USB to serial converters you will likely experience intermittent synchronization issues. The RPC library uart interface on the OpenMV Cam is designed to work with real-time UARTs like hardware RS232/RS422/RS485  COM ports on PCs and TTL UARTS on single board computers like the RaspberryPi and Beaglebone. That said, the interface library can handle this and will continue to work.  
+
+## rpc_uart_slave(port, baudrate=9600)
+
+Creates a slave implementation of the `rpc` library to communicate over a hardware RS232/RS422/RS485  or TTL COM port. `port` is the string name of the serial port. `baudrate` is the bits per second to run at.
+
+Please use the `rpc_usb_vcp_slave` to talk to the OpenMV Cam over its USB interface. This class is for talking to the OpenMV Cam over its hardware UART.
+
+If you are using this class with USB to serial converters you will likely experience intermittent synchronization issues. The RPC library uart interface on the OpenMV Cam is designed to work with real-time UARTs like hardware RS232/RS422/RS485  COM ports on PCs and TTL UARTS on single board computers like the RaspberryPi and Beaglebone. That said, the interface library can handle this and will continue to work. 
+
 ## rpc_usb_vcp_master(port):
 
 Creates a master implementation of the `rpc` library to communicate over a USB VCP (virtual COM port). `port` is the string name of the serial port.
@@ -163,3 +202,11 @@ Creates a master implementation of the `rpc` library to communicate over WiFi or
 ## rpc_wifi_or_ethernet_slave(my_ip="", port=0x1DBA):
 
 Creates a slave implementation of the `rpc` library to communicate over WiFi or Ethernet. `my_ip` can be `""` which binds the slave to any interface adapter to communicate to the master. If `my_ip` is not `""` then it should be an IP address on the same subnet as the master. `port` is a free port to use for UDP and TCP traffic.
+
+## rpc_kvarser_can_master(channel, message_id=0x7FF, bit_rate=250000, sampling_point=75)
+
+Creates a master implementation of the `rpc` library to communicate over CAN using Kvarser hardware. `channel` is the Kvarser channel to use. `message_id` is the 11-bit CAN ID to use for data transport. `bit_rate` is the CAN bus rate. `sampling_point` is the percentage sample point on the CAN bus.
+
+## rpc_kvarser_can_slave(channel, message_id=0x7FF, bit_rate=250000, sampling_point=75)
+
+Creates a slave implementation of the `rpc` library to communicate over CAN using Kvarser hardware. `channel` is the Kvarser channel to use. `message_id` is the 11-bit CAN ID to use for data transport. `bit_rate` is the CAN bus rate. `sampling_point` is the percentage sample point on the CAN bus.
