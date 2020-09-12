@@ -1,9 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # This file is part of the OpenMV project.
-# Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
 # This work is licensed under the MIT license, see the file LICENSE for details.
 #
-# Openmv module.
+# Openmv module with support for multiple cams.
 
 import struct
 import sys,time
@@ -167,7 +170,8 @@ def save_descriptor(port, x, y, w, h, path):
 def set_attr(port, attr, value):
     try:
         idx = __port.index(port)
-        __serial[idx].write(struct.pack("<BBIhh", __USBDBG_CMD, __USBDBG_ATTR_WRITE, 0, attr, value))
+        __serial[idx].write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_ATTR_WRITE, 8))
+        __serial[idx].write(struct.pack("<II", attr, value))
     except:
         pass
 
@@ -243,7 +247,8 @@ def fw_version(port):
 def enable_fb(port, enable):
     try:
         idx = __port.index(port)
-        __serial[idx].write(struct.pack("<BBIH", __USBDBG_CMD, __USBDBG_FB_ENABLE, 0, enable))
+        __serial[idx].write(struct.pack("<BBI", __USBDBG_CMD, __USBDBG_FB_ENABLE, 4))
+        __serial[idx].write(struct.pack("<I", enable))
     except:
         pass
 

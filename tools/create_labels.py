@@ -1,18 +1,19 @@
 #!/usr/bin/env python2
 # This file is part of the OpenMV project.
-# Copyright (c) 2017-2018
-# Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
 # This work is licensed under the MIT license, see the file LICENSE for details.
-# 
+#
 # This script creates test and training label files for an image dataset.
+# See https://medium.com/machine-learning-world/using-caffe-with-your-own-dataset-b0ade5d71233
 
 import os, sys
 import argparse
 import random
 import numpy as np
 from tqdm import tqdm
-
-# courtsey https://medium.com/machine-learning-world/using-caffe-with-your-own-dataset-b0ade5d71233
 
 import time
 import shutil

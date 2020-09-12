@@ -1,11 +1,13 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * ORB keypoints descriptor based on OpenCV code.
  */
-
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -377,7 +379,7 @@ array_t *orb_find_keypoints(image_t *img, bool normalized, int threshold,
             break;
         }
 
-        img_scaled.pixels = fb_alloc(img_scaled.w * img_scaled.h);
+        img_scaled.pixels = fb_alloc(img_scaled.w * img_scaled.h, FB_ALLOC_NO_HINT);
         // Down scale image
         image_scale(img, &img_scaled);
 
@@ -598,7 +600,7 @@ int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
     r->w = r->h = 0;
     r->x = r->y = 20000;
 
-    float *kpts_dist = fb_alloc(kpts_size * sizeof(float));
+    float *kpts_dist = fb_alloc(kpts_size * sizeof(float), FB_ALLOC_NO_HINT);
 
     // Find centroid 
     for (int i=0; i<kpts_size; i++) {

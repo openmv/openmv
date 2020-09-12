@@ -1,5 +1,12 @@
-#!/usr/bin/env python
-# Converts raw RGB565 video to MP4/AVI
+#!/usr/bin/env python2
+# This file is part of the OpenMV project.
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+# This script converts raw RGB565 video to MP4/AVI
 
 from sys import argv, exit
 from array import array

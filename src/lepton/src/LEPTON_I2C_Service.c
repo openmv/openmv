@@ -71,7 +71,9 @@
 #include "LEPTON_Types.h"
 #include "LEPTON_ErrorCodes.h"
 #include "LEPTON_I2C_Service.h"
+#include "sensor.h"
 #include "cambus.h"
+extern sensor_t sensor;
 
 /******************************************************************************/
 /** LOCAL DEFINES                                                            **/
@@ -163,7 +165,7 @@ LEP_RESULT LEP_I2C_MasterReadData(LEP_UINT16 portID,
     LEP_RESULT result = LEP_OK;
 
     for (int i = 0; i < dataLength; i++) {
-        if (cambus_readw2(deviceAddress << 1, subAddress + (i * 2), &dataPtr[i])) return LEP_ERROR;
+        if (cambus_readw2(&sensor.i2c, deviceAddress << 1, subAddress + (i * 2), &dataPtr[i])) return LEP_ERROR;
     }
 
     return(result);
@@ -191,7 +193,7 @@ LEP_RESULT LEP_I2C_MasterWriteData(LEP_UINT16 portID,
     LEP_RESULT result = LEP_OK;
 
     for (int i = 0; i < dataLength; i++) {
-        if (cambus_writew2(deviceAddress << 1, subAddress + (i * 2), dataPtr[i])) return LEP_ERROR;
+        if (cambus_writew2(&sensor.i2c, deviceAddress << 1, subAddress + (i * 2), dataPtr[i])) return LEP_ERROR;
     }
 
     return(result);
@@ -205,7 +207,7 @@ LEP_RESULT LEP_I2C_MasterReadRegister(LEP_UINT16 portID,
 {
     LEP_RESULT result = LEP_OK;
 
-    if (cambus_readw2(deviceAddress << 1, regAddress, regValue)) return LEP_ERROR;
+    if (cambus_readw2(&sensor.i2c, deviceAddress << 1, regAddress, regValue)) return LEP_ERROR;
 
     return(result);
 }
@@ -218,7 +220,7 @@ LEP_RESULT LEP_I2C_MasterWriteRegister(LEP_UINT16 portID,
 {
     LEP_RESULT result = LEP_OK;
 
-    if (cambus_writew2(deviceAddress << 1, regAddress, regValue)) return LEP_ERROR;
+    if (cambus_writew2(&sensor.i2c, deviceAddress << 1, regAddress, regValue)) return LEP_ERROR;
 
     return(result);
 }

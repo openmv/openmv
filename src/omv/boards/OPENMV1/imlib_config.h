@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Image library configuration.
- *
  */
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
@@ -32,6 +34,9 @@
 
 // Enable invariant table
 //#define IMLIB_ENABLE_INVARIANT_TABLE
+
+// Enable lens_corr()
+//#define IMLIB_ENABLE_LENS_CORR
 
 // Enable rotation_corr()
 //#define IMLIB_ENABLE_ROTATION_CORR
@@ -78,7 +83,7 @@
 // Enable find_barcodes() (42 KB)
 //#define IMLIB_ENABLE_BARCODES
 
-// Enable LENET (200+ KB).
-//#define IMLIB_ENABLE_LENET
+// Enable Tensor Flow
+//#define IMLIB_ENABLE_TF
 
 #endif //__IMLIB_CONFIG_H__

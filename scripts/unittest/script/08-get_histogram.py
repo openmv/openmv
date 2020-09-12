@@ -17,4 +17,4 @@ def unittest(data_path, temp_path):
             return False
 
     return hist2.get_percentile(0.5)[0] == 96 and hist2.get_statistics()[0:] ==\
-    (82, 96, 0, 59, 0, 255, 13, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    (81, 96, 0, 59, 0, 255, 13, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)

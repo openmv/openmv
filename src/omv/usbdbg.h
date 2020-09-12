@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * USB debug support.
- *
  */
 #ifndef __USBDBG_H__
 #define __USBDBG_H__
@@ -18,8 +20,8 @@
   * the IDE will Not connect if the major version number is different.
   */
 #define FIRMWARE_VERSION_MAJOR      (3)
-#define FIRMWARE_VERSION_MINOR      (4)
-#define FIRMWARE_VERSION_PATCH      (2)
+#define FIRMWARE_VERSION_MINOR      (6)
+#define FIRMWARE_VERSION_PATCH      (8)
 
 /**
   * To add a new debugging command, increment the last command value used.
@@ -44,9 +46,11 @@ enum usbdbg_cmd {
     USBDBG_ATTR_READ        =0x8A,
     USBDBG_ATTR_WRITE       =0x0B,
     USBDBG_SYS_RESET        =0x0C,
+    USBDBG_SYS_RESET_TO_BL  =0x0E,
     USBDBG_FB_ENABLE        =0x0D,
     USBDBG_TX_BUF_LEN       =0x8E,
-    USBDBG_TX_BUF           =0x8F
+    USBDBG_TX_BUF           =0x8F,
+    USBDBG_SENSOR_ID        =0x90
 };
 void usbdbg_init();
 bool usbdbg_script_ready();

@@ -1,12 +1,13 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013-2018 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Lepton driver.
- *
  */
-
 #include STM32_HAL_H
 #include "mp.h"
 #include "irq.h"
@@ -17,7 +18,8 @@
 #include "omv_boardconfig.h"
 #include "common.h"
 
-#if defined(OMV_ENABLE_LEPTON)
+#if (OMV_ENABLE_LEPTON == 1)
+
 #include "crc16.h"
 #include "LEPTON_SDK.h"
 #include "LEPTON_AGC.h"
@@ -118,7 +120,7 @@ static int sleep(sensor_t *sensor, int enable)
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint16_t reg_data;
-    if (cambus_readw2(sensor->slv_addr, reg_addr, &reg_data)) {
+    if (cambus_readw2(&sensor->i2c, sensor->slv_addr, reg_addr, &reg_data)) {
         return -1;
     }
     return reg_data;
@@ -126,7 +128,7 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 
 static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
-    return cambus_writew2(sensor->slv_addr, reg_addr, reg_data);
+    return cambus_writew2(&sensor->i2c, sensor->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
@@ -135,11 +137,6 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 }
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
-{
-    return 0;
-}
-
-static int set_framerate(sensor_t *sensor, framerate_t framerate)
 {
     return 0;
 }
@@ -463,9 +460,36 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
     }
 }
 
+static int sensor_check_buffsize(sensor_t *sensor)
+{
+    int bpp=0;
+    switch (sensor->pixformat) {
+        case PIXFORMAT_BAYER:
+        case PIXFORMAT_GRAYSCALE:
+            bpp = 1;
+            break;
+        case PIXFORMAT_YUV422:
+        case PIXFORMAT_RGB565:
+            bpp = 2;
+            break;
+        default:
+            break;
+    }
+
+    if ((MAIN_FB()->w * MAIN_FB()->h * bpp) > framebuffer_get_buffer_size()) {
+        return -1;
+    }
+
+    return 0;
+}
+
 static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
 {
     fb_update_jpeg_buffer();
+
+    if (sensor_check_buffsize(sensor) == -1) {
+        return -1;
+    }
 
     if ((!h_res) || (!v_res) || (!sensor->framesize) || (!sensor->pixformat)) {
         return -1;
@@ -625,7 +649,6 @@ int lepton_init(sensor_t *sensor)
     sensor->write_reg           = write_reg;
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
-    sensor->set_framerate       = set_framerate;
     sensor->set_contrast        = set_contrast;
     sensor->set_brightness      = set_brightness;
     sensor->set_saturation      = set_saturation;
@@ -712,9 +735,4 @@ int lepton_init(sensor_t *sensor)
 
     return 0;
 }
-#else
-int lepton_init(sensor_t *sensor)
-{
-    return -1;
-}
-#endif //defined(OMV_ENABLE_LEPTON)
+#endif // (OMV_ENABLE_LEPTON == 1)

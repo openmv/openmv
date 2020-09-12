@@ -1,10 +1,12 @@
 ﻿/*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * BMP reader/writer.
- *
  */
 #include <arm_math.h>
 #include <stdlib.h>
@@ -31,7 +33,13 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
     uint32_t data_size = file_size - header_size;
     if (data_size % 4) ff_file_corrupted(fp);
 
-    read_long_expect(fp, 40);
+    uint32_t header_type;
+    read_long(fp, &header_type);
+    if ((header_type != 40) // BITMAPINFOHEADER
+    && (header_type != 52) // BITMAPV2INFOHEADER
+    && (header_type != 56) // BITMAPV3INFOHEADER
+    && (header_type != 108) // BITMAPV4HEADER
+    && (header_type != 124)) ff_unsupported_format(fp); // BITMAPV5HEADER
     read_long(fp, (uint32_t*) &rs->bmp_w);
     read_long(fp, (uint32_t*) &rs->bmp_h);
     if ((rs->bmp_w == 0) || (rs->bmp_h == 0)) ff_file_corrupted(fp);
@@ -54,6 +62,18 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
 
     if (rs->bmp_bpp == 8) {
         if (rs->bmp_fmt != 0) ff_unsupported_format(fp);
+        if (header_type >= 52) { // Skip past the remaining BITMAPV2INFOHEADER bytes.
+            for (int i = 0; i < 3; i++) read_long_ignore(fp);
+        }
+        if (header_type >= 56) { // Skip past the remaining BITMAPV3INFOHEADER bytes.
+            for (int i = 0; i < 1; i++) read_long_ignore(fp);
+        }
+        if (header_type >= 108) { // Skip past the remaining BITMAPV4HEADER bytes.
+            for (int i = 0; i < 13; i++) read_long_ignore(fp);
+        }
+        if (header_type >= 124) { // Skip past the remaining BITMAPV5HEADER bytes.
+            for (int i = 0; i < 4; i++) read_long_ignore(fp);
+        }
         // Color Table (1024 bytes)
         for (int i = 0; i < 256; i++) {
             read_long_expect(fp, ((i) << 16) | ((i) << 8) | i);
@@ -64,12 +84,32 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
         read_long_expect(fp, 0x1F << 11);
         read_long_expect(fp, 0x3F << 5);
         read_long_expect(fp, 0x1F);
+        if (header_type >= 56) { // Skip past the remaining BITMAPV3INFOHEADER bytes.
+            for (int i = 0; i < 1; i++) read_long_ignore(fp);
+        }
+        if (header_type >= 108) { // Skip past the remaining BITMAPV4HEADER bytes.
+            for (int i = 0; i < 13; i++) read_long_ignore(fp);
+        }
+        if (header_type >= 124) { // Skip past the remaining BITMAPV5HEADER bytes.
+            for (int i = 0; i < 4; i++) read_long_ignore(fp);
+        }
     } else if (rs->bmp_bpp == 24) {
         if (rs->bmp_fmt == 3) {
             // Bit Masks (12 bytes)
             read_long_expect(fp, 0xFF << 16);
             read_long_expect(fp, 0xFF << 8);
             read_long_expect(fp, 0xFF);
+        } else if (header_type >= 52) { // Skip past the remaining BITMAPV2INFOHEADER bytes.
+            for (int i = 0; i < 3; i++) read_long_ignore(fp);
+        }
+        if (header_type >= 56) { // Skip past the remaining BITMAPV3INFOHEADER bytes.
+            for (int i = 0; i < 1; i++) read_long_ignore(fp);
+        }
+        if (header_type >= 108) { // Skip past the remaining BITMAPV4HEADER bytes.
+            for (int i = 0; i < 13; i++) read_long_ignore(fp);
+        }
+        if (header_type >= 124) { // Skip past the remaining BITMAPV5HEADER bytes.
+            for (int i = 0; i < 4; i++) read_long_ignore(fp);
         }
     }
 
@@ -79,15 +119,13 @@ bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_setting
 }
 
 // This function reads the pixel values of an image.
-void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_read_settings_t *rs)
+void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs)
 {
     if (rs->bmp_bpp == 8) {
         if ((rs->bmp_h < 0) && (rs->bmp_w >= 0) && (img->w == rs->bmp_row_bytes)) {
-            read_data(fp, // Super Fast - Zoom, Zoom!
-                      img->pixels + (line_start * img->w),
-                      (line_end - line_start) * img->w);
+            read_data(fp, img->pixels, n_lines * img->w);
         } else {
-            for (int i = line_start; i < line_end; i++) {
+            for (int i = 0; i < n_lines; i++) {
                 for (int j = 0; j < rs->bmp_row_bytes; j++) {
                     uint8_t pixel;
                     read_byte(fp, &pixel);
@@ -110,7 +148,7 @@ void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_re
             }
         }
     } else if (rs->bmp_bpp == 16) {
-        for (int i = line_start; i < line_end; i++) {
+        for (int i = 0; i < n_lines; i++) {
             for (int j = 0, jj = rs->bmp_row_bytes / 2; j < jj; j++) {
                 uint16_t pixel;
                 read_word(fp, &pixel);
@@ -133,12 +171,12 @@ void bmp_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, bmp_re
             }
         }
     } else if (rs->bmp_bpp == 24) {
-        for (int i = line_start; i < line_end; i++) {
+        for (int i = 0; i < n_lines; i++) {
             for (int j = 0, jj = rs->bmp_row_bytes / 3; j < jj; j++) {
-                uint8_t r, g, b;
-                read_byte(fp, &r);
-                read_byte(fp, &g);
+                uint8_t b, g, r;
                 read_byte(fp, &b);
+                read_byte(fp, &g);
+                read_byte(fp, &r);
                 uint16_t pixel = IM_RGB565(IM_R825(r), IM_G826(g), IM_B825(b));
                 if (j < img->w) {
                     if (rs->bmp_h < 0) { // vertical flip
@@ -171,7 +209,7 @@ void bmp_read(image_t *img, const char *path)
     file_buffer_on(&fp);
     bmp_read_geometry(&fp, img, path, &rs);
     if (!img->pixels) img->pixels = xalloc(img->w * img->h * img->bpp);
-    bmp_read_pixels(&fp, img, 0, img->h, &rs);
+    bmp_read_pixels(&fp, img, img->h, &rs);
     file_buffer_off(&fp);
     file_close(&fp);
 }

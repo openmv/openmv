@@ -1,14 +1,16 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * WINC1500 Python module.
- *
  */
 #include <string.h>
 #include <stdarg.h>
-#include <errno.h>
+#include "mperrno.h"
 
 #include "py/nlr.h"
 #include "py/objtuple.h"
@@ -28,6 +30,7 @@
 #include "socket/include/socket.h"
 #include "driver/include/m2m_wifi.h"
 
+#if MICROPY_PY_WINC1500
 typedef struct _winc_obj_t {
     mp_obj_base_t base;
 } winc_obj_t;
@@ -49,8 +52,10 @@ static mp_obj_t py_winc_make_new(const mp_obj_type_t *type, mp_uint_t n_args, mp
 
     // Init WINC
     winc_mode_t winc_mode = args[0].u_int;
-    if (winc_init(winc_mode) != 0) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "failed to init WINC1500 module"));
+    int error = winc_init(winc_mode);
+    if (error != 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError,
+                    "Failed to initialize WINC1500 module: %s\n", winc_strerror(error)));
     }
 
     switch (winc_mode) {
@@ -93,6 +98,10 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
     // get ssid
     const char *ssid = mp_obj_str_get_str(args[0].u_obj);
 
+    if (strlen(ssid) == 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError, "SSID can't be empty!"));
+    }
+
     // get key and sec
     const char *key = NULL;
     mp_uint_t security = M2M_WIFI_SEC_OPEN;
@@ -100,6 +109,10 @@ static mp_obj_t py_winc_connect(mp_uint_t n_args, const mp_obj_t *pos_args, mp_m
     if (args[1].u_obj != mp_const_none) {
         key = mp_obj_str_get_str(args[1].u_obj);
         security = args[2].u_int;
+    }
+
+    if (security != M2M_WIFI_SEC_OPEN && strlen(key) == 0) {
+        nlr_raise(mp_obj_new_exception_msg_varg(&mp_type_OSError, "Key can't be empty!"));
     }
 
     // connect to AP
@@ -140,7 +153,9 @@ static mp_obj_t py_winc_start_ap(mp_uint_t n_args, const mp_obj_t *pos_args, mp_
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Missing WEP key!"));
     }
 
-    key = mp_obj_str_get_str(args[1].u_obj);
+    if (security != M2M_WIFI_SEC_OPEN) {
+        key = mp_obj_str_get_str(args[1].u_obj);
+    }
 
     // get channel
     mp_uint_t channel = args[3].u_int;
@@ -193,32 +208,58 @@ static mp_obj_t py_winc_wait_for_sta(mp_obj_t self_in, mp_obj_t timeout_in)
     return sta_list;
 }
 
-static mp_obj_t py_winc_ifconfig(mp_obj_t self_in)
+static mp_obj_t py_winc_ifconfig(size_t n_args, const mp_obj_t *args)
 {
     winc_ifconfig_t ifconfig;
-    mp_obj_t ifconfig_list= mp_obj_new_list(0, NULL);
+    if (n_args == 1) {
+        // get ifconfig info
+        winc_ifconfig(&ifconfig, false);
+        mp_obj_t tuple[4] = {
+            netutils_format_ipv4_addr(ifconfig.ip_addr, NETUTILS_BIG),
+            netutils_format_ipv4_addr(ifconfig.subnet_addr, NETUTILS_BIG),
+            netutils_format_ipv4_addr(ifconfig.gateway_addr, NETUTILS_BIG),
+            netutils_format_ipv4_addr(ifconfig.dns_addr, NETUTILS_BIG),
+        };
+        return mp_obj_new_tuple(4, tuple);
+    } else {
+        // set ifconfig info
+        mp_obj_t *items;
+        mp_obj_get_array_fixed_n(args[1], 4, &items);
+        netutils_parse_ipv4_addr(items[0], ifconfig.ip_addr, NETUTILS_BIG);
+        netutils_parse_ipv4_addr(items[1], ifconfig.subnet_addr, NETUTILS_BIG);
+        netutils_parse_ipv4_addr(items[2], ifconfig.gateway_addr, NETUTILS_BIG);
+        netutils_parse_ipv4_addr(items[3], ifconfig.dns_addr, NETUTILS_BIG);
+        winc_ifconfig(&ifconfig, true);
+        return mp_const_none;
+    }
+}
 
-    winc_ifconfig(&ifconfig);
+static mp_obj_t py_winc_netinfo(mp_obj_t self_in)
+{
+    winc_netinfo_t netinfo;
+    winc_netinfo(&netinfo);
 
     // Format MAC address
     VSTR_FIXED(mac_vstr, 18);
     vstr_printf(&mac_vstr, "%02x:%02x:%02x:%02x:%02x:%02x",
-            ifconfig.mac_addr[0], ifconfig.mac_addr[1], ifconfig.mac_addr[2],
-            ifconfig.mac_addr[3], ifconfig.mac_addr[4], ifconfig.mac_addr[5]);
+            netinfo.mac_addr[0], netinfo.mac_addr[1], netinfo.mac_addr[2],
+            netinfo.mac_addr[3], netinfo.mac_addr[4], netinfo.mac_addr[5]);
 
     // Format IP address
     VSTR_FIXED(ip_vstr, 16);
-    vstr_printf(&ip_vstr, "%d.%d.%d.%d", ifconfig.ip_addr[0],
-            ifconfig.ip_addr[1], ifconfig.ip_addr[2], ifconfig.ip_addr[3]);
+    vstr_printf(&ip_vstr, "%d.%d.%d.%d", netinfo.ip_addr[0],
+            netinfo.ip_addr[1], netinfo.ip_addr[2], netinfo.ip_addr[3]);
 
     // Add connection info
-    mp_obj_list_append(ifconfig_list, mp_obj_new_int(ifconfig.rssi));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_int(ifconfig.security));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(ifconfig.ssid, strlen(ifconfig.ssid)));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(mac_vstr.buf, mac_vstr.len));
-    mp_obj_list_append(ifconfig_list, mp_obj_new_str(ip_vstr.buf, ip_vstr.len));
 
-    return ifconfig_list;
+    mp_obj_t tuple[5] = {
+        mp_obj_new_int(netinfo.rssi),
+        mp_obj_new_int(netinfo.security),
+        mp_obj_new_str(netinfo.ssid, strlen(netinfo.ssid)),
+        mp_obj_new_str(mac_vstr.buf, mac_vstr.len),
+        mp_obj_new_str(ip_vstr.buf, ip_vstr.len),
+    };
+    return mp_obj_new_tuple(5, tuple);
 }
 
 static int winc_scan_callback(winc_scan_result_t *scan_result, void *arg)
@@ -328,7 +369,7 @@ static int py_winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
     uint8_t type;
 
     if (socket->u_param.domain != MOD_NETWORK_AF_INET) {
-        *_errno = EAFNOSUPPORT;
+        *_errno = MP_EAFNOSUPPORT;
         return -1;
     }
 
@@ -342,7 +383,7 @@ static int py_winc_socket_socket(mod_network_socket_obj_t *socket, int *_errno)
             break;
 
         default:
-            *_errno = EINVAL;
+            *_errno = MP_EINVAL;
             return -1;
     }
 
@@ -427,7 +468,13 @@ static int py_winc_socket_connect(mod_network_socket_obj_t *socket, byte *ip, mp
 static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byte *buf, mp_uint_t len, int *_errno)
 {
     int ret = winc_socket_send(socket->fd, buf, len, socket->timeout);
-    if (ret < 0) {
+    if (ret == SOCK_ERR_TIMEOUT) {
+        // The socket is Not closed on timeout when calling
+        // WINC1500 functions that actually accept a timeout.
+        *_errno = MP_ETIMEDOUT;
+        return 0;
+    } else if (ret < 0) {
+        // Close the socket on any other errors.
         *_errno = ret;
         py_winc_socket_close(socket);
         return -1;
@@ -438,7 +485,13 @@ static mp_uint_t py_winc_socket_send(mod_network_socket_obj_t *socket, const byt
 static mp_uint_t py_winc_socket_recv(mod_network_socket_obj_t *socket, byte *buf, mp_uint_t len, int *_errno)
 {
     int ret = winc_socket_recv(socket->fd, buf, len, &socket->sockbuf, socket->timeout);
-    if (ret < 0) {
+    if (ret == SOCK_ERR_TIMEOUT) {
+        // The socket is Not closed on timeout when calling
+        // WINC1500 functions that actually accept a timeout.
+        *_errno = MP_ETIMEDOUT;
+        return 0;
+    } else if (ret < 0) {
+        // Close the socket on any other errors.
         *_errno = ret;
         py_winc_socket_close(socket);
         return -1;
@@ -451,7 +504,12 @@ static mp_uint_t py_winc_socket_sendto(mod_network_socket_obj_t *socket,
 {
     MAKE_SOCKADDR(addr, ip, port)
     int ret = winc_socket_sendto(socket->fd, buf, len, &addr, socket->timeout);
-    if (ret < 0) {
+    if (ret == SOCK_ERR_TIMEOUT) {
+        // The socket is Not closed on timeout when calling
+        // WINC1500 functions that actually accept a timeout.
+        *_errno = MP_ETIMEDOUT;
+        return 0;
+    } else if (ret < 0) {
         *_errno = ret;
         py_winc_socket_close(socket);
         return -1;
@@ -465,7 +523,13 @@ static mp_uint_t py_winc_socket_recvfrom(mod_network_socket_obj_t *socket,
     sockaddr addr;
     int ret = winc_socket_recvfrom(socket->fd, buf, len, &addr, socket->timeout);
     UNPACK_SOCKADDR((&addr), ip, *port);
-    if (ret < 0) {
+    if (ret == SOCK_ERR_TIMEOUT) {
+        // The socket is Not closed on timeout when calling
+        // WINC1500 functions that actually accept a timeout.
+        *_errno = MP_ETIMEDOUT;
+        return 0;
+    } else if (ret < 0) {
+        // Close the socket on any other errors.
         *_errno = ret;
         py_winc_socket_close(socket);
         return -1;
@@ -487,13 +551,21 @@ static int py_winc_socket_setsockopt(mod_network_socket_obj_t *socket, mp_uint_t
 
 static int py_winc_socket_settimeout(mod_network_socket_obj_t *socket, mp_uint_t timeout_ms, int *_errno)
 {
+    if (timeout_ms == UINT32_MAX) {
+        // no timeout is given, set the socket to blocking mode.
+        timeout_ms = 0;
+    } else if (timeout_ms == 0) {
+        // non-blocking mode, set the timeout to a small number other than zero.
+        timeout_ms = 10;
+    } // otherwise, timeout is provided.
+
     socket->timeout = timeout_ms;
     return 0;
 }
 
 static int py_winc_socket_ioctl(mod_network_socket_obj_t *socket, mp_uint_t request, mp_uint_t arg, int *_errno)
 {
-    *_errno = EIO;
+    *_errno = MP_EIO;
     return -1;
 }
 
@@ -503,7 +575,8 @@ static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_disconnect_obj,    py_winc_disconnect);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_isconnected_obj,   py_winc_isconnected);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_connected_sta_obj, py_winc_connected_sta);
 static MP_DEFINE_CONST_FUN_OBJ_2(py_winc_wait_for_sta_obj,  py_winc_wait_for_sta);
-static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_ifconfig_obj,      py_winc_ifconfig);
+static MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_winc_ifconfig_obj, 1, 2, py_winc_ifconfig);
+static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_netinfo_obj,       py_winc_netinfo);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_scan_obj,          py_winc_scan);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_get_rssi_obj,      py_winc_get_rssi);
 static MP_DEFINE_CONST_FUN_OBJ_1(py_winc_fw_version_obj,    py_winc_fw_version);
@@ -518,6 +591,7 @@ static const mp_map_elem_t winc_locals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_connected_sta), (mp_obj_t)&py_winc_connected_sta_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_wait_for_sta),  (mp_obj_t)&py_winc_wait_for_sta_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_ifconfig),      (mp_obj_t)&py_winc_ifconfig_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_netinfo),       (mp_obj_t)&py_winc_netinfo_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_scan),          (mp_obj_t)&py_winc_scan_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_rssi),          (mp_obj_t)&py_winc_get_rssi_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_fw_version),    (mp_obj_t)&py_winc_fw_version_obj },
@@ -559,3 +633,4 @@ const mod_network_nic_type_t mod_network_nic_type_winc = {
     .settimeout = py_winc_socket_settimeout,
     .ioctl      = py_winc_socket_ioctl,
 };
+#endif // MICROPY_PY_WINC1500

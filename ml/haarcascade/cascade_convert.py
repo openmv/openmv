@@ -1,6 +1,9 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python2
 # This file is part of the OpenMV project.
-# Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
 # This work is licensed under the MIT license, see the file LICENSE for details.
 #
 # Haar Cascade binary converter.
@@ -30,7 +33,7 @@ def cascade_info(path):
     stages_elements = xmldoc.getElementsByTagName('stages')
     stages = []
     for node in stages_elements[0].childNodes:
-        if node.nodeType is 1:
+        if node.nodeType == 1:
             stages.append(int(node.getElementsByTagName('maxWeakCount')[0].childNodes[0].nodeValue))
     stage_threshold = xmldoc.getElementsByTagName('stageThreshold')[0:n_stages]
 
@@ -62,7 +65,7 @@ def cascade_info_old(path):
     n_stages = len(trees)
 
     # read stages
-    stages = [len(t.childNodes)/2 for t in trees][0:n_stages]
+    stages = [len(t.childNodes)//2 for t in trees][0:n_stages]
     stage_threshold = xmldoc.getElementsByTagName('stage_threshold')[0:n_stages]
 
     # total number of features
@@ -77,7 +80,7 @@ def cascade_info_old(path):
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
     #read cascade size
-    size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
+    size = list(map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
 
     n_rectangles = 0
     for f in feature:
@@ -115,12 +118,12 @@ def cascade_binary(path, n_stages, name):
     stages_elements = xmldoc.getElementsByTagName('stages')
     stages = []
     for node in stages_elements[0].childNodes:
-        if node.nodeType is 1:
+        if node.nodeType == 1:
             stages.append(int(node.getElementsByTagName('maxWeakCount')[0].childNodes[0].nodeValue))
     stage_threshold = xmldoc.getElementsByTagName('stageThreshold')[0:n_stages]
 
     # total number of features
-    n_features = sum(stages)
+    n_features = int(sum(stages))
 
     # read features threshold
     internal_nodes = xmldoc.getElementsByTagName('internalNodes')[0:n_features]
@@ -188,7 +191,7 @@ def cascade_binary(path, n_stages, name):
         idx = int(f.childNodes[0].nodeValue.split()[2])
         rects = feature[idx].getElementsByTagName('_')
         for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            l = list(map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
 
     # write rects
@@ -196,8 +199,8 @@ def cascade_binary(path, n_stages, name):
         idx = int(f.childNodes[0].nodeValue.split()[2])
         rects = feature[idx].getElementsByTagName('_')
         for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
-            fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
+            l = list(map(int, r.childNodes[0].nodeValue[:-1].split()))
+            fout.write(struct.pack('BBBB', l[0], l[1], l[2], l[3])) #uint8_t
 
     # print cascade info
     print("size:%dx%d"%(size[0], size[1]))
@@ -220,7 +223,7 @@ def cascade_binary_old(path, n_stages, name):
         n_stages = max_stages
 
     # read stages
-    stages = [len(t.childNodes)/2 for t in trees][0:n_stages]
+    stages = [len(t.childNodes)//2 for t in trees][0:n_stages]
     stage_threshold = xmldoc.getElementsByTagName('stage_threshold')[0:n_stages]
 
     # total number of features
@@ -237,7 +240,8 @@ def cascade_binary_old(path, n_stages, name):
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
     # read cascade size
-    size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
+    size = list(map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
+
 
     # open output file with the specified name or xml file name
     if not name:
@@ -285,14 +289,14 @@ def cascade_binary_old(path, n_stages, name):
     for f in feature:
         rects = f.getElementsByTagName('_')
         for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            l = list(map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('b', l[4])) #int8_t NOTE: multiply by 4096
 
     # write rects
     for f in feature:
         rects = f.getElementsByTagName('_')
         for r in rects:
-            l = map(int, r.childNodes[0].nodeValue[:-1].split())
+            l = list(map(int, r.childNodes[0].nodeValue[:-1].split()))
             fout.write(struct.pack('BBBB',l[0], l[1], l[2], l[3])) #uint8_t
 
     # print cascade info
@@ -332,7 +336,7 @@ def cascade_header(path, n_stages, name):
     feature = xmldoc.getElementsByTagName('rects')[0:n_features]
 
     # read cascade size
-    size = (map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
+    size = list(map(int, xmldoc.getElementsByTagName('size')[0].childNodes[0].nodeValue.split()))
 
     # open output file with the specified name or xml file name
     if not name:

@@ -1,50 +1,81 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Framebuffer stuff.
- *
+ * Framebuffer functions.
  */
 #ifndef __FRAMEBUFFER_H__
 #define __FRAMEBUFFER_H__
 #include <stdint.h>
+#include "imlib.h"
 #include "mutex.h"
 
 typedef struct framebuffer {
-    int x,y;
-    int w,h;
-    int u,v;
-    int bpp;
+    int32_t x,y;
+    int32_t w,h;
+    int32_t u,v;
+    int32_t bpp;
+    int32_t streaming_enabled;
+    // NOTE: This buffer must be aligned on a 16 byte boundary
     uint8_t pixels[];
 } framebuffer_t;
 
-extern framebuffer_t *fb_framebuffer;
+extern framebuffer_t *framebuffer;
 
 typedef struct jpegbuffer {
-    int w,h;
-    int size;
-    int enabled;
-    int quality;
+    int32_t w,h;
+    int32_t size;
+    int32_t enabled;
+    int32_t quality;
     mutex_t lock;
     uint8_t pixels[];
 } jpegbuffer_t;
 
-extern jpegbuffer_t *jpeg_fb_framebuffer;
+extern jpegbuffer_t *jpeg_framebuffer;
 
-// Use these macros to get a pointer to main or JPEG framebuffer.
-#define MAIN_FB()           (fb_framebuffer)
-#define JPEG_FB()           (jpeg_fb_framebuffer)
+// Force fb streaming to the IDE off.
+void fb_set_streaming_enabled(bool enable);
+bool fb_get_streaming_enabled();
 
-// Use this macro to get a pointer to the free SRAM area located after the framebuffer.
-#define MAIN_FB_PIXELS()    (MAIN_FB()->pixels + fb_buffer_size())
+// Encode jpeg data for transmission over a text channel.
+int fb_encode_for_ide_new_size(image_t *img);
+void fb_encode_for_ide(uint8_t *ptr, image_t *img);
 
-// Use this macro to get a pointer to the free SRAM area located after the framebuffer.
-#define JPEG_FB_PIXELS()    (JPEG_FB()->pixels + JPEG_FB()->size)
-
-// Returns the main frame buffer size, factoring in pixel formats.
-uint32_t fb_buffer_size();
+// Initializes an image_t struct with the frame buffer.
+void framebuffer_initialize_image(image_t *img);
 
 // Transfers the frame buffer to the jpeg frame buffer if not locked.
 void fb_update_jpeg_buffer();
+
+int32_t framebuffer_get_x();
+int32_t framebuffer_get_y();
+int32_t framebuffer_get_u();
+int32_t framebuffer_get_v();
+
+int32_t framebuffer_get_width();
+int32_t framebuffer_get_height();
+int32_t framebuffer_get_depth();
+
+// Return the size of the current frame (w * h * bpp) if the framebuffer is initialized,
+// otherwise return 0 if the framebuffer is unintialized or invalid (e.g. first frame).
+uint32_t framebuffer_get_frame_size();
+
+// Return the max frame size that fits the framebuffer
+// (i.e OMV_RAW_BUF_SIZE - sizeof(framebuffer_t))
+uint32_t framebuffer_get_buffer_size();
+
+// Return the current buffer address.
+uint8_t *framebuffer_get_buffer();
+
+// Set the framebuffer w, h and bpp.
+void framebuffer_set(int32_t w, int32_t h, int32_t bpp);
+
+// Use these macros to get a pointer to main or JPEG framebuffer.
+#define MAIN_FB()           (framebuffer)
+#define JPEG_FB()           (jpeg_framebuffer)
+
 #endif /* __FRAMEBUFFER_H__ */

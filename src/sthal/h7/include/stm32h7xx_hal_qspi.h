@@ -2,42 +2,24 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_qspi.h
   * @author  MCD Application Team
-  * @version V1.2.0
-  * @date   29-December-2017
   * @brief   Header file of QSPI HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32H7xx_HAL_QSPI_H
-#define __STM32H7xx_HAL_QSPI_H
+#ifndef STM32H7xx_HAL_QSPI_H
+#define STM32H7xx_HAL_QSPI_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -45,7 +27,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32h7xx_hal_def.h"
-#include "stm32h7xx_hal_mdma.h"
 
 /** @addtogroup STM32H7xx_HAL_Driver
   * @{
@@ -115,7 +96,11 @@ typedef enum
 /**
   * @brief  QSPI Handle Structure definition
   */
+#if (USE_HAL_QSPI_REGISTER_CALLBACKS == 1)
+typedef struct __QSPI_HandleTypeDef
+#else
 typedef struct
+#endif/* USE_HAL_QSPI_REGISTER_CALLBACKS  */
 {
   QUADSPI_TypeDef            *Instance;        /* QSPI registers base address        */
   QSPI_InitTypeDef           Init;             /* QSPI communication parameters      */
@@ -130,6 +115,19 @@ typedef struct
   __IO HAL_QSPI_StateTypeDef State;            /* QSPI communication state           */
   __IO uint32_t              ErrorCode;        /* QSPI Error code                    */
   uint32_t                   Timeout;          /* Timeout for the QSPI memory access */
+#if (USE_HAL_QSPI_REGISTER_CALLBACKS == 1)
+  void (* ErrorCallback)        (struct __QSPI_HandleTypeDef *hqspi);
+  void (* AbortCpltCallback)    (struct __QSPI_HandleTypeDef *hqspi);
+  void (* FifoThresholdCallback)(struct __QSPI_HandleTypeDef *hqspi);
+  void (* CmdCpltCallback)      (struct __QSPI_HandleTypeDef *hqspi);
+  void (* RxCpltCallback)       (struct __QSPI_HandleTypeDef *hqspi);
+  void (* TxCpltCallback)       (struct __QSPI_HandleTypeDef *hqspi);
+  void (* StatusMatchCallback)  (struct __QSPI_HandleTypeDef *hqspi);
+  void (* TimeOutCallback)      (struct __QSPI_HandleTypeDef *hqspi);
+
+  void (* MspInitCallback)      (struct __QSPI_HandleTypeDef *hqspi);
+  void (* MspDeInitCallback)    (struct __QSPI_HandleTypeDef *hqspi);
+#endif
 }QSPI_HandleTypeDef;
 
 /**
@@ -199,6 +197,30 @@ typedef struct
                                   This parameter can be a value of @ref QSPI_TimeOutActivation */
 }QSPI_MemoryMappedTypeDef;
 
+#if (USE_HAL_QSPI_REGISTER_CALLBACKS == 1)
+/**
+  * @brief  HAL QSPI Callback ID enumeration definition
+  */
+typedef enum
+{
+  HAL_QSPI_ERROR_CB_ID          = 0x00U,  /*!< QSPI Error Callback ID            */
+  HAL_QSPI_ABORT_CB_ID          = 0x01U,  /*!< QSPI Abort Callback ID            */
+  HAL_QSPI_FIFO_THRESHOLD_CB_ID = 0x02U,  /*!< QSPI FIFO Threshold Callback ID   */
+  HAL_QSPI_CMD_CPLT_CB_ID       = 0x03U,  /*!< QSPI Command Complete Callback ID */
+  HAL_QSPI_RX_CPLT_CB_ID        = 0x04U,  /*!< QSPI Rx Complete Callback ID      */
+  HAL_QSPI_TX_CPLT_CB_ID        = 0x05U,  /*!< QSPI Tx Complete Callback ID      */
+  HAL_QSPI_STATUS_MATCH_CB_ID   = 0x08U,  /*!< QSPI Status Match Callback ID     */
+  HAL_QSPI_TIMEOUT_CB_ID        = 0x09U,  /*!< QSPI Timeout Callback ID          */
+
+  HAL_QSPI_MSP_INIT_CB_ID       = 0x0AU,  /*!< QSPI MspInit Callback ID          */
+  HAL_QSPI_MSP_DEINIT_CB_ID     = 0x0B0   /*!< QSPI MspDeInit Callback ID        */
+}HAL_QSPI_CallbackIDTypeDef;
+
+/**
+  * @brief  HAL QSPI Callback pointer definition
+  */
+typedef void (*pQSPI_CallbackTypeDef)(QSPI_HandleTypeDef *hqspi);
+#endif
 /**
   * @}
   */
@@ -216,6 +238,9 @@ typedef struct
 #define HAL_QSPI_ERROR_TRANSFER        ((uint32_t)0x00000002U) /*!< Transfer error     */
 #define HAL_QSPI_ERROR_DMA             ((uint32_t)0x00000004U) /*!< DMA transfer error */
 #define HAL_QSPI_ERROR_INVALID_PARAM   ((uint32_t)0x00000008U) /*!< Invalid parameters error */
+#if (USE_HAL_QSPI_REGISTER_CALLBACKS == 1)
+#define HAL_QSPI_ERROR_INVALID_CALLBACK 0x00000010U /*!< Invalid callback error   */
+#endif
 /**
   * @}
   */
@@ -437,7 +462,15 @@ typedef struct
   * @param  __HANDLE__: QSPI handle.
   * @retval None
   */
+#if (USE_HAL_QSPI_REGISTER_CALLBACKS == 1)
+#define __HAL_QSPI_RESET_HANDLE_STATE(__HANDLE__)           do {                                              \
+                                                                  (__HANDLE__)->State = HAL_QSPI_STATE_RESET; \
+                                                                  (__HANDLE__)->MspInitCallback = NULL;       \
+                                                                  (__HANDLE__)->MspDeInitCallback = NULL;     \
+                                                               } while(0)
+#else
 #define __HAL_QSPI_RESET_HANDLE_STATE(__HANDLE__)           ((__HANDLE__)->State = HAL_QSPI_STATE_RESET)
+#endif
 
 /** @brief  Enable the QSPI peripheral.
   * @param  __HANDLE__: specifies the QSPI Handle.
@@ -504,7 +537,7 @@ typedef struct
   *            @arg QSPI_FLAG_TE:   QSPI Transfer error flag
   * @retval None
   */
-#define __HAL_QSPI_GET_FLAG(__HANDLE__, __FLAG__)           (READ_BIT((__HANDLE__)->Instance->SR, (__FLAG__)) != 0)
+#define __HAL_QSPI_GET_FLAG(__HANDLE__, __FLAG__)           ((READ_BIT((__HANDLE__)->Instance->SR, (__FLAG__)) != 0U) ? SET : RESET)
 
 /** @brief  Clears the specified QSPI's flag status.
   * @param  __HANDLE__: specifies the QSPI Handle.
@@ -561,8 +594,6 @@ void                  HAL_QSPI_FifoThresholdCallback(QSPI_HandleTypeDef *hqspi);
 void                  HAL_QSPI_CmdCpltCallback      (QSPI_HandleTypeDef *hqspi);
 void                  HAL_QSPI_RxCpltCallback       (QSPI_HandleTypeDef *hqspi);
 void                  HAL_QSPI_TxCpltCallback       (QSPI_HandleTypeDef *hqspi);
-void                  HAL_QSPI_RxHalfCpltCallback   (QSPI_HandleTypeDef *hqspi);
-void                  HAL_QSPI_TxHalfCpltCallback   (QSPI_HandleTypeDef *hqspi);
 
 /* QSPI status flag polling mode */
 void                  HAL_QSPI_StatusMatchCallback  (QSPI_HandleTypeDef *hqspi);
@@ -570,6 +601,18 @@ void                  HAL_QSPI_StatusMatchCallback  (QSPI_HandleTypeDef *hqspi);
 /* QSPI memory-mapped mode */
 void                  HAL_QSPI_TimeOutCallback      (QSPI_HandleTypeDef *hqspi);
 
+#if (USE_HAL_QSPI_REGISTER_CALLBACKS == 1)
+/* QSPI callback registering/unregistering */
+HAL_StatusTypeDef     HAL_QSPI_RegisterCallback     (QSPI_HandleTypeDef *hqspi, HAL_QSPI_CallbackIDTypeDef CallbackId, pQSPI_CallbackTypeDef pCallback);
+HAL_StatusTypeDef     HAL_QSPI_UnRegisterCallback   (QSPI_HandleTypeDef *hqspi, HAL_QSPI_CallbackIDTypeDef CallbackId);
+#endif
+/**
+  * @}
+  */
+
+/** @addtogroup QSPI_Exported_Functions_Group3
+  * @{
+  */
 /* Peripheral Control and State functions  ************************************/
 HAL_QSPI_StateTypeDef HAL_QSPI_GetState        (QSPI_HandleTypeDef *hqspi);
 uint32_t              HAL_QSPI_GetError        (QSPI_HandleTypeDef *hqspi);
@@ -578,23 +621,25 @@ HAL_StatusTypeDef     HAL_QSPI_Abort_IT        (QSPI_HandleTypeDef *hqspi);
 void                  HAL_QSPI_SetTimeout      (QSPI_HandleTypeDef *hqspi, uint32_t Timeout);
 HAL_StatusTypeDef     HAL_QSPI_SetFifoThreshold(QSPI_HandleTypeDef *hqspi, uint32_t Threshold);
 uint32_t              HAL_QSPI_GetFifoThreshold(QSPI_HandleTypeDef *hqspi);
+HAL_StatusTypeDef     HAL_QSPI_SetFlashID      (QSPI_HandleTypeDef *hqspi, uint32_t FlashID);
 /**
   * @}
   */
+
 /* End of exported functions -------------------------------------------------*/
 
 /* Private macros ------------------------------------------------------------*/
 /** @defgroup QSPI_Private_Macros QSPI Private Macros
 * @{
 */
-#define IS_QSPI_CLOCK_PRESCALER(PRESCALER) ((PRESCALER) <= 0xFF)
+#define IS_QSPI_CLOCK_PRESCALER(PRESCALER) ((PRESCALER) <= 0xFFU)
 
-#define IS_QSPI_FIFO_THRESHOLD(THR)        (((THR) > 0) && ((THR) <= 32))
+#define IS_QSPI_FIFO_THRESHOLD(THR)        (((THR) > 0U) && ((THR) <= 32U))
 
 #define IS_QSPI_SSHIFT(SSHIFT)             (((SSHIFT) == QSPI_SAMPLE_SHIFTING_NONE) || \
                                             ((SSHIFT) == QSPI_SAMPLE_SHIFTING_HALFCYCLE))
 
-#define IS_QSPI_FLASH_SIZE(FSIZE)          (((FSIZE) <= 31))
+#define IS_QSPI_FLASH_SIZE(FSIZE)          (((FSIZE) <= 31U))
 
 #define IS_QSPI_CS_HIGH_TIME(CSHTIME)      (((CSHTIME) == QSPI_CS_HIGH_TIME_1_CYCLE) || \
                                             ((CSHTIME) == QSPI_CS_HIGH_TIME_2_CYCLE) || \
@@ -609,13 +654,13 @@ uint32_t              HAL_QSPI_GetFifoThreshold(QSPI_HandleTypeDef *hqspi);
                                             ((CLKMODE) == QSPI_CLOCK_MODE_3))
 
 
-#define IS_QSPI_FLASH_ID(FLASH)            (((FLASH) == QSPI_FLASH_ID_1) || \
-                                            ((FLASH) == QSPI_FLASH_ID_2))
+#define IS_QSPI_FLASH_ID(FLASH_ID)         (((FLASH_ID) == QSPI_FLASH_ID_1) || \
+                                            ((FLASH_ID) == QSPI_FLASH_ID_2))
 
 #define IS_QSPI_DUAL_FLASH_MODE(MODE)      (((MODE) == QSPI_DUALFLASH_ENABLE) || \
                                             ((MODE) == QSPI_DUALFLASH_DISABLE))
 
-#define IS_QSPI_INSTRUCTION(INSTRUCTION)   ((INSTRUCTION) <= 0xFF)
+#define IS_QSPI_INSTRUCTION(INSTRUCTION)   ((INSTRUCTION) <= 0xFFU)
 
 #define IS_QSPI_ADDRESS_SIZE(ADDR_SIZE)    (((ADDR_SIZE) == QSPI_ADDRESS_8_BITS)  || \
                                             ((ADDR_SIZE) == QSPI_ADDRESS_16_BITS) || \
@@ -627,7 +672,7 @@ uint32_t              HAL_QSPI_GetFifoThreshold(QSPI_HandleTypeDef *hqspi);
                                             ((SIZE) == QSPI_ALTERNATE_BYTES_24_BITS) || \
                                             ((SIZE) == QSPI_ALTERNATE_BYTES_32_BITS))
 
-#define IS_QSPI_DUMMY_CYCLES(DCY)          ((DCY) <= 31)
+#define IS_QSPI_DUMMY_CYCLES(DCY)          ((DCY) <= 31U)
 
 #define IS_QSPI_INSTRUCTION_MODE(MODE)     (((MODE) == QSPI_INSTRUCTION_NONE)    || \
                                             ((MODE) == QSPI_INSTRUCTION_1_LINE)  || \
@@ -660,7 +705,7 @@ uint32_t              HAL_QSPI_GetFifoThreshold(QSPI_HandleTypeDef *hqspi);
 
 #define IS_QSPI_INTERVAL(INTERVAL)         ((INTERVAL) <= QUADSPI_PIR_INTERVAL)
 
-#define IS_QSPI_STATUS_BYTES_SIZE(SIZE)    (((SIZE) >= 1) && ((SIZE) <= 4))
+#define IS_QSPI_STATUS_BYTES_SIZE(SIZE)    (((SIZE) >= 1U) && ((SIZE) <= 4U))
 
 #define IS_QSPI_MATCH_MODE(MODE)           (((MODE) == QSPI_MATCH_MODE_AND) || \
                                             ((MODE) == QSPI_MATCH_MODE_OR))
@@ -671,7 +716,7 @@ uint32_t              HAL_QSPI_GetFifoThreshold(QSPI_HandleTypeDef *hqspi);
 #define IS_QSPI_TIMEOUT_ACTIVATION(TCEN)   (((TCEN) == QSPI_TIMEOUT_COUNTER_DISABLE) || \
                                             ((TCEN) == QSPI_TIMEOUT_COUNTER_ENABLE))
 
-#define IS_QSPI_TIMEOUT_PERIOD(PERIOD)     ((PERIOD) <= 0xFFFF)
+#define IS_QSPI_TIMEOUT_PERIOD(PERIOD)     ((PERIOD) <= 0xFFFFU)
 /**
 * @}
 */
@@ -685,10 +730,13 @@ uint32_t              HAL_QSPI_GetFifoThreshold(QSPI_HandleTypeDef *hqspi);
   * @}
   */
 
+/**
+  * @}
+  */
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __STM32H7xx_HAL_QSPI_H */
+#endif /* STM32H7xx_HAL_QSPI_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

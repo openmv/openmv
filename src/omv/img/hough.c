@@ -1,8 +1,13 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Hough Transform feature extraction.
  */
-
 #include "imlib.h"
 
 #ifdef IMLIB_ENABLE_FIND_LINES
@@ -21,7 +26,7 @@ void imlib_find_lines(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
         if (hough_divide > 4) fb_alloc_fail(); // support 1, 2, 4
     }
 
-    uint32_t *acc = fb_alloc0(sizeof(uint32_t) * theta_size * r_size);
+    uint32_t *acc = fb_alloc0(sizeof(uint32_t) * theta_size * r_size, FB_ALLOC_NO_HINT);
 
     switch (ptr->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -365,9 +370,9 @@ void imlib_find_line_segments(list_t *out, image_t *ptr, rectangle_t *roi, unsig
     list_init(out, sizeof(find_lines_list_lnk_data_t));
 
     const int r_diag_len = fast_roundf(fast_sqrtf((roi->w * roi->w) + (roi->h * roi->h))) * 2;
-    int *theta_buffer = fb_alloc(sizeof(int) * r_diag_len);
-    uint32_t *mag_buffer = fb_alloc(sizeof(uint32_t) * r_diag_len);
-    point_t *point_buffer = fb_alloc(sizeof(point_t) * r_diag_len);
+    int *theta_buffer = fb_alloc(sizeof(int) * r_diag_len, FB_ALLOC_NO_HINT);
+    uint32_t *mag_buffer = fb_alloc(sizeof(uint32_t) * r_diag_len, FB_ALLOC_NO_HINT);
+    point_t *point_buffer = fb_alloc(sizeof(point_t) * r_diag_len, FB_ALLOC_NO_HINT);
 
     for (size_t i = 0; list_size(&temp_out); i++) {
         find_lines_list_lnk_data_t lnk_data;
@@ -456,8 +461,8 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                         uint32_t threshold, unsigned int x_margin, unsigned int y_margin, unsigned int r_margin,
                         unsigned int r_min, unsigned int r_max, unsigned int r_step)
 {
-    uint16_t *theta_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h);
-    uint16_t *magnitude_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h);
+    uint16_t *theta_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h, FB_ALLOC_NO_HINT);
+    uint16_t *magnitude_acc = fb_alloc0(sizeof(uint16_t) * roi->w * roi->h, FB_ALLOC_NO_HINT);
 
     switch (ptr->bpp) {
         case IMAGE_BPP_BINARY: {
@@ -678,6 +683,7 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
     for (int r = r_min, rr = r_max; r < rr; r += r_step) { // ignore r = 0/1
         int a_size, b_size, hough_divide = 1; // divides a and b accumulators
+        int hough_shift = 0;
         int w_size = roi->w - (2 * r);
         int h_size = roi->h - (2 * r);
 
@@ -686,10 +692,18 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
             b_size = 1 + ((h_size + hough_divide - 1) / hough_divide) + 1; // top & bottom padding
             if ((sizeof(uint32_t) * a_size * b_size) <= fb_avail()) break;
             hough_divide = hough_divide << 1; // powers of 2...
+            hough_shift++;
             if (hough_divide > 4) fb_alloc_fail(); // support 1, 2, 4
         }
 
-        uint32_t *acc = fb_alloc0(sizeof(uint32_t) * a_size * b_size);
+        uint32_t *acc = fb_alloc0(sizeof(uint32_t) * a_size * b_size, FB_ALLOC_NO_HINT);
+        int16_t *rcos = fb_alloc(sizeof(int16_t)*360, FB_ALLOC_NO_HINT);
+        int16_t *rsin = fb_alloc(sizeof(int16_t)*360, FB_ALLOC_NO_HINT);
+        for (int i=0; i<360; i++)
+        {
+            rcos[i] = (int16_t)roundf(r * cos_table[i]);
+            rsin[i] = (int16_t)roundf(r * sin_table[i]);
+        }
 
         for (int y = 0, yy = roi->h; y < yy; y++) {
             for (int x = 0, xx = roi->w; x < xx; x++) {
@@ -700,13 +714,12 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
                 // We have to do the below step twice because the gradient may be pointing inside or outside the circle.
                 // Only graidents pointing inside of the circle sum up to produce a large magnitude.
-
                 for (;;) { // Hi to lo edge direction
-                    int a = fast_roundf(x + (r * cos_table[theta])) - r;
+                    int a = x + rcos[theta] - r;
                     if ((a < 0) || (w_size <= a)) break; // circle doesn't fit in the window
-                    int b = fast_roundf(y + (r * sin_table[theta])) - r;
+                    int b = y + rsin[theta] - r;
                     if ((b < 0) || (h_size <= b)) break; // circle doesn't fit in the window
-                    int acc_index = (((b / hough_divide) + 1) * a_size) + ((a / hough_divide) + 1); // add offset
+                    int acc_index = (((b >> hough_shift) + 1) * a_size) + ((a >> hough_shift) + 1); // add offset
 
                     int acc_value = acc[acc_index] += magnitude;
                     acc[acc_index] = acc_value;
@@ -714,11 +727,11 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
                 }
 
                 for (;;) { // Lo to hi edge direction
-                    int a = fast_roundf(x + (r * cos_table[(theta + 180) % 360])) - r;
+                    int a = x - rcos[theta] - r;
                     if ((a < 0) || (w_size <= a)) break; // circle doesn't fit in the window
-                    int b = fast_roundf(y + (r * sin_table[(theta + 180) % 360])) - r;
+                    int b = y - rsin[theta] - r;
                     if ((b < 0) || (h_size <= b)) break; // circle doesn't fit in the window
-                    int acc_index = (((b / hough_divide) + 1) * a_size) + ((a / hough_divide) + 1); // add offset
+                    int acc_index = (((b >> hough_shift) + 1) * a_size) + ((a >> hough_shift) + 1); // add offset
 
                     int acc_value = acc[acc_index] += magnitude;
                     acc[acc_index] = acc_value;
@@ -729,29 +742,34 @@ void imlib_find_circles(list_t *out, image_t *ptr, rectangle_t *roi, unsigned in
 
         for (int y = 1, yy = b_size - 1; y < yy; y++) {
             uint32_t *row_ptr = acc + (a_size * y);
-
+            uint32_t val;
             for (int x = 1, xx = a_size - 1; x < xx; x++) {
-                if ((row_ptr[x] >= threshold)
-                &&  (row_ptr[x] >= row_ptr[x-a_size-1])
-                &&  (row_ptr[x] >= row_ptr[x-a_size])
-                &&  (row_ptr[x] >= row_ptr[x-a_size+1])
-                &&  (row_ptr[x] >= row_ptr[x-1])
-                &&  (row_ptr[x] >= row_ptr[x+1])
-                &&  (row_ptr[x] >= row_ptr[x+a_size-1])
-                &&  (row_ptr[x] >= row_ptr[x+a_size])
-                &&  (row_ptr[x] >= row_ptr[x+a_size+1])) {
+                val = row_ptr[x];
+                if ((val >= threshold)
+                &&  (val >= row_ptr[x-a_size-1])
+                &&  (val >= row_ptr[x-a_size])
+                &&  (val >= row_ptr[x-a_size+1])
+                &&  (val >= row_ptr[x-1])
+                &&  (val >= row_ptr[x+1])
+                &&  (val >= row_ptr[x+a_size-1])
+                &&  (val >= row_ptr[x+a_size])
+                &&  (val >= row_ptr[x+a_size+1])) {
 
                     find_circles_list_lnk_data_t lnk_data;
-                    lnk_data.magnitude = row_ptr[x];
-                    lnk_data.p.x = ((x - 1) * hough_divide) + r + roi->x; // remove offset
-                    lnk_data.p.y = ((y - 1) * hough_divide) + r + roi->y; // remove offset
+                    lnk_data.magnitude = val;
+                    lnk_data.p.x = ((x - 1) << hough_shift) + r + roi->x; // remove offset
+                    lnk_data.p.y = ((y - 1) << hough_shift) + r + roi->y; // remove offset
                     lnk_data.r = r;
 
                     list_push_back(out, &lnk_data);
+                    if (val > row_ptr[x+1])
+                       x++; // can skip the next pixel
                 }
             }
         }
 
+        fb_free(); // rsin
+        fb_free(); // rcos
         fb_free(); // acc
     }
 

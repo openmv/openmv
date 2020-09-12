@@ -1,4 +1,16 @@
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * main function.
+ */
 #include STM32_HAL_H
+#include <stdbool.h>
+#include "sdram.h"
 #include "usbd_core.h"
 #include "usbd_desc.h"
 #include "usbd_uvc.h"
@@ -49,6 +61,20 @@ int printf(const char *fmt, ...)
 {
     return 0;
 }
+
+NORETURN void nlr_jump(void *val)
+{
+    __fatal_error();
+}
+
+void *mp_obj_new_exception_msg(const void *exc_type, const char *msg)
+{
+    return NULL;
+}
+
+const void *mp_type_MemoryError = NULL;
+
+const void *mp_sys_stdout_print = NULL;
 
 static uint8_t frame_index = 0;
 static uint8_t format_index = 0;
@@ -111,9 +137,6 @@ int main()
 {
     HAL_Init();
 
-    // Re-enable IRQs (disabled by bootloader)
-    __enable_irq();
-
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_PULLUP;
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
@@ -122,6 +145,20 @@ int main()
     GPIO_InitStructure.Pin = OMV_BOOTLDR_LED_PIN;
     HAL_GPIO_Init(OMV_BOOTLDR_LED_PORT, &GPIO_InitStructure);
     HAL_GPIO_WritePin(OMV_BOOTLDR_LED_PORT, OMV_BOOTLDR_LED_PIN, GPIO_PIN_SET);
+
+    // Re-enable IRQs (disabled by bootloader)
+    __enable_irq();
+
+    #ifdef OMV_SDRAM_SIZE
+    if (!sdram_init()) {
+        __fatal_error();
+    }
+    #if (OMV_SDRAM_TEST == 1)
+    if (!sdram_test(false)) {
+        __fatal_error();
+    }
+    #endif
+    #endif
 
     sensor_init0();
     fb_alloc_init0();

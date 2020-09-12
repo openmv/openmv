@@ -1,8 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+# This file is part of the OpenMV project.
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+# This script generates FFT tables.
+# See: https://www.nayuki.io/page/fast-fourier-transform-in-x86-assembly
 
 import sys, math
-# https://www.nayuki.io/page/fast-fourier-transform-in-x86-assembly
 
 sys.stdout.write("const float cos_table[512] = {\n")
 for i in range(512):

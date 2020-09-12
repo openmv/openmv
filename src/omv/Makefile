@@ -1,4 +1,12 @@
-# Sources
+# This file is part of the OpenMV project.
+#
+# Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+# Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+#
+# This work is licensed under the MIT license, see the file LICENSE for details.
+#
+# OMV Makefile
+
 SRCS += $(addprefix ,   \
 	main.c              \
 	xalloc.c            \
@@ -11,12 +19,14 @@ SRCS += $(addprefix ,   \
 	usbdbg.c            \
 	wifidbg.c           \
 	cambus.c            \
-	ov9650.c            \
 	ov2640.c            \
-	ov7725.c            \
 	ov5640.c            \
+	ov7690.c            \
+	ov7725.c            \
+	ov9650.c            \
 	mt9v034.c           \
 	lepton.c            \
+	hm01b0.c            \
 	sensor.c            \
 	stm32fxxx_hal_msp.c \
 	soft_i2c.c          \
@@ -97,6 +107,8 @@ SRCS += $(addprefix py/, \
 	py_winc.c               \
 	py_cpufreq.c            \
 	py_nn.c                 \
+	py_tf.c                 \
+	py_imu.c                \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))

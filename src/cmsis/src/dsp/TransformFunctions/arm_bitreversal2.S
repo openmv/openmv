@@ -1,55 +1,43 @@
 ;/* ----------------------------------------------------------------------
-;* Copyright (C) 2010-2014 ARM Limited. All rights reserved.
-;*
-;* $Date:       19. March 2015 
-;* $Revision: 	V.1.4.5
-;*
-;* Project: 	CMSIS DSP Library
-;* Title:	    arm_bitreversal2.S
-;*
-;* Description:	This is the arm_bitreversal_32 function done in
-;*              assembly for maximum speed.  This function is called
-;*              after doing an fft to reorder the output.  The function
-;*              is loop unrolled by 2. arm_bitreversal_16 as well.
-;*
-;* Target Processor: Cortex-M4/Cortex-M3/Cortex-M0
-;*
-;* Redistribution and use in source and binary forms, with or without
-;* modification, are permitted provided that the following conditions
-;* are met:
-;*   - Redistributions of source code must retain the above copyright
-;*     notice, this list of conditions and the following disclaimer.
-;*   - Redistributions in binary form must reproduce the above copyright
-;*     notice, this list of conditions and the following disclaimer in
-;*     the documentation and/or other materials provided with the
-;*     distribution.
-;*   - Neither the name of ARM LIMITED nor the names of its contributors
-;*     may be used to endorse or promote products derived from this
-;*     software without specific prior written permission.
-;*
-;* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-;* "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-;* LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-;* FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-;* COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-;* INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-;* BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-;* LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-;* CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-;* LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
-;* ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-;* POSSIBILITY OF SUCH DAMAGE.
-;* -------------------------------------------------------------------- */
-#if defined(__CC_ARM)       // Keil
+; * Project:      CMSIS DSP Library
+; * Title:        arm_bitreversal2.S
+; * Description:  arm_bitreversal_32 function done in assembly for maximum speed.
+; *               Called after doing an fft to reorder the output.
+; *               The function is loop unrolled by 2. arm_bitreversal_16 as well.
+; *
+; * $Date:        27. January 2017
+; * $Revision:    V.1.5.1
+; *
+; * Target Processor: Cortex-M cores
+; * -------------------------------------------------------------------- */
+;/*
+; * Copyright (C) 2010-2017 ARM Limited or its affiliates. All rights reserved.
+; *
+; * SPDX-License-Identifier: Apache-2.0
+; *
+; * Licensed under the Apache License, Version 2.0 (the License); you may
+; * not use this file except in compliance with the License.
+; * You may obtain a copy of the License at
+; *
+; * www.apache.org/licenses/LICENSE-2.0
+; *
+; * Unless required by applicable law or agreed to in writing, software
+; * distributed under the License is distributed on an AS IS BASIS, WITHOUT
+; * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+; * See the License for the specific language governing permissions and
+; * limitations under the License.
+; */
+
+#if   defined ( __CC_ARM )     /* Keil */
     #define CODESECT AREA     ||.text||, CODE, READONLY, ALIGN=2
     #define LABEL
-#elif defined(__IASMARM__)  // IAR
+#elif defined ( __IASMARM__ )  /* IAR */
     #define CODESECT SECTION `.text`:CODE
     #define PROC
     #define LABEL
     #define ENDP
     #define EXPORT PUBLIC
-#elif defined(__CSMC__)		/* Cosmic */
+#elif defined ( __CSMC__ )	   /* Cosmic */
 	#define	CODESECT	switch .text
 	#define THUMB
 	#define EXPORT	xdef
@@ -57,7 +45,15 @@
 	#define LABEL	:
 	#define ENDP
 	#define arm_bitreversal_32 _arm_bitreversal_32
-#elif defined (__GNUC__)    // GCC
+#elif defined ( __TI_ARM__ )   /* TI ARM */
+    #define THUMB    .thumb
+    #define CODESECT .text
+    #define EXPORT   .global
+    #define PROC     : .asmfunc
+    #define LABEL    :
+    #define ENDP     .endasmfunc
+    #define END
+#elif defined ( __GNUC__ )     /* GCC */
     #define THUMB .thumb
     #define CODESECT .section .text
     #define EXPORT .global
@@ -82,7 +78,16 @@
 	EXPORT arm_bitreversal_32
 	EXPORT arm_bitreversal_16
 
-#if defined(ARM_MATH_CM0) || defined(ARM_MATH_CM0PLUS)
+#if   defined ( __CC_ARM )     /* Keil */
+#elif defined ( __IASMARM__ )  /* IAR */
+#elif defined ( __CSMC__ )	   /* Cosmic */
+#elif defined ( __TI_ARM__ )   /* TI ARM */
+#elif defined ( __GNUC__ )     /* GCC */
+	.type   arm_bitreversal_16, %function
+	.type   arm_bitreversal_32, %function
+#endif
+
+#if defined(ARM_MATH_CM0) || defined(ARM_MATH_CM0PLUS) || defined(ARM_MATH_ARMV8MBL)
 
 arm_bitreversal_32 PROC
 	ADDS     r3,r1,#1

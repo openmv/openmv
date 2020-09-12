@@ -1,118 +1,217 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2018 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Phase correlation.
  */
-
 #include "imlib.h"
 #include "fft.h"
-#define alt_fast_exp(x, linear) ((linear) ? (x) : (fast_expf(x)))
-#define alt_fast_log(x, linear) ((linear) ? (x) : (fast_log(x)))
 
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse)
 {
-    float w_2 = roi->w / 2.0f;
-    float h_2 = roi->h / 2.0f;
-    float rho_scale = alt_fast_log(fast_sqrtf((w_2 * w_2) + (h_2 * h_2)), linear) / roi->h;
-    float rho_scale_inv = 1.0 / rho_scale;
-    float theta_scale = 360.0f / roi->w;
-    float theta_scale_inv = 1.0 / theta_scale;
+    int w = roi->w; // == dst_w
+    int h = roi->h; // == dst_h
+    int w_2 = w / 2;
+    int h_2 = h / 2;
+    float rho_scale = fast_sqrtf((w_2 * w_2) + (h_2 * h_2));
+    if (!linear) rho_scale = fast_log(rho_scale);
+    const float m_pi_1_5 = 1.5f * M_PI;
+    const float m_pi_1_5_d = IM_RAD2DEG(m_pi_1_5);
+    const float m_pi_2_0 = 2.0f * M_PI;
+    const float m_pi_2_0_d = IM_RAD2DEG(m_pi_2_0);
+    const int m_pi_2_0_d_i = m_pi_2_0_d;
+    float theta_scale_d = m_pi_2_0_d / (w - 2);
+    float theta_scale_inv = w / m_pi_2_0;
 
-    switch (src->bpp) {
-        case IMAGE_BPP_BINARY: {
-            for (int y = 0, yy = roi->h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(dst, y);
-                float rho = y * rho_scale;
-                for (int x = 0, xx = roi->w; x < xx; x++) {
-                    int sourceX, sourceY;
+    if (!reverse) {
+        rho_scale /= h;
 
-                    if (!reverse) {
-                        int theta = 630 - fast_roundf(x * theta_scale);
-                        if (theta >= 360) theta -= 360;
-                        sourceX = fast_roundf((alt_fast_exp(rho, linear) * cos_table[theta]) + w_2);
-                        sourceY = fast_roundf((alt_fast_exp(rho, linear) * sin_table[theta]) + h_2);
-                    } else {
-                        float x_2 = x - w_2;
-                        float y_2 = y - h_2;
-                        float rho = alt_fast_log(fast_sqrtf((x_2 * x_2) + (y_2 * y_2)), linear);
-                        int theta = 630 - (x_2 ? fast_roundf(fast_atan2f(y_2, x_2) * (180 / M_PI)) : ((y_2 < 0) ? 270 : 90));
-                        if (theta >= 360) theta -= 360;
-                        sourceX = fast_roundf(theta * theta_scale_inv);
-                        sourceY = fast_roundf(rho * rho_scale_inv);
+        switch (src->bpp) {
+            case IMAGE_BPP_BINARY: {
+                uint32_t *tmp = (uint32_t *) src->data;
+                int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
+
+                for (int y = 0, yy = h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(dst, y);
+                    float rho = y * rho_scale;
+                    if (!linear) rho = fast_expf(rho);
+                    for (int x = 0, xx = w_2; x < xx; x++) {
+
+                        int theta = fast_roundf(m_pi_1_5_d - (x * theta_scale_d));
+                        if (theta < 0) theta += m_pi_2_0_d_i; // wrap for table access
+                        int sourceX = tmp_x + fast_roundf(rho * cos_table[theta]); // rounding is necessary
+                        int sourceY = tmp_y + fast_roundf(rho * sin_table[theta]); // rounding is necessary
+
+                        if ((0 <= sourceX) && (0 <= sourceY) && (sourceY < tmp_h)) { // plot the 2 symmetrical pixels
+                            uint32_t *ptr, pixel;
+                            ptr = tmp + (((tmp_w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                            pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                            pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, tmp_w-1-sourceX);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w-1-x, pixel);
+                        }
                     }
+                }
+                break;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                uint8_t *tmp = (uint8_t *) src->data;
+                int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
 
-                    if ((0 <= sourceX) && (sourceX < roi->w) && (0 <= sourceY) && (sourceY < roi->h)) {
-                        uint32_t *ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src, (sourceY + roi->y));
-                        int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, (sourceX + roi->x));
+                for (int y = 0, yy = h; y < yy; y++) {
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, y);
+                    float rho = y * rho_scale;
+                    if (!linear) rho = fast_expf(rho);
+                    for (int x = 0, xx = w_2; x < xx; x++) {
+
+                        int theta = fast_roundf(m_pi_1_5_d - (x * theta_scale_d));
+                        if (theta < 0) theta += m_pi_2_0_d_i; // wrap for table access
+                        int sourceX = tmp_x + fast_roundf(rho * cos_table[theta]); // rounding is necessary
+                        int sourceY = tmp_y + fast_roundf(rho * sin_table[theta]); // rounding is necessary
+
+                        if ((0 <= sourceX) && (0 <= sourceY) && (sourceY < tmp_h)) { // plot the 2 symmetrical pixels
+                            uint8_t *ptr, pixel;
+                            ptr = tmp + (tmp_w * sourceY);
+                            pixel = ptr[sourceX];
+                            row_ptr[x] = pixel;
+                            pixel = ptr[tmp_w - 1 - sourceX];
+                            row_ptr[w - 1 - x] = pixel;
+                        }
+                    }
+                }
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                uint16_t *tmp = (uint16_t *) src->data;
+                int tmp_w = src->w, tmp_h = src->h, tmp_x = roi->x + w_2 - 1, tmp_y = roi->y + h_2;
+
+                for (int y = 0, yy = h; y < yy; y++) {
+                    uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, y);
+                    float rho = y * rho_scale;
+                    if (!linear) rho = fast_expf(rho);
+                    for (int x = 0, xx = w_2; x < xx; x++) {
+
+                        int theta = fast_roundf(m_pi_1_5_d - (x * theta_scale_d));
+                        if (theta < 0) theta += m_pi_2_0_d_i; // wrap for table access
+                        int sourceX = tmp_x + fast_roundf(rho * cos_table[theta]); // rounding is necessary
+                        int sourceY = tmp_y + fast_roundf(rho * sin_table[theta]); // rounding is necessary
+
+                        if ((0 <= sourceX) && (0 <= sourceY) && (sourceY < tmp_h)) { // plot the 2 symmetrical pixels
+                            uint16_t *ptr, pixel;
+                            ptr = tmp + (tmp_w * sourceY);
+                            pixel = ptr[sourceX];
+                            row_ptr[x] = pixel;
+                            pixel = ptr[tmp_w - 1 - sourceX];
+                            row_ptr[w - 1 - x] = pixel;
+                        }
+                    }
+                }
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    } else {
+        float rho_scale_inv = (h - 1) / rho_scale;
+        switch (src->bpp) {
+            case IMAGE_BPP_BINARY: {
+                uint32_t *tmp = (uint32_t *) src->data;
+                int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
+
+                for (int y = 0, yy = h; y < yy; y++) {
+                    uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(dst, y);
+                    int y_2 = y - h_2;
+                    int y_2_2 = y_2 * y_2;
+
+                    for (int x = 0, xx = w_2; x < xx; x++) {
+                        int x_2 = x - w_2;
+                        int x_2_2 = x_2 * x_2;
+
+                        float rho = fast_sqrtf(x_2_2 + y_2_2);
+                        if (!linear) rho = fast_log(rho);
+                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2);
+                        int sourceX = tmp_x + fast_roundf(theta * theta_scale_inv); // rounding is necessary
+                        int sourceY = tmp_y + fast_roundf(rho * rho_scale_inv); // rounding is necessary
+
+                        // plot the 2 symmetrical pixels
+                        uint32_t *ptr, pixel;
+                        ptr = tmp + (((tmp_w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
+                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
                         IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                        pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, tmp_w-1-sourceX);
+                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w-1-x, pixel);
                     }
                 }
+                break;
             }
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            for (int y = 0, yy = roi->h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, y);
-                float rho = y * rho_scale;
-                for (int x = 0, xx = roi->w; x < xx; x++) {
-                    int sourceX, sourceY;
+            case IMAGE_BPP_GRAYSCALE: {
+                uint8_t *tmp = (uint8_t *) src->data;
+                int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
 
-                    if (!reverse) {
-                        int theta = 630 - fast_roundf(x * theta_scale);
-                        if (theta >= 360) theta -= 360;
-                        sourceX = fast_roundf((alt_fast_exp(rho, linear) * cos_table[theta]) + w_2);
-                        sourceY = fast_roundf((alt_fast_exp(rho, linear) * sin_table[theta]) + h_2);
-                    } else {
-                        float x_2 = x - w_2;
-                        float y_2 = y - h_2;
-                        float rho = alt_fast_log(fast_sqrtf((x_2 * x_2) + (y_2 * y_2)), linear);
-                        int theta = 630 - (x_2 ? fast_roundf(fast_atan2f(y_2, x_2) * (180 / M_PI)) : ((y_2 < 0) ? 270 : 90));
-                        if (theta >= 360) theta -= 360;
-                        sourceX = fast_roundf(theta * theta_scale_inv);
-                        sourceY = fast_roundf(rho * rho_scale_inv);
-                    }
+                for (int y = 0, yy = h; y < yy; y++) {
+                    uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(dst, y);
+                    int y_2 = y - h_2;
+                    int y_2_2 = y_2 * y_2;
 
-                    if ((0 <= sourceX) && (sourceX < roi->w) && (0 <= sourceY) && (sourceY < roi->h)) {
-                        uint8_t *ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src, (sourceY + roi->y));
-                        int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, (sourceX + roi->x));
-                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
+                    for (int x = 0, xx = w_2; x < xx; x++) {
+                        int x_2 = x - w_2;
+                        int x_2_2 = x_2 * x_2;
+
+                        float rho = fast_sqrtf(x_2_2 + y_2_2);
+                        if (!linear) rho = fast_log(rho);
+                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2);
+                        int sourceX = tmp_x + fast_roundf(theta * theta_scale_inv); // rounding is necessary
+                        int sourceY = tmp_y + fast_roundf(rho * rho_scale_inv); // rounding is necessary
+
+                        // plot the 2 symmetrical pixels
+                        uint8_t *ptr, pixel;
+                        ptr = tmp + (tmp_w * sourceY);
+                        pixel = ptr[sourceX];
+                        row_ptr[x] = pixel;
+                        pixel = ptr[tmp_w - 1 - sourceX];
+                        row_ptr[w - 1 - x] = pixel;
                     }
                 }
+                break;
             }
-            break;
-        }
-        case IMAGE_BPP_RGB565: {
-            for (int y = 0, yy = roi->h; y < yy; y++) {
-                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, y);
-                float rho = y * rho_scale;
-                for (int x = 0, xx = roi->w; x < xx; x++) {
-                    int sourceX, sourceY;
+            case IMAGE_BPP_RGB565: {
+                uint16_t *tmp = (uint16_t *) src->data;
+                int tmp_w = src->w, tmp_x = roi->x, tmp_y = roi->y;
 
-                    if (!reverse) {
-                        int theta = 630 - fast_roundf(x * theta_scale);
-                        if (theta >= 360) theta -= 360;
-                        sourceX = fast_roundf((alt_fast_exp(rho, linear) * cos_table[theta]) + w_2);
-                        sourceY = fast_roundf((alt_fast_exp(rho, linear) * sin_table[theta]) + h_2);
-                    } else {
-                        float x_2 = x - w_2;
-                        float y_2 = y - h_2;
-                        float rho = alt_fast_log(fast_sqrtf((x_2 * x_2) + (y_2 * y_2)), linear);
-                        int theta = 630 - (x_2 ? fast_roundf(fast_atan2f(y_2, x_2) * (180 / M_PI)) : ((y_2 < 0) ? 270 : 90));
-                        if (theta >= 360) theta -= 360;
-                        sourceX = IM_MIN(IM_MAX(fast_roundf(theta * theta_scale_inv), 0), (roi->w-1));
-                        sourceY = IM_MIN(IM_MAX(fast_roundf(rho * rho_scale_inv), 0), (roi->h-1));
-                    }
+                for (int y = 0, yy = h; y < yy; y++) {
+                    uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(dst, y);
+                    int y_2 = y - h_2;
+                    int y_2_2 = y_2 * y_2;
 
-                    if ((0 <= sourceX) && (sourceX < roi->w) && (0 <= sourceY) && (sourceY < roi->h)) {
-                        uint16_t *ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src, (sourceY + roi->y));
-                        int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, (sourceX + roi->x));
-                        IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
+                    for (int x = 0, xx = w_2; x < xx; x++) {
+                        int x_2 = x - w_2;
+                        int x_2_2 = x_2 * x_2;
+
+                        float rho = fast_sqrtf(x_2_2 + y_2_2);
+                        if (!linear) rho = fast_log(rho);
+                        float theta = m_pi_1_5 - fast_atan2f(y_2, x_2);
+                        int sourceX = tmp_x + fast_roundf(theta * theta_scale_inv); // rounding is necessary
+                        int sourceY = tmp_y + fast_roundf(rho * rho_scale_inv); // rounding is necessary
+
+                        // plot the 2 symmetrical pixels
+                        uint16_t *ptr, pixel;
+                        ptr = tmp + (tmp_w * sourceY);
+                        pixel = ptr[sourceX];
+                        row_ptr[x] = pixel;
+                        pixel = ptr[tmp_w - 1 - sourceX];
+                        row_ptr[w - 1 - x] = pixel;
                     }
                 }
+                break;
             }
-            break;
-        }
-        default: {
-            break;
+            default: {
+                break;
+            }
         }
     }
 }
@@ -124,7 +223,6 @@ void imlib_logpolar(image_t *img, bool linear, bool reverse)
     img_2.w = img->w;
     img_2.h = img->h;
     img_2.bpp = img->bpp;
-    img_2.data = fb_alloc(image_size(img));
 
     rectangle_t rect;
     rect.x = 0;
@@ -132,9 +230,13 @@ void imlib_logpolar(image_t *img, bool linear, bool reverse)
     rect.w = img->w;
     rect.h = img->h;
 
-    memcpy(img_2.data, img->data, image_size(img));
-    memset(img->data, 0, image_size(img));
+    size_t size = image_size(img);
+    img_2.data = fb_alloc(size, FB_ALLOC_NO_HINT);
+    memcpy(img_2.data, img->data, size);
+    memset(img->data, 0, size);
+
     imlib_logpolar_int(img, &img_2, &rect, linear, reverse);
+
     fb_free();
 }
 #endif //defined(IMLIB_ENABLE_LOGPOLAR) || defined(IMLIB_ENABLE_LINPOLAR)
@@ -286,7 +388,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
         img0_fixed.w = roi0->w;
         img0_fixed.h = roi0->h;
         img0_fixed.bpp = img0->bpp;
-        img0_fixed.data = fb_alloc(image_size(&img0_fixed));
+        img0_fixed.data = fb_alloc(image_size(&img0_fixed), FB_ALLOC_NO_HINT);
 
         roi0_fixed.x = 0;
         roi0_fixed.y = 0;
@@ -327,7 +429,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
             }
         }
 
-        imlib_rotation_corr(&img0_fixed, 0, 0, *rotation, 0, 0, *scale);
+        imlib_rotation_corr(&img0_fixed, 0, 0, *rotation, 0, 0, *scale, 60, NULL);
     } else {
         memcpy(&img0_fixed, img0, sizeof(image_t));
         memcpy(&roi0_fixed, roi0, sizeof(rectangle_t));
@@ -342,7 +444,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
             img0alt.w = roi0_fixed.w;
             img0alt.h = roi0_fixed.h;
             img0alt.bpp = img0_fixed.bpp;
-            img0alt.data = fb_alloc0(image_size(&img0alt));
+            img0alt.data = fb_alloc0(image_size(&img0alt), FB_ALLOC_NO_HINT);
             imlib_logpolar_int(&img0alt, &img0_fixed, &roi0_fixed, false, false);
             roi0alt.x = 0;
             roi0alt.y = 0;
@@ -352,7 +454,7 @@ void imlib_phasecorrelate(image_t *img0, image_t *img1, rectangle_t *roi0, recta
             img1alt.w = roi1->w;
             img1alt.h = roi1->h;
             img1alt.bpp = img1->bpp;
-            img1alt.data = fb_alloc0(image_size(&img1alt));
+            img1alt.data = fb_alloc0(image_size(&img1alt), FB_ALLOC_NO_HINT);
             imlib_logpolar_int(&img1alt, img1, roi1, false, false);
             roi1alt.x = 0;
             roi1alt.y = 0;

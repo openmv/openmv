@@ -6,7 +6,7 @@
 import image, time, fir
 
 # Initialize the thermal sensor
-fir.init(type=fir.FIR_MLX90640, refresh=16) # Hz (higher end OpenMV Cam's may be able to run faster)
+fir.init(type=fir.FIR_MLX90640, refresh=32) # 16Hz, 32Hz or 64Hz.
 
 # FPS clock
 clock = time.clock()

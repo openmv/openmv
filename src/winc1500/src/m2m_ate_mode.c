@@ -2,38 +2,31 @@
  *
  * \file
  *
- * \brief NMC1500 Peripherials Application Interface.
+ * \brief WINC1500 Peripherials Application Interface.
  *
- * Copyright (c) 2015 Atmel Corporation. All rights reserved.
+ * Copyright (c) 2016-2018 Microchip Technology Inc. and its subsidiaries.
  *
  * \asf_license_start
  *
  * \page License
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * Subject to your compliance with these terms, you may use Microchip
+ * software and any derivatives exclusively with Microchip products.
+ * It is your responsibility to comply with third party license terms applicable
+ * to your use of third party software (including open source software) that
+ * may accompany Microchip software.
  *
- * 1. Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *
- * 3. The name of Atmel may not be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY ATMEL "AS IS" AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT ARE
- * EXPRESSLY AND SPECIFICALLY DISCLAIMED. IN NO EVENT SHALL ATMEL BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS SUPPLIED BY MICROCHIP "AS IS". NO WARRANTIES,
+ * WHETHER EXPRESS, IMPLIED OR STATUTORY, APPLY TO THIS SOFTWARE,
+ * INCLUDING ANY IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY,
+ * AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT WILL MICROCHIP BE
+ * LIABLE FOR ANY INDIRECT, SPECIAL, PUNITIVE, INCIDENTAL OR CONSEQUENTIAL
+ * LOSS, DAMAGE, COST OR EXPENSE OF ANY KIND WHATSOEVER RELATED TO THE
+ * SOFTWARE, HOWEVER CAUSED, EVEN IF MICROCHIP HAS BEEN ADVISED OF THE
+ * POSSIBILITY OR THE DAMAGES ARE FORESEEABLE.  TO THE FULLEST EXTENT
+ * ALLOWED BY LAW, MICROCHIP'S TOTAL LIABILITY ON ALL CLAIMS IN ANY WAY
+ * RELATED TO THIS SOFTWARE WILL NOT EXCEED THE AMOUNT OF FEES, IF ANY,
+ * THAT YOU HAVE PAID DIRECTLY TO MICROCHIP FOR THIS SOFTWARE.
  *
  * \asf_license_stop
  *
@@ -103,6 +96,7 @@ volatile static uint32	gaAteFwTxRates[M2M_ATE_MAX_NUM_OF_RATES] =
 	0x06, 0x09, 0x0C, 0x12, 0x18, 0x24, 0x30, 0x36,	/*G-Rats*/
 	0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87	/*N-Rats*/
 };
+
 
 /*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
 STATIC FUNCTIONS
@@ -366,7 +360,6 @@ sint8 m2m_ate_start_tx(tstrM2mAteTx * strM2mAteTx)
 		(strM2mAteTx->duty_cycle > M2M_ATE_TX_DUTY_MIN_VALUE /*10*/ ) ||
 		(strM2mAteTx->dpd_ctrl < M2M_ATE_TX_DPD_DYNAMIC)	||
 		(strM2mAteTx->dpd_ctrl > M2M_ATE_TX_DPD_ENABLED)  ||
-		(strM2mAteTx->use_pmu < M2M_ATE_PMU_DISBLE)	||
 		(strM2mAteTx->use_pmu > M2M_ATE_PMU_ENABLE)	||
 		(strM2mAteTx->phy_burst_tx < M2M_ATE_TX_SRC_MAC) ||
 		(strM2mAteTx->phy_burst_tx > M2M_ATE_TX_SRC_PHY) ||
@@ -392,6 +385,7 @@ sint8 m2m_ate_start_tx(tstrM2mAteTx * strM2mAteTx)
 		goto __EXIT;
 	}
 	
+
 	s8Ret += nm_write_reg(rBurstTx_NMI_USE_PMU, strM2mAteTx->use_pmu);
 	s8Ret += nm_write_reg(rBurstTx_NMI_TX_PHY_CONT, strM2mAteTx->phy_burst_tx);
 	s8Ret += nm_write_reg(rBurstTx_NMI_NUM_TX_FRAMES, strM2mAteTx->num_frames);
@@ -506,7 +500,6 @@ sint8 m2m_ate_start_rx(tstrM2mAteRx * strM2mAteRxStr)
 	
 	if(	(strM2mAteRxStr->channel_num < M2M_ATE_CHANNEL_1) ||
 		(strM2mAteRxStr->channel_num > M2M_ATE_CHANNEL_14)||
-		(strM2mAteRxStr->use_pmu < M2M_ATE_PMU_DISBLE)	 ||
 		(strM2mAteRxStr->use_pmu > M2M_ATE_PMU_ENABLE)
 	)
 	{
@@ -672,6 +665,35 @@ sint8 m2m_ate_get_dig_gain(double * dGaindB)
 	*dGaindB = 20.0*log10((double)dGain / 1024.0);
 	
 	return M2M_SUCCESS;
+}
+/*!
+@fn	\
+	void m2m_ate_set_pa_gain(uint8 gain_db)
+
+@brief
+	This function is used to set the PA gain (18/15/12/9/6/3/0 only)
+
+@param [in]	uint8 gain_db
+		PA gain level allowed (18/15/12/9/6/3/0 only)
+
+*/
+void m2m_ate_set_pa_gain(uint8 gain_db)
+{
+	uint32 PA_1e9c;
+	uint8 aGain[] = {
+		/* "0 dB"  */ 0x00,
+		/* "3 dB"  */ 0x01,
+		/* "6 dB"  */ 0x03,
+		/* "9 dB"  */ 0x07,
+		/* "12 dB" */ 0x0f,
+		/* "15 dB" */ 0x1f,
+	/* "18 dB" */ 0x3f };
+	/* The variable PA gain is valid only for High power mode */
+	PA_1e9c = nm_read_reg(0x1e9c);
+	/* TX bank 0. */
+	PA_1e9c &= ~(0x3ful << 8);
+	PA_1e9c |= (((uint32)aGain[gain_db/3] & 0x3f) << 8);
+	nm_write_reg(0x1e9c, PA_1e9c);
 }
 /*!
 @fn	\

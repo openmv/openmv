@@ -14,14 +14,15 @@ rtc.datetime((2014, 5, 1, 4, 13, 0, 0, 0))
 print(rtc.datetime())
 
 sensor.reset()
+
+# Enable sensor softsleep
+sensor.sleep(True)
+
 # Optionally bypass the regulator on OV7725
 # for the lowest possible power consumption.
 if (sensor.get_id() == sensor.OV7725):
     # Bypass internal regulator
     sensor.__write_reg(0x4F, 0x18)
-
-# Enable sensor softsleep
-sensor.sleep(True)
 
 # Shutdown the sensor (pulls PWDN high).
 sensor.shutdown(True)

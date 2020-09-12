@@ -1,12 +1,13 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Image Python module.
- *
  */
-
 #include <arm_math.h>
 #include <mp.h>
 #include "imlib.h"
@@ -247,10 +248,100 @@ typedef struct _py_image_obj_t {
     image_t _cobj;
 } py_image_obj_t;
 
+typedef struct _mp_obj_py_image_it_t {
+    mp_obj_base_t base;
+    mp_fun_1_t iternext;
+    mp_obj_t py_image;
+    size_t cur;
+} mp_obj_py_image_it_t;
+
 void *py_image_cobj(mp_obj_t img_obj)
 {
     PY_ASSERT_TYPE(img_obj, &py_image_type);
     return &((py_image_obj_t *)img_obj)->_cobj;
+}
+
+mp_obj_t py_image_unary_op(mp_unary_op_t op, mp_obj_t self_in) {
+    py_image_obj_t *self = MP_OBJ_TO_PTR(self_in);
+    switch (op) {
+        case MP_UNARY_OP_LEN: {
+            image_t *img = &self->_cobj;
+            if (img->bpp >= IMAGE_BPP_JPEG) {
+                // For JPEG images we create a 1D array.
+                return mp_obj_new_int(img->bpp); //size in bytes is stored in bpp.
+            } else {
+                // For other formats, 2D array is created.
+                return mp_obj_new_int(img->h);
+            }
+        }
+        default:
+            return MP_OBJ_NULL; // op not supported
+    }
+}
+
+// image iterator
+STATIC mp_obj_t py_image_it_iternext(mp_obj_t self_in)
+{
+    mp_obj_py_image_it_t *self = MP_OBJ_TO_PTR(self_in);
+    py_image_obj_t *image = MP_OBJ_TO_PTR(self->py_image);
+    image_t *img = &image->_cobj;
+    switch (img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            if (self->cur >= img->h) {
+                return MP_OBJ_STOP_ITERATION;
+            } else {
+                mp_obj_t row = mp_obj_new_list(0, NULL);
+                for (int i=0; i<img->w; i++) {
+                    mp_obj_list_append(row, mp_obj_new_int(IMAGE_GET_BINARY_PIXEL(img, i, self->cur)));
+                }
+                self->cur++;
+                return row;
+            }
+        }
+        case IMAGE_BPP_BAYER:
+        case IMAGE_BPP_GRAYSCALE: {
+            if (self->cur >= img->h) {
+                return MP_OBJ_STOP_ITERATION;
+            } else {
+                mp_obj_t row = mp_obj_new_list(0, NULL);
+                for (int i=0; i<img->w; i++) {
+                    mp_obj_list_append(row, mp_obj_new_int(IMAGE_GET_GRAYSCALE_PIXEL(img, i, self->cur)));
+                }
+                self->cur++;
+                return row;
+            }
+        }
+        case IMAGE_BPP_RGB565: {
+            if (self->cur >= img->h) {
+                return MP_OBJ_STOP_ITERATION;
+            } else {
+                mp_obj_t row = mp_obj_new_list(0, NULL);
+                for (int i=0; i<img->w; i++) {
+                    mp_obj_list_append(row, mp_obj_new_int(IMAGE_GET_RGB565_PIXEL(img, i, self->cur)));
+                }
+                self->cur++;
+                return row;
+            }
+        }
+        default: {// JPEG
+            if (self->cur >= img->bpp) {
+                return MP_OBJ_STOP_ITERATION;
+            } else {
+                return mp_obj_new_int(img->pixels[self->cur++]);
+            }
+        }
+    }
+}
+
+STATIC mp_obj_t py_image_getiter(mp_obj_t o_in, mp_obj_iter_buf_t *iter_buf)
+{
+    assert(sizeof(mp_obj_py_image_it_t) <= sizeof(mp_obj_iter_buf_t));
+    mp_obj_py_image_it_t *o = (mp_obj_py_image_it_t*)iter_buf;
+    o->base.type = &mp_type_polymorph_iter;
+    o->iternext = py_image_it_iternext;
+    o->py_image = o_in;
+    o->cur = 0;
+    return MP_OBJ_FROM_PTR(o);
 }
 
 static void py_image_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
@@ -542,6 +633,13 @@ static mp_obj_t py_image_size(mp_obj_t img_obj)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_size_obj, py_image_size);
 
+static mp_obj_t py_image_bytearray(mp_obj_t img_obj)
+{
+    image_t *arg_img = (image_t *) py_image_cobj(img_obj);
+    return mp_obj_new_bytearray_by_ref(image_size(arg_img), arg_img->data);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_bytearray_obj, py_image_bytearray);
+
 STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
@@ -597,11 +695,11 @@ STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
         }
         case IMAGE_BPP_BAYER:
             if (arg_rgbtuple) {
-                int pixel = IMAGE_GET_GRAYSCALE_PIXEL(arg_img, arg_x, arg_y); // Correct!
+                uint16_t pixel; imlib_bayer_to_rgb565(arg_img, 1, 1, arg_x, arg_y, &pixel);
                 mp_obj_t pixel_tuple[3];
-                pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(COLOR_GRAYSCALE_TO_RGB565(pixel)));
-                pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(COLOR_GRAYSCALE_TO_RGB565(pixel)));
-                pixel_tuple[2] = mp_obj_new_int(COLOR_RGB565_TO_B8(COLOR_GRAYSCALE_TO_RGB565(pixel)));
+                pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(pixel));
+                pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(pixel));
+                pixel_tuple[2] = mp_obj_new_int(COLOR_RGB565_TO_B8(pixel));
                 return mp_obj_new_tuple(3, pixel_tuple);
             } else {
                 return mp_obj_new_int(IMAGE_GET_GRAYSCALE_PIXEL(arg_img, arg_x, arg_y)); // Correct!
@@ -671,12 +769,7 @@ static mp_obj_t py_image_mean_pool(mp_obj_t img_obj, mp_obj_t x_div_obj, mp_obj_
     imlib_mean_pool(arg_img, &out_img, arg_x_div, arg_y_div);
     arg_img->w = out_img.w;
     arg_img->h = out_img.h;
-
-    if (MAIN_FB()->pixels == arg_img->data) {
-        MAIN_FB()->w = out_img.w;
-        MAIN_FB()->h = out_img.h;
-    }
-
+    py_helper_update_framebuffer(arg_img);
     return img_obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_image_mean_pool_obj, py_image_mean_pool);
@@ -729,12 +822,7 @@ static mp_obj_t py_image_midpoint_pool(uint n_args, const mp_obj_t *args, mp_map
     imlib_midpoint_pool(arg_img, &out_img, arg_x_div, arg_y_div, arg_bias);
     arg_img->w = out_img.w;
     arg_img->h = out_img.h;
-
-    if (MAIN_FB()->pixels == arg_img->data) {
-        MAIN_FB()->w = out_img.w;
-        MAIN_FB()->h = out_img.h;
-    }
-
+    py_helper_update_framebuffer(arg_img);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pool_obj, 3, py_image_midpoint_pool);
@@ -786,7 +874,7 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
             PY_ASSERT_TRUE_MSG((out.w >= (sizeof(uint32_t)/sizeof(uint8_t))) || copy,
                                "Can't convert to bitmap in place!");
             fb_alloc_mark();
-            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out), FB_ALLOC_NO_HINT);
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(arg_img, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
@@ -803,7 +891,7 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
             PY_ASSERT_TRUE_MSG((out.w >= (sizeof(uint32_t)/sizeof(uint16_t))) || copy,
                                "Can't convert to bitmap in place!");
             fb_alloc_mark();
-            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out));
+            uint32_t *out_row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(&out), FB_ALLOC_NO_HINT);
             for (int y = 0, yy = out.h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(arg_img, y);
                 for (int x = 0, xx = out.w; x < xx; x++) {
@@ -841,10 +929,7 @@ static mp_obj_t py_image_to_bitmap(uint n_args, const mp_obj_t *args, mp_map_t *
 
     if (!copy) {
         arg_img->bpp = IMAGE_BPP_BINARY;
-
-        if ((MAIN_FB()->pixels == out.data)) {
-            MAIN_FB()->bpp = out.bpp;
-        }
+        py_helper_update_framebuffer(&out);
     }
 
     return py_image_from_struct(&out);
@@ -865,7 +950,7 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            if (copy || (MAIN_FB()->pixels != out.data)) {
+            if (copy || (!py_helper_is_equal_to_framebuffer(&out))) {
                 PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
                     "Can't convert to grayscale in place!");
                 for (int y = 0, yy = out.h; y < yy; y++) {
@@ -880,16 +965,9 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
-
-                MAIN_FB()->w = 0;
-                MAIN_FB()->h = 0;
-                MAIN_FB()->bpp = 0;
-                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to grayscale in place!");
-                MAIN_FB()->w = out.w;
-                MAIN_FB()->h = out.h;
-                MAIN_FB()->bpp = out.bpp;
+                py_helper_set_to_framebuffer(&out);
 
                 for (int y = 0, yy = out.h; y < yy; y++) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&temp, y);
@@ -944,10 +1022,7 @@ static mp_obj_t py_image_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_
 
     if (!copy) {
         arg_img->bpp = IMAGE_BPP_GRAYSCALE;
-
-        if ((MAIN_FB()->pixels == out.data)) {
-            MAIN_FB()->bpp = out.bpp;
-        }
+        py_helper_update_framebuffer(&out);
     }
 
     return py_image_from_struct(&out);
@@ -968,7 +1043,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            if (copy || (MAIN_FB()->pixels != out.data)) {
+            if (copy || (!py_helper_is_equal_to_framebuffer(&out))) {
                 PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
                     "Can't convert to grayscale in place!");
                 for (int y = 0, yy = out.h; y < yy; y++) {
@@ -983,16 +1058,9 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
-
-                MAIN_FB()->w = 0;
-                MAIN_FB()->h = 0;
-                MAIN_FB()->bpp = 0;
-                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to grayscale in place!");
-                MAIN_FB()->w = out.w;
-                MAIN_FB()->h = out.h;
-                MAIN_FB()->bpp = out.bpp;
+                py_helper_set_to_framebuffer(&out);
 
                 for (int y = 0, yy = out.h; y < yy; y++) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&temp, y);
@@ -1008,7 +1076,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            if (copy || (MAIN_FB()->pixels != out.data)) {
+            if (copy || (!py_helper_is_equal_to_framebuffer(&out))) {
                 PY_ASSERT_TRUE_MSG(copy,
                     "Can't convert to rgb565 in place!");
                 for (int y = 0, yy = out.h; y < yy; y++) {
@@ -1023,16 +1091,9 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
-
-                MAIN_FB()->w = 0;
-                MAIN_FB()->h = 0;
-                MAIN_FB()->bpp = 0;
-                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to grayscale in place!");
-                MAIN_FB()->w = out.w;
-                MAIN_FB()->h = out.h;
-                MAIN_FB()->bpp = out.bpp;
+                py_helper_set_to_framebuffer(&out);
 
                 for (int y = 0, yy = out.h; y < yy; y++) {
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y);
@@ -1082,10 +1143,7 @@ static mp_obj_t py_image_to_rgb565(uint n_args, const mp_obj_t *args, mp_map_t *
 
     if (!copy) {
         arg_img->bpp = IMAGE_BPP_RGB565;
-
-        if ((MAIN_FB()->pixels == out.data)) {
-            MAIN_FB()->bpp = out.bpp;
-        }
+        py_helper_update_framebuffer(&out);
     }
 
     return py_image_from_struct(&out);
@@ -1116,7 +1174,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
 
     switch(arg_img->bpp) {
         case IMAGE_BPP_BINARY: {
-            if (copy || (MAIN_FB()->pixels != out.data)) {
+            if (copy || (!py_helper_is_equal_to_framebuffer(&out))) {
                 PY_ASSERT_TRUE_MSG((out.w == 1) || copy,
                     "Can't convert to rainbow in place!");
                 for (int y = 0, yy = out.h; y < yy; y++) {
@@ -1131,16 +1189,9 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
-
-                MAIN_FB()->w = 0;
-                MAIN_FB()->h = 0;
-                MAIN_FB()->bpp = 0;
-                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to rainbow in place!");
-                MAIN_FB()->w = out.w;
-                MAIN_FB()->h = out.h;
-                MAIN_FB()->bpp = out.bpp;
+                py_helper_set_to_framebuffer(&out);
 
                 for (int y = 0, yy = out.h; y < yy; y++) {
                     uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(&temp, y);
@@ -1156,7 +1207,7 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            if (copy || (MAIN_FB()->pixels != out.data)) {
+            if (copy || (!py_helper_is_equal_to_framebuffer(&out))) {
                 PY_ASSERT_TRUE_MSG(copy,
                     "Can't convert to rainbow in place!");
                 for (int y = 0, yy = out.h; y < yy; y++) {
@@ -1171,16 +1222,9 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
                 image_t temp;
                 memcpy(&temp, arg_img, sizeof(image_t));
                 fb_alloc_mark();
-                temp.data = fb_alloc(image_size(&temp));
+                temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
                 memcpy(temp.data, arg_img->data, image_size(&temp));
-
-                MAIN_FB()->w = 0;
-                MAIN_FB()->h = 0;
-                MAIN_FB()->bpp = 0;
-                PY_ASSERT_TRUE_MSG((image_size(&out) <= fb_avail()), "Can't convert to rainbow in place!");
-                MAIN_FB()->w = out.w;
-                MAIN_FB()->h = out.h;
-                MAIN_FB()->bpp = out.bpp;
+                py_helper_set_to_framebuffer(&out);
 
                 for (int y = 0, yy = out.h; y < yy; y++) {
                     uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&temp, y);
@@ -1231,106 +1275,115 @@ static mp_obj_t py_image_to_rainbow(uint n_args, const mp_obj_t *args, mp_map_t 
 
     if (!copy) {
         arg_img->bpp = IMAGE_BPP_RGB565;
-
-        if (MAIN_FB()->pixels == out.data) {
-            MAIN_FB()->bpp = out.bpp;
-        }
+        py_helper_update_framebuffer(&out);
     }
 
     return py_image_from_struct(&out);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_to_rainbow_obj, 1, py_image_to_rainbow);
 
+static mp_obj_t py_image_jpeg_encode_for_ide(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(arg_img->bpp >= IMAGE_BPP_JPEG, "Image format is not supported!");
+    PY_ASSERT_TRUE_MSG(py_helper_is_equal_to_framebuffer(arg_img), "Can't compress in place!");
+
+    int new_size = fb_encode_for_ide_new_size(arg_img);
+    fb_alloc_mark();
+    uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
+    fb_encode_for_ide(temp, arg_img);
+
+    image_t out;
+    out.w = arg_img->w;
+    out.h = arg_img->h;
+    out.bpp = new_size;
+    py_helper_set_to_framebuffer(&out);
+    arg_img->bpp = new_size;
+
+    memcpy(arg_img->data, temp, new_size);
+    fb_alloc_free_till_mark();
+
+    return img_obj;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_jpeg_encode_for_ide_obj, py_image_jpeg_encode_for_ide);
+
+static mp_obj_t py_image_jpeg_encoded_for_ide(mp_obj_t img_obj)
+{
+    image_t *arg_img = py_image_cobj(img_obj);
+    PY_ASSERT_TRUE_MSG(arg_img->bpp >= IMAGE_BPP_JPEG, "Image format is not supported!");
+
+    int new_size = fb_encode_for_ide_new_size(arg_img);
+    uint8_t *temp = xalloc(new_size);
+    fb_encode_for_ide(temp, arg_img);
+
+    return py_image(arg_img->w, arg_img->h, new_size, temp);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_jpeg_encoded_for_ide_obj, py_image_jpeg_encoded_for_ide);
+
 static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    if (IM_IS_JPEG((image_t *) py_image_cobj(args[0]))) return args[0];
+
     image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
     uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size);
+    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     PY_ASSERT_TRUE_MSG(out.bpp <= image_size(arg_img), "Can't compress in place!");
     memcpy(arg_img->data, out.data, out.bpp);
     arg_img->bpp = out.bpp;
     fb_alloc_free_till_mark();
-
-    if (MAIN_FB()->pixels == arg_img->data) {
-        MAIN_FB()->bpp = arg_img->bpp;
-    }
-
+    py_helper_update_framebuffer(arg_img);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_obj, 1, py_image_compress);
 
 static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    if (IM_IS_JPEG((image_t *) py_image_cobj(args[0]))) return py_image_jpeg_encode_for_ide(args[0]);
+
     image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
     uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size);
+    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    PY_ASSERT_TRUE_MSG(((((out.bpp * 8) + 5) / 6) + 2) <= image_size(arg_img), "Can't compress in place!");
-    uint8_t *ptr = arg_img->data;
+    int new_size = fb_encode_for_ide_new_size(&out);
+    PY_ASSERT_TRUE_MSG(new_size <= image_size(arg_img), "Can't compress in place!");
+    fb_encode_for_ide(arg_img->data, &out);
 
-    *ptr++ = 0xFE;
-
-    for(int i = 0, j = (out.bpp / 3) * 3; i < j; i += 3) {
-        int x = 0;
-        x |= out.data[i + 0] << 0;
-        x |= out.data[i + 1] << 8;
-        x |= out.data[i + 2] << 16;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 18) & 0x3F);
-    }
-
-    if((out.bpp % 3) == 2) { // 2 bytes -> 16-bits -> 24-bits sent
-        int x = 0;
-        x |= out.data[out.bpp - 2] << 0;
-        x |= out.data[out.bpp - 1] << 8;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
-    }
-
-    if((out.bpp % 3) == 1) { // 1 byte -> 8-bits -> 16-bits sent
-        int x = 0;
-        x |= out.data[out.bpp - 1] << 0;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-    }
-
-    *ptr++ = 0xFE;
-
-    out.bpp = (((out.bpp * 8) + 5) / 6) + 2;
+    out.bpp = new_size;
     arg_img->bpp = out.bpp;
     fb_alloc_free_till_mark();
-
-    if (MAIN_FB()->pixels == arg_img->data) {
-        MAIN_FB()->bpp = arg_img->bpp;
-    }
-
+    py_helper_update_framebuffer(arg_img);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compress_for_ide_obj, 1, py_image_compress_for_ide);
 
 static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_image_cobj(args[0]);
+
+    if (IM_IS_JPEG(arg_img)) {
+        image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=arg_img->bpp, .data=xalloc(arg_img->bpp) };
+        memcpy(out.data, arg_img->data, arg_img->bpp);
+        return py_image_from_struct(&out);
+    }
+
+    arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
     uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size);
+    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     uint8_t *temp = xalloc(out.bpp);
@@ -1344,50 +1397,22 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_compressed_obj, 1, py_image_compresse
 
 static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    if (IM_IS_JPEG((image_t *) py_image_cobj(args[0]))) return py_image_jpeg_encoded_for_ide(args[0]);
+
     image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
     uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size);
+    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
     image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
-    uint8_t *temp = xalloc((((out.bpp * 8) + 5) / 6) + 2);
-    uint8_t *ptr = temp;
+    int new_size = fb_encode_for_ide_new_size(&out);
+    uint8_t *temp = xalloc(new_size);
+    fb_encode_for_ide(temp, &out);
 
-    *ptr++ = 0xFE;
-
-    for(int i = 0, j = (out.bpp / 3) * 3; i < j; i += 3) {
-        int x = 0;
-        x |= out.data[i + 0] << 0;
-        x |= out.data[i + 1] << 8;
-        x |= out.data[i + 2] << 16;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 18) & 0x3F);
-    }
-
-    if((out.bpp % 3) == 2) { // 2 bytes -> 16-bits -> 24-bits sent
-        int x = 0;
-        x |= out.data[out.bpp - 2] << 0;
-        x |= out.data[out.bpp - 1] << 8;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 12) & 0x0F);
-    }
-
-    if((out.bpp % 3) == 1) { // 1 byte -> 8-bits -> 16-bits sent
-        int x = 0;
-        x |= out.data[out.bpp - 1] << 0;
-        *ptr++ = 0x80 | ((x >> 0) & 0x3F);
-        *ptr++ = 0x80 | ((x >> 6) & 0x03);
-    }
-
-    *ptr++ = 0xFE;
-
-    out.bpp = (((out.bpp * 8) + 5) / 6) + 2;
+    out.bpp = new_size;
     out.data = temp;
     fb_alloc_free_till_mark();
 
@@ -1441,14 +1466,7 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     image.data = NULL;
 
     if (copy_to_fb) {
-        MAIN_FB()->w = 0;
-        MAIN_FB()->h = 0;
-        MAIN_FB()->bpp = 0;
-        PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-        image.data = MAIN_FB()->pixels;
+        py_helper_set_to_framebuffer(&image);
     } else if (arg_other) {
         PY_ASSERT_TRUE_MSG((image_size(&image) <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
         image.data = arg_other->data;
@@ -1462,17 +1480,11 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
     if (in_place) {
         memcpy(&temp, arg_img, sizeof(image_t));
         fb_alloc_mark();
-        temp.data = fb_alloc(image_size(&temp));
+        temp.data = fb_alloc(image_size(&temp), FB_ALLOC_NO_HINT);
         memcpy(temp.data, arg_img->data, image_size(&temp));
         arg_img = &temp;
         if (copy_to_fb) {
-            MAIN_FB()->w = 0;
-            MAIN_FB()->h = 0;
-            MAIN_FB()->bpp = 0;
-            PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
-            MAIN_FB()->w = image.w;
-            MAIN_FB()->h = image.h;
-            MAIN_FB()->bpp = image.bpp;
+            py_helper_set_to_framebuffer(&image);
         }
     }
 
@@ -1521,16 +1533,12 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
         fb_alloc_free_till_mark();
     }
 
-    if (MAIN_FB()->pixels == image.data) {
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-    }
+    py_helper_update_framebuffer(&image);
 
     if (copy_to_fb) {
         image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
 
-        if (MAIN_FB()->pixels == arg_img->data) {
+        if (py_helper_is_equal_to_framebuffer(arg_img)) {
             arg_img->w = image.w;
             arg_img->h = image.h;
             arg_img->bpp = image.bpp;
@@ -1851,16 +1859,75 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
     float arg_x_scale =
         py_helper_keyword_float(n_args, args, offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), 1.0f);
     PY_ASSERT_TRUE_MSG((0.0f <= arg_x_scale), "Error: 0.0 <= x_scale!");
+
     float arg_y_scale =
         py_helper_keyword_float(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), 1.0f);
     PY_ASSERT_TRUE_MSG((0.0f <= arg_y_scale), "Error: 0.0 <= y_scale!");
-    float arg_alpha =
-        py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 256) / 256.0f;
-    PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 1), "Error: 0 <= alpha <= 256!");
+
+    int arg_alpha =
+        py_helper_keyword_int(n_args, args, offset + 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 256);
+    PY_ASSERT_TRUE_MSG((0 <= arg_alpha) && (arg_alpha <= 256), "Error: 0 <= alpha <= 256!");
     image_t *arg_msk =
         py_helper_keyword_to_image_mutable_mask(n_args, args, offset + 3, kw_args);
 
-    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk);
+    const uint16_t *color_palette = NULL;
+    {
+        int palette;
+
+        if (py_helper_keyword_int_maybe(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
+            if (palette == COLOR_PALETTE_RAINBOW) {
+                color_palette = rainbow_table;
+            } else if (palette == COLOR_PALETTE_IRONBOW) {
+                color_palette = ironbow_table;
+            } else {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pre-defined color palette!"));
+            }
+        } else {
+            image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, offset + 4, kw_args);
+
+            if (arg_color_palette) {
+                if (arg_color_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be an RGB565 format image!"));
+                if ((arg_color_palette->w * arg_color_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette image must have 256 pixels!"));
+
+                color_palette = (uint16_t*)arg_color_palette->data;
+            }
+        }
+
+        if (color_palette) {
+            if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify a color palette when passing a grayscale image!"));
+        }
+    }
+
+    if (color_palette && arg_img->bpp != IMAGE_BPP_RGB565) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palettes must be used with color images!"));
+    }
+
+    const uint8_t *alpha_palette = NULL;
+    {
+        image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, offset + 5, kw_args);
+
+        if (arg_alpha_palette) {
+            if (arg_other->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Can only specify an alpha palette when passing a grayscale image!"));
+            if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be an grayscale format image!"));
+            if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette image must have 256 pixels!"));
+            if (arg_img->bpp != IMAGE_BPP_GRAYSCALE && arg_img->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palettes must be used with color images!"));
+
+            alpha_palette = (uint8_t*)arg_alpha_palette->data;
+        }
+    }
+
+    image_hint_t hint =
+        py_helper_keyword_int(n_args, args, offset + 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
+
+    if (hint && arg_msk) {
+        // This check is only performed if there is a hint for backwards compatiblity with old draw image where dimesions were not enforced.
+        if (arg_msk->w != arg_other->w || arg_msk->h != arg_other->h) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Mask must have same dimensions as image"));
+        }
+    }
+
+    imlib_draw_image(arg_img, arg_other, arg_cx, arg_cy, arg_x_scale, arg_y_scale, arg_alpha, arg_msk, color_palette, alpha_palette, hint);
+
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_image_obj, 3, py_image_draw_image);
@@ -1942,7 +2009,7 @@ STATIC mp_obj_t py_image_mask_rectangle(uint n_args, const mp_obj_t *args, mp_ma
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.bpp = IMAGE_BPP_BINARY;
-    temp.data = fb_alloc0(image_size(&temp));
+    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
 
     imlib_draw_rectangle(&temp, arg_rx, arg_ry, arg_rw, arg_rh, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
@@ -1976,7 +2043,7 @@ STATIC mp_obj_t py_image_mask_circle(uint n_args, const mp_obj_t *args, mp_map_t
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.bpp = IMAGE_BPP_BINARY;
-    temp.data = fb_alloc0(image_size(&temp));
+    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
 
     imlib_draw_circle(&temp, arg_cx, arg_cy, arg_cr, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
@@ -2016,7 +2083,7 @@ STATIC mp_obj_t py_image_mask_ellipse(uint n_args, const mp_obj_t *args, mp_map_
     temp.w = arg_img->w;
     temp.h = arg_img->h;
     temp.bpp = IMAGE_BPP_BINARY;
-    temp.data = fb_alloc0(image_size(&temp));
+    temp.data = fb_alloc0(image_size(&temp), FB_ALLOC_NO_HINT);
 
     imlib_draw_ellipse(&temp, arg_cx, arg_cy, arg_rx, arg_ry, arg_r, -1, 0, true);
     imlib_zero(arg_img, &temp, true);
@@ -2119,10 +2186,7 @@ STATIC mp_obj_t py_image_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 
     if (arg_to_bitmap && (!arg_copy)) {
         arg_img->bpp = IMAGE_BPP_BINARY;
-
-        if ((MAIN_FB()->pixels == out.data)) {
-            MAIN_FB()->bpp = out.bpp;
-        }
+        py_helper_update_framebuffer(&out);
     }
 
     return py_image_from_struct(&out);
@@ -2458,12 +2522,7 @@ STATIC mp_obj_t py_image_replace(uint n_args, const mp_obj_t *args, mp_map_t *kw
     }
 
     fb_alloc_free_till_mark();
-
-    if (MAIN_FB()->pixels == arg_img->data) {
-        MAIN_FB()->w = arg_img->w;
-        MAIN_FB()->h = arg_img->h;
-    }
-
+    py_helper_update_framebuffer(arg_img);
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_replace_obj, 1, py_image_replace);
@@ -2821,7 +2880,7 @@ STATIC mp_obj_t py_image_morph(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
     fb_alloc_mark();
 
-    int *arg_krn = fb_alloc(n * sizeof(int));
+    int *arg_krn = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -2866,14 +2925,14 @@ STATIC mp_obj_t py_image_gaussian(uint n_args, const mp_obj_t *args, mp_map_t *k
 
     fb_alloc_mark();
 
-    int *pascal = fb_alloc(n * sizeof(int));
+    int *pascal = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
     pascal[0] = 1;
 
     for (int i = 0; i < k_2; i++) { // Compute a row of pascal's triangle.
         pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
     }
 
-    int *arg_krn = fb_alloc(n * n * sizeof(int));
+    int *arg_krn = fb_alloc(n * n * sizeof(int), FB_ALLOC_NO_HINT);
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -2922,14 +2981,14 @@ STATIC mp_obj_t py_image_laplacian(uint n_args, const mp_obj_t *args, mp_map_t *
 
     fb_alloc_mark();
 
-    int *pascal = fb_alloc(n * sizeof(int));
+    int *pascal = fb_alloc(n * sizeof(int), FB_ALLOC_NO_HINT);
     pascal[0] = 1;
 
     for (int i = 0; i < k_2; i++) { // Compute a row of pascal's triangle.
         pascal[i + 1] = (pascal[i] * (k_2 - i)) / (i + 1);
     }
 
-    int *arg_krn = fb_alloc(n * n * sizeof(int));
+    int *arg_krn = fb_alloc(n * n * sizeof(int), FB_ALLOC_NO_HINT);
     int arg_m = 0;
 
     for (int i = 0; i < n; i++) {
@@ -3081,6 +3140,8 @@ static mp_obj_t py_image_linpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     image_t *arg_img =
         py_helper_arg_to_image_mutable(args[0]);
+    PY_ASSERT_FALSE_MSG(arg_img->w % 2, "Width must be even!");
+    PY_ASSERT_FALSE_MSG(arg_img->h % 2, "Height must be even!");
     bool arg_reverse =
         py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse), false);
 
@@ -3097,6 +3158,8 @@ static mp_obj_t py_image_logpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     image_t *arg_img =
         py_helper_arg_to_image_mutable(args[0]);
+    PY_ASSERT_FALSE_MSG(arg_img->w % 2, "Width must be even!");
+    PY_ASSERT_FALSE_MSG(arg_img->h % 2, "Height must be even!");
     bool arg_reverse =
         py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_reverse), false);
 
@@ -3108,23 +3171,32 @@ static mp_obj_t py_image_logpolar(uint n_args, const mp_obj_t *args, mp_map_t *k
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_logpolar_obj, 1, py_image_logpolar);
 #endif // IMLIB_ENABLE_LOGPOLAR
 
+#ifdef IMLIB_ENABLE_LENS_CORR
 STATIC mp_obj_t py_image_lens_corr(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img =
         py_helper_arg_to_image_mutable(args[0]);
+    PY_ASSERT_FALSE_MSG(arg_img->w % 2, "Width must be even!");
+    PY_ASSERT_FALSE_MSG(arg_img->h % 2, "Height must be even!");
     float arg_strength =
-        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_strength), 1.8);
-    PY_ASSERT_TRUE_MSG(arg_strength > 0.0, "Strength must be > 0!");
+        py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_strength), 1.8f);
+    PY_ASSERT_TRUE_MSG(arg_strength > 0.0f, "Strength must be > 0!");
     float arg_zoom =
-        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom), 1.0);
-    PY_ASSERT_TRUE_MSG(arg_zoom > 0.0, "Zoom must be > 0!");
+        py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom), 1.0f);
+    PY_ASSERT_TRUE_MSG(arg_zoom > 0.0f, "Zoom must be > 0!");
+
+    float arg_x_corr =
+        py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_corr), 0.0f);
+    float arg_y_corr =
+        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_corr), 0.0f);
 
     fb_alloc_mark();
-    imlib_lens_corr(arg_img, arg_strength, arg_zoom);
+    imlib_lens_corr(arg_img, arg_strength, arg_zoom, arg_x_corr, arg_y_corr);
     fb_alloc_free_till_mark();
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_lens_corr_obj, 1, py_image_lens_corr);
+#endif // IMLIB_ENABLE_LENS_CORR
 
 #ifdef IMLIB_ENABLE_ROTATION_CORR
 STATIC mp_obj_t py_image_rotation_corr(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -3132,24 +3204,28 @@ STATIC mp_obj_t py_image_rotation_corr(uint n_args, const mp_obj_t *args, mp_map
     image_t *arg_img =
         py_helper_arg_to_image_mutable(args[0]);
     float arg_x_rotation =
-        IM_DEG2RAD(py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_rotation), 0.0));
+        IM_DEG2RAD(py_helper_keyword_float(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_rotation), 0.0f));
     float arg_y_rotation =
-        IM_DEG2RAD(py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_rotation), 0.0));
+        IM_DEG2RAD(py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_rotation), 0.0f));
     float arg_z_rotation =
-        IM_DEG2RAD(py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_z_rotation), 0.0));
+        IM_DEG2RAD(py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_z_rotation), 0.0f));
     float arg_x_translation =
-        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_translation), 0.0);
+        py_helper_keyword_float(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_translation), 0.0f);
     float arg_y_translation =
-        py_helper_keyword_float(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_translation), 0.0);
+        py_helper_keyword_float(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_translation), 0.0f);
     float arg_zoom =
-        py_helper_keyword_float(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom), 1.0);
-    PY_ASSERT_TRUE_MSG(arg_zoom > 0.0, "Zoom must be > 0!");
+        py_helper_keyword_float(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_zoom), 1.0f);
+    PY_ASSERT_TRUE_MSG(arg_zoom > 0.0f, "Zoom must be > 0!");
+    float arg_fov =
+        IM_DEG2RAD(py_helper_keyword_float(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_fov), 60.0f));
+    PY_ASSERT_TRUE_MSG((0.0f < arg_fov) && (arg_fov < 180.0f), "FOV must be > 0 and < 180!");
+    float *arg_corners = py_helper_keyword_corner_array(n_args, args, 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_corners));
 
     fb_alloc_mark();
     imlib_rotation_corr(arg_img,
                         arg_x_rotation, arg_y_rotation, arg_z_rotation,
                         arg_x_translation, arg_y_translation,
-                        arg_zoom);
+                        arg_zoom, arg_fov, arg_corners);
     fb_alloc_free_till_mark();
     return args[0];
 }
@@ -3733,9 +3809,9 @@ mp_obj_t py_histogram_get_percentile(mp_obj_t self_in, mp_obj_t percentile)
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
     fb_alloc_mark();
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3771,9 +3847,9 @@ mp_obj_t py_histogram_get_threshold(mp_obj_t self_in)
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
     fb_alloc_mark();
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3809,9 +3885,9 @@ mp_obj_t py_histogram_get_statistics(mp_obj_t self_in)
     hist.ABinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->ABins)->len;
     hist.BBinCount = ((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->BBins)->len;
     fb_alloc_mark();
-    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
+    hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+    hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
 
     for (int i = 0; i < hist.LBinCount; i++) {
         hist.LBins[i] = mp_obj_get_float(((mp_obj_list_t *) ((py_histogram_obj_t *) self_in)->LBins)->items[i]);
@@ -3899,6 +3975,7 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
     py_helper_keyword_thresholds(n_args, args, 1, kw_args, &thresholds);
     bool invert = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    image_t *other = py_helper_keyword_to_image_mutable(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_difference), NULL);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 3, kw_args, &roi);
@@ -3914,10 +3991,10 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -3930,10 +4007,10 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -3954,10 +4031,10 @@ static mp_obj_t py_image_get_histogram(uint n_args, const mp_obj_t *args, mp_map
             hist.BBinCount = py_helper_keyword_int(n_args, args, n_args, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
             PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4000,6 +4077,7 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
     list_init(&thresholds, sizeof(color_thresholds_list_lnk_data_t));
     py_helper_keyword_thresholds(n_args, args, 1, kw_args, &thresholds);
     bool invert = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_invert), false);
+    image_t *other = py_helper_keyword_to_image_mutable(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_difference), NULL);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 3, kw_args, &roi);
@@ -4015,10 +4093,10 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4031,10 +4109,10 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.ABinCount = 0;
             hist.BBinCount = 0;
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
             hist.ABins = NULL;
             hist.BBins = NULL;
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4055,10 +4133,10 @@ static mp_obj_t py_image_get_statistics(uint n_args, const mp_obj_t *args, mp_ma
             hist.BBinCount = py_helper_keyword_int(n_args, args, n_args, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_b_bins), b_bins);
             PY_ASSERT_TRUE_MSG(hist.BBinCount >= 2, "b_bins must be >= 2");
             fb_alloc_mark();
-            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float));
-            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float));
-            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float));
-            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert);
+            hist.LBins = fb_alloc(hist.LBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.ABins = fb_alloc(hist.ABinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            hist.BBins = fb_alloc(hist.BBinCount * sizeof(float), FB_ALLOC_NO_HINT);
+            imlib_get_histogram(&hist, arg_img, &roi, &thresholds, invert, other);
             list_free(&thresholds);
             break;
         }
@@ -4270,7 +4348,7 @@ static void py_blob_print(const mp_print_t *print, mp_obj_t self_in, mp_print_ki
     mp_printf(print,
               "{\"x\":%d, \"y\":%d, \"w\":%d, \"h\":%d,"
               " \"pixels\":%d, \"cx\":%d, \"cy\":%d, \"rotation\":%f, \"code\":%d, \"count\":%d,"
-              " \"perimeter\":%d, \"roundness:%f\"}",
+              " \"perimeter\":%d, \"roundness\":%f}",
               mp_obj_get_int(self->x),
               mp_obj_get_int(self->y),
               mp_obj_get_int(self->w),
@@ -5569,7 +5647,9 @@ static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_ma
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);
+#ifndef IMLIB_ENABLE_HIGH_RES_APRILTAGS
     PY_ASSERT_TRUE_MSG((roi.w * roi.h) < 65536, "The maximum supported resolution for find_apriltags() is < 64K pixels.");
+#endif
     if ((roi.w < 4) || (roi.h < 4)) {
         return mp_obj_new_list(0, NULL);
     }
@@ -6296,6 +6376,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_image_height_obj)},
     {MP_ROM_QSTR(MP_QSTR_format),              MP_ROM_PTR(&py_image_format_obj)},
     {MP_ROM_QSTR(MP_QSTR_size),                MP_ROM_PTR(&py_image_size_obj)},
+    {MP_ROM_QSTR(MP_QSTR_bytearray),           MP_ROM_PTR(&py_image_bytearray_obj)},
     {MP_ROM_QSTR(MP_QSTR_get_pixel),           MP_ROM_PTR(&py_image_get_pixel_obj)},
     {MP_ROM_QSTR(MP_QSTR_set_pixel),           MP_ROM_PTR(&py_image_set_pixel_obj)},
 #ifdef IMLIB_ENABLE_MEAN_POOLING
@@ -6320,6 +6401,8 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_compress_for_ide),    MP_ROM_PTR(&py_image_compress_for_ide_obj)},
     {MP_ROM_QSTR(MP_QSTR_compressed),          MP_ROM_PTR(&py_image_compressed_obj)},
     {MP_ROM_QSTR(MP_QSTR_compressed_for_ide),  MP_ROM_PTR(&py_image_compressed_for_ide_obj)},
+    {MP_ROM_QSTR(MP_QSTR_jpeg_encode_for_ide), MP_ROM_PTR(&py_image_jpeg_encode_for_ide_obj)},
+    {MP_ROM_QSTR(MP_QSTR_jpeg_encoded_for_ide),MP_ROM_PTR(&py_image_jpeg_encoded_for_ide_obj)},
     {MP_ROM_QSTR(MP_QSTR_copy),                MP_ROM_PTR(&py_image_copy_obj)},
     {MP_ROM_QSTR(MP_QSTR_crop),                MP_ROM_PTR(&py_image_crop_obj)},
     {MP_ROM_QSTR(MP_QSTR_scale),               MP_ROM_PTR(&py_image_crop_obj)},
@@ -6495,7 +6578,11 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
 #else
     {MP_ROM_QSTR(MP_QSTR_logpolar),            MP_ROM_PTR(&py_func_unavailable_obj)},
 #endif
+#ifdef IMLIB_ENABLE_LENS_CORR
     {MP_ROM_QSTR(MP_QSTR_lens_corr),           MP_ROM_PTR(&py_image_lens_corr_obj)},
+#else
+    {MP_ROM_QSTR(MP_QSTR_lens_corr),           MP_ROM_PTR(&py_func_unavailable_obj)},
+#endif
 #ifdef IMLIB_ENABLE_ROTATION_CORR
     {MP_ROM_QSTR(MP_QSTR_rotation_corr),       MP_ROM_PTR(&py_image_rotation_corr_obj)},
 #else
@@ -6603,6 +6690,8 @@ static const mp_obj_type_t py_image_type = {
     .print = py_image_print,
     .buffer_p = { .get_buffer = py_image_get_buffer },
     .subscr = py_image_subscr,
+    .getiter = py_image_getiter,
+    .unary_op = py_image_unary_op,
     .locals_dict = (mp_obj_t) &locals_dict
 };
 
@@ -6761,14 +6850,7 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     uint32_t size = image_size(&image);
 
     if (copy_to_fb) {
-        MAIN_FB()->w = 0;
-        MAIN_FB()->h = 0;
-        MAIN_FB()->bpp = 0;
-        PY_ASSERT_TRUE_MSG((size <= fb_avail()), "The new image won't fit in the main frame buffer!");
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-        image.data = MAIN_FB()->pixels;
+        py_helper_set_to_framebuffer(&image);
     } else if (arg_other) {
         PY_ASSERT_TRUE_MSG((size <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
         image.data = arg_other->data;
@@ -6779,12 +6861,7 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     char ignore[15];
     read_data(fp, image.data, size);
     if (size % 16) read_data(fp, ignore, 16 - (size % 16)); // Read in to multiple of 16 bytes.
-
-    if (MAIN_FB()->pixels == image.data) {
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-    }
+    py_helper_update_framebuffer(&image);
 
     if (arg_other) {
         arg_other->w = image.w;
@@ -7155,14 +7232,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     }
 
     if (copy_to_fb) {
-        MAIN_FB()->w = 0;
-        MAIN_FB()->h = 0;
-        MAIN_FB()->bpp = 0;
-        PY_ASSERT_TRUE_MSG((image_size(&image) <= fb_avail()), "The new image won't fit in the main frame buffer!");
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-        image.data = MAIN_FB()->pixels;
+        py_helper_set_to_framebuffer(&image);
     } else if (arg_other) {
         PY_ASSERT_TRUE_MSG((image_size(&image) <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
         image.data = arg_other->data;
@@ -7177,11 +7247,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
         fb_alloc_free_till_mark();
     }
 
-    if (MAIN_FB()->pixels == image.data) {
-        MAIN_FB()->w = image.w;
-        MAIN_FB()->h = image.h;
-        MAIN_FB()->bpp = image.bpp;
-    }
+    py_helper_update_framebuffer(&image);
 
     if (arg_other) {
         arg_other->w = image.w;
@@ -7373,7 +7439,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
 
         if (array_length(kpts1->kpts) && array_length(kpts1->kpts)) {
             fb_alloc_mark();
-            int *match = fb_alloc(array_length(kpts1->kpts) * sizeof(int) * 2);
+            int *match = fb_alloc(array_length(kpts1->kpts) * sizeof(int) * 2, FB_ALLOC_NO_HINT);
 
             // Match the two keypoint sets
             count = orb_match_keypoints(kpts1->kpts, kpts2->kpts, match, threshold, &r, &c, &theta);
@@ -7474,6 +7540,8 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE93),              MP_ROM_INT(BARCODE_CODE93)},
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
 #endif
+    {MP_ROM_QSTR(MP_QSTR_IMAGE_HINT_BILINEAR),MP_ROM_INT(IMAGE_HINT_BILINEAR)},
+    {MP_ROM_QSTR(MP_QSTR_IMAGE_HINT_CENTER),        MP_ROM_INT(IMAGE_HINT_CENTER)},
     {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_image_imagewriter_obj)},
     {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_image_imagereader_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_grayscale), MP_ROM_PTR(&py_image_binary_to_grayscale_obj)},

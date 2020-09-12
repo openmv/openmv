@@ -1,33 +1,52 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2018 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Basic drawing functions.
  */
-
 #include "font.h"
 #include "imlib.h"
 
-// Get pixel (handles boundary check and image type check).
-int imlib_get_pixel(image_t *img, int x, int y)
-{
-    if ((0 <= x) && (x < img->w) && (0 <= y) && (y < img->h)) {
-        switch(img->bpp) {
-            case IMAGE_BPP_BINARY: {
-                return IMAGE_GET_BINARY_PIXEL(img, x, y);
-            }
-            case IMAGE_BPP_GRAYSCALE: {
-                return IMAGE_GET_GRAYSCALE_PIXEL(img, x, y);
-            }
-            case IMAGE_BPP_RGB565: {
-                return IMAGE_GET_RGB565_PIXEL(img, x, y);
-            }
-            default: {
-                return -1;
-            }
+void* imlib_compute_row_ptr(const image_t *img, int y) {
+    switch(img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            return IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+        }
+        case IMAGE_BPP_RGB565: {
+            return IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+        }
+        default: {
+            // This shouldn't happen, at least we return a valid memory block
+            return img->data;
         }
     }
-
-    return -1;
 }
+
+inline int imlib_get_pixel_fast(int img_bpp, const void *row_ptr, int x)
+{
+    switch(img_bpp) {
+        case IMAGE_BPP_BINARY: {
+            return IMAGE_GET_BINARY_PIXEL_FAST((uint32_t*)row_ptr, x);
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return IMAGE_GET_GRAYSCALE_PIXEL_FAST((uint8_t*)row_ptr, x);
+        }
+        case IMAGE_BPP_RGB565: {
+            return IMAGE_GET_RGB565_PIXEL_FAST((uint16_t*)row_ptr, x);
+        }
+        default: {
+            return -1;
+        }
+    }
+}
+
 
 // Set pixel (handles boundary check and image type check).
 void imlib_set_pixel(image_t *img, int x, int y, int p)
@@ -412,11 +431,11 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
     }
 }
 
-static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
+static int safe_map_pixel(int dst_bpp, int src_bpp, int pixel)
 {
-    switch (dst->bpp) {
+    switch (dst_bpp) {
         case IMAGE_BPP_BINARY: {
-            switch (src->bpp) {
+            switch (src_bpp) {
                 case IMAGE_BPP_BINARY: {
                     return pixel;
                 }
@@ -432,7 +451,7 @@ static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
             }
         }
         case IMAGE_BPP_GRAYSCALE: {
-            switch (src->bpp) {
+            switch (src_bpp) {
                 case IMAGE_BPP_BINARY: {
                     return COLOR_BINARY_TO_GRAYSCALE(pixel);
                 }
@@ -448,7 +467,7 @@ static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
             }
         }
         case IMAGE_BPP_RGB565: {
-            switch (src->bpp) {
+            switch (src_bpp) {
                 case IMAGE_BPP_BINARY: {
                     return COLOR_BINARY_TO_RGB565(pixel);
                 }
@@ -469,21 +488,517 @@ static int safe_map_pixel(image_t *dst, image_t *src, int pixel)
     }
 }
 
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, float alpha, image_t *mask)
+/**
+ * Blend two RGB888 format pixels using alpha.
+ * NOTE:
+ *   Interpolating RGB is not a good way of blending colors as it can generate colors that aren't in the original image.
+ *   It's better to blend by transforming to another color space then interpolate, but that may slow things down.
+ *   We could implement a better blend at a later date using a hint like image.BLEND_USING_HSV.
+ *
+ * @param background_pixel Background pixel value in RGB888
+ * @param foreground_pixel Foreground pixel value in RGB888
+ * @param alpha Foreground alpha 0->128
+ * @param alpha_complement 128 minues Foreground alpha
+ * @return Blended pixel in RGB888 format
+ */
+uint32_t draw_blendop_rgb888(uint32_t background_pixel, uint32_t foreground_pixel, uint32_t alpha, uint32_t alpha_complement)
 {
-    float over_xscale = IM_DIV(1.0, x_scale), over_yscale = IM_DIV(1.0f, y_scale), beta = 1 - alpha;
+    // rrrrrrrrggggggggbbbbbbbb
+    uint32_t frb = foreground_pixel & 0xFF00FF;
+    // rrrrrrrr........bbbbbbbb
+    uint32_t fg = (foreground_pixel >> 8) & 255;
+    // ................gggggggg
+    uint32_t brb = background_pixel & 0xFF00FF;
+    // rrrrrrrr........bbbbbbbb
+    uint32_t bg = (background_pixel >> 8) & 255;
+    // ................gggggggg
 
-    for (int y = 0, yy = fast_floorf(other->h * y_scale); y < yy; y++) {
-        int other_y = fast_floorf(y * over_yscale);
+    uint32_t rb = (frb * alpha + brb * alpha_complement) >> 7;
+    uint32_t g = (fg * alpha + bg * alpha_complement) >> 7;
 
-        for (int x = 0, xx = fast_floorf(other->w * x_scale); x < xx; x++) {
-            int other_x = fast_floorf(x * over_xscale);
+    return (rb & 0xFF00FF) + (g << 8);
+}
 
-            if ((!mask) || image_get_mask_pixel(mask, other_x, other_y)) {
-                int pixel = safe_map_pixel(img, other, imlib_get_pixel(other, other_x, other_y));
-                imlib_set_pixel(img, x_off + x, y_off + y, (alpha == 1) ? pixel :
-                                (pixel * alpha) + (imlib_get_pixel(img, x_off + x, y_off + y) * beta));
+/**
+ * Scale an RGB565 format pixel returning an RGB888 result.
+ *
+ * @param pixel RGB565 pixel to scale.
+ * @param scale Amount to scale 0->128
+ * @return Scaled pixel as RGB888
+ */
+uint32_t draw_scaleop_RGB565_to_RGB888(uint32_t pixel, uint32_t scale)
+{
+    uint32_t vr = COLOR_RGB565_TO_R8(pixel);
+    uint32_t vg = COLOR_RGB565_TO_G8(pixel);
+    uint32_t vb = COLOR_RGB565_TO_B8(pixel);
+
+    // Scale is 0->128 so we shift right 7
+    uint32_t r = (vr * scale) >> 7;
+    uint32_t g = (vg * scale) >> 7;
+    uint32_t b = (vb * scale) >> 7;
+    
+    return (r << 16) + (g << 8) + b;
+}
+
+/**
+ * Convert a pixel to binary.
+ * Used by interpolation cache line methods to convert mask to bitmap.
+ *
+ * @param bpp Bits per pixel of pixel.
+ * @param pixel Pixel value.
+ * @return pixel in binary format.
+ */
+inline bool imlib_pixel_to_binary(int bpp, uint32_t pixel)
+{
+    switch (bpp) {
+        case IMAGE_BPP_BINARY: {
+            return pixel;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            return COLOR_GRAYSCALE_TO_BINARY(pixel);
+        }
+        case IMAGE_BPP_RGB565: {
+            return COLOR_RGB565_TO_BINARY(pixel);
+        }
+        default: {
+            return false;
+        }
+    }
+}
+
+/**
+ * Used by IMAGE_HINT_BILINEAR to generate a grayscale linear interpolated row.
+ * The drawing algorithm will later apply the vertical interpolation between two cached lines.
+ *
+ * @param cache_line Where to write the line
+ * @param alpha 0->128, alpha blending value for other image.
+ * @param other_row_ptr Other source image row pointer.
+ * @param other_bpp Other image bits per pixel.
+ * @param mask_row_ptr Mask image row pointer.
+ * @param mask_bpp Mask image bits per pixel.
+ * @param other_x_start Start x pixel location in source/mask image.
+ * @param other_x_end End x pixel (exclusive) location in source/mask image.
+ * @param over_x_scale Scale from other scale to image scale.
+ */
+static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, uint8_t *other_row_ptr, int other_bpp, void *mask_row_ptr, int mask_bpp, int other_x_start, int other_x_end, float over_xscale, const uint8_t *alpha_palette)
+{
+    for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
+        float other_x_float = (x + 0.5) * over_xscale;
+        uint32_t other_x = fast_floorf(other_x_float);
+        uint32_t weight_x = fast_floorf((other_x_float - other_x) * alpha);
+        bool mask1 = true, mask2 = true;
+
+        if (mask_row_ptr) {
+            mask1 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
+            mask2 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
+        }
+
+        uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
+        uint32_t alpha2 = mask2 ? weight_x : 0;
+        uint32_t other_pixel1 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
+        uint32_t other_pixel2 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x + 1));
+
+        if (alpha_palette) {
+            alpha1 = alpha1 * alpha_palette[other_pixel1] >> 8;
+            alpha2 = alpha2 * alpha_palette[other_pixel2] >> 8;
+        }
+
+        other_pixel1 *= alpha1;
+        other_pixel2 *= alpha2;
+        
+        // Image alpha is the remaining alpha after applying other alpha
+        uint32_t img_alpha = 256 - (alpha1 + alpha2);
+
+        // Note img_alpha is now 0->128 to fit into a byte
+        cache_line[i] = ((other_pixel1 + other_pixel2) & 0xFF00) + (img_alpha >> 1);
+    }
+}
+
+
+/**
+ * Used by IMAGE_HINT_BILINEAR to generate a RGB888 linear interpolated row.
+ * The drawing algorithm will later apply the vertical interpolation between two cached lines.
+ *
+ * @param cache_line Where to write the line
+ * @param alpha 0->128, alpha blending value for other image.
+ * @param other_row_ptr Other source image row pointer.
+ * @param other_bpp Other image bits per pixel.
+ * @param mask_row_ptr Mask image row pointer.
+ * @param mask_bpp Mask image bits per pixel.
+ * @param other_x_start Start x pixel location in source/mask image.
+ * @param other_x_end End x pixel (exclusive) location in source/mask image.
+ * @param over_x_scale Scale from other scale to image scale.
+ */
+static void int_generate_cache_line_rgb565(uint32_t *cache_line, int alpha, const uint16_t *other_row_ptr, int other_bpp, const void *mask_row_ptr, int mask_bpp, int other_x_start, int other_x_end, float over_xscale, const uint16_t *color_palette, const uint8_t *alpha_palette)
+{
+    // generate line
+    for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
+        float other_x_float = (x + 0.5) * over_xscale;
+        uint32_t other_x = fast_floorf(other_x_float);
+        uint32_t weight_x = fast_floorf((other_x_float - other_x) * alpha);
+        bool mask1 = true, mask2 = true;
+
+        if (mask_row_ptr) {
+            mask1 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
+            mask2 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
+        }
+
+        uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
+        uint32_t alpha2 = mask2 ? weight_x : 0;
+        uint32_t other_pixel1 = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x);
+        uint32_t other_pixel2 = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x + 1);
+
+        if (alpha_palette) {
+            alpha1 = alpha1 * alpha_palette[other_pixel1] >> 8;
+            alpha2 = alpha2 * alpha_palette[other_pixel2] >> 8;
+        }
+
+        other_pixel1 = color_palette ? color_palette[other_pixel1] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, other_pixel1);
+        other_pixel1 = draw_scaleop_RGB565_to_RGB888(other_pixel1, alpha1);
+        other_pixel2 = color_palette ? color_palette[other_pixel2] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, other_pixel2);
+        other_pixel2 = draw_scaleop_RGB565_to_RGB888(other_pixel2, alpha2);
+        
+        // Image alpha is the remaining alpha after applying other alpha
+        uint32_t img_alpha = 128 - (alpha1 + alpha2);
+
+        cache_line[i] = ((other_pixel1 + other_pixel2) << 8) + img_alpha; // RGBA8888
+    }
+}
+
+/**
+ * Draw an image onto another image converting format if necessary.
+ * 
+ * @param img The image to draw onto.
+ * @param other The image to draw.
+ * @param x_off X offset in destination.
+ * @param y_off Y offset in destination.
+ * @param x_scale X scale.
+ * @param y_scale Y scale.
+ * @param alpha Alpha, between 0 and 256 inclusive.
+ * @param mask Mask image, if interpolating must be the same size as the other image.
+ * @param color_palette Color palette for transforming grayscale images to RGB565.
+ * @param alpha_palette Alpha palette for masking grayscale images.
+ * @param hint Rendering hint.  e.g. IMAGE_HINT_BILINEAR, IMAGE_HINT_CENTER
+ */
+void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask, const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint)
+{
+    // If alpha is 0 then nothing changes
+    if (alpha == 0) return;
+
+    if (hint & IMAGE_HINT_BILINEAR) {
+        // Cannot interpolate a 1x1 pixel.
+        if (other->w <= 1 || other->h <= 1) hint &= ~IMAGE_HINT_BILINEAR;
+    }
+
+    // Scaled other size
+    int other_width_scaled = fast_floorf(x_scale * other->w);
+    int other_height_scaled = fast_floorf(y_scale * other->h);
+
+    // Center other if hint is set
+    if (hint & IMAGE_HINT_CENTER) {
+        x_off -= other_width_scaled >> 1;
+        y_off -= other_height_scaled >> 1;
+    }
+
+    // Scaler to convert from img scale to other scale
+    float over_xscale = IM_DIV(1.0f, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
+
+    // Left or top of other is out of bounds
+    int other_x_start = (x_off < 0) ? -x_off : 0;
+    int other_y_start = (y_off < 0) ? -y_off : 0;
+
+    // Right or bottom of image is out of bounds
+    int other_x_end = (x_off + other_width_scaled >= img->w) ? img->w - x_off : other_width_scaled;
+    int other_y_end = (y_off + other_height_scaled >= img->h) ? img->h - y_off : other_height_scaled;
+
+    // Check bounds are within img
+    if (other_x_start + x_off >= img->w || other_y_start + y_off >= img->h) return;
+    if (other_x_end + x_off <= 0 || other_y_end + y_off <= 0) return;
+
+    // If we're linear interpolating the last pixel will overflow if we land on it, we want to land just before it.
+    if (hint & IMAGE_HINT_BILINEAR) {
+        over_xscale *= (float)(other->w - 1) / other->w;
+        over_yscale *= (float)(other->h - 1) / other->h;
+    }
+
+    const int img_bpp = img->bpp;
+    const int other_bpp = other->bpp;
+    const int mask_bpp = mask ? mask->bpp : 0;
+
+    switch(img_bpp) {
+        case IMAGE_BPP_BINARY: {
+            // If alpha is less that 128 on a bitmap we're just copying the image back to the image, so do nothing
+            if (alpha >= 128) {
+                // Iterate the img area to be updated
+                for (int y = other_y_start; y < other_y_end; y++) {
+                    uint32_t *img_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_off + y);
+                    const int other_y = fast_floorf(y * over_yscale);
+                    void *other_row_ptr = imlib_compute_row_ptr(other, other_y);
+
+                    for (int x = other_x_start; x < other_x_end; x++) {
+                        const int other_x = fast_floorf(x * over_xscale);
+
+                        if (!mask || image_get_mask_pixel(mask, other_x, other_y)) {
+                            uint32_t result_pixel = safe_map_pixel(IMAGE_BPP_BINARY, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
+                            
+                            IMAGE_PUT_BINARY_PIXEL_FAST(img_row_ptr, x_off + x, result_pixel);
+                        }
+                    }
+                }
             }
+            break;
+        }
+        case IMAGE_BPP_GRAYSCALE: {
+            if (hint & IMAGE_HINT_BILINEAR) {
+                fb_alloc_mark();
+
+                // Allocate cache lines
+                int bytes_per_img_line = img->w * sizeof(uint8_t) * 2; // (1 byte graysclae + 1 byte alpha) = * 2
+                uint16_t *cache_line_1 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
+                uint16_t *cache_line_2 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
+                uint16_t *cache_line_top = cache_line_2;
+                uint16_t *cache_line_bottom = cache_line_1;
+
+                // Pre-fill cache for first drawn line
+                int temp_other_y = fast_floorf(other_y_start * over_yscale);
+                uint8_t *other_row_ptr = imlib_compute_row_ptr(other, temp_other_y);
+                void *mask_row_ptr = mask ? imlib_compute_row_ptr(mask, temp_other_y) : NULL;
+
+                int_generate_cache_line_grayscale(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, alpha_palette);
+
+                // Used to detect when other starts rendering from the next line
+                int last_other_y = -1;
+
+                // Iterate the img area to be updated
+                for (int y = other_y_start; y < other_y_end; y++) {
+                    // Pre-add x_off here to save adding it inside the central loop
+                    uint8_t *img_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_off + y) + x_off;
+
+                    // calculate y offset in other
+                    float other_y_float = (y + 0.5) * over_yscale;
+
+                    // Calculate weighting between top and bottom pixel
+                    int other_y = fast_floorf(other_y_float);
+                    int weight_y = fast_floorf((other_y_float - other_y) * 256);
+                    uint32_t y_interpolate = (weight_y << 16) + (256 - weight_y);
+
+                    // If we've moved to the next line in the other image then generate the new cache line
+                    if (last_other_y != other_y) {
+                        last_other_y = other_y;
+                        
+                        // Move to next line.  Swap y+1 cache line to y
+                        uint16_t *cache_line_temp = cache_line_top;
+                        cache_line_top = cache_line_bottom;
+                        cache_line_bottom = cache_line_temp;
+
+                        // And generate a new y+1
+                        other_row_ptr = imlib_compute_row_ptr(other, other_y + 1);
+                        mask_row_ptr = mask ? imlib_compute_row_ptr(mask, other_y + 1) : NULL;
+                        int_generate_cache_line_grayscale(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, alpha_palette);
+                    }
+
+                    // Draw the line to img
+                    for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
+                        // Pack pixel data for SMUADS
+                        uint32_t pixel_data = (cache_line_bottom[i] << 16) | cache_line_top[i];
+
+                        // Extract alpha for top + bottom pixel for SMUAD
+                        uint32_t img_alpha_pixels = pixel_data & 0xFF00FF;
+
+                        // Calculate the alpha weighting for the img pixel, don't unshift so we have more accuracy when combining
+                        uint32_t img_alpha_15bits = __SMUAD(y_interpolate, img_alpha_pixels); // 8 bits x 7 bits = 15 bits
+
+                        // Extract other pixels for SMUAD
+                        uint32_t other_pixels = (pixel_data >> 8) & 0xFF00FF;
+
+                        // Apply alpha, but don't unshift for more accuracy in combining
+                        uint32_t pixel_16bits = __SMUAD(y_interpolate, other_pixels);
+
+                        // Get img pixel.
+                        uint8_t img_pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(img_row_ptr,  x);
+
+                        // Combine img_pixel with other pixel, and shift fixed component
+                        uint32_t pixel = (((img_pixel * img_alpha_15bits) >> 7) + pixel_16bits) >> 8;
+
+                        // Store pixel
+                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(img_row_ptr, x, pixel);
+                    }
+                }
+                // De-allocate cache lines
+                fb_alloc_free_till_mark();
+            } else {
+                // 00000000otheralph00000000imgalpha
+                uint32_t packed_alpha = (alpha << 16) + (256 - alpha);
+
+                // Iterate the img area to be updated
+                for (int y = other_y_start; y < other_y_end; y++) {
+                    // Pre-add x_off here to save adding it inside the central loop
+                    uint8_t *img_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_off + y) + x_off;
+                    int other_y = fast_floorf(y * over_yscale);
+                    uint16_t *other_row_ptr = imlib_compute_row_ptr(other, other_y);
+
+                    for (int x = other_x_start; x < other_x_end; x++) {
+                        int other_x = fast_floorf(x * over_xscale);
+
+                        if (!mask || image_get_mask_pixel(mask, other_x, other_y)) {
+                            uint8_t result_pixel = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
+
+                            if (alpha_palette) {
+                                uint32_t temp_alpha = (alpha * alpha_palette[result_pixel]) >> 8;
+                                
+                                packed_alpha = (temp_alpha << 16) + (256 - temp_alpha);
+                            }
+
+                            if (packed_alpha & 0x1ff) {
+                                uint8_t img_pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(img_row_ptr,  x);
+                                uint32_t vgs = (result_pixel << 16) + img_pixel;
+
+                                result_pixel = __SMUAD(packed_alpha, vgs) >> 8;
+                            }
+
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(img_row_ptr, x, result_pixel);
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        case IMAGE_BPP_RGB565: {
+            // Alpha is 0->128
+            alpha >>= 1;
+
+            if (hint & IMAGE_HINT_BILINEAR) {
+                fb_alloc_mark();
+
+                // Allocate cache lines
+                int bytes_per_img_line = img->w * 4; // (3 bytes RGB888 + 1 byte alpha) = * 4
+                uint32_t *cache_line_1 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
+                uint32_t *cache_line_2 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
+                uint32_t *cache_line_top = cache_line_2;
+                uint32_t *cache_line_bottom = cache_line_1;
+
+                // Pre-fill cache for first drawn line
+                int temp_other_y = fast_floorf(other_y_start * over_yscale);
+                uint16_t *other_row_ptr = imlib_compute_row_ptr(other, temp_other_y);
+                void *mask_row_ptr = mask ? imlib_compute_row_ptr(mask, temp_other_y) : NULL;
+
+                int_generate_cache_line_rgb565(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, color_palette, alpha_palette);
+
+                // Used to detect when other starts rendering from the next line
+                int last_other_y = -1;
+
+                // Iterate the img area to be updated
+                for (int y = other_y_start; y < other_y_end; y++) {
+                    // Pre-add x_off here to save adding it inside the central loop
+                    uint16_t *img_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_off + y) + x_off;
+
+                    // calculate y offset in other
+                    float other_y_float = (y + 0.5) * over_yscale;
+
+                    // Calculate weighting between top and bottom pixel
+                    int other_y = fast_floorf(other_y_float);
+                    int weight_y = fast_floorf((other_y_float - other_y) * 256);
+                    uint32_t y_interpolate = ((256 - weight_y) << 16) + weight_y;
+
+                    // Weighting is 0->128 for blendops to prevent overflow
+                    weight_y >>= 1;
+
+                    // If the scale is negative the pixels come in reverse order, so reverse the remainder weighting
+                    int weight_y_complement = 128 - weight_y;
+                    
+                    if (last_other_y != other_y) {      
+                        uint32_t *cache_line_temp = cache_line_top;
+                        cache_line_top = cache_line_bottom;
+                        cache_line_bottom = cache_line_temp;
+                        
+                        other_row_ptr = imlib_compute_row_ptr(other, other_y + 1);
+                        mask_row_ptr = mask ? imlib_compute_row_ptr(mask, other_y + 1) : NULL;
+                        int_generate_cache_line_rgb565(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, color_palette, alpha_palette);
+
+                        last_other_y = other_y;
+                    }
+
+                    for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
+                        uint32_t top = cache_line_top[i];
+                        uint32_t bottom = cache_line_bottom[i];
+                        uint32_t result_pixel = draw_blendop_rgb888(top >> 8, bottom >> 8, weight_y, weight_y_complement);
+
+                        // Pack top and bottom img alpha for SMUAD
+                        uint32_t img_alpha_top_bottom = ((top & 255) << 16) | (bottom & 255);
+
+                        // Blend img alphas
+                        uint32_t img_alpha = __SMUAD(y_interpolate, img_alpha_top_bottom) >> 8;
+
+                        // if img alpha will have an effect
+                        if (img_alpha) {
+                            // Get img pixel
+                            uint32_t img_pixel = IMAGE_GET_RGB565_PIXEL_FAST(img_row_ptr, x);
+
+                            // Apply alpha to img pixel
+                            img_pixel = draw_scaleop_RGB565_to_RGB888(img_pixel, img_alpha);
+
+                            // Add to other pixel (which already had alpha applied in generate_line_cache)
+                            result_pixel = img_pixel + result_pixel;
+                        }
+
+                        // Convert back to RGB565
+                        result_pixel = COLOR_R5_G6_B5_TO_RGB565(result_pixel >> 19, (result_pixel >> 10) & 63, (result_pixel >> 3) & 63);
+                        
+                        // Store pixel
+                        IMAGE_PUT_RGB565_PIXEL_FAST(img_row_ptr, x, result_pixel);
+                    }
+                }
+                
+                // De-allocate cache lines
+                fb_alloc_free_till_mark();
+            } else {
+                uint32_t va = __PKHBT((128 - alpha), alpha, 16);
+
+                // Iterate the img area to be updated
+                for (int y = other_y_start; y < other_y_end; y++) {
+                    // Pre-add x_off here to save adding it inside the central loop
+                    uint16_t *img_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_off + y) + x_off;
+                    float other_y_float = y * over_yscale;
+                    int other_y = fast_floorf(other_y_float);
+                    uint16_t *other_row_ptr = imlib_compute_row_ptr(other, other_y);
+                    
+                    for (int x = other_x_start; x < other_x_end; x++) {
+                        int other_x = fast_floorf(x * over_xscale);
+
+                        if (!mask || image_get_mask_pixel(mask, other_x, other_y)) {
+                            uint32_t result_pixel = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x);
+                            
+                            if (alpha_palette) {
+                                uint32_t temp_alpha = (alpha * alpha_palette[result_pixel]) >> 8;
+                                
+                                va = __PKHBT((128 - temp_alpha), temp_alpha, 16);
+                            }
+                            result_pixel = color_palette ? color_palette[result_pixel] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, result_pixel);
+                            
+                            if (va & 0x1ff) {
+                                // Blend img to other pixel
+                                uint16_t img_pixel = IMAGE_GET_RGB565_PIXEL_FAST(img_row_ptr, x);
+                                uint32_t r_ta = COLOR_RGB565_TO_R5(result_pixel);
+                                uint32_t g_ta = COLOR_RGB565_TO_G6(result_pixel);
+                                uint32_t b_ta = COLOR_RGB565_TO_B5(result_pixel);
+                                uint32_t vr = __PKHBT(COLOR_RGB565_TO_R5(img_pixel), r_ta, 16);
+                                uint32_t vg = __PKHBT(COLOR_RGB565_TO_G6(img_pixel), g_ta, 16);
+                                uint32_t vb = __PKHBT(COLOR_RGB565_TO_B5(img_pixel), b_ta, 16);
+                                uint32_t r = __SMUAD(va, vr) >> 7;
+                                uint32_t g = __SMUAD(va, vg) >> 7;
+                                uint32_t b = __SMUAD(va, vb) >> 7;
+
+                                result_pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
+                            }
+                            IMAGE_PUT_RGB565_PIXEL_FAST(img_row_ptr, x, result_pixel);
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        default: {
+            break;
         }
     }
 }
@@ -498,7 +1013,7 @@ void imlib_flood_fill(image_t *img, int x, int y,
         out.w = img->w;
         out.h = img->h;
         out.bpp = IMAGE_BPP_BINARY;
-        out.data = fb_alloc0(image_size(&out));
+        out.data = fb_alloc0(image_size(&out), FB_ALLOC_NO_HINT);
 
         if (mask) {
             for (int y = 0, yy = out.h; y < yy; y++) {

@@ -1,33 +1,40 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Sensor abstraction layer.
- *
  */
 #ifndef __SENSOR_H__
 #define __SENSOR_H__
-#include <stdint.h>
 #include <stdarg.h>
 #include "imlib.h"
 
-#define OV7725_SLV_ADDR       (0x42)
-#define OV2640_SLV_ADDR       (0x60)
-#define MT9V034_SLV_ADDR      (0xB8)
-#define LEPTON_SLV_ADDR       (0x54)
-#define OV5640_SLV_ADDR       (0x78)
+#define OV2640_SLV_ADDR     (0x60)
+#define OV5640_SLV_ADDR     (0x78)
+#define OV7725_SLV_ADDR     (0x42)
+#define MT9V034_SLV_ADDR    (0xB8)
+#define LEPTON_SLV_ADDR     (0x54)
+#define HM01B0_SLV_ADDR     (0x48)
 
-#define OV_CHIP_ID      (0x0A)
-#define OV5640_CHIP_ID  (0x300A)
-#define ON_CHIP_ID      (0x00)
+// Chip ID Registers
+#define OV5640_CHIP_ID      (0x300A)
+#define OV_CHIP_ID          (0x0A)
+#define ON_CHIP_ID          (0x00)
+#define HIMAX_CHIP_ID       (0x0001)
 
-#define OV9650_ID       (0x96)
-#define OV2640_ID       (0x26)
-#define OV7725_ID       (0x77)
-#define OV5640_ID       (0x56)
-#define MT9V034_ID      (0x13)
-#define LEPTON_ID       (0x54)
+// Chip ID Values
+#define OV2640_ID           (0x26)
+#define OV5640_ID           (0x56)
+#define OV7690_ID           (0x76)
+#define OV7725_ID           (0x77)
+#define OV9650_ID           (0x96)
+#define MT9V034_ID          (0x13)
+#define LEPTON_ID           (0x54)
+#define HM01B0_ID           (0xB0)
 
 typedef enum {
     PIXFORMAT_INVALID = 0,
@@ -71,15 +78,13 @@ typedef enum {
     FRAMESIZE_XGA,      // 1024x768
     FRAMESIZE_SXGA,     // 1280x1024
     FRAMESIZE_UXGA,     // 1600x1200
+    FRAMESIZE_HD,       // 1280x720
+    FRAMESIZE_FHD,      // 1920x1080
+    FRAMESIZE_QHD,      // 2560x1440
+    FRAMESIZE_QXGA,     // 2048x1536
+    FRAMESIZE_WQXGA,    // 2560x1600
+    FRAMESIZE_WQXGA2,   // 2592x1944
 } framesize_t;
-
-typedef enum {
-    FRAMERATE_2FPS =0x9F,
-    FRAMERATE_8FPS =0x87,
-    FRAMERATE_15FPS=0x83,
-    FRAMERATE_30FPS=0x81,
-    FRAMERATE_60FPS=0x80,
-} framerate_t;
 
 typedef enum {
     GAINCEILING_2X,
@@ -109,6 +114,8 @@ typedef enum {
 } polarity_t;
 
 typedef enum {
+    IOCTL_SET_READOUT_WINDOW,
+    IOCTL_GET_READOUT_WINDOW,
     IOCTL_SET_TRIGGERED_MODE,
     IOCTL_GET_TRIGGERED_MODE,
     IOCTL_LEPTON_GET_WIDTH,
@@ -156,8 +163,13 @@ typedef struct _sensor {
     sde_t sde;                  // Special digital effects
     pixformat_t pixformat;      // Pixel format
     framesize_t framesize;      // Frame size
-    framerate_t framerate;      // Frame rate
     gainceiling_t gainceiling;  // AGC gainceiling
+    bool hmirror;               // Horizontal Mirror
+    bool vflip;                 // Vertical Flip
+    bool transpose;             // Transpose Image
+    bool auto_rotation;         // Rotate Image Automatically
+
+    I2C_HandleTypeDef i2c;      // SCCB/I2C bus.
 
     // Sensor function pointers
     int  (*reset)               (sensor_t *sensor);
@@ -166,7 +178,6 @@ typedef struct _sensor {
     int  (*write_reg)           (sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data);
     int  (*set_pixformat)       (sensor_t *sensor, pixformat_t pixformat);
     int  (*set_framesize)       (sensor_t *sensor, framesize_t framesize);
-    int  (*set_framerate)       (sensor_t *sensor, framerate_t framerate);
     int  (*set_contrast)        (sensor_t *sensor, int level);
     int  (*set_brightness)      (sensor_t *sensor, int level);
     int  (*set_saturation)      (sensor_t *sensor, int level);
@@ -220,9 +231,6 @@ int sensor_set_pixformat(pixformat_t pixformat);
 // Set the sensor frame size.
 int sensor_set_framesize(framesize_t framesize);
 
-// Set the sensor frame rate.
-int sensor_set_framerate(framerate_t framerate);
-
 // Set window size.
 int sensor_set_windowing(int x, int y, int w, int h);
 
@@ -266,8 +274,26 @@ int sensor_get_rgb_gain_db(float *r_gain_db, float *g_gain_db, float *b_gain_db)
 // Enable/disable the hmirror mode.
 int sensor_set_hmirror(int enable);
 
+// Get hmirror status.
+bool sensor_get_hmirror();
+
 // Enable/disable the vflip mode.
 int sensor_set_vflip(int enable);
+
+// Get vflip status.
+bool sensor_get_vflip();
+
+// Enable/disable the transpose mode.
+int sensor_set_transpose(bool enable);
+
+// Get transpose mode state.
+bool sensor_get_transpose();
+
+// Enable/disable the auto rotation mode.
+int sensor_set_auto_rotation(bool enable);
+
+// Get transpose mode state.
+bool sensor_get_auto_rotation();
 
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);

@@ -30,3 +30,14 @@ usr/openmv.config
 ######################
 ml/cmsisnn/caffe
 
+# VS Code #
+######################
+.vscode/
+
+# Qt Creator #
+######################
+openmv.config
+openmv.creator
+openmv.creator.user
+openmv.files
+openmv.includes

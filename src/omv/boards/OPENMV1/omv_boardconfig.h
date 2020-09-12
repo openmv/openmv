@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Board configuration and pin definitions.
- *
  */
 #ifndef __OMV_BOARDCONFIG_H__
 #define __OMV_BOARDCONFIG_H__
@@ -25,6 +27,22 @@
 #define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_2)
 #define OMV_BOOTLDR_LED_PORT    (GPIOC)
 
+// Core VBAT for selftests
+#define OMV_CORE_VBAT           "3.3"
+
+//PLL1 168MHz/48MHz
+#define OMV_OSC_PLL1M           (12)
+#define OMV_OSC_PLL1N           (336)
+#define OMV_OSC_PLL1P           (2)
+#define OMV_OSC_PLL1Q           (7)
+
+// HSE/HSI/CSI State
+#define OMV_OSC_HSE_STATE       (RCC_HSE_ON)
+#define OMV_OSC_HSI_STATE       (RCC_HSI_OFF)
+
+// Flash Latency
+#define OMV_FLASH_LATENCY       (FLASH_LATENCY_5)
+
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 #define OMV_BOOT_ORIGIN     0x08000000
 #define OMV_BOOT_LENGTH     16K
@@ -32,8 +50,8 @@
 #define OMV_TEXT_LENGTH     448K
 #define OMV_SRAM1_ORIGIN    0x20000000
 #define OMV_SRAM1_LENGTH    128K
-#define OMV_CCM_ORIGIN      0x10000000
-#define OMV_CCM_LENGTH      64K
+#define OMV_DTCM_ORIGIN      0x10000000
+#define OMV_DTCM_LENGTH      64K
 
 /* SCCB/I2C */
 #define SCCB_I2C                (I2C1)

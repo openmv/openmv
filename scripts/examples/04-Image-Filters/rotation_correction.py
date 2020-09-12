@@ -1,9 +1,7 @@
 # Rotation Correction
 #
-# This example shows off how to use the rotation_corr() to undo perspective rotations
-# in 3 dimensions along with zooming in and out on the image. While this demo rotates
-# the image around for fun you can use this feature to fix perspective issues related
-# to how your OpenMV Cam is mounted.
+# This example shows off how to use the rotation_corr() to play with the scene
+# window your OpenMV Cam sees.
 
 import sensor, image, time
 
@@ -14,7 +12,14 @@ Z_ROTATION_DEGREE_RATE = 0
 X_OFFSET = 0
 Y_OFFSET = 0
 
-ZOOM_AMOUNT = 1 # Lower zooms out - Higher zooms in
+ZOOM_AMOUNT = 1 # Lower zooms out - Higher zooms in.
+FOV_WINDOW = 60 # Between 0 and 180. Represents the field-of-view of the scene
+                # window when rotating the image in 3D space. When closer to
+                # zero results in lines becoming straighter as the window
+                # moves away from the image being rotated in 3D space. A large
+                # value moves the window closer to the image in 3D space which
+                # results in the more perspective distortion and sometimes
+                # the image in 3D intersecting the scene window.
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
@@ -34,7 +39,8 @@ while(True):
                                           z_rotation = z_rotation_counter, \
                                           x_translation = X_OFFSET, \
                                           y_translation = Y_OFFSET, \
-                                          zoom = ZOOM_AMOUNT)
+                                          zoom = ZOOM_AMOUNT, \
+                                          fov = FOV_WINDOW)
 
     x_rotation_counter += X_ROTATION_DEGREE_RATE
     y_rotation_counter += Y_ROTATION_DEGREE_RATE

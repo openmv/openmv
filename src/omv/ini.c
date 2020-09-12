@@ -1,8 +1,13 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2018 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Initialization file parser.
  */
-
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>
@@ -271,8 +276,8 @@ ini_fgetc(FIL *fp)
 char *
 ini_fgets(char *dst, int max, FIL *fp)
 {
-    int c;
     char *p;
+    int c=EOF;
 
     /* get max bytes or upto a newline */
 

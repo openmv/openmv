@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * HAL MSP.
- *
  */
 #include STM32_HAL_H
 #include "omv_boardconfig.h"
@@ -66,11 +68,19 @@ void HAL_MspInit(void)
     /* Enable I/D cache */
     #if defined(MCU_SERIES_F7) ||\
         defined(MCU_SERIES_H7)
-    // Invalidate CPU cache
-    SCB_InvalidateICache();
-    SCB_InvalidateDCache();
+    if (SCB->CCR & (uint32_t)SCB_CCR_IC_Msk) {
+        /* Disable and Invalidate I-Cache */
+        SCB_DisableICache();
+        SCB_InvalidateICache();
+    }
 
-    // Enable the CPU Cache
+    if (SCB->CCR & (uint32_t)SCB_CCR_DC_Msk) {
+        /* Disable, Clean and Invalidate D-Cache */
+        SCB_DisableDCache();
+        SCB_CleanInvalidateDCache();
+    }
+
+    // Enable the CPU Caches
     SCB_EnableICache();
     SCB_EnableDCache();
     #endif
@@ -84,15 +94,26 @@ void HAL_MspInit(void)
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
     __GPIOE_CLK_ENABLE();
-
-    #if defined(STM32F769xx)
+    #ifdef OMV_ENABLE_GPIO_BANK_F
     __GPIOF_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_G
     __GPIOG_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_H
     __GPIOH_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_I
     __GPIOI_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_J
     __GPIOJ_CLK_ENABLE();
+    #endif
+    #ifdef OMV_ENABLE_GPIO_BANK_K
     __GPIOK_CLK_ENABLE();
+    #endif
 
+    #if defined (OMV_HARDWARE_JPEG)
     /* Enable JPEG clock */
     __HAL_RCC_JPEG_CLK_ENABLE();
     #endif
@@ -117,15 +138,19 @@ void HAL_MspInit(void)
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
 
+    #if defined(DCMI_RESET_PIN)
     GPIO_InitStructure.Pin = DCMI_RESET_PIN;
     HAL_GPIO_Init(DCMI_RESET_PORT, &GPIO_InitStructure);
+    #endif
 
+    #if defined(DCMI_PWDN_PIN)
     GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
     HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
+    #endif
 
-    #if defined(DCMI_FSIN_PIN)
-    GPIO_InitStructure.Pin = DCMI_FSIN_PIN;
-    HAL_GPIO_Init(DCMI_FSIN_PORT, &GPIO_InitStructure);
+    #if defined(DCMI_FSYNC_PIN)
+    GPIO_InitStructure.Pin = DCMI_FSYNC_PIN;
+    HAL_GPIO_Init(DCMI_FSYNC_PORT, &GPIO_InitStructure);
     #endif
 }
 
@@ -147,13 +172,36 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
 
         GPIO_InitStructure.Pin = SCCB_SDA_PIN;
         HAL_GPIO_Init(SCCB_PORT, &GPIO_InitStructure);
+    } else if (hi2c->Instance == FIR_I2C) {
+        /* Enable I2C clock */
+        FIR_I2C_CLK_ENABLE();
+
+        /* Configure FIR I2C GPIOs */
+        GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.Pull      = GPIO_NOPULL;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
+        GPIO_InitStructure.Mode      = GPIO_MODE_AF_OD;
+        GPIO_InitStructure.Alternate = FIR_I2C_AF;
+
+        GPIO_InitStructure.Pin = FIR_I2C_SCL_PIN;
+        HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Pin = FIR_I2C_SDA_PIN;
+        HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
     }
+
 }
 
 void HAL_I2C_MspDeInit(I2C_HandleTypeDef *hi2c)
 {
     if (hi2c->Instance == SCCB_I2C) {
+        SCCB_FORCE_RESET();
+        SCCB_RELEASE_RESET();
         SCCB_CLK_DISABLE();
+    } else if (hi2c->Instance == FIR_I2C) {
+        FIR_I2C_FORCE_RESET();
+        FIR_I2C_RELEASE_RESET();
+        FIR_I2C_CLK_DISABLE();
     }
 }
 
@@ -202,6 +250,32 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
 
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 {
+    #if defined(IMU_SPI)
+    if (hspi->Instance == IMU_SPI) {
+        IMU_SPI_CLK_ENABLE();
+
+        GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.Pull      = GPIO_PULLUP;
+        GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+        GPIO_InitStructure.Alternate = IMU_SPI_AF;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_LOW;
+
+        GPIO_InitStructure.Pin       = IMU_SPI_SCLK_PIN;
+        HAL_GPIO_Init(IMU_SPI_SCLK_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Pin       = IMU_SPI_MISO_PIN;
+        HAL_GPIO_Init(IMU_SPI_MISO_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Pin       = IMU_SPI_MOSI_PIN;
+        HAL_GPIO_Init(IMU_SPI_MOSI_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Mode      = GPIO_MODE_OUTPUT_PP;
+
+        GPIO_InitStructure.Pin       = IMU_SPI_SSEL_PIN;
+        HAL_GPIO_Init(IMU_SPI_SSEL_PORT, &GPIO_InitStructure);
+    }
+    #endif
+
     #if defined(LEPTON_SPI)
     if (hspi->Instance == LEPTON_SPI) {
         LEPTON_SPI_CLK_ENABLE();

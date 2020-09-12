@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Board configuration and pin definitions.
- *
  */
 #ifndef __OMV_BOARDCONFIG_H__
 #define __OMV_BOARDCONFIG_H__
@@ -40,6 +42,16 @@
 // RAW buffer size
 #define OMV_RAW_BUF_SIZE        (307200)
 
+// Enable sensor drivers
+#define OMV_ENABLE_OV2640       (0)
+#define OMV_ENABLE_OV5640       (0)
+#define OMV_ENABLE_OV7690       (0)
+#define OMV_ENABLE_OV7725       (1)
+#define OMV_ENABLE_OV9650       (0)
+#define OMV_ENABLE_MT9V034      (0)
+#define OMV_ENABLE_LEPTON       (0)
+#define OMV_ENABLE_HM01B0       (0)
+
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH     (160*120*2)
@@ -48,30 +60,53 @@
 #define JPEG_QUALITY_LOW        35
 #define JPEG_QUALITY_HIGH       60
 
+// FB Heap Block Size
+#define OMV_UMM_BLOCK_SIZE      16
+
+// Core VBAT for selftests
+#define OMV_CORE_VBAT           "3.3"
+
+//PLL1 216MHz/48MHz
+#define OMV_OSC_PLL1M           (12)
+#define OMV_OSC_PLL1N           (432)
+#define OMV_OSC_PLL1P           (2)
+#define OMV_OSC_PLL1Q           (9)
+#define OMV_OSC_PLL1R           (2)
+
+// HSE/HSI/CSI State
+#define OMV_OSC_HSE_STATE       (RCC_HSE_ON)
+#define OMV_OSC_HSI_STATE       (RCC_HSI_OFF)
+
+// Flash Latency
+#define OMV_FLASH_LATENCY       (FLASH_LATENCY_7)
+
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
 #define OMV_FB_MEMORY       SRAM1   // Framebuffer, fb_alloc
-#define OMV_MAIN_MEMORY     CCM     // data, bss, stack and heap
-#define OMV_DMA_MEMORY      CCM     // Misc DMA buffers
+#define OMV_MAIN_MEMORY     DTCM    // data, bss and heap
+#define OMV_STACK_MEMORY    ITCM    // stack memory
+#define OMV_DMA_MEMORY      DTCM    // Misc DMA buffers
 
-#define OMV_FB_SIZE         (301K)  // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE   (83K)   // minimum fb alloc size
-#define OMV_STACK_SIZE      (4K)
-#define OMV_HEAP_SIZE       (54K)
+#define OMV_FB_SIZE         (300K)  // FB memory: header + VGA/GS image
+#define OMV_FB_ALLOC_SIZE   (84K)   // minimum fb alloc size
+#define OMV_STACK_SIZE      (16K)
+#define OMV_HEAP_SIZE       (58K)
 
-#define OMV_LINE_BUF_SIZE   (3K)    // Image line buffer round(640 * 2BPP * 2 buffers).
+#define OMV_LINE_BUF_SIZE   (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
 #define OMV_VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
 #define OMV_FFS_BUF_SIZE    (32K)   // Flash filesystem cache
-#define OMV_JPEG_BUF_SIZE   (23 * 1024) // IDE JPEG buffer (header + data).
+#define OMV_JPEG_BUF_SIZE   (22 * 1024) // IDE JPEG buffer (header + data).
 
 #define OMV_BOOT_ORIGIN     0x08000000
 #define OMV_BOOT_LENGTH     32K
 #define OMV_TEXT_ORIGIN     0x08020000
 #define OMV_TEXT_LENGTH     1920K
-#define OMV_CCM_ORIGIN      0x20000000
-#define OMV_CCM_LENGTH      128K    // Note DTCM/ITCM memory is not cacheable on M7
+#define OMV_DTCM_ORIGIN     0x20000000
+#define OMV_DTCM_LENGTH     128K    // Note DTCM/ITCM memory is not cacheable on M7
+#define OMV_ITCM_ORIGIN     0x00000000
+#define OMV_ITCM_LENGTH     16K
 #define OMV_SRAM1_ORIGIN    0x20020000
 #define OMV_SRAM1_LENGTH    384K
 
@@ -83,7 +118,21 @@
 #define SCCB_PORT               (GPIOB)
 #define SCCB_SCL_PIN            (GPIO_PIN_8)
 #define SCCB_SDA_PIN            (GPIO_PIN_9)
-#define SCCB_TIMING             (0x1090699B) // Frequency: 100KHz Rise Time: 100ns Fall Time: 20ns
+#define SCCB_TIMING             (I2C_TIMING_STANDARD)
+#define SCCB_FORCE_RESET()      __HAL_RCC_I2C1_FORCE_RESET()
+#define SCCB_RELEASE_RESET()    __HAL_RCC_I2C1_RELEASE_RESET()
+
+/* FIR I2C */
+#define FIR_I2C                 (I2C2)
+#define FIR_I2C_AF              (GPIO_AF4_I2C2)
+#define FIR_I2C_CLK_ENABLE()    __I2C2_CLK_ENABLE()
+#define FIR_I2C_CLK_DISABLE()   __I2C2_CLK_DISABLE()
+#define FIR_I2C_PORT            (GPIOB)
+#define FIR_I2C_SCL_PIN         (GPIO_PIN_10)
+#define FIR_I2C_SDA_PIN         (GPIO_PIN_11)
+#define FIR_I2C_TIMING          (I2C_TIMING_FULL)
+#define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C2_FORCE_RESET()
+#define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C2_RELEASE_RESET()
 
 /* DCMI */
 #define DCMI_TIM                (TIM1)
@@ -163,19 +212,19 @@
 #define WINC_CS_LOW()           HAL_GPIO_WritePin(WINC_CS_PORT, WINC_CS_PIN, GPIO_PIN_RESET)
 #define WINC_CS_HIGH()          HAL_GPIO_WritePin(WINC_CS_PORT, WINC_CS_PIN, GPIO_PIN_SET)
 
-#define I2C_PORT                GPIOB
-#define I2C_SIOC_PIN            GPIO_PIN_10
-#define I2C_SIOD_PIN            GPIO_PIN_11
+#define SOFT_I2C_PORT                GPIOB
+#define SOFT_I2C_SIOC_PIN            GPIO_PIN_10
+#define SOFT_I2C_SIOD_PIN            GPIO_PIN_11
 
-#define I2C_SIOC_H()            HAL_GPIO_WritePin(I2C_PORT, I2C_SIOC_PIN, GPIO_PIN_SET)
-#define I2C_SIOC_L()            HAL_GPIO_WritePin(I2C_PORT, I2C_SIOC_PIN, GPIO_PIN_RESET)
+#define SOFT_I2C_SIOC_H()            HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOC_PIN, GPIO_PIN_SET)
+#define SOFT_I2C_SIOC_L()            HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOC_PIN, GPIO_PIN_RESET)
 
-#define I2C_SIOD_H()            HAL_GPIO_WritePin(I2C_PORT, I2C_SIOD_PIN, GPIO_PIN_SET)
-#define I2C_SIOD_L()            HAL_GPIO_WritePin(I2C_PORT, I2C_SIOD_PIN, GPIO_PIN_RESET)
+#define SOFT_I2C_SIOD_H()            HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, GPIO_PIN_SET)
+#define SOFT_I2C_SIOD_L()            HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, GPIO_PIN_RESET)
 
-#define I2C_SIOD_READ()         HAL_GPIO_ReadPin(I2C_PORT, I2C_SIOD_PIN)
-#define I2C_SIOD_WRITE(bit)     HAL_GPIO_WritePin(I2C_PORT, I2C_SIOD_PIN, bit);
+#define SOFT_I2C_SIOD_READ()         HAL_GPIO_ReadPin (SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN)
+#define SOFT_I2C_SIOD_WRITE(bit)     HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, bit);
 
-#define I2C_SPIN_DELAY          24
+#define SOFT_I2C_SPIN_DELAY          24
 
 #endif //__OMV_BOARDCONFIG_H__

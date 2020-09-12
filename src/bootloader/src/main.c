@@ -1,7 +1,18 @@
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
+ * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * main function.
+ */
 #include STM32_HAL_H
 #include "usbdev/usbd_cdc.h"
 #include "usbdev/usbd_desc.h"
 #include "omv_boardconfig.h"
+#include "qspif.h"
 
 #define IDE_TIMEOUT     (1000)
 #define CONFIG_TIMEOUT  (2000)
@@ -41,6 +52,12 @@ int main()
     SCB->VTOR = FLASH_BASE | 0x0;
 
     HAL_Init();
+
+    #if defined(OMV_QSPIF_LAYOUT)
+    if (qspif_init() != 0) {
+        __fatal_error();
+    }
+    #endif
 
     /* Init Device Library */
     USBD_Init(&USBD_Device, &VCP_Desc, 0);
@@ -84,6 +101,11 @@ int main()
 
     // Deinit USB
     USBD_DeInit(&USBD_Device);
+
+    #if defined(OMV_QSPIF_LAYOUT)
+    qspif_reset();
+    qspif_deinit();
+    #endif
 
     // Disable IRQs
     __disable_irq(); __DSB(); __ISB();

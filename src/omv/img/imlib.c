@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * Image library.
- *
  */
 #include <stdlib.h>
 #include <mp.h>
@@ -234,6 +236,10 @@ void image_copy(image_t *dst, image_t *src)
 
 size_t image_size(image_t *ptr)
 {
+    if (ptr->bpp < 0) {
+        return 0;
+    }
+
     switch (ptr->bpp) {
         case IMAGE_BPP_BINARY: {
             return IMAGE_BINARY_LINE_LEN_BYTES(ptr) * ptr->h;
@@ -353,7 +359,8 @@ int8_t imlib_rgb565_to_y(uint16_t pixel)
     int g = COLOR_RGB565_TO_G8(pixel);
     int b = COLOR_RGB565_TO_B8(pixel);
 
-    return fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f)) - 128;
+    return (int8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - 128; // .299*r + .587*g + .114*b
+//    return fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f)) - 128;
 }
 
 int8_t imlib_rgb565_to_u(uint16_t pixel)
@@ -362,7 +369,8 @@ int8_t imlib_rgb565_to_u(uint16_t pixel)
     int g = COLOR_RGB565_TO_G8(pixel);
     int b = COLOR_RGB565_TO_B8(pixel);
 
-    return fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f));
+    return (int8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15); // -0.168736*r + -0.331264*g + 0.5*b
+//    return fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f));
 }
 
 int8_t imlib_rgb565_to_v(uint16_t pixel)
@@ -371,7 +379,8 @@ int8_t imlib_rgb565_to_v(uint16_t pixel)
     int g = COLOR_RGB565_TO_G8(pixel);
     int b = COLOR_RGB565_TO_B8(pixel);
 
-    return fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f));
+    return (int8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15); // 0.5*r + -0.418688*g + -0.081312*b
+//    return fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f));
 }
 
 // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
@@ -415,6 +424,9 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
 {
     int r, g, b;
     for (int y=yoffs; y<yoffs+h; y++) {
+// The faster routine needs to start on an even column
+// and not next to the top or bottom edge to avoid boundary checks on each pixel
+    if (xoffs & 1 || y == 0 || y >= yoffs+h-1) {
         for (int x=xoffs; x<xoffs+w; x++) {
             if ((y % 2) == 0) { // Even row
                 if ((x % 2) == 0) { // Even col
@@ -466,9 +478,400 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
             g = IM_G826(g);
             b = IM_B825(b);
             *rgbbuf++ = IM_RGB565(r, g, b);
-        }
-    }
+        } // for x
+    } else { // faster way
+//
+// Theory of operation:
+// The Bayer pattern from the sensor looks like this:
+// +---+---+---+---+---+---+
+// | B | G | B | G | B | G |
+// +---+---+---+---+---+---+
+// | G |*R*|*G*| R | G | R | * = Example of current pair of pixels being processed
+// +---+---+---+---+---+---+ Each iteration below will advance 2 pixels to the right
+// | B | G | B | G | B | G |
+// +---+---+---+---+---+---+
+// | G | R | G | R | G | R |
+// +---+---+---+---+---+---+
+// Each of the color stimuli above is stored as 1 byte
+// The slower algorithm above reads each byte around the current pixel individually to
+// average the colors together to simulate the colors not present at the current pixel
+// e.g. At location 0,0, only the blue value is present; red and green must be estimated from
+// neighboring pixels
+//
+// The optimized algorithm below minimizes memory accesses by reading 2 bytes at a time
+// and re-using the last pair as it progresses from left to right. Since the ARM CPU enforces a
+// memory policy of generating an exception on unaligned reads, we read 16-bits at a time and
+// OR them into a 32-bit variable to hold on to the pixels left and right of the current pair.
+// This way we can work on 2 pixels at a time from 3 32-bit variables containing 3 lines of 4 pixels.
+// The variables l0,l1,l2 hold the 4 pixels (left, current left, current_right, right)
+// in lines above the current (l0), current (l1) and below (l2)
+// This algorithm assumes that the starting x is 0 (it doesn't have to be).
+// The starting and ending pixel are treated like absolute sensor edges, so they are less accurate
+// than the middle pixels.
+//
+        uint32_t l0,l1,l2; // 3 lines we're working with
+        uint16_t *s = (uint16_t *)&img->pixels[(y * img->w) + xoffs];
+        uint32_t r, g, b, w2 = img->w/2;
+        l0 = s[-w2]; l1 = s[0]; l2 = s[w2];
+        s++;
+// For each pixel, the R8 G8 B8 values are directly shifted into R5 G6 B5
+// to save a step when creating the RGB565 output
+        if (y & 1) { // odd lines (G R G R G R)
+            b = ((l0 & 0xff) + (l2 & 0xff)) >> 4; // left edge pixel
+            g = (l1 & 0xff) >> 2;
+            r = (l1 & 0xff00) >> 11;
+            *rgbbuf++ = IM_RGB565(r, g, b); // first col is treated differently
+            for (int x = xoffs+1; x < xoffs+w-1; x+=2) { // 'middle' pixels can use neighbors from 3x3 grid
+                l0 |= (s[-w2] << 16); // shift last pixel pairs into upper 16 bits
+                l1 |= (s[0] << 16);   // of the 3 line variables
+                l2 |= (s[w2] << 16);
+                s++; // advance source pointer one pair of pixels
+                r = (l1 & 0xff00) >> 11; // (1, 0) red pixel at current-left
+                g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 4;
+                b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 5;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                g = (l1 & 0xff0000) >> 18; // (0,0) green pixel at current-right
+                b = (((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 4;
+                r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 4;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                // prepare for the next set of source pixels
+                l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+            } // for x
+            // last col
+            g = ((l0 >> 8) + (l2 >> 8)) >> 3; // re-use blue from last pixel in loop
+            r = (l1 >> 11);
+            *rgbbuf++ = IM_RGB565(r, g, b);
+        } else { // even lines (B G B G B G)
+            b = (l1 & 0xff) >> 3;
+            g = ((l0 & 0xff) + (l2 & 0xff)) >> 3;
+            r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12; // first pixel is different
+            *rgbbuf++ = IM_RGB565(r, g, b);
+            for (int x = xoffs+1; x < xoffs+w-1; x+=2) { // middle part
+                l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                l1 |= (s[0] << 16);
+                l2 |= (s[w2] << 16);
+                s++;
+                g = (l1 & 0xff00) >> 10; // (1, 0) green pixel at current-left
+                b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 4;
+                r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                b = (l1 & 0xff0000) >> 19; // (0,0) blue pixel at current-right
+                g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 4;
+                r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 5;
+                *rgbbuf++ = IM_RGB565(r, g, b);
+                // prepare for the next set of source pixels
+                l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+            } // for x
+            // last col
+            g = (l1 >> 10); // re-use blue pixel from last column of loop
+            r = ((l0 >> 8) + (l2 >> 8)) >> 4;
+            *rgbbuf++ = IM_RGB565(r, g, b); // last pixel
+        } // even lines
+    } // faster way
+    } // for y
 }
+
+//
+// Convert a row of Bayer pixels into grayscale output
+//
+void imlib_bayer_to_y(image_t *img, int x_offset, int y_offset, int width, uint8_t *Y)
+{
+            uint16_t *s;
+            uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
+            int x, xx, r, g, b = 0;
+            int pitch = img->w; // keep in local var
+            int w2 = pitch/2; // pitch for a uint16_t pointer
+            x = x_offset; xx = x_offset+width;
+            if (y_offset < 1 || y_offset >= img->h-1) { // top or bottom lines
+                uint8_t *s8 = (uint8_t *)&img->pixels[(y_offset * pitch) + x_offset];
+                if (y_offset & 1) { // odd line (y == img->h-1)
+                    int bLastPixel = 0;
+                    if (((x_offset+width) & 1) == 0 && x_offset+width >= img->w) { // flag to not read past the bottom-right edge
+                        xx--; // make the loop stop on an even pixel
+                        bLastPixel = 1;
+                    }
+                    if (x == 0) { // special case of starting from left edge
+                        g = s8[0];
+                        b = s8[-pitch];
+                        r = s8[1];
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        x++;
+                    } // x == 0
+                    for (; x<xx; x++) {
+                        if (x & 1) { // odd pixels
+                            g = (s8[-1] + s8[1]) >>1;
+                            r = s8[0];
+                            b = (s8[-pitch-1] + s8[-pitch+1]) >> 1;
+                        } else { // even pixels
+                            g = s8[0];
+                            b = s8[-pitch];
+                            r = (s8[-1] + s8[1]) >> 1;
+                        }
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    } // for x
+                    if (bLastPixel) { // 1 more pixel to process
+                        r = s8[0]; // on a red pixel
+                        g = (s8[-pitch] + s8[-1]) >> 1; // and re-use the previous blue
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    }
+                } else { // even line (y==0)
+                    if (x == 0) { // left edge special case
+                        b = s8[0];
+                        g = s8[pitch];
+                        r = s8[pitch+1];
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        x++;
+                    }
+                    for (; x<xx; x++) {
+                        if (x & 1) { // odd pixels
+                            b = (s8[-1] + s8[1]) >>1;
+                            g = s8[0];
+                            r = s8[pitch];
+                        } else { // even pixels
+                            b = s8[0];
+                            g = (s8[1] + s8[-1]) >> 1;
+                            r = s8[pitch];
+                        }
+                        *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    } // for x
+                } // even line
+                return;
+            } // edge case; need to check boundary conditions
+// middle of image can be converted without checking boundary conditions on each pixel
+            s = (uint16_t*)&img->pixels[(y_offset * pitch) + (x_offset & 0xfffe)];
+            if (x_offset == 0) { // don't read past left edge; repeat pixels instead
+                l0 = s[-w2] | (s[-w2] << 16); // prep current and left pixels
+                l1 = s[0] | (s[0] << 16);
+                l2 = s[w2] | (s[w2] << 16);
+            } else {
+                l0 = s[-w2-1] | (s[-w2] << 16); // prep current and left pixels
+                l1 = s[-1] | (s[0] << 16);
+                l2 = s[w2-1] | (s[w2] << 16);
+            }
+            x = x_offset; xx = x_offset+width;
+            s++;
+            if (y_offset & 1) { // odd line
+                if (x_offset & 1) // starting on an odd pixel, capture it differently
+                {
+                    r = (l1 >> 24); // (1, 0) red pixel
+                    g = ((l0 >> 24) + (l2 >> 24)) >> 1;
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    x++; // advance to next pixel
+                }
+                for (; x<xx-1; x+=2) {
+                    g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    // faster to keep all calculations in integer math with 15-bit fractions
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                    l1 |= (s[0] << 16);
+                    l2 |= (s[w2] << 16);
+                    s++;
+                    r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
+                    g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
+                    b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                } // for x
+                if (x < xx) { // one final pixel to do
+                    g = (l1 >> 16) & 0xff; // (0, 0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g
+                }
+            } else { // even line
+                if (x_offset & 1) // starting on an odd pixel, capture it differently
+                {
+                    g = (l1 >> 8) & 0xff; // (1, 0) green pixel
+                    r = (((l0 >> 8) & 0xff) + ((l2 >> 8) && 0xff)) >> 1;
+                    b = (((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 1;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    x++; // advance to next pixel
+                }
+                for (; x<xx-1; x+=2) {
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    // prepare for the next set of source pixels
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                    l1 |= (s[0] << 16);
+                    l2 |= (s[w2] << 16);
+                    s++;
+                    g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
+                    b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
+                    r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                } // for x
+                if (x < xx) { // one final pixel to do
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    *Y++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                }
+            } // even line
+} /* imlib_bayer_to_y() */
+//
+// Convert a row of Bayer pixels into binary output
+//
+void imlib_bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, uint8_t *binary)
+{
+            uint16_t *s;
+            uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
+            int x, xx, r, g, b = 0;
+            uint8_t pixel;
+            int pitch = img->w; // keep in local var
+            int w2 = pitch/2; // pitch for a uint16_t pointer
+            x = x_offset; xx = x_offset+width;
+            if (y_offset < 1 || y_offset >= img->h-1) { // top or bottom lines
+                uint8_t *s8 = (uint8_t *)&img->pixels[(y_offset * pitch) + x_offset];
+                if (y_offset & 1) { // odd line (y == img->h-1)
+                    int bLastPixel = 0;
+                    if (((x_offset+width) & 1) == 0 && x_offset+width >= img->w) { // flag to not read past the bottom-right edge
+                        xx--; // make the loop stop on an even pixel
+                        bLastPixel = 1;
+                    }
+                    if (x == 0) { // special case of starting from left edge
+                        g = s8[0];
+                        b = s8[-pitch];
+                        r = s8[1];
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                        x++;
+                    }
+                    for (; x<xx; x++) {
+                        if (x & 1) { // odd pixels
+                            g = (s8[-1] + s8[1]) >>1;
+                            r = s8[0];
+                            b = (s8[-pitch-1] + s8[-pitch+1]) >> 1;
+                        } else { // even pixels
+                            g = s8[0];
+                            b = s8[-pitch];
+                            r = (s8[-1] + s8[1]) >> 1;
+                        }
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    } // for x
+                    if (bLastPixel) { // 1 more pixel to process
+                        r = s8[0]; // on a red pixel
+                        g = (s8[-pitch] + s8[-1]) >> 1; // and re-use the previous blue
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    }
+                } else { // even line (y==0)
+                    if (x == 0) { // left edge special case
+                        b = s8[0];
+                        g = s8[pitch];
+                        r = s8[pitch+1];
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                        x++;
+                    }
+                    for (; x<xx; x++) {
+                        if (x & 1) { // odd pixels
+                            b = (s8[-1] + s8[1]) >>1;
+                            g = s8[0];
+                            r = s8[pitch];
+                        } else { // even pixels
+                            b = s8[0];
+                            g = (s8[1] + s8[-1]) >> 1;
+                            r = s8[pitch];
+                        }
+                        pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                        IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    } // for x
+                } // even line
+                return;
+            } // edge case; need to check boundary conditions
+// middle of image can be converted without checking boundary conditions on each pixel
+            s = (uint16_t*)&img->pixels[(y_offset * pitch) + (x_offset & 0xfffe)];
+            if (x_offset == 0) { // don't read past left edge; repeat pixels instead
+                l0 = s[-w2] | (s[-w2] << 16); // prep current and left pixels
+                l1 = s[0] | (s[0] << 16);
+                l2 = s[w2] | (s[w2] << 16);
+            } else {
+                l0 = s[-w2-1] | (s[-w2] << 16); // prep current and left pixels
+                l1 = s[-1] | (s[0] << 16);
+                l2 = s[w2-1] | (s[w2] << 16);
+            }
+            x = x_offset; xx = x_offset+width;
+            s++;
+            if (y_offset & 1) { // odd line
+                if (x_offset & 1) // starting on an odd pixel, capture it differently
+                {
+                    r = (l1 >> 24); // (1, 0) red pixel
+                    g = ((l0 >> 24) + (l2 >> 24)) >> 1;
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    x++; // advance to next pixel
+                }
+                for (; x<xx-1; x+=2) {
+                    g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    // faster to keep all calculations in integer math with 15-bit fractions
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                    l1 |= (s[0] << 16);
+                    l2 |= (s[w2] << 16);
+                    s++;
+                    r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
+                    g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
+                    b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x+1, (pixel >> 7));
+                } // for x
+                if (x < xx) { // one final pixel to do
+                    g = (l1 >> 16) & 0xff; // (0, 0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x+1, (pixel >> 7));
+                }
+            } else { // even line
+                if (x_offset & 1) // starting on an odd pixel, capture it differently
+                {
+                    g = (l1 >> 8) & 0xff; // (1, 0) green pixel
+                    r = (((l0 >> 8) & 0xff) + ((l2 >> 8) && 0xff)) >> 1;
+                    b = (((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 1;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    x++; // advance to next pixel
+                }
+                for (; x<xx-1; x+=2) {
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                    // prepare for the next set of source pixels
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                    l1 |= (s[0] << 16);
+                    l2 |= (s[w2] << 16);
+                    s++;
+                    g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
+                    b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
+                    r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x+1, (pixel >> 7));
+                } // for x
+                if (x < xx) { // one final pixel to do
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    pixel = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
+                    IMAGE_PUT_BINARY_PIXEL_FAST(binary, x, (pixel >> 7));
+                }
+            } // even line
+} /* imlib_bayer_to_binary() */
+
 ////////////////////////////////////////////////////////////////////////////////
 
 static save_image_format_t imblib_parse_extension(image_t *img, const char *path)
@@ -551,20 +954,22 @@ bool imlib_read_geometry(FIL *fp, image_t *img, const char *path, img_read_setti
         file_buffer_on(fp); // REMEMBER TO TURN THIS OFF LATER!
         vflipped = bmp_read_geometry(fp, img, path, &rs->bmp_rs);
     } else {
-        ff_unsupported_format(NULL);
+        rs->format = FORMAT_JPG;
+        file_read_open(fp, path);
+        jpeg_read_geometry(fp, img, path, &rs->jpg_rs);
     }
     imblib_parse_extension(img, path); // Enforce extension!
     return vflipped;
 }
 
-static void imlib_read_pixels(FIL *fp, image_t *img, int line_start, int line_end, img_read_settings_t *rs)
+static void imlib_read_pixels(FIL *fp, image_t *img, int n_lines, img_read_settings_t *rs)
 {
     switch (rs->format) {
         case FORMAT_BMP:
-            bmp_read_pixels(fp, img, line_start, line_end, &rs->bmp_rs);
+            bmp_read_pixels(fp, img, n_lines, &rs->bmp_rs);
             break;
         case FORMAT_PNM:
-            ppm_read_pixels(fp, img, line_start, line_end, &rs->ppm_rs);
+            ppm_read_pixels(fp, img, n_lines, &rs->ppm_rs);
             break;
         default: // won't happen
             break;
@@ -575,7 +980,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
 {
     if (path) {
         uint32_t size = fb_avail() / 2;
-        void *alloc = fb_alloc(size); // We have to do this before the read.
+        void *alloc = fb_alloc(size, FB_ALLOC_NO_HINT); // We have to do this before the read.
         // This code reads a window of an image in at a time and then executes
         // the line operation on each line in that window before moving to the
         // next window. The vflipped part is here because BMP files can be saved
@@ -592,20 +997,21 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         // window is equal to an image in size. However, since this is not the
         // case we shrink the window size to how many lines we're buffering.
         temp.pixels = alloc;
-        temp.h = (size / (temp.w * temp.bpp)); // round down
+        // Set the max buffer height to image height.
+        temp.h = IM_MIN(img->h, (size / (temp.w * temp.bpp)));
         // This should never happen unless someone forgot to free.
         if ((!temp.pixels) || (!temp.h)) {
             nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
                                                "Not enough memory available!"));
         }
         for (int i=0; i<img->h; i+=temp.h) { // goes past end
-            int can_do = IM_MIN(temp.h, img->h-i);
-            imlib_read_pixels(&fp, &temp, 0, can_do, &rs);
-            for (int j=0; j<can_do; j++) {
+            int lines = IM_MIN(temp.h, img->h-i);
+            imlib_read_pixels(&fp, &temp, lines, &rs);
+            for (int j=0; j<lines; j++) {
                 if (!vflipped) {
                     op(img, i+j, temp.pixels+(temp.w*temp.bpp*j), data, false);
                 } else {
-                    op(img, (img->h-i-can_do)+j, temp.pixels+(temp.w*temp.bpp*j), data, true);
+                    op(img, (img->h-i-lines)+j, temp.pixels+(temp.w*temp.bpp*j), data, true);
                 }
             }
         }
@@ -642,7 +1048,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
     } else {
         switch(img->bpp) {
             case IMAGE_BPP_BINARY: {
-                uint32_t *row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img));
+                uint32_t *row_ptr = fb_alloc(IMAGE_BINARY_LINE_LEN_BYTES(img), FB_ALLOC_NO_HINT);
 
                 for (int i=0, ii=img->w; i<ii; i++) {
                     IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, i, scalar);
@@ -656,7 +1062,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
                 break;
             }
             case IMAGE_BPP_GRAYSCALE: {
-                uint8_t *row_ptr = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img));
+                uint8_t *row_ptr = fb_alloc(IMAGE_GRAYSCALE_LINE_LEN_BYTES(img), FB_ALLOC_NO_HINT);
 
                 for (int i=0, ii=img->w; i<ii; i++) {
                     IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, i, scalar);
@@ -670,7 +1076,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
                 break;
             }
             case IMAGE_BPP_RGB565: {
-                uint16_t *row_ptr = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img));
+                uint16_t *row_ptr = fb_alloc(IMAGE_RGB565_LINE_LEN_BYTES(img), FB_ALLOC_NO_HINT);
 
                 for (int i=0, ii=img->w; i<ii; i++) {
                     IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, i, scalar);
@@ -734,18 +1140,18 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
         case FORMAT_DONT_CARE:
             // Path doesn't have an extension.
             if (IM_IS_JPEG(img)) {
-                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".jpg");
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".jpg");
                 jpeg_write(img, new_path, quality);
                 fb_free();
             } else if (IM_IS_BAYER(img)) {
                 FIL fp;
-                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".raw");
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".raw");
                 file_write_open(&fp, new_path);
                 write_data(&fp, img->pixels, img->w * img->h);
                 file_close(&fp);
                 fb_free();
             } else { // RGB or GS, save as BMP.
-                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5), path), ".bmp");
+                char *new_path = strcat(strcpy(fb_alloc(strlen(path)+5, FB_ALLOC_NO_HINT), path), ".bmp");
                 bmp_write_subimg(img, new_path, roi);
                 fb_free();
             }
@@ -797,120 +1203,206 @@ void imlib_zero(image_t *img, image_t *mask, bool invert)
     }
 }
 
+#ifdef IMLIB_ENABLE_LENS_CORR
 // A simple algorithm for correcting lens distortion.
 // See http://www.tannerhelland.com/4743/simple-algorithm-correcting-lens-distortion/
-void imlib_lens_corr(image_t *img, float strength, float zoom)
+void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, float y_corr)
 {
+    int w = img->w;
+    int h = img->h;
+    int halfWidth = w / 2;
+    int halfHeight = h / 2;
+    float maximum_diameter = fast_sqrtf((w * w) + (h * h));
+    float lens_corr_diameter = strength / maximum_diameter;
     zoom = 1 / zoom;
-    int halfWidth = img->w / 2;
-    int halfHeight = img->h / 2;
-    float lens_corr_radius = strength / fast_sqrtf((img->w * img->w) + (img->h * img->h));
+
+    // Convert percentage offset to pixels from center of image
+    int x_off = w * x_corr;
+    int y_off = h * y_corr;
+
+    // Create a tmp copy of the image to pull pixels from.
+    size_t size = image_size(img);
+    void *data = fb_alloc(size, FB_ALLOC_NO_HINT);
+    memcpy(data, img->data, size);
+    memset(img->data, 0, size);
+
+    int maximum_radius = fast_ceilf(maximum_diameter / 2) + 1; // +1 inclusive of final value
+    float *precalculated_table = fb_alloc(maximum_radius * sizeof(float), FB_ALLOC_NO_HINT);
+
+    for(int i=0; i < maximum_radius; i++) {
+        float r = lens_corr_diameter * i;
+        precalculated_table[i] = (fast_atanf(r) / r) * zoom;
+    }
+
+    int down_adj = halfHeight + y_off;
+    int up_adj = h - 1 - halfHeight + y_off;
+    int right_adj = halfWidth + x_off;
+    int left_adj = w - 1 - halfWidth + x_off;
 
     switch(img->bpp) {
         case IMAGE_BPP_BINARY: {
-            // Create a temp copy of the image to pull pixels from.
-            uint32_t *tmp = fb_alloc(((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
-            memcpy(tmp, img->data, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
-            memset(img->data, 0, ((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * img->h);
+            uint32_t *tmp = (uint32_t *) data;
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            for (int y = 0; y < halfHeight; y++) {
                 uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                uint32_t *row_ptr2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
-                float zoomedY = newY * zoom;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0; x < halfWidth; x++) {
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
-                    float zoomedX = newX * zoom;
+                    float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
+                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
+                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY_down = down_adj + sourceY;
+                    int sourceY_up = up_adj - sourceY;
+                    int sourceX_right = right_adj + sourceX;
+                    int sourceX_left = left_adj - sourceX;
 
-                    float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
-                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
+                    // plot the 4 symmetrical pixels
+                    // top 2 pixels
+                    if (sourceY_down >= 0 && sourceY_down < h) {
+                        uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY_down);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
-                        uint32_t *ptr = tmp + (((img->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
-                        int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
-                        IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                        if (sourceX_right >= 0 && sourceX_right < w) {
+                            uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_right);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
+                        }
+
+                        if (sourceX_left >= 0 && sourceX_left < w) {
+                            uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_left);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w - 1 - x, pixel);
+                        }
+                    }
+
+                    // bottom 2 pixels
+                    if (sourceY_up >= 0 && sourceY_up < h) {
+                        uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY_up);
+
+                        if (sourceX_right >= 0 && sourceX_right < w) {
+                            uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_right);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, x, pixel);
+                        }
+
+                        if (sourceX_left >= 0 && sourceX_left < w) {
+                            uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_left);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, w - 1 - x, pixel);
+                        }
                     }
                 }
             }
-
-            fb_free();
             break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            // Create a temp copy of the image to pull pixels from.
-            uint8_t *tmp = fb_alloc(img->w * img->h * sizeof(uint8_t));
-            memcpy(tmp, img->data, img->w * img->h * sizeof(uint8_t));
-            memset(img->data, 0, img->w * img->h * sizeof(uint8_t));
+            uint8_t *tmp = (uint8_t *) data;
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            for (int y = 0; y < halfHeight; y++) {
                 uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
+                uint8_t *row_ptr2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
-                float zoomedY = newY * zoom;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0; x < halfWidth; x++) {
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
-                    float zoomedX = newX * zoom;
+                    float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
+                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
+                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY_down = down_adj + sourceY;
+                    int sourceY_up = up_adj - sourceY;
+                    int sourceX_right = right_adj + sourceX;
+                    int sourceX_left = left_adj - sourceX;
 
-                    float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
-                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
+                    // plot the 4 symmetrical pixels
+                    // top 2 pixels
+                    if (sourceY_down >= 0 && sourceY_down < h) {
+                        uint8_t *ptr = tmp + (w * sourceY_down);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
-                        uint8_t *ptr = tmp + (img->w * sourceY);
-                        int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX);
-                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
+                        if (sourceX_right >= 0 && sourceX_right < w) {
+                            row_ptr[x] = ptr[sourceX_right];
+                        }
+
+                        if (sourceX_left >= 0 && sourceX_left < w) {
+                            row_ptr[w - 1 - x] = ptr[sourceX_left];
+                        }
+                    }
+
+                    // bottom 2 pixels
+                    if (sourceY_up >= 0 && sourceY_up < h) {
+                        uint8_t *ptr = tmp + (w * sourceY_up);
+
+                        if (sourceX_right >= 0 && sourceX_right < w) {
+                            row_ptr2[x] = ptr[sourceX_right];
+                        }
+
+                        if (sourceX_left >= 0 && sourceX_left < w) {
+                            row_ptr2[w - 1 - x] = ptr[sourceX_left];
+                        }
                     }
                 }
             }
-
-            fb_free();
             break;
         }
         case IMAGE_BPP_RGB565: {
-            // Create a temp copy of the image to pull pixels from.
-            uint16_t *tmp = fb_alloc(img->w * img->h * sizeof(uint16_t));
-            memcpy(tmp, img->data, img->w * img->h * sizeof(uint16_t));
-            memset(img->data, 0, img->w * img->h * sizeof(uint16_t));
+            uint16_t *tmp = (uint16_t *) data;
 
-            for (int y = 0, yy = img->h; y < yy; y++) {
+            for (int y = 0; y < halfHeight; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
+                uint16_t *row_ptr2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, h-1-y);
                 int newY = y - halfHeight;
                 int newY2 = newY * newY;
-                float zoomedY = newY * zoom;
 
-                for (int x = 0, xx = img->w; x < xx; x++) {
+                for (int x = 0; x < halfWidth; x++) {
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
-                    float zoomedX = newX * zoom;
+                    float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
+                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
+                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
+                    int sourceY_down = down_adj + sourceY;
+                    int sourceY_up = up_adj - sourceY;
+                    int sourceX_right = right_adj + sourceX;
+                    int sourceX_left = left_adj - sourceX;
 
-                    float r = lens_corr_radius * fast_sqrtf(newX2 + newY2);
-                    float theta = (r < 0.0000001f) ? 1.0f : (fast_atanf(r) / r);
-                    int sourceX = halfWidth + fast_floorf(theta * zoomedX);
-                    int sourceY = halfHeight + fast_floorf(theta * zoomedY);
+                    // plot the 4 symmetrical pixels
+                    // top 2 pixels
+                    if (sourceY_down >= 0 && sourceY_down < h) {
+                        uint16_t *ptr = tmp + (w * sourceY_down);
 
-                    if ((0 <= sourceX) && (sourceX < img->w) && (0 <= sourceY) && (sourceY < img->h)) {
-                        uint16_t *ptr = tmp + (img->w * sourceY);
-                        int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX);
-                        IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
+                        if (sourceX_right >= 0 && sourceX_right < w) {
+                            row_ptr[x] = ptr[sourceX_right];
+                        }
+
+                        if (sourceX_left >= 0 && sourceX_left < w) {
+                            row_ptr[w - 1 - x] = ptr[sourceX_left];
+                        }
+                    }
+
+                    // bottom 2 pixels
+                    if (sourceY_up >= 0 && sourceY_up < h) {
+                        uint16_t *ptr = tmp + (w * sourceY_up);
+
+                        if (sourceX_right >= 0 && sourceX_right < w) {
+                            row_ptr2[x] = ptr[sourceX_right];
+                        }
+
+                        if (sourceX_left >= 0 && sourceX_left < w) {
+                            row_ptr2[w - 1 - x] = ptr[sourceX_left];
+                        }
                     }
                 }
             }
-
-            fb_free();
             break;
         }
         default: {
             break;
         }
     }
+
+    fb_free(); // precalculated_table
+    fb_free(); // data
 }
+#endif //IMLIB_ENABLE_LENS_CORR
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -989,20 +1481,18 @@ void imlib_sepconv3(image_t *img, const int8_t *krn, const float m, const int b)
 {
     int ksize = 3;
     // TODO: Support RGB
-    int *buffer = fb_alloc(img->w * 2 * sizeof(*buffer));
+    int *buffer = fb_alloc(img->w * sizeof(*buffer) * 2, FB_ALLOC_NO_HINT);
 
     // NOTE: This doesn't deal with borders right now. Adding if
     // statements in the inner loop will slow it down significantly.
     for (int y=0; y<img->h-ksize; y++) {
-        for (int x=0; x<img->w-ksize; x+=ksize) {
-            for (int k=0; k<ksize; k++) {
-                int acc=0;
-                //if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j))
-                acc = __SMLAD(krn[0], IM_GET_GS_PIXEL(img, x+k, y+0), acc);
-                acc = __SMLAD(krn[1], IM_GET_GS_PIXEL(img, x+k, y+1), acc);
-                acc = __SMLAD(krn[2], IM_GET_GS_PIXEL(img, x+k, y+2), acc);
-                buffer[((y%2)*img->w) + x+k] = acc;
-            }
+        for (int x=0; x<img->w; x++) {
+            int acc=0;
+            //if (IM_X_INSIDE(img, x+k) && IM_Y_INSIDE(img, y+j))
+            acc = __SMLAD(krn[0], IM_GET_GS_PIXEL(img, x, y + 0), acc);
+            acc = __SMLAD(krn[1], IM_GET_GS_PIXEL(img, x, y + 1), acc);
+            acc = __SMLAD(krn[2], IM_GET_GS_PIXEL(img, x, y + 2), acc);
+            buffer[((y%2)*img->w) + x] = acc;
         }
         if (y > 0) {
             // flush buffer

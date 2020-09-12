@@ -2,42 +2,24 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_mmc_ex.h
   * @author  MCD Application Team
-  * @version V1.2.0
-  * @date   29-December-2017
-  * @brief   Header file of MMC HAL extended module.
+  * @brief   Header file of SD HAL extended module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                       opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
-  */
+  */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32H7xx_HAL_MMC_EX_H
-#define __STM32H7xx_HAL_MMC_EX_H
+#ifndef STM32H7xx_HAL_MMC_EX_H
+#define STM32H7xx_HAL_MMC_EX_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -51,9 +33,9 @@
   */
 
 /** @addtogroup MMCEx
-  * @brief MMC HAL extended module driver
+  * @brief SD HAL extended module driver
   * @{
-  */
+  */ 
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup MMCEx_Exported_Types MMCEx Exported Types
@@ -62,7 +44,7 @@
 
 /** @defgroup MMCEx_Exported_Types_Group1 MMC Internal DMA Buffer structure
   * @{
-  */
+  */ 
 typedef enum
 {
   MMC_DMA_BUFFER0      = 0x00U,    /*!< selects MMC internal DMA Buffer 0     */
@@ -71,20 +53,20 @@ typedef enum
 }HAL_MMCEx_DMABuffer_MemoryTypeDef;
 
 
-/**
+/** 
   * @}
   */
-
-/**
+  
+/** 
   * @}
-  */
+  */  
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup MMCEx_Exported_Functions MMCEx Exported Functions
   * @{
   */
-
+  
 /** @defgroup MMCEx_Exported_Functions_Group1 MultiBuffer functions
   * @{
   */
@@ -101,11 +83,11 @@ void HAL_MMCEx_Write_DMADoubleBuffer1CpltCallback(MMC_HandleTypeDef *hmmc);
 /**
   * @}
   */
-
+  
 /**
   * @}
   */
-
+  
 /* Private types -------------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -113,7 +95,7 @@ void HAL_MMCEx_Write_DMADoubleBuffer1CpltCallback(MMC_HandleTypeDef *hmmc);
 /* Private macros ------------------------------------------------------------*/
 /* Private functions prototypes ----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
-
+  
 /**
   * @}
   */
@@ -126,6 +108,6 @@ void HAL_MMCEx_Write_DMADoubleBuffer1CpltCallback(MMC_HandleTypeDef *hmmc);
 #endif
 
 
-#endif /* __STM32H7xx_HAL_MMCEx_H */
+#endif /* STM32H7xx_HAL_MMCEx_H */ 
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * USB debug support.
- *
+ * USB debugger.
  */
 #include "mp.h"
 #include "imlib.h"
@@ -82,6 +84,13 @@ void usbdbg_data_in(void *buffer, int length)
             break;
         }
 
+        case USBDBG_SENSOR_ID: {
+            int sensor_id = sensor_get_id();
+            memcpy(buffer, &sensor_id, 4);
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         case USBDBG_TX_BUF: {
             uint8_t *tx_buf = usb_cdc_tx_buf(length);
             memcpy(buffer, tx_buf, length);
@@ -148,6 +157,18 @@ extern int py_image_descriptor_from_roi(image_t *image, const char *path, rectan
 void usbdbg_data_out(void *buffer, int length)
 {
     switch (cmd) {
+        case USBDBG_FB_ENABLE: {
+            uint32_t enable = *((int32_t*)buffer);
+            JPEG_FB()->enabled = enable;
+            if (enable == 0) {
+                // When disabling framebuffer, the IDE might still be holding FB lock.
+                // If the IDE is not the current lock owner, this operation is ignored.
+                mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
+            }
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         case USBDBG_SCRIPT_EXEC:
             // check if GC is locked before allocating memory for vstr. If GC was locked
             // at least once before the script is fully uploaded xfer_bytes will be less
@@ -170,18 +191,14 @@ void usbdbg_data_out(void *buffer, int length)
                     // Interrupt running REPL
                     // Note: setting pendsv explicitly here because the VM is probably
                     // waiting in REPL and the soft interrupt flag will not be checked.
-                    pendsv_nlr_jump_hard(mp_const_ide_interrupt);
+                    pendsv_nlr_jump(mp_const_ide_interrupt);
                 }
             }
             break;
 
         case USBDBG_TEMPLATE_SAVE: {
-            image_t image ={
-                .w = MAIN_FB()->w,
-                .h = MAIN_FB()->h,
-                .bpp = MAIN_FB()->bpp,
-                .pixels = MAIN_FB()->pixels
-            };
+            image_t image;
+            framebuffer_initialize_image(&image);
 
             // null terminate the path
             length = (length == 64) ? 63:length;
@@ -197,12 +214,8 @@ void usbdbg_data_out(void *buffer, int length)
         }
 
         case USBDBG_DESCRIPTOR_SAVE: {
-            image_t image ={
-                .w = MAIN_FB()->w,
-                .h = MAIN_FB()->h,
-                .bpp = MAIN_FB()->bpp,
-                .pixels = MAIN_FB()->pixels
-            };
+            image_t image;
+            framebuffer_initialize_image(&image);
 
             // null terminate the path
             length = (length == 64) ? 63:length;
@@ -214,6 +227,31 @@ void usbdbg_data_out(void *buffer, int length)
             py_image_descriptor_from_roi(&image, path, roi);
             break;
         }
+
+        case USBDBG_ATTR_WRITE: {
+            /* write sensor attribute */
+            int32_t attr= *((int32_t*)buffer);
+            int32_t val = *((int32_t*)buffer+1);
+            switch (attr) {
+                case ATTR_CONTRAST:
+                    sensor_set_contrast(val);
+                    break;
+                case ATTR_BRIGHTNESS:
+                    sensor_set_brightness(val);
+                    break;
+                case ATTR_SATURATION:
+                    sensor_set_saturation(val);
+                    break;
+                case ATTR_GAINCEILING:
+                    sensor_set_gainceiling(val);
+                    break;
+                default:
+                    break;
+            }
+            cmd = USBDBG_NONE;
+            break;
+        }
+
         default: /* error */
             break;
     }
@@ -259,7 +297,7 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
                 // interrupt running code by raising an exception
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
-                pendsv_nlr_jump_hard(mp_const_ide_interrupt);
+                pendsv_nlr_jump(mp_const_ide_interrupt);
             }
             cmd = USBDBG_NONE;
             break;
@@ -281,43 +319,26 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             xfer_length =length;
             break;
 
-        case USBDBG_ATTR_WRITE: {
-            /* write sensor attribute */
-            int16_t attr= *((int16_t*)buffer);
-            int16_t val = *((int16_t*)buffer+1);
-            switch (attr) {
-                case ATTR_CONTRAST:
-                    sensor_set_contrast(val);
-                    break;
-                case ATTR_BRIGHTNESS:
-                    sensor_set_brightness(val);
-                    break;
-                case ATTR_SATURATION:
-                    sensor_set_saturation(val);
-                    break;
-                case ATTR_GAINCEILING:
-                    sensor_set_gainceiling(val);
-                    break;
-                default:
-                    break;
-            }
-            cmd = USBDBG_NONE;
+        case USBDBG_ATTR_WRITE:
+            xfer_bytes = 0;
+            xfer_length =length;
             break;
-        }
 
         case USBDBG_SYS_RESET:
             NVIC_SystemReset();
             break;
 
+        case USBDBG_SYS_RESET_TO_BL:{
+            RTC_HandleTypeDef RTCHandle;
+            RTCHandle.Instance = RTC;
+            HAL_RTCEx_BKUPWrite(&RTCHandle, RTC_BKP_DR0, 0xDF59);
+            NVIC_SystemReset();
+            break;
+        }
+        
         case USBDBG_FB_ENABLE: {
-            int16_t enable = *((int16_t*)buffer);
-            JPEG_FB()->enabled = enable;
-            if (enable == 0) {
-                // When disabling framebuffer, the IDE might still be holding FB lock.
-                // If the IDE is not the current lock owner, this operation is ignored.
-                mutex_unlock(&JPEG_FB()->lock, MUTEX_TID_IDE);
-            }
-            cmd = USBDBG_NONE;
+            xfer_bytes = 0;
+            xfer_length = length;
             break;
         }
 
@@ -327,10 +348,13 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             xfer_length = length;
             break;
 
+        case USBDBG_SENSOR_ID:
+            xfer_bytes = 0;
+            xfer_length = length;
+            break;
+
         default: /* error */
             cmd = USBDBG_NONE;
             break;
     }
 }
-
-

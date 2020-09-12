@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * LCD Python module.
- *
  */
 #include <mp.h>
 #include <objstr.h>
@@ -202,7 +204,9 @@ static mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
             systick_sleep(120);
 
             // Memory Data Access Control
-            lcd_write_command(0x36, 1, (uint8_t []) {0xC0});
+            uint8_t madctl = 0xC0;
+            uint8_t bgr = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bgr), 0);
+            lcd_write_command(0x36, 1, (uint8_t []) {madctl | (bgr<<3)});
 
             // Interface Pixel Format
             lcd_write_command(0x3A, 1, (uint8_t []) {0x05});
@@ -311,8 +315,8 @@ static mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         case LCD_SHIELD:
             lcd_write_command_byte(0x2C);
             fb_alloc_mark();
-            uint8_t *zero = fb_alloc0(width*2);
-            uint16_t *line = fb_alloc(width*2);
+            uint8_t *zero = fb_alloc0(width*2, FB_ALLOC_NO_HINT);
+            uint16_t *line = fb_alloc(width*2, FB_ALLOC_NO_HINT);
             for (int i=0; i<t_pad; i++) {
                 lcd_write_data(width*2, zero);
             }
@@ -352,7 +356,7 @@ static mp_obj_t py_lcd_clear()
         case LCD_SHIELD:
             lcd_write_command_byte(0x2C);
             fb_alloc_mark();
-            uint8_t *zero = fb_alloc0(width*2);
+            uint8_t *zero = fb_alloc0(width*2, FB_ALLOC_NO_HINT);
             for (int i=0; i<height; i++) {
                 lcd_write_data(width*2, zero);
             }

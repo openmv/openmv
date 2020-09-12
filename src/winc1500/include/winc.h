@@ -1,20 +1,29 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * WINC1500 driver.
- *
  */
 #ifndef __WINC_H__
 #define __WINC_H__
 #include <stdint.h>
-#define WINC_IP_ADDR_LEN        (4)
+#include <stdbool.h>
+#define WINC_IPV4_ADDR_LEN      (4)
 #define WINC_MAC_ADDR_LEN       (6)
 #define WINC_MAX_SSID_LEN       (33)
 #define WINC_MAX_PSK_LEN        (65)
 #define WINC_MAX_BOARD_NAME_LEN (33)
-#define WINC_SOCKBUF_SIZE       (1400)
+// NOTE: Due to the way the WINC1500 HIF is designed, a single recv() call reads all the data received on the socket, which
+// can result in multiple callbacks if the received data is more than the buffer size passed to the recv() call. As a result,
+// the async call handler will keep overwriting the user-provided buffer in subsequent callbacks. The socket buffer is used
+// as workaround to this issue to allow receiving partial packets. Note the maximum size of WINC internal socket buffer seems
+// to change with host-driver/firmware updates. It's very important to make sure this value is still valid after an update.
+#define WINC_SOCKBUF_MAX_SIZE   (1480)
+#define WINC_REQUEST_TIMEOUT    (5000)
 
 #define MAKE_SOCKADDR(addr, ip, port) \
     struct sockaddr addr; \
@@ -50,11 +59,10 @@ typedef enum {
 } winc_security_t;
 
 typedef struct {
-    int8_t  rssi;
-    uint8_t security;
-    char    ssid[WINC_MAX_SSID_LEN];
-    uint8_t ip_addr[WINC_IP_ADDR_LEN];
-    uint8_t mac_addr[WINC_MAC_ADDR_LEN];
+    uint8_t ip_addr[WINC_IPV4_ADDR_LEN];
+    uint8_t subnet_addr[WINC_IPV4_ADDR_LEN];
+    uint8_t gateway_addr[WINC_IPV4_ADDR_LEN];
+    uint8_t dns_addr[WINC_IPV4_ADDR_LEN];
 } winc_ifconfig_t;
 
 typedef struct {
@@ -64,6 +72,14 @@ typedef struct {
     uint8_t bssid[6];
     char    ssid[WINC_MAX_SSID_LEN];
 } winc_scan_result_t;
+
+typedef struct {
+    int8_t  rssi;
+    uint8_t security;
+    char    ssid[WINC_MAX_SSID_LEN];
+    uint8_t ip_addr[WINC_IPV4_ADDR_LEN];
+    uint8_t mac_addr[WINC_MAC_ADDR_LEN];
+} winc_netinfo_t;
 
 typedef int (*winc_scan_callback_t) (winc_scan_result_t *, void *);
 
@@ -86,12 +102,13 @@ typedef struct {
 typedef struct {
     int idx;
     int size;
-    uint8_t buf[WINC_SOCKBUF_SIZE];
+    uint8_t buf[WINC_SOCKBUF_MAX_SIZE];
 } winc_socket_buf_t;
 
 typedef struct sockaddr sockaddr;
 typedef struct sockaddr_in sockaddr_in;
 
+const char *winc_strerror(int error);
 int winc_init(winc_mode_t winc_mode);
 int winc_connect(const char *ssid, uint8_t security, const char *key, uint16_t channel);
 int winc_start_ap(const char *ssid, uint8_t security, const char *key, uint16_t channel);
@@ -99,7 +116,8 @@ int winc_disconnect();
 int winc_isconnected();
 int winc_connected_sta(uint32_t *sta_ip);
 int winc_wait_for_sta(uint32_t *sta_ip, uint32_t timeout);
-int winc_ifconfig(winc_ifconfig_t *ifconfig);
+int winc_ifconfig(winc_ifconfig_t *ifconfig, bool set);
+int winc_netinfo(winc_netinfo_t *netinfo);
 int winc_scan(winc_scan_callback_t cb, void *arg);
 int winc_get_rssi();
 int winc_fw_version(winc_fwver_t *wfwver);

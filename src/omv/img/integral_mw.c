@@ -1,6 +1,9 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * An integral image using a moving window.
@@ -64,13 +67,13 @@ void imlib_integral_mw_alloc(mw_image_t *sum, int w, int h)
     sum->y_offs = 0;
     sum->x_ratio = (1<<16)+1;
     sum->y_ratio = (1<<16)+1;
-    sum->data = fb_alloc(h * sizeof(*sum->data));
+    sum->data = fb_alloc(h * sizeof(*sum->data), FB_ALLOC_NO_HINT);
     // swap is used when shifting the image pointers
     // to avoid overwriting the image rows in sum->data
-    sum->swap = fb_alloc(h * sizeof(*sum->data));
+    sum->swap = fb_alloc(h * sizeof(*sum->data), FB_ALLOC_NO_HINT);
 
     for (int i=0; i<h; i++) {
-        sum->data[i] = fb_alloc(w * sizeof(**sum->data));
+        sum->data[i] = fb_alloc(w * sizeof(**sum->data), FB_ALLOC_NO_HINT);
     }
 }
 

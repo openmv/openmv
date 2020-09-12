@@ -1,10 +1,12 @@
 /*
  * This file is part of the OpenMV project.
- * Copyright (c) 2013/2014 Ibrahim Abdelkader <i.abdalkader@gmail.com>
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
  * qstrs specific to openmv
- *
  */
 
 // OMV Module
@@ -16,6 +18,7 @@ Q(version_string)
 Q(arch)
 Q(board_type)
 Q(board_id)
+Q(disable_fb)
 
 // Image module
 Q(image)
@@ -81,6 +84,7 @@ Q(set_backlight)
 Q(get_backlight)
 Q(display)
 Q(clear)
+Q(bgr)
 
 // tv Module
 Q(tv)
@@ -130,11 +134,14 @@ Q(RGB565)
 Q(YUV422)
 Q(BAYER)
 Q(JPEG)
-Q(OV9650)
 Q(OV2640)
+Q(OV5640)
+Q(OV7690)
 Q(OV7725)
+Q(OV9650)
 Q(MT9V034)
 Q(LEPTON)
+Q(HM01B0)
 Q(value)
 Q(shutdown)
 
@@ -198,12 +205,20 @@ Q(SVGA)
 Q(XGA)
 Q(SXGA)
 Q(UXGA)
+Q(HD)
+Q(FHD)
+Q(QHD)
+Q(QXGA)
+Q(WQXGA)
+Q(WQXGA2)
 
 //SDE
 Q(NORMAL)
 Q(NEGATIVE)
 
 //IOCTLs
+Q(IOCTL_SET_READOUT_WINDOW)
+Q(IOCTL_GET_READOUT_WINDOW)
 Q(IOCTL_SET_TRIGGERED_MODE)
 Q(IOCTL_GET_TRIGGERED_MODE)
 Q(IOCTL_LEPTON_GET_WIDTH)
@@ -234,11 +249,12 @@ Q(get_id)
 Q(alloc_extra_fb)
 Q(dealloc_extra_fb)
 Q(set_pixformat)
-Q(set_framerate)
+Q(get_pixformat)
 Q(set_framesize)
+Q(get_framesize)
 Q(set_vsync_output)
-Q(set_binning)
 Q(set_windowing)
+Q(get_windowing)
 Q(set_gainceiling)
 Q(set_contrast)
 Q(set_brightness)
@@ -256,7 +272,13 @@ Q(set_auto_whitebal)
 Q(rgb_gain_db)
 Q(get_rgb_gain_db)
 Q(set_hmirror)
+Q(get_hmirror)
 Q(set_vflip)
+Q(get_vflip)
+Q(set_transpose)
+Q(get_transpose)
+Q(set_auto_rotation)
+Q(get_auto_rotation)
 Q(set_special_effect)
 Q(set_lens_correction)
 Q(ioctl)
@@ -346,6 +368,7 @@ Q(isconnected)
 Q(connected_sta)
 Q(wait_for_sta)
 Q(ifconfig)
+Q(netinfo)
 Q(fw_version)
 Q(fw_dump)
 Q(fw_update)
@@ -429,6 +452,7 @@ Q(to_rainbow)
 // duplicate Q(copy)
 // duplicate Q(rgb_channel)
 Q(color_palette)
+Q(alpha_palette)
 
 // Compress (in place)
 Q(compress)
@@ -445,6 +469,12 @@ Q(compressed)
 // Compressed for IDE (out of place)
 Q(compressed_for_ide)
 // duplicate Q(quality)
+
+// Encode for IDE (in place)
+Q(jpeg_encode_for_ide)
+
+// Encoded for IDE (out of place)
+Q(jpeg_encoded_for_ide)
 
 // Copy
 // duplicate Q(copy)
@@ -524,6 +554,9 @@ Q(draw_image)
 // duplicate Q(y_scale)
 Q(alpha)
 // duplicate Q(mask)
+Q(hint)
+Q(IMAGE_HINT_BILINEAR)
+Q(IMAGE_HINT_CENTER)
 
 // Draw Keypoints
 Q(draw_keypoints)
@@ -779,6 +812,8 @@ Q(logpolar)
 Q(lens_corr)
 Q(strength)
 Q(zoom)
+Q(x_corr)
+Q(y_corr)
 
 // Rotation Correction
 Q(rotation_corr)
@@ -788,6 +823,8 @@ Q(z_rotation)
 Q(x_translation)
 Q(y_translation)
 // duplicate Q(zoom)
+Q(fov)
+Q(corners)
 
 // Structural Similarity
 Q(get_similarity)
@@ -914,7 +951,7 @@ Q(x_hist_bins_max)
 Q(y_hist_bins_max)
 // Blob Object
 Q(blob)
-Q(corners)
+// duplicate Q(corners)
 Q(min_corners)
 Q(rect)
 Q(x)
@@ -1165,3 +1202,48 @@ Q(draw_ir)
 // duplicate Q(scale)
 Q(pixformat)
 // duplciate Q(copy_to_fb)
+
+// TensorFlow Module
+Q(tf)
+// duplicate Q(load)
+Q(load_to_fb)
+Q(free_from_fb)
+Q(classify)
+Q(segment)
+
+// Model Object
+Q(tf_model)
+// duplicate Q(len)
+// duplicate Q(height)
+// duplicate Q(width)
+Q(channels)
+Q(signed)
+Q(is_float)
+
+// Classify
+// duplicate Q(classify)
+// duplicate Q(roi)
+// duplicate Q(min_scale)
+// duplicate Q(scale_mul)
+// duplicate Q(x_overlap)
+// duplicate Q(y_overlap)
+
+// Class Object
+Q(tf_classification)
+// duplicate Q(x)
+// duplicate Q(y)
+// duplicate Q(w)
+// duplicate Q(h)
+Q(output)
+
+// Segment
+// duplicate Q(segment)
+// duplicate Q(roi)
+
+// IMU Module
+Q(imu)
+Q(acceleration_mg)
+Q(angular_rate_mdps)
+Q(temperature_c)
+Q(roll)
+Q(pitch)

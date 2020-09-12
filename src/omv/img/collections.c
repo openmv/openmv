@@ -1,8 +1,13 @@
-/* This file is part of the OpenMV project.
- * Copyright (c) 2013-2017 Ibrahim Abdelkader <iabdalkader@openmv.io> & Kwabena W. Agyeman <kwagyeman@openmv.io>
+/*
+ * This file is part of the OpenMV project.
+ *
+ * Copyright (c) 2013-2019 Ibrahim Abdelkader <iabdalkader@openmv.io>
+ * Copyright (c) 2013-2019 Kwabena W. Agyeman <kwagyeman@openmv.io>
+ *
  * This work is licensed under the MIT license, see the file LICENSE for details.
+ *
+ * Common data structures.
  */
-
 #include "imlib.h"
 #define CHAR_BITS (sizeof(char) * 8)
 #define CHAR_MASK (CHAR_BITS - 1)
@@ -15,7 +20,7 @@
 void bitmap_alloc(bitmap_t *ptr, size_t size)
 {
     ptr->size = size;
-    ptr->data = (char *) fb_alloc0(((size + CHAR_MASK) >> CHAR_SHIFT) * sizeof(char));
+    ptr->data = (char *) fb_alloc0(((size + CHAR_MASK) >> CHAR_SHIFT) * sizeof(char), FB_ALLOC_NO_HINT);
 }
 
 void bitmap_free(bitmap_t *ptr)
@@ -49,13 +54,13 @@ void lifo_alloc(lifo_t *ptr, size_t size, size_t data_len)
     ptr->len = 0;
     ptr->size = size;
     ptr->data_len = data_len;
-    ptr->data = (char *) fb_alloc(size * data_len);
+    ptr->data = (char *) fb_alloc(size * data_len, FB_ALLOC_NO_HINT);
 }
 
 void lifo_alloc_all(lifo_t *ptr, size_t *size, size_t data_len)
 {
     uint32_t tmp_size;
-    ptr->data = (char *) fb_alloc_all(&tmp_size);
+    ptr->data = (char *) fb_alloc_all(&tmp_size, FB_ALLOC_NO_HINT);
     ptr->data_len = data_len;
     ptr->size = tmp_size / data_len;
     ptr->len = 0;
@@ -126,13 +131,13 @@ void fifo_alloc(fifo_t *ptr, size_t size, size_t data_len)
     ptr->len = 0;
     ptr->size = size;
     ptr->data_len = data_len;
-    ptr->data = (char *) fb_alloc(size * data_len);
+    ptr->data = (char *) fb_alloc(size * data_len, FB_ALLOC_NO_HINT);
 }
 
 void fifo_alloc_all(fifo_t *ptr, size_t *size, size_t data_len)
 {
     uint32_t tmp_size;
-    ptr->data = (char *) fb_alloc_all(&tmp_size);
+    ptr->data = (char *) fb_alloc_all(&tmp_size, FB_ALLOC_NO_HINT);
     ptr->data_len = data_len;
     ptr->size = tmp_size / data_len;
     ptr->len = 0;

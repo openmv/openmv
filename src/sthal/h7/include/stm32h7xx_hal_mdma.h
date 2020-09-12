@@ -2,42 +2,24 @@
   ******************************************************************************
   * @file    stm32h7xx_hal_mdma.h
   * @author  MCD Application Team
-  * @version V1.2.0
-  * @date   29-December-2017
   * @brief   Header file of DMA HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32H7xx_HAL_MDMA_H
-#define __STM32H7xx_HAL_MDMA_H
+#ifndef STM32H7xx_HAL_MDMA_H
+#define STM32H7xx_HAL_MDMA_H
 
 #ifdef __cplusplus
  extern "C" {
@@ -146,7 +128,7 @@ typedef struct
   __IO uint32_t CBRUR;    /*!< New CBRUR register configuration for the given MDMA linked list node  */
   __IO uint32_t CLAR;     /*!< New CLAR register configuration for the given MDMA linked list node   */
   __IO uint32_t CTBR;     /*!< New CTBR register configuration for the given MDMA linked list node   */
-  __IO uint32_t Reserved; /*!< Reserved register*/
+  __IO uint32_t Reserved; /*!< Reserved register                                                     */
   __IO uint32_t CMAR;     /*!< New CMAR register configuration for the given MDMA linked list node   */
   __IO uint32_t CMDR;     /*!< New CMDR register configuration for the given MDMA linked list node   */
 
@@ -161,8 +143,8 @@ typedef struct
   MDMA_InitTypeDef Init;            /*!< configuration of the specified MDMA Linked List Node    */
   uint32_t         SrcAddress;      /*!< The source memory address for the Linked list Node      */
   uint32_t         DstAddress;      /*!< The destination memory address for the Linked list Node */
-  uint32_t         BlockDataLength; /*!< The length of a block transfer in bytes                 */
-  uint32_t         BlockCount;      /*!< The number of a blocks to be transfer                   */
+  uint32_t         BlockDataLength; /*!< The data length of a block in bytes                     */
+  uint32_t         BlockCount;      /*!< The number of blocks to be transferred                  */
 
   uint32_t PostRequestMaskAddress;  /*!< specifies the address to be updated (written) with PostRequestMaskData after a request is served.
                                          PostRequestMaskAddress and PostRequestMaskData could be used to automatically clear a peripheral flag when the request is served  */
@@ -183,7 +165,7 @@ typedef enum
   HAL_MDMA_STATE_READY               = 0x01U,  /*!< MDMA initialized and ready for use   */
   HAL_MDMA_STATE_BUSY                = 0x02U,  /*!< MDMA process is ongoing              */
   HAL_MDMA_STATE_ERROR               = 0x03U,  /*!< MDMA error state                     */
-  HAL_MDMA_STATE_ABORT               = 0x04U,  /*!< DMA Abort state                      */
+  HAL_MDMA_STATE_ABORT               = 0x04U,  /*!< MDMA Abort state                     */
 
 }HAL_MDMA_StateTypeDef;
 
@@ -224,7 +206,6 @@ typedef struct __MDMA_HandleTypeDef
 
   MDMA_InitTypeDef      Init;                                                                  /*!< MDMA communication parameters          */
 
-
   HAL_LockTypeDef       Lock;                                                                  /*!< MDMA locking object                    */
 
   __IO HAL_MDMA_StateTypeDef  State;                                                           /*!< MDMA transfer state                    */
@@ -246,13 +227,13 @@ typedef struct __MDMA_HandleTypeDef
 
   MDMA_LinkNodeTypeDef *FirstLinkedListNodeAddress;                                             /*!< specifies the first node address of the transfer list
                                                                                                      (after the initial node defined by the Init struct)
-                                                                                                    this parameter is used internally by the MDMA driver
-                                                                                                     to construct the liked list node
+                                                                                                     this parameter is used internally by the MDMA driver
+                                                                                                     to construct the linked list node
                                                                                                 */
 
   MDMA_LinkNodeTypeDef *LastLinkedListNodeAddress;                                             /*!< specifies the last node address of the transfer list
                                                                                                     this parameter is used internally by the MDMA driver
-                                                                                                     to construct the liked list node
+                                                                                                    to construct the linked list node
                                                                                                 */
   uint32_t LinkedListNodeCounter;                                                               /*!< Number of nodes in the MDMA linked list */
 
@@ -323,14 +304,9 @@ typedef struct __MDMA_HandleTypeDef
 #define MDMA_REQUEST_DMA2D_TC             ((uint32_t)0x00000019U)  /*!< MDMA HW request is DMA2D Transfer Complete Flag           */
 #define MDMA_REQUEST_DMA2D_TW             ((uint32_t)0x0000001AU)  /*!< MDMA HW request is DMA2D Transfer Watermark Flag          */
 
-#if defined(DSI)
-#define MDMA_REQUEST_DSI_TEARINGE_FFECT   ((uint32_t)0x0000001BU)  /*!< MDMA HW request is DSI Tearing Effect Flag                */
-#define MDMA_REQUEST_DSI_END_REFRESH      ((uint32_t)0x0000001CU)  /*!< MDMA HW request is DSI End of refresh  Flag               */
-#endif /* DSI */
-
 #define MDMA_REQUEST_SDMMC1_END_DATA      ((uint32_t)0x0000001DU)  /*!< MDMA HW request is SDMMC1 End of Data Flag                */
 
-#define MDMA_REQUEST_SW                   ((uint32_t)0x40000000U) /*!< MDMA SW request   */
+#define MDMA_REQUEST_SW                   ((uint32_t)0x40000000U) /*!< MDMA SW request                                            */
 
 /**
   * @}
@@ -439,14 +415,14 @@ typedef struct __MDMA_HandleTypeDef
   */
 
 /** @defgroup MDMA_data_Alignment MDMA data alignment
-  * @brief    MDMA MDMA data alignment
+  * @brief    MDMA data alignment
   * @{
   */
 #define MDMA_DATAALIGN_PACKENABLE        ((uint32_t)MDMA_CTCR_PKE)     /*!< The source data is packed/un-packed into the destination data size
                                                                             All data are right aligned, in Little Endien mode. */
 #define MDMA_DATAALIGN_RIGHT            ((uint32_t)0x00000000U)        /*!< Right Aligned, padded w/ 0s (default) */
 #define MDMA_DATAALIGN_RIGHT_SIGNED     ((uint32_t)MDMA_CTCR_PAM_0)    /*!< Right Aligned, Sign extended ,
-                                                                            Note : this mode is allowed only if the Source data size smaller than Destination data size  */
+                                                                            Note : this mode is allowed only if the Source data size is smaller than Destination data size  */
 #define MDMA_DATAALIGN_LEFT             ((uint32_t)MDMA_CTCR_PAM_1)    /*!< Left Aligned (padded with 0s) */
 
 /**
@@ -534,7 +510,7 @@ typedef struct __MDMA_HandleTypeDef
 #define __HAL_MDMA_ENABLE(__HANDLE__)  ((__HANDLE__)->Instance->CCR |=  MDMA_CCR_EN)
 
 /**
-  * @brief  Disable the specified DMA Channel.
+  * @brief  Disable the specified MDMA Channel.
   * @param  __HANDLE__: MDMA handle
   * @retval None
   */
@@ -570,7 +546,7 @@ typedef struct __MDMA_HandleTypeDef
 #define __HAL_MDMA_CLEAR_FLAG(__HANDLE__, __FLAG__) ((__HANDLE__)->Instance->CIFCR = (__FLAG__))
 
 /**
-  * @brief  Enables the specified DMA Channel interrupts.
+  * @brief  Enables the specified MDMA Channel interrupts.
   * @param  __HANDLE__: MDMA handle
   * @param __INTERRUPT__: specifies the DMA interrupt sources to be enabled or disabled.
   *          This parameter can be any combination of the following values:
@@ -586,7 +562,7 @@ typedef struct __MDMA_HandleTypeDef
 /**
   * @brief  Disables the specified MDMA Channel interrupts.
   * @param  __HANDLE__: MDMA handle
-  * @param __INTERRUPT__: specifies the DMA interrupt sources to be enabled or disabled.
+  * @param __INTERRUPT__: specifies the MDMA interrupt sources to be enabled or disabled.
   *          This parameter can be any combination of the following values:
   *            @arg MDMA_IT_TE   :  Transfer Error interrupt mask
   *            @arg MDMA_IT_CTC  :  Channel Transfer Complete interrupt mask
@@ -661,7 +637,7 @@ HAL_StatusTypeDef HAL_MDMA_Start (MDMA_HandleTypeDef *hmdma, uint32_t SrcAddress
 HAL_StatusTypeDef HAL_MDMA_Start_IT(MDMA_HandleTypeDef *hmdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t BlockDataLength, uint32_t BlockCount);
 HAL_StatusTypeDef HAL_MDMA_Abort(MDMA_HandleTypeDef *hmdma);
 HAL_StatusTypeDef HAL_MDMA_Abort_IT(MDMA_HandleTypeDef *hmdma);
-HAL_StatusTypeDef HAL_MDMA_PollForTransfer(MDMA_HandleTypeDef *hmdma, uint32_t CompleteLevel, uint32_t Timeout);
+HAL_StatusTypeDef HAL_MDMA_PollForTransfer(MDMA_HandleTypeDef *hmdma, HAL_MDMA_LevelCompleteTypeDef CompleteLevel, uint32_t Timeout);
 HAL_StatusTypeDef HAL_MDMA_GenerateSWRequest(MDMA_HandleTypeDef *hmdma);
 void HAL_MDMA_IRQHandler(MDMA_HandleTypeDef *hmdma);
 
@@ -805,11 +781,11 @@ uint32_t              HAL_MDMA_GetError(MDMA_HandleTypeDef *hmdma);
                                          ((__MODE__) == MDMA_REPEAT_BLOCK_TRANSFER ) || \
                                          ((__MODE__) == MDMA_FULL_TRANSFER))
 
-#define IS_MDMA_BUFFER_TRANSFER_LENGTH(__LENGTH__) (((__LENGTH__) >= 0x00000001) && ((__LENGTH__) < 0x000000FF))
+#define IS_MDMA_BUFFER_TRANSFER_LENGTH(__LENGTH__) (((__LENGTH__) >= 0x00000001U) && ((__LENGTH__) < 0x000000FFU))
 
-#define IS_MDMA_BLOCK_COUNT(__COUNT__) (((__COUNT__) > 0 ) && ((__COUNT__) <= 4096))
+#define IS_MDMA_BLOCK_COUNT(__COUNT__) (((__COUNT__) > 0U ) && ((__COUNT__) <= 4096U))
 
-#define IS_MDMA_TRANSFER_LENGTH(SIZE) (((SIZE) > 0) && ((SIZE) <= 65536))
+#define IS_MDMA_TRANSFER_LENGTH(SIZE) (((SIZE) > 0U) && ((SIZE) <= 65536U))
 
 #define IS_MDMA_BLOCK_ADDR_OFFSET(__BLOCK_ADD_OFFSET__) (((__BLOCK_ADD_OFFSET__) > (-65536)) && ((__BLOCK_ADD_OFFSET__) < 65536))
 
@@ -847,6 +823,6 @@ uint32_t              HAL_MDMA_GetError(MDMA_HandleTypeDef *hmdma);
 }
 #endif
 
-#endif /* __STM32H7xx_HAL_MDMA_H */
+#endif /* STM32H7xx_HAL_MDMA_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
