@@ -57,10 +57,10 @@
 #define IMLIB_ENABLE_BILATERAL
 
 // Enable cartoon()
-#define IMLIB_ENABLE_CARTOON
+// #define IMLIB_ENABLE_CARTOON
 
 // Enable remove_shadows()
-#define IMLIB_ENABLE_REMOVE_SHADOWS
+// #define IMLIB_ENABLE_REMOVE_SHADOWS
 
 // Enable linpolar()
 #define IMLIB_ENABLE_LINPOLAR
@@ -69,10 +69,10 @@
 #define IMLIB_ENABLE_LOGPOLAR
 
 // Enable chrominvar()
-#define IMLIB_ENABLE_CHROMINVAR
+// #define IMLIB_ENABLE_CHROMINVAR
 
 // Enable illuminvar()
-#define IMLIB_ENABLE_ILLUMINVAR
+// #define IMLIB_ENABLE_ILLUMINVAR
 
 // Enable invariant table
 //#define IMLIB_ENABLE_INVARIANT_TABLE

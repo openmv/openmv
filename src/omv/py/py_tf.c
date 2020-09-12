@@ -149,7 +149,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
         file_read_open(&fp, path);
         tf_model->model_data_len = f_size(&fp);
         tf_model->model_data = alloc_mode
-            ? fb_alloc(tf_model->model_data_len, FB_ALLOC_NO_HINT)
+            ? fb_alloc(tf_model->model_data_len, FB_ALLOC_PREFER_SIZE)
             : xalloc(tf_model->model_data_len);
         read_data(&fp, tf_model->model_data, tf_model->model_data_len);
         file_close(&fp);
