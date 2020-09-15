@@ -40,21 +40,21 @@ Next, you need to install OpenMV IDE on your computer to flash firmware and run 
 
 Finally, you need to install the OpenMV GitHub Repo. In Linux, `cd` in a terminal to a place where you want to put the repo (we recommend making a folder called `repositories` in your home directory and storing repositories in that) and then:
 
-    git clone --recursive git@github.com:openmv/openmv.git
+    git clone --recursive https://github.com/openmv/openmv.git
 
 However, if you are interested in submitting code fixes back to us you will need to fork our repo first and clone your fork so that you can send pull requests. You need to fork these two repos:
 
-    git@github.com:openmv/openmv.git
-    git@github.com:openmv/micropython.git
+    https://github.com/openmv/openmv.git
+    https://github.com/openmv/micropython.git
 
 Then:
 
-    git clone --recursive git@github.com:<your_openmv_fork_name>.git
+    git clone --recursive https://github.com/<username>/openmv.git
     cd openmv
-    git remote add remote git@github.com:openmv/openmv.git
+    git remote add remote https://github.com/openmv/openmv.git
     cd src/micropython
-    git remote set-url origin git@github.com:<your_micropython_fork_name>.git
-    git remote add remote git@github.com:openmv/micropython.git
+    git remote set-url origin https://github.com/<username>/micropython.git
+    git remote add remote https://github.com/openmv/micropython.git
 
 This will setup the `openmv` and `micropython` repos so `origin` points to your forks and so you can pull updates from the offical repos with `remote`. Now when you want to create a new feature branch to send a Pull Request to OpenMV you just need to do:
 
