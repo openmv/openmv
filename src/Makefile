@@ -675,12 +675,12 @@ flash_bin::
 
 # Flash the bootloader using dfu_util
 flash_boot_dfu_util::
-	dfu-util -a 0 -d 0483:df11 -D $(FW_DIR)/$(BOOTLOADER).dfu
+	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(BOOTLOADER).dfu
 
 # Flash the main firmware image using dfu_util
 flash_image_dfu_util::
-	dfu-util -a 0 -d 0483:df11 -D $(FW_DIR)/$(FIRMWARE).dfu
+	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(FIRMWARE).dfu
 
 # Flash the bootloader + main firmware image (DFU) using dfu_util
 flash_dfu_util::
-	dfu-util -a 0 -d 0483:df11 -D $(FW_DIR)/$(OPENMV).dfu
+	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(OPENMV).dfu
