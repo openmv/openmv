@@ -409,7 +409,6 @@ int main(void)
     bool sdram_pass = false;
     #endif
     #endif
-    int sensor_init_ret = 0;
     #if MICROPY_HW_ENABLE_SDCARD
     bool sdcard_mounted = false;
     #endif
@@ -502,9 +501,11 @@ soft_reset:
     // Initialize the sensor and check the result after
     // mounting the file-system to log errors (if any).
     if (first_soft_reset) {
-        sensor_init_ret = sensor_init();
+        sensor_init();
         #if MICROPY_PY_IMU
-        if ((!sensor_init_ret) && (sensor_get_id() == OV7690_ID)) py_imu_init();
+        if (sensor_is_detected() && sensor_get_id() == OV7690_ID) {
+            py_imu_init();
+        }
         #endif // MICROPY_PY_IMU
     }
 
@@ -620,13 +621,6 @@ soft_reset:
     }
     #endif
     #endif
-
-    // check sensor init result
-    if (first_soft_reset && sensor_init_ret != 0) {
-        char buf[512];
-        snprintf(buf, sizeof(buf), "Failed to init sensor, error:%d", sensor_init_ret);
-        __fatal_error(buf);
-    }
 
     // Turn boot-up LEDs off
     led_state(LED_RED, 0);

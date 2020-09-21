@@ -85,7 +85,10 @@ void usbdbg_data_in(void *buffer, int length)
         }
 
         case USBDBG_SENSOR_ID: {
-            int sensor_id = sensor_get_id();
+            int sensor_id = 0xFF;
+            if (sensor_is_detected() == true) {
+                sensor_id = sensor_get_id();
+            }
             memcpy(buffer, &sensor_id, 4);
             cmd = USBDBG_NONE;
             break;

@@ -471,6 +471,8 @@ int sensor_init()
     // Set default color palette.
     sensor.color_palette = rainbow_table;
 
+    sensor.detected = true;
+
     /* All good! */
     return 0;
 }
@@ -525,6 +527,11 @@ int sensor_reset()
 int sensor_get_id()
 {
     return sensor.chip_id;
+}
+
+bool sensor_is_detected()
+{
+    return sensor.detected;
 }
 
 int sensor_sleep(int enable)
