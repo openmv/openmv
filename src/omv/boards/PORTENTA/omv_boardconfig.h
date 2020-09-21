@@ -70,6 +70,9 @@
 // FB Heap Block Size
 #define OMV_UMM_BLOCK_SIZE      256
 
+// Core VBAT for selftests
+#define OMV_CORE_VBAT           "3.0"
+
 //PLL1 480MHz/48MHz for USB, SDMMC and FDCAN
 #define OMV_OSC_PLL1M           (5)
 #define OMV_OSC_PLL1N           (160)
@@ -79,9 +82,6 @@
 #define OMV_OSC_PLL1VCI         (RCC_PLL1VCIRANGE_2)
 #define OMV_OSC_PLL1VCO         (RCC_PLL1VCOWIDE)
 #define OMV_OSC_PLL1FRAC        (0)
-
-// Core VBAT for selftests
-#define OMV_CORE_VBAT           "3.0"
 
 // PLL2 180MHz for FMC and QSPI.
 #define OMV_OSC_PLL2M           (5)
@@ -102,6 +102,10 @@
 #define OMV_OSC_PLL3VCI         (RCC_PLL3VCIRANGE_2)
 #define OMV_OSC_PLL3VCO         (RCC_PLL3VCOWIDE)
 #define OMV_OSC_PLL3FRAC        (0)
+
+// Clock Sources
+#define OMV_OSC_ADC_SOURCE      RCC_ADCCLKSOURCE_PLL3
+#define OMV_OSC_SPI123_SOURCE   RCC_SPI123CLKSOURCE_PLL3
 
 // HSE/HSI/CSI State
 #define OMV_OSC_HSE_STATE       (RCC_HSE_BYPASS)

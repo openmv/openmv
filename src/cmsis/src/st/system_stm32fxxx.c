@@ -98,73 +98,73 @@ void SystemInit(void)
       SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
     #endif
     /* Reset the RCC clock configuration to the default reset state ------------*/
-    
+
     /* Set HSION bit */
     RCC->CR |= CONFIG_RCC_CR_1ST;
-    
+
     /* Reset CFGR register */
     RCC->CFGR = 0x00000000;
-    
+
     /* Reset HSEON, CSSON and PLLON bits */
     RCC->CR &= (uint32_t) CONFIG_RCC_CR_2ND;
-    
+
     /* Reset PLLCFGR register */
     RCC->PLLCFGR = CONFIG_RCC_PLLCFGR;
-    
+
     #if defined(MCU_SERIES_H7)
     /* Reset D1CFGR register */
     RCC->D1CFGR = 0x00000000;
-    
+
     /* Reset D2CFGR register */
     RCC->D2CFGR = 0x00000000;
-    
+
     /* Reset D3CFGR register */
     RCC->D3CFGR = 0x00000000;
-    
+
     /* Reset PLLCKSELR register */
     RCC->PLLCKSELR = 0x00000000;
-    
+
     /* Reset PLL1DIVR register */
     RCC->PLL1DIVR = 0x00000000;
-    
+
     /* Reset PLL1FRACR register */
     RCC->PLL1FRACR = 0x00000000;
-    
+
     /* Reset PLL2DIVR register */
     RCC->PLL2DIVR = 0x00000000;
-    
+
     /* Reset PLL2FRACR register */
     RCC->PLL2FRACR = 0x00000000;
-    
+
     /* Reset PLL3DIVR register */
     RCC->PLL3DIVR = 0x00000000;
-    
+
     /* Reset PLL3FRACR register */
     RCC->PLL3FRACR = 0x00000000;
     #endif // defined(MCU_SERIES_H7)
-    
+
     /* Reset HSEBYP bit */
     RCC->CR &= (uint32_t)0xFFFBFFFF;
-    
+
     /* Disable all interrupts */
     #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7)
     RCC->CIR = 0x00000000;
     #elif defined(MCU_SERIES_L4) || defined(MCU_SERIES_H7)
     RCC->CIER = 0x00000000;
     #endif
-    
+
     #if defined(MCU_SERIES_H7)
     /* Change  the switch matrix read issuing capability to 1 for the AXI SRAM target (Target 7) */
     *((__IO uint32_t*)0x51008108) = 0x00000001;
     #endif // defined(MCU_SERIES_H7)
-    
+
     /* Configure the Vector Table location add offset address ------------------*/
     #ifdef VECT_TAB_SRAM
     SCB->VTOR = SRAM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
     #else
     SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
     #endif
-    
+
     /* dpgeorge: enable 8-byte stack alignment for IRQ handlers, in accord with EABI */
     SCB->CCR |= SCB_CCR_STKALIGN_Msk;
 
@@ -280,10 +280,11 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
     PeriphClkInitStruct.FmcClockSelection = RCC_FMCCLKSOURCE_PLL2;
     PeriphClkInitStruct.QspiClockSelection = RCC_QSPICLKSOURCE_PLL2;
-    PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLL3;
-    PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL3;
+    PeriphClkInitStruct.AdcClockSelection = OMV_OSC_ADC_SOURCE;
+    PeriphClkInitStruct.Spi123ClockSelection = OMV_OSC_SPI123_SOURCE;
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
     PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
+    PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_PLL2;
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         // Initialization Error
