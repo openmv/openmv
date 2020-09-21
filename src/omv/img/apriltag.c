@@ -12446,13 +12446,14 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
 
                     for (int y = 0, yy = h; y < yy; y++) {
                         uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                        int bw = ((w + UINT32_T_MASK) >> UINT32_T_SHIFT);
                         for (int x = 0, xx = w; x < xx; x++) {
-                            int sourceX = fast_roundf(T4_00*x + T4_01*y + T4_02);
-                            int sourceY = fast_roundf(T4_10*x + T4_11*y + T4_12);
+                            float sourceX = T4_00*x + T4_01*y + T4_02;
+                            float sourceY = T4_10*x + T4_11*y + T4_12;
 
-                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                                uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
-                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                            if ((0 <= sourceX) && (sourceX + 1 < w) && (0 <= sourceY) && (sourceY + 1 < h)) {
+                                uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * fast_floorf(sourceY));
+                                int pixel = fast_roundf(IMAGE_GET_BINARY_PIXEL_INTERP(ptr, bw, sourceX, sourceY));
                                 IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
                             }
                         }
@@ -12465,12 +12466,12 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     for (int y = 0, yy = h; y < yy; y++) {
                         uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y);
                         for (int x = 0, xx = w; x < xx; x++) {
-                            int sourceX = fast_roundf(T4_00*x + T4_01*y + T4_02);
-                            int sourceY = fast_roundf(T4_10*x + T4_11*y + T4_12);
+                            float sourceX = T4_00*x + T4_01*y + T4_02;
+                            float sourceY = T4_10*x + T4_11*y + T4_12;
 
-                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                                uint8_t *ptr = tmp + (w * sourceY);
-                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX);
+                            if ((0 <= sourceX) && (sourceX + 1 < w) && (0 <= sourceY) && (sourceY + 1 < h)) {
+                                uint8_t *ptr = tmp + (w * fast_floorf(sourceY));
+                                int pixel = fast_roundf(IMAGE_GET_INTERP_GRAYSCALE_PIXEL(ptr, w, sourceX, sourceY));
                                 IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
                             }
                         }
@@ -12483,12 +12484,12 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                     for (int y = 0, yy = h; y < yy; y++) {
                         uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y);
                         for (int x = 0, xx = w; x < xx; x++) {
-                            int sourceX = fast_roundf(T4_00*x + T4_01*y + T4_02);
-                            int sourceY = fast_roundf(T4_10*x + T4_11*y + T4_12);
+                            float sourceX = T4_00*x + T4_01*y + T4_02;
+                            float sourceY = T4_10*x + T4_11*y + T4_12;
 
-                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                                uint16_t *ptr = tmp + (w * sourceY);
-                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX);
+                            if ((0 <= sourceX) && (sourceX + 1 < w) && (0 <= sourceY) && (sourceY + 1 < h)) {
+                                uint16_t *ptr = tmp + (w * fast_floorf(sourceY));
+                                int pixel = fast_roundf(IMAGE_GET_INTERP_RGB565_PIXEL(ptr, w, sourceX, sourceY));
                                 IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
                             }
                         }
@@ -12506,16 +12507,17 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
 
                     for (int y = 0, yy = h; y < yy; y++) {
                         uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y);
+                        int bw = ((w + UINT32_T_MASK) >> UINT32_T_SHIFT);
                         for (int x = 0, xx = w; x < xx; x++) {
                             float xxx = T4_00*x + T4_01*y + T4_02;
                             float yyy = T4_10*x + T4_11*y + T4_12;
                             float zzz = T4_20*x + T4_21*y + T4_22;
-                            int sourceX = fast_roundf(xxx / zzz);
-                            int sourceY = fast_roundf(yyy / zzz);
+                            float sourceX = xxx / zzz;
+                            float sourceY = yyy / zzz;
 
-                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                                uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY);
-                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX);
+                            if ((0 <= sourceX) && (sourceX + 1 < w) && (0 <= sourceY) && (sourceY + 1 < h)) {
+                                uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * fast_floorf(sourceY));
+                                int pixel = fast_roundf(IMAGE_GET_BINARY_PIXEL_INTERP(ptr, bw, sourceX, sourceY));
                                 IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
                             }
                         }
@@ -12531,12 +12533,12 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                             float xxx = T4_00*x + T4_01*y + T4_02;
                             float yyy = T4_10*x + T4_11*y + T4_12;
                             float zzz = T4_20*x + T4_21*y + T4_22;
-                            int sourceX = fast_roundf(xxx / zzz);
-                            int sourceY = fast_roundf(yyy / zzz);
+                            float sourceX = xxx / zzz;
+                            float sourceY = yyy / zzz;
 
-                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                                uint8_t *ptr = tmp + (w * sourceY);
-                                int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(ptr, sourceX);
+                            if ((0 <= sourceX) && (sourceX + 1 < w) && (0 <= sourceY) && (sourceY + 1 < h)) {
+                                uint8_t *ptr = tmp + (w * fast_floorf(sourceY));
+                                int pixel = fast_roundf(IMAGE_GET_INTERP_GRAYSCALE_PIXEL(ptr, w, sourceX, sourceY));
                                 IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_ptr, x, pixel);
                             }
                         }
@@ -12552,12 +12554,12 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
                             float xxx = T4_00*x + T4_01*y + T4_02;
                             float yyy = T4_10*x + T4_11*y + T4_12;
                             float zzz = T4_20*x + T4_21*y + T4_22;
-                            int sourceX = fast_roundf(xxx / zzz);
-                            int sourceY = fast_roundf(yyy / zzz);
+                            float sourceX = xxx / zzz;
+                            float sourceY = yyy / zzz;
 
-                            if ((0 <= sourceX) && (sourceX < w) && (0 <= sourceY) && (sourceY < h)) {
-                                uint16_t *ptr = tmp + (w * sourceY);
-                                int pixel = IMAGE_GET_RGB565_PIXEL_FAST(ptr, sourceX);
+                            if ((0 <= sourceX) && (sourceX + 1 < w) && (0 <= sourceY) && (sourceY + 1 < h)) {
+                                uint16_t *ptr = tmp + (w * fast_floorf(sourceY));
+                                int pixel = fast_roundf(IMAGE_GET_INTERP_RGB565_PIXEL(ptr, w, sourceX, sourceY));
                                 IMAGE_PUT_RGB565_PIXEL_FAST(row_ptr, x, pixel);
                             }
                         }
