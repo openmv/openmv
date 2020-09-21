@@ -276,8 +276,7 @@
 #define SOFT_I2C_SPIN_DELAY          64
 
 #define LEPTON_SPI                  (SPI3)
-#define LEPTON_SPI_AF               (GPIO_AF6_SPI3)
-// SPI1/2/3 clock source is PLL2 (160MHz/8 == 20MHz).
+// SPI1/2/3 clock source is PLL3 (160MHz/8 == 20MHz) - Minimum (164*240*8*27 = 8,501,760Hz)
 #define LEPTON_SPI_PRESCALER        (SPI_BAUDRATEPRESCALER_8)
 
 #define LEPTON_SPI_IRQn             (SPI3_IRQn)
@@ -294,6 +293,11 @@
 
 #define LEPTON_SPI_CLK_ENABLE()     __HAL_RCC_SPI3_CLK_ENABLE()
 #define LEPTON_SPI_CLK_DISABLE()    __HAL_RCC_SPI3_CLK_DISABLE()
+
+#define LEPTON_SPI_SCLK_AF          (GPIO_AF6_SPI3)
+#define LEPTON_SPI_MISO_AF          (GPIO_AF6_SPI3)
+#define LEPTON_SPI_MOSI_AF          (GPIO_AF7_SPI3)
+#define LEPTON_SPI_SSEL_AF          (GPIO_AF6_SPI3)
 
 #define LEPTON_SPI_SCLK_PIN         (GPIO_PIN_3)
 #define LEPTON_SPI_MISO_PIN         (GPIO_PIN_4)

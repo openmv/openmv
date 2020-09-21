@@ -283,18 +283,21 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
         GPIO_InitTypeDef GPIO_InitStructure;
         GPIO_InitStructure.Pull      = GPIO_PULLUP;
         GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
-        GPIO_InitStructure.Alternate = LEPTON_SPI_AF;
         GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_LOW;
 
+        GPIO_InitStructure.Alternate = LEPTON_SPI_SCLK_AF;
         GPIO_InitStructure.Pin       = LEPTON_SPI_SCLK_PIN;
         HAL_GPIO_Init(LEPTON_SPI_SCLK_PORT, &GPIO_InitStructure);
 
+        GPIO_InitStructure.Alternate = LEPTON_SPI_MISO_AF;
         GPIO_InitStructure.Pin       = LEPTON_SPI_MISO_PIN;
         HAL_GPIO_Init(LEPTON_SPI_MISO_PORT, &GPIO_InitStructure);
 
+        GPIO_InitStructure.Alternate = LEPTON_SPI_MOSI_AF;
         GPIO_InitStructure.Pin       = LEPTON_SPI_MOSI_PIN;
         HAL_GPIO_Init(LEPTON_SPI_MOSI_PORT, &GPIO_InitStructure);
 
+        GPIO_InitStructure.Alternate = LEPTON_SPI_SSEL_AF;
         GPIO_InitStructure.Pin       = LEPTON_SPI_SSEL_PIN;
         HAL_GPIO_Init(LEPTON_SPI_SSEL_PORT, &GPIO_InitStructure);
     }
