@@ -1253,41 +1253,42 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
                     float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
-                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
-                    int sourceY_down = down_adj + sourceY;
-                    int sourceY_up = up_adj - sourceY;
-                    int sourceX_right = right_adj + sourceX;
-                    int sourceX_left = left_adj - sourceX;
+                    float sourceY = precalculated * newY + 0.5f;
+                    float sourceX = precalculated * newX + 0.5f;
+                    float sourceY_down = down_adj + sourceY;
+                    float sourceY_up = up_adj - sourceY;
+                    float sourceX_right = right_adj + sourceX - 1;
+                    float sourceX_left = left_adj - sourceX;
+                    int bw = ((w + UINT32_T_MASK) >> UINT32_T_SHIFT);
 
                     // plot the 4 symmetrical pixels
                     // top 2 pixels
-                    if (sourceY_down >= 0 && sourceY_down < h) {
-                        uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY_down);
+                    if (sourceY_down >= 0 && (sourceY_down + 1) < h) {
+                        uint32_t *ptr = tmp + (bw * (int)fast_floorf(sourceY_down));
 
-                        if (sourceX_right >= 0 && sourceX_right < w) {
-                            uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_right);
+                        if (sourceX_right >= 0 && (sourceX_right + 1) < w) {
+                            uint8_t pixel = fast_roundf(IMAGE_GET_INTERP_BINARY_PIXEL(ptr, bw, sourceX_right, sourceY_down));
                             IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x, pixel);
                         }
-
-                        if (sourceX_left >= 0 && sourceX_left < w) {
-                            uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_left);
-                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, w - 1 - x, pixel);
+                        
+                        if (sourceX_left >= 0 && (sourceX_left + 1) < w) {
+                            uint8_t pixel = fast_roundf(IMAGE_GET_INTERP_BINARY_PIXEL(ptr, bw, sourceX_left, sourceY_down));
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr, x2, pixel);
                         }
                     }
 
                     // bottom 2 pixels
-                    if (sourceY_up >= 0 && sourceY_up < h) {
-                        uint32_t *ptr = tmp + (((w + UINT32_T_MASK) >> UINT32_T_SHIFT) * sourceY_up);
+                    if (sourceY_up >= 0 && (sourceY_up + 1) < h && roi->y <= y2 && y2 <= roi_y_max) {
+                        uint32_t *ptr = tmp + (bw * (int)fast_floorf(sourceY_up));
 
-                        if (sourceX_right >= 0 && sourceX_right < w) {
-                            uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_right);
+                        if (sourceX_right >= 0 && (sourceX_right + 1) < w) {
+                            uint8_t pixel = fast_roundf(IMAGE_GET_INTERP_BINARY_PIXEL(ptr, bw, sourceX_right, sourceY_up));
                             IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, x, pixel);
                         }
 
-                        if (sourceX_left >= 0 && sourceX_left < w) {
-                            uint8_t pixel = IMAGE_GET_BINARY_PIXEL_FAST(ptr, sourceX_left);
-                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, w - 1 - x, pixel);
+                        if (sourceX_left >= 0 && (sourceX_left + 1) < w) {
+                            uint8_t pixel = fast_roundf(IMAGE_GET_INTERP_BINARY_PIXEL(ptr, bw, sourceX_left, sourceY_up));
+                            IMAGE_PUT_BINARY_PIXEL_FAST(row_ptr2, x2, pixel);
                         }
                     }
                 }
@@ -1307,37 +1308,37 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
                     float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
-                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
-                    int sourceY_down = down_adj + sourceY;
-                    int sourceY_up = up_adj - sourceY;
-                    int sourceX_right = right_adj + sourceX;
-                    int sourceX_left = left_adj - sourceX;
+                    float sourceY = precalculated * newY + 0.5f;
+                    float sourceX = precalculated * newX + 0.5f;
+                    float sourceY_down = down_adj + sourceY;
+                    float sourceY_up = up_adj - sourceY;
+                    float sourceX_right = right_adj + sourceX - 1;
+                    float sourceX_left = left_adj - sourceX;
 
                     // plot the 4 symmetrical pixels
                     // top 2 pixels
-                    if (sourceY_down >= 0 && sourceY_down < h) {
-                        uint8_t *ptr = tmp + (w * sourceY_down);
+                    if (sourceY_down >= 0 && (sourceY_down + 1) < h) {
+                        uint8_t *ptr = tmp + (w * (int)(fast_floorf(sourceY_down)));
 
-                        if (sourceX_right >= 0 && sourceX_right < w) {
-                            row_ptr[x] = ptr[sourceX_right];
+                        if (sourceX_right >= 0 && (sourceX_right + 1) < w) {
+                            row_ptr[x] = fast_roundf(IMAGE_GET_INTERP_GRAYSCALE_PIXEL(ptr, w, sourceX_right, sourceY_down));
                         }
 
-                        if (sourceX_left >= 0 && sourceX_left < w) {
-                            row_ptr[w - 1 - x] = ptr[sourceX_left];
+                        if (sourceX_left >= 0 && (sourceX_left + 1) < w) {
+                            row_ptr[x2] = fast_roundf(IMAGE_GET_INTERP_GRAYSCALE_PIXEL(ptr, w, sourceX_left, sourceY_down));
                         }
                     }
 
                     // bottom 2 pixels
-                    if (sourceY_up >= 0 && sourceY_up < h) {
-                        uint8_t *ptr = tmp + (w * sourceY_up);
+                    if (sourceY_up >= 0 && (sourceY_up + 1) < h && roi->y <= y2 && y2 <= roi_y_max) {
+                        uint8_t *ptr = tmp + (w * (int)fast_floorf(sourceY_up+1));
 
-                        if (sourceX_right >= 0 && sourceX_right < w) {
-                            row_ptr2[x] = ptr[sourceX_right];
+                        if (sourceX_right >= 0 && (sourceX_right + 1) < w) {
+                            row_ptr2[x] = fast_roundf(IMAGE_GET_INTERP_GRAYSCALE_PIXEL(ptr, w, sourceX_right, sourceY_up));
                         }
 
-                        if (sourceX_left >= 0 && sourceX_left < w) {
-                            row_ptr2[w - 1 - x] = ptr[sourceX_left];
+                        if (sourceX_left >= 0 && (sourceX_left + 1) < w) {
+                            row_ptr2[x2] = fast_roundf(IMAGE_GET_INTERP_GRAYSCALE_PIXEL(ptr, w, sourceX_left, sourceY_up));
                         }
                     }
                 }
@@ -1357,37 +1358,37 @@ void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, flo
                     int newX = x - halfWidth;
                     int newX2 = newX * newX;
                     float precalculated = precalculated_table[(int)fast_sqrtf(newX2 + newY2)];
-                    int sourceY = fast_roundf(precalculated * newY); // rounding is necessary
-                    int sourceX = fast_roundf(precalculated * newX); // rounding is necessary
-                    int sourceY_down = down_adj + sourceY;
-                    int sourceY_up = up_adj - sourceY;
-                    int sourceX_right = right_adj + sourceX;
-                    int sourceX_left = left_adj - sourceX;
+                    float sourceY = precalculated * newY + 0.5f;
+                    float sourceX = precalculated * newX + 0.5f;
+                    float sourceY_down = down_adj + sourceY;
+                    float sourceY_up = up_adj - sourceY;
+                    float sourceX_right = right_adj + sourceX - 1;
+                    float sourceX_left = left_adj - sourceX;
 
                     // plot the 4 symmetrical pixels
                     // top 2 pixels
-                    if (sourceY_down >= 0 && sourceY_down < h) {
-                        uint16_t *ptr = tmp + (w * sourceY_down);
+                    if (sourceY_down >= 0 && (sourceY_down + 1) < h) {
+                        uint16_t *ptr = tmp + (w * (int)(fast_floorf(sourceY_down)));
 
-                        if (sourceX_right >= 0 && sourceX_right < w) {
-                            row_ptr[x] = ptr[sourceX_right];
+                        if (sourceX_right >= 0 && (sourceX_right + 1) < w) {
+                            row_ptr[x] = fast_roundf(IMAGE_GET_INTERP_RGB565_PIXEL(ptr, w, sourceX_right, sourceY_down));
                         }
 
-                        if (sourceX_left >= 0 && sourceX_left < w) {
-                            row_ptr[w - 1 - x] = ptr[sourceX_left];
+                        if (sourceX_left >= 0 && (sourceX_left + 1) < w) {
+                            row_ptr[x2] = fast_roundf(IMAGE_GET_INTERP_RGB565_PIXEL(ptr, w, sourceX_left, sourceY_down));
                         }
                     }
 
                     // bottom 2 pixels
-                    if (sourceY_up >= 0 && sourceY_up < h) {
-                        uint16_t *ptr = tmp + (w * sourceY_up);
+                    if (sourceY_up >= 0 && (sourceY_up + 1) < h && roi->y <= y2 && y2 <= roi_y_max) {
+                        uint16_t *ptr = tmp + (w * (int)fast_floorf(sourceY_up+1));
 
-                        if (sourceX_right >= 0 && sourceX_right < w) {
-                            row_ptr2[x] = ptr[sourceX_right];
+                        if (sourceX_right >= 0 && (sourceX_right + 1) < w) {
+                            row_ptr2[x] = fast_roundf(IMAGE_GET_INTERP_RGB565_PIXEL(ptr, w, sourceX_right, sourceY_up));
                         }
 
-                        if (sourceX_left >= 0 && sourceX_left < w) {
-                            row_ptr2[w - 1 - x] = ptr[sourceX_left];
+                        if (sourceX_left >= 0 && (sourceX_left + 1) < w) {
+                            row_ptr2[x2] = fast_roundf(IMAGE_GET_INTERP_RGB565_PIXEL(ptr, w, sourceX_left, sourceY_up));
                         }
                     }
                 }

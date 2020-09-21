@@ -679,6 +679,57 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
 
 #define IMAGE_GET_SCALED_RGB565_PIXEL_FAST(row_ptr, x) IMAGE_GET_RGB565_PIXEL_FAST((row_ptr), ((size_t) ((IMAGE_X_RATIO * ((x) - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET)
 
+// Interpolate pixels from float coordinates
+
+#define IMAGE_GET_INTERP_BINARY_PIXEL(row_ptr, row_width, x, y) \
+({ \
+    __typeof__ (row_ptr) __row_ptr = (row_ptr); \
+    __typeof__ (row_ptr) __row_ptr2 = (row_ptr + row_width); \
+    double _xf, _yf; \
+    float _xp = (float)modf((float)x, &_xf); \
+    float _xip = 1.0f - _xp; \
+    float _yp = (float)modf((float)y, &_yf); \
+    float _yip = 1.0f - _yp; \
+    int __x = abs((int)_xf); \
+    ((IMAGE_GET_BINARY_PIXEL_FAST(__row_ptr, __x) * _xip + \
+    IMAGE_GET_BINARY_PIXEL_FAST(__row_ptr, __x + 1) * _xp) * _yip + \
+    (IMAGE_GET_BINARY_PIXEL_FAST(__row_ptr2, __x) * _xip + \
+    IMAGE_GET_BINARY_PIXEL_FAST(__row_ptr2, __x + 1) * _xp) * _yp); \
+})
+
+#define IMAGE_GET_INTERP_GRAYSCALE_PIXEL(row_ptr, row_width, x, y) \
+({ \
+    __typeof__ (row_ptr) __row_ptr = (row_ptr); \
+    __typeof__ (row_ptr) __row_ptr2 = (row_ptr + row_width); \
+    double _xf, _yf; \
+    float _xp = (float)modf((float)x, &_xf); \
+    float _xip = 1.0f - _xp; \
+    float _yp = (float)modf((float)y, &_yf); \
+    float _yip = 1.0f - _yp; \
+    int __x = abs((int)_xf); \
+    ((IMAGE_GET_GRAYSCALE_PIXEL_FAST(__row_ptr, __x) * _xip + \
+    IMAGE_GET_GRAYSCALE_PIXEL_FAST(__row_ptr, __x + 1) * _xp) * _yip + \
+    (IMAGE_GET_GRAYSCALE_PIXEL_FAST(__row_ptr2, __x) * _xip + \
+    IMAGE_GET_GRAYSCALE_PIXEL_FAST(__row_ptr2, __x + 1) * _xp) * _yp); \
+})
+
+#define IMAGE_GET_INTERP_RGB565_PIXEL(row_ptr, row_width, x, y) \
+({ \
+    __typeof__ (row_ptr) __row_ptr = (row_ptr); \
+    __typeof__ (row_ptr) __row_ptr2 = (row_ptr + row_width); \
+    double _xf, _yf; \
+    float _xp = (float)modf((float)x, &_xf); \
+    float _xip = 1.0f - _xp; \
+    float _yp = (float)modf((float)y, &_yf); \
+    float _yip = 1.0f - _yp; \
+    int __x = abs((int)_xf); \
+    ((IMAGE_GET_RGB565_PIXEL_FAST(__row_ptr, __x) * _xip + \
+    IMAGE_GET_RGB565_PIXEL_FAST(__row_ptr, __x + 1) * _xp) * _yip + \
+    (IMAGE_GET_RGB565_PIXEL_FAST(__row_ptr2, __x) * _xip + \
+    IMAGE_GET_RGB565_PIXEL_FAST(__row_ptr2, __x + 1) * _xp) * _yp); \
+})
+
+
 // Old Image Macros - Will be refactor and removed. But, only after making sure through testing new macros work.
 
 #define IM_SWAP16(x) __REV16(x) // Swap bottom two chars in short.
