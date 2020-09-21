@@ -53,8 +53,14 @@
 #include "extint.h"
 #include "omv_boardconfig.h"
 
+// Re-use MicroPython's SPI2 Handle.
+#ifndef WINC_SPI_HANDLE
 extern SPI_HandleTypeDef SPIHandle2;
 #define SPI_HANDLE      (SPIHandle2)
+#else
+SPI_HandleTypeDef       WINC_SPI_HANDLE;
+#define SPI_HANDLE      (WINC_SPI_HANDLE)
+#endif
 
 #define NM_BUS_MAX_TRX_SZ 4096
 
