@@ -113,9 +113,7 @@ static const char fresh_readme_txt[] =
 "https://github.com/openmv/openmv\r\n"
 ;
 
-#ifdef OPENMV1
-static const char fresh_selftest_py[] ="";
-#else
+#if (OMV_ENABLE_SELFTEST == 1)
 static const char fresh_selftest_py[] =
 "import sensor, time, pyb\n"
 "\n"
@@ -275,10 +273,12 @@ void make_flash_fs()
     f_write(&fp, fresh_readme_txt, sizeof(fresh_readme_txt) - 1 /* don't count null terminator */, &n);
     f_close(&fp);
 
+    #if (OMV_ENABLE_SELFTEST == 1)
     // Create default selftest.py
     f_open(&vfs_fat->fatfs, &fp, "/selftest.py", FA_WRITE | FA_CREATE_ALWAYS);
     f_write(&fp, fresh_selftest_py, sizeof(fresh_selftest_py) - 1 /* don't count null terminator */, &n);
     f_close(&fp);
+    #endif
 
     led_state(LED_RED, 0);
 }
@@ -596,9 +596,11 @@ soft_reset:
         // Execute the boot.py script before initializing the USB dev to
         // override the USB mode if required, otherwise VCP+MSC is used.
         exec_boot_script("/boot.py", false, false);
+        #if (OMV_ENABLE_SELFTEST == 1)
         // Execute the selftests.py script before the filesystem is mounted
         // to avoid corrupting the filesystem when selftests.py is removed.
         exec_boot_script("/selftest.py", true, false);
+        #endif
     }
 
     // Init USB device to default setting if it was not already configured
