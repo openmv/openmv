@@ -168,6 +168,7 @@ typedef struct _sensor {
     bool vflip;                 // Vertical Flip
     bool transpose;             // Transpose Image
     bool auto_rotation;         // Rotate Image Automatically
+    bool detected;              // Set to true when the sensor is initialized.
 
     I2C_HandleTypeDef i2c;      // SCCB/I2C bus.
 
@@ -212,6 +213,9 @@ int sensor_reset();
 
 // Return sensor PID.
 int sensor_get_id();
+
+// Return true if the sensor was detected and initialized.
+bool sensor_is_detected();
 
 // Sleep mode.
 int sensor_sleep(int enable);

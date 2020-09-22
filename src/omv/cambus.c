@@ -15,7 +15,7 @@
 #include "omv_boardconfig.h"
 #include "cambus.h"
 #define I2C_FREQUENCY   (100000)
-#define I2C_TIMEOUT     (1000)
+#define I2C_TIMEOUT     (100)
 
 int cambus_init(I2C_HandleTypeDef *i2c, I2C_TypeDef *instance, uint32_t timing)
 {
