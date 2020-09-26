@@ -215,14 +215,20 @@ void SystemClock_Config(void)
     /* Enable HSE Oscillator and activate PLL with HSE as source */
     #if defined(OMV_OSC_HSE_STATE)
     RCC_OscInitStruct.HSEState = OMV_OSC_HSE_STATE;
+    RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
     #endif
     #if defined(OMV_OSC_HSI_STATE)
     RCC_OscInitStruct.HSIState = OMV_OSC_HSI_STATE;
+    RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_HSI;
     #endif
     #if defined(OMV_OSC_CSI_STATE)
     RCC_OscInitStruct.CSIState = OMV_OSC_CSI_STATE;
+    RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_CSI;
     #endif
-    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+    #if defined(OMV_OSC_HSI48_STATE)
+    RCC_OscInitStruct.HSI48State = OMV_OSC_HSI48_STATE;
+    RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_HSI48;
+    #endif
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
     RCC_OscInitStruct.PLL.PLLM = OMV_OSC_PLL1M;
@@ -274,17 +280,19 @@ void SystemClock_Config(void)
                                               |RCC_PERIPHCLK_SPI3|RCC_PERIPHCLK_SPI2
                                               |RCC_PERIPHCLK_SDMMC|RCC_PERIPHCLK_I2C2
                                               |RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_USB
-                                              |RCC_PERIPHCLK_QSPI|RCC_PERIPHCLK_FMC;
-    PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
+                                              |RCC_PERIPHCLK_QSPI|RCC_PERIPHCLK_FMC
+                                              |RCC_PERIPHCLK_RNG;
+    PeriphClkInitStruct.UsbClockSelection = OMV_OSC_USB_CLKSOURCE;
     PeriphClkInitStruct.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL;
     PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
     PeriphClkInitStruct.FmcClockSelection = RCC_FMCCLKSOURCE_PLL2;
     PeriphClkInitStruct.QspiClockSelection = RCC_QSPICLKSOURCE_PLL2;
-    PeriphClkInitStruct.AdcClockSelection = OMV_OSC_ADC_SOURCE;
-    PeriphClkInitStruct.Spi123ClockSelection = OMV_OSC_SPI123_SOURCE;
+    PeriphClkInitStruct.AdcClockSelection = OMV_OSC_ADC_CLKSOURCE;
+    PeriphClkInitStruct.Spi123ClockSelection = OMV_OSC_SPI123_CLKSOURCE;
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
     PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
     PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_PLL2;
+    PeriphClkInitStruct.RngClockSelection = RCC_RNGCLKSOURCE_HSI48;
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         // Initialization Error

@@ -80,8 +80,9 @@
 #define OMV_CORE_VBAT                   "3.3"
 
 // Clock Sources
-#define OMV_OSC_ADC_SOURCE              RCC_ADCCLKSOURCE_PLL2
-#define OMV_OSC_SPI123_SOURCE           RCC_SPI123CLKSOURCE_PLL2
+#define OMV_OSC_USB_CLKSOURCE           RCC_USBCLKSOURCE_PLL
+#define OMV_OSC_ADC_CLKSOURCE           RCC_ADCCLKSOURCE_PLL2
+#define OMV_OSC_SPI123_CLKSOURCE        RCC_SPI123CLKSOURCE_PLL2
 
 //PLL1 48MHz for USB, SDMMC and FDCAN
 #define OMV_OSC_PLL1M                   (3)
@@ -115,8 +116,6 @@
 
 // HSE/HSI/CSI State
 #define OMV_OSC_HSE_STATE               (RCC_HSE_ON)
-#define OMV_OSC_HSI_STATE               (RCC_HSI_OFF)
-#define OMV_OSC_CSI_STATE               (RCC_CSI_OFF)
 
 // Flash Latency
 #define OMV_FLASH_LATENCY               (FLASH_LATENCY_2)
