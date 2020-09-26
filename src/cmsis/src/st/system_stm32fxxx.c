@@ -278,13 +278,13 @@ void SystemClock_Config(void)
                                               |RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_USB
                                               |RCC_PERIPHCLK_QSPI|RCC_PERIPHCLK_FMC
                                               |RCC_PERIPHCLK_RNG;
-    PeriphClkInitStruct.UsbClockSelection = RCC_USBCLKSOURCE_PLL;
+    PeriphClkInitStruct.UsbClockSelection = OMV_OSC_USB_CLKSOURCE;
     PeriphClkInitStruct.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL;
     PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
     PeriphClkInitStruct.FmcClockSelection = RCC_FMCCLKSOURCE_PLL2;
     PeriphClkInitStruct.QspiClockSelection = RCC_QSPICLKSOURCE_PLL2;
-    PeriphClkInitStruct.AdcClockSelection = OMV_OSC_ADC_SOURCE;
-    PeriphClkInitStruct.Spi123ClockSelection = OMV_OSC_SPI123_SOURCE;
+    PeriphClkInitStruct.AdcClockSelection = OMV_OSC_ADC_CLKSOURCE;
+    PeriphClkInitStruct.Spi123ClockSelection = OMV_OSC_SPI123_CLKSOURCE;
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
     PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
     PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_PLL2;
