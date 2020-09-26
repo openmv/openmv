@@ -76,11 +76,12 @@
 // Core VBAT for selftests
 #define OMV_CORE_VBAT           "3.0"
 
-//PLL1 480MHz/48MHz for USB, SDMMC and FDCAN
+// PLL1 400MHz/40MHz for SDMMC and FDCAN
+// USB and RNG are clocked from the HSI48
 #define OMV_OSC_PLL1M           (5)
 #define OMV_OSC_PLL1N           (160)
 #define OMV_OSC_PLL1P           (2)
-#define OMV_OSC_PLL1Q           (10)
+#define OMV_OSC_PLL1Q           (20)
 #define OMV_OSC_PLL1R           (2)
 #define OMV_OSC_PLL1VCI         (RCC_PLL1VCIRANGE_2)
 #define OMV_OSC_PLL1VCO         (RCC_PLL1VCOWIDE)
