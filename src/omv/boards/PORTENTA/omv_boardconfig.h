@@ -113,8 +113,7 @@
 
 // HSE/HSI/CSI State
 #define OMV_OSC_HSE_STATE       (RCC_HSE_BYPASS)
-#define OMV_OSC_HSI_STATE       (RCC_HSI_OFF)
-#define OMV_OSC_CSI_STATE       (RCC_CSI_OFF)
+#define OMV_OSC_HSI48_STATE     (RCC_HSI48_ON)
 
 // Flash Latency
 #define OMV_FLASH_LATENCY       (FLASH_LATENCY_2)
