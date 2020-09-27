@@ -521,7 +521,7 @@ soft_reset:
     if (sdcard_is_present()) {
         // Init the vfs object
         vfs_fat->blockdev.flags = 0;
-        sdcard_init_vfs(vfs_fat, 1);
+        sdcard_init_vfs(vfs_fat, 0);
 
         // Try to mount the SD card
         FRESULT res = f_mount(&vfs_fat->fatfs);
