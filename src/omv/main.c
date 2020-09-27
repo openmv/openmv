@@ -393,9 +393,11 @@ FRESULT exec_boot_script(const char *path, bool selftest, bool interruptible)
         f_unlink(&vfs_fat->fatfs, path);
         storage_flush();
 
+        #ifdef OMV_SELF_TEST_SWD_ADDR
         // Set flag for SWD debugger.
         // Note: main.py does not use the frame buffer.
-        MAIN_FB()->bpp = 0xDEADBEEF;
+        OMV_SELF_TEST_SWD_ADDR = 0xDEADBEEF;
+        #endif
     }
 
     return f_res;

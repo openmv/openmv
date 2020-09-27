@@ -16,6 +16,9 @@
 #define OMV_BOARD_TYPE          "H7"
 #define OMV_UNIQUE_ID_ADDR      0x1FF1E800
 
+// Needed by the SWD JTAG testrig - located at the bottom of the frame buffer stack.
+#define OMV_SELF_TEST_SWD_ADDR  MAIN_FB()->bpp
+
 // Flash sectors for the bootloader.
 // Flash FS sector, main FW sector, max sector.
 #define OMV_FLASH_LAYOUT        {1, 2, 15}
