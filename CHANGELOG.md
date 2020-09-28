@@ -1,4 +1,22 @@
 # Change Log
+## [3.6.8](https://github.com/openmv/openmv/releases/tag/v3.6.8) (2020-9-28)
+* Add support for boards without image sensors.
+* Enable TensorFlow CMSIS-NN kernels.
+* Add UART and CAN support to RPC library.
+* Update example scripts.
+* Allow build-time configuration of clock sources, PLLs, sensors and modules.
+* Improve Arduino's Portenta board support.
+* Fix test jig bug.
+* Fix extra PLLs initialization in system config.
+* Fix FLIR alt configuration.
+* Fix sensor reset with the regulator turned off.
+* Fix uninitialized sensor timer struct field bug.
+* Fix JPEG image loading.
+* Fix broken debug build.
+* Fix FSYNC pin definition.
+* Fix DAC timed write bug on H7.
+* Fix WINC1500 open security bug.
+
 ## [3.6.7](https://github.com/openmv/openmv/releases/tag/v3.6.7) (2020-7-21)
 * Fix framebuffer bug introduced in 3.6.5.
 
