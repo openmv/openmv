@@ -134,6 +134,14 @@ ifeq ($(MICROPY_PY_ULAB), 1)
 MP_CFLAGS += -DMICROPY_PY_ULAB=1
 MICROPY_ARGS += MICROPY_PY_ULAB=1
 endif
+ifeq ($(MICROPY_PY_LWIP), 1)
+MP_CFLAGS += -DMICROPY_PY_LWIP=1
+MICROPY_ARGS += MICROPY_PY_LWIP=1
+endif
+ifeq ($(MICROPY_PY_NETWORK_CYW43), 1)
+MP_CFLAGS += -DMICROPY_PY_NETWORK_CYW43=1
+MICROPY_ARGS += MICROPY_PY_NETWORK_CYW43=1
+endif
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
@@ -393,7 +401,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	utils/sys_stdio_mphal.o     \
 	utils/gchelper_m3.o         \
 	libc/string0.o              \
-	netutils/netutils.o         \
+	netutils/*.o                \
 	timeutils/timeutils.o       \
 	berkeley-db-1.xx/btree/*.o  \
 	berkeley-db-1.xx/mpool/*.o  \
@@ -493,6 +501,29 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/ulab/,\
 	code/filter.o		\
 	code/compare.o		\
 	code/extras.o		\
+	)
+endif
+
+ifeq ($(MICROPY_PY_LWIP), 1)
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
+	lib/lwip/src/core/*.o      \
+	lib/lwip/src/core/*/*.o    \
+	lib/lwip/src/netif/*.o     \
+	lib/lwip/src/apps/*/*.o    \
+	extmod/modlwip.o           \
+	extmod/moduwebsocket.o     \
+	extmod/modwebrepl.o        \
+	)
+LIBS += $(MICROPY_DIR)/drivers/cyw43/libcyw43.a
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
+	sdio.o                  \
+	)
+endif
+
+ifeq ($(MICROPY_PY_NETWORK_CYW43), 1)
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
+	drivers/cyw43/*.o          \
+	extmod/network_cyw43.o     \
 	)
 endif
 
