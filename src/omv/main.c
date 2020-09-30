@@ -76,6 +76,12 @@
 #include "ini.h"
 #include "omv_boardconfig.h"
 
+#if MICROPY_PY_LWIP
+#include "lwip/init.h"
+#include "lwip/apps/mdns.h"
+#include "drivers/cyw43/cyw43.h"
+#endif
+
 int errno;
 extern char _vfs_buf;
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
@@ -496,6 +502,29 @@ soft_reset:
     sdcard_init();
     #endif
     rtc_init_start(false);
+    #if MICROPY_PY_LWIP
+    // lwIP doesn't allow to reinitialise itself by subsequent calls to this function
+    // because the system timeout list (next_timeout) is only ever reset by BSS clearing.
+    // So for now we only init the lwIP stack once on power-up.
+    if (first_soft_reset) {
+        lwip_init();
+    }
+    #if LWIP_MDNS_RESPONDER
+    mdns_resp_init();
+    #endif
+    systick_enable_dispatch(SYSTICK_DISPATCH_LWIP, mod_network_lwip_poll_wrapper);
+    #endif
+
+    #if MICROPY_PY_NETWORK_CYW43
+    {
+        cyw43_init(&cyw43_state);
+        uint8_t buf[8];
+        memcpy(&buf[0], "PYBD", 4);
+        mp_hal_get_mac_ascii(MP_HAL_MAC_WLAN0, 8, 4, (char *)&buf[4]);
+        cyw43_wifi_ap_set_ssid(&cyw43_state, 8, buf);
+        cyw43_wifi_ap_set_password(&cyw43_state, 8, (const uint8_t *)"pybd0123");
+    }
+    #endif
 
     pyb_usb_init0();
     MP_STATE_PORT(pyb_stdio_uart) = NULL;
