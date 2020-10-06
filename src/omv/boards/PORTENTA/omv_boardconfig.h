@@ -81,7 +81,7 @@
 #define OMV_OSC_PLL1M           (5)
 #define OMV_OSC_PLL1N           (160)
 #define OMV_OSC_PLL1P           (2)
-#define OMV_OSC_PLL1Q           (20)
+#define OMV_OSC_PLL1Q           (16)
 #define OMV_OSC_PLL1R           (2)
 #define OMV_OSC_PLL1VCI         (RCC_PLL1VCIRANGE_2)
 #define OMV_OSC_PLL1VCO         (RCC_PLL1VCOWIDE)
