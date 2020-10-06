@@ -716,6 +716,7 @@ soft_reset:
 
     // soft reset
     storage_flush();
+    mod_network_deinit();
     timer_deinit();
     i2c_deinit_all();
     spi_deinit_all();
