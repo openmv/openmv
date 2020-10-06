@@ -22,6 +22,12 @@
 #include "runtime.h"
 #include "omv_boardconfig.h"
 
+#if MICROPY_HW_USB_HS
+#define OTG_IRQn    (OTG_HS_IRQn)
+#else
+#define OTG_IRQn    (OTG_FS_IRQn)
+#endif
+
 static int xfer_bytes;
 static int xfer_length;
 static enum usbdbg_cmd cmd;
@@ -58,9 +64,9 @@ void usbdbg_set_script_running(bool running)
 inline void usbdbg_set_irq_enabled(bool enabled)
 {
     if (enabled) {
-        HAL_NVIC_EnableIRQ(OTG_FS_IRQn);
+        HAL_NVIC_EnableIRQ(OTG_IRQn);
     } else {
-        HAL_NVIC_DisableIRQ(OTG_FS_IRQn);
+        HAL_NVIC_DisableIRQ(OTG_IRQn);
     }
     __DSB(); __ISB();
 }
