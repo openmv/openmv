@@ -41,7 +41,6 @@ OPENMV = openmv
 BOOTLOADER = bootloader
 UVC = uvc
 FIRMWARE = firmware
-CYW43_FIRMWARE = cyw4343
 
 # Directories
 TOP_DIR=$(shell pwd)
@@ -658,7 +657,6 @@ $(FIRMWARE): FIRMWARE_OBJS
 	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(OMV_DIR)/stm32fxxx.ld.S > $(BUILD)/stm32fxxx.lds
 	$(CC) $(LDFLAGS) $(FIRM_OBJ) -o $(FW_DIR)/$(FIRMWARE).elf $(LIBS)
 	$(OBJCOPY) -Obinary -R .big_const* $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
-	$(OBJCOPY) -Obinary -j .big_const* $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(CYW43_FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
 # This target generates the bootloader. The bootloader binary is generated twice,
