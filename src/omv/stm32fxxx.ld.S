@@ -38,6 +38,9 @@ MEMORY
   DRAM (xrw)        : ORIGIN = OMV_DRAM_ORIGIN,     LENGTH = OMV_DRAM_LENGTH
   #endif
   FLASH_TEXT (rx)   : ORIGIN = OMV_TEXT_ORIGIN,     LENGTH = OMV_TEXT_LENGTH
+  #if defined(OMV_FLASH_EXT_ORIGIN)
+  FLASH_EXT (rx)    : ORIGIN = OMV_FLASH_EXT_ORIGIN, LENGTH = OMV_FLASH_EXT_LENGTH
+  #endif
 }
 
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
@@ -85,6 +88,17 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;         // define a global symbols at end of code
   } >FLASH_TEXT
+
+  #if defined(OMV_CYW43_MEMORY)
+  // This makes sure the symbol .big_const is at the same offset.
+  .big_const OMV_CYW43_MEMORY_OFFSET :
+  {
+    . = ALIGN(512);
+    *(.big_const*)
+    . = ALIGN(4);
+    _ebig_const = .;
+  } > OMV_CYW43_MEMORY
+  #endif
 
   .ARM.exidx :
   {
