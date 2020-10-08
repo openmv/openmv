@@ -89,6 +89,17 @@ SECTIONS
     _etext = .;         // define a global symbols at end of code
   } >FLASH_TEXT
 
+  #if defined(OMV_CYW43_MEMORY)
+  // This makes sure the symbol .big_const is at the same offset.
+  .big_const OMV_CYW43_MEMORY_OFFSET :
+  {
+    . = ALIGN(512);
+    *(.big_const*)
+    . = ALIGN(4);
+    _ebig_const = .;
+  } > OMV_CYW43_MEMORY
+  #endif
+
   .ARM.exidx :
   {
       *(.ARM.exidx*)

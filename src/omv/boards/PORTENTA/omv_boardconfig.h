@@ -132,6 +132,8 @@
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
 #define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // _fballoc_overlay memory.
 #define OMV_FB_OVERLAY_MEMORY_OFFSET    (480*1024)  // _fballoc_overlay
+#define OMV_CYW43_MEMORY        FLASH_EXT   // CYW43 firmware in external flash mmap'd flash.
+#define OMV_CYW43_MEMORY_OFFSET (0x90F00000)// Last Mbyte.
 
 #define OMV_FB_SIZE             (4M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (3M)       // minimum fb alloc size
