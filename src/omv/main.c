@@ -589,6 +589,13 @@ soft_reset:
         pyb_usb_storage_medium = PYB_USB_STORAGE_MEDIUM_FLASH;
     #if MICROPY_HW_ENABLE_SDCARD
     }
+    #if MICROPY_HW_HAS_FLASH
+    else {
+        // The storage should always be initialized on boards that have
+        // an external flash, to make sure the flash is memory-mapped.
+        storage_init();
+    }
+    #endif
     #endif
 
     // Mark FS as OpenMV disk.
