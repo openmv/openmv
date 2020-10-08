@@ -161,6 +161,8 @@
 #define OMV_AXI_SRAM_LENGTH     512K
 #define OMV_DRAM_ORIGIN         0xC0000000
 #define OMV_DRAM_LENGTH         8M
+#define OMV_FLASH_EXT_ORIGIN    0x90000000
+#define OMV_FLASH_EXT_LENGTH    16M
 #define OMV_FB_OVERLAY_MEMORY_ORIGIN    OMV_AXI_SRAM_ORIGIN
 
 // Use the MPU to set an uncacheable memory region.
