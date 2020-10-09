@@ -137,8 +137,8 @@
 
 #define OMV_FB_SIZE             (4M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (3M)       // minimum fb alloc size
-#define OMV_STACK_SIZE          (15K)
-#define OMV_HEAP_SIZE           (224K)
+#define OMV_STACK_SIZE          (32K)
+#define OMV_HEAP_SIZE           (212K)
 #define OMV_SDRAM_SIZE          (8 * 1024 * 1024) // This needs to be here for UVC firmware.
 #define OMV_SDRAM_TEST          (0)
 
@@ -154,9 +154,7 @@
 #define OMV_DTCM_ORIGIN         0x20000000  // Note accessible by CPU and MDMA only.
 #define OMV_DTCM_LENGTH         128K
 #define OMV_SRAM1_ORIGIN        0x30000000
-#define OMV_SRAM1_LENGTH        256K
-#define OMV_SRAM3_ORIGIN        0x30040000
-#define OMV_SRAM3_LENGTH        32K
+#define OMV_SRAM1_LENGTH        288K
 #define OMV_SRAM4_ORIGIN        0x38000000
 #define OMV_SRAM4_LENGTH        64K
 #define OMV_AXI_SRAM_ORIGIN     0x24000000
