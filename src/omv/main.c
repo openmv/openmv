@@ -508,15 +508,15 @@ soft_reset:
     // So for now we only init the lwIP stack once on power-up.
     if (first_soft_reset) {
         lwip_init();
+        #if LWIP_MDNS_RESPONDER
+        mdns_resp_init();
+        #endif
+        systick_enable_dispatch(SYSTICK_DISPATCH_LWIP, mod_network_lwip_poll_wrapper);
     }
-    #if LWIP_MDNS_RESPONDER
-    mdns_resp_init();
-    #endif
-    systick_enable_dispatch(SYSTICK_DISPATCH_LWIP, mod_network_lwip_poll_wrapper);
     #endif
 
     #if MICROPY_PY_NETWORK_CYW43
-    {
+    if (first_soft_reset) {
         cyw43_init(&cyw43_state);
         uint8_t buf[8];
         memcpy(&buf[0], "PYBD", 4);
