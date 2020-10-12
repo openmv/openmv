@@ -1,4 +1,9 @@
 # Change Log
+## [3.6.9](https://github.com/openmv/openmv/releases/tag/v3.6.9) (2020-10-12)
+* Enable LWIP and CYW4343.
+* Fix major issues with Portenta build.
+* Fix issues with QSPI and MPU mode.
+
 ## [3.6.8](https://github.com/openmv/openmv/releases/tag/v3.6.8) (2020-9-28)
 * Add support for boards without image sensors.
 * Enable TensorFlow CMSIS-NN kernels.
