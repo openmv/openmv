@@ -31,10 +31,12 @@ void py_helper_keyword_rectangle_roi(image_t *img, uint n_args, const mp_obj_t *
                                      mp_map_t *kw_args, rectangle_t *r);
 int py_helper_keyword_int(uint n_args, const mp_obj_t *args, uint arg_index,
                           mp_map_t *kw_args, mp_obj_t kw, int default_val);
-int py_helper_keyword_int_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
-                                mp_map_t *kw_args, mp_obj_t kw, int* value);
+bool py_helper_keyword_int_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
+                                 mp_map_t *kw_args, mp_obj_t kw, int* value);
 float py_helper_keyword_float(uint n_args, const mp_obj_t *args, uint arg_index,
                               mp_map_t *kw_args, mp_obj_t kw, float default_val);
+bool py_helper_keyword_float_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
+                                   mp_map_t *kw_args, mp_obj_t kw, float* value);
 void py_helper_keyword_int_array(uint n_args, const mp_obj_t *args, uint arg_index,
                                  mp_map_t *kw_args, mp_obj_t kw, int *x, int size);
 void py_helper_keyword_float_array(uint n_args, const mp_obj_t *args, uint arg_index,

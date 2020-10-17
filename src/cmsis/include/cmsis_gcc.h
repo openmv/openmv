@@ -46,9 +46,9 @@
 #ifndef   __STATIC_INLINE
   #define __STATIC_INLINE                        static inline
 #endif
-#ifndef   __STATIC_FORCEINLINE                 
+#ifndef   __STATIC_FORCEINLINE
   #define __STATIC_FORCEINLINE                   __attribute__((always_inline)) static inline
-#endif                                           
+#endif
 #ifndef   __NO_RETURN
   #define __NO_RETURN                            __attribute__((__noreturn__))
 #endif
@@ -585,7 +585,7 @@ __STATIC_FORCEINLINE void __TZ_set_FAULTMASK_NS(uint32_t faultMask)
   Devices without ARMv8-M Main Extensions (i.e. Cortex-M23) lack the non-secure
   Stack Pointer Limit register hence zero is returned always in non-secure
   mode.
-  
+
   \details Returns the current value of the Process Stack Pointer Limit (PSPLIM).
   \return               PSPLIM Register value
  */
@@ -630,7 +630,7 @@ __STATIC_FORCEINLINE uint32_t __TZ_get_PSPLIM_NS(void)
   Devices without ARMv8-M Main Extensions (i.e. Cortex-M23) lack the non-secure
   Stack Pointer Limit register hence the write is silently ignored in non-secure
   mode.
-  
+
   \details Assigns the given value to the Process Stack Pointer Limit (PSPLIM).
   \param [in]    ProcStackPtrLimit  Process Stack Pointer Limit value to set
  */
@@ -767,7 +767,7 @@ __STATIC_FORCEINLINE uint32_t __get_FPSCR(void)
 {
 #if ((defined (__FPU_PRESENT) && (__FPU_PRESENT == 1U)) && \
      (defined (__FPU_USED   ) && (__FPU_USED    == 1U))     )
-#if __has_builtin(__builtin_arm_get_fpscr) 
+#if __has_builtin(__builtin_arm_get_fpscr)
 // Re-enable using built-in when GCC has been fixed
 // || (__GNUC__ > 7) || (__GNUC__ == 7 && __GNUC_MINOR__ >= 2)
   /* see https://gcc.gnu.org/ml/gcc-patches/2017-04/msg00443.html */
@@ -1160,6 +1160,23 @@ __extension__ \
 
 
 /**
+  \brief   Signed Saturate
+  \details Saturates a signed value.
+  \param [in]  ARG1  Value to be saturated
+  \param [in]  ARG2  Bit position to saturate to (1..32)
+  \param [in]  ARG3  Right shift (0..31)
+  \return             Saturated value
+ */
+#define __SSAT_ASR(ARG1,ARG2,ARG3) \
+__extension__ \
+({                          \
+  int32_t __RES, __ARG1 = (ARG1); \
+  __ASM ("ssat %0, %1, %2, asr %3" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1), "I" (ARG3) ); \
+  __RES; \
+ })
+
+
+/**
   \brief   Unsigned Saturate
   \details Saturates an unsigned value.
   \param [in]  ARG1  Value to be saturated
@@ -1171,6 +1188,23 @@ __extension__ \
 ({                          \
   uint32_t __RES, __ARG1 = (ARG1); \
   __ASM ("usat %0, %1, %2" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1) ); \
+  __RES; \
+ })
+
+
+/**
+  \brief   Unsigned Saturate
+  \details Saturates an unsigned value.
+  \param [in]  ARG1  Value to be saturated
+  \param [in]  ARG2  Bit position to saturate to (0..31)
+  \param [in]  ARG3  Right shift (0..31)
+  \return             Saturated value
+ */
+#define __USAT_ASR(ARG1,ARG2,ARG3) \
+ __extension__ \
+({                          \
+  uint32_t __RES, __ARG1 = (ARG1); \
+  __ASM ("usat %0, %1, %2, asr %3" : "=r" (__RES) :  "I" (ARG2), "r" (__ARG1), "I" (ARG3) ); \
   __RES; \
  })
 
@@ -1863,12 +1897,28 @@ __STATIC_FORCEINLINE uint32_t __UXTB16(uint32_t op1)
   return(result);
 }
 
+__STATIC_FORCEINLINE uint32_t __UXTB16_RORn(uint32_t op1, uint32_t rotate)
+{
+  uint32_t result;
+
+  __ASM volatile ("uxtb16 %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  return result;
+}
+
 __STATIC_FORCEINLINE uint32_t __UXTAB16(uint32_t op1, uint32_t op2)
 {
   uint32_t result;
 
   __ASM volatile ("uxtab16 %0, %1, %2" : "=r" (result) : "r" (op1), "r" (op2) );
   return(result);
+}
+
+__STATIC_FORCEINLINE uint32_t __UXTAB_RORn(uint32_t op1, uint32_t op2, uint32_t rotate)
+{
+  uint32_t result;
+
+  __ASM volatile ("uxtab %0, %1, %2, ROR %3" : "=r" (result) : "r" (op1), "r" (op2), "i" (rotate) );
+  return result;
 }
 
 __STATIC_FORCEINLINE uint32_t __SXTB16(uint32_t op1)
@@ -1879,12 +1929,28 @@ __STATIC_FORCEINLINE uint32_t __SXTB16(uint32_t op1)
   return(result);
 }
 
+__STATIC_FORCEINLINE uint32_t __SXTB16_RORn(uint32_t op1, uint32_t rotate)
+{
+  uint32_t result;
+
+  __ASM volatile ("sxtb16 %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  return result;
+}
+
 __STATIC_FORCEINLINE uint32_t __SXTAB16(uint32_t op1, uint32_t op2)
 {
   uint32_t result;
 
   __ASM volatile ("sxtab16 %0, %1, %2" : "=r" (result) : "r" (op1), "r" (op2) );
   return(result);
+}
+
+__STATIC_FORCEINLINE uint32_t __SXTAB_RORn(uint32_t op1, uint32_t op2, uint32_t rotate)
+{
+  uint32_t result;
+
+  __ASM volatile ("sxtab %0, %1, %2, ROR %3" : "=r" (result) : "r" (op1), "r" (op2), "i" (rotate) );
+  return result;
 }
 
 __STATIC_FORCEINLINE uint32_t __SMUAD  (uint32_t op1, uint32_t op2)
@@ -2043,7 +2109,7 @@ __STATIC_FORCEINLINE  int32_t __QSUB( int32_t op1,  int32_t op2)
   return(result);
 }
 
-#if 0
+#if 1
 #define __PKHBT(ARG1,ARG2,ARG3) \
 ({                          \
   uint32_t __RES, __ARG1 = (ARG1), __ARG2 = (ARG2); \
@@ -2061,13 +2127,13 @@ __STATIC_FORCEINLINE  int32_t __QSUB( int32_t op1,  int32_t op2)
   __RES; \
  })
 #endif
-
+/*
 #define __PKHBT(ARG1,ARG2,ARG3)          ( ((((uint32_t)(ARG1))          ) & 0x0000FFFFUL) |  \
                                            ((((uint32_t)(ARG2)) << (ARG3)) & 0xFFFF0000UL)  )
 
 #define __PKHTB(ARG1,ARG2,ARG3)          ( ((((uint32_t)(ARG1))          ) & 0xFFFF0000UL) |  \
                                            ((((uint32_t)(ARG2)) >> (ARG3)) & 0x0000FFFFUL)  )
-
+*/
 __STATIC_FORCEINLINE int32_t __SMMLA (int32_t op1, int32_t op2, int32_t op3)
 {
  int32_t result;

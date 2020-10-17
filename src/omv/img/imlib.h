@@ -28,6 +28,9 @@
 #include "collections.h"
 #include "imlib_config.h"
 
+extern void *unaligned_2_to_1_memcpy(void *dest, void *src, size_t n);
+extern void *unaligned_memcpy(void *dest, void *src, size_t n);
+
 #define IM_LOG2_2(x)    (((x) &                0x2ULL) ? ( 2                        ) :             1) // NO ({ ... }) !
 #define IM_LOG2_4(x)    (((x) &                0xCULL) ? ( 2 +  IM_LOG2_2((x) >>  2)) :  IM_LOG2_2(x)) // NO ({ ... }) !
 #define IM_LOG2_8(x)    (((x) &               0xF0ULL) ? ( 4 +  IM_LOG2_4((x) >>  4)) :  IM_LOG2_4(x)) // NO ({ ... }) !
@@ -286,6 +289,50 @@ extern const int8_t yuv_table[196608];
 #define COLOR_RGB565_TO_U(pixel) imlib_rgb565_to_u(pixel)
 #define COLOR_RGB565_TO_V(pixel) imlib_rgb565_to_v(pixel)
 #endif
+
+#define RGB565_TO_R8_FAST(pixel) \
+({ \
+    __typeof__ (pixel) __pixel = (pixel); \
+    __pixel = __pixel & 0xF8; /* RGB565 byte reversal fix */ \
+    __pixel | (__pixel >> 5); \
+})
+
+#define RGB565_TO_G8_FAST(pixel) \
+({ \
+    __typeof__ (pixel) __pixel = (pixel); \
+    __pixel = (__REV16(__pixel) >> 3) & 0xFC; /* RGB565 byte reversal fix */ \
+    __pixel | (__pixel >> 6); \
+})
+
+#define RGB565_TO_B8_FAST(pixel) \
+({ \
+    __typeof__ (pixel) __pixel = (pixel); \
+    __pixel = (__pixel >> 5) & 0xF8; /* RGB565 byte reversal fix */ \
+    __pixel | (__pixel >> 5); \
+})
+
+#define RGB565_TO_Y_FAST(rgb565) \
+({ \
+    __typeof__ (rgb565) __rgb565 = (rgb565); \
+    int r = RGB565_TO_R8_FAST(__rgb565); \
+    int g = RGB565_TO_G8_FAST(__rgb565); \
+    int b = RGB565_TO_B8_FAST(__rgb565); \
+    ((r * 38) + (g * 75) + (b * 15)) >> 7; /* 0.299R + 0.587G + 0.114B */ \
+})
+
+#define Y_TO_RGB565_FAST(pixel) \
+({ \
+    __typeof__ (pixel) __pixel = (pixel); \
+    int __rb_pixel = (__pixel >> 3) & 0x3F; \
+    int __rgb_pixel =  (__rb_pixel * 0x0801) + ((__pixel << 3) & 0x7E0); \
+    __REV16(__rgb_pixel); /* RGB565 byte reversal fix */ \
+})
+
+#define Y_TO_RGB888_FAST(pixel) \
+({ \
+    __typeof__ (pixel) __pixel = (pixel); \
+    pixel * 0x010101; \
+})
 
 #define COLOR_LAB_TO_RGB565(l, a, b) imlib_lab_to_rgb(l, a, b)
 #define COLOR_YUV_TO_RGB565(y, u, v) imlib_yuv_to_rgb((y) + 128, u, v)
@@ -559,9 +606,6 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
     __typeof__ (image) _image = (image); \
     _row_ptr + ((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT); \
 })
-
-#define RGB565_TO_Y_FAST(pixel) \
-  (((pixel & 0x1f00) >> 5) + (pixel & 0xf8) + ((pixel & 0x7) << 6) + ((pixel & 0xe000) >> 10)) / 4;
 
 #define IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) \
 ({ \
@@ -1148,10 +1192,26 @@ typedef struct find_barcodes_list_lnk_data {
 } find_barcodes_list_lnk_data_t;
 
 typedef enum image_hint {
-    IMAGE_HINT_BILINEAR = 1,
-    IMAGE_HINT_CENTER = 128
+    IMAGE_HINT_AREA = 1,
+    IMAGE_HINT_BILINEAR = 2,
+    IMAGE_HINT_BICUBIC = 4,
+    IMAGE_HINT_CENTER = 128,
+    IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST = 256,
+    IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST = 512
 } image_hint_t;
 
+typedef struct imlib_draw_row_data {
+    image_t *dst_img; // user
+    int src_img_bpp; // user
+    int rgb_channel; // user
+    int alpha; // user
+    const uint16_t *color_palette; // user
+    const uint8_t *alpha_palette; // user
+    int toggle; // private
+    void *row_buffer[2]; // private
+    long smuad_alpha; // private
+    uint32_t *smuad_alpha_palette; // private
+} imlib_draw_row_data_t;
 
 /* Color space functions */
 int8_t imlib_rgb565_to_l(uint16_t pixel);
@@ -1284,6 +1344,11 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 
 // Helper Functions
 void imlib_zero(image_t *img, image_t *mask, bool invert);
+void imlib_draw_row_setup(imlib_draw_row_data_t *data);
+void imlib_draw_row_teardown(imlib_draw_row_data_t *data);
+void *imlib_draw_row_get_row_buffer(imlib_draw_row_data_t *data);
+void imlib_draw_row_put_row_buffer(imlib_draw_row_data_t *data, void *row_buffer);
+void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data);
 void imlib_flood_fill_int(image_t *out, image_t *img, int x, int y,
                           int seed_threshold, int floating_threshold,
                           flood_fill_call_back_t cb, void *data);
@@ -1297,8 +1362,8 @@ void imlib_draw_circle(image_t *img, int cx, int cy, int r, int c, int thickness
 void imlib_draw_ellipse(image_t *img, int cx, int cy, int rx, int ry, int rotation, int c, int thickness, bool fill);
 void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int c, float scale, int x_spacing, int y_spacing, bool mono_space,
                        int char_rotation, bool char_hmirror, bool char_vflip, int string_rotation, bool string_hmirror, bool string_hflip);
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask,
-                      const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint);
+void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int dst_y_start, float x_scale, float y_scale, rectangle_t *roi,
+                      int rgb_channel, int alpha, const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint);
 void imlib_flood_fill(image_t *img, int x, int y,
                       float seed_threshold, float floating_threshold,
                       int c, bool invert, bool clear_background, image_t *mask);

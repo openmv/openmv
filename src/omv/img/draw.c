@@ -431,576 +431,3369 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
     }
 }
 
-static int safe_map_pixel(int dst_bpp, int src_bpp, int pixel)
+#ifdef __IMLIB_ENABLE_DMA2D__
+DMA2D_HandleTypeDef dma2d;
+#endif
+
+void imlib_draw_row_setup(imlib_draw_row_data_t *data)
 {
-    switch (dst_bpp) {
-        case IMAGE_BPP_BINARY: {
-            switch (src_bpp) {
-                case IMAGE_BPP_BINARY: {
-                    return pixel;
-                }
-                case IMAGE_BPP_GRAYSCALE: {
-                    return COLOR_GRAYSCALE_TO_BINARY(pixel);
-                }
-                case IMAGE_BPP_RGB565: {
-                    return COLOR_RGB565_TO_BINARY(pixel);
-                }
-                default: {
-                    return 0;
-                }
-            }
-        }
+    size_t image_row_size = image_size(data->dst_img) / data->dst_img->h;
+
+    data->toggle = 0;
+    data->row_buffer[0] = fb_alloc(image_row_size, FB_ALLOC_NO_HINT);
+#ifdef __IMLIB_ENABLE_DMA2D__
+    data->row_buffer[1] = fb_alloc(image_row_size, FB_ALLOC_NO_HINT);
+#else
+    data->row_buffer[1] = data->row_buffer[0];
+#endif
+
+#ifdef __IMLIB_ENABLE_DMA2D__
+    dma2d.Init.Mode = DMA2D_M2M_BLEND;
+    dma2d.Init.ColorMode = DMA2D_OUTPUT_RGB565;
+    dma2d.Init.OutputOffset = 0;
+    dma2d.Init.AlphaInverted = DMA2D_REGULAR_ALPHA;
+    dma2d.Init.RedBlueSwap = DMA2D_RB_REGULAR;
+    HAL_DMA2D_Init(&dma2d);
+
+    dma2d.LayerCfg[DMA2D_BACKGROUND_LAYER].InputOffset = 0;
+    dma2d.LayerCfg[DMA2D_BACKGROUND_LAYER].InputColorMode = DMA2D_INPUT_RGB565;
+    dma2d.LayerCfg[DMA2D_BACKGROUND_LAYER].AlphaMode = DMA2D_NO_MODIF_ALPHA;
+    dma2d.LayerCfg[DMA2D_BACKGROUND_LAYER].InputAlpha = 0xff;
+    dma2d.LayerCfg[DMA2D_BACKGROUND_LAYER].AlphaInverted = DMA2D_REGULAR_ALPHA;
+    dma2d.LayerCfg[DMA2D_BACKGROUND_LAYER].RedBlueSwap = DMA2D_RB_REGULAR;
+    dma2d.LayerCfg[DMA2D_BACKGROUND_LAYER].ChromaSubSampling = DMA2D_NO_CSS;
+    HAL_DMA2D_ConfigLayer(&dma2d, DMA2D_BACKGROUND_LAYER);
+
+    switch (data->src_img_bpp) {
         case IMAGE_BPP_GRAYSCALE: {
-            switch (src_bpp) {
-                case IMAGE_BPP_BINARY: {
-                    return COLOR_BINARY_TO_GRAYSCALE(pixel);
+            dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].InputColorMode = DMA2D_INPUT_L8;
+            dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].AlphaMode = DMA2D_COMBINE_ALPHA;
+            uint32_t *clut = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_NO_HINT);
+
+            if (!data->alpha_palette) {
+                if (!data->color_palette) {
+                    for (int i = 0; i < 256; i++) {
+                        clut[i] = (0xff << 24) | Y_TO_RGB888_FAST(i);
+                    }
+                } else {
+                    for (int i = 0; i < 256; i++) {
+                        int pixel = color_palette[i];
+                        clut[i] = (0xff << 24) | (RGB565_TO_R8_FAST(pixel) << 16) | (RGB565_TO_G8_FAST(pixel) << 8) | RGB565_TO_B8_FAST(pixel);
+                    }
                 }
-                case IMAGE_BPP_GRAYSCALE: {
-                    return pixel;
-                }
-                case IMAGE_BPP_RGB565: {
-                    return COLOR_RGB565_TO_GRAYSCALE(pixel);
-                }
-                default: {
-                    return 0;
+            } else {
+                if (!data->color_palette) {
+                    for (int i = 0; i < 256; i++) {
+                        clut[i] = (alpha_palette[i] << 24) | Y_TO_RGB888_FAST(i);
+                    }
+                } else {
+                    for (int i = 0; i < 256; i++) {
+                        int pixel = color_palette[i];
+                        clut[i] = (alpha_palette[i] << 24) | (RGB565_TO_R8_FAST(pixel) << 16) | (RGB565_TO_G8_FAST(pixel) << 8) | RGB565_TO_B8_FAST(pixel);
+                    }
                 }
             }
+
+            DMA2D_CLUTCfgTypeDef cfg;
+            cfg.pCLUT = clut;
+            cfg.CLUTColorMode = DMA2D_CCM_ARGB8888;
+            cfg.size = 256;
+            HAL_DMA2D_CLUTLoad(&dma2d, &cfg, DMA2D_FOREGROUND_LAYER);
+            HAL_DMA2D_PollForTransfer(&dma2d, HAL_MAX_DELAY);
+            break;
         }
         case IMAGE_BPP_RGB565: {
-            switch (src_bpp) {
+            dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].InputColorMode = DMA2D_INPUT_RGB565;
+            dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].AlphaMode = DMA2D_REPLACE_ALPHA;
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].InputOffset = 0;
+    dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].InputAlpha = fast_roundf(data->alpha * 255.f) / 256;
+    dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].AlphaInverted = DMA2D_REGULAR_ALPHA;
+    dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].RedBlueSwap = DMA2D_RB_REGULAR;
+    dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].ChromaSubSampling = DMA2D_NO_CSS;
+    HAL_DMA2D_ConfigLayer(&dma2d, DMA2D_FOREGROUND_LAYER);
+#endif
+
+    int alpha = data->alpha, max = 256;
+
+    if (data->dst_img->bpp == IMAGE_BPP_RGB565) {
+        alpha >>= 3; // 5-bit alpha for RGB565
+        max = 32;
+    }
+
+    data->smuad_alpha = (alpha << 16) | (max - alpha);
+
+    if (data->alpha_palette) {
+        data->smuad_alpha_palette = fb_alloc(256 * sizeof(uint32_t), FB_ALLOC_NO_HINT);
+
+        for (int i = 0, a = alpha; i < 256; i++) {
+            int new_alpha = fast_roundf((a * data->alpha_palette[i]) / 255.f);
+            data->smuad_alpha_palette[i] = (new_alpha << 16) | (max - new_alpha);
+        }
+    } else {
+        data->smuad_alpha_palette = NULL;
+    }
+}
+
+void imlib_draw_row_teardown(imlib_draw_row_data_t *data)
+{
+    if (data->smuad_alpha_palette) fb_free();
+#ifdef __IMLIB_ENABLE_DMA2D__
+    if (data->src_img_bpp == IMAGE_BPP_GRAYSCALE) fb_free();
+    HAL_DMA2D_PollForTransfer(&dma2d, HAL_MAX_DELAY);
+    HAL_DMA2D_DeInit(&dma2d);
+    SCB_InvalidateDCache_by_Addr((uint32_t*) data->dst_img->data, image_size(data->dst_img));
+    fb_free(); // data->row_buffer[1]
+#endif
+    fb_free(); // data->row_buffer[0]
+}
+
+void *imlib_draw_row_get_row_buffer(imlib_draw_row_data_t *data)
+{
+    void *result = data->row_buffer[data->toggle];
+    data->toggle = !data->toggle;
+    return result;
+}
+
+void imlib_draw_row_put_row_buffer(imlib_draw_row_data_t *data, void *row_buffer)
+{
+    data->row_buffer[data->toggle] = row_buffer;
+    data->toggle = !data->toggle;
+}
+
+// Draws (x_end - x_start) pixels.
+// src width must be equal to dst width.
+void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data)
+{
+    #define BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha) \
+    ({ \
+        __typeof__ (src_pixel) _src_pixel = (src_pixel); \
+        __typeof__ (dst_pixel) _dst_pixel = (dst_pixel); \
+        _src_pixel = __REV16(_src_pixel); /* RGB565 byte reversal fix */ \
+        _dst_pixel = __REV16(_dst_pixel); /* RGB565 byte reversal fix */ \
+        const long mask_r = 0x7c007c00, mask_g = 0x07e007e0, mask_b = 0x001f001f; \
+        uint32_t rgb = (_src_pixel << 16) | _dst_pixel; \
+        long rb = ((rgb >> 1) & mask_r) | (rgb & mask_b); \
+        long g = rgb & mask_g; \
+        int rb_out = __SMUAD(smuad_alpha, rb) >> 5; \
+        int g_out = __SMUAD(smuad_alpha, g) >> 5; \
+        int pixel = ((rb_out << 1) & 0xf800) | (g_out & 0x07e0) | (rb_out & 0x001f); \
+        pixel = __REV16(pixel); /* RGB565 byte reversal fix */ \
+    })
+
+    switch (data->dst_img->bpp) {
+        case IMAGE_BPP_BINARY: {
+            uint32_t *dst32 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(data->dst_img, y_row);
+            switch (data->src_img_bpp) {
                 case IMAGE_BPP_BINARY: {
-                    return COLOR_BINARY_TO_RGB565(pixel);
+                    uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
+                    if (data->smuad_alpha_palette) {
+                        const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                        if (!data->color_palette) {
+                            uint32_t alpha_pal0 = smuad_alpha_palette[0], alpha_pal255 = smuad_alpha_palette[255];
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                long smuad_alpha = pixel ? alpha_pal255 : alpha_pal0;
+                                long smuad_pixel = ((pixel ? 0xff : 0x00) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint32_t alpha_pal0 = smuad_alpha_palette[0], alpha_pal255 = smuad_alpha_palette[255];
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            pal0 = RGB565_TO_Y_FAST(pal0);
+                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                long smuad_alpha = pixel ? alpha_pal255 : alpha_pal0;
+                                long smuad_pixel = ((pixel ? pal255 : pal0) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        }
+                    } else if (data->alpha == 256) {
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            pal0 = RGB565_TO_Y_FAST(pal0) > 127;
+                            pal255 = RGB565_TO_Y_FAST(pal255) > 127;
+                            switch ((pal0 << 1) | (pal255 << 0)) {
+                                case 0: {
+                                    for (int x = x_start; x < x_end; x++) {
+                                        IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, 0);
+                                    }
+                                    break;
+                                }
+                                case 1: {
+                                    for (int x = x_start; x < x_end; x++) {
+                                        int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                        IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                    }
+                                    break;
+                                }
+                                case 2: {
+                                    for (int x = x_start; x < x_end; x++) {
+                                        int pixel = !IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                        IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                    }
+                                    break;
+                                }
+                                case 3: {
+                                    for (int x = x_start; x < x_end; x++) {
+                                        IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, 1);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        long smuad_alpha = data->smuad_alpha;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                long smuad_pixel = ((IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? 0xff : 0x00) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                int pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            pal0 = RGB565_TO_Y_FAST(pal0);
+                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? pal255 : pal0;
+                                long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        }
+                        // More desirable results are produced by alpha blending with 8-bits.
+                        // if (!data->color_palette) {
+                        //     for (int x = x_start; x < x_end; x++) {
+                        //         int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) & IMAGE_GET_BINARY_PIXEL_FAST(dst32, x);
+                        //         IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                        //     }
+                        // } else {
+                        //     const uint16_t *color_palette = data->color_palette;
+                        //     uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                        //     pal0 = RGB565_TO_Y_FAST(pal0) > 127;
+                        //     pal255 = RGB565_TO_Y_FAST(pal255) > 127;
+                        //     switch ((pal0 << 1) | (pal255 << 0)) {
+                        //         case 0: {
+                        //             for (int x = x_start; x < x_end; x++) {
+                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, 0);
+                        //             }
+                        //             break;
+                        //         }
+                        //         case 1: {
+                        //             for (int x = x_start; x < x_end; x++) {
+                        //                 int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) & IMAGE_GET_BINARY_PIXEL_FAST(dst32, x);
+                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                        //             }
+                        //             break;
+                        //         }
+                        //         case 2: {
+                        //             for (int x = x_start; x < x_end; x++) {
+                        //                 int pixel = !(IMAGE_GET_BINARY_PIXEL_FAST(src32, x) | IMAGE_GET_BINARY_PIXEL_FAST(dst32, x));
+                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                        //             }
+                        //             break;
+                        //         }
+                        //         case 3: {
+                        //             for (int x = x_start; x < x_end; x++) {
+                        //                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, 1);
+                        //             }
+                        //             break;
+                        //         }
+                        //     }
+                        // }
+                    }
+                    break;
                 }
                 case IMAGE_BPP_GRAYSCALE: {
-                    return COLOR_GRAYSCALE_TO_RGB565(pixel);
+                    uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
+                    if (data->smuad_alpha_palette) {
+                        const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = *src8++;
+                                long smuad_alpha = smuad_alpha_palette[pixel];
+                                long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = *src8++;
+                                long smuad_alpha = smuad_alpha_palette[pixel];
+                                pixel = color_palette[pixel];
+                                pixel = RGB565_TO_Y_FAST(pixel);
+                                long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        }
+                    } else if (data->alpha == 256) {
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = *src8++ > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = color_palette[*src8++];
+                                pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        }
+                    } else {
+                        long smuad_alpha = data->smuad_alpha;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                long smuad_pixel = (*src8++ << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                int pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = color_palette[*src8++];
+                                pixel = RGB565_TO_Y_FAST(pixel);
+                                long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                            }
+                        }
+                    }
+                    break;
                 }
                 case IMAGE_BPP_RGB565: {
-                    return pixel;
+                    uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
+                    if (data->rgb_channel < 0) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_Y_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel];
+                                    long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_Y_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    pixel = color_palette[pixel_y];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_Y_FAST(pixel)];
+                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_Y_FAST(pixel)];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 0) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_R8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel];
+                                    long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_R8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    pixel = color_palette[pixel_y];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_R8_FAST(pixel) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_R8_FAST(pixel)];
+                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    long smuad_pixel = (RGB565_TO_R8_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_R8_FAST(pixel)];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 1) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_G8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel];
+                                    long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_G8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    pixel = color_palette[pixel_y];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_G8_FAST(pixel) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_G8_FAST(pixel)];
+                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    long smuad_pixel = (RGB565_TO_G8_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_G8_FAST(pixel)];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 2) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_B8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel];
+                                    long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_B8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    pixel = color_palette[pixel_y];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_B8_FAST(pixel) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_B8_FAST(pixel)];
+                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    long smuad_pixel = (RGB565_TO_B8_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_B8_FAST(pixel)];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
+                                    IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
+                                }
+                            }
+                        }
+                    }
+                    break;
                 }
                 default: {
-                    return 0;
+                    break;
                 }
             }
-        }
-        default: {
-            return 0;
-        }
-    }
-}
-
-/**
- * Blend two RGB888 format pixels using alpha.
- * NOTE:
- *   Interpolating RGB is not a good way of blending colors as it can generate colors that aren't in the original image.
- *   It's better to blend by transforming to another color space then interpolate, but that may slow things down.
- *   We could implement a better blend at a later date using a hint like image.BLEND_USING_HSV.
- *
- * @param background_pixel Background pixel value in RGB888
- * @param foreground_pixel Foreground pixel value in RGB888
- * @param alpha Foreground alpha 0->128
- * @param alpha_complement 128 minues Foreground alpha
- * @return Blended pixel in RGB888 format
- */
-uint32_t draw_blendop_rgb888(uint32_t background_pixel, uint32_t foreground_pixel, uint32_t alpha, uint32_t alpha_complement)
-{
-    // rrrrrrrrggggggggbbbbbbbb
-    uint32_t frb = foreground_pixel & 0xFF00FF;
-    // rrrrrrrr........bbbbbbbb
-    uint32_t fg = (foreground_pixel >> 8) & 255;
-    // ................gggggggg
-    uint32_t brb = background_pixel & 0xFF00FF;
-    // rrrrrrrr........bbbbbbbb
-    uint32_t bg = (background_pixel >> 8) & 255;
-    // ................gggggggg
-
-    uint32_t rb = (frb * alpha + brb * alpha_complement) >> 7;
-    uint32_t g = (fg * alpha + bg * alpha_complement) >> 7;
-
-    return (rb & 0xFF00FF) + (g << 8);
-}
-
-/**
- * Scale an RGB565 format pixel returning an RGB888 result.
- *
- * @param pixel RGB565 pixel to scale.
- * @param scale Amount to scale 0->128
- * @return Scaled pixel as RGB888
- */
-uint32_t draw_scaleop_RGB565_to_RGB888(uint32_t pixel, uint32_t scale)
-{
-    uint32_t vr = COLOR_RGB565_TO_R8(pixel);
-    uint32_t vg = COLOR_RGB565_TO_G8(pixel);
-    uint32_t vb = COLOR_RGB565_TO_B8(pixel);
-
-    // Scale is 0->128 so we shift right 7
-    uint32_t r = (vr * scale) >> 7;
-    uint32_t g = (vg * scale) >> 7;
-    uint32_t b = (vb * scale) >> 7;
-    
-    return (r << 16) + (g << 8) + b;
-}
-
-/**
- * Convert a pixel to binary.
- * Used by interpolation cache line methods to convert mask to bitmap.
- *
- * @param bpp Bits per pixel of pixel.
- * @param pixel Pixel value.
- * @return pixel in binary format.
- */
-inline bool imlib_pixel_to_binary(int bpp, uint32_t pixel)
-{
-    switch (bpp) {
-        case IMAGE_BPP_BINARY: {
-            return pixel;
+            break;
         }
         case IMAGE_BPP_GRAYSCALE: {
-            return COLOR_GRAYSCALE_TO_BINARY(pixel);
+            uint8_t *dst8 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(data->dst_img, y_row) + x_start;
+            switch (data->src_img_bpp) {
+                case IMAGE_BPP_BINARY: {
+                    uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
+                    if (data->smuad_alpha_palette) {
+                        const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                        if (!data->color_palette) {
+                            uint32_t alpha_pal0 = smuad_alpha_palette[0], alpha_pal255 = smuad_alpha_palette[255];
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                long smuad_alpha = pixel ? alpha_pal255 : alpha_pal0;
+                                long smuad_pixel = ((pixel ? 0xff : 0x00) << 16) | *dst8;
+                                *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint32_t alpha_pal0 = smuad_alpha_palette[0], alpha_pal255 = smuad_alpha_palette[255];
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            pal0 = RGB565_TO_Y_FAST(pal0);
+                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                long smuad_alpha = pixel ? alpha_pal255 : alpha_pal0;
+                                long smuad_pixel = ((pixel ? pal255 : pal0) << 16) | *dst8;
+                                *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                            }
+                        }
+                    } else if (data->alpha == 256) {
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                *dst8++ = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? 0xff : 0x00;
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            pal0 = RGB565_TO_Y_FAST(pal0);
+                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            for (int x = x_start; x < x_end; x++) {
+                                *dst8++ = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? pal255 : pal0;
+                            }
+                        }
+                    } else {
+                        long smuad_alpha = data->smuad_alpha;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                long smuad_pixel = ((IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? 0xff : 0x00) << 16) | *dst8;
+                                *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            pal0 = RGB565_TO_Y_FAST(pal0);
+                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            for (int x = x_start; x < x_end; x++) {
+                                long smuad_pixel = ((IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? pal255 : pal0) << 16) | *dst8;
+                                *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                            }
+                        }
+                    }
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
+                    if (data->smuad_alpha_palette) {
+                        const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = *src8++;
+                                long smuad_alpha = smuad_alpha_palette[pixel];
+                                long smuad_pixel = (pixel << 16) | *dst8;
+                                *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = *src8++;
+                                long smuad_alpha = smuad_alpha_palette[pixel];
+                                pixel = color_palette[pixel];
+                                long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                            }
+                        }
+                    } else if (data->alpha == 256) {
+                        if (!data->color_palette) {
+                            unaligned_memcpy(dst8 , src8, (x_end - x_start) * sizeof(uint8_t));
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = color_palette[*src8++];
+                                *dst8++ = RGB565_TO_Y_FAST(pixel);
+                            }
+                        }
+                    } else {
+                        long smuad_alpha = data->smuad_alpha;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                long smuad_pixel = (*src8++ << 16) | *dst8;
+                                *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = color_palette[*src8++];
+                                long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                            }
+                        }
+                    }
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
+                    if (data->rgb_channel < 0) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_Y_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    long smuad_pixel = (pixel_y << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_Y_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    pixel = color_palette[pixel_y];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_Y_FAST(pixel)];
+                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_Y_FAST(pixel)];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 0) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_R8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    long smuad_pixel = (pixel_y << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_R8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    pixel = color_palette[pixel_y];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    *dst8++ = RGB565_TO_R8_FAST(pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_R8_FAST(pixel)];
+                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    long smuad_pixel = (RGB565_TO_R8_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_R8_FAST(pixel)];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 1) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_G8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    long smuad_pixel = (pixel_y << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_G8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    pixel = color_palette[pixel_y];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    *dst8++ = RGB565_TO_G8_FAST(pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_G8_FAST(pixel)];
+                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    long smuad_pixel = (RGB565_TO_G8_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_G8_FAST(pixel)];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 2) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_B8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    long smuad_pixel = (pixel_y << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    int pixel_y = RGB565_TO_B8_FAST(pixel);
+                                    long smuad_alpha = smuad_alpha_palette[pixel_y];
+                                    pixel = color_palette[pixel_y];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    *dst8++ = RGB565_TO_B8_FAST(pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_B8_FAST(pixel)];
+                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    long smuad_pixel = (RGB565_TO_B8_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = color_palette[RGB565_TO_B8_FAST(pixel)];
+                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            break;
         }
         case IMAGE_BPP_RGB565: {
-            return COLOR_RGB565_TO_BINARY(pixel);
+            uint16_t *dst16 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(data->dst_img, y_row) + x_start;
+            switch (data->src_img_bpp) {
+                case IMAGE_BPP_BINARY: {
+                    uint32_t *src32 = (uint32_t *) data->row_buffer[!data->toggle];
+                    if (data->smuad_alpha_palette) {
+                        const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                        if (!data->color_palette) {
+                            uint32_t alpha_pal0 = smuad_alpha_palette[0], alpha_pal255 = smuad_alpha_palette[255];
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                long smuad_alpha = pixel ? alpha_pal255 : alpha_pal0;
+                                int src_pixel = pixel ? 0xffff : 0x0000;
+                                int dst_pixel = *dst16;
+                                *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint32_t alpha_pal0 = smuad_alpha_palette[0], alpha_pal255 = smuad_alpha_palette[255];
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
+                                long smuad_alpha = pixel ? alpha_pal255 : alpha_pal0;
+                                int src_pixel = pixel ? pal255 : pal0;
+                                int dst_pixel = *dst16;
+                                *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                            }
+                        }
+                    } else if (data->alpha == 256) {
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                *dst16++ = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? 0xffff : 0x0000;
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            for (int x = x_start; x < x_end; x++) {
+                                *dst16++ = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? pal255 : pal0;
+                            }
+                        }
+                    } else {
+                        long smuad_alpha = data->smuad_alpha;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                int src_pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? 0xffff : 0x0000;
+                                int dst_pixel = *dst16;
+                                *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
+                            for (int x = x_start; x < x_end; x++) {
+                                int src_pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? pal255 : pal0;
+                                int dst_pixel = *dst16;
+                                *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                            }
+                        }
+                    }
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    uint8_t *src8 = ((uint8_t *) data->row_buffer[!data->toggle]) + x_start;
+#ifdef __IMLIB_ENABLE_DMA2D__
+                    HAL_DMA2D_PollForTransfer(&dma2d, HAL_MAX_DELAY);
+                    HAL_DMA2D_BlendingStart(&dma2d, src8, dst16, dst16, x_end - x_start, 1);
+#else
+                    if (data->smuad_alpha_palette) {
+                        const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                int src_pixel = *src8++;
+                                long smuad_alpha = smuad_alpha_palette[src_pixel];
+                                src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                int dst_pixel = *dst16;
+                                *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                int src_pixel = *src8++;
+                                long smuad_alpha = smuad_alpha_palette[src_pixel];
+                                src_pixel = color_palette[src_pixel];
+                                int dst_pixel = *dst16;
+                                *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                            }
+                        }
+                    } else if (data->alpha == 256) {
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                int pixel = *src8++;
+                                *dst16++ = Y_TO_RGB565_FAST(pixel);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                *dst16++ = color_palette[*src8++];
+                            }
+                        }
+                    } else {
+                        long smuad_alpha = data->smuad_alpha;
+                        if (!data->color_palette) {
+                            for (int x = x_start; x < x_end; x++) {
+                                int src_pixel = *src8++;
+                                src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                int dst_pixel = *dst16;
+                                *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                            }
+                        } else {
+                            const uint16_t *color_palette = data->color_palette;
+                            for (int x = x_start; x < x_end; x++) {
+                                int src_pixel = color_palette[*src8++];
+                                int dst_pixel = *dst16;
+                                *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                            }
+                        }
+                    }
+#endif
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    uint16_t *src16 = ((uint16_t *) data->row_buffer[!data->toggle]) + x_start;
+                    if (data->rgb_channel < 0) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    long smuad_alpha = smuad_alpha_palette[RGB565_TO_Y_FAST(src_pixel)];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    int src_pixel_y = RGB565_TO_Y_FAST(src_pixel);
+                                    long smuad_alpha = smuad_alpha_palette[src_pixel_y];
+                                    src_pixel = color_palette[src_pixel_y];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+#ifdef __IMLIB_ENABLE_DMA2D__
+                                HAL_DMA2D_PollForTransfer(&dma2d, HAL_MAX_DELAY);
+                                HAL_DMA2D_Start(&dma2d, src16, dst16, x_end - x_start, 1);
+#else
+                                unaligned_memcpy(dst16, src16, (x_end - x_start) * sizeof(uint16_t));
+#endif
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    *dst16++ = color_palette[RGB565_TO_Y_FAST(pixel)];
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+#ifdef __IMLIB_ENABLE_DMA2D__
+                                HAL_DMA2D_PollForTransfer(&dma2d, HAL_MAX_DELAY);
+                                HAL_DMA2D_BlendingStart(&dma2d, src16, dst16, dst16, x_end - x_start, 1);
+#else
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+#endif
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    src_pixel = color_palette[RGB565_TO_Y_FAST(src_pixel)];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 0) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    int src_pixel_y = RGB565_TO_R8_FAST(src_pixel);
+                                    long smuad_alpha = smuad_alpha_palette[src_pixel_y];
+                                    src_pixel = Y_TO_RGB565_FAST(src_pixel_y);
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    int src_pixel_y = RGB565_TO_R8_FAST(src_pixel);
+                                    long smuad_alpha = smuad_alpha_palette[src_pixel_y];
+                                    src_pixel = color_palette[src_pixel_y];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_R8_FAST(pixel);
+                                    *dst16++ = Y_TO_RGB565_FAST(pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    *dst16++ = color_palette[RGB565_TO_R8_FAST(pixel)];
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    src_pixel = RGB565_TO_R8_FAST(src_pixel);
+                                    src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    src_pixel = color_palette[RGB565_TO_R8_FAST(src_pixel)];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 1) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    int src_pixel_y = RGB565_TO_G8_FAST(src_pixel);
+                                    long smuad_alpha = smuad_alpha_palette[src_pixel_y];
+                                    src_pixel = Y_TO_RGB565_FAST(src_pixel_y);
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    int src_pixel_y = RGB565_TO_G8_FAST(src_pixel);
+                                    long smuad_alpha = smuad_alpha_palette[src_pixel_y];
+                                    src_pixel = color_palette[src_pixel_y];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_G8_FAST(pixel);
+                                    *dst16++ = Y_TO_RGB565_FAST(pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    *dst16++ = color_palette[RGB565_TO_G8_FAST(pixel)];
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    src_pixel = RGB565_TO_G8_FAST(src_pixel);
+                                    src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    src_pixel = color_palette[RGB565_TO_G8_FAST(src_pixel)];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            }
+                        }
+                    } else if (data->rgb_channel == 2) {
+                        if (data->smuad_alpha_palette) {
+                            const uint32_t *smuad_alpha_palette = data->smuad_alpha_palette;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    int src_pixel_y = RGB565_TO_B8_FAST(src_pixel);
+                                    long smuad_alpha = smuad_alpha_palette[src_pixel_y];
+                                    src_pixel = Y_TO_RGB565_FAST(src_pixel_y);
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    int src_pixel_y = RGB565_TO_B8_FAST(src_pixel);
+                                    long smuad_alpha = smuad_alpha_palette[src_pixel_y];
+                                    src_pixel = color_palette[src_pixel_y];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            }
+                        } else if (data->alpha == 256) {
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    pixel = RGB565_TO_B8_FAST(pixel);
+                                    *dst16++ = Y_TO_RGB565_FAST(pixel);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int pixel = *src16++;
+                                    *dst16++ = color_palette[RGB565_TO_B8_FAST(pixel)];
+                                }
+                            }
+                        } else {
+                            long smuad_alpha = data->smuad_alpha;
+                            if (!data->color_palette) {
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    src_pixel = RGB565_TO_B8_FAST(src_pixel);
+                                    src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            } else {
+                                const uint16_t *color_palette = data->color_palette;
+                                for (int x = x_start; x < x_end; x++) {
+                                    int src_pixel = *src16++;
+                                    src_pixel = color_palette[RGB565_TO_B8_FAST(src_pixel)];
+                                    int dst_pixel = *dst16;
+                                    *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                default: {
+                    break;
+                }
+            }
+            break;
         }
         default: {
-            return false;
+            break;
         }
     }
+
+    #undef BLEND_RGB566
 }
 
-/**
- * Used by IMAGE_HINT_BILINEAR to generate a grayscale linear interpolated row.
- * The drawing algorithm will later apply the vertical interpolation between two cached lines.
- *
- * @param cache_line Where to write the line
- * @param alpha 0->128, alpha blending value for other image.
- * @param other_row_ptr Other source image row pointer.
- * @param other_bpp Other image bits per pixel.
- * @param mask_row_ptr Mask image row pointer.
- * @param mask_bpp Mask image bits per pixel.
- * @param other_x_start Start x pixel location in source/mask image.
- * @param other_x_end End x pixel (exclusive) location in source/mask image.
- * @param over_x_scale Scale from other scale to image scale.
- */
-static void int_generate_cache_line_grayscale(uint16_t *cache_line, int alpha, uint8_t *other_row_ptr, int other_bpp, void *mask_row_ptr, int mask_bpp, int other_x_start, int other_x_end, float over_xscale, const uint8_t *alpha_palette)
+void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int dst_y_start, float x_scale, float y_scale, rectangle_t *roi,
+                      int rgb_channel, int alpha, const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint)
 {
-    for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
-        float other_x_float = (x + 0.5) * over_xscale;
-        uint32_t other_x = fast_floorf(other_x_float);
-        uint32_t weight_x = fast_floorf((other_x_float - other_x) * alpha);
-        bool mask1 = true, mask2 = true;
-
-        if (mask_row_ptr) {
-            mask1 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
-            mask2 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
-        }
-
-        uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
-        uint32_t alpha2 = mask2 ? weight_x : 0;
-        uint32_t other_pixel1 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
-        uint32_t other_pixel2 = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x + 1));
-
-        if (alpha_palette) {
-            alpha1 = alpha1 * alpha_palette[other_pixel1] >> 8;
-            alpha2 = alpha2 * alpha_palette[other_pixel2] >> 8;
-        }
-
-        other_pixel1 *= alpha1;
-        other_pixel2 *= alpha2;
-        
-        // Image alpha is the remaining alpha after applying other alpha
-        uint32_t img_alpha = 256 - (alpha1 + alpha2);
-
-        // Note img_alpha is now 0->128 to fit into a byte
-        cache_line[i] = ((other_pixel1 + other_pixel2) & 0xFF00) + (img_alpha >> 1);
+    int dst_delta_x = 1; // positive direction
+    if (x_scale < 0.f) { // flip X
+        dst_delta_x = -1;
+        x_scale = -x_scale;
     }
-}
 
-
-/**
- * Used by IMAGE_HINT_BILINEAR to generate a RGB888 linear interpolated row.
- * The drawing algorithm will later apply the vertical interpolation between two cached lines.
- *
- * @param cache_line Where to write the line
- * @param alpha 0->128, alpha blending value for other image.
- * @param other_row_ptr Other source image row pointer.
- * @param other_bpp Other image bits per pixel.
- * @param mask_row_ptr Mask image row pointer.
- * @param mask_bpp Mask image bits per pixel.
- * @param other_x_start Start x pixel location in source/mask image.
- * @param other_x_end End x pixel (exclusive) location in source/mask image.
- * @param over_x_scale Scale from other scale to image scale.
- */
-static void int_generate_cache_line_rgb565(uint32_t *cache_line, int alpha, const uint16_t *other_row_ptr, int other_bpp, const void *mask_row_ptr, int mask_bpp, int other_x_start, int other_x_end, float over_xscale, const uint16_t *color_palette, const uint8_t *alpha_palette)
-{
-    // generate line
-    for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
-        float other_x_float = (x + 0.5) * over_xscale;
-        uint32_t other_x = fast_floorf(other_x_float);
-        uint32_t weight_x = fast_floorf((other_x_float - other_x) * alpha);
-        bool mask1 = true, mask2 = true;
-
-        if (mask_row_ptr) {
-            mask1 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x));
-            mask2 = imlib_pixel_to_binary(mask_bpp, imlib_get_pixel_fast(mask_bpp, mask_row_ptr, other_x + 1));
-        }
-
-        uint32_t alpha1 = mask1 ? (alpha - weight_x) : 0;
-        uint32_t alpha2 = mask2 ? weight_x : 0;
-        uint32_t other_pixel1 = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x);
-        uint32_t other_pixel2 = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x + 1);
-
-        if (alpha_palette) {
-            alpha1 = alpha1 * alpha_palette[other_pixel1] >> 8;
-            alpha2 = alpha2 * alpha_palette[other_pixel2] >> 8;
-        }
-
-        other_pixel1 = color_palette ? color_palette[other_pixel1] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, other_pixel1);
-        other_pixel1 = draw_scaleop_RGB565_to_RGB888(other_pixel1, alpha1);
-        other_pixel2 = color_palette ? color_palette[other_pixel2] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, other_pixel2);
-        other_pixel2 = draw_scaleop_RGB565_to_RGB888(other_pixel2, alpha2);
-        
-        // Image alpha is the remaining alpha after applying other alpha
-        uint32_t img_alpha = 128 - (alpha1 + alpha2);
-
-        cache_line[i] = ((other_pixel1 + other_pixel2) << 8) + img_alpha; // RGBA8888
+    int dst_delta_y = 1; // positive direction
+    if (y_scale < 0.f) { // flip Y
+        dst_delta_y = -1;
+        y_scale = -y_scale;
     }
-}
 
-/**
- * Draw an image onto another image converting format if necessary.
- * 
- * @param img The image to draw onto.
- * @param other The image to draw.
- * @param x_off X offset in destination.
- * @param y_off Y offset in destination.
- * @param x_scale X scale.
- * @param y_scale Y scale.
- * @param alpha Alpha, between 0 and 256 inclusive.
- * @param mask Mask image, if interpolating must be the same size as the other image.
- * @param color_palette Color palette for transforming grayscale images to RGB565.
- * @param alpha_palette Alpha palette for masking grayscale images.
- * @param hint Rendering hint.  e.g. IMAGE_HINT_BILINEAR, IMAGE_HINT_CENTER
- */
-void imlib_draw_image(image_t *img, image_t *other, int x_off, int y_off, float x_scale, float y_scale, int alpha, image_t *mask, const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint)
-{
-    // If alpha is 0 then nothing changes
+    int src_img_w = roi ? roi->w : src_img->w, w_limit = src_img_w - 1, w_limit_m_1 = w_limit - 1;
+    int src_img_h = roi ? roi->h : src_img->h, h_limit = src_img_h - 1, h_limit_m_1 = h_limit - 1;
+
+    int src_width_scaled = fast_floorf(x_scale * src_img_w);
+    int src_height_scaled = fast_floorf(y_scale * src_img_h);
+
+    // Nothing to draw
+    if ((src_width_scaled < 1) || (src_height_scaled < 1)) return;
+
+    // If alpha is 0 then nothing changes.
     if (alpha == 0) return;
 
-    if (hint & IMAGE_HINT_BILINEAR) {
-        // Cannot interpolate a 1x1 pixel.
-        if (other->w <= 1 || other->h <= 1) hint &= ~IMAGE_HINT_BILINEAR;
+    if (alpha_palette) {
+        int i = 0;
+        while ((i < 256) && (!alpha_palette[i])) i++;
+        if (i == 256) return; // zero alpha palette
     }
 
-    // Scaled other size
-    int other_width_scaled = fast_floorf(x_scale * other->w);
-    int other_height_scaled = fast_floorf(y_scale * other->h);
-
-    // Center other if hint is set
+    // Center src if hint is set.
     if (hint & IMAGE_HINT_CENTER) {
-        x_off -= other_width_scaled >> 1;
-        y_off -= other_height_scaled >> 1;
+        dst_x_start -= src_width_scaled / 2;
+        dst_y_start -= src_height_scaled / 2;
     }
 
-    // Scaler to convert from img scale to other scale
-    float over_xscale = IM_DIV(1.0f, x_scale), over_yscale = IM_DIV(1.0f, y_scale);
-
-    // Left or top of other is out of bounds
-    int other_x_start = (x_off < 0) ? -x_off : 0;
-    int other_y_start = (y_off < 0) ? -y_off : 0;
-
-    // Right or bottom of image is out of bounds
-    int other_x_end = (x_off + other_width_scaled >= img->w) ? img->w - x_off : other_width_scaled;
-    int other_y_end = (y_off + other_height_scaled >= img->h) ? img->h - y_off : other_height_scaled;
-
-    // Check bounds are within img
-    if (other_x_start + x_off >= img->w || other_y_start + y_off >= img->h) return;
-    if (other_x_end + x_off <= 0 || other_y_end + y_off <= 0) return;
-
-    // If we're linear interpolating the last pixel will overflow if we land on it, we want to land just before it.
-    if (hint & IMAGE_HINT_BILINEAR) {
-        over_xscale *= (float)(other->w - 1) / other->w;
-        over_yscale *= (float)(other->h - 1) / other->h;
+    // Clamp start x to image bounds.
+    int src_x_start = 0;
+    if (dst_x_start < 0) {
+        src_x_start -= dst_x_start; // this is an add becasue dst_x_start is negative
+        dst_x_start = 0;
     }
 
-    const int img_bpp = img->bpp;
-    const int other_bpp = other->bpp;
-    const int mask_bpp = mask ? mask->bpp : 0;
+    if (dst_x_start >= dst_img->w) return;
+    int src_x_dst_width = src_width_scaled - src_x_start;
+    if (src_x_dst_width <= 0) return;
 
-    switch(img_bpp) {
-        case IMAGE_BPP_BINARY: {
-            // If alpha is less that 128 on a bitmap we're just copying the image back to the image, so do nothing
-            if (alpha >= 128) {
-                // Iterate the img area to be updated
-                for (int y = other_y_start; y < other_y_end; y++) {
-                    uint32_t *img_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(img, y_off + y);
-                    const int other_y = fast_floorf(y * over_yscale);
-                    void *other_row_ptr = imlib_compute_row_ptr(other, other_y);
+    // Clamp start y to image bounds.
+    int src_y_start = 0;
+    if (dst_y_start < 0) {
+        src_y_start -= dst_y_start; // this is an add becasue dst_y_start is negative
+        dst_y_start = 0;
+    }
 
-                    for (int x = other_x_start; x < other_x_end; x++) {
-                        const int other_x = fast_floorf(x * over_xscale);
+    if (dst_y_start >= dst_img->h) return;
+    int src_y_dst_height = src_height_scaled - src_y_start;
+    if (src_y_dst_height <= 0) return;
 
-                        if (!mask || image_get_mask_pixel(mask, other_x, other_y)) {
-                            uint32_t result_pixel = safe_map_pixel(IMAGE_BPP_BINARY, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
-                            
-                            IMAGE_PUT_BINARY_PIXEL_FAST(img_row_ptr, x_off + x, result_pixel);
-                        }
-                    }
+    // Clamp end x to image bounds.
+    int dst_x_end = dst_x_start + src_x_dst_width;
+    if (dst_x_end > dst_img->w) dst_x_end = dst_img->w;
+
+    // Clamp end y to image bounds.
+    int dst_y_end = dst_y_start + src_y_dst_height;
+    if (dst_y_end > dst_img->h) dst_y_end = dst_img->h;
+
+    if (dst_delta_x < 0) {
+        // Since we are drawing backwards we have to slide our drawing offset forward by an amount
+        // limited by the size of the drawing area left. E.g. when we hit the right edge we have
+        // advance the offset to prevent the image from sliding.
+        int allowed_offset_width = src_width_scaled - (dst_x_end - dst_x_start);
+        src_x_start = IM_MIN(dst_x_start, allowed_offset_width);
+    }
+
+    // Apply roi offset
+    if (roi) src_x_start += fast_floorf(roi->x * x_scale);
+
+    if (dst_delta_y < 0) {
+        // Since we are drawing backwards we have to slide our drawing offset forward by an amount
+        // limited by the size of the drawing area left. E.g. when we hit the bottom edge we have
+        // advance the offset to prevent the image from sliding.
+        int allowed_offset_height = src_height_scaled - (dst_y_end - dst_y_start);
+        src_y_start = IM_MIN(dst_y_start, allowed_offset_height);
+    }
+
+    // Apply roi offset
+    if (roi) src_y_start += fast_floorf(roi->y * y_scale);
+
+    // For all of the scaling algorithms (nearest neighbor, bilinear, bicubic, and area)
+    // we use a 32-bit fraction instead of a floating point value for iteration. Below,
+    // we calculate an increment which fits in 32-bits. We can then add this value
+    // successively as we loop over the destination pixels and then shift this sum
+    // right by 16 to get the corresponding source pixel. If we want the fractional
+    // position we just have to look at the bottom 16-bits.
+    //
+    // top 16-bits = whole part, bottom 16-bits = fractional part.
+
+    int dst_x_reset = (dst_delta_x < 0) ? (dst_x_end - 1) : dst_x_start;
+    long src_x_frac = fast_floorf(65536.0f / x_scale), src_x_frac_size = (src_x_frac + 0xFFFF) >> 16;
+    long src_x_accum_reset = fast_floorf((src_x_start << 16) / x_scale);
+
+    int dst_y_reset = (dst_delta_y < 0) ? (dst_y_end - 1) : dst_y_start;
+    long src_y_frac = fast_floorf(65536.0f / y_scale), src_y_frac_size = (src_y_frac + 0xFFFF) >> 16;
+    long src_y_accum_reset = fast_floorf((src_y_start << 16) / y_scale);
+
+    // Nearest Neighbor
+    if ((src_x_frac == 65536) && (src_y_frac == 65536)) hint &= ~(IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR);
+
+    // Nearest Neighbor
+    if ((hint & IMAGE_HINT_AREA) && (x_scale >= 1.f) && (y_scale >= 1.f)) hint &= ~(IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR);
+
+    // Cannot interpolate.
+    if ((src_img_w <= 3) || (src_img_h <= 3)) {
+        if (hint & IMAGE_HINT_BICUBIC) hint |= IMAGE_HINT_BILINEAR;
+        hint &= ~IMAGE_HINT_BICUBIC;
+    }
+
+    // Cannot interpolate.
+    if ((src_img_w <= 1) || (src_img_h <= 1)) hint &= ~(IMAGE_HINT_AREA | IMAGE_HINT_BILINEAR);
+
+    // Bicbuic and bilinear both shift the image right by (0.5, 0.5) so we have to undo that.
+    if (hint & (IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR)) {
+        src_x_accum_reset -= 0x8000;
+        src_y_accum_reset -= 0x8000;
+    }
+
+    // rgb_channel extracted / color_palette applied image
+    image_t new_src_img;
+
+    if (((hint & IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST) && (src_img->bpp == IMAGE_BPP_RGB565) && (rgb_channel != -1))
+    || ((hint & IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST) && color_palette)) {
+        new_src_img.w = src_img_w; // same width as source image
+        new_src_img.h = src_img_h; // same height as source image
+        new_src_img.bpp = color_palette ? IMAGE_BPP_RGB565 : IMAGE_BPP_GRAYSCALE;
+        new_src_img.data = fb_alloc(image_size(&new_src_img), FB_ALLOC_NO_HINT);
+        imlib_draw_image(&new_src_img, src_img, 0, 0, 1.f, 1.f, NULL, rgb_channel, 256, color_palette, NULL, 0);
+        src_img = &new_src_img;
+        rgb_channel = -1;
+        color_palette = NULL;
+    }
+
+    imlib_draw_row_data_t imlib_draw_row_data;
+    imlib_draw_row_data.dst_img = dst_img;
+    imlib_draw_row_data.src_img_bpp = src_img->bpp;
+    imlib_draw_row_data.rgb_channel = rgb_channel;
+    imlib_draw_row_data.alpha = alpha;
+    imlib_draw_row_data.color_palette = color_palette;
+    imlib_draw_row_data.alpha_palette = alpha_palette;
+
+    imlib_draw_row_setup(&imlib_draw_row_data);
+
+    // Y loop iteration variables
+    int dst_y = dst_y_reset;
+    long src_y_accum = src_y_accum_reset;
+    int next_src_y_index = src_y_accum >> 16;
+    int y = dst_y_start;
+    bool y_not_done = y < dst_y_end;
+
+    if (hint & IMAGE_HINT_AREA) {
+        // The area scaling algorithm runs in fast mode if the image is being scaled down by
+        // 1, 2, 3, 4, 5, etc. or slow mode if it's a fractional scale.
+        //
+        // In fast mode area scaling is just the sum of the specified area. No weighting of pixels
+        // is required to get the job done.
+        //
+        // In slow mode we need to weight pixels that lie on the edges of the area scale rectangle.
+        // This prevents making the inner loop of the algorithm tight.
+        //
+        if ((!(src_x_frac & 0xFFFF)) && (!(src_y_frac & 0xFFFF))) { // fast
+            switch (src_img->bpp) {
+                case IMAGE_BPP_BINARY: {
+                    while (y_not_done) {
+                        int src_y_index = next_src_y_index;
+                        int src_y_index_end = src_y_index + src_y_frac_size;
+                        if (src_y_index_end > src_img_h) src_y_index_end = src_img_h;
+                        int height = src_y_index_end - src_y_index;
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int src_x_index_end = src_x_index + src_x_frac_size;
+                            if (src_x_index_end > src_img_w) src_x_index_end = src_img_w;
+                            int width = src_x_index_end - src_x_index;
+
+                            uint32_t area = width * height;
+                            uint32_t acc = 0;
+
+                            for (int i = src_y_index; i < src_y_index_end; i++) {
+                                uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, i);
+                                for (int j = src_x_index; j < src_x_index_end; j++) {
+                                    acc += IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, j);
+                                }
+                            }
+
+                            int pixel = (acc + (area >> 1)) / area;
+
+                            IMAGE_PUT_BINARY_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    while (y_not_done) {
+                        int src_y_index = next_src_y_index;
+                        int src_y_index_end = src_y_index + src_y_frac_size;
+                        if (src_y_index_end > src_img_h) src_y_index_end = src_img_h;
+                        int height = src_y_index_end - src_y_index;
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int src_x_index_end = src_x_index + src_x_frac_size;
+                            if (src_x_index_end > src_img_w) src_x_index_end = src_img_w;
+                            int width = src_x_index_end - src_x_index;
+
+                            uint32_t area = width * height;
+                            uint32_t acc = 0;
+
+                            if (width < 4) {
+                                for (int i = src_y_index; i < src_y_index_end; i++) {
+                                    uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i) + src_x_index;
+                                    int n = width;
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                                    uint16_t *src_row_ptr16 = (uint16_t *) src_row_ptr;
+
+                                    for (; n > 1; n -= 2) {
+                                        uint16_t pixels = *src_row_ptr16++;
+                                        acc = __USADA8(pixels, 0, acc);
+                                    }
+
+                                    src_row_ptr = (uint8_t *) src_row_ptr16;
+#endif
+                                    for (; n > 0; n -= 1)  {
+                                        acc += *src_row_ptr++;
+                                    }
+                                }
+                            } else {
+                                for (int i = src_y_index; i < src_y_index_end; i++) {
+                                    uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i) + src_x_index;
+                                    int n = width;
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                                    uint32_t *src_row_ptr32 = (uint32_t *) src_row_ptr;
+
+                                    for (; n > 3; n -= 4) {
+                                        uint32_t pixels = *src_row_ptr32++;
+                                        acc = __USADA8(pixels, 0, acc);
+                                    }
+
+                                    src_row_ptr = (uint8_t *) src_row_ptr32;
+#endif
+                                    for (; n > 0; n -= 1)  {
+                                        acc += *src_row_ptr++;
+                                    }
+                                }
+                            }
+
+                            int pixel = (acc + (area >> 1)) / area;
+
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    while (y_not_done) {
+                        int src_y_index = next_src_y_index;
+                        int src_y_index_end = src_y_index + src_y_frac_size;
+                        if (src_y_index_end > src_img_h) src_y_index_end = src_img_h;
+                        int height = src_y_index_end - src_y_index;
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int src_x_index_end = src_x_index + src_x_frac_size;
+                            if (src_x_index_end > src_img_w) src_x_index_end = src_img_w;
+                            int width = src_x_index_end - src_x_index;
+
+                            uint32_t area = width * height;
+                            uint32_t r_acc = 0, g_acc = 0, b_acc = 0;
+
+                            for (int i = src_y_index; i < src_y_index_end; i++) {
+                                uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, i) + src_x_index;
+                                int n = width;
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                                uint32_t *src_row_ptr32 = (uint32_t *) src_row_ptr;
+
+                                for (; n > 1; n -= 2) {
+                                    uint32_t pixels = *src_row_ptr32++;
+
+                                    // RGB565 byte reversal fix
+                                    pixels = __REV16(pixels);
+
+                                    long r = (pixels >> 11) & 0x1F001F;
+                                    r_acc = __USADA8(r, 0, r_acc);
+
+                                    long g = (pixels >> 5) & 0x3F003F;
+                                    g_acc = __USADA8(g, 0, g_acc);
+
+                                    long b = pixels & 0x1F001F;
+                                    b_acc = __USADA8(b, 0, b_acc);
+                                }
+
+                                src_row_ptr = (uint16_t *) src_row_ptr32;
+#endif
+                                for (; n > 0; n -= 1)  {
+                                    int pixel = *src_row_ptr++;
+                                    r_acc += COLOR_RGB565_TO_R5(pixel);
+                                    g_acc += COLOR_RGB565_TO_G6(pixel);
+                                    b_acc += COLOR_RGB565_TO_B5(pixel);
+                                }
+                            }
+
+                            r_acc = (r_acc + (area >> 1)) / area;
+                            g_acc = (g_acc + (area >> 1)) / area;
+                            b_acc = (b_acc + (area >> 1)) / area;
+
+                            int pixel = COLOR_R5_G6_B5_TO_RGB565(r_acc, g_acc, b_acc);
+
+                            IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                default: {
+                    break;
                 }
             }
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            if (hint & IMAGE_HINT_BILINEAR) {
-                fb_alloc_mark();
+        } else { // slow
+            switch (src_img->bpp) {
+                case IMAGE_BPP_BINARY: {
+                    while (y_not_done) {
+                        int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
+                        int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
 
-                // Allocate cache lines
-                int bytes_per_img_line = img->w * sizeof(uint8_t) * 2; // (1 byte graysclae + 1 byte alpha) = * 2
-                uint16_t *cache_line_1 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
-                uint16_t *cache_line_2 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
-                uint16_t *cache_line_top = cache_line_2;
-                uint16_t *cache_line_bottom = cache_line_1;
+                        int t_y_weight = 256 - ((src_y_accum >> 8) & 0xFF);
+                        int b_y_weight = ((src_y_accum + src_y_frac) >> 8) & 0xFF;
+                        // Since src_y_index_end is inclusive this should be 256 when there's perfect overlap.
+                        if (!b_y_weight) b_y_weight = 256;
 
-                // Pre-fill cache for first drawn line
-                int temp_other_y = fast_floorf(other_y_start * over_yscale);
-                uint8_t *other_row_ptr = imlib_compute_row_ptr(other, temp_other_y);
-                void *mask_row_ptr = mask ? imlib_compute_row_ptr(mask, temp_other_y) : NULL;
-
-                int_generate_cache_line_grayscale(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, alpha_palette);
-
-                // Used to detect when other starts rendering from the next line
-                int last_other_y = -1;
-
-                // Iterate the img area to be updated
-                for (int y = other_y_start; y < other_y_end; y++) {
-                    // Pre-add x_off here to save adding it inside the central loop
-                    uint8_t *img_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_off + y) + x_off;
-
-                    // calculate y offset in other
-                    float other_y_float = (y + 0.5) * over_yscale;
-
-                    // Calculate weighting between top and bottom pixel
-                    int other_y = fast_floorf(other_y_float);
-                    int weight_y = fast_floorf((other_y_float - other_y) * 256);
-                    uint32_t y_interpolate = (weight_y << 16) + (256 - weight_y);
-
-                    // If we've moved to the next line in the other image then generate the new cache line
-                    if (last_other_y != other_y) {
-                        last_other_y = other_y;
-                        
-                        // Move to next line.  Swap y+1 cache line to y
-                        uint16_t *cache_line_temp = cache_line_top;
-                        cache_line_top = cache_line_bottom;
-                        cache_line_bottom = cache_line_temp;
-
-                        // And generate a new y+1
-                        other_row_ptr = imlib_compute_row_ptr(other, other_y + 1);
-                        mask_row_ptr = mask ? imlib_compute_row_ptr(mask, other_y + 1) : NULL;
-                        int_generate_cache_line_grayscale(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, alpha_palette);
-                    }
-
-                    // Draw the line to img
-                    for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
-                        // Pack pixel data for SMUADS
-                        uint32_t pixel_data = (cache_line_bottom[i] << 16) | cache_line_top[i];
-
-                        // Extract alpha for top + bottom pixel for SMUAD
-                        uint32_t img_alpha_pixels = pixel_data & 0xFF00FF;
-
-                        // Calculate the alpha weighting for the img pixel, don't unshift so we have more accuracy when combining
-                        uint32_t img_alpha_15bits = __SMUAD(y_interpolate, img_alpha_pixels); // 8 bits x 7 bits = 15 bits
-
-                        // Extract other pixels for SMUAD
-                        uint32_t other_pixels = (pixel_data >> 8) & 0xFF00FF;
-
-                        // Apply alpha, but don't unshift for more accuracy in combining
-                        uint32_t pixel_16bits = __SMUAD(y_interpolate, other_pixels);
-
-                        // Get img pixel.
-                        uint8_t img_pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(img_row_ptr,  x);
-
-                        // Combine img_pixel with other pixel, and shift fixed component
-                        uint32_t pixel = (((img_pixel * img_alpha_15bits) >> 7) + pixel_16bits) >> 8;
-
-                        // Store pixel
-                        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(img_row_ptr, x, pixel);
-                    }
-                }
-                // De-allocate cache lines
-                fb_alloc_free_till_mark();
-            } else {
-                // 00000000otheralph00000000imgalpha
-                uint32_t packed_alpha = (alpha << 16) + (256 - alpha);
-
-                // Iterate the img area to be updated
-                for (int y = other_y_start; y < other_y_end; y++) {
-                    // Pre-add x_off here to save adding it inside the central loop
-                    uint8_t *img_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(img, y_off + y) + x_off;
-                    int other_y = fast_floorf(y * over_yscale);
-                    uint16_t *other_row_ptr = imlib_compute_row_ptr(other, other_y);
-
-                    for (int x = other_x_start; x < other_x_end; x++) {
-                        int other_x = fast_floorf(x * over_xscale);
-
-                        if (!mask || image_get_mask_pixel(mask, other_x, other_y)) {
-                            uint8_t result_pixel = safe_map_pixel(IMAGE_BPP_GRAYSCALE, other_bpp, imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x));
-
-                            if (alpha_palette) {
-                                uint32_t temp_alpha = (alpha * alpha_palette[result_pixel]) >> 8;
-                                
-                                packed_alpha = (temp_alpha << 16) + (256 - temp_alpha);
-                            }
-
-                            if (packed_alpha & 0x1ff) {
-                                uint8_t img_pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(img_row_ptr,  x);
-                                uint32_t vgs = (result_pixel << 16) + img_pixel;
-
-                                result_pixel = __SMUAD(packed_alpha, vgs) >> 8;
-                            }
-
-                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(img_row_ptr, x, result_pixel);
+                        // Handle end being off the edge.
+                        if (src_y_index_end > h_limit) {
+                            src_y_index_end = h_limit;
+                            // Either we don't need end of we chopped off the last part.
+                            if (src_y_index_end == src_y_index) b_y_weight = 0;
+                            else b_y_weight = 256; // max out if we chopped off
                         }
-                    }
+
+                        int y_height_m_2 = src_y_index_end - src_y_index - 1;
+
+                        uint32_t *t_src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index);
+                        uint32_t *b_src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index_end);
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index, src_x_index_p_1 = src_x_index + 1;
+                            int src_x_index_end = src_x_index + src_x_frac_size - 1; // inclusive end
+
+                            int l_x_weight = 256 - ((src_x_accum >> 8) & 0xFF);
+                            int r_x_weight = ((src_x_accum + src_x_frac) >> 8) & 0xFF;
+                            // Since src_x_index_end is inclusive this should be 256 when there's perfect overlap.
+                            if (!r_x_weight) r_x_weight = 256;
+
+                            // Handle end being off the edge.
+                            if (src_x_index_end > w_limit) {
+                                src_x_index_end = w_limit;
+                                // Either we don't need end of we chopped off the last part.
+                                if (src_x_index_end == src_x_index) r_x_weight = 0;
+                                else r_x_weight = 256; // max out if we chopped off
+                            }
+
+                            int x_width_m_2 = src_x_index_end - src_x_index - 1;
+
+                            int t_l_weight = t_y_weight * l_x_weight;
+                            int t_r_weight = t_y_weight * r_x_weight;
+                            int b_l_weight = b_y_weight * l_x_weight;
+                            int b_r_weight = b_y_weight * r_x_weight;
+
+                            uint32_t area = t_l_weight + t_r_weight + b_l_weight + b_r_weight;
+                            uint32_t acc = 0;
+
+                            // sum corners
+
+                            acc += IMAGE_GET_BINARY_PIXEL_FAST(t_src_row_ptr, src_x_index) * t_l_weight;
+                            acc += IMAGE_GET_BINARY_PIXEL_FAST(t_src_row_ptr, src_x_index_end) * t_r_weight;
+                            acc += IMAGE_GET_BINARY_PIXEL_FAST(b_src_row_ptr, src_x_index) * b_l_weight;
+                            acc += IMAGE_GET_BINARY_PIXEL_FAST(b_src_row_ptr, src_x_index_end) * b_r_weight;
+
+                            area = (area + 255) >> 8;
+                            acc = (acc + 128) >> 8;
+
+                            if (x_width_m_2 > 0) { // sum top/bot
+                                area += x_width_m_2 * (t_y_weight + b_y_weight);
+                                for (int i = src_x_index_p_1; i < src_x_index_end; i++) {
+                                    acc += IMAGE_GET_BINARY_PIXEL_FAST(t_src_row_ptr, i) * t_y_weight;
+                                    acc += IMAGE_GET_BINARY_PIXEL_FAST(b_src_row_ptr, i) * b_y_weight;
+                                }
+                            }
+
+                            if (y_height_m_2 > 0) { // sum left/right
+                                area += y_height_m_2 * (l_x_weight + r_x_weight);
+                                for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
+                                    uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, i);
+                                    acc += IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, src_x_index) * l_x_weight;
+                                    acc += IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, src_x_index_end) * r_x_weight;
+                                }
+                            }
+
+                            area = (area + 255) >> 8;
+                            acc = (acc + 128) >> 8;
+
+                            if ((x_width_m_2 > 0) && (y_height_m_2 > 0)) { // sum middle
+                                area += x_width_m_2 * y_height_m_2;
+                                for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
+                                    uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, i);
+                                    for (int j = src_x_index_p_1; j < src_x_index_end; j++) {
+                                        acc += IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, j);
+                                    }
+                                }
+                            }
+
+                            int pixel = (acc + (area >> 1)) / area;
+
+                            IMAGE_PUT_BINARY_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    while (y_not_done) {
+                        int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
+                        int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
+
+                        int t_y_weight = 256 - ((src_y_accum >> 8) & 0xFF);
+                        int b_y_weight = ((src_y_accum + src_y_frac) >> 8) & 0xFF;
+                        // Since src_y_index_end is inclusive this should be 256 when there's perfect overlap.
+                        if (!b_y_weight) b_y_weight = 256;
+
+                        // Handle end being off the edge.
+                        if (src_y_index_end > h_limit) {
+                            src_y_index_end = h_limit;
+                            // Either we don't need end of we chopped off the last part.
+                            if (src_y_index_end == src_y_index) b_y_weight = 0;
+                            else b_y_weight = 256; // max out if we chopped off
+                        }
+
+                        int y_height_m_2 = src_y_index_end - src_y_index - 1;
+
+                        uint8_t *t_src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index);
+                        uint8_t *b_src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index_end);
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index, src_x_index_p_1 = src_x_index + 1;
+                            int src_x_index_end = src_x_index + src_x_frac_size - 1; // inclusive end
+
+                            int l_x_weight = 256 - ((src_x_accum >> 8) & 0xFF);
+                            int r_x_weight = ((src_x_accum + src_x_frac) >> 8) & 0xFF;
+                            // Since src_x_index_end is inclusive this should be 256 when there's perfect overlap.
+                            if (!r_x_weight) r_x_weight = 256;
+
+                            // Handle end being off the edge.
+                            if (src_x_index_end > w_limit) {
+                                src_x_index_end = w_limit;
+                                // Either we don't need end of we chopped off the last part.
+                                if (src_x_index_end == src_x_index) r_x_weight = 0;
+                                else r_x_weight = 256; // max out if we chopped off
+                            }
+
+                            int x_width_m_2 = src_x_index_end - src_x_index - 1;
+
+                            int t_l_weight = t_y_weight * l_x_weight;
+                            int t_r_weight = t_y_weight * r_x_weight;
+                            int b_l_weight = b_y_weight * l_x_weight;
+                            int b_r_weight = b_y_weight * r_x_weight;
+
+                            uint32_t area = t_l_weight + t_r_weight + b_l_weight + b_r_weight;
+                            uint32_t acc = 0;
+
+                            // sum corners
+
+                            acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(t_src_row_ptr, src_x_index) * t_l_weight;
+                            acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(t_src_row_ptr, src_x_index_end) * t_r_weight;
+                            acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(b_src_row_ptr, src_x_index) * b_l_weight;
+                            acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(b_src_row_ptr, src_x_index_end) * b_r_weight;
+
+                            area = (area + 255) >> 8;
+                            acc = (acc + 128) >> 8;
+
+                            if (x_width_m_2 > 0) { // sum top/bot
+                                area += x_width_m_2 * (t_y_weight + b_y_weight);
+                                uint8_t *t_src_row_ptr_tmp = t_src_row_ptr + src_x_index_p_1;
+                                uint8_t *b_src_row_ptr_tmp = b_src_row_ptr + src_x_index_p_1;
+                                for (int i = src_x_index_p_1; i < src_x_index_end; i++) {
+                                    acc += *t_src_row_ptr_tmp++ * t_y_weight;
+                                    acc += *b_src_row_ptr_tmp++ * b_y_weight;
+                                }
+                            }
+
+                            if (y_height_m_2 > 0) { // sum left/right
+                                area += y_height_m_2 * (l_x_weight + r_x_weight);
+                                for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
+                                    uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i);
+                                    acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(src_row_ptr, src_x_index) * l_x_weight;
+                                    acc += IMAGE_GET_GRAYSCALE_PIXEL_FAST(src_row_ptr, src_x_index_end) * r_x_weight;
+                                }
+                            }
+
+                            area = (area + 255) >> 8;
+                            acc = (acc + 128) >> 8;
+
+                            if ((x_width_m_2 > 0) && (y_height_m_2 > 0)) { // sum middle
+                                area += x_width_m_2 * y_height_m_2;
+                                if (x_width_m_2 < 4) {
+                                    for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
+                                        uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i) + src_x_index_p_1;
+                                        int n = x_width_m_2;
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                                        uint16_t *src_row_ptr16 = (uint16_t *) src_row_ptr;
+
+                                        for (; n > 1; n -= 2) {
+                                            uint16_t pixels = *src_row_ptr16++;
+                                            acc = __USADA8(pixels, 0, acc);
+                                        }
+
+                                        src_row_ptr = (uint8_t *) src_row_ptr16;
+#endif
+                                        for (; n > 0; n -= 1)  {
+                                            acc += *src_row_ptr++;
+                                        }
+                                    }
+                                } else {
+                                    for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
+                                        uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, i) + src_x_index_p_1;
+                                        int n = x_width_m_2;
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                                        uint32_t *src_row_ptr32 = (uint32_t *) src_row_ptr;
+
+                                        for (; n > 4; n -= 4) {
+                                            uint32_t pixels = *src_row_ptr32++;
+                                            acc = __USADA8(pixels, 0, acc);
+                                        }
+
+                                        src_row_ptr = (uint8_t *) src_row_ptr32;
+#endif
+                                        for (; n > 0; n -= 1)  {
+                                            acc += *src_row_ptr++;
+                                        }
+                                    }
+                                }
+                            }
+
+                            int pixel = (acc + (area >> 1)) / area;
+
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    while (y_not_done) {
+                        int src_y_index = next_src_y_index, src_y_index_p_1 = src_y_index + 1;
+                        int src_y_index_end = src_y_index + src_y_frac_size - 1; // inclusive end
+
+                        int t_y_weight = 128 - ((src_y_accum >> 9) & 0x7F);
+                        int b_y_weight = ((src_y_accum + src_y_frac) >> 9) & 0x7F;
+                        // Since src_y_index_end is inclusive this should be 128 when there's perfect overlap.
+                        if (!b_y_weight) b_y_weight = 128;
+
+                        // Handle end being off the edge.
+                        if (src_y_index_end > h_limit) {
+                            src_y_index_end = h_limit;
+                            // Either we don't need end of we chopped off the last part.
+                            if (src_y_index_end == src_y_index) b_y_weight = 0;
+                            else b_y_weight = 128; // max out if we chopped off
+                        }
+
+                        int y_height_m_2 = src_y_index_end - src_y_index - 1;
+                        long smlad_y_weight = (t_y_weight << 16) | b_y_weight;
+
+                        uint16_t *t_src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index);
+                        uint16_t *b_src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index_end);
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index, src_x_index_p_1 = src_x_index + 1;
+                            int src_x_index_end = src_x_index + src_x_frac_size - 1; // inclusive end
+
+                            int l_x_weight = 128 - ((src_x_accum >> 9) & 0x7F);
+                            int r_x_weight = ((src_x_accum + src_x_frac) >> 9) & 0x7F;
+                            // Since src_x_index_end is inclusive this should be 128 when there's perfect overlap.
+                            if (!r_x_weight) r_x_weight = 128;
+
+                            // Handle end being off the edge.
+                            if (src_x_index_end > w_limit) {
+                                src_x_index_end = w_limit;
+                                // Either we don't need end of we chopped off the last part.
+                                if (src_x_index_end == src_x_index) r_x_weight = 0;
+                                else r_x_weight = 128; // max out if we chopped off
+                            }
+
+                            int x_width_m_2 = src_x_index_end - src_x_index - 1;
+                            long smlad_x_weight = (l_x_weight << 16) | r_x_weight;
+
+                            long t_smlad_x_weight = smlad_x_weight * t_y_weight;
+                            long b_smlad_x_weight = smlad_x_weight * b_y_weight;
+                            long t_b_smlad_x_weight_sum = __QADD16(t_smlad_x_weight, b_smlad_x_weight);
+
+                            uint32_t area = __SMUAD(t_b_smlad_x_weight_sum, 0x10001);
+                            uint32_t r_acc = 0, g_acc = 0, b_acc = 0;
+
+                            // sum corners
+
+                            int t_l_pixel = IMAGE_GET_RGB565_PIXEL_FAST(t_src_row_ptr, src_x_index);
+                            int t_r_pixel = IMAGE_GET_RGB565_PIXEL_FAST(t_src_row_ptr, src_x_index_end);
+                            int t_pixels = (t_l_pixel << 16) | t_r_pixel;
+
+                            // RGB565 byte reversal fix
+                            t_pixels = __REV16(t_pixels);
+
+                            long t_r = (t_pixels >> 11) & 0x1F001F;
+                            r_acc = __SMLAD(t_r, t_smlad_x_weight, r_acc);
+
+                            long t_g = (t_pixels >> 5) & 0x3F003F;
+                            g_acc = __SMLAD(t_g, t_smlad_x_weight, g_acc);
+
+                            long t_b = t_pixels & 0x1F001F;
+                            b_acc = __SMLAD(t_b, t_smlad_x_weight, b_acc);
+
+                            int b_l_pixel = IMAGE_GET_RGB565_PIXEL_FAST(b_src_row_ptr, src_x_index);
+                            int b_r_pixel = IMAGE_GET_RGB565_PIXEL_FAST(b_src_row_ptr, src_x_index_end);
+                            int b_pixels = (b_l_pixel << 16) | b_r_pixel;
+
+                            // RGB565 byte reversal fix
+                            b_pixels = __REV16(b_pixels);
+
+                            long b_r = (b_pixels >> 11) & 0x1F001F;
+                            r_acc = __SMLAD(b_r, b_smlad_x_weight, r_acc);
+
+                            long b_g = (b_pixels >> 5) & 0x3F003F;
+                            g_acc = __SMLAD(b_g, b_smlad_x_weight, g_acc);
+
+                            long b_b = b_pixels & 0x1F001F;
+                            b_acc = __SMLAD(b_b, b_smlad_x_weight, b_acc);
+
+                            area = (area + 127) >> 7;
+                            r_acc = (r_acc + 64) >> 7;
+                            g_acc = (g_acc + 64) >> 7;
+                            b_acc = (b_acc + 64) >> 7;
+
+                            if (x_width_m_2 > 0) { // sum top/bot
+                                area += x_width_m_2 * (t_y_weight + b_y_weight);
+                                uint16_t *t_src_row_ptr_tmp = t_src_row_ptr + src_x_index_p_1;
+                                uint16_t *b_src_row_ptr_tmp = b_src_row_ptr + src_x_index_p_1;
+                                for (int i = src_x_index_p_1; i < src_x_index_end; i++) {
+                                    int t_y_pixel = *t_src_row_ptr_tmp++;
+                                    int b_y_pixel = *b_src_row_ptr_tmp++;
+                                    int pixels = (t_y_pixel << 16) | b_y_pixel;
+
+                                    // RGB565 byte reversal fix
+                                    pixels = __REV16(pixels);
+
+                                    long r = (pixels >> 11) & 0x1F001F;
+                                    r_acc = __SMLAD(r, smlad_y_weight, r_acc);
+
+                                    long g = (pixels >> 5) & 0x3F003F;
+                                    g_acc = __SMLAD(g, smlad_y_weight, g_acc);
+
+                                    long b = pixels & 0x1F001F;
+                                    b_acc = __SMLAD(b, smlad_y_weight, b_acc);
+                                }
+                            }
+
+                            if (y_height_m_2 > 0) { // sum left/right
+                                area += y_height_m_2 * (l_x_weight + r_x_weight);
+                                for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
+                                    uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, i);
+                                    int l_x_pixel = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr, src_x_index);
+                                    int r_x_pixel = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr, src_x_index_end);
+                                    int pixels = (l_x_pixel << 16) | r_x_pixel;
+
+                                    // RGB565 byte reversal fix
+                                    pixels = __REV16(pixels);
+
+                                    long r = (pixels >> 11) & 0x1F001F;
+                                    r_acc = __SMLAD(r, smlad_x_weight, r_acc);
+
+                                    long g = (pixels >> 5) & 0x3F003F;
+                                    g_acc = __SMLAD(g, smlad_x_weight, g_acc);
+
+                                    long b = pixels & 0x1F001F;
+                                    b_acc = __SMLAD(b, smlad_x_weight, b_acc);
+                                }
+                            }
+
+                            area = (area + 127) >> 7;
+                            r_acc = (r_acc + 64) >> 7;
+                            g_acc = (g_acc + 64) >> 7;
+                            b_acc = (b_acc + 64) >> 7;
+
+                            if ((x_width_m_2 > 0) && (y_height_m_2 > 0)) { // sum middle
+                                area += x_width_m_2 * y_height_m_2;
+                                for (int i = src_y_index_p_1; i < src_y_index_end; i++) {
+                                    uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, i) + src_x_index_p_1;
+                                    int n = x_width_m_2;
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                                    uint32_t *src_row_ptr32 = (uint32_t *) src_row_ptr;
+
+                                    for (; n > 1; n -= 2) {
+                                        uint32_t pixels = *src_row_ptr32++;
+
+                                        // RGB565 byte reversal fix
+                                        pixels = __REV16(pixels);
+
+                                        long r = (pixels >> 11) & 0x1F001F;
+                                        r_acc = __USADA8(r, 0, r_acc);
+
+                                        long g = (pixels >> 5) & 0x3F003F;
+                                        g_acc = __USADA8(g, 0, g_acc);
+
+                                        long b = pixels & 0x1F001F;
+                                        b_acc = __USADA8(b, 0, b_acc);
+                                    }
+
+                                    src_row_ptr = (uint16_t *) src_row_ptr32;
+#endif
+                                    for (; n > 0; n -= 1)  {
+                                        int pixel = *src_row_ptr++;
+                                        r_acc += COLOR_RGB565_TO_R5(pixel);
+                                        g_acc += COLOR_RGB565_TO_G6(pixel);
+                                        b_acc += COLOR_RGB565_TO_B5(pixel);
+                                    }
+                                }
+                            }
+
+                            r_acc = (r_acc + (area >> 1)) / area;
+                            g_acc = (g_acc + (area >> 1)) / area;
+                            b_acc = (b_acc + (area >> 1)) / area;
+
+                            int pixel = COLOR_R5_G6_B5_TO_RGB565(r_acc, g_acc, b_acc);
+
+                            IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                default: {
+                    break;
                 }
             }
-            break;
         }
-        case IMAGE_BPP_RGB565: {
-            // Alpha is 0->128
-            alpha >>= 1;
+    } else if (hint & IMAGE_HINT_BICUBIC) {
+        // Implements the traditional bicubic interpolation algorithm which uses
+        // a 4x4 filter block with the current pixel centered at (1,1) (C below).
+        // However, instead of floating point math, it uses integer (fixed point).
+        // The Cortex-M4/M7 has a hardware floating point unit, so doing FP math
+        // doesn't take any extra time, but it does take extra time to convert
+        // the integer pixels to floating point and back to integers again.
+        // So this allows it to execute more quickly in pure integer math.
+        //
+        // +---+---+---+---+
+        // | x | x | x | x |
+        // +---+---+---+---+
+        // | x | C | x | x |
+        // +---+---+---+---+
+        // | x | x | x | x |
+        // +---+---+---+---+
+        // | x | x | x | x |
+        // +---+---+---+---+
+        //
+        switch (src_img->bpp) {
+            case IMAGE_BPP_BINARY: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint32_t *src_row_ptr_0, *src_row_ptr_1, *src_row_ptr_2, *src_row_ptr_3;
 
-            if (hint & IMAGE_HINT_BILINEAR) {
-                fb_alloc_mark();
-
-                // Allocate cache lines
-                int bytes_per_img_line = img->w * 4; // (3 bytes RGB888 + 1 byte alpha) = * 4
-                uint32_t *cache_line_1 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
-                uint32_t *cache_line_2 = fb_alloc(bytes_per_img_line, FB_ALLOC_NO_HINT);
-                uint32_t *cache_line_top = cache_line_2;
-                uint32_t *cache_line_bottom = cache_line_1;
-
-                // Pre-fill cache for first drawn line
-                int temp_other_y = fast_floorf(other_y_start * over_yscale);
-                uint16_t *other_row_ptr = imlib_compute_row_ptr(other, temp_other_y);
-                void *mask_row_ptr = mask ? imlib_compute_row_ptr(mask, temp_other_y) : NULL;
-
-                int_generate_cache_line_rgb565(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, color_palette, alpha_palette);
-
-                // Used to detect when other starts rendering from the next line
-                int last_other_y = -1;
-
-                // Iterate the img area to be updated
-                for (int y = other_y_start; y < other_y_end; y++) {
-                    // Pre-add x_off here to save adding it inside the central loop
-                    uint16_t *img_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_off + y) + x_off;
-
-                    // calculate y offset in other
-                    float other_y_float = (y + 0.5) * over_yscale;
-
-                    // Calculate weighting between top and bottom pixel
-                    int other_y = fast_floorf(other_y_float);
-                    int weight_y = fast_floorf((other_y_float - other_y) * 256);
-                    uint32_t y_interpolate = ((256 - weight_y) << 16) + weight_y;
-
-                    // Weighting is 0->128 for blendops to prevent overflow
-                    weight_y >>= 1;
-
-                    // If the scale is negative the pixels come in reverse order, so reverse the remainder weighting
-                    int weight_y_complement = 128 - weight_y;
-                    
-                    if (last_other_y != other_y) {      
-                        uint32_t *cache_line_temp = cache_line_top;
-                        cache_line_top = cache_line_bottom;
-                        cache_line_bottom = cache_line_temp;
-                        
-                        other_row_ptr = imlib_compute_row_ptr(other, other_y + 1);
-                        mask_row_ptr = mask ? imlib_compute_row_ptr(mask, other_y + 1) : NULL;
-                        int_generate_cache_line_rgb565(cache_line_bottom, alpha, other_row_ptr, other_bpp, mask_row_ptr, mask_bpp, other_x_start, other_x_end, over_xscale, color_palette, alpha_palette);
-
-                        last_other_y = other_y;
+                    // keep row pointers in bounds
+                    if (src_y_index < 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = src_row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, 0);
+                        src_row_ptr_3 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, 1);
+                    } else if (src_y_index == 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, 0);
+                        src_row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, 1);
+                        src_row_ptr_3 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, 2);
+                    } else if (src_y_index == h_limit_m_1) {
+                        int src_y_index_m_1 = src_y_index - 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, h_limit_m_1);
+                        src_row_ptr_2 = src_row_ptr_3 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else if (src_y_index >= h_limit) {
+                        int src_y_index_m_1 = src_y_index - 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = src_row_ptr_2 = src_row_ptr_3 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else { // get 4 neighboring rows
+                        int src_y_index_m_1 = src_y_index - 1;
+                        int src_y_index_p_1 = src_y_index + 1;
+                        int src_y_index_p_2 = src_y_index + 2;
+                        src_row_ptr_0 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index);
+                        src_row_ptr_2 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index_p_1);
+                        src_row_ptr_3 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index_p_2);
                     }
 
-                    for (int i = 0, x = other_x_start; x < other_x_end; x++, i++) {
-                        uint32_t top = cache_line_top[i];
-                        uint32_t bottom = cache_line_bottom[i];
-                        uint32_t result_pixel = draw_blendop_rgb888(top >> 8, bottom >> 8, weight_y, weight_y_complement);
+                    do { // Cache the results of getting the source rows
+                        // 15-bit fraction to fit a square of it in 32-bits
+                        // pre-calculate the ^1, ^2, and ^3 of the fraction
+                        int dy = ((src_y_accum >> 1) & 0x7FFF);
+                        int dy2 = (dy * dy) >> 15;
+                        int dy3 = (dy2 * dy) >> 15;
+                        long smuad_dy_dy2 = (dy << 16) | dy2;
 
-                        // Pack top and bottom img alpha for SMUAD
-                        uint32_t img_alpha_top_bottom = ((top & 255) << 16) | (bottom & 255);
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
 
-                        // Blend img alphas
-                        uint32_t img_alpha = __SMUAD(y_interpolate, img_alpha_top_bottom) >> 8;
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
 
-                        // if img alpha will have an effect
-                        if (img_alpha) {
-                            // Get img pixel
-                            uint32_t img_pixel = IMAGE_GET_RGB565_PIXEL_FAST(img_row_ptr, x);
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int src_x_index_m_1 = src_x_index - 1;
+                            int src_x_index_p_1 = src_x_index + 1;
+                            int src_x_index_p_2 = src_x_index + 2;
+                            int pixel_x_offests[4];
 
-                            // Apply alpha to img pixel
-                            img_pixel = draw_scaleop_RGB565_to_RGB888(img_pixel, img_alpha);
-
-                            // Add to other pixel (which already had alpha applied in generate_line_cache)
-                            result_pixel = img_pixel + result_pixel;
-                        }
-
-                        // Convert back to RGB565
-                        result_pixel = COLOR_R5_G6_B5_TO_RGB565(result_pixel >> 19, (result_pixel >> 10) & 63, (result_pixel >> 3) & 63);
-                        
-                        // Store pixel
-                        IMAGE_PUT_RGB565_PIXEL_FAST(img_row_ptr, x, result_pixel);
-                    }
-                }
-                
-                // De-allocate cache lines
-                fb_alloc_free_till_mark();
-            } else {
-                uint32_t va = __PKHBT((128 - alpha), alpha, 16);
-
-                // Iterate the img area to be updated
-                for (int y = other_y_start; y < other_y_end; y++) {
-                    // Pre-add x_off here to save adding it inside the central loop
-                    uint16_t *img_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(img, y_off + y) + x_off;
-                    float other_y_float = y * over_yscale;
-                    int other_y = fast_floorf(other_y_float);
-                    uint16_t *other_row_ptr = imlib_compute_row_ptr(other, other_y);
-                    
-                    for (int x = other_x_start; x < other_x_end; x++) {
-                        int other_x = fast_floorf(x * over_xscale);
-
-                        if (!mask || image_get_mask_pixel(mask, other_x, other_y)) {
-                            uint32_t result_pixel = imlib_get_pixel_fast(other_bpp, other_row_ptr, other_x);
-                            
-                            if (alpha_palette) {
-                                uint32_t temp_alpha = (alpha * alpha_palette[result_pixel]) >> 8;
-                                
-                                va = __PKHBT((128 - temp_alpha), temp_alpha, 16);
+                            // keep pixels in bounds
+                            if (src_x_index < 0) {
+                                pixel_x_offests[0] = pixel_x_offests[1] = pixel_x_offests[2] = 0;
+                                pixel_x_offests[3] = 1;
+                            } else if (src_x_index == 0) {
+                                pixel_x_offests[0] = pixel_x_offests[1] = 0;
+                                pixel_x_offests[2] = 1;
+                                pixel_x_offests[3] = 2;
+                            } else if (src_x_index == w_limit_m_1) {
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = w_limit_m_1;
+                                pixel_x_offests[2] = pixel_x_offests[3] = w_limit;
+                            } else if (src_x_index >= w_limit) {
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = pixel_x_offests[2] = pixel_x_offests[3] = w_limit;
+                            } else { // get 4 neighboring rows
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = src_x_index;
+                                pixel_x_offests[2] = src_x_index_p_1;
+                                pixel_x_offests[3] = src_x_index_p_2;
                             }
-                            result_pixel = color_palette ? color_palette[result_pixel] : safe_map_pixel(IMAGE_BPP_RGB565, other_bpp, result_pixel);
-                            
-                            if (va & 0x1ff) {
-                                // Blend img to other pixel
-                                uint16_t img_pixel = IMAGE_GET_RGB565_PIXEL_FAST(img_row_ptr, x);
-                                uint32_t r_ta = COLOR_RGB565_TO_R5(result_pixel);
-                                uint32_t g_ta = COLOR_RGB565_TO_G6(result_pixel);
-                                uint32_t b_ta = COLOR_RGB565_TO_B5(result_pixel);
-                                uint32_t vr = __PKHBT(COLOR_RGB565_TO_R5(img_pixel), r_ta, 16);
-                                uint32_t vg = __PKHBT(COLOR_RGB565_TO_G6(img_pixel), g_ta, 16);
-                                uint32_t vb = __PKHBT(COLOR_RGB565_TO_B5(img_pixel), b_ta, 16);
-                                uint32_t r = __SMUAD(va, vr) >> 7;
-                                uint32_t g = __SMUAD(va, vg) >> 7;
-                                uint32_t b = __SMUAD(va, vb) >> 7;
 
-                                result_pixel = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
-                            }
-                            IMAGE_PUT_RGB565_PIXEL_FAST(img_row_ptr, x, result_pixel);
-                        }
-                    }
-                }
+                            int d[4];
+
+                            for (int z = 0; z < 4; z++) { // bicubic x step (-1 to +2)
+                                int pixel_0 = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr_0, pixel_x_offests[z]) * 0xFF; // more res
+                                int pixel_1 = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr_1, pixel_x_offests[z]) * 0xFF; // more res
+                                int pixel_2 = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr_2, pixel_x_offests[z]) * 0xFF; // more res
+                                int pixel_3 = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr_3, pixel_x_offests[z]) * 0xFF; // more res
+
+                                int a0 = pixel_2 - pixel_0;
+                                int a1 = (pixel_0 << 1) + (pixel_2 << 2) - (5 * pixel_1) - pixel_3;
+                                int a2 = (3 * (pixel_1 - pixel_2)) + pixel_3 - pixel_0;
+                                long smuad_a0_a1 = __PKHBT(a1, a0, 16);
+                                int pixel_1_avg = (pixel_1 << 16) | 0x8000;
+
+                                d[z] = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1, (dy3 * a2) + pixel_1_avg)) >> 16;
+                            } // for z
+
+                            int d0 = d[0], d1 = d[1], d2 = d[2], d3 = d[3];
+                            int a0 = d2 - d0;
+                            int a1 = (d0 << 1) + (d2 << 2) - (5 * d1) - d3;
+                            int a2 = (3 * (d1 - d2)) + d3 - d0;
+                            long smuad_a0_a1 = __PKHBT(a1, a0, 16);
+                            int d1_avg = (d1 << 16) | 0x8000;
+
+                            do { // Cache the results of getting the source pixels
+                                // 15-bit fraction to fit a square of it in 32-bits
+                                // pre-calculate the ^1, ^2, and ^3 of the fraction
+                                int dx = ((src_x_accum >> 1) & 0x7FFF);
+                                int dx2 = (dx * dx) >> 15;
+                                int dx3 = (dx2 * dx) >> 15;
+                                long smuad_dx_dx2 = (dx << 16) | dx2;
+
+                                int pixel = __SMLAD(smuad_dx_dx2, smuad_a0_a1, (dx3 * a2) + d1_avg);
+
+                                // clamp output
+                                pixel = __USAT_ASR(pixel, 1, 23);
+
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
             }
-            break;
+            case IMAGE_BPP_GRAYSCALE: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint8_t *src_row_ptr_0, *src_row_ptr_1, *src_row_ptr_2, *src_row_ptr_3;
+
+                    // keep row pointers in bounds
+                    if (src_y_index < 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = src_row_ptr_2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, 0);
+                        src_row_ptr_3 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, 1);
+                    } else if (src_y_index == 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, 0);
+                        src_row_ptr_2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, 1);
+                        src_row_ptr_3 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, 2);
+                    } else if (src_y_index == h_limit_m_1) {
+                        int src_y_index_m_1 = src_y_index - 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, h_limit_m_1);
+                        src_row_ptr_2 = src_row_ptr_3 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else if (src_y_index >= h_limit) {
+                        int src_y_index_m_1 = src_y_index - 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = src_row_ptr_2 = src_row_ptr_3 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else { // get 4 neighboring rows
+                        int src_y_index_m_1 = src_y_index - 1;
+                        int src_y_index_p_1 = src_y_index + 1;
+                        int src_y_index_p_2 = src_y_index + 2;
+                        src_row_ptr_0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index);
+                        src_row_ptr_2 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index_p_1);
+                        src_row_ptr_3 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index_p_2);
+                    }
+
+                    do { // Cache the results of getting the source rows
+                        // 15-bit fraction to fit a square of it in 32-bits
+                        // pre-calculate the ^1, ^2, and ^3 of the fraction
+                        int dy = ((src_y_accum >> 1) & 0x7FFF);
+                        int dy2 = (dy * dy) >> 15;
+                        int dy3 = (dy2 * dy) >> 15;
+                        long smuad_dy_dy2 = (dy << 16) | dy2;
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int src_x_index_m_1 = src_x_index - 1;
+// Concept code showing off how to do 4 operations in parallel. Not useful however because of overflows
+// in the 8-bit accumulators - the final image looks bad. Might be workable for lower bit-depth images.
+#if 0
+                            int pixel_row_0, pixel_row_1, pixel_row_2, pixel_row_3;
+                            // Column 0 = Bits[7:0]
+                            // Column 1 = Bits[15:8]
+                            // Column 2 = Bits[23:16]
+                            // Column 3 = Bits[31:24]
+
+                            if (src_x_index < 0) {
+                                pixel_row_0 = ((*src_row_ptr_0) * 0x010101) | ((*(src_row_ptr_0 + 1)) << 24);
+                                pixel_row_1 = ((*src_row_ptr_1) * 0x010101) | ((*(src_row_ptr_1 + 1)) << 24);
+                                pixel_row_2 = ((*src_row_ptr_2) * 0x010101) | ((*(src_row_ptr_2 + 1)) << 24);
+                                pixel_row_3 = ((*src_row_ptr_3) * 0x010101) | ((*(src_row_ptr_3 + 1)) << 24);
+                            } else if (src_x_index == 0) {
+                                pixel_row_0 = ((*src_row_ptr_0) * 0x0101) | ((*((uint16_t *) (src_row_ptr_0 + 1))) << 16);
+                                pixel_row_1 = ((*src_row_ptr_1) * 0x0101) | ((*((uint16_t *) (src_row_ptr_1 + 1))) << 16);
+                                pixel_row_2 = ((*src_row_ptr_2) * 0x0101) | ((*((uint16_t *) (src_row_ptr_2 + 1))) << 16);
+                                pixel_row_3 = ((*src_row_ptr_3) * 0x0101) | ((*((uint16_t *) (src_row_ptr_3 + 1))) << 16);
+                            } else if (src_x_index == w_limit_m_1) {
+                                pixel_row_0 = (*((uint16_t *) (src_row_ptr_0 + src_x_index_m_1))) | ((*(src_row_ptr_0 + w_limit)) * 0x01010000);
+                                pixel_row_1 = (*((uint16_t *) (src_row_ptr_1 + src_x_index_m_1))) | ((*(src_row_ptr_1 + w_limit)) * 0x01010000);
+                                pixel_row_2 = (*((uint16_t *) (src_row_ptr_2 + src_x_index_m_1))) | ((*(src_row_ptr_2 + w_limit)) * 0x01010000);
+                                pixel_row_3 = (*((uint16_t *) (src_row_ptr_3 + src_x_index_m_1))) | ((*(src_row_ptr_3 + w_limit)) * 0x01010000);
+                            } else if (src_x_index >= w_limit) {
+                                pixel_row_0 = (*(src_row_ptr_0 + src_x_index_m_1)) | ((*(src_row_ptr_0 + w_limit)) * 0x01010100);
+                                pixel_row_1 = (*(src_row_ptr_1 + src_x_index_m_1)) | ((*(src_row_ptr_1 + w_limit)) * 0x01010100);
+                                pixel_row_2 = (*(src_row_ptr_2 + src_x_index_m_1)) | ((*(src_row_ptr_2 + w_limit)) * 0x01010100);
+                                pixel_row_3 = (*(src_row_ptr_3 + src_x_index_m_1)) | ((*(src_row_ptr_3 + w_limit)) * 0x01010100);
+                            } else { // get 4 neighboring rows
+                                pixel_row_0 = *((uint32_t *) (src_row_ptr_0 + src_x_index_m_1));
+                                pixel_row_1 = *((uint32_t *) (src_row_ptr_1 + src_x_index_m_1));
+                                pixel_row_2 = *((uint32_t *) (src_row_ptr_2 + src_x_index_m_1));
+                                pixel_row_3 = *((uint32_t *) (src_row_ptr_3 + src_x_index_m_1));
+                            }
+
+                            // Need 8-bit signed (0x7F max).
+                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
+                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
+                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
+                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
+
+                            // Need 1/3 gaurd bits.
+                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
+                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
+                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
+                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
+
+                            // Need 2/3 gaurd bits.
+                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
+                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
+                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
+                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
+
+                            // Need 3/3 gaurd bits.
+                            pixel_row_0 = __UHADD8(pixel_row_0, 0);
+                            pixel_row_1 = __UHADD8(pixel_row_1, 0);
+                            pixel_row_2 = __UHADD8(pixel_row_2, 0);
+                            pixel_row_3 = __UHADD8(pixel_row_3, 0);
+
+                            long temp0 = __QADD8(pixel_row_2, pixel_row_2);
+                            long temp1 = __QADD8(pixel_row_1, pixel_row_1);
+                            long temp2 = __QSUB8(pixel_row_1, pixel_row_2);
+
+                            long a0_col = __QSUB8(pixel_row_2, pixel_row_0);
+                            long a1_col = __QSUB8(__QSUB8(__QADD8(__QADD8(pixel_row_0, pixel_row_0), __QADD8(temp0, temp0)), __QADD8(__QADD8(temp1, temp1), pixel_row_1)), pixel_row_3);
+                            long a2_col = __QSUB8(__QADD8(__QADD8(__QADD8(temp2, temp2), temp2), pixel_row_3), pixel_row_0);
+
+                            long a0_col_2_0 = __SXTB16(a0_col);
+                            long a1_col_2_0 = __SXTB16(a1_col);
+                            long a2_col_2_0 = __SXTB16(a2_col);
+
+                            long smuad_a0_a1_0 = __PKHBT(a1_col_2_0, a0_col_2_0, 16);
+                            long pixel_1_avg_0 = ((pixel_row_1 & 0xff) << 16) | 0x8000;
+                            int d0 = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_0, __SMLAD(dy3, a2_col_2_0, pixel_1_avg_0))) >> 16;
+
+                            long smuad_a0_a1_2 = __PKHTB(a0_col_2_0, a1_col_2_0, 16);
+                            long pixel_1_avg_2 = (pixel_row_1 & 0xff0000) | 0x8000;
+                            int d2 = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_2, __SMLADX(dy3, a2_col_2_0, pixel_1_avg_2))) >> 16;
+
+                            long a0_col_3_1 = __SXTB16_RORn(a0_col, 8);
+                            long a1_col_3_1 = __SXTB16_RORn(a1_col, 8);
+                            long a2_col_3_1 = __SXTB16_RORn(a2_col, 8);
+
+                            long smuad_a0_a1_1 = __PKHBT(a1_col_3_1, a0_col_3_1, 16);
+                            long pixel_1_avg_1 = ((pixel_row_1 << 8) & 0xff0000) | 0x8000;
+                            int d1 = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_1, __SMLAD(dy3, a2_col_3_1, pixel_1_avg_1))) >> 16;
+
+                            long smuad_a0_a1_3 = __PKHTB(a0_col_3_1, a1_col_3_1, 16);
+                            long pixel_1_avg_3 = ((pixel_row_1 >> 8) & 0xff0000) | 0x8000;
+                            int d3 = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1_3, __SMLADX(dy3, a2_col_3_1, pixel_1_avg_3))) >> 16;
+#else
+                            int src_x_index_p_1 = src_x_index + 1;
+                            int src_x_index_p_2 = src_x_index + 2;
+                            int pixel_x_offests[4];
+
+                            // keep pixels in bounds
+                            if (src_x_index < 0) {
+                                pixel_x_offests[0] = pixel_x_offests[1] = pixel_x_offests[2] = 0;
+                                pixel_x_offests[3] = 1;
+                            } else if (src_x_index == 0) {
+                                pixel_x_offests[0] = pixel_x_offests[1] = 0;
+                                pixel_x_offests[2] = 1;
+                                pixel_x_offests[3] = 2;
+                            } else if (src_x_index == w_limit_m_1) {
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = w_limit_m_1;
+                                pixel_x_offests[2] = pixel_x_offests[3] = w_limit;
+                            } else if (src_x_index >= w_limit) {
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = pixel_x_offests[2] = pixel_x_offests[3] = w_limit;
+                            } else { // get 4 neighboring rows
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = src_x_index;
+                                pixel_x_offests[2] = src_x_index_p_1;
+                                pixel_x_offests[3] = src_x_index_p_2;
+                            }
+
+                            int d[4];
+
+                            for (int z = 0; z < 4; z++) { // bicubic x step (-1 to +2)
+                                int pixel_0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(src_row_ptr_0, pixel_x_offests[z]);
+                                int pixel_1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(src_row_ptr_1, pixel_x_offests[z]);
+                                int pixel_2 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(src_row_ptr_2, pixel_x_offests[z]);
+                                int pixel_3 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(src_row_ptr_3, pixel_x_offests[z]);
+
+                                int a0 = pixel_2 - pixel_0;
+                                int a1 = (pixel_0 << 1) + (pixel_2 << 2) - (5 * pixel_1) - pixel_3;
+                                int a2 = (3 * (pixel_1 - pixel_2)) + pixel_3 - pixel_0;
+                                long smuad_a0_a1 = __PKHBT(a1, a0, 16);
+                                int pixel_1_avg = (pixel_1 << 16) | 0x8000;
+
+                                d[z] = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_a0_a1, (dy3 * a2) + pixel_1_avg)) >> 16;
+                            } // for z
+
+                            int d0 = d[0], d1 = d[1], d2 = d[2], d3 = d[3];
+#endif
+                            int a0 = d2 - d0;
+                            int a1 = (d0 << 1) + (d2 << 2) - (5 * d1) - d3;
+                            int a2 = (3 * (d1 - d2)) + d3 - d0;
+                            long smuad_a0_a1 = __PKHBT(a1, a0, 16);
+                            int d1_avg = (d1 << 16) | 0x8000;
+
+                            do { // Cache the results of getting the source pixels
+                                // 15-bit fraction to fit a square of it in 32-bits
+                                // pre-calculate the ^1, ^2, and ^3 of the fraction
+                                int dx = ((src_x_accum >> 1) & 0x7FFF);
+                                int dx2 = (dx * dx) >> 15;
+                                int dx3 = (dx2 * dx) >> 15;
+                                long smuad_dx_dx2 = (dx << 16) | dx2;
+
+                                int pixel = __SMLAD(smuad_dx_dx2, smuad_a0_a1, (dx3 * a2) + d1_avg);
+
+                                // clamp output
+                                pixel = __USAT_ASR(pixel, 8, 16);
+
+                                IMAGE_PUT_GRAYSCALE_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint16_t *src_row_ptr_0, *src_row_ptr_1, *src_row_ptr_2, *src_row_ptr_3;
+
+                    // keep row pointers in bounds
+                    if (src_y_index < 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = src_row_ptr_2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, 0);
+                        src_row_ptr_3 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, 1);
+                    } else if (src_y_index == 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, 0);
+                        src_row_ptr_2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, 1);
+                        src_row_ptr_3 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, 2);
+                    } else if (src_y_index == h_limit_m_1) {
+                        int src_y_index_m_1 = src_y_index - 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, h_limit_m_1);
+                        src_row_ptr_2 = src_row_ptr_3 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else if (src_y_index >= h_limit) {
+                        int src_y_index_m_1 = src_y_index - 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = src_row_ptr_2 = src_row_ptr_3 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else { // get 4 neighboring rows
+                        int src_y_index_m_1 = src_y_index - 1;
+                        int src_y_index_p_1 = src_y_index + 1;
+                        int src_y_index_p_2 = src_y_index + 2;
+                        src_row_ptr_0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index_m_1);
+                        src_row_ptr_1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index);
+                        src_row_ptr_2 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index_p_1);
+                        src_row_ptr_3 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index_p_2);
+                    }
+
+                    do { // Cache the results of getting the source rows
+                        // 15-bit fraction to fit a square of it in 32-bits
+                        // pre-calculate the ^1, ^2, and ^3 of the fraction
+                        int dy = ((src_y_accum >> 1) & 0x7FFF);
+                        int dy2 = (dy * dy) >> 15;
+                        int dy3 = (dy2 * dy) >> 15;
+                        long smuad_dy_dy2 = (dy << 16) | dy2;
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int src_x_index_m_1 = src_x_index - 1;
+                            int src_x_index_p_1 = src_x_index + 1;
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+                            uint32_t pixel_row_0[2], pixel_row_1[2], pixel_row_2[2], pixel_row_3[2];
+                            // Column 0 = Bits[15:0]
+                            // Column 1 = Bits[31:16]
+
+                            if (src_x_index < 0) {
+                                pixel_row_0[0] = (*src_row_ptr_0) * 0x10001;
+                                pixel_row_0[1] = __PKHBT(pixel_row_0[0], *(src_row_ptr_0 + 1), 16);
+                                pixel_row_1[0] = (*src_row_ptr_1) * 0x10001;
+                                pixel_row_1[1] = __PKHBT(pixel_row_1[0], *(src_row_ptr_1 + 1), 16);
+                                pixel_row_2[0] = (*src_row_ptr_2) * 0x10001;
+                                pixel_row_2[1] = __PKHBT(pixel_row_2[0], *(src_row_ptr_2 + 1), 16);
+                                pixel_row_3[0] = (*src_row_ptr_3) * 0x10001;
+                                pixel_row_3[1] = __PKHBT(pixel_row_3[0], *(src_row_ptr_3 + 1), 16);
+                            } else if (src_x_index == 0) {
+                                pixel_row_0[0] = (*src_row_ptr_0) * 0x10001;
+                                pixel_row_0[1] = *((uint32_t *) (src_row_ptr_0 + 1));
+                                pixel_row_1[0] = (*src_row_ptr_1) * 0x10001;
+                                pixel_row_1[1] = *((uint32_t *) (src_row_ptr_1 + 1));
+                                pixel_row_2[0] = (*src_row_ptr_2) * 0x10001;
+                                pixel_row_2[1] = *((uint32_t *) (src_row_ptr_2 + 1));
+                                pixel_row_3[0] = (*src_row_ptr_3) * 0x10001;
+                                pixel_row_3[1] = *((uint32_t *) (src_row_ptr_3 + 1));
+                            } else if (src_x_index == w_limit_m_1) {
+                                pixel_row_0[0] = *((uint32_t *) (src_row_ptr_0 + src_x_index_m_1));
+                                pixel_row_0[1] = (*(src_row_ptr_0 + w_limit)) * 0x10001;
+                                pixel_row_1[0] = *((uint32_t *) (src_row_ptr_1 + src_x_index_m_1));
+                                pixel_row_1[1] = (*(src_row_ptr_1 + w_limit)) * 0x10001;
+                                pixel_row_2[0] = *((uint32_t *) (src_row_ptr_2 + src_x_index_m_1));
+                                pixel_row_2[1] = (*(src_row_ptr_2 + w_limit)) * 0x10001;
+                                pixel_row_3[0] = *((uint32_t *) (src_row_ptr_3 + src_x_index_m_1));
+                                pixel_row_3[1] = (*(src_row_ptr_3 + w_limit)) * 0x10001;
+                            } else if (src_x_index >= w_limit) {
+                                pixel_row_0[0] = *((uint32_t *) (src_row_ptr_0 + src_x_index_m_1));
+                                pixel_row_0[1] = (pixel_row_0[0] >> 16) * 0x10001;
+                                pixel_row_1[0] = *((uint32_t *) (src_row_ptr_1 + src_x_index_m_1));
+                                pixel_row_1[1] = (pixel_row_1[0] >> 16) * 0x10001;
+                                pixel_row_2[0] = *((uint32_t *) (src_row_ptr_2 + src_x_index_m_1));
+                                pixel_row_2[1] = (pixel_row_2[0] >> 16) * 0x10001;
+                                pixel_row_3[0] = *((uint32_t *) (src_row_ptr_3 + src_x_index_m_1));
+                                pixel_row_3[1] = (pixel_row_3[0] >> 16) * 0x10001;
+                            } else { // get 4 neighboring rows
+                                pixel_row_0[0] = *((uint32_t *) (src_row_ptr_0 + src_x_index_m_1));
+                                pixel_row_0[1] = *((uint32_t *) (src_row_ptr_0 + src_x_index_p_1));
+                                pixel_row_1[0] = *((uint32_t *) (src_row_ptr_1 + src_x_index_m_1));
+                                pixel_row_1[1] = *((uint32_t *) (src_row_ptr_1 + src_x_index_p_1));
+                                pixel_row_2[0] = *((uint32_t *) (src_row_ptr_2 + src_x_index_m_1));
+                                pixel_row_2[1] = *((uint32_t *) (src_row_ptr_2 + src_x_index_p_1));
+                                pixel_row_3[0] = *((uint32_t *) (src_row_ptr_3 + src_x_index_m_1));
+                                pixel_row_3[1] = *((uint32_t *) (src_row_ptr_3 + src_x_index_p_1));
+                            }
+
+                            int r_d[4], g_d[4], b_d[4];
+
+                            for (int z = 0; z < 2; z++) { // dual bicubic x step (-1 to +2)
+
+                                // RGB565 byte reversal fix
+                                pixel_row_0[z] = __REV16(pixel_row_0[z]);
+                                pixel_row_1[z] = __REV16(pixel_row_1[z]);
+                                pixel_row_2[z] = __REV16(pixel_row_2[z]);
+                                pixel_row_3[z] = __REV16(pixel_row_3[z]);
+
+                                long r_pixel_row_0 = (pixel_row_0[z] >> 11) & 0x1f001f;
+                                long r_pixel_row_1 = (pixel_row_1[z] >> 11) & 0x1f001f;
+                                long r_pixel_row_2 = (pixel_row_2[z] >> 11) & 0x1f001f;
+                                long r_pixel_row_3 = (pixel_row_3[z] >> 11) & 0x1f001f;
+
+                                uint32_t r_a0_col = __QSUB16(r_pixel_row_2, r_pixel_row_0);
+                                uint32_t r_a1_col = __QSUB16(__QSUB16(__QADD16(r_pixel_row_0 << 1, r_pixel_row_2 << 2), r_pixel_row_1 * 5), r_pixel_row_3);
+                                uint32_t r_a2_col = __QSUB16(__QADD16(__QSUB16(r_pixel_row_1 * 3, r_pixel_row_2 * 3), r_pixel_row_3), r_pixel_row_0);
+
+                                long r_smuad_a0_a1_0 = __PKHBT(r_a1_col, r_a0_col, 16);
+                                long r_pixel_1_avg_0 =  (r_pixel_row_1 << 16) | 0x8000;
+                                r_d[z*2] = ((int32_t) __SMLAD(smuad_dy_dy2, r_smuad_a0_a1_0, __SMLAD(dy3, r_a2_col, r_pixel_1_avg_0))) >> 16;
+
+                                long r_smuad_a0_a1_1 = __PKHTB(r_a0_col, r_a1_col, 16);
+                                long r_pixel_1_avg_1 = __PKHTB(r_pixel_row_1, 0x8000, 0);
+                                r_d[(z*2)+1] = ((int32_t) __SMLAD(smuad_dy_dy2, r_smuad_a0_a1_1, __SMLADX(dy3, r_a2_col, r_pixel_1_avg_1))) >> 16;
+
+                                long g_pixel_row_0 = (pixel_row_0[z] >> 5) & 0x3f003f;
+                                long g_pixel_row_1 = (pixel_row_1[z] >> 5) & 0x3f003f;
+                                long g_pixel_row_2 = (pixel_row_2[z] >> 5) & 0x3f003f;
+                                long g_pixel_row_3 = (pixel_row_3[z] >> 5) & 0x3f003f;
+
+                                uint32_t g_a0_col = __QSUB16(g_pixel_row_2, g_pixel_row_0);
+                                uint32_t g_a1_col = __QSUB16(__QSUB16(__QADD16(g_pixel_row_0 << 1, g_pixel_row_2 << 2), g_pixel_row_1 * 5), g_pixel_row_3);
+                                uint32_t g_a2_col = __QSUB16(__QADD16(__QSUB16(g_pixel_row_1 * 3, g_pixel_row_2 * 3), g_pixel_row_3), g_pixel_row_0);
+
+                                long g_smuad_a0_a1_0 = __PKHBT(g_a1_col, g_a0_col, 16);
+                                long g_pixel_1_avg_0 =  (g_pixel_row_1 << 16) | 0x8000;
+                                g_d[z*2] = ((int32_t) __SMLAD(smuad_dy_dy2, g_smuad_a0_a1_0, __SMLAD(dy3, g_a2_col, g_pixel_1_avg_0))) >> 16;
+
+                                long g_smuad_a0_a1_1 = __PKHTB(g_a0_col, g_a1_col, 16);
+                                long g_pixel_1_avg_1 = __PKHTB(g_pixel_row_1, 0x8000, 0);
+                                g_d[(z*2)+1] = ((int32_t) __SMLAD(smuad_dy_dy2, g_smuad_a0_a1_1, __SMLADX(dy3, g_a2_col, g_pixel_1_avg_1))) >> 16;
+
+                                long b_pixel_row_0 = pixel_row_0[z] & 0x1f001f;
+                                long b_pixel_row_1 = pixel_row_1[z] & 0x1f001f;
+                                long b_pixel_row_2 = pixel_row_2[z] & 0x1f001f;
+                                long b_pixel_row_3 = pixel_row_3[z] & 0x1f001f;
+
+                                uint32_t b_a0_col = __QSUB16(b_pixel_row_2, b_pixel_row_0);
+                                uint32_t b_a1_col = __QSUB16(__QSUB16(__QADD16(b_pixel_row_0 << 1, b_pixel_row_2 << 2), b_pixel_row_1 * 5), b_pixel_row_3);
+                                uint32_t b_a2_col = __QSUB16(__QADD16(__QSUB16(b_pixel_row_1 * 3, b_pixel_row_2 * 3), b_pixel_row_3), b_pixel_row_0);
+
+                                long b_smuad_a0_a1_0 = __PKHBT(b_a1_col, b_a0_col, 16);
+                                long b_pixel_1_avg_0 =  (b_pixel_row_1 << 16) | 0x8000;
+                                b_d[z*2] = ((int32_t) __SMLAD(smuad_dy_dy2, b_smuad_a0_a1_0, __SMLAD(dy3, b_a2_col, b_pixel_1_avg_0))) >> 16;
+
+                                long b_smuad_a0_a1_1 = __PKHTB(b_a0_col, b_a1_col, 16);
+                                long b_pixel_1_avg_1 = __PKHTB(b_pixel_row_1, 0x8000, 0);
+                                b_d[(z*2)+1] = ((int32_t) __SMLAD(smuad_dy_dy2, b_smuad_a0_a1_1, __SMLADX(dy3, b_a2_col, b_pixel_1_avg_1))) >> 16;
+                            } // for z
+#else
+                            int src_x_index_p_2 = src_x_index + 2;
+                            int pixel_x_offests[4];
+
+                            // keep pixels in bounds
+                            if (src_x_index < 0) {
+                                pixel_x_offests[0] = pixel_x_offests[1] = pixel_x_offests[2] = 0;
+                                pixel_x_offests[3] = 1;
+                            } else if (src_x_index == 0) {
+                                pixel_x_offests[0] = pixel_x_offests[1] = 0;
+                                pixel_x_offests[2] = 1;
+                                pixel_x_offests[3] = 2;
+                            } else if (src_x_index == w_limit_m_1) {
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = w_limit_m_1;
+                                pixel_x_offests[2] = pixel_x_offests[3] = w_limit;
+                            } else if (src_x_index >= w_limit) {
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = pixel_x_offests[2] = pixel_x_offests[3] = w_limit;
+                            } else { // get 4 neighboring rows
+                                pixel_x_offests[0] = src_x_index_m_1;
+                                pixel_x_offests[1] = src_x_index;
+                                pixel_x_offests[2] = src_x_index_p_1;
+                                pixel_x_offests[3] = src_x_index_p_2;
+                            }
+
+                            int r_d[4], g_d[4], b_d[4];
+
+                            for (int z = 0; z < 4; z++) { // bicubic x step (-1 to +2)
+                                int pixel_0 = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr_0, pixel_x_offests[z]);
+                                int pixel_1 = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr_1, pixel_x_offests[z]);
+                                int pixel_2 = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr_2, pixel_x_offests[z]);
+                                int pixel_3 = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr_3, pixel_x_offests[z]);
+
+                                // RGB565 byte reversal fix
+                                pixel_0 = __REV16(pixel_0);
+                                pixel_1 = __REV16(pixel_1);
+                                pixel_2 = __REV16(pixel_2);
+                                pixel_3 = __REV16(pixel_3);
+
+                                int r0 = pixel_0 >> 11;
+                                int r1 = pixel_1 >> 11;
+                                int r2 = pixel_2 >> 11;
+                                int r3 = pixel_3 >> 11;
+
+                                int r_a0 = r2 - r0;
+                                int r_a1 = (r0 << 1) + (r2 << 2) - (5 * r1) - r3;
+                                int r_a2 = (3 * (r1 - r2)) + r3 - r0;
+                                long smuad_r_a0_r_a1 = __PKHBT(r_a1, r_a0, 16);
+                                int r1_avg = (r1 << 16) | 0x8000;
+
+                                r_d[z] = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_r_a0_r_a1, (dy3 * r_a2) + r1_avg)) >> 16;
+
+                                int g0 = (pixel_0 >> 5) & 0x3F;
+                                int g1 = (pixel_1 >> 5) & 0x3F;
+                                int g2 = (pixel_2 >> 5) & 0x3F;
+                                int g3 = (pixel_3 >> 5) & 0x3F;
+
+                                int g_a0 = g2 - g0;
+                                int g_a1 = (g0 << 1) + (g2 << 2) - (5 * g1) - g3;
+                                int g_a2 = (3 * (g1 - g2)) + g3 - g0;
+                                long smuad_g_a0_g_a1 = __PKHBT(g_a1, g_a0, 16);
+                                int g1_avg = (g1 << 16) | 0x8000;
+
+                                g_d[z] = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_g_a0_g_a1, (dy3 * g_a2) + g1_avg)) >> 16;
+
+                                int b0 = pixel_0 & 0x1F;
+                                int b1 = pixel_1 & 0x1F;
+                                int b2 = pixel_2 & 0x1F;
+                                int b3 = pixel_3 & 0x1F;
+
+                                int b_a0 = b2 - b0;
+                                int b_a1 = (b0 << 1) + (b2 << 2) - (5 * b1) - b3;
+                                int b_a2 = (3 * (b1 - b2)) + b3 - b0;
+                                long smuad_b_a0_b_a1 = __PKHBT(b_a1, b_a0, 16);
+                                int b1_avg = (b1 << 16) | 0x8000;
+
+                                b_d[z] = ((int32_t) __SMLAD(smuad_dy_dy2, smuad_b_a0_b_a1, (dy3 * b_a2) + b1_avg)) >> 16;
+                            } // for z
+#endif
+                            int r_d0 = r_d[0], r_d1 = r_d[1], r_d2 = r_d[2], r_d3 = r_d[3];
+                            int r_a0 = r_d2 - r_d0;
+                            int r_a1 = (r_d0 << 1) + (r_d2 << 2) - (5 * r_d1) - r_d3;
+                            int r_a2 = (3 * (r_d1 - r_d2)) + r_d3 - r_d0;
+                            long smuad_r_a0_r_a1 = __PKHBT(r_a1, r_a0, 16);
+                            int r_d1_avg = (r_d1 << 16) | 0x8000;
+
+                            int g_d0 = g_d[0], g_d1 = g_d[1], g_d2 = g_d[2], g_d3 = g_d[3];
+                            int g_a0 = g_d2 - g_d0;
+                            int g_a1 = (g_d0 << 1) + (g_d2 << 2) - (5 * g_d1) - g_d3;
+                            int g_a2 = (3 * (g_d1 - g_d2)) + g_d3 - g_d0;
+                            long smuad_g_a0_g_a1 = __PKHBT(g_a1, g_a0, 16);
+                            int g_d1_avg = (g_d1 << 16) | 0x8000;
+
+                            int b_d0 = b_d[0], b_d1 = b_d[1], b_d2 = b_d[2], b_d3 = b_d[3];
+                            int b_a0 = b_d2 - b_d0;
+                            int b_a1 = (b_d0 << 1) + (b_d2 << 2) - (5 * b_d1) - b_d3;
+                            int b_a2 = (3 * (b_d1 - b_d2)) + b_d3 - b_d0;
+                            long smuad_b_a0_b_a1 = __PKHBT(b_a1, b_a0, 16);
+                            int b_d1_avg = (b_d1 << 16) | 0x8000;
+
+                            do { // Cache the results of getting the source pixels
+                                // 15-bit fraction to fit a square of it in 32-bits
+                                // pre-calculate the ^1, ^2, and ^3 of the fraction
+                                int dx = ((src_x_accum >> 1) & 0x7FFF);
+                                int dx2 = (dx * dx) >> 15;
+                                int dx3 = (dx2 * dx) >> 15;
+                                long smuad_dx_dx2 = (dx << 16) | dx2;
+
+                                long r_pixel = __SMLAD(smuad_dx_dx2, smuad_r_a0_r_a1, (dx3 * r_a2) + r_d1_avg);
+
+                                // clamp output
+                                r_pixel = __USAT_ASR(r_pixel, 5, 16);
+
+                                long g_pixel = __SMLAD(smuad_dx_dx2, smuad_g_a0_g_a1, (dx3 * g_a2) + g_d1_avg);
+
+                                // clamp output
+                                g_pixel = __USAT_ASR(g_pixel, 6, 16);
+
+                                long b_pixel = __SMLAD(smuad_dx_dx2, smuad_b_a0_b_a1, (dx3 * b_a2) + b_d1_avg);
+
+                                // clamp output
+                                b_pixel = __USAT_ASR(b_pixel, 5, 16);
+
+                                int pixel = COLOR_R5_G6_B5_TO_RGB565(r_pixel, g_pixel, b_pixel);
+
+                                IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
+            }
+            default: {
+                break;
+            }
         }
-        default: {
-            break;
+    } else if (hint & IMAGE_HINT_BILINEAR) {
+        // Implements the traditional bilinear interpolation algorithm which uses
+        // a 2x2 filter block with the current pixel centered at (0,0) (C below).
+        // However, instead of floating point math, it uses integer (fixed point).
+        // The Cortex-M4/M7 has a hardware floating point unit, so doing FP math
+        // doesn't take any extra time, but it does take extra time to convert
+        // the integer pixels to floating point and back to integers again.
+        // So this allows it to execute more quickly in pure integer math.
+        //
+        // +---+---+
+        // | C | x |
+        // +---+---+
+        // | x | x |
+        // +---+---+
+        //
+        switch (src_img->bpp) {
+            case IMAGE_BPP_BINARY: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint32_t *src_row_ptr_0, *src_row_ptr_1;
+
+                    // keep row pointers in bounds
+                    if (src_y_index < 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, 0);
+                    } else if (src_y_index >= h_limit) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else { // get 2 neighboring rows
+                        int src_y_index_p_1 = src_y_index + 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index);
+                        src_row_ptr_1 = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index_p_1);
+                    }
+
+                    do { // Cache the results of getting the source rows
+                        uint32_t * src_row_ptr = ((src_y_accum >> 15) & 0x1) ? src_row_ptr_1 : src_row_ptr_0;
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int pixel_0, pixel_1;
+
+                            // keep pixels in bounds
+                            if (src_x_index < 0) {
+                                pixel_0 = pixel_1 = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, 0);
+                            } else if (src_x_index >= w_limit) {
+                                pixel_0 = pixel_1 = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, w_limit);
+                            } else { // get 4 neighboring pixels
+                                int src_x_index_p_1 = src_x_index + 1;
+                                pixel_0 = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, src_x_index);
+                                pixel_1 = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, src_x_index_p_1);
+                            }
+
+                            do { // Cache the results of getting the source pixels
+                                int pixel = ((src_x_accum >> 15) & 0x1) ? pixel_1 : pixel_0;
+
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint8_t *src_row_ptr_0, *src_row_ptr_1;
+
+                    // keep row pointers in bounds
+                    if (src_y_index < 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, 0);
+                    } else if (src_y_index >= h_limit) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else { // get 2 neighboring rows
+                        int src_y_index_p_1 = src_y_index + 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index);
+                        src_row_ptr_1 = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index_p_1);
+                    }
+
+                    do { // Cache the results of getting the source rows
+                        // used to mix pixels vertically
+                        long smuad_y = (src_y_accum >> 8) & 0xff;
+                        smuad_y |= (256 - smuad_y) << 16;
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int pixel_00, pixel_10, pixel_01, pixel_11;
+
+                            // keep pixels in bounds
+                            if (src_x_index < 0) {
+                                pixel_00 = pixel_10 = src_row_ptr_0[0];
+                                pixel_01 = pixel_11 = src_row_ptr_1[0];
+                            } else if (src_x_index >= w_limit) {
+                                pixel_00 = pixel_10 = src_row_ptr_0[w_limit];
+                                pixel_01 = pixel_11 = src_row_ptr_1[w_limit];
+                            } else { // get 4 neighboring pixels
+                                int src_x_index_p_1 = src_x_index + 1;
+                                pixel_00 = src_row_ptr_0[src_x_index]; pixel_10 = src_row_ptr_0[src_x_index_p_1];
+                                pixel_01 = src_row_ptr_1[src_x_index]; pixel_11 = src_row_ptr_1[src_x_index_p_1];
+                            }
+
+                            long vertical_avg_0 = (pixel_00 << 16) | pixel_01;
+                            int pixel_l = __SMLAD(smuad_y, vertical_avg_0, 128) >> 8; // vertically average
+
+                            long vertical_avg_1 = (pixel_10 << 16) | pixel_11;
+                            int pixel_r = __SMLAD(smuad_y, vertical_avg_1, 128) >> 8; // vertically average
+
+                            long horizontal_avg = (pixel_l << 16) | pixel_r;
+
+                            do { // Cache the results of getting the source pixels
+                                // used to mix pixels horizontally
+                                long smuad_x = (src_x_accum >> 8) & 0xff;
+                                smuad_x |= (256 - smuad_x) << 16;
+
+                                int pixel = __SMLAD(smuad_x, horizontal_avg, 128) >> 8; // horizontally average
+
+                                IMAGE_PUT_GRAYSCALE_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint16_t *src_row_ptr_0, *src_row_ptr_1;
+
+                    // keep row pointers in bounds
+                    if (src_y_index < 0) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, 0);
+                    } else if (src_y_index >= h_limit) {
+                        src_row_ptr_0 = src_row_ptr_1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, h_limit);
+                    } else { // get 2 neighboring rows
+                        int src_y_index_p_1 = src_y_index + 1;
+                        src_row_ptr_0 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index);
+                        src_row_ptr_1 = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index_p_1);
+                    }
+
+                    do { // Cache the results of getting the source rows
+                        // used to mix pixels vertically
+                        long smuad_y = (src_y_accum >> 11) & 0x1f;
+                        smuad_y |= (32 - smuad_y) << 16;
+
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int pixel_00, pixel_10, pixel_01, pixel_11;
+
+                            // keep pixels in bounds
+                            if (src_x_index < 0) {
+                                pixel_00 = pixel_10 = src_row_ptr_0[0];
+                                pixel_01 = pixel_11 = src_row_ptr_1[0];
+                            } else if (src_x_index >= w_limit) {
+                                pixel_00 = pixel_10 = src_row_ptr_0[w_limit];
+                                pixel_01 = pixel_11 = src_row_ptr_1[w_limit];
+                            } else { // get 4 neighboring pixels
+                                int src_x_index_p_1 = src_x_index + 1;
+                                pixel_00 = src_row_ptr_0[src_x_index]; pixel_10 = src_row_ptr_0[src_x_index_p_1];
+                                pixel_01 = src_row_ptr_1[src_x_index]; pixel_11 = src_row_ptr_1[src_x_index_p_1];
+                            }
+
+                            // RGB565 byte reversal fix
+                            pixel_00 = __REV16(pixel_00);
+                            pixel_10 = __REV16(pixel_10);
+                            pixel_01 = __REV16(pixel_01);
+                            pixel_11 = __REV16(pixel_11);
+
+                            const long mask_r = 0x7c007c00, mask_g = 0x07e007e0, mask_b = 0x001f001f;
+                            const long avg_rb = 0x4010, avg_g = 0x200;
+
+                            uint32_t rgb_l = (pixel_00 << 16) | pixel_01;
+                            long rb_l = ((rgb_l >> 1) & mask_r) | (rgb_l & mask_b);
+                            long g_l = rgb_l & mask_g;
+                            int rb_out_l = (__SMLAD(smuad_y, rb_l, avg_rb) >> 5) & 0x7c1f;
+                            int g_out_l = (__SMLAD(smuad_y, g_l, avg_g) >> 5) & 0x07e0;
+
+                            uint32_t rgb_r = (pixel_10 << 16) | pixel_11;
+                            long rb_r = ((rgb_r >> 1) & mask_r) | (rgb_r & mask_b);
+                            long g_r = rgb_r & mask_g;
+                            int rb_out_r = (__SMLAD(smuad_y, rb_r, avg_rb) >> 5) & 0x7c1f;
+                            int g_out_r = (__SMLAD(smuad_y, g_r, avg_g) >> 5) & 0x07e0;
+
+                            long rb = (rb_out_l << 16) | rb_out_r;
+                            long g = (g_out_l << 16) | g_out_r;
+
+                            do { // Cache the results of getting the source pixels
+                                // used to mix pixels horizontally
+                                long smuad_x = (src_x_accum >> 11) & 0x1f;
+                                smuad_x |= (32 - smuad_x) << 16;
+
+                                int rb_out = __SMLAD(smuad_x, rb, avg_rb) >> 5;
+                                int g_out = __SMLAD(smuad_x, g, avg_g) >> 5;
+                                int pixel = ((rb_out << 1) & 0xf800) | (g_out & 0x07e0) | (rb_out & 0x001f);
+
+                                // RGB565 byte reversal fix
+                                pixel = __REV16(pixel);
+
+                                IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    } else if ((dst_delta_x == 1) && (dst_x_start == 0) && (src_x_start == 0) && (src_x_frac == 65536) && (src_y_frac == 65536)) { // copy
+        switch (src_img->bpp) {
+            case IMAGE_BPP_BINARY: {
+                while (y_not_done) {
+                    uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                    imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                    imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                    // Increment offsets
+                    dst_y += dst_delta_y;
+                    src_y_accum += src_y_frac;
+                    next_src_y_index = src_y_accum >> 16;
+                    y_not_done = ++y < dst_y_end;
+                } // while y
+                break;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                while (y_not_done) {
+                    uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                    imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                    imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                    // Increment offsets
+                    dst_y += dst_delta_y;
+                    src_y_accum += src_y_frac;
+                    next_src_y_index = src_y_accum >> 16;
+                    y_not_done = ++y < dst_y_end;
+                } // while y
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                while (y_not_done) {
+                    uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                    imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                    imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                    // Increment offsets
+                    dst_y += dst_delta_y;
+                    src_y_accum += src_y_frac;
+                    next_src_y_index = src_y_accum >> 16;
+                    y_not_done = ++y < dst_y_end;
+                } // while y
+                break;
+            }
+            default: {
+                break;
+            }
+        }
+    } else { // nearest neighbor
+        switch (src_img->bpp) {
+            case IMAGE_BPP_BINARY: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, src_y_index);
+
+                    do { // Cache the results of getting the source row
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, src_x_index);
+
+                            do { // Cache the results of getting the source pixel
+                                IMAGE_PUT_BINARY_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
+            }
+            case IMAGE_BPP_GRAYSCALE: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, src_y_index);
+
+                    do { // Cache the results of getting the source row
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(src_row_ptr, src_x_index);
+
+                            do { // Cache the results of getting the source pixel
+                                IMAGE_PUT_GRAYSCALE_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
+            }
+            case IMAGE_BPP_RGB565: {
+                while (y_not_done) {
+                    int src_y_index = next_src_y_index;
+                    uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, src_y_index);
+
+                    do { // Cache the results of getting the source row
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int src_x_index = next_src_x_index;
+                            int pixel = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr, src_x_index);
+
+                            do { // Cache the results of getting the source pixel
+                                IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                                // Increment offsets
+                                dst_x += dst_delta_x;
+                                src_x_accum += src_x_frac;
+                                next_src_x_index = src_x_accum >> 16;
+                                x_not_done = ++x < dst_x_end;
+                            } while (x_not_done && (src_x_index == next_src_x_index));
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } while (y_not_done && (src_y_index == next_src_y_index));
+                } // while y
+                break;
+            }
+            default: {
+                break;
+            }
         }
     }
+
+    imlib_draw_row_teardown(&imlib_draw_row_data);
+    if (&new_src_img == src_img) fb_free();
 }
 
 #ifdef IMLIB_ENABLE_FLOOD_FILL
