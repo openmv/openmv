@@ -137,8 +137,8 @@ int py_helper_keyword_int(uint n_args, const mp_obj_t *args, uint arg_index,
     return default_val;
 }
 
-int py_helper_keyword_int_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
-                                mp_map_t *kw_args, mp_obj_t kw, int* value)
+bool py_helper_keyword_int_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
+                                 mp_map_t *kw_args, mp_obj_t kw, int* value)
 {
     mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
 
@@ -163,6 +163,20 @@ float py_helper_keyword_float(uint n_args, const mp_obj_t *args, uint arg_index,
     }
 
     return default_val;
+}
+
+bool py_helper_keyword_float_maybe(uint n_args, const mp_obj_t *args, uint arg_index,
+                                   mp_map_t *kw_args, mp_obj_t kw, float *value)
+{
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg) {
+        return mp_obj_get_float_maybe(kw_arg->value, value);
+    } else if (n_args > arg_index) {
+        return mp_obj_get_float_maybe(args[arg_index], value);
+    }
+
+    return false;
 }
 
 void py_helper_keyword_int_array(uint n_args, const mp_obj_t *args, uint arg_index,
