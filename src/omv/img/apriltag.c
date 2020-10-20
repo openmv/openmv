@@ -12110,47 +12110,18 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
     umm_init_x(((fb_avail() - fb_alloc_need) / resolution) * resolution);
     apriltag_detector_t *td = apriltag_detector_create();
 
-    uint8_t *grayscale_image = fb_alloc(roi->w * roi->h, FB_ALLOC_NO_HINT);
+    image_t img;
+    img.w = roi->w;
+    img.h = roi->h;
+    img.bpp = IMAGE_BPP_GRAYSCALE;
+    img.data = fb_alloc(image_size(&img), FB_ALLOC_NO_HINT);
+    imlib_draw_image(&img, ptr, 0, 0, 1.f, 1.f, roi, -1, 256, NULL, NULL, 0);
 
     image_u8_t im;
     im.width = roi->w;
     im.height = roi->h;
     im.stride = roi->w;
-    im.buf = grayscale_image;
-
-    switch(ptr->bpp) {
-        case IMAGE_BPP_BINARY: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint32_t *row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        case IMAGE_BPP_GRAYSCALE: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint8_t *row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x);
-                }
-            }
-            break;
-        }
-        case IMAGE_BPP_RGB565: {
-            for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
-                uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
-                for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = COLOR_RGB565_TO_GRAYSCALE(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
-                }
-            }
-            break;
-        }
-        default: {
-            memset(grayscale_image, 0, roi->w * roi->h);
-            break;
-        }
-    }
+    im.buf = img.data;
 
     ///////////////////////////////////////////////////////////
     // Detect quads according to requested image decimation
@@ -12273,7 +12244,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
         uint32_t magnitude = 0;
 
         for (int i = 0; i < 4; i++) {
-            if(!lb_clip_line(&lines[i], 0, 0, ptr->w, ptr->h)) {
+            if(!lb_clip_line(&lines[i], 0, 0, roi->w, roi->h)) {
                 continue;
             }
 
