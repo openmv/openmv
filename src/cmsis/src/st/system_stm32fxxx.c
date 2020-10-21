@@ -229,12 +229,24 @@ void SystemClock_Config(void)
     RCC_OscInitStruct.HSI48State = OMV_OSC_HSI48_STATE;
     RCC_OscInitStruct.OscillatorType |= RCC_OSCILLATORTYPE_HSI48;
     #endif
+
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
     RCC_OscInitStruct.PLL.PLLM = OMV_OSC_PLL1M;
     RCC_OscInitStruct.PLL.PLLN = OMV_OSC_PLL1N;
     RCC_OscInitStruct.PLL.PLLQ = OMV_OSC_PLL1Q;
     RCC_OscInitStruct.PLL.PLLP = OMV_OSC_PLL1P;
+
+    #if defined(MCU_SERIES_H7)
+    // Override PLL1 frequency for revision Y devices,
+    // with maximum frequency of 400MHz CPU 200MHz Bus.
+    if (HAL_GetREVID() < 0x2003) {
+        // 400MHz/200MHz
+        RCC_OscInitStruct.PLL.PLLN = 200;
+        RCC_OscInitStruct.PLL.PLLQ = 16;
+    }
+    #endif
+
     #if defined(OMV_OSC_PLL1R)
     RCC_OscInitStruct.PLL.PLLR = OMV_OSC_PLL1R;
     #endif
