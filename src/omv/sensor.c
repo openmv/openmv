@@ -1103,6 +1103,29 @@ void *unaligned_memcpy(void *dest, void *src, size_t n)
 #endif
 }
 
+// ARM Cortex-M4/M7 Processors can access memory using unaligned 32-bit reads/writes.
+void *unaligned_memcpy_rev16(void *dest, void *src, size_t n)
+{
+    uint32_t *dest32 = (uint32_t *) dest;
+    uint32_t *src32 = (uint32_t *) src;
+
+// TODO: Make this faster using only 32-bit aligned reads/writes with data shifting.
+#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+    for (; n > 2; n -= 2) {
+        *dest32++ = __REV16(*src32++);
+    }
+#endif
+
+    uint16_t *dest16 = (uint16_t *) dest32;
+    uint16_t *src16 = (uint16_t *) src32;
+
+    for (; n > 0; n -= 1) {
+        *dest16++ = __REV16(*src16++);
+    }
+
+    return dest;
+}
+
 // Stop allowing new data in on the end of the frame and let snapshot know that the frame has been
 // received. Note that DCMI_DMAConvCpltUser() is called before DCMI_IT_FRAME is enabled by
 // DCMI_DMAXferCplt() so this means that the last line of data is *always* transferred before
@@ -1207,7 +1230,11 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                 case PIXFORMAT_RGB565:
                     dst16 += (offset - MAIN_FB()->y) * MAIN_FB()->w;
                     src16 += MAIN_FB()->x;
-                    unaligned_memcpy(dst16, src16, MAIN_FB()->w * sizeof(uint16_t));
+                    if (SENSOR_HW_FLAGS_GET(&sensor, SWNSOR_HW_FLAGS_RGB565_REV)) {
+                        unaligned_memcpy_rev16(dst16, src16, MAIN_FB()->w);
+                    } else {
+                        unaligned_memcpy(dst16, src16, MAIN_FB()->w * sizeof(uint16_t));
+                    }
                     break;
                 default:
                     break;
@@ -1244,9 +1271,16 @@ void DCMI_DMAConvCpltUser(uint32_t addr)
                 case PIXFORMAT_RGB565:
                     dst16 += offset - MAIN_FB()->y;
                     src16 += MAIN_FB()->x;
-                    for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
-                        *dst16 = *src16++;
-                        dst16 += h;
+                    if (SENSOR_HW_FLAGS_GET(&sensor, SWNSOR_HW_FLAGS_RGB565_REV)) {
+                        for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                            *dst16 = __REV16(*src16++);
+                            dst16 += h;
+                        }
+                    } else {
+                        for (int i = MAIN_FB()->w, h = MAIN_FB()->h; i; i--) {
+                            *dst16 = *src16++;
+                            dst16 += h;
+                        }
                     }
                     break;
                 default:

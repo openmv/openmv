@@ -75,7 +75,7 @@
 #define IMAGE_MODE_JPEG_EN      0x10
 #define IMAGE_MODE_YUV422       0x00
 #define IMAGE_MODE_RAW10        0x04
-#define IMAGE_MODE_RGB565       0x08
+#define IMAGE_MODE_RGB565       0x09
 #define IMAGE_MODE_HREF_VSYNC   0x02
 #define IMAGE_MODE_LBYTE_FIRST  0x01
 #define IMAGE_MODE_GET_FMT(x)   ((x)&0xC)
