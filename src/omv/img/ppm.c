@@ -86,9 +86,7 @@ void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs
                 read_int(fp, &r, rs);
                 read_int(fp, &g, rs);
                 read_int(fp, &b, rs);
-                IM_SET_RGB565_PIXEL(img, j, i, IM_RGB565(IM_R825(r),
-                                                         IM_G826(g),
-                                                         IM_B825(b)));
+                IM_SET_RGB565_PIXEL(img, j, i, COLOR_R8_G8_B8_TO_RGB565(r, g, b));
             }
         }
     } else if (rs->ppm_fmt == '5') {
@@ -100,9 +98,7 @@ void ppm_read_pixels(FIL *fp, image_t *img, int n_lines, ppm_read_settings_t *rs
                 read_byte(fp, &r);
                 read_byte(fp, &g);
                 read_byte(fp, &b);
-                IM_SET_RGB565_PIXEL(img, j, i, IM_RGB565(IM_R825(r),
-                                                         IM_G826(g),
-                                                         IM_B825(b)));
+                IM_SET_RGB565_PIXEL(img, j, i, COLOR_R8_G8_B8_TO_RGB565(r, g, b));
             }
         }
     }
@@ -150,9 +146,9 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
             for (int j = 0; j < rect.w; j++) {
                 int pixel = IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i));
                 char buff[3];
-                buff[0] = IM_R528(IM_R565(pixel));
-                buff[1] = IM_G628(IM_G565(pixel));
-                buff[2] = IM_B528(IM_B565(pixel));
+                buff[0] = COLOR_RGB565_TO_R8(pixel);
+                buff[1] = COLOR_RGB565_TO_G8(pixel);
+                buff[2] = COLOR_RGB565_TO_B8(pixel);
                 write_data(&fp, buff, 3);
             }
         }

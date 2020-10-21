@@ -81,9 +81,9 @@ void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
             write_byte(fp, 0x80); // clear code
             for (int x=0; x<block_size; x++) {
                 int pixel = ((uint16_t *) img->pixels)[(y*BLOCK_SIZE)+x];
-                int red = IM_R565(pixel)>>3;
-                int green = IM_G565(pixel)>>3;
-                int blue = IM_B565(pixel)>>3;
+                int red = COLOR_RGB565_TO_R5(pixel)>>3;
+                int green = COLOR_RGB565_TO_G6(pixel)>>3;
+                int blue = COLOR_RGB565_TO_B5(pixel)>>3;
                 write_byte(fp, (red<<5) | (green<<2) | blue);
             }
         }

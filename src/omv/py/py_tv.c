@@ -18,7 +18,7 @@
 #include "py_image.h"
 
 // Crystal frequency in MHZ (float, observe accuracy)
-// In fact I use 28.63636 MHZ crystal and disable 8x PLL. 
+// In fact I use 28.63636 MHZ crystal and disable 8x PLL.
 // But calculation worong if I change XTAL_MHZ value.
 #define XTAL_MHZ 3.579545
 // Line length in microseconds (float, observe accuracy)
@@ -31,9 +31,9 @@
 // Width, in PLL clocks, of each pixel
 // Used 4 to 8 for 160x120 pics
 #define PLLCLKS_PER_PIXEL 9 // 4 is too short.
-// Extra bytes can be added to end of picture lines to prevent pic-to-proto 
-// border artifacts. 8 is a good value. 0 can be tried to test, if there is 
-// no need for extra bytes.        
+// Extra bytes can be added to end of picture lines to prevent pic-to-proto
+// border artifacts. 8 is a good value. 0 can be tried to test, if there is
+// no need for extra bytes.
 #define BEXTRA 8
 
 //// Protolines ////
@@ -41,7 +41,7 @@
 // Reserve memory for this number of different prototype lines
 // (prototype lines are used for sync timing, porch and border area)
 #define PROTOLINES 3
-// if your real protoline lenght is longer than one slot, you must 
+// if your real protoline lenght is longer than one slot, you must
 // use several slots per proto and there are total 16 slots
 #define PROTOLINE_LENGTH_WORDS 512
 
@@ -49,7 +49,7 @@
 #define PROTOLINE_BYTE_ADDRESS(n) (PROTOLINE_LENGTH_WORDS) *2 *(n)) // 512 * 2 * n = 1024*n
 #define PROTOLINE_WORD_ADDRESS(n) (PROTOLINE_LENGTH_WORDS * (n)) // 512 * n = 512*n
 
-// These are for proto lines and so format is VVVVUUUUYYYYYYYY 
+// These are for proto lines and so format is VVVVUUUUYYYYYYYY
 // Sync is always 0
 #define SYNC_LEVEL  0x0000
 // 285 mV to 75 ohm load
@@ -84,7 +84,7 @@
 // NTSC sync to blanking end time is 10.5 us
 #define BLANK_END_US 9.155
 #define BLANKEND ((uint16_t)(BLANK_END_US*XTAL_MHZ-10.0/8.0))
-// Front porch starts at the end of the line, at 62.5us 
+// Front porch starts at the end of the line, at 62.5us
 #define FRPORCH_US 61.8105
 #define FRPORCH ((uint16_t)(FRPORCH_US*XTAL_MHZ-10.0/8.0))
 
@@ -113,7 +113,7 @@
 /// PAL sync to blanking end time is 10.5 us
 #define BLANK_END_US 10.5
 #define BLANKEND ((uint16_t)(BLANK_END_US*XTAL_MHZ-10.0/8.0))
-/// Front porch starts at the end of the line, at 62.5us 
+/// Front porch starts at the end of the line, at 62.5us
 #define FRPORCH_US 62.5
 #define FRPORCH ((uint16_t)(FRPORCH_US*XTAL_MHZ-10.0/8.0))
 */
@@ -127,7 +127,7 @@
 #define ENDLINE STARTLINE + YPIXELS
 // The first pixel of the picture area, the X direction.
 #define STARTPIX (BLANKEND+6)
-// The last pixel of the picture area. Set PIXELS to wanted value and suitable 
+// The last pixel of the picture area. Set PIXELS to wanted value and suitable
 // ENDPIX value is calculated.
 #define XPIXELS 160
 #define ENDPIX ((uint16_t)(STARTPIX+PLLCLKS_PER_PIXEL*XPIXELS/8))
@@ -157,10 +157,10 @@
 
 //// Index start /////
 
-#define PROTO_AREA_WORDS (PROTOLINE_LENGTH_WORDS * PROTOLINES) 
+#define PROTO_AREA_WORDS (PROTOLINE_LENGTH_WORDS * PROTOLINES)
 #define INDEX_START_LONGWORDS ((PROTO_AREA_WORDS+1)/2)
 #define INDEX_START_WORDS (INDEX_START_LONGWORDS * 2)
-#define INDEX_START_BYTES (INDEX_START_WORDS * 2)              
+#define INDEX_START_BYTES (INDEX_START_WORDS * 2)
 
 //// Pattern generator microcode ////
 
@@ -172,14 +172,14 @@
 
 // Bits 5:3
 // Pick 1..8
-#define PICK_BITS(a) (((a)-1)<<3) 
+#define PICK_BITS(a) (((a)-1)<<3)
 
-// Bits 2:0  
+// Bits 2:0
 // Shift 0..6
 #define SHIFT_BITS(a) (a)
 
 // The microcode is given as a 32-bit parameter to the SpiWrite-function, and must
-// therefore be typecasted to unsigned long. Otherwise, if using Arduino, the values 
+// therefore be typecasted to unsigned long. Otherwise, if using Arduino, the values
 // shifted beyond 16-bit range are lost. VS1005 and VS1010 would not require typecasting
 // in this instance.
 // b=>u
@@ -406,17 +406,17 @@ void VS23Init()
     SpiWrite(WRITE_STATUS, 0, 0x40, 0);
     // set GPIO output, high
     SpiWrite(GPIOCTL, 0, 0xFF, 0);
-    // Write picture start and end values. These are the 
+    // Write picture start and end values. These are the
     // left and right limits of the visible picture.
     SpiWrite(PICSTART, 0, (STARTPIX-1), 1);
     SpiWrite(PICEND, 0, (ENDPIX-1), 1);
-                
+
     // Enable and select PLL clock.
     // SpiWrite(VDCTRL1, 0, (VDCTRL1_PLL_ENABLE) | (VDCTRL1_SELECT_PLL_CLOCK), 1);
     SpiWrite(VDCTRL1, 0, VDCTRL1_PLL_ENABLE, 1);
 
     // Clear memory by filling it with 0. Memory is 65536 16-bit words, and first 24-bits
-    // are used for the starting address. The address then autoincrements when the zero 
+    // are used for the starting address. The address then autoincrements when the zero
     // data is being sent.
     // this is slow, Can not clear.
     // CS_PIN_WRITE(false);
@@ -424,11 +424,11 @@ void VS23Init()
     // for (int i=0; i<65539; i++) SpiSendWord(0); // Address and data.
     // CS_PIN_WRITE(true);
 
-    // Set length of one complete line (in PLL (VClk) clocks). 
-    // Does not include the fixed 10 cycles of sync level at the beginning 
-    // of the lines. 
+    // Set length of one complete line (in PLL (VClk) clocks).
+    // Does not include the fixed 10 cycles of sync level at the beginning
+    // of the lines.
     SpiWrite(LINELEN, 0, PLLCLKS_PER_LINE, 1);
-    
+
     // Set microcode program for picture lines. Each OP is one VClk cycle.
     SpiWrite(PROGRAM, 0, ((OP4 << 24) | (OP3 << 16) | (OP2 << 8) | (OP1)), 0);
 
@@ -444,14 +444,14 @@ void VS23Init()
     protoline(0, BLANKEND, FRPORCH, BLACK_LEVEL); // Set the color level to black
     protoline(0, 0, SYNC, SYNC_LEVEL); // Set HSYNC
     protoline(0, BURST, BURSTDUR, BURST_LEVEL); // Set color burst
-    
+
     // Construct protoline 1. This is a short+short VSYNC line
     protoline(1, 0, COLORCLKS_PER_LINE, BLANK_LEVEL);
     protoline(1, 0, SHORTSYNC, SYNC_LEVEL); // Short sync at the beginning of line
     protoline(1, COLORCLKS_LINE_HALF, SHORTSYNCM, SYNC_LEVEL); // Short sync at the middle of line
-    
+
     // Construct protoline 2. This is a long+long VSYNC line
-    protoline(2, 0, COLORCLKS_PER_LINE, BLANK_LEVEL);    
+    protoline(2, 0, COLORCLKS_PER_LINE, BLANK_LEVEL);
     protoline(2, 0, LONGSYNC, SYNC_LEVEL);    // Long sync at the beginning of line
     protoline(2, COLORCLKS_LINE_HALF, LONGSYNCM, SYNC_LEVEL); // Long sync at the middle of line
 
@@ -464,8 +464,8 @@ void VS23Init()
     // for (int i=0; i<ENDLINE-STARTLINE; i++) SetPicIndex(i + STARTLINE, PICLINE_BYTE_ADDRESS(i),0);
     for (int i=0; i<(ENDLINE-STARTLINE)*2; i++) SetPicIndex(i + STARTLINE, PICLINE_BYTE_ADDRESS(i/2),0);
     // Enable Video Display Controller, set video mode to NTSC, set program length and linecount.
-    SpiWrite(VDCTRL2, 0, 
-        VDCTRL2_ENABLE_VIDEO | 
+    SpiWrite(VDCTRL2, 0,
+        VDCTRL2_ENABLE_VIDEO |
         VDCTRL2_NTSC |
         VDCTRL2_PROGRAM_LENGTH |
         VDCTRL2_LINECOUNT, 1);
@@ -577,7 +577,7 @@ static mp_obj_t py_tv_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
                 uint16_t pixel = IM_GET_RGB565_PIXEL(arg_img, x, y);
                 uint8_t b4 = (COLOR_RGB565_TO_U(pixel)) & 0xF0;
                 uint8_t a4 = ((-COLOR_RGB565_TO_V(pixel))>>4) & 0x0F;
-                uint8_t y8 = ((COLOR_RGB565_TO_Y(pixel)+128));
+                uint8_t y8 = COLOR_RGB565_TO_Y(pixel);
                 line[2*i] = b4 | a4;
                 line[2*i + 1] = y8;
             }

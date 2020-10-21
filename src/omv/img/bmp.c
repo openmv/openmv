@@ -152,7 +152,6 @@ void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs
             for (int j = 0, jj = rs->bmp_row_bytes / 2; j < jj; j++) {
                 uint16_t pixel;
                 read_word(fp, &pixel);
-                pixel = IM_SWAP16(pixel);
                 if (j < img->w) {
                     if (rs->bmp_h < 0) { // vertical flip (BMP file perspective)
                         if (rs->bmp_w < 0) { // horizontal flip (BMP file perspective)
@@ -177,7 +176,7 @@ void bmp_read_pixels(FIL *fp, image_t *img, int n_lines, bmp_read_settings_t *rs
                 read_byte(fp, &b);
                 read_byte(fp, &g);
                 read_byte(fp, &r);
-                uint16_t pixel = IM_RGB565(IM_R825(r), IM_G826(g), IM_B825(b));
+                uint16_t pixel = COLOR_R8_G8_B8_TO_RGB565(r, g, b);
                 if (j < img->w) {
                     if (rs->bmp_h < 0) { // vertical flip
                         if (rs->bmp_w < 0) { // horizontal flip
@@ -290,7 +289,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r)
         write_long(&fp, 0x1F);
         for (int i = 0; i < rect.h; i++) {
             for (int j = 0; j < rect.w; j++) {
-                write_word(&fp, IM_SWAP16(IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i))));
+                write_word(&fp, IM_GET_RGB565_PIXEL(img, (rect.x + j), (rect.y + i)));
             }
             for (int j = 0; j < waste; j++) {
                 write_word(&fp, 0);

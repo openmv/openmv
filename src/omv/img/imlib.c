@@ -353,16 +353,6 @@ int8_t imlib_rgb565_to_b(uint16_t pixel)
     return fast_floorf(200 * (y-z));
 }
 
-int8_t imlib_rgb565_to_y(uint16_t pixel)
-{
-    int r = COLOR_RGB565_TO_R8(pixel);
-    int g = COLOR_RGB565_TO_G8(pixel);
-    int b = COLOR_RGB565_TO_B8(pixel);
-
-    return (int8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - 128; // .299*r + .587*g + .114*b
-//    return fast_floorf((r * +0.299000f) + (g * +0.587000f) + (b * +0.114000f)) - 128;
-}
-
 int8_t imlib_rgb565_to_u(uint16_t pixel)
 {
     int r = COLOR_RGB565_TO_R8(pixel);
@@ -474,10 +464,7 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
                 }
 
             }
-            r = IM_R825(r);
-            g = IM_G826(g);
-            b = IM_B825(b);
-            *rgbbuf++ = IM_RGB565(r, g, b);
+            *rgbbuf++ = COLOR_R8_G8_B8_TO_RGB565(r, g, b);
         } // for x
     } else { // faster way
 //
@@ -520,7 +507,7 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
             b = ((l0 & 0xff) + (l2 & 0xff)) >> 4; // left edge pixel
             g = (l1 & 0xff) >> 2;
             r = (l1 & 0xff00) >> 11;
-            *rgbbuf++ = IM_RGB565(r, g, b); // first col is treated differently
+            *rgbbuf++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b); // first col is treated differently
             for (int x = xoffs+1; x < xoffs+w-1; x+=2) { // 'middle' pixels can use neighbors from 3x3 grid
                 l0 |= (s[-w2] << 16); // shift last pixel pairs into upper 16 bits
                 l1 |= (s[0] << 16);   // of the 3 line variables
@@ -529,23 +516,23 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
                 r = (l1 & 0xff00) >> 11; // (1, 0) red pixel at current-left
                 g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 4;
                 b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 5;
-                *rgbbuf++ = IM_RGB565(r, g, b);
+                *rgbbuf++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
                 g = (l1 & 0xff0000) >> 18; // (0,0) green pixel at current-right
                 b = (((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 4;
                 r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 4;
-                *rgbbuf++ = IM_RGB565(r, g, b);
+                *rgbbuf++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
                 // prepare for the next set of source pixels
                 l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
             } // for x
             // last col
             g = ((l0 >> 8) + (l2 >> 8)) >> 3; // re-use blue from last pixel in loop
             r = (l1 >> 11);
-            *rgbbuf++ = IM_RGB565(r, g, b);
+            *rgbbuf++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
         } else { // even lines (B G B G B G)
             b = (l1 & 0xff) >> 3;
             g = ((l0 & 0xff) + (l2 & 0xff)) >> 3;
             r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12; // first pixel is different
-            *rgbbuf++ = IM_RGB565(r, g, b);
+            *rgbbuf++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
             for (int x = xoffs+1; x < xoffs+w-1; x+=2) { // middle part
                 l0 |= (s[-w2] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
                 l1 |= (s[0] << 16);
@@ -554,18 +541,18 @@ void imlib_bayer_to_rgb565(image_t *img, int w, int h, int xoffs, int yoffs, uin
                 g = (l1 & 0xff00) >> 10; // (1, 0) green pixel at current-left
                 b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 4;
                 r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 12;
-                *rgbbuf++ = IM_RGB565(r, g, b);
+                *rgbbuf++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
                 b = (l1 & 0xff0000) >> 19; // (0,0) blue pixel at current-right
                 g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 4;
                 r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 5;
-                *rgbbuf++ = IM_RGB565(r, g, b);
+                *rgbbuf++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b);
                 // prepare for the next set of source pixels
                 l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
             } // for x
             // last col
             g = (l1 >> 10); // re-use blue pixel from last column of loop
             r = ((l0 >> 8) + (l2 >> 8)) >> 4;
-            *rgbbuf++ = IM_RGB565(r, g, b); // last pixel
+            *rgbbuf++ = COLOR_R5_G6_B5_TO_RGB565(r, g, b); // last pixel
         } // even lines
     } // faster way
     } // for y
