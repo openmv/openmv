@@ -275,7 +275,7 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.PLL3.PLL3FRACN = OMV_OSC_PLL3FRAC;
     #endif
 
-    #if defined(STM32H743xx) || defined(STM32H747xx)
+    #if defined(MCU_SERIES_H7)
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_FDCAN
                                               |RCC_PERIPHCLK_SPI3|RCC_PERIPHCLK_SPI2
                                               |RCC_PERIPHCLK_SDMMC|RCC_PERIPHCLK_I2C2
@@ -292,7 +292,7 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
     PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
     PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_PLL2;
-    PeriphClkInitStruct.RngClockSelection = RCC_RNGCLKSOURCE_HSI48;
+    PeriphClkInitStruct.RngClockSelection = OMV_OSC_RNG_CLKSOURCE;
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         // Initialization Error
