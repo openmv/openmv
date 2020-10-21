@@ -20,9 +20,9 @@ if False: # 1D illumination invariant image
     sys.stdout.write("const uint8_t invariant_table[65536] = {\n") # 65536 * 1
     for i in range(65536):
 
-        r = ((((i >> 3) & 31) * 255) + 15.5) // 31
-        g = (((((i & 7) << 3) | (i >> 13)) * 255) + 31.5) // 63
-        b = ((((i >> 8) & 31) * 255) + 15.5) // 31
+        r = ((((i >> 11) & 31) * 255) + 15.5) // 31
+        g = ((((i >> 5) & 63) * 255) + 31.5) // 63
+        b = (((i & 31) * 255) + 15.5) // 31
 
         # http://ai.stanford.edu/~alireza/publication/cic15.pdf
 
@@ -111,10 +111,10 @@ if True: # 2D illumination invariant image
         p_th_01 = e_t_x * e_t_y
         p_th_10 = e_t_y * e_t_x
         p_th_11 = e_t_y * e_t_y
-       
+
         x_th_x = (p_th_00 * chi_x) + (p_th_01 * chi_y)
         x_th_y = (p_th_10 * chi_x) + (p_th_11 * chi_y)
-       
+
         r_chi = (x_th_x *  0.7071) + (x_th_y *  0.4082)
         g_chi = (x_th_x * -0.7071) + (x_th_y *  0.4082)
         b_chi = (x_th_x *  0.0000) + (x_th_y * -0.8164)
@@ -124,7 +124,7 @@ if True: # 2D illumination invariant image
         b_chi_invariant = math.exp(b_chi)
 
         chi_invariant_sum = r_chi_invariant + g_chi_invariant + b_chi_invariant
-        
+
         r_chi_invariant_m = 0.0
         g_chi_invariant_m = 0.0
         b_chi_invariant_m = 0.0
