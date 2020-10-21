@@ -483,7 +483,7 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x00);
             break;
         case PIXFORMAT_RGB565:
-            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x61);
+            ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL, 0x6F);
             ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, FORMAT_CONTROL_MUX, 0x01);
             break;
         case PIXFORMAT_YUV422:
@@ -1030,6 +1030,7 @@ int ov5640_init(sensor_t *sensor)
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 1);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 1);
+    SENSOR_HW_FLAGS_SET(sensor, SWNSOR_HW_FLAGS_RGB565_REV, 0);
 
     return 0;
 }
