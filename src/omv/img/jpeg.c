@@ -1150,31 +1150,31 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                                    pY += (64-8);
 
                                 pixel = pRow[0]; // top left
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[0] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) -128; // .299*r + .587*g + .114*b
                                 pU[0] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15); // -0.168736*r + -0.331264*g + 0.5*b
                                 pV[0] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15); // 0.5*r + -0.418688*g + -0.081312*b
                                 pixel = pRow[1]; // top right
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
 
                                 pixel = pRow[src->w]; // bottom left
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[8] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
 
                                 pixel = pRow[1+src->w]; // bottom right
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[9] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
                                 pY += 2; pU++; pV++; pRow += 2;
