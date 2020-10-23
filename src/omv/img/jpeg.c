@@ -252,9 +252,9 @@ static uint8_t *get_mcu()
                 pPixels = &jpeg_enc.pixels16[(y * jpeg_enc.img_w) + jpeg_enc.x_offset];
                 for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++, idx++) {
                     pixel = *pPixels++; // get RGB565 pixel
-                    r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                    g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                    b = rb528_table[(pixel >> 8) & 0x1f];
+                    r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                    g = COLOR_RGB565_TO_G8(pixel);
+                    b = COLOR_RGB565_TO_B8(pixel);
                     // faster to keep all calculations in integer math with 15-bit fractions
                     Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15); // .299*r + .587*g + .114*b
                     CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) -128; // -0.168736*r + -0.331264*g + 0.5*b
@@ -1047,9 +1047,9 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                             pY = &YDU[(ty*8)]; pU = &UDU[ty*8]; pV=&VDU[ty*8];
                             for (int tx=0; tx<dx; tx++) { // columns
                                 pixel = *pRow++;
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel);
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 *pY++ = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) -128; // .299*r + .587*g + .114*b
                                 *pU++ = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15); // -0.168736*r + -0.331264*g + 0.5*b
@@ -1090,17 +1090,17 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                                    pY += (64-8);
 
                                 pixel = pRow[0]; // left
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel);
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[0] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) -128; // .299*r + .587*g + .114*b
                                 *pU++ = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15); // -0.168736*r + -0.331264*g + 0.5*b
                                 *pV++ = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15); // 0.5*r + -0.418688*g + -0.081312*b
                                 pixel = pRow[1]; // right
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel);
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
 
@@ -1150,31 +1150,31 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                                    pY += (64-8);
 
                                 pixel = pRow[0]; // top left
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[0] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) -128; // .299*r + .587*g + .114*b
                                 pU[0] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15); // -0.168736*r + -0.331264*g + 0.5*b
                                 pV[0] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15); // 0.5*r + -0.418688*g + -0.081312*b
                                 pixel = pRow[1]; // top right
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
 
                                 pixel = pRow[src->w]; // bottom left
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[8] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
 
                                 pixel = pRow[1+src->w]; // bottom right
-                                r = rb528_table[(pixel >> 3) & 0x1f]; // extract R8/G8/B8
-                                g = g628_table[((pixel & 7) << 3) | (pixel >> 13)];
-                                b = rb528_table[(pixel >> 8) & 0x1f];
+                                r = COLOR_RGB565_TO_R8(pixel); // extract R8/G8/B8
+                                g = COLOR_RGB565_TO_G8(pixel);
+                                b = COLOR_RGB565_TO_B8(pixel);
                                 // faster to keep all calculations in integer math with 15-bit fractions
                                 pY[9] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15)-128; // .299*r + .587*g + .114*b
                                 pY += 2; pU++; pV++; pRow += 2;
@@ -1293,7 +1293,7 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
     for (;;) {
         uint16_t header;
         read_word(fp, &header);
-        header = IM_SWAP16(header);
+        header = __REV16(header);
         if ((0xFFD0 <= header) && (header <= 0xFFD9)) {
             continue;
         } else if (((0xFFC0 <= header) && (header <= 0xFFCF))
@@ -1303,7 +1303,7 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
         {
             uint16_t size;
             read_word(fp, &size);
-            size = IM_SWAP16(size);
+            size = __REV16(size);
             if (((0xFFC0 <= header) && (header <= 0xFFC3))
              || ((0xFFC5 <= header) && (header <= 0xFFC7))
              || ((0xFFC9 <= header) && (header <= 0xFFCB))
@@ -1312,10 +1312,10 @@ void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settin
                 read_byte_ignore(fp);
                 uint16_t width;
                 read_word(fp, &width);
-                width = IM_SWAP16(width);
+                width = __REV16(width);
                 uint16_t height;
                 read_word(fp, &height);
-                height = IM_SWAP16(height);
+                height = __REV16(height);
                 rs->jpg_w = img->w = width;
                 rs->jpg_h = img->h = height;
                 rs->jpg_size = img->bpp = f_size(fp);

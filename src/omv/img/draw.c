@@ -473,23 +473,23 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
             if (!data->alpha_palette) {
                 if (!data->color_palette) {
                     for (int i = 0; i < 256; i++) {
-                        clut[i] = (0xff << 24) | Y_TO_RGB888_FAST(i);
+                        clut[i] = (0xff << 24) | COLOR_Y_TO_RGB888(i);
                     }
                 } else {
                     for (int i = 0; i < 256; i++) {
                         int pixel = color_palette[i];
-                        clut[i] = (0xff << 24) | (RGB565_TO_R8_FAST(pixel) << 16) | (RGB565_TO_G8_FAST(pixel) << 8) | RGB565_TO_B8_FAST(pixel);
+                        clut[i] = (0xff << 24) | (COLOR_RGB565_TO_R8(pixel) << 16) | (COLOR_RGB565_TO_G8(pixel) << 8) | COLOR_RGB565_TO_B8(pixel);
                     }
                 }
             } else {
                 if (!data->color_palette) {
                     for (int i = 0; i < 256; i++) {
-                        clut[i] = (alpha_palette[i] << 24) | Y_TO_RGB888_FAST(i);
+                        clut[i] = (alpha_palette[i] << 24) | COLOR_Y_TO_RGB888(i);
                     }
                 } else {
                     for (int i = 0; i < 256; i++) {
                         int pixel = color_palette[i];
-                        clut[i] = (alpha_palette[i] << 24) | (RGB565_TO_R8_FAST(pixel) << 16) | (RGB565_TO_G8_FAST(pixel) << 8) | RGB565_TO_B8_FAST(pixel);
+                        clut[i] = (alpha_palette[i] << 24) | (COLOR_RGB565_TO_R8(pixel) << 16) | (COLOR_RGB565_TO_G8(pixel) << 8) | COLOR_RGB565_TO_B8(pixel);
                     }
                 }
             }
@@ -575,16 +575,13 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
     ({ \
         __typeof__ (src_pixel) _src_pixel = (src_pixel); \
         __typeof__ (dst_pixel) _dst_pixel = (dst_pixel); \
-        _src_pixel = __REV16(_src_pixel); /* RGB565 byte reversal fix */ \
-        _dst_pixel = __REV16(_dst_pixel); /* RGB565 byte reversal fix */ \
         const long mask_r = 0x7c007c00, mask_g = 0x07e007e0, mask_b = 0x001f001f; \
         uint32_t rgb = (_src_pixel << 16) | _dst_pixel; \
         long rb = ((rgb >> 1) & mask_r) | (rgb & mask_b); \
         long g = rgb & mask_g; \
         int rb_out = __SMUAD(smuad_alpha, rb) >> 5; \
         int g_out = __SMUAD(smuad_alpha, g) >> 5; \
-        int pixel = ((rb_out << 1) & 0xf800) | (g_out & 0x07e0) | (rb_out & 0x001f); \
-        pixel = __REV16(pixel); /* RGB565 byte reversal fix */ \
+        ((rb_out << 1) & 0xf800) | (g_out & 0x07e0) | (rb_out & 0x001f); \
     })
 
     switch (data->dst_img->bpp) {
@@ -608,8 +605,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             const uint16_t *color_palette = data->color_palette;
                             uint32_t alpha_pal0 = smuad_alpha_palette[0], alpha_pal255 = smuad_alpha_palette[255];
                             uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                            pal0 = RGB565_TO_Y_FAST(pal0);
-                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            pal0 = COLOR_RGB565_TO_Y(pal0);
+                            pal255 = COLOR_RGB565_TO_Y(pal255);
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
                                 long smuad_alpha = pixel ? alpha_pal255 : alpha_pal0;
@@ -627,8 +624,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         } else {
                             const uint16_t *color_palette = data->color_palette;
                             uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                            pal0 = RGB565_TO_Y_FAST(pal0) > 127;
-                            pal255 = RGB565_TO_Y_FAST(pal255) > 127;
+                            pal0 = COLOR_RGB565_TO_Y(pal0) > 127;
+                            pal255 = COLOR_RGB565_TO_Y(pal255) > 127;
                             switch ((pal0 << 1) | (pal255 << 0)) {
                                 case 0: {
                                     for (int x = x_start; x < x_end; x++) {
@@ -669,8 +666,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         } else {
                             const uint16_t *color_palette = data->color_palette;
                             uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                            pal0 = RGB565_TO_Y_FAST(pal0);
-                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            pal0 = COLOR_RGB565_TO_Y(pal0);
+                            pal255 = COLOR_RGB565_TO_Y(pal255);
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? pal255 : pal0;
                                 long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
@@ -687,8 +684,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         // } else {
                         //     const uint16_t *color_palette = data->color_palette;
                         //     uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                        //     pal0 = RGB565_TO_Y_FAST(pal0) > 127;
-                        //     pal255 = RGB565_TO_Y_FAST(pal255) > 127;
+                        //     pal0 = COLOR_RGB565_TO_Y(pal0) > 127;
+                        //     pal255 = COLOR_RGB565_TO_Y(pal255) > 127;
                         //     switch ((pal0 << 1) | (pal255 << 0)) {
                         //         case 0: {
                         //             for (int x = x_start; x < x_end; x++) {
@@ -739,7 +736,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 int pixel = *src8++;
                                 long smuad_alpha = smuad_alpha_palette[pixel];
                                 pixel = color_palette[pixel];
-                                pixel = RGB565_TO_Y_FAST(pixel);
+                                pixel = COLOR_RGB565_TO_Y(pixel);
                                 long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                 pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
@@ -755,7 +752,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             const uint16_t *color_palette = data->color_palette;
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = color_palette[*src8++];
-                                pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                pixel = COLOR_RGB565_TO_Y(pixel) > 127;
                                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                             }
                         }
@@ -771,7 +768,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             const uint16_t *color_palette = data->color_palette;
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = color_palette[*src8++];
-                                pixel = RGB565_TO_Y_FAST(pixel);
+                                pixel = COLOR_RGB565_TO_Y(pixel);
                                 long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                 pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                 IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
@@ -788,7 +785,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_Y_FAST(pixel);
+                                    pixel = COLOR_RGB565_TO_Y(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel];
                                     long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
@@ -798,10 +795,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_Y_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_Y(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     pixel = color_palette[pixel_y];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -810,15 +807,15 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    pixel = COLOR_RGB565_TO_Y(pixel) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_Y_FAST(pixel)];
-                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    pixel = color_palette[COLOR_RGB565_TO_Y(pixel)];
+                                    pixel = COLOR_RGB565_TO_Y(pixel) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
                             }
@@ -827,7 +824,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -835,8 +832,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_Y_FAST(pixel)];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = color_palette[COLOR_RGB565_TO_Y(pixel)];
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -848,7 +845,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_R8_FAST(pixel);
+                                    pixel = COLOR_RGB565_TO_R8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel];
                                     long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
@@ -858,10 +855,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_R8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_R8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     pixel = color_palette[pixel_y];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -870,15 +867,15 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_R8_FAST(pixel) > 127;
+                                    pixel = COLOR_RGB565_TO_R8(pixel) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_R8_FAST(pixel)];
-                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    pixel = color_palette[COLOR_RGB565_TO_R8(pixel)];
+                                    pixel = COLOR_RGB565_TO_Y(pixel) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
                             }
@@ -887,7 +884,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    long smuad_pixel = (RGB565_TO_R8_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    long smuad_pixel = (COLOR_RGB565_TO_R8(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -895,8 +892,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_R8_FAST(pixel)];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = color_palette[COLOR_RGB565_TO_R8(pixel)];
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -908,7 +905,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_G8_FAST(pixel);
+                                    pixel = COLOR_RGB565_TO_G8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel];
                                     long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
@@ -918,10 +915,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_G8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_G8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     pixel = color_palette[pixel_y];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -930,15 +927,15 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_G8_FAST(pixel) > 127;
+                                    pixel = COLOR_RGB565_TO_G8(pixel) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_G8_FAST(pixel)];
-                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    pixel = color_palette[COLOR_RGB565_TO_G8(pixel)];
+                                    pixel = COLOR_RGB565_TO_Y(pixel) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
                             }
@@ -947,7 +944,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    long smuad_pixel = (RGB565_TO_G8_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    long smuad_pixel = (COLOR_RGB565_TO_G8(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -955,8 +952,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_G8_FAST(pixel)];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = color_palette[COLOR_RGB565_TO_G8(pixel)];
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -968,7 +965,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_B8_FAST(pixel);
+                                    pixel = COLOR_RGB565_TO_B8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel];
                                     long smuad_pixel = (pixel << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
@@ -978,10 +975,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_B8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_B8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     pixel = color_palette[pixel_y];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -990,15 +987,15 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_B8_FAST(pixel) > 127;
+                                    pixel = COLOR_RGB565_TO_B8(pixel) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_B8_FAST(pixel)];
-                                    pixel = RGB565_TO_Y_FAST(pixel) > 127;
+                                    pixel = color_palette[COLOR_RGB565_TO_B8(pixel)];
+                                    pixel = COLOR_RGB565_TO_Y(pixel) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
                             }
@@ -1007,7 +1004,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    long smuad_pixel = (RGB565_TO_B8_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    long smuad_pixel = (COLOR_RGB565_TO_B8(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -1015,8 +1012,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_B8_FAST(pixel)];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
+                                    pixel = color_palette[COLOR_RGB565_TO_B8(pixel)];
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | (IMAGE_GET_BINARY_PIXEL_FAST(dst32, x) ? 0xff : 0x00);
                                     pixel = (__SMUAD(smuad_alpha, smuad_pixel) >> 8) > 127;
                                     IMAGE_PUT_BINARY_PIXEL_FAST(dst32, x, pixel);
                                 }
@@ -1050,8 +1047,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             const uint16_t *color_palette = data->color_palette;
                             uint32_t alpha_pal0 = smuad_alpha_palette[0], alpha_pal255 = smuad_alpha_palette[255];
                             uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                            pal0 = RGB565_TO_Y_FAST(pal0);
-                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            pal0 = COLOR_RGB565_TO_Y(pal0);
+                            pal255 = COLOR_RGB565_TO_Y(pal255);
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src32, x);
                                 long smuad_alpha = pixel ? alpha_pal255 : alpha_pal0;
@@ -1067,8 +1064,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         } else {
                             const uint16_t *color_palette = data->color_palette;
                             uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                            pal0 = RGB565_TO_Y_FAST(pal0);
-                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            pal0 = COLOR_RGB565_TO_Y(pal0);
+                            pal255 = COLOR_RGB565_TO_Y(pal255);
                             for (int x = x_start; x < x_end; x++) {
                                 *dst8++ = IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? pal255 : pal0;
                             }
@@ -1083,8 +1080,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         } else {
                             const uint16_t *color_palette = data->color_palette;
                             uint16_t pal0 = color_palette[0], pal255 = color_palette[255];
-                            pal0 = RGB565_TO_Y_FAST(pal0);
-                            pal255 = RGB565_TO_Y_FAST(pal255);
+                            pal0 = COLOR_RGB565_TO_Y(pal0);
+                            pal255 = COLOR_RGB565_TO_Y(pal255);
                             for (int x = x_start; x < x_end; x++) {
                                 long smuad_pixel = ((IMAGE_GET_BINARY_PIXEL_FAST(src32, x) ? pal255 : pal0) << 16) | *dst8;
                                 *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
@@ -1110,7 +1107,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 int pixel = *src8++;
                                 long smuad_alpha = smuad_alpha_palette[pixel];
                                 pixel = color_palette[pixel];
-                                long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                 *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                             }
                         }
@@ -1121,7 +1118,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             const uint16_t *color_palette = data->color_palette;
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = color_palette[*src8++];
-                                *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                *dst8++ = COLOR_RGB565_TO_Y(pixel);
                             }
                         }
                     } else {
@@ -1135,7 +1132,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             const uint16_t *color_palette = data->color_palette;
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = color_palette[*src8++];
-                                long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                 *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                             }
                         }
@@ -1150,7 +1147,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_Y_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_Y(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     long smuad_pixel = (pixel_y << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
@@ -1159,10 +1156,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_Y_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_Y(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     pixel = color_palette[pixel_y];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             }
@@ -1170,14 +1167,14 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                    *dst8++ = COLOR_RGB565_TO_Y(pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_Y_FAST(pixel)];
-                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                    pixel = color_palette[COLOR_RGB565_TO_Y(pixel)];
+                                    *dst8++ = COLOR_RGB565_TO_Y(pixel);
                                 }
                             }
                         } else {
@@ -1185,15 +1182,15 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_Y_FAST(pixel)];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    pixel = color_palette[COLOR_RGB565_TO_Y(pixel)];
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             }
@@ -1204,7 +1201,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_R8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_R8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     long smuad_pixel = (pixel_y << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
@@ -1213,10 +1210,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_R8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_R8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     pixel = color_palette[pixel_y];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             }
@@ -1224,14 +1221,14 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    *dst8++ = RGB565_TO_R8_FAST(pixel);
+                                    *dst8++ = COLOR_RGB565_TO_R8(pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_R8_FAST(pixel)];
-                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                    pixel = color_palette[COLOR_RGB565_TO_R8(pixel)];
+                                    *dst8++ = COLOR_RGB565_TO_Y(pixel);
                                 }
                             }
                         } else {
@@ -1239,15 +1236,15 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    long smuad_pixel = (RGB565_TO_R8_FAST(pixel) << 16) | *dst8;
+                                    long smuad_pixel = (COLOR_RGB565_TO_R8(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_R8_FAST(pixel)];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    pixel = color_palette[COLOR_RGB565_TO_R8(pixel)];
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             }
@@ -1258,7 +1255,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_G8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_G8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     long smuad_pixel = (pixel_y << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
@@ -1267,10 +1264,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_G8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_G8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     pixel = color_palette[pixel_y];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             }
@@ -1278,14 +1275,14 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    *dst8++ = RGB565_TO_G8_FAST(pixel);
+                                    *dst8++ = COLOR_RGB565_TO_G8(pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_G8_FAST(pixel)];
-                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                    pixel = color_palette[COLOR_RGB565_TO_G8(pixel)];
+                                    *dst8++ = COLOR_RGB565_TO_Y(pixel);
                                 }
                             }
                         } else {
@@ -1293,15 +1290,15 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    long smuad_pixel = (RGB565_TO_G8_FAST(pixel) << 16) | *dst8;
+                                    long smuad_pixel = (COLOR_RGB565_TO_G8(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_G8_FAST(pixel)];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    pixel = color_palette[COLOR_RGB565_TO_G8(pixel)];
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             }
@@ -1312,7 +1309,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_B8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_B8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     long smuad_pixel = (pixel_y << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
@@ -1321,10 +1318,10 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    int pixel_y = RGB565_TO_B8_FAST(pixel);
+                                    int pixel_y = COLOR_RGB565_TO_B8(pixel);
                                     long smuad_alpha = smuad_alpha_palette[pixel_y];
                                     pixel = color_palette[pixel_y];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             }
@@ -1332,14 +1329,14 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    *dst8++ = RGB565_TO_B8_FAST(pixel);
+                                    *dst8++ = COLOR_RGB565_TO_B8(pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_B8_FAST(pixel)];
-                                    *dst8++ = RGB565_TO_Y_FAST(pixel);
+                                    pixel = color_palette[COLOR_RGB565_TO_B8(pixel)];
+                                    *dst8++ = COLOR_RGB565_TO_Y(pixel);
                                 }
                             }
                         } else {
@@ -1347,15 +1344,15 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    long smuad_pixel = (RGB565_TO_B8_FAST(pixel) << 16) | *dst8;
+                                    long smuad_pixel = (COLOR_RGB565_TO_B8(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = color_palette[RGB565_TO_B8_FAST(pixel)];
-                                    long smuad_pixel = (RGB565_TO_Y_FAST(pixel) << 16) | *dst8;
+                                    pixel = color_palette[COLOR_RGB565_TO_B8(pixel)];
+                                    long smuad_pixel = (COLOR_RGB565_TO_Y(pixel) << 16) | *dst8;
                                     *dst8++ = __SMUAD(smuad_alpha, smuad_pixel) >> 8;
                                 }
                             }
@@ -1441,7 +1438,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             for (int x = x_start; x < x_end; x++) {
                                 int src_pixel = *src8++;
                                 long smuad_alpha = smuad_alpha_palette[src_pixel];
-                                src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                src_pixel = COLOR_Y_TO_RGB565(src_pixel);
                                 int dst_pixel = *dst16;
                                 *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                             }
@@ -1459,7 +1456,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         if (!data->color_palette) {
                             for (int x = x_start; x < x_end; x++) {
                                 int pixel = *src8++;
-                                *dst16++ = Y_TO_RGB565_FAST(pixel);
+                                *dst16++ = COLOR_Y_TO_RGB565(pixel);
                             }
                         } else {
                             const uint16_t *color_palette = data->color_palette;
@@ -1472,7 +1469,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                         if (!data->color_palette) {
                             for (int x = x_start; x < x_end; x++) {
                                 int src_pixel = *src8++;
-                                src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                src_pixel = COLOR_Y_TO_RGB565(src_pixel);
                                 int dst_pixel = *dst16;
                                 *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                             }
@@ -1496,7 +1493,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    long smuad_alpha = smuad_alpha_palette[RGB565_TO_Y_FAST(src_pixel)];
+                                    long smuad_alpha = smuad_alpha_palette[COLOR_RGB565_TO_Y(src_pixel)];
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1504,7 +1501,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    int src_pixel_y = RGB565_TO_Y_FAST(src_pixel);
+                                    int src_pixel_y = COLOR_RGB565_TO_Y(src_pixel);
                                     long smuad_alpha = smuad_alpha_palette[src_pixel_y];
                                     src_pixel = color_palette[src_pixel_y];
                                     int dst_pixel = *dst16;
@@ -1523,7 +1520,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    *dst16++ = color_palette[RGB565_TO_Y_FAST(pixel)];
+                                    *dst16++ = color_palette[COLOR_RGB565_TO_Y(pixel)];
                                 }
                             }
                         } else {
@@ -1543,7 +1540,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    src_pixel = color_palette[RGB565_TO_Y_FAST(src_pixel)];
+                                    src_pixel = color_palette[COLOR_RGB565_TO_Y(src_pixel)];
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1555,9 +1552,9 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    int src_pixel_y = RGB565_TO_R8_FAST(src_pixel);
+                                    int src_pixel_y = COLOR_RGB565_TO_R8(src_pixel);
                                     long smuad_alpha = smuad_alpha_palette[src_pixel_y];
-                                    src_pixel = Y_TO_RGB565_FAST(src_pixel_y);
+                                    src_pixel = COLOR_Y_TO_RGB565(src_pixel_y);
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1565,7 +1562,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    int src_pixel_y = RGB565_TO_R8_FAST(src_pixel);
+                                    int src_pixel_y = COLOR_RGB565_TO_R8(src_pixel);
                                     long smuad_alpha = smuad_alpha_palette[src_pixel_y];
                                     src_pixel = color_palette[src_pixel_y];
                                     int dst_pixel = *dst16;
@@ -1576,14 +1573,14 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_R8_FAST(pixel);
-                                    *dst16++ = Y_TO_RGB565_FAST(pixel);
+                                    pixel = COLOR_RGB565_TO_R8(pixel);
+                                    *dst16++ = COLOR_Y_TO_RGB565(pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    *dst16++ = color_palette[RGB565_TO_R8_FAST(pixel)];
+                                    *dst16++ = color_palette[COLOR_RGB565_TO_R8(pixel)];
                                 }
                             }
                         } else {
@@ -1591,8 +1588,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    src_pixel = RGB565_TO_R8_FAST(src_pixel);
-                                    src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                    src_pixel = COLOR_RGB565_TO_R8(src_pixel);
+                                    src_pixel = COLOR_Y_TO_RGB565(src_pixel);
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1600,7 +1597,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    src_pixel = color_palette[RGB565_TO_R8_FAST(src_pixel)];
+                                    src_pixel = color_palette[COLOR_RGB565_TO_R8(src_pixel)];
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1612,9 +1609,9 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    int src_pixel_y = RGB565_TO_G8_FAST(src_pixel);
+                                    int src_pixel_y = COLOR_RGB565_TO_G8(src_pixel);
                                     long smuad_alpha = smuad_alpha_palette[src_pixel_y];
-                                    src_pixel = Y_TO_RGB565_FAST(src_pixel_y);
+                                    src_pixel = COLOR_Y_TO_RGB565(src_pixel_y);
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1622,7 +1619,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    int src_pixel_y = RGB565_TO_G8_FAST(src_pixel);
+                                    int src_pixel_y = COLOR_RGB565_TO_G8(src_pixel);
                                     long smuad_alpha = smuad_alpha_palette[src_pixel_y];
                                     src_pixel = color_palette[src_pixel_y];
                                     int dst_pixel = *dst16;
@@ -1633,14 +1630,14 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_G8_FAST(pixel);
-                                    *dst16++ = Y_TO_RGB565_FAST(pixel);
+                                    pixel = COLOR_RGB565_TO_G8(pixel);
+                                    *dst16++ = COLOR_Y_TO_RGB565(pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    *dst16++ = color_palette[RGB565_TO_G8_FAST(pixel)];
+                                    *dst16++ = color_palette[COLOR_RGB565_TO_G8(pixel)];
                                 }
                             }
                         } else {
@@ -1648,8 +1645,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    src_pixel = RGB565_TO_G8_FAST(src_pixel);
-                                    src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                    src_pixel = COLOR_RGB565_TO_G8(src_pixel);
+                                    src_pixel = COLOR_Y_TO_RGB565(src_pixel);
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1657,7 +1654,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    src_pixel = color_palette[RGB565_TO_G8_FAST(src_pixel)];
+                                    src_pixel = color_palette[COLOR_RGB565_TO_G8(src_pixel)];
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1669,9 +1666,9 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    int src_pixel_y = RGB565_TO_B8_FAST(src_pixel);
+                                    int src_pixel_y = COLOR_RGB565_TO_B8(src_pixel);
                                     long smuad_alpha = smuad_alpha_palette[src_pixel_y];
-                                    src_pixel = Y_TO_RGB565_FAST(src_pixel_y);
+                                    src_pixel = COLOR_Y_TO_RGB565(src_pixel_y);
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1679,7 +1676,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    int src_pixel_y = RGB565_TO_B8_FAST(src_pixel);
+                                    int src_pixel_y = COLOR_RGB565_TO_B8(src_pixel);
                                     long smuad_alpha = smuad_alpha_palette[src_pixel_y];
                                     src_pixel = color_palette[src_pixel_y];
                                     int dst_pixel = *dst16;
@@ -1690,14 +1687,14 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    pixel = RGB565_TO_B8_FAST(pixel);
-                                    *dst16++ = Y_TO_RGB565_FAST(pixel);
+                                    pixel = COLOR_RGB565_TO_B8(pixel);
+                                    *dst16++ = COLOR_Y_TO_RGB565(pixel);
                                 }
                             } else {
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int pixel = *src16++;
-                                    *dst16++ = color_palette[RGB565_TO_B8_FAST(pixel)];
+                                    *dst16++ = color_palette[COLOR_RGB565_TO_B8(pixel)];
                                 }
                             }
                         } else {
@@ -1705,8 +1702,8 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                             if (!data->color_palette) {
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    src_pixel = RGB565_TO_B8_FAST(src_pixel);
-                                    src_pixel = Y_TO_RGB565_FAST(src_pixel);
+                                    src_pixel = COLOR_RGB565_TO_B8(src_pixel);
+                                    src_pixel = COLOR_Y_TO_RGB565(src_pixel);
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -1714,7 +1711,7 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
                                 const uint16_t *color_palette = data->color_palette;
                                 for (int x = x_start; x < x_end; x++) {
                                     int src_pixel = *src16++;
-                                    src_pixel = color_palette[RGB565_TO_B8_FAST(src_pixel)];
+                                    src_pixel = color_palette[COLOR_RGB565_TO_B8(src_pixel)];
                                     int dst_pixel = *dst16;
                                     *dst16++ = BLEND_RGB566(src_pixel, dst_pixel, smuad_alpha);
                                 }
@@ -2083,9 +2080,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
 
                                 for (; n > 1; n -= 2) {
                                     uint32_t pixels = *src_row_ptr32++;
-
-                                    // RGB565 byte reversal fix
-                                    pixels = __REV16(pixels);
 
                                     long r = (pixels >> 11) & 0x1F001F;
                                     r_acc = __USADA8(r, 0, r_acc);
@@ -2480,9 +2474,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                             int t_r_pixel = IMAGE_GET_RGB565_PIXEL_FAST(t_src_row_ptr, src_x_index_end);
                             int t_pixels = (t_l_pixel << 16) | t_r_pixel;
 
-                            // RGB565 byte reversal fix
-                            t_pixels = __REV16(t_pixels);
-
                             long t_r = (t_pixels >> 11) & 0x1F001F;
                             r_acc = __SMLAD(t_r, t_smlad_x_weight, r_acc);
 
@@ -2495,9 +2486,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                             int b_l_pixel = IMAGE_GET_RGB565_PIXEL_FAST(b_src_row_ptr, src_x_index);
                             int b_r_pixel = IMAGE_GET_RGB565_PIXEL_FAST(b_src_row_ptr, src_x_index_end);
                             int b_pixels = (b_l_pixel << 16) | b_r_pixel;
-
-                            // RGB565 byte reversal fix
-                            b_pixels = __REV16(b_pixels);
 
                             long b_r = (b_pixels >> 11) & 0x1F001F;
                             r_acc = __SMLAD(b_r, b_smlad_x_weight, r_acc);
@@ -2522,9 +2510,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                     int b_y_pixel = *b_src_row_ptr_tmp++;
                                     int pixels = (t_y_pixel << 16) | b_y_pixel;
 
-                                    // RGB565 byte reversal fix
-                                    pixels = __REV16(pixels);
-
                                     long r = (pixels >> 11) & 0x1F001F;
                                     r_acc = __SMLAD(r, smlad_y_weight, r_acc);
 
@@ -2543,9 +2528,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                     int l_x_pixel = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr, src_x_index);
                                     int r_x_pixel = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr, src_x_index_end);
                                     int pixels = (l_x_pixel << 16) | r_x_pixel;
-
-                                    // RGB565 byte reversal fix
-                                    pixels = __REV16(pixels);
 
                                     long r = (pixels >> 11) & 0x1F001F;
                                     r_acc = __SMLAD(r, smlad_x_weight, r_acc);
@@ -2573,9 +2555,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
 
                                     for (; n > 1; n -= 2) {
                                         uint32_t pixels = *src_row_ptr32++;
-
-                                        // RGB565 byte reversal fix
-                                        pixels = __REV16(pixels);
 
                                         long r = (pixels >> 11) & 0x1F001F;
                                         r_acc = __USADA8(r, 0, r_acc);
@@ -3125,12 +3104,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
 
                             for (int z = 0; z < 2; z++) { // dual bicubic x step (-1 to +2)
 
-                                // RGB565 byte reversal fix
-                                pixel_row_0[z] = __REV16(pixel_row_0[z]);
-                                pixel_row_1[z] = __REV16(pixel_row_1[z]);
-                                pixel_row_2[z] = __REV16(pixel_row_2[z]);
-                                pixel_row_3[z] = __REV16(pixel_row_3[z]);
-
                                 long r_pixel_row_0 = (pixel_row_0[z] >> 11) & 0x1f001f;
                                 long r_pixel_row_1 = (pixel_row_1[z] >> 11) & 0x1f001f;
                                 long r_pixel_row_2 = (pixel_row_2[z] >> 11) & 0x1f001f;
@@ -3215,12 +3188,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                 int pixel_1 = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr_1, pixel_x_offests[z]);
                                 int pixel_2 = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr_2, pixel_x_offests[z]);
                                 int pixel_3 = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr_3, pixel_x_offests[z]);
-
-                                // RGB565 byte reversal fix
-                                pixel_0 = __REV16(pixel_0);
-                                pixel_1 = __REV16(pixel_1);
-                                pixel_2 = __REV16(pixel_2);
-                                pixel_3 = __REV16(pixel_3);
 
                                 int r0 = pixel_0 >> 11;
                                 int r1 = pixel_1 >> 11;
@@ -3549,12 +3516,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                 pixel_01 = src_row_ptr_1[src_x_index]; pixel_11 = src_row_ptr_1[src_x_index_p_1];
                             }
 
-                            // RGB565 byte reversal fix
-                            pixel_00 = __REV16(pixel_00);
-                            pixel_10 = __REV16(pixel_10);
-                            pixel_01 = __REV16(pixel_01);
-                            pixel_11 = __REV16(pixel_11);
-
                             const long mask_r = 0x7c007c00, mask_g = 0x07e007e0, mask_b = 0x001f001f;
                             const long avg_rb = 0x4010, avg_g = 0x200;
 
@@ -3581,9 +3542,6 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                                 int rb_out = __SMLAD(smuad_x, rb, avg_rb) >> 5;
                                 int g_out = __SMLAD(smuad_x, g, avg_g) >> 5;
                                 int pixel = ((rb_out << 1) & 0xf800) | (g_out & 0x07e0) | (rb_out & 0x001f);
-
-                                // RGB565 byte reversal fix
-                                pixel = __REV16(pixel);
 
                                 IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
 
