@@ -260,7 +260,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	xyz_tab.o                               \
 	yuv_tab.o                               \
 	rainbow_tab.o                           \
-	rgb2rgb_tab.o                           \
 	invariant_tab.o                         \
 	mathop.o                                \
 	pool.o                                  \
@@ -588,7 +587,6 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	xyz_tab.o                               \
 	yuv_tab.o                               \
 	rainbow_tab.o                           \
-	rgb2rgb_tab.o                           \
 	invariant_tab.o                         \
 	jpeg.o                                  \
 	fmath.o                                 \

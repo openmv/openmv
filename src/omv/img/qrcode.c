@@ -982,7 +982,7 @@ static void threshold(struct quirc *q)
     // to get the effect used below (a fraction of threshold_s-1/threshold_s
     // The second constant is to reduce the averaged values to compare with the current pixel
     fracmul2 = (0x100000 * (100 - THRESHOLD_T)) / (200 * threshold_s); // use as many bits as possible without overflowing
-    
+
     for (y = 0; y < q->h; y++) {
         int row_average[q->w];
 
@@ -2996,7 +2996,7 @@ void imlib_find_qrcodes(list_t *out, image_t *ptr, rectangle_t *roi)
             for (int y = roi->y, yy = roi->y + roi->h; y < yy; y++) {
                 uint16_t *row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(ptr, y);
                 for (int x = roi->x, xx = roi->x + roi->w; x < xx; x++) {
-                    *(grayscale_image++) = RGB565_TO_Y_FAST(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
+                    *(grayscale_image++) = COLOR_RGB565_TO_Y(IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x));
                 }
             }
             break;

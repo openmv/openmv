@@ -685,9 +685,9 @@ STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
             if (arg_rgbtuple) {
                 int pixel = IMAGE_GET_RGB565_PIXEL(arg_img, arg_x, arg_y);
                 mp_obj_t pixel_tuple[3];
-                pixel_tuple[0] = mp_obj_new_int(COLOR_R5_TO_R8(COLOR_RGB565_TO_R5(pixel)));
-                pixel_tuple[1] = mp_obj_new_int(COLOR_G6_TO_G8(COLOR_RGB565_TO_G6(pixel)));
-                pixel_tuple[2] = mp_obj_new_int(COLOR_B5_TO_B8(COLOR_RGB565_TO_B5(pixel)));
+                pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(pixel));
+                pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(pixel));
+                pixel_tuple[2] = mp_obj_new_int(COLOR_RGB565_TO_B8(pixel));
                 return mp_obj_new_tuple(3, pixel_tuple);
             } else {
                 return mp_obj_new_int(IMAGE_GET_RGB565_PIXEL(arg_img, arg_x, arg_y));
@@ -7097,7 +7097,7 @@ mp_obj_t py_image_yuv_to_binary(uint n_args, const mp_obj_t *args, mp_map_t *kw_
 {
     const mp_obj_t *arg_vec;
     py_helper_consume_array(n_args, args, 0, 3, &arg_vec);
-    int8_t y = (mp_obj_get_int(arg_vec[0]) & 255) - 128;
+    int8_t y = mp_obj_get_int(arg_vec[0]) & 255;
     int8_t u = mp_obj_get_int(arg_vec[1]) & 255;
     int8_t v = mp_obj_get_int(arg_vec[2]) & 255;
     uint16_t rgb565 = COLOR_YUV_TO_RGB565(y, u, v);
@@ -7109,7 +7109,7 @@ mp_obj_t py_image_yuv_to_grayscale(uint n_args, const mp_obj_t *args, mp_map_t *
 {
     const mp_obj_t *arg_vec;
     py_helper_consume_array(n_args, args, 0, 3, &arg_vec);
-    int8_t y = (mp_obj_get_int(arg_vec[0]) & 255) - 128;
+    int8_t y = mp_obj_get_int(arg_vec[0]) & 255;
     int8_t u = mp_obj_get_int(arg_vec[1]) & 255;
     int8_t v = mp_obj_get_int(arg_vec[2]) & 255;
     uint16_t rgb565 = COLOR_YUV_TO_RGB565(y, u, v);
@@ -7121,7 +7121,7 @@ mp_obj_t py_image_yuv_to_rgb(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
 {
     const mp_obj_t *arg_vec;
     py_helper_consume_array(n_args, args, 0, 3, &arg_vec);
-    int8_t y = (mp_obj_get_int(arg_vec[0]) & 255) - 128;
+    int8_t y = mp_obj_get_int(arg_vec[0]) & 255;
     int8_t u = mp_obj_get_int(arg_vec[1]) & 255;
     int8_t v = mp_obj_get_int(arg_vec[2]) & 255;
     uint16_t rgb565 = COLOR_YUV_TO_RGB565(y, u, v);
@@ -7136,7 +7136,7 @@ mp_obj_t py_image_yuv_to_lab(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
 {
     const mp_obj_t *arg_vec;
     py_helper_consume_array(n_args, args, 0, 3, &arg_vec);
-    int8_t y = (mp_obj_get_int(arg_vec[0]) & 255) - 128;
+    int8_t y = mp_obj_get_int(arg_vec[0]) & 255;
     int8_t u = mp_obj_get_int(arg_vec[1]) & 255;
     int8_t v = mp_obj_get_int(arg_vec[2]) & 255;
     uint16_t rgb565 = COLOR_YUV_TO_RGB565(y, u, v);

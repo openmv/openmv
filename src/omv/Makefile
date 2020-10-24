@@ -59,7 +59,6 @@ SRCS += $(addprefix img/,   \
 	xyz_tab.c               \
 	yuv_tab.c               \
 	rainbow_tab.c           \
-	rgb2rgb_tab.c           \
 	invariant_tab.c         \
 	mathop.c                \
 	pool.c                  \

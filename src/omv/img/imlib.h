@@ -223,49 +223,59 @@ color_thresholds_list_lnk_data_t;
 #define COLOR_B_MIN -128
 #define COLOR_B_MAX 127
 
-#define COLOR_Y_MIN -128
-#define COLOR_Y_MAX 127
+#define COLOR_Y_MIN 0
+#define COLOR_Y_MAX 255
 #define COLOR_U_MIN -128
 #define COLOR_U_MAX 127
 #define COLOR_V_MIN -128
 #define COLOR_V_MAX 127
 
-extern const uint8_t rb528_table[32];
-extern const uint8_t g628_table[64];
-
-#define COLOR_R5_TO_R8(color) rb528_table[color]
-#define COLOR_G6_TO_G8(color) g628_table[color]
-#define COLOR_B5_TO_B8(color) rb528_table[color]
-
-extern const uint8_t rb825_table[256];
-extern const uint8_t g826_table[256];
-
-#define COLOR_R8_TO_R5(color) rb825_table[color]
-#define COLOR_G8_TO_G6(color) g826_table[color]
-#define COLOR_B8_TO_B5(color) rb825_table[color]
-
 // RGB565 Stuff //
 
-#define COLOR_RGB565_TO_R5(pixel) (((pixel) >> 3) & 0x1F)
-#define COLOR_RGB565_TO_G6(pixel) \
+#define COLOR_RGB565_TO_R5(pixel) (((pixel) >> 11) & 0x1F)
+#define COLOR_RGB565_TO_R8(pixel) \
 ({ \
-    __typeof__ (pixel) _pixel = (pixel); \
-    ((_pixel & 0x07) << 3) | (_pixel >> 13); \
-})
-#define COLOR_RGB565_TO_B5(pixel) (((pixel) >> 8) & 0x1F)
-#define COLOR_RGB565_TO_R8(pixel) COLOR_R5_TO_R8(COLOR_RGB565_TO_R5(pixel))
-#define COLOR_RGB565_TO_G8(pixel) COLOR_G6_TO_G8(COLOR_RGB565_TO_G6(pixel))
-#define COLOR_RGB565_TO_B8(pixel) COLOR_B5_TO_B8(COLOR_RGB565_TO_B5(pixel))
-
-#define COLOR_R5_G6_B5_TO_RGB565(r5, g6, b5) \
-({ \
-    __typeof__ (r5) _r5 = (r5); \
-    __typeof__ (g6) _g6 = (g6); \
-    __typeof__ (b5) _b5 = (b5); \
-    __REV16((_r5 << 11) | (_g6 << 5) | _b5); \
+    __typeof__ (pixel) __pixel = (pixel); \
+    __pixel = (__pixel >> 8) & 0xF8; \
+    __pixel | (__pixel >> 5); \
 })
 
-#define COLOR_R8_G8_B8_TO_RGB565(r8, g8, b8) COLOR_R5_G6_B5_TO_RGB565(COLOR_R8_TO_R5(r8), COLOR_G8_TO_G6(g8), COLOR_B8_TO_B5(b8))
+#define COLOR_RGB565_TO_G6(pixel) (((pixel) >> 5) & 0x3F)
+#define COLOR_RGB565_TO_G8(pixel) \
+({ \
+    __typeof__ (pixel) __pixel = (pixel); \
+    __pixel = (__pixel >> 3) & 0xFC; \
+    __pixel | (__pixel >> 6); \
+})
+
+#define COLOR_RGB565_TO_B5(pixel) ((pixel) & 0x1F)
+#define COLOR_RGB565_TO_B8(pixel) \
+({ \
+    __typeof__ (pixel) __pixel = (pixel); \
+    __pixel = (__pixel << 3) & 0xF8; \
+    __pixel | (__pixel >> 5); \
+})
+
+#define COLOR_R5_G6_B5_TO_RGB565(r5, g6, b5) (((r5) << 11) | ((g6) << 5) | (b5))
+#define COLOR_R8_G8_B8_TO_RGB565(r8, g8, b8) ((((r8) & 0xF8) << 8) | (((g8) & 0xFC) << 3) | ((b8) >> 3))
+
+#define COLOR_RGB888_TO_Y(r8, g8, b8) ((((r8) * 38) + ((g8) * 75) + ((b8) * 15)) >> 7) // 0.299R + 0.587G + 0.114B
+#define COLOR_RGB565_TO_Y(rgb565) \
+({ \
+    __typeof__ (rgb565) __rgb565 = (rgb565); \
+    int r = COLOR_RGB565_TO_R8(__rgb565); \
+    int g = COLOR_RGB565_TO_G8(__rgb565); \
+    int b = COLOR_RGB565_TO_B8(__rgb565); \
+    COLOR_RGB888_TO_Y(r, g, b); \
+})
+
+#define COLOR_Y_TO_RGB888(pixel) ((pixel) * 0x010101)
+#define COLOR_Y_TO_RGB565(pixel) \
+({ \
+    __typeof__ (pixel) __pixel = (pixel); \
+    int __rb_pixel = (__pixel >> 3) & 0x1F; \
+    (__rb_pixel * 0x0801) + ((__pixel << 3) & 0x7E0); \
+})
 
 extern const int8_t lab_table[196608];
 extern const int8_t yuv_table[196608];
@@ -281,58 +291,12 @@ extern const int8_t yuv_table[196608];
 #endif
 
 #ifdef IMLIB_ENABLE_YUV_LUT
-#define COLOR_RGB565_TO_Y(pixel) yuv_table[(pixel) * 3]
 #define COLOR_RGB565_TO_U(pixel) yuv_table[((pixel) * 3) + 1]
 #define COLOR_RGB565_TO_V(pixel) yuv_table[((pixel) * 3) + 2]
 #else
-#define COLOR_RGB565_TO_Y(pixel) imlib_rgb565_to_y(pixel)
 #define COLOR_RGB565_TO_U(pixel) imlib_rgb565_to_u(pixel)
 #define COLOR_RGB565_TO_V(pixel) imlib_rgb565_to_v(pixel)
 #endif
-
-#define RGB565_TO_R8_FAST(pixel) \
-({ \
-    __typeof__ (pixel) __pixel = (pixel); \
-    __pixel = __pixel & 0xF8; /* RGB565 byte reversal fix */ \
-    __pixel | (__pixel >> 5); \
-})
-
-#define RGB565_TO_G8_FAST(pixel) \
-({ \
-    __typeof__ (pixel) __pixel = (pixel); \
-    __pixel = (__REV16(__pixel) >> 3) & 0xFC; /* RGB565 byte reversal fix */ \
-    __pixel | (__pixel >> 6); \
-})
-
-#define RGB565_TO_B8_FAST(pixel) \
-({ \
-    __typeof__ (pixel) __pixel = (pixel); \
-    __pixel = (__pixel >> 5) & 0xF8; /* RGB565 byte reversal fix */ \
-    __pixel | (__pixel >> 5); \
-})
-
-#define RGB565_TO_Y_FAST(rgb565) \
-({ \
-    __typeof__ (rgb565) __rgb565 = (rgb565); \
-    int r = RGB565_TO_R8_FAST(__rgb565); \
-    int g = RGB565_TO_G8_FAST(__rgb565); \
-    int b = RGB565_TO_B8_FAST(__rgb565); \
-    ((r * 38) + (g * 75) + (b * 15)) >> 7; /* 0.299R + 0.587G + 0.114B */ \
-})
-
-#define Y_TO_RGB565_FAST(pixel) \
-({ \
-    __typeof__ (pixel) __pixel = (pixel); \
-    int __rb_pixel = (__pixel >> 3) & 0x3F; \
-    int __rgb_pixel =  (__rb_pixel * 0x0801) + ((__pixel << 3) & 0x7E0); \
-    __REV16(__rgb_pixel); /* RGB565 byte reversal fix */ \
-})
-
-#define Y_TO_RGB888_FAST(pixel) \
-({ \
-    __typeof__ (pixel) __pixel = (pixel); \
-    pixel * 0x010101; \
-})
 
 #define COLOR_LAB_TO_RGB565(l, a, b) imlib_lab_to_rgb(l, a, b)
 #define COLOR_YUV_TO_RGB565(y, u, v) imlib_yuv_to_rgb((y) + 128, u, v)
@@ -386,15 +350,15 @@ extern const int8_t yuv_table[196608];
                  IM_GET_RAW_PIXEL(img, __x+1, __y+1)) >> 2;  \
         }                                                    \
     }                                                        \
-    r  = IM_R825(r);                                         \
-    g  = IM_G826(g);                                         \
-    b  = IM_B825(b);                                         \
+    r  = r >> 3;                                             \
+    g  = g >> 2;                                             \
+    b  = b >> 3;                                             \
 })
 
 #define COLOR_BINARY_TO_GRAYSCALE(pixel) ((pixel) * COLOR_GRAYSCALE_MAX)
 #define COLOR_BINARY_TO_RGB565(pixel) COLOR_YUV_TO_RGB565(((pixel) ? 127 : -128), 0, 0)
 #define COLOR_RGB565_TO_BINARY(pixel) (COLOR_RGB565_TO_Y(pixel) > (((COLOR_Y_MAX - COLOR_Y_MIN) / 2) + COLOR_Y_MIN))
-#define COLOR_RGB565_TO_GRAYSCALE(pixel) (COLOR_RGB565_TO_Y(pixel) + 128)
+#define COLOR_RGB565_TO_GRAYSCALE(pixel) COLOR_RGB565_TO_Y(pixel)
 #define COLOR_GRAYSCALE_TO_BINARY(pixel) ((pixel) > (((COLOR_GRAYSCALE_MAX - COLOR_GRAYSCALE_MIN) / 2) + COLOR_GRAYSCALE_MIN))
 #define COLOR_GRAYSCALE_TO_RGB565(pixel) COLOR_YUV_TO_RGB565(((pixel) - 128), 0, 0)
 
@@ -531,66 +495,6 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
     ((uint16_t *) _image->data)[(_image->w * _y) + _x] = _v; \
 })
 
-#ifdef __arm__
-    #define IMAGE_REV_RGB565_PIXEL(pixel) \
-    ({ \
-        __typeof__ (pixel) _pixel = (pixel); \
-        __REV16(_pixel); \
-    })
-#else
-    #define IMAGE_REV_RGB565_PIXEL(pixel) \
-    ({ \
-        __typeof__ (pixel) _pixel = (pixel); \
-        ((_pixel >> 8) | (_pixel << 8)) & 0xFFFF; \
-    })
-#endif
-
-#define IMAGE_COMPUTE_TARGET_SIZE_SCALE_FACTOR(target_size, source_rect) \
-__typeof__ (target_size) _target_size = (target_size); \
-__typeof__ (source_rect) _source_rect = (source_rect); \
-int IMAGE_X_SOURCE_OFFSET = _source_rect->p.x; \
-int IMAGE_Y_SOURCE_OFFSET = _source_rect->p.y; \
-int IMAGE_X_TARGET_OFFSET = 0; \
-int IMAGE_Y_TARGET_OFFSET = 0; \
-float IMAGE_X_RATIO = ((float) _source_rect->s.w) / ((float) _target_size->w); \
-float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_size->h); \
-({ 0; })
-
-#define IMAGE_COMPUTE_TARGET_RECT_SCALE_FACTOR(target_rect, source_rect) \
-__typeof__ (target_rect) _target_rect = (target_rect); \
-__typeof__ (source_rect) _source_rect = (source_rect); \
-int IMAGE_X_SOURCE_OFFSET = _source_rect->p.x; \
-int IMAGE_Y_SOURCE_OFFSET = _source_rect->p.y; \
-int IMAGE_X_TARGET_OFFSET = _target_rect->p.x; \
-int IMAGE_Y_TARGET_OFFSET = _target_rect->p.y; \
-float IMAGE_X_RATIO = ((float) _source_rect->s.w) / ((float) _target_rect->s.w); \
-float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h); \
-({ 0; })
-
-#define IMAGE_GET_SCALED_BINARY_PIXEL(image, x, y) \
-({ \
-    __typeof__ (image) _image = (image); \
-    __typeof__ (x) _x = (x); \
-    __typeof__ (y) _y = (y); \
-    IMAGE_GET_BINARY_PIXEL(_image, ((size_t) ((IMAGE_X_RATIO * (_x - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET, ((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET); \
-})
-
-#define IMAGE_GET_SCALED_GRAYSCALE_PIXEL(image, x, y) \
-({ \
-    __typeof__ (image) _image = (image); \
-    __typeof__ (x) _x = (x); \
-    __typeof__ (y) _y = (y); \
-    IMAGE_GET_GRAYSCALE_PIXEL(_image, ((size_t) ((IMAGE_X_RATIO * (_x - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET, ((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET); \
-})
-
-#define IMAGE_GET_SCALED_RGB565_PIXEL(image, x, y) \
-({ \
-    __typeof__ (image) _image = (image); \
-    __typeof__ (x) _x = (x); \
-    __typeof__ (y) _y = (y); \
-    IMAGE_GET_RGB565_PIXEL(_image, ((size_t) ((IMAGE_X_RATIO * (_x - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET, ((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET); \
-})
-
 // Fast Stuff //
 
 #define IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(image, y) \
@@ -598,13 +502,6 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
     __typeof__ (image) _image = (image); \
     __typeof__ (y) _y = (y); \
     ((uint32_t *) _image->data) + (((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * _y); \
-})
-
-#define IMAGE_INC_BINARY_PIXEL_ROW_PTR(row_ptr, image) \
-({ \
-    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
-    __typeof__ (image) _image = (image); \
-    _row_ptr + ((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT); \
 })
 
 #define IMAGE_GET_BINARY_PIXEL_FAST(row_ptr, x) \
@@ -645,13 +542,6 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
     ((uint8_t *) _image->data) + (_image->w * _y); \
 })
 
-#define IMAGE_INC_GRAYSCALE_PIXEL_ROW_PTR(row_ptr, image) \
-({ \
-    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
-    __typeof__ (image) _image = (image); \
-    row_ptr + _image->w; \
-})
-
 #define IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_ptr, x) \
 ({ \
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
@@ -674,13 +564,6 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
     ((uint16_t *) _image->data) + (_image->w * _y); \
 })
 
-#define IMAGE_INC_RGB565_PIXEL_ROW_PTR(row_ptr, image) \
-({ \
-    __typeof__ (row_ptr) _row_ptr = (row_ptr); \
-    __typeof__ (image) _image = (image); \
-    row_ptr + _image->w; \
-})
-
 #define IMAGE_GET_RGB565_PIXEL_FAST(row_ptr, x) \
 ({ \
     __typeof__ (row_ptr) _row_ptr = (row_ptr); \
@@ -696,91 +579,7 @@ float IMAGE_Y_RATIO = ((float) _source_rect->s.h) / ((float) _target_rect->s.h);
     _row_ptr[_x] = _v; \
 })
 
-#define IMAGE_COMPUTE_SCALED_BINARY_PIXEL_ROW_PTR(image, y) \
-({ \
-    __typeof__ (image) _image = (image); \
-    __typeof__ (y) _y = (y); \
-    ((uint32_t *) _image->data) + (((_image->w + UINT32_T_MASK) >> UINT32_T_SHIFT) * (((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET)); \
-})
-
-#define IMAGE_GET_SCALED_BINARY_PIXEL_FAST(row_ptr, x) IMAGE_GET_BINARY_PIXEL_FAST((row_ptr), ((size_t) ((IMAGE_X_RATIO * ((x) - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET)
-
-#define IMAGE_COMPUTE_SCALED_GRAYSCALE_PIXEL_ROW_PTR(image, y) \
-({ \
-    __typeof__ (image) _image = (image); \
-    __typeof__ (y) _y = (y); \
-    ((uint8_t *) _image->data) + (_image->w * (((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET)); \
-})
-
-#define IMAGE_GET_SCALED_GRAYSCALE_PIXEL_FAST(row_ptr, x) IMAGE_GET_GRAYSCALE_PIXEL_FAST((row_ptr), ((size_t) ((IMAGE_X_RATIO * ((x) - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET)
-
-#define IMAGE_COMPUTE_SCALED_RGB565_PIXEL_ROW_PTR(image, y) \
-({ \
-    __typeof__ (image) _image = (image); \
-    __typeof__ (y) _y = (y); \
-    ((uint16_t *) _image->data) + (_image->w * (((size_t) ((IMAGE_Y_RATIO * (_y - IMAGE_Y_TARGET_OFFSET)) + 0.5)) + IMAGE_Y_SOURCE_OFFSET)); \
-})
-
-#define IMAGE_GET_SCALED_RGB565_PIXEL_FAST(row_ptr, x) IMAGE_GET_RGB565_PIXEL_FAST((row_ptr), ((size_t) ((IMAGE_X_RATIO * ((x) - IMAGE_X_TARGET_OFFSET)) + 0.5)) + IMAGE_X_SOURCE_OFFSET)
-
 // Old Image Macros - Will be refactor and removed. But, only after making sure through testing new macros work.
-
-#define IM_SWAP16(x) __REV16(x) // Swap bottom two chars in short.
-#define IM_SWAP32(x) __REV32(x) // Swap bottom two shorts in long.
-
-// RGB565 to RGB888 conversion.
-extern const uint8_t rb528_table[32];
-extern const uint8_t g628_table[64];
-
-#define IM_R528(p) \
-    ({ __typeof__ (p) _p = (p); \
-       rb528_table[_p]; })
-
-#define IM_G628(p) \
-    ({ __typeof__ (p) _p = (p); \
-       g628_table[_p]; })
-
-#define IM_B528(p) \
-    ({ __typeof__ (p) _p = (p); \
-       rb528_table[_p]; })
-
-// RGB888 to RGB565 conversion.
-extern const uint8_t rb825_table[256];
-extern const uint8_t g826_table[256];
-
-#define IM_R825(p) \
-    ({ __typeof__ (p) _p = (p); \
-       rb825_table[_p]; })
-
-#define IM_G826(p) \
-    ({ __typeof__ (p) _p = (p); \
-       g826_table[_p]; })
-
-#define IM_B825(p) \
-    ({ __typeof__ (p) _p = (p); \
-       rb825_table[_p]; })
-
-// Split RGB565 values (note the RGB565 value is byte reversed).
-
-#define IM_R565(p) \
-    ({ __typeof__ (p) _p = (p); \
-       ((_p)>>3)&0x1F; })
-
-#define IM_G565(p) \
-    ({ __typeof__ (p) _p = (p); \
-       (((_p)&0x07)<<3)|((_p)>>13); })
-
-#define IM_B565(p) \
-    ({ __typeof__ (p) _p = (p); \
-       ((_p)>>8)&0x1F; })
-
-// Merge RGB565 values (note the RGB565 value is byte reversed).
-
-#define IM_RGB565(r, g, b) \
-    ({ __typeof__ (r) _r = (r); \
-       __typeof__ (g) _g = (g); \
-       __typeof__ (b) _b = (b); \
-       ((_r)<<3)|((_g)>>3)|((_g)<<13)|((_b)<<8); })
 
 // Image kernels
 extern const int8_t kernel_gauss_3[9];
@@ -914,7 +713,7 @@ extern const int kernel_high_pass_3[9];
        (_img0->w==_img1->w)&&(_img0->h==_img1->h)&&(_img0->bpp==_img1->bpp); })
 
 #define IM_TO_GS_PIXEL(img, x, y)    \
-    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : (COLOR_RGB565_TO_Y(((uint16_t*)img->pixels)[((y)*img->w)+(x)]) + 128))
+    (img->bpp == 1 ? img->pixels[((y)*img->w)+(x)] : COLOR_RGB565_TO_Y(((uint16_t*)img->pixels)[((y)*img->w)+(x)]) )
 
 typedef struct simple_color {
     uint8_t G;          // Gray
