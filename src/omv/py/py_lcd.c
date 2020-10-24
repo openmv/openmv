@@ -329,12 +329,13 @@ static mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
                         uint8_t pixel = IM_GET_GS_PIXEL(arg_img, (rect.x + j), (rect.y + i));
                         line[j] = COLOR_Y_TO_RGB565(pixel);
                     }
-                    lcd_write_data(rect.w*2, (uint8_t *) line);
                 } else {
-                    lcd_write_data(rect.w*2, (uint8_t *)
-                        (((uint16_t *) arg_img->pixels) +
-                        ((rect.y + i) * arg_img->w) + rect.x));
+                    for (int j=0; j<rect.w; j++) {
+                        uint16_t pixel = IM_GET_RGB565_PIXEL(arg_img, (rect.x + j), (rect.y + i));
+                        line[j] = __REV16(pixel);
+                    }
                 }
+                lcd_write_data(rect.w*2, (uint8_t *) line);
                 if (r_pad) {
                     lcd_write_data(r_pad*2, zero); // r_pad < width
                 }
