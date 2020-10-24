@@ -268,6 +268,47 @@
 
 #define SOFT_I2C_SPIN_DELAY          64
 
+// SAI4
+#define AUDIO_SAI                   (SAI4_Block_A)
+
+#define AUDIO_SAI_CK_PORT           (GPIOE)
+#define AUDIO_SAI_CK_PIN            (GPIO_PIN_2)
+#define AUDIO_SAI_CK_AF             (GPIO_AF10_SAI4)
+
+#define AUDIO_SAI_D1_PORT           (GPIOB)
+#define AUDIO_SAI_D1_PIN            (GPIO_PIN_2)
+#define AUDIO_SAI_D1_AF             (GPIO_AF10_SAI4)
+
+#define AUDIO_SAI_DMA_STREAM        BDMA_Channel1
+#define AUDIO_SAI_DMA_REQUEST       BDMA_REQUEST_SAI4_A
+#define AUDIO_SAI_DMA_IRQ           BDMA_Channel1_IRQn
+#define AUDIO_SAI_DMA_IRQHandler    BDMA_Channel1_IRQHandler
+
+#define AUDIO_SAI_CLK_ENABLE()      __HAL_RCC_SAI4_CLK_ENABLE()
+#define AUDIO_SAI_CLK_DISABLE()     __HAL_RCC_SAI4_CLK_DISABLE()
+#define AUDIO_SAI_DMA_CLK_ENABLE()  __HAL_RCC_BDMA_CLK_ENABLE()
+
+// SAI1
+// Set SAI1 clock source in system ex: Sai1ClockSelection = RCC_SAI1CLKSOURCE_PLL;
+// #define AUDIO_SAI                   (SAI1_Block_A)
+//
+// #define AUDIO_SAI_CK_PORT           (GPIOE)
+// #define AUDIO_SAI_CK_PIN            (GPIO_PIN_2)
+// #define AUDIO_SAI_CK_AF             (GPIO_AF2_SAI1)
+//
+// #define AUDIO_SAI_D1_PORT           (GPIOB)
+// #define AUDIO_SAI_D1_PIN            (GPIO_PIN_2)
+// #define AUDIO_SAI_D1_AF             (GPIO_AF2_SAI1)
+//
+// #define AUDIO_SAI_DMA_STREAM        DMA2_Stream6
+// #define AUDIO_SAI_DMA_REQUEST       DMA_REQUEST_SAI1_A
+// #define AUDIO_SAI_DMA_IRQ           DMA2_Stream6_IRQn
+// #define AUDIO_SAI_DMA_IRQHandler    DMA2_Stream6_IRQHandler
+//
+// #define AUDIO_SAI_CLK_ENABLE()      __HAL_RCC_SAI1_CLK_ENABLE()
+// #define AUDIO_SAI_CLK_DISABLE()     __HAL_RCC_SAI1_CLK_DISABLE()
+// #define AUDIO_SAI_DMA_CLK_ENABLE()  __HAL_RCC_DMA2_CLK_ENABLE()
+
 // Enable additional GPIO banks for DRAM...
 #define OMV_ENABLE_GPIO_BANK_F
 #define OMV_ENABLE_GPIO_BANK_G
