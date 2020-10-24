@@ -35,6 +35,8 @@ stm32h7xx_hal_rcc_ex.c\
 stm32h7xx_hal_rng.c\
 stm32h7xx_hal_rtc.c\
 stm32h7xx_hal_rtc_ex.c\
+stm32h7xx_hal_sai.c\
+stm32h7xx_hal_sai_ex.c\
 stm32h7xx_hal_sd.c\
 stm32h7xx_hal_sdram.c\
 stm32h7xx_hal_spi.c\
