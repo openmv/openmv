@@ -56,13 +56,6 @@ _ffs_cache          = ORIGIN(OMV_FFS_MEMORY) + OMV_FFS_MEMORY_OFFSET;
 _jpeg_buf           = ORIGIN(OMV_JPEG_MEMORY) + OMV_JPEG_MEMORY_OFFSET;
 #endif
 
-#if defined(OMV_VOSPI_MEMORY)
-#if !defined(OMV_VOSPI_MEMORY_OFFSET)
-#define OMV_VOSPI_MEMORY_OFFSET         (0)
-#endif
-_vospi_buf          = ORIGIN(OMV_VOSPI_MEMORY) + OMV_VOSPI_MEMORY_OFFSET;
-#endif
-
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
 _stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
 
@@ -137,6 +130,15 @@ SECTIONS
     *(.dma_buffer)
 
   } >OMV_DMA_MEMORY
+
+  #if defined(OMV_SRAM4_ORIGIN)
+  /* D3 SRAM4 memory */
+  .d3_sram (NOLOAD) :
+  {
+   . = ALIGN(4);
+    *(.d3_sram_buffer)
+  } >SRAM4
+  #endif
 
   /* Initialized data sections */
   .data : AT ( _sidata )

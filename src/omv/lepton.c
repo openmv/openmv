@@ -61,7 +61,7 @@ extern uint8_t _vospi_buf;
 
 static bool vospi_resync = true;
 static uint8_t *vospi_packet = &_line_buf;
-static uint8_t *vospi_buffer = &_vospi_buf;
+static uint8_t vospi_buffer[64*1024] __attribute__((section(".d3_sram_buffer")));
 static volatile uint32_t vospi_pid = 0;
 static volatile uint32_t vospi_seg = 1;
 static uint32_t vospi_packets = 60;
