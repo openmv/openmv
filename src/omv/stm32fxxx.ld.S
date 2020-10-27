@@ -157,6 +157,15 @@ SECTIONS
 
   } >OMV_DMA_MEMORY
 
+  #if defined(OMV_SRAM4_ORIGIN)
+  /* D3 SRAM4 memory */
+  .d3_sram (NOLOAD) :
+  {
+   . = ALIGN(4);
+    *(.d3_sram_buffer)
+  } >SRAM4
+  #endif
+
   /* Initialized data sections */
   .data : AT ( _sidata )
   {
