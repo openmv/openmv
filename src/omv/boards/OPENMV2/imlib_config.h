@@ -56,23 +56,11 @@
 // Enable cartoon()
 //#define IMLIB_ENABLE_CARTOON
 
-// Enable remove_shadows()
-//#define IMLIB_ENABLE_REMOVE_SHADOWS
-
 // Enable linpolar()
 //#define IMLIB_ENABLE_LINPOLAR
 
 // Enable logpolar()
 //#define IMLIB_ENABLE_LOGPOLAR
-
-// Enable chrominvar()
-//#define IMLIB_ENABLE_CHROMINVAR
-
-// Enable illuminvar()
-//#define IMLIB_ENABLE_ILLUMINVAR
-
-// Enable invariant table
-//#define IMLIB_ENABLE_INVARIANT_TABLE
 
 // Enable lens_corr()
 #define IMLIB_ENABLE_LENS_CORR
