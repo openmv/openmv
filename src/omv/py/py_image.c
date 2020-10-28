@@ -1918,7 +1918,7 @@ STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t 
 
     fb_alloc_mark();
     imlib_draw_image(arg_img, arg_other, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
-                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint);
+                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint, NULL, NULL);
     fb_alloc_free_till_mark();
     return args[0];
 }
