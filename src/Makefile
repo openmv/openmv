@@ -145,6 +145,10 @@ ifeq ($(MICROPY_PY_NETWORK_CYW43), 1)
 MP_CFLAGS += -DMICROPY_PY_NETWORK_CYW43=1
 MICROPY_ARGS += MICROPY_PY_NETWORK_CYW43=1
 endif
+ifeq ($(MICROPY_PY_AUDIO), 1)
+MP_CFLAGS += -DMICROPY_PY_AUDIO=1
+MICROPY_ARGS += MICROPY_PY_AUDIO=1
+endif
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
@@ -186,7 +190,9 @@ UVC_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=ha
 
 #------------- Libraries ----------------#
 LIBS = -lgcc
+ifeq ($(MICROPY_PY_AUDIO), 1)
 LIBS += $(TOP_DIR)/$(LIBPDM_DIR)/libPDMFilter_CM7_GCC_wc32.a
+endif
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/CommonTables/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/FastMathFunctions/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
@@ -311,6 +317,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_nn.o                                 \
 	py_tf.o                                 \
 	py_imu.o                                \
+	py_audio.o                              \
 	)
 
 
