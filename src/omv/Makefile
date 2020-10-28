@@ -59,7 +59,6 @@ SRCS += $(addprefix img/,   \
 	xyz_tab.c               \
 	yuv_tab.c               \
 	rainbow_tab.c           \
-	invariant_tab.c         \
 	mathop.c                \
 	pool.c                  \
 	point.c                 \
@@ -73,7 +72,6 @@ SRCS += $(addprefix img/,   \
 	orb.c                   \
 	template.c              \
 	phasecorrelation.c      \
-	shadow_removal.c        \
 	font.c                  \
 	jpeg.c                  \
 	lbp.c                   \
