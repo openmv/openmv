@@ -184,6 +184,8 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
 
     if ((!helper_mode) && (!alloc_mode)) {
         fb_alloc_free_till_mark();
+    } else if ((!helper_mode) && alloc_mode) {
+        fb_alloc_mark_permanent(); // tf_model->model_data will not be popped on exception.
     }
 
     return tf_model;
@@ -197,7 +199,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_tf_load_obj, 1, py_tf_load);
 
 STATIC mp_obj_t py_tf_free_from_fb()
 {
-    fb_alloc_free_till_mark();
+    fb_alloc_free_till_mark_past_mark_permanent();
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_tf_free_from_fb_obj, py_tf_free_from_fb);
