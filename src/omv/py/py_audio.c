@@ -23,6 +23,7 @@
 #define RAISE_OS_EXCEPTION(msg)     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, msg))
 #define SAI_MIN(a,b)                ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
 
+static CRC_HandleTypeDef hcrc;
 static SAI_HandleTypeDef hsai;
 static DMA_HandleTypeDef hdma_sai_rx;
 
@@ -130,6 +131,18 @@ static mp_obj_t py_audio_init()
     // Configure and enable SAI DMA IRQ Channel
     NVIC_SetPriority(AUDIO_SAI_DMA_IRQ, IRQ_PRI_DMA21);
     HAL_NVIC_EnableIRQ(AUDIO_SAI_DMA_IRQ);
+
+    // Init CRC for the PDM library
+    hcrc.Instance = CRC;
+    hcrc.Init.DefaultPolynomialUse = DEFAULT_POLYNOMIAL_ENABLE;
+    hcrc.Init.DefaultInitValueUse = DEFAULT_INIT_VALUE_ENABLE;
+    hcrc.Init.InputDataInversionMode = CRC_INPUTDATA_INVERSION_NONE;
+    hcrc.Init.OutputDataInversionMode = CRC_OUTPUTDATA_INVERSION_DISABLE;
+    hcrc.InputDataFormat = CRC_INPUTDATA_FORMAT_BYTES;
+    if (HAL_CRC_Init(&hcrc) != HAL_OK) {
+        RAISE_OS_EXCEPTION("Failed to initialize CRC!");
+    }
+    __HAL_CRC_DR_RESET(&hcrc);
 
     return mp_const_none;
 }
