@@ -13,7 +13,6 @@
 
 extern char _fballoc;
 static char *pointer = &_fballoc;
-static int marks = 0;
 
 #if defined(FB_ALLOC_STATS)
 static uint32_t alloc_bytes;
@@ -25,6 +24,10 @@ static uint32_t alloc_bytes_peak;
 extern char _fballoc_overlay;
 static char *pointer_overlay = &_fballoc_overlay;
 #endif
+
+// fb_alloc_free_till_mark() will not free past this.
+// Use fb_alloc_free_till_mark_permanent() instead.
+#define FB_PERMANENT_FLAG 0x2
 
 static char *fb_alloc_min_address()
 {
@@ -46,7 +49,6 @@ __weak NORETURN void fb_alloc_fail()
 void fb_alloc_init0()
 {
     pointer = &_fballoc;
-    marks = 0;
     #if defined(OMV_FB_OVERLAY_MEMORY)
     pointer_overlay = &_fballoc_overlay;
     #endif
@@ -74,18 +76,25 @@ void fb_alloc_mark()
     // we will use a size value of 4 as a marker in the alloc stack.
     *((uint32_t *) new_pointer) = sizeof(uint32_t); // Save size.
     pointer = new_pointer;
-    marks += 1;
     #if defined(FB_ALLOC_STATS)
     alloc_bytes = 0;
     alloc_bytes_peak = 0;
     #endif
 }
 
-void fb_alloc_free_till_mark()
+static void int_fb_alloc_free_till_mark(bool free_permanent)
 {
-    if (!marks) return;
+    // Previously there was a marks counting method used to provide a semaphore lock for this code:
+    //
+    // https://github.com/openmv/openmv/commit/c982617523766018fda70c15818f643ee8b1fd33
+    //
+    // This does not really help you in complex memory allocation operations where you want to be
+    // able to unwind things until after a certain point. It also did not handle preventing
+    // fb_alloc_free_till_mark() from running in recursive call situations (see find_blobs()).
     while (pointer < &_fballoc) {
         uint32_t size = *((uint32_t *) pointer);
+        if ((!free_permanent) && (size & FB_PERMANENT_FLAG)) return;
+        size &= ~FB_PERMANENT_FLAG;
         #if defined(OMV_FB_OVERLAY_MEMORY)
         if (size & FB_OVERLAY_MEMORY_FLAG) { // Check for fast flag.
             size &= ~FB_OVERLAY_MEMORY_FLAG; // Remove it.
@@ -95,10 +104,24 @@ void fb_alloc_free_till_mark()
         pointer += size; // Get size and pop.
         if (size == sizeof(uint32_t)) break; // Break on first marker.
     }
-    marks -= 1;
     #if defined(FB_ALLOC_STATS)
     printf("fb_alloc peak memory: %lu\n", alloc_bytes_peak);
     #endif
+}
+
+void fb_alloc_free_till_mark()
+{
+    int_fb_alloc_free_till_mark(false);
+}
+
+void fb_alloc_mark_permanent()
+{
+    if (pointer < &_fballoc) *((uint32_t *) pointer) |= FB_PERMANENT_FLAG;
+}
+
+void fb_alloc_free_till_mark_past_mark_permanent()
+{
+    int_fb_alloc_free_till_mark(true);
 }
 
 // returns null pointer without error if size==0
@@ -199,6 +222,7 @@ void fb_free()
 {
     if (pointer < &_fballoc) {
         uint32_t size = *((uint32_t *) pointer);
+        size &= ~FB_PERMANENT_FLAG;
         #if defined(OMV_FB_OVERLAY_MEMORY)
         if (size & FB_OVERLAY_MEMORY_FLAG) { // Check for fast flag.
             size &= ~FB_OVERLAY_MEMORY_FLAG; // Remove it.
@@ -216,6 +240,7 @@ void fb_free_all()
 {
     while (pointer < &_fballoc) {
         uint32_t size = *((uint32_t *) pointer);
+        size &= ~FB_PERMANENT_FLAG;
         #if defined(OMV_FB_OVERLAY_MEMORY)
         if (size & FB_OVERLAY_MEMORY_FLAG) { // Check for fast flag.
             size &= ~FB_OVERLAY_MEMORY_FLAG; // Remove it.
@@ -227,5 +252,4 @@ void fb_free_all()
         #endif
         pointer += size; // Get size and pop.
     }
-    marks = 0;
 }

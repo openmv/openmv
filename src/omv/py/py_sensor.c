@@ -206,12 +206,13 @@ static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_
 
     fb_alloc_mark();
     ((image_t *) py_image_cobj(r))->pixels = fb_alloc0(image_size(&img), FB_ALLOC_NO_HINT);
+    fb_alloc_mark_permanent(); // pixels will not be popped on exception
     return r;
 }
 
 static mp_obj_t py_sensor_dealloc_extra_fb()
 {
-    fb_alloc_free_till_mark();
+    fb_alloc_free_till_mark_past_mark_permanent();
     return mp_const_none;
 }
 

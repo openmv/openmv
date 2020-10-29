@@ -406,7 +406,17 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
 
-                                if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
+                                bool add_to_list = threshold_cb_arg == NULL;
+                                if (!add_to_list) {
+                                    // Protect ourselves from caught exceptions in the callback
+                                    // code from freeing our fb_alloc() stack.
+                                    fb_alloc_mark();
+                                    fb_alloc_mark_permanent();
+                                    add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
+                                    fb_alloc_free_till_mark_past_mark_permanent();
+                                }
+
+                                if (add_to_list) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
@@ -666,7 +676,17 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
 
-                                if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
+                                bool add_to_list = threshold_cb_arg == NULL;
+                                if (!add_to_list) {
+                                    // Protect ourselves from caught exceptions in the callback
+                                    // code from freeing our fb_alloc() stack.
+                                    fb_alloc_mark();
+                                    fb_alloc_mark_permanent();
+                                    add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
+                                    fb_alloc_free_till_mark_past_mark_permanent();
+                                }
+
+                                if (add_to_list) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
@@ -926,7 +946,17 @@ void imlib_find_blobs(list_t *out, image_t *ptr, rectangle_t *roi, unsigned int 
                                     bin_up(y_hist_bins, ptr->h, y_hist_bins_max, &lnk_blob.y_hist_bins, &lnk_blob.y_hist_bins_count);
                                 }
 
-                                if (((threshold_cb_arg == NULL) || threshold_cb(threshold_cb_arg, &lnk_blob))) {
+                                bool add_to_list = threshold_cb_arg == NULL;
+                                if (!add_to_list) {
+                                    // Protect ourselves from caught exceptions in the callback
+                                    // code from freeing our fb_alloc() stack.
+                                    fb_alloc_mark();
+                                    fb_alloc_mark_permanent();
+                                    add_to_list = threshold_cb(threshold_cb_arg, &lnk_blob);
+                                    fb_alloc_free_till_mark_past_mark_permanent();
+                                }
+
+                                if (add_to_list) {
                                     list_push_back(out, &lnk_blob);
                                 } else {
                                     if (lnk_blob.x_hist_bins) xfree(lnk_blob.x_hist_bins);
