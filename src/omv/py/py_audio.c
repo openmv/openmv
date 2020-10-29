@@ -19,7 +19,6 @@
 
 #if MICROPY_PY_AUDIO
 
-#define PDM_SAMPLE_FREQ             (2048U)//KHz
 #define RAISE_OS_EXCEPTION(msg)     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, msg))
 #define SAI_MIN(a,b)                ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
 
@@ -223,7 +222,7 @@ static mp_obj_t py_audio_read_pcm(uint n_args, const mp_obj_t *args, mp_map_t *k
     size_t typesize = mp_binary_get_size('@', pcmbuf.typecode, NULL);
     uint32_t n_samples = pcmbuf.len / typesize;
     int16_t *output_buffer = (int16_t *) pcmbuf.buf;
-    uint32_t decimation_factor = PDM_SAMPLE_FREQ/frequency;
+    uint32_t decimation_factor = AUDIO_SAI_FREQKHZ/frequency;
     uint32_t output_samples = ((PDM_BUFFER_SIZE / 2) * 8) / (decimation_factor * n_channels); // Half transfer
 
     if (typesize != 2) {
