@@ -1,4 +1,4 @@
-# Firmware Guide
+# Firmware Guide Updated
 
 This guide covers how to install the OpenMV Cam firmware development environment on Windows, Mac, and Linux.
 
