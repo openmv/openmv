@@ -293,7 +293,7 @@ void SystemClock_Config(void)
                                               |RCC_PERIPHCLK_SDMMC|RCC_PERIPHCLK_I2C2
                                               |RCC_PERIPHCLK_ADC|RCC_PERIPHCLK_USB
                                               |RCC_PERIPHCLK_QSPI|RCC_PERIPHCLK_FMC
-                                              |RCC_PERIPHCLK_RNG;
+                                              |RCC_PERIPHCLK_RNG|RCC_PERIPHCLK_SAI4A;
     PeriphClkInitStruct.UsbClockSelection = OMV_OSC_USB_CLKSOURCE;
     PeriphClkInitStruct.SdmmcClockSelection = RCC_SDMMCCLKSOURCE_PLL;
     PeriphClkInitStruct.FdcanClockSelection = RCC_FDCANCLKSOURCE_PLL;
@@ -305,6 +305,7 @@ void SystemClock_Config(void)
     PeriphClkInitStruct.I2c123ClockSelection = RCC_I2C123CLKSOURCE_D2PCLK1;
     PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_PLL2;
     PeriphClkInitStruct.RngClockSelection = OMV_OSC_RNG_CLKSOURCE;
+    PeriphClkInitStruct.Sai4AClockSelection = RCC_SAI4ACLKSOURCE_PLL;
 
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
         // Initialization Error
