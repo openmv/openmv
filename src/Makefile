@@ -260,7 +260,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	xyz_tab.o                               \
 	yuv_tab.o                               \
 	rainbow_tab.o                           \
-	invariant_tab.o                         \
 	mathop.o                                \
 	pool.o                                  \
 	point.o                                 \
@@ -274,7 +273,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	orb.o                                   \
 	template.o                              \
 	phasecorrelation.o                      \
-	shadow_removal.o                        \
 	font.o                                  \
 	jpeg.o                                  \
 	lbp.o                                   \
@@ -587,7 +585,6 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	xyz_tab.o                               \
 	yuv_tab.o                               \
 	rainbow_tab.o                           \
-	invariant_tab.o                         \
 	jpeg.o                                  \
 	fmath.o                                 \
 	imlib.o                                 \

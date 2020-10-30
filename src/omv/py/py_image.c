@@ -3070,59 +3070,6 @@ STATIC mp_obj_t py_image_cartoon(uint n_args, const mp_obj_t *args, mp_map_t *kw
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_cartoon_obj, 1, py_image_cartoon);
 #endif // IMLIB_ENABLE_CARTOON
 
-/////////////////////////
-// Shadow Removal Methods
-/////////////////////////
-
-#ifdef IMLIB_ENABLE_REMOVE_SHADOWS
-STATIC mp_obj_t py_image_remove_shadows(uint n_args, const mp_obj_t *args)
-{
-    image_t *arg_img =
-        py_helper_arg_to_image_color(args[0]);
-
-    fb_alloc_mark();
-
-    if (n_args < 2) {
-        imlib_remove_shadows(arg_img, NULL, NULL, 0, true);
-    } else if (MP_OBJ_IS_STR(args[1])) {
-        imlib_remove_shadows(arg_img, mp_obj_str_get_str(args[1]), NULL, 0, false);
-    } else if (MP_OBJ_IS_TYPE(args[1], &py_image_type)) {
-        imlib_remove_shadows(arg_img, NULL, py_helper_arg_to_image_color(args[1]), 0, false);
-    } else {
-        imlib_remove_shadows(arg_img, NULL, NULL,
-                             py_helper_keyword_color(arg_img, n_args, args, 1, NULL, 0),
-                             false);
-    }
-
-    fb_alloc_free_till_mark();
-
-    return args[0];
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_image_remove_shadows_obj, 1, 2, py_image_remove_shadows);
-#endif // IMLIB_ENABLE_REMOVE_SHADOWS
-
-#ifdef IMLIB_ENABLE_CHROMINVAR
-STATIC mp_obj_t py_image_chrominvar(mp_obj_t img_obj)
-{
-    fb_alloc_mark();
-    imlib_chrominvar(py_helper_arg_to_image_color(img_obj));
-    fb_alloc_free_till_mark();
-    return img_obj;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_chrominvar_obj, py_image_chrominvar);
-#endif // IMLIB_ENABLE_CHROMINVAR
-
-#ifdef IMLIB_ENABLE_ILLUMINVAR
-STATIC mp_obj_t py_image_illuminvar(mp_obj_t img_obj)
-{
-    fb_alloc_mark();
-    imlib_illuminvar(py_helper_arg_to_image_color(img_obj));
-    fb_alloc_free_till_mark();
-    return img_obj;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_illuminvar_obj, py_image_illuminvar);
-#endif // IMLIB_ENABLE_ILLUMINVAR
-
 ////////////////////
 // Geometric Methods
 ////////////////////
@@ -6542,22 +6489,6 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_cartoon),             MP_ROM_PTR(&py_image_cartoon_obj)},
 #else
     {MP_ROM_QSTR(MP_QSTR_cartoon),             MP_ROM_PTR(&py_func_unavailable_obj)},
-#endif
-    /* Shadow Removal Methods */
-#ifdef IMLIB_ENABLE_REMOVE_SHADOWS
-    {MP_ROM_QSTR(MP_QSTR_remove_shadows),      MP_ROM_PTR(&py_image_remove_shadows_obj)},
-#else
-    {MP_ROM_QSTR(MP_QSTR_remove_shadows),      MP_ROM_PTR(&py_func_unavailable_obj)},
-#endif
-#ifdef IMLIB_ENABLE_CHROMINVAR
-    {MP_ROM_QSTR(MP_QSTR_chrominvar),          MP_ROM_PTR(&py_image_chrominvar_obj)},
-#else
-    {MP_ROM_QSTR(MP_QSTR_chrominvar),          MP_ROM_PTR(&py_func_unavailable_obj)},
-#endif
-#ifdef IMLIB_ENABLE_ILLUMINVAR
-    {MP_ROM_QSTR(MP_QSTR_illuminvar),          MP_ROM_PTR(&py_image_illuminvar_obj)},
-#else
-    {MP_ROM_QSTR(MP_QSTR_illuminvar),          MP_ROM_PTR(&py_func_unavailable_obj)},
 #endif
     /* Geometric Methods */
 #ifdef IMLIB_ENABLE_LINPOLAR

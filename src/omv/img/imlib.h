@@ -1213,9 +1213,6 @@ void imlib_cartoon_filter(image_t *img, float seed_threshold, float floating_thr
 // Image Correction
 void imlib_logpolar_int(image_t *dst, image_t *src, rectangle_t *roi, bool linear, bool reverse); // helper/internal
 void imlib_logpolar(image_t *img, bool linear, bool reverse);
-void imlib_remove_shadows(image_t *img, const char *path, image_t *other, int scalar, bool single);
-void imlib_chrominvar(image_t *img);
-void imlib_illuminvar(image_t *img);
 // Lens/Rotation Correction
 void imlib_lens_corr(image_t *img, float strength, float zoom, float x_corr, float y_corr);
 void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation,
