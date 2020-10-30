@@ -16,6 +16,8 @@
 #include "pdm2pcm_glo.h"
 #include "fb_alloc.h"
 #include "omv_boardconfig.h"
+#include "py/obj.h"
+#include "py/objarray.h"
 
 #if MICROPY_PY_AUDIO
 
@@ -35,7 +37,7 @@ static PDM_Filter_Config_t   PDM_FilterConfig[2];
 #define DMA_XFER_FULL   (0x04U)
 static volatile uint32_t xfer_status = 0;
 
-#define PDM_BUFFER_SIZE     (256*2)
+#define PDM_BUFFER_SIZE     (4096)
 // BDMA can only access D3 SRAM4 memory.
 uint8_t PDM_BUFFER[PDM_BUFFER_SIZE] __attribute__ ((aligned (32))) __attribute__((section(".d3_sram_buffer")));
 
@@ -215,7 +217,7 @@ static mp_obj_t py_audio_read_pcm(uint n_args, const mp_obj_t *args, mp_map_t *k
 {
     mp_buffer_info_t pcmbuf;
     mp_get_buffer_raise(args[0], &pcmbuf, MP_BUFFER_WRITE);
-    int frequency = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_frequency), 16);
+    uint32_t frequency = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_frequency), 16);
     int gain_db = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), 24);
     float highpass = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_highpass), 0.9883f);
 
@@ -299,15 +301,99 @@ static mp_obj_t py_audio_read_pcm(uint n_args, const mp_obj_t *args, mp_map_t *k
     return mp_const_none;
 }
 
+static mp_obj_t py_audio_start_streaming(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    mp_obj_t callback = args[0];
+    mp_obj_t arg_obj = args[1];
+    uint32_t time = (uint32_t) (py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_time), 1.0) * 1000);
+    uint32_t frequency = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_frequency), 16);
+    int gain_db = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), 24);
+    float highpass = py_helper_keyword_float(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_highpass), 0.9883f);
+
+    uint32_t decimation_factor = AUDIO_SAI_FREQKHZ/frequency;
+    uint32_t output_samples = ((PDM_BUFFER_SIZE / 2) * 8) / (decimation_factor * n_channels); // Half transfer
+    mp_obj_array_t *pcmbuf = mp_obj_new_bytearray_by_ref(output_samples * 4, m_new(int16_t, output_samples * 2));
+
+    // Configure PDM library
+    for (int i=0; i<n_channels; i++) {
+        PDM_FilterHandler[i].bit_order  = PDM_FILTER_BIT_ORDER_MSB;
+        PDM_FilterHandler[i].endianness = PDM_FILTER_ENDIANNESS_LE;
+        PDM_FilterHandler[i].high_pass_tap = (uint32_t) (highpass * 2147483647U); // coff * (2^31-1)
+        PDM_FilterHandler[i].out_ptr_channels = n_channels;
+        PDM_FilterHandler[i].in_ptr_channels  = n_channels;
+        PDM_Filter_Init(&PDM_FilterHandler[i]);
+
+        PDM_FilterConfig[i].mic_gain = gain_db;
+        PDM_FilterConfig[i].output_samples_number = output_samples;
+        PDM_FilterConfig[i].decimation_factor = get_decimation_factor(decimation_factor);
+        PDM_Filter_setConfig(&PDM_FilterHandler[i], &PDM_FilterConfig[i]);
+    }
+
+    // Clear DMA buffer status
+    xfer_status &= DMA_XFER_NONE;
+
+    // Start DMA transfer
+    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / 2) != HAL_OK) {
+        RAISE_OS_EXCEPTION("SAI DMA transfer failed!");
+    }
+
+    uint32_t record_start = HAL_GetTick();
+    while ((HAL_GetTick() - record_start) < time) {
+        uint32_t start = HAL_GetTick();
+        // Wait for half transfer complete.
+        while ((xfer_status & DMA_XFER_HALF) == 0) {
+            if ((HAL_GetTick() - start) >= 1000) {
+                HAL_SAI_DMAStop(&hsai);
+                RAISE_OS_EXCEPTION("SAI DMA transfer timeout!");
+            }
+        }
+
+        // Clear buffer state.
+        xfer_status &= ~(DMA_XFER_HALF);
+
+        // Convert PDM samples to PCM.
+        for (int i=0; i<n_channels; i++) {
+            PDM_Filter(&((uint8_t*)PDM_BUFFER)[i], &((int16_t*)pcmbuf->items)[i], &PDM_FilterHandler[i]);
+        }
+
+        mp_call_function_2(callback, MP_OBJ_FROM_PTR(pcmbuf), arg_obj);
+
+        // Wait for transfer complete.
+        while ((xfer_status & DMA_XFER_FULL) == 0) {
+            if ((HAL_GetTick() - start) >= 1000) {
+                HAL_SAI_DMAStop(&hsai);
+                RAISE_OS_EXCEPTION("SAI DMA transfer timeout!");
+            }
+        }
+
+        // Clear buffer state.
+        xfer_status &= ~(DMA_XFER_FULL);
+
+        // Convert PDM samples to PCM.
+        for (int i=0; i<n_channels; i++) {
+            PDM_Filter(&((uint8_t*)PDM_BUFFER)[PDM_BUFFER_SIZE / 2 + i], &((int16_t*)pcmbuf->items)[i], &PDM_FilterHandler[i]);
+        }
+
+        mp_call_function_2(callback, MP_OBJ_FROM_PTR(pcmbuf), arg_obj);
+    }
+
+    // Stop SAI DMA.
+    HAL_SAI_DMAStop(&hsai);
+
+    return mp_const_none;
+}
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_init_obj, py_audio_init);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_audio_read_pdm_obj, py_audio_read_pdm);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_read_pcm_obj, 1, py_audio_read_pcm);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_start_streaming_obj, 2, py_audio_start_streaming);
 
 static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_audio) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init),        (mp_obj_t)&py_audio_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_pcm),    (mp_obj_t)&py_audio_read_pcm_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_pdm),    (mp_obj_t)&py_audio_read_pdm_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_audio) },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_init),            (mp_obj_t)&py_audio_init_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read_pcm),        (mp_obj_t)&py_audio_read_pcm_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_read_pdm),        (mp_obj_t)&py_audio_read_pdm_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_start_streaming), (mp_obj_t)&py_audio_start_streaming_obj },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
