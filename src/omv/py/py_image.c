@@ -6756,12 +6756,14 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     read_long(fp, &ms_tmp);
 
     uint32_t ms; // Wait for elapsed ms.
-    for (ms = systick_current_millis();
-         ((ms - ((py_imagewriter_obj_t *) args[0])->ms) < ms_tmp);
-         ms = systick_current_millis()) {
-        __WFI();
+    ms = 0;
+    if (!py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pause), true)) {
+        for (ms = systick_current_millis();
+            ((ms - ((py_imagewriter_obj_t *) args[0])->ms) < ms_tmp);
+            ms = systick_current_millis()) {
+            __WFI();
+        }
     }
-
     ((py_imagewriter_obj_t *) args[0])->ms = ms;
 
     image_t image = {0};
