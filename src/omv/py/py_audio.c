@@ -28,7 +28,7 @@ static CRC_HandleTypeDef hcrc;
 static SAI_HandleTypeDef hsai;
 static DMA_HandleTypeDef hdma_sai_rx;
 
-static const int n_channels = 2;
+static int n_channels = AUDIO_SAI_NBR_CHANNELS;
 static PDM_Filter_Handler_t  PDM_FilterHandler[2];
 static PDM_Filter_Config_t   PDM_FilterConfig[2];
 
@@ -58,12 +58,18 @@ void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
     SCB_InvalidateDCache_by_Addr((uint32_t *)(&PDM_BUFFER[PDM_BUFFER_SIZE / 2]), PDM_BUFFER_SIZE / 2);
 }
 
-static mp_obj_t py_audio_init()
+static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    n_channels = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_channels), 2);
+
+    if (n_channels != 1 && n_channels != 2) {
+        RAISE_OS_EXCEPTION("Invalid number of channels! Expected 1 or 2.");
+    }
+
     hsai.Instance                    = AUDIO_SAI;
     hsai.Init.Protocol               = SAI_FREE_PROTOCOL;
     hsai.Init.AudioMode              = SAI_MODEMASTER_RX;
-    hsai.Init.DataSize               = SAI_DATASIZE_16;
+    hsai.Init.DataSize               = (n_channels == 1) ? SAI_DATASIZE_8 : SAI_DATASIZE_16;
     hsai.Init.FirstBit               = SAI_FIRSTBIT_LSB;
     hsai.Init.ClockStrobing          = SAI_CLOCKSTROBING_RISINGEDGE;
     hsai.Init.Synchro                = SAI_ASYNCHRONOUS;
@@ -72,7 +78,7 @@ static mp_obj_t py_audio_init()
     hsai.Init.FIFOThreshold          = SAI_FIFOTHRESHOLD_1QF;
     hsai.Init.SynchroExt             = SAI_SYNCEXT_DISABLE;
     hsai.Init.AudioFrequency         = SAI_AUDIO_FREQUENCY_MCKDIV;
-    hsai.Init.MonoStereoMode         = SAI_STEREOMODE;
+    hsai.Init.MonoStereoMode         = (n_channels == 1)  ? SAI_MONOMODE: SAI_STEREOMODE;
     hsai.Init.CompandingMode         = SAI_NOCOMPANDING;
     hsai.Init.TriState               = SAI_OUTPUT_RELEASED;
 
@@ -95,8 +101,8 @@ static mp_obj_t py_audio_init()
 
     hsai.SlotInit.FirstBitOffset     = 0;
     hsai.SlotInit.SlotSize           = SAI_SLOTSIZE_DATASIZE;
-    hsai.SlotInit.SlotNumber         = 1;
-    hsai.SlotInit.SlotActive         = SAI_SLOTACTIVE_0;
+    hsai.SlotInit.SlotNumber         = (n_channels == 1) ? 2 : 1;
+    hsai.SlotInit.SlotActive         = (n_channels == 1) ? (SAI_SLOTACTIVE_0 | SAI_SLOTACTIVE_1) : SAI_SLOTACTIVE_0;
 
     // Initialize the SAI
     HAL_SAI_DeInit(&hsai);
@@ -113,8 +119,8 @@ static mp_obj_t py_audio_init()
     hdma_sai_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;
     hdma_sai_rx.Init.PeriphInc           = DMA_PINC_DISABLE;
     hdma_sai_rx.Init.MemInc              = DMA_MINC_ENABLE;
-    hdma_sai_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-    hdma_sai_rx.Init.MemDataAlignment    = DMA_MDATAALIGN_HALFWORD;
+    hdma_sai_rx.Init.PeriphDataAlignment = (n_channels == 1) ? DMA_PDATAALIGN_BYTE : DMA_PDATAALIGN_HALFWORD;
+    hdma_sai_rx.Init.MemDataAlignment    = (n_channels == 1) ? DMA_MDATAALIGN_BYTE : DMA_MDATAALIGN_HALFWORD;
     hdma_sai_rx.Init.Mode                = DMA_CIRCULAR;
     hdma_sai_rx.Init.Priority            = DMA_PRIORITY_HIGH;
     hdma_sai_rx.Init.FIFOMode            = DMA_FIFOMODE_ENABLE;
@@ -154,18 +160,19 @@ static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in)
     mp_get_buffer_raise(buf_in, &pdmbuf, MP_BUFFER_WRITE);
     size_t typesize = mp_binary_get_size('@', pdmbuf.typecode, NULL);
     uint32_t xfer_samples = 0;
-    uint32_t n_samples = pdmbuf.len / typesize;
+    // Note: samples are copied as bytes for 1 and 2 channels.
+    uint32_t n_samples = pdmbuf.len;
 
-    if (typesize != 2) {
-        // Make sure the buffer is 16-Bits array.
-        RAISE_OS_EXCEPTION("Wrong data type, expected 16-Bits array!");
+    if (typesize != n_channels) {
+        // Make sure the buffer type matches the number of channels.
+        RAISE_OS_EXCEPTION("Buffer data type does not match the number of channels!");
     }
 
     // Clear DMA buffer status
     xfer_status &= DMA_XFER_NONE;
 
     // Start DMA transfer
-    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / 2) != HAL_OK) {
+    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / n_channels) != HAL_OK) {
         RAISE_OS_EXCEPTION("SAI DMA transfer failed!");
     }
 
@@ -183,9 +190,10 @@ static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in)
         xfer_status &= DMA_XFER_NONE;
 
         // Copy samples to pdm output buffer.
-        uint32_t samples = SAI_MIN(n_samples, PDM_BUFFER_SIZE/2);
+        // Note: samples are copied as bytes for 1 and 2 channels.
+        uint32_t samples = SAI_MIN(n_samples, PDM_BUFFER_SIZE);
         for (int i=0; i<samples; i++, n_samples--, xfer_samples++) {
-            ((uint16_t*)pdmbuf.buf)[xfer_samples] = ((uint16_t *)PDM_BUFFER)[i];
+            ((uint8_t*)pdmbuf.buf)[xfer_samples] = ((uint8_t *)PDM_BUFFER)[i];
         }
 
         if (xfer_status & DMA_XFER_FULL) {
@@ -221,14 +229,15 @@ static mp_obj_t py_audio_read_pcm(uint n_args, const mp_obj_t *args, mp_map_t *k
     int gain_db = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), 24);
     float highpass = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_highpass), 0.9883f);
 
-    size_t typesize = mp_binary_get_size('@', pcmbuf.typecode, NULL);
-    uint32_t n_samples = pcmbuf.len / typesize;
     int16_t *output_buffer = (int16_t *) pcmbuf.buf;
     uint32_t decimation_factor = AUDIO_SAI_FREQKHZ/frequency;
     uint32_t output_samples = ((PDM_BUFFER_SIZE / 2) * 8) / (decimation_factor * n_channels); // Half transfer
+    size_t typesize = mp_binary_get_size('@', pcmbuf.typecode, NULL);
+    // Round down the number of samples to even buffer multiples.
+    uint32_t n_samples = (((pcmbuf.len / typesize) / output_samples) & (~1U)) * output_samples;
 
     if (typesize != 2) {
-        // Make sure the buffer is 16-Bits array.
+        // Make sure the buffer is 16-Bits array for PCM samples.
         RAISE_OS_EXCEPTION("Wrong data type, expected 16-Bits array!");
     }
 
@@ -251,7 +260,7 @@ static mp_obj_t py_audio_read_pcm(uint n_args, const mp_obj_t *args, mp_map_t *k
     xfer_status &= DMA_XFER_NONE;
 
     // Start DMA transfer
-    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / 2) != HAL_OK) {
+    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / n_channels) != HAL_OK) {
         RAISE_OS_EXCEPTION("SAI DMA transfer failed!");
     }
 
@@ -273,7 +282,7 @@ static mp_obj_t py_audio_read_pcm(uint n_args, const mp_obj_t *args, mp_map_t *k
             PDM_Filter(&((uint8_t*)PDM_BUFFER)[i], &output_buffer[i], &PDM_FilterHandler[i]);
         }
 
-        output_buffer += output_samples * 2;
+        output_buffer += output_samples * n_channels;
 
         // Wait for transfer complete.
         while ((xfer_status & DMA_XFER_FULL) == 0) {
@@ -291,8 +300,8 @@ static mp_obj_t py_audio_read_pcm(uint n_args, const mp_obj_t *args, mp_map_t *k
             PDM_Filter(&((uint8_t*)PDM_BUFFER)[PDM_BUFFER_SIZE / 2 + i], &output_buffer[i], &PDM_FilterHandler[i]);
         }
 
-        output_buffer += output_samples * 2;
-        n_samples -= output_samples * 4;
+        output_buffer += output_samples * n_channels;
+        n_samples -= output_samples * n_channels * 2;
     }
 
     // Stop SAI DMA.
@@ -312,7 +321,8 @@ static mp_obj_t py_audio_start_streaming(uint n_args, const mp_obj_t *args, mp_m
 
     uint32_t decimation_factor = AUDIO_SAI_FREQKHZ/frequency;
     uint32_t output_samples = ((PDM_BUFFER_SIZE / 2) * 8) / (decimation_factor * n_channels); // Half transfer
-    mp_obj_array_t *pcmbuf = mp_obj_new_bytearray_by_ref(output_samples * 4, m_new(int16_t, output_samples * 2));
+    mp_obj_array_t *pcmbuf = mp_obj_new_bytearray_by_ref(
+            output_samples * n_channels * sizeof(int16_t), m_new(int16_t, output_samples * n_channels));
 
     // Configure PDM library
     for (int i=0; i<n_channels; i++) {
@@ -333,7 +343,7 @@ static mp_obj_t py_audio_start_streaming(uint n_args, const mp_obj_t *args, mp_m
     xfer_status &= DMA_XFER_NONE;
 
     // Start DMA transfer
-    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / 2) != HAL_OK) {
+    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / n_channels) != HAL_OK) {
         RAISE_OS_EXCEPTION("SAI DMA transfer failed!");
     }
 
@@ -383,7 +393,7 @@ static mp_obj_t py_audio_start_streaming(uint n_args, const mp_obj_t *args, mp_m
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_init_obj, py_audio_init);
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_init_obj, 0, py_audio_init);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_audio_read_pdm_obj, py_audio_read_pdm);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_read_pcm_obj, 1, py_audio_read_pcm);
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_start_streaming_obj, 2, py_audio_start_streaming);
