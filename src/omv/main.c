@@ -70,6 +70,7 @@
 #include "py_fir.h"
 #include "py_tv.h"
 #include "py_imu.h"
+#include "py_audio.h"
 
 #include "framebuffer.h"
 
@@ -732,7 +733,9 @@ soft_reset:
     can_deinit_all();
     #endif
     pyb_thread_deinit();
-
+    #if MICROPY_PY_AUDIO
+    py_audio_deinit();
+    #endif
     first_soft_reset = false;
     goto soft_reset;
 }
