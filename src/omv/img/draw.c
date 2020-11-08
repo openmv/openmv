@@ -513,7 +513,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
     }
 
     dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].InputOffset = 0;
-    dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].InputAlpha = fast_roundf(data->alpha * 255.f) / 256;
+    dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].InputAlpha = fast_roundf((data->alpha * 255) / 256.f);
     dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].AlphaInverted = DMA2D_REGULAR_ALPHA;
     dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].RedBlueSwap = DMA2D_RB_REGULAR;
     dma2d.LayerCfg[DMA2D_FOREGROUND_LAYER].ChromaSubSampling = DMA2D_NO_CSS;
