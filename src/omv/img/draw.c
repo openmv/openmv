@@ -2399,6 +2399,82 @@ void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *da
     #undef BLEND_RGB566
 }
 
+// False == Image is black, True == rect valid
+bool imlib_draw_image_rectangle(image_t *dst_img, image_t *src_img, int dst_x_start, int dst_y_start, float x_scale, float y_scale, rectangle_t *roi,
+                                int alpha, const uint8_t *alpha_palette, image_hint_t hint,
+                                int *x0, int *x1, int *y0, int *y1)
+{
+    if (!alpha) {
+        return false;
+    }
+
+    if (alpha_palette) {
+        int i = 0;
+        while ((i < 256) && (!alpha_palette[i])) i++;
+        if (i == 256) { // zero alpha palette
+            return false;
+        }
+    }
+
+    int src_width_scaled = fast_floorf(fast_fabsf(x_scale) * (roi ? roi->w : src_img->w));
+    int src_height_scaled = fast_floorf(fast_fabsf(y_scale) * (roi ? roi->h : src_img->h));
+
+    // Center src if hint is set.
+    if (hint & IMAGE_HINT_CENTER) {
+        dst_x_start -= src_width_scaled / 2;
+        dst_y_start -= src_height_scaled / 2;
+    }
+
+    // Clamp start x to image bounds.
+    int src_x_start = 0;
+    if (dst_x_start < 0) {
+        src_x_start -= dst_x_start; // this is an add because dst_x_start is negative
+        dst_x_start = 0;
+    }
+
+    if (dst_x_start >= dst_img->w) {
+        return false;
+    }
+
+    int src_x_dst_width = src_width_scaled - src_x_start;
+
+    if (src_x_dst_width <= 0) {
+        return false;
+    }
+
+    // Clamp start y to image bounds.
+    int src_y_start = 0;
+    if (dst_y_start < 0) {
+        src_y_start -= dst_y_start; // this is an add because dst_y_start is negative
+        dst_y_start = 0;
+    }
+
+    if (dst_y_start >= dst_img->h) {
+        return false;
+    }
+
+    int src_y_dst_height = src_height_scaled - src_y_start;
+
+    if (src_y_dst_height <= 0) {
+        return false;
+    }
+
+    // Clamp end x to image bounds.
+    int dst_x_end = dst_x_start + src_x_dst_width;
+    if (dst_x_end > dst_img->w) dst_x_end = dst_img->w;
+
+    // Clamp end y to image bounds.
+    int dst_y_end = dst_y_start + src_y_dst_height;
+    if (dst_y_end > dst_img->h) dst_y_end = dst_img->h;
+
+    *x0 = dst_x_start;
+    *x1 = dst_x_end;
+    *y0 = dst_y_start;
+    *y1 = dst_y_end;
+
+    return true;
+}
+
 void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int dst_y_start, float x_scale, float y_scale, rectangle_t *roi,
                       int rgb_channel, int alpha, const uint16_t *color_palette, const uint8_t *alpha_palette, image_hint_t hint,
                       imlib_draw_row_callback_t callback, void *dst_row_override)
