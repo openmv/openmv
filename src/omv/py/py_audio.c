@@ -9,6 +9,7 @@
  * Audio Python module.
  */
 #include <mp.h>
+#include "py_audio.h"
 #include "systick.h"
 #include "py_assert.h"
 #include "py_helper.h"
@@ -28,7 +29,10 @@ static CRC_HandleTypeDef hcrc;
 static SAI_HandleTypeDef hsai;
 static DMA_HandleTypeDef hdma_sai_rx;
 
-static int n_channels = AUDIO_SAI_NBR_CHANNELS;
+static mp_obj_array_t *g_pcmbuf = NULL;
+static mp_obj_t g_audio_callback = mp_const_none;
+
+static int g_channels = AUDIO_SAI_NBR_CHANNELS;
 static PDM_Filter_Handler_t  PDM_FilterHandler[2];
 static PDM_Filter_Config_t   PDM_FilterConfig[2];
 
@@ -41,6 +45,9 @@ static volatile uint32_t xfer_status = 0;
 // BDMA can only access D3 SRAM4 memory.
 uint8_t PDM_BUFFER[PDM_BUFFER_SIZE] __attribute__ ((aligned (32))) __attribute__((section(".d3_sram_buffer")));
 
+// Pendsv dispatch callback.
+static void audio_pendsv_callback(void);
+
 void AUDIO_SAI_DMA_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(hsai.hdmarx);
@@ -50,26 +57,62 @@ void HAL_SAI_RxHalfCpltCallback(SAI_HandleTypeDef *hsai)
 {
     xfer_status |= DMA_XFER_HALF;
     SCB_InvalidateDCache_by_Addr((uint32_t *)(&PDM_BUFFER[0]), PDM_BUFFER_SIZE / 2);
+    if (g_audio_callback != mp_const_none) {
+        pendsv_schedule_dispatch(PENDSV_DISPATCH_AUDIO, audio_pendsv_callback);
+    }
 }
 
 void HAL_SAI_RxCpltCallback(SAI_HandleTypeDef *hsai)
 {
     xfer_status |= DMA_XFER_FULL;
     SCB_InvalidateDCache_by_Addr((uint32_t *)(&PDM_BUFFER[PDM_BUFFER_SIZE / 2]), PDM_BUFFER_SIZE / 2);
+    if (g_audio_callback != mp_const_none) {
+        pendsv_schedule_dispatch(PENDSV_DISPATCH_AUDIO, audio_pendsv_callback);
+    }
+}
+
+static uint32_t get_decimation_factor(uint32_t decimation)
+{
+    switch (decimation) {
+        case 16:    return PDM_FILTER_DEC_FACTOR_16;
+        case 24:    return PDM_FILTER_DEC_FACTOR_24;
+        case 32:    return PDM_FILTER_DEC_FACTOR_32;
+        case 48:    return PDM_FILTER_DEC_FACTOR_48;
+        case 64:    return PDM_FILTER_DEC_FACTOR_64;
+        case 80:    return PDM_FILTER_DEC_FACTOR_80;
+        case 128:   return PDM_FILTER_DEC_FACTOR_128;
+        default: return 0;
+    }
 }
 
 static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    n_channels = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_channels), 2);
+    // Read Args.
+    g_channels = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_channels), 2);
+    uint32_t frequency = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_frequency), 16000);
+    int gain_db = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), 24);
+    float highpass = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_highpass), 0.9883f);
 
-    if (n_channels != 1 && n_channels != 2) {
+    // Sanity checks
+    if (frequency < 16000 || frequency > 128000) {
+        RAISE_OS_EXCEPTION("Invalid frequency!");
+    }
+
+    if (g_channels != 1 && g_channels != 2) {
         RAISE_OS_EXCEPTION("Invalid number of channels! Expected 1 or 2.");
     }
+
+    uint32_t decimation_factor = AUDIO_SAI_FREQKHZ / (frequency / 1000);
+    uint32_t decimation_factor_const = get_decimation_factor(decimation_factor);
+    if (decimation_factor_const == 0) {
+        RAISE_OS_EXCEPTION("This frequency is not supported!");
+    }
+    uint32_t samples_per_channel = (PDM_BUFFER_SIZE * 8) / (decimation_factor * g_channels * 2); // Half a transfer
 
     hsai.Instance                    = AUDIO_SAI;
     hsai.Init.Protocol               = SAI_FREE_PROTOCOL;
     hsai.Init.AudioMode              = SAI_MODEMASTER_RX;
-    hsai.Init.DataSize               = (n_channels == 1) ? SAI_DATASIZE_8 : SAI_DATASIZE_16;
+    hsai.Init.DataSize               = (g_channels == 1) ? SAI_DATASIZE_8 : SAI_DATASIZE_16;
     hsai.Init.FirstBit               = SAI_FIRSTBIT_LSB;
     hsai.Init.ClockStrobing          = SAI_CLOCKSTROBING_RISINGEDGE;
     hsai.Init.Synchro                = SAI_ASYNCHRONOUS;
@@ -78,7 +121,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     hsai.Init.FIFOThreshold          = SAI_FIFOTHRESHOLD_1QF;
     hsai.Init.SynchroExt             = SAI_SYNCEXT_DISABLE;
     hsai.Init.AudioFrequency         = SAI_AUDIO_FREQUENCY_MCKDIV;
-    hsai.Init.MonoStereoMode         = (n_channels == 1)  ? SAI_MONOMODE: SAI_STEREOMODE;
+    hsai.Init.MonoStereoMode         = (g_channels == 1)  ? SAI_MONOMODE: SAI_STEREOMODE;
     hsai.Init.CompandingMode         = SAI_NOCOMPANDING;
     hsai.Init.TriState               = SAI_OUTPUT_RELEASED;
 
@@ -101,8 +144,8 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 
     hsai.SlotInit.FirstBitOffset     = 0;
     hsai.SlotInit.SlotSize           = SAI_SLOTSIZE_DATASIZE;
-    hsai.SlotInit.SlotNumber         = (n_channels == 1) ? 2 : 1;
-    hsai.SlotInit.SlotActive         = (n_channels == 1) ? (SAI_SLOTACTIVE_0 | SAI_SLOTACTIVE_1) : SAI_SLOTACTIVE_0;
+    hsai.SlotInit.SlotNumber         = (g_channels == 1) ? 2 : 1;
+    hsai.SlotInit.SlotActive         = (g_channels == 1) ? (SAI_SLOTACTIVE_0 | SAI_SLOTACTIVE_1) : SAI_SLOTACTIVE_0;
 
     // Initialize the SAI
     HAL_SAI_DeInit(&hsai);
@@ -119,8 +162,8 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     hdma_sai_rx.Init.Direction           = DMA_PERIPH_TO_MEMORY;
     hdma_sai_rx.Init.PeriphInc           = DMA_PINC_DISABLE;
     hdma_sai_rx.Init.MemInc              = DMA_MINC_ENABLE;
-    hdma_sai_rx.Init.PeriphDataAlignment = (n_channels == 1) ? DMA_PDATAALIGN_BYTE : DMA_PDATAALIGN_HALFWORD;
-    hdma_sai_rx.Init.MemDataAlignment    = (n_channels == 1) ? DMA_MDATAALIGN_BYTE : DMA_MDATAALIGN_HALFWORD;
+    hdma_sai_rx.Init.PeriphDataAlignment = (g_channels == 1) ? DMA_PDATAALIGN_BYTE : DMA_PDATAALIGN_HALFWORD;
+    hdma_sai_rx.Init.MemDataAlignment    = (g_channels == 1) ? DMA_MDATAALIGN_BYTE : DMA_MDATAALIGN_HALFWORD;
     hdma_sai_rx.Init.Mode                = DMA_CIRCULAR;
     hdma_sai_rx.Init.Priority            = DMA_PRIORITY_HIGH;
     hdma_sai_rx.Init.FIFOMode            = DMA_FIFOMODE_ENABLE;
@@ -151,7 +194,52 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     }
     __HAL_CRC_DR_RESET(&hcrc);
 
+    // Configure PDM filters
+    for (int i=0; i<g_channels; i++) {
+        PDM_FilterHandler[i].bit_order  = PDM_FILTER_BIT_ORDER_MSB;
+        PDM_FilterHandler[i].endianness = PDM_FILTER_ENDIANNESS_LE;
+        PDM_FilterHandler[i].high_pass_tap = (uint32_t) (highpass * 2147483647U); // coff * (2^31-1)
+        PDM_FilterHandler[i].out_ptr_channels = g_channels;
+        PDM_FilterHandler[i].in_ptr_channels  = g_channels;
+        PDM_Filter_Init(&PDM_FilterHandler[i]);
+
+        PDM_FilterConfig[i].mic_gain = gain_db;
+        PDM_FilterConfig[i].output_samples_number = samples_per_channel;
+        PDM_FilterConfig[i].decimation_factor = decimation_factor_const;
+        PDM_Filter_setConfig(&PDM_FilterHandler[i], &PDM_FilterConfig[i]);
+    }
+
+    // Allocate global PCM buffer.
+    g_pcmbuf = mp_obj_new_bytearray_by_ref(
+            samples_per_channel * g_channels * sizeof(int16_t),
+            m_new(int16_t, samples_per_channel * g_channels));
+
     return mp_const_none;
+}
+
+void py_audio_deinit()
+{
+    // Stop SAI DMA.
+    if (hdma_sai_rx.Instance != NULL) {
+        HAL_SAI_DMAStop(&hsai);
+    }
+
+    // Disable IRQs
+    HAL_NVIC_DisableIRQ(AUDIO_SAI_DMA_IRQ);
+
+    if (hsai.Instance != NULL) {
+        HAL_SAI_DeInit(&hsai);
+        hsai.Instance = NULL;
+    }
+
+    if (hdma_sai_rx.Instance != NULL) {
+        HAL_DMA_DeInit(&hdma_sai_rx);
+        hdma_sai_rx.Instance = NULL;
+    }
+
+    g_channels = 0;
+    g_pcmbuf = NULL;
+    g_audio_callback = mp_const_none;
 }
 
 static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in)
@@ -163,7 +251,7 @@ static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in)
     // Note: samples are copied as bytes for 1 and 2 channels.
     uint32_t n_samples = pdmbuf.len;
 
-    if (typesize != n_channels) {
+    if (typesize != g_channels) {
         // Make sure the buffer type matches the number of channels.
         RAISE_OS_EXCEPTION("Buffer data type does not match the number of channels!");
     }
@@ -172,7 +260,7 @@ static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in)
     xfer_status &= DMA_XFER_NONE;
 
     // Start DMA transfer
-    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / n_channels) != HAL_OK) {
+    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / g_channels) != HAL_OK) {
         RAISE_OS_EXCEPTION("SAI DMA transfer failed!");
     }
 
@@ -207,203 +295,70 @@ static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in)
     return mp_const_none;
 }
 
-static uint32_t get_decimation_factor(uint32_t decimation)
+static void audio_pendsv_callback(void)
 {
-    switch (decimation) {
-        case 16:    return PDM_FILTER_DEC_FACTOR_16;
-        case 24:    return PDM_FILTER_DEC_FACTOR_24;
-        case 32:    return PDM_FILTER_DEC_FACTOR_32;
-        case 48:    return PDM_FILTER_DEC_FACTOR_48;
-        case 64:    return PDM_FILTER_DEC_FACTOR_64;
-        case 80:    return PDM_FILTER_DEC_FACTOR_80;
-        case 128:   return PDM_FILTER_DEC_FACTOR_128;
-        default: RAISE_OS_EXCEPTION("This frequency is not supported!");
+    // Check for half transfer complete.
+    if ((xfer_status & DMA_XFER_HALF)) {
+        // Clear buffer state.
+        xfer_status &= ~(DMA_XFER_HALF);
+
+        // Convert PDM samples to PCM.
+        for (int i=0; i<g_channels; i++) {
+            PDM_Filter(&((uint8_t*)PDM_BUFFER)[i], &((int16_t*)g_pcmbuf->items)[i], &PDM_FilterHandler[i]);
+        }
+    } else if ((xfer_status & DMA_XFER_FULL)) { // Check for transfer complete.
+        // Clear buffer state.
+        xfer_status &= ~(DMA_XFER_FULL);
+
+        // Convert PDM samples to PCM.
+        for (int i=0; i<g_channels; i++) {
+            PDM_Filter(&((uint8_t*)PDM_BUFFER)[PDM_BUFFER_SIZE / 2 + i], &((int16_t*)g_pcmbuf->items)[i], &PDM_FilterHandler[i]);
+        }
     }
+    // Call user callback
+    mp_call_function_1(g_audio_callback, MP_OBJ_FROM_PTR(g_pcmbuf));
 }
 
-static mp_obj_t py_audio_read_pcm(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+static mp_obj_t py_audio_start_streaming(mp_obj_t callback_obj)
 {
-    mp_buffer_info_t pcmbuf;
-    mp_get_buffer_raise(args[0], &pcmbuf, MP_BUFFER_WRITE);
-    uint32_t frequency = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_frequency), 16);
-    int gain_db = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), 24);
-    float highpass = py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_highpass), 0.9883f);
+    g_audio_callback = callback_obj;
 
-    int16_t *output_buffer = (int16_t *) pcmbuf.buf;
-    uint32_t decimation_factor = AUDIO_SAI_FREQKHZ/frequency;
-    uint32_t output_samples = ((PDM_BUFFER_SIZE / 2) * 8) / (decimation_factor * n_channels); // Half transfer
-    size_t typesize = mp_binary_get_size('@', pcmbuf.typecode, NULL);
-    // Round down the number of samples to even buffer multiples.
-    uint32_t n_samples = (((pcmbuf.len / typesize) / output_samples) & (~1U)) * output_samples;
-
-    if (typesize != 2) {
-        // Make sure the buffer is 16-Bits array for PCM samples.
-        RAISE_OS_EXCEPTION("Wrong data type, expected 16-Bits array!");
-    }
-
-    // Configure PDM library
-    for (int i=0; i<n_channels; i++) {
-        PDM_FilterHandler[i].bit_order  = PDM_FILTER_BIT_ORDER_MSB;
-        PDM_FilterHandler[i].endianness = PDM_FILTER_ENDIANNESS_LE;
-        PDM_FilterHandler[i].high_pass_tap = (uint32_t) (highpass * 2147483647U); // coff * (2^31-1)
-        PDM_FilterHandler[i].out_ptr_channels = n_channels;
-        PDM_FilterHandler[i].in_ptr_channels  = n_channels;
-        PDM_Filter_Init(&PDM_FilterHandler[i]);
-
-        PDM_FilterConfig[i].mic_gain = gain_db;
-        PDM_FilterConfig[i].output_samples_number = output_samples;
-        PDM_FilterConfig[i].decimation_factor = get_decimation_factor(decimation_factor);
-        PDM_Filter_setConfig(&PDM_FilterHandler[i], &PDM_FilterConfig[i]);
+    if (!mp_obj_is_callable(g_audio_callback)) {
+        g_audio_callback = mp_const_none;
+        RAISE_OS_EXCEPTION("Invalid callback object!");
     }
 
     // Clear DMA buffer status
     xfer_status &= DMA_XFER_NONE;
 
     // Start DMA transfer
-    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / n_channels) != HAL_OK) {
+    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / g_channels) != HAL_OK) {
+        g_audio_callback = mp_const_none;
         RAISE_OS_EXCEPTION("SAI DMA transfer failed!");
     }
-
-    while (n_samples) {
-        uint32_t start = HAL_GetTick();
-        // Wait for half transfer complete.
-        while ((xfer_status & DMA_XFER_HALF) == 0) {
-            if ((HAL_GetTick() - start) >= 1000) {
-                HAL_SAI_DMAStop(&hsai);
-                RAISE_OS_EXCEPTION("SAI DMA transfer timeout!");
-            }
-        }
-
-        // Clear buffer state.
-        xfer_status &= ~(DMA_XFER_HALF);
-
-        // Convert PDM samples to PCM.
-        for (int i=0; i<n_channels; i++) {
-            PDM_Filter(&((uint8_t*)PDM_BUFFER)[i], &output_buffer[i], &PDM_FilterHandler[i]);
-        }
-
-        output_buffer += output_samples * n_channels;
-
-        // Wait for transfer complete.
-        while ((xfer_status & DMA_XFER_FULL) == 0) {
-            if ((HAL_GetTick() - start) >= 1000) {
-                HAL_SAI_DMAStop(&hsai);
-                RAISE_OS_EXCEPTION("SAI DMA transfer timeout!");
-            }
-        }
-
-        // Clear buffer state.
-        xfer_status &= ~(DMA_XFER_FULL);
-
-        // Convert PDM samples to PCM.
-        for (int i=0; i<n_channels; i++) {
-            PDM_Filter(&((uint8_t*)PDM_BUFFER)[PDM_BUFFER_SIZE / 2 + i], &output_buffer[i], &PDM_FilterHandler[i]);
-        }
-
-        output_buffer += output_samples * n_channels;
-        n_samples -= output_samples * n_channels * 2;
-    }
-
-    // Stop SAI DMA.
-    HAL_SAI_DMAStop(&hsai);
 
     return mp_const_none;
 }
 
-static mp_obj_t py_audio_start_streaming(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+static mp_obj_t py_audio_stop_streaming()
 {
-    mp_obj_t callback = args[0];
-    mp_obj_t arg_obj = args[1];
-    uint32_t time = (uint32_t) (py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_time), 1.0) * 1000);
-    uint32_t frequency = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_frequency), 16);
-    int gain_db = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_gain_db), 24);
-    float highpass = py_helper_keyword_float(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_highpass), 0.9883f);
-
-    uint32_t decimation_factor = AUDIO_SAI_FREQKHZ/frequency;
-    uint32_t output_samples = ((PDM_BUFFER_SIZE / 2) * 8) / (decimation_factor * n_channels); // Half transfer
-    mp_obj_array_t *pcmbuf = mp_obj_new_bytearray_by_ref(
-            output_samples * n_channels * sizeof(int16_t), m_new(int16_t, output_samples * n_channels));
-
-    // Configure PDM library
-    for (int i=0; i<n_channels; i++) {
-        PDM_FilterHandler[i].bit_order  = PDM_FILTER_BIT_ORDER_MSB;
-        PDM_FilterHandler[i].endianness = PDM_FILTER_ENDIANNESS_LE;
-        PDM_FilterHandler[i].high_pass_tap = (uint32_t) (highpass * 2147483647U); // coff * (2^31-1)
-        PDM_FilterHandler[i].out_ptr_channels = n_channels;
-        PDM_FilterHandler[i].in_ptr_channels  = n_channels;
-        PDM_Filter_Init(&PDM_FilterHandler[i]);
-
-        PDM_FilterConfig[i].mic_gain = gain_db;
-        PDM_FilterConfig[i].output_samples_number = output_samples;
-        PDM_FilterConfig[i].decimation_factor = get_decimation_factor(decimation_factor);
-        PDM_Filter_setConfig(&PDM_FilterHandler[i], &PDM_FilterConfig[i]);
-    }
-
-    // Clear DMA buffer status
-    xfer_status &= DMA_XFER_NONE;
-
-    // Start DMA transfer
-    if (HAL_SAI_Receive_DMA(&hsai, (uint8_t*) PDM_BUFFER, PDM_BUFFER_SIZE / n_channels) != HAL_OK) {
-        RAISE_OS_EXCEPTION("SAI DMA transfer failed!");
-    }
-
-    uint32_t record_start = HAL_GetTick();
-    while ((HAL_GetTick() - record_start) < time) {
-        uint32_t start = HAL_GetTick();
-        // Wait for half transfer complete.
-        while ((xfer_status & DMA_XFER_HALF) == 0) {
-            if ((HAL_GetTick() - start) >= 1000) {
-                HAL_SAI_DMAStop(&hsai);
-                RAISE_OS_EXCEPTION("SAI DMA transfer timeout!");
-            }
-        }
-
-        // Clear buffer state.
-        xfer_status &= ~(DMA_XFER_HALF);
-
-        // Convert PDM samples to PCM.
-        for (int i=0; i<n_channels; i++) {
-            PDM_Filter(&((uint8_t*)PDM_BUFFER)[i], &((int16_t*)pcmbuf->items)[i], &PDM_FilterHandler[i]);
-        }
-
-        mp_call_function_2(callback, MP_OBJ_FROM_PTR(pcmbuf), arg_obj);
-
-        // Wait for transfer complete.
-        while ((xfer_status & DMA_XFER_FULL) == 0) {
-            if ((HAL_GetTick() - start) >= 1000) {
-                HAL_SAI_DMAStop(&hsai);
-                RAISE_OS_EXCEPTION("SAI DMA transfer timeout!");
-            }
-        }
-
-        // Clear buffer state.
-        xfer_status &= ~(DMA_XFER_FULL);
-
-        // Convert PDM samples to PCM.
-        for (int i=0; i<n_channels; i++) {
-            PDM_Filter(&((uint8_t*)PDM_BUFFER)[PDM_BUFFER_SIZE / 2 + i], &((int16_t*)pcmbuf->items)[i], &PDM_FilterHandler[i]);
-        }
-
-        mp_call_function_2(callback, MP_OBJ_FROM_PTR(pcmbuf), arg_obj);
-    }
-
     // Stop SAI DMA.
     HAL_SAI_DMAStop(&hsai);
-
+    g_audio_callback = mp_const_none;
     return mp_const_none;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_init_obj, 0, py_audio_init);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_audio_read_pdm_obj, py_audio_read_pdm);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_read_pcm_obj, 1, py_audio_read_pcm);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_audio_start_streaming_obj, 2, py_audio_start_streaming);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_audio_start_streaming_obj, py_audio_start_streaming);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_audio_stop_streaming_obj, py_audio_stop_streaming);
 
-static const mp_map_elem_t globals_dict_table[] = {
-    { MP_OBJ_NEW_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_audio) },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_init),            (mp_obj_t)&py_audio_init_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_pcm),        (mp_obj_t)&py_audio_read_pcm_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_read_pdm),        (mp_obj_t)&py_audio_read_pdm_obj },
-    { MP_OBJ_NEW_QSTR(MP_QSTR_start_streaming), (mp_obj_t)&py_audio_start_streaming_obj },
+static const mp_rom_map_elem_t globals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___name__),        MP_ROM_QSTR(MP_QSTR_audio)               },
+    { MP_ROM_QSTR(MP_QSTR_init),            MP_ROM_PTR(&py_audio_init_obj)           },
+    { MP_ROM_QSTR(MP_QSTR_read_pdm),        MP_ROM_PTR(&py_audio_read_pdm_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_start_streaming), MP_ROM_PTR(&py_audio_start_streaming_obj)},
+    { MP_ROM_QSTR(MP_QSTR_stop_streaming),  MP_ROM_PTR(&py_audio_stop_streaming_obj) },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
