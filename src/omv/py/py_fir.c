@@ -603,8 +603,7 @@ mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int alpha = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
     PY_ASSERT_TRUE_MSG((0 <= alpha) && (alpha <= 256), "Error: 0 <= alpha <= 256!");
 
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args,
-                                                  MP_OBJ_NEW_QSTR(MP_QSTR_scale));
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
     if (scale_obj) {
         mp_obj_t *arg_scale;
         mp_obj_get_array_fixed_n(scale_obj, 2, &arg_scale);
@@ -674,8 +673,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int alpha = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
     PY_ASSERT_TRUE_MSG((0 <= alpha) && (alpha <= 256), "Error: 0 <= alpha <= 256!");
 
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args,
-                                                  MP_OBJ_NEW_QSTR(MP_QSTR_scale));
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
     if (scale_obj) {
         mp_obj_t *arg_scale;
         mp_obj_get_array_fixed_n(scale_obj, 2, &arg_scale);
@@ -743,7 +741,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int pixformat = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixformat), PIXFORMAT_RGB565);
     PY_ASSERT_TRUE_MSG((pixformat == PIXFORMAT_GRAYSCALE) || (pixformat == PIXFORMAT_RGB565), "Invalid Pixformat!");
 
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb));
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
     bool copy_to_fb = false;
     image_t *arg_other = NULL;
 

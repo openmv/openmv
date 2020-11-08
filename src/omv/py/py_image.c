@@ -1437,7 +1437,8 @@ static mp_obj_t py_image_copy_int(uint n_args, const mp_obj_t *args, mp_map_t *k
         py_helper_keyword_float(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), 1.0f);
         PY_ASSERT_TRUE_MSG((0.0f <= arg_y_scale), "Error: 0.0 <= y_scale!");
 
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(mode ? MP_QSTR_copy : MP_QSTR_copy_to_fb));
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 4, kw_args,
+            MP_OBJ_NEW_QSTR(mode ? MP_QSTR_copy : MP_QSTR_copy_to_fb), NULL);
     bool copy_to_fb = false;
     image_t *arg_other = mode ? arg_img : NULL;
 
@@ -4839,9 +4840,9 @@ static mp_obj_t py_image_find_blobs(uint n_args, const mp_obj_t *args, mp_map_t 
     int margin =
         py_helper_keyword_int(n_args, args, 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_margin), 0);
     mp_obj_t threshold_cb =
-        py_helper_keyword_object(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold_cb));
+        py_helper_keyword_object(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold_cb), NULL);
     mp_obj_t merge_cb =
-        py_helper_keyword_object(n_args, args, 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge_cb));
+        py_helper_keyword_object(n_args, args, 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_merge_cb), NULL);
     unsigned int x_hist_bins_max =
         py_helper_keyword_int(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_hist_bins_max), 0);
     unsigned int y_hist_bins_max =
@@ -6230,7 +6231,7 @@ static mp_obj_t py_image_find_edges(uint n_args, const mp_obj_t *args, mp_map_t 
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 2, kw_args, &roi);
 
     int thresh[2] = {100, 200};
-    mp_obj_t thresh_obj = py_helper_keyword_object(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold));
+    mp_obj_t thresh_obj = py_helper_keyword_object(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), NULL);
 
     if (thresh_obj) {
         mp_obj_t *thresh_array;
@@ -6722,7 +6723,7 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
 {
     // Don't use the file buffer here...
 
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb));
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
     bool copy_to_fb = true;
     image_t *arg_other = NULL;
 
@@ -7106,7 +7107,8 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     bool mode = mp_obj_is_integer(args[0]);
     const char *path = mode ? NULL : mp_obj_str_get_str(args[0]);
 
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, mode ? 3 : 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb));
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, mode ? 3 : 1,
+            kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
     bool copy_to_fb = false;
     image_t *arg_other = NULL;
 
