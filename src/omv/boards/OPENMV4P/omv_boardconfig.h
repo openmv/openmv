@@ -383,6 +383,45 @@
 #define QSPIF_D2_GPIO_CLK_ENABLE()   __HAL_RCC_GPIOF_CLK_ENABLE()
 #define QSPIF_D3_GPIO_CLK_ENABLE()   __HAL_RCC_GPIOF_CLK_ENABLE()
 
+// SPI LCD Interface
+#define OMV_SPI_LCD_CONTROLLER              (&spi_obj[1])
+#define OMV_SPI_LCD_CONTROLLER_INSTANCE     (SPI2)
+
+#define OMV_SPI_LCD_MOSI_PIN                (GPIO_PIN_15)
+#define OMV_SPI_LCD_MOSI_PORT               (GPIOB)
+#define OMV_SPI_LCD_MOSI_ALT                (GPIO_AF5_SPI2)
+
+#define OMV_SPI_LCD_SCLK_PIN                (GPIO_PIN_13)
+#define OMV_SPI_LCD_SCLK_PORT               (GPIOB)
+#define OMV_SPI_LCD_SCLK_ALT                (GPIO_AF5_SPI2)
+
+#define OMV_SPI_LCD_RST_PIN                 (GPIO_PIN_12)
+#define OMV_SPI_LCD_RST_PORT                (GPIOD)
+#define OMV_SPI_LCD_RST_OFF()               HAL_GPIO_WritePin(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN, GPIO_PIN_SET)
+#define OMV_SPI_LCD_RST_ON()                HAL_GPIO_WritePin(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN, GPIO_PIN_RESET)
+
+#define OMV_SPI_LCD_RS_PIN                  (GPIO_PIN_13)
+#define OMV_SPI_LCD_RS_PORT                 (GPIOD)
+#define OMV_SPI_LCD_RS_OFF()                HAL_GPIO_WritePin(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN, GPIO_PIN_SET)
+#define OMV_SPI_LCD_RS_ON()                 HAL_GPIO_WritePin(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN, GPIO_PIN_RESET)
+
+#define OMV_SPI_LCD_CS_PIN                  (GPIO_PIN_12)
+#define OMV_SPI_LCD_CS_PORT                 (GPIOB)
+#define OMV_SPI_LCD_CS_HIGH()               HAL_GPIO_WritePin(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN, GPIO_PIN_SET)
+#define OMV_SPI_LCD_CS_LOW()                HAL_GPIO_WritePin(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN, GPIO_PIN_RESET)
+
+#define OMV_SPI_LCD_BL_PIN                  (GPIO_PIN_5)
+#define OMV_SPI_LCD_BL_PORT                 (GPIOA)
+#define OMV_SPI_LCD_BL_ON()                 HAL_GPIO_WritePin(OMV_SPI_LCD_BL_PORT, OMV_SPI_LCD_BL_PIN, GPIO_PIN_SET)
+#define OMV_SPI_LCD_BL_OFF()                HAL_GPIO_WritePin(OMV_SPI_LCD_BL_PORT, OMV_SPI_LCD_BL_PIN, GPIO_PIN_RESET)
+
+#define OMV_SPI_LCD_BL_DAC                  (DAC1)
+#define OMV_SPI_LCD_BL_DAC_CHANNEL          (DAC_CHANNEL_2)
+#define OMV_SPI_LCD_BL_DAC_CLK_ENABLE()     __HAL_RCC_DAC12_CLK_ENABLE()
+#define OMV_SPI_LCD_BL_DAC_CLK_DISABLE()    __HAL_RCC_DAC12_CLK_DISABLE()
+#define OMV_SPI_LCD_BL_DAC_FORCE_RESET()    __HAL_RCC_DAC12_FORCE_RESET()
+#define OMV_SPI_LCD_BL_DAC_RELEASE_RESET()  __HAL_RCC_DAC12_RELEASE_RESET()
+
 // Enable additional GPIO banks for DRAM...
 #define OMV_ENABLE_GPIO_BANK_F
 #define OMV_ENABLE_GPIO_BANK_G
