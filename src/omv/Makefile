@@ -107,6 +107,7 @@ SRCS += $(addprefix py/, \
 	py_tf.c                 \
 	py_imu.c                \
 	py_audio.c              \
+	py_micro_speech.c       \
    )
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
