@@ -62,6 +62,20 @@ int libtf_invoke(const unsigned char *model_data, // TensorFlow Lite binary mode
                  libtf_output_data_callback_t output_callback, // Callback to use the model output data byte array.
                  void *output_callback_data); // User data structure passed to output callback.
 
+// Returns 0 on success and 1 on failure.
+// Errors are printed to stdout.
+int libtf_initialize_micro_features();
+
+// Returns 0 on success and 1 on failure.
+// Errors are printed to stdout.
+// Converts audio sample data into a more compact form that's
+// appropriate for feeding into a neural network.
+int libtf_generate_micro_features(const int16_t* input, // Audio samples
+                                  int input_size, // Audio samples size
+                                  int output_size, // Slice size
+                                  int8_t* output, // Slice data
+                                  size_t* num_samples_read); // Number of samples used.
+
 #ifdef __cplusplus
 }
 #endif
