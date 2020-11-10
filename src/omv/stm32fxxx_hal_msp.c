@@ -222,6 +222,23 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
         HAL_GPIO_Init(DCMI_TIM_PORT, &GPIO_InitStructure);
     }
     #endif // (OMV_XCLK_SOURCE == OMV_XCLK_TIM)
+
+    #if defined(OMV_LCD_BL_TIM)
+    if (htim->Instance == OMV_LCD_BL_TIM) {
+        OMV_LCD_BL_TIM_CLK_ENABLE();
+    }
+    #endif
+}
+
+void HAL_TIM_PWM_MspDeInit(TIM_HandleTypeDef *htim)
+{
+    #if defined(OMV_LCD_BL_TIM)
+    if (htim->Instance == OMV_LCD_BL_TIM) {
+        OMV_LCD_BL_TIM_FORCE_RESET();
+        OMV_LCD_BL_TIM_RELEASE_RESET();
+        OMV_LCD_BL_TIM_CLK_DISABLE();
+    }
+    #endif
 }
 
 void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
@@ -302,6 +319,51 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
         HAL_GPIO_Init(LEPTON_SPI_SSEL_PORT, &GPIO_InitStructure);
     }
     #endif
+
+    #if defined(OMV_SPI_LCD_CONTROLLER)
+    if (hspi->Instance == OMV_SPI_LCD_CONTROLLER_INSTANCE) {
+        GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.Pull      = GPIO_NOPULL;
+        GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_MEDIUM;
+
+        GPIO_InitStructure.Alternate = OMV_SPI_LCD_MOSI_ALT;
+        GPIO_InitStructure.Pin       = OMV_SPI_LCD_MOSI_PIN;
+        HAL_GPIO_Init(OMV_SPI_LCD_MOSI_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Alternate = OMV_SPI_LCD_SCLK_ALT;
+        GPIO_InitStructure.Pin       = OMV_SPI_LCD_SCLK_PIN;
+        HAL_GPIO_Init(OMV_SPI_LCD_SCLK_PORT, &GPIO_InitStructure);
+
+        GPIO_InitStructure.Mode      = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_LOW;
+
+        GPIO_InitStructure.Pin       = OMV_SPI_LCD_RST_PIN;
+        HAL_GPIO_Init(OMV_SPI_LCD_RST_PORT, &GPIO_InitStructure);
+        OMV_SPI_LCD_RST_OFF();
+
+        GPIO_InitStructure.Pin       = OMV_SPI_LCD_RS_PIN;
+        HAL_GPIO_Init(OMV_SPI_LCD_RS_PORT, &GPIO_InitStructure);
+        OMV_SPI_LCD_RS_OFF();
+
+        GPIO_InitStructure.Pin       = OMV_SPI_LCD_CS_PIN;
+        HAL_GPIO_Init(OMV_SPI_LCD_CS_PORT, &GPIO_InitStructure);
+        OMV_SPI_LCD_CS_HIGH();
+    }
+    #endif
+}
+
+void HAL_SPI_MspDeinit(SPI_HandleTypeDef *hspi)
+{
+    #if defined(OMV_SPI_LCD_CONTROLLER)
+    if (hspi->Instance == OMV_SPI_LCD_CONTROLLER_INSTANCE) {
+        HAL_GPIO_DeInit(OMV_SPI_LCD_MOSI_PORT, OMV_SPI_LCD_MOSI_PIN);
+        HAL_GPIO_DeInit(OMV_SPI_LCD_SCLK_PORT, OMV_SPI_LCD_SCLK_PIN);
+        HAL_GPIO_DeInit(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN);
+        HAL_GPIO_DeInit(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN);
+        HAL_GPIO_DeInit(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN);
+    }
+    #endif
 }
 
 #if defined(AUDIO_SAI)
@@ -342,13 +404,158 @@ void HAL_CRC_MspInit(CRC_HandleTypeDef* hcrc)
     __HAL_RCC_CRC_CLK_ENABLE();
 }
 
-
 void HAL_CRC_MspDeInit(CRC_HandleTypeDef* hcrc)
 {
     __HAL_RCC_CRC_CLK_DISABLE();
 }
 
+#if defined(OMV_LCD_CONTROLLER) && (!defined(OMV_DSI_CONTROLLER))
+typedef struct {
+    GPIO_TypeDef *port;
+    uint16_t af, pin;
+} ltdc_gpio_t;
+
+static const ltdc_gpio_t ltdc_pins[] = {
+    {OMV_LCD_R0_PORT, OMV_LCD_R0_ALT, OMV_LCD_R0_PIN},
+    {OMV_LCD_R1_PORT, OMV_LCD_R1_ALT, OMV_LCD_R1_PIN},
+    {OMV_LCD_R2_PORT, OMV_LCD_R2_ALT, OMV_LCD_R2_PIN},
+    {OMV_LCD_R3_PORT, OMV_LCD_R3_ALT, OMV_LCD_R3_PIN},
+    {OMV_LCD_R4_PORT, OMV_LCD_R4_ALT, OMV_LCD_R4_PIN},
+    {OMV_LCD_R5_PORT, OMV_LCD_R5_ALT, OMV_LCD_R5_PIN},
+    {OMV_LCD_R6_PORT, OMV_LCD_R6_ALT, OMV_LCD_R6_PIN},
+    {OMV_LCD_R7_PORT, OMV_LCD_R7_ALT, OMV_LCD_R7_PIN},
+    {OMV_LCD_G0_PORT, OMV_LCD_G0_ALT, OMV_LCD_G0_PIN},
+    {OMV_LCD_G1_PORT, OMV_LCD_G1_ALT, OMV_LCD_G1_PIN},
+    {OMV_LCD_G2_PORT, OMV_LCD_G2_ALT, OMV_LCD_G2_PIN},
+    {OMV_LCD_G3_PORT, OMV_LCD_G3_ALT, OMV_LCD_G3_PIN},
+    {OMV_LCD_G4_PORT, OMV_LCD_G4_ALT, OMV_LCD_G4_PIN},
+    {OMV_LCD_G5_PORT, OMV_LCD_G5_ALT, OMV_LCD_G5_PIN},
+    {OMV_LCD_G6_PORT, OMV_LCD_G6_ALT, OMV_LCD_G6_PIN},
+    {OMV_LCD_G7_PORT, OMV_LCD_G7_ALT, OMV_LCD_G7_PIN},
+    {OMV_LCD_B0_PORT, OMV_LCD_B0_ALT, OMV_LCD_B0_PIN},
+    {OMV_LCD_B1_PORT, OMV_LCD_B1_ALT, OMV_LCD_B1_PIN},
+    {OMV_LCD_B2_PORT, OMV_LCD_B2_ALT, OMV_LCD_B2_PIN},
+    {OMV_LCD_B3_PORT, OMV_LCD_B3_ALT, OMV_LCD_B3_PIN},
+    {OMV_LCD_B4_PORT, OMV_LCD_B4_ALT, OMV_LCD_B4_PIN},
+    {OMV_LCD_B5_PORT, OMV_LCD_B5_ALT, OMV_LCD_B5_PIN},
+    {OMV_LCD_B6_PORT, OMV_LCD_B6_ALT, OMV_LCD_B6_PIN},
+    {OMV_LCD_B7_PORT, OMV_LCD_B7_ALT, OMV_LCD_B7_PIN},
+    {OMV_LCD_CLK_PORT, OMV_LCD_CLK_ALT, OMV_LCD_CLK_PIN},
+    {OMV_LCD_DE_PORT, OMV_LCD_DE_ALT, OMV_LCD_DE_PIN},
+    {OMV_LCD_HSYNC_PORT, OMV_LCD_HSYNC_ALT, OMV_LCD_HSYNC_PIN},
+    {OMV_LCD_VSYNC_PORT, OMV_LCD_VSYNC_ALT, OMV_LCD_VSYNC_PIN},
+};
+#endif
+
+#if defined(OMV_LCD_CONTROLLER) || defined(OMV_DSI_CONTROLLER)
+void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc)
+{
+    #if defined(OMV_DSI_CONTROLLER)
+    if (hltdc->Instance == OMV_LCD_CONTROLLER) {
+        OMV_LCD_CLK_ENABLE();
+    }
+    #elif defined(OMV_LCD_CONTROLLER)
+    if (hltdc->Instance == OMV_LCD_CONTROLLER) {
+        OMV_LCD_CLK_ENABLE();
+
+        GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.Pull      = GPIO_NOPULL;
+        GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
+
+        for (int i = 0, ii = sizeof(ltdc_pins) / sizeof(ltdc_gpio_t); i < ii; i++) {
+            GPIO_InitStructure.Alternate = ltdc_pins[i].af;
+            GPIO_InitStructure.Pin       = ltdc_pins[i].pin;
+            HAL_GPIO_Init(ltdc_pins[i].port, &GPIO_InitStructure);
+        }
+
+        GPIO_InitStructure.Mode      = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_LOW;
+
+        #if defined(OMV_LCD_DISP_PIN)
+        GPIO_InitStructure.Pin       = OMV_LCD_DISP_PIN;
+        HAL_GPIO_Init(OMV_LCD_DISP_PORT, &GPIO_InitStructure);
+        OMV_LCD_DISP_OFF();
+        #endif
+
+        #if defined(OMV_LCD_BL_PIN)
+        GPIO_InitStructure.Pin       = OMV_LCD_BL_PIN;
+        HAL_GPIO_Init(OMV_LCD_BL_PORT, &GPIO_InitStructure);
+        OMV_LCD_BL_OFF();
+        #endif
+    }
+    #endif
+}
+
+void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc)
+{
+    #if defined(OMV_DSI_CONTROLLER)
+    if (hltdc->Instance == OMV_LCD_CONTROLLER) {
+        OMV_LCD_FORCE_RESET();
+        OMV_LCD_RELEASE_RESET();
+        OMV_LCD_CLK_DISABLE();
+    }
+    #elif defined(OMV_LCD_CONTROLLER)
+    if (hltdc->Instance == OMV_LCD_CONTROLLER) {
+        OMV_LCD_FORCE_RESET();
+        OMV_LCD_RELEASE_RESET();
+        OMV_LCD_CLK_DISABLE();
+
+        for (int i = 0, ii = sizeof(ltdc_pins) / sizeof(ltdc_gpio_t); i < ii; i++) {
+            HAL_GPIO_DeInit(ltdc_pins[i].port, ltdc_pins[i].pin);
+        }
+
+        #if defined(OMV_LCD_DISP_PIN)
+        HAL_GPIO_DeInit(OMV_LCD_DISP_PORT, OMV_LCD_DISP_PIN);
+        #endif
+
+        #if defined(OMV_LCD_BL_PIN)
+        HAL_GPIO_DeInit(OMV_LCD_BL_PORT, OMV_LCD_BL_PIN);
+        #endif
+    }
+    #endif
+}
+#endif
+
+void HAL_DAC_MspInit(DAC_HandleTypeDef *hdac)
+{
+    #if defined(OMV_SPI_LCD_BL_DAC)
+    if (hdac->Instance == OMV_SPI_LCD_BL_DAC) {
+        OMV_SPI_LCD_BL_DAC_CLK_ENABLE();
+    }
+    #endif
+}
+
+void HAL_DAC_MspDeinit(DAC_HandleTypeDef *hdac)
+{
+    #if defined(OMV_SPI_LCD_BL_DAC)
+    if (hdac->Instance == OMV_SPI_LCD_BL_DAC) {
+        OMV_SPI_LCD_BL_DAC_FORCE_RESET();
+        OMV_SPI_LCD_BL_DAC_RELEASE_RESET();
+        OMV_SPI_LCD_BL_DAC_CLK_DISABLE();
+    }
+    #endif
+}
+
 void HAL_MspDeInit(void)
 {
 
+}
+
+#if defined(OMV_SPI_LCD_CONTROLLER)
+extern void spi_lcd_callback();
+#endif
+
+__attribute__((weak)) void spi_lcd_callback()
+{
+    // Necessary for UVC compile...
+}
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    #if defined(OMV_SPI_LCD_CONTROLLER)
+    if (hspi->Instance == OMV_SPI_LCD_CONTROLLER_INSTANCE) {
+        spi_lcd_callback();
+    }
+    #endif
 }
