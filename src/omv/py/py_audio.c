@@ -41,7 +41,7 @@ static PDM_Filter_Config_t   PDM_FilterConfig[2];
 #define DMA_XFER_FULL   (0x04U)
 static volatile uint32_t xfer_status = 0;
 
-#define PDM_BUFFER_SIZE     (4096)
+#define PDM_BUFFER_SIZE     (16384)
 // BDMA can only access D3 SRAM4 memory.
 uint8_t PDM_BUFFER[PDM_BUFFER_SIZE] __attribute__ ((aligned (32))) __attribute__((section(".d3_sram_buffer")));
 
