@@ -149,6 +149,10 @@ ifeq ($(MICROPY_PY_AUDIO), 1)
 MP_CFLAGS += -DMICROPY_PY_AUDIO=1
 MICROPY_ARGS += MICROPY_PY_AUDIO=1
 endif
+ifeq ($(MICROPY_PY_MICRO_SPEECH), 1)
+MP_CFLAGS += -DMICROPY_PY_MICRO_SPEECH=1
+MICROPY_ARGS += MICROPY_PY_MICRO_SPEECH=1
+endif
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
@@ -316,6 +320,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_tf.o                                 \
 	py_imu.o                                \
 	py_audio.o                              \
+	py_micro_speech.o                       \
 	)
 
 
