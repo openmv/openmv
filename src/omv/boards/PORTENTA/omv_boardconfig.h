@@ -195,9 +195,6 @@
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C2_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C2_RELEASE_RESET()
 
-#define DCMI_PWDN_PIN           (GPIO_PIN_13)
-#define DCMI_PWDN_PORT          (GPIOC)
-
 /* DCMI */
 #define DCMI_TIM                (TIM1)
 #define DCMI_TIM_PIN            (GPIO_PIN_1)
