@@ -132,6 +132,7 @@ void HAL_MspInit(void)
     __HAL_RCC_JPGDECEN_CLK_ENABLE();
     #endif
 
+    #if defined(DCMI_RESET_PIN) || defined(DCMI_PWDN_PIN) || defined(DCMI_FSYNC_PIN)
     /* Configure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
@@ -152,6 +153,8 @@ void HAL_MspInit(void)
     GPIO_InitStructure.Pin = DCMI_FSYNC_PIN;
     HAL_GPIO_Init(DCMI_FSYNC_PORT, &GPIO_InitStructure);
     #endif
+
+    #endif // DCMI_RESET_PIN || DCMI_PWDN_PIN || DCMI_FSYNC_PIN
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
