@@ -153,11 +153,6 @@ int main()
     if (!sdram_init()) {
         __fatal_error();
     }
-    #if (OMV_SDRAM_TEST == 1)
-    if (!sdram_test(false)) {
-        __fatal_error();
-    }
-    #endif
     #endif
 
     sensor_init0();
