@@ -42,7 +42,6 @@
 #include <stm32fxxx_it.h>
 
 extern PCD_HandleTypeDef hpcd;
-extern DCMI_HandleTypeDef DCMIHandle;
 extern void DCMI_VsyncExtiCallback();
 extern TIM_HandleTypeDef TIM5_Handle;
 
@@ -156,12 +155,4 @@ void OTG_HS_IRQHandler(void)
 #endif
 {
   HAL_PCD_IRQHandler(&hpcd);
-}
-
-void DCMI_IRQHandler(void) {
-    HAL_DCMI_IRQHandler(&DCMIHandle);
-}
-
-void DMA2_Stream1_IRQHandler(void) {
-    HAL_DMA_IRQHandler(DCMIHandle.DMA_Handle);
 }

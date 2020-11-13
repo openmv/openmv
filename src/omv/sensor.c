@@ -30,10 +30,10 @@
 
 extern void __fatal_error(const char *msg);
 
-sensor_t           sensor     = {0};
-TIM_HandleTypeDef  TIMHandle  = {0};
-DMA_HandleTypeDef  DMAHandle  = {0};
-DCMI_HandleTypeDef DCMIHandle = {0};
+sensor_t sensor = {0};
+static TIM_HandleTypeDef  TIMHandle  = {0};
+static DMA_HandleTypeDef  DMAHandle  = {0};
+static DCMI_HandleTypeDef DCMIHandle = {0};
 
 extern uint8_t _line_buf;
 static uint8_t *dest_fb = NULL;
@@ -80,6 +80,14 @@ const int resolution[][2] = {
     {2560, 1600},    /* WQXGA     */
     {2592, 1944},    /* WQXGA2    */
 };
+
+void DCMI_IRQHandler(void) {
+    HAL_DCMI_IRQHandler(&DCMIHandle);
+}
+
+void DMA2_Stream1_IRQHandler(void) {
+    HAL_DMA_IRQHandler(DCMIHandle.DMA_Handle);
+}
 
 static int extclk_config(int frequency)
 {
@@ -203,7 +211,8 @@ static void dcmi_abort()
     // This stops the DCMI hardware from generating DMA requests immediately and then stops the DMA
     // hardware. Note that HAL_DMA_Abort is a blocking operation. Do not use this in an interrupt.
 
-    if (DCMI->CR & DCMI_CR_ENABLE) {
+    if (DMAHandle.Instance != NULL &&
+            DCMI->CR & DCMI_CR_ENABLE) {
         DCMI->CR &= ~DCMI_CR_ENABLE;
         HAL_DMA_Abort(&DMAHandle);
     }
@@ -521,6 +530,7 @@ int sensor_reset()
 
     // Disable VSYNC EXTI IRQ
     HAL_NVIC_DisableIRQ(DCMI_VSYNC_IRQN);
+
     return 0;
 }
 
