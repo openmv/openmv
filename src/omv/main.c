@@ -416,9 +416,6 @@ int main(void)
 {
     #if MICROPY_HW_SDRAM_SIZE
     bool sdram_ok = false;
-    #if MICROPY_HW_SDRAM_STARTUP_TEST
-    bool sdram_pass = false;
-    #endif
     #endif
     #if MICROPY_HW_ENABLE_SDCARD
     bool sdcard_mounted = false;
@@ -442,9 +439,6 @@ int main(void)
 
     #if MICROPY_HW_SDRAM_SIZE
     sdram_ok = sdram_init();
-    #if MICROPY_HW_SDRAM_STARTUP_TEST
-    sdram_pass = sdram_test(false);
-    #endif
     #endif
 
     // Basic sub-system init
@@ -660,13 +654,6 @@ soft_reset:
         snprintf(buf, sizeof(buf), "Failed to init sdram!");
         __fatal_error(buf);
     }
-    #if MICROPY_HW_SDRAM_STARTUP_TEST
-    if (first_soft_reset && (!sdram_pass)) {
-        char buf[512];
-        snprintf(buf, sizeof(buf), "SDRAM failed testing!");
-        __fatal_error(buf);
-    }
-    #endif
     #endif
 
     // Turn boot-up LEDs off
