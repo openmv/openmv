@@ -86,7 +86,9 @@
 int errno;
 extern char _vfs_buf;
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
+#if MICROPY_PY_THREAD
 pyb_thread_t pyb_thread_main;
+#endif
 
 static const char fresh_main_py[] =
 "# main.py -- put your code here!\n"
@@ -448,7 +450,9 @@ int main(void)
     // Basic sub-system init
     led_init();
     pendsv_init();
+    #if MICROPY_PY_THREAD
     pyb_thread_init(&pyb_thread_main);
+    #endif
 
     // Re-enable IRQs (disabled by bootloader)
     __enable_irq();
@@ -463,8 +467,10 @@ soft_reset:
 
     machine_init();
 
+    #if MICROPY_PY_THREAD
     // Python threading init
     mp_thread_init();
+    #endif
 
     // Stack limit should be less than real stack size, so we have a
     // chance to recover from limit hit. (Limit is measured in bytes)
@@ -732,7 +738,9 @@ soft_reset:
     #if MICROPY_HW_ENABLE_CAN
     can_deinit_all();
     #endif
+    #if MICROPY_PY_THREAD
     pyb_thread_deinit();
+    #endif
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif
