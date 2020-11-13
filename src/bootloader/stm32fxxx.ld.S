@@ -45,10 +45,10 @@ SECTIONS
   } >FLASH_TEXT
 
   /* used by the startup to initialize data */
-  _sidata = .;
+  _sidata = LOADADDR(.data);
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
-  .data : AT ( _sidata )
+  .data :
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
@@ -58,23 +58,19 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >DTCM
+  } >DTCM AT> FLASH_TEXT
 
   /* Uninitialized data section */
   . = ALIGN(4);
   .bss :
   {
-    /* This is used by the startup in order to initialize the .bss secion */
-    _sbss = .;         /* define a global symbol at bss start */
-    __bss_start__ = _sbss;
-    *(.bss)
-    *(.bss*)
-    *(COMMON)
-
     . = ALIGN(4);
-    _ebss = .;         /* define a global symbol at bss end */
-    __bss_end__ = _ebss;
-    _bss_end = _ebss; /* for gccollect */
+    _sbss = .;          // Used by the startup to initialize the .bss secion
+    *(.bss*)
+    . = ALIGN(4);
+    *(COMMON)
+    . = ALIGN(4);
+    _ebss = .;          // define a global symbol at bss end
   } >DTCM
 
   /* Make sure there is enough RAM the stack and FS cache */
