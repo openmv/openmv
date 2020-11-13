@@ -213,20 +213,23 @@ void flash_error(int n) {
 }
 
 void NORETURN __fatal_error(const char *msg) {
-    FIL fp;
-    if (f_open(&vfs_fat->fatfs, &fp, "ERROR.LOG",
-               FA_WRITE|FA_CREATE_ALWAYS) == FR_OK) {
-        UINT bytes;
-        const char *hdr = "FATAL ERROR:\n";
-        f_write(&fp, hdr, strlen(hdr), &bytes);
-        f_write(&fp, msg, strlen(msg), &bytes);
-        f_close(&fp);
-        storage_flush();
-        // Initialize the USB device if it's not already initialize to allow
-        // the host to mount the filesystem and access the error log.
-        pyb_usb_dev_init(pyb_usb_dev_detect(), USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
+    // Check if any storage has been initialized
+    // before attempting to create the error log.
+    if (pyb_usb_storage_medium) {
+        FIL fp;
+        if (f_open(&vfs_fat->fatfs, &fp, "ERROR.LOG",
+                    FA_WRITE|FA_CREATE_ALWAYS) == FR_OK) {
+            UINT bytes;
+            const char *hdr = "FATAL ERROR:\n";
+            f_write(&fp, hdr, strlen(hdr), &bytes);
+            f_write(&fp, msg, strlen(msg), &bytes);
+            f_close(&fp);
+            storage_flush();
+            // Initialize the USB device if it's not already initialize to allow
+            // the host to mount the filesystem and access the error log.
+            pyb_usb_dev_init(pyb_usb_dev_detect(), USBD_VID, USBD_PID_CDC_MSC, USBD_MODE_CDC_MSC, 0, NULL, NULL);
+        }
     }
-
     for (uint i = 0;;) {
         led_toggle(((i++) & 3));
         for (volatile uint delay = 0; delay < 500000; delay++) {
