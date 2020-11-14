@@ -22,7 +22,7 @@ const float __atanf_lut[4] = {
     +0.9997878412794807f     //p1
 };
 
-float ALWAYS_INLINE fast_sqrtf(float x)
+float OMV_ATTR_ALWAYS_INLINE fast_sqrtf(float x)
 {
     asm volatile (
             "vsqrt.f32  %[r], %[x]\n"
@@ -31,7 +31,7 @@ float ALWAYS_INLINE fast_sqrtf(float x)
     return x;
 }
 
-int ALWAYS_INLINE fast_floorf(float x)
+int OMV_ATTR_ALWAYS_INLINE fast_floorf(float x)
 {
     int i;
     asm volatile (
@@ -41,7 +41,7 @@ int ALWAYS_INLINE fast_floorf(float x)
     return i;
 }
 
-int ALWAYS_INLINE fast_ceilf(float x)
+int OMV_ATTR_ALWAYS_INLINE fast_ceilf(float x)
 {
     int i;
     x += 0.9999f;
@@ -52,7 +52,7 @@ int ALWAYS_INLINE fast_ceilf(float x)
     return i;
 }
 
-int ALWAYS_INLINE fast_roundf(float x)
+int OMV_ATTR_ALWAYS_INLINE fast_roundf(float x)
 {
     int i;
     asm volatile (
@@ -103,7 +103,7 @@ float fast_cbrtf(float x)
    return v.x;
 }
 
-float ALWAYS_INLINE fast_fabsf(float x)
+float OMV_ATTR_ALWAYS_INLINE fast_fabsf(float x)
 {
     asm volatile (
             "vabs.f32  %[r], %[x]\n"

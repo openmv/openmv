@@ -9,30 +9,32 @@
  * Common macros.
  */
 #ifndef __OMV_COMMON_H__
-#ifndef ALWAYS_INLINE
-#define ALWAYS_INLINE inline __attribute__((always_inline))
-#endif
 
-#ifndef BREAK
-#define BREAK() __asm__ volatile ("BKPT")
-#endif
+#define OMV_ATTR_ALIGNED(x, a)   x __attribute__((aligned(a)))
+#define OMV_ATTR_SECTION(x, s)   x __attribute__((section(s)))
+#define OMV_ATTR_ALWAYS_INLINE  inline __attribute__((always_inline))
+#define OMV_ATTR_OPTIMIZE(o)    __attribute__((optimize(o)))
 
-#ifndef DISABLE_OPT
-#define DISABLE_OPT __attribute__((optimize("O0")))
-#endif
+#define OMG_BREAK() __asm__ volatile ("BKPT")
 
-#ifdef DEBUG_PRINTF
+#ifdef OMV_DEBUG_PRINTF
 #define debug_printf(fmt, ...) \
             do { printf("%s(): " fmt, __func__, ##__VA_ARGS__);} while (0)
 #else
 #define debug_printf(...)
 #endif
 
-#ifndef MIN
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-#endif
-#ifndef MAX
-#define MAX(x, y) ((x) > (y) ? (x) : (y))
-#endif
+#define OMV_MAX(a,b)                    \
+({                                      \
+    __typeof__ (a) _a = (a);            \
+    __typeof__ (b) _b = (b);            \
+    _a > _b ? _a : _b;                  \
+})
 
+#define OMV_MIN(a,b)                    \
+({                                      \
+    __typeof__ (a) _a = (a);            \
+    __typeof__ (b) _b = (b);            \
+    _a < _b ? _a : _b;                  \
+})
 #endif //__OMV_COMMON_H__

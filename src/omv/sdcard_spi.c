@@ -83,7 +83,7 @@ bool sdcard_is_present(void)
 static BYTE spi_send(BYTE out)
 {
     if (HAL_SPI_TransmitReceive(&SPIHandle, &out, &out, 1, SPI_TIMEOUT) != HAL_OK) {
-        BREAK();
+        OMV_BREAK();
     }
     return out;
 }
@@ -247,7 +247,7 @@ void sdcard_hw_init(uint32_t baudrate)
     /* Initialize the SPI */
     if (HAL_SPI_Init(&SPIHandle) != HAL_OK) {
         /* Initialization Error */
-        BREAK();
+        OMV_BREAK();
     } else {
         // TODO is this needed ?
         uint8_t buf[1];
@@ -305,7 +305,7 @@ void sdcard_init(void)
         sdcard_hw_init(SPI_BAUDRATEPRESCALER_2);
     } else {
         /* Initialization failed */
-        BREAK();
+        OMV_BREAK();
     }
 }
 

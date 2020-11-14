@@ -186,7 +186,7 @@ void file_buffer_init0()
     file_buffer_index = 0;
 }
 
-ALWAYS_INLINE static void file_fill(FIL *fp)
+OMV_ATTR_ALWAYS_INLINE static void file_fill(FIL *fp)
 {
     if (file_buffer_index == file_buffer_size) {
         file_buffer_pointer -= file_buffer_offset;
@@ -202,7 +202,7 @@ ALWAYS_INLINE static void file_fill(FIL *fp)
     }
 }
 
-ALWAYS_INLINE static void file_flush(FIL *fp)
+OMV_ATTR_ALWAYS_INLINE static void file_flush(FIL *fp)
 {
     if (file_buffer_index == file_buffer_size) {
         UINT bytes;

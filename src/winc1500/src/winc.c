@@ -853,7 +853,7 @@ int winc_socket_send(int fd, const uint8_t *buf, uint32_t len, uint32_t timeout)
         m2m_wifi_handle_events(NULL);
 
         // Split the packet into smaller ones.
-        int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH); 
+        int n = OMV_MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
         int ret = WINC1500_EXPORT(send)(fd, (uint8_t*)buf + bytes, n, 0);
 
         if (ret == SOCK_ERR_NO_ERROR) {
@@ -893,7 +893,7 @@ int winc_socket_recv(int fd, uint8_t *buf, uint32_t len, winc_socket_buf_t *sock
         sockbuf->size = recv_bytes;
     }
 
-    uint32_t bytes = MIN(len, sockbuf->size);
+    uint32_t bytes = OMV_MIN(len, sockbuf->size);
     memcpy(buf, sockbuf->buf+sockbuf->idx, bytes);
     sockbuf->idx  += bytes;
     sockbuf->size -= bytes;
@@ -915,7 +915,7 @@ int winc_socket_sendto(int fd, const uint8_t *buf, uint32_t len, sockaddr *addr,
         m2m_wifi_handle_events(NULL);
 
         // Split the packet into smaller ones.
-        int n = MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH); 
+        int n = OMV_MIN((len - bytes), SOCKET_BUFFER_MAX_LENGTH);
         int ret = WINC1500_EXPORT(sendto)(fd, (uint8_t*)buf + bytes, n, 0, addr, sizeof(*addr));
 
         if (ret == SOCK_ERR_NO_ERROR) {

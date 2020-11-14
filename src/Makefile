@@ -81,7 +81,7 @@ endif
 
 # Enable debug printf
 ifeq ($(DEBUG_PRINTF), 1)
-CFLAGS += -DDEBUG_PRINTF
+CFLAGS += -DOMV_DEBUG_PRINTF
 endif
 
 # Enable stack protection
