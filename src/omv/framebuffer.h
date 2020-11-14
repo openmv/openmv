@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include "imlib.h"
 #include "mutex.h"
+#include "common.h"
 
 typedef struct framebuffer {
     int32_t x,y;
@@ -21,7 +22,7 @@ typedef struct framebuffer {
     int32_t bpp;
     int32_t streaming_enabled;
     // NOTE: This buffer must be aligned on a 16 byte boundary
-    uint8_t pixels[];
+    OMV_ATTR_ALIGNED(uint8_t pixels[], 16);
 } framebuffer_t;
 
 extern framebuffer_t *framebuffer;
