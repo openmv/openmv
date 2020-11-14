@@ -80,39 +80,39 @@ const static float fft_cos_table[512] = {
     -0.998795f, -0.999078f, -0.999322f, -0.999529f, -0.999699f, -0.999831f, -0.999925f, -0.999981f
 };
 
-ALWAYS_INLINE static float get_cos(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_cos(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return fft_cos_table[k << (9 - N_pow2)];
 }
 
-ALWAYS_INLINE static float get_ai(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_ai(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return 0.5 * (-get_cos(k, N_pow2));
 }
 
-ALWAYS_INLINE static float get_bi(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_bi(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return 0.5 * (+get_cos(k, N_pow2));
 }
 
-ALWAYS_INLINE static float get_a_star_i(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_a_star_i(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return 0.5 * (+get_cos(k, N_pow2));
 }
 
-ALWAYS_INLINE static float get_b_star_i(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_b_star_i(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return 0.5 * (-get_cos(k, N_pow2));
 }
 
 //// For samples 0 to (n/2)-1 --- Note: clog2(n/2) = N_pow2
-//ALWAYS_INLINE static float get_hann_l_side(int k, int N_pow2)
+//OMV_ATTR_ALWAYS_INLINE static float get_hann_l_side(int k, int N_pow2)
 //{
 //    return 0.5 * (1 - get_cos(k, N_pow2));
 //}
 
 //// For samples (n/2) to n-1 --- Note: clog2(n/2) = N_pow2
-//ALWAYS_INLINE static float get_hann_r_side(int k, int N_pow2)
+//OMV_ATTR_ALWAYS_INLINE static float get_hann_r_side(int k, int N_pow2)
 //{
 //    return 0.5 * (1 - get_cos((2 << N_pow2) - k - 1, N_pow2));
 //}
@@ -184,27 +184,27 @@ const static float fft_sin_table[512] = {
      0.049068f,  0.042938f,  0.036807f,  0.030675f,  0.024541f,  0.018407f,  0.012272f,  0.006136f
 };
 
-ALWAYS_INLINE static float get_sin(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_sin(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return fft_sin_table[k << (9 - N_pow2)];
 }
 
-ALWAYS_INLINE static float get_ar(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_ar(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return 0.5 * (1 - get_sin(k, N_pow2));
 }
 
-ALWAYS_INLINE static float get_br(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_br(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return 0.5 * (1 + get_sin(k, N_pow2));
 }
 
-ALWAYS_INLINE static float get_a_star_r(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_a_star_r(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return 0.5 * (1 - get_sin(k, N_pow2));
 }
 
-ALWAYS_INLINE static float get_b_star_r(int k, int N_pow2) // N=512 -> N=pow2=9
+OMV_ATTR_ALWAYS_INLINE static float get_b_star_r(int k, int N_pow2) // N=512 -> N=pow2=9
 {
     return 0.5 * (1 + get_sin(k, N_pow2));
 }
@@ -281,12 +281,12 @@ static void pack_fft(float *in, float *out, int N_pow2)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ALWAYS_INLINE static int int_flog2(int x) // floor log 2
+OMV_ATTR_ALWAYS_INLINE static int int_flog2(int x) // floor log 2
 {
     return 31 - __CLZ(x);
 }
 
-ALWAYS_INLINE static int int_clog2(int x) // ceiling log 2
+OMV_ATTR_ALWAYS_INLINE static int int_clog2(int x) // ceiling log 2
 {
     int y = int_flog2(x);
     return (x - (1 << y)) ? (y + 1) : y;
@@ -296,19 +296,19 @@ ALWAYS_INLINE static int int_clog2(int x) // ceiling log 2
 
 // Input even numbered index
 // Output even numbered index
-ALWAYS_INLINE static int bit_reverse(int index, int N_pow2)
+OMV_ATTR_ALWAYS_INLINE static int bit_reverse(int index, int N_pow2)
 {
     return __RBIT(index) >> (30 - N_pow2);
 }
 
-ALWAYS_INLINE static void swap(float *a, float *b)
+OMV_ATTR_ALWAYS_INLINE static void swap(float *a, float *b)
 {
     float tmp = *b;
     *b = *a;
     *a = tmp;
 }
 
-//ALWAYS_INLINE static float get_hann(int k, int N_pow2)
+//OMV_ATTR_ALWAYS_INLINE static float get_hann(int k, int N_pow2)
 //{
 //    if (k < (1 << N_pow2)) {
 //        return get_hann_l_side(k, N_pow2);
