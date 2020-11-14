@@ -19,11 +19,11 @@
 #include "omv_boardconfig.h"
 #include "py/obj.h"
 #include "py/objarray.h"
+#include "common.h"
 
 #if MICROPY_PY_AUDIO
 
 #define RAISE_OS_EXCEPTION(msg)     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, msg))
-#define SAI_MIN(a,b)                ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
 
 static CRC_HandleTypeDef hcrc;
 static SAI_HandleTypeDef hsai;
@@ -43,7 +43,7 @@ static volatile uint32_t xfer_status = 0;
 
 #define PDM_BUFFER_SIZE     (16384)
 // BDMA can only access D3 SRAM4 memory.
-uint8_t PDM_BUFFER[PDM_BUFFER_SIZE] __attribute__ ((aligned (32))) __attribute__((section(".d3_sram_buffer")));
+uint8_t OMV_ATTR_SECTION(OMV_ATTR_ALIGNED(PDM_BUFFER[PDM_BUFFER_SIZE], 32), ".d3_sram_buffer");
 
 // Pendsv dispatch callback.
 static void audio_pendsv_callback(void);
@@ -279,7 +279,7 @@ static mp_obj_t py_audio_read_pdm(mp_obj_t buf_in)
 
         // Copy samples to pdm output buffer.
         // Note: samples are copied as bytes for 1 and 2 channels.
-        uint32_t samples = SAI_MIN(n_samples, PDM_BUFFER_SIZE);
+        uint32_t samples = OMV_MIN(n_samples, PDM_BUFFER_SIZE);
         for (int i=0; i<samples; i++, n_samples--, xfer_samples++) {
             ((uint8_t*)pdmbuf.buf)[xfer_samples] = ((uint8_t *)PDM_BUFFER)[i];
         }
