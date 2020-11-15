@@ -185,7 +185,7 @@ void SystemClock_Config(void)
 
     #if defined(MCU_SERIES_H7)
     /* Supply configuration update enable */
-    HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
+    HAL_PWREx_ConfigSupply(OMV_PWR_SUPPLY);
     #else
     /* Enable Power Control clock */
     __PWR_CLK_ENABLE();
