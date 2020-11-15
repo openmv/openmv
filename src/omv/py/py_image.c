@@ -7128,10 +7128,6 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
         }
     }
 
-    if (copy_to_fb) {
-        fb_update_jpeg_buffer();
-    }
-
     image_t image = {0};
 
     if (mode) {
@@ -7188,6 +7184,10 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
         arg_other->w = image.w;
         arg_other->h = image.h;
         arg_other->bpp = image.bpp;
+    }
+
+    if (copy_to_fb) {
+        fb_update_jpeg_buffer();
     }
 
     return py_image_from_struct(&image);

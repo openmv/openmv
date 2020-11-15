@@ -17,11 +17,5 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 # Load image
 img = image.Image("/example.bmp", copy_to_fb=True)
 
-# Add drawing code here.
-# img.draw_line(...)
-
-# Flush FB
-sensor.flush()
-
-# Add a small delay to allow the IDE to read the flushed image.
-time.sleep(100)
+# Add a small delay to allow the IDE to read the loaded image.
+time.sleep(500)
