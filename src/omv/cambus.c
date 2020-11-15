@@ -33,6 +33,9 @@ int cambus_init(I2C_HandleTypeDef *i2c, I2C_TypeDef *instance, uint32_t timing)
     i2c->Init.NoStretchMode   = I2C_NOSTRETCH_DISABLED;
     i2c->Init.OwnAddress1     = 0xFE;
     i2c->Init.OwnAddress2     = 0xFE;
+    #if !defined(STM32F4)
+    i2c->Init.OwnAddress2Masks = 0;
+    #endif
 
     HAL_I2C_DeInit(i2c);
     if (HAL_I2C_Init(i2c) != HAL_OK) {
