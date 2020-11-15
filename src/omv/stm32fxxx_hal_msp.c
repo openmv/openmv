@@ -66,23 +66,27 @@ void HAL_MspInit(void)
     #endif
 
     /* Enable I/D cache */
-    #if defined(MCU_SERIES_F7) ||\
-        defined(MCU_SERIES_H7)
-    if (SCB->CCR & (uint32_t)SCB_CCR_IC_Msk) {
-        /* Disable and Invalidate I-Cache */
-        SCB_DisableICache();
+    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
+    #ifdef OMV_DISABLE_CACHE
+    // Disable caches for testing.
+    SCB_DisableICache();
+    SCB_DisableDCache();
+    #else
+    // Enable caches if not enabled, or clean and invalidate.
+    if (!(SCB->CCR & (uint32_t)SCB_CCR_IC_Msk)) {
+        SCB_EnableICache();
+    } else {
         SCB_InvalidateICache();
+        __ISB(); __DSB(); __DMB();
     }
 
-    if (SCB->CCR & (uint32_t)SCB_CCR_DC_Msk) {
-        /* Disable, Clean and Invalidate D-Cache */
-        SCB_DisableDCache();
+    if (!(SCB->CCR & (uint32_t)SCB_CCR_DC_Msk)) {
+        SCB_EnableDCache();
+    } else {
         SCB_CleanInvalidateDCache();
+        __ISB(); __DSB(); __DMB();
     }
-
-    // Enable the CPU Caches
-    SCB_EnableICache();
-    SCB_EnableDCache();
+    #endif
     #endif
 
     /* Config Systick */
