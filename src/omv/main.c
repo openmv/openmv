@@ -444,6 +444,10 @@ int main(void)
     sdram_ok = sdram_init();
     #endif
 
+    #if MICROPY_HW_SDRAM_STARTUP_TEST
+    sdram_test(MICROPY_HW_SDRAM_TEST_EXHAUSTIVE);
+    #endif
+
     // Basic sub-system init
     led_init();
     pendsv_init();
