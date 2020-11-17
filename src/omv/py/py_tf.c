@@ -9,28 +9,17 @@
 #include "ff_wrapper.h"
 #include "libtf.h"
 #include "libtf_person_detect_model_data.h"
+#include "py_tf.h"
 
 #ifdef IMLIB_ENABLE_TF
 
 #define PY_TF_PUTCHAR_BUFFER_LEN 1023
 
-extern char *py_tf_putchar_buffer;
-extern size_t py_tf_putchar_buffer_len;
-
-STATIC void alloc_putchar_buffer()
+void py_tf_alloc_putchar_buffer()
 {
     py_tf_putchar_buffer = (char *) fb_alloc0(PY_TF_PUTCHAR_BUFFER_LEN + 1, FB_ALLOC_NO_HINT);
     py_tf_putchar_buffer_len = PY_TF_PUTCHAR_BUFFER_LEN;
 }
-
-// TF Model Object
-typedef struct py_tf_model_obj {
-    mp_obj_base_t base;
-    unsigned char *model_data;
-    unsigned int model_data_len, height, width, channels;
-    bool signed_or_unsigned;
-    bool is_float;
-} py_tf_model_obj_t;
 
 STATIC void py_tf_model_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
@@ -156,7 +145,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
     }
 
     if (!helper_mode) {
-        alloc_putchar_buffer();
+        py_tf_alloc_putchar_buffer();
     }
 
     uint32_t tensor_arena_size;
@@ -175,7 +164,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
     fb_free(); // free fb_alloc_all()
 
     if (!helper_mode) {
-        fb_free(); // free alloc_putchar_buffer()
+        fb_free(); // free py_tf_alloc_putchar_buffer()
     }
 
     // In this mode we leave the model allocated on the frame buffer.
@@ -388,7 +377,7 @@ STATIC void py_tf_classify_output_data_callback(void *callback_data,
 STATIC mp_obj_t py_tf_classify(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     fb_alloc_mark();
-    alloc_putchar_buffer();
+    py_tf_alloc_putchar_buffer();
 
     py_tf_model_obj_t *arg_model = py_tf_load_alloc(args[0]);
     image_t *arg_img = py_helper_arg_to_image_mutable(args[1]);
@@ -508,7 +497,7 @@ STATIC void py_tf_segment_output_data_callback(void *callback_data,
 STATIC mp_obj_t py_tf_segment(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     fb_alloc_mark();
-    alloc_putchar_buffer();
+    py_tf_alloc_putchar_buffer();
 
     py_tf_model_obj_t *arg_model = py_tf_load_alloc(args[0]);
     image_t *arg_img = py_helper_arg_to_image_mutable(args[1]);
