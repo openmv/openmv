@@ -1,5 +1,5 @@
 os: linux
-dist: trusty
+dist: focal
 sudo: required
 language: c
 stage: build
