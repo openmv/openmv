@@ -1,5 +1,5 @@
 os: linux
-dist: focal
+dist: xenial
 sudo: required
 language: c
 stage: build
