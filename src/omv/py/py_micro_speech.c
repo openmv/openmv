@@ -18,6 +18,8 @@
 #include "py/obj.h"
 #include "py/objarray.h"
 #include "libtf.h"
+#include "py_tf.h"
+#include "common.h"
 
 #if MICROPY_PY_MICRO_SPEECH
 #define kMaxAudioSampleSize     (512)
@@ -29,11 +31,14 @@
 #define kFeatureElementCount    (kFeatureSliceSize * kFeatureSliceCount)
 #define kFeatureSliceStrideMs   (20)
 #define kFeatureSliceDurationMs (30)
+#define kCategoryCount          (4)
 
 #define RAISE_OS_EXCEPTION(msg)     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, msg))
+
 typedef struct _py_micro_speech_obj {
     mp_obj_base_t base;
     uint32_t n_slices;
+    bool new_slices;
     int8_t spectrogram[kFeatureElementCount];
 } py_micro_speech_obj_t;
 
@@ -42,7 +47,7 @@ static const mp_obj_type_t py_micro_speech_type;
 static void py_micro_speech_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
 {
     //py_micro_speech_obj_t *microspeech = MP_OBJ_TO_PTR(self_in);
-    printf("micro speech object\n");
+    printf("micro speech object yay!\n");
 }
 
 mp_obj_t py_micro_speech_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args)
@@ -52,6 +57,7 @@ mp_obj_t py_micro_speech_make_new(const mp_obj_type_t *type, size_t n_args, size
     py_micro_speech_obj_t *o = m_new_obj(py_micro_speech_obj_t);
     o->base.type = &py_micro_speech_type;
     o->n_slices = 0;
+    o->new_slices = false;
     memset(o->spectrogram, 0, kFeatureElementCount);
     if (libtf_initialize_micro_features() != 0) {
         RAISE_OS_EXCEPTION("Failed to initialize micro features!");
@@ -90,20 +96,115 @@ mp_obj_t py_micro_speech_audio_callback(mp_obj_t self_in, mp_obj_t buf_in)
                 microspeech->spectrogram + kFeatureSliceSize,
                 kFeatureElementCount - kFeatureSliceSize);
     }
-    printf("slice index %ld\n", slice_index);
+
+    debug_printf("slice index %ld\n", slice_index);
+
     size_t num_samples_read;
     int8_t *new_slice = microspeech->spectrogram + (slice_index * kFeatureSliceSize);
     if (libtf_generate_micro_features((int16_t*) pcmbuf.buf,
                 kMaxAudioSampleSize, kFeatureSliceSize, new_slice, &num_samples_read)) {
         RAISE_OS_EXCEPTION("Feature generation failed!");
     }
+    microspeech->new_slices = true;
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_micro_speech_audio_callback_obj, py_micro_speech_audio_callback);
 
+STATIC void py_tf_input_callback(void *callback_data, void *model_input, const unsigned int input_height,
+        const unsigned int input_width, const unsigned int input_channels, const bool is_signed, const bool is_float)
+{
+    // Copy feature buffer to input tensor
+    for (int i = 0; i < kFeatureElementCount; i++) {
+        ((int8_t *) model_input)[i]  = ((int8_t *) callback_data)[i];
+    }
+}
+
+STATIC void py_tf_output_callback(void *callback_data, void *model_output, const unsigned int output_height,
+        const unsigned int output_width, const unsigned int output_channels, const bool is_signed, const bool is_float)
+{
+    uint8_t *results = (uint8_t *) callback_data;
+    PY_ASSERT_TRUE_MSG(output_height   == 1, "Expected model output height to be 1!");
+    PY_ASSERT_TRUE_MSG(output_width    == 1, "Expected model output width to be 1!");
+    PY_ASSERT_TRUE_MSG(output_channels == 4, "Expected model output channels to be 4!");
+
+    for (int i=0; i<output_channels; i++) {
+        debug_printf("%.2f ", (double)((((uint8_t *) model_output)[i] ^ (is_signed ? 128 : 0)) / 255.0f));
+        //results[i] = (((uint8_t *) model_output)[i] ^ (is_signed ? 128 : 0)) / 255.0f;
+        results[i] = (((uint8_t *) model_output)[i] ^ (is_signed ? 128 : 0));
+    }
+}
+
+STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    fb_alloc_mark();
+    py_tf_alloc_putchar_buffer();
+
+    uint32_t tensor_arena_size;
+    uint8_t *tensor_arena = fb_alloc_all(&tensor_arena_size, FB_ALLOC_PREFER_SIZE);
+
+    py_micro_speech_obj_t *microspeech = args[0];
+    py_tf_model_obj_t *arg_model = args[1];
+    float threshold  = py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.9f);
+    uint32_t timeout = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), 1000);
+
+    int8_t spectrogram[kFeatureElementCount];
+
+    uint32_t results_count = 0;
+    uint8_t results[kCategoryCount];
+    uint32_t average_scores[kCategoryCount];
+    for (int i=0; i<kCategoryCount; i++) {
+        average_scores[i] = 0;
+    }
+    //mp_obj_list_t *output_list = mp_obj_new_list(kCategoryCount, NULL);
+
+    uint32_t start = HAL_GetTick();
+    uint32_t last_timestamp = start;
+
+    while (timeout == 0 || (HAL_GetTick() - start) < timeout) {
+        __WFI();
+        if (microspeech->new_slices == true) {
+            __disable_irq();
+            microspeech->new_slices = false;
+            memcpy(spectrogram, microspeech->spectrogram, kFeatureElementCount);
+            __enable_irq();
+            PY_ASSERT_FALSE_MSG(libtf_invoke(arg_model->model_data,
+                                     tensor_arena,
+                                     tensor_arena_size,
+                                     py_tf_input_callback,
+                                     spectrogram,
+                                     py_tf_output_callback,
+                                     results),
+                                     py_tf_putchar_buffer - (PY_TF_PUTCHAR_BUFFER_LEN - py_tf_putchar_buffer_len));
+
+            results_count++;
+            for (int i=0; i<kCategoryCount; i++) {
+                average_scores[i] += results[i];
+            }
+
+            if ((HAL_GetTick() - last_timestamp) > 1500) {
+                for (int i=0; i<kCategoryCount; i++) {
+                    if (average_scores[i] / (results_count * 255.0f) > threshold) {
+                        fb_alloc_free_till_mark();
+                        return mp_obj_new_int(i);
+                    }
+                    average_scores[i] = 0;
+                }
+                results_count = 0;
+                last_timestamp = HAL_GetTick();
+            }
+        }
+    }
+
+    fb_alloc_free_till_mark();
+    return mp_obj_new_int(0);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_micro_speech_listen_obj, 2, py_micro_speech_listen);
+
+
 STATIC const mp_rom_map_elem_t py_micro_speech_locals_dict_table[] = {
     // instance methods
     { MP_ROM_QSTR(MP_QSTR_audio_callback),      MP_ROM_PTR(&py_micro_speech_audio_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_listen),              MP_ROM_PTR(&py_micro_speech_listen_obj) },
     // class constants
 };
 STATIC MP_DEFINE_CONST_DICT(py_micro_speech_locals_dict, py_micro_speech_locals_dict_table);
