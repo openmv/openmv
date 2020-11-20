@@ -1012,6 +1012,12 @@ typedef struct imlib_draw_row_data {
     void *dst_row_override; // user
     int toggle; // private
     void *row_buffer[2]; // private
+    #ifdef IMLIB_ENABLE_DMA2D
+    bool dma2d_request; // user
+    bool dma2d_enabled; // private
+    bool dma2d_initialized; // private
+    DMA2D_HandleTypeDef dma2d; // private
+    #endif
     long smuad_alpha; // private
     uint32_t *smuad_alpha_palette; // private
 } imlib_draw_row_data_t;
@@ -1151,6 +1157,9 @@ void imlib_find_hog(image_t *src, rectangle_t *roi, int cell_size);
 void imlib_zero(image_t *img, image_t *mask, bool invert);
 void imlib_draw_row_setup(imlib_draw_row_data_t *data);
 void imlib_draw_row_teardown(imlib_draw_row_data_t *data);
+#ifdef IMLIB_ENABLE_DMA2D
+void imlib_draw_row_deinit_all();
+#endif
 void *imlib_draw_row_get_row_buffer(imlib_draw_row_data_t *data);
 void imlib_draw_row_put_row_buffer(imlib_draw_row_data_t *data, void *row_buffer);
 void imlib_draw_row(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data);
