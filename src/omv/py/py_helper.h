@@ -43,6 +43,8 @@ void py_helper_keyword_float_array(uint n_args, const mp_obj_t *args, uint arg_i
                                    mp_map_t *kw_args, mp_obj_t kw, float *x, int size);
 float *py_helper_keyword_corner_array(uint n_args, const mp_obj_t *args, uint arg_index,
                                       mp_map_t *kw_args, mp_obj_t kw);
+mp_obj_t *py_helper_keyword_iterable(uint n_args, const mp_obj_t *args, uint arg_index,
+                                        mp_map_t *kw_args, mp_obj_t kw, size_t *len);
 uint py_helper_consume_array(uint n_args, const mp_obj_t *args, uint arg_index, size_t len, const mp_obj_t **items);
 int py_helper_keyword_color(image_t *img, uint n_args, const mp_obj_t *args, uint arg_index,
                             mp_map_t *kw_args, int default_val);
