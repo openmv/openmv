@@ -137,6 +137,9 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
     py_tf_model_obj_t *arg_model = args[1];
     float threshold  = py_helper_keyword_float(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_threshold), 0.9f);
     uint32_t timeout = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), 1000);
+    size_t labels_filter_len = 0;
+    mp_obj_t *labels_filter = py_helper_keyword_iterable(n_args, args,
+            4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_filter), &labels_filter_len);
 
     fb_alloc_mark();
     py_tf_alloc_putchar_buffer();
@@ -201,13 +204,28 @@ STATIC mp_obj_t py_micro_speech_listen(uint n_args, const mp_obj_t *args, mp_map
 
             // If the highest average score is higher than the threshold return a command.
             if (average_scores[highest_index] / (kAverageWindowSamples * 255.0f) > threshold) {
-                return_label = highest_index;
-                // Clear spectrogram
-                __disable_irq();
-                microspeech->n_slices = 0;
-                microspeech->new_slices = false;
-                __enable_irq();
-                break;
+                bool command_filtered = (labels_filter != NULL);
+
+                // If a list of labels is provided to filter commands, check if the
+                // detected command is in that list, otherwise continue the detection.
+                if (labels_filter != NULL) {
+                    for (int i=0; i<labels_filter_len; i++) {
+                        if (highest_index == mp_obj_get_int(labels_filter[i])) {
+                            command_filtered = false;
+                            break;
+                        }
+                    }
+                }
+
+                if (command_filtered == false) {
+                    return_label = highest_index;
+                    // Clear spectrogram
+                    __disable_irq();
+                    microspeech->n_slices = 0;
+                    microspeech->new_slices = false;
+                    __enable_irq();
+                    break;
+                }
             }
         }
 
