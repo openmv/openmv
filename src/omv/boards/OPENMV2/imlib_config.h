@@ -138,4 +138,7 @@
 // Enable find_hog()
 //#define IMLIB_ENABLE_HOG
 
+// Enable STM32 DMA2D
+#define IMLIB_ENABLE_DMA2D
+
 #endif //__IMLIB_CONFIG_H__

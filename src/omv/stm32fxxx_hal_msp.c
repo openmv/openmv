@@ -409,6 +409,18 @@ void HAL_CRC_MspDeInit(CRC_HandleTypeDef* hcrc)
     __HAL_RCC_CRC_CLK_DISABLE();
 }
 
+void HAL_DMA2D_MspInit(DMA2D_HandleTypeDef *hdma2d)
+{
+    __HAL_RCC_DMA2D_CLK_ENABLE();
+}
+
+void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef *hdma2d)
+{
+    __HAL_RCC_DMA2D_FORCE_RESET();
+    __HAL_RCC_DMA2D_RELEASE_RESET();
+    __HAL_RCC_DMA2D_CLK_DISABLE();
+}
+
 #if defined(OMV_LCD_CONTROLLER) && (!defined(OMV_DSI_CONTROLLER))
 typedef struct {
     GPIO_TypeDef *port;

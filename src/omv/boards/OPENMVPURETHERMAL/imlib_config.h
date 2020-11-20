@@ -151,4 +151,7 @@
 // Enable selective_search()
 // #define IMLIB_ENABLE_SELECTIVE_SEARCH
 
+// Enable STM32 DMA2D
+#define IMLIB_ENABLE_DMA2D
+
 #endif //__IMLIB_CONFIG_H__

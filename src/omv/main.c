@@ -736,6 +736,9 @@ soft_reset:
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif
+    #ifdef IMLIB_ENABLE_DMA2D
+    imlib_draw_row_deinit_all();
+    #endif
     first_soft_reset = false;
     goto soft_reset;
 }

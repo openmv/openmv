@@ -74,4 +74,7 @@
 // Enable Tensor Flow
 //#define IMLIB_ENABLE_TF
 
+// Enable STM32 DMA2D
+#define IMLIB_ENABLE_DMA2D
+
 #endif //__IMLIB_CONFIG_H__
