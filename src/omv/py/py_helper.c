@@ -243,6 +243,26 @@ float *py_helper_keyword_corner_array(uint n_args, const mp_obj_t *args, uint ar
     return NULL;
 }
 
+mp_obj_t *py_helper_keyword_iterable(uint n_args, const mp_obj_t *args,
+        uint arg_index, mp_map_t *kw_args, mp_obj_t kw, size_t *len)
+{
+    mp_obj_t itr = NULL;
+    mp_obj_t *items = NULL;
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, kw, MP_MAP_LOOKUP);
+
+    if (kw_arg) {
+        itr = kw_arg->value;
+    } else if (n_args > arg_index) {
+        itr = args[arg_index];
+    }
+
+    if (itr && (MP_OBJ_IS_TYPE(itr, &mp_type_tuple) ||
+                MP_OBJ_IS_TYPE(itr, &mp_type_list))) {
+        mp_obj_get_array(itr, len, &items);
+    }
+    return items;
+}
+
 uint py_helper_consume_array(uint n_args, const mp_obj_t *args, uint arg_index, size_t len, const mp_obj_t **items)
 {
     if (MP_OBJ_IS_TYPE(args[arg_index], &mp_type_tuple) || MP_OBJ_IS_TYPE(args[arg_index], &mp_type_list)) {
