@@ -446,7 +446,7 @@ void imlib_draw_row_setup(imlib_draw_row_data_t *data)
 
     void *dst_buff = data->dst_row_override ? data->dst_row_override : data->dst_img->data;
 
-    if ((data->dst_img->bpp == IMAGE_BPP_RGB565) && DMA_BUFFER(dst_buff) &&
+    if (data->dma2d_request && (data->dst_img->bpp == IMAGE_BPP_RGB565) && DMA_BUFFER(dst_buff) &&
         ((data->src_img_bpp == IMAGE_BPP_GRAYSCALE) ||
         ((data->src_img_bpp == IMAGE_BPP_RGB565) && (data->rgb_channel < 0) && (data->alpha != 256) && (!data->color_palette) && (!data->alpha_palette)))) {
         data->row_buffer[1] = fb_alloc(image_row_size, FB_ALLOC_NO_HINT);
@@ -2669,6 +2669,10 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
     imlib_draw_row_data.black_background = hint & IMAGE_HINT_BLACK_BACKGROUND;
     imlib_draw_row_data.callback = callback;
     imlib_draw_row_data.dst_row_override = dst_row_override;
+    #ifdef IMLIB_ENABLE_DMA2D
+    imlib_draw_row_data.dma2d_request = (alpha != 256) || alpha_palette ||
+        (hint & (IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR));
+    #endif
 
     imlib_draw_row_setup(&imlib_draw_row_data);
 

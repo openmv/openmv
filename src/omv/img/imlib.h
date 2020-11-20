@@ -1013,6 +1013,7 @@ typedef struct imlib_draw_row_data {
     int toggle; // private
     void *row_buffer[2]; // private
     #ifdef IMLIB_ENABLE_DMA2D
+    bool dma2d_request; // user
     bool dma2d_enabled; // private
     bool dma2d_initialized; // private
     DMA2D_HandleTypeDef dma2d; // private
