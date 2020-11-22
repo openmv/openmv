@@ -9,8 +9,10 @@
  * LCD Python module.
  */
 #include STM32_HAL_H
+#include "extint.h"
 #include "spi.h"
 #include "py_helper.h"
+#include "extmod/machine_i2c.h"
 #include "omv_boardconfig.h"
 
 #define FRAMEBUFFER_COUNT 3
@@ -24,7 +26,9 @@ static int lcd_height = 0;
 static enum {
     LCD_NONE,
     LCD_SHIELD,
-    LCD_DISPLAY
+    LCD_DISPLAY,
+    LCD_DISPLAY_WITH_HDMI,
+    LCD_DISPLAY_ONLY_HDMI
 } lcd_type = LCD_NONE;
 
 static bool lcd_triple_buffer = false;
@@ -343,8 +347,10 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start, 
         // Tell the call back FSM that we want to turn the display on.
         spi_tx_cb_state_on[new_framebuffer_head] = true;
 
+        #ifdef __DCACHE_PRESENT
         // Flush data for DMA
-        MP_HAL_CLEAN_DCACHE(dst_img.data, image_size(&dst_img));
+        SCB_CleanDCache();
+        #endif
 
         // Update head which means a new image is ready.
         framebuffer_head = new_framebuffer_head;
@@ -881,7 +887,7 @@ void HAL_LTDC_LineEventCallback(LTDC_HandleTypeDef *hltdc)
     HAL_LTDC_Reload(&ltdc_handle, LTDC_RELOAD_VERTICAL_BLANKING);
 
     #if defined(OMV_LCD_DISP_PIN)
-    if (framebuffer_head != framebuffer_tail) OMV_LCD_DISP_ON(); // Turn display on if there is a new command.
+    if (((lcd_type == LCD_DISPLAY) || (lcd_type == LCD_DISPLAY_WITH_HDMI)) && (framebuffer_head != framebuffer_tail)) OMV_LCD_DISP_ON(); // Turn display on if there is a new command.
     #endif
     framebuffer_tail = framebuffer_head;
 
@@ -920,8 +926,10 @@ static void ltdc_display(image_t *src_img, int dst_x_start, int dst_y_start, flo
     if (!black) imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi,
                                  rgb_channel, 256, color_palette, alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
 
+    #ifdef __DCACHE_PRESENT
     // Flush data for DMA
-    if (!black) MP_HAL_CLEAN_DCACHE((IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, y0) + x0), (dst_img.w * (y1 - y0) * sizeof(uint16_t)));
+    if (!black) SCB_CleanDCache();
+    #endif
 
     // Update head which means a new image is ready.
     framebuffer_head = new_framebuffer_head;
@@ -1014,6 +1022,172 @@ static void ltdc_set_backlight(int intensity)
 #endif // OMV_LCD_BL_PIN
 #endif // OMV_LCD_CONTROLLER
 
+#ifdef OMV_DVI_PRESENT
+#define TFP410_I2C_ADDR 0x3F
+mp_obj_base_t *ltdc_dvi_bus = NULL;
+#ifdef OMV_DDC_PRESENT
+#define EEPROM_I2C_ADDR 0x50
+mp_obj_base_t *ltdc_ddc_bus = NULL;
+#endif // OMV_DDC_PRESENT
+mp_obj_t ltdc_dvi_user_cb = NULL;
+
+static mp_obj_t ltdc_dvi_get_display_connected()
+{
+    mp_obj_base_t *bus = ltdc_dvi_bus ? ltdc_dvi_bus : ((mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 0, (const mp_obj_t []) {
+        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_DVI_SCL_PIN, (mp_obj_t) OMV_DVI_SDA_PIN
+    }));
+
+    if (mp_machine_soft_i2c_transfer(bus, TFP410_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+        .len = 1, .buf = (uint8_t []) {0x09} // addr
+    }), 0) == 1) {
+        uint8_t reg;
+
+        if ((mp_machine_soft_i2c_transfer(bus, TFP410_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+            .len = 1, .buf = &reg
+        }), MP_MACHINE_I2C_FLAG_READ | MP_MACHINE_I2C_FLAG_STOP) == 0)
+        && (mp_machine_soft_i2c_transfer(bus, TFP410_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+            .len = 2, .buf = (uint8_t []) {0x09, 0x19} // clear interrupt flag
+        }), MP_MACHINE_I2C_FLAG_STOP) == 2)) {
+            return mp_obj_new_bool(reg & 2);
+        }
+    } else { // generate stop on error...
+        mp_machine_soft_i2c_transfer(bus, TFP410_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+            .len = 0, .buf = NULL
+        }), MP_MACHINE_I2C_FLAG_STOP);
+    }
+
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to get display connected!"));
+}
+
+#ifdef OMV_DDC_PRESENT
+static bool ltdc_dvi_checksum(uint8_t *data, int long_count)
+{
+    uint32_t *data32 = (uint32_t *) data;
+    uint32_t sum = 0;
+
+    for (int i = 0; i < long_count; i++) {
+        sum = __USADA8(data32[i], 0, sum);
+    }
+
+    return !(sum & 0xFF);
+}
+
+static mp_obj_t ltdc_dvi_get_display_id_data()
+{
+    mp_obj_base_t *bus = ltdc_ddc_bus ? ltdc_ddc_bus : ((mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 1, (const mp_obj_t []) {
+        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_DDC_SCL_PIN, (mp_obj_t) OMV_DDC_SDA_PIN,
+            MP_OBJ_NEW_QSTR(MP_QSTR_freq),
+            MP_OBJ_NEW_SMALL_INT(100000)
+    }));
+
+    if (mp_machine_soft_i2c_transfer(bus, EEPROM_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+        .len = 1, .buf = (uint8_t []) {0x00} // addr
+    }), MP_MACHINE_I2C_FLAG_STOP) == 1) {
+        fb_alloc_mark();
+        uint8_t *data = fb_alloc(128, FB_ALLOC_NO_HINT);
+
+        if (mp_machine_soft_i2c_transfer(bus, EEPROM_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+            .len = 128, .buf = data
+        }), MP_MACHINE_I2C_FLAG_READ | MP_MACHINE_I2C_FLAG_STOP) == 0) {
+            uint32_t *data32 = (uint32_t *) data;
+
+            if ((data32[0] == 0xFFFFFF00) && (data32[1] == 0x00FFFFFF) && ltdc_dvi_checksum(data, 32)
+            && (mp_machine_soft_i2c_transfer(bus, EEPROM_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+                .len = 1, .buf = (uint8_t []) {0x80} // addr
+            }), MP_MACHINE_I2C_FLAG_STOP) == 1)) {
+                int extensions = data[126], extensions_byte_size = extensions * 128, total_data_byte_size = extensions_byte_size + 128;
+                uint8_t *data2 = fb_alloc(total_data_byte_size, FB_ALLOC_NO_HINT), *data2_ext = data2 + 128;
+                memcpy(data2, data, 128);
+
+                if ((mp_machine_soft_i2c_transfer(bus, EEPROM_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+                    .len = extensions_byte_size, .buf = data2_ext
+                }), MP_MACHINE_I2C_FLAG_READ | MP_MACHINE_I2C_FLAG_STOP) == 0)
+                && ltdc_dvi_checksum(data2_ext, extensions_byte_size / 4)) {
+                    mp_obj_t result = mp_obj_new_bytes(data2, total_data_byte_size);
+                    fb_alloc_free_till_mark();
+                    return result;
+                }
+            }
+        }
+    }
+
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to get display id data!"));
+}
+#endif // OMV_DDC_PRESENT
+
+STATIC mp_obj_t ltdc_dvi_extint_callback(mp_obj_t line)
+{
+    if (ltdc_dvi_user_cb) mp_call_function_1(ltdc_dvi_user_cb, ltdc_dvi_get_display_connected());
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(ltdc_dvi_extint_callback_obj, ltdc_dvi_extint_callback);
+
+static void ltdc_dvi_deinit()
+{
+    extint_disable(OMV_DVI_INT_PIN->pin);
+
+    ltdc_dvi_user_cb = NULL;
+    #ifdef OMV_DDC_PRESENT
+    ltdc_ddc_bus = NULL;
+    #endif // OMV_DDC_PRESENT
+    ltdc_dvi_bus = NULL;
+
+    HAL_GPIO_WritePin(OMV_DVI_RESET_PIN->gpio, OMV_DVI_RESET_PIN->pin_mask, GPIO_PIN_RESET);
+    HAL_Delay(1);
+
+    HAL_GPIO_WritePin(OMV_DVI_RESET_PIN->gpio, OMV_DVI_RESET_PIN->pin_mask, GPIO_PIN_SET);
+    HAL_Delay(1);
+
+    HAL_GPIO_DeInit(OMV_DVI_INT_PIN->gpio, OMV_DVI_INT_PIN->pin_mask);
+    HAL_GPIO_DeInit(OMV_DVI_SDA_PIN->gpio, OMV_DVI_SDA_PIN->pin_mask);
+    HAL_GPIO_DeInit(OMV_DVI_SCL_PIN->gpio, OMV_DVI_SCL_PIN->pin_mask);
+    HAL_GPIO_DeInit(OMV_DVI_RESET_PIN->gpio, OMV_DVI_RESET_PIN->pin_mask);
+}
+
+static void ltdc_dvi_init()
+{
+    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitStructure.Pull = GPIO_NOPULL;
+    GPIO_InitStructure.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStructure.Pin = OMV_DVI_RESET_PIN->pin_mask;
+    HAL_GPIO_Init(OMV_DVI_RESET_PIN->gpio, &GPIO_InitStructure);
+
+    HAL_GPIO_WritePin(OMV_DVI_RESET_PIN->gpio, OMV_DVI_RESET_PIN->pin_mask, GPIO_PIN_RESET);
+    HAL_Delay(1);
+
+    HAL_GPIO_WritePin(OMV_DVI_RESET_PIN->gpio, OMV_DVI_RESET_PIN->pin_mask, GPIO_PIN_SET);
+    HAL_Delay(1);
+
+    ltdc_dvi_bus = (mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 0, (const mp_obj_t []) {
+        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_DVI_SCL_PIN, (mp_obj_t) OMV_DVI_SDA_PIN
+    });
+
+    #ifdef OMV_DDC_PRESENT
+    ltdc_ddc_bus = (mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 1, (const mp_obj_t []) {
+        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_DDC_SCL_PIN, (mp_obj_t) OMV_DDC_SDA_PIN,
+            MP_OBJ_NEW_QSTR(MP_QSTR_freq),
+            MP_OBJ_NEW_SMALL_INT(100000)
+    });
+    #endif // OMV_DDC_PRESENT
+
+    if (mp_machine_soft_i2c_transfer(ltdc_dvi_bus, TFP410_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
+        .len = 4, .buf = (uint8_t []) {0x08, 0xB7, 0x19, 0x80} // addr, CTL_1, CTL_2, CTL_3
+    }), MP_MACHINE_I2C_FLAG_STOP) == 4) {
+         extint_register((mp_obj_t) OMV_DVI_INT_PIN, GPIO_MODE_IT_FALLING, GPIO_PULLUP, (mp_obj_t) &ltdc_dvi_extint_callback_obj, true);
+    } else {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Display init failed!"));
+    }
+}
+
+static void ltdc_dvi_register_hotplug_cb(mp_obj_t cb)
+{
+    extint_disable(OMV_DVI_INT_PIN->pin);
+    ltdc_dvi_user_cb = cb;
+    if (cb != mp_const_none) extint_enable(OMV_DVI_INT_PIN->pin);
+}
+#endif // OMV_DVI_PRESENT
+
 STATIC mp_obj_t py_lcd_deinit()
 {
     switch (lcd_type) {
@@ -1027,11 +1201,14 @@ STATIC mp_obj_t py_lcd_deinit()
         }
         #endif
         #ifdef OMV_LCD_CONTROLLER
-        case LCD_DISPLAY: {
+        case LCD_DISPLAY: case LCD_DISPLAY_WITH_HDMI: case LCD_DISPLAY_ONLY_HDMI: {
             ltdc_config_deinit();
             #ifdef OMV_LCD_BL_PIN
-            ltdc_set_backlight(0); // back to default state
-            #endif
+            if ((lcd_type == LCD_DISPLAY) || (lcd_type == LCD_DISPLAY_WITH_HDMI)) ltdc_set_backlight(0); // back to default state
+            #endif // OMV_LCD_BL_PIN
+            #ifdef OMV_DVI_PRESENT
+            if ((lcd_type == LCD_DISPLAY_WITH_HDMI) || (lcd_type == LCD_DISPLAY_ONLY_HDMI)) ltdc_dvi_deinit();
+            #endif // OMV_DVI_PRESENT
             break;
         }
         #endif
@@ -1056,7 +1233,9 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
 {
     py_lcd_deinit();
 
-    switch (py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), LCD_SHIELD)) {
+    int type = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), LCD_SHIELD);
+
+    switch (type) {
         #ifdef OMV_SPI_LCD_CONTROLLER
         case LCD_SHIELD: {
             int w = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), 128);
@@ -1082,15 +1261,18 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
         }
         #endif
         #ifdef OMV_LCD_CONTROLLER
-        case LCD_DISPLAY: {
+        case LCD_DISPLAY: case LCD_DISPLAY_WITH_HDMI: case LCD_DISPLAY_ONLY_HDMI: {
             int frame_size = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_framesize), LCD_DISPLAY_FWVGA);
             if ((frame_size < 0) || (LCD_DISPLAY_MAX <= frame_size)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid Frame Size!"));
             int refresh_rate = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 60);
             if ((refresh_rate < 30) || (120 < refresh_rate)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid Refresh Rate!"));
             ltdc_config_init(frame_size, refresh_rate);
             #ifdef OMV_LCD_BL_PIN
-            ltdc_set_backlight(255); // to on state
-            #endif
+            if ((type == LCD_DISPLAY) || (type == LCD_DISPLAY_WITH_HDMI)) ltdc_set_backlight(255); // to on state
+            #endif // OMV_LCD_BL_PIN
+            #ifdef OMV_DVI_PRESENT
+            if ((type == LCD_DISPLAY_WITH_HDMI) || (type == LCD_DISPLAY_ONLY_HDMI)) ltdc_dvi_init();
+            #endif // OMV_DVI_PRESENT
             lcd_width = resolution_w_h[frame_size][0];
             lcd_height = resolution_w_h[frame_size][1];
             lcd_type = LCD_DISPLAY;
@@ -1147,7 +1329,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_bgr_obj, py_lcd_bgr);
 
 STATIC mp_obj_t py_lcd_framesize()
 {
-    if (lcd_type != LCD_DISPLAY) return mp_const_none;
+    if ((lcd_type == LCD_NONE) || (lcd_type == LCD_SHIELD)) return mp_const_none;
     return mp_obj_new_int(lcd_resolution);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_framesize_obj, py_lcd_framesize);
@@ -1172,7 +1354,7 @@ STATIC mp_obj_t py_lcd_set_backlight(mp_obj_t intensity_obj)
         }
         #endif
         #if defined(OMV_LCD_CONTROLLER) && defined(OMV_LCD_BL_PIN)
-        case LCD_DISPLAY: {
+        case LCD_DISPLAY: case LCD_DISPLAY_WITH_HDMI: {
             ltdc_set_backlight(intensity);
             break;
         }
@@ -1188,10 +1370,39 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_set_backlight_obj, py_lcd_set_backlight)
 
 STATIC mp_obj_t py_lcd_get_backlight()
 {
-    if (lcd_type == LCD_NONE) return mp_const_none;
+    if ((lcd_type == LCD_NONE) || (lcd_type == LCD_DISPLAY_ONLY_HDMI)) return mp_const_none;
     return mp_obj_new_int(lcd_intensity);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_backlight_obj, py_lcd_get_backlight);
+
+STATIC mp_obj_t py_lcd_get_display_connected()
+{
+    #ifdef OMV_DVI_PRESENT
+    return ltdc_dvi_get_display_connected();
+    #else
+    return mp_const_false;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_display_connected_obj, py_lcd_get_display_connected);
+
+STATIC mp_obj_t py_lcd_get_display_id_data()
+{
+    #if defined(OMV_DVI_PRESENT) && defined(OMV_DDC_PRESENT)
+    return ltdc_dvi_get_display_id_data();
+    #else
+    return mp_const_empty_bytes;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_display_id_data_obj, py_lcd_get_display_id_data);
+
+STATIC mp_obj_t py_lcd_register_hotplug_cb(mp_obj_t cb)
+{
+    #ifdef OMV_DVI_PRESENT
+    ltdc_dvi_register_hotplug_cb(cb);
+    #endif
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_register_hotplug_cb_obj, py_lcd_register_hotplug_cb);
 
 STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -1212,7 +1423,7 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
             arg_y_off = mp_obj_get_int(args[2]);
             offset = 3;
         } else if (n_args > 1) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Expected x and y offset!"));
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_TypeError, "Expected x and y offset!"));
         }
     }
 
@@ -1289,7 +1500,7 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
         }
         #endif
         #ifdef OMV_LCD_CONTROLLER
-        case LCD_DISPLAY: {
+        case LCD_DISPLAY: case LCD_DISPLAY_WITH_HDMI: case LCD_DISPLAY_ONLY_HDMI: {
             fb_alloc_mark();
             ltdc_display(arg_img, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
                          arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint);
@@ -1323,9 +1534,9 @@ STATIC mp_obj_t py_lcd_clear(uint n_args, const mp_obj_t *args)
         }
         #endif
         #ifdef OMV_LCD_CONTROLLER
-        case LCD_DISPLAY: {
+        case LCD_DISPLAY: case LCD_DISPLAY_WITH_HDMI: case LCD_DISPLAY_ONLY_HDMI: {
             #if defined(OMV_LCD_DISP_PIN)
-            if (n_args && mp_obj_get_int(*args)) { // turns the display off (may not be black)
+            if ((lcd_type == LCD_DISPLAY) && n_args && mp_obj_get_int(*args)) { // turns the display off (may not be black)
                 OMV_LCD_DISP_OFF();
             } else { // sets the display to black (not off)
             #else
@@ -1346,41 +1557,46 @@ STATIC mp_obj_t py_lcd_clear(uint n_args, const mp_obj_t *args)
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_lcd_clear_obj, 0, 1, py_lcd_clear);
 
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__),        MP_OBJ_NEW_QSTR(MP_QSTR_lcd)          },
-    { MP_ROM_QSTR(MP_QSTR_LCD_NONE),        MP_ROM_INT(LCD_NONE)                  },
-    { MP_ROM_QSTR(MP_QSTR_LCD_SHIELD),      MP_ROM_INT(LCD_SHIELD)                },
-    { MP_ROM_QSTR(MP_QSTR_LCD_DISPLAY),     MP_ROM_INT(LCD_DISPLAY)               },
-    { MP_ROM_QSTR(MP_QSTR_QVGA),            MP_ROM_INT(LCD_DISPLAY_QVGA)          },
-    { MP_ROM_QSTR(MP_QSTR_TQVGA),           MP_ROM_INT(LCD_DISPLAY_TQVGA)         },
-    { MP_ROM_QSTR(MP_QSTR_FHVGA),           MP_ROM_INT(LCD_DISPLAY_FHVGA)         },
-    { MP_ROM_QSTR(MP_QSTR_FHVGA2),          MP_ROM_INT(LCD_DISPLAY_FHVGA2)        },
-    { MP_ROM_QSTR(MP_QSTR_VGA),             MP_ROM_INT(LCD_DISPLAY_VGA)           },
-    { MP_ROM_QSTR(MP_QSTR_THVGA),           MP_ROM_INT(LCD_DISPLAY_THVGA)         },
-    { MP_ROM_QSTR(MP_QSTR_FWVGA),           MP_ROM_INT(LCD_DISPLAY_FWVGA)         },
-    { MP_ROM_QSTR(MP_QSTR_FWVGA2),          MP_ROM_INT(LCD_DISPLAY_FWVGA2)        },
-    { MP_ROM_QSTR(MP_QSTR_TFWVGA),          MP_ROM_INT(LCD_DISPLAY_TFWVGA)        },
-    { MP_ROM_QSTR(MP_QSTR_TFWVGA2),         MP_ROM_INT(LCD_DISPLAY_TFWVGA2)       },
-    { MP_ROM_QSTR(MP_QSTR_SVGA),            MP_ROM_INT(LCD_DISPLAY_SVGA)          },
-    { MP_ROM_QSTR(MP_QSTR_WSVGA),           MP_ROM_INT(LCD_DISPLAY_WSVGA)         },
-    { MP_ROM_QSTR(MP_QSTR_XGA),             MP_ROM_INT(LCD_DISPLAY_XGA)           },
-    { MP_ROM_QSTR(MP_QSTR_SXGA),            MP_ROM_INT(LCD_DISPLAY_SXGA)          },
-    { MP_ROM_QSTR(MP_QSTR_SXGA2),           MP_ROM_INT(LCD_DISPLAY_SXGA2)         },
-    { MP_ROM_QSTR(MP_QSTR_UXGA),            MP_ROM_INT(LCD_DISPLAY_UXGA)          },
-    { MP_ROM_QSTR(MP_QSTR_HD),              MP_ROM_INT(LCD_DISPLAY_HD)            },
-    { MP_ROM_QSTR(MP_QSTR_FHD),             MP_ROM_INT(LCD_DISPLAY_FHD)           },
-    { MP_ROM_QSTR(MP_QSTR_init),            MP_ROM_PTR(&py_lcd_init_obj)          },
-    { MP_ROM_QSTR(MP_QSTR_deinit),          MP_ROM_PTR(&py_lcd_deinit_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_width),           MP_ROM_PTR(&py_lcd_width_obj)         },
-    { MP_ROM_QSTR(MP_QSTR_height),          MP_ROM_PTR(&py_lcd_height_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_type),            MP_ROM_PTR(&py_lcd_type_obj)          },
-    { MP_ROM_QSTR(MP_QSTR_triple_buffer),   MP_ROM_PTR(&py_lcd_triple_buffer_obj) },
-    { MP_ROM_QSTR(MP_QSTR_bgr),             MP_ROM_PTR(&py_lcd_bgr_obj)           },
-    { MP_ROM_QSTR(MP_QSTR_framesize),       MP_ROM_PTR(&py_lcd_framesize_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_refresh),         MP_ROM_PTR(&py_lcd_refresh_obj)       },
-    { MP_ROM_QSTR(MP_QSTR_get_backlight),   MP_ROM_PTR(&py_lcd_get_backlight_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_backlight),   MP_ROM_PTR(&py_lcd_set_backlight_obj) },
-    { MP_ROM_QSTR(MP_QSTR_display),         MP_ROM_PTR(&py_lcd_display_obj)       },
-    { MP_ROM_QSTR(MP_QSTR_clear),           MP_ROM_PTR(&py_lcd_clear_obj)         },
+    { MP_ROM_QSTR(MP_QSTR___name__),                MP_OBJ_NEW_QSTR(MP_QSTR_lcd)                    },
+    { MP_ROM_QSTR(MP_QSTR_LCD_NONE),                MP_ROM_INT(LCD_NONE)                            },
+    { MP_ROM_QSTR(MP_QSTR_LCD_SHIELD),              MP_ROM_INT(LCD_SHIELD)                          },
+    { MP_ROM_QSTR(MP_QSTR_LCD_DISPLAY),             MP_ROM_INT(LCD_DISPLAY)                         },
+    { MP_ROM_QSTR(MP_QSTR_LCD_DISPLAY_WITH_HDMI),   MP_ROM_INT(LCD_DISPLAY_WITH_HDMI)               },
+    { MP_ROM_QSTR(MP_QSTR_LCD_DISPLAY_ONLY_HDMI),   MP_ROM_INT(LCD_DISPLAY_ONLY_HDMI)               },
+    { MP_ROM_QSTR(MP_QSTR_QVGA),                    MP_ROM_INT(LCD_DISPLAY_QVGA)                    },
+    { MP_ROM_QSTR(MP_QSTR_TQVGA),                   MP_ROM_INT(LCD_DISPLAY_TQVGA)                   },
+    { MP_ROM_QSTR(MP_QSTR_FHVGA),                   MP_ROM_INT(LCD_DISPLAY_FHVGA)                   },
+    { MP_ROM_QSTR(MP_QSTR_FHVGA2),                  MP_ROM_INT(LCD_DISPLAY_FHVGA2)                  },
+    { MP_ROM_QSTR(MP_QSTR_VGA),                     MP_ROM_INT(LCD_DISPLAY_VGA)                     },
+    { MP_ROM_QSTR(MP_QSTR_THVGA),                   MP_ROM_INT(LCD_DISPLAY_THVGA)                   },
+    { MP_ROM_QSTR(MP_QSTR_FWVGA),                   MP_ROM_INT(LCD_DISPLAY_FWVGA)                   },
+    { MP_ROM_QSTR(MP_QSTR_FWVGA2),                  MP_ROM_INT(LCD_DISPLAY_FWVGA2)                  },
+    { MP_ROM_QSTR(MP_QSTR_TFWVGA),                  MP_ROM_INT(LCD_DISPLAY_TFWVGA)                  },
+    { MP_ROM_QSTR(MP_QSTR_TFWVGA2),                 MP_ROM_INT(LCD_DISPLAY_TFWVGA2)                 },
+    { MP_ROM_QSTR(MP_QSTR_SVGA),                    MP_ROM_INT(LCD_DISPLAY_SVGA)                    },
+    { MP_ROM_QSTR(MP_QSTR_WSVGA),                   MP_ROM_INT(LCD_DISPLAY_WSVGA)                   },
+    { MP_ROM_QSTR(MP_QSTR_XGA),                     MP_ROM_INT(LCD_DISPLAY_XGA)                     },
+    { MP_ROM_QSTR(MP_QSTR_SXGA),                    MP_ROM_INT(LCD_DISPLAY_SXGA)                    },
+    { MP_ROM_QSTR(MP_QSTR_SXGA2),                   MP_ROM_INT(LCD_DISPLAY_SXGA2)                   },
+    { MP_ROM_QSTR(MP_QSTR_UXGA),                    MP_ROM_INT(LCD_DISPLAY_UXGA)                    },
+    { MP_ROM_QSTR(MP_QSTR_HD),                      MP_ROM_INT(LCD_DISPLAY_HD)                      },
+    { MP_ROM_QSTR(MP_QSTR_FHD),                     MP_ROM_INT(LCD_DISPLAY_FHD)                     },
+    { MP_ROM_QSTR(MP_QSTR_init),                    MP_ROM_PTR(&py_lcd_init_obj)                    },
+    { MP_ROM_QSTR(MP_QSTR_deinit),                  MP_ROM_PTR(&py_lcd_deinit_obj)                  },
+    { MP_ROM_QSTR(MP_QSTR_width),                   MP_ROM_PTR(&py_lcd_width_obj)                   },
+    { MP_ROM_QSTR(MP_QSTR_height),                  MP_ROM_PTR(&py_lcd_height_obj)                  },
+    { MP_ROM_QSTR(MP_QSTR_type),                    MP_ROM_PTR(&py_lcd_type_obj)                    },
+    { MP_ROM_QSTR(MP_QSTR_triple_buffer),           MP_ROM_PTR(&py_lcd_triple_buffer_obj)           },
+    { MP_ROM_QSTR(MP_QSTR_bgr),                     MP_ROM_PTR(&py_lcd_bgr_obj)                     },
+    { MP_ROM_QSTR(MP_QSTR_framesize),               MP_ROM_PTR(&py_lcd_framesize_obj)               },
+    { MP_ROM_QSTR(MP_QSTR_refresh),                 MP_ROM_PTR(&py_lcd_refresh_obj)                 },
+    { MP_ROM_QSTR(MP_QSTR_get_backlight),           MP_ROM_PTR(&py_lcd_get_backlight_obj)           },
+    { MP_ROM_QSTR(MP_QSTR_set_backlight),           MP_ROM_PTR(&py_lcd_set_backlight_obj)           },
+    { MP_ROM_QSTR(MP_QSTR_get_display_connected),   MP_ROM_PTR(&py_lcd_get_display_connected_obj)   },
+    { MP_ROM_QSTR(MP_QSTR_get_display_id_data),     MP_ROM_PTR(&py_lcd_get_display_id_data_obj)     },
+    { MP_ROM_QSTR(MP_QSTR_register_hotplug_cb),     MP_ROM_PTR(&py_lcd_register_hotplug_cb_obj)     },
+    { MP_ROM_QSTR(MP_QSTR_display),                 MP_ROM_PTR(&py_lcd_display_obj)                 },
+    { MP_ROM_QSTR(MP_QSTR_clear),                   MP_ROM_PTR(&py_lcd_clear_obj)                   },
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
