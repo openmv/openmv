@@ -11,6 +11,7 @@
 #include STM32_HAL_H
 #include "extint.h"
 #include "spi.h"
+#include "py_lcd_touch.h"
 #include "py_helper.h"
 #include "extmod/machine_i2c.h"
 #include "omv_boardconfig.h"
@@ -1209,6 +1210,9 @@ STATIC mp_obj_t py_lcd_deinit()
             #ifdef OMV_DVI_PRESENT
             if ((lcd_type == LCD_DISPLAY_WITH_HDMI) || (lcd_type == LCD_DISPLAY_ONLY_HDMI)) ltdc_dvi_deinit();
             #endif // OMV_DVI_PRESENT
+            #ifdef OMV_TOUCH_PRESENT
+            if ((lcd_type == LCD_DISPLAY) || (lcd_type == LCD_DISPLAY_WITH_HDMI)) lcd_touch_deinit();
+            #endif // OMV_TOUCH_PRESENT
             break;
         }
         #endif
@@ -1273,6 +1277,9 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
             #ifdef OMV_DVI_PRESENT
             if ((type == LCD_DISPLAY_WITH_HDMI) || (type == LCD_DISPLAY_ONLY_HDMI)) ltdc_dvi_init();
             #endif // OMV_DVI_PRESENT
+            #ifdef OMV_TOUCH_PRESENT
+            if ((type == LCD_DISPLAY) || (type == LCD_DISPLAY_WITH_HDMI)) lcd_touch_init();
+            #endif // OMV_TOUCH_PRESENT
             lcd_width = resolution_w_h[frame_size][0];
             lcd_height = resolution_w_h[frame_size][1];
             lcd_type = LCD_DISPLAY;
@@ -1403,6 +1410,85 @@ STATIC mp_obj_t py_lcd_register_hotplug_cb(mp_obj_t cb)
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_register_hotplug_cb_obj, py_lcd_register_hotplug_cb);
+
+STATIC mp_obj_t py_lcd_update_touch_points()
+{
+    #ifdef OMV_TOUCH_PRESENT
+    return lcd_touch_update_touch_points();
+    #else
+    return mp_const_none;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_update_touch_points_obj, py_lcd_update_touch_points);
+
+STATIC mp_obj_t py_lcd_register_touch_cb(mp_obj_t cb)
+{
+    #ifdef OMV_TOUCH_PRESENT
+    lcd_touch_register_touch_cb(cb);
+    #endif
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_register_touch_cb_obj, py_lcd_register_touch_cb);
+
+STATIC mp_obj_t py_lcd_get_gesture()
+{
+    #ifdef OMV_TOUCH_PRESENT
+    return lcd_touch_get_gesture();
+    #else
+    return mp_const_none;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_gesture_obj, py_lcd_get_gesture);
+
+STATIC mp_obj_t py_lcd_get_points()
+{
+    #ifdef OMV_TOUCH_PRESENT
+    return lcd_touch_get_points();
+    #else
+    return mp_const_none;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_points_obj, py_lcd_get_points);
+
+STATIC mp_obj_t py_lcd_get_point_flag(mp_obj_t index)
+{
+    #ifdef OMV_TOUCH_PRESENT
+    return lcd_touch_get_point_flag(index);
+    #else
+    return mp_const_none;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_get_point_flag_obj, py_lcd_get_point_flag);
+
+STATIC mp_obj_t py_lcd_get_point_id(mp_obj_t index)
+{
+    #ifdef OMV_TOUCH_PRESENT
+    return lcd_touch_get_point_id(index);
+    #else
+    return mp_const_none;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_get_point_id_obj, py_lcd_get_point_id);
+
+STATIC mp_obj_t py_lcd_get_point_x_position(mp_obj_t index)
+{
+    #ifdef OMV_TOUCH_PRESENT
+    return lcd_touch_get_point_x_position(index);
+    #else
+    return mp_const_none;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_get_point_x_position_obj, py_lcd_get_point_x_position);
+
+STATIC mp_obj_t py_lcd_get_point_y_position(mp_obj_t index)
+{
+    #ifdef OMV_TOUCH_PRESENT
+    return lcd_touch_get_point_y_position(index);
+    #else
+    return mp_const_none;
+    #endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_get_point_y_position_obj, py_lcd_get_point_y_position);
 
 STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -1581,6 +1667,16 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_UXGA),                    MP_ROM_INT(LCD_DISPLAY_UXGA)                    },
     { MP_ROM_QSTR(MP_QSTR_HD),                      MP_ROM_INT(LCD_DISPLAY_HD)                      },
     { MP_ROM_QSTR(MP_QSTR_FHD),                     MP_ROM_INT(LCD_DISPLAY_FHD)                     },
+    { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_MOVE_UP),     MP_ROM_INT(PY_LCD_TOUCH_GESTURE_MOVE_UP)        },
+    { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_MOVE_LEFT),   MP_ROM_INT(PY_LCD_TOUCH_GESTURE_MOVE_LEFT)      },
+    { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_MOVE_DOWN),   MP_ROM_INT(PY_LCD_TOUCH_GESTURE_MOVE_DOWN)      },
+    { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_MOVE_RIGHT),  MP_ROM_INT(PY_LCD_TOUCH_GESTURE_MOVE_RIGHT)     },
+    { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_ZOOM_IN),     MP_ROM_INT(PY_LCD_TOUCH_GESTURE_ZOOM_IN)        },
+    { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_ZOOM_OUT),    MP_ROM_INT(PY_LCD_TOUCH_GESTURE_ZOOM_OUT)       },
+    { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_NONE),        MP_ROM_INT(PY_LCD_TOUCH_GESTURE_NONE)           },
+    { MP_ROM_QSTR(MP_QSTR_LCD_FLAG_PRESSED),        MP_ROM_INT(PY_LCD_TOUCH_EVENT_PUT_DOWN)         },
+    { MP_ROM_QSTR(MP_QSTR_LCD_FLAG_RELEASED),       MP_ROM_INT(PY_LCD_TOUCH_EVENT_PUT_UP)           },
+    { MP_ROM_QSTR(MP_QSTR_LCD_FLAG_MOVED),          MP_ROM_INT(PY_LCD_TOUCH_EVENT_CONTACT)          },
     { MP_ROM_QSTR(MP_QSTR_init),                    MP_ROM_PTR(&py_lcd_init_obj)                    },
     { MP_ROM_QSTR(MP_QSTR_deinit),                  MP_ROM_PTR(&py_lcd_deinit_obj)                  },
     { MP_ROM_QSTR(MP_QSTR_width),                   MP_ROM_PTR(&py_lcd_width_obj)                   },
@@ -1595,6 +1691,14 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_get_display_connected),   MP_ROM_PTR(&py_lcd_get_display_connected_obj)   },
     { MP_ROM_QSTR(MP_QSTR_get_display_id_data),     MP_ROM_PTR(&py_lcd_get_display_id_data_obj)     },
     { MP_ROM_QSTR(MP_QSTR_register_hotplug_cb),     MP_ROM_PTR(&py_lcd_register_hotplug_cb_obj)     },
+    { MP_ROM_QSTR(MP_QSTR_update_touch_points),     MP_ROM_PTR(&py_lcd_update_touch_points_obj)     },
+    { MP_ROM_QSTR(MP_QSTR_register_touch_cb),       MP_ROM_PTR(&py_lcd_register_touch_cb_obj)       },
+    { MP_ROM_QSTR(MP_QSTR_get_gesture),             MP_ROM_PTR(&py_lcd_get_gesture_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_get_points),              MP_ROM_PTR(&py_lcd_get_points_obj)              },
+    { MP_ROM_QSTR(MP_QSTR_get_point_flag),          MP_ROM_PTR(&py_lcd_get_point_flag_obj)          },
+    { MP_ROM_QSTR(MP_QSTR_get_point_id),            MP_ROM_PTR(&py_lcd_get_point_id_obj)            },
+    { MP_ROM_QSTR(MP_QSTR_get_point_x_position),    MP_ROM_PTR(&py_lcd_get_point_x_position_obj)    },
+    { MP_ROM_QSTR(MP_QSTR_get_point_y_position),    MP_ROM_PTR(&py_lcd_get_point_y_position_obj)    },
     { MP_ROM_QSTR(MP_QSTR_display),                 MP_ROM_PTR(&py_lcd_display_obj)                 },
     { MP_ROM_QSTR(MP_QSTR_clear),                   MP_ROM_PTR(&py_lcd_clear_obj)                   },
 };
