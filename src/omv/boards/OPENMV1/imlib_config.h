@@ -30,12 +30,8 @@
 //#define IMLIB_ENABLE_ROTATION_CORR
 
 // Enable phasecorrelate()
+#if defined(IMLIB_ENABLE_ROTATION_CORR)
 //#define IMLIB_ENABLE_FIND_DISPLACEMENT
-
-// rotation_corr() is required by phasecorrelate()
-#if defined(IMLIB_ENABLE_FIND_DISPLACEMENT)\
-    && !defined(IMLIB_ENABLE_ROTATION_CORR)
-    #define IMLIB_ENABLE_ROTATION_CORR
 #endif
 
 // Enable get_similarity()
