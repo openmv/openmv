@@ -16,7 +16,6 @@
 // Enable new code optimizations
 #define OPTIMIZED
 
-#ifdef IMLIB_ENABLE_APRILTAGS
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
 
@@ -12561,4 +12560,3 @@ void imlib_rotation_corr(image_t *img, float x_rotation, float y_rotation, float
 }
 #endif //IMLIB_ENABLE_ROTATION_CORR
 #pragma GCC diagnostic pop
-#endif //IMLIB_ENABLE_APRILTAGS
