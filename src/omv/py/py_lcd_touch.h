@@ -19,11 +19,13 @@ typedef enum py_lcd_touch_gesture {
     PY_LCD_TOUCH_GESTURE_ZOOM_OUT = 0x49,
     PY_LCD_TOUCH_GESTURE_NONE = 0x00
 } py_lcd_touch_gesture_t;
+
 typedef enum py_lcd_touch_event {
     PY_LCD_TOUCH_EVENT_PUT_DOWN = 0x0,
     PY_LCD_TOUCH_EVENT_PUT_UP = 0x1,
     PY_LCD_TOUCH_EVENT_CONTACT = 0x2
 } py_lcd_touch_event_t;
+
 void lcd_touch_init();
 void lcd_touch_deinit();
 mp_obj_t lcd_touch_update_touch_points();

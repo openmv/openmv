@@ -17,16 +17,16 @@
 
 #ifdef OMV_TOUCH_PRESENT
 #define FT5X06_I2C_ADDR 0x38
-mp_obj_base_t *lcd_touch_bus = NULL;
-mp_obj_t lcd_touch_user_cb = NULL;
+static mp_obj_base_t *lcd_touch_bus = NULL;
+static mp_obj_t lcd_touch_user_cb = NULL;
 
 #define NUM_TOUCH_POINTS 5
-volatile uint8_t lcd_touch_gesture = 0;
-volatile uint8_t lcd_touch_points = 0, lcd_touch_points_old = 0;
-volatile uint8_t lcd_touch_flag[NUM_TOUCH_POINTS] = {};
-volatile uint8_t lcd_touch_id[NUM_TOUCH_POINTS] = {};
-volatile uint16_t lcd_touch_x_position[NUM_TOUCH_POINTS] = {};
-volatile uint16_t lcd_touch_y_position[NUM_TOUCH_POINTS] = {};
+static volatile uint8_t lcd_touch_gesture = 0;
+static volatile uint8_t lcd_touch_points = 0, lcd_touch_points_old = 0;
+static volatile uint8_t lcd_touch_flag[NUM_TOUCH_POINTS] = {};
+static volatile uint8_t lcd_touch_id[NUM_TOUCH_POINTS] = {};
+static volatile uint16_t lcd_touch_x_position[NUM_TOUCH_POINTS] = {};
+static volatile uint16_t lcd_touch_y_position[NUM_TOUCH_POINTS] = {};
 
 mp_obj_t lcd_touch_get_gesture()
 {
