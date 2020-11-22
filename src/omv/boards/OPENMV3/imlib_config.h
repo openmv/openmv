@@ -72,12 +72,8 @@
 #define IMLIB_ENABLE_ROTATION_CORR
 
 // Enable phasecorrelate()
+#if defined(IMLIB_ENABLE_ROTATION_CORR)
 #define IMLIB_ENABLE_FIND_DISPLACEMENT
-
-// rotation_corr() is required by phasecorrelate()
-#if defined(IMLIB_ENABLE_FIND_DISPLACEMENT)\
-    && !defined(IMLIB_ENABLE_ROTATION_CORR)
-    #define IMLIB_ENABLE_ROTATION_CORR
 #endif
 
 // Enable get_similarity()
@@ -88,12 +84,6 @@
 
 // Enable find_line_segments()
 #define IMLIB_ENABLE_FIND_LINE_SEGMENTS
-
-// find_lines() is required by the old find_line_segments()
-#if defined(IMLIB_ENABLE_FIND_LINE_SEGMENTS)\
-    && !defined(IMLIB_ENABLE_FIND_LINES)
-    #define IMLIB_ENABLE_FIND_LINES
-#endif
 
 // Enable find_circles()
 #define IMLIB_ENABLE_FIND_CIRCLES
