@@ -1,4 +1,26 @@
 # Change Log
+## [3.7.0](https://github.com/openmv/openmv/releases/tag/v3.7.0) (2020-11-23)
+* Fix imlib build dependencies.
+* Fix fatal_error bug using uninitialized storage.
+* Fix build errors if no DCMI GPIOs are defined.
+* Fix RGB565 inversion from camera
+* Fix copy_to_fb to update JPEG fb after loading/creating images.
+* Fix PLL1 frequency for revision Y devices.
+* Add FT5X06 touch screen lcd support.
+* Add HDMI support via the TFP410
+* Use DMA2D to accelerate some drawing functions.
+* Update SDRAM test and make it cache-aware.
+* Add power supply per board configuration.
+* Add new image scaling pipeline
+* Add ExtInt wake-up example.
+* Support flushing images without initializing the sensor.
+* PORTENTA: Fix and update PLL settings.
+* PORTENTA: Fix SDRAM timing config.
+* PORTENTA: Add Audio module with PCM support.
+* PORTENTA: Add Tensorflow micro speech module.
+* PORTENTA: Fix Ethernet/SDRAM bug.
+* PORTENTA: Add Portenta audio example scripts.
+
 ## [3.6.9](https://github.com/openmv/openmv/releases/tag/v3.6.9) (2020-10-12)
 * Enable LWIP and CYW4343.
 * Fix major issues with Portenta build.
