@@ -102,7 +102,7 @@ CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -DARM_NN_TRUNCATE\
           -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard
 CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=$(OMV_HSE_VALUE)\
           -D$(TARGET) -DSTM32_HAL_H=$(HAL_INC) -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(MAIN_APP_ADDR)
-CFLAGS += $(OMV_BOARD_EXTRA_CFLAGS) -DOPENMV
+CFLAGS += $(OMV_BOARD_EXTRA_CFLAGS)
 
 ST_CFLAGS += -I. -Iinclude
 ST_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
@@ -415,6 +415,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	utils/interrupt_char.o      \
 	utils/sys_stdio_mphal.o     \
 	utils/gchelper_m3.o         \
+	utils/gchelper_native.o     \
 	libc/string0.o              \
 	netutils/*.o                \
 	timeutils/timeutils.o       \
@@ -459,6 +460,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
 
 #------------- mbedtls -------------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/lib/mbedtls/library/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/lib/mbedtls_errors/*.o)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	core/src/usbd_core.o                \
@@ -500,6 +502,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modbtree.o          \
 	moducryptolib.o     \
 	modussl_mbedtls.o   \
+	moduasyncio.o       \
 	)
 
 ifeq ($(MICROPY_PY_ULAB), 1)

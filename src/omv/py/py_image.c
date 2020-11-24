@@ -7302,7 +7302,7 @@ mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
 
     if ((res = f_open_helper(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
         // Find descriptor type
-        mp_obj_type_t *desc_obj_type = mp_obj_get_type(args[0]);
+        const mp_obj_type_t *desc_obj_type = mp_obj_get_type(args[0]);
         if (desc_obj_type ==  &py_lbp_type) {
             desc_type = DESC_LBP;
         } else if (desc_obj_type ==  &py_kp_type) {
@@ -7345,8 +7345,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 2, py_image_save
 static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     mp_obj_t match_obj = mp_const_none;
-    mp_obj_type_t *desc1_type = mp_obj_get_type(args[0]);
-    mp_obj_type_t *desc2_type = mp_obj_get_type(args[1]);
+    const mp_obj_type_t *desc1_type = mp_obj_get_type(args[0]);
+    const mp_obj_type_t *desc2_type = mp_obj_get_type(args[1]);
     PY_ASSERT_TRUE_MSG((desc1_type == desc2_type), "Descriptors have different types!");
 
     if (desc1_type ==  &py_lbp_type) {
