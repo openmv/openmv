@@ -142,7 +142,10 @@ sint8 nm_bus_init(void *pvinit)
     SPI_HANDLE.Init.CRCPolynomial     = 7;
 
     // Init SPI
-    HAL_SPI_Init(&SPI_HANDLE);
+    HAL_SPI_DeInit(&SPI_HANDLE);
+    if (HAL_SPI_Init(&SPI_HANDLE) != HAL_OK) {
+        result = M2M_ERR_BUS_FAIL;
+    }
 
     nm_bsp_reset();
 	WINC_CS_HIGH();
