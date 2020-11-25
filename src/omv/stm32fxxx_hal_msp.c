@@ -326,51 +326,11 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
         HAL_GPIO_Init(LEPTON_SPI_SSEL_PORT, &GPIO_InitStructure);
     }
     #endif
-
-    #if defined(OMV_SPI_LCD_CONTROLLER)
-    if (hspi->Instance == OMV_SPI_LCD_CONTROLLER_INSTANCE) {
-        GPIO_InitTypeDef GPIO_InitStructure;
-        GPIO_InitStructure.Pull      = GPIO_NOPULL;
-        GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
-        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_MEDIUM;
-
-        GPIO_InitStructure.Alternate = OMV_SPI_LCD_MOSI_ALT;
-        GPIO_InitStructure.Pin       = OMV_SPI_LCD_MOSI_PIN;
-        HAL_GPIO_Init(OMV_SPI_LCD_MOSI_PORT, &GPIO_InitStructure);
-
-        GPIO_InitStructure.Alternate = OMV_SPI_LCD_SCLK_ALT;
-        GPIO_InitStructure.Pin       = OMV_SPI_LCD_SCLK_PIN;
-        HAL_GPIO_Init(OMV_SPI_LCD_SCLK_PORT, &GPIO_InitStructure);
-
-        GPIO_InitStructure.Mode      = GPIO_MODE_OUTPUT_PP;
-        GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_LOW;
-
-        GPIO_InitStructure.Pin       = OMV_SPI_LCD_RST_PIN;
-        HAL_GPIO_Init(OMV_SPI_LCD_RST_PORT, &GPIO_InitStructure);
-        OMV_SPI_LCD_RST_OFF();
-
-        GPIO_InitStructure.Pin       = OMV_SPI_LCD_RS_PIN;
-        HAL_GPIO_Init(OMV_SPI_LCD_RS_PORT, &GPIO_InitStructure);
-        OMV_SPI_LCD_RS_OFF();
-
-        GPIO_InitStructure.Pin       = OMV_SPI_LCD_CS_PIN;
-        HAL_GPIO_Init(OMV_SPI_LCD_CS_PORT, &GPIO_InitStructure);
-        OMV_SPI_LCD_CS_HIGH();
-    }
-    #endif
 }
 
 void HAL_SPI_MspDeinit(SPI_HandleTypeDef *hspi)
 {
-    #if defined(OMV_SPI_LCD_CONTROLLER)
-    if (hspi->Instance == OMV_SPI_LCD_CONTROLLER_INSTANCE) {
-        HAL_GPIO_DeInit(OMV_SPI_LCD_MOSI_PORT, OMV_SPI_LCD_MOSI_PIN);
-        HAL_GPIO_DeInit(OMV_SPI_LCD_SCLK_PORT, OMV_SPI_LCD_SCLK_PIN);
-        HAL_GPIO_DeInit(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN);
-        HAL_GPIO_DeInit(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN);
-        HAL_GPIO_DeInit(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN);
-    }
-    #endif
+
 }
 
 #if defined(AUDIO_SAI)

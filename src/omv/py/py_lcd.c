@@ -80,6 +80,17 @@ static void spi_config_deinit()
     }
 
     spi_deinit(OMV_SPI_LCD_CONTROLLER);
+
+    // Do not put in HAL_SPI_MspDeinit as other modules share the SPI2 bus.
+
+    HAL_GPIO_DeInit(OMV_SPI_LCD_MOSI_PORT, OMV_SPI_LCD_MOSI_PIN);
+    HAL_GPIO_DeInit(OMV_SPI_LCD_SCLK_PORT, OMV_SPI_LCD_SCLK_PIN);
+
+    HAL_GPIO_DeInit(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN);
+    HAL_GPIO_DeInit(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN);
+    HAL_GPIO_DeInit(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN);
+
+    ///////////////////////////////////////////////////////////////////////
 }
 
 static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, bool bgr)
@@ -91,6 +102,38 @@ static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, 
     OMV_SPI_LCD_CONTROLLER->spi->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
     spi_set_params(OMV_SPI_LCD_CONTROLLER, 0xffffffff, w * h * refresh_rate * 16, 0, 0, 8, 0);
     spi_init(OMV_SPI_LCD_CONTROLLER, true);
+
+    // Do not put in HAL_SPI_MspInit as other modules share the SPI2 bus.
+
+    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitStructure.Pull      = GPIO_NOPULL;
+    GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_MEDIUM;
+
+    GPIO_InitStructure.Alternate = OMV_SPI_LCD_MOSI_ALT;
+    GPIO_InitStructure.Pin       = OMV_SPI_LCD_MOSI_PIN;
+    HAL_GPIO_Init(OMV_SPI_LCD_MOSI_PORT, &GPIO_InitStructure);
+
+    GPIO_InitStructure.Alternate = OMV_SPI_LCD_SCLK_ALT;
+    GPIO_InitStructure.Pin       = OMV_SPI_LCD_SCLK_PIN;
+    HAL_GPIO_Init(OMV_SPI_LCD_SCLK_PORT, &GPIO_InitStructure);
+
+    GPIO_InitStructure.Mode      = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_LOW;
+
+    GPIO_InitStructure.Pin       = OMV_SPI_LCD_RST_PIN;
+    HAL_GPIO_Init(OMV_SPI_LCD_RST_PORT, &GPIO_InitStructure);
+    OMV_SPI_LCD_RST_OFF();
+
+    GPIO_InitStructure.Pin       = OMV_SPI_LCD_RS_PIN;
+    HAL_GPIO_Init(OMV_SPI_LCD_RS_PORT, &GPIO_InitStructure);
+    OMV_SPI_LCD_RS_OFF();
+
+    GPIO_InitStructure.Pin       = OMV_SPI_LCD_CS_PIN;
+    HAL_GPIO_Init(OMV_SPI_LCD_CS_PORT, &GPIO_InitStructure);
+    OMV_SPI_LCD_CS_HIGH();
+
+    /////////////////////////////////////////////////////////////////////
 
     OMV_SPI_LCD_RST_ON();
     HAL_Delay(100);
