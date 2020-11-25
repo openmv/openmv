@@ -15,22 +15,42 @@
 #include STM32_HAL_H
 #include "py_cpufreq.h"
 #include "py_helper.h"
+#include "omv_boardconfig.h"
 
 #if defined(STM32F7) || defined(STM32H7)
 
-#define ARRAY_LENGTH(x) (sizeof(x)/sizeof(x[0]))
-
 #if defined(STM32H7)
-static const uint32_t cpufreq_freqs[] = {120, 240, 480};
+#define N_FREQUENCIES   (4)
+static const uint32_t CPUFREQ_FREQS_REV_V [N_FREQUENCIES] = {60, 120, 240, 480};
+static const uint32_t CPUFREQ_FREQS_REV_XY[N_FREQUENCIES] = {50, 100, 200, 400};
 #elif defined(STM32F7)
-static const uint32_t cpufreq_pllq[] = {5, 6, 7, 8, 9};
-static const uint32_t cpufreq_freqs[] = {120, 144, 168, 192, 216};
-static const uint32_t cpufreq_latency[] = { // Flash latency (see table 11)
+#define N_FREQUENCIES   (5)
+static const uint32_t cpufreq_pllq[N_FREQUENCIES] = {5, 6, 7, 8, 9};
+static const uint32_t cpufreq_freqs[N_FREQUENCIES] = {120, 144, 168, 192, 216};
+static const uint32_t cpufreq_latency[N_FREQUENCIES] = { // Flash latency (see table 11)
     FLASH_LATENCY_3, FLASH_LATENCY_4, FLASH_LATENCY_5, FLASH_LATENCY_7, FLASH_LATENCY_7
 };
 #endif
 
-uint32_t cpufreq_get_cpuclk()
+#if defined(STM32H7)
+static const uint32_t *cpufreq_get_frequencies()
+{
+    #if (OMV_MAX_CPU_FREQ == 400)
+    (void)CPUFREQ_FREQS_REV_V;
+    // If the maximum frequency is set to 400 use rev x/y frequencies.
+    return CPUFREQ_FREQS_REV_XY;
+    #else
+    // Otherwise, determine the frequencies dynamically using the revid.
+    if (HAL_GetREVID() >= 0x2003) {
+        return CPUFREQ_FREQS_REV_V;
+    } else {
+        return CPUFREQ_FREQS_REV_XY;
+    }
+    #endif
+}
+#endif
+
+static uint32_t cpufreq_get_cpuclk()
 {
     uint32_t cpuclk = HAL_RCC_GetSysClockFreq();
 
@@ -47,6 +67,9 @@ uint32_t cpufreq_get_cpuclk()
             break;
         case RCC_SYSCLK_DIV4:
             cpuclk /= 4;
+            break;
+        case RCC_SYSCLK_DIV8:
+            cpuclk /= 8;
             break;
         default:
             break;
@@ -68,8 +91,11 @@ mp_obj_t py_cpufreq_get_current_frequencies()
 
 mp_obj_t py_cpufreq_get_supported_frequencies()
 {
+    #if defined(STM32H7)
+    const uint32_t *cpufreq_freqs = cpufreq_get_frequencies();
+    #endif
     mp_obj_t freq_list = mp_obj_new_list(0, NULL);
-    for (int i=0; i<ARRAY_LENGTH(cpufreq_freqs); i++) {
+    for (int i=0; i<N_FREQUENCIES; i++) {
         mp_obj_list_append(freq_list, mp_obj_new_int(cpufreq_freqs[i]));
     }
     return freq_list;
@@ -85,7 +111,10 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
     // Check if frequency is supported
     int cpufreq_idx = -1;
     uint32_t cpufreq = mp_obj_get_int(cpufreq_obj);
-    for (int i=0; i<ARRAY_LENGTH(cpufreq_freqs); i++) {
+    #if defined(STM32H7)
+    const uint32_t *cpufreq_freqs = cpufreq_get_frequencies();
+    #endif
+    for (int i=0; i<N_FREQUENCIES; i++) {
         if (cpufreq == cpufreq_freqs[i]) {
             cpufreq_idx = i;
             break;
@@ -109,6 +138,17 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
             RCC_CLOCKTYPE_D1PCLK1 | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2  | RCC_CLOCKTYPE_D3PCLK1);
 
     switch (cpufreq) {
+        case 50:
+        case 60:
+            RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV8; // D1CPRE
+            RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;   // HPRE
+            RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;   // D2PPRE1
+            RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV1;   // D2PPRE2
+            RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV1;   // D1PPRE
+            RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;   // D3PPRE
+            break;
+
+        case 100:
         case 120:
             RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV4; // D1CPRE
             RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;   // HPRE
@@ -118,6 +158,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
             RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;   // D3PPRE
             break;
 
+        case 200:
         case 240:
             RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV2; // D1CPRE
             RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV1;   // HPRE
@@ -127,6 +168,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
             RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;   // D3PPRE
             break;
 
+        case 400:
         case 480:
             RCC_ClkInitStruct.SYSCLKDivider  = RCC_SYSCLK_DIV1; // D1CPRE
             RCC_ClkInitStruct.AHBCLKDivider  = RCC_HCLK_DIV2;   // HPRE

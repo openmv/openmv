@@ -76,6 +76,9 @@
 // Core VBAT for selftests
 #define OMV_CORE_VBAT           "3.0"
 
+// Defined for cpu frequency scaling to override the revid.
+#define OMV_MAX_CPU_FREQ        (400)
+
 // PLL1 400MHz/40MHz for SDMMC and FDCAN
 // USB and RNG are clocked from the HSI48
 #define OMV_OSC_PLL1M           (5)
