@@ -13,14 +13,14 @@ if not (TEST_DIR in os.listdir("")):
 print("")
 test_failed = False
 
-def print_result(test, passed):
+def print_result(test, result):
     s = "Unittest (%s)"%(test)
     padding = "."*(60-len(s))
-    print(s + padding + ("PASSED" if passed == True else "FAILED"))
+    print(s + padding + result)
 
 for test in sorted(os.listdir(SCRIPT_DIR)):
     if test.endswith(".py"):
-        test_passed = True
+        test_result = "PASSED"
         test_path = "/".join((SCRIPT_DIR, test))
         try:
             exec(open(test_path).read())
@@ -29,8 +29,8 @@ for test in sorted(os.listdir(SCRIPT_DIR)):
                 raise Exception()
         except Exception as e:
             test_failed = True
-            test_passed = False
-        print_result(test, test_passed)
+            test_result =  "DISABLED" if "unavailable" in str(e) else "FAILED"
+        print_result(test, test_result)
 
 if test_failed:
     print("\nSome tests have FAILED!!!\n\n")
