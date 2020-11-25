@@ -16,6 +16,8 @@
 #include "extmod/machine_i2c.h"
 #include "omv_boardconfig.h"
 
+#if defined(OMV_SPI_LCD_CONTROLLER) || defined(OMV_LCD_CONTROLLER)
+
 #define FRAMEBUFFER_COUNT 3
 static int framebuffer_head = 0;
 static volatile int framebuffer_tail = 0;
@@ -1697,3 +1699,23 @@ void py_lcd_init0()
 {
     py_lcd_deinit();
 }
+
+#else
+
+STATIC const mp_rom_map_elem_t globals_dict_table[] = {
+    { MP_ROM_QSTR(MP_QSTR___name__),                MP_OBJ_NEW_QSTR(MP_QSTR_lcd)                    },
+};
+
+STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
+
+const mp_obj_module_t lcd_module = {
+    .base = { &mp_type_module },
+    .globals = (mp_obj_t) &globals_dict,
+};
+
+void py_lcd_init0()
+{
+    // Nothing to do...
+}
+
+#endif // defined(OMV_SPI_LCD_CONTROLLER) || defined(OMV_LCD_CONTROLLER)
