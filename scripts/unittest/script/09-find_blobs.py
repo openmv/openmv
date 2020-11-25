@@ -8,5 +8,5 @@ def unittest(data_path, temp_path):
 
     blobs = img.find_blobs(thresholds, pixels_threshold=2000, area_threshold=200)
     return  [int(x) for x in blobs[0][0:-5]] == [122, 41, 97, 82, 6266, 168, 82] and\
-            [int(x) for x in blobs[1][0:-5]] == [44, 42, 78, 88, 5162, 81, 85]   and\
-            [int(x) for x in blobs[2][0:-5]] == [210, 40, 72, 83, 3930, 249, 77]
+            [int(x) for x in blobs[1][0:-5]] == [44, 42, 78, 88, 5162, 80, 84]   and\
+            [int(x) for x in blobs[2][0:-5]] == [210, 40, 72, 83, 3930, 249, 76]
