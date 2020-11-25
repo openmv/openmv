@@ -255,7 +255,6 @@
 // SPI5 clock source is PLL2 (200MHz/4 == 50MHz) - Slightly over the maximum of 48 MHz.
 #define WINC_SPI_PRESCALER              (SPI_BAUDRATEPRESCALER_4)
 #define WINC_SPI_CLK_ENABLE()           __HAL_RCC_SPI5_CLK_ENABLE()
-#define WINC_SPI_HANDLE                 SPIHandle5
 
 #define WINC_SPI_SCLK_PIN               (GPIO_PIN_6)
 #define WINC_SPI_MISO_PIN               (GPIO_PIN_7)
