@@ -61,6 +61,8 @@ CUBEAI_DIR=stm32cubeai
 LIBPDM_DIR=libpdm
 OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/stm32/boards/$(TARGET)/
+MPY_LIB_DIR=$(TOP_DIR)/../scripts/libraries
+FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 
 # Additional qstr definitions for OpenMV
 OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/py/qstrdefsomv.h
@@ -102,7 +104,7 @@ CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -DARM_NN_TRUNCATE\
           -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard
 CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DUSE_USB_FS -DUSE_DEVICE_MODE -DUSE_USB_OTG_ID=0 -DHSE_VALUE=$(OMV_HSE_VALUE)\
           -D$(TARGET) -DSTM32_HAL_H=$(HAL_INC) -DVECT_TAB_OFFSET=$(VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(MAIN_APP_ADDR)
-CFLAGS += $(OMV_BOARD_EXTRA_CFLAGS) -DOPENMV
+CFLAGS += $(OMV_BOARD_EXTRA_CFLAGS)
 
 ST_CFLAGS += -I. -Iinclude
 ST_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/
@@ -124,7 +126,7 @@ MP_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 
 # In addition to CFLAGS, the following options are needed to set varilables
 # in MicroPython's Makefile, to enable or disable compiling additional modules.
-MICROPY_ARGS = BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)"
+MICROPY_ARGS = BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)" MPY_LIB_DIR=$(MPY_LIB_DIR)
 ifeq ($(MICROPY_PY_WINC1500), 1)
 MP_CFLAGS += -DMICROPY_PY_WINC1500=1
 MICROPY_ARGS += MICROPY_PY_WINC1500=1
@@ -397,15 +399,11 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	posix_helpers.o         \
 	softtimer.o             \
 	mbedtls/mbedtls_port.o  \
+    frozen_content.o        \
 	)
 
 # board object files
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/boards/$(TARGET)/*.o)
-
-# object file for frozen bytecode (frozen .mpy files)
-ifneq ($(FROZEN_MPY_DIR),)
-FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,frozen_mpy.o)
-endif
 
 #------------- MicroPy Objects ----------------#
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
@@ -415,6 +413,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/,\
 	utils/interrupt_char.o      \
 	utils/sys_stdio_mphal.o     \
 	utils/gchelper_m3.o         \
+	utils/gchelper_native.o     \
 	libc/string0.o              \
 	netutils/*.o                \
 	timeutils/timeutils.o       \
@@ -459,6 +458,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mp-readline/,\
 
 #------------- mbedtls -------------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/lib/mbedtls/library/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/lib/mbedtls_errors/*.o)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/usbdev/, \
 	core/src/usbd_core.o                \
@@ -500,6 +500,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	modbtree.o          \
 	moducryptolib.o     \
 	modussl_mbedtls.o   \
+	moduasyncio.o       \
 	)
 
 ifeq ($(MICROPY_PY_ULAB), 1)
@@ -630,7 +631,7 @@ export TOP_DIR
 export BUILD
 export TARGET
 export STARTUP
-export FROZEN_MPY_DIR
+export FROZEN_MANIFEST
 ###################################################
 all: $(OPENMV)
 
