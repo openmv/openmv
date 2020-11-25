@@ -46,7 +46,7 @@
 #define OMV_RAW_BUF_SIZE        (153600)
 
 // Enable sensor drivers
-#define OMV_ENABLE_OV2640       (0)
+#define OMV_ENABLE_OV2640       (1)
 #define OMV_ENABLE_OV5640       (0)
 #define OMV_ENABLE_OV7690       (0)
 #define OMV_ENABLE_OV7725       (1)
