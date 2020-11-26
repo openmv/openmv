@@ -31,7 +31,7 @@ def draw_audio_bar(img, level, offset):
         fb.draw_rectangle(SIZE+offset, SIZE - ((i+1)*blk_size) + blk_space, 20, blk_size - blk_space, color, 1, True)
 
 while (True):
-    if (raw_buf):
+    if (raw_buf != None):
         pcm_buf = np.frombuffer(raw_buf, dtype=np.int16)
         raw_buf = None
         fft_buf = sp.signal.spectrogram(pcm_buf[0::2])
