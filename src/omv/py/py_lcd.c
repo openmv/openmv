@@ -11,6 +11,7 @@
 #include STM32_HAL_H
 #include "extint.h"
 #include "spi.h"
+#include "py_lcd_cec.h"
 #include "py_lcd_touch.h"
 #include "py_helper.h"
 #include "extmod/machine_i2c.h"
@@ -1208,7 +1209,12 @@ STATIC mp_obj_t py_lcd_deinit()
             if ((lcd_type == LCD_DISPLAY) || (lcd_type == LCD_DISPLAY_WITH_HDMI)) ltdc_set_backlight(0); // back to default state
             #endif // OMV_LCD_BL_PIN
             #ifdef OMV_DVI_PRESENT
-            if ((lcd_type == LCD_DISPLAY_WITH_HDMI) || (lcd_type == LCD_DISPLAY_ONLY_HDMI)) ltdc_dvi_deinit();
+            if ((lcd_type == LCD_DISPLAY_WITH_HDMI) || (lcd_type == LCD_DISPLAY_ONLY_HDMI)) {
+                ltdc_dvi_deinit();
+                #ifdef OMV_CEC_PRESENT
+                lcd_cec_deinit();
+                #endif
+            }
             #endif // OMV_DVI_PRESENT
             #ifdef OMV_TOUCH_PRESENT
             if ((lcd_type == LCD_DISPLAY) || (lcd_type == LCD_DISPLAY_WITH_HDMI)) lcd_touch_deinit();
@@ -1275,7 +1281,12 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
             if ((type == LCD_DISPLAY) || (type == LCD_DISPLAY_WITH_HDMI)) ltdc_set_backlight(255); // to on state
             #endif // OMV_LCD_BL_PIN
             #ifdef OMV_DVI_PRESENT
-            if ((type == LCD_DISPLAY_WITH_HDMI) || (type == LCD_DISPLAY_ONLY_HDMI)) ltdc_dvi_init();
+            if ((type == LCD_DISPLAY_WITH_HDMI) || (type == LCD_DISPLAY_ONLY_HDMI)) {
+                ltdc_dvi_init();
+                #ifdef OMV_CEC_PRESENT
+                lcd_cec_init();
+                #endif
+            }
             #endif // OMV_DVI_PRESENT
             #ifdef OMV_TOUCH_PRESENT
             if ((type == LCD_DISPLAY) || (type == LCD_DISPLAY_WITH_HDMI)) lcd_touch_init();
@@ -1382,34 +1393,62 @@ STATIC mp_obj_t py_lcd_get_backlight()
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_backlight_obj, py_lcd_get_backlight);
 
+#ifdef OMV_DVI_PRESENT
 STATIC mp_obj_t py_lcd_get_display_connected()
 {
-    #ifdef OMV_DVI_PRESENT
     return ltdc_dvi_get_display_connected();
-    #else
-    return mp_const_false;
-    #endif
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_display_connected_obj, py_lcd_get_display_connected);
 
-STATIC mp_obj_t py_lcd_get_display_id_data()
-{
-    #if defined(OMV_DVI_PRESENT) && defined(OMV_DDC_PRESENT)
-    return ltdc_dvi_get_display_id_data();
-    #else
-    return mp_const_empty_bytes;
-    #endif
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_display_id_data_obj, py_lcd_get_display_id_data);
-
 STATIC mp_obj_t py_lcd_register_hotplug_cb(mp_obj_t cb)
 {
-    #ifdef OMV_DVI_PRESENT
     ltdc_dvi_register_hotplug_cb(cb);
-    #endif
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_register_hotplug_cb_obj, py_lcd_register_hotplug_cb);
+#endif
+
+#if defined(OMV_DVI_PRESENT) && defined(OMV_DDC_PRESENT)
+STATIC mp_obj_t py_lcd_get_display_id_data()
+{
+    return ltdc_dvi_get_display_id_data();
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_get_display_id_data_obj, py_lcd_get_display_id_data);
+#endif
+
+#if defined(OMV_DVI_PRESENT) && defined(OMV_CEC_PRESENT)
+STATIC mp_obj_t py_lcd_send_frame(mp_obj_t dst_addr, mp_obj_t src_addr, mp_obj_t bytes)
+{
+    lcd_cec_send_frame(dst_addr, src_addr, bytes);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_lcd_send_frame_obj, py_lcd_send_frame);
+
+STATIC mp_obj_t py_lcd_receive_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    return lcd_cec_receive_frame(n_args, args, kw_args);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_lcd_receive_frame_obj, 1, py_lcd_receive_frame);
+
+STATIC mp_obj_t py_lcd_register_cec_receive_cb(mp_obj_t cb, mp_obj_t dst_addr)
+{
+    lcd_cec_register_cec_receive_cb(cb, dst_addr);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_lcd_register_cec_receive_cb_obj, py_lcd_register_cec_receive_cb);
+
+STATIC mp_obj_t py_lcd_received_frame_src_addr()
+{
+    return lcd_cec_received_frame_src_addr();
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_received_frame_src_addr_obj, py_lcd_received_frame_src_addr);
+
+STATIC mp_obj_t py_lcd_received_frame_bytes()
+{
+    return lcd_cec_received_frame_bytes();
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_received_frame_bytes_obj, py_lcd_received_frame_bytes);
+#endif
 
 #ifdef OMV_TOUCH_PRESENT
 STATIC mp_obj_t py_lcd_update_touch_points()
@@ -1421,6 +1460,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_update_touch_points_obj, py_lcd_update_t
 STATIC mp_obj_t py_lcd_register_touch_cb(mp_obj_t cb)
 {
     lcd_touch_register_touch_cb(cb);
+    return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_register_touch_cb_obj, py_lcd_register_touch_cb);
 
@@ -1460,6 +1500,7 @@ STATIC mp_obj_t py_lcd_get_point_y_position(mp_obj_t index)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_lcd_get_point_y_position_obj, py_lcd_get_point_y_position);
 #endif
+
 STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
@@ -1660,9 +1701,31 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_refresh),                 MP_ROM_PTR(&py_lcd_refresh_obj)                 },
     { MP_ROM_QSTR(MP_QSTR_get_backlight),           MP_ROM_PTR(&py_lcd_get_backlight_obj)           },
     { MP_ROM_QSTR(MP_QSTR_set_backlight),           MP_ROM_PTR(&py_lcd_set_backlight_obj)           },
+#ifdef OMV_DVI_PRESENT
     { MP_ROM_QSTR(MP_QSTR_get_display_connected),   MP_ROM_PTR(&py_lcd_get_display_connected_obj)   },
-    { MP_ROM_QSTR(MP_QSTR_get_display_id_data),     MP_ROM_PTR(&py_lcd_get_display_id_data_obj)     },
     { MP_ROM_QSTR(MP_QSTR_register_hotplug_cb),     MP_ROM_PTR(&py_lcd_register_hotplug_cb_obj)     },
+#else
+    { MP_ROM_QSTR(MP_QSTR_get_display_connected),   MP_ROM_PTR(&py_func_unavailable_obj)            },
+    { MP_ROM_QSTR(MP_QSTR_register_hotplug_cb),     MP_ROM_PTR(&py_func_unavailable_obj)            },
+#endif
+#if defined(OMV_DVI_PRESENT) && defined(OMV_DDC_PRESENT)
+    { MP_ROM_QSTR(MP_QSTR_get_display_id_data),     MP_ROM_PTR(&py_lcd_get_display_id_data_obj)     },
+#else
+    { MP_ROM_QSTR(MP_QSTR_get_display_id_data),     MP_ROM_PTR(&py_func_unavailable_obj)            },
+#endif
+#if defined(OMV_DVI_PRESENT) && defined(OMV_CEC_PRESENT)
+    { MP_ROM_QSTR(MP_QSTR_send_frame),              MP_ROM_PTR(&py_lcd_send_frame_obj)              },
+    { MP_ROM_QSTR(MP_QSTR_receive_frame),           MP_ROM_PTR(&py_lcd_receive_frame_obj)           },
+    { MP_ROM_QSTR(MP_QSTR_register_receive_cb),     MP_ROM_PTR(&py_lcd_register_cec_receive_cb_obj) },
+    { MP_ROM_QSTR(MP_QSTR_received_frame_src_addr), MP_ROM_PTR(&py_lcd_received_frame_src_addr_obj) },
+    { MP_ROM_QSTR(MP_QSTR_received_frame_bytes),    MP_ROM_PTR(&py_lcd_received_frame_bytes_obj)    },
+#else
+    { MP_ROM_QSTR(MP_QSTR_send_frame),              MP_ROM_PTR(&py_func_unavailable_obj)            },
+    { MP_ROM_QSTR(MP_QSTR_receive_frame),           MP_ROM_PTR(&py_func_unavailable_obj)            },
+    { MP_ROM_QSTR(MP_QSTR_register_receive_cb),     MP_ROM_PTR(&py_func_unavailable_obj)            },
+    { MP_ROM_QSTR(MP_QSTR_received_frame_src_addr), MP_ROM_PTR(&py_func_unavailable_obj)            },
+    { MP_ROM_QSTR(MP_QSTR_received_frame_bytes),    MP_ROM_PTR(&py_func_unavailable_obj)            },
+#endif
 #ifdef OMV_TOUCH_PRESENT
     { MP_ROM_QSTR(MP_QSTR_update_touch_points),     MP_ROM_PTR(&py_lcd_update_touch_points_obj)     },
     { MP_ROM_QSTR(MP_QSTR_register_touch_cb),       MP_ROM_PTR(&py_lcd_register_touch_cb_obj)       },
