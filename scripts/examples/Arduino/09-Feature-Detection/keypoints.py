@@ -22,7 +22,7 @@ def draw_keypoints(img, kpts):
         print(kpts)
         img.draw_keypoints(kpts)
         img = sensor.snapshot()
-        time.sleep(1000)
+        time.sleep_ms(1000)
 
 kpts1 = None
 # NOTE: uncomment to load a keypoints descriptor from file

@@ -34,4 +34,4 @@ client.subscribe("openmv/test")
 
 while (True):
     client.check_msg() # poll for messages.
-    time.sleep(1000)
+    time.sleep_ms(1000)

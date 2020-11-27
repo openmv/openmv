@@ -52,7 +52,7 @@ def nss_callback(line):
 pyb.ExtInt(pyb.Pin("P3"), pyb.ExtInt.IRQ_FALLING, pyb.Pin.PULL_UP, nss_callback)
 
 while(True):
-    time.sleep(1000)
+    time.sleep_ms(1000)
 
 ###################################################################################################
 # Arduino Code

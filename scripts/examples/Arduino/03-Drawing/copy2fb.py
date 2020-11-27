@@ -18,4 +18,4 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 img = image.Image("/example.bmp", copy_to_fb=True)
 
 # Add a small delay to allow the IDE to read the loaded image.
-time.sleep(500)
+time.sleep_ms(500)

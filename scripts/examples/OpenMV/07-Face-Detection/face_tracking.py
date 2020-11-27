@@ -44,7 +44,7 @@ while (kpts1 == None):
 print(kpts1)
 img.draw_keypoints(kpts1, size=24)
 img = sensor.snapshot()
-time.sleep(2000)
+time.sleep_ms(2000)
 
 # FPS clock
 clock = time.clock()

@@ -11,7 +11,7 @@ while(True):
     # The DAC has 8-12 bits of resolution (default 8-bits).
     for i in range(256):
         dac.write(i)
-        time.sleep(20)
+        time.sleep_ms(20)
     for i in range(256):
         dac.write(255-i)
-        time.sleep(20)
+        time.sleep_ms(20)

@@ -6,4 +6,4 @@ light = Timer(2, freq=50000).channel(1, Timer.PWM, pin=Pin("P6"))
 light.pulse_width_percent(100) # adjust light 0~100
 
 while (True):
-    time.sleep(1000)
+    time.sleep_ms(1000)

@@ -14,9 +14,9 @@ while(True):
         s1.pulse_width(1000 + i)
         s2.pulse_width(1999 - i)
         s3.pulse_width(1000 + i)
-        time.sleep(10)
+        time.sleep_ms(10)
     for i in range(1000):
         s1.pulse_width(1999 - i)
         s2.pulse_width(1000 + i)
         s3.pulse_width(1999 - i)
-        time.sleep(10)
+        time.sleep_ms(10)

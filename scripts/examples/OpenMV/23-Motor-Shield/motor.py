@@ -12,20 +12,20 @@ m2 = Motor(2) # motor 2: B0 and B1
 while (True):
     m1.set_speed(100) # Forward
     m2.set_speed(100) # Forward
-    time.sleep(1000)
+    time.sleep_ms(1000)
 
     m1.set_speed(0) # Stop
     m2.set_speed(0) # Stop
-    time.sleep(1000)
+    time.sleep_ms(1000)
 
     m1.set_speed(-100) # Reverse
     m2.set_speed(-100) # Reverse
-    time.sleep(1000)
+    time.sleep_ms(1000)
 
     m1.set_speed(0) # Stop
     m2.set_speed(0) # Stop
-    time.sleep(1000)
+    time.sleep_ms(1000)
 
     m1.set_speed(-50) # Reverse slow
     m2.set_speed(-50) # Reverse slow
-    time.sleep(1000)
+    time.sleep_ms(1000)

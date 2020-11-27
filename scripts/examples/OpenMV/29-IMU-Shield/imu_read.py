@@ -20,4 +20,4 @@ while True:
     #print('Linear acceleration (m/s^2)', x, y, z)
     #x, y, z = imu.gravity()
     #print('Gravity (m/s^2):', x, y, z)
-    time.sleep(100)
+    time.sleep_ms(100)

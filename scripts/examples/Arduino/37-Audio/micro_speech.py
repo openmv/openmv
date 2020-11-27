@@ -17,8 +17,8 @@ while (True):
     led = led_green if idx == 2 else led_red
     print(labels[idx])
     for i in range(0, 4):
-        led.on(); time.sleep(25)
-        led.off(); time.sleep(25)
+        led.on(); time.sleep_ms(25)
+        led.off(); time.sleep_ms(25)
 
 # Stop streaming
 audio.stop_streaming()

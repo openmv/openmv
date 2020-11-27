@@ -6,9 +6,9 @@
  *
  * This work is licensed under the MIT license, see the file LICENSE for details.
  *
- * Time Python module.
+ * Clock Python module.
  */
-#ifndef __PY_TIME_H__
-#define __PY_TIME_H__
-const mp_obj_module_t *py_time_init();
-#endif // __PY_TIME_H__
+#ifndef __PY_CLOCK_H__
+#define __PY_CLOCK_H__
+const mp_obj_type_t py_clock_type;
+#endif // __PY_CLOCK_H__

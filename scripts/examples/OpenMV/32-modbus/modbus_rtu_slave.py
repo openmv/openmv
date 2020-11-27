@@ -8,7 +8,7 @@ while(True):
     if modbus.any():
         modbus.handle(debug=True)
     else:
-        time.sleep(100)
+        time.sleep_ms(100)
         modbus.REGISTER[0] = 1000
         modbus.REGISTER[1] += 1
         modbus.REGISTER[3] += 3
