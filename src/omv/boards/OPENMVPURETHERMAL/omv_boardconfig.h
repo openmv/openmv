@@ -579,6 +579,10 @@
 #define OMV_TOUCH_SDA_PIN                   (pin_J14)
 #define OMV_TOUCH_INT_PIN                   (pin_J6)
 
+// HDMI CEC I/O
+#define OMV_CEC_PRESENT
+#define OMV_CEC_PIN                         (pin_H2)
+
 // Enable additional GPIO banks for DRAM...
 #define OMV_ENABLE_GPIO_BANK_F
 #define OMV_ENABLE_GPIO_BANK_G
