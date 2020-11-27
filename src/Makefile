@@ -347,6 +347,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	pendsv.o                \
 	bufhelper.o             \
 	usb.o                   \
+	eth.o                   \
 	gccollect.o             \
 	help.o                  \
 	flash.o                 \
@@ -388,6 +389,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	moduos.o                \
 	modutime.o              \
 	modusocket.o            \
+	network_lan.o           \
 	modnetwork.o            \
 	modmachine.o            \
 	machine_i2c.o           \
@@ -400,7 +402,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	posix_helpers.o         \
 	softtimer.o             \
 	mbedtls/mbedtls_port.o  \
-    frozen_content.o        \
+	frozen_content.o        \
 	)
 
 # board object files
