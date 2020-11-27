@@ -33,5 +33,5 @@ img.save("/%s.pgm"%(FILE_NAME))
 
 img.draw_keypoints(kpts)
 sensor.snapshot()
-time.sleep(1000)
+time.sleep_ms(1000)
 raise(Exception("Done! Please reset the camera"))

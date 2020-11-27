@@ -12,22 +12,22 @@ usb = pyb.USB_VCP() # This is a serial port object that allows you to
 
 while(not usb.isconnected()):
     led.on()
-    time.sleep(150)
+    time.sleep_ms(150)
     led.off()
-    time.sleep(100)
+    time.sleep_ms(100)
     led.on()
-    time.sleep(150)
+    time.sleep_ms(150)
     led.off()
-    time.sleep(600)
+    time.sleep_ms(600)
 
 led = pyb.LED(2) # Switch to using the green LED.
 
 while(usb.isconnected()):
     led.on()
-    time.sleep(150)
+    time.sleep_ms(150)
     led.off()
-    time.sleep(100)
+    time.sleep_ms(100)
     led.on()
-    time.sleep(150)
+    time.sleep_ms(150)
     led.off()
-    time.sleep(600)
+    time.sleep_ms(600)

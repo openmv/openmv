@@ -28,4 +28,4 @@ while(True):
     # x, y and scroll
     # move 10 pixels to the right
     hid.send((0, 10, 0, 0))
-    time.sleep(500)
+    time.sleep_ms(500)

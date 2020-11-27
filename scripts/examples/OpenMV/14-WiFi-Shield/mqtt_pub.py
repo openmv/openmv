@@ -27,4 +27,4 @@ client.connect()
 
 while (True):
     client.publish("openmv/test", "Hello World!")
-    time.sleep(1000)
+    time.sleep_ms(1000)

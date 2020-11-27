@@ -11,4 +11,4 @@ stepper.set_speed(1) # rpm = 1
 stepper.set_power(80) #set pwm
 while (True):
     stepper.step(200) # motor rotates 1 circle
-    time.sleep(1000)
+    time.sleep_ms(1000)

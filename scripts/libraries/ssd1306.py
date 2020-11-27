@@ -151,7 +151,7 @@ class SSD1306_SPI(SSD1306):
 
     def poweron(self):
         self.res.high()
-        time.sleep(1)
+        time.sleep_ms(1)
         self.res.low()
-        time.sleep(10)
+        time.sleep_ms(10)
         self.res.high()

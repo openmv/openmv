@@ -97,13 +97,13 @@ static const char fresh_main_py[] =
 "usb = pyb.USB_VCP()\n"
 "while (usb.isconnected()==False):\n"
 "   led.on()\n"
-"   time.sleep(150)\n"
+"   time.sleep_ms(150)\n"
 "   led.off()\n"
-"   time.sleep(100)\n"
+"   time.sleep_ms(100)\n"
 "   led.on()\n"
-"   time.sleep(150)\n"
+"   time.sleep_ms(150)\n"
 "   led.off()\n"
-"   time.sleep(600)\n"
+"   time.sleep_ms(600)\n"
 ;
 
 static const char fresh_readme_txt[] =

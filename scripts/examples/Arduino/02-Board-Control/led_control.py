@@ -24,4 +24,4 @@ def led_control(x):
 while(True):
     for i in range(16):
         led_control(i)
-        time.sleep(500)
+        time.sleep_ms(500)

@@ -12,4 +12,4 @@ while (True):
     for ap in scan_result:
         print("Channel:%d RSSI:%d Auth:%d BSSID:%s SSID:%s"%(ap))
     print()
-    time.sleep(1000)
+    time.sleep_ms(1000)

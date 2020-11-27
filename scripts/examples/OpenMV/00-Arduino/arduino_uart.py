@@ -35,4 +35,4 @@ while(True):
     uart.write("Hello World!\n")
     if (uart.any()):
         print(uart.read())
-    time.sleep(1000)
+    time.sleep_ms(1000)

@@ -95,7 +95,7 @@ SRCS += $(addprefix py/, \
 	py_omv.c                \
 	py_sensor.c             \
 	py_image.c              \
-	py_time.c               \
+	py_clock.c              \
 	py_lcd.c                \
 	py_lcd_touch.c          \
 	py_tv.c                 \

@@ -16,4 +16,4 @@ tim = Timer(2, freq=1)      # create a timer object using timer 2 - trigger at 1
 tim.callback(tick)          # set the callback to our tick function
 
 while (True):
-    time.sleep(1000)
+    time.sleep_ms(1000)

@@ -16,6 +16,6 @@ machine.sleep()
 
 while (True):
     led.on()
-    time.sleep(100)
+    time.sleep_ms(100)
     led.off()
-    time.sleep(100)
+    time.sleep_ms(100)

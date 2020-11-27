@@ -12,4 +12,4 @@ ch2 = tim.channel(2, Timer.PWM, pin=Pin("P8"), pulse_width_percent=75)
 ch3 = tim.channel(3, Timer.PWM, pin=Pin("P9"), pulse_width_percent=50)
 
 while (True):
-    time.sleep(1000)
+    time.sleep_ms(1000)

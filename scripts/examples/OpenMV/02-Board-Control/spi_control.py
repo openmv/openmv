@@ -41,12 +41,12 @@ def write_image(img):
 
 # Reset the LCD.
 rst.low()
-time.sleep(100)
+time.sleep_ms(100)
 rst.high()
-time.sleep(100)
+time.sleep_ms(100)
 
 write_command(0x11) # Sleep Exit
-time.sleep(120)
+time.sleep_ms(120)
 
 # Memory Data Access Control
 # Write 0xC8 for BGR mode.

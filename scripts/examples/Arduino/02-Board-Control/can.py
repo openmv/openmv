@@ -24,7 +24,7 @@ if (TRANSMITTER):
     while (True):
         # Send message with id 1
         can.send('Hello', 1)
-        time.sleep(1000)
+        time.sleep_ms(1000)
 
 else:
     # Runs on the receiving node.

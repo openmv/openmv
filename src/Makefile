@@ -310,7 +310,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_omv.o                                \
 	py_sensor.o                             \
 	py_image.o                              \
-	py_time.o                               \
+	py_clock.o                              \
 	py_lcd.o                                \
 	py_lcd_touch.o                          \
 	py_tv.o                                 \
