@@ -241,7 +241,7 @@ void spi_lcd_callback()
                     OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
 #elif defined(MCU_SERIES_F7)
                     OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_16BIT;
-#elif defined(MCU_SERIES_M4)
+#elif defined(MCU_SERIES_F4)
                     OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
 #endif
                 }
@@ -255,7 +255,7 @@ void spi_lcd_callback()
                 OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_8BIT;
 #elif defined(MCU_SERIES_F7)
                 OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_8BIT;
-#elif defined(MCU_SERIES_M4)
+#elif defined(MCU_SERIES_F4)
                 OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_8BIT;
 #endif
                 OMV_SPI_LCD_CS_HIGH();
@@ -325,7 +325,7 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start, 
         OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
 #elif defined(MCU_SERIES_F7)
         OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_16BIT;
-#elif defined(MCU_SERIES_M4)
+#elif defined(MCU_SERIES_F4)
         OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
 #endif
 
@@ -349,7 +349,7 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start, 
         OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_8BIT;
 #elif defined(MCU_SERIES_F7)
         OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_8BIT;
-#elif defined(MCU_SERIES_M4)
+#elif defined(MCU_SERIES_F4)
         OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_8BIT;
 #endif
         OMV_SPI_LCD_CS_HIGH();
