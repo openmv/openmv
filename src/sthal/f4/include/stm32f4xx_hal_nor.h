@@ -2,38 +2,20 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_nor.h
   * @author  MCD Application Team
-  * @version V1.7.1
-  * @date    14-April-2017
   * @brief   Header file of NOR HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
-  */
+  */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32F4xx_HAL_NOR_H
@@ -45,9 +27,9 @@
 
 /* Includes ------------------------------------------------------------------*/
 #if defined(STM32F405xx) || defined(STM32F415xx) || defined(STM32F407xx) || defined(STM32F417xx) || defined(STM32F412Zx) ||\
-    defined(STM32F412Vx) || defined(STM32F413xx) || defined(STM32F423xx)
+    defined(STM32F412Vx) || defined(STM32F412Rx) || defined(STM32F413xx) || defined(STM32F423xx)
   #include "stm32f4xx_ll_fsmc.h"
-#endif /* STM32F405xx || STM32F415xx || STM32F407xx || STM32F417xx || STM32F412Zx || STM32F412Vx || STM32F413xx || STM32F423xx */
+#endif /* STM32F405xx || STM32F415xx || STM32F407xx || STM32F417xx || STM32F412Zx || STM32F412Vx || STM32F412Rx || STM32F413xx || STM32F423xx */
 
 #if defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx) ||\
     defined(STM32F446xx) || defined(STM32F469xx) || defined(STM32F479xx)
@@ -60,23 +42,23 @@
 
 /** @addtogroup NOR
   * @{
-  */
+  */ 
 
 #if defined(STM32F405xx) || defined(STM32F415xx) || defined(STM32F407xx) || defined(STM32F417xx) ||\
     defined(STM32F427xx) || defined(STM32F437xx) || defined(STM32F429xx) || defined(STM32F439xx) ||\
     defined(STM32F446xx) || defined(STM32F469xx) || defined(STM32F479xx) || defined(STM32F412Zx) ||\
-    defined(STM32F412Vx) || defined(STM32F413xx) || defined(STM32F423xx)
+    defined(STM32F412Vx) || defined(STM32F412Rx) || defined(STM32F413xx) || defined(STM32F423xx)
 
 /* Exported typedef ----------------------------------------------------------*/
 /** @defgroup NOR_Exported_Types NOR Exported Types
   * @{
   */
 
-/**
-  * @brief  HAL SRAM State structures definition
-  */
+/** 
+  * @brief  HAL SRAM State structures definition  
+  */ 
 typedef enum
-{
+{  
   HAL_NOR_STATE_RESET             = 0x00U,  /*!< NOR not yet initialized or disabled  */
   HAL_NOR_STATE_READY             = 0x01U,  /*!< NOR initialized and ready for use    */
   HAL_NOR_STATE_BUSY              = 0x02U,  /*!< NOR internal processing is ongoing   */
@@ -106,9 +88,9 @@ typedef struct
 
   uint16_t Device_Code2;
 
-  uint16_t Device_Code3;       /*!< Defines the device's codes used to identify the memory.
-                                    These codes can be accessed by performing read operations with specific
-                                    control signals and addresses set.They can also be accessed by issuing
+  uint16_t Device_Code3;       /*!< Defines the device's codes used to identify the memory. 
+                                    These codes can be accessed by performing read operations with specific 
+                                    control signals and addresses set.They can also be accessed by issuing 
                                     an Auto Select command                                                   */
 }NOR_IDTypeDef;
 
@@ -118,7 +100,7 @@ typedef struct
 typedef struct
 {
   /*!< Defines the information stored in the memory's Common flash interface
-       which contains a description of various electrical and timing parameters,
+       which contains a description of various electrical and timing parameters, 
        density information and functions supported by the memory                   */
 
   uint16_t CFI_1;
@@ -130,10 +112,15 @@ typedef struct
   uint16_t CFI_4;
 }NOR_CFITypeDef;
 
-/**
+/** 
   * @brief  NOR handle Structure definition
   */
+#if (USE_HAL_NOR_REGISTER_CALLBACKS == 1)
+typedef struct __NOR_HandleTypeDef
+#else
 typedef struct
+#endif /* USE_HAL_NOR_REGISTER_CALLBACKS  */
+
 {
   FMC_NORSRAM_TypeDef           *Instance;    /*!< Register base address                        */
 
@@ -145,27 +132,55 @@ typedef struct
 
   __IO HAL_NOR_StateTypeDef     State;        /*!< NOR device access state                      */
 
-}NOR_HandleTypeDef;
+#if (USE_HAL_NOR_REGISTER_CALLBACKS == 1)
+  void  (* MspInitCallback)        ( struct __NOR_HandleTypeDef * hnor);    /*!< NOR Msp Init callback              */
+  void  (* MspDeInitCallback)      ( struct __NOR_HandleTypeDef * hnor);    /*!< NOR Msp DeInit callback            */
+#endif
+} NOR_HandleTypeDef;
+
+#if (USE_HAL_NOR_REGISTER_CALLBACKS == 1)
+/**
+  * @brief  HAL NOR Callback ID enumeration definition
+  */
+typedef enum
+{
+  HAL_NOR_MSP_INIT_CB_ID       = 0x00U,  /*!< NOR MspInit Callback ID          */
+  HAL_NOR_MSP_DEINIT_CB_ID     = 0x01U   /*!< NOR MspDeInit Callback ID        */
+}HAL_NOR_CallbackIDTypeDef;
+
+/**
+  * @brief  HAL NOR Callback pointer definition
+  */
+typedef void (*pNOR_CallbackTypeDef)(NOR_HandleTypeDef *hnor);
+#endif
 /**
   * @}
   */
-
+  
 /* Exported constants --------------------------------------------------------*/
 /* Exported macros ------------------------------------------------------------*/
 /** @defgroup NOR_Exported_Macros NOR Exported Macros
   * @{
   */
 /** @brief Reset NOR handle state
-  * @param  __HANDLE__: specifies the NOR handle.
+  * @param  __HANDLE__ specifies the NOR handle.
   * @retval None
   */
+#if (USE_HAL_NOR_REGISTER_CALLBACKS == 1)
+#define __HAL_NOR_RESET_HANDLE_STATE(__HANDLE__)          do {                                             \
+                                                               (__HANDLE__)->State = HAL_NOR_STATE_RESET;  \
+                                                               (__HANDLE__)->MspInitCallback = NULL;       \
+                                                               (__HANDLE__)->MspDeInitCallback = NULL;     \
+                                                             } while(0)
+#else
 #define __HAL_NOR_RESET_HANDLE_STATE(__HANDLE__) ((__HANDLE__)->State = HAL_NOR_STATE_RESET)
+#endif
 /**
   * @}
   */
 
 /* Exported functions --------------------------------------------------------*/
-/** @addtogroup NOR_Exported_Functions
+/** @addtogroup NOR_Exported_Functions 
  *  @{
  */
 
@@ -181,7 +196,7 @@ void HAL_NOR_MspWait(NOR_HandleTypeDef *hnor, uint32_t Timeout);
 /**
   * @}
   */
-
+  
 /** @addtogroup NOR_Exported_Functions_Group2
  *  @{
  */
@@ -197,10 +212,16 @@ HAL_StatusTypeDef HAL_NOR_ProgramBuffer(NOR_HandleTypeDef *hnor, uint32_t uwAddr
 HAL_StatusTypeDef HAL_NOR_Erase_Block(NOR_HandleTypeDef *hnor, uint32_t BlockAddress, uint32_t Address);
 HAL_StatusTypeDef HAL_NOR_Erase_Chip(NOR_HandleTypeDef *hnor, uint32_t Address);
 HAL_StatusTypeDef HAL_NOR_Read_CFI(NOR_HandleTypeDef *hnor, NOR_CFITypeDef *pNOR_CFI);
+
+#if (USE_HAL_NOR_REGISTER_CALLBACKS == 1)
+/* NOR callback registering/unregistering */
+HAL_StatusTypeDef HAL_NOR_RegisterCallback(NOR_HandleTypeDef *hnor, HAL_NOR_CallbackIDTypeDef CallbackId, pNOR_CallbackTypeDef pCallback);
+HAL_StatusTypeDef HAL_NOR_UnRegisterCallback(NOR_HandleTypeDef *hnor, HAL_NOR_CallbackIDTypeDef CallbackId);
+#endif
 /**
   * @}
   */
-
+  
 /** @addtogroup NOR_Exported_Functions_Group3
  *  @{
  */
@@ -210,7 +231,7 @@ HAL_StatusTypeDef HAL_NOR_WriteOperation_Disable(NOR_HandleTypeDef *hnor);
 /**
   * @}
   */
-
+  
 /** @addtogroup NOR_Exported_Functions_Group4
  *  @{
  */
@@ -220,11 +241,11 @@ HAL_NOR_StatusTypeDef HAL_NOR_GetStatus(NOR_HandleTypeDef *hnor, uint32_t Addres
 /**
   * @}
   */
-
+    
 /**
   * @}
   */
-
+  
 /* Private types -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private constants ---------------------------------------------------------*/
@@ -245,7 +266,7 @@ HAL_NOR_StatusTypeDef HAL_NOR_GetStatus(NOR_HandleTypeDef *hnor, uint32_t Addres
 
 /* NOR operation wait timeout */
 #define NOR_TMEOUT               ((uint16_t)0xFFFF)
-
+   
 /* NOR memory data width */
 #define NOR_MEMORY_8B            ((uint8_t)0x00)
 #define NOR_MEMORY_16B           ((uint8_t)0x01)
@@ -265,18 +286,18 @@ HAL_NOR_StatusTypeDef HAL_NOR_GetStatus(NOR_HandleTypeDef *hnor, uint32_t Addres
   */
 /**
   * @brief  NOR memory address shifting.
-  * @param  __NOR_ADDRESS__: NOR base address
-  * @param  NOR_MEMORY_WIDTH: NOR memory width
-  * @param  ADDRESS: NOR memory address
+  * @param  __NOR_ADDRESS__ NOR base address 
+  * @param  NOR_MEMORY_WIDTH NOR memory width
+  * @param  ADDRESS NOR memory address 
   * @retval NOR shifted address value
   */
 #define NOR_ADDR_SHIFT(__NOR_ADDRESS__, NOR_MEMORY_WIDTH, ADDRESS)    (uint32_t)(((NOR_MEMORY_WIDTH) == NOR_MEMORY_16B)? ((uint32_t)((__NOR_ADDRESS__) + (2U * (ADDRESS)))):\
                                                                                  ((uint32_t)((__NOR_ADDRESS__) + (ADDRESS))))
-
+ 
 /**
   * @brief  NOR memory write data to specified address.
-  * @param  ADDRESS: NOR memory address
-  * @param  DATA: Data to write
+  * @param  ADDRESS NOR memory address 
+  * @param  DATA Data to write
   * @retval None
   */
 #define NOR_WRITE(ADDRESS, DATA)  (*(__IO uint16_t *)((uint32_t)(ADDRESS)) = (DATA))
@@ -287,10 +308,10 @@ HAL_NOR_StatusTypeDef HAL_NOR_GetStatus(NOR_HandleTypeDef *hnor, uint32_t Addres
 #endif /* STM32F405xx || STM32F415xx || STM32F407xx || STM32F417xx ||\
           STM32F427xx || STM32F437xx || STM32F429xx || STM32F439xx ||\
           STM32F446xx || STM32F469xx || STM32F479xx || STM32F412Zx ||\
-          STM32F412Vx || STM32F413xx || STM32F423xx */
+          STM32F412Vx || STM32F412Rx || STM32F413xx || STM32F423xx */
 /**
   * @}
-  */
+  */ 
 
 /**
   * @}

@@ -2,35 +2,17 @@
   ******************************************************************************
   * @file    stm32f4xx_ll_usart.h
   * @author  MCD Application Team
-  * @version V1.7.1
-  * @date    14-April-2017
   * @brief   Header file of USART LL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2016 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
@@ -375,9 +357,9 @@ typedef struct
   * @param  __BAUDRATE__ Baud rate value to achieve
   * @retval USARTDIV value to be used for BRR register filling in OverSampling_8 case
   */
-#define __LL_USART_DIV_SAMPLING8_100(__PERIPHCLK__, __BAUDRATE__)      (((__PERIPHCLK__)*25)/(2*(__BAUDRATE__)))
+#define __LL_USART_DIV_SAMPLING8_100(__PERIPHCLK__, __BAUDRATE__)      ((uint32_t)((((uint64_t)(__PERIPHCLK__))*25)/(2*((uint64_t)(__BAUDRATE__)))))
 #define __LL_USART_DIVMANT_SAMPLING8(__PERIPHCLK__, __BAUDRATE__)      (__LL_USART_DIV_SAMPLING8_100((__PERIPHCLK__), (__BAUDRATE__))/100)
-#define __LL_USART_DIVFRAQ_SAMPLING8(__PERIPHCLK__, __BAUDRATE__)      (((__LL_USART_DIV_SAMPLING8_100((__PERIPHCLK__), (__BAUDRATE__)) - (__LL_USART_DIVMANT_SAMPLING8((__PERIPHCLK__), (__BAUDRATE__)) * 100)) * 8 + 50) / 100)
+#define __LL_USART_DIVFRAQ_SAMPLING8(__PERIPHCLK__, __BAUDRATE__)      ((((__LL_USART_DIV_SAMPLING8_100((__PERIPHCLK__), (__BAUDRATE__)) - (__LL_USART_DIVMANT_SAMPLING8((__PERIPHCLK__), (__BAUDRATE__)) * 100)) * 8) + 50) / 100)
 /* UART BRR = mantissa + overflow + fraction
             = (UART DIVMANT << 4) + ((UART DIVFRAQ & 0xF8) << 1) + (UART DIVFRAQ & 0x07) */
 #define __LL_USART_DIV_SAMPLING8(__PERIPHCLK__, __BAUDRATE__)             (((__LL_USART_DIVMANT_SAMPLING8((__PERIPHCLK__), (__BAUDRATE__)) << 4) + \
@@ -391,9 +373,9 @@ typedef struct
   * @param  __BAUDRATE__ Baud rate value to achieve
   * @retval USARTDIV value to be used for BRR register filling in OverSampling_16 case
   */
-#define __LL_USART_DIV_SAMPLING16_100(__PERIPHCLK__, __BAUDRATE__)     (((__PERIPHCLK__)*25)/(4*(__BAUDRATE__)))
+#define __LL_USART_DIV_SAMPLING16_100(__PERIPHCLK__, __BAUDRATE__)     ((uint32_t)((((uint64_t)(__PERIPHCLK__))*25)/(4*((uint64_t)(__BAUDRATE__)))))
 #define __LL_USART_DIVMANT_SAMPLING16(__PERIPHCLK__, __BAUDRATE__)     (__LL_USART_DIV_SAMPLING16_100((__PERIPHCLK__), (__BAUDRATE__))/100)
-#define __LL_USART_DIVFRAQ_SAMPLING16(__PERIPHCLK__, __BAUDRATE__)     (((__LL_USART_DIV_SAMPLING16_100((__PERIPHCLK__), (__BAUDRATE__)) - (__LL_USART_DIVMANT_SAMPLING16((__PERIPHCLK__), (__BAUDRATE__)) * 100)) * 16 + 50) / 100)
+#define __LL_USART_DIVFRAQ_SAMPLING16(__PERIPHCLK__, __BAUDRATE__)     ((((__LL_USART_DIV_SAMPLING16_100((__PERIPHCLK__), (__BAUDRATE__)) - (__LL_USART_DIVMANT_SAMPLING16((__PERIPHCLK__), (__BAUDRATE__)) * 100)) * 16) + 50) / 100)
 /* USART BRR = mantissa + overflow + fraction
             = (USART DIVMANT << 4) + (USART DIVFRAQ & 0xF0) + (USART DIVFRAQ & 0x0F) */
 #define __LL_USART_DIV_SAMPLING16(__PERIPHCLK__, __BAUDRATE__)            (((__LL_USART_DIVMANT_SAMPLING16((__PERIPHCLK__), (__BAUDRATE__)) << 4) + \
@@ -1984,7 +1966,7 @@ __STATIC_INLINE void LL_USART_ClearFlag_IDLE(USART_TypeDef *USARTx)
   */
 __STATIC_INLINE void LL_USART_ClearFlag_TC(USART_TypeDef *USARTx)
 {
-  WRITE_REG(USARTx->SR , ~(USART_SR_TC));
+  WRITE_REG(USARTx->SR, ~(USART_SR_TC));
 }
 
 /**
@@ -1995,7 +1977,7 @@ __STATIC_INLINE void LL_USART_ClearFlag_TC(USART_TypeDef *USARTx)
   */
 __STATIC_INLINE void LL_USART_ClearFlag_RXNE(USART_TypeDef *USARTx)
 {
-  WRITE_REG(USARTx->SR , ~(USART_SR_RXNE));
+  WRITE_REG(USARTx->SR, ~(USART_SR_RXNE));
 }
 
 /**
@@ -2008,7 +1990,7 @@ __STATIC_INLINE void LL_USART_ClearFlag_RXNE(USART_TypeDef *USARTx)
   */
 __STATIC_INLINE void LL_USART_ClearFlag_LBD(USART_TypeDef *USARTx)
 {
-  WRITE_REG(USARTx->SR , ~(USART_SR_LBD));
+  WRITE_REG(USARTx->SR, ~(USART_SR_LBD));
 }
 
 /**
@@ -2021,7 +2003,7 @@ __STATIC_INLINE void LL_USART_ClearFlag_LBD(USART_TypeDef *USARTx)
   */
 __STATIC_INLINE void LL_USART_ClearFlag_nCTS(USART_TypeDef *USARTx)
 {
-  WRITE_REG(USARTx->SR , ~(USART_SR_CTS));
+  WRITE_REG(USARTx->SR, ~(USART_SR_CTS));
 }
 
 /**
@@ -2400,7 +2382,7 @@ __STATIC_INLINE uint32_t LL_USART_IsEnabledDMAReq_TX(USART_TypeDef *USARTx)
 __STATIC_INLINE uint32_t LL_USART_DMA_GetRegAddr(USART_TypeDef *USARTx)
 {
   /* return address of DR register */
-  return ((uint32_t) &(USARTx->DR));
+  return ((uint32_t) & (USARTx->DR));
 }
 
 /**

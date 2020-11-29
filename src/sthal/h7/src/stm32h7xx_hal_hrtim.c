@@ -363,6 +363,7 @@
 
 #ifdef HAL_HRTIM_MODULE_ENABLED
 
+#if defined(HRTIM1)
 
 /** @defgroup HRTIM HRTIM
   * @brief HRTIM HAL module driver
@@ -1315,6 +1316,9 @@ HAL_StatusTypeDef HAL_HRTIM_SimpleOCChannelConfig(HRTIM_HandleTypeDef * hhrtim,
 
   default:
     {
+      OutputCfg.SetSource = HRTIM_OUTPUTSET_NONE;
+      OutputCfg.ResetSource = HRTIM_OUTPUTRESET_NONE;
+
       hhrtim->State = HAL_HRTIM_STATE_ERROR;
 
       /* Process Unlocked */
@@ -1860,6 +1864,9 @@ HAL_StatusTypeDef HAL_HRTIM_SimplePWMChannelConfig(HRTIM_HandleTypeDef * hhrtim,
     }
   default:
     {
+      OutputCfg.SetSource = HRTIM_OUTPUTSET_NONE;
+      OutputCfg.ResetSource = HRTIM_OUTPUTRESET_NONE;
+
       hhrtim->State = HAL_HRTIM_STATE_ERROR;
 
       /* Process Unlocked */
@@ -3185,6 +3192,9 @@ HAL_StatusTypeDef HAL_HRTIM_SimpleOnePulseChannelConfig(HRTIM_HandleTypeDef * hh
 
   default:
     {
+      OutputCfg.SetSource = HRTIM_OUTPUTSET_NONE;
+      OutputCfg.ResetSource = HRTIM_OUTPUTRESET_NONE;
+
       hhrtim->State = HAL_HRTIM_STATE_ERROR;
 
       /* Process Unlocked */
@@ -3634,8 +3644,8 @@ HAL_StatusTypeDef HAL_HRTIM_EventConfig(HRTIM_HandleTypeDef * hhrtim,
                                         HRTIM_EventCfgTypeDef* pEventCfg)
 {
   /* Check parameters */
-  assert_param(IS_HRTIM_EVENTSRC(pEventCfg->Source));
   assert_param(IS_HRTIM_EVENT(Event));
+  assert_param(IS_HRTIM_EVENTSRC(pEventCfg->Source));
   assert_param(IS_HRTIM_EVENTPOLARITY(pEventCfg->Sensitivity, pEventCfg->Polarity));
   assert_param(IS_HRTIM_EVENTSENSITIVITY(pEventCfg->Sensitivity));
   assert_param(IS_HRTIM_EVENTFASTMODE(Event, pEventCfg->FastMode));
@@ -5122,11 +5132,11 @@ HAL_StatusTypeDef HAL_HRTIM_WaveformCountStart(HRTIM_HandleTypeDef * hhrtim,
   * @param  Timers Timer counter(s) to stop
   *                   This parameter can be any combination of the following values:
   *                   @arg HRTIM_TIMERID_MASTER
-  *                   @arg HRTIM_TIMERID_A
-  *                   @arg HRTIM_TIMERID_B
-  *                   @arg HRTIM_TIMERID_C
-  *                   @arg HRTIM_TIMERID_D
-  *                   @arg HRTIM_TIMERID_E
+  *                   @arg HRTIM_TIMERID_TIMER_A
+  *                   @arg HRTIM_TIMERID_TIMER_B
+  *                   @arg HRTIM_TIMERID_TIMER_C
+  *                   @arg HRTIM_TIMERID_TIMER_D
+  *                   @arg HRTIM_TIMERID_TIMER_E
   * @retval HAL status
   * @note The counter of a timer is stopped only if all timer outputs are disabled
   */
@@ -5159,11 +5169,11 @@ HAL_StatusTypeDef HAL_HRTIM_WaveformCountStop(HRTIM_HandleTypeDef * hhrtim,
   * @param  Timers Timer counter(s) to start
   *                   This parameter can be any combination of the following values:
   *                   @arg HRTIM_TIMERID_MASTER
-  *                   @arg HRTIM_TIMERID_A
-  *                   @arg HRTIM_TIMERID_B
-  *                   @arg HRTIM_TIMERID_C
-  *                   @arg HRTIM_TIMERID_D
-  *                   @arg HRTIM_TIMERID_E
+  *                   @arg HRTIM_TIMERID_TIMER_A
+  *                   @arg HRTIM_TIMERID_TIMER_B
+  *                   @arg HRTIM_TIMERID_TIMER_C
+  *                   @arg HRTIM_TIMERID_TIMER_D
+  *                   @arg HRTIM_TIMERID_TIMER_E
   * @note HRTIM interrupts (e.g. faults interrupts) and interrupts related
   *       to the timers to start are enabled within this function.
   *       Interrupts to enable are selected through HAL_HRTIM_WaveformTimerConfig
@@ -5223,11 +5233,11 @@ HAL_StatusTypeDef HAL_HRTIM_WaveformCountStart_IT(HRTIM_HandleTypeDef * hhrtim,
   * @param  Timers Timer counter(s) to stop
   *                   This parameter can be any combination of the following values:
   *                   @arg HRTIM_TIMERID_MASTER
-  *                   @arg HRTIM_TIMERID_A
-  *                   @arg HRTIM_TIMERID_B
-  *                   @arg HRTIM_TIMERID_C
-  *                   @arg HRTIM_TIMERID_D
-  *                   @arg HRTIM_TIMERID_E
+  *                   @arg HRTIM_TIMERID_TIMER_A
+  *                   @arg HRTIM_TIMERID_TIMER_B
+  *                   @arg HRTIM_TIMERID_TIMER_C
+  *                   @arg HRTIM_TIMERID_TIMER_D
+  *                   @arg HRTIM_TIMERID_TIMER_E
   * @retval HAL status
   * @note The counter of a timer is stopped only if all timer outputs are disabled
   * @note All enabled timer related interrupts are disabled.
@@ -9256,6 +9266,7 @@ static void HRTIM_BurstDMACplt(DMA_HandleTypeDef *hdma)
   * @}
   */
 
+#endif /* HRTIM1 */
 
 #endif /* HAL_HRTIM_MODULE_ENABLED */
 

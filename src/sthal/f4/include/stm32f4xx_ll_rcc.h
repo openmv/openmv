@@ -2,35 +2,17 @@
   ******************************************************************************
   * @file    stm32f4xx_ll_rcc.h
   * @author  MCD Application Team
-  * @version V1.7.1
-  * @date    14-April-2017
   * @brief   Header file of RCC LL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
@@ -116,7 +98,7 @@ typedef struct
 
 /** @defgroup RCC_LL_EC_OSC_VALUES Oscillator Values adaptation
   * @brief    Defines used to adapt values of different oscillators
-  * @note     These values could be modified in the user environment according to
+  * @note     These values could be modified in the user environment according to 
   *           HW set-up.
   * @{
   */
@@ -4854,6 +4836,31 @@ __STATIC_INLINE void LL_RCC_PLL_ConfigDomain_SAI(uint32_t Source, uint32_t PLLM,
 #endif /* RCC_PLLCFGR_PLLR */
 
 /**
+  * @brief  Configure PLL clock source
+  * @rmtoll PLLCFGR      PLLSRC        LL_RCC_PLL_SetMainSource
+  * @param PLLSource This parameter can be one of the following values:
+  *         @arg @ref LL_RCC_PLLSOURCE_HSI
+  *         @arg @ref LL_RCC_PLLSOURCE_HSE
+  * @retval None
+  */
+__STATIC_INLINE void LL_RCC_PLL_SetMainSource(uint32_t PLLSource)
+{
+  MODIFY_REG(RCC->PLLCFGR, RCC_PLLCFGR_PLLSRC, PLLSource);
+}
+
+/**
+  * @brief  Get the oscillator used as PLL clock source.
+  * @rmtoll PLLCFGR      PLLSRC        LL_RCC_PLL_GetMainSource
+  * @retval Returned value can be one of the following values:
+  *         @arg @ref LL_RCC_PLLSOURCE_HSI
+  *         @arg @ref LL_RCC_PLLSOURCE_HSE
+  */
+__STATIC_INLINE uint32_t LL_RCC_PLL_GetMainSource(void)
+{
+  return (uint32_t)(READ_BIT(RCC->PLLCFGR, RCC_PLLCFGR_PLLSRC));
+}
+
+/**
   * @brief  Get Main PLL multiplication factor for VCO
   * @rmtoll PLLCFGR      PLLN          LL_RCC_PLL_GetN
   * @retval Between 50/192(*) and 432
@@ -4866,7 +4873,7 @@ __STATIC_INLINE uint32_t LL_RCC_PLL_GetN(void)
 }
 
 /**
-  * @brief  Get Main PLL division factor for PLLP
+  * @brief  Get Main PLL division factor for PLLP 
   * @rmtoll PLLCFGR      PLLP       LL_RCC_PLL_GetP
   * @retval Returned value can be one of the following values:
   *         @arg @ref LL_RCC_PLLP_DIV_2
@@ -4966,18 +4973,6 @@ __STATIC_INLINE uint32_t LL_RCC_PLL_GetDIVR(void)
   return (uint32_t)(READ_BIT(RCC->DCKCFGR, RCC_DCKCFGR_PLLDIVR));
 }
 #endif /* RCC_DCKCFGR_PLLDIVR */
-
-/**
-  * @brief  Get the oscillator used as PLL clock source.
-  * @rmtoll PLLCFGR      PLLSRC        LL_RCC_PLL_GetMainSource
-  * @retval Returned value can be one of the following values:
-  *         @arg @ref LL_RCC_PLLSOURCE_HSI
-  *         @arg @ref LL_RCC_PLLSOURCE_HSE
-  */
-__STATIC_INLINE uint32_t LL_RCC_PLL_GetMainSource(void)
-{
-  return (uint32_t)(READ_BIT(RCC->PLLCFGR, RCC_PLLCFGR_PLLSRC));
-}
 
 /**
   * @brief  Get Division factor for the main PLL and other PLL
@@ -5343,7 +5338,7 @@ __STATIC_INLINE uint32_t LL_RCC_PLLI2S_IsReady(void)
   */
 __STATIC_INLINE void LL_RCC_PLLI2S_ConfigDomain_SAI(uint32_t Source, uint32_t PLLM, uint32_t PLLN, uint32_t PLLQ_R, uint32_t PLLDIVQ_R)
 {
-  register uint32_t *pReg = (uint32_t *)((uint32_t)((uint32_t)(&RCC->PLLCFGR) + (Source & 0x80U)));
+  register __IO uint32_t *pReg = (__IO uint32_t *)((uint32_t)((uint32_t)(&RCC->PLLCFGR) + (Source & 0x80U)));
   MODIFY_REG(*pReg, RCC_PLLCFGR_PLLSRC, (Source & (~0x80U)));
 #if defined(RCC_PLLI2SCFGR_PLLI2SM)
   MODIFY_REG(RCC->PLLI2SCFGR, RCC_PLLI2SCFGR_PLLI2SM, PLLM);
@@ -5463,7 +5458,7 @@ __STATIC_INLINE void LL_RCC_PLLI2S_ConfigDomain_SAI(uint32_t Source, uint32_t PL
   */
 __STATIC_INLINE void LL_RCC_PLLI2S_ConfigDomain_48M(uint32_t Source, uint32_t PLLM, uint32_t PLLN, uint32_t PLLQ)
 {
-  register uint32_t *pReg = (uint32_t *)((uint32_t)((uint32_t)(&RCC->PLLCFGR) + (Source & 0x80U)));
+  register __IO uint32_t *pReg = (__IO uint32_t *)((uint32_t)((uint32_t)(&RCC->PLLCFGR) + (Source & 0x80U)));
   MODIFY_REG(*pReg, RCC_PLLCFGR_PLLSRC, (Source & (~0x80U)));
 #if defined(RCC_PLLI2SCFGR_PLLI2SM)
   MODIFY_REG(RCC->PLLI2SCFGR, RCC_PLLI2SCFGR_PLLI2SM, PLLM);
@@ -5667,7 +5662,7 @@ __STATIC_INLINE void LL_RCC_PLLI2S_ConfigDomain_SPDIFRX(uint32_t Source, uint32_
   */
 __STATIC_INLINE void LL_RCC_PLLI2S_ConfigDomain_I2S(uint32_t Source, uint32_t PLLM, uint32_t PLLN, uint32_t PLLR)
 {
-  register uint32_t *pReg = (uint32_t *)((uint32_t)((uint32_t)(&RCC->PLLCFGR) + (Source & 0x80U)));
+  register __IO uint32_t *pReg = (__IO uint32_t *)((uint32_t)((uint32_t)(&RCC->PLLCFGR) + (Source & 0x80U)));
   MODIFY_REG(*pReg, RCC_PLLCFGR_PLLSRC, (Source & (~0x80U)));
 #if defined(RCC_PLLI2SCFGR_PLLI2SM)
   MODIFY_REG(RCC->PLLI2SCFGR, RCC_PLLI2SCFGR_PLLI2SM, PLLM);

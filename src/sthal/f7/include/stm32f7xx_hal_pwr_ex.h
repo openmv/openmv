@@ -2,38 +2,20 @@
   ******************************************************************************
   * @file    stm32f7xx_hal_pwr_ex.h
   * @author  MCD Application Team
-  * @version V1.2.2
-  * @date    14-April-2017
   * @brief   Header file of PWR HAL Extension module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
-  */
+  */ 
 
 /* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32F7xx_HAL_PWR_EX_H
@@ -52,9 +34,9 @@
 
 /** @addtogroup PWREx
   * @{
-  */
+  */ 
 
-/* Exported types ------------------------------------------------------------*/
+/* Exported types ------------------------------------------------------------*/ 
 /* Exported constants --------------------------------------------------------*/
 /** @defgroup PWREx_Exported_Constants PWREx Exported Constants
   * @{
@@ -84,7 +66,7 @@
 /**
   * @}
   */
-
+	
 /** @defgroup PWREx_Regulator_state_in_UnderDrive_mode PWREx Regulator state in UnderDrive mode
   * @{
   */
@@ -92,8 +74,8 @@
 #define PWR_LOWPOWERREGULATOR_UNDERDRIVE_ON                   ((uint32_t)(PWR_CR1_LPDS | PWR_CR1_LPUDS))
 /**
   * @}
-  */
-
+  */ 
+  
 /** @defgroup PWREx_Over_Under_Drive_Flag PWREx Over Under Drive Flag
   * @{
   */
@@ -103,7 +85,7 @@
 /**
   * @}
   */
-
+	
 /** @defgroup PWREx_Wakeup_Pins_Flag PWREx Wake Up Pin Flags
   * @{
   */
@@ -119,8 +101,8 @@
 
 /**
   * @}
-  */
-
+  */ 
+  
 /* Exported macro ------------------------------------------------------------*/
 /** @defgroup PWREx_Exported_Macro PWREx Exported Macro
   *  @{
@@ -137,24 +119,24 @@
 
 /** @brief Macros to enable or disable the Under drive mode.
   * @note  This mode is enabled only with STOP low power mode.
-  *        In this mode, the 1.2V domain is preserved in reduced leakage mode. This
-  *        mode is only available when the main regulator or the low power regulator
-  *        is in low voltage mode.
-  * @note  If the Under-drive mode was enabled, it is automatically disabled after
-  *        exiting Stop mode.
-  *        When the voltage regulator operates in Under-drive mode, an additional
+  *        In this mode, the 1.2V domain is preserved in reduced leakage mode. This 
+  *        mode is only available when the main regulator or the low power regulator 
+  *        is in low voltage mode.      
+  * @note  If the Under-drive mode was enabled, it is automatically disabled after 
+  *        exiting Stop mode. 
+  *        When the voltage regulator operates in Under-drive mode, an additional  
   *        startup delay is induced when waking up from Stop mode.
   */
 #define __HAL_PWR_UNDERDRIVE_ENABLE() (PWR->CR1 |= (uint32_t)PWR_CR1_UDEN)
 #define __HAL_PWR_UNDERDRIVE_DISABLE() (PWR->CR1 &= (uint32_t)(~PWR_CR1_UDEN))
 
 /** @brief  Check PWR flag is set or not.
-  * @param  __FLAG__: specifies the flag to check.
+  * @param  __FLAG__ specifies the flag to check.
   *         This parameter can be one of the following values:
   *            @arg PWR_FLAG_ODRDY: This flag indicates that the Over-drive mode
-  *                                 is ready
+  *                                 is ready 
   *            @arg PWR_FLAG_ODSWRDY: This flag indicates that the Over-drive mode
-  *                                   switching is ready
+  *                                   switching is ready  
   *            @arg PWR_FLAG_UDRDY: This flag indicates that the Under-drive mode
   *                                 is enabled in Stop mode
   * @retval The new state of __FLAG__ (TRUE or FALSE).
@@ -166,26 +148,26 @@
 #define __HAL_PWR_CLEAR_ODRUDR_FLAG() (PWR->CSR1 |= PWR_FLAG_UDRDY)
 
 /** @brief  Check Wake Up flag is set or not.
-  * @param  __WUFLAG__: specifies the Wake Up flag to check.
+  * @param  __WUFLAG__ specifies the Wake Up flag to check.
   *          This parameter can be one of the following values:
   *            @arg PWR_WAKEUP_PIN_FLAG1: Wakeup Pin Flag for PA0
   *            @arg PWR_WAKEUP_PIN_FLAG2: Wakeup Pin Flag for PA2
   *            @arg PWR_WAKEUP_PIN_FLAG3: Wakeup Pin Flag for PC1
   *            @arg PWR_WAKEUP_PIN_FLAG4: Wakeup Pin Flag for PC13
   *            @arg PWR_WAKEUP_PIN_FLAG5: Wakeup Pin Flag for PI8
-  *            @arg PWR_WAKEUP_PIN_FLAG6: Wakeup Pin Flag for PI11
+  *            @arg PWR_WAKEUP_PIN_FLAG6: Wakeup Pin Flag for PI11          
   */
 #define __HAL_PWR_GET_WAKEUP_FLAG(__WUFLAG__) (PWR->CSR2 & (__WUFLAG__))
 
 /** @brief  Clear the WakeUp pins flags.
-  * @param  __WUFLAG__: specifies the Wake Up pin flag to clear.
+  * @param  __WUFLAG__ specifies the Wake Up pin flag to clear.
   *          This parameter can be one of the following values:
   *            @arg PWR_WAKEUP_PIN_FLAG1: Wakeup Pin Flag for PA0
   *            @arg PWR_WAKEUP_PIN_FLAG2: Wakeup Pin Flag for PA2
   *            @arg PWR_WAKEUP_PIN_FLAG3: Wakeup Pin Flag for PC1
   *            @arg PWR_WAKEUP_PIN_FLAG4: Wakeup Pin Flag for PC13
   *            @arg PWR_WAKEUP_PIN_FLAG5: Wakeup Pin Flag for PI8
-  *            @arg PWR_WAKEUP_PIN_FLAG6: Wakeup Pin Flag for PI11
+  *            @arg PWR_WAKEUP_PIN_FLAG6: Wakeup Pin Flag for PI11          
   */
 #define __HAL_PWR_CLEAR_WAKEUP_FLAG(__WUFLAG__) (PWR->CR2 |=  (__WUFLAG__))
 /**
@@ -195,7 +177,7 @@
 /** @addtogroup PWREx_Exported_Functions PWREx Exported Functions
   *  @{
   */
-
+ 
 /** @addtogroup PWREx_Exported_Functions_Group1
   * @{
   */
@@ -203,9 +185,9 @@ uint32_t HAL_PWREx_GetVoltageRange(void);
 HAL_StatusTypeDef HAL_PWREx_ControlVoltageScaling(uint32_t VoltageScaling);
 
 void HAL_PWREx_EnableFlashPowerDown(void);
-void HAL_PWREx_DisableFlashPowerDown(void);
+void HAL_PWREx_DisableFlashPowerDown(void); 
 HAL_StatusTypeDef HAL_PWREx_EnableBkUpReg(void);
-HAL_StatusTypeDef HAL_PWREx_DisableBkUpReg(void);
+HAL_StatusTypeDef HAL_PWREx_DisableBkUpReg(void); 
 
 void HAL_PWREx_EnableMainRegulatorLowVoltage(void);
 void HAL_PWREx_DisableMainRegulatorLowVoltage(void);
@@ -241,7 +223,7 @@ HAL_StatusTypeDef HAL_PWREx_EnterUnderDriveSTOPMode(uint32_t Regulator, uint8_t 
                                             ((__PIN__) == PWR_WAKEUP_PIN3)       || \
                                             ((__PIN__) == PWR_WAKEUP_PIN4)       || \
                                             ((__PIN__) == PWR_WAKEUP_PIN5)       || \
-                                            ((__PIN__) == PWR_WAKEUP_PIN6)           || \
+                                            ((__PIN__) == PWR_WAKEUP_PIN6)  		 || \
                                             ((__PIN__) == PWR_WAKEUP_PIN1_HIGH)  || \
                                             ((__PIN__) == PWR_WAKEUP_PIN2_HIGH)  || \
                                             ((__PIN__) == PWR_WAKEUP_PIN3_HIGH)  || \
@@ -252,7 +234,7 @@ HAL_StatusTypeDef HAL_PWREx_EnterUnderDriveSTOPMode(uint32_t Regulator, uint8_t 
                                             ((__PIN__) == PWR_WAKEUP_PIN2_LOW)   || \
                                             ((__PIN__) == PWR_WAKEUP_PIN3_LOW)   || \
                                             ((__PIN__) == PWR_WAKEUP_PIN4_LOW)   || \
-                                            ((__PIN__) == PWR_WAKEUP_PIN5_LOW)   || \
+                                            ((__PIN__) == PWR_WAKEUP_PIN5_LOW)	 || \
                                             ((__PIN__) == PWR_WAKEUP_PIN6_LOW))
 /**
   * @}
@@ -264,12 +246,12 @@ HAL_StatusTypeDef HAL_PWREx_EnterUnderDriveSTOPMode(uint32_t Regulator, uint8_t 
 
 /**
   * @}
-  */
+  */ 
 
 /**
   * @}
   */
-
+  
 #ifdef __cplusplus
 }
 #endif
