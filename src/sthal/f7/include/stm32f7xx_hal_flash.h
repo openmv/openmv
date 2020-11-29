@@ -2,35 +2,17 @@
   ******************************************************************************
   * @file    stm32f7xx_hal_flash.h
   * @author  MCD Application Team
-  * @version V1.2.2
-  * @date    14-April-2017
   * @brief   Header file of FLASH HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
@@ -187,6 +169,15 @@ typedef struct
 /** @defgroup FLASH_Sectors FLASH Sectors
   * @{
   */
+#if (FLASH_SECTOR_TOTAL == 2)
+#define FLASH_SECTOR_0           ((uint32_t)0U) /*!< Sector Number 0   */
+#define FLASH_SECTOR_1           ((uint32_t)1U) /*!< Sector Number 1   */
+#elif (FLASH_SECTOR_TOTAL == 4)
+#define FLASH_SECTOR_0           ((uint32_t)0U) /*!< Sector Number 0   */
+#define FLASH_SECTOR_1           ((uint32_t)1U) /*!< Sector Number 1   */
+#define FLASH_SECTOR_2           ((uint32_t)2U) /*!< Sector Number 2   */
+#define FLASH_SECTOR_3           ((uint32_t)3U) /*!< Sector Number 3   */
+#else
 #define FLASH_SECTOR_0           ((uint32_t)0U) /*!< Sector Number 0   */
 #define FLASH_SECTOR_1           ((uint32_t)1U) /*!< Sector Number 1   */
 #define FLASH_SECTOR_2           ((uint32_t)2U) /*!< Sector Number 2   */
@@ -195,6 +186,7 @@ typedef struct
 #define FLASH_SECTOR_5           ((uint32_t)5U) /*!< Sector Number 5   */
 #define FLASH_SECTOR_6           ((uint32_t)6U) /*!< Sector Number 6   */
 #define FLASH_SECTOR_7           ((uint32_t)7U) /*!< Sector Number 7   */
+#endif /* FLASH_SECTOR_TOTAL */
 /**
   * @}
   */
@@ -209,7 +201,7 @@ typedef struct
   */
 /**
   * @brief  Set the FLASH Latency.
-  * @param  __LATENCY__: FLASH Latency
+  * @param  __LATENCY__ FLASH Latency
   *         The value of this parameter depend on device used within the same series
   * @retval none
   */
@@ -258,7 +250,7 @@ typedef struct
 
 /**
   * @brief  Enable the specified FLASH interrupt.
-  * @param  __INTERRUPT__ : FLASH interrupt
+  * @param  __INTERRUPT__  FLASH interrupt
   *         This parameter can be any combination of the following values:
   *     @arg FLASH_IT_EOP: End of FLASH Operation Interrupt
   *     @arg FLASH_IT_ERR: Error Interrupt
@@ -268,7 +260,7 @@ typedef struct
 
 /**
   * @brief  Disable the specified FLASH interrupt.
-  * @param  __INTERRUPT__ : FLASH interrupt
+  * @param  __INTERRUPT__  FLASH interrupt
   *         This parameter can be any combination of the following values:
   *     @arg FLASH_IT_EOP: End of FLASH Operation Interrupt
   *     @arg FLASH_IT_ERR: Error Interrupt
@@ -278,7 +270,7 @@ typedef struct
 
 /**
   * @brief  Get the specified FLASH flag status.
-  * @param  __FLAG__: specifies the FLASH flag to check.
+  * @param  __FLAG__ specifies the FLASH flag to check.
   *          This parameter can be one of the following values:
   *            @arg FLASH_FLAG_EOP   : FLASH End of Operation flag
   *            @arg FLASH_FLAG_OPERR : FLASH operation Error flag
@@ -293,7 +285,7 @@ typedef struct
 
 /**
   * @brief  Clear the specified FLASH flag.
-  * @param  __FLAG__: specifies the FLASH flags to clear.
+  * @param  __FLAG__ specifies the FLASH flags to clear.
   *          This parameter can be any combination of the following values:
   *            @arg FLASH_FLAG_EOP   : FLASH End of Operation flag
   *            @arg FLASH_FLAG_OPERR : FLASH operation Error flag

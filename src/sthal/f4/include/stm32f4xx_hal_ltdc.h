@@ -2,50 +2,33 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_ltdc.h
   * @author  MCD Application Team
-  * @version V1.7.1
-  * @date    14-April-2017
   * @brief   Header file of LTDC HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2016 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __STM32F4xx_HAL_LTDC_H
-#define __STM32F4xx_HAL_LTDC_H
+#ifndef STM32F4xx_HAL_LTDC_H
+#define STM32F4xx_HAL_LTDC_H
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
 
-#if defined(STM32F429xx) || defined(STM32F439xx) || defined(STM32F469xx) || defined(STM32F479xx)
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal_def.h"
+
+#if defined (LTDC)
 
 /** @addtogroup STM32F4xx_HAL_Driver
   * @{
@@ -176,12 +159,16 @@ typedef enum
   HAL_LTDC_STATE_BUSY              = 0x02U,    /*!< LTDC internal process is ongoing     */
   HAL_LTDC_STATE_TIMEOUT           = 0x03U,    /*!< LTDC Timeout state                   */
   HAL_LTDC_STATE_ERROR             = 0x04U     /*!< LTDC state error                     */
-}HAL_LTDC_StateTypeDef;
+} HAL_LTDC_StateTypeDef;
 
 /**
   * @brief  LTDC handle Structure definition
   */
+#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 1)
+typedef struct __LTDC_HandleTypeDef
+#else
 typedef struct
+#endif /* USE_HAL_LTDC_REGISTER_CALLBACKS */
 {
   LTDC_TypeDef                *Instance;                /*!< LTDC Register base address                */
 
@@ -195,7 +182,41 @@ typedef struct
 
   __IO uint32_t               ErrorCode;                /*!< LTDC Error code                           */
 
+#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 1)
+  void (* LineEventCallback)(struct __LTDC_HandleTypeDef *hltdc);     /*!< LTDC Line Event Callback    */
+  void (* ReloadEventCallback)(struct __LTDC_HandleTypeDef *hltdc);   /*!< LTDC Reload Event Callback  */
+  void (* ErrorCallback)(struct __LTDC_HandleTypeDef *hltdc);         /*!< LTDC Error Callback         */
+
+  void (* MspInitCallback)(struct __LTDC_HandleTypeDef *hltdc);       /*!< LTDC Msp Init callback      */
+  void (* MspDeInitCallback)(struct __LTDC_HandleTypeDef *hltdc);     /*!< LTDC Msp DeInit callback    */
+
+#endif /* USE_HAL_LTDC_REGISTER_CALLBACKS */
+
+
 } LTDC_HandleTypeDef;
+
+#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 1)
+/**
+  * @brief  HAL LTDC Callback ID enumeration definition
+  */
+typedef enum
+{
+  HAL_LTDC_MSPINIT_CB_ID            = 0x00U,    /*!< LTDC MspInit callback ID       */
+  HAL_LTDC_MSPDEINIT_CB_ID          = 0x01U,    /*!< LTDC MspDeInit callback ID     */
+
+  HAL_LTDC_LINE_EVENT_CB_ID         = 0x02U,    /*!< LTDC Line Event Callback ID    */
+  HAL_LTDC_RELOAD_EVENT_CB_ID       = 0x03U,    /*!< LTDC Reload Callback ID        */
+  HAL_LTDC_ERROR_CB_ID              = 0x04U     /*!< LTDC Error Callback ID         */
+
+} HAL_LTDC_CallbackIDTypeDef;
+
+/**
+  * @brief  HAL LTDC Callback pointer definition
+  */
+typedef  void (*pLTDC_CallbackTypeDef)(LTDC_HandleTypeDef *hltdc);  /*!< pointer to an LTDC callback function */
+
+#endif /* USE_HAL_LTDC_REGISTER_CALLBACKS */
+
 /**
   * @}
   */
@@ -212,6 +233,9 @@ typedef struct
 #define HAL_LTDC_ERROR_TE                 0x00000001U   /*!< LTDC Transfer error       */
 #define HAL_LTDC_ERROR_FU                 0x00000002U   /*!< LTDC FIFO Underrun        */
 #define HAL_LTDC_ERROR_TIMEOUT            0x00000020U   /*!< LTDC Timeout error        */
+#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 1)
+#define  HAL_LTDC_ERROR_INVALID_CALLBACK  0x00000040U   /*!< LTDC Invalid Callback error  */
+#endif /* USE_HAL_LTDC_REGISTER_CALLBACKS */
 /**
   * @}
   */
@@ -375,7 +399,15 @@ typedef struct
   * @param  __HANDLE__  LTDC handle
   * @retval None
   */
+#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 1)
+#define __HAL_LTDC_RESET_HANDLE_STATE(__HANDLE__) do{                                                  \
+                                                      (__HANDLE__)->State = HAL_LTDC_STATE_RESET;     \
+                                                      (__HANDLE__)->MspInitCallback = NULL;           \
+                                                      (__HANDLE__)->MspDeInitCallback = NULL;         \
+                                                    } while(0)
+#else
 #define __HAL_LTDC_RESET_HANDLE_STATE(__HANDLE__) ((__HANDLE__)->State = HAL_LTDC_STATE_RESET)
+#endif /*USE_HAL_LTDC_REGISTER_CALLBACKS */
 
 /**
   * @brief  Enable the LTDC.
@@ -505,11 +537,18 @@ typedef struct
 /* Initialization and de-initialization functions *****************************/
 HAL_StatusTypeDef HAL_LTDC_Init(LTDC_HandleTypeDef *hltdc);
 HAL_StatusTypeDef HAL_LTDC_DeInit(LTDC_HandleTypeDef *hltdc);
-void HAL_LTDC_MspInit(LTDC_HandleTypeDef* hltdc);
-void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef* hltdc);
+void HAL_LTDC_MspInit(LTDC_HandleTypeDef *hltdc);
+void HAL_LTDC_MspDeInit(LTDC_HandleTypeDef *hltdc);
 void HAL_LTDC_ErrorCallback(LTDC_HandleTypeDef *hltdc);
 void HAL_LTDC_LineEventCallback(LTDC_HandleTypeDef *hltdc);
 void HAL_LTDC_ReloadEventCallback(LTDC_HandleTypeDef *hltdc);
+
+/* Callbacks Register/UnRegister functions  ***********************************/
+#if (USE_HAL_LTDC_REGISTER_CALLBACKS == 1)
+HAL_StatusTypeDef HAL_LTDC_RegisterCallback(LTDC_HandleTypeDef *hltdc, HAL_LTDC_CallbackIDTypeDef CallbackID, pLTDC_CallbackTypeDef pCallback);
+HAL_StatusTypeDef HAL_LTDC_UnRegisterCallback(LTDC_HandleTypeDef *hltdc, HAL_LTDC_CallbackIDTypeDef CallbackID);
+#endif /* USE_HAL_LTDC_REGISTER_CALLBACKS */
+
 /**
   * @}
   */
@@ -616,7 +655,7 @@ uint32_t              HAL_LTDC_GetError(LTDC_HandleTypeDef *hltdc);
 #define IS_LTDC_CFBLL(__CFBLL__)                       ((__CFBLL__) <= LTDC_COLOR_FRAME_BUFFER)
 #define IS_LTDC_CFBLNBR(__CFBLNBR__)                   ((__CFBLNBR__) <= LTDC_LINE_NUMBER)
 #define IS_LTDC_LIPOS(__LIPOS__)                       ((__LIPOS__) <= 0x7FFU)
-#define IS_LTDC_RELOAD(__RELOADTYPE__)                 (((__RELOADTYPE__) == LTDC_RELOAD_IMMEDIATE) || ((__RELOADTYPE__) == LTDC_SRCR_VBR))
+#define IS_LTDC_RELOAD(__RELOADTYPE__)                 (((__RELOADTYPE__) == LTDC_RELOAD_IMMEDIATE) || ((__RELOADTYPE__) == LTDC_RELOAD_VERTICAL_BLANKING))
 /**
   * @}
   */
@@ -638,12 +677,12 @@ uint32_t              HAL_LTDC_GetError(LTDC_HandleTypeDef *hltdc);
   * @}
   */
 
-#endif /* STM32F429xx || STM32F439xx  || STM32F469xx || STM32F479xx */
+#endif /* LTDC */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __STM32F4xx_HAL_LTDC_H */
+#endif /* STM32F4xx_HAL_LTDC_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

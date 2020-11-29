@@ -2,35 +2,17 @@
   ******************************************************************************
   * @file    stm32f4xx_hal_rcc.h
   * @author  MCD Application Team
-  * @version V1.7.1
-  * @date    14-April-2017
   * @brief   Header file of RCC HAL module.
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
+  * All rights reserved.</center></h2>
   *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
   *
   ******************************************************************************
   */
@@ -270,8 +252,10 @@ typedef struct
 /** @defgroup RCC_RTC_Clock_Source RTC Clock Source
   * @{
   */
+#define RCC_RTCCLKSOURCE_NO_CLK          0x00000000U
 #define RCC_RTCCLKSOURCE_LSE             0x00000100U
 #define RCC_RTCCLKSOURCE_LSI             0x00000200U
+#define RCC_RTCCLKSOURCE_HSE_DIVX        0x00000300U
 #define RCC_RTCCLKSOURCE_HSE_DIV2        0x00020300U
 #define RCC_RTCCLKSOURCE_HSE_DIV3        0x00030300U
 #define RCC_RTCCLKSOURCE_HSE_DIV4        0x00040300U
@@ -855,12 +839,12 @@ typedef struct
 /** @brief  Macro to adjust the Internal High Speed oscillator (HSI) calibration value.
   * @note   The calibration is used to compensate for the variations in voltage
   *         and temperature that influence the frequency of the internal HSI RC.
-  * @param  __HSICalibrationValue__: specifies the calibration trimming value.
+  * @param  __HSICalibrationValue__ specifies the calibration trimming value.
   *         (default is RCC_HSICALIBRATION_DEFAULT).
   *         This parameter must be a number between 0 and 0x1F.
   */
 #define __HAL_RCC_HSI_CALIBRATIONVALUE_ADJUST(__HSICalibrationValue__) (MODIFY_REG(RCC->CR,\
-        RCC_CR_HSITRIM, (uint32_t)(__HSICalibrationValue__) << POSITION_VAL(RCC_CR_HSITRIM)))
+        RCC_CR_HSITRIM, (uint32_t)(__HSICalibrationValue__) << RCC_CR_HSITRIM_Pos))
 /**
   * @}
   */
@@ -901,7 +885,7 @@ typedef struct
   * @note   This function reset the CSSON bit, so if the clock security system(CSS)
   *         was previously enabled you have to enable it again after calling this
   *         function.
-  * @param  __STATE__: specifies the new state of the HSE.
+  * @param  __STATE__ specifies the new state of the HSE.
   *         This parameter can be one of the following values:
   *            @arg RCC_HSE_OFF: turn OFF the HSE oscillator, HSERDY flag goes low after
   *                              6 HSE oscillator clock cycles.
@@ -944,7 +928,7 @@ typedef struct
   * @note   After enabling the LSE (RCC_LSE_ON or RCC_LSE_BYPASS), the application
   *         software should wait on LSERDY flag to be set indicating that LSE clock
   *         is stable and can be used to clock the RTC.
-  * @param  __STATE__: specifies the new state of the LSE.
+  * @param  __STATE__ specifies the new state of the LSE.
   *         This parameter can be one of the following values:
   *            @arg RCC_LSE_OFF: turn OFF the LSE oscillator, LSERDY flag goes low after
   *                              6 LSE oscillator clock cycles.
@@ -990,12 +974,13 @@ typedef struct
   * @note   Once the RTC clock is configured it can't be changed unless the
   *         Backup domain is reset using __HAL_RCC_BackupReset_RELEASE() macro, or by
   *         a Power On Reset (POR).
-  * @param  __RTCCLKSource__: specifies the RTC clock source.
+  * @param  __RTCCLKSource__ specifies the RTC clock source.
   *         This parameter can be one of the following values:
-  *            @arg RCC_RTCCLKSOURCE_LSE: LSE selected as RTC clock.
-  *            @arg RCC_RTCCLKSOURCE_LSI: LSI selected as RTC clock.
-  *            @arg RCC_RTCCLKSOURCE_HSE_DIVx: HSE clock divided by x selected
-  *                                            as RTC clock, where x:[2,31]
+               @arg @ref RCC_RTCCLKSOURCE_NO_CLK: No clock selected as RTC clock.
+  *            @arg @ref RCC_RTCCLKSOURCE_LSE: LSE selected as RTC clock.
+  *            @arg @ref RCC_RTCCLKSOURCE_LSI: LSI selected as RTC clock.
+  *            @arg @ref RCC_RTCCLKSOURCE_HSE_DIVX: HSE clock divided by x selected
+  *                                                 as RTC clock, where x:[2,31]
   * @note   If the LSE or LSI is used as RTC clock source, the RTC continues to
   *         work in STOP and STANDBY modes, and can be used as wake-up source.
   *         However, when the HSE clock is used as RTC clock source, the RTC
@@ -1009,6 +994,23 @@ typedef struct
 #define __HAL_RCC_RTC_CONFIG(__RTCCLKSource__) do { __HAL_RCC_RTC_CLKPRESCALER(__RTCCLKSource__);    \
                                                     RCC->BDCR |= ((__RTCCLKSource__) & 0x00000FFFU);  \
                                                    } while(0U)
+
+/** @brief Macro to get the RTC clock source.
+  * @retval The clock source can be one of the following values:
+  *            @arg @ref RCC_RTCCLKSOURCE_NO_CLK No clock selected as RTC clock
+  *            @arg @ref RCC_RTCCLKSOURCE_LSE LSE selected as RTC clock
+  *            @arg @ref RCC_RTCCLKSOURCE_LSI LSI selected as RTC clock
+  *            @arg @ref RCC_RTCCLKSOURCE_HSE_DIVX HSE divided by X selected as RTC clock (X can be retrieved thanks to @ref __HAL_RCC_GET_RTC_HSE_PRESCALER()
+  */
+#define __HAL_RCC_GET_RTC_SOURCE() (READ_BIT(RCC->BDCR, RCC_BDCR_RTCSEL))
+
+/**
+  * @brief   Get the RTC and HSE clock divider (RTCPRE).
+  * @retval Returned value can be one of the following values:
+  *            @arg @ref RCC_RTCCLKSOURCE_HSE_DIVX: HSE clock divided by x selected
+  *                                                 as RTC clock, where x:[2,31]
+  */
+#define  __HAL_RCC_GET_RTC_HSE_PRESCALER() (READ_BIT(RCC->CFGR, RCC_CFGR_RTCPRE) | RCC_BDCR_RTCSEL)
 
 /** @brief  Macros to force or release the Backup domain reset.
   * @note   This function resets the RTC peripheral (including the backup registers)
@@ -1037,7 +1039,7 @@ typedef struct
 
 /** @brief  Macro to configure the PLL clock source.
   * @note   This function must be used only when the main PLL is disabled.
-  * @param  __PLLSOURCE__: specifies the PLL entry clock source.
+  * @param  __PLLSOURCE__ specifies the PLL entry clock source.
   *         This parameter can be one of the following values:
   *            @arg RCC_PLLSOURCE_HSI: HSI oscillator clock selected as PLL clock entry
   *            @arg RCC_PLLSOURCE_HSE: HSE oscillator clock selected as PLL clock entry
@@ -1047,7 +1049,7 @@ typedef struct
 
 /** @brief  Macro to configure the PLL multiplication factor.
   * @note   This function must be used only when the main PLL is disabled.
-  * @param  __PLLM__: specifies the division factor for PLL VCO input clock
+  * @param  __PLLM__ specifies the division factor for PLL VCO input clock
   *         This parameter must be a number between Min_Data = 2 and Max_Data = 63.
   * @note   You have to set the PLLM parameter correctly to ensure that the VCO input
   *         frequency ranges from 1 to 2 MHz. It is recommended to select a frequency
@@ -1064,7 +1066,7 @@ typedef struct
   */
 /**
   * @brief Macro to configure the system clock source.
-  * @param __RCC_SYSCLKSOURCE__: specifies the system clock source.
+  * @param __RCC_SYSCLKSOURCE__ specifies the system clock source.
   * This parameter can be one of the following values:
   *              - RCC_SYSCLKSOURCE_HSI: HSI oscillator is used as system clock source.
   *              - RCC_SYSCLKSOURCE_HSE: HSE oscillator is used as system clock source.
@@ -1083,7 +1085,7 @@ typedef struct
   *              - RCC_SYSCLKSOURCE_STATUS_PLLRCLK: PLLR used as system clock. This parameter
   *                is available only for STM32F446xx devices.
   */
-#define __HAL_RCC_GET_SYSCLK_SOURCE() ((uint32_t)(RCC->CFGR & RCC_CFGR_SWS))
+#define __HAL_RCC_GET_SYSCLK_SOURCE() (RCC->CFGR & RCC_CFGR_SWS)
 
 /** @brief  Macro to get the oscillator used as PLL clock source.
   * @retval The oscillator used as PLL clock source. The returned value can be one
@@ -1149,7 +1151,7 @@ typedef struct
 
 /** @brief  Enable RCC interrupt (Perform Byte access to RCC_CIR[14:8] bits to enable
   *         the selected interrupts).
-  * @param  __INTERRUPT__: specifies the RCC interrupt sources to be enabled.
+  * @param  __INTERRUPT__ specifies the RCC interrupt sources to be enabled.
   *         This parameter can be any combination of the following values:
   *            @arg RCC_IT_LSIRDY: LSI ready interrupt.
   *            @arg RCC_IT_LSERDY: LSE ready interrupt.
@@ -1162,7 +1164,7 @@ typedef struct
 
 /** @brief Disable RCC interrupt (Perform Byte access to RCC_CIR[14:8] bits to disable
   *        the selected interrupts).
-  * @param  __INTERRUPT__: specifies the RCC interrupt sources to be disabled.
+  * @param  __INTERRUPT__ specifies the RCC interrupt sources to be disabled.
   *         This parameter can be any combination of the following values:
   *            @arg RCC_IT_LSIRDY: LSI ready interrupt.
   *            @arg RCC_IT_LSERDY: LSE ready interrupt.
@@ -1175,7 +1177,7 @@ typedef struct
 
 /** @brief  Clear the RCC's interrupt pending bits (Perform Byte access to RCC_CIR[23:16]
   *         bits to clear the selected interrupt pending bits.
-  * @param  __INTERRUPT__: specifies the interrupt pending bit to clear.
+  * @param  __INTERRUPT__ specifies the interrupt pending bit to clear.
   *         This parameter can be any combination of the following values:
   *            @arg RCC_IT_LSIRDY: LSI ready interrupt.
   *            @arg RCC_IT_LSERDY: LSE ready interrupt.
@@ -1188,7 +1190,7 @@ typedef struct
 #define __HAL_RCC_CLEAR_IT(__INTERRUPT__) (*(__IO uint8_t *) RCC_CIR_BYTE2_ADDRESS = (__INTERRUPT__))
 
 /** @brief  Check the RCC's interrupt has occurred or not.
-  * @param  __INTERRUPT__: specifies the RCC interrupt source to check.
+  * @param  __INTERRUPT__ specifies the RCC interrupt source to check.
   *         This parameter can be one of the following values:
   *            @arg RCC_IT_LSIRDY: LSI ready interrupt.
   *            @arg RCC_IT_LSERDY: LSE ready interrupt.
@@ -1207,7 +1209,7 @@ typedef struct
 #define __HAL_RCC_CLEAR_RESET_FLAGS() (RCC->CSR |= RCC_CSR_RMVF)
 
 /** @brief  Check RCC flag is set or not.
-  * @param  __FLAG__: specifies the flag to check.
+  * @param  __FLAG__ specifies the flag to check.
   *         This parameter can be one of the following values:
   *            @arg RCC_FLAG_HSIRDY: HSI oscillator clock ready.
   *            @arg RCC_FLAG_HSERDY: HSE oscillator clock ready.
@@ -1244,7 +1246,7 @@ typedef struct
   * @{
   */
 /* Initialization and de-initialization functions  ******************************/
-void HAL_RCC_DeInit(void);
+HAL_StatusTypeDef HAL_RCC_DeInit(void);
 HAL_StatusTypeDef HAL_RCC_OscConfig(RCC_OscInitTypeDef *RCC_OscInitStruct);
 HAL_StatusTypeDef HAL_RCC_ClockConfig(RCC_ClkInitTypeDef *RCC_ClkInitStruct, uint32_t FLatency);
 /**
@@ -1291,7 +1293,7 @@ void HAL_RCC_CSSCallback(void);
   * @{
   */
 #define RCC_OFFSET                 (RCC_BASE - PERIPH_BASE)
-/* --- CR Register ---*/
+/* --- CR Register --- */
 /* Alias word address of HSION bit */
 #define RCC_CR_OFFSET              (RCC_OFFSET + 0x00U)
 #define RCC_HSION_BIT_NUMBER       0x00U
@@ -1303,7 +1305,7 @@ void HAL_RCC_CSSCallback(void);
 #define RCC_PLLON_BIT_NUMBER       0x18U
 #define RCC_CR_PLLON_BB            (PERIPH_BB_BASE + (RCC_CR_OFFSET * 32U) + (RCC_PLLON_BIT_NUMBER * 4U))
 
-/* --- BDCR Register ---*/
+/* --- BDCR Register --- */
 /* Alias word address of RTCEN bit */
 #define RCC_BDCR_OFFSET            (RCC_OFFSET + 0x70U)
 #define RCC_RTCEN_BIT_NUMBER       0x0FU
@@ -1312,7 +1314,7 @@ void HAL_RCC_CSSCallback(void);
 #define RCC_BDRST_BIT_NUMBER       0x10U
 #define RCC_BDCR_BDRST_BB          (PERIPH_BB_BASE + (RCC_BDCR_OFFSET * 32U) + (RCC_BDRST_BIT_NUMBER * 4U))
 
-/* --- CSR Register ---*/
+/* --- CSR Register --- */
 /* Alias word address of LSION bit */
 #define RCC_CSR_OFFSET             (RCC_OFFSET + 0x74U)
 #define RCC_LSION_BIT_NUMBER        0x00U
@@ -1336,6 +1338,7 @@ void HAL_RCC_CSSCallback(void);
 #define HSE_TIMEOUT_VALUE          HSE_STARTUP_TIMEOUT
 #define HSI_TIMEOUT_VALUE          2U  /* 2 ms */
 #define LSI_TIMEOUT_VALUE          2U  /* 2 ms */
+#define CLOCKSWITCH_TIMEOUT_VALUE  5000U /* 5 s */
 
 /**
   * @}
