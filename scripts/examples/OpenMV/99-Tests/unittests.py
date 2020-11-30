@@ -28,8 +28,11 @@ for test in sorted(os.listdir(SCRIPT_DIR)):
             if unittest(DATA_DIR, TEMP_DIR) == False:
                 raise Exception()
         except Exception as e:
-            test_failed = True
-            test_result =  "DISABLED" if "unavailable" in str(e) else "FAILED"
+            if "unavailable" in str(e):
+                test_result =  "DISABLED"
+            else:
+                test_failed = True
+                test_result =  "FAILED"
         print_result(test, test_result)
 
 if test_failed:
