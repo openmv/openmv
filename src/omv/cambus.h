@@ -13,9 +13,9 @@
 #include <stdint.h>
 #include STM32_HAL_H
 #if defined(STM32F4)
-#define I2C_TIMING_STANDARD     (0)
-#define I2C_TIMING_FULL         (0)
-#define I2C_TIMING_FAST         (0)
+#define I2C_TIMING_STANDARD     (100000U)
+#define I2C_TIMING_FULL         (400000U)
+#define I2C_TIMING_FAST         (400000U)
 #elif defined(STM32F7)
 // These timing values are for f_I2CCLK=54MHz and are only approximate
 #define I2C_TIMING_STANDARD     (0x1090699B)
