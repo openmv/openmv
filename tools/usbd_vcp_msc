@@ -1,5 +1,5 @@
 
-Bus 001 Device 009: ID 1209:abd1 Generic OpenMV Cam
+Bus 001 Device 015: ID 1209:abd1 Generic OpenMV Cam
 Device Descriptor:
   bLength                18
   bDescriptorType         1
@@ -13,7 +13,7 @@ Device Descriptor:
   bcdDevice            2.00
   iManufacturer           1 OpenMV
   iProduct                2 OpenMV Virtual Comm Port in FS Mode
-  iSerial                 3 000000000011
+  iSerial                 3 396F35773134
   bNumConfigurations      1
   Configuration Descriptor:
     bLength                 9
