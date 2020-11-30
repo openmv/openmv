@@ -14,8 +14,8 @@
 #include "systick.h"
 #include "omv_boardconfig.h"
 #include "cambus.h"
-#define I2C_FREQUENCY   (100000)
-#define I2C_TIMEOUT     (100)
+#define I2C_TIMEOUT         (1000)
+#define I2C_SCAN_TIMEOUT    (100)
 
 int cambus_init(I2C_HandleTypeDef *i2c, I2C_TypeDef *instance, uint32_t timing)
 {
@@ -25,7 +25,7 @@ int cambus_init(I2C_HandleTypeDef *i2c, I2C_TypeDef *instance, uint32_t timing)
     #if !defined(STM32F4)
     i2c->Init.Timing          = timing;
     #else
-    i2c->Init.ClockSpeed      = I2C_FREQUENCY;
+    i2c->Init.ClockSpeed      = timing;
     i2c->Init.DutyCycle       = I2C_DUTYCYCLE_2;
     #endif
     i2c->Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
@@ -78,7 +78,7 @@ int cambus_deinit(I2C_HandleTypeDef *i2c)
 int cambus_scan(I2C_HandleTypeDef *i2c)
 {
     for (uint8_t addr=0x09; addr<=0x77; addr++) {
-        if (HAL_I2C_IsDeviceReady(i2c, addr << 1, 10, I2C_TIMEOUT) == HAL_OK) {
+        if (HAL_I2C_IsDeviceReady(i2c, addr << 1, 10, I2C_SCAN_TIMEOUT) == HAL_OK) {
             return (addr << 1);
         }
     }
