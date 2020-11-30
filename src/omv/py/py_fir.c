@@ -398,7 +398,15 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             IR_refresh_rate = 10;
             ADC_resolution  = 12;
 
-            test_ack(cambus_write_bytes(&fir_i2c, AMG8833_ADDR, 0x01, (uint8_t [1]){0x3F}, 1));
+            for (int i=0; i<=10; i++) {
+                if ((cambus_write_bytes(&fir_i2c, AMG8833_ADDR, 0x01, (uint8_t [1]){0x3F}, 1)) == 0) {
+                    break;
+                }
+                if (i == 10) {
+                    test_ack(-1);
+                }
+                HAL_Delay(10);
+            }
 
             return mp_const_none;
         }
