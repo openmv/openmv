@@ -98,7 +98,7 @@ static uint8_t height = 0;
 static uint8_t IR_refresh_rate = 0;
 static uint8_t ADC_resolution = 0;
 
-static I2C_HandleTypeDef fir_i2c = {0};      // SCCB/I2C bus.
+static I2C_HandleTypeDef fir_i2c = {0};      // FIR/I2C bus.
 
 static enum {
     FIR_NONE,
@@ -113,6 +113,29 @@ extern const uint16_t rainbow_table[256];
 static void test_ack(int ret)
 {
     PY_ASSERT_TRUE_MSG(ret == 0, "I2C Bus communication error - missing ACK!");
+}
+
+static void generate_scl_train()
+{
+    // Configure SCL as GPIO
+    GPIO_InitTypeDef GPIO_InitStructure;
+    GPIO_InitStructure.Pull  = GPIO_NOPULL;
+    GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
+    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStructure.Pin   = FIR_I2C_SCL_PIN;
+    HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
+
+    // Pulse SCL to recover stuck device.
+    for (int i=0; i<10000; i++) {
+        HAL_GPIO_WritePin(FIR_I2C_PORT, FIR_I2C_SCL_PIN, GPIO_PIN_SET);
+        mp_hal_delay_us(10);
+        HAL_GPIO_WritePin(FIR_I2C_PORT, FIR_I2C_SCL_PIN, GPIO_PIN_RESET);
+        mp_hal_delay_us(10);
+    }
+
+    // Clear ARLO flag if it's set.
+    __HAL_I2C_CLEAR_FLAG(&fir_i2c, I2C_FLAG_ARLO);
+    debug_printf("reset stuck i2c device\n");
 }
 
 static float calculate_Ta() // ambient temp
@@ -251,6 +274,7 @@ calling:
 mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_fir_deinit();
+    bool first_init = true;
     switch (py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), FIR_SHIELD)) {
         case FIR_NONE: {
             return mp_const_none;
@@ -353,6 +377,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         }
 
         case FIR_MLX90640: {
+            FIR_MLX90640:
             width = 32;
             height = 24;
             fir_sensor = FIR_MLX90640;
@@ -378,18 +403,26 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             uint16_t *eeprom = fb_alloc(832 * sizeof(uint16_t), FB_ALLOC_NO_HINT);
             error |= MLX90640_DumpEE(MLX90640_ADDR, eeprom);
             error |= MLX90640_ExtractParameters(eeprom, (paramsMLX90640 *) alpha_ij);
+            fb_alloc_free_till_mark();
+
+            if (error != 0 && first_init == true) {
+                first_init = false;
+                generate_scl_train();
+                xfree(alpha_ij);
+                alpha_ij = NULL;
+                goto FIR_MLX90640;
+            }
 
             // Switch to FAST speed
             cambus_deinit(&fir_i2c);
             cambus_init(&fir_i2c, FIR_I2C, I2C_TIMING_FAST);
 
             PY_ASSERT_TRUE_MSG(error == 0, "Failed to init the MLX90640!");
-
-            fb_alloc_free_till_mark();
             return mp_const_none;
         }
 
         case FIR_AMG8833: {
+            FIR_AMG8833:
             width = 8;
             height = 8;
             fir_sensor = FIR_AMG8833;
@@ -398,16 +431,14 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             IR_refresh_rate = 10;
             ADC_resolution  = 12;
 
-            for (int i=0; i<=10; i++) {
-                if ((cambus_write_bytes(&fir_i2c, AMG8833_ADDR, 0x01, (uint8_t [1]){0x3F}, 1)) == 0) {
-                    break;
-                }
-                if (i == 10) {
-                    test_ack(-1);
-                }
-                HAL_Delay(10);
+            int error = cambus_write_bytes(&fir_i2c, AMG8833_ADDR, 0x01, (uint8_t [1]){0x3F}, 1);
+            if (error != 0 && first_init == true) {
+                first_init = false;
+                generate_scl_train();
+                goto FIR_AMG8833;
             }
 
+            PY_ASSERT_TRUE_MSG(error == 0, "Failed to init the AMG8833!");
             return mp_const_none;
         }
     }
