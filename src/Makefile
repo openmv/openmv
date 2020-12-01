@@ -69,7 +69,7 @@ OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/py/qstrdefsomv.h
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
-CFLAGS += -O0 -ggdb3
+CFLAGS += -Og -ggdb3 -Wno-maybe-uninitialized
 else
 DEBUG=0
 CFLAGS += -O2 -ggdb3 -DNDEBUG
