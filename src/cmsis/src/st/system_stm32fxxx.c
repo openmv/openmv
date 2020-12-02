@@ -168,10 +168,14 @@ void SystemInit(void)
     /* dpgeorge: enable 8-byte stack alignment for IRQ handlers, in accord with EABI */
     SCB->CCR |= SCB_CCR_STKALIGN_Msk;
 
+    #if !defined(NDEBUG)
     #if defined(MCU_SERIES_F4) ||  defined(MCU_SERIES_F7)
     DBGMCU->CR |= DBGMCU_CR_DBG_SLEEP;
     #elif defined(MCU_SERIES_H7)
     DBGMCU->CR |= DBGMCU_CR_DBG_SLEEPD1;
+    DBGMCU->CR |= DBGMCU_CR_DBG_STOPD1;
+    DBGMCU->CR |= DBGMCU_CR_DBG_STANDBYD1;
+    #endif
     #endif
 }
 
