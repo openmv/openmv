@@ -15,8 +15,7 @@ print("")
 for i in range(1, 18):
     try:
         print("Testing TIM%d... "%(i), end="")
-        tim = Timer(i, freq=10)     # create a timer object using timer 4 - trigger at 1Hz
-        tim.callback(tick)          # set the callback to our tick function
+        tim = Timer(i, freq=10, callback=tick)
         time.sleep_ms(1000)
         tim.deinit()
     except ValueError as e:
