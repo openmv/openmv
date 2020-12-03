@@ -422,6 +422,9 @@ HAL_StatusTypeDef HAL_TIM_Base_Start(TIM_HandleTypeDef *htim)
     __HAL_TIM_ENABLE(htim);
   }
 
+  /* Set the TIM state */
+  htim->State = HAL_TIM_STATE_READY;
+
   /* Return function status */
   return HAL_OK;
 }
