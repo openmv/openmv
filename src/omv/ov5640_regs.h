@@ -17,7 +17,9 @@
 
 #define SYSTEM_CTROL0       0x3008
 
+#define SC_PLL_CONTRL1      0x3035
 #define SC_PLL_CONTRL2      0x3036
+#define SC_PLL_CONTRL3      0x3037
 
 #define SCCB_SYSTEM_CTRL_1  0x3103
 
