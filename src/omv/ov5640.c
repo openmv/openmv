@@ -389,6 +389,14 @@ static int reset(sensor_t *sensor)
         ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, (default_regs[i][0] << 8) | (default_regs[i][1] << 0), default_regs[i][2]);
     }
 
+    #if defined(MCU_SERIES_H7)
+    // Rev V (480 MHz / 20) -> 24 MHz PCLK / 3 * 100 = 800 MHz / 10 = 80 MHz PCLK.
+    // Rev Y (400 MHz / 16) -> 25 MHz PCLK / 3 * 84 = 700 MHz / 10 = 70 MHz PCLK.
+    if (HAL_GetREVID() < 0x2003) { // Is this REV Y?
+        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, SC_PLL_CONTRL2, 0x54);
+    }
+    #endif
+
     // Delay 300 ms
     systick_sleep(300);
 
