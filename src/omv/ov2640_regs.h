@@ -113,7 +113,7 @@
 #define AEC                 0x10
 
 #define CLKRC               0x11
-#define CLKRC_DOUBLE        0x80
+#define CLKRC_DOUBLE        0x82
 #define CLKRC_DIVIDER_MASK  0x3F
 
 #define COM10               0x15

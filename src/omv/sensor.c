@@ -389,6 +389,9 @@ int sensor_init()
     switch (sensor.chip_id) {
         #if (OMV_ENABLE_OV2640 == 1)
         case OV2640_ID:
+            if (extclk_config(OV2640_XCLK_FREQ) != 0) {
+                return -3;
+            }
             init_ret = ov2640_init(&sensor);
             break;
         #endif // (OMV_ENABLE_OV2640 == 1)
