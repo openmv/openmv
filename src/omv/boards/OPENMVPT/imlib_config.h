@@ -120,7 +120,7 @@
 #endif
 
 // Enable FAST (20+ KBs).
-#define IMLIB_ENABLE_FAST
+// #define IMLIB_ENABLE_FAST
 
 // Enable find_template()
 #define IMLIB_FIND_TEMPLATE
