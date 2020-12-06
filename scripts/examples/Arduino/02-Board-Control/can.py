@@ -9,15 +9,9 @@ from pyb import CAN
 # NOTE: Set to False on receiving node.
 TRANSMITTER = True
 
-can = CAN(2, CAN.NORMAL)
-# Set a different baudrate (default is 125Kbps)
-# NOTE: The following parameters are for the H7 only.
-#
-# can.init(CAN.NORMAL, prescaler=32, sjw=1, bs1=8, bs2=3) # 125Kbps
-# can.init(CAN.NORMAL, prescaler=16, sjw=1, bs1=8, bs2=3) # 250Kbps
-# can.init(CAN.NORMAL, prescaler=8,  sjw=1, bs1=8, bs2=3) # 500Kbps
-# can.init(CAN.NORMAL, prescaler=4,  sjw=1, bs1=8, bs2=3) # 1000Kbps
-
+can = CAN(2, CAN.NORMAL, baudrate=125_000, sampling_point=75)
+# NOTE: uncomment to set bit timing manually, for example:
+#can.init(CAN.NORMAL, prescaler=32, sjw=1, bs1=8, bs2=3)
 can.restart()
 
 if (TRANSMITTER):
