@@ -1282,6 +1282,31 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             *va_arg(ap, int *) = readout_h;
             break;
         }
+#if (OMV_ENABLE_OV5640_AF == 1)
+        case IOCTL_TRIGGER_AUTO_FOCUS: {
+            ret = cambus_writeb2(&sensor->i2c, sensor->slv_addr, AF_CMD_MAIN, 0x03);
+            break;
+        }
+        case IOCTL_PAUSE_AUTO_FOCUS: {
+            ret = cambus_writeb2(&sensor->i2c, sensor->slv_addr, AF_CMD_MAIN, 0x06);
+            break;
+        }
+        case IOCTL_RESET_AUTO_FOCUS: {
+            ret = cambus_writeb2(&sensor->i2c, sensor->slv_addr, AF_CMD_MAIN, 0x08);
+            break;
+        }
+        case IOCTL_WAIT_ON_AUTO_FOCUS: {
+            uint32_t start_tick = HAL_GetTick(), delay_ms = va_arg(ap, uint32_t);
+            for (;;) {
+                uint8_t reg;
+                ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, AF_CMD_ACK, &reg);
+                if ((ret < 0) || (!reg)) break;
+                if ((HAL_GetTick() - start_tick) >= delay_ms) return -1;
+                systick_sleep(1);
+            }
+            break;
+        }
+#endif
         default: {
             ret = -1;
             break;
