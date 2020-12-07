@@ -1306,7 +1306,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             }
             break;
         }
-#endif
+    #endif
         default: {
             ret = -1;
             break;
