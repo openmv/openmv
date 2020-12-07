@@ -553,7 +553,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             break;
         }
 
-#if (OMV_ENABLE_OV5640_AF == 1)
+    #if (OMV_ENABLE_OV5640_AF == 1)
         case IOCTL_TRIGGER_AUTO_FOCUS:
         case IOCTL_PAUSE_AUTO_FOCUS:
         case IOCTL_RESET_AUTO_FOCUS: {
