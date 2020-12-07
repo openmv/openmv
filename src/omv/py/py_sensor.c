@@ -568,7 +568,7 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             }
             break;
         }
-#endif
+    #endif
 
         case IOCTL_LEPTON_GET_WIDTH: {
             int width;
