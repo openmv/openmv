@@ -59,6 +59,9 @@
 #define OMV_ENABLE_LEPTON               (1)
 #define OMV_ENABLE_HM01B0               (0)
 
+// Enable sensor features
+#define OMV_ENABLE_OV5640_AF            (1)
+
 // Enable WiFi debug
 #define OMV_ENABLE_WIFIDBG              (1)
 

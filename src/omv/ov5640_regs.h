@@ -11,11 +11,17 @@
 #ifndef __REG_REGS_H__
 #define __REG_REGS_H__
 
+#define SYSTEM_RESET_00     0x3000
+#define SYSTEM_RESET_01     0x3001
 #define SYSTEM_RESET_02     0x3002
 
 #define CLOCK_ENABLE_02     0x3006
 
 #define SYSTEM_CTROL0       0x3008
+
+#define AF_CMD_MAIN         0x3022
+#define AF_CMD_ACK          0x3023
+#define AF_FW_STATUS        0x3029
 
 #define SC_PLL_CONTRL1      0x3035
 #define SC_PLL_CONTRL2      0x3036
@@ -97,5 +103,7 @@
 #define FORMAT_CONTROL_MUX  0x501F
 
 #define PRE_ISP_TEST        0x503D
+
+#define MCU_FIRMWARE_BASE   0x8000
 
 #endif //__REG_REGS_H__
