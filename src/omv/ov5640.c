@@ -1282,7 +1282,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             *va_arg(ap, int *) = readout_h;
             break;
         }
-#if (OMV_ENABLE_OV5640_AF == 1)
+    #if (OMV_ENABLE_OV5640_AF == 1)
         case IOCTL_TRIGGER_AUTO_FOCUS: {
             ret = cambus_writeb2(&sensor->i2c, sensor->slv_addr, AF_CMD_MAIN, 0x03);
             break;
