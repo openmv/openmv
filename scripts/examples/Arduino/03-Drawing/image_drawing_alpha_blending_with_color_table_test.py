@@ -8,7 +8,7 @@
 import sensor, image, time
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 
 hint = image.BICUBIC # image.BILINEAR image.BICUBIC
@@ -23,7 +23,7 @@ hint |= 0 # image.EXTRACT_RGB_CHANNEL_FIRST
 #
 hint |= 0 # image.APPLY_COLOR_PALETTE_FIRST
 
-small_img = image.Image(4, 4, sensor.RGB565)
+small_img = image.Image(4, 4, sensor.GRAYSCALE)
 small_img.set_pixel(0, 0, (0,   0,   127))
 small_img.set_pixel(1, 0, (47,  255, 199))
 small_img.set_pixel(2, 0, (0,   188, 255))
