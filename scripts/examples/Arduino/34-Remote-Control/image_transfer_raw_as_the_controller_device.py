@@ -122,7 +122,7 @@ while(True):
     # more quicly from one image buffer to another. Note: This works because once an RPC call
     # completes successfully both the master and slave devices are synchronized completely.
     #
-    img = get_frame_buffer_call_back(sensor.RGB565, sensor.QQVGA, cutthrough=True, silent=True)
+    img = get_frame_buffer_call_back(sensor.GRAYSCALE, sensor.QQVGA, cutthrough=True, silent=True)
     if img is not None:
         pass # You can process the image here.
 
