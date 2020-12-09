@@ -23,7 +23,7 @@ clock = time.clock() # Tracks FPS.
 # So, be aware that it's a lot easier to get out of RAM issues now. However,
 # frame differencing doesn't use a lot of the extra space in the frame buffer.
 # But, things like AprilTags do and won't work if you do this...
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
+extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
 
 print("About to save background image...")
 sensor.skip_frames(time = 2000) # Give the user time to get ready.
