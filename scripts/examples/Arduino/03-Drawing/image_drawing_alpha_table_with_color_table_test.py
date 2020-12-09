@@ -43,7 +43,7 @@ small_img.set_pixel(3, 3, (50,  255, 195))
 #small_img.to_grayscale()
 #small_img.to_bitmap()
 
-big_img = image.Image(128, 128, sensor.RGB565)
+big_img = image.Image(128, 128, sensor.GRAYSCALE)
 big_img.draw_image(small_img, 0, 0, x_scale=32, y_scale=32, hint=hint)
 #big_img.to_grayscale()
 #big_img.to_bitmap()
