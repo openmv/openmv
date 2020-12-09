@@ -91,7 +91,7 @@ clock = time.clock()                # Create a clock object to track the FPS.
 # There's a lot more RAM in the frame buffer than in the MicroPython heap.
 # However, after doing this you have a lot less RAM for some algorithms...
 # So, be aware that it's a lot easier to get out of RAM issues now.
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
+extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
 extra_fb.replace(sensor.snapshot())
 
 while(True):
