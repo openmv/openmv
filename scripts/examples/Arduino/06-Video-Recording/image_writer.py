@@ -11,7 +11,7 @@ import sensor, image, pyb, time
 record_time = 10000 # 10 seconds in milliseconds
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)
 sensor.skip_frames(time = 2000)
 clock = time.clock()
