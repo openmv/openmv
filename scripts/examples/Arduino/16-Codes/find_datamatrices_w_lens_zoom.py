@@ -6,7 +6,7 @@
 import sensor, image, time, math
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA)
 sensor.set_windowing((320, 240)) # 2x Zoom
 sensor.skip_frames(time = 2000)
