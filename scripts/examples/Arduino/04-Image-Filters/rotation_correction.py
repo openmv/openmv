@@ -22,7 +22,7 @@ FOV_WINDOW = 60 # Between 0 and 180. Represents the field-of-view of the scene
                 # the image in 3D intersecting the scene window.
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time = 2000)
 clock = time.clock()
