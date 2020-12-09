@@ -10,7 +10,7 @@ RED_LED_PIN = 1
 BLUE_LED_PIN = 3
 
 sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
+sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
 sensor.skip_frames(time = 2000) # Let new settings take affect.
 
