@@ -8,7 +8,7 @@ import sensor, image, pyb, os, time
 TRIGGER_THRESHOLD = 5
 
 sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
+sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.QQVGA) # or sensor.QVGA (or others)
 if sensor.get_id() == sensor.OV7725: # Reduce sensor PLL from 6x to 4x.
     sensor.__write_reg(0x0D, (sensor.__read_reg(0x0D) & 0x3F) | 0x40)
