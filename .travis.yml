@@ -80,7 +80,7 @@ jobs:
           name: WINC1500_WORKSPACE # workspace names are escaped.
           paths: ~/build/$TARGET
       script:
-        - cp -rf src/winc1500/firmware ~/build/$TARGET
+        - cp -rf src/drivers/winc1500/firmware ~/build/$TARGET
 
     - stage: build
       env: TARGET=CYW4343
@@ -89,7 +89,7 @@ jobs:
           name: CYW4343_WORKSPACE # workspace names are escaped.
           paths: ~/build/$TARGET
       script:
-        - cp -rf src/cyw4343/firmware ~/build/$TARGET
+        - cp -rf src/drivers/cyw4343/firmware ~/build/$TARGET
 
     - stage: deploy
       git:
