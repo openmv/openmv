@@ -93,9 +93,14 @@ ifeq ($(FB_ALLOC_STATS), 1)
 CFLAGS += -DFB_ALLOC_STATS
 endif
 
-# Compiler Flags
 include $(MP_BOARD_CONFIG_DIR)/mpconfigboard.mk
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
+
+# Set startup and system files based on MCU.
+SYSTEM    ?= st/system_stm32fxxx
+STARTUP   ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
+
+# Compiler Flags
 CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
 CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -DARM_NN_TRUNCATE\
           -fsingle-precision-constant -Wdouble-promotion -mcpu=$(CPU) -mtune=$(CPU) -mfpu=$(FPU) -mfloat-abi=hard
@@ -325,9 +330,9 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	)
 
 
-FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+FIRM_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\
 	$(STARTUP).o                                \
-	system_stm32fxxx.o                          \
+	$(SYSTEM).o                                 \
 	)
 
 #------------- MicroPy Core -------------------#
@@ -566,9 +571,9 @@ BOOTLOADER = bootloader
 # Bootloader object files
 BOOT_OBJ += $(wildcard $(BUILD)/$(BOOTLDR_DIR)/src/*.o)
 BOOT_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
-BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\
 	$(STARTUP).o                                \
-	system_stm32fxxx.o                          \
+	$(SYSTEM).o                                 \
 	)
 endif
 
@@ -577,9 +582,9 @@ UVC = uvc
 # UVC object files
 UVC_OBJ += $(wildcard $(BUILD)/$(UVC_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
-UVC_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
+UVC_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\
 	$(STARTUP).o                                \
-	system_stm32fxxx.o                          \
+	$(SYSTEM).o                                 \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
@@ -637,6 +642,7 @@ export TOP_DIR
 export BUILD
 export TARGET
 export STARTUP
+export SYSTEM
 export FROZEN_MANIFEST
 ###################################################
 all: $(OPENMV)
