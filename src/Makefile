@@ -38,8 +38,6 @@ CAT     = $(Q)cat
 # Targets
 TARGET ?= OPENMV4
 OPENMV = openmv
-BOOTLOADER = bootloader
-UVC = uvc
 FIRMWARE = firmware
 
 # Directories
@@ -563,6 +561,8 @@ endif
 
 FIRM_OBJ += $(wildcard $(TOP_DIR)/$(TENSORFLOW_DIR)/$(CPU)/*.a)
 
+ifeq ($(OMV_ENABLE_BL), 1)
+BOOTLOADER = bootloader
 # Bootloader object files
 BOOT_OBJ += $(wildcard $(BUILD)/$(BOOTLDR_DIR)/src/*.o)
 BOOT_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
@@ -570,7 +570,10 @@ BOOT_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/st/,\
 	$(STARTUP).o                                \
 	system_stm32fxxx.o                          \
 	)
+endif
 
+ifeq ($(OMV_ENABLE_UVC), 1)
+UVC = uvc
 # UVC object files
 UVC_OBJ += $(wildcard $(BUILD)/$(UVC_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(HAL_DIR)/src/*.o)
@@ -613,6 +616,7 @@ UVC_OBJ += $(wildcard $(BUILD)/$(LEPTON_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX_DIR)/src/*.o)
 ifeq ($(MICROPY_PY_IMU), 1)
 UVC_OBJ += $(wildcard $(BUILD)/$(LSM6DS3_DIR)/src/*.o)
+endif
 endif
 
 ###################################################
@@ -659,12 +663,14 @@ endif
 ifeq ($(CUBEAI), 1)
 	$(MAKE)  -C $(CUBEAI_DIR)               BUILD=$(BUILD)/$(CUBEAI_DIR)   CFLAGS="$(CFLAGS) -fno-strict-aliasing -MMD"
 endif
-
+ifeq ($(OMV_ENABLE_UVC), 1)
 UVC_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(UVC_DIR)                  BUILD=$(BUILD)/$(UVC_DIR)      CFLAGS="$(UVC_CFLAGS) -MMD"
-
+endif
+ifeq ($(OMV_ENABLE_BL), 1)
 BOOTLOADER_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(BOOTLDR_DIR)              BUILD=$(BUILD)/$(BOOTLDR_DIR)  CFLAGS="$(BOOTLDR_CFLAGS) -MMD"
+endif
 
 # This target generates the main/app firmware image located at 0x08010000
 $(FIRMWARE): FIRMWARE_OBJS
@@ -673,32 +679,35 @@ $(FIRMWARE): FIRMWARE_OBJS
 	$(OBJCOPY) -Obinary -R .big_const* $(FW_DIR)/$(FIRMWARE).elf $(FW_DIR)/$(FIRMWARE).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(FIRMWARE).dfu
 
-# This target generates the bootloader. The bootloader binary is generated twice,
-# once without padding, to generate the bootloader.dfu file, and once with padding
-# up to the main fw image (MAIN_APP_ADDR), to generate a contiguous firmware.bin image.
+ifeq ($(OMV_ENABLE_BL), 1)
+# This target generates the bootloader.
 $(BOOTLOADER): FIRMWARE_OBJS BOOTLOADER_OBJS
 	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(BOOTLDR_DIR)/stm32fxxx.ld.S > $(BUILD)/$(BOOTLDR_DIR)/stm32fxxx.lds
 	$(CC) $(BOOTLDR_LDFLAGS) $(BOOT_OBJ) -o $(FW_DIR)/$(BOOTLOADER).elf -lgcc
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(BOOTLOADER).dfu
-	$(OBJCOPY) -Obinary --pad-to=$(MAIN_APP_ADDR) --gap-fill=0xFF $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER).bin
+endif
 
+ifeq ($(OMV_ENABLE_UVC), 1)
 # This target generates the UVC firmware.
 $(UVC): FIRMWARE_OBJS UVC_OBJS
 	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(UVC_DIR)/stm32fxxx.ld.S > $(BUILD)/$(UVC_DIR)/stm32fxxx.lds
 	$(CC) $(UVC_LDFLAGS) $(UVC_OBJ) -o $(FW_DIR)/$(UVC).elf -lgcc
 	$(OBJCOPY) -Obinary $(FW_DIR)/$(UVC).elf $(FW_DIR)/$(UVC).bin
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
+endif
 
-# This target generates a combined bootloader+main firmware image.
+# This target generates the uvc, bootloader and firmware images.
 $(OPENMV): $(BOOTLOADER) $(UVC) $(FIRMWARE)
-	$(CAT) $(FW_DIR)/$(BOOTLOADER).bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
-	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b 0x08000000:$(FW_DIR)/$(BOOTLOADER).bin -b $(MAIN_APP_ADDR):$(FW_DIR)/$(FIRMWARE).bin $(FW_DIR)/$(OPENMV).dfu
+ifeq ($(OMV_ENABLE_BL), 1)
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
+endif
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
 
 size:
+ifeq ($(OMV_ENABLE_BL), 1)
 	$(SIZE) --format=SysV $(FW_DIR)/$(BOOTLOADER).elf
+endif
 	$(SIZE) --format=SysV $(FW_DIR)/$(FIRMWARE).elf
 
 clean:
@@ -712,14 +721,6 @@ flash_boot::
 flash_image::
 	$(PYDFU) -u $(FW_DIR)/$(FIRMWARE).dfu
 
-# Flash the bootloader + main firmware image (DFU)
-flash_dfu::
-	$(PYDFU) -m -u $(FW_DIR)/$(OPENMV).dfu
-
-# Flash the bootloader + main firmware image (binary)
-flash_bin::
-	$(PYDFU) -m -u $(FW_DIR)/$(OPENMV).bin
-
 # Flash the bootloader using dfu_util
 flash_boot_dfu_util::
 	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(BOOTLOADER).dfu
@@ -728,6 +729,3 @@ flash_boot_dfu_util::
 flash_image_dfu_util::
 	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(FIRMWARE).dfu
 
-# Flash the bootloader + main firmware image (DFU) using dfu_util
-flash_dfu_util::
-	dfu-util -a 0 -d $(DFU_DEVICE) -D $(FW_DIR)/$(OPENMV).dfu
