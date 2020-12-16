@@ -8,7 +8,6 @@
  *
  * MT9V034 driver.
  */
-#include STM32_HAL_H
 #include "cambus.h"
 #include "mt9v034.h"
 #include "systick.h"

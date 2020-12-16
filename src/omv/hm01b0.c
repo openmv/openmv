@@ -11,7 +11,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include STM32_HAL_H
 #include "cambus.h"
 #include "hm01b0.h"
 #include "hm01b0_regs.h"
