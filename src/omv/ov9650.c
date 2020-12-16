@@ -11,7 +11,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include STM32_HAL_H
 #include "cambus.h"
 #include "ov9650.h"
 #include "systick.h"
