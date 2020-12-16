@@ -85,11 +85,6 @@ SRCS += $(addprefix img/,   \
 	selective_search.c      \
    )
 
-SRCS += $(addprefix nn/,    \
-	nn.c                    \
-   )
-
-
 SRCS += $(addprefix py/, \
 	py_helper.c             \
 	py_omv.c                \
@@ -105,7 +100,6 @@ SRCS += $(addprefix py/, \
 	py_mjpeg.c              \
 	py_winc.c               \
 	py_cpufreq.c            \
-	py_nn.c                 \
 	py_tf.c                 \
 	py_imu.c                \
 	py_audio.c              \
