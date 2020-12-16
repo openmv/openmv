@@ -7,8 +7,8 @@
 #
 # CMSIS Makefile
 
-SRC_S = src/st/$(STARTUP).s
-SRC_C = src/st/system_stm32fxxx.c
+SRC_S = src/$(STARTUP).s
+SRC_C = src/$(SYSTEM).c
 
 SRC_C  += $(wildcard src/dsp/CommonTables/*.c)
 SRC_C  += $(wildcard src/dsp/FastMathFunctions/*.c)
