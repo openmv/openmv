@@ -11,19 +11,19 @@ CFLAGS_STNN += -I/
 CFLAGS_STNN := $(CFLAGS) $(CFLAGS_STNN)
 
 #Sources
-SRCS += $(addprefix ../cmsis/src/dsp/BasicMathFunctions/,\
-	arm_shift_q7.c                                       \
-	arm_shift_q15.c                                      \
-	arm_dot_prod_f32.c                                   \
+SRCS += $(addprefix ../hal/cmsis/src/dsp/BasicMathFunctions/,\
+	arm_shift_q7.c                                           \
+	arm_shift_q15.c                                          \
+	arm_dot_prod_f32.c                                       \
 )
 
-SRCS += $(addprefix ../cmsis/src/dsp/SupportFunctions/,\
-	arm_float_to_q7.c                                   \
-	arm_float_to_q15.c                                  \
-	arm_q7_to_float.c                                   \
-	arm_q15_to_float.c                                  \
-	arm_q7_to_q15.c                                     \
-	arm_q15_to_q7.c                                     \
+SRCS += $(addprefix ../hal/cmsis/src/dsp/SupportFunctions/,\
+	arm_float_to_q7.c                                      \
+	arm_float_to_q15.c                                     \
+	arm_q7_to_float.c                                      \
+	arm_q15_to_float.c                                     \
+	arm_q7_to_q15.c                                        \
+	arm_q15_to_q7.c                                        \
 	)
 
 #CONV_FUNCTION = $(wildcard ../cmsis/src/nn/ConvolutionFunctions/*.o)
