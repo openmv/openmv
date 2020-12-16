@@ -160,7 +160,6 @@ endif
 
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
-OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/nn/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
@@ -303,10 +302,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
 	selective_search.o                      \
 	)
 
-FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/nn/,\
-	nn.o                                    \
-	)
-
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_helper.o                             \
 	py_omv.o                                \
@@ -322,7 +317,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/py/, \
 	py_mjpeg.o                              \
 	py_winc.o                               \
 	py_cpufreq.o                            \
-	py_nn.o                                 \
 	py_tf.o                                 \
 	py_imu.o                                \
 	py_audio.o                              \
