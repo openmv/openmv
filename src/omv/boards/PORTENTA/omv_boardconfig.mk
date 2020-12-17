@@ -1,6 +1,7 @@
 MCU=STM32H747xx
 CPU=cortex-m7
 FPU=fpv5-sp-d16
+PORT=stm32
 HAL_DIR=hal/stm32/h7
 ARM_MATH=ARM_MATH_CM7
 HAL_INC='<stm32h7xx_hal.h>'
