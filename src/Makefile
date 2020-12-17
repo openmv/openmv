@@ -161,6 +161,7 @@ endif
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/py/
 OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/img/
+OMV_CFLAGS += -I$(TOP_DIR)/$(OMV_DIR)/sensors/
 OMV_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
 OMV_CFLAGS += -I$(TOP_DIR)/$(LEPTON_DIR)/include/
 OMV_CFLAGS += -I$(TOP_DIR)/$(MLX_DIR)/include/
@@ -236,6 +237,14 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	usbdbg.o                                \
 	wifidbg.o                               \
 	cambus.o                                \
+	sensor.o                                \
+	stm32fxxx_hal_msp.o                     \
+	soft_i2c.o                              \
+	mutex.o                                 \
+	trace.o                                 \
+	)
+
+FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	ov2640.o                                \
 	ov5640.o                                \
 	ov7690.o                                \
@@ -244,11 +253,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	mt9v034.o                               \
 	lepton.o                                \
 	hm01b0.o                                \
-	sensor.o                                \
-	stm32fxxx_hal_msp.o                     \
-	soft_i2c.o                              \
-	mutex.o                                 \
-	trace.o                                 \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
@@ -586,6 +590,14 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	framebuffer.o                           \
 	array.o                                 \
 	cambus.o                                \
+	sensor.o                                \
+	stm32fxxx_hal_msp.o                     \
+	soft_i2c.o                              \
+	mutex.o                                 \
+	trace.o                                 \
+	)
+
+UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 	ov2640.o                                \
 	ov5640.o                                \
 	ov7690.o                                \
@@ -594,11 +606,6 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/, \
 	mt9v034.o                               \
 	lepton.o                                \
 	hm01b0.o                                \
-	sensor.o                                \
-	stm32fxxx_hal_msp.o                     \
-	soft_i2c.o                              \
-	mutex.o                                 \
-	trace.o                                 \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/img/,\
