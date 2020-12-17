@@ -1,6 +1,7 @@
 MCU=STM32F407xx
 CPU=cortex-m4
 FPU=fpv4-sp-d16
+PORT=stm32
 HAL_DIR=hal/stm32/f4
 ARM_MATH=ARM_MATH_CM4
 HAL_INC='<stm32f4xx_hal.h>'
