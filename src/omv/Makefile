@@ -7,23 +7,18 @@
 #
 # OMV Makefile
 
-SRCS += $(addprefix ,   \
-	main.c              \
-	xalloc.c            \
-	fb_alloc.c          \
-	umm_malloc.c        \
-	ff_wrapper.c        \
-	ini.c               \
-	framebuffer.c       \
-	array.c             \
-	usbdbg.c            \
-	wifidbg.c           \
-	cambus.c            \
-	sensor.c            \
-	stm32fxxx_hal_msp.c \
-	soft_i2c.c          \
-	mutex.c             \
-	trace.c             \
+SRCS += $(addprefix alloc/,     \
+	xalloc.c                    \
+	fb_alloc.c                  \
+	umm_malloc.c                \
+   )
+
+SRCS += $(addprefix common/,    \
+	array.c                     \
+	ff_wrapper.c                \
+	ini.c                       \
+	ringbuf.c                   \
+	trace.c                     \
    )
 
 SRCS += $(addprefix sensors/,   \
@@ -37,77 +32,71 @@ SRCS += $(addprefix sensors/,   \
 	hm01b0.c                    \
    )
 
-SRCS += $(addprefix img/,   \
-	binary.c                \
-	blob.c                  \
-	clahe.c                 \
-	draw.c                  \
-	qrcode.c                \
-	apriltag.c              \
-	dmtx.c                  \
-	zbar.c                  \
-	fmath.c                 \
-	fsort.c                 \
-	qsort.c                 \
-	fft.c                   \
-	filter.c                \
-	haar.c                  \
-	imlib.c                 \
-	collections.c           \
-	stats.c                 \
-	integral.c              \
-	integral_mw.c           \
-	kmeans.c                \
-	lab_tab.c               \
-	xyz_tab.c               \
-	yuv_tab.c               \
-	rainbow_tab.c           \
-	mathop.c                \
-	pool.c                  \
-	point.c                 \
-	rectangle.c             \
-	bmp.c                   \
-	ppm.c                   \
-	gif.c                   \
-	mjpeg.c                 \
-	fast.c                  \
-	agast.c                 \
-	orb.c                   \
-	template.c              \
-	phasecorrelation.c      \
-	font.c                  \
-	jpeg.c                  \
-	lbp.c                   \
-	eye.c                   \
-	hough.c                 \
-	line.c                  \
-	lsd.c                   \
-	sincos_tab.c            \
-	edge.c                  \
-	hog.c                   \
-	selective_search.c      \
+SRCS += $(addprefix modules/,   \
+	py_clock.c                  \
+	py_gif.c                    \
+	py_helper.c                 \
+	py_image.c                  \
+	py_mjpeg.c                  \
+	py_omv.c                    \
+	py_sensor.c                 \
+	py_tf.c                     \
    )
 
-SRCS += $(addprefix py/, \
-	py_helper.c             \
-	py_omv.c                \
-	py_sensor.c             \
-	py_image.c              \
-	py_clock.c              \
-	py_lcd.c                \
-	py_lcd_cec.c            \
-	py_lcd_touch.c          \
-	py_tv.c                 \
-	py_fir.c                \
-	py_gif.c                \
-	py_mjpeg.c              \
-	py_winc.c               \
-	py_cpufreq.c            \
-	py_tf.c                 \
-	py_imu.c                \
-	py_audio.c              \
-	py_micro_speech.c       \
+SRCS += $(addprefix imlib/,     \
+	agast.c                     \
+	apriltag.c                  \
+	binary.c                    \
+	blob.c                      \
+	bmp.c                       \
+	clahe.c                     \
+	collections.c               \
+	dmtx.c                      \
+	draw.c                      \
+	edge.c                      \
+	eye.c                       \
+	fast.c                      \
+	fft.c                       \
+	filter.c                    \
+	fmath.c                     \
+	font.c                      \
+	framebuffer.c               \
+	fsort.c                     \
+	gif.c                       \
+	haar.c                      \
+	hog.c                       \
+	hough.c                     \
+	imlib.c                     \
+	integral.c                  \
+	integral_mw.c               \
+	jpeg.c                      \
+	kmeans.c                    \
+	lab_tab.c                   \
+	lbp.c                       \
+	line.c                      \
+	lsd.c                       \
+	mathop.c                    \
+	mjpeg.c                     \
+	orb.c                       \
+	phasecorrelation.c          \
+	point.c                     \
+	pool.c                      \
+	ppm.c                       \
+	qrcode.c                    \
+	qsort.c                     \
+	rainbow_tab.c               \
+	rectangle.c                 \
+	selective_search.c          \
+	sincos_tab.c                \
+	stats.c                     \
+	template.c                  \
+	xyz_tab.c                   \
+	yuv_tab.c                   \
+	zbar.c                      \
    )
+
+SRCS += $(wildcard ports/$(PORT)/*.c)
+SRCS += $(wildcard ports/$(PORT)/modules/*.c)
 
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
