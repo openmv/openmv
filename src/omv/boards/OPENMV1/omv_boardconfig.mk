@@ -13,3 +13,4 @@ DFU_DEVICE=0x0483:0xdf11
 OMV_ENABLE_BL=1
 OMV_ENABLE_UVC=1
 MICROPY_PY_WINC1500 = 1
+$(error "This camera is no longer supported :O Have fun hacking the code $(BRACKET)")

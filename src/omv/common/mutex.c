@@ -8,8 +8,8 @@
  *
  * Mutex implementation.
  */
-#include STM32_HAL_H
 #include "mutex.h"
+#include "cmsis_gcc.h"
 
 // This is a standard implementation of mutexs on ARM processors following the ARM guide.
 // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHEJCHB.html
