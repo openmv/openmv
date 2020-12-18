@@ -9,7 +9,9 @@
  * Image library.
  */
 #include <stdlib.h>
-#include <mp.h>
+#include "py/obj.h"
+#include "py/nlr.h"
+
 #include "font.h"
 #include "array.h"
 #include "ff_wrapper.h"
@@ -81,10 +83,10 @@ void point_min_area_rectangle(point_t *corners, point_t *new_corners, int corner
         int miny = y0;
         int maxy = y0;
         for (int j = 0, jj = corners_len - 1; j < jj; j++) {
-            minx = MIN(minx, x1[j]);
-            maxx = MAX(maxx, x1[j]);
-            miny = MIN(miny, y1[j]);
-            maxy = MAX(maxy, y1[j]);
+            minx = IM_MIN(minx, x1[j]);
+            maxx = IM_MAX(maxx, x1[j]);
+            miny = IM_MIN(miny, y1[j]);
+            maxy = IM_MAX(maxy, y1[j]);
         }
 
         int area = (maxx - minx + 1) * (maxy - miny + 1);

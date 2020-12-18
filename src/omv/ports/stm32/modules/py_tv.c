@@ -6,10 +6,13 @@
  * TV Python module.
  *
  */
-#include <mp.h>
-#include <objstr.h>
+#include "py/nlr.h"
+#include "py/mphal.h"
+#include "systick.h"
+#include "py/obj.h"
+#include "py/objstr.h"
+
 #include <spi.h>
-#include <systick.h>
 #include "imlib.h"
 #include "fb_alloc.h"
 #include "ff_wrapper.h"

@@ -12,16 +12,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <errno.h>
+#include "py/nlr.h"
+#include "py/mphal.h"
+#include "py/obj.h"
+#include "py/lexer.h"
+#include "py/parse.h"
+#include "py/compile.h"
+#include "py/runtime.h"
+#include "py/stackctrl.h"
+#include "irq.h"
+
 #include "winc.h"
 #include "socket/include/socket.h"
 #include "driver/include/m2m_wifi.h"
-#include "mp.h"
-#include "irq.h"
-#include "lexer.h"
-#include "parse.h"
-#include "compile.h"
-#include "runtime.h"
-#include "stackctrl.h"
 #include "usbdbg.h"
 #include "sensor.h"
 #include "framebuffer.h"

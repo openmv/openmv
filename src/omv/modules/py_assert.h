@@ -10,7 +10,6 @@
  */
 #ifndef __PY_ASSERT_H__
 #define __PY_ASSERT_H__
-#include "mp.h"
 #define PY_ASSERT_TRUE(cond)                            \
     do {                                                \
         if ((cond) == 0) {                              \

@@ -8,7 +8,8 @@
  *
  * MJPEG Python module.
  */
-#include "mp.h"
+#include "py/obj.h"
+#include "py/nlr.h"
 #include "ff_wrapper.h"
 #include "framebuffer.h"
 #include "sensor.h"

@@ -8,8 +8,9 @@
  *
  * UMM memory allocator.
  */
-#include <mp.h>
 #include <string.h>
+#include "py/nlr.h"
+#include "py/mphal.h"
 #include "fb_alloc.h"
 #include "umm_malloc.h"
 #include "omv_boardconfig.h"

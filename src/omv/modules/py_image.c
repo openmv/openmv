@@ -8,8 +8,19 @@
  *
  * Image Python module.
  */
+#include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include <arm_math.h>
-#include <mp.h>
+#include "py/nlr.h"
+#include "systick.h"
+#include "py/obj.h"
+#include "py/objlist.h"
+#include "py/objstr.h"
+#include "py/objtuple.h"
+#include "py/objtype.h"
+#include "py/runtime.h"
+
 #include "imlib.h"
 #include "array.h"
 #include "sensor.h"
@@ -21,8 +32,6 @@
 #include "py_helper.h"
 #include "py_image.h"
 #include "omv_boardconfig.h"
-#include "py/runtime0.h"
-#include "py/runtime.h"
 
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;

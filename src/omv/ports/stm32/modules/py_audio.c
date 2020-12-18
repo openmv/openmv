@@ -8,17 +8,22 @@
  *
  * Audio Python module.
  */
-#include <mp.h>
-#include "py_audio.h"
+#include <stdio.h>
+#include "py/obj.h"
+#include "py/objarray.h"
+#include "py/nlr.h"
+#include "py/mphal.h"
+#include "py/binary.h"
 #include "systick.h"
+#include "pendsv.h"
+#include "runtime.h"
+
+#include "py_audio.h"
 #include "py_assert.h"
 #include "py_helper.h"
-#include "py/binary.h"
 #include "pdm2pcm_glo.h"
 #include "fb_alloc.h"
 #include "omv_boardconfig.h"
-#include "py/obj.h"
-#include "py/objarray.h"
 #include "common.h"
 
 #if MICROPY_PY_AUDIO

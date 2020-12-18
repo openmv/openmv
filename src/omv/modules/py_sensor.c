@@ -9,7 +9,8 @@
  * Sensor Python module.
  */
 #include <stdarg.h>
-#include "mp.h"
+#include "py/mphal.h"
+#include "py/nlr.h"
 #include "pin.h"
 #include "sensor.h"
 #include "imlib.h"

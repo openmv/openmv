@@ -8,15 +8,18 @@
  *
  * Micro Speech Python module.
  */
-#include <mp.h>
-#include "systick.h"
-#include "py_assert.h"
-#include "py_helper.h"
-#include "py/binary.h"
-#include "fb_alloc.h"
-#include "omv_boardconfig.h"
+#include <stdio.h>
 #include "py/obj.h"
 #include "py/objarray.h"
+#include "py/nlr.h"
+#include "py/mphal.h"
+#include "systick.h"
+#include "py/binary.h"
+
+#include "py_assert.h"
+#include "py_helper.h"
+#include "fb_alloc.h"
+#include "omv_boardconfig.h"
 #include "libtf.h"
 #include "py_tf.h"
 #include "common.h"

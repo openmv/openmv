@@ -8,7 +8,10 @@
  *
  * Memory allocation functions.
  */
-#include <mp.h>
+#include <string.h>
+#include "py/nlr.h"
+#include "py/gc.h"
+#include "py/mphal.h"
 #include "xalloc.h"
 
 NORETURN static void xalloc_fail()

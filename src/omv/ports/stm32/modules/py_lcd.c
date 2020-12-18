@@ -8,7 +8,9 @@
  *
  * LCD Python module.
  */
-#include STM32_HAL_H
+#include "py/obj.h"
+#include "py/nlr.h"
+
 #include "extint.h"
 #include "spi.h"
 #include "py_lcd_cec.h"
@@ -16,6 +18,7 @@
 #include "py_helper.h"
 #include "extmod/machine_i2c.h"
 #include "omv_boardconfig.h"
+#include STM32_HAL_H
 
 #define FRAMEBUFFER_COUNT 3
 static int framebuffer_head = 0;

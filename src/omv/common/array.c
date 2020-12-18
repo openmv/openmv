@@ -8,8 +8,9 @@
  *
  * Dynamic array.
  */
-#include <mp.h>
-#include <stackctrl.h>
+#include <string.h>
+#include "py/runtime.h"
+#include "py/stackctrl.h"
 #include "xalloc.h"
 #include "array.h"
 #define ARRAY_INIT_SIZE (4) // Size of one GC block.
