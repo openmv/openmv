@@ -8,14 +8,15 @@
  *
  * MT9V034 driver.
  */
+#include "omv_boardconfig.h"
+#if (OMV_ENABLE_MT9V034 == 1)
+
 #include "cambus.h"
+#include "sensor.h"
 #include "mt9v034.h"
 #include "systick.h"
 #include "framebuffer.h"
-#include "sensor.h"
-#include "omv_boardconfig.h"
 
-#if (OMV_ENABLE_MT9V034 == 1)
 #define MT9V034_MAX_HEIGHT                      (480)
 #define MT9V034_MAX_WIDTH                       (752)
 #define MT9V034_CHIP_VERSION                    (0x00)

@@ -8,16 +8,19 @@
  *
  * OV7690 driver.
  */
+#include "omv_boardconfig.h"
+#if (OMV_ENABLE_OV7690 == 1)
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "cambus.h"
+#include "sensor.h"
 #include "ov7690.h"
 #include "ov7690_regs.h"
 #include "systick.h"
-#include "omv_boardconfig.h"
 
-#if (OMV_ENABLE_OV7690 == 1)
 static const uint8_t default_regs[][2] = {
 
 // From App Note.

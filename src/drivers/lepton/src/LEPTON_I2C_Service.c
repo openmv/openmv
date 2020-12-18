@@ -67,6 +67,8 @@
 /******************************************************************************/
 /** INCLUDE FILES                                                            **/
 /******************************************************************************/
+#include "omv_boardconfig.h"
+#if (OMV_ENABLE_LEPTON == 1)
 
 #include "LEPTON_Types.h"
 #include "LEPTON_ErrorCodes.h"
@@ -236,4 +238,4 @@ LEP_RESULT LEP_I2C_MasterStatus(LEP_UINT16 portID,
     return(result);
 }
 
-
+#endif // (OMV_ENABLE_LEPTON == 1)

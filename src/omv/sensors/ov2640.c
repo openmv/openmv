@@ -8,16 +8,18 @@
  *
  * OV2640 driver.
  */
+#include "omv_boardconfig.h"
+#if (OMV_ENABLE_OV2640 == 1)
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "cambus.h"
+#include "sensor.h"
 #include "ov2640.h"
 #include "ov2640_regs.h"
 #include "systick.h"
-#include "omv_boardconfig.h"
-
-#if (OMV_ENABLE_OV2640 == 1)
 
 #define CIF_WIDTH       (400)
 #define CIF_HEIGHT      (296)

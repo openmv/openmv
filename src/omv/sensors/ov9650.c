@@ -8,16 +8,18 @@
  *
  * OV9650 driver.
  */
+#include "omv_boardconfig.h"
+#if (OMV_ENABLE_OV9650 == 1)
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "cambus.h"
+#include "sensor.h"
 #include "ov9650.h"
 #include "systick.h"
 #include "ov9650_regs.h"
-#include "omv_boardconfig.h"
-
-#if (OMV_ENABLE_OV9650 == 1)
 
 #define NUM_BR_LEVELS       7
 

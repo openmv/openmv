@@ -8,19 +8,22 @@
  *
  * HM01B0 driver.
  */
+#include "omv_boardconfig.h"
+#if (OMV_ENABLE_HM01B0 == 1)
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "cambus.h"
+#include "sensor.h"
 #include "hm01b0.h"
 #include "hm01b0_regs.h"
 #include "systick.h"
-#include "omv_boardconfig.h"
-#define HIMAX_BOOT_RETRY        (10)
 
-#define HIMAX_LINE_LEN_PCK 0x172
-#define HIMAX_FRAME_LENGTH 0x232
-#if (OMV_ENABLE_HM01B0 == 1)
+#define HIMAX_BOOT_RETRY        (10)
+#define HIMAX_LINE_LEN_PCK      0x172
+#define HIMAX_FRAME_LENGTH      0x232
+
 static const uint16_t default_regs[][2] = {
     {BLC_TGT,              0x08},          //  BLC target :8  at 8 bit mode
     {BLC2_TGT,             0x08},          //  BLI target :8  at 8 bit mode
