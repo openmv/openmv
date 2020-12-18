@@ -10,6 +10,5 @@
  */
 #ifndef __HM01B0_H__
 #define __HM01B0_H__
-#include "sensor.h"
 int hm01b0_init(sensor_t *sensor);
 #endif // __HM01B0_H__
