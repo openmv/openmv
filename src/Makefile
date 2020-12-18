@@ -234,6 +234,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	ini.o                       \
 	ringbuf.o                   \
 	trace.o                     \
+	mutex.o                     \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
@@ -400,6 +401,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	array.o                                 \
 	trace.o                                 \
+	mutex.o                                 \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
@@ -428,7 +430,6 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/ports/stm32/,\
 	sensor.o                                \
 	stm32fxxx_hal_msp.o                     \
 	soft_i2c.o                              \
-	mutex.o                                 \
 	cambus.o                                \
 	)
 

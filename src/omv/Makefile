@@ -19,6 +19,7 @@ SRCS += $(addprefix common/,    \
 	ini.c                       \
 	ringbuf.c                   \
 	trace.c                     \
+	mutex.c                     \
    )
 
 SRCS += $(addprefix sensors/,   \
