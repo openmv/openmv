@@ -9,7 +9,6 @@
  * Lepton driver.
  */
 #include STM32_HAL_H
-#include "mp.h"
 #include "irq.h"
 #include "cambus.h"
 #include "sensor.h"

@@ -6,7 +6,10 @@
  * File System Helper Functions
  *
  */
-#include <mp.h>
+#include <string.h>
+#include "py/runtime.h"
+#include "extmod/vfs.h"
+#include "extmod/vfs_fat.h"
 #include "common.h"
 #include "fb_alloc.h"
 #include "ff_wrapper.h"

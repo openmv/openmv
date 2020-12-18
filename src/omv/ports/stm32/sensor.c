@@ -8,9 +8,10 @@
  *
  * Sensor abstraction layer.
  */
-#include <stdlib.h>
 #include <string.h>
-#include "mp.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include "py/mphal.h"
 #include "irq.h"
 #include "cambus.h"
 #include "ov2640.h"

@@ -8,18 +8,24 @@
  *
  * USB debugger.
  */
-#include "mp.h"
+#include <string.h>
+#include <stdio.h>
+#include "py/nlr.h"
+#include "py/gc.h"
+#include "py/mphal.h"
+#include "py/obj.h"
+#include "py/lexer.h"
+#include "py/parse.h"
+#include "py/compile.h"
+#include "py/runtime.h"
+#include "pendsv.h"
+
 #include "imlib.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "ff.h"
 #include "usb.h"
 #include "usbdbg.h"
-#include "nlr.h"
-#include "lexer.h"
-#include "parse.h"
-#include "compile.h"
-#include "runtime.h"
 #include "omv_boardconfig.h"
 
 #if MICROPY_HW_USB_HS

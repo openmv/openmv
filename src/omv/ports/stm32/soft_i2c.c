@@ -8,7 +8,11 @@
  *
  * Software I2C implementation.
  */
-#include <mp.h>
+#include <string.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include "py/mphal.h"
+
 #include "soft_i2c.h"
 #include "omv_boardconfig.h"
 

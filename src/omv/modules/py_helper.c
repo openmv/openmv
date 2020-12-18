@@ -8,8 +8,11 @@
  *
  * Python helper functions.
  */
+#include "py/obj.h"
+#include "py/nlr.h"
 #include "framebuffer.h"
 #include "py_helper.h"
+#include "py_assert.h"
 
 extern void *py_image_cobj(mp_obj_t img_obj);
 

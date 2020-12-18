@@ -8,11 +8,16 @@
  *
  * IMU Python module.
  */
-#include STM32_HAL_H
+#include "py/obj.h"
+#include "py/nlr.h"
+#include "py/mphal.h"
+#include "systick.h"
+
 #include "lsm6ds3tr_c_reg.h"
 #include "omv_boardconfig.h"
 #include "py_helper.h"
 #include "py_imu.h"
+#include STM32_HAL_H
 
 #if MICROPY_PY_IMU
 

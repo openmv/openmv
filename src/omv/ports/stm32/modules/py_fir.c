@@ -9,6 +9,12 @@
  * FIR Python module.
  */
 #include <stdbool.h>
+#include "py/obj.h"
+#include "py/nlr.h"
+#include "py/gc.h"
+#include "py/mphal.h"
+#include "systick.h"
+
 #include "soft_i2c.h"
 #include "cambus.h"
 #include "MLX90640_I2C_Driver.h"
@@ -17,6 +23,7 @@
 #include "framebuffer.h"
 #include "sensor.h"
 #include "py_helper.h"
+#include "py_assert.h"
 #include "py_image.h"
 #include "py_fir.h"
 

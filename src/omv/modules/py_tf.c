@@ -3,8 +3,14 @@
  * This work is licensed under the MIT license, see the file LICENSE for details.
  */
 
-#include <mp.h>
+#include "py/obj.h"
+#include "py/nlr.h"
+#include "py/obj.h"
+#include "py/objlist.h"
+#include "py/objtuple.h"
+
 #include "py_helper.h"
+#include "py_assert.h"
 #include "py_image.h"
 #include "ff_wrapper.h"
 #include "libtf.h"

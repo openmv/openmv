@@ -6,7 +6,8 @@
  * Interface for using extra frame buffer RAM as a stack.
  *
  */
-#include <mp.h>
+#include "py/obj.h"
+#include "py/nlr.h"
 #include "fb_alloc.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"

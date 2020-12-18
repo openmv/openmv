@@ -8,7 +8,7 @@
  *
  * Clock Python module.
  */
-#include <mp.h>
+#include "py/obj.h"
 #include "systick.h"
 #include "py_clock.h"
 

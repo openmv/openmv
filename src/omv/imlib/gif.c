@@ -8,7 +8,6 @@
  *
  * A simple GIF encoder.
  */
-#include <mp.h>
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
 #include "imlib.h"

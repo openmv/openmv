@@ -8,7 +8,10 @@
  *
  * OMV Python module.
  */
-#include <mp.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include "py/obj.h"
 #include "usbdbg.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
