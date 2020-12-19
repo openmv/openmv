@@ -37,16 +37,6 @@
 #define HM01B0_ID           (0xB0)
 
 typedef enum {
-    PIXFORMAT_INVALID = 0,
-    PIXFORMAT_BINARY,    // 1BPP/BINARY
-    PIXFORMAT_GRAYSCALE, // 1BPP/GRAYSCALE
-    PIXFORMAT_RGB565,    // 2BPP/RGB565
-    PIXFORMAT_YUV422,    // 2BPP/YUV422
-    PIXFORMAT_BAYER,     // 1BPP/RAW
-    PIXFORMAT_JPEG,      // JPEG/COMPRESSED
-} pixformat_t;
-
-typedef enum {
     FRAMESIZE_INVALID = 0,
     // C/SIF Resolutions
     FRAMESIZE_QQCIF,    // 88x72

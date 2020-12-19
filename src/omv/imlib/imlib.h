@@ -375,6 +375,16 @@ extern const uint16_t ironbow_table[256];
 // Image Stuff //
 /////////////////
 
+typedef enum {
+    PIXFORMAT_INVALID = 0,
+    PIXFORMAT_BINARY,    // 1BPP/BINARY
+    PIXFORMAT_GRAYSCALE, // 1BPP/GRAYSCALE
+    PIXFORMAT_RGB565,    // 2BPP/RGB565
+    PIXFORMAT_YUV422,    // 2BPP/YUV422
+    PIXFORMAT_BAYER,     // 1BPP/RAW
+    PIXFORMAT_JPEG,      // JPEG/COMPRESSED
+} pixformat_t;
+
 typedef enum image_bpp
 {
     IMAGE_BPP_BINARY,       // BPP = 0

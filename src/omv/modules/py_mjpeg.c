@@ -12,7 +12,6 @@
 #include "py/nlr.h"
 #include "ff_wrapper.h"
 #include "framebuffer.h"
-#include "sensor.h"
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
