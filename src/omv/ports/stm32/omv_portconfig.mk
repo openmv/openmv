@@ -3,6 +3,7 @@ SYSTEM    ?= st/system_stm32fxxx
 STARTUP   ?= st/startup_$(shell echo $(MCU) | tr '[:upper:]' '[:lower:]')
 LDSCRIPT  ?= stm32fxxx
 
+OMV_PORT_CFLAGS     += -DSTM32_HAL_H=$(HAL_INC)
 OMV_PORT_HAL_CFLAGS += -I$(TOP_DIR)/$(CMSIS_DIR)/include/st
 OMV_PORT_HAL_CFLAGS += -I$(TOP_DIR)/$(HAL_DIR)/include/Legacy/
 
