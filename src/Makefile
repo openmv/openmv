@@ -357,17 +357,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 LIBS += $(MICROPY_DIR)/drivers/cyw43/libcyw43.a
 endif
 
-FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
-	ff.o                \
-	ffunicode.o         \
-	)
-
-FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
-	bus/softspi.o       \
-	dht/dht.o           \
-	memory/spiflash.o   \
-	)
-
 #------------- CubeAI Objects -------------------#
 ifeq ($(CUBEAI), 1)
 include $(TOP_DIR)/stm32cubeai/cube.mk

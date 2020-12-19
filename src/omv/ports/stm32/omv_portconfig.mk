@@ -178,3 +178,14 @@ OMV_PORT_MPY_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
 	moduasyncio.o       \
 	)
 
+OMV_PORT_MPY_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/oofatfs/,\
+	ff.o                \
+	ffunicode.o         \
+	)
+
+OMV_PORT_MPY_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/drivers/,\
+	bus/softspi.o       \
+	dht/dht.o           \
+	memory/spiflash.o   \
+	)
+
