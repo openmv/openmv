@@ -90,6 +90,7 @@ Q(Gif)
 Q(open)
 Q(add_frame)
 Q(loop)
+Q(delay)
 
 // Mjpeg module
 Q(mjpeg)
