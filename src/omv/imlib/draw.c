@@ -8,10 +8,13 @@
  *
  * Basic drawing functions.
  */
-#include STM32_HAL_H
-#include "dma.h"
 #include "font.h"
 #include "imlib.h"
+
+#ifdef IMLIB_ENABLE_DMA2D
+#include STM32_HAL_H
+#include "dma.h"
+#endif
 
 void* imlib_compute_row_ptr(const image_t *img, int y) {
     switch(img->bpp) {
