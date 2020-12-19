@@ -9,7 +9,7 @@
  * Clock Python module.
  */
 #include "py/obj.h"
-#include "systick.h"
+#include "py/mphal.h"
 #include "py_clock.h"
 
 /* Clock Type */
@@ -23,7 +23,7 @@ typedef struct _py_clock_obj_t {
 mp_obj_t py_clock_tick(mp_obj_t clock_obj)
 {
     py_clock_obj_t *clock = (py_clock_obj_t*) clock_obj;
-    clock->t_start = systick_current_millis();
+    clock->t_start = mp_hal_ticks_ms();
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_clock_tick_obj,  py_clock_tick);
@@ -32,7 +32,7 @@ mp_obj_t py_clock_fps(mp_obj_t clock_obj)
 {
     py_clock_obj_t *clock = (py_clock_obj_t*) clock_obj;
     clock->t_frame++;
-    clock->t_ticks += (systick_current_millis()-clock->t_start);
+    clock->t_ticks += (mp_hal_ticks_ms() - clock->t_start);
     float fps = 1000.0f / (clock->t_ticks/(float)clock->t_frame);
     return mp_obj_new_float(fps);
 }
@@ -42,7 +42,7 @@ mp_obj_t py_clock_avg(mp_obj_t clock_obj)
 {
     py_clock_obj_t *clock = (py_clock_obj_t*) clock_obj;
     clock->t_frame++;
-    clock->t_ticks += (systick_current_millis()-clock->t_start);
+    clock->t_ticks += (mp_hal_ticks_ms() - clock->t_start);
     return mp_obj_new_float(clock->t_ticks/(float)clock->t_frame);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_clock_avg_obj,   py_clock_avg);

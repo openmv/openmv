@@ -15,7 +15,7 @@
 #include "irq.h"
 #include "cambus.h"
 #include "sensor.h"
-#include "systick.h"
+#include "py/mphal.h"
 #include "framebuffer.h"
 #include "common.h"
 
@@ -84,7 +84,7 @@ static void lepton_sync()
     HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
 
     debug_printf("resync...\n");
-    systick_sleep(200);
+    mp_hal_delay_ms(200);
 
     vospi_resync = false;
     vospi_pid = VOSPI_FIRST_PACKET;
@@ -107,10 +107,10 @@ static int sleep(sensor_t *sensor, int enable)
 {
     if (enable) {
         DCMI_PWDN_LOW();
-        systick_sleep(100);
+        mp_hal_delay_ms(100);
     } else {
         DCMI_PWDN_HIGH();
-        systick_sleep(100);
+        mp_hal_delay_ms(100);
     }
 
     return 0;
@@ -329,31 +329,31 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
 static int lepton_reset(sensor_t *sensor, bool measurement_mode)
 {
     DCMI_PWDN_LOW();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     DCMI_PWDN_HIGH();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     DCMI_RESET_LOW();
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     DCMI_RESET_HIGH();
-    systick_sleep(1000);
+    mp_hal_delay_ms(1000);
 
     LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
     memset(&LEPHandle, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
-    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ;mp_hal_delay_ms(1)) {
         if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &LEPHandle) == LEP_OK) {
             break;
         }
-        if (HAL_GetTick() - start >= LEPTON_TIMEOUT) {
+        if ((mp_hal_ticks_ms() - start) >= LEPTON_TIMEOUT) {
             return -1;
         }
     }
 
-    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ;mp_hal_delay_ms(1)) {
         LEP_SDK_BOOT_STATUS_E status;
         if (LEP_GetCameraBootStatus(&LEPHandle, &status) != LEP_OK) {
             return -1;
@@ -361,12 +361,12 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode)
         if (status == LEP_BOOT_STATUS_BOOTED) {
             break;
         }
-        if (HAL_GetTick() - start >= LEPTON_TIMEOUT) {
+        if ((mp_hal_ticks_ms() - start) >= LEPTON_TIMEOUT) {
             return -1;
         }
     }
 
-    for (uint32_t start = HAL_GetTick(); ;systick_sleep(1)) {
+    for (mp_uint_t start = mp_hal_ticks_ms(); ;mp_hal_delay_ms(1)) {
         LEP_UINT16 status;
         if (LEP_DirectReadRegister(&LEPHandle, LEP_I2C_STATUS_REG, &status) != LEP_OK) {
             return -1;
@@ -374,7 +374,7 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode)
         if (!(status & LEP_I2C_STATUS_BUSY_BIT_MASK)) {
             break;
         }
-        if (HAL_GetTick() - start >= LEPTON_TIMEOUT) {
+        if ((mp_hal_ticks_ms() - start) >= LEPTON_TIMEOUT) {
             return -1;
         }
     }
@@ -509,7 +509,7 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
 
         // Snapshot start tick
-        uint32_t tick_start = HAL_GetTick();
+        mp_uint_t tick_start = mp_hal_ticks_ms();
         bool reset_tried = false;
 
         do {
@@ -523,11 +523,11 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
             } else {
                 __WFI();
             }
-            if ((HAL_GetTick() - tick_start) >= 20000) {
+            if ((mp_hal_ticks_ms() - tick_start) >= 20000) {
                 // Timeout error.
                 return -1;
             }
-            if ((!reset_tried) && ((HAL_GetTick() - tick_start) >= 10000)) {
+            if ((!reset_tried) && ((mp_hal_ticks_ms() - tick_start) >= 10000)) {
                 reset_tried = true;
 
                 // The FLIR lepton might have crashed so reset it (it does this).

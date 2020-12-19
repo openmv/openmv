@@ -13,13 +13,13 @@
 #include <stdbool.h>
 #include <arm_math.h>
 #include "py/nlr.h"
-#include "systick.h"
 #include "py/obj.h"
 #include "py/objlist.h"
 #include "py/objstr.h"
 #include "py/objtuple.h"
 #include "py/objtype.h"
 #include "py/runtime.h"
+#include "py/mphal.h"
 
 #include "imlib.h"
 #include "array.h"
@@ -6667,7 +6667,7 @@ mp_obj_t py_imagewriter_add_frame(mp_obj_t self_in, mp_obj_t img_obj)
     PY_ASSERT_TYPE(img_obj, &py_image_type);
     image_t *arg_img = &((py_image_obj_t *) img_obj)->_cobj;
 
-    uint32_t ms = systick_current_millis(); // Write out elapsed ms.
+    uint32_t ms = mp_hal_ticks_ms(); // Write out elapsed ms.
     write_long(fp, ms - ((py_imagewriter_obj_t *) self_in)->ms);
     ((py_imagewriter_obj_t *) self_in)->ms = ms;
 
@@ -6718,7 +6718,7 @@ mp_obj_t py_image_imagewriter(mp_obj_t path)
     write_long(&obj->fp, *((uint32_t *) "STR ")); // Stream
     write_long(&obj->fp, *((uint32_t *) "V1.0")); // v1.0
 
-    obj->ms = systick_current_millis();
+    obj->ms = mp_hal_ticks_ms();
     return obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_imagewriter_obj, py_image_imagewriter);
@@ -6781,9 +6781,9 @@ mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     uint32_t ms; // Wait for elapsed ms.
     ms = 0;
     if (!py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pause), true)) {
-        for (ms = systick_current_millis();
+        for (ms = mp_hal_ticks_ms();
             ((ms - ((py_imagewriter_obj_t *) args[0])->ms) < ms_tmp);
-            ms = systick_current_millis()) {
+            ms = mp_hal_ticks_ms()) {
             __WFI();
         }
     }
@@ -6856,7 +6856,7 @@ mp_obj_t py_image_imagereader(mp_obj_t path)
     read_long_expect(&obj->fp, *((uint32_t *) "STR ")); // Stream
     read_long_expect(&obj->fp, *((uint32_t *) "V1.0")); // v1.0
 
-    obj->ms = systick_current_millis();
+    obj->ms = mp_hal_ticks_ms();
     return obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_imagereader_obj, py_image_imagereader);

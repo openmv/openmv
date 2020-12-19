@@ -11,7 +11,6 @@
  * DCT implementation is based on Arai, Agui, and Nakajima's algorithm for scaled DCT.
  */
 #include <stdio.h>
-#include STM32_HAL_H
 #include <arm_math.h>
 
 #include "xalloc.h"
@@ -21,6 +20,9 @@
 #include "omv_boardconfig.h"
 
 #define TIME_JPEG   (0)
+#if (TIME_JPEG == 1)
+#include "py/mphal.h"
+#endif
 
 // Expand 4 bits to 32 for binary to grayscale; process 4 pixels at a time
 const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
@@ -152,6 +154,7 @@ static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0
 } /* bayer_to_ycbcr() */
 
 #if (OMV_HARDWARE_JPEG == 1)
+#include STM32_HAL_H
 
 #define MCU_W                       (8)
 #define MCU_H                       (8)
@@ -309,7 +312,7 @@ void HAL_JPEG_ErrorCallback(JPEG_HandleTypeDef *hjpeg)
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
 {
 #if (TIME_JPEG==1)
-    uint32_t start = HAL_GetTick();
+    mp_uint_t start = mp_hal_ticks_ms();
 #endif
 
     // Init the HAL JPEG driver
@@ -369,7 +372,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     dst->bpp = jpeg_enc.out_size;
 
 #if (TIME_JPEG==1)
-    printf("time: %lums\n", HAL_GetTick() - start);
+    printf("time: %u ms\n", mp_hal_ticks_ms() - start);
 #endif
 
     HAL_JPEG_DeInit(&JPEG_Handle);
@@ -959,7 +962,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     int DCY=0, DCU=0, DCV=0;
 
     #if (TIME_JPEG==1)
-    uint32_t start = HAL_GetTick();
+    uint32_t start = mp_hal_ticks_ms();
     #endif
 
     // JPEG buffer
@@ -1279,7 +1282,7 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     dst->data = jpeg_buf.buf;
 
     #if (TIME_JPEG==1)
-    printf("time: %lums\n", HAL_GetTick() - start);
+    printf("time: %lums\n", mp_hal_ticks_ms() - start);
     #endif
 
 jpeg_overflow:
