@@ -8,9 +8,9 @@
  *
  * Trace buffer.
  */
-#include "trace.h"
 #include <stdint.h>
-#include STM32_HAL_H
+#include "cmsis_gcc.h"
+#include "trace.h"
 
 #define TRACEBUF_SIZE   (256)
 typedef struct _tracebuf_t {
