@@ -19,7 +19,7 @@
 #include "sensor.h"
 #include "ov5640.h"
 #include "ov5640_regs.h"
-#include "systick.h"
+#include "py/mphal.h"
 
 #define BLANK_LINES             8
 #define DUMMY_LINES             6
@@ -657,7 +657,7 @@ static int reset(sensor_t *sensor)
     ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, SYSTEM_CTROL0, 0x82);
 
     // Delay 5 ms
-    systick_sleep(5);
+    mp_hal_delay_ms(5);
 
     // Write default regsiters
     for (int i = 0; default_regs[i][0]; i++) {
@@ -686,7 +686,7 @@ static int reset(sensor_t *sensor)
     #endif
 
     // Delay 300 ms
-    systick_sleep(300);
+    mp_hal_delay_ms(300);
 
     return ret;
 }
@@ -1297,13 +1297,13 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             break;
         }
         case IOCTL_WAIT_ON_AUTO_FOCUS: {
-            uint32_t start_tick = HAL_GetTick(), delay_ms = va_arg(ap, uint32_t);
+            mp_uint_t start_tick = mp_hal_ticks_ms(), delay_ms = va_arg(ap, uint32_t);
             for (;;) {
                 uint8_t reg;
                 ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, AF_CMD_ACK, &reg);
                 if ((ret < 0) || (!reg)) break;
-                if ((HAL_GetTick() - start_tick) >= delay_ms) return -1;
-                systick_sleep(1);
+                if ((mp_hal_ticks_ms() - start_tick) >= delay_ms) return -1;
+                mp_hal_delay_ms(1);
             }
             break;
         }

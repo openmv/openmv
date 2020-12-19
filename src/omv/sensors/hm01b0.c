@@ -18,7 +18,7 @@
 #include "sensor.h"
 #include "hm01b0.h"
 #include "hm01b0_regs.h"
-#include "systick.h"
+#include "py/mphal.h"
 
 #define HIMAX_BOOT_RETRY        (10)
 #define HIMAX_LINE_LEN_PCK      0x172
@@ -127,7 +127,7 @@ static int reset(sensor_t *sensor)
             return -1;
         }
         // Delay for 1ms.
-        systick_sleep(1);
+        mp_hal_delay_ms(1);
         if (cambus_readb2(&sensor->i2c, sensor->slv_addr, MODE_SELECT, &reg) != 0) {
             return -1;
         }

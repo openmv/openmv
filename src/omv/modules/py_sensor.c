@@ -21,7 +21,6 @@
 #include "omv_boardconfig.h"
 #include "py_helper.h"
 #include "framebuffer.h"
-#include "systick.h"
 
 extern sensor_t sensor;
 
@@ -123,15 +122,15 @@ static mp_obj_t py_sensor_skip_frames(uint n_args, const mp_obj_t *args, mp_map_
         time = mp_obj_get_int(kw_arg->value);
     }
 
-    uint32_t millis = systick_current_millis();
+    uint32_t millis = mp_hal_ticks_ms();
 
     if (!n_args) {
-        while ((systick_current_millis() - millis) < time) { // 32-bit math handles wrap around...
+        while ((mp_hal_ticks_ms() - millis) < time) { // 32-bit math handles wrap around...
             py_sensor_snapshot(0, NULL, NULL);
         }
     } else {
         for (int i = 0, j = mp_obj_get_int(args[0]); i < j; i++) {
-            if ((kw_arg != NULL) && ((systick_current_millis() - millis) >= time)) {
+            if ((kw_arg != NULL) && ((mp_hal_ticks_ms() - millis) >= time)) {
                 break;
             }
 

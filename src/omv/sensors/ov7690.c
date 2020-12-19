@@ -19,7 +19,7 @@
 #include "sensor.h"
 #include "ov7690.h"
 #include "ov7690_regs.h"
-#include "systick.h"
+#include "py/mphal.h"
 
 static const uint8_t default_regs[][2] = {
 
@@ -189,7 +189,7 @@ static int reset(sensor_t *sensor)
     int ret = cambus_writeb(&sensor->i2c, sensor->slv_addr, REG12, 0x80);
 
     // Delay 2 ms
-    systick_sleep(2);
+    mp_hal_delay_ms(2);
 
     // Write default regsiters
     for (int i = 0; default_regs[i][0]; i++) {
@@ -197,7 +197,7 @@ static int reset(sensor_t *sensor)
     }
 
     // Delay 300 ms
-    systick_sleep(300);
+    mp_hal_delay_ms(300);
 
     return ret;
 }

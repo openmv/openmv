@@ -18,7 +18,7 @@
 #include "cambus.h"
 #include "sensor.h"
 #include "ov9650.h"
-#include "systick.h"
+#include "py/mphal.h"
 #include "ov9650_regs.h"
 
 #define NUM_BR_LEVELS       7
@@ -211,7 +211,7 @@ static int reset(sensor_t *sensor)
     cambus_writeb(&sensor->i2c, sensor->slv_addr, REG_COM7, 0x80);
 
     /* delay n ms */
-    systick_sleep(10);
+    mp_hal_delay_ms(10);
 
     /* Write initial regsiters */
     while (regs[i][0]) {

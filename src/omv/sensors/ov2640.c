@@ -19,7 +19,7 @@
 #include "sensor.h"
 #include "ov2640.h"
 #include "ov2640_regs.h"
-#include "systick.h"
+#include "py/mphal.h"
 
 #define CIF_WIDTH       (400)
 #define CIF_HEIGHT      (296)
@@ -352,7 +352,7 @@ static int reset(sensor_t *sensor)
     ret |= cambus_writeb(&sensor->i2c, sensor->slv_addr, COM7, COM7_SRST);
 
     // Delay 5 ms
-    systick_sleep(5);
+    mp_hal_delay_ms(5);
 
     // Write default regsiters
     for (int i = 0; default_regs[i][0]; i++) {
@@ -360,7 +360,7 @@ static int reset(sensor_t *sensor)
     }
 
     // Delay 300 ms
-    systick_sleep(300);
+    mp_hal_delay_ms(300);
 
     return ret;
 }

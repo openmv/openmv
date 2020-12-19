@@ -14,7 +14,7 @@
 #include "cambus.h"
 #include "sensor.h"
 #include "mt9v034.h"
-#include "systick.h"
+#include "py/mphal.h"
 #include "framebuffer.h"
 
 #define MT9V034_MAX_HEIGHT                      (480)
@@ -112,16 +112,16 @@
 static int reset(sensor_t *sensor)
 {
     DCMI_PWDN_HIGH();
-    systick_sleep(1);
+    mp_hal_delay_ms(1);
 
     DCMI_PWDN_LOW();
-    systick_sleep(1);
+    mp_hal_delay_ms(1);
 
     DCMI_RESET_LOW();
-    systick_sleep(1);
+    mp_hal_delay_ms(1);
 
     DCMI_RESET_HIGH();
-    systick_sleep(1);
+    mp_hal_delay_ms(1);
 
     int ret = 0;
 
@@ -140,10 +140,10 @@ static int sleep(sensor_t *sensor, int enable)
 {
     if (enable) {
         DCMI_PWDN_HIGH();
-        systick_sleep(1);
+        mp_hal_delay_ms(1);
     } else {
         DCMI_PWDN_LOW();
-        systick_sleep(1);
+        mp_hal_delay_ms(1);
     }
 
     return 0;

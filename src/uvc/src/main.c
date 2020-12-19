@@ -24,6 +24,16 @@ USBD_HandleTypeDef hUsbDeviceFS;
 extern volatile uint8_t g_uvc_stream_status;
 extern struct uvc_streaming_control videoCommitControl;
 
+void mp_hal_delay_ms(uint32_t Delay)
+{
+    HAL_Delay(Delay);
+}
+
+mp_uint_t mp_hal_ticks_ms(void)
+{
+    return HAL_GetTick();
+}
+
 void __attribute__((noreturn)) __fatal_error()
 {
     while (1) {
