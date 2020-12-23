@@ -90,7 +90,7 @@ void usbdbg_data_in(void *buffer, int length)
         }
 
         case USBDBG_TX_BUF_LEN: {
-            uint32_t tx_buf_len = usb_cdc_tx_buf_len();
+            uint32_t tx_buf_len = usb_cdc_buf_len();
             memcpy(buffer, &tx_buf_len, sizeof(tx_buf_len));
             cmd = USBDBG_NONE;
             break;
@@ -107,8 +107,7 @@ void usbdbg_data_in(void *buffer, int length)
         }
 
         case USBDBG_TX_BUF: {
-            uint8_t *tx_buf = usb_cdc_tx_buf(length);
-            memcpy(buffer, tx_buf, length);
+            xfer_bytes += usb_cdc_get_buf(buffer, length);
             if (xfer_bytes == xfer_length) {
                 cmd = USBDBG_NONE;
             }
