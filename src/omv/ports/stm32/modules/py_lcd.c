@@ -8,14 +8,13 @@
  *
  * LCD Python module.
  */
-#include "py/obj.h"
-#include "py/nlr.h"
-
 #include "extint.h"
+#include "nlr.h"
+#include "runtime.h"
 #include "spi.h"
+#include "py_helper.h"
 #include "py_lcd_cec.h"
 #include "py_lcd_touch.h"
-#include "py_helper.h"
 #include "extmod/machine_i2c.h"
 #include "omv_boardconfig.h"
 #include STM32_HAL_H

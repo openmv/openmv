@@ -10,6 +10,8 @@
  */
 #include STM32_HAL_H
 #include "extint.h"
+#include "nlr.h"
+#include "runtime.h"
 #include "extmod/machine_i2c.h"
 #include "py_helper.h"
 #include "py_lcd_touch.h"

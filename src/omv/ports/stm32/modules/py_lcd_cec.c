@@ -9,7 +9,9 @@
  * LCD Python module.
  */
 #include "extint.h"
+#include "nlr.h"
 #include "objarray.h"
+#include "runtime.h"
 #include "py_helper.h"
 #include "py_lcd_cec.h"
 #include "omv_boardconfig.h"
