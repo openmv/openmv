@@ -8,8 +8,12 @@
  *
  * LCD Python module.
  */
+#include "py/obj.h"
+#include "py/objarray.h"
+#include "py/nlr.h"
+#include "py/runtime.h"
 #include "extint.h"
-#include "objarray.h"
+
 #include "py_helper.h"
 #include "py_lcd_cec.h"
 #include "omv_boardconfig.h"
