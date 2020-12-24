@@ -87,11 +87,55 @@ ifeq ($(FB_ALLOC_STATS), 1)
 CFLAGS += -DFB_ALLOC_STATS
 endif
 
-# Include the board config to set the port.
+# Include OpenMV board config first to set the port.
 include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 
-# MicroPython board config.
+# Include MicroPython board config.
 #include $(MP_BOARD_CONFIG_DIR)/mpconfigboard.mk
+
+# The following command line args are passed to MicroPython's top Makefile.
+MICROPY_ARGS = BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)" MPY_LIB_DIR=$(MPY_LIB_DIR)
+
+# Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
+ifeq ($(MICROPY_PY_SENSOR), 1)
+MPY_CFLAGS += -DMICROPY_PY_SENSOR=1
+MICROPY_ARGS += MICROPY_PY_SENSOR=1
+endif
+
+ifeq ($(MICROPY_PY_WINC1500), 1)
+MPY_CFLAGS += -DMICROPY_PY_WINC1500=1
+MICROPY_ARGS += MICROPY_PY_WINC1500=1
+endif
+
+ifeq ($(MICROPY_PY_IMU), 1)
+MPY_CFLAGS += -DMICROPY_PY_IMU=1
+MICROPY_ARGS += MICROPY_PY_IMU=1
+endif
+
+ifeq ($(MICROPY_PY_ULAB), 1)
+MPY_CFLAGS += -DMICROPY_PY_ULAB=1
+MICROPY_ARGS += MICROPY_PY_ULAB=1
+endif
+
+ifeq ($(MICROPY_PY_LWIP), 1)
+MPY_CFLAGS += -DMICROPY_PY_LWIP=1
+MICROPY_ARGS += MICROPY_PY_LWIP=1
+endif
+
+ifeq ($(MICROPY_PY_NETWORK_CYW43), 1)
+MPY_CFLAGS += -DMICROPY_PY_NETWORK_CYW43=1
+MICROPY_ARGS += MICROPY_PY_NETWORK_CYW43=1
+endif
+
+ifeq ($(MICROPY_PY_AUDIO), 1)
+MPY_CFLAGS += -DMICROPY_PY_AUDIO=1
+MICROPY_ARGS += MICROPY_PY_AUDIO=1
+endif
+
+ifeq ($(MICROPY_PY_MICRO_SPEECH), 1)
+MPY_CFLAGS += -DMICROPY_PY_MICRO_SPEECH=1
+MICROPY_ARGS += MICROPY_PY_MICRO_SPEECH=1
+endif
 
 # Include the port Makefile.
 include $(OMV_DIR)/ports/$(PORT)/omv_port.mk
