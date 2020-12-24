@@ -12,6 +12,9 @@
 #include "py/mphal.h"
 #include "py/nlr.h"
 #include "pin.h"
+
+#if MICROPY_PY_SENSOR
+
 #include "sensor.h"
 #include "imlib.h"
 #include "xalloc.h"
@@ -927,3 +930,4 @@ const mp_obj_module_t sensor_module = {
     .base = { &mp_type_module },
     .globals = (mp_obj_t)&globals_dict,
 };
+#endif  //MICROPY_PY_SENSOR
