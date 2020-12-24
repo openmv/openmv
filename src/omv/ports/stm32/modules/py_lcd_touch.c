@@ -8,12 +8,16 @@
  *
  * LCD Python module.
  */
-#include STM32_HAL_H
+#include "py/obj.h"
+#include "py/nlr.h"
+#include "py/runtime.h"
 #include "extint.h"
 #include "extmod/machine_i2c.h"
+
 #include "py_helper.h"
 #include "py_lcd_touch.h"
 #include "omv_boardconfig.h"
+#include STM32_HAL_H
 
 #ifdef OMV_TOUCH_PRESENT
 #define FT5X06_I2C_ADDR 0x38

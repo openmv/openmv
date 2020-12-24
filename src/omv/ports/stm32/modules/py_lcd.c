@@ -10,9 +10,11 @@
  */
 #include "py/obj.h"
 #include "py/nlr.h"
-
+#include "py/runtime.h"
+#include "pendsv.h"
 #include "extint.h"
 #include "spi.h"
+
 #include "py_lcd_cec.h"
 #include "py_lcd_touch.h"
 #include "py_helper.h"
