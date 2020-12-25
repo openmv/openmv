@@ -17,6 +17,7 @@
 #include "imlib.h"
 #include "xalloc.h"
 #include "ff.h"
+#ifdef IMLIB_ENABLE_FIND_LBP
 
 #define LBP_HIST_SIZE   (59)    //58 uniform hist + 1
 #define LBP_NUM_REGIONS (7)     //7x7 regions
@@ -117,3 +118,4 @@ int imlib_lbp_desc_load(FIL *fp, uint8_t **desc)
 
     return res;
 }
+#endif //IMLIB_ENABLE_FIND_LBP

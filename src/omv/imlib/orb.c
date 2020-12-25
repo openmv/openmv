@@ -46,6 +46,7 @@
 #include "imlib.h"
 #include "xalloc.h"
 #include "fb_alloc.h"
+#ifdef IMLIB_ENABLE_FIND_KEYPOINTS
 
 #define PATCH_SIZE  (31) // 31x31 pixels
 #define KDESC_SIZE  (32) // 32 bytes
@@ -832,3 +833,4 @@ float orb_cluster_dist(int cx, int cy, void *kp_in)
     return fast_sqrtf(sum);
 
 }
+#endif //IMLIB_ENABLE_FIND_KEYPOINTS
