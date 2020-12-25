@@ -27,6 +27,7 @@
 #include "usb.h"
 #include "usbdbg.h"
 #include "omv_boardconfig.h"
+#include "py_image.h"
 
 #if MICROPY_HW_USB_HS
 #define OTG_IRQn    (OTG_HS_IRQn)
@@ -166,8 +167,6 @@ void usbdbg_data_in(void *buffer, int length)
     }
 }
 
-extern int py_image_descriptor_from_roi(image_t *image, const char *path, rectangle_t *roi);
-
 void usbdbg_data_out(void *buffer, int length)
 {
     switch (cmd) {
@@ -228,6 +227,7 @@ void usbdbg_data_out(void *buffer, int length)
         }
 
         case USBDBG_DESCRIPTOR_SAVE: {
+            #ifdef IMLIB_ENABLE_KEYPOINTS
             image_t image;
             framebuffer_initialize_image(&image);
 
@@ -239,6 +239,7 @@ void usbdbg_data_out(void *buffer, int length)
             char *path = (char*)buffer+sizeof(rectangle_t);
 
             py_image_descriptor_from_roi(&image, path, roi);
+            #endif
             break;
         }
 

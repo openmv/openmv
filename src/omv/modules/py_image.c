@@ -149,7 +149,7 @@ static const mp_obj_type_t py_lbp_type = {
 
 // Keypoints Match Object /////////////////////////////////////////////////////
 
-#ifdef IMLIB_ENABLE_FIND_KEYPOINTS
+#if defined(IMLIB_ENABLE_DESCRIPTOR) && defined(IMLIB_ENABLE_FIND_KEYPOINTS)
 
 #define kptmatch_obj_size 9
 typedef struct _py_kptmatch_obj_t {
@@ -7253,6 +7253,7 @@ mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
 
         // Load descriptor
         switch (desc_type) {
+            #if defined(IMLIB_ENABLE_FIND_LBP)
             case DESC_LBP: {
                 py_lbp_obj_t *lbp = m_new_obj(py_lbp_obj_t);
                 lbp->base.type = &py_lbp_type;
@@ -7263,7 +7264,8 @@ mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
                 }
                 break;
             }
-
+            #endif  //IMLIB_ENABLE_FIND_LBP
+            #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
             case DESC_ORB: {
                 array_t *kpts = NULL;
                 array_alloc(&kpts, xfree);
@@ -7280,6 +7282,7 @@ mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
                 }
                 break;
             }
+            #endif //IMLIB_ENABLE_FIND_KEYPOINTS
         }
 
         f_close(&fp);
@@ -7311,10 +7314,18 @@ mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
     if ((res = f_open_helper(&fp, path, FA_WRITE|FA_CREATE_ALWAYS)) == FR_OK) {
         // Find descriptor type
         const mp_obj_type_t *desc_obj_type = mp_obj_get_type(args[0]);
-        if (desc_obj_type ==  &py_lbp_type) {
+        if (0) {
+        #if defined(IMLIB_ENABLE_FIND_LBP)
+        } else if (desc_obj_type ==  &py_lbp_type) {
             desc_type = DESC_LBP;
+        #endif //IMLIB_ENABLE_FIND_LBP
+        #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
         } else if (desc_obj_type ==  &py_kp_type) {
             desc_type = DESC_ORB;
+        #endif //IMLIB_ENABLE_FIND_KEYPOINTS
+        } else {
+            (void) desc_obj_type;
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
         }
 
         // Write descriptor type
@@ -7325,17 +7336,20 @@ mp_obj_t py_image_save_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *k
 
         // Write descriptor
         switch (desc_type) {
+            #if defined(IMLIB_ENABLE_FIND_LBP)
             case DESC_LBP: {
                 py_lbp_obj_t *lbp = ((py_lbp_obj_t*)args[0]);
                 res = imlib_lbp_desc_save(&fp, lbp->hist);
                 break;
             }
-
+            #endif //IMLIB_ENABLE_FIND_LBP
+            #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
             case DESC_ORB: {
                 py_kp_obj_t *kpts = ((py_kp_obj_t*)args[0]);
                 res = orb_save_descriptor(&fp, kpts->kpts);
                 break;
             }
+            #endif //IMLIB_ENABLE_FIND_KEYPOINTS
         }
         // ignore unsupported descriptors when saving
         f_close(&fp);
@@ -7357,7 +7371,9 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
     const mp_obj_type_t *desc2_type = mp_obj_get_type(args[1]);
     PY_ASSERT_TRUE_MSG((desc1_type == desc2_type), "Descriptors have different types!");
 
-    if (desc1_type ==  &py_lbp_type) {
+    if (0) {
+    #if defined(IMLIB_ENABLE_FIND_LBP)
+    } else if (desc1_type ==  &py_lbp_type) {
         py_lbp_obj_t *lbp1 = ((py_lbp_obj_t*)args[0]);
         py_lbp_obj_t *lbp2 = ((py_lbp_obj_t*)args[1]);
 
@@ -7367,6 +7383,8 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
 
         // Match descriptors
         match_obj = mp_obj_new_int(imlib_lbp_desc_distance(lbp1->hist, lbp2->hist));
+    #endif //IMLIB_ENABLE_FIND_LBP
+    #if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
     } else if (desc1_type == &py_kp_type) {
         py_kp_obj_t *kpts1 = ((py_kp_obj_t*)args[0]);
         py_kp_obj_t *kpts2 = ((py_kp_obj_t*)args[1]);
@@ -7421,6 +7439,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
         o->theta = mp_obj_new_int(theta);
         o->match = match_list;
         match_obj = o;
+    #endif //IMLIB_ENABLE_FIND_KEYPOINTS
     } else {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Descriptor type is not supported"));
     }
@@ -7430,6 +7449,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 2, py_image_match_descriptor);
 #endif // IMLIB_ENABLE_DESCRIPTOR
 
+#if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
 int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *roi)
 {
     FIL fp;
@@ -7451,6 +7471,7 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
     }
     return 0;
 }
+#endif // IMLIB_ENABLE_KEYPOINTS
 
 static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
