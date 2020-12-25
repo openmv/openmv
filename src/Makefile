@@ -138,7 +138,7 @@ MICROPY_ARGS += MICROPY_PY_MICRO_SPEECH=1
 endif
 
 # Include the port Makefile.
-include $(OMV_DIR)/ports/$(PORT)/omv_port.mk
+include $(OMV_DIR)/ports/$(PORT)/omv_portconfig.mk
 
 clean:
 	$(RM) -fr $(BUILD)
