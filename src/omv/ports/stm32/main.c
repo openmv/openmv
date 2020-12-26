@@ -500,7 +500,9 @@ soft_reset:
     uart_init0();
     sensor_init0();
     fb_alloc_init0();
+    #ifdef IMLIB_ENABLE_IMAGE_IO
     file_buffer_init0();
+    #endif
     py_lcd_init0();
     py_fir_init0();
     py_tv_init0();

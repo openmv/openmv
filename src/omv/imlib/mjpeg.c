@@ -8,9 +8,11 @@
  *
  * A simple MJPEG encoder.
  */
+#include "imlib.h"
+#if defined(IMLIB_ENABLE_IMAGE_IO)
+
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
-#include "imlib.h"
 
 #define SIZE_OFFSET             (1*4)
 #define MICROS_OFFSET           (8*4)
@@ -149,3 +151,4 @@ void mjpeg_close(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps)
     write_long(fp, 4 + (*frames * 8) + *bytes);
     file_close(fp);
 }
+#endif //IMLIB_ENABLE_IMAGE_IO

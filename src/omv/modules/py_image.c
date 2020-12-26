@@ -247,7 +247,8 @@ static const mp_obj_type_t py_kptmatch_type = {
     .locals_dict = (mp_obj_t) &py_kptmatch_locals_dict
 };
 
-#endif // IMLIB_ENABLE_FIND_KEYPOINTS
+
+#endif //IMLIB_ENABLE_DESCRIPTOR && IMLIB_ENABLE_FIND_KEYPOINTS
 
 // Image //////////////////////////////////////////////////////////////////////
 
@@ -1575,6 +1576,7 @@ static mp_obj_t py_image_crop(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_crop_obj, 1, py_image_crop);
 
+#if defined(IMLIB_ENABLE_IMAGE_IO)
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1592,6 +1594,7 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
+#endif //IMLIB_ENABLE_IMAGE_IO
 
 static mp_obj_t py_image_flush(mp_obj_t img_obj)
 {
@@ -6363,7 +6366,11 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_copy),                MP_ROM_PTR(&py_image_copy_obj)},
     {MP_ROM_QSTR(MP_QSTR_crop),                MP_ROM_PTR(&py_image_crop_obj)},
     {MP_ROM_QSTR(MP_QSTR_scale),               MP_ROM_PTR(&py_image_crop_obj)},
+    #if defined(IMLIB_ENABLE_IMAGE_IO)
     {MP_ROM_QSTR(MP_QSTR_save),                MP_ROM_PTR(&py_image_save_obj)},
+    #else
+    {MP_ROM_QSTR(MP_QSTR_save),                MP_ROM_PTR(&py_func_unavailable_obj)},
+    #endif
     {MP_ROM_QSTR(MP_QSTR_flush),               MP_ROM_PTR(&py_image_flush_obj)},
     /* Drawing Methods */
     {MP_ROM_QSTR(MP_QSTR_clear),               MP_ROM_PTR(&py_image_clear_obj)},
@@ -6640,6 +6647,7 @@ static const mp_obj_type_t py_image_type = {
     .locals_dict = (mp_obj_t) &locals_dict
 };
 
+#if defined(IMLIB_ENABLE_IMAGE_IO)
 // ImageWriter Object //
 typedef struct py_imagewriter_obj {
     mp_obj_base_t base;
@@ -6859,6 +6867,7 @@ mp_obj_t py_image_imagereader(mp_obj_t path)
     return obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_imagereader_obj, py_image_imagereader);
+#endif //IMLIB_ENABLE_IMAGE_IO
 
 mp_obj_t py_image_binary_to_grayscale(mp_obj_t arg)
 {
@@ -7128,8 +7137,8 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     bool mode = mp_obj_is_integer(args[0]);
     const char *path = mode ? NULL : mp_obj_str_get_str(args[0]);
 
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, mode ? 3 : 1,
-            kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args,
+            mode ? 3 : 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
     bool copy_to_fb = false;
     image_t *arg_other = NULL;
 
@@ -7167,12 +7176,17 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
                 break;
         }
     } else {
+        #if defined(IMLIB_ENABLE_IMAGE_IO)
         fb_alloc_mark();
         FIL fp;
         img_read_settings_t rs;
         imlib_read_geometry(&fp, &image, path, &rs);
         file_buffer_off(&fp);
         file_close(&fp);
+        #else
+        (void) path;
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+        #endif //IMLIB_ENABLE_IMAGE_IO
     }
 
     if (copy_to_fb) {
@@ -7187,8 +7201,10 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     if (mode) {
         memset(image.data, 0, image_size(&image));
     } else {
+        #if defined(IMLIB_ENABLE_IMAGE_IO)
         imlib_load_image(&image, path);
         fb_alloc_free_till_mark();
+        #endif
     }
 
     py_helper_update_framebuffer(&image);
@@ -7233,7 +7249,8 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
 
-#ifdef IMLIB_ENABLE_DESCRIPTOR
+#if defined(IMLIB_ENABLE_DESCRIPTOR)
+#if defined(IMLIB_ENABLE_IMAGE_IO)
 mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     FIL fp;
@@ -7363,6 +7380,7 @@ error:
     return mp_const_true;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 2, py_image_save_descriptor);
+#endif //IMLIB_ENABLE_IMAGE_IO
 
 static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -7447,9 +7465,9 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
     return match_obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 2, py_image_match_descriptor);
-#endif // IMLIB_ENABLE_DESCRIPTOR
+#endif //IMLIB_ENABLE_DESCRIPTOR
 
-#if defined(IMLIB_ENABLE_FIND_KEYPOINTS)
+#if defined(IMLIB_ENABLE_FIND_KEYPOINTS) && defined(IMLIB_ENABLE_IMAGE_IO)
 int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *roi)
 {
     FIL fp;
@@ -7471,7 +7489,7 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
     }
     return 0;
 }
-#endif // IMLIB_ENABLE_KEYPOINTS
+#endif // IMLIB_ENABLE_KEYPOINTS && IMLIB_ENABLE_IMAGE_IO
 
 static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
@@ -7488,23 +7506,23 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CENTER),              MP_ROM_INT(IMAGE_HINT_CENTER)},
     {MP_ROM_QSTR(MP_QSTR_EXTRACT_RGB_CHANNEL_FIRST), MP_ROM_INT(IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST)},
     {MP_ROM_QSTR(MP_QSTR_APPLY_COLOR_PALETTE_FIRST), MP_ROM_INT(IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST)},
-#ifdef IMLIB_FIND_TEMPLATE
+    #ifdef IMLIB_FIND_TEMPLATE
     {MP_ROM_QSTR(MP_QSTR_SEARCH_EX),           MP_ROM_INT(SEARCH_EX)},
     {MP_ROM_QSTR(MP_QSTR_SEARCH_DS),           MP_ROM_INT(SEARCH_DS)},
-#endif
+    #endif
     {MP_ROM_QSTR(MP_QSTR_EDGE_CANNY),          MP_ROM_INT(EDGE_CANNY)},
     {MP_ROM_QSTR(MP_QSTR_EDGE_SIMPLE),         MP_ROM_INT(EDGE_SIMPLE)},
     {MP_ROM_QSTR(MP_QSTR_CORNER_FAST),         MP_ROM_INT(CORNER_FAST)},
     {MP_ROM_QSTR(MP_QSTR_CORNER_AGAST),        MP_ROM_INT(CORNER_AGAST)},
-#ifdef IMLIB_ENABLE_APRILTAGS
+    #ifdef IMLIB_ENABLE_APRILTAGS
     {MP_ROM_QSTR(MP_QSTR_TAG16H5),             MP_ROM_INT(TAG16H5)},
     {MP_ROM_QSTR(MP_QSTR_TAG25H7),             MP_ROM_INT(TAG25H7)},
     {MP_ROM_QSTR(MP_QSTR_TAG25H9),             MP_ROM_INT(TAG25H9)},
     {MP_ROM_QSTR(MP_QSTR_TAG36H10),            MP_ROM_INT(TAG36H10)},
     {MP_ROM_QSTR(MP_QSTR_TAG36H11),            MP_ROM_INT(TAG36H11)},
     {MP_ROM_QSTR(MP_QSTR_ARTOOLKIT),           MP_ROM_INT(ARTOOLKIT)},
-#endif
-#ifdef IMLIB_ENABLE_BARCODES
+    #endif
+    #ifdef IMLIB_ENABLE_BARCODES
     {MP_ROM_QSTR(MP_QSTR_EAN2),                MP_ROM_INT(BARCODE_EAN2)},
     {MP_ROM_QSTR(MP_QSTR_EAN5),                MP_ROM_INT(BARCODE_EAN5)},
     {MP_ROM_QSTR(MP_QSTR_EAN8),                MP_ROM_INT(BARCODE_EAN8)},
@@ -7521,9 +7539,14 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_PDF417),              MP_ROM_INT(BARCODE_PDF417)},
     {MP_ROM_QSTR(MP_QSTR_CODE93),              MP_ROM_INT(BARCODE_CODE93)},
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
-#endif
+    #endif
+    #if defined(IMLIB_ENABLE_IMAGE_IO)
     {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_image_imagewriter_obj)},
     {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_image_imagereader_obj)},
+    #else
+    {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_func_unavailable_obj)},
+    #endif
     {MP_ROM_QSTR(MP_QSTR_binary_to_grayscale), MP_ROM_PTR(&py_image_binary_to_grayscale_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_rgb),       MP_ROM_PTR(&py_image_binary_to_rgb_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_lab),       MP_ROM_PTR(&py_image_binary_to_lab_obj)},
@@ -7546,15 +7569,18 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_yuv_to_lab),          MP_ROM_PTR(&py_image_yuv_to_lab_obj)},
     {MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_image_load_image_obj)},
     {MP_ROM_QSTR(MP_QSTR_HaarCascade),         MP_ROM_PTR(&py_image_load_cascade_obj)},
-#ifdef IMLIB_ENABLE_DESCRIPTOR
+    #if defined(IMLIB_ENABLE_DESCRIPTOR) && defined(IMLIB_ENABLE_IMAGE_IO)
     {MP_ROM_QSTR(MP_QSTR_load_descriptor),     MP_ROM_PTR(&py_image_load_descriptor_obj)},
     {MP_ROM_QSTR(MP_QSTR_save_descriptor),     MP_ROM_PTR(&py_image_save_descriptor_obj)},
-    {MP_ROM_QSTR(MP_QSTR_match_descriptor),    MP_ROM_PTR(&py_image_match_descriptor_obj)}
-#else
+    #else
     {MP_ROM_QSTR(MP_QSTR_load_descriptor),     MP_ROM_PTR(&py_func_unavailable_obj)},
     {MP_ROM_QSTR(MP_QSTR_save_descriptor),     MP_ROM_PTR(&py_func_unavailable_obj)},
+    #endif //IMLIB_ENABLE_DESCRIPTOR && IMLIB_ENABLE_IMAGE_IO
+    #if defined(IMLIB_ENABLE_DESCRIPTOR)
+    {MP_ROM_QSTR(MP_QSTR_match_descriptor),    MP_ROM_PTR(&py_image_match_descriptor_obj)}
+    #else
     {MP_ROM_QSTR(MP_QSTR_match_descriptor),    MP_ROM_PTR(&py_func_unavailable_obj)}
-#endif
+    #endif
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);

@@ -8,12 +8,15 @@
  *
  * BMP reader/writer.
  */
-#include <arm_math.h>
-#include <stdlib.h>
-#include <ff.h>
-#include "ff_wrapper.h"
-#include "xalloc.h"
 #include "imlib.h"
+#if defined(IMLIB_ENABLE_IMAGE_IO)
+
+#include <stdlib.h>
+#include "py/obj.h"
+#include "py/nlr.h"
+
+#include "xalloc.h"
+#include "ff_wrapper.h"
 
 // This function inits the geometry values of an image (opens file).
 bool bmp_read_geometry(FIL *fp, image_t *img, const char *path, bmp_read_settings_t *rs)
@@ -216,10 +219,12 @@ void bmp_read(image_t *img, const char *path)
 void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r)
 {
     rectangle_t rect;
-    if (!rectangle_subimg(img, r, &rect)) ff_no_intersection(NULL);
+    if (!rectangle_subimg(img, r, &rect)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "No intersection!"));
+    }
+
     FIL fp;
     file_write_open(&fp, path);
-
     file_buffer_on(&fp);
     if (IM_IS_GS(img)) {
         const int row_bytes = (((rect.w * 8) + 31) / 32) * 4;
@@ -300,3 +305,4 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r)
 
     file_close(&fp);
 }
+#endif //IMLIB_ENABLE_IMAGE_IO

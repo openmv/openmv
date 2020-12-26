@@ -8,9 +8,11 @@
  *
  * A simple GIF encoder.
  */
+#include "imlib.h"
+#if defined(IMLIB_ENABLE_IMAGE_IO)
+
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
-#include "imlib.h"
 #define BLOCK_SIZE (126) // (2^7) - 2 // (DO NOT CHANGE!)
 
 void gif_open(FIL *fp, int width, int height, bool color, bool loop)
@@ -115,3 +117,4 @@ void gif_close(FIL *fp)
     write_byte(fp, ';');
     file_close(fp);
 }
+#endif //IMLIB_ENABLE_IMAGE_IO

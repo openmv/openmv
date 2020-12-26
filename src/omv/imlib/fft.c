@@ -6,6 +6,8 @@
  * FFT LIB - can do 1024 point real FFTs and 512 point complex FFTs
  *
  */
+#include "py/nlr.h"
+#include "py/obj.h"
 #include <arm_math.h>
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
@@ -548,7 +550,9 @@ void fft1d_run_again(fft1d_controller_t *controller)
 void fft2d_alloc(fft2d_controller_t *controller, image_t *img, rectangle_t *r)
 {
     controller->img = img;
-    if (!rectangle_subimg(controller->img, r, &controller->r)) ff_no_intersection(NULL);
+    if (!rectangle_subimg(controller->img, r, &controller->r)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "No intersection!"));
+    }
 
     controller->w_pow2 = int_clog2(controller->r.w);
     controller->h_pow2 = int_clog2(controller->r.h);
