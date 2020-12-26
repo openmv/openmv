@@ -8,11 +8,17 @@
  *
  * PPM/PGM reader/writer.
  */
+
+#include "imlib.h"
+#if defined(IMLIB_ENABLE_IMAGE_IO)
+
 #include <stdio.h>
-#include <ff.h>
-#include "ff_wrapper.h"
+#include "py/obj.h"
+#include "py/nlr.h"
+
 #include "xalloc.h"
 #include "imlib.h"
+#include "ff_wrapper.h"
 
 static void read_int_reset(ppm_read_settings_t *rs)
 {
@@ -120,10 +126,12 @@ void ppm_read(image_t *img, const char *path)
 void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
 {
     rectangle_t rect;
-    if (!rectangle_subimg(img, r, &rect)) ff_no_intersection(NULL);
+    if (!rectangle_subimg(img, r, &rect)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "No intersection!"));
+    }
+
     FIL fp;
     file_write_open(&fp, path);
-
     file_buffer_on(&fp);
     if (IM_IS_GS(img)) {
         char buffer[20]; // exactly big enough for 5-digit w/h
@@ -157,3 +165,4 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
 
     file_close(&fp);
 }
+#endif //IMLIB_ENABLE_IMAGE_IO

@@ -11,6 +11,9 @@
 #ifndef __IMLIB_CONFIG_H__
 #define __IMLIB_CONFIG_H__
 
+// Enable Image I/O
+#define IMLIB_ENABLE_IMAGE_IO
+
 // Enable LAB LUT
 #define IMLIB_ENABLE_LAB_LUT
 
@@ -131,9 +134,8 @@
 // Enable find_keypoints()
 #define IMLIB_ENABLE_FIND_KEYPOINTS
 
-#if defined(IMLIB_ENABLE_FIND_LBP) || defined(IMLIB_ENABLE_FIND_KEYPOINTS)
-    #define IMLIB_ENABLE_DESCRIPTOR
-#endif
+// Enable load, save and match descriptor
+#define IMLIB_ENABLE_DESCRIPTOR
 
 // Enable find_hog()
 #define IMLIB_ENABLE_HOG

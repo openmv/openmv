@@ -10,7 +10,9 @@
  * Based on the work of Francesco Comaschi (f.comaschi@tue.nl)
  */
 #include <stdio.h>
-#include <arm_math.h>
+#include "py/obj.h"
+#include "py/nlr.h"
+
 #include "ff.h"
 #include "ff_wrapper.h"
 #include "xalloc.h"
@@ -163,6 +165,7 @@ array_t *imlib_detect_objects(image_t *image, cascade_t *cascade, rectangle_t *r
     return objects;
 }
 
+#if defined(IMLIB_ENABLE_IMAGE_IO)
 int imlib_load_cascade_from_file(cascade_t *cascade, const char *path)
 {
     int i;
@@ -248,6 +251,7 @@ error:
     file_close(&fp);
     return res;
 }
+#endif //(IMLIB_ENABLE_IMAGE_IO)
 
 int imlib_load_cascade(cascade_t *cascade, const char *path)
 {
@@ -277,8 +281,12 @@ int imlib_load_cascade(cascade_t *cascade, const char *path)
         cascade->weights_array       = (int8_t  *)eye_weights_array;
         cascade->rectangles_array    = (int8_t  *)eye_rectangles_array;
     } else {
+        #if defined(IMLIB_ENABLE_IMAGE_IO)
         // xml cascade
         return imlib_load_cascade_from_file(cascade, path);
+        #else
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+        #endif
     }
 
     int i;

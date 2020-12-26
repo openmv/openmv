@@ -210,6 +210,7 @@ void usbdbg_data_out(void *buffer, int length)
             break;
 
         case USBDBG_TEMPLATE_SAVE: {
+            #if defined(IMLIB_ENABLE_IMAGE_IO)
             image_t image;
             framebuffer_initialize_image(&image);
 
@@ -221,13 +222,16 @@ void usbdbg_data_out(void *buffer, int length)
             char *path = (char*)buffer+sizeof(rectangle_t);
 
             imlib_save_image(&image, path, roi, 50);
+
             // raise a flash IRQ to flush image
             //NVIC->STIR = FLASH_IRQn;
+            #endif  //IMLIB_ENABLE_IMAGE_IO
             break;
         }
 
         case USBDBG_DESCRIPTOR_SAVE: {
-            #ifdef IMLIB_ENABLE_KEYPOINTS
+            #if defined(IMLIB_ENABLE_IMAGE_IO)\
+                && defined(IMLIB_ENABLE_KEYPOINTS)
             image_t image;
             framebuffer_initialize_image(&image);
 
@@ -239,7 +243,7 @@ void usbdbg_data_out(void *buffer, int length)
             char *path = (char*)buffer+sizeof(rectangle_t);
 
             py_image_descriptor_from_roi(&image, path, roi);
-            #endif
+            #endif  //IMLIB_ENABLE_IMAGE_IO && IMLIB_ENABLE_KEYPOINTS
             break;
         }
 

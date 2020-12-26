@@ -140,6 +140,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
         tf_model->model_data = (unsigned char *) g_person_detect_model_data;
         tf_model->model_data_len = g_person_detect_model_data_len;
     } else {
+        #if defined(IMLIB_ENABLE_IMAGE_IO)
         FIL fp;
         file_read_open(&fp, path);
         tf_model->model_data_len = f_size(&fp);
@@ -148,6 +149,9 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
             : xalloc(tf_model->model_data_len);
         read_data(&fp, tf_model->model_data, tf_model->model_data_len);
         file_close(&fp);
+        #else
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+        #endif
     }
 
     if (!helper_mode) {

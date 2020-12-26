@@ -863,6 +863,7 @@ void imlib_bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, 
 
 ////////////////////////////////////////////////////////////////////////////////
 
+#if defined(IMLIB_ENABLE_IMAGE_IO)
 static save_image_format_t imblib_parse_extension(image_t *img, const char *path)
 {
     size_t l = strlen(path);
@@ -964,10 +965,12 @@ static void imlib_read_pixels(FIL *fp, image_t *img, int n_lines, img_read_setti
             break;
     }
 }
+#endif  //IMLIB_ENABLE_IMAGE_IO
 
 void imlib_image_operation(image_t *img, const char *path, image_t *other, int scalar, line_op_t op, void *data)
 {
     if (path) {
+        #if defined(IMLIB_ENABLE_IMAGE_IO)
         uint32_t size = fb_avail() / 2;
         void *alloc = fb_alloc(size, FB_ALLOC_NO_HINT); // We have to do this before the read.
         // This code reads a window of an image in at a time and then executes
@@ -979,7 +982,8 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         img_read_settings_t rs;
         bool vflipped = imlib_read_geometry(&fp, &temp, path, &rs);
         if (!IM_EQUAL(img, &temp)) {
-            ff_not_equal(&fp);
+            f_close(&fp);
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Images not equal!"));
         }
         // When processing vertically flipped images the read function will fill
         // the window up from the bottom. The read function assumes that the
@@ -1007,9 +1011,12 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
         file_buffer_off(&fp);
         file_close(&fp);
         fb_free();
+        #else
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+        #endif
     } else if (other) {
         if (!IM_EQUAL(img, other)) {
-            ff_not_equal(NULL);
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Images not equal!"));
         }
         switch (img->bpp) {
             case IMAGE_BPP_BINARY: {
@@ -1085,6 +1092,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
     }
 }
 
+#if defined(IMLIB_ENABLE_IMAGE_IO)
 void imlib_load_image(image_t *img, const char *path)
 {
     FIL fp;
@@ -1147,6 +1155,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
             break;
     }
 }
+#endif //IMLIB_ENABLE_IMAGE_IO
 
 ////////////////////////////////////////////////////////////////////////////////
 

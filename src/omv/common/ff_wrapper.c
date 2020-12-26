@@ -6,10 +6,14 @@
  * File System Helper Functions
  *
  */
+#include "imlib_config.h"
+#if defined(IMLIB_ENABLE_IMAGE_IO)
+
 #include <string.h>
 #include "py/runtime.h"
 #include "extmod/vfs.h"
 #include "extmod/vfs_fat.h"
+
 #include "common.h"
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
@@ -460,3 +464,4 @@ void write_data(FIL *fp, const void *data, UINT size)
         if (bytes != size) ff_write_fail(fp);
     }
 }
+#endif //IMLIB_ENABLE_IMAGE_IO

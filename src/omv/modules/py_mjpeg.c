@@ -24,7 +24,9 @@ typedef struct py_mjpeg_obj {
     int height;
     uint32_t frames;
     uint32_t bytes;
+    #if defined(IMLIB_ENABLE_IMAGE_IO)
     FIL fp;
+    #endif
 } py_mjpeg_obj_t;
 
 static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
@@ -36,8 +38,12 @@ static mp_obj_t py_mjpeg_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     mjpeg->bytes = 0; // private
     mjpeg->base.type = &py_mjpeg_type;
 
+    #if defined(IMLIB_ENABLE_IMAGE_IO)
     file_write_open(&mjpeg->fp, mp_obj_str_get_str(args[0]));
     mjpeg_open(&mjpeg->fp, mjpeg->width, mjpeg->height);
+    #else
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+    #endif
     return mjpeg;
 }
 
@@ -55,12 +61,17 @@ static mp_obj_t py_mjpeg_height(mp_obj_t mjpeg_obj)
 
 static mp_obj_t py_mjpeg_size(mp_obj_t mjpeg_obj)
 {
+    #if defined(IMLIB_ENABLE_IMAGE_IO)
     py_mjpeg_obj_t *arg_mjpeg = mjpeg_obj;
     return mp_obj_new_int(f_size(&arg_mjpeg->fp));
+    #else
+    return mp_obj_new_int(0);
+    #endif
 }
 
 static mp_obj_t py_mjpeg_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
+    #if defined(IMLIB_ENABLE_IMAGE_IO)
     py_mjpeg_obj_t *arg_mjpeg = args[0];
     image_t *arg_img = py_image_cobj(args[1]);
     PY_ASSERT_FALSE_MSG((arg_mjpeg->width != arg_img->w)
@@ -70,13 +81,18 @@ static mp_obj_t py_mjpeg_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *
     int arg_q = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     arg_q = IM_MIN(IM_MAX(arg_q, 1), 100);
     mjpeg_add_frame(&arg_mjpeg->fp, &arg_mjpeg->frames, &arg_mjpeg->bytes, arg_img, arg_q);
+    #else
+    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+    #endif
     return mp_const_none;
 }
 
 static mp_obj_t py_mjpeg_close(mp_obj_t mjpeg_obj, mp_obj_t fps_obj)
 {
+    #if defined(IMLIB_ENABLE_IMAGE_IO)
     py_mjpeg_obj_t *arg_mjpeg = mjpeg_obj;
     mjpeg_close(&arg_mjpeg->fp, &arg_mjpeg->frames, &arg_mjpeg->bytes, mp_obj_get_float(fps_obj));
+    #endif
     return mp_const_none;
 }
 
