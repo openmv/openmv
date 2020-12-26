@@ -75,6 +75,9 @@
 // Core VBAT for selftests
 #define OMV_CORE_VBAT           "3.3"
 
+// USB IRQn.
+#define OMV_USB_IRQN            (OTG_FS_IRQn)
+
 //PLL1 192MHz/48MHz
 #define OMV_OSC_PLL1M           (12)
 #define OMV_OSC_PLL1N           (384)

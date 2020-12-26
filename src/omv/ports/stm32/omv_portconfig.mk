@@ -119,6 +119,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
 	ringbuf.o                   \
 	trace.o                     \
 	mutex.o                     \
+	usbdbg.o                    \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \

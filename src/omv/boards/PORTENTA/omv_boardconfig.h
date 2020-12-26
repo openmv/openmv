@@ -79,6 +79,9 @@
 // Core VBAT for selftests
 #define OMV_CORE_VBAT           "3.0"
 
+// USB IRQn.
+#define OMV_USB_IRQN            (OTG_HS_IRQn)
+
 // Defined for cpu frequency scaling to override the revid.
 #define OMV_MAX_CPU_FREQ        (400)
 

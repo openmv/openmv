@@ -82,6 +82,9 @@
 // Core VBAT for selftests
 #define OMV_CORE_VBAT                   "3.3"
 
+// USB IRQn.
+#define OMV_USB_IRQN                    (OTG_FS_IRQn)
+
 // Clock Sources
 #define OMV_OSC_USB_CLKSOURCE           RCC_USBCLKSOURCE_PLL
 #define OMV_OSC_RNG_CLKSOURCE           RCC_RNGCLKSOURCE_HSI48

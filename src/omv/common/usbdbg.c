@@ -21,19 +21,14 @@
 #include "pendsv.h"
 
 #include "imlib.h"
+#if MICROPY_PY_SENSOR
 #include "sensor.h"
+#endif
 #include "framebuffer.h"
 #include "ff.h"
-#include "usb.h"
 #include "usbdbg.h"
 #include "omv_boardconfig.h"
 #include "py_image.h"
-
-#if MICROPY_HW_USB_HS
-#define OTG_IRQn    (OTG_HS_IRQn)
-#else
-#define OTG_IRQn    (OTG_FS_IRQn)
-#endif
 
 static int xfer_bytes;
 static int xfer_length;
@@ -43,10 +38,14 @@ static volatile bool script_ready;
 static volatile bool script_running;
 static vstr_t script_buf;
 static mp_obj_t mp_const_ide_interrupt = MP_OBJ_NULL;
-extern const char *ffs_strerror(FRESULT res);
+
+// These functions must be implemented in MicroPython CDC driver.
+extern uint32_t usb_cdc_buf_len();
+extern uint32_t usb_cdc_get_buf(uint8_t *buf, uint32_t len);
 
 void usbdbg_init()
 {
+    cmd = USBDBG_NONE;
     script_ready=false;
     script_running=false;
     vstr_init(&script_buf, 32);
@@ -71,9 +70,9 @@ void usbdbg_set_script_running(bool running)
 inline void usbdbg_set_irq_enabled(bool enabled)
 {
     if (enabled) {
-        HAL_NVIC_EnableIRQ(OTG_IRQn);
+        NVIC_EnableIRQ(OMV_USB_IRQN);
     } else {
-        HAL_NVIC_DisableIRQ(OTG_IRQn);
+        NVIC_DisableIRQ(OMV_USB_IRQN);
     }
     __DSB(); __ISB();
 }
@@ -99,9 +98,11 @@ void usbdbg_data_in(void *buffer, int length)
 
         case USBDBG_SENSOR_ID: {
             int sensor_id = 0xFF;
+            #if MICROPY_PY_SENSOR
             if (sensor_is_detected() == true) {
                 sensor_id = sensor_get_id();
             }
+            #endif
             memcpy(buffer, &sensor_id, 4);
             cmd = USBDBG_NONE;
             break;
@@ -244,10 +245,12 @@ void usbdbg_data_out(void *buffer, int length)
 
             py_image_descriptor_from_roi(&image, path, roi);
             #endif  //IMLIB_ENABLE_IMAGE_IO && IMLIB_ENABLE_KEYPOINTS
+            cmd = USBDBG_NONE;
             break;
         }
 
         case USBDBG_ATTR_WRITE: {
+            #if MICROPY_PY_SENSOR
             /* write sensor attribute */
             int32_t attr= *((int32_t*)buffer);
             int32_t val = *((int32_t*)buffer+1);
@@ -267,6 +270,7 @@ void usbdbg_data_out(void *buffer, int length)
                 default:
                     break;
             }
+            #endif
             cmd = USBDBG_NONE;
             break;
         }
@@ -322,8 +326,8 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             break;
 
         case USBDBG_SCRIPT_SAVE:
-            /* save running script */
-            // TODO
+            // TODO: save running script
+            cmd = USBDBG_NONE;
             break;
 
         case USBDBG_SCRIPT_RUNNING:
@@ -348,9 +352,11 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
             break;
 
         case USBDBG_SYS_RESET_TO_BL:{
+            #if defined(RTC_BASE)
             RTC_HandleTypeDef RTCHandle;
             RTCHandle.Instance = RTC;
             HAL_RTCEx_BKUPWrite(&RTCHandle, RTC_BKP_DR0, 0xDF59);
+            #endif
             NVIC_SystemReset();
             break;
         }
