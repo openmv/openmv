@@ -5,6 +5,8 @@
 
 import sensor, image, time, fir
 
+drawing_hint = image.BICUBIC # or image.BILINEAR or 0 (nearest neighbor)
+
 ALT_OVERLAY = False # Set to True to allocate a second ir image.
 
 sensor.reset()
@@ -32,15 +34,18 @@ while (True):
     #   ir: Object temperatures (IR array)
     #   to_min: Minimum object temperature
     #   to_max: Maximum object temperature
-    ta, ir, to_min, to_max = fir.read_ir()
+    try:
+        ta, ir, to_min, to_max = fir.read_ir()
+    except OSError:
+        continue
 
     if not ALT_OVERLAY:
         # Scale the image and belnd it with the framebuffer
-        fir.draw_ir(img, ir)
+        fir.draw_ir(img, ir, hint=drawing_hint)
     else:
         # Create a secondary image and then blend into the frame buffer.
         extra_fb.clear()
-        fir.draw_ir(extra_fb, ir, alpha=256)
+        fir.draw_ir(extra_fb, ir, alpha=256, hint=drawing_hint)
         img.blend(extra_fb, alpha=128)
 
     # Draw ambient, min and max temperatures.

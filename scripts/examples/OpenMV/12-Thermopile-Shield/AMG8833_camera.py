@@ -14,7 +14,10 @@ clock = time.clock()
 while (True):
     clock.tick()
 
-    img = fir.snapshot(copy_to_fb=True)
+    try:
+        img = fir.snapshot(copy_to_fb=True)
+    except OSError:
+        continue
 
     # Print FPS.
     print(clock.fps())
