@@ -5,7 +5,7 @@
 #
 # This work is licensed under the MIT license, see the file LICENSE for details.
 #
-# MLX Makefile
+# MLX90640 Makefile
 SRCS = $(wildcard src/*.c)
 OBJS = $(addprefix $(BUILD)/, $(SRCS:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
