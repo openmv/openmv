@@ -1628,8 +1628,8 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     if (got_x_scale && got_x_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
     if (got_y_scale && got_y_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
 
-    if (got_x_size) arg_x_scale = arg_x_size / ((float) arg_img->w);
-    if (got_y_size) arg_y_scale = arg_y_size / ((float) arg_img->h);
+    if (got_x_size) arg_x_scale = arg_x_size / ((float) arg_roi.w);
+    if (got_y_size) arg_y_scale = arg_y_size / ((float) arg_roi.h);
 
     if ((!got_x_scale) && (!got_x_size) && got_y_size) arg_x_scale = arg_y_scale;
     if ((!got_y_scale) && (!got_y_size) && got_x_size) arg_y_scale = arg_x_scale;
