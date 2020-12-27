@@ -85,15 +85,6 @@
 
 #define AMG8833_ADDR        0xD2
 
-#define MAP(OldValue, OldMin, OldMax, NewMin, NewMax) \
-    ({ __typeof__ (OldValue) _OldValue = (OldValue); \
-       __typeof__ (OldMin) _OldMin = (OldMin); \
-       __typeof__ (OldMax) _OldMax = (OldMax); \
-       __typeof__ (NewMin) _NewMin = (NewMin); \
-       __typeof__ (NewMax) _NewMax = (NewMax); \
-       ((((_OldValue-_OldMin)*(_NewMax-_NewMin))+((_OldMax-OldMin)/2)) / \
-       (_OldMax-OldMin))+_NewMin; })
-
 // MLX variables
 static float *a_ij = NULL;
 static float *b_ij = NULL;
@@ -232,6 +223,30 @@ static void calculate_To(float Ta, float *To)
         To[i] = sqrtf(sqrtf((v_ir_comp/alpha_comp_ij)+Tak4))-273.15f;
     }
     fb_alloc_free_till_mark();
+}
+
+// img->w == data_w && img->h == data_h && img->bpp == IMAGE_BPP_GRAYSCALE
+static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, float max)
+{
+    float tmp = min;
+    min = (min < max) ? min : max;
+    max = (max > tmp) ? max : tmp;
+
+    float diff = 255.f / (max - min);
+
+    for (int y = 0; y < img->h; y++) {
+        int row_offset = y * img->w;
+        mp_obj_t *raw_row = data + row_offset;
+        uint8_t *row_pointer = ((uint8_t *) img->data) + row_offset;
+
+        for (int x = 0; x < img->w; x++) {
+            float raw = mp_obj_get_float(raw_row[x]);
+            if (raw < min) raw = min;
+            if (raw > max) raw = max;
+            int pixel = fast_roundf((raw - min) * diff);
+            row_pointer[x] = __USAT(pixel, 8);
+        }
+    }
 }
 
 static mp_obj_t py_fir_deinit()
@@ -638,140 +653,157 @@ mp_obj_t py_fir_read_ir()
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ir_obj,  py_fir_read_ir);
 
-mp_obj_t py_fir_draw_ta(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    if (fir_sensor == FIR_NONE) return mp_const_none;
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
-
-    float Ta = mp_obj_get_float(args[1]);
-    float min = -17.7778, max = 37.7778; // 0F to 100F
-
-    int alpha = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
-    PY_ASSERT_TRUE_MSG((0 <= alpha) && (alpha <= 256), "Error: 0 <= alpha <= 256!");
-
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
-    if (scale_obj) {
-        mp_obj_t *arg_scale;
-        mp_obj_get_array_fixed_n(scale_obj, 2, &arg_scale);
-        min = mp_obj_get_float(arg_scale[0]);
-        max = mp_obj_get_float(arg_scale[1]);
-    }
-
-    uint8_t gs_ta = IM_MIN(IM_MAX(MAP(Ta, min, max, 0, 255), 0), 255);
-    uint16_t r_ta = COLOR_RGB565_TO_R5(rainbow_table[gs_ta]);
-    uint16_t g_ta = COLOR_RGB565_TO_G6(rainbow_table[gs_ta]);
-    uint16_t b_ta = COLOR_RGB565_TO_B5(rainbow_table[gs_ta]);
-    uint32_t va = __PKHBT((256-alpha), alpha, 16);
-    for (int y=0; y<arg_img->h; y++) {
-        for (int x=0; x<arg_img->w; x++) {
-            switch (arg_img->bpp) {
-                case IMAGE_BPP_BINARY: {
-                    uint8_t pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(arg_img, x, y));
-                    uint32_t vgs = __PKHBT(pixel, gs_ta, 16);
-                    uint32_t gs = __SMUAD(va, vgs)>>8;
-                    IMAGE_PUT_BINARY_PIXEL(arg_img, x, y, COLOR_GRAYSCALE_TO_BINARY(gs));
-                    break;
-                }
-
-                case IMAGE_BPP_GRAYSCALE: {
-                    uint8_t pixel = IMAGE_GET_GRAYSCALE_PIXEL(arg_img, x, y);
-                    uint32_t vgs = __PKHBT(pixel, gs_ta, 16);
-                    uint32_t gs = __SMUAD(va, vgs)>>8;
-                    IMAGE_PUT_GRAYSCALE_PIXEL(arg_img, x, y, gs);
-                    break;
-                }
-
-                case IMAGE_BPP_RGB565: {
-                    uint16_t pixel = IMAGE_GET_RGB565_PIXEL(arg_img, x, y);
-                    uint32_t vr = __PKHBT(COLOR_RGB565_TO_R5(pixel), r_ta, 16);
-                    uint32_t vg = __PKHBT(COLOR_RGB565_TO_G6(pixel), g_ta, 16);
-                    uint32_t vb = __PKHBT(COLOR_RGB565_TO_B5(pixel), b_ta, 16);
-                    uint32_t r = __SMUAD(va, vr)>>8;
-                    uint32_t g = __SMUAD(va, vg)>>8;
-                    uint32_t b = __SMUAD(va, vb)>>8;
-                    IMAGE_PUT_RGB565_PIXEL(arg_img, x, y, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
-                    break;
-                }
-                default: break;
-            }
-        }
-    }
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ta_obj, 2, py_fir_draw_ta);
-
 mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    if (fir_sensor == FIR_NONE) return mp_const_none;
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *dst_img = py_helper_arg_to_image_mutable(args[0]);
 
-    mp_obj_t *arg_To;
-    mp_obj_get_array_fixed_n(args[1], width*height, &arg_To);
+    image_t src_img;
+    src_img.bpp = IMAGE_BPP_GRAYSCALE;
 
-    fb_alloc_mark();
-    float *To = fb_alloc(width*height * sizeof(float), FB_ALLOC_NO_HINT), min = FLT_MAX, max = FLT_MIN;
-    for (int i=0; i<width*height; i++) {
-        float temp = To[i] = mp_obj_get_float(arg_To[i]);
-        min = IM_MIN(min, temp);
-        max = IM_MAX(max, temp);
+    size_t len;
+    mp_obj_t *items, *arg_to;
+    mp_obj_get_array(args[1], &len, &items);
+
+    if (len == 3) {
+        src_img.w = mp_obj_get_int(items[0]);
+        src_img.h = mp_obj_get_int(items[1]);
+        mp_obj_get_array_fixed_n(items[2], src_img.w * src_img.h, &arg_to);
+    } else if (fir_sensor != FIR_NONE) {
+        src_img.w = width;
+        src_img.h = height;
+        // Handle if the user passed an array of the array.
+        if (len == 1) mp_obj_get_array_fixed_n(*items, src_img.w * src_img.h, &arg_to);
+        else mp_obj_get_array_fixed_n(args[1], src_img.w * src_img.h, &arg_to);
+    } else {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_TypeError, "Invalid IR array!"));
     }
 
-    int alpha = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
-    PY_ASSERT_TRUE_MSG((0 <= alpha) && (alpha <= 256), "Error: 0 <= alpha <= 256!");
+    int arg_x_off = 0;
+    int arg_y_off = 0;
+    uint offset = 2;
+    if (n_args > 2) {
+        if (MP_OBJ_IS_TYPE(args[2], &mp_type_tuple) || MP_OBJ_IS_TYPE(args[2], &mp_type_list)) {
+            mp_obj_t *arg_vec;
+            mp_obj_get_array_fixed_n(args[2], 2, &arg_vec);
+            arg_x_off = mp_obj_get_int(arg_vec[0]);
+            arg_y_off = mp_obj_get_int(arg_vec[1]);
+            offset = 3;
+        } else if (n_args > 3) {
+            arg_x_off = mp_obj_get_int(args[2]);
+            arg_y_off = mp_obj_get_int(args[3]);
+            offset = 4;
+        } else if (n_args > 2) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_TypeError, "Expected x and y offset!"));
+        }
+    }
 
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
+    float arg_x_scale = 1.f;
+    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
+
+    float arg_y_scale = 1.f;
+    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
+
+    rectangle_t arg_roi;
+    py_helper_keyword_rectangle_roi(&src_img, n_args, args, offset + 2, kw_args, &arg_roi);
+
+    float tmp_x_scale = dst_img->w / ((float) arg_roi.w);
+    float tmp_y_scale = dst_img->h / ((float) arg_roi.h);
+    float tmp_scale = IM_MIN(tmp_x_scale, tmp_y_scale);
+
+    if (n_args == 2) {
+        arg_x_off = fast_floorf((dst_img->w - (arg_roi.w * tmp_scale)) / 2.f);
+        arg_y_off = fast_floorf((dst_img->h - (arg_roi.h * tmp_scale)) / 2.f);
+    }
+
+    if (!got_x_scale) arg_x_scale = tmp_scale;
+    if (!got_y_scale) arg_y_scale = tmp_scale;
+
+    int arg_rgb_channel = py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
+    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
+
+    int arg_alpha = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
+    if ((arg_alpha < 0) || (256 < arg_alpha)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
+
+    const uint16_t *color_palette = rainbow_table;
+    {
+        int palette;
+
+        uint arg_index = offset + 5;
+        mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), MP_MAP_LOOKUP);
+
+        if (kw_arg && MP_OBJ_IS_TYPE(kw_arg->value, mp_const_none)) {
+            color_palette = NULL;
+        } else if ((n_args > arg_index) && MP_OBJ_IS_TYPE(args[arg_index], mp_const_none)) {
+            color_palette = NULL;
+        } else if (py_helper_keyword_int_maybe(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
+            if (palette == COLOR_PALETTE_RAINBOW) color_palette = rainbow_table;
+            else if (palette == COLOR_PALETTE_IRONBOW) color_palette = ironbow_table;
+            else nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pre-defined color palette!"));
+        } else {
+            image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, arg_index, kw_args);
+
+            if (arg_color_palette) {
+                if (arg_color_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be RGB565!"));
+                if ((arg_color_palette->w * arg_color_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be 256 pixels!"));
+                color_palette = (uint16_t *) arg_color_palette->data;
+            }
+        }
+    }
+
+    const uint8_t *alpha_palette = NULL;
+    {
+        image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, offset + 6, kw_args);
+
+        if (arg_alpha_palette) {
+            if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be GRAYSCALE!"));
+            if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be 256 pixels!"));
+            alpha_palette = (uint8_t *) arg_alpha_palette->data;
+        }
+    }
+
+    image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
+
+    int arg_x_size;
+    bool got_x_size = py_helper_keyword_int_maybe(n_args, args, offset + 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
+
+    int arg_y_size;
+    bool got_y_size = py_helper_keyword_int_maybe(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
+
+    if (got_x_scale && got_x_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
+    if (got_y_scale && got_y_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+
+    if (got_x_size) arg_x_scale = arg_x_size / ((float) arg_roi.w);
+    if (got_y_size) arg_y_scale = arg_y_size / ((float) arg_roi.h);
+
+    if ((!got_x_scale) && (!got_x_size) && got_y_size) arg_x_scale = arg_y_scale;
+    if ((!got_y_scale) && (!got_y_size) && got_x_size) arg_y_scale = arg_x_scale;
+
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, offset + 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
+    float min = FLT_MAX, max = FLT_MIN;
+
     if (scale_obj) {
         mp_obj_t *arg_scale;
         mp_obj_get_array_fixed_n(scale_obj, 2, &arg_scale);
         min = mp_obj_get_float(arg_scale[0]);
         max = mp_obj_get_float(arg_scale[1]);
-    }
-
-    int x_scale = arg_img->w / width, y_scale = arg_img->h / height;
-    int scale = IM_MIN(x_scale, y_scale);
-    int x_offset = (arg_img->w - (width * scale)) / 2;
-    int y_offset = (arg_img->h - (height * scale)) / 2;
-    uint32_t va = __PKHBT((256-alpha), alpha, 16);
-    for (int y=y_offset; y<y_offset+(height*scale); y++) {
-        for (int x=x_offset; x<x_offset+(width*scale); x++) {
-            int index = (((y-y_offset)/scale)*width)+((x-x_offset)/scale);
-            uint8_t gs_to = IM_MIN(IM_MAX(MAP(To[index], min, max, 0, 255), 0), 255);
-            uint16_t r_to = COLOR_RGB565_TO_R5(rainbow_table[gs_to]);
-            uint16_t g_to = COLOR_RGB565_TO_G6(rainbow_table[gs_to]);
-            uint16_t b_to = COLOR_RGB565_TO_B5(rainbow_table[gs_to]);
-            switch (arg_img->bpp) {
-                case IMAGE_BPP_BINARY: {
-                    uint8_t pixel = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(arg_img, x, y));
-                    uint32_t vgs = __PKHBT(pixel, gs_to, 16);
-                    uint32_t gs = __SMUAD(va, vgs)>>8;
-                    IMAGE_PUT_BINARY_PIXEL(arg_img, x, y, COLOR_GRAYSCALE_TO_BINARY(gs));
-                    break;
-                }
-
-                case IMAGE_BPP_GRAYSCALE: {
-                    uint8_t pixel = IMAGE_GET_GRAYSCALE_PIXEL(arg_img, x, y);
-                    uint32_t vgs = __PKHBT(pixel, gs_to, 16);
-                    uint32_t gs = __SMUAD(va, vgs)>>8;
-                    IMAGE_PUT_GRAYSCALE_PIXEL(arg_img, x, y, gs);
-                    break;
-                }
-
-                case IMAGE_BPP_RGB565: {
-                    uint16_t pixel = IMAGE_GET_RGB565_PIXEL(arg_img, x, y);
-                    uint32_t vr = __PKHBT(COLOR_RGB565_TO_R5(pixel), r_to, 16);
-                    uint32_t vg = __PKHBT(COLOR_RGB565_TO_G6(pixel), g_to, 16);
-                    uint32_t vb = __PKHBT(COLOR_RGB565_TO_B5(pixel), b_to, 16);
-                    uint32_t r = __SMUAD(va, vr)>>8;
-                    uint32_t g = __SMUAD(va, vg)>>8;
-                    uint32_t b = __SMUAD(va, vb)>>8;
-                    IMAGE_PUT_RGB565_PIXEL(arg_img, x, y, COLOR_R5_G6_B5_TO_RGB565(r, g, b));
-                    break;
-                }
-                default: break;
-            }
+    } else {
+        for (int i = 0, ii = src_img.w * src_img.h; i < ii; i++) {
+            float temp = mp_obj_get_float(arg_to[i]);
+            if (temp < min) min = temp;
+            if (temp > max) max = temp;
         }
     }
+
+    fb_alloc_mark();
+
+    src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
+    fir_fill_image_float_obj(&src_img, arg_to, min, max);
+
+    imlib_draw_image(dst_img, &src_img, arg_x_off, arg_y_off, arg_x_scale, arg_y_scale, &arg_roi,
+                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, hint, NULL, NULL);
+
     fb_alloc_free_till_mark();
+
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
@@ -863,7 +895,6 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_resolution),      MP_ROM_PTR(&py_fir_resolution_obj) },
     { MP_ROM_QSTR(MP_QSTR_read_ta),         MP_ROM_PTR(&py_fir_read_ta_obj) },
     { MP_ROM_QSTR(MP_QSTR_read_ir),         MP_ROM_PTR(&py_fir_read_ir_obj) },
-    { MP_ROM_QSTR(MP_QSTR_draw_ta),         MP_ROM_PTR(&py_fir_draw_ta_obj) },
     { MP_ROM_QSTR(MP_QSTR_draw_ir),         MP_ROM_PTR(&py_fir_draw_ir_obj) },
     { MP_ROM_QSTR(MP_QSTR_snapshot),        MP_ROM_PTR(&py_fir_snapshot_obj) }
 };
