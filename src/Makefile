@@ -53,6 +53,7 @@ MICROPY_DIR=micropython
 LEPTON_DIR=drivers/lepton
 LSM6DS3_DIR=drivers/lsm6ds3
 WINC1500_DIR=drivers/winc1500
+MLX90621_DIR=drivers/mlx90621
 MLX90640_DIR=drivers/mlx90640
 LIBPDM_DIR=lib/libpdm
 TENSORFLOW_DIR=lib/libtf
