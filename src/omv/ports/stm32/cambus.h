@@ -11,6 +11,7 @@
 #ifndef __CAMBUS_H__
 #define __CAMBUS_H__
 #include <stdint.h>
+#include <stdbool.h>
 #include STM32_HAL_H
 #if defined(STM32F4)
 #define I2C_TIMING_STANDARD     (100000U)
@@ -46,4 +47,6 @@ int cambus_read_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr
 int cambus_write_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t reg_addr, uint8_t *buf, int len);
 int cambus_readw_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t *buf, int len);
 int cambus_writew_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_addr, uint8_t *buf, int len);
+int cambus_read_bytes_seq(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t *buf, int len, bool nostop);
+int cambus_write_bytes_seq(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t *buf, int len, bool nostop);
 #endif // __CAMBUS_H__

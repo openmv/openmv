@@ -10,8 +10,9 @@
  */
 #include <stdbool.h>
 #include <stddef.h>
+#include "py/mphal.h"
+
 #include STM32_HAL_H
-#include "systick.h"
 #include "omv_boardconfig.h"
 #include "cambus.h"
 #define I2C_TIMEOUT         (1000)
@@ -214,4 +215,57 @@ int cambus_writew_bytes(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint16_t reg_a
         return -1;
     }
     return 0;
+}
+
+int cambus_read_bytes_seq(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t *buf, int len, bool nostop)
+{
+    int ret = 0;
+    HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
+
+    if (HAL_I2C_Master_Seq_Receive_IT(i2c, slv_addr, buf, len,
+                (nostop == true) ? I2C_FIRST_FRAME : I2C_FIRST_AND_LAST_FRAME) != HAL_OK) {
+        ret = -1;
+        goto i2c_error;
+    }
+
+    mp_uint_t tick_start = mp_hal_ticks_ms();
+    while (HAL_I2C_GetState(i2c) != HAL_I2C_STATE_READY) {
+        if ((mp_hal_ticks_ms() - tick_start) >= I2C_TIMEOUT) {
+            ret = -1;
+        }
+        __WFI();
+    }
+
+i2c_error:
+    HAL_NVIC_DisableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_DisableIRQ(I2C2_ER_IRQn);
+    return ret;
+}
+
+int cambus_write_bytes_seq(I2C_HandleTypeDef *i2c, uint8_t slv_addr, uint8_t *buf, int len, bool nostop)
+{
+    int ret = 0;
+    HAL_NVIC_EnableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_EnableIRQ(I2C2_ER_IRQn);
+
+    if (HAL_I2C_Master_Seq_Transmit_IT(i2c, slv_addr, buf, len,
+                (nostop == true) ? I2C_FIRST_FRAME : I2C_FIRST_AND_LAST_FRAME) != HAL_OK) {
+        ret = -1;
+        goto i2c_error;
+    }
+
+    mp_uint_t tick_start = mp_hal_ticks_ms();
+    while (HAL_I2C_GetState(i2c) != HAL_I2C_STATE_READY) {
+        if ((mp_hal_ticks_ms() - tick_start) >= I2C_TIMEOUT) {
+            ret = -1;
+            goto i2c_error;
+        }
+        __WFI();
+    }
+
+i2c_error:
+    HAL_NVIC_DisableIRQ(I2C2_EV_IRQn);
+    HAL_NVIC_DisableIRQ(I2C2_ER_IRQn);
+    return ret;
 }
