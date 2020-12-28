@@ -39,14 +39,7 @@ static uint8_t IR_refresh_rate = 0;
 static uint8_t ADC_resolution = 0;
 static void *mlx_data= NULL;
 
-// TODO temporary hack.
-#ifdef PORTENTA
-extern I2C_HandleTypeDef I2CHandle3;      // FIR/I2C bus.
-#define fir_i2c (I2CHandle3)
-#else
-extern I2C_HandleTypeDef I2CHandle2;      // FIR/I2C bus.
-#define fir_i2c (I2CHandle2)
-#endif
+static cambus_t bus;
 
 static enum {
     FIR_NONE,
@@ -61,29 +54,6 @@ extern const uint16_t rainbow_table[256];
 static void test_ack(int ret)
 {
     PY_ASSERT_TRUE_MSG(ret == 0, "I2C Bus communication error - missing ACK!");
-}
-
-static void generate_scl_train()
-{
-    // Configure SCL as GPIO
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Pull  = GPIO_NOPULL;
-    GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
-    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStructure.Pin   = FIR_I2C_SCL_PIN;
-    HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
-
-    // Pulse SCL to recover stuck device.
-    for (int i=0; i<10000; i++) {
-        HAL_GPIO_WritePin(FIR_I2C_PORT, FIR_I2C_SCL_PIN, GPIO_PIN_SET);
-        mp_hal_delay_us(10);
-        HAL_GPIO_WritePin(FIR_I2C_PORT, FIR_I2C_SCL_PIN, GPIO_PIN_RESET);
-        mp_hal_delay_us(10);
-    }
-
-    // Clear ARLO flag if it's set.
-    __HAL_I2C_CLEAR_FLAG(&fir_i2c, I2C_FLAG_ARLO);
-    debug_printf("reset stuck i2c device\n");
 }
 
 // img->w == data_w && img->h == data_h && img->bpp == IMAGE_BPP_GRAYSCALE
@@ -121,7 +91,7 @@ static mp_obj_t py_fir_deinit()
     }
     if (fir_sensor != FIR_NONE) {
         fir_sensor = FIR_NONE;
-        cambus_deinit(&fir_i2c);
+        cambus_deinit(&bus);
     }
     return mp_const_none;
 }
@@ -153,9 +123,9 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             width = 16;
             height = 4;
             fir_sensor = MLX90621;
-            MLX90621_I2CInit(&fir_i2c);
+            MLX90621_I2CInit(&bus);
             // The EEPROM must be read at <= 400KHz.
-            cambus_init(&fir_i2c, FIR_I2C, I2C_TIMING_FULL);
+            cambus_init(&bus, FIR_I2C_ID, CAMBUS_SPEED_FULL);
 
             // parse refresh rate and ADC resolution
             IR_refresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 64);     // 64Hz
@@ -179,15 +149,15 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             if (error != 0 && first_init == true) {
                 first_init = false;
-                generate_scl_train();
+                cambus_pulse_scl(&bus);
                 xfree(mlx_data);
                 mlx_data = NULL;
                 goto FIR_MLX90621;
             }
 
             // Switch to FAST speed
-            cambus_deinit(&fir_i2c);
-            cambus_init(&fir_i2c, FIR_I2C, I2C_TIMING_FAST);
+            cambus_deinit(&bus);
+            cambus_init(&bus, FIR_I2C_ID, CAMBUS_SPEED_FAST);
 
             PY_ASSERT_TRUE_MSG(error == 0, "Failed to init the MLX90621!");
             return mp_const_none;
@@ -198,9 +168,9 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             width = 32;
             height = 24;
             fir_sensor = FIR_MLX90640;
-            MLX90640_I2CInit(&fir_i2c);
+            MLX90640_I2CInit(&bus);
             // The EEPROM must be read at <= 400KHz.
-            cambus_init(&fir_i2c, FIR_I2C, I2C_TIMING_FULL);
+            cambus_init(&bus, FIR_I2C_ID, CAMBUS_SPEED_FULL);
 
             // parse refresh rate and ADC resolution
             IR_refresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 32);     // 32Hz
@@ -224,15 +194,15 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             if (error != 0 && first_init == true) {
                 first_init = false;
-                generate_scl_train();
+                cambus_pulse_scl(&bus);
                 xfree(mlx_data);
                 mlx_data = NULL;
                 goto FIR_MLX90640;
             }
 
             // Switch to FAST speed
-            cambus_deinit(&fir_i2c);
-            cambus_init(&fir_i2c, FIR_I2C, I2C_TIMING_FAST);
+            cambus_deinit(&bus);
+            cambus_init(&bus, FIR_I2C_ID, CAMBUS_SPEED_FAST);
 
             PY_ASSERT_TRUE_MSG(error == 0, "Failed to init the MLX90640!");
             return mp_const_none;
@@ -243,15 +213,15 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             width = 8;
             height = 8;
             fir_sensor = FIR_AMG8833;
-            cambus_init(&fir_i2c, FIR_I2C, I2C_TIMING_STANDARD);
+            cambus_init(&bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
 
             IR_refresh_rate = 10;
             ADC_resolution  = 12;
 
-            int error = cambus_write_bytes(&fir_i2c, AMG8833_ADDR, 0x01, (uint8_t [1]){0x3F}, 1);
+            int error = cambus_write_bytes(&bus, AMG8833_ADDR, 0x01, (uint8_t [1]){0x3F}, 1);
             if (error != 0 && first_init == true) {
                 first_init = false;
-                generate_scl_train();
+                cambus_pulse_scl(&bus);
                 goto FIR_AMG8833;
             }
 
@@ -333,7 +303,7 @@ mp_obj_t py_fir_read_ta()
 
         case FIR_AMG8833: {
             int16_t temp=0;
-            test_ack(cambus_read_bytes(&fir_i2c, AMG8833_ADDR, 0x0E, (uint8_t *) &temp, 2));
+            test_ack(cambus_read_bytes(&bus, AMG8833_ADDR, 0x0E, (uint8_t *) &temp, 2));
             if ((temp >> 11) & 1) temp |= 1 << 15;
             temp &= 0x87FF;
             return mp_obj_new_float(temp * 0.0625);
@@ -420,14 +390,14 @@ mp_obj_t py_fir_read_ir()
 
         case FIR_AMG8833: {
             int16_t temp;
-            test_ack(cambus_read_bytes(&fir_i2c, AMG8833_ADDR, 0x0E, (uint8_t *) &temp, 2));
+            test_ack(cambus_read_bytes(&bus, AMG8833_ADDR, 0x0E, (uint8_t *) &temp, 2));
             if ((temp >> 11) & 1) temp |= 1 << 15;
             temp &= 0x87FF;
             float Ta = temp * 0.0625;
 
             fb_alloc_mark();
             int16_t *data = fb_alloc(64 * sizeof(int16_t), FB_ALLOC_NO_HINT);
-            test_ack(cambus_read_bytes(&fir_i2c, AMG8833_ADDR, 0x80, (uint8_t *) data, 128));
+            test_ack(cambus_read_bytes(&bus, AMG8833_ADDR, 0x80, (uint8_t *) data, 128));
             float To[64], min = FLT_MAX, max = FLT_MIN;
             for (int i = 0; i < 64; i++) {
                 if ((data[i] >> 11) & 1) data[i] |= 1 << 15;

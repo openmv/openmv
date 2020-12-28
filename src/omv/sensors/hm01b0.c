@@ -123,12 +123,12 @@ static int reset(sensor_t *sensor)
         if (retry == 0) {
             return -1;
         }
-        if (cambus_writeb2(&sensor->i2c, sensor->slv_addr, SW_RESET, HIMAX_RESET) != 0) {
+        if (cambus_writeb2(&sensor->bus, sensor->slv_addr, SW_RESET, HIMAX_RESET) != 0) {
             return -1;
         }
         // Delay for 1ms.
         mp_hal_delay_ms(1);
-        if (cambus_readb2(&sensor->i2c, sensor->slv_addr, MODE_SELECT, &reg) != 0) {
+        if (cambus_readb2(&sensor->bus, sensor->slv_addr, MODE_SELECT, &reg) != 0) {
             return -1;
         }
     }
@@ -136,14 +136,14 @@ static int reset(sensor_t *sensor)
     // Write default regsiters
     int ret = 0;
     for (int i=0; default_regs[i][0] && ret == 0; i++) {
-        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, default_regs[i][0], default_regs[i][1]);
     }
 
     // Set PCLK polarity.
-    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, PCLK_POLARITY, (0x20 | PCLK_FALLING_EDGE));
+    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, PCLK_POLARITY, (0x20 | PCLK_FALLING_EDGE));
     
     // Set mode to streaming
-    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, MODE_SELECT, HIMAX_MODE_STREAMING);
+    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MODE_SELECT, HIMAX_MODE_STREAMING);
 
     return ret;
 }
@@ -151,7 +151,7 @@ static int reset(sensor_t *sensor)
 static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 {
     uint8_t reg_data;
-    if (cambus_readb2(&sensor->i2c, sensor->slv_addr, reg_addr, &reg_data) != 0) {
+    if (cambus_readb2(&sensor->bus, sensor->slv_addr, reg_addr, &reg_data) != 0) {
         return -1;
     }
     return reg_data;
@@ -159,7 +159,7 @@ static int read_reg(sensor_t *sensor, uint16_t reg_addr)
 
 static int write_reg(sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data)
 {
-    return cambus_writeb2(&sensor->i2c, sensor->slv_addr, reg_addr, reg_data);
+    return cambus_writeb2(&sensor->bus, sensor->slv_addr, reg_addr, reg_data);
 }
 
 static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
@@ -203,12 +203,12 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     switch (framesize) {
         case FRAMESIZE_QVGA:
             for (int i=0; QVGA_regs[i][0] && ret == 0; i++) {
-                ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, QVGA_regs[i][0], QVGA_regs[i][1]);
+                ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, QVGA_regs[i][0], QVGA_regs[i][1]);
             }
             break;
         case FRAMESIZE_QQVGA:
             for (int i=0; QQVGA_regs[i][0] && ret == 0; i++) {
-                ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, QQVGA_regs[i][0], QQVGA_regs[i][1]);
+                ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, QQVGA_regs[i][0], QQVGA_regs[i][1]);
             }
             break;
         default: 
@@ -270,14 +270,14 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     int ret=0;
 
     if (enable) {
-        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AE_CTRL, 1);
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 1);
     } else {
         int coarse_int = exposure_us*(OMV_XCLK_FREQUENCY/1000000)/LINE_LEN_PCK_H;
         if (coarse_int<2) coarse_int = 2;
         if (coarse_int>HIMAX_FRAME_LENGTH-2) coarse_int = HIMAX_FRAME_LENGTH-2;
-        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, AE_CTRL, 0);
-        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, INTEGRATION_H, coarse_int>>8);
-        ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, INTEGRATION_L, coarse_int&0xff);
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 0);
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, INTEGRATION_H, coarse_int>>8);
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, INTEGRATION_L, coarse_int&0xff);
     }
 
     return ret;
@@ -301,16 +301,16 @@ static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db,
 static int set_hmirror(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, IMG_ORIENTATION, &reg);
-    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_HMIRROR(reg, enable)) ;
+    int ret = cambus_readb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, &reg);
+    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_HMIRROR(reg, enable)) ;
     return ret;
 }
 
 static int set_vflip(sensor_t *sensor, int enable)
 {
     uint8_t reg;
-    int ret = cambus_readb2(&sensor->i2c, sensor->slv_addr, IMG_ORIENTATION, &reg);
-    ret |= cambus_writeb2(&sensor->i2c, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_VMIRROR(reg, enable)) ;
+    int ret = cambus_readb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, &reg);
+    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_VMIRROR(reg, enable)) ;
     return ret;
 }
 

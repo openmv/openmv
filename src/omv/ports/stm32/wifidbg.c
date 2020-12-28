@@ -26,6 +26,7 @@
 #include "socket/include/socket.h"
 #include "driver/include/m2m_wifi.h"
 #include "usbdbg.h"
+#include "cambus.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
