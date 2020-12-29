@@ -15,6 +15,7 @@
 
 #if MICROPY_PY_SENSOR
 
+#include "cambus.h"
 #include "sensor.h"
 #include "imlib.h"
 #include "xalloc.h"

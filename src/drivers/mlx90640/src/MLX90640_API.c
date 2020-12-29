@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-#include STM32_HAL_H
+#include "cambus.h"
 #include <MLX90640_I2C_Driver.h>
 #include <MLX90640_API.h>
 #include <math.h>

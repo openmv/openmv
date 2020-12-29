@@ -253,7 +253,7 @@ void sensor_init0()
     #ifdef PORTENTA
     // The Portenta board uses the same I2C bus for the sensor and
     // user scripts. The I2C bus must be reinitialized on soft-reset.
-    cambus_init(&sensor.i2c, SCCB_I2C, SCCB_TIMING);
+    cambus_init(&sensor.bus, ISC_I2C_ID, ISC_I2C_SPEED);
     #endif
 
 }
@@ -320,11 +320,11 @@ int sensor_init()
     systick_sleep(10);
 
     // Initialize the camera bus.
-    cambus_init(&sensor.i2c, SCCB_I2C, SCCB_TIMING);
+    cambus_init(&sensor.bus, ISC_I2C_ID, ISC_I2C_SPEED);
     systick_sleep(10);
 
     /* Probe the sensor */
-    sensor.slv_addr = cambus_scan(&sensor.i2c);
+    sensor.slv_addr = cambus_scan(&sensor.bus);
     if (sensor.slv_addr == 0) {
         /* Sensor has been held in reset,
            so the reset line is active low */
@@ -335,21 +335,21 @@ int sensor_init()
         systick_sleep(10);
 
         /* Probe again to set the slave addr */
-        sensor.slv_addr = cambus_scan(&sensor.i2c);
+        sensor.slv_addr = cambus_scan(&sensor.bus);
         if (sensor.slv_addr == 0) {
             sensor.pwdn_pol = ACTIVE_LOW;
 
             DCMI_PWDN_HIGH();
             systick_sleep(10);
 
-            sensor.slv_addr = cambus_scan(&sensor.i2c);
+            sensor.slv_addr = cambus_scan(&sensor.bus);
             if (sensor.slv_addr == 0) {
                 sensor.reset_pol = ACTIVE_HIGH;
 
                 DCMI_RESET_LOW();
                 systick_sleep(10);
 
-                sensor.slv_addr = cambus_scan(&sensor.i2c);
+                sensor.slv_addr = cambus_scan(&sensor.bus);
                 if (sensor.slv_addr == 0) {
                     return -2;
                 }
@@ -365,22 +365,22 @@ int sensor_init()
 
     switch (sensor.slv_addr) {
         case OV2640_SLV_ADDR: // Or OV9650.
-            cambus_readb(&sensor.i2c, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+            cambus_readb(&sensor.bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
             break;
         case OV5640_SLV_ADDR:
-            cambus_readb2(&sensor.i2c, sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
+            cambus_readb2(&sensor.bus, sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
             break;
         case OV7725_SLV_ADDR: // Or OV7690.
-            cambus_readb(&sensor.i2c, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
+            cambus_readb(&sensor.bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
             break;
         case MT9V034_SLV_ADDR:
-            cambus_readb(&sensor.i2c, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
+            cambus_readb(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
             break;
         case LEPTON_SLV_ADDR:
             sensor.chip_id = LEPTON_ID;
             break;
         case HM01B0_SLV_ADDR:
-            cambus_readb2(&sensor.i2c, sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
+            cambus_readb2(&sensor.bus, sensor.slv_addr, HIMAX_CHIP_ID, &sensor.chip_id);
             break;
         default:
             return -3;

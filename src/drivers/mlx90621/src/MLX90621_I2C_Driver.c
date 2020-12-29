@@ -15,24 +15,23 @@
  *
  */
 #include <stdio.h>
-#include STM32_HAL_H
 #include "cambus.h"
 #include "MLX90621_I2C_Driver.h"
 
-static I2C_HandleTypeDef *hi2c;
+static cambus_t *bus;
 
-void MLX90621_I2CInit(I2C_HandleTypeDef *i2c)
+void MLX90621_I2CInit(cambus_t *hbus)
 {   
-    hi2c = i2c;
+    bus = hbus;
 }
 
 int MLX90621_I2CReadEEPROM(uint8_t slaveAddr, uint8_t startAddress, uint16_t nMemAddressRead, uint8_t *data)
 {
-    if (cambus_write_bytes_seq(hi2c, (slaveAddr << 1), &startAddress, 1, true) != 0) {
+    if (cambus_write_bytes_seq(bus, (slaveAddr << 1), &startAddress, 1, true) != 0) {
         return -1;
     }
              
-    if (cambus_read_bytes_seq(hi2c, (slaveAddr << 1), data, nMemAddressRead, false) != 0) {
+    if (cambus_read_bytes_seq(bus, (slaveAddr << 1), data, nMemAddressRead, false) != 0) {
         return -1; 
     }          
     
@@ -49,11 +48,11 @@ int MLX90621_I2CRead(uint8_t slaveAddr,uint8_t command,
         nMemAddressRead
     };
     
-    if (cambus_write_bytes_seq(hi2c, (slaveAddr << 1), cmd, 4, true) != 0) {
+    if (cambus_write_bytes_seq(bus, (slaveAddr << 1), cmd, 4, true) != 0) {
         return -1;
     }
 
-    if (cambus_read_bytes_seq(hi2c, (slaveAddr << 1), (uint8_t *) data, nMemAddressRead * 2, false) != 0) {
+    if (cambus_read_bytes_seq(bus, (slaveAddr << 1), (uint8_t *) data, nMemAddressRead * 2, false) != 0) {
         return -1; 
     }          
 
@@ -70,7 +69,7 @@ int MLX90621_I2CWrite(uint8_t slaveAddr, uint8_t command, uint8_t checkValue, ui
         (data >> 8)
     };
 
-    if (cambus_write_bytes_seq(hi2c, (slaveAddr << 1), cmd, 5, false) != 0) {
+    if (cambus_write_bytes_seq(bus, (slaveAddr << 1), cmd, 5, false) != 0) {
         return -1;
     }
     return 0;

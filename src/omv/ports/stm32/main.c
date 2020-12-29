@@ -53,6 +53,7 @@
 #include "extint.h"
 #include "servo.h"
 
+#include "cambus.h"
 #include "sensor.h"
 #include "usbdbg.h"
 #include "wifidbg.h"

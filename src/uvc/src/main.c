@@ -15,9 +15,23 @@
 #include "usbd_desc.h"
 #include "usbd_uvc.h"
 #include "usbd_uvc_if.h"
+#include "cambus.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+
+#if defined(I2C1)
+I2C_HandleTypeDef I2CHandle1;
+#endif
+#if defined(I2C2)
+I2C_HandleTypeDef I2CHandle2;
+#endif
+#if defined(I2C3)
+I2C_HandleTypeDef I2CHandle3;
+#endif
+#if defined(I2C4)
+I2C_HandleTypeDef I2CHandle4;
+#endif
 
 extern sensor_t sensor;
 USBD_HandleTypeDef hUsbDeviceFS;

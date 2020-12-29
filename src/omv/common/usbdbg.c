@@ -22,6 +22,7 @@
 
 #include "imlib.h"
 #if MICROPY_PY_SENSOR
+#include "cambus.h"
 #include "sensor.h"
 #endif
 #include "framebuffer.h"
