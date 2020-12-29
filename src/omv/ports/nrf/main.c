@@ -78,6 +78,8 @@
 #endif
 
 #include "usbdbg.h"
+#include "framebuffer.h"
+#include "omv_boardconfig.h"
 
 uint32_t HAL_GetHalVersion()
 {
@@ -165,6 +167,8 @@ soft_reset:
     #if MICROPY_PY_MACHINE_UART
     uart_init0();
     #endif
+
+    framebuffer_init0();
 
     #if (MICROPY_PY_BLE_NUS == 0) && (MICROPY_HW_USB_CDC == 0)
     {

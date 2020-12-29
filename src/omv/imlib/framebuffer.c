@@ -70,6 +70,28 @@ void fb_encode_for_ide(uint8_t *ptr, image_t *img)
     *ptr++ = 0xFE;
 }
 
+void framebuffer_init0()
+{
+    // Save fb_enabled flag state
+    int fb_enabled = JPEG_FB()->enabled;
+
+    // Clear framebuffers
+    memset(MAIN_FB(), 0, sizeof(*MAIN_FB()));
+    memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
+
+    // Skip the first frame.
+    MAIN_FB()->bpp = -1;
+
+    // Enable streaming.
+    MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
+
+    // Set default quality
+    JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
+
+    // Set fb_enabled
+    JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
+}
+
 void framebuffer_initialize_image(image_t *img)
 {
     img->w = framebuffer->w;
