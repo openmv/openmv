@@ -35,7 +35,9 @@
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
 
+#if defined(IMLIB_ENABLE_IMAGE_IO)
 extern const char *ffs_strerror(FRESULT res);
+#endif
 
 // Haar Cascade ///////////////////////////////////////////////////////////////
 
@@ -7231,7 +7233,13 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     // Load cascade from file or flash
     int res = imlib_load_cascade(&cascade, path);
     if (res != FR_OK) {
+        #if defined(IMLIB_ENABLE_IMAGE_IO)
+        // cascade is not built-in and failed to load it from file.
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+        #else
+        // cascade is not built-in.
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+        #endif
     }
 
     // Read the number of stages

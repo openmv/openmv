@@ -285,7 +285,7 @@ int imlib_load_cascade(cascade_t *cascade, const char *path)
         // xml cascade
         return imlib_load_cascade_from_file(cascade, path);
         #else
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
+        return -1;
         #endif
     }
 
