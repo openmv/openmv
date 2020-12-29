@@ -26,6 +26,7 @@
 #include "systick.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+#include "unaligned_memcpy.h"
 
 #define MAX_XFER_SIZE   (0xFFFF*4)
 
@@ -1065,79 +1066,6 @@ static void sensor_check_buffsize()
     MAIN_FB()->y += (window_h - MAIN_FB()->v) / 2;
     if (MAIN_FB()->x % 2) MAIN_FB()->x -= 1;
     if (MAIN_FB()->y % 2) MAIN_FB()->y -= 1;
-}
-
-// ARM Cortex-M4/M7 Processors can access memory using unaligned 32-bit reads/writes.
-void *unaligned_2_to_1_memcpy(void *dest, void *src, size_t n)
-{
-    uint32_t *dest32 = (uint32_t *) dest;
-    uint32_t *src32 = (uint32_t *) src;
-
-// TODO: Make this faster using only 32-bit aligned reads/writes with data shifting.
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    for (; n > 4; n -= 4) {
-        uint32_t tmp1 = *src32++;
-        uint32_t tmp2 = *src32++;
-        *dest32++ = (tmp1 & 0xff) | ((tmp1 >> 8) & 0xff00) | ((tmp2 & 0xff) << 16) | ((tmp2 & 0xff0000) << 8);
-    }
-#endif
-
-    uint8_t *dest8 = (uint8_t *) dest32;
-    uint16_t *src16 = (uint16_t *) src32;
-
-    for (; n > 0; n -= 1) {
-        *dest8++ = *src16++;
-    }
-
-    return dest;
-}
-
-// ARM Cortex-M4/M7 Processors can access memory using unaligned 32-bit reads/writes.
-void *unaligned_memcpy(void *dest, void *src, size_t n)
-{
-// TODO: Make this faster using only 32-bit aligned reads/writes with data shifting.
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    uint32_t *dest32 = (uint32_t *) dest;
-    uint32_t *src32 = (uint32_t *) src;
-
-    for (; n > 4; n -= 4) {
-        *dest32++ = *src32++;
-    }
-
-    uint8_t *dest8 = (uint8_t *) dest32;
-    uint8_t *src8 = (uint8_t *) src32;
-
-    for (; n > 0; n -= 1) {
-        *dest8++ = *src8++;
-    }
-
-    return dest;
-#else
-    return memcpy(dest, src, n);
-#endif
-}
-
-// ARM Cortex-M4/M7 Processors can access memory using unaligned 32-bit reads/writes.
-void *unaligned_memcpy_rev16(void *dest, void *src, size_t n)
-{
-    uint32_t *dest32 = (uint32_t *) dest;
-    uint32_t *src32 = (uint32_t *) src;
-
-// TODO: Make this faster using only 32-bit aligned reads/writes with data shifting.
-#if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    for (; n > 2; n -= 2) {
-        *dest32++ = __REV16(*src32++);
-    }
-#endif
-
-    uint16_t *dest16 = (uint16_t *) dest32;
-    uint16_t *src16 = (uint16_t *) src32;
-
-    for (; n > 0; n -= 1) {
-        *dest16++ = __REV16(*src16++);
-    }
-
-    return dest;
 }
 
 // Stop allowing new data in on the end of the frame and let snapshot know that the frame has been
