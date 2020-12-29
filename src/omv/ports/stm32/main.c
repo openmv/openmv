@@ -500,6 +500,7 @@ soft_reset:
     spi_init0();
     uart_init0();
     sensor_init0();
+    framebuffer_init0();
     fb_alloc_init0();
     #ifdef IMLIB_ENABLE_IMAGE_IO
     file_buffer_init0();

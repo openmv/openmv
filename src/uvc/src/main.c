@@ -180,6 +180,7 @@ int main()
     #endif
 
     sensor_init0();
+    framebuffer_init0();
     fb_alloc_init0();
 
     // Initialize the sensor

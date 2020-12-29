@@ -233,24 +233,6 @@ void sensor_init0()
 {
     dcmi_abort();
 
-    // Save fb_enabled flag state
-    int fb_enabled = JPEG_FB()->enabled;
-
-    // Clear framebuffers
-    memset(MAIN_FB(), 0, sizeof(*MAIN_FB()));
-    memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
-
-    // Skip the first frame.
-    MAIN_FB()->bpp = -1;
-
-    // Enable streaming.
-    MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
-
-    // Set default quality
-    JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
-
-    // Set fb_enabled
-    JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
     #ifdef PORTENTA
     // The Portenta board uses the same I2C bus for the sensor and
     // user scripts. The I2C bus must be reinitialized on soft-reset.

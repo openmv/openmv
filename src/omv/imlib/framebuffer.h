@@ -46,6 +46,8 @@ bool fb_get_streaming_enabled();
 int fb_encode_for_ide_new_size(image_t *img);
 void fb_encode_for_ide(uint8_t *ptr, image_t *img);
 
+void framebuffer_init0();
+
 // Initializes an image_t struct with the frame buffer.
 void framebuffer_initialize_image(image_t *img);
 
