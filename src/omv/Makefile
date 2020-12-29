@@ -11,6 +11,7 @@ SRCS += $(addprefix alloc/,     \
 	xalloc.c                    \
 	fb_alloc.c                  \
 	umm_malloc.c                \
+	unaligned_memcpy.c          \
    )
 
 SRCS += $(addprefix common/,    \

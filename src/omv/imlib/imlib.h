@@ -28,9 +28,6 @@
 #include "collections.h"
 #include "imlib_config.h"
 
-extern void *unaligned_2_to_1_memcpy(void *dest, void *src, size_t n);
-extern void *unaligned_memcpy(void *dest, void *src, size_t n);
-
 #define IM_LOG2_2(x)    (((x) &                0x2ULL) ? ( 2                        ) :             1) // NO ({ ... }) !
 #define IM_LOG2_4(x)    (((x) &                0xCULL) ? ( 2 +  IM_LOG2_2((x) >>  2)) :  IM_LOG2_2(x)) // NO ({ ... }) !
 #define IM_LOG2_8(x)    (((x) &               0xF0ULL) ? ( 4 +  IM_LOG2_4((x) >>  4)) :  IM_LOG2_4(x)) // NO ({ ... }) !

@@ -112,6 +112,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 	xalloc.o                    \
 	fb_alloc.o                  \
 	umm_malloc.o                \
+	unaligned_memcpy.o          \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \
@@ -445,6 +446,7 @@ UVC_OBJ += $(addprefix $(BUILD)/$(CMSIS_DIR)/src/,\
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 	fb_alloc.o                              \
+	unaligned_memcpy.o                      \
 	)
 
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/common/, \

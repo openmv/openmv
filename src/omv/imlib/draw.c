@@ -10,6 +10,7 @@
  */
 #include "font.h"
 #include "imlib.h"
+#include "unaligned_memcpy.h"
 
 #ifdef IMLIB_ENABLE_DMA2D
 #include STM32_HAL_H
