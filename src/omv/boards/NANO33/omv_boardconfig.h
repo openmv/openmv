@@ -67,6 +67,10 @@
 #define JPEG_QUALITY_LOW        50
 #define JPEG_QUALITY_HIGH       90
 
+// Low and high JPEG QS.
+#define JPEG_QUALITY_LOW        50
+#define JPEG_QUALITY_HIGH       90
+
 // FB Heap Block Size
 #define OMV_UMM_BLOCK_SIZE      16
 
@@ -91,4 +95,11 @@
 #define OMV_TEXT_LENGTH     808K        // FLASH_SIZE - SD_SIZE - FS_SIZE
 #define OMV_SRAM_ORIGIN     0x20004000  // Reserve 16K for SD memory.
 #define OMV_SRAM_LENGTH     240K        // RAM_SIZE - SD_RAM_SIZE
+
+// FIR I2C
+#define FIR_I2C_ID              (0)
+#define FIR_I2C_SCL_PIN         (2)
+#define FIR_I2C_SDA_PIN         (31)
+#define FIR_I2C_SPEED           (CAMBUS_SPEED_FULL)
+
 #endif //__OMV_BOARDCONFIG_H__
