@@ -127,6 +127,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/modules/,   \
 	py_omv.o                    \
 	py_sensor.o                 \
 	py_tf.o                     \
+	py_fir.o                    \
    )
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \

@@ -44,6 +44,7 @@ SRCS += $(addprefix modules/,   \
 	py_omv.c                    \
 	py_sensor.c                 \
 	py_tf.c                     \
+	py_fir.c                    \
    )
 
 SRCS += $(addprefix imlib/,     \
