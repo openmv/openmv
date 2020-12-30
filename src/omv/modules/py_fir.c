@@ -18,6 +18,7 @@
 #include "MLX90640_I2C_Driver.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
@@ -66,54 +67,6 @@ static int fir_height = 0;
 static int fir_ir_fresh_rate = 0;
 static int fir_adc_resolution = 0;
 static bool fir_transposed = false;
-
-// img->w == data_w && img->h == data_h && img->bpp == IMAGE_BPP_GRAYSCALE
-static void fir_fill_image_float(image_t *img, int w, int h, float *data, float min, float max,
-                                 bool mirror, bool flip, bool dst_transpose, bool src_transpose)
-{
-    float tmp = min;
-    min = (min < max) ? min : max;
-    max = (max > tmp) ? max : tmp;
-
-    float diff = 255.f / (max - min);
-    int w_1 = w - 1, h_1 = h - 1;
-
-    if (!src_transpose) {
-        for (int y = 0; y < h; y++) {
-            int y_dst = flip ? (h_1 - y) : y;
-            float *raw_row = data + (y * w);
-            uint8_t *row_pointer = ((uint8_t *) img->data) + (y_dst * w), *t_row_pointer = ((uint8_t *) img->data) + y_dst;
-
-            for (int x = 0; x < w; x++) {
-                int x_dst = mirror ? (w_1 - x) : x;
-                float raw = raw_row[x];
-                if (raw < min) raw = min;
-                if (raw > max) raw = max;
-                int pixel = fast_roundf((raw - min) * diff);
-                pixel = __USAT(pixel, 8);
-                if (!dst_transpose) row_pointer[x_dst] = pixel;
-                else t_row_pointer[x_dst * h] = pixel;
-            }
-        }
-    } else {
-        for (int x = 0; x < w; x++) {
-            int x_dst = mirror ? (w_1 - x) : x;
-            float *raw_row = data + (x * h);
-            uint8_t *t_row_pointer = ((uint8_t *) img->data) + (x_dst * h), *row_pointer = ((uint8_t *) img->data) + x_dst;
-
-            for (int y = 0; y < h; y++) {
-                int y_dst = flip ? (h_1 - y) : y;
-                float raw = raw_row[y];
-                if (raw < min) raw = min;
-                if (raw > max) raw = max;
-                int pixel = fast_roundf((raw - min) * diff);
-                pixel = __USAT(pixel, 8);
-                if (!dst_transpose) row_pointer[y_dst * w] = pixel;
-                else t_row_pointer[y_dst] = pixel;
-            }
-        }
-    }
-}
 
 // img->w == data_w && img->h == data_h && img->bpp == IMAGE_BPP_GRAYSCALE
 static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, float max)
@@ -814,8 +767,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                 fast_get_min_max(To, MLX90621_WIDTH * MLX90621_HEIGHT, &min, &max);
             }
 
-            fir_fill_image_float(&src_img, MLX90621_WIDTH, MLX90621_HEIGHT, To, min, max,
-                    arg_hmirror ^ true, arg_vflip, arg_transpose, true);
+            imlib_fill_image_from_float(&src_img, MLX90621_WIDTH, MLX90621_HEIGHT, To, min, max,
+                                        arg_hmirror ^ true, arg_vflip, arg_transpose, true);
+
             fb_free();
             break;
         }
@@ -827,8 +781,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                 fast_get_min_max(To, MLX90640_WIDTH * MLX90640_HEIGHT, &min, &max);
             }
 
-            fir_fill_image_float(&src_img, MLX90640_WIDTH, MLX90640_HEIGHT, To, min, max,
-                    arg_hmirror ^ true, arg_vflip, arg_transpose, false);
+            imlib_fill_image_from_float(&src_img, MLX90640_WIDTH, MLX90640_HEIGHT, To, min, max,
+                                        arg_hmirror ^ true, arg_vflip, arg_transpose, false);
+
             fb_free();
             break;
         }
@@ -840,8 +795,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                 fast_get_min_max(To, AMG8833_WIDTH * AMG8833_HEIGHT, &min, &max);
             }
 
-            fir_fill_image_float(&src_img, AMG8833_WIDTH, AMG8833_HEIGHT, To, min, max,
-                    arg_hmirror ^ true, arg_vflip, arg_transpose, true);
+            imlib_fill_image_from_float(&src_img, AMG8833_WIDTH, AMG8833_HEIGHT, To, min, max,
+                                        arg_hmirror ^ true, arg_vflip, arg_transpose, true);
+
             fb_free();
             break;
         }

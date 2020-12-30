@@ -1031,6 +1031,10 @@ typedef struct imlib_draw_row_data {
 
 typedef void (*imlib_draw_row_callback_t)(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data);
 
+// Generic Helper Functions
+void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float min, float max,
+                                 bool mirror, bool flip, bool dst_transpose, bool src_transpose);
+
 /* Color space functions */
 int8_t imlib_rgb565_to_l(uint16_t pixel);
 int8_t imlib_rgb565_to_a(uint16_t pixel);
