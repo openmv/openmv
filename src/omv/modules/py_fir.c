@@ -18,7 +18,6 @@
 #include "MLX90640_I2C_Driver.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
-
 #include "py_assert.h"
 #include "py_helper.h"
 #include "py_image.h"
@@ -42,6 +41,15 @@
 #define AMG8833_THERMISTOR_REGISTER     0x0E
 #define AMG8833_TEMPERATURE_REGISTER    0x80
 #define AMG8833_INITIAL_RESET_VALUE     0x3F
+
+#define AMG8833_12_TO_16(value) \
+({ \
+    __typeof__ (value) __value = (value); \
+    if ((__value >> 11) & 1) { \
+        __value |= 1 << 15; \
+    } \
+    __value & 0x87FF; \
+})
 
 static cambus_t fir_bus = {};
 static void *fir_mlx_data = NULL;
@@ -162,12 +170,6 @@ static void fir_MLX90640_get_frame(float *Ta, float *To)
     fb_free();
 }
 
-static inline int16_t fir_AMG8833_12_to_16(int16_t value)
-{
-    if ((value >> 11) & 1) value |= 1 << 15;
-    return value & 0x87FF;
-}
-
 static void fir_AMG8833_get_frame(float *Ta, float *To)
 {
     int16_t temp;
@@ -175,7 +177,7 @@ static void fir_AMG8833_get_frame(float *Ta, float *To)
             (uint8_t *) &temp, sizeof(int16_t)) >= 0,
             "Failed to read the AMG8833 sensor data!");
 
-    *Ta = fir_AMG8833_12_to_16(temp) * 0.0625f;
+    *Ta = AMG8833_12_TO_16(temp) * 0.0625f;
 
     int16_t *data = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t), FB_ALLOC_NO_HINT);
     PY_ASSERT_TRUE_MSG(cambus_read_bytes(&fir_bus, AMG8833_ADDR, AMG8833_TEMPERATURE_REGISTER,
@@ -183,7 +185,7 @@ static void fir_AMG8833_get_frame(float *Ta, float *To)
             "Failed to read the AMG8833 sensor data!");
 
     for (int i = 0, ii = AMG8833_WIDTH * AMG8833_HEIGHT; i < ii; i++) {
-        To[i] = fir_AMG8833_12_to_16(data[i]) * 0.25f;
+        To[i] = AMG8833_12_TO_16(data[i]) * 0.25f;
     }
 
     fb_free();
@@ -457,7 +459,7 @@ mp_obj_t py_fir_read_ta()
             PY_ASSERT_TRUE_MSG(cambus_read_bytes(&fir_bus, AMG8833_ADDR, AMG8833_THERMISTOR_REGISTER,
                     (uint8_t *) &temp, sizeof(int16_t)) >= 0,
                     "Failed to read the AMG8833 sensor data!");
-            return mp_obj_new_float(fir_AMG8833_12_to_16(temp) * 0.0625f);
+            return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
         }
     }
 
