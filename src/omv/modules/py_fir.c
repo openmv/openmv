@@ -13,7 +13,6 @@
 #include "py/nlr.h"
 #include "py/gc.h"
 #include "py/mphal.h"
-#include "systick.h"
 
 #include "cambus.h"
 #include "MLX90640_API.h"
@@ -24,7 +23,6 @@
 
 #include "omv_boardconfig.h"
 #include "framebuffer.h"
-#include "sensor.h"
 #include "py_helper.h"
 #include "py_assert.h"
 #include "py_image.h"
