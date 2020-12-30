@@ -84,8 +84,15 @@ static void fir_fill_image_float_obj(image_t *img, mp_obj_t *data, float min, fl
 
         for (int x = 0; x < img->w; x++) {
             float raw = mp_obj_get_float(raw_row[x]);
-            if (raw < min) raw = min;
-            if (raw > max) raw = max;
+
+            if (raw < min) {
+                raw = min;
+            }
+
+            if (raw > max) {
+                raw = max;
+            }
+
             int pixel = fast_roundf((raw - min) * diff);
             row_pointer[x] = __USAT(pixel, 8);
         }
@@ -147,39 +154,65 @@ static void fir_AMG8833_get_frame(float *Ta, float *To)
 static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror, bool flip, bool dst_transpose, bool src_transpose)
 {
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
-    float min = FLT_MAX, max = FLT_MIN;
-    int w_1 = w - 1, h_1 = h - 1;
+    float min = FLT_MAX;
+    float max = FLT_MIN;
+    int w_1 = w - 1;
+    int h_1 = h - 1;
 
     if (!src_transpose) {
         for (int y = 0; y < h; y++) {
             int y_dst = flip ? (h_1 - y) : y;
             float *raw_row = To + (y * w);
-            mp_obj_t *list_row = list->items + (y_dst * w), *t_list_row = list->items + y_dst;
+            mp_obj_t *list_row = list->items + (y_dst * w);
+            mp_obj_t *t_list_row = list->items + y_dst;
 
             for (int x = 0; x < w; x++) {
                 int x_dst = mirror ? (w_1 - x) : x;
                 float raw = raw_row[x];
-                if (raw < min) min = raw;
-                if (raw > max) max = raw;
+
+                if (raw < min) {
+                    min = raw;
+                }
+
+                if (raw > max) {
+                    max = raw;
+                }
+
                 mp_obj_t f = mp_obj_new_float(raw);
-                if (!dst_transpose) list_row[x_dst] = f;
-                else t_list_row[x_dst * h] = f;
+
+                if (!dst_transpose) {
+                    list_row[x_dst] = f;
+                } else {
+                    t_list_row[x_dst * h] = f;
+                }
             }
         }
     } else {
         for (int x = 0; x < w; x++) {
             int x_dst = mirror ? (w_1 - x) : x;
             float *raw_row = To + (x * h);
-            mp_obj_t *t_list_row = list->items + (x_dst * h), *list_row = list->items + x_dst;
+            mp_obj_t *t_list_row = list->items + (x_dst * h);
+            mp_obj_t *list_row = list->items + x_dst;
 
             for (int y = 0; y < h; y++) {
                 int y_dst = flip ? (h_1 - y) : y;
                 float raw = raw_row[y];
-                if (raw < min) min = raw;
-                if (raw > max) max = raw;
+
+                if (raw < min) {
+                    min = raw;
+                }
+
+                if (raw > max) {
+                    max = raw;
+                }
+
                 mp_obj_t f = mp_obj_new_float(raw);
-                if (!dst_transpose) list_row[y_dst * w] = f;
-                else t_list_row[y_dst] = f;
+
+                if (!dst_transpose) {
+                    list_row[y_dst * w] = f;
+                } else {
+                    t_list_row[y_dst] = f;
+                }
             }
         }
     }
@@ -438,7 +471,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             float Ta, *To = fb_alloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_MLX90621_get_frame(&Ta, To);
             mp_obj_t result = fir_get_ir(MLX90621_WIDTH, MLX90621_HEIGHT, Ta, To,
-                    arg_hmirror ^ true, arg_vflip, fir_transposed, true);
+                                         arg_hmirror ^ true, arg_vflip, fir_transposed, true);
             fb_alloc_free_till_mark();
             return result;
         }
@@ -447,7 +480,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             float Ta, *To = fb_alloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_MLX90640_get_frame(&Ta, To);
             mp_obj_t result = fir_get_ir(MLX90640_WIDTH, MLX90640_HEIGHT, Ta, To,
-                    arg_hmirror ^ true, arg_vflip, fir_transposed, false);
+                                         arg_hmirror ^ true, arg_vflip, fir_transposed, false);
             fb_alloc_free_till_mark();
             return result;
         }
@@ -456,7 +489,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             float Ta, *To = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_AMG8833_get_frame(&Ta, To);
             mp_obj_t result = fir_get_ir(AMG8833_WIDTH, AMG8833_HEIGHT, Ta, To,
-                    arg_hmirror ^ true, arg_vflip, fir_transposed, true);
+                                         arg_hmirror ^ true, arg_vflip, fir_transposed, true);
             fb_alloc_free_till_mark();
             return result;
         }
@@ -769,7 +802,6 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             imlib_fill_image_from_float(&src_img, MLX90621_WIDTH, MLX90621_HEIGHT, To, min, max,
                                         arg_hmirror ^ true, arg_vflip, arg_transpose, true);
-
             fb_free();
             break;
         }
@@ -783,7 +815,6 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             imlib_fill_image_from_float(&src_img, MLX90640_WIDTH, MLX90640_HEIGHT, To, min, max,
                                         arg_hmirror ^ true, arg_vflip, arg_transpose, false);
-
             fb_free();
             break;
         }
@@ -797,7 +828,6 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
             imlib_fill_image_from_float(&src_img, AMG8833_WIDTH, AMG8833_HEIGHT, To, min, max,
                                         arg_hmirror ^ true, arg_vflip, arg_transpose, true);
-
             fb_free();
             break;
         }
