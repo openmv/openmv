@@ -402,21 +402,35 @@ static mp_obj_t py_fir_refresh()
 {
     const int mlx_90621_refresh_rates[16] = {512, 512, 512, 512, 512, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0};
     const int mlx_90640_refresh_rates[8] = {0, 1, 2, 4, 8, 16, 32, 64};
-    if (fir_sensor == FIR_NONE) return mp_const_none;
-    if (fir_sensor == FIR_MLX90621) return mp_obj_new_int(mlx_90621_refresh_rates[fir_ir_fresh_rate]);
-    if (fir_sensor == FIR_MLX90640) return mp_obj_new_int(mlx_90640_refresh_rates[fir_ir_fresh_rate]);
-    if (fir_sensor == FIR_AMG8833) return mp_obj_new_int(fir_ir_fresh_rate);
-    return mp_const_none;
+    switch (fir_sensor) {
+        case FIR_NONE:
+            return mp_const_none;
+        case FIR_MLX90621:
+            return mp_obj_new_int(mlx_90621_refresh_rates[fir_ir_fresh_rate]);
+        case FIR_MLX90640:
+            return mp_obj_new_int(mlx_90640_refresh_rates[fir_ir_fresh_rate]);
+        case FIR_AMG8833:
+            return mp_obj_new_int(fir_ir_fresh_rate);
+        default:
+            return mp_const_none;
+    }
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_refresh_obj, py_fir_refresh);
 
 static mp_obj_t py_fir_resolution()
 {
-    if (fir_sensor == FIR_NONE) return mp_const_none;
-    if (fir_sensor == FIR_MLX90621) return mp_obj_new_int(fir_adc_resolution + 15);
-    if (fir_sensor == FIR_MLX90640) return mp_obj_new_int(fir_adc_resolution + 16);
-    if (fir_sensor == FIR_AMG8833) return mp_obj_new_int(fir_adc_resolution);
-    return mp_const_none;
+    switch (fir_sensor) {
+        case FIR_NONE:
+            return mp_const_none;
+        case FIR_MLX90621:
+            return mp_obj_new_int(fir_adc_resolution + 15);
+        case FIR_MLX90640:
+            return mp_obj_new_int(fir_adc_resolution + 16);
+        case FIR_AMG8833:
+            return mp_obj_new_int(fir_adc_resolution);
+        default:
+            return mp_const_none;
+    }
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
 
@@ -459,12 +473,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_read_ta_obj, py_fir_read_ta);
 
 mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    bool arg_hmirror =
-        py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
-    bool arg_vflip =
-        py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
-    fir_transposed =
-        py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
+    bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
+    bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
+    fir_transposed = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
 
     switch(fir_sensor) {
         case FIR_NONE: {
@@ -522,8 +533,11 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         src_img.w = fir_transposed ? fir_height : fir_width;
         src_img.h = fir_transposed ? fir_width : fir_height;
         // Handle if the user passed an array of the array.
-        if (len == 1) mp_obj_get_array_fixed_n(*items, src_img.w * src_img.h, &arg_to);
-        else mp_obj_get_array_fixed_n(args[1], src_img.w * src_img.h, &arg_to);
+        if (len == 1) {
+            mp_obj_get_array_fixed_n(*items, src_img.w * src_img.h, &arg_to);
+        } else {
+            mp_obj_get_array_fixed_n(args[1], src_img.w * src_img.h, &arg_to);
+        }
     } else {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_TypeError, "Invalid IR array!"));
     }
@@ -548,10 +562,12 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     float arg_x_scale = 1.f;
-    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
+    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args,
+            offset + 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
 
     float arg_y_scale = 1.f;
-    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args, offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
+    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args,
+            offset + 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
 
     rectangle_t arg_roi;
     py_helper_keyword_rectangle_roi(&src_img, n_args, args, offset + 2, kw_args, &arg_roi);
@@ -565,50 +581,65 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         arg_y_off = fast_floorf((dst_img->h - (arg_roi.h * tmp_scale)) / 2.f);
     }
 
-    if (!got_x_scale) arg_x_scale = tmp_scale;
-    if (!got_y_scale) arg_y_scale = tmp_scale;
+    if (!got_x_scale) {
+        arg_x_scale = tmp_scale;
+    }
+
+    if (!got_y_scale) {
+        arg_y_scale = tmp_scale;
+    }
 
     int arg_rgb_channel = py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
-    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
+    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
+    }
 
     int arg_alpha = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
-    if ((arg_alpha < 0) || (256 < arg_alpha)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
+    if ((arg_alpha < 0) || (256 < arg_alpha)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
+    }
 
     const uint16_t *color_palette = rainbow_table;
-    {
-        int palette;
+    int palette;
+    uint arg_index = offset + 5;
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), MP_MAP_LOOKUP);
 
-        uint arg_index = offset + 5;
-        mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), MP_MAP_LOOKUP);
-
-        if (kw_arg && MP_OBJ_IS_TYPE(kw_arg->value, mp_const_none)) {
-            color_palette = NULL;
-        } else if ((n_args > arg_index) && MP_OBJ_IS_TYPE(args[arg_index], mp_const_none)) {
-            color_palette = NULL;
-        } else if (py_helper_keyword_int_maybe(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
-            if (palette == COLOR_PALETTE_RAINBOW) color_palette = rainbow_table;
-            else if (palette == COLOR_PALETTE_IRONBOW) color_palette = ironbow_table;
-            else nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pre-defined color palette!"));
+    if (kw_arg && MP_OBJ_IS_TYPE(kw_arg->value, mp_const_none)) {
+        color_palette = NULL;
+    } else if ((n_args > arg_index) && MP_OBJ_IS_TYPE(args[arg_index], mp_const_none)) {
+        color_palette = NULL;
+    } else if (py_helper_keyword_int_maybe(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
+        if (palette == COLOR_PALETTE_RAINBOW) {
+            color_palette = rainbow_table;
+        } else if (palette == COLOR_PALETTE_IRONBOW) {
+            color_palette = ironbow_table;
         } else {
-            image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, arg_index, kw_args);
-
-            if (arg_color_palette) {
-                if (arg_color_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be RGB565!"));
-                if ((arg_color_palette->w * arg_color_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be 256 pixels!"));
-                color_palette = (uint16_t *) arg_color_palette->data;
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pre-defined color palette!"));
+        }
+    } else {
+        image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, arg_index, kw_args);
+        if (arg_color_palette) {
+            if (arg_color_palette->bpp != IMAGE_BPP_RGB565) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be RGB565!"));
             }
+            if ((arg_color_palette->w * arg_color_palette->h) != 256) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be 256 pixels!"));
+            }
+            color_palette = (uint16_t *) arg_color_palette->data;
         }
     }
 
     const uint8_t *alpha_palette = NULL;
-    {
-        image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, offset + 6, kw_args);
+    image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, offset + 6, kw_args);
 
-        if (arg_alpha_palette) {
-            if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be GRAYSCALE!"));
-            if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be 256 pixels!"));
-            alpha_palette = (uint8_t *) arg_alpha_palette->data;
+    if (arg_alpha_palette) {
+        if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be GRAYSCALE!"));
         }
+        if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be 256 pixels!"));
+        }
+        alpha_palette = (uint8_t *) arg_alpha_palette->data;
     }
 
     image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
@@ -619,14 +650,29 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int arg_y_size;
     bool got_y_size = py_helper_keyword_int_maybe(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
 
-    if (got_x_scale && got_x_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
-    if (got_y_scale && got_y_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+    if (got_x_scale && got_x_size) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
+    }
 
-    if (got_x_size) arg_x_scale = arg_x_size / ((float) arg_roi.w);
-    if (got_y_size) arg_y_scale = arg_y_size / ((float) arg_roi.h);
+    if (got_y_scale && got_y_size) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+    }
 
-    if ((!got_x_scale) && (!got_x_size) && got_y_size) arg_x_scale = arg_y_scale;
-    if ((!got_y_scale) && (!got_y_size) && got_x_size) arg_y_scale = arg_x_scale;
+    if (got_x_size) {
+        arg_x_scale = arg_x_size / ((float) arg_roi.w);
+    }
+
+    if (got_y_size) {
+        arg_y_scale = arg_y_size / ((float) arg_roi.h);
+    }
+
+    if ((!got_x_scale) && (!got_x_size) && got_y_size) {
+        arg_x_scale = arg_y_scale;
+    }
+
+    if ((!got_y_scale) && (!got_y_size) && got_x_size) {
+        arg_y_scale = arg_x_scale;
+    }
 
     mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, offset + 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
     float min = FLT_MAX, max = FLT_MIN;
@@ -639,8 +685,12 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     } else {
         for (int i = 0, ii = src_img.w * src_img.h; i < ii; i++) {
             float temp = mp_obj_get_float(arg_to[i]);
-            if (temp < min) min = temp;
-            if (temp > max) max = temp;
+            if (temp < min) {
+                min = temp;
+            }
+            if (temp > max) {
+                max = temp;
+            }
         }
     }
 
@@ -662,12 +712,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (fir_sensor == FIR_NONE) return mp_const_none;
 
-    bool arg_hmirror =
-        py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
-    bool arg_vflip =
-        py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
-    bool arg_transpose =
-        py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
+    bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
+    bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
+    bool arg_transpose = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
 
     image_t src_img;
     src_img.bpp = IMAGE_BPP_GRAYSCALE;
@@ -684,46 +731,57 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     py_helper_keyword_rectangle_roi(&src_img, n_args, args, 5, kw_args, &arg_roi);
 
     int arg_rgb_channel = py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
-    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
+    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
+    }
 
     int arg_alpha = py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
-    if ((arg_alpha < 0) || (256 < arg_alpha)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
+    if ((arg_alpha < 0) || (256 < arg_alpha)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
+    }
 
     const uint16_t *color_palette = rainbow_table;
-    {
-        int palette;
+    int palette;
 
-        uint arg_index = 8;
-        mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), MP_MAP_LOOKUP);
+    uint arg_index = 8;
+    mp_map_elem_t *kw_arg = mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), MP_MAP_LOOKUP);
 
-        if (kw_arg && MP_OBJ_IS_TYPE(kw_arg->value, mp_const_none)) {
-            color_palette = NULL;
-        } else if ((n_args > arg_index) && MP_OBJ_IS_TYPE(args[arg_index], mp_const_none)) {
-            color_palette = NULL;
-        } else if (py_helper_keyword_int_maybe(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
-            if (palette == COLOR_PALETTE_RAINBOW) color_palette = rainbow_table;
-            else if (palette == COLOR_PALETTE_IRONBOW) color_palette = ironbow_table;
-            else nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pre-defined color palette!"));
+    if (kw_arg && MP_OBJ_IS_TYPE(kw_arg->value, mp_const_none)) {
+        color_palette = NULL;
+    } else if ((n_args > arg_index) && MP_OBJ_IS_TYPE(args[arg_index], mp_const_none)) {
+        color_palette = NULL;
+    } else if (py_helper_keyword_int_maybe(n_args, args, arg_index, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
+        if (palette == COLOR_PALETTE_RAINBOW) {
+            color_palette = rainbow_table;
+        } else if (palette == COLOR_PALETTE_IRONBOW) {
+            color_palette = ironbow_table;
         } else {
-            image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, arg_index, kw_args);
-
-            if (arg_color_palette) {
-                if (arg_color_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be RGB565!"));
-                if ((arg_color_palette->w * arg_color_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be 256 pixels!"));
-                color_palette = (uint16_t *) arg_color_palette->data;
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pre-defined color palette!"));
+        }
+    } else {
+        image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, arg_index, kw_args);
+        if (arg_color_palette) {
+            if (arg_color_palette->bpp != IMAGE_BPP_RGB565) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be RGB565!"));
             }
+            if ((arg_color_palette->w * arg_color_palette->h) != 256) {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be 256 pixels!"));
+            }
+            color_palette = (uint16_t *) arg_color_palette->data;
         }
     }
 
     const uint8_t *alpha_palette = NULL;
-    {
-        image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, 9, kw_args);
+    image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, 9, kw_args);
 
-        if (arg_alpha_palette) {
-            if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be GRAYSCALE!"));
-            if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be 256 pixels!"));
-            alpha_palette = (uint8_t *) arg_alpha_palette->data;
+    if (arg_alpha_palette) {
+        if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be GRAYSCALE!"));
         }
+        if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) {
+            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be 256 pixels!"));
+        }
+        alpha_palette = (uint8_t *) arg_alpha_palette->data;
     }
 
     image_hint_t hint = py_helper_keyword_int(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
@@ -734,14 +792,29 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     int arg_y_size;
     bool got_y_size = py_helper_keyword_int_maybe(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
 
-    if (got_x_scale && got_x_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
-    if (got_y_scale && got_y_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+    if (got_x_scale && got_x_size) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
+    }
 
-    if (got_x_size) arg_x_scale = arg_x_size / ((float) arg_roi.w);
-    if (got_y_size) arg_y_scale = arg_y_size / ((float) arg_roi.h);
+    if (got_y_scale && got_y_size) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+    }
 
-    if ((!got_x_scale) && (!got_x_size) && got_y_size) arg_x_scale = arg_y_scale;
-    if ((!got_y_scale) && (!got_y_size) && got_x_size) arg_y_scale = arg_x_scale;
+    if (got_x_size) {
+        arg_x_scale = arg_x_size / ((float) arg_roi.w);
+    }
+
+    if (got_y_size) {
+        arg_y_scale = arg_y_size / ((float) arg_roi.h);
+    }
+
+    if ((!got_x_scale) && (!got_x_size) && got_y_size) {
+        arg_x_scale = arg_y_scale;
+    }
+
+    if ((!got_y_scale) && (!got_y_size) && got_x_size) {
+        arg_y_scale = arg_x_scale;
+    }
 
     mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 13, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
     float min, max;
@@ -754,7 +827,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     int arg_pixformat = py_helper_keyword_int(n_args, args, 14, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixformat), PIXFORMAT_RGB565);
-    if ((arg_pixformat != PIXFORMAT_GRAYSCALE) && (arg_pixformat != PIXFORMAT_RGB565)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pixformat!"));
+    if ((arg_pixformat != PIXFORMAT_GRAYSCALE) && (arg_pixformat != PIXFORMAT_RGB565)) {
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pixformat!"));
+    }
 
     mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 15, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
     bool copy_to_fb = false;
@@ -840,8 +915,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         }
     }
 
-    imlib_draw_image(&dst_img, &src_img, 0, 0, arg_x_scale, arg_y_scale, &arg_roi,
-                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette, (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
+    imlib_draw_image(&dst_img, &src_img, 0, 0, arg_x_scale, arg_y_scale,
+            &arg_roi, arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
+            (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
 
     fb_alloc_free_till_mark();
 
