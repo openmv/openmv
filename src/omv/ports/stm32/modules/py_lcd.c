@@ -1587,35 +1587,8 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     int arg_alpha = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 256);
     if ((arg_alpha < 0) || (256 < arg_alpha)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
 
-    const uint16_t *color_palette = NULL;
-    {
-        int palette;
-
-        if (py_helper_keyword_int_maybe(n_args, args, offset + 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
-            if (palette == COLOR_PALETTE_RAINBOW) color_palette = rainbow_table;
-            else if (palette == COLOR_PALETTE_IRONBOW) color_palette = ironbow_table;
-            else nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pre-defined color palette!"));
-        } else {
-            image_t *arg_color_palette = py_helper_keyword_to_image_mutable_color_palette(n_args, args, offset + 5, kw_args);
-
-            if (arg_color_palette) {
-                if (arg_color_palette->bpp != IMAGE_BPP_RGB565) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be RGB565!"));
-                if ((arg_color_palette->w * arg_color_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Color palette must be 256 pixels!"));
-                color_palette = (uint16_t *) arg_color_palette->data;
-            }
-        }
-    }
-
-    const uint8_t *alpha_palette = NULL;
-    {
-        image_t *arg_alpha_palette = py_helper_keyword_to_image_mutable_alpha_palette(n_args, args, offset + 6, kw_args);
-
-        if (arg_alpha_palette) {
-            if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be GRAYSCALE!"));
-            if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Alpha palette must be 256 pixels!"));
-            alpha_palette = (uint8_t *) arg_alpha_palette->data;
-        }
-    }
+    const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, offset + 5, kw_args, NULL);
+    const uint8_t *alpha_palette = py_helper_keyword_alpha_palette(n_args, args, offset + 6, kw_args, NULL);
 
     image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
 
