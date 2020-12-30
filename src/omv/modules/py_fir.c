@@ -285,6 +285,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     cambus_pulse_scl(&fir_bus);
                     goto FIR_MLX90621_RETRY;
                 } else {
+                    py_fir_deinit();
                     nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the MLX90621!"));
                 }
             }
@@ -328,6 +329,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     cambus_pulse_scl(&fir_bus);
                     goto FIR_MLX90640_RETRY;
                 } else {
+                    py_fir_deinit();
                     nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the MLX90640!"));
                 }
             }
@@ -346,7 +348,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             FIR_AMG8833_RETRY:
             cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
 
-            int error = cambus_write_bytes(&fir_bus, AMG8833_ADDR, AMG8833_RESET_REGISTER, (uint8_t [1]){AMG8833_INITIAL_RESET_VALUE}, 1);
+            int error = cambus_write_bytes(&fir_bus, AMG8833_ADDR, AMG8833_RESET_REGISTER,
+                                           (uint8_t [1]){AMG8833_INITIAL_RESET_VALUE}, 1);
 
             if (error != 0) {
                 if (first_init) {
@@ -354,6 +357,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     cambus_pulse_scl(&fir_bus);
                     goto FIR_AMG8833_RETRY;
                 } else {
+                    py_fir_deinit();
                     nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the AMG8833!"));
                 }
             }
