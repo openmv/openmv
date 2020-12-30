@@ -85,7 +85,7 @@ float fast_expf(float x)
 }
 #pragma GCC diagnostic pop
 
-/* 
+/*
  * From Hackers Delight:
  * This is a very approximate but very fast version of acbrt. It is just eight
  * integer instructions (shift rights and adds), plus instructions to load the constant.
@@ -175,7 +175,6 @@ float fast_atan2f(float y, float x)
   return (y == 0) ? 0 : ((y > 0) ? M_PI : -M_PI);
 }
 
-
 float fast_log2(float x)
 {
   union { float f; uint32_t i; } vx = { x };
@@ -197,4 +196,24 @@ float fast_powf(float a, float b)
     union { float d; int x; } u = { a };
     u.x = (int)((b * (u.x - 1064866805)) + 1064866805);
     return u.d;
+}
+
+void fast_get_min_max(float *data, size_t data_len, float *p_min, float *p_max)
+{
+    float min = FLT_MAX, max = FLT_MIN;
+
+    for (size_t i = 0; i < data_len; i++) {
+        float temp = data[i];
+
+        if (temp < min) {
+            min = temp;
+        }
+
+        if (temp > max) {
+            max = temp;
+        }
+    }
+
+    *p_min = min;
+    *p_max = max;
 }

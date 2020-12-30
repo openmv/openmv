@@ -312,6 +312,80 @@ const int kernel_high_pass_3[3*3] = {
     -1, -1, -1
 };
 
+// This function fills a grayscale image from an array of floating point numbers that are scaled
+// between min and max. The image w*h must equal the floating point array w*h.
+void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float min, float max,
+                                 bool mirror, bool flip, bool dst_transpose, bool src_transpose)
+{
+    float tmp = min;
+    min = (min < max) ? min : max;
+    max = (max > tmp) ? max : tmp;
+
+    float diff = 255.f / (max - min);
+    int w_1 = w - 1;
+    int h_1 = h - 1;
+
+    if (!src_transpose) {
+        for (int y = 0; y < h; y++) {
+            int y_dst = flip ? (h_1 - y) : y;
+            float *raw_row = data + (y * w);
+            uint8_t *row_pointer = ((uint8_t *) img->data) + (y_dst * w);
+            uint8_t *t_row_pointer = ((uint8_t *) img->data) + y_dst;
+
+            for (int x = 0; x < w; x++) {
+                int x_dst = mirror ? (w_1 - x) : x;
+                float raw = raw_row[x];
+
+                if (raw < min) {
+                    raw = min;
+                }
+
+                if (raw > max) {
+                    raw = max;
+                }
+
+                int pixel = fast_roundf((raw - min) * diff);
+                pixel = __USAT(pixel, 8);
+
+                if (!dst_transpose) {
+                    row_pointer[x_dst] = pixel;
+                } else {
+                    t_row_pointer[x_dst * h] = pixel;
+                }
+            }
+        }
+    } else {
+        for (int x = 0; x < w; x++) {
+            int x_dst = mirror ? (w_1 - x) : x;
+            float *raw_row = data + (x * h);
+            uint8_t *t_row_pointer = ((uint8_t *) img->data) + (x_dst * h);
+            uint8_t *row_pointer = ((uint8_t *) img->data) + x_dst;
+
+            for (int y = 0; y < h; y++) {
+                int y_dst = flip ? (h_1 - y) : y;
+                float raw = raw_row[y];
+
+                if (raw < min) {
+                    raw = min;
+                }
+
+                if (raw > max) {
+                    raw = max;
+                }
+
+                int pixel = fast_roundf((raw - min) * diff);
+                pixel = __USAT(pixel, 8);
+
+                if (!dst_transpose) {
+                    row_pointer[y_dst * w] = pixel;
+                } else {
+                    t_row_pointer[y_dst] = pixel;
+                }
+            }
+        }
+    }
+}
+
 int8_t imlib_rgb565_to_l(uint16_t pixel)
 {
     float r_lin = xyz_table[COLOR_RGB565_TO_R8(pixel)];

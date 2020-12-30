@@ -5,8 +5,12 @@
 
 import image, time, fir
 
+drawing_hint = image.BICUBIC # or image.BILINEAR or 0 (nearest neighbor)
+
 # Initialize the thermal sensor
-fir.init(type=fir.FIR_MLX90640, refresh=32) # 16Hz, 32Hz or 64Hz.
+fir.init(type=fir.FIR_MLX90640)
+w = fir.width() * 10
+h = fir.height() * 10
 
 # FPS clock
 clock = time.clock()
@@ -15,7 +19,9 @@ while (True):
     clock.tick()
 
     try:
-        img = fir.snapshot(copy_to_fb=True)
+        img = fir.snapshot(x_size=w, y_size=h,
+                           color_palette=fir.PALETTE_IRONBOW, hint=drawing_hint,
+                           copy_to_fb=True)
     except OSError:
         continue
 
