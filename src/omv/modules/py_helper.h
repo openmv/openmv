@@ -11,7 +11,6 @@
 #ifndef __PY_HELPER_H__
 #define __PY_HELPER_H__
 #include "imlib.h"
-
 extern const mp_obj_fun_builtin_var_t py_func_unavailable_obj;
 image_t *py_helper_arg_to_image_mutable(const mp_obj_t arg);
 image_t *py_helper_arg_to_image_mutable_bayer(const mp_obj_t arg);
@@ -55,6 +54,10 @@ int py_helper_arg_to_ksize(const mp_obj_t arg);
 int py_helper_ksize_to_n(int ksize);
 mp_obj_t py_helper_keyword_object(uint n_args, const mp_obj_t *args,
         uint arg_index, mp_map_t *kw_args, mp_obj_t kw, mp_obj_t default_val);
+const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *args,
+        uint arg_index, mp_map_t *kw_args, const uint16_t *default_color_palette);
+const uint8_t *py_helper_keyword_alpha_palette(uint n_args, const mp_obj_t *args,
+        uint arg_index, mp_map_t *kw_args, const uint8_t *default_alpha_palette);
 bool py_helper_is_equal_to_framebuffer(image_t *img);
 void py_helper_update_framebuffer(image_t *img);
 void py_helper_set_to_framebuffer(image_t *img);
