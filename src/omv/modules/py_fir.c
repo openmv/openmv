@@ -59,20 +59,6 @@ static int fir_ir_fresh_rate = 0;
 static int fir_adc_resolution = 0;
 static bool fir_transposed = false;
 
-static void fir_get_minmax(float *data, size_t len, float *p_min, float *p_max)
-{
-    float min = FLT_MAX, max = FLT_MIN;
-
-    for (int i = 0; i < len; i++) {
-        float temp = data[i];
-        if (temp < min) min = temp;
-        if (temp > max) max = temp;
-    }
-
-    *p_min = min;
-    *p_max = max;
-}
-
 // img->w == data_w && img->h == data_h && img->bpp == IMAGE_BPP_GRAYSCALE
 static void fir_fill_image_float(image_t *img, int w, int h, float *data, float min, float max,
                                  bool mirror, bool flip, bool dst_transpose, bool src_transpose)
@@ -821,7 +807,11 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         case FIR_MLX90621: {
             float Ta, *To = fb_alloc(MLX90621_WIDTH * MLX90621_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_MLX90621_get_frame(&Ta, To);
-            if (!scale_obj) fir_get_minmax(To, MLX90621_WIDTH * MLX90621_HEIGHT, &min, &max);
+
+            if (!scale_obj) {
+                fast_get_min_max(To, MLX90621_WIDTH * MLX90621_HEIGHT, &min, &max);
+            }
+
             fir_fill_image_float(&src_img, MLX90621_WIDTH, MLX90621_HEIGHT, To, min, max,
                     arg_hmirror ^ true, arg_vflip, arg_transpose, true);
             fb_free();
@@ -830,7 +820,11 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         case FIR_MLX90640: {
             float Ta, *To = fb_alloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_MLX90640_get_frame(&Ta, To);
-            if (!scale_obj) fir_get_minmax(To, MLX90640_WIDTH * MLX90640_HEIGHT, &min, &max);
+
+            if (!scale_obj) {
+                fast_get_min_max(To, MLX90640_WIDTH * MLX90640_HEIGHT, &min, &max);
+            }
+
             fir_fill_image_float(&src_img, MLX90640_WIDTH, MLX90640_HEIGHT, To, min, max,
                     arg_hmirror ^ true, arg_vflip, arg_transpose, false);
             fb_free();
@@ -839,7 +833,11 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         case FIR_AMG8833: {
             float Ta, *To = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_AMG8833_get_frame(&Ta, To);
-            if (!scale_obj) fir_get_minmax(To, AMG8833_WIDTH * AMG8833_HEIGHT, &min, &max);
+
+            if (!scale_obj) {
+                fast_get_min_max(To, AMG8833_WIDTH * AMG8833_HEIGHT, &min, &max);
+            }
+
             fir_fill_image_float(&src_img, AMG8833_WIDTH, AMG8833_HEIGHT, To, min, max,
                     arg_hmirror ^ true, arg_vflip, arg_transpose, true);
             fb_free();

@@ -10,7 +10,9 @@
  */
 #ifndef __FMATH_H__
 #define __FMATH_H__
+#include <stdlib.h>
 #include <stdint.h>
+#include <float.h>
 float fast_sqrtf(float x);
 int fast_floorf(float x);
 int fast_ceilf(float x);
@@ -23,6 +25,7 @@ float fast_fabsf(float d);
 float fast_log(float x);
 float fast_log2(float x);
 float fast_powf(float a, float b);
+void fast_get_min_max(float *data, size_t data_len, float *p_min, float *p_max);
 extern const float cos_table[360];
 extern const float sin_table[360];
 #endif // __FMATH_H__
