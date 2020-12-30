@@ -19,9 +19,9 @@ sys.stdout.write("#include <stdint.h>\n")
 sys.stdout.write("const int8_t lab_table[196608] = {\n") # 65536 * 3
 for i in range(65536):
 
-    r = ((((i >> 3) & 31) * 255) + 15.5) // 31
-    g = (((((i & 7) << 3) | (i >> 13)) * 255) + 31.5) // 63
-    b = ((((i >> 8) & 31) * 255) + 15.5) // 31
+    r = ((((i >> 11) & 31) * 255) + 15.5) // 31
+    g = ((((i >> 5) & 63) * 255) + 31.5) // 63
+    b = (((i & 31) * 255) + 15.5) // 31
 
     # https://en.wikipedia.org/wiki/SRGB (The reverse transformation)
 

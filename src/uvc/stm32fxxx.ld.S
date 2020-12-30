@@ -87,7 +87,7 @@ SECTIONS
   } >FLASH_TEXT
 
   /* used by the startup to initialize data */
-  _sidata = .;
+  _sidata = LOADADDR(.data);
 
   /* Main framebuffer memory */
   .fb_memory (NOLOAD) :
@@ -139,7 +139,7 @@ SECTIONS
   } >OMV_DMA_MEMORY
 
   /* Initialized data sections */
-  .data : AT ( _sidata )
+  .data :
   {
     . = ALIGN(4);
     _sdata = .;         // Create a global symbol at data start
@@ -151,7 +151,7 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;         // define a global symbol at data end
-  } >OMV_MAIN_MEMORY
+  } >OMV_MAIN_MEMORY AT> FLASH_TEXT
 
   /* Uninitialized data section */
   . = ALIGN(4);
@@ -159,19 +159,12 @@ SECTIONS
   {
     . = ALIGN(4);
     _sbss = .;          // Used by the startup to initialize the .bss secion
-    __bss_start__ = _sbss;
-    *(.bss)
-
     . = ALIGN(4);
     *(.bss*)
-
     . = ALIGN(4);
     *(COMMON)
-
     . = ALIGN(4);
     _ebss = .;          // define a global symbol at bss end
-    _bss_end = .;       // Used by gccollect
-    __bss_end__ = .;
   } >OMV_MAIN_MEMORY
 
   ._heap (NOLOAD) :

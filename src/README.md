@@ -2,13 +2,13 @@
 
 This guide covers how to install the OpenMV Cam firmware development environment on Windows, Mac, and Linux.
 
-**If you are looking for information on how to use the OpenMV Cam from the python level interface please see our [forums](http://openmv.io/forums) or [docs](http://openmv.io/docs). This README details how to setup the development enviornment to compile your OpenMV Cam's firmware.**
+**If you are looking for information on how to use the OpenMV Cam from the python level interface please see our [forums](http://openmv.io/forums) or [docs](http://openmv.io/docs). This README details how to setup the development environment to compile your OpenMV Cam's firmware.**
 
 # Windows Installation
 
 There is no Windows development environment. It is very difficult to install the toolchain on Windows. Instead you can install Ubuntu on a virtual machine running on your windows machine:
 
-1. You can get VMware Player (free) [here](https://my.vmware.com/en/web/vmware/free#desktop_end_user_computing/vmware_workstation_player/15_0) to run Ubuntu. Or, you can get VirtualBox (free) [here](https://www.virtualbox.org/wiki/Downloads). VMware Player is reconmended.
+1. You can get VMware Player (free) [here](https://my.vmware.com/en/web/vmware/free#desktop_end_user_computing/vmware_workstation_player/15_0) to run Ubuntu. Or, you can get VirtualBox (free) [here](https://www.virtualbox.org/wiki/Downloads). VMware Player is recommended.
 2. Download Ubuntu [here](http://www.ubuntu.com/desktop). Then use whatever virtual machine software you installed to install the operating system. VMware Player makes this easy with a automated install option where it will install everything for you without you having to do anything other than enter your name and password initially.
 3. Install any updates, etc. for your operating system. Also, if you're using VMware Player make sure to install VMware Tools so you can drag and drop files between your Windows desktop and Ubuntu desktop along with being able to setup shared folders.
 
@@ -16,7 +16,7 @@ There is no Windows development environment. It is very difficult to install the
 
 There is no Mac development environment. It is very difficult to install the toolchain on Mac. Instead you can install Ubuntu on a virtual machine running on your Mac machine:
 
-1. You can get VMware Fusion (paid) [here](https://www.vmware.com/products/fusion/) to run Ubuntu. Or, you can get VirtualBox (free) [here](https://www.virtualbox.org/wiki/Downloads). VMware Fusion is reconmended.
+1. You can get VMware Fusion (paid) [here](https://www.vmware.com/products/fusion/) to run Ubuntu. Or, you can get VirtualBox (free) [here](https://www.virtualbox.org/wiki/Downloads). VMware Fusion is recommended.
 2. Download Ubuntu [here](http://www.ubuntu.com/desktop). Then use whatever virtual machine software you installed to install the operating system. VMware Fusion makes this easy with a automated install option where it will install everything for you without you having to do anything other than enter your name and password initially.
 3. Install any updates, etc. for your operating system. Also, if you're using VMware Fusion make sure to install VMware Tools so you can drag and drop files between your Mac desktop and Ubuntu desktop along with being able to setup shared folders.
 
@@ -40,33 +40,33 @@ Next, you need to install OpenMV IDE on your computer to flash firmware and run 
 
 Finally, you need to install the OpenMV GitHub Repo. In Linux, `cd` in a terminal to a place where you want to put the repo (we recommend making a folder called `repositories` in your home directory and storing repositories in that) and then:
 
-    git clone --recursive git@github.com:openmv/openmv.git
+    git clone --recursive https://github.com/openmv/openmv.git
 
 However, if you are interested in submitting code fixes back to us you will need to fork our repo first and clone your fork so that you can send pull requests. You need to fork these two repos:
 
-    git@github.com:openmv/openmv.git
-    git@github.com:openmv/micropython.git
+    https://github.com/openmv/openmv.git
+    https://github.com/openmv/micropython.git
 
 Then:
 
-    git clone --recursive git@github.com:<your_openmv_fork_name>.git
+    git clone --recursive https://github.com/<username>/openmv.git
     cd openmv
-    git remote add remote git@github.com:openmv/openmv.git
+    git remote add remote https://github.com/openmv/openmv.git
     cd src/micropython
-    git remote set-url origin git@github.com:<your_micropython_fork_name>.git
-    git remote add remote git@github.com:openmv/micropython.git
+    git remote set-url origin https://github.com/<username>/micropython.git
+    git remote add remote https://github.com/openmv/micropython.git
 
-This will setup the `openmv` and `micropython` repos so `origin` points to your forks and so you can pull updates from the offical repos with `remote`. Now when you want to create a new feature branch to send a Pull Request to OpenMV you just need to do:
+This will setup the `openmv` and `micropython` repos so `origin` points to your forks and so you can pull updates from the official repos with `remote`. Now when you want to create a new feature branch to send a Pull Request to OpenMV you just need to do:
 
     git checkout -b <your_name>/<some_branch_name>
     <commit changes>
     git push origin -u <your_name>/<some_branch_name>
 
-Finally, after pushing your changes you can then use Github to automatically generate a Pull Request to the offical OpenMV Github repo to get your changes upstreamed into the offical OpenMV Cam Firmware.
+Finally, after pushing your changes you can then use Github to automatically generate a Pull Request to the official OpenMV Github repo to get your changes upstreamed into the official OpenMV Cam Firmware.
 
 ### Committing Etiquette
 
-If you would like to send a Pull Request to get your changes integrated into the offical source tree please try to keep one commit to one Pull Request. Additionally, please create example scripts (in `../scripts/examples`) for any new features you are committing.
+If you would like to send a Pull Request to get your changes integrated into the official source tree please try to keep one commit to one Pull Request. Additionally, please create example scripts (in `../scripts/examples`) for any new features you are committing.
 
 # Work Flow
 

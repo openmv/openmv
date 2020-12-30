@@ -1,4 +1,85 @@
 # Change Log
+## [3.8.0](https://github.com/openmv/openmv/releases/tag/v3.8.0) (2020-12-06)
+* Update F4 HAL V1.7.1 -> V1.7.10
+* Update F7 HAL V1.2.2 -> V1.2.8
+* Update H7 HAL V1.6.0 -> V1.9.0
+* Update MicroPython 1.12 -> 1.13
+* Fix FIR I2C bus arbitration lost error.
+* Fix disabled OSCs/PLLs after exiting stop mode.
+* Fix DRAM retention in stop mode.
+* Fix stop mode voltage scaling for H7 Rev V.
+* Fix OV5640 and OV2640 clocks on H7 Rev Y.
+* Fix imlib build dependencies.
+* Fix fatal_error possibly using uninitialized storage.
+* Fix build errors if no DCMI GPIOs are defined.
+* Fix RGB565 inversion from camera.
+* Fix copy_to_fb to update JPEG fb after loading/creating images.
+* Fix PLL1 frequency for revision Y devices.
+* Fix unit-test failing on disabled functions.
+* Add FT5X06 touch screen lcd support.
+* Add HDMI CEC and HDMI support via the TFP410.
+* Add DMA2D support to some drawing functions.
+* Add power supply per-board configuration.
+* Add new image scaling pipeline.
+* Add ExtInt wake-up example.
+* Add support for using images to draw on FB.
+* Add CAN function to calculate bit timing from baudrate.
+* Update SDRAM test and make it cache-aware.
+* Update cpufreq module to support H7 REV X/Y and V frequencies.
+* Update from using frozen dir to per-board frozen manifest file.
+* Portenta: Fix and update PLL settings.
+* Portenta: Fix SDRAM timing config.
+* Portenta: Add Audio module with PCM support.
+* Portenta: Add Tensorflow micro speech module.
+* Portenta: Fix Ethernet/SDRAM bug.
+* Portenta: Add Portenta audio example scripts.
+* Portenta: Add Ethernet support and example scripts.
+
+## [3.7.0](https://github.com/openmv/openmv/releases/tag/v3.7.0) (2020-11-23)
+* Fix imlib build dependencies.
+* Fix fatal_error bug using uninitialized storage.
+* Fix build errors if no DCMI GPIOs are defined.
+* Fix RGB565 inversion from camera
+* Fix copy_to_fb to update JPEG fb after loading/creating images.
+* Fix PLL1 frequency for revision Y devices.
+* Add FT5X06 touch screen lcd support.
+* Add HDMI support via the TFP410
+* Use DMA2D to accelerate some drawing functions.
+* Update SDRAM test and make it cache-aware.
+* Add power supply per board configuration.
+* Add new image scaling pipeline
+* Add ExtInt wake-up example.
+* Support flushing images without initializing the sensor.
+* PORTENTA: Fix and update PLL settings.
+* PORTENTA: Fix SDRAM timing config.
+* PORTENTA: Add Audio module with PCM support.
+* PORTENTA: Add Tensorflow micro speech module.
+* PORTENTA: Fix Ethernet/SDRAM bug.
+* PORTENTA: Add Portenta audio example scripts.
+
+## [3.6.9](https://github.com/openmv/openmv/releases/tag/v3.6.9) (2020-10-12)
+* Enable LWIP and CYW4343.
+* Fix major issues with Portenta build.
+* Fix issues with QSPI and MPU mode.
+
+## [3.6.8](https://github.com/openmv/openmv/releases/tag/v3.6.8) (2020-9-28)
+* Add support for boards without image sensors.
+* Enable TensorFlow CMSIS-NN kernels.
+* Add UART and CAN support to RPC library.
+* Update example scripts.
+* Allow build-time configuration of clock sources, PLLs, sensors and modules.
+* Improve Arduino's Portenta board support.
+* Fix test jig bug.
+* Fix extra PLLs initialization in system config.
+* Fix FLIR alt configuration.
+* Fix sensor reset with the regulator turned off.
+* Fix uninitialized sensor timer struct field bug.
+* Fix JPEG image loading.
+* Fix broken debug build.
+* Fix FSYNC pin definition.
+* Fix DAC timed write bug on H7.
+* Fix WINC1500 open security bug.
+
 ## [3.6.7](https://github.com/openmv/openmv/releases/tag/v3.6.7) (2020-7-21)
 * Fix framebuffer bug introduced in 3.6.5.
 

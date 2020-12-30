@@ -30,6 +30,9 @@
 // Core VBAT for selftests
 #define OMV_CORE_VBAT           "3.3"
 
+// USB IRQn.
+#define OMV_USB_IRQN            (OTG_FS_IRQn)
+
 //PLL1 168MHz/48MHz
 #define OMV_OSC_PLL1M           (12)
 #define OMV_OSC_PLL1N           (336)
@@ -38,7 +41,6 @@
 
 // HSE/HSI/CSI State
 #define OMV_OSC_HSE_STATE       (RCC_HSE_ON)
-#define OMV_OSC_HSI_STATE       (RCC_HSI_OFF)
 
 // Flash Latency
 #define OMV_FLASH_LATENCY       (FLASH_LATENCY_5)

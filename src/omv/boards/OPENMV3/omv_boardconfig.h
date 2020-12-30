@@ -16,6 +16,9 @@
 #define OMV_BOARD_TYPE          "M7"
 #define OMV_UNIQUE_ID_ADDR      0x1FF0F420
 
+// Needed by the SWD JTAG testrig - located at the bottom of the frame buffer stack.
+#define OMV_SELF_TEST_SWD_ADDR  MAIN_FB()->bpp
+
 // Flash sectors for the bootloader.
 // Flash FS sector, main FW sector, max sector.
 #define OMV_FLASH_LAYOUT        {1, 4, 11}
@@ -52,6 +55,12 @@
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (0)
 
+// Enable sensor features
+#define OMV_ENABLE_OV5640_AF    (0)
+
+// Enable self-tests on first boot
+#define OMV_ENABLE_SELFTEST     (1)
+
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
 #define JPEG_QUALITY_THRESH     (160*120*2)
@@ -66,6 +75,9 @@
 // Core VBAT for selftests
 #define OMV_CORE_VBAT           "3.3"
 
+// USB IRQn.
+#define OMV_USB_IRQN            (OTG_FS_IRQn)
+
 //PLL1 216MHz/48MHz
 #define OMV_OSC_PLL1M           (12)
 #define OMV_OSC_PLL1N           (432)
@@ -75,7 +87,6 @@
 
 // HSE/HSI/CSI State
 #define OMV_OSC_HSE_STATE       (RCC_HSE_ON)
-#define OMV_OSC_HSI_STATE       (RCC_HSI_OFF)
 
 // Flash Latency
 #define OMV_FLASH_LATENCY       (FLASH_LATENCY_7)
@@ -91,7 +102,7 @@
 #define OMV_FB_SIZE         (300K)  // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE   (84K)   // minimum fb alloc size
 #define OMV_STACK_SIZE      (16K)
-#define OMV_HEAP_SIZE       (58K)
+#define OMV_HEAP_SIZE       (56K)
 
 #define OMV_LINE_BUF_SIZE   (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
@@ -110,27 +121,29 @@
 #define OMV_SRAM1_ORIGIN    0x20020000
 #define OMV_SRAM1_LENGTH    384K
 
-/* SCCB/I2C */
-#define SCCB_I2C                (I2C1)
-#define SCCB_AF                 (GPIO_AF4_I2C1)
-#define SCCB_CLK_ENABLE()       __I2C1_CLK_ENABLE()
-#define SCCB_CLK_DISABLE()      __I2C1_CLK_DISABLE()
-#define SCCB_PORT               (GPIOB)
-#define SCCB_SCL_PIN            (GPIO_PIN_8)
-#define SCCB_SDA_PIN            (GPIO_PIN_9)
-#define SCCB_TIMING             (I2C_TIMING_STANDARD)
-#define SCCB_FORCE_RESET()      __HAL_RCC_I2C1_FORCE_RESET()
-#define SCCB_RELEASE_RESET()    __HAL_RCC_I2C1_RELEASE_RESET()
+// Image sensor I2C
+#define ISC_I2C                 (I2C1)
+#define ISC_I2C_ID              (1)
+#define ISC_I2C_AF              (GPIO_AF4_I2C1)
+#define ISC_I2C_CLK_ENABLE()    __I2C1_CLK_ENABLE()
+#define ISC_I2C_CLK_DISABLE()   __I2C1_CLK_DISABLE()
+#define ISC_I2C_PORT            (GPIOB)
+#define ISC_I2C_SCL_PIN         (GPIO_PIN_8)
+#define ISC_I2C_SDA_PIN         (GPIO_PIN_9)
+#define ISC_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
+#define ISC_I2C_FORCE_RESET()   __HAL_RCC_I2C1_FORCE_RESET()
+#define ISC_I2C_RELEASE_RESET() __HAL_RCC_I2C1_RELEASE_RESET()
 
 /* FIR I2C */
 #define FIR_I2C                 (I2C2)
+#define FIR_I2C_ID              (2)
 #define FIR_I2C_AF              (GPIO_AF4_I2C2)
 #define FIR_I2C_CLK_ENABLE()    __I2C2_CLK_ENABLE()
 #define FIR_I2C_CLK_DISABLE()   __I2C2_CLK_DISABLE()
 #define FIR_I2C_PORT            (GPIOB)
 #define FIR_I2C_SCL_PIN         (GPIO_PIN_10)
 #define FIR_I2C_SDA_PIN         (GPIO_PIN_11)
-#define FIR_I2C_TIMING          (I2C_TIMING_FULL)
+#define FIR_I2C_SPEED           (CAMBUS_SPEED_FULL)
 #define FIR_I2C_FORCE_RESET()   __HAL_RCC_I2C2_FORCE_RESET()
 #define FIR_I2C_RELEASE_RESET() __HAL_RCC_I2C2_RELEASE_RESET()
 
@@ -226,5 +239,44 @@
 #define SOFT_I2C_SIOD_WRITE(bit)     HAL_GPIO_WritePin(SOFT_I2C_PORT, SOFT_I2C_SIOD_PIN, bit);
 
 #define SOFT_I2C_SPIN_DELAY          24
+
+// SPI LCD Interface
+#define OMV_SPI_LCD_CONTROLLER              (&spi_obj[1])
+#define OMV_SPI_LCD_CONTROLLER_INSTANCE     (SPI2)
+
+#define OMV_SPI_LCD_MOSI_PIN                (GPIO_PIN_15)
+#define OMV_SPI_LCD_MOSI_PORT               (GPIOB)
+#define OMV_SPI_LCD_MOSI_ALT                (GPIO_AF5_SPI2)
+
+#define OMV_SPI_LCD_SCLK_PIN                (GPIO_PIN_13)
+#define OMV_SPI_LCD_SCLK_PORT               (GPIOB)
+#define OMV_SPI_LCD_SCLK_ALT                (GPIO_AF5_SPI2)
+
+#define OMV_SPI_LCD_RST_PIN                 (GPIO_PIN_12)
+#define OMV_SPI_LCD_RST_PORT                (GPIOD)
+#define OMV_SPI_LCD_RST_OFF()               HAL_GPIO_WritePin(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN, GPIO_PIN_SET)
+#define OMV_SPI_LCD_RST_ON()                HAL_GPIO_WritePin(OMV_SPI_LCD_RST_PORT, OMV_SPI_LCD_RST_PIN, GPIO_PIN_RESET)
+
+#define OMV_SPI_LCD_RS_PIN                  (GPIO_PIN_13)
+#define OMV_SPI_LCD_RS_PORT                 (GPIOD)
+#define OMV_SPI_LCD_RS_OFF()                HAL_GPIO_WritePin(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN, GPIO_PIN_SET)
+#define OMV_SPI_LCD_RS_ON()                 HAL_GPIO_WritePin(OMV_SPI_LCD_RS_PORT, OMV_SPI_LCD_RS_PIN, GPIO_PIN_RESET)
+
+#define OMV_SPI_LCD_CS_PIN                  (GPIO_PIN_12)
+#define OMV_SPI_LCD_CS_PORT                 (GPIOB)
+#define OMV_SPI_LCD_CS_HIGH()               HAL_GPIO_WritePin(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN, GPIO_PIN_SET)
+#define OMV_SPI_LCD_CS_LOW()                HAL_GPIO_WritePin(OMV_SPI_LCD_CS_PORT, OMV_SPI_LCD_CS_PIN, GPIO_PIN_RESET)
+
+#define OMV_SPI_LCD_BL_PIN                  (GPIO_PIN_5)
+#define OMV_SPI_LCD_BL_PORT                 (GPIOA)
+#define OMV_SPI_LCD_BL_ON()                 HAL_GPIO_WritePin(OMV_SPI_LCD_BL_PORT, OMV_SPI_LCD_BL_PIN, GPIO_PIN_SET)
+#define OMV_SPI_LCD_BL_OFF()                HAL_GPIO_WritePin(OMV_SPI_LCD_BL_PORT, OMV_SPI_LCD_BL_PIN, GPIO_PIN_RESET)
+
+#define OMV_SPI_LCD_BL_DAC                  (DAC)
+#define OMV_SPI_LCD_BL_DAC_CHANNEL          (DAC_CHANNEL_2)
+#define OMV_SPI_LCD_BL_DAC_CLK_ENABLE()     __HAL_RCC_DAC_CLK_ENABLE()
+#define OMV_SPI_LCD_BL_DAC_CLK_DISABLE()    __HAL_RCC_DAC_CLK_DISABLE()
+#define OMV_SPI_LCD_BL_DAC_FORCE_RESET()    __HAL_RCC_DAC_FORCE_RESET()
+#define OMV_SPI_LCD_BL_DAC_RELEASE_RESET()  __HAL_RCC_DAC_RELEASE_RESET()
 
 #endif //__OMV_BOARDCONFIG_H__

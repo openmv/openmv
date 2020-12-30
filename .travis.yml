@@ -1,5 +1,5 @@
 os: linux
-dist: trusty
+dist: xenial
 sudo: required
 language: c
 stage: build
@@ -80,7 +80,16 @@ jobs:
           name: WINC1500_WORKSPACE # workspace names are escaped.
           paths: ~/build/$TARGET
       script:
-        - cp -rf src/winc1500/firmware ~/build/$TARGET
+        - cp -rf src/drivers/winc1500/firmware ~/build/$TARGET
+
+    - stage: build
+      env: TARGET=CYW4343
+      workspaces:
+        create:
+          name: CYW4343_WORKSPACE # workspace names are escaped.
+          paths: ~/build/$TARGET
+      script:
+        - cp -rf src/drivers/cyw4343/firmware ~/build/$TARGET
 
     - stage: deploy
       git:
@@ -93,8 +102,9 @@ jobs:
           - OPENMV4P_WORKSPACE
           - PORTENTA_WORKSPACE
           - WINC1500_WORKSPACE
+          - CYW4343_WORKSPACE
       script:
-        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA WINC1500
+        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA WINC1500 CYW4343
       deploy:
         provider: releases
         api_key:

@@ -15,14 +15,38 @@
 #include "usbd_desc.h"
 #include "usbd_uvc.h"
 #include "usbd_uvc_if.h"
+#include "cambus.h"
 #include "sensor.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+
+#if defined(I2C1)
+I2C_HandleTypeDef I2CHandle1;
+#endif
+#if defined(I2C2)
+I2C_HandleTypeDef I2CHandle2;
+#endif
+#if defined(I2C3)
+I2C_HandleTypeDef I2CHandle3;
+#endif
+#if defined(I2C4)
+I2C_HandleTypeDef I2CHandle4;
+#endif
 
 extern sensor_t sensor;
 USBD_HandleTypeDef hUsbDeviceFS;
 extern volatile uint8_t g_uvc_stream_status;
 extern struct uvc_streaming_control videoCommitControl;
+
+void mp_hal_delay_ms(uint32_t Delay)
+{
+    HAL_Delay(Delay);
+}
+
+mp_uint_t mp_hal_ticks_ms(void)
+{
+    return HAL_GetTick();
+}
 
 void __attribute__((noreturn)) __fatal_error()
 {
@@ -153,14 +177,10 @@ int main()
     if (!sdram_init()) {
         __fatal_error();
     }
-    #if (OMV_SDRAM_TEST == 1)
-    if (!sdram_test(false)) {
-        __fatal_error();
-    }
-    #endif
     #endif
 
     sensor_init0();
+    framebuffer_init0();
     fb_alloc_init0();
 
     // Initialize the sensor
