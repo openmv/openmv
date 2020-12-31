@@ -31,8 +31,8 @@ script:
   - popd
   - arm-none-eabi-gcc --version
   # build firmware
-  - make -j5 -C src/micropython/mpy-cross
-  - make -j5 TARGET=$TARGET -C src
+  - make -j$(nproc) -C src/micropython/mpy-cross
+  - make -j$(nproc) TARGET=$TARGET -C src
   - mkdir ~/build/$TARGET
   - cp -r src/build/bin/* ~/build/$TARGET
 
