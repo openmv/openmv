@@ -20,6 +20,9 @@ HAL_CFLAGS += -I$(TOP_DIR)/$(HAL_DIR)/include/hal/
 HAL_CFLAGS += -I$(TOP_DIR)/$(HAL_DIR)/include/soc/
 HAL_CFLAGS += -I$(TOP_DIR)/$(HAL_DIR)/include/prs/
 
+ifeq ($(MICROPY_PY_ULAB), 1)
+MPY_CFLAGS += -DMP_NEED_LOG2
+endif
 MPY_CFLAGS += -I$(MP_BOARD_CONFIG_DIR)
 MPY_CFLAGS += -I$(BUILD)/$(MICROPY_DIR)/
 MPY_CFLAGS += -I$(TOP_DIR)/$(MICROPY_DIR)/
@@ -237,6 +240,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	fmodf.o         \
 	nearbyintf.o    \
 	ef_sqrt.o       \
+	erf_lgamma.o    \
 	kf_rem_pio2.o   \
 	kf_sin.o        \
 	kf_cos.o        \
@@ -248,10 +252,17 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/libm/,\
 	sf_frexp.o      \
 	sf_modf.o       \
 	sf_ldexp.o      \
+	sf_erf.o        \
 	asinfacosf.o    \
 	atanf.o         \
 	atan2f.o        \
 	roundf.o        \
+	log1pf.o        \
+	acoshf.o        \
+	asinhf.o        \
+	atanhf.o        \
+	wf_lgamma.o     \
+	wf_tgamma.o     \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/,\
