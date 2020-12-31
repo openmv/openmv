@@ -60,7 +60,7 @@
 **
 *******************************************************************************/
 #ifndef _LEPTON_I2C_SERVICE_H_
-    #define _LEPTON_I2C_SERVICE_H_
+#define _LEPTON_I2C_SERVICE_H_
 
     #ifdef __cplusplus
 extern "C"
@@ -70,9 +70,9 @@ extern "C"
 /******************************************************************************/
 /** INCLUDE FILES                                                            **/
 /******************************************************************************/
-    #include "LEPTON_Types.h"
-    #include "LEPTON_ErrorCodes.h"
-
+#include "LEPTON_Types.h"
+#include "LEPTON_ErrorCodes.h"
+#include "cambus.h"
 
 /******************************************************************************/
 /** EXPORTED DEFINES                                                         **/
@@ -89,6 +89,7 @@ extern "C"
 /******************************************************************************/
 /** EXPORTED PUBLIC FUNCTIONS                                                **/
 /******************************************************************************/
+    void LEP_I2C_Init(cambus_t *bus);
 
     extern LEP_RESULT LEP_I2C_MasterSelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
                                                  LEP_PROTOCOL_DEVICE_E device);
@@ -96,9 +97,9 @@ extern "C"
     extern LEP_RESULT LEP_I2C_MasterOpen(LEP_UINT16 portID,
                                          LEP_UINT16 *portBaudRate);
 
-    extern LEP_RESULT LEP_I2C_MasterClose(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr );
+    extern LEP_RESULT LEP_I2C_MasterClose(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr);
 
-    extern LEP_RESULT LEP_I2C_MasterReset(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr );
+    extern LEP_RESULT LEP_I2C_MasterReset(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr);
 
     extern LEP_RESULT LEP_I2C_MasterReadData(LEP_UINT16 portID,
                                              LEP_UINT8  deviceAddress,
@@ -124,7 +125,7 @@ extern "C"
                                                   LEP_UINT16 regValue);
 
     extern LEP_RESULT LEP_I2C_MasterStatus(LEP_UINT16 portID,
-                                           LEP_UINT16 *portStatus );
+                                           LEP_UINT16 *portStatus);
 
 /******************************************************************************/
     #ifdef __cplusplus

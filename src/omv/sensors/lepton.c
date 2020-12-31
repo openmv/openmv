@@ -672,6 +672,8 @@ int lepton_init(sensor_t *sensor)
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
 
+    LEP_I2C_Init(&sensor->bus);
+
     // Configure the DMA handler for Transmission process
     DMAHandle.Instance                 = LEPTON_SPI_DMA_STREAM;
     DMAHandle.Init.Request             = LEPTON_SPI_DMA_REQUEST;
