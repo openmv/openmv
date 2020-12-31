@@ -236,4 +236,8 @@
 
 #endif
 
+#ifndef NRFX_PDM_ENABLED
+#define NRFX_PDM_ENABLED 1
+#endif
+
 #endif // NRFX_CONFIG_H

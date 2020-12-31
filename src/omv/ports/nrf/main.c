@@ -78,6 +78,7 @@
 #endif
 
 #include "usbdbg.h"
+#include "py_audio.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
@@ -299,6 +300,10 @@ soft_reset:
     usbdbg_set_irq_enabled(false);
 
     mp_deinit();
+
+    #if MICROPY_PY_AUDIO
+    py_audio_deinit();
+    #endif
 
     #if BLUETOOTH_SD
     sd_softdevice_disable();
