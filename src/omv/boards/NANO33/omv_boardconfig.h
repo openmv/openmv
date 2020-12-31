@@ -87,7 +87,7 @@
 
 #define OMV_FB_SIZE         (128K)  // FB memory: header + QVGA/GS image
 #define OMV_FB_ALLOC_SIZE   (16K)   // minimum fb alloc size
-#define OMV_STACK_SIZE      (10K)
+#define OMV_STACK_SIZE      (8K)
 #define OMV_HEAP_SIZE       (64K)
 #define OMV_JPEG_BUF_SIZE   (16 * 1024) // IDE JPEG buffer (header + data).
 
@@ -101,5 +101,10 @@
 #define FIR_I2C_SCL_PIN         (2)
 #define FIR_I2C_SDA_PIN         (31)
 #define FIR_I2C_SPEED           (CAMBUS_SPEED_FULL)
+
+// PDM/MIC
+#define PDM_DIN_PIN             (25)
+#define PDM_CLK_PIN             (26)
+#define PDM_PWR_PIN             (17)
 
 #endif //__OMV_BOARDCONFIG_H__
