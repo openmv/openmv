@@ -31,7 +31,9 @@ OBJS  = $(addprefix $(BUILD)/, $(SRC_S:.s=.o))
 OBJS += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
 OBJ_DIRS = $(sort $(dir $(OBJS)))
 
-all: | $(OBJ_DIRS) $(OBJS)
+all: $(OBJS)
+$(OBJS): | $(OBJ_DIRS)
+
 $(OBJ_DIRS):
 	$(MKDIR) -p $@
 
