@@ -88,7 +88,9 @@ To build the latest OpenMV Cam firmware. You make target building the firmware f
     make TARGET=OPENMV3 # To build the OpenMV Cam M7 Firmware
     make TARGET=OPENMV4 # To build the OpenMV Cam H7 Firmware (default)
     make TARGET=OPENMV4P # To build the OpenMV Cam H7 Plus Firmware
+    make TARGET=OPENMVPT # To build the OpenMV Pure Thermal Firmware
     make TARGET=PORTENTA # To build the Arduino H7 Portenta Firmware
+    make TARGET=NANO33 # To build the Arduino Nano 33 BLE Firmware
 
 After building the firmware the output will appear under `src/build/bin` where you will find the following files:
 
