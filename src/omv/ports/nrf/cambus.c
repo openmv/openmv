@@ -56,6 +56,9 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
         return -1;
     }
 
+    // This bus needs to be enabled for suspended transfers.
+    nrfx_twi_enable(&bus->twi);
+
     bus->initialized = true;
     return 0;
 }
@@ -63,6 +66,7 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 int cambus_deinit(cambus_t *bus)
 {
     if (bus->initialized) {
+        nrfx_twi_disable(&bus->twi);
         nrfx_twi_uninit(&bus->twi);
         bus->initialized = false;
     }
@@ -79,83 +83,37 @@ int cambus_gencall(cambus_t *bus, uint8_t cmd)
     return 0;
 }
 
-int cambus_read_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr, uint8_t *buf, int len)
+int cambus_read_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags)
 {
     int ret = 0;
     slv_addr = slv_addr >> 1;
-
-    nrfx_twi_enable(&bus->twi);
-    nrfx_twi_xfer_desc_t desc1 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_addr, 1);
-    if (nrfx_twi_xfer(&bus->twi, &desc1, NRFX_TWI_FLAG_TX_NO_STOP) != NRFX_SUCCESS) {
-        ret = -1;
-        goto i2c_error;
+    uint32_t xfer_flags = 0;
+    if (flags & CAMBUS_XFER_SUSPEND) {
+        xfer_flags |= NRFX_TWI_FLAG_SUSPEND;
     }
 
-    nrfx_twi_xfer_desc_t desc2 = NRFX_TWI_XFER_DESC_RX(slv_addr, buf, len);
-    if (nrfx_twi_xfer(&bus->twi, &desc2, 0) != NRFX_SUCCESS) {
-        ret = -1;
-    }
-
-i2c_error:
-    nrfx_twi_disable(&bus->twi);
-    return ret;
-}
-
-int cambus_write_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr, uint8_t *buf, int len)
-{
-    int ret = 0;
-    slv_addr = slv_addr >> 1;
-
-    nrfx_twi_enable(&bus->twi);
-    nrfx_twi_xfer_desc_t desc1 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_addr, 1);
-    if (nrfx_twi_xfer(&bus->twi, &desc1, NRFX_TWI_FLAG_SUSPEND) != NRFX_SUCCESS) {
-        ret = -1;
-        goto i2c_error;
-    }
-
-    nrfx_twi_xfer_desc_t desc2 = NRFX_TWI_XFER_DESC_TX(slv_addr, buf, len);
-    if (nrfx_twi_xfer(&bus->twi, &desc2, 0) != NRFX_SUCCESS) {
-        ret = -1;
-    }
-
-i2c_error:
-    nrfx_twi_disable(&bus->twi);
-    return ret;
-}
-
-int cambus_readw_bytes(cambus_t *bus, uint8_t slv_addr, uint16_t reg_addr, uint8_t *buf, int len)
-{
-    return 0;
-}
-
-int cambus_writew_bytes(cambus_t *bus, uint8_t slv_addr, uint16_t reg_addr, uint8_t *buf, int len)
-{
-    return 0;
-}
-
-int cambus_read_bytes_seq(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, bool nostop)
-{
-    int ret = 0;
-    slv_addr = slv_addr >> 1;
-    nrfx_twi_enable(&bus->twi);
     nrfx_twi_xfer_desc_t desc = NRFX_TWI_XFER_DESC_RX(slv_addr, buf, len);
-    if (nrfx_twi_xfer(&bus->twi, &desc, 0) != NRFX_SUCCESS) {
+    if (nrfx_twi_xfer(&bus->twi, &desc, xfer_flags) != NRFX_SUCCESS) {
         ret = -1;
     }
-    nrfx_twi_disable(&bus->twi);
     return ret;
 }
 
-int cambus_write_bytes_seq(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, bool nostop)
+int cambus_write_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags)
 {
     int ret = 0;
     slv_addr = slv_addr >> 1;
-    nrfx_twi_enable(&bus->twi);
+    uint32_t xfer_flags = 0;
+    if (flags & CAMBUS_XFER_NO_STOP) {
+        xfer_flags |= NRFX_TWI_FLAG_TX_NO_STOP;
+    } else if (flags & CAMBUS_XFER_SUSPEND) {
+        xfer_flags |= NRFX_TWI_FLAG_SUSPEND;
+    }
+
     nrfx_twi_xfer_desc_t desc = NRFX_TWI_XFER_DESC_TX(slv_addr, buf, len);
-    if (nrfx_twi_xfer(&bus->twi, &desc, (nostop == true) ? NRFX_TWI_FLAG_TX_NO_STOP:0) != NRFX_SUCCESS) {
+    if (nrfx_twi_xfer(&bus->twi, &desc, xfer_flags) != NRFX_SUCCESS) {
         ret = -1;
     }
-    nrfx_twi_disable(&bus->twi);
     return ret;
 }
 

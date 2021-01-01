@@ -206,6 +206,19 @@ static int cambus_set_irq_state(cambus_t *bus, bool enabled)
     return 0;
 }
 
+static int cambus_wait_timeout(cambus_t *bus, uint32_t timeout)
+{
+    mp_uint_t tick_start;
+    tick_start = mp_hal_ticks_ms();
+    while (HAL_I2C_GetState(bus->i2c) != HAL_I2C_STATE_READY) {
+        if ((mp_hal_ticks_ms() - tick_start) >= I2C_TIMEOUT) {
+            return -1;
+        }
+        __WFI();
+    }
+    return 0;
+}
+
 int cambus_deinit(cambus_t *bus)
 {
     if (bus->i2c && bus->i2c->Instance) {
@@ -322,87 +335,48 @@ int cambus_writew2(cambus_t *bus, uint8_t slv_addr, uint16_t reg_addr, uint16_t 
     return ret;
 }
 
-int cambus_read_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr, uint8_t *buf, int len)
-{
-    if (HAL_I2C_Mem_Read(bus->i2c, slv_addr, reg_addr,
-                I2C_MEMADD_SIZE_8BIT, buf, len, I2C_TIMEOUT) != HAL_OK) {
-        return -1;
-    }
-    return 0;
-}
-
-int cambus_write_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr, uint8_t *buf, int len)
-{
-    if (HAL_I2C_Mem_Write(bus->i2c, slv_addr, reg_addr,
-                I2C_MEMADD_SIZE_8BIT, buf, len, I2C_TIMEOUT) != HAL_OK) {
-        return -1;
-    }
-    return 0;
-}
-
-int cambus_readw_bytes(cambus_t *bus, uint8_t slv_addr, uint16_t reg_addr, uint8_t *buf, int len)
-{
-    if (HAL_I2C_Mem_Read(bus->i2c, slv_addr, reg_addr,
-                I2C_MEMADD_SIZE_16BIT, buf, len, I2C_TIMEOUT) != HAL_OK) {
-        return -1;
-    }
-    return 0;
-}
-
-int cambus_writew_bytes(cambus_t *bus, uint8_t slv_addr, uint16_t reg_addr, uint8_t *buf, int len)
-{
-    if (HAL_I2C_Mem_Write(bus->i2c, slv_addr, reg_addr,
-                I2C_MEMADD_SIZE_16BIT, buf, len, I2C_TIMEOUT) != HAL_OK) {
-        return -1;
-    }
-    return 0;
-}
-
-int cambus_read_bytes_seq(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, bool nostop)
+int cambus_read_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags)
 {
     int ret = 0;
+    uint32_t xfer_flags = 0;
+    if (flags & CAMBUS_XFER_NO_STOP) {
+        xfer_flags |= I2C_FIRST_FRAME;
+    } else if (flags & CAMBUS_XFER_SUSPEND) {
+        xfer_flags |= I2C_NEXT_FRAME;
+    } else {
+        xfer_flags |= I2C_LAST_FRAME;
+    }
+
     cambus_set_irq_state(bus, true);
 
-    if (HAL_I2C_Master_Seq_Receive_IT(bus->i2c, slv_addr, buf, len,
-                (nostop == true) ? I2C_FIRST_FRAME : I2C_FIRST_AND_LAST_FRAME) != HAL_OK) {
+    if (HAL_I2C_Master_Seq_Receive_IT(bus->i2c, slv_addr, buf, len, xfer_flags) != HAL_OK
+            || cambus_wait_timeout(bus, I2C_TIMEOUT) != 0) {
         ret = -1;
-        goto i2c_error;
     }
 
-    mp_uint_t tick_start = mp_hal_ticks_ms();
-    while (HAL_I2C_GetState(bus->i2c) != HAL_I2C_STATE_READY) {
-        if ((mp_hal_ticks_ms() - tick_start) >= I2C_TIMEOUT) {
-            ret = -1;
-        }
-        __WFI();
-    }
-
-i2c_error:
     cambus_set_irq_state(bus, false);
     return ret;
 }
 
-int cambus_write_bytes_seq(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, bool nostop)
+int cambus_write_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags)
 {
     int ret = 0;
+    uint32_t xfer_flags = 0;
+    if (flags & CAMBUS_XFER_NO_STOP) {
+        xfer_flags |= I2C_FIRST_FRAME;
+    } else if (flags & CAMBUS_XFER_SUSPEND) {
+        xfer_flags |= I2C_NEXT_FRAME;
+    } else {
+        xfer_flags |= I2C_LAST_FRAME;
+    }
+
     cambus_set_irq_state(bus, true);
 
-    if (HAL_I2C_Master_Seq_Transmit_IT(bus->i2c, slv_addr, buf, len,
-                (nostop == true) ? I2C_FIRST_FRAME : I2C_FIRST_AND_LAST_FRAME) != HAL_OK) {
+    if (HAL_I2C_Master_Seq_Transmit_IT(bus->i2c, slv_addr, buf, len, xfer_flags) != HAL_OK
+            || cambus_wait_timeout(bus, I2C_TIMEOUT) != 0) {
         ret = -1;
-        goto i2c_error;
     }
 
-    mp_uint_t tick_start = mp_hal_ticks_ms();
-    while (HAL_I2C_GetState(bus->i2c) != HAL_I2C_STATE_READY) {
-        if ((mp_hal_ticks_ms() - tick_start) >= I2C_TIMEOUT) {
-            ret = -1;
-            goto i2c_error;
-        }
-        __WFI();
-    }
-
-i2c_error:
     cambus_set_irq_state(bus, false);
     return ret;
 }
