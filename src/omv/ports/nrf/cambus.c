@@ -23,17 +23,19 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 {
     bus->id = bus_id;
     bus->speed = speed;
-    bus->scl_pin = FIR_I2C_SCL_PIN;
-    bus->sda_pin = FIR_I2C_SDA_PIN;
     bus->initialized = false;
 
     switch (bus_id) {
         case 0: {
+            bus->scl_pin = TWI0_SCL_PIN;
+            bus->sda_pin = TWI0_SDA_PIN;
             nrfx_twi_t _twi = NRFX_TWI_INSTANCE(0);
             memcpy(&bus->twi, &_twi, sizeof(nrfx_twi_t));
             break;
         }
         case 1: {
+            bus->scl_pin = TWI1_SCL_PIN;
+            bus->sda_pin = TWI1_SDA_PIN;
             nrfx_twi_t _twi = NRFX_TWI_INSTANCE(1);
             memcpy(&bus->twi, &_twi, sizeof(nrfx_twi_t));
             break;
@@ -43,8 +45,8 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
     }
 
     nrfx_twi_config_t config = {
-       .scl                = FIR_I2C_SCL_PIN,
-       .sda                = FIR_I2C_SDA_PIN,
+       .scl                = bus->scl_pin,
+       .sda                = bus->sda_pin,
        .frequency          = speed,
        .interrupt_priority = 4,
        .hold_bus_uninit    = false

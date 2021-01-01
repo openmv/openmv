@@ -36,6 +36,9 @@ typedef enum _cambus_speed {
 typedef struct _cambus {
     uint32_t id;
     uint32_t speed;
+    uint32_t scl_pin;
+    uint32_t sda_pin;
+    GPIO_TypeDef  *port;
     // This pointer will be set to its respective I2C handle defined in MicroPython
     // because all I2C IRQs are defined in stm32_it.c and handled by MicroPython.
     I2C_HandleTypeDef *i2c;
