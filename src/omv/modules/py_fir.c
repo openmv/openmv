@@ -133,16 +133,17 @@ static void fir_MLX90640_get_frame(float *Ta, float *To)
 static void fir_AMG8833_get_frame(float *Ta, float *To)
 {
     int16_t temp;
-    PY_ASSERT_TRUE_MSG(cambus_read_bytes(&fir_bus, AMG8833_ADDR, AMG8833_THERMISTOR_REGISTER,
-            (uint8_t *) &temp, sizeof(int16_t)) >= 0,
-            "Failed to read the AMG8833 sensor data!");
+    int error = 0;
+    error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
+    error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), CAMBUS_XFER_NO_FLAGS);
+    PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     *Ta = AMG8833_12_TO_16(temp) * 0.0625f;
 
     int16_t *data = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t), FB_ALLOC_NO_HINT);
-    PY_ASSERT_TRUE_MSG(cambus_read_bytes(&fir_bus, AMG8833_ADDR, AMG8833_TEMPERATURE_REGISTER,
-            (uint8_t *) data, AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t)) >= 0,
-            "Failed to read the AMG8833 sensor data!");
+    error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_TEMPERATURE_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
+    error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) data, AMG8833_WIDTH * AMG8833_HEIGHT * 2, CAMBUS_XFER_NO_FLAGS);
+    PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     for (int i = 0, ii = AMG8833_WIDTH * AMG8833_HEIGHT; i < ii; i++) {
         To[i] = AMG8833_12_TO_16(data[i]) * 0.25f;
@@ -348,9 +349,9 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             FIR_AMG8833_RETRY:
             cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
 
-            int error = cambus_write_bytes(&fir_bus, AMG8833_ADDR, AMG8833_RESET_REGISTER,
-                                           (uint8_t [1]){AMG8833_INITIAL_RESET_VALUE}, 1);
-
+            int error = 0;
+            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_RESET_REGISTER}, 1, CAMBUS_XFER_SUSPEND);
+            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_INITIAL_RESET_VALUE}, 1, CAMBUS_XFER_NO_FLAGS);
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
@@ -460,9 +461,10 @@ mp_obj_t py_fir_read_ta()
         }
         case FIR_AMG8833: {
             int16_t temp;
-            PY_ASSERT_TRUE_MSG(cambus_read_bytes(&fir_bus, AMG8833_ADDR, AMG8833_THERMISTOR_REGISTER,
-                    (uint8_t *) &temp, sizeof(int16_t)) >= 0,
-                    "Failed to read the AMG8833 sensor data!");
+            int error = 0;
+            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
+            error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), CAMBUS_XFER_NO_FLAGS);
+            PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
             return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
         }
     }
