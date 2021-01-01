@@ -99,6 +99,8 @@ static void spi_config_deinit()
     ///////////////////////////////////////////////////////////////////////
 }
 
+void spi_lcd_callback(SPI_HandleTypeDef *hspi);
+
 static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, bool bgr)
 {
     OMV_SPI_LCD_CONTROLLER->spi->Init.Mode = SPI_MODE_MASTER;
@@ -108,6 +110,7 @@ static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, 
     OMV_SPI_LCD_CONTROLLER->spi->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
     spi_set_params(OMV_SPI_LCD_CONTROLLER, 0xffffffff, w * h * refresh_rate * 16, 0, 0, 8, 0);
     spi_init(OMV_SPI_LCD_CONTROLLER, true);
+    HAL_SPI_RegisterCallback(OMV_SPI_LCD_CONTROLLER->spi, HAL_SPI_TX_COMPLETE_CB_ID, spi_lcd_callback);
 
     // Do not put in HAL_SPI_MspInit as other modules share the SPI2 bus.
 
@@ -195,7 +198,7 @@ static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, 
 
 static bool spi_tx_cb_state_on[FRAMEBUFFER_COUNT] = {};
 
-void spi_lcd_callback()
+void spi_lcd_callback(SPI_HandleTypeDef *hspi)
 {
     if (lcd_type == LCD_SHIELD) {
         static uint16_t *spi_tx_cb_state_memory_write_addr = NULL;
@@ -295,7 +298,7 @@ static void spi_lcd_kick()
         }
 
         spi_tx_cb_state = SPI_TX_CB_MEMORY_WRITE_CMD;
-        spi_lcd_callback();
+        spi_lcd_callback(OMV_SPI_LCD_CONTROLLER->spi);
     }
 }
 

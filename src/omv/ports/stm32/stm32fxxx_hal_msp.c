@@ -520,21 +520,3 @@ void HAL_MspDeInit(void)
 {
 
 }
-
-#if defined(OMV_SPI_LCD_CONTROLLER)
-extern void spi_lcd_callback();
-#endif
-
-__attribute__((weak)) void spi_lcd_callback()
-{
-    // Necessary for UVC compile...
-}
-
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
-{
-    #if defined(OMV_SPI_LCD_CONTROLLER)
-    if (hspi->Instance == OMV_SPI_LCD_CONTROLLER_INSTANCE) {
-        spi_lcd_callback();
-    }
-    #endif
-}
