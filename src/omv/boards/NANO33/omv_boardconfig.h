@@ -102,6 +102,18 @@
 #define FIR_I2C_SDA_PIN         (31)
 #define FIR_I2C_SPEED           (CAMBUS_SPEED_FULL)
 
+// I2C0
+#define TWI0_ID                 (0)
+#define TWI0_SCL_PIN            (2)
+#define TWI0_SDA_PIN            (31)
+#define TWI0_SPEED              (CAMBUS_SPEED_FULL)
+
+// I2C1
+#define TWI1_ID                 (1)
+#define TWI1_SCL_PIN            (15)
+#define TWI1_SDA_PIN            (14)
+#define TWI1_SPEED              (CAMBUS_SPEED_FULL)
+
 // PDM/MIC
 #define PDM_DIN_PIN             (25)
 #define PDM_CLK_PIN             (26)

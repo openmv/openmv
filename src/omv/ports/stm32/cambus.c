@@ -92,6 +92,21 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
             return -1;
     }
 
+    // Our code only knows about these two I2Cs instances.
+    if (bus->i2c->Instance == FIR_I2C) {
+        bus->port     = FIR_I2C_PORT;
+        bus->scl_pin  = FIR_I2C_SCL_PIN;
+        bus->sda_pin  = FIR_I2C_SDA_PIN;
+    } else if (bus->i2c->Instance == ISC_I2C) {
+        bus->port     = ISC_I2C_PORT;
+        bus->scl_pin  = ISC_I2C_SCL_PIN;
+        bus->sda_pin  = ISC_I2C_SDA_PIN;
+    } else {
+        bus->port     = NULL;
+        bus->scl_pin  = 0;
+        bus->sda_pin  = 0;
+    }
+
     // Configure the I2C handle
     bus->i2c->Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
     #if !defined(STM32F4)
@@ -111,7 +126,8 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 
     HAL_I2C_DeInit(bus->i2c);
     if (HAL_I2C_Init(bus->i2c) != HAL_OK) {
-        /* Initialization Error */
+        bus->i2c = NULL;
+        bus->port = NULL;
         return -1;
     }
 
@@ -197,6 +213,7 @@ int cambus_deinit(cambus_t *bus)
         bus->i2c->Instance = NULL;
     }
     bus->i2c = NULL;
+    bus->port = NULL;
     return 0;
 }
 
@@ -390,29 +407,28 @@ i2c_error:
     return ret;
 }
 
-// TODO this is only used by the FIR code, hard-code pin/port for now.
 int cambus_pulse_scl(cambus_t *bus)
 {
-    #if defined(FIR_I2C_SCL_PIN)
-    // Configure SCL as GPIO
-    GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Pull  = GPIO_NOPULL;
-    GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
-    GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStructure.Pin   = FIR_I2C_SCL_PIN;
-    HAL_GPIO_Init(FIR_I2C_PORT, &GPIO_InitStructure);
+    if (bus->port) {
+        // Configure SCL as GPIO
+        GPIO_InitTypeDef GPIO_InitStructure;
+        GPIO_InitStructure.Pull  = GPIO_NOPULL;
+        GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
+        GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStructure.Pin   = bus->scl_pin;
+        HAL_GPIO_Init(bus->port, &GPIO_InitStructure);
 
-    // Pulse SCL to recover stuck device.
-    for (int i=0; i<10000; i++) {
-        HAL_GPIO_WritePin(FIR_I2C_PORT, FIR_I2C_SCL_PIN, GPIO_PIN_SET);
-        mp_hal_delay_us(10);
-        HAL_GPIO_WritePin(FIR_I2C_PORT, FIR_I2C_SCL_PIN, GPIO_PIN_RESET);
-        mp_hal_delay_us(10);
+        // Pulse SCL to recover stuck device.
+        for (int i=0; i<10000; i++) {
+            HAL_GPIO_WritePin(bus->port, bus->scl_pin, GPIO_PIN_SET);
+            mp_hal_delay_us(10);
+            HAL_GPIO_WritePin(bus->port, bus->scl_pin, GPIO_PIN_RESET);
+            mp_hal_delay_us(10);
+        }
+
+        // Clear ARLO flag if it's set.
+        __HAL_I2C_CLEAR_FLAG(bus->i2c, I2C_FLAG_ARLO);
+        debug_printf("reset stuck i2c device\n");
     }
-
-    // Clear ARLO flag if it's set.
-    __HAL_I2C_CLEAR_FLAG(bus->i2c, I2C_FLAG_ARLO);
-    debug_printf("reset stuck i2c device\n");
-    #endif
     return 0;
 }
