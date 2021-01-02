@@ -16,28 +16,21 @@ sensor.set_framesize(sensor.QQVGA)
 sensor.skip_frames(time = 2000)
 clock = time.clock()
 
-img_writer = image.ImageWriter("/stream.bin")
+stream = image.ImageIO("/stream.bin", "w")
 
 # Red LED on means we are capturing frames.
-red_led = pyb.LED(1)
-red_led.on()
+pyb.LED(1).on()
 
 start = pyb.millis()
 while pyb.elapsed_millis(start) < record_time:
     clock.tick()
     img = sensor.snapshot()
     # Modify the image if you feel like here...
-
-    img_writer.add_frame(img)
+    stream.write(img)
     print(clock.fps())
 
-img_writer.close()
+stream.close()
 
 # Blue LED on means we are done.
-red_led.off()
-blue_led = pyb.LED(3)
-blue_led.on()
-
-print("Done")
-while(True):
-    pyb.wfi()
+pyb.LED(1).off()
+pyb.LED(3).on()
