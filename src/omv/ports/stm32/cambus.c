@@ -19,13 +19,15 @@
 #define I2C_TIMEOUT             (1000)
 #define I2C_SCAN_TIMEOUT        (100)
 
-// If an I2C handle is already defined in MicroPython, reuse that handle
-// to allow MicroPython to process I2C IRQs, otherwise define a new handle.
+// If an I2C handle is already defined in MicroPython, reuse that handle to allow
+// MicroPython to process I2C IRQs, otherwise define a new handle and handle IRQs here.
 #if defined(I2C1)
 #if defined(MICROPY_HW_I2C1_SCL)
 extern I2C_HandleTypeDef I2CHandle1;
 #else
 static I2C_HandleTypeDef I2CHandle1;
+void I2C1_EV_IRQHandler(void) { HAL_I2C_EV_IRQHandler(&I2CHandle1); }
+void I2C1_ER_IRQHandler(void) { HAL_I2C_ER_IRQHandler(&I2CHandle1); }
 #endif
 #endif // I2C1
 
@@ -34,6 +36,8 @@ static I2C_HandleTypeDef I2CHandle1;
 extern I2C_HandleTypeDef I2CHandle2;
 #else
 static I2C_HandleTypeDef I2CHandle2;
+void I2C2_EV_IRQHandler(void) { HAL_I2C_EV_IRQHandler(&I2CHandle2); }
+void I2C2_ER_IRQHandler(void) { HAL_I2C_ER_IRQHandler(&I2CHandle2); }
 #endif
 #endif // I2C2
 
@@ -42,6 +46,8 @@ static I2C_HandleTypeDef I2CHandle2;
 extern I2C_HandleTypeDef I2CHandle3;
 #else
 static I2C_HandleTypeDef I2CHandle3;
+void I2C3_EV_IRQHandler(void) { HAL_I2C_EV_IRQHandler(&I2CHandle3); }
+void I2C3_ER_IRQHandler(void) { HAL_I2C_ER_IRQHandler(&I2CHandle3); }
 #endif
 #endif // I2C3
 
@@ -50,6 +56,8 @@ static I2C_HandleTypeDef I2CHandle3;
 extern I2C_HandleTypeDef I2CHandle4;
 #else
 static I2C_HandleTypeDef I2CHandle4;
+void I2C4_EV_IRQHandler(void) { HAL_I2C_EV_IRQHandler(&I2CHandle4); }
+void I2C4_ER_IRQHandler(void) { HAL_I2C_ER_IRQHandler(&I2CHandle4); }
 #endif
 #endif // I2C4
 

@@ -676,7 +676,9 @@ static int reset(sensor_t *sensor)
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, SYSTEM_RESET_00, 0x20); // force mcu reset
 
     // Write firmware
-    ret |= cambus_writew_bytes(&sensor->bus, sensor->slv_addr, MCU_FIRMWARE_BASE, (uint8_t *) af_firmware_regs, sizeof(af_firmware_regs));
+    uint16_t fw_addr = MCU_FIRMWARE_BASE;
+    ret |= cambus_write_bytes(&sensor->bus, sensor->slv_addr, (uint8_t *) &fw_addr, 2, CAMBUS_XFER_SUSPEND);
+    ret |= cambus_write_bytes(&sensor->bus, sensor->slv_addr, (uint8_t *) af_firmware_regs, sizeof(af_firmware_regs), CAMBUS_XFER_NO_FLAGS);
 
     for (int i = 0; af_firmware_command_regs[i][0]; i++) {
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, (af_firmware_command_regs[i][0] << 8) | (af_firmware_command_regs[i][1] << 0), af_firmware_command_regs[i][2]);
