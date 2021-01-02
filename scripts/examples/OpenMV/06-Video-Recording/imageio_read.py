@@ -18,11 +18,15 @@ sensor.set_framesize(sensor.QQVGA)
 sensor.skip_frames(time = 2000)
 clock = time.clock()
 
-img_reader = None if snapshot_source else image.ImageReader("/stream.bin")
+stream = None
+if snapshot_source == False:
+    stream = image.ImageIO("/stream.bin", "r")
 
 while(True):
     clock.tick()
-    img = sensor.snapshot() if snapshot_source else img_reader.next_frame(copy_to_fb=True, loop=True, pause=True)
+    if snapshot_source:
+        img = sensor.snapshot() 
+    else:
+        img = stream.read(copy_to_fb=True, loop=True, pause=True)
     # Do machine vision algorithms on the image here.
-
     print(clock.fps())
