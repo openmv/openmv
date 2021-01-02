@@ -141,6 +141,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/modules/,   \
 	py_gif.o                    \
 	py_helper.o                 \
 	py_image.o                  \
+	py_imageio.o                \
 	py_mjpeg.o                  \
 	py_omv.o                    \
 	py_sensor.o                 \

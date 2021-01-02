@@ -1164,24 +1164,15 @@ Q(displacement)
 // duplicate Q(scale)
 Q(response)
 
-// Image Writer
-Q(ImageWriter)
-// Image Writer Object
-Q(imagewriter)
-// duplicate Q(size)
-// duplicate Q(add_frame)
-// duplicate Q(close)
-
-// Image Reader
-Q(ImageReader)
-// Image Reader Object
-Q(imagereader)
-// duplicate Q(size)
-Q(next_frame)
-// duplicate Q(copy_to_fb)
-// duplicate Q(loop)
-// duplicate Q(close)
+// Image Stream
+Q(imageio)
+Q(ImageIO)
+Q(size)
+Q(read)
+Q(write)
+Q(close)
 Q(pause)
+Q(seek)
 
 // LCD Module
 Q(lcd)

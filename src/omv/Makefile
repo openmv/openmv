@@ -40,6 +40,7 @@ SRCS += $(addprefix modules/,   \
 	py_gif.c                    \
 	py_helper.c                 \
 	py_image.c                  \
+	py_imageio.c                \
 	py_mjpeg.c                  \
 	py_omv.c                    \
 	py_sensor.c                 \
