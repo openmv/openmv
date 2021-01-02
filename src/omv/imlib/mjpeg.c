@@ -9,7 +9,7 @@
  * A simple MJPEG encoder.
  */
 #include "imlib.h"
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
@@ -151,4 +151,4 @@ void mjpeg_close(FIL *fp, uint32_t *frames, uint32_t *bytes, float fps)
     write_long(fp, 4 + (*frames * 8) + *bytes);
     file_close(fp);
 }
-#endif //IMLIB_ENABLE_IMAGE_IO
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO

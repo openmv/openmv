@@ -7,7 +7,7 @@
  *
  */
 #include "imlib_config.h"
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 
 #include <string.h>
 #include "py/runtime.h"
@@ -464,4 +464,4 @@ void write_data(FIL *fp, const void *data, UINT size)
         if (bytes != size) ff_write_fail(fp);
     }
 }
-#endif //IMLIB_ENABLE_IMAGE_IO
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO
