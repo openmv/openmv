@@ -937,7 +937,7 @@ void imlib_bayer_to_binary(image_t *img, int x_offset, int y_offset, int width, 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 static save_image_format_t imblib_parse_extension(image_t *img, const char *path)
 {
     size_t l = strlen(path);
@@ -1039,12 +1039,12 @@ static void imlib_read_pixels(FIL *fp, image_t *img, int n_lines, img_read_setti
             break;
     }
 }
-#endif  //IMLIB_ENABLE_IMAGE_IO
+#endif  //IMLIB_ENABLE_IMAGE_FILE_IO
 
 void imlib_image_operation(image_t *img, const char *path, image_t *other, int scalar, line_op_t op, void *data)
 {
     if (path) {
-        #if defined(IMLIB_ENABLE_IMAGE_IO)
+        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         uint32_t size = fb_avail() / 2;
         void *alloc = fb_alloc(size, FB_ALLOC_NO_HINT); // We have to do this before the read.
         // This code reads a window of an image in at a time and then executes
@@ -1166,7 +1166,7 @@ void imlib_image_operation(image_t *img, const char *path, image_t *other, int s
     }
 }
 
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 void imlib_load_image(image_t *img, const char *path)
 {
     FIL fp;
@@ -1229,7 +1229,7 @@ void imlib_save_image(image_t *img, const char *path, rectangle_t *roi, int qual
             break;
     }
 }
-#endif //IMLIB_ENABLE_IMAGE_IO
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO
 
 ////////////////////////////////////////////////////////////////////////////////
 

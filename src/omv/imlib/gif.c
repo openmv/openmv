@@ -9,7 +9,7 @@
  * A simple GIF encoder.
  */
 #include "imlib.h"
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 
 #include "fb_alloc.h"
 #include "ff_wrapper.h"
@@ -117,4 +117,4 @@ void gif_close(FIL *fp)
     write_byte(fp, ';');
     file_close(fp);
 }
-#endif //IMLIB_ENABLE_IMAGE_IO
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO

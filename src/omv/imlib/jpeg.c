@@ -1290,7 +1290,7 @@ jpeg_overflow:
 }
 #endif //defined OMV_HARDWARE_JPEG
 
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 // This function inits the geometry values of an image.
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs)
 {
@@ -1377,4 +1377,4 @@ void jpeg_write(image_t *img, const char *path, int quality)
     }
     file_close(&fp);
 }
-#endif //IMLIB_ENABLE_IMAGE_IO)
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO)

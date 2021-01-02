@@ -140,7 +140,7 @@ STATIC mp_obj_t int_py_tf_load(mp_obj_t path_obj, bool alloc_mode, bool helper_m
         tf_model->model_data = (unsigned char *) g_person_detect_model_data;
         tf_model->model_data_len = g_person_detect_model_data_len;
     } else {
-        #if defined(IMLIB_ENABLE_IMAGE_IO)
+        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         FIL fp;
         file_read_open(&fp, path);
         tf_model->model_data_len = f_size(&fp);

@@ -10,7 +10,7 @@
  */
 
 #include "imlib.h"
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 
 #include <stdio.h>
 #include "py/obj.h"
@@ -165,4 +165,4 @@ void ppm_write_subimg(image_t *img, const char *path, rectangle_t *r)
 
     file_close(&fp);
 }
-#endif //IMLIB_ENABLE_IMAGE_IO
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO

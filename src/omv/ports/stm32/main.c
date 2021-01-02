@@ -502,7 +502,7 @@ soft_reset:
     sensor_init0();
     framebuffer_init0();
     fb_alloc_init0();
-    #ifdef IMLIB_ENABLE_IMAGE_IO
+    #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
     #endif
     py_lcd_init0();

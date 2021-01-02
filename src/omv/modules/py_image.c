@@ -35,7 +35,7 @@
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
 
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 extern const char *ffs_strerror(FRESULT res);
 #endif
 
@@ -1578,7 +1578,7 @@ static mp_obj_t py_image_crop(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_crop_obj, 1, py_image_crop);
 
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_image_cobj(args[0]);
@@ -1596,7 +1596,7 @@ static mp_obj_t py_image_save(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     return args[0];
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
-#endif //IMLIB_ENABLE_IMAGE_IO
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO
 
 static mp_obj_t py_image_flush(mp_obj_t img_obj)
 {
@@ -6341,7 +6341,7 @@ static const mp_rom_map_elem_t locals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_copy),                MP_ROM_PTR(&py_image_copy_obj)},
     {MP_ROM_QSTR(MP_QSTR_crop),                MP_ROM_PTR(&py_image_crop_obj)},
     {MP_ROM_QSTR(MP_QSTR_scale),               MP_ROM_PTR(&py_image_crop_obj)},
-    #if defined(IMLIB_ENABLE_IMAGE_IO)
+    #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     {MP_ROM_QSTR(MP_QSTR_save),                MP_ROM_PTR(&py_image_save_obj)},
     #else
     {MP_ROM_QSTR(MP_QSTR_save),                MP_ROM_PTR(&py_func_unavailable_obj)},
@@ -6622,7 +6622,7 @@ static const mp_obj_type_t py_image_type = {
     .locals_dict = (mp_obj_t) &locals_dict
 };
 
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 // ImageWriter Object //
 typedef struct py_imagewriter_obj {
     mp_obj_base_t base;
@@ -6842,7 +6842,7 @@ mp_obj_t py_image_imagereader(mp_obj_t path)
     return obj;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_imagereader_obj, py_image_imagereader);
-#endif //IMLIB_ENABLE_IMAGE_IO
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO
 
 mp_obj_t py_image_binary_to_grayscale(mp_obj_t arg)
 {
@@ -7151,7 +7151,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
                 break;
         }
     } else {
-        #if defined(IMLIB_ENABLE_IMAGE_IO)
+        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         fb_alloc_mark();
         FIL fp;
         img_read_settings_t rs;
@@ -7161,7 +7161,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
         #else
         (void) path;
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Image I/O is not supported"));
-        #endif //IMLIB_ENABLE_IMAGE_IO
+        #endif //IMLIB_ENABLE_IMAGE_FILE_IO
     }
 
     if (copy_to_fb) {
@@ -7176,7 +7176,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     if (mode) {
         memset(image.data, 0, image_size(&image));
     } else {
-        #if defined(IMLIB_ENABLE_IMAGE_IO)
+        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         imlib_load_image(&image, path);
         fb_alloc_free_till_mark();
         #endif
@@ -7206,7 +7206,7 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     // Load cascade from file or flash
     int res = imlib_load_cascade(&cascade, path);
     if (res != FR_OK) {
-        #if defined(IMLIB_ENABLE_IMAGE_IO)
+        #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         // cascade is not built-in and failed to load it from file.
         nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
         #else
@@ -7231,7 +7231,7 @@ mp_obj_t py_image_load_cascade(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_load_cascade_obj, 1, py_image_load_cascade);
 
 #if defined(IMLIB_ENABLE_DESCRIPTOR)
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 mp_obj_t py_image_load_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     FIL fp;
@@ -7361,7 +7361,7 @@ error:
     return mp_const_true;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_descriptor_obj, 2, py_image_save_descriptor);
-#endif //IMLIB_ENABLE_IMAGE_IO
+#endif //IMLIB_ENABLE_IMAGE_FILE_IO
 
 static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
@@ -7448,7 +7448,7 @@ static mp_obj_t py_image_match_descriptor(uint n_args, const mp_obj_t *args, mp_
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_match_descriptor_obj, 2, py_image_match_descriptor);
 #endif //IMLIB_ENABLE_DESCRIPTOR
 
-#if defined(IMLIB_ENABLE_FIND_KEYPOINTS) && defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_FIND_KEYPOINTS) && defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *roi)
 {
     FIL fp;
@@ -7470,7 +7470,7 @@ int py_image_descriptor_from_roi(image_t *img, const char *path, rectangle_t *ro
     }
     return 0;
 }
-#endif // IMLIB_ENABLE_KEYPOINTS && IMLIB_ENABLE_IMAGE_IO
+#endif // IMLIB_ENABLE_KEYPOINTS && IMLIB_ENABLE_IMAGE_FILE_IO
 
 static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR___name__),            MP_OBJ_NEW_QSTR(MP_QSTR_image)},
@@ -7521,7 +7521,7 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE93),              MP_ROM_INT(BARCODE_CODE93)},
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
     #endif
-    #if defined(IMLIB_ENABLE_IMAGE_IO)
+    #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_image_imagewriter_obj)},
     {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_image_imagereader_obj)},
     #else
@@ -7550,13 +7550,13 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_yuv_to_lab),          MP_ROM_PTR(&py_image_yuv_to_lab_obj)},
     {MP_ROM_QSTR(MP_QSTR_Image),               MP_ROM_PTR(&py_image_load_image_obj)},
     {MP_ROM_QSTR(MP_QSTR_HaarCascade),         MP_ROM_PTR(&py_image_load_cascade_obj)},
-    #if defined(IMLIB_ENABLE_DESCRIPTOR) && defined(IMLIB_ENABLE_IMAGE_IO)
+    #if defined(IMLIB_ENABLE_DESCRIPTOR) && defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     {MP_ROM_QSTR(MP_QSTR_load_descriptor),     MP_ROM_PTR(&py_image_load_descriptor_obj)},
     {MP_ROM_QSTR(MP_QSTR_save_descriptor),     MP_ROM_PTR(&py_image_save_descriptor_obj)},
     #else
     {MP_ROM_QSTR(MP_QSTR_load_descriptor),     MP_ROM_PTR(&py_func_unavailable_obj)},
     {MP_ROM_QSTR(MP_QSTR_save_descriptor),     MP_ROM_PTR(&py_func_unavailable_obj)},
-    #endif //IMLIB_ENABLE_DESCRIPTOR && IMLIB_ENABLE_IMAGE_IO
+    #endif //IMLIB_ENABLE_DESCRIPTOR && IMLIB_ENABLE_IMAGE_FILE_IO
     #if defined(IMLIB_ENABLE_DESCRIPTOR)
     {MP_ROM_QSTR(MP_QSTR_match_descriptor),    MP_ROM_PTR(&py_image_match_descriptor_obj)}
     #else

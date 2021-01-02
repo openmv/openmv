@@ -12,7 +12,7 @@
 #define __IMLIB_CONFIG_H__
 
 // Enable Image I/O
-//#define IMLIB_ENABLE_IMAGE_IO
+//#define IMLIB_ENABLE_IMAGE_FILE_IO
 
 // Enable LAB LUT
 //#define IMLIB_ENABLE_LAB_LUT

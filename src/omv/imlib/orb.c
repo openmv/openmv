@@ -704,7 +704,7 @@ int orb_filter_keypoints(array_t *kpts, rectangle_t *r, point_t *c)
     return matches;
 }
 
-#if defined(IMLIB_ENABLE_IMAGE_IO)
+#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 int orb_save_descriptor(FIL *fp, array_t *kpts)
 {
     UINT bytes;
@@ -824,7 +824,7 @@ int orb_load_descriptor(FIL *fp, array_t *kpts)
 error:
     return res;
 }
-#endif  //IMLIB_ENABLE_IMAGE_IO
+#endif  //IMLIB_ENABLE_IMAGE_FILE_IO
 
 float orb_cluster_dist(int cx, int cy, void *kp_in)
 {

@@ -26,7 +26,7 @@ typedef struct py_gif_obj {
     int height;
     bool color;
     bool loop;
-    #if defined(IMLIB_ENABLE_IMAGE_IO)
+    #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     FIL fp;
     #endif
 } py_gif_obj_t;
@@ -40,7 +40,7 @@ static mp_obj_t py_gif_open(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
     gif->loop   = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_loop), true);
     gif->base.type = &py_gif_type;
 
-    #if defined(IMLIB_ENABLE_IMAGE_IO)
+    #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     file_write_open(&gif->fp, mp_obj_str_get_str(args[0]));
     gif_open(&gif->fp, gif->width, gif->height, gif->color, gif->loop);
     #else
@@ -69,7 +69,7 @@ static mp_obj_t py_gif_format(mp_obj_t gif_obj)
 
 static mp_obj_t py_gif_size(mp_obj_t gif_obj)
 {
-    #if defined(IMLIB_ENABLE_IMAGE_IO)
+    #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     py_gif_obj_t *arg_gif = gif_obj;
     return mp_obj_new_int(file_size_w_buf(&arg_gif->fp));
     #else
@@ -85,7 +85,7 @@ static mp_obj_t py_gif_loop(mp_obj_t gif_obj)
 
 static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    #if defined(IMLIB_ENABLE_IMAGE_IO)
+    #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     py_gif_obj_t *arg_gif = args[0];
     image_t *arg_img = py_image_cobj(args[1]);
     PY_ASSERT_FALSE_MSG(IM_IS_JPEG(arg_img),   "Operation not supported on JPEG images.");
@@ -104,7 +104,7 @@ static mp_obj_t py_gif_add_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw
 
 static mp_obj_t py_gif_close(mp_obj_t gif_obj)
 {
-    #if defined(IMLIB_ENABLE_IMAGE_IO)
+    #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     py_gif_obj_t *arg_gif = gif_obj;
     gif_close(&arg_gif->fp);
     #endif
