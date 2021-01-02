@@ -38,6 +38,7 @@ typedef enum image_io_stream_type {
 
 typedef struct _py_imageio_obj {
     mp_obj_base_t base;
+    bool closed;
     union {
         #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
         struct{
@@ -94,6 +95,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_size_obj, py_imageio_size);
 mp_obj_t py_imageio_write(mp_obj_t self, mp_obj_t img_obj)
 {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
+    PY_ASSERT_TRUE_MSG((stream->closed == false), "Stream closed");
     image_t *image = py_image_cobj(img_obj);
 
     if (0) {
@@ -138,6 +140,7 @@ mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     image_t image = {0};
     mp_obj_t copy_to_fb_obj;
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(args[0]);
+    PY_ASSERT_TRUE_MSG((stream->closed == false), "Stream closed");
 
     bool copy_to_fb = true;
     image_t *arg_other = NULL;
@@ -242,6 +245,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_imageio_read_obj, 1, py_imageio_read);
 mp_obj_t py_imageio_seek(mp_obj_t self, mp_obj_t offs)
 {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
+    PY_ASSERT_TRUE_MSG((stream->closed == false), "Stream closed");
+
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     } else if (stream->type == IMAGE_IO_FILE_STREAM) {
@@ -263,16 +268,19 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_imageio_seek_obj, py_imageio_seek);
 mp_obj_t py_imageio_close(mp_obj_t self)
 {
     py_imageio_obj_t *stream = MP_OBJ_TO_PTR(self);
+    PY_ASSERT_TRUE_MSG((stream->closed == false), "Stream closed");
+
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
     } else if (stream->type == IMAGE_IO_FILE_STREAM) {
         file_close(&stream->fp);
     #endif
     } else if (stream->type == IMAGE_IO_MEMORY_STREAM) {
-        // Nothing to do.
+        fb_alloc_free_till_mark();
     } else {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Invalid image stream"));
     }
+    stream->closed = true;
     return self;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imageio_close_obj, py_imageio_close);
@@ -285,6 +293,7 @@ mp_obj_t py_imageio_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_
     py_imageio_obj_t *stream = NULL;
     stream = m_new_obj(py_imageio_obj_t);
     stream->base.type = &py_imageio_type;
+    stream->closed = false;
 
     if (0) {
     #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
