@@ -31,6 +31,9 @@
 #include "py_helper.h"
 #include "py_image.h"
 #include "omv_boardconfig.h"
+#if defined(IMLIB_ENABLE_IMAGE_IO)
+#include "py_imageio.h"
+#endif
 
 static const mp_obj_type_t py_cascade_type;
 static const mp_obj_type_t py_image_type;
@@ -6622,228 +6625,6 @@ static const mp_obj_type_t py_image_type = {
     .locals_dict = (mp_obj_t) &locals_dict
 };
 
-#if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-// ImageWriter Object //
-typedef struct py_imagewriter_obj {
-    mp_obj_base_t base;
-    FIL fp;
-    uint32_t ms;
-} py_imagewriter_obj_t;
-
-static void py_imagewriter_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
-{
-    py_imagewriter_obj_t *self = self_in;
-    mp_printf(print, "{\"size\":%d}", f_size(&self->fp));
-}
-
-mp_obj_t py_imagewriter_size(mp_obj_t self_in)
-{
-    return mp_obj_new_int(f_size(&((py_imagewriter_obj_t *) self_in)->fp));
-}
-
-mp_obj_t py_imagewriter_add_frame(mp_obj_t self_in, mp_obj_t img_obj)
-{
-    // Don't use the file buffer here...
-
-    FIL *fp = &((py_imagewriter_obj_t *) self_in)->fp;
-    PY_ASSERT_TYPE(img_obj, &py_image_type);
-    image_t *arg_img = &((py_image_obj_t *) img_obj)->_cobj;
-
-    uint32_t ms = mp_hal_ticks_ms(); // Write out elapsed ms.
-    write_long(fp, ms - ((py_imagewriter_obj_t *) self_in)->ms);
-    ((py_imagewriter_obj_t *) self_in)->ms = ms;
-
-    write_long(fp, arg_img->w);
-    write_long(fp, arg_img->h);
-    write_long(fp, arg_img->bpp);
-
-    uint32_t size = image_size(arg_img);
-
-    write_data(fp, arg_img->data, size);
-    if (size % 16) write_data(fp, "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0", 16 - (size % 16)); // Pad to multiple of 16 bytes.
-    return self_in;
-}
-
-mp_obj_t py_imagewriter_close(mp_obj_t self_in)
-{
-    file_close(&((py_imagewriter_obj_t *) self_in)->fp);
-    return self_in;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imagewriter_size_obj, py_imagewriter_size);
-STATIC MP_DEFINE_CONST_FUN_OBJ_2(py_imagewriter_add_frame_obj, py_imagewriter_add_frame);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imagewriter_close_obj, py_imagewriter_close);
-
-STATIC const mp_rom_map_elem_t py_imagewriter_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_size), MP_ROM_PTR(&py_imagewriter_size_obj) },
-    { MP_ROM_QSTR(MP_QSTR_add_frame), MP_ROM_PTR(&py_imagewriter_add_frame_obj) },
-    { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&py_imagewriter_close_obj) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(py_imagewriter_locals_dict, py_imagewriter_locals_dict_table);
-
-static const mp_obj_type_t py_imagewriter_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_imagewriter,
-    .print = py_imagewriter_print,
-    .locals_dict = (mp_obj_t) &py_imagewriter_locals_dict
-};
-
-mp_obj_t py_image_imagewriter(mp_obj_t path)
-{
-    py_imagewriter_obj_t *obj = m_new_obj(py_imagewriter_obj_t);
-    obj->base.type = &py_imagewriter_type;
-    file_write_open(&obj->fp, mp_obj_str_get_str(path));
-
-    write_long(&obj->fp, *((uint32_t *) "OMV ")); // OpenMV
-    write_long(&obj->fp, *((uint32_t *) "IMG ")); // Image
-    write_long(&obj->fp, *((uint32_t *) "STR ")); // Stream
-    write_long(&obj->fp, *((uint32_t *) "V1.0")); // v1.0
-
-    obj->ms = mp_hal_ticks_ms();
-    return obj;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_imagewriter_obj, py_image_imagewriter);
-
-// ImageReader Object //
-typedef struct py_imagereader_obj {
-    mp_obj_base_t base;
-    FIL fp;
-    uint32_t ms;
-} py_imagereader_obj_t;
-
-static void py_imagereader_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind)
-{
-    py_imagereader_obj_t *self = self_in;
-    mp_printf(print, "{\"size\":%d}", f_size(&self->fp));
-}
-
-mp_obj_t py_imagereader_size(mp_obj_t self_in)
-{
-    return mp_obj_new_int(f_size(&((py_imagereader_obj_t *) self_in)->fp));
-}
-
-mp_obj_t py_imagereader_next_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
-{
-    // Don't use the file buffer here...
-
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
-    bool copy_to_fb = true;
-    image_t *arg_other = NULL;
-
-    if (copy_to_fb_obj) {
-        if (mp_obj_is_integer(copy_to_fb_obj)) {
-            copy_to_fb = mp_obj_get_int(copy_to_fb_obj);
-        } else {
-            arg_other = py_helper_arg_to_image_mutable(copy_to_fb_obj);
-        }
-    }
-
-    if (copy_to_fb) {
-        fb_update_jpeg_buffer();
-    }
-
-    FIL *fp = &((py_imagereader_obj_t *) args[0])->fp;
-
-    if (f_eof(fp)) {
-        if (!py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_loop), true)) {
-            return mp_const_none;
-        }
-
-        file_seek(fp, 16); // skip past the header
-
-        if (f_eof(fp)) { // empty file
-            return mp_const_none;
-        }
-    }
-
-    uint32_t ms_tmp;
-    read_long(fp, &ms_tmp);
-
-    uint32_t ms; // Wait for elapsed ms.
-    ms = 0;
-    if (!py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pause), true)) {
-        for (ms = mp_hal_ticks_ms();
-            ((ms - ((py_imagewriter_obj_t *) args[0])->ms) < ms_tmp);
-            ms = mp_hal_ticks_ms()) {
-            __WFI();
-        }
-    }
-    ((py_imagewriter_obj_t *) args[0])->ms = ms;
-
-    image_t image = {0};
-
-    read_long(fp, (uint32_t *) &image.w);
-    read_long(fp, (uint32_t *) &image.h);
-    read_long(fp, (uint32_t *) &image.bpp);
-
-    uint32_t size = image_size(&image);
-
-    if (copy_to_fb) {
-        py_helper_set_to_framebuffer(&image);
-    } else if (arg_other) {
-        PY_ASSERT_TRUE_MSG((size <= image_size(arg_other)), "The new image won't fit in the target frame buffer!");
-        image.data = arg_other->data;
-    } else {
-        image.data = xalloc(size);
-    }
-
-    char ignore[15];
-    read_data(fp, image.data, size);
-    if (size % 16) read_data(fp, ignore, 16 - (size % 16)); // Read in to multiple of 16 bytes.
-    py_helper_update_framebuffer(&image);
-
-    if (arg_other) {
-        arg_other->w = image.w;
-        arg_other->h = image.h;
-        arg_other->bpp = image.bpp;
-    }
-
-    return py_image_from_struct(&image);
-}
-
-mp_obj_t py_imagereader_close(mp_obj_t self_in)
-{
-    file_close(&((py_imagereader_obj_t *) self_in)->fp);
-    return self_in;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imagereader_size_obj, py_imagereader_size);
-STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_imagereader_next_frame_obj, 1, py_imagereader_next_frame);
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_imagereader_close_obj, py_imagereader_close);
-
-STATIC const mp_rom_map_elem_t py_imagereader_locals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR_size), MP_ROM_PTR(&py_imagereader_size_obj) },
-    { MP_ROM_QSTR(MP_QSTR_next_frame), MP_ROM_PTR(&py_imagereader_next_frame_obj) },
-    { MP_ROM_QSTR(MP_QSTR_close), MP_ROM_PTR(&py_imagereader_close_obj) }
-};
-
-STATIC MP_DEFINE_CONST_DICT(py_imagereader_locals_dict, py_imagereader_locals_dict_table);
-
-static const mp_obj_type_t py_imagereader_type = {
-    { &mp_type_type },
-    .name  = MP_QSTR_imagereader,
-    .print = py_imagereader_print,
-    .locals_dict = (mp_obj_t) &py_imagereader_locals_dict
-};
-
-mp_obj_t py_image_imagereader(mp_obj_t path)
-{
-    py_imagereader_obj_t *obj = m_new_obj(py_imagereader_obj_t);
-    obj->base.type = &py_imagereader_type;
-    file_read_open(&obj->fp, mp_obj_str_get_str(path));
-
-    read_long_expect(&obj->fp, *((uint32_t *) "OMV ")); // OpenMV
-    read_long_expect(&obj->fp, *((uint32_t *) "IMG ")); // Image
-    read_long_expect(&obj->fp, *((uint32_t *) "STR ")); // Stream
-    read_long_expect(&obj->fp, *((uint32_t *) "V1.0")); // v1.0
-
-    obj->ms = mp_hal_ticks_ms();
-    return obj;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_imagereader_obj, py_image_imagereader);
-#endif //IMLIB_ENABLE_IMAGE_FILE_IO
-
 mp_obj_t py_image_binary_to_grayscale(mp_obj_t arg)
 {
     int8_t b = mp_obj_get_int(arg) & 1;
@@ -7521,12 +7302,10 @@ static const mp_rom_map_elem_t globals_dict_table[] = {
     {MP_ROM_QSTR(MP_QSTR_CODE93),              MP_ROM_INT(BARCODE_CODE93)},
     {MP_ROM_QSTR(MP_QSTR_CODE128),             MP_ROM_INT(BARCODE_CODE128)},
     #endif
-    #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
-    {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_image_imagewriter_obj)},
-    {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_image_imagereader_obj)},
+    #if defined(IMLIB_ENABLE_IMAGE_IO)
+    {MP_ROM_QSTR(MP_QSTR_ImageIO),             MP_ROM_PTR(&py_imageio_type) },
     #else
-    {MP_ROM_QSTR(MP_QSTR_ImageWriter),         MP_ROM_PTR(&py_func_unavailable_obj)},
-    {MP_ROM_QSTR(MP_QSTR_ImageReader),         MP_ROM_PTR(&py_func_unavailable_obj)},
+    {MP_ROM_QSTR(MP_QSTR_ImageIO),             MP_ROM_PTR(&py_func_unavailable_obj)},
     #endif
     {MP_ROM_QSTR(MP_QSTR_binary_to_grayscale), MP_ROM_PTR(&py_image_binary_to_grayscale_obj)},
     {MP_ROM_QSTR(MP_QSTR_binary_to_rgb),       MP_ROM_PTR(&py_image_binary_to_rgb_obj)},
