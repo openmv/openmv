@@ -23,6 +23,10 @@
 #include "py_helper.h"
 #include "py_image.h"
 
+#if defined(OMV_FIR_LEPTON_PRESENT)
+#include "py_fir_lepton.h"
+#endif
+
 #define MLX90621_ADDR                   0xC0
 #define MLX90621_WIDTH                  16
 #define MLX90621_HEIGHT                 4
@@ -52,20 +56,23 @@
     __value & 0x87FF; \
 })
 
-static cambus_t fir_bus = {};
+cambus_t fir_bus = {};
 static void *fir_mlx_data = NULL;
 
 static enum {
     FIR_NONE,
     FIR_MLX90621,
     FIR_MLX90640,
-    FIR_AMG8833
+    FIR_AMG8833,
+    #if defined(OMV_FIR_LEPTON_PRESENT)
+    FIR_LEPTON
+    #endif
 } fir_sensor = FIR_NONE;
 
-static int fir_width = 0;
-static int fir_height = 0;
-static int fir_ir_fresh_rate = 0;
-static int fir_adc_resolution = 0;
+int fir_width = 0;
+int fir_height = 0;
+int fir_ir_fresh_rate = 0;
+int fir_adc_resolution = 0;
 static bool fir_transposed = false;
 
 // img->w == data_w && img->h == data_h && img->bpp == IMAGE_BPP_GRAYSCALE
@@ -228,6 +235,12 @@ static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror, bool 
 
 static mp_obj_t py_fir_deinit()
 {
+    #if defined(OMV_FIR_LEPTON_PRESENT)
+    if (fir_sensor == FIR_LEPTON) {
+        fir_lepton_deinit();
+    }
+    #endif
+
     if (fir_sensor != FIR_NONE) {
         cambus_deinit(&fir_bus);
         fir_sensor = FIR_NONE;
@@ -369,6 +382,29 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             fir_adc_resolution = 12;
             return mp_const_none;
         }
+        #if defined(OMV_FIR_LEPTON_PRESENT)
+        case FIR_LEPTON: {
+            fir_sensor = FIR_LEPTON;
+            FIR_LEPTON_RETRY:
+            cambus_init(&fir_bus, OMV_FIR_LEPTON_I2C_BUS, OMV_FIR_LEPTON_I2C_BUS_SPEED);
+
+            int error = fir_lepton_init();
+
+            if (error != 0) {
+                if (first_init) {
+                    first_init = false;
+                    cambus_pulse_scl(&fir_bus);
+                    goto FIR_LEPTON_RETRY;
+                } else {
+                    py_fir_deinit();
+                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                                                       "Failed to init the Lepton!"));
+                }
+            }
+
+            return mp_const_none;
+        }
+        #endif
         default: {
             nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid sensor type!"));
         }
@@ -412,6 +448,10 @@ static mp_obj_t py_fir_refresh()
             return mp_obj_new_int(mlx_90640_refresh_rates[fir_ir_fresh_rate]);
         case FIR_AMG8833:
             return mp_obj_new_int(fir_ir_fresh_rate);
+        #if defined(OMV_FIR_LEPTON_PRESENT)
+        case FIR_LEPTON:
+            return mp_obj_new_int(fir_ir_fresh_rate);
+        #endif
         default:
             return mp_const_none;
     }
@@ -429,11 +469,49 @@ static mp_obj_t py_fir_resolution()
             return mp_obj_new_int(fir_adc_resolution + 16);
         case FIR_AMG8833:
             return mp_obj_new_int(fir_adc_resolution);
+        #if defined(OMV_FIR_LEPTON_PRESENT)
+        case FIR_LEPTON:
+            return mp_obj_new_int(fir_adc_resolution);
+        #endif
         default:
             return mp_const_none;
     }
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_resolution_obj, py_fir_resolution);
+
+#if defined(OMV_FIR_LEPTON_PRESENT)
+static mp_obj_t py_fir_radiometric()
+{
+    if (fir_sensor == FIR_LEPTON) {
+        return fir_lepton_get_radiometry();
+    }
+
+    return mp_const_true;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_radiometric_obj, py_fir_radiometric);
+
+#if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
+static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb)
+{
+    if (fir_sensor == FIR_LEPTON) {
+        fir_lepton_register_vsync_cb(cb);
+    }
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_vsync_cb_obj, py_fir_register_vsync_cb);
+#endif
+
+static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
+{
+    if (fir_sensor == FIR_LEPTON) {
+        fir_lepton_trigger_ffc(n_args, args, kw_args);
+    }
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_trigger_ffc_obj, 0, py_fir_trigger_ffc);
+#endif
 
 mp_obj_t py_fir_read_ta()
 {
@@ -467,6 +545,11 @@ mp_obj_t py_fir_read_ta()
             PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
             return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
         }
+        #if defined(OMV_FIR_LEPTON_PRESENT)
+        case FIR_LEPTON: {
+            return fir_lepton_read_ta();
+        }
+        #endif
     }
 
     return mp_const_none;
@@ -510,6 +593,11 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             fb_alloc_free_till_mark();
             return result;
         }
+        #if defined(OMV_FIR_LEPTON_PRESENT)
+        case FIR_LEPTON: {
+            return fir_lepton_read_ir(arg_hmirror, arg_vflip, fir_transposed);
+        }
+        #endif
     }
 
     return mp_const_none;
@@ -831,6 +919,13 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             fb_free();
             break;
         }
+        #if defined(OMV_FIR_LEPTON_PRESENT)
+        case FIR_LEPTON: {
+            fir_lepton_fill_image(&src_img, !scale_obj, min, max,
+                                  arg_hmirror, arg_vflip, arg_transpose);
+            break;
+        }
+        #endif
         default: {
             break;
         }
@@ -847,27 +942,43 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_snapshot_obj, 0, py_fir_snapshot);
 
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__),        MP_ROM_QSTR(MP_QSTR_fir)            },
-    { MP_ROM_QSTR(MP_QSTR_FIR_NONE),        MP_ROM_INT(FIR_NONE)                },
-    { MP_ROM_QSTR(MP_QSTR_FIR_SHIELD),      MP_ROM_INT(FIR_MLX90621)            },
-    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90621),    MP_ROM_INT(FIR_MLX90621)            },
-    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90640),    MP_ROM_INT(FIR_MLX90640)            },
-    { MP_ROM_QSTR(MP_QSTR_FIR_AMG8833),     MP_ROM_INT(FIR_AMG8833)             },
-    { MP_ROM_QSTR(MP_QSTR_PALETTE_RAINBOW), MP_ROM_INT(COLOR_PALETTE_RAINBOW)   },
-    { MP_ROM_QSTR(MP_QSTR_PALETTE_IRONBOW), MP_ROM_INT(COLOR_PALETTE_IRONBOW)   },
-    { MP_ROM_QSTR(MP_QSTR_GRAYSCALE),       MP_ROM_INT(PIXFORMAT_GRAYSCALE)     },
-    { MP_ROM_QSTR(MP_QSTR_RGB565),          MP_ROM_INT(PIXFORMAT_RGB565)        },
-    { MP_ROM_QSTR(MP_QSTR_init),            MP_ROM_PTR(&py_fir_init_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_deinit),          MP_ROM_PTR(&py_fir_deinit_obj)      },
-    { MP_ROM_QSTR(MP_QSTR_type),            MP_ROM_PTR(&py_fir_type_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_width),           MP_ROM_PTR(&py_fir_width_obj)       },
-    { MP_ROM_QSTR(MP_QSTR_height),          MP_ROM_PTR(&py_fir_height_obj)      },
-    { MP_ROM_QSTR(MP_QSTR_refresh),         MP_ROM_PTR(&py_fir_refresh_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_resolution),      MP_ROM_PTR(&py_fir_resolution_obj)  },
-    { MP_ROM_QSTR(MP_QSTR_read_ta),         MP_ROM_PTR(&py_fir_read_ta_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_read_ir),         MP_ROM_PTR(&py_fir_read_ir_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_draw_ir),         MP_ROM_PTR(&py_fir_draw_ir_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_snapshot),        MP_ROM_PTR(&py_fir_snapshot_obj)    }
+    { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_fir)                    },
+    { MP_ROM_QSTR(MP_QSTR_FIR_NONE),            MP_ROM_INT(FIR_NONE)                        },
+    { MP_ROM_QSTR(MP_QSTR_FIR_SHIELD),          MP_ROM_INT(FIR_MLX90621)                    },
+    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90621),        MP_ROM_INT(FIR_MLX90621)                    },
+    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90640),        MP_ROM_INT(FIR_MLX90640)                    },
+    { MP_ROM_QSTR(MP_QSTR_FIR_AMG8833),         MP_ROM_INT(FIR_AMG8833)                     },
+#if defined(OMV_FIR_LEPTON_PRESENT)
+    { MP_ROM_QSTR(MP_QSTR_FIR_LEPTON),          MP_ROM_INT(FIR_LEPTON)                      },
+#endif
+    { MP_ROM_QSTR(MP_QSTR_PALETTE_RAINBOW),     MP_ROM_INT(COLOR_PALETTE_RAINBOW)           },
+    { MP_ROM_QSTR(MP_QSTR_PALETTE_IRONBOW),     MP_ROM_INT(COLOR_PALETTE_IRONBOW)           },
+    { MP_ROM_QSTR(MP_QSTR_GRAYSCALE),           MP_ROM_INT(PIXFORMAT_GRAYSCALE)             },
+    { MP_ROM_QSTR(MP_QSTR_RGB565),              MP_ROM_INT(PIXFORMAT_RGB565)                },
+    { MP_ROM_QSTR(MP_QSTR_init),                MP_ROM_PTR(&py_fir_init_obj)                },
+    { MP_ROM_QSTR(MP_QSTR_deinit),              MP_ROM_PTR(&py_fir_deinit_obj)              },
+    { MP_ROM_QSTR(MP_QSTR_type),                MP_ROM_PTR(&py_fir_type_obj)                },
+    { MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_fir_width_obj)               },
+    { MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_fir_height_obj)              },
+    { MP_ROM_QSTR(MP_QSTR_refresh),             MP_ROM_PTR(&py_fir_refresh_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_resolution),          MP_ROM_PTR(&py_fir_resolution_obj)          },
+#if defined(OMV_FIR_LEPTON_PRESENT)
+    { MP_ROM_QSTR(MP_QSTR_radiometric),         MP_ROM_PTR(&py_fir_radiometric_obj)         },
+#if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
+    { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_fir_register_vsync_cb_obj)   },
+#else
+    { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
+#endif
+    { MP_ROM_QSTR(MP_QSTR_trigger_ffc),         MP_ROM_PTR(&py_fir_trigger_ffc_obj)         },
+#else
+    { MP_ROM_QSTR(MP_QSTR_radiometric),         MP_ROM_PTR(&py_func_unavailable_obj)        },
+    { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
+    { MP_ROM_QSTR(MP_QSTR_trigger_ffc),         MP_ROM_PTR(&py_func_unavailable_obj)        },
+#endif
+    { MP_ROM_QSTR(MP_QSTR_read_ta),             MP_ROM_PTR(&py_fir_read_ta_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_read_ir),             MP_ROM_PTR(&py_fir_read_ir_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_draw_ir),             MP_ROM_PTR(&py_fir_draw_ir_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_snapshot),            MP_ROM_PTR(&py_fir_snapshot_obj)            }
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);

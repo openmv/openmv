@@ -148,7 +148,7 @@
 #define OMV_FB_SIZE                     (32M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE               (31M)       // minimum fb alloc size
 #define OMV_STACK_SIZE                  (64K)
-#define OMV_HEAP_SIZE                   (244K)
+#define OMV_HEAP_SIZE                   (240K)
 #define OMV_SDRAM_SIZE                  (64 * 1024 * 1024) // This needs to be here for UVC firmware.
 
 #define OMV_LINE_BUF_SIZE               (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
@@ -590,6 +590,58 @@
 // HDMI CEC I/O
 #define OMV_CEC_PRESENT
 #define OMV_CEC_PIN                         (pin_H2)
+
+// FIR Lepton
+#define OMV_FIR_LEPTON_PRESENT
+#define OMV_FIR_LEPTON_I2C_BUS                  (ISC_I2C_ID)
+#define OMV_FIR_LEPTON_I2C_BUS_SPEED            (ISC_I2C_SPEED)
+#define OMV_FIR_LEPTON_CONTROLLER               (&spi_obj[2])
+#define OMV_FIR_LEPTON_CONTROLLER_INSTANCE      (SPI3)
+
+#define OMV_FIR_LEPTON_MOSI_PIN                 (GPIO_PIN_5)
+#define OMV_FIR_LEPTON_MOSI_PORT                (GPIOB)
+#define OMV_FIR_LEPTON_MOSI_ALT                 (GPIO_AF7_SPI3)
+
+#define OMV_FIR_LEPTON_MISO_PIN                 (GPIO_PIN_4)
+#define OMV_FIR_LEPTON_MISO_PORT                (GPIOB)
+#define OMV_FIR_LEPTON_MISO_ALT                 (GPIO_AF6_SPI3)
+
+#define OMV_FIR_LEPTON_SCLK_PIN                 (GPIO_PIN_3)
+#define OMV_FIR_LEPTON_SCLK_PORT                (GPIOB)
+#define OMV_FIR_LEPTON_SCLK_ALT                 (GPIO_AF6_SPI3)
+
+#define OMV_FIR_LEPTON_CS_PIN                   (GPIO_PIN_15)
+#define OMV_FIR_LEPTON_CS_PORT                  (GPIOA)
+#define OMV_FIR_LEPTON_CS_HIGH()                HAL_GPIO_WritePin(OMV_FIR_LEPTON_CS_PORT, OMV_FIR_LEPTON_CS_PIN, GPIO_PIN_SET)
+#define OMV_FIR_LEPTON_CS_LOW()                 HAL_GPIO_WritePin(OMV_FIR_LEPTON_CS_PORT, OMV_FIR_LEPTON_CS_PIN, GPIO_PIN_RESET)
+
+#define OMV_FIR_LEPTON_RST_PIN_PRESENT
+#define OMV_FIR_LEPTON_RST_PIN                  (GPIO_PIN_5)
+#define OMV_FIR_LEPTON_RST_PORT                 (GPIOD)
+#define OMV_FIR_LEPTON_RST_HIGH()               HAL_GPIO_WritePin(OMV_FIR_LEPTON_RST_PORT, OMV_FIR_LEPTON_RST_PIN, GPIO_PIN_SET)
+#define OMV_FIR_LEPTON_RST_LOW()                HAL_GPIO_WritePin(OMV_FIR_LEPTON_RST_PORT, OMV_FIR_LEPTON_RST_PIN, GPIO_PIN_RESET)
+
+#define OMV_FIR_LEPTON_PWDN_PIN_PRESENT
+#define OMV_FIR_LEPTON_PWDN_PIN                 (GPIO_PIN_4)
+#define OMV_FIR_LEPTON_PWDN_PORT                (GPIOD)
+#define OMV_FIR_LEPTON_PWDN_HIGH()              HAL_GPIO_WritePin(OMV_FIR_LEPTON_PWDN_PORT, OMV_FIR_LEPTON_PWDN_PIN, GPIO_PIN_SET)
+#define OMV_FIR_LEPTON_PWDN_LOW()               HAL_GPIO_WritePin(OMV_FIR_LEPTON_PWDN_PORT, OMV_FIR_LEPTON_PWDN_PIN, GPIO_PIN_RESET)
+
+#define OMV_FIR_LEPTON_VSYNC_PRESENT
+#define OMV_FIR_LEPTON_VSYNC_PIN                (pin_E3)
+
+#define OMV_FIR_LEPTON_MCLK_PIN                 (GPIO_PIN_3)
+#define OMV_FIR_LEPTON_MCLK_PORT                (GPIOA)
+#define OMV_FIR_LEPTON_MCLK_ALT                 (GPIO_AF4_TIM15)
+#define OMV_FIR_LEPTON_MCLK_FREQ                (24000000)
+
+#define OMV_FIR_LEPTON_MCLK_TIM                 (TIM15)
+#define OMV_FIR_LEPTON_MCLK_TIM_CHANNEL         (TIM_CHANNEL_2)
+#define OMV_FIR_LEPTON_MCLK_TIM_CLK_ENABLE()    __HAL_RCC_TIM15_CLK_ENABLE()
+#define OMV_FIR_LEPTON_MCLK_TIM_CLK_DISABLE()   __HAL_RCC_TIM15_CLK_DISABLE()
+#define OMV_FIR_LEPTON_MCLK_TIM_FORCE_RESET()   __HAL_RCC_TIM15_FORCE_RESET()
+#define OMV_FIR_LEPTON_MCLK_TIM_RELEASE_RESET() __HAL_RCC_TIM15_RELEASE_RESET()
+#define OMV_FIR_LEPTON_MCLK_TIM_PCLK_FREQ()     HAL_RCC_GetPCLK2Freq()
 
 // Enable additional GPIO banks for DRAM...
 #define OMV_ENABLE_GPIO_BANK_F
