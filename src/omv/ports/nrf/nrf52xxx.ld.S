@@ -23,6 +23,8 @@ MEMORY
 
 _heap_size  = OMV_HEAP_SIZE;    /* required amount of heap */
 _stack_size = OMV_STACK_SIZE;   /* minimum amount of stack */
+_fs_start   = OMV_TEXT_ORIGIN + OMV_TEXT_LENGTH;
+_fs_end     = OMV_TEXT_ORIGIN + OMV_TEXT_LENGTH + 64K;
 
 /* define output sections */
 SECTIONS
