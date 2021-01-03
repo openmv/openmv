@@ -156,7 +156,7 @@ static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror, bool 
 {
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
     float min = FLT_MAX;
-    float max = FLT_MIN;
+    float max = -FLT_MAX;
     int w_1 = w - 1;
     int h_1 = h - 1;
 
@@ -637,7 +637,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, offset + 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
-    float min = FLT_MAX, max = FLT_MIN;
+    float min = FLT_MAX, max = -FLT_MAX;
 
     if (scale_obj) {
         mp_obj_t *arg_scale;
