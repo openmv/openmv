@@ -84,6 +84,8 @@ extern "C"
        #include <stdbool.h>
     #endif
 
+    #include "cambus.h"
+
 /******************************************************************************/
 /** EXPORTED DEFINES                                                         **/
 /******************************************************************************/
@@ -211,7 +213,7 @@ extern "C"
         LEP_CCI_TWI=0,
         LEP_CCI_SPI,
         LEP_END_CCI_PORTS,
-        
+
         LEP_CCI_PORTS_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     }LEP_CAMERA_PORT_E, *LEP_CAMERA_PORT_E_PTR;
 
@@ -228,7 +230,7 @@ extern "C"
         /* SPI Devices */
 
         LEP_END_PROTOCOL_DEVICE,
-        
+
         LEP_PROTOCOL_DEVICE_MAKE_32_BIT_ENUM = 0x7FFFFFFF
     } LEP_PROTOCOL_DEVICE_E, *LEP_PROTOCOL_DEVICE_E_PTR;
 
@@ -260,7 +262,7 @@ extern "C"
     */
     typedef struct  LEP_CAMERA_PORT_DESC_T_TAG
     {
-        LEP_UINT16  portID;
+        cambus_t *bus;
         LEP_CAMERA_PORT_E   portType;
         LEP_UINT16  portBaudRate;
         LEP_UINT8 deviceAddress;
@@ -281,5 +283,3 @@ extern "C"
 }
     #endif
 #endif   // _FLIR_TYPES_H_
-
-

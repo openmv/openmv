@@ -361,10 +361,8 @@ int fir_lepton_init()
     LEP_RAD_ENABLE_E rad;
     LEP_AGC_ROI_T roi;
 
-    LEP_I2C_Init(&fir_bus);
-
     for (uint32_t start = systick_current_millis();; systick_sleep(1)) {
-        if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &fir_lepton_handle) == LEP_OK) {
+        if (LEP_OpenPort(&fir_bus, LEP_CCI_TWI, 0, &fir_lepton_handle) == LEP_OK) {
             break;
         }
 
