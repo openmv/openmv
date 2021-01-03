@@ -92,7 +92,7 @@
 #define OMV_JPEG_BUF_SIZE   (16 * 1024) // IDE JPEG buffer (header + data).
 
 #define OMV_TEXT_ORIGIN     0x00026000
-#define OMV_TEXT_LENGTH     808K        // FLASH_SIZE - SD_SIZE - FS_SIZE
+#define OMV_TEXT_LENGTH     808K        // FLASH_SIZE - SD_SIZE - FS_SIZE 1024-152-64
 #define OMV_SRAM_ORIGIN     0x20004000  // Reserve 16K for SD memory.
 #define OMV_SRAM_LENGTH     240K        // RAM_SIZE - SD_RAM_SIZE
 
