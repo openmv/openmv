@@ -200,7 +200,7 @@ float fast_powf(float a, float b)
 
 void fast_get_min_max(float *data, size_t data_len, float *p_min, float *p_max)
 {
-    float min = FLT_MAX, max = FLT_MIN;
+    float min = FLT_MAX, max = -FLT_MAX;
 
     for (size_t i = 0; i < data_len; i++) {
         float temp = data[i];
