@@ -81,9 +81,17 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
         .interrupt_priority = PDM_IRQ_PRIORITY,
     };
 
+    // Enable high frequency oscillator if not already enabled
+    if (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) {
+        NRF_CLOCK->TASKS_HFCLKSTART    = 1;
+        while (NRF_CLOCK->EVENTS_HFCLKSTARTED == 0) {
+        }
+    }
+
     // configure the sample rate and channels
     switch (frequency) {
         case 16000:
+            NRF_PDM->RATIO = ((PDM_RATIO_RATIO_Ratio80 << PDM_RATIO_RATIO_Pos) & PDM_RATIO_RATIO_Msk);
             nrfx_pdm_config.clock_freq = NRF_PDM_FREQ_1280K;
             break;
         case 41667:
