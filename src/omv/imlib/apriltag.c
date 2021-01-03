@@ -11880,7 +11880,7 @@ zarray_t *apriltag_detector_detect(apriltag_detector_t *td, image_u8_t *im_orig)
                     if (pref == 0) {
                         // at this point, we should only be undecided if the tag detections
                         // are *exactly* the same. How would that happen?
-                        printf("uh oh, no preference for overlappingdetection\n");
+                        // printf("uh oh, no preference for overlappingdetection\n");
                     }
 
                     if (pref < 0) {
@@ -12189,7 +12189,7 @@ void imlib_find_rects(list_t *out, image_t *ptr, rectangle_t *roi, uint32_t thre
                     if (pref == 0) {
                         // at this point, we should only be undecided if the tag detections
                         // are *exactly* the same. How would that happen?
-                        printf("uh oh, no preference for overlappingdetection\n");
+                        // printf("uh oh, no preference for overlappingdetection\n");
                     }
 
                     if (pref < 0) {
