@@ -134,15 +134,19 @@ static void fir_AMG8833_get_frame(float *Ta, float *To)
 {
     int16_t temp;
     int error = 0;
-    error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
-    error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), CAMBUS_XFER_NO_FLAGS);
+    error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR,
+            (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
+    error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR,
+            (uint8_t *) &temp, sizeof(temp), CAMBUS_XFER_NO_FLAGS);
     PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     *Ta = AMG8833_12_TO_16(temp) * 0.0625f;
 
     int16_t *data = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(int16_t), FB_ALLOC_NO_HINT);
-    error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_TEMPERATURE_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
-    error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) data, AMG8833_WIDTH * AMG8833_HEIGHT * 2, CAMBUS_XFER_NO_FLAGS);
+    error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR,
+            (uint8_t [1]){AMG8833_TEMPERATURE_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
+    error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR,
+            (uint8_t *) data, AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(uint16_t), CAMBUS_XFER_NO_FLAGS);
     PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
 
     for (int i = 0, ii = AMG8833_WIDTH * AMG8833_HEIGHT; i < ii; i++) {
@@ -152,7 +156,8 @@ static void fir_AMG8833_get_frame(float *Ta, float *To)
     fb_free();
 }
 
-static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To, bool mirror, bool flip, bool dst_transpose, bool src_transpose)
+static mp_obj_t fir_get_ir(int w, int h, float Ta, float *To,
+                           bool mirror, bool flip, bool dst_transpose, bool src_transpose)
 {
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
     float min = FLT_MAX;
@@ -256,19 +261,40 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             return mp_const_none;
         }
         case FIR_MLX90621: {
-            // parse refresh rate and ADC resolution
-            int ir_fresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 64);
-            int adc_resolution = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 18);
+            int ir_fresh_rate = py_helper_keyword_int(n_args, args,
+                    1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 64);
 
-            // sanitize values
-            ir_fresh_rate = 14 - __CLZ(__RBIT((ir_fresh_rate > 512) ? 512 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate)));
-            adc_resolution = ((adc_resolution > 18) ? 18 : ((adc_resolution < 15) ? 15 : adc_resolution)) - 15;
+            if (ir_fresh_rate > 512) {
+                ir_fresh_rate = 512;
+            }
+
+            if (ir_fresh_rate < 1) {
+                ir_fresh_rate = 1;
+            }
+
+            // Map to [0:15]
+            ir_fresh_rate = 14 - __CLZ(__RBIT(ir_fresh_rate));
+
+            int adc_resolution = py_helper_keyword_int(n_args, args,
+                    2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 18);
+
+            if (adc_resolution > 18) {
+                adc_resolution = 18;
+            }
+
+            if (adc_resolution < 15) {
+                adc_resolution = 15;
+            }
+
+            // Map to [0:3]
+            adc_resolution = adc_resolution - 15;
 
             fir_mlx_data = xalloc(sizeof(paramsMLX90621));
 
             fir_sensor = FIR_MLX90621;
             FIR_MLX90621_RETRY:
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            // The EEPROM must be read at <= 400KHz.
+            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FULL);
             MLX90621_I2CInit(&fir_bus);
 
             fb_alloc_mark();
@@ -287,7 +313,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     goto FIR_MLX90621_RETRY;
                 } else {
                     py_fir_deinit();
-                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the MLX90621!"));
+                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                                                       "Failed to init the MLX90621!"));
                 }
             }
 
@@ -301,19 +328,40 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             return mp_const_none;
         }
         case FIR_MLX90640: {
-            // parse refresh rate and ADC resolution
-            int ir_fresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 32);
-            int adc_resolution = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 19);
+            int ir_fresh_rate = py_helper_keyword_int(n_args, args,
+                    1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 32);
 
-            // sanitize values
-            ir_fresh_rate = __CLZ(__RBIT((ir_fresh_rate > 64) ? 64 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate))) + 1;
-            adc_resolution = ((adc_resolution > 19) ? 19 : ((adc_resolution < 16) ? 16 : adc_resolution)) - 16;
+            if (ir_fresh_rate > 64) {
+                ir_fresh_rate = 64;
+            }
+
+            if (ir_fresh_rate < 1) {
+                ir_fresh_rate = 1;
+            }
+
+            // Map to [0:7]
+            ir_fresh_rate = __CLZ(__RBIT(ir_fresh_rate)) + 1;
+
+            int adc_resolution = py_helper_keyword_int(n_args, args,
+                    2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 19);
+
+            if (adc_resolution > 19) {
+                adc_resolution = 19;
+            }
+
+            if (adc_resolution < 16) {
+                adc_resolution = 16;
+            }
+
+            // Map to [0:3]
+            adc_resolution = adc_resolution - 16;
 
             fir_mlx_data = xalloc(sizeof(paramsMLX90640));
 
             fir_sensor = FIR_MLX90640;
             FIR_MLX90640_RETRY:
-            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            // The EEPROM must be read at <= 400KHz.
+            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FULL);
             MLX90640_I2CInit(&fir_bus);
 
             fb_alloc_mark();
@@ -331,7 +379,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     goto FIR_MLX90640_RETRY;
                 } else {
                     py_fir_deinit();
-                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the MLX90640!"));
+                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                                                       "Failed to init the MLX90640!"));
                 }
             }
 
@@ -350,8 +399,10 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
 
             int error = 0;
-            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_RESET_REGISTER}, 1, CAMBUS_XFER_SUSPEND);
-            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_INITIAL_RESET_VALUE}, 1, CAMBUS_XFER_NO_FLAGS);
+            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR,
+                    (uint8_t [1]){AMG8833_RESET_REGISTER}, 1, CAMBUS_XFER_SUSPEND);
+            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR,
+                    (uint8_t [1]){AMG8833_INITIAL_RESET_VALUE}, 1, CAMBUS_XFER_NO_FLAGS);
             if (error != 0) {
                 if (first_init) {
                     first_init = false;
@@ -359,7 +410,8 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     goto FIR_AMG8833_RETRY;
                 } else {
                     py_fir_deinit();
-                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the AMG8833!"));
+                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                                                       "Failed to init the AMG8833!"));
                 }
             }
 
@@ -401,8 +453,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_height_obj, py_fir_height);
 
 static mp_obj_t py_fir_refresh()
 {
-    const int mlx_90621_refresh_rates[16] = {512, 512, 512, 512, 512, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0};
-    const int mlx_90640_refresh_rates[8] = {0, 1, 2, 4, 8, 16, 32, 64};
+    const int mlx_90621_refresh_rates[16] =
+            {512, 512, 512, 512, 512, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0};
+    const int mlx_90640_refresh_rates[8] =
+            {0, 1, 2, 4, 8, 16, 32, 64};
     switch (fir_sensor) {
         case FIR_NONE:
             return mp_const_none;
@@ -462,8 +516,10 @@ mp_obj_t py_fir_read_ta()
         case FIR_AMG8833: {
             int16_t temp;
             int error = 0;
-            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR, (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
-            error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR, (uint8_t *) &temp, sizeof(temp), CAMBUS_XFER_NO_FLAGS);
+            error |= cambus_write_bytes(&fir_bus, AMG8833_ADDR,
+                    (uint8_t [1]){AMG8833_THERMISTOR_REGISTER}, 1, CAMBUS_XFER_NO_STOP);
+            error |= cambus_read_bytes(&fir_bus, AMG8833_ADDR,
+                    (uint8_t *) &temp, sizeof(temp), CAMBUS_XFER_NO_FLAGS);
             PY_ASSERT_TRUE_MSG((error == 0), "Failed to read the AMG8833 sensor data!");
             return mp_obj_new_float(AMG8833_12_TO_16(temp) * 0.0625f);
         }
@@ -591,33 +647,44 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         arg_y_scale = tmp_scale;
     }
 
-    int arg_rgb_channel = py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
+    int arg_rgb_channel = py_helper_keyword_int(n_args, args,
+            offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
+
     if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
     }
 
-    int arg_alpha = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
+    int arg_alpha = py_helper_keyword_int(n_args, args,
+            offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
+
     if ((arg_alpha < 0) || (256 < arg_alpha)) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
     }
 
-    const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, offset + 5, kw_args, rainbow_table);
-    const uint8_t *alpha_palette = py_helper_keyword_alpha_palette(n_args, args, offset + 6, kw_args, NULL);
+    const uint16_t *color_palette =
+            py_helper_keyword_color_palette(n_args, args, offset + 5, kw_args, rainbow_table);
+    const uint8_t *alpha_palette =
+            py_helper_keyword_alpha_palette(n_args, args, offset + 6, kw_args, NULL);
 
-    image_hint_t hint = py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
+    image_hint_t hint =
+            py_helper_keyword_int(n_args, args, offset + 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
 
     int arg_x_size;
-    bool got_x_size = py_helper_keyword_int_maybe(n_args, args, offset + 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
+    bool got_x_size = py_helper_keyword_int_maybe(n_args, args,
+            offset + 8, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
 
     int arg_y_size;
-    bool got_y_size = py_helper_keyword_int_maybe(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
+    bool got_y_size = py_helper_keyword_int_maybe(n_args, args,
+            offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
 
     if (got_x_scale && got_x_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                "Choose either x_scale or x_size not both!"));
     }
 
     if (got_y_scale && got_y_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                "Choose either y_scale or y_size not both!"));
     }
 
     if (got_x_size) {
@@ -636,8 +703,11 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         arg_y_scale = arg_x_scale;
     }
 
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, offset + 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
-    float min = FLT_MAX, max = FLT_MIN;
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args,
+            offset + 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
+
+    float min = FLT_MAX;
+    float max = FLT_MIN;
 
     if (scale_obj) {
         mp_obj_t *arg_scale;
@@ -647,9 +717,11 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     } else {
         for (int i = 0, ii = src_img.w * src_img.h; i < ii; i++) {
             float temp = mp_obj_get_float(arg_to[i]);
+
             if (temp < min) {
                 min = temp;
             }
+
             if (temp > max) {
                 max = temp;
             }
@@ -672,7 +744,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_draw_ir_obj, 2, py_fir_draw_ir);
 
 mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    if (fir_sensor == FIR_NONE) return mp_const_none;
+    if (fir_sensor == FIR_NONE) {
+        return mp_const_none;
+    }
 
     bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
@@ -684,41 +758,54 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     src_img.h = arg_transpose ? fir_width : fir_height;
 
     float arg_x_scale = 1.f;
-    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
+    bool got_x_scale = py_helper_keyword_float_maybe(n_args, args,
+            3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
 
     float arg_y_scale = 1.f;
-    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
+    bool got_y_scale = py_helper_keyword_float_maybe(n_args, args,
+            4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_scale), &arg_y_scale);
 
     rectangle_t arg_roi;
     py_helper_keyword_rectangle_roi(&src_img, n_args, args, 5, kw_args, &arg_roi);
 
-    int arg_rgb_channel = py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
+    int arg_rgb_channel = py_helper_keyword_int(n_args, args,
+            6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
+
     if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
     }
 
-    int arg_alpha = py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
+    int arg_alpha = py_helper_keyword_int(n_args, args,
+            7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
+
     if ((arg_alpha < 0) || (256 < arg_alpha)) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
     }
 
-    const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, 8, kw_args, rainbow_table);
-    const uint8_t *alpha_palette = py_helper_keyword_alpha_palette(n_args, args, 9, kw_args, NULL);
+    const uint16_t *color_palette =
+            py_helper_keyword_color_palette(n_args, args, 8, kw_args, rainbow_table);
+    const uint8_t *alpha_palette =
+            py_helper_keyword_alpha_palette(n_args, args, 9, kw_args, NULL);
 
-    image_hint_t hint = py_helper_keyword_int(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
+    image_hint_t hint =
+            py_helper_keyword_int(n_args, args, 10, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hint), 0);
 
     int arg_x_size;
-    bool got_x_size = py_helper_keyword_int_maybe(n_args, args, 11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
+    bool got_x_size = py_helper_keyword_int_maybe(n_args, args,
+            11, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_size), &arg_x_size);
 
     int arg_y_size;
-    bool got_y_size = py_helper_keyword_int_maybe(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
+    bool got_y_size = py_helper_keyword_int_maybe(n_args, args,
+            12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
 
     if (got_x_scale && got_x_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                "Choose either x_scale or x_size not both!"));
     }
 
     if (got_y_scale && got_y_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
+                "Choose either y_scale or y_size not both!"));
     }
 
     if (got_x_size) {
@@ -737,8 +824,11 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         arg_y_scale = arg_x_scale;
     }
 
-    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args, 13, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
-    float min, max;
+    mp_obj_t scale_obj = py_helper_keyword_object(n_args, args,
+            13, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_scale), NULL);
+
+    float min;
+    float max;
 
     if (scale_obj) {
         mp_obj_t *arg_scale;
@@ -747,12 +837,16 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         max = mp_obj_get_float(arg_scale[1]);
     }
 
-    int arg_pixformat = py_helper_keyword_int(n_args, args, 14, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixformat), PIXFORMAT_RGB565);
+    int arg_pixformat = py_helper_keyword_int(n_args, args,
+            14, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixformat), PIXFORMAT_RGB565);
+
     if ((arg_pixformat != PIXFORMAT_GRAYSCALE) && (arg_pixformat != PIXFORMAT_RGB565)) {
         nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pixformat!"));
     }
 
-    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 15, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
+    mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args,
+            15, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);
+
     bool copy_to_fb = false;
     image_t *arg_other = NULL;
 
@@ -847,27 +941,27 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_fir_snapshot_obj, 0, py_fir_snapshot);
 
 STATIC const mp_rom_map_elem_t globals_dict_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__),        MP_ROM_QSTR(MP_QSTR_fir)            },
-    { MP_ROM_QSTR(MP_QSTR_FIR_NONE),        MP_ROM_INT(FIR_NONE)                },
-    { MP_ROM_QSTR(MP_QSTR_FIR_SHIELD),      MP_ROM_INT(FIR_MLX90621)            },
-    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90621),    MP_ROM_INT(FIR_MLX90621)            },
-    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90640),    MP_ROM_INT(FIR_MLX90640)            },
-    { MP_ROM_QSTR(MP_QSTR_FIR_AMG8833),     MP_ROM_INT(FIR_AMG8833)             },
-    { MP_ROM_QSTR(MP_QSTR_PALETTE_RAINBOW), MP_ROM_INT(COLOR_PALETTE_RAINBOW)   },
-    { MP_ROM_QSTR(MP_QSTR_PALETTE_IRONBOW), MP_ROM_INT(COLOR_PALETTE_IRONBOW)   },
-    { MP_ROM_QSTR(MP_QSTR_GRAYSCALE),       MP_ROM_INT(PIXFORMAT_GRAYSCALE)     },
-    { MP_ROM_QSTR(MP_QSTR_RGB565),          MP_ROM_INT(PIXFORMAT_RGB565)        },
-    { MP_ROM_QSTR(MP_QSTR_init),            MP_ROM_PTR(&py_fir_init_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_deinit),          MP_ROM_PTR(&py_fir_deinit_obj)      },
-    { MP_ROM_QSTR(MP_QSTR_type),            MP_ROM_PTR(&py_fir_type_obj)        },
-    { MP_ROM_QSTR(MP_QSTR_width),           MP_ROM_PTR(&py_fir_width_obj)       },
-    { MP_ROM_QSTR(MP_QSTR_height),          MP_ROM_PTR(&py_fir_height_obj)      },
-    { MP_ROM_QSTR(MP_QSTR_refresh),         MP_ROM_PTR(&py_fir_refresh_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_resolution),      MP_ROM_PTR(&py_fir_resolution_obj)  },
-    { MP_ROM_QSTR(MP_QSTR_read_ta),         MP_ROM_PTR(&py_fir_read_ta_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_read_ir),         MP_ROM_PTR(&py_fir_read_ir_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_draw_ir),         MP_ROM_PTR(&py_fir_draw_ir_obj)     },
-    { MP_ROM_QSTR(MP_QSTR_snapshot),        MP_ROM_PTR(&py_fir_snapshot_obj)    }
+    { MP_ROM_QSTR(MP_QSTR___name__),            MP_ROM_QSTR(MP_QSTR_fir)                    },
+    { MP_ROM_QSTR(MP_QSTR_FIR_NONE),            MP_ROM_INT(FIR_NONE)                        },
+    { MP_ROM_QSTR(MP_QSTR_FIR_SHIELD),          MP_ROM_INT(FIR_MLX90621)                    },
+    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90621),        MP_ROM_INT(FIR_MLX90621)                    },
+    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90640),        MP_ROM_INT(FIR_MLX90640)                    },
+    { MP_ROM_QSTR(MP_QSTR_FIR_AMG8833),         MP_ROM_INT(FIR_AMG8833)                     },
+    { MP_ROM_QSTR(MP_QSTR_PALETTE_RAINBOW),     MP_ROM_INT(COLOR_PALETTE_RAINBOW)           },
+    { MP_ROM_QSTR(MP_QSTR_PALETTE_IRONBOW),     MP_ROM_INT(COLOR_PALETTE_IRONBOW)           },
+    { MP_ROM_QSTR(MP_QSTR_GRAYSCALE),           MP_ROM_INT(PIXFORMAT_GRAYSCALE)             },
+    { MP_ROM_QSTR(MP_QSTR_RGB565),              MP_ROM_INT(PIXFORMAT_RGB565)                },
+    { MP_ROM_QSTR(MP_QSTR_init),                MP_ROM_PTR(&py_fir_init_obj)                },
+    { MP_ROM_QSTR(MP_QSTR_deinit),              MP_ROM_PTR(&py_fir_deinit_obj)              },
+    { MP_ROM_QSTR(MP_QSTR_type),                MP_ROM_PTR(&py_fir_type_obj)                },
+    { MP_ROM_QSTR(MP_QSTR_width),               MP_ROM_PTR(&py_fir_width_obj)               },
+    { MP_ROM_QSTR(MP_QSTR_height),              MP_ROM_PTR(&py_fir_height_obj)              },
+    { MP_ROM_QSTR(MP_QSTR_refresh),             MP_ROM_PTR(&py_fir_refresh_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_resolution),          MP_ROM_PTR(&py_fir_resolution_obj)          },
+    { MP_ROM_QSTR(MP_QSTR_read_ta),             MP_ROM_PTR(&py_fir_read_ta_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_read_ir),             MP_ROM_PTR(&py_fir_read_ir_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_draw_ir),             MP_ROM_PTR(&py_fir_draw_ir_obj)             },
+    { MP_ROM_QSTR(MP_QSTR_snapshot),            MP_ROM_PTR(&py_fir_snapshot_obj)            }
 };
 
 STATIC MP_DEFINE_CONST_DICT(globals_dict, globals_dict_table);
