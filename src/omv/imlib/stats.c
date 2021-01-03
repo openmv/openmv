@@ -129,7 +129,7 @@ void imlib_get_similarity(image_t *img, const char *path, image_t *other, int sc
     state.similarity_sum = 0.0f;
     state.similarity_sum_2 = 0.0f;
     state.similarity_min = FLT_MAX;
-    state.similarity_max = FLT_MIN;
+    state.similarity_max = -FLT_MAX;
     state.lines_processed = 0;
 
     imlib_image_operation(img, path, other, scalar, imlib_similarity_line_op, &state);
