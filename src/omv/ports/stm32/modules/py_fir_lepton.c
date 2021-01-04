@@ -37,11 +37,6 @@ static volatile int framebuffer_head = 0;
 static int framebuffer_tail = 0;
 static uint16_t *framebuffers[FRAMEBUFFER_COUNT] = {};
 
-extern cambus_t fir_bus;
-extern int fir_width;
-extern int fir_height;
-extern int fir_ir_fresh_rate;
-extern int fir_adc_resolution;
 static int fir_lepton_rad_en = false;
 static bool fir_lepton_3 = false;
 
@@ -253,7 +248,7 @@ void fir_lepton_deinit()
 #endif
 }
 
-int fir_lepton_init()
+int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution)
 {
     OMV_FIR_LEPTON_CONTROLLER->spi->Init.Mode = SPI_MODE_MASTER;
     OMV_FIR_LEPTON_CONTROLLER->spi->Init.Direction = SPI_DIRECTION_2LINES_RXONLY;
@@ -362,7 +357,7 @@ int fir_lepton_init()
     LEP_AGC_ROI_T roi;
 
     for (uint32_t start = systick_current_millis();; systick_sleep(1)) {
-        if (LEP_OpenPort(&fir_bus, LEP_CCI_TWI, 0, &fir_lepton_handle) == LEP_OK) {
+        if (LEP_OpenPort(bus, LEP_CCI_TWI, 0, &fir_lepton_handle) == LEP_OK) {
             break;
         }
 
@@ -419,12 +414,14 @@ int fir_lepton_init()
         return -8;
     }
 
-    fir_width = roi.endCol + 1;
-    fir_height = roi.endRow + 1;
-    fir_lepton_3 = fir_height > VOSPI_PIDS_PER_SEG;
+    int flir_w = roi.endCol + 1;
+    int flir_h = roi.endRow + 1;
+    fir_lepton_3 = flir_h > VOSPI_PIDS_PER_SEG;
     fir_lepton_rad_en = rad == LEP_RAD_ENABLE;
-    fir_ir_fresh_rate = fir_lepton_3 ? 27 : 9;
-    fir_adc_resolution = fir_lepton_rad_en ? 16 : 14;
+    *w = flir_w;
+    *h = flir_h;
+    *refresh = fir_lepton_3 ? 27 : 9;
+    *resolution = fir_lepton_rad_en ? 16 : 14;
 
     #if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
     if (LEP_SetOemGpioMode(&fir_lepton_handle, LEP_OEM_GPIO_MODE_VSYNC) != LEP_OK) {
@@ -443,7 +440,7 @@ int fir_lepton_init()
     framebuffer_tail = 0;
 
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-        framebuffers[i] = (uint16_t *) fb_alloc0(fir_width * fir_height * sizeof(uint16_t),
+        framebuffers[i] = (uint16_t *) fb_alloc0(flir_w * flir_h * sizeof(uint16_t),
                                                  FB_ALLOC_NO_HINT);
     }
 
@@ -534,23 +531,23 @@ mp_obj_t fir_lepton_read_ta()
     return mp_obj_new_float((fir_lepton_get_temperature() * 0.01f) - 273.15f);
 }
 
-mp_obj_t fir_lepton_read_ir(bool mirror, bool flip, bool transpose)
+mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose)
 {
     int kelvin = fir_lepton_get_temperature();
-    mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(fir_width * fir_height, NULL);
+    mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
     const uint16_t *data = fir_lepton_get_frame();
     float min = +FLT_MAX;
     float max = -FLT_MAX;
-    int w_1 = fir_width - 1;
-    int h_1 = fir_height - 1;
+    int w_1 = w - 1;
+    int h_1 = h - 1;
 
-    for (int y = 0; y < fir_height; y++) {
+    for (int y = 0; y < h; y++) {
         int y_dst = flip ? (h_1 - y) : y;
-        const uint16_t *raw_row = data + (y * fir_width);
-        mp_obj_t *list_row = list->items + (y_dst * fir_width);
+        const uint16_t *raw_row = data + (y * w);
+        mp_obj_t *list_row = list->items + (y_dst * w);
         mp_obj_t *t_list_row = list->items + y_dst;
 
-        for (int x = 0; x < fir_width; x++) {
+        for (int x = 0; x < w; x++) {
             int x_dst = mirror ? (w_1 - x) : x;
             int raw = raw_row[x];
 
@@ -573,7 +570,7 @@ mp_obj_t fir_lepton_read_ir(bool mirror, bool flip, bool transpose)
             if (!transpose) {
                 list_row[x_dst] = f;
             } else {
-                t_list_row[x_dst * fir_height] = f;
+                t_list_row[x_dst * h] = f;
             }
         }
     }
@@ -586,7 +583,7 @@ mp_obj_t fir_lepton_read_ir(bool mirror, bool flip, bool transpose)
     return mp_obj_new_tuple(4, tuple);
 }
 
-void fir_lepton_fill_image(image_t *img, bool auto_range, float min, float max,
+void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float min, float max,
                            bool mirror, bool flip, bool transpose)
 {
     int kelvin = fir_lepton_get_temperature();
@@ -598,7 +595,7 @@ void fir_lepton_fill_image(image_t *img, bool auto_range, float min, float max,
         new_min = INT_MAX;
         new_max = INT_MIN;
 
-        for (int i = 0, ii = fir_width * fir_height; i < ii; i++) {
+        for (int i = 0, ii = w * h; i < ii; i++) {
             int temp = data[i];
 
             if (!fir_lepton_rad_en) {
@@ -622,16 +619,16 @@ void fir_lepton_fill_image(image_t *img, bool auto_range, float min, float max,
     }
 
     float diff = 255.f / (new_max - new_min);
-    int w_1 = fir_width - 1;
-    int h_1 = fir_height - 1;
+    int w_1 = w - 1;
+    int h_1 = h - 1;
 
-    for (int y = 0; y < fir_height; y++) {
+    for (int y = 0; y < h; y++) {
         int y_dst = flip ? (h_1 - y) : y;
-        const uint16_t *raw_row = data + (y * fir_width);
-        uint8_t *row_pointer = ((uint8_t *) img->data) + (y_dst * fir_width);
+        const uint16_t *raw_row = data + (y * w);
+        uint8_t *row_pointer = ((uint8_t *) img->data) + (y_dst * w);
         uint8_t *t_row_pointer = ((uint8_t *) img->data) + y_dst;
 
-        for (int x = 0; x < fir_width; x++) {
+        for (int x = 0; x < w; x++) {
             int x_dst = mirror ? (w_1 - x) : x;
             int raw = raw_row[x];
 
@@ -653,7 +650,7 @@ void fir_lepton_fill_image(image_t *img, bool auto_range, float min, float max,
             if (!transpose) {
                 row_pointer[x_dst] = pixel;
             } else {
-                t_row_pointer[x_dst * fir_height] = pixel;
+                t_row_pointer[x_dst * h] = pixel;
             }
         }
     }

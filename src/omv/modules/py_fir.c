@@ -60,7 +60,7 @@
     __value & 0x87FF; \
 })
 
-cambus_t fir_bus = {};
+static cambus_t fir_bus = {};
 #if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1))
 static void *fir_mlx_data = NULL;
 #endif
@@ -81,10 +81,10 @@ static enum {
 #endif
 } fir_sensor = FIR_NONE;
 
-int fir_width = 0;
-int fir_height = 0;
-int fir_ir_fresh_rate = 0;
-int fir_adc_resolution = 0;
+static int fir_width = 0;
+static int fir_height = 0;
+static int fir_ir_fresh_rate = 0;
+static int fir_adc_resolution = 0;
 static bool fir_transposed = false;
 
 // img->w == data_w && img->h == data_h && img->bpp == IMAGE_BPP_GRAYSCALE
@@ -414,7 +414,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             FIR_LEPTON_RETRY:
             cambus_init(&fir_bus, OMV_FIR_LEPTON_I2C_BUS, OMV_FIR_LEPTON_I2C_BUS_SPEED);
 
-            int error = fir_lepton_init();
+            int error = fir_lepton_init(&fir_bus, &fir_width, &fir_height, &fir_ir_fresh_rate, &fir_adc_resolution);
 
             if (error != 0) {
                 if (first_init) {
@@ -649,7 +649,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         #endif
         #if (OMV_ENABLE_FIR_LEPTON == 1)
         case FIR_LEPTON: {
-            return fir_lepton_read_ir(arg_hmirror, arg_vflip, fir_transposed);
+            return fir_lepton_read_ir(fir_width, fir_height, arg_hmirror, arg_vflip, fir_transposed);
         }
         #endif
     }
@@ -981,7 +981,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         #endif
         #if (OMV_ENABLE_FIR_LEPTON == 1)
         case FIR_LEPTON: {
-            fir_lepton_fill_image(&src_img, !scale_obj, min, max,
+            fir_lepton_fill_image(&src_img, fir_width, fir_height, !scale_obj, min, max,
                                   arg_hmirror, arg_vflip, arg_transpose);
             break;
         }
