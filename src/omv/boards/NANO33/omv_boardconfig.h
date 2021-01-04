@@ -119,4 +119,10 @@
 #define PDM_CLK_PIN             (26)
 #define PDM_PWR_PIN             (17)
 
+// FIR Module
+#define OMV_ENABLE_FIR_MLX90621 (1)
+#define OMV_ENABLE_FIR_MLX90640 (1)
+#define OMV_ENABLE_FIR_AMG8833  (1)
+#define OMV_ENABLE_FIR_LEPTON   (0)
+
 #endif //__OMV_BOARDCONFIG_H__

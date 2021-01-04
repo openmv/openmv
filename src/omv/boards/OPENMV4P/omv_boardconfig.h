@@ -432,8 +432,13 @@
 #define OMV_SPI_LCD_BL_DAC_FORCE_RESET()    __HAL_RCC_DAC12_FORCE_RESET()
 #define OMV_SPI_LCD_BL_DAC_RELEASE_RESET()  __HAL_RCC_DAC12_RELEASE_RESET()
 
+// FIR Module
+#define OMV_ENABLE_FIR_MLX90621             (1)
+#define OMV_ENABLE_FIR_MLX90640             (1)
+#define OMV_ENABLE_FIR_AMG8833              (1)
+#define OMV_ENABLE_FIR_LEPTON               (1)
+
 // FIR Lepton
-#define OMV_FIR_LEPTON_PRESENT
 #define OMV_FIR_LEPTON_I2C_BUS              (FIR_I2C_ID)
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED        (FIR_I2C_SPEED)
 #define OMV_FIR_LEPTON_CONTROLLER           (&spi_obj[1])

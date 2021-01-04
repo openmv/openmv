@@ -68,7 +68,7 @@
 /** INCLUDE FILES                                                            **/
 /******************************************************************************/
 #include "omv_boardconfig.h"
-#if (OMV_ENABLE_LEPTON == 1 || defined(OMV_FIR_LEPTON_PRESENT))
+#if ((OMV_ENABLE_LEPTON == 1) || (OMV_ENABLE_FIR_LEPTON == 1))
 
 #include "LEPTON_Types.h"
 #include "LEPTON_ErrorCodes.h"
@@ -232,4 +232,4 @@ LEP_RESULT LEP_I2C_MasterStatus(cambus_t *bus,
     return(result);
 }
 
-#endif // (OMV_ENABLE_LEPTON == 1)
+#endif // ((OMV_ENABLE_LEPTON == 1) || (OMV_ENABLE_FIR_LEPTON == 1))
