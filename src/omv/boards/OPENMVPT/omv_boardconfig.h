@@ -591,8 +591,13 @@
 #define OMV_CEC_PRESENT
 #define OMV_CEC_PIN                         (pin_H2)
 
+// FIR Module
+#define OMV_ENABLE_FIR_MLX90621                 (1)
+#define OMV_ENABLE_FIR_MLX90640                 (1)
+#define OMV_ENABLE_FIR_AMG8833                  (1)
+#define OMV_ENABLE_FIR_LEPTON                   (1)
+
 // FIR Lepton
-#define OMV_FIR_LEPTON_PRESENT
 #define OMV_FIR_LEPTON_I2C_BUS                  (ISC_I2C_ID)
 #define OMV_FIR_LEPTON_I2C_BUS_SPEED            (ISC_I2C_SPEED)
 #define OMV_FIR_LEPTON_CONTROLLER               (&spi_obj[2])

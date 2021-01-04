@@ -30,7 +30,7 @@
 #include "LEPTON_RAD.h"
 #include "LEPTON_I2C_Reg.h"
 
-#if defined(OMV_FIR_LEPTON_PRESENT)
+#if (OMV_ENABLE_FIR_LEPTON == 1)
 
 #define FRAMEBUFFER_COUNT 3
 static volatile int framebuffer_head = 0;
