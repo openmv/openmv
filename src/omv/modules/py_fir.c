@@ -56,7 +56,7 @@
     __value & 0x87FF; \
 })
 
-cambus_t fir_bus = {};
+static cambus_t fir_bus = {};
 static void *fir_mlx_data = NULL;
 
 static enum {
