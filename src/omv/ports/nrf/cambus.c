@@ -22,22 +22,33 @@
 int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 {
     bus->id = bus_id;
-    bus->speed = speed;
     bus->initialized = false;
+
+    switch (speed) {
+        case CAMBUS_SPEED_STANDARD:
+            bus->speed = TWI_FREQUENCY_FREQUENCY_K100; ///< 100 kbps
+            break;
+        case CAMBUS_SPEED_FULL:
+            bus->speed = TWI_FREQUENCY_FREQUENCY_K250; ///< 250 kbps
+            break;
+        case CAMBUS_SPEED_FAST:
+            bus->speed = TWI_FREQUENCY_FREQUENCY_K400;  ///< 400 kbps
+            break;
+        default:
+            return -1;
+    }
 
     switch (bus_id) {
         case 0: {
             bus->scl_pin = TWI0_SCL_PIN;
             bus->sda_pin = TWI0_SDA_PIN;
-            nrfx_twi_t _twi = NRFX_TWI_INSTANCE(0);
-            memcpy(&bus->twi, &_twi, sizeof(nrfx_twi_t));
+            bus->i2c = (nrfx_twi_t) NRFX_TWI_INSTANCE(0);
             break;
         }
         case 1: {
             bus->scl_pin = TWI1_SCL_PIN;
             bus->sda_pin = TWI1_SDA_PIN;
-            nrfx_twi_t _twi = NRFX_TWI_INSTANCE(1);
-            memcpy(&bus->twi, &_twi, sizeof(nrfx_twi_t));
+            bus->i2c = (nrfx_twi_t) NRFX_TWI_INSTANCE(1);
             break;
         }
         default:
@@ -47,17 +58,17 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
     nrfx_twi_config_t config = {
        .scl                = bus->scl_pin,
        .sda                = bus->sda_pin,
-       .frequency          = speed,
+       .frequency          = bus->speed,
        .interrupt_priority = 4,
        .hold_bus_uninit    = false
     };
 
-    if (nrfx_twi_init(&bus->twi, &config, NULL, NULL) != NRFX_SUCCESS) {
+    if (nrfx_twi_init(&bus->i2c, &config, NULL, NULL) != NRFX_SUCCESS) {
         return -1;
     }
 
     // This bus needs to be enabled for suspended transfers.
-    nrfx_twi_enable(&bus->twi);
+    nrfx_twi_enable(&bus->i2c);
 
     bus->initialized = true;
     return 0;
@@ -66,8 +77,8 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 int cambus_deinit(cambus_t *bus)
 {
     if (bus->initialized) {
-        nrfx_twi_disable(&bus->twi);
-        nrfx_twi_uninit(&bus->twi);
+        nrfx_twi_disable(&bus->i2c);
+        nrfx_twi_uninit(&bus->i2c);
         bus->initialized = false;
     }
     return 0;
@@ -93,7 +104,7 @@ int cambus_read_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, ui
     }
 
     nrfx_twi_xfer_desc_t desc = NRFX_TWI_XFER_DESC_RX(slv_addr, buf, len);
-    if (nrfx_twi_xfer(&bus->twi, &desc, xfer_flags) != NRFX_SUCCESS) {
+    if (nrfx_twi_xfer(&bus->i2c, &desc, xfer_flags) != NRFX_SUCCESS) {
         ret = -1;
     }
     return ret;
@@ -111,7 +122,7 @@ int cambus_write_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, u
     }
 
     nrfx_twi_xfer_desc_t desc = NRFX_TWI_XFER_DESC_TX(slv_addr, buf, len);
-    if (nrfx_twi_xfer(&bus->twi, &desc, xfer_flags) != NRFX_SUCCESS) {
+    if (nrfx_twi_xfer(&bus->i2c, &desc, xfer_flags) != NRFX_SUCCESS) {
         ret = -1;
     }
     return ret;
