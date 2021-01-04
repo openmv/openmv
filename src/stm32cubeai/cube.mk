@@ -13,6 +13,7 @@ OMV_QSTR_DEFS += $(TOP_DIR)/stm32cubeai/qstrdefscubeai.h
 
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/BasicMathFunctions/*.o)
 FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/SupportFunctions/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(CMSIS_DIR)/src/dsp/MatrixFunctions/*.o)
 
 FIRM_OBJ += $(addprefix $(BUILD)/stm32cubeai/data/,\
 	network.o                       \
