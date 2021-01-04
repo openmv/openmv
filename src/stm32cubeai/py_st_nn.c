@@ -7,11 +7,14 @@
  * details.
  */
 
-#include "nn_st.h"
+#include "py/nlr.h"
+#include "py/objlist.h"
+
 #include "omv_boardconfig.h"
 #include "py_helper.h"
+#include "py_assert.h"
 #include "py_image.h"
-#include <mp.h>
+#include "nn_st.h"
 
 static const mp_obj_type_t py_st_net_type;
 
