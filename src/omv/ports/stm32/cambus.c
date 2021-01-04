@@ -61,11 +61,25 @@ void I2C4_ER_IRQHandler(void) { HAL_I2C_ER_IRQHandler(&I2CHandle4); }
 #endif
 #endif // I2C4
 
+static const uint32_t cambus_timing[CAMBUS_SPEED_MAX] = {
+#if defined(STM32F4)
+    100000U, 400000U, 400000U,
+#elif defined(STM32F7)
+    0x1090699B, 0x70330309, 0x50100103,
+#elif defined(STM32H7)
+    0x20D09DE7, 0x40900C22, 0x4030040B,
+#else
+#error "no I2C timings for this MCU"
+#endif
+};
+
 int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
 {
     bus->id = bus_id;
-    bus->speed = speed;
     bus->i2c = NULL;
+    bus->initialized = false;
+    bus->scl_pin = (omv_gpio_t) {0, 0};
+    bus->sda_pin = (omv_gpio_t) {0, 0};
 
     switch (bus_id) {
         #if defined(I2C1)
@@ -100,27 +114,27 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
             return -1;
     }
 
+    if (speed < 0 || speed >= CAMBUS_SPEED_MAX) {
+        return -1;
+    } else {
+        bus->speed = cambus_timing[speed];
+    }
+
     // Our code only knows about these two I2Cs instances.
     if (bus->i2c->Instance == FIR_I2C) {
-        bus->port     = FIR_I2C_PORT;
-        bus->scl_pin  = FIR_I2C_SCL_PIN;
-        bus->sda_pin  = FIR_I2C_SDA_PIN;
+        bus->scl_pin = (omv_gpio_t) {FIR_I2C_SCL_PIN, FIR_I2C_PORT};
+        bus->sda_pin = (omv_gpio_t) {FIR_I2C_SDA_PIN, FIR_I2C_PORT};
     } else if (bus->i2c->Instance == ISC_I2C) {
-        bus->port     = ISC_I2C_PORT;
-        bus->scl_pin  = ISC_I2C_SCL_PIN;
-        bus->sda_pin  = ISC_I2C_SDA_PIN;
-    } else {
-        bus->port     = NULL;
-        bus->scl_pin  = 0;
-        bus->sda_pin  = 0;
+        bus->scl_pin = (omv_gpio_t) {ISC_I2C_SCL_PIN, ISC_I2C_PORT};
+        bus->sda_pin = (omv_gpio_t) {ISC_I2C_SDA_PIN, ISC_I2C_PORT};
     }
 
     // Configure the I2C handle
     bus->i2c->Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
     #if !defined(STM32F4)
-    bus->i2c->Init.Timing          = speed;
+    bus->i2c->Init.Timing          = bus->speed;
     #else
-    bus->i2c->Init.ClockSpeed      = speed;
+    bus->i2c->Init.ClockSpeed      = bus->speed;
     bus->i2c->Init.DutyCycle       = I2C_DUTYCYCLE_2;
     #endif
     bus->i2c->Init.DualAddressMode = I2C_DUALADDRESS_DISABLED;
@@ -135,7 +149,8 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
     HAL_I2C_DeInit(bus->i2c);
     if (HAL_I2C_Init(bus->i2c) != HAL_OK) {
         bus->i2c = NULL;
-        bus->port = NULL;
+        bus->scl_pin = (omv_gpio_t) {0, 0};
+        bus->sda_pin = (omv_gpio_t) {0, 0};
         return -1;
     }
 
@@ -164,6 +179,8 @@ int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed)
             #endif
         }
     }
+
+    bus->initialized = true;
     return 0;
 }
 
@@ -229,12 +246,14 @@ static int cambus_wait_timeout(cambus_t *bus, uint32_t timeout)
 
 int cambus_deinit(cambus_t *bus)
 {
-    if (bus->i2c && bus->i2c->Instance) {
+    if (bus->initialized) {
         HAL_I2C_DeInit(bus->i2c);
         bus->i2c->Instance = NULL;
     }
     bus->i2c = NULL;
-    bus->port = NULL;
+    bus->scl_pin = (omv_gpio_t) {0, 0};
+    bus->sda_pin = (omv_gpio_t) {0, 0};
+    bus->initialized = false;
     return 0;
 }
 
@@ -391,20 +410,20 @@ int cambus_write_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, u
 
 int cambus_pulse_scl(cambus_t *bus)
 {
-    if (bus->port) {
+    if (bus->initialized && bus->scl_pin.port) {
         // Configure SCL as GPIO
         GPIO_InitTypeDef GPIO_InitStructure;
         GPIO_InitStructure.Pull  = GPIO_NOPULL;
         GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
         GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
-        GPIO_InitStructure.Pin   = bus->scl_pin;
-        HAL_GPIO_Init(bus->port, &GPIO_InitStructure);
+        GPIO_InitStructure.Pin   = bus->scl_pin.pin;
+        HAL_GPIO_Init(bus->scl_pin.port, &GPIO_InitStructure);
 
         // Pulse SCL to recover stuck device.
         for (int i=0; i<10000; i++) {
-            HAL_GPIO_WritePin(bus->port, bus->scl_pin, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(bus->scl_pin.port, bus->scl_pin.pin, GPIO_PIN_SET);
             mp_hal_delay_us(10);
-            HAL_GPIO_WritePin(bus->port, bus->scl_pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(bus->scl_pin.port, bus->scl_pin.pin, GPIO_PIN_RESET);
             mp_hal_delay_us(10);
         }
 

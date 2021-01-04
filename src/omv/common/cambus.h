@@ -12,9 +12,18 @@
 #define __CAMBUS_H__
 #include <stdint.h>
 #include <stdbool.h>
-#include "cambus_struct.h"
+#include "omv_portconfig.h"
+
+// Transfer speeds
+typedef enum _cambus_speed {
+    CAMBUS_SPEED_STANDARD  = (0U),
+    CAMBUS_SPEED_FULL      = (1U),
+    CAMBUS_SPEED_FAST      = (2U),
+    CAMBUS_SPEED_MAX       = (3U)
+} cambus_speed_t;
+
 // For use with read/write_bytes
-enum cambus_xfer_flags {
+typedef enum cambus_xfer_flags {
     // Stop condition after the transfer.
     // Normal transfer with start condition, address, data and stop condition.
     CAMBUS_XFER_NO_FLAGS =   (0<<0),
@@ -24,7 +33,17 @@ enum cambus_xfer_flags {
     // No stop condition after the transfer.
     // This flag allows chaining multiple writes or reads with the same direction.
     CAMBUS_XFER_SUSPEND  =   (1<<1),
-};
+} cambus_xfer_flags_t;
+
+typedef struct _cambus {
+    uint32_t id;
+    uint32_t speed;
+    uint32_t initialized;
+    omv_gpio_t scl_pin;
+    omv_gpio_t sda_pin;
+    omv_cambus_t i2c;
+} cambus_t;
+
 int cambus_init(cambus_t *bus, uint32_t bus_id, uint32_t speed);
 int cambus_deinit(cambus_t *bus);
 int cambus_scan(cambus_t *bus);
