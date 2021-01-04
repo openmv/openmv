@@ -73,14 +73,6 @@
 #include "LEPTON_Types.h"
 #include "LEPTON_ErrorCodes.h"
 #include "LEPTON_I2C_Service.h"
-#include "cambus.h"
-
-static cambus_t *bus;
-
-void LEP_I2C_Init(cambus_t *hbus)
-{
-    bus = hbus;
-}
 
 /******************************************************************************/
 /** LOCAL DEFINES                                                            **/
@@ -116,7 +108,7 @@ LEP_RESULT LEP_I2C_MasterSelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
 
 /* Driver Open
 */
-LEP_RESULT LEP_I2C_MasterOpen(LEP_UINT16 portID,
+LEP_RESULT LEP_I2C_MasterOpen(cambus_t *bus,
                               LEP_UINT16 *portBaudRate)
 {
     LEP_RESULT result = LEP_OK;
@@ -147,8 +139,6 @@ LEP_RESULT LEP_I2C_MasterReset(LEP_CAMERA_PORT_DESC_T_PTR portDescriptorPtr )
  *    Use Lepton I2C protocol for READ starting from current
  *      location
  *
- * @param portID        User-defined parameter to identify one of multiple ports
- *
  * @param deviceAddress This is the Lepton TWI/CCI (I2C) device address.
  *
  * @param subAddress    Specifies the Lepton Register Address to write to
@@ -159,7 +149,7 @@ LEP_RESULT LEP_I2C_MasterReset(LEP_CAMERA_PORT_DESC_T_PTR portDescriptorPtr )
  *
  * @return
  */
-LEP_RESULT LEP_I2C_MasterReadData(LEP_UINT16 portID,
+LEP_RESULT LEP_I2C_MasterReadData(cambus_t *bus,
                                   LEP_UINT8  deviceAddress,
                                   LEP_UINT16 subAddress,
                                   LEP_UINT16 *dataPtr,
@@ -179,8 +169,6 @@ LEP_RESULT LEP_I2C_MasterReadData(LEP_UINT16 portID,
 /**
  * Driver Write
  *
- * @param portID     User-defined parameter to identify one of multiple ports
- *
  * @param subAddress Specifies the Lepton Register Address to write to
  *
  * @param dataPtr    Pointer to a DATA buffer to source the transfers
@@ -189,7 +177,7 @@ LEP_RESULT LEP_I2C_MasterReadData(LEP_UINT16 portID,
  *
  * @return LEP_RESULT   LEP_OK if all goes well; otherwise a Lepton error code.
  */
-LEP_RESULT LEP_I2C_MasterWriteData(LEP_UINT16 portID,
+LEP_RESULT LEP_I2C_MasterWriteData(cambus_t *bus,
                                    LEP_UINT8  deviceAddress,
                                    LEP_UINT16 subAddress,
                                    LEP_UINT16 *dataPtr,
@@ -206,7 +194,7 @@ LEP_RESULT LEP_I2C_MasterWriteData(LEP_UINT16 portID,
     return(result);
 }
 
-LEP_RESULT LEP_I2C_MasterReadRegister(LEP_UINT16 portID,
+LEP_RESULT LEP_I2C_MasterReadRegister(cambus_t *bus,
                                       LEP_UINT8  deviceAddress,
                                       LEP_UINT16 regAddress,
                                       LEP_UINT16 *regValue)
@@ -220,7 +208,7 @@ LEP_RESULT LEP_I2C_MasterReadRegister(LEP_UINT16 portID,
     return(result);
 }
 
-LEP_RESULT LEP_I2C_MasterWriteRegister(LEP_UINT16 portID,
+LEP_RESULT LEP_I2C_MasterWriteRegister(cambus_t *bus,
                                        LEP_UINT8  deviceAddress,
                                        LEP_UINT16 regAddress,
                                        LEP_UINT16 regValue)
@@ -236,7 +224,7 @@ LEP_RESULT LEP_I2C_MasterWriteRegister(LEP_UINT16 portID,
 
 /* Driver Status
 */
-LEP_RESULT LEP_I2C_MasterStatus(LEP_UINT16 portID,
+LEP_RESULT LEP_I2C_MasterStatus(cambus_t *bus,
                                 LEP_UINT16 *portStatus)
 {
     LEP_RESULT result = LEP_OK;

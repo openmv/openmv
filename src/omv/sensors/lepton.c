@@ -345,7 +345,7 @@ static int lepton_reset(sensor_t *sensor, bool measurement_mode)
     memset(&LEPHandle, 0, sizeof(LEP_CAMERA_PORT_DESC_T));
 
     for (mp_uint_t start = mp_hal_ticks_ms(); ;mp_hal_delay_ms(1)) {
-        if (LEP_OpenPort(0, LEP_CCI_TWI, 0, &LEPHandle) == LEP_OK) {
+        if (LEP_OpenPort(&sensor->bus, LEP_CCI_TWI, 0, &LEPHandle) == LEP_OK) {
             break;
         }
         if ((mp_hal_ticks_ms() - start) >= LEPTON_TIMEOUT) {
@@ -671,8 +671,6 @@ int lepton_init(sensor_t *sensor)
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_PIXCK, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_FSYNC, 0);
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_JPEGE, 0);
-
-    LEP_I2C_Init(&sensor->bus);
 
     // Configure the DMA handler for Transmission process
     DMAHandle.Instance                 = LEPTON_SPI_DMA_STREAM;

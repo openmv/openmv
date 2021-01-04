@@ -111,7 +111,7 @@ extern "C"
     extern LEP_RESULT LEP_I2C_SelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
                                            LEP_PROTOCOL_DEVICE_E device);
 
-    extern LEP_RESULT LEP_I2C_OpenPort(LEP_UINT16 portID,
+    extern LEP_RESULT LEP_I2C_OpenPort(cambus_t *bus,
                                        LEP_UINT16 *baudRateInkHz,
                                        LEP_UINT8 *deviceAddress);
 
@@ -157,4 +157,3 @@ extern "C"
     #endif
 
 #endif  /* _LEPTON_I2C_PROTOCOL_H_ */
-

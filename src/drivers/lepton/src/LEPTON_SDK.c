@@ -268,11 +268,6 @@ LEP_RESULT LEP_SelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
  * This function dynamically allocates a new descriptor from the
  * system heap.
  *
- * @param portID      LEP_UINT 16  User defined port ID.  This
- *                    value is not used by the Lepton SDK but
- *                    provides the ability for
- *                    application-specific use.
- *
  * @param portType    LEP_CAMERA_PORT_E  Specifies the Lepton
  *                    Communications Port type.
  *
@@ -283,7 +278,7 @@ LEP_RESULT LEP_SelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
  * @return LEP_RESULT  Lepton Error Code.  LEP_OK if all goes well,
  *         otherise and Lepton error code is retunred.
  */
-LEP_RESULT LEP_OpenPort(LEP_UINT16 portID,
+LEP_RESULT LEP_OpenPort(cambus_t *bus,
                         LEP_CAMERA_PORT_E portType,
                         LEP_UINT16   portBaudRate,
                         LEP_CAMERA_PORT_DESC_T_PTR portDescPtr)
@@ -313,11 +308,11 @@ LEP_RESULT LEP_OpenPort(LEP_UINT16 portID,
         switch( portType )
         {
             case LEP_CCI_TWI:
-                result = LEP_I2C_OpenPort(portID, &portBaudRate, &deviceAddress);
+                result = LEP_I2C_OpenPort(bus, &portBaudRate, &deviceAddress);
                 if( result == LEP_OK )
                 {
                     portDescPtr->portBaudRate = portBaudRate;
-                    portDescPtr->portID = portID;
+                    portDescPtr->bus = bus;
                     portDescPtr->portType = portType;
                     portDescPtr->deviceAddress = deviceAddress;
                 }
@@ -570,5 +565,3 @@ LEP_RESULT LEP_GetCameraBootStatus(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
 //    }
 //    return(LEP_OK);
 //}
-
-

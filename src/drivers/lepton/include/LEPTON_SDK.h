@@ -130,7 +130,7 @@ extern "C"
     extern LEP_RESULT LEP_SelectDevice(LEP_CAMERA_PORT_DESC_T_PTR portDescPtr,
                                        LEP_PROTOCOL_DEVICE_E device);
 
-    extern LEP_RESULT LEP_OpenPort(LEP_UINT16 portID,
+    extern LEP_RESULT LEP_OpenPort(cambus_t *bus,
                                    LEP_CAMERA_PORT_E portType,
                                    LEP_UINT16   portBaudRate,
                                    LEP_CAMERA_PORT_DESC_T_PTR portDescPtr);
