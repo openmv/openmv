@@ -203,6 +203,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	drivers/bluetooth/ble_uart.o    \
 	drivers/usb/usb_cdc.o           \
 	drivers/usb/usb_descriptors.o   \
+	frozen_content.o                \
 	)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/,\
