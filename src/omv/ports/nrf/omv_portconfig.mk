@@ -186,6 +186,7 @@ FIRM_OBJ += $(wildcard $(BUILD)/$(OMV_DIR)/ports/$(PORT)/modules/*.o)
 
 #------------- MicroPy Objects -------------------#
 FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/py/*.o)
+FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/boards/$(TARGET)/*.o)
 
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 	mphalport.o                     \
@@ -290,7 +291,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/,\
 	music/musictunes.o                  \
 	ble/modble.o                        \
 	)
-FIRM_OBJ += $(wildcard $(BUILD)/$(MICROPY_DIR)/boards/$(TARGET)/*.o)
 
 ifeq ($(MICROPY_PY_ULAB), 1)
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/ulab/,\

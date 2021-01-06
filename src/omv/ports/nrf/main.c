@@ -88,33 +88,16 @@ uint32_t HAL_GetHalVersion()
     return ((2<<24) | (0<<16) | (0<<8) | (0<<0));
 }
 
-void do_str(const char *src, mp_parse_input_kind_t input_kind) {
-    mp_lexer_t *lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, src, strlen(src), 0);
-    if (lex == NULL) {
-        printf("MemoryError: lexer could not allocate memory\n");
-        return;
-    }
-
-    nlr_buf_t nlr;
-    if (nlr_push(&nlr) == 0) {
-        qstr source_name = lex->source_name;
-        mp_parse_tree_t pn = mp_parse(lex, input_kind);
-        mp_obj_t module_fun = mp_compile(&pn, source_name, true);
-        mp_call_function_0(module_fun);
-        nlr_pop();
-    } else {
-        // uncaught exception
-        mp_obj_print_exception(&mp_plat_print, (mp_obj_t)nlr.ret_val);
-    }
-}
-
 extern uint32_t _heap_start;
 extern uint32_t _heap_end;
 
-int main(int argc, char **argv) {
-
-
+int main(int argc, char **argv)
+{
 soft_reset:
+    #if defined(MICROPY_BOARD_EARLY_INIT)
+    MICROPY_BOARD_EARLY_INIT();
+    #endif
+
     #if MICROPY_PY_TIME_TICKS
     rtc1_init_time_ticks();
     #endif
@@ -139,7 +122,6 @@ soft_reset:
     mp_obj_list_init(mp_sys_argv, 0);
 
     readline_init0();
-
 
     #if MICROPY_PY_MACHINE_HW_SPI
     spi_init0();
@@ -307,6 +289,10 @@ soft_reset:
 
     #if BLUETOOTH_SD
     sd_softdevice_disable();
+    #endif
+
+    #if defined(MICROPY_BOARD_DEINIT)
+    MICROPY_BOARD_DEINIT();
     #endif
 
     goto soft_reset;
