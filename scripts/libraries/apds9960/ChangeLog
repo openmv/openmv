@@ -1,0 +1,19 @@
+needrestart (0.2)
+
+  * Features:
+    - micropython port
+    (github pr #2 by Thomas Waldmann @ThomasWaldmann)
+    - upload to PyPi
+
+  * Changes:
+    - add 0xa8 to valid device id's
+    (github pr #1 by Ristomatti Airo @ristomatti)
+
+ -- Thomas Liske <thomas@fiasko-nw.net>  Sun, 15 Apr 2018 21:36:49 +0200
+
+needrestart (0.1)
+
+  * Initial release.
+
+ -- Thomas Liske <thomas@fiasko-nw.net>  Tue, 06 Jun 2017 01:30:55 +0200
+
