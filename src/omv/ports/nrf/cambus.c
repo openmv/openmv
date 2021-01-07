@@ -143,8 +143,8 @@ int cambus_write_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, u
 
 int cambus_pulse_scl(cambus_t *bus)
 {
+    cambus_deinit(bus);
     for (int i=0; i<10000; i++) {
-        cambus_deinit(bus);
         nrfx_twi_bus_recover(bus->scl_pin, bus->sda_pin);
     }
     return 0;
