@@ -31,7 +31,7 @@
 #include "py_fir_lepton.h"
 #endif
 
-#define MLX90621_ADDR                   0xC0
+#define MLX90621_ADDR                   0x50
 #define MLX90621_WIDTH                  16
 #define MLX90621_HEIGHT                 4
 #define MLX90621_EEPROM_DATA_SIZE       256
@@ -50,6 +50,8 @@
 #define AMG8833_THERMISTOR_REGISTER     0x0E
 #define AMG8833_TEMPERATURE_REGISTER    0x80
 #define AMG8833_INITIAL_RESET_VALUE     0x3F
+
+#define LEPTON_ADDR                     0x54
 
 #define AMG8833_12_TO_16(value) \
 ({ \
@@ -284,7 +286,41 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     py_fir_deinit();
     bool first_init = true;
-    switch (py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), FIR_MLX90621)) {
+    int type = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), -1);
+    if (type == -1) {
+        cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
+        switch (cambus_scan(&fir_bus)) {
+            #if (OMV_ENABLE_FIR_MLX90621 == 1)
+                case (MLX90621_ADDR << 1): {
+                    type = FIR_MLX90621;
+                    break;
+                }
+            #endif
+            #if (OMV_ENABLE_FIR_MLX90640 == 1)
+                case (MLX90640_ADDR << 1): {
+                    type = FIR_MLX90640;
+                    break;
+                }
+            #endif
+            #if (OMV_ENABLE_FIR_AMG8833 == 1)
+                case AMG8833_ADDR: {
+                    type = FIR_AMG8833;
+                    break;
+                }
+            #endif
+            #if (OMV_ENABLE_FIR_LEPTON == 1)
+                case LEPTON_ADDR: {
+                    type = FIR_LEPTON;
+                    break;
+                }
+            #endif
+            default: {
+                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "No device type found!"));
+            }
+        }
+        cambus_deinit(&fir_bus);
+    }
+    switch (type) {
         case FIR_NONE: {
             return mp_const_none;
         }
