@@ -288,6 +288,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     bool first_init = true;
     int type = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_type), -1);
     if (type == -1) {
+        FIR_SCAN_RETRY:
         cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_STANDARD);
         switch (cambus_scan(&fir_bus)) {
             #if (OMV_ENABLE_FIR_MLX90621 == 1)
@@ -315,11 +316,22 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                 }
             #endif
             default: {
-                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "No device type found!"));
+                if (first_init) {
+                    first_init = false;
+                    // Try to recover the bus once as it may be stuck from an interrupted run.
+                    // This is mostly needed for the AMG8833
+                    cambus_pulse_scl(&fir_bus);
+                    goto FIR_SCAN_RETRY;
+                } else {
+                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to detect any FIR sensor"));
+                }
             }
         }
         cambus_deinit(&fir_bus);
     }
+
+    // Initialize the detected sensor.
+    first_init = true;
     switch (type) {
         case FIR_NONE: {
             return mp_const_none;
