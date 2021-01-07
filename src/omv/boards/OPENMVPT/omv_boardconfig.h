@@ -15,6 +15,7 @@
 #define OMV_ARCH_STR                    "OPENMVPT 65536 SDRAM" // 33 chars max
 #define OMV_BOARD_TYPE                  "H7"
 #define OMV_UNIQUE_ID_ADDR              0x1FF1E800
+#define OMV_UNIQUE_ID_SIZE              3 // 3 words
 
 // Flash sectors for the bootloader.
 // Flash FS sector, main FW sector, max sector.
