@@ -1,9 +1,9 @@
-# AMG8833 Overlay Demo
+# Thermal Overlay Demo
 #
 # This example shows off how to overlay a heatmap onto your OpenMV Cam's
 # live video output from the main camera.
 
-import sensor, image, time, fir, lcd
+import sensor, image, time, fir
 
 drawing_hint = image.BICUBIC # or image.BILINEAR or 0 (nearest neighbor)
 
@@ -11,14 +11,11 @@ ALT_OVERLAY = False # Set to True to allocate a second ir image.
 
 sensor.reset()
 sensor.set_pixformat(sensor.RGB565)
-sensor.set_framesize(sensor.QQVGA2)
+sensor.set_framesize(sensor.QQVGA)
 sensor.skip_frames(time = 2000)
 
 # Initialize the thermal sensor
-fir.init(type=fir.FIR_AMG8833)
-
-# Init the lcd.
-lcd.init()
+fir.init()
 
 # Allocate another frame buffer for smoother video.
 extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
@@ -56,7 +53,6 @@ while (True):
     img.draw_string(8, 8, "To min: %0.2f C" % to_min, color = (255, 0, 0), mono_space = False)
     img.draw_string(8, 16, "To max: %0.2f C"% to_max, color = (255, 0, 0), mono_space = False)
 
-    lcd.display(img)
     # Force high quality streaming...
     img.compress(quality=90)
 

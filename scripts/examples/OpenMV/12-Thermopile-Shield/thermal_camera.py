@@ -1,4 +1,4 @@
-# MLX90621 Camera Demo
+# Thermal Camera Demo
 #
 # This example shows off how to overlay a heatmap onto your OpenMV Cam's
 # live video output from the main camera.
@@ -8,9 +8,19 @@ import image, time, fir
 drawing_hint = image.BICUBIC # or image.BILINEAR or 0 (nearest neighbor)
 
 # Initialize the thermal sensor
-fir.init(type=fir.FIR_MLX90621)
-w = fir.width() * 20
-h = fir.height() * 20
+fir.init()
+w = fir.width()
+h = fir.height()
+
+if (fir.type() == fir.FIR_MLX90621):
+    w = w * 10
+    h = h * 10
+elif (fir.type() == fir.FIR_MLX90640):
+    w = w * 10
+    h = h * 10
+elif (fir.type() == fir.FIR_AMG8833):
+    w = w * 20
+    h = h * 20
 
 # FPS clock
 clock = time.clock()
