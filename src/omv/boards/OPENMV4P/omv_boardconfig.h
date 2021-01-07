@@ -15,6 +15,7 @@
 #define OMV_ARCH_STR            "OMV4P H7 32768 SDRAM" // 33 chars max
 #define OMV_BOARD_TYPE          "H7"
 #define OMV_UNIQUE_ID_ADDR      0x1FF1E800
+#define OMV_UNIQUE_ID_SIZE      3 // 3 words
 
 // Needed by the SWD JTAG testrig - located at the bottom of the frame buffer overlay stack.
 #define OMV_SELF_TEST_SWD_ADDR  *((uint32_t *) 0x24000018)

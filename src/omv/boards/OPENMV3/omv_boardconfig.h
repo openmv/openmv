@@ -15,6 +15,7 @@
 #define OMV_ARCH_STR            "OMV3 F7 512" // 33 chars max
 #define OMV_BOARD_TYPE          "M7"
 #define OMV_UNIQUE_ID_ADDR      0x1FF0F420
+#define OMV_UNIQUE_ID_SIZE      3 // 3 words
 
 // Needed by the SWD JTAG testrig - located at the bottom of the frame buffer stack.
 #define OMV_SELF_TEST_SWD_ADDR  MAIN_FB()->bpp

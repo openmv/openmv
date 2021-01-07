@@ -15,6 +15,7 @@
 #define OMV_ARCH_STR            "NANO33 M4" // 33 chars max
 #define OMV_BOARD_TYPE          "NANO33"
 #define OMV_UNIQUE_ID_ADDR      0x10000060
+#define OMV_UNIQUE_ID_SIZE      2 // 2 words
 
 // Needed by the SWD JTAG testrig - located at the bottom of the frame buffer stack.
 #define OMV_SELF_TEST_SWD_ADDR  MAIN_FB()->bpp
