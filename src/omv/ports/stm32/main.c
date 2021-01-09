@@ -489,6 +489,9 @@ soft_reset:
 
     // Initialise low-level sub-systems. Here we need to do the very basic
     // things like zeroing out memory and resetting any of the sub-systems.
+    py_lcd_init0();
+    py_fir_init0();
+    py_tv_init0();
     readline_init0();
     pin_init0();
     extint_init0();
@@ -505,9 +508,6 @@ soft_reset:
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
     #endif
-    py_lcd_init0();
-    py_fir_init0();
-    py_tv_init0();
     servo_init();
     usbdbg_init();
     #if MICROPY_HW_ENABLE_SDCARD
