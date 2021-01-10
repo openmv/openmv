@@ -9,14 +9,14 @@
  * Memory allocation functions.
  */
 #include <string.h>
-#include "py/nlr.h"
+#include "py/runtime.h"
 #include "py/gc.h"
 #include "py/mphal.h"
 #include "xalloc.h"
 
 NORETURN static void xalloc_fail()
 {
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "Out of normal MicroPython Heap Memory!"
+    mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Out of normal MicroPython Heap Memory!"
         " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
 }
 

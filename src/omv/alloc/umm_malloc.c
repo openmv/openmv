@@ -9,7 +9,7 @@
  * UMM memory allocator.
  */
 #include <string.h>
-#include "py/nlr.h"
+#include "py/runtime.h"
 #include "py/mphal.h"
 #include "fb_alloc.h"
 #include "umm_malloc.h"
@@ -17,8 +17,8 @@
 
 NORETURN  void umm_alloc_fail()
 {
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
-        "Out of temporary Frame Buffer Heap Memory!"
+    mp_raise_msg(&mp_type_MemoryError,
+        MP_ERROR_TEXT("Out of temporary Frame Buffer Heap Memory!"
         " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
 }
 

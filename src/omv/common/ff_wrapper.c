@@ -22,49 +22,49 @@
 NORETURN static void ff_fail(FIL *fp, FRESULT res)
 {
     if (fp) f_close(fp);
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, ffs_strerror(res)));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(ffs_strerror(res)));
 }
 
 NORETURN static void ff_read_fail(FIL *fp)
 {
     if (fp) f_close(fp);
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to read requested bytes!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to read requested bytes!"));
 }
 
 NORETURN static void ff_write_fail(FIL *fp)
 {
     if (fp) f_close(fp);
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to write requested bytes!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to write requested bytes!"));
 }
 
 NORETURN static void ff_expect_fail(FIL *fp)
 {
     if (fp) f_close(fp);
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Unexpected value read!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unexpected value read!"));
 }
 
 NORETURN void ff_unsupported_format(FIL *fp)
 {
     if (fp) f_close(fp);
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Unsupported format!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unsupported format!"));
 }
 
 NORETURN void ff_file_corrupted(FIL *fp)
 {
     if (fp) f_close(fp);
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "File corrupted!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("File corrupted!"));
 }
 
 NORETURN void ff_not_equal(FIL *fp)
 {
     if (fp) f_close(fp);
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Images not equal!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Images not equal!"));
 }
 
 NORETURN void ff_no_intersection(FIL *fp)
 {
     if (fp) f_close(fp);
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "No intersection!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("No intersection!"));
 }
 
 void file_read_open(FIL *fp, const char *path)
@@ -246,7 +246,7 @@ void file_buffer_on(FIL *fp)
     file_buffer_offset = f_tell(fp) % 4;
     file_buffer_pointer = fb_alloc_all(&file_buffer_size, FB_ALLOC_PREFER_SIZE) + file_buffer_offset;
     if (!file_buffer_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError, "No memory!"));
+        mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("No memory!"));
     }
     file_buffer_size -= file_buffer_offset;
     file_buffer_index = 0;

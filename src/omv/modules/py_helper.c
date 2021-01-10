@@ -9,7 +9,7 @@
  * Python helper functions.
  */
 #include "py/obj.h"
-#include "py/nlr.h"
+#include "py/runtime.h"
 #include "framebuffer.h"
 #include "py_helper.h"
 #include "py_assert.h"
@@ -426,8 +426,8 @@ const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *arg
         } else if (palette == COLOR_PALETTE_IRONBOW) {
             default_color_palette = ironbow_table;
         } else {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
-                      "Invalid pre-defined color palette!"));
+            mp_raise_msg(&mp_type_ValueError,
+                    MP_ERROR_TEXT("Invalid pre-defined color palette!"));
         }
     } else {
         image_t *arg_color_palette =
@@ -435,13 +435,13 @@ const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *arg
 
         if (arg_color_palette) {
             if (arg_color_palette->bpp != IMAGE_BPP_RGB565) {
-                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
-                          "Color palette must be RGB565!"));
+                mp_raise_msg(&mp_type_ValueError,
+                        MP_ERROR_TEXT("Color palette must be RGB565!"));
             }
 
             if ((arg_color_palette->w * arg_color_palette->h) != 256) {
-                nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
-                          "Color palette must be 256 pixels!"));
+                mp_raise_msg(&mp_type_ValueError,
+                        MP_ERROR_TEXT("Color palette must be 256 pixels!"));
             }
 
             default_color_palette = (uint16_t *) arg_color_palette->data;
@@ -459,13 +459,13 @@ const uint8_t *py_helper_keyword_alpha_palette(uint n_args, const mp_obj_t *args
 
     if (arg_alpha_palette) {
         if (arg_alpha_palette->bpp != IMAGE_BPP_GRAYSCALE) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
-                      "Alpha palette must be GRAYSCALE!"));
+            mp_raise_msg(&mp_type_ValueError,
+                    MP_ERROR_TEXT("Alpha palette must be GRAYSCALE!"));
         }
 
         if ((arg_alpha_palette->w * arg_alpha_palette->h) != 256) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
-                      "Alpha palette must be 256 pixels!"));
+            mp_raise_msg(&mp_type_ValueError,
+                    MP_ERROR_TEXT("Alpha palette must be 256 pixels!"));
         }
 
         default_alpha_palette = (uint8_t *) arg_alpha_palette->data;

@@ -28,7 +28,7 @@
 
 #if MICROPY_PY_AUDIO
 
-#define RAISE_OS_EXCEPTION(msg)     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, msg))
+#define RAISE_OS_EXCEPTION(msg)     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(msg))
 
 static CRC_HandleTypeDef hcrc;
 static SAI_HandleTypeDef hsai;
@@ -176,7 +176,7 @@ static mp_obj_t py_audio_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_ar
     hdma_sai_rx.Init.MemBurst            = DMA_MBURST_SINGLE;
     hdma_sai_rx.Init.PeriphBurst         = DMA_MBURST_SINGLE;
     __HAL_LINKDMA(&hsai, hdmarx, hdma_sai_rx);
-    
+
     // Initialize the DMA stream
     HAL_DMA_DeInit(&hdma_sai_rx);
     if (HAL_DMA_Init(&hdma_sai_rx) != HAL_OK) {

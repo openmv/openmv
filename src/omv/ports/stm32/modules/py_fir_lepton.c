@@ -520,7 +520,7 @@ static int fir_lepton_get_temperature()
     LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
 
     if (LEP_GetSysFpaTemperatureKelvin(&fir_lepton_handle, &kelvin) != LEP_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "FPA Error!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("FPA Error!"));
     }
 
     return kelvin;
@@ -659,7 +659,7 @@ void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float mi
 void fir_lepton_trigger_ffc()
 {
     if (LEP_RunSysFFCNormalization(&fir_lepton_handle) != LEP_OK) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "FFC Error!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("FFC Error!"));
     }
 }
 
@@ -672,7 +672,7 @@ void fir_lepton_wait_on_ffc(uint n_args, const mp_obj_t *args)
         LEP_SYS_STATUS_E status;
 
         if (LEP_GetSysFFCStatus(&fir_lepton_handle, &status) != LEP_OK) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "SYS Error!"));
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SYS Error!"));
         }
 
         if (status == LEP_SYS_STATUS_READY) {
@@ -680,7 +680,7 @@ void fir_lepton_wait_on_ffc(uint n_args, const mp_obj_t *args)
         }
 
         if ((systick_current_millis() - start) >= delay_ms) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Timeout!"));
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
         }
 
         systick_sleep(1);

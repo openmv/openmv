@@ -872,7 +872,7 @@ static void ltdc_pll_config_init(int frame_size, int refresh_rate)
         }
     }
 
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Unable to initialize LTDC PLL!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unable to initialize LTDC PLL!"));
 }
 
 static void ltdc_config_deinit()
@@ -1109,7 +1109,7 @@ static mp_obj_t ltdc_dvi_get_display_connected()
         }), MP_MACHINE_I2C_FLAG_STOP);
     }
 
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to get display connected!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to get display connected!"));
 }
 
 #ifdef OMV_DDC_PRESENT
@@ -1164,7 +1164,7 @@ static mp_obj_t ltdc_dvi_get_display_id_data()
         }
     }
 
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Failed to get display id data!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Failed to get display id data!"));
 }
 #endif // OMV_DDC_PRESENT
 
@@ -1229,7 +1229,7 @@ static void ltdc_dvi_init()
     }), MP_MACHINE_I2C_FLAG_STOP) == 4) {
          extint_register((mp_obj_t) OMV_DVI_INT_PIN, GPIO_MODE_IT_FALLING, GPIO_PULLUP, (mp_obj_t) &ltdc_dvi_extint_callback_obj, true);
     } else {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Display init failed!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Display init failed!"));
     }
 }
 
@@ -1300,11 +1300,11 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
         #ifdef OMV_SPI_LCD_CONTROLLER
         case LCD_SHIELD: {
             int w = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_width), 128);
-            if ((w <= 0) || (32767 < w)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid Width!"));
+            if ((w <= 0) || (32767 < w)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Width!"));
             int h = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_height), 160);
-            if ((h <= 0) || (32767 < h)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid Height!"));
+            if ((h <= 0) || (32767 < h)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Height!"));
             int refresh_rate = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 60);
-            if ((refresh_rate < 30) || (120 < refresh_rate)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid Refresh Rate!"));
+            if ((refresh_rate < 30) || (120 < refresh_rate)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Refresh Rate!"));
             bool triple_buffer = py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_triple_buffer), false);
             bool bgr = py_helper_keyword_int(n_args, args, 5, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_bgr), false);
             spi_config_init(w, h, refresh_rate, triple_buffer, bgr);
@@ -1324,9 +1324,9 @@ STATIC mp_obj_t py_lcd_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args
         #ifdef OMV_LCD_CONTROLLER
         case LCD_DISPLAY: case LCD_DISPLAY_WITH_HDMI: case LCD_DISPLAY_ONLY_HDMI: {
             int frame_size = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_framesize), LCD_DISPLAY_FWVGA);
-            if ((frame_size < 0) || (LCD_DISPLAY_MAX <= frame_size)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid Frame Size!"));
+            if ((frame_size < 0) || (LCD_DISPLAY_MAX <= frame_size)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Frame Size!"));
             int refresh_rate = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 60);
-            if ((refresh_rate < 30) || (120 < refresh_rate)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid Refresh Rate!"));
+            if ((refresh_rate < 30) || (120 < refresh_rate)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid Refresh Rate!"));
             ltdc_config_init(frame_size, refresh_rate);
             #ifdef OMV_LCD_BL_PIN
             if ((type == LCD_DISPLAY) || (type == LCD_DISPLAY_WITH_HDMI)) ltdc_set_backlight(255); // to on state
@@ -1413,7 +1413,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_lcd_refresh_obj, py_lcd_refresh);
 STATIC mp_obj_t py_lcd_set_backlight(mp_obj_t intensity_obj)
 {
     int intensity = mp_obj_get_int(intensity_obj);
-    if ((intensity < 0) || (255 < intensity)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= intensity <= 255!"));
+    if ((intensity < 0) || (255 < intensity)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= intensity <= 255!"));
 
     switch (lcd_type) {
         #if defined(OMV_SPI_LCD_CONTROLLER) && defined(OMV_SPI_LCD_BL_PIN)
@@ -1571,7 +1571,7 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
             arg_y_off = mp_obj_get_int(args[2]);
             offset = 3;
         } else if (n_args > 1) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_TypeError, "Expected x and y offset!"));
+            mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Expected x and y offset!"));
         }
     }
 
@@ -1585,10 +1585,10 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, offset + 2, kw_args, &arg_roi);
 
     int arg_rgb_channel = py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
-    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
+    if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("-1 <= rgb_channel <= 2!"));
 
     int arg_alpha = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 256);
-    if ((arg_alpha < 0) || (256 < arg_alpha)) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
+    if ((arg_alpha < 0) || (256 < arg_alpha)) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= alpha <= 256!"));
 
     const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, offset + 5, kw_args, NULL);
     const uint8_t *alpha_palette = py_helper_keyword_alpha_palette(n_args, args, offset + 6, kw_args, NULL);
@@ -1601,8 +1601,8 @@ STATIC mp_obj_t py_lcd_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
     int arg_y_size;
     bool got_y_size = py_helper_keyword_int_maybe(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
 
-    if (got_x_scale && got_x_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
-    if (got_y_scale && got_y_size) nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+    if (got_x_scale && got_x_size) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
+    if (got_y_scale && got_y_size) mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either y_scale or y_size not both!"));
 
     if (got_x_size) arg_x_scale = arg_x_size / ((float) arg_roi.w);
     if (got_y_size) arg_y_scale = arg_y_size / ((float) arg_roi.h);

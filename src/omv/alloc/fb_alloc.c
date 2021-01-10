@@ -7,7 +7,7 @@
  *
  */
 #include "py/obj.h"
-#include "py/nlr.h"
+#include "py/runtime.h"
 #include "fb_alloc.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
@@ -42,8 +42,8 @@ char *fb_alloc_stack_pointer()
 
 MP_WEAK NORETURN void fb_alloc_fail()
 {
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_MemoryError,
-        "Out of fast Frame Buffer Stack Memory!"
+    mp_raise_msg(&mp_type_MemoryError,
+        MP_ERROR_TEXT("Out of fast Frame Buffer Stack Memory!"
         " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
 }
 
@@ -68,8 +68,8 @@ void fb_alloc_mark()
     // Check if allocation overwrites the framebuffer pixels
     if (new_pointer < fb_alloc_min_address()) {
         nlr_raise_for_fb_alloc_mark(mp_obj_new_exception_msg(&mp_type_MemoryError,
-            "Out of fast Frame Buffer Stack Memory!"
-            " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
+            MP_ERROR_TEXT("Out of fast Frame Buffer Stack Memory!"
+            " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!")));
     }
 
     // fb_alloc does not allow regions which are a size of 0 to be alloced,
