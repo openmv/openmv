@@ -233,8 +233,8 @@ void sensor_init0()
 {
     dcmi_abort();
 
-    #ifdef PORTENTA
-    // The Portenta board uses the same I2C bus for the sensor and
+    #if defined(PORTENTA) || defined(OPENMVPT)
+    // These boards use the same I2C bus for the sensor and
     // user scripts. The I2C bus must be reinitialized on soft-reset.
     cambus_init(&sensor.bus, ISC_I2C_ID, ISC_I2C_SPEED);
     #endif
