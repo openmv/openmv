@@ -250,7 +250,7 @@ static void CEC_SendAckBit()
     mp_uint_t start = mp_hal_ticks_ms();
     /* Wait for falling edge: end of EOM bit sent by the initiator */
     while (HAL_GPIO_ReadPin(OMV_CEC_PIN->gpio, OMV_CEC_PIN->pin_mask)) {
-        if ((mp_hal_ticks_ms() - start) > 10) nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Ack timeout!"));
+        if ((mp_hal_ticks_ms() - start) > 10) mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Ack timeout!"));
     }
 
     /* Send ACK bit */
@@ -279,7 +279,7 @@ static uint8_t CEC_ReceiveAckBit()
         mp_uint_t start = mp_hal_ticks_ms();
         /* Wait for falling edge of ACK bit (the end of ACK bit)*/
         while (HAL_GPIO_ReadPin(OMV_CEC_PIN->gpio, OMV_CEC_PIN->pin_mask)) {
-            if ((mp_hal_ticks_ms() - start) > 10) nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Ack timeout!"));
+            if ((mp_hal_ticks_ms() - start) > 10) mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Ack timeout!"));
         }
     }
 
@@ -507,7 +507,7 @@ static bool lcd_cec_receive_frame_int(mp_obj_t dst_addr, bool assertOnError)
     bool frameSendToMe = result & FrameSendToMeMask;
 
     if (assertOnError && (!receiveFrameStatus)) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Receive Failed!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Receive Failed!"));
     }
 
     if (receiveFrameStatus && frameSendToMe) {
@@ -524,7 +524,7 @@ void lcd_cec_send_frame(mp_obj_t dst_addr, mp_obj_t src_addr, mp_obj_t bytes)
     size_t len;
     uint8_t *data = (uint8_t *) mp_obj_str_get_data(bytes, &len);
     if (!CEC_SendFrame(mp_obj_get_int(src_addr), mp_obj_get_int(dst_addr), len, data)) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Send Failed!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Send Failed!"));
     }
 }
 
@@ -545,13 +545,13 @@ mp_obj_t lcd_cec_receive_frame(uint n_args, const mp_obj_t *args, mp_map_t *kw_a
 
         mp_uint_t start = mp_hal_ticks_ms();
         while (HAL_GPIO_ReadPin(OMV_CEC_PIN->gpio, OMV_CEC_PIN->pin_mask)) {
-            if ((mp_hal_ticks_ms() - start) > timeout) nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Receive timeout!"));
+            if ((mp_hal_ticks_ms() - start) > timeout) mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Receive timeout!"));
         }
 
         return  mp_obj_new_bool(lcd_cec_receive_frame_int(args[0], true));
     }
 
-    nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Expected destination address!"));
+    mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Expected destination address!"));
 }
 
 STATIC mp_obj_t lcd_cec_extint_callback(mp_obj_t line)

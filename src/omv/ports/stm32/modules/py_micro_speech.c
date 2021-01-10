@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include "py/obj.h"
 #include "py/objarray.h"
-#include "py/nlr.h"
+#include "py/runtime.h"
 #include "py/mphal.h"
 #include "systick.h"
 #include "py/binary.h"
@@ -36,7 +36,7 @@
 #define kFeatureSliceDurationMs (30)
 #define kCategoryCount          (4)
 #define kAverageWindowSamples   (1020 / kFeatureSliceDurationMs)
-#define RAISE_OS_EXCEPTION(msg) nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, msg))
+#define RAISE_OS_EXCEPTION(msg) mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(msg))
 
 typedef struct _py_micro_speech_obj {
     mp_obj_base_t base;

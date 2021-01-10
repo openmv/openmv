@@ -9,7 +9,7 @@
  * MJPEG Python module.
  */
 #include "py/obj.h"
-#include "py/nlr.h"
+#include "py/runtime.h"
 #include "ff_wrapper.h"
 #include "framebuffer.h"
 #include "py_assert.h"

@@ -9,7 +9,7 @@
  * GIF Python module.
  */
 #include "py/mphal.h"
-#include "py/nlr.h"
+#include "py/runtime.h"
 
 #include "ff_wrapper.h"
 #include "framebuffer.h"

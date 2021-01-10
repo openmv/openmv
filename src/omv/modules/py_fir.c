@@ -8,7 +8,7 @@
  *
  * FIR Python module.
  */
-#include "py/nlr.h"
+#include "py/runtime.h"
 #include "py/objlist.h"
 
 #include "omv_boardconfig.h"
@@ -323,7 +323,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     cambus_pulse_scl(&fir_bus);
                     goto FIR_SCAN_RETRY;
                 } else {
-                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to detect any FIR sensor"));
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to detect any FIR sensor"));
                 }
             }
         }
@@ -369,7 +369,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     goto FIR_MLX90621_RETRY;
                 } else {
                     py_fir_deinit();
-                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the MLX90621!"));
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to init the MLX90621!"));
                 }
             }
 
@@ -415,7 +415,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     goto FIR_MLX90640_RETRY;
                 } else {
                     py_fir_deinit();
-                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the MLX90640!"));
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to init the MLX90640!"));
                 }
             }
 
@@ -445,7 +445,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     goto FIR_AMG8833_RETRY;
                 } else {
                     py_fir_deinit();
-                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Failed to init the AMG8833!"));
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to init the AMG8833!"));
                 }
             }
 
@@ -471,8 +471,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
                     goto FIR_LEPTON_RETRY;
                 } else {
                     py_fir_deinit();
-                    nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError,
-                                                       "Failed to init the Lepton!"));
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to init the Lepton!"));
                 }
             }
 
@@ -480,7 +479,7 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         }
         #endif
         default: {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid sensor type!"));
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid sensor type!"));
         }
     }
 
@@ -731,7 +730,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             mp_obj_get_array_fixed_n(args[1], src_img.w * src_img.h, &arg_to);
         }
     } else {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_TypeError, "Invalid IR array!"));
+        mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Invalid IR array!"));
     }
 
     int arg_x_off = 0;
@@ -749,7 +748,7 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             arg_y_off = mp_obj_get_int(args[3]);
             offset = 4;
         } else if (n_args > 2) {
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_TypeError, "Expected x and y offset!"));
+            mp_raise_msg(&mp_type_TypeError, MP_ERROR_TEXT("Expected x and y offset!"));
         }
     }
 
@@ -783,12 +782,12 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
     int arg_rgb_channel = py_helper_keyword_int(n_args, args, offset + 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
     if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("-1 <= rgb_channel <= 2!"));
     }
 
     int arg_alpha = py_helper_keyword_int(n_args, args, offset + 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
     if ((arg_alpha < 0) || (256 < arg_alpha)) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= alpha <= 256!"));
     }
 
     const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, offset + 5, kw_args, rainbow_table);
@@ -803,11 +802,11 @@ mp_obj_t py_fir_draw_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     bool got_y_size = py_helper_keyword_int_maybe(n_args, args, offset + 9, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
 
     if (got_x_scale && got_x_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
     }
 
     if (got_y_scale && got_y_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either y_scale or y_size not both!"));
     }
 
     if (got_x_size) {
@@ -884,12 +883,12 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
     int arg_rgb_channel = py_helper_keyword_int(n_args, args, 6, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_rgb_channel), -1);
     if ((arg_rgb_channel < -1) || (2 < arg_rgb_channel)) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "-1 <= rgb_channel <= 2!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("-1 <= rgb_channel <= 2!"));
     }
 
     int arg_alpha = py_helper_keyword_int(n_args, args, 7, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_alpha), 128);
     if ((arg_alpha < 0) || (256 < arg_alpha)) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "0 <= alpha <= 256!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("0 <= alpha <= 256!"));
     }
 
     const uint16_t *color_palette = py_helper_keyword_color_palette(n_args, args, 8, kw_args, rainbow_table);
@@ -904,11 +903,11 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     bool got_y_size = py_helper_keyword_int_maybe(n_args, args, 12, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_y_size), &arg_y_size);
 
     if (got_x_scale && got_x_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either x_scale or x_size not both!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either x_scale or x_size not both!"));
     }
 
     if (got_y_scale && got_y_size) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Choose either y_scale or y_size not both!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Choose either y_scale or y_size not both!"));
     }
 
     if (got_x_size) {
@@ -939,7 +938,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 
     int arg_pixformat = py_helper_keyword_int(n_args, args, 14, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_pixformat), PIXFORMAT_RGB565);
     if ((arg_pixformat != PIXFORMAT_GRAYSCALE) && (arg_pixformat != PIXFORMAT_RGB565)) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_ValueError, "Invalid pixformat!"));
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid pixformat!"));
     }
 
     mp_obj_t copy_to_fb_obj = py_helper_keyword_object(n_args, args, 15, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_copy_to_fb), NULL);

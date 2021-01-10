@@ -12,7 +12,7 @@
 #include <string.h>
 #include <math.h>
 #include "py/obj.h"
-#include "py/nlr.h"
+#include "py/runtime.h"
 
 #include "py_cpufreq.h"
 #include "py_helper.h"
@@ -125,7 +125,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
 
     // Frequency is Not supported.
     if (cpufreq_idx == -1) {
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Unsupported frequency!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unsupported frequency!"));
     }
 
     // Return if frequency hasn't changed.
@@ -181,7 +181,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
             break;
 
         default:
-            nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "Unsupported frequency!"));
+            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Unsupported frequency!"));
             break;
     }
 
@@ -196,7 +196,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
     RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
     if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK) {
         // Initialization Error
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "RCC CLK Initialization Error!!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("RCC CLK Initialization Error!!"));
     }
 
     // Enable HSE Oscillator and activate PLL with HSE as source
@@ -211,7 +211,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
 
     if(HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
         // Initialization Error
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "RCC OSC Initialization Error!!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("RCC OSC Initialization Error!!"));
     }
 
     // Select PLL as system clock source
@@ -222,7 +222,7 @@ mp_obj_t py_cpufreq_set_frequency(mp_obj_t cpufreq_obj)
 
     if(HAL_RCC_ClockConfig(&RCC_ClkInitStruct, flatency) != HAL_OK) {
         // Initialization Error
-        nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, "RCC CLK Initialization Error!!"));
+        mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("RCC CLK Initialization Error!!"));
     }
     return mp_const_true;
 }

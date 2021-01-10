@@ -36,7 +36,7 @@
 #define NRF_PDM_FREQ_2667K  (nrf_pdm_freq_t)(0x15000000UL)               ///< PDM_CLK= 2.667 MHz (32 MHz / 12) => Fs= 41667 Hz
 #define NRF_PDM_FREQ_3200K  (nrf_pdm_freq_t)(0x19000000UL)               ///< PDM_CLK= 3.200 MHz (32 MHz / 10) => Fs= 50000 Hz
 #define NRF_PDM_FREQ_4000K  (nrf_pdm_freq_t)(0x20000000UL)               ///< PDM_CLK= 4.000 MHz (32 MHz /  8) => Fs= 62500 Hz
-#define RAISE_OS_EXCEPTION(msg)     nlr_raise(mp_obj_new_exception_msg(&mp_type_OSError, msg))
+#define RAISE_OS_EXCEPTION(msg)     mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT(msg))
 
 static mp_obj_array_t *g_pcmbuf = NULL;
 static mp_obj_t g_audio_callback = mp_const_none;
