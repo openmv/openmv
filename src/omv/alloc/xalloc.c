@@ -14,10 +14,10 @@
 #include "py/mphal.h"
 #include "xalloc.h"
 
-NORETURN static void xalloc_fail()
+NORETURN static void xalloc_fail(uint32_t size)
 {
-    mp_raise_msg(&mp_type_MemoryError, MP_ERROR_TEXT("Out of normal MicroPython Heap Memory!"
-        " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!"));
+    mp_raise_msg_varg(&mp_type_MemoryError,
+            MP_ERROR_TEXT("memory allocation failed, allocating %u bytes"), (uint)size);
 }
 
 // returns null pointer without error if size==0
@@ -25,7 +25,7 @@ void *xalloc(uint32_t size)
 {
     void *mem = gc_alloc(size, false);
     if (size && (mem == NULL)) {
-        xalloc_fail();
+        xalloc_fail(size);
     }
     return mem;
 }
@@ -41,7 +41,7 @@ void *xalloc0(uint32_t size)
 {
     void *mem = gc_alloc(size, false);
     if (size && (mem == NULL)) {
-        xalloc_fail();
+        xalloc_fail(size);
     }
     memset(mem, 0, size);
     return mem;
@@ -60,7 +60,7 @@ void *xrealloc(void *mem, uint32_t size)
 {
     mem = gc_realloc(mem, size, true);
     if (size && (mem == NULL)) {
-        xalloc_fail();
+        xalloc_fail(size);
     }
     return mem;
 }
