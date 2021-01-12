@@ -21,6 +21,10 @@
 #include "MLX90640_API.h"
 #include "MLX90640_I2C_Driver.h"
 #endif
+#if (OMV_ENABLE_FIR_MLX90641 == 1)
+#include "MLX90641_API.h"
+#include "MLX90641_I2C_Driver.h"
+#endif
 #include "framebuffer.h"
 
 #include "py_assert.h"
@@ -43,6 +47,12 @@
 #define MLX90640_EEPROM_DATA_SIZE       832
 #define MLX90640_FRAME_DATA_SIZE        834
 
+#define MLX90641_ADDR                   0x33
+#define MLX90641_WIDTH                  16
+#define MLX90641_HEIGHT                 12
+#define MLX90641_EEPROM_DATA_SIZE       832
+#define MLX90641_FRAME_DATA_SIZE        242
+
 #define AMG8833_ADDR                    0xD2
 #define AMG8833_WIDTH                   8
 #define AMG8833_HEIGHT                  8
@@ -63,7 +73,7 @@
 })
 
 static cambus_t fir_bus = {};
-#if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1))
+#if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
 static void *fir_mlx_data = NULL;
 #endif
 
@@ -74,6 +84,9 @@ static enum {
 #endif
 #if (OMV_ENABLE_FIR_MLX90640 == 1)
     FIR_MLX90640,
+#endif
+#if (OMV_ENABLE_FIR_MLX90641 == 1)
+    FIR_MLX90641,
 #endif
 #if (OMV_ENABLE_FIR_AMG8833 == 1)
     FIR_AMG8833,
@@ -150,6 +163,20 @@ static void fir_MLX90640_get_frame(float *Ta, float *To)
                        "Failed to read the MLX90640 sensor data!");
     *Ta = MLX90640_GetTa(data, fir_mlx_data);
     MLX90640_CalculateTo(data, fir_mlx_data, 0.95f, *Ta - 8, To);
+
+    fb_free();
+}
+#endif
+
+#if (OMV_ENABLE_FIR_MLX90641 == 1)
+static void fir_MLX90641_get_frame(float *Ta, float *To)
+{
+    uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+
+    PY_ASSERT_TRUE_MSG(MLX90641_GetFrameData(MLX90641_ADDR, data) >= 0,
+                       "Failed to read the MLX90641 sensor data!");
+    *Ta = MLX90641_GetTa(data, fir_mlx_data);
+    MLX90641_CalculateTo(data, fir_mlx_data, 0.95f, *Ta - 8, To);
 
     fb_free();
 }
@@ -266,7 +293,7 @@ static mp_obj_t py_fir_deinit()
         fir_sensor = FIR_NONE;
     }
 
-    #if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1))
+    #if ((OMV_ENABLE_FIR_MLX90621 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1))
     if (fir_mlx_data != NULL) {
         xfree(fir_mlx_data);
         fir_mlx_data = NULL;
@@ -300,6 +327,12 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             #if (OMV_ENABLE_FIR_MLX90640 == 1)
                 case (MLX90640_ADDR << 1): {
                     type = FIR_MLX90640;
+                    break;
+                }
+            #endif
+            #if (OMV_ENABLE_FIR_MLX90640 == 0) && (OMV_ENABLE_FIR_MLX90641 == 1)
+                case (MLX90641_ADDR << 1): {
+                    type = FIR_MLX90641;
                     break;
                 }
             #endif
@@ -429,6 +462,52 @@ mp_obj_t py_fir_init(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             return mp_const_none;
         }
         #endif
+        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        case FIR_MLX90641: {
+            // parse refresh rate and ADC resolution
+            int ir_fresh_rate = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_refresh), 32);
+            int adc_resolution = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_resolution), 19);
+
+            // sanitize values
+            ir_fresh_rate = __CLZ(__RBIT((ir_fresh_rate > 64) ? 64 : ((ir_fresh_rate < 1) ? 1 : ir_fresh_rate))) + 1;
+            adc_resolution = ((adc_resolution > 19) ? 19 : ((adc_resolution < 16) ? 16 : adc_resolution)) - 16;
+
+            fir_mlx_data = xalloc(sizeof(paramsMLX90641));
+
+            fir_sensor = FIR_MLX90641;
+            FIR_MLX90641_RETRY:
+            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FULL); // The EEPROM must be read at <= 400KHz.
+            MLX90641_I2CInit(&fir_bus);
+
+            fb_alloc_mark();
+            uint16_t *eeprom = fb_alloc(MLX90641_EEPROM_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            int error = MLX90641_DumpEE(MLX90641_ADDR, eeprom);
+            error |= MLX90641_SetRefreshRate(MLX90641_ADDR, ir_fresh_rate);
+            error |= MLX90641_SetResolution(MLX90641_ADDR, adc_resolution);
+            error |= MLX90641_ExtractParameters(eeprom, fir_mlx_data);
+            fb_alloc_free_till_mark();
+
+            if (error != 0) {
+                if (first_init) {
+                    first_init = false;
+                    cambus_pulse_scl(&fir_bus);
+                    goto FIR_MLX90641_RETRY;
+                } else {
+                    py_fir_deinit();
+                    mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to init the MLX90641!"));
+                }
+            }
+
+            // Switch to FAST speed
+            cambus_deinit(&fir_bus);
+            cambus_init(&fir_bus, FIR_I2C_ID, CAMBUS_SPEED_FAST);
+            fir_width = MLX90641_WIDTH;
+            fir_height = MLX90641_HEIGHT;
+            fir_ir_fresh_rate = ir_fresh_rate;
+            fir_adc_resolution = adc_resolution;
+            return mp_const_none;
+        }
+        #endif
         #if (OMV_ENABLE_FIR_AMG8833 == 1)
         case FIR_AMG8833: {
             fir_sensor = FIR_AMG8833;
@@ -513,8 +592,8 @@ static mp_obj_t py_fir_refresh()
     #if (OMV_ENABLE_FIR_MLX90621 == 1)
     const int mlx_90621_refresh_rates[16] = {512, 512, 512, 512, 512, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1, 0};
     #endif
-    #if (OMV_ENABLE_FIR_MLX90640 == 1)
-    const int mlx_90640_refresh_rates[8] = {0, 1, 2, 4, 8, 16, 32, 64};
+    #if (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90641 == 1)
+    const int mlx_90640_1_refresh_rates[8] = {0, 1, 2, 4, 8, 16, 32, 64};
     #endif
     switch (fir_sensor) {
         case FIR_NONE:
@@ -523,9 +602,14 @@ static mp_obj_t py_fir_refresh()
         case FIR_MLX90621:
             return mp_obj_new_int(mlx_90621_refresh_rates[fir_ir_fresh_rate]);
         #endif
+        #if (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1)
         #if (OMV_ENABLE_FIR_MLX90640 == 1)
         case FIR_MLX90640:
-            return mp_obj_new_int(mlx_90640_refresh_rates[fir_ir_fresh_rate]);
+        #endif
+        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        case FIR_MLX90641:
+        #endif
+            return mp_obj_new_int(mlx_90640_1_refresh_rates[fir_ir_fresh_rate]);
         #endif
         #if (OMV_ENABLE_FIR_AMG8833 == 1)
         case FIR_AMG8833:
@@ -550,8 +634,13 @@ static mp_obj_t py_fir_resolution()
         case FIR_MLX90621:
             return mp_obj_new_int(fir_adc_resolution + 15);
         #endif
+        #if (OMV_ENABLE_FIR_MLX90640 == 1) || (OMV_ENABLE_FIR_MLX90640 == 1)
         #if (OMV_ENABLE_FIR_MLX90640 == 1)
         case FIR_MLX90640:
+        #endif
+        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        case FIR_MLX90641:
+        #endif
             return mp_obj_new_int(fir_adc_resolution + 16);
         #endif
         #if (OMV_ENABLE_FIR_AMG8833 == 1)
@@ -630,6 +719,17 @@ mp_obj_t py_fir_read_ta()
             return result;
         }
         #endif
+        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        case FIR_MLX90641: {
+            fb_alloc_mark();
+            uint16_t *data = fb_alloc(MLX90641_FRAME_DATA_SIZE * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            PY_ASSERT_TRUE_MSG(MLX90641_GetFrameData(MLX90641_ADDR, data) >= 0,
+                               "Failed to read the MLX90641 sensor data!");
+            mp_obj_t result = mp_obj_new_float(MLX90641_GetTa(data, fir_mlx_data));
+            fb_alloc_free_till_mark();
+            return result;
+        }
+        #endif
         #if (OMV_ENABLE_FIR_AMG8833 == 1)
         case FIR_AMG8833: {
             int16_t temp;
@@ -678,6 +778,17 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             float Ta, *To = fb_alloc(MLX90640_WIDTH * MLX90640_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
             fir_MLX90640_get_frame(&Ta, To);
             mp_obj_t result = fir_get_ir(MLX90640_WIDTH, MLX90640_HEIGHT, Ta, To,
+                                         arg_hmirror ^ true, arg_vflip, fir_transposed, false);
+            fb_alloc_free_till_mark();
+            return result;
+        }
+        #endif
+        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        case FIR_MLX90641: {
+            fb_alloc_mark();
+            float Ta, *To = fb_alloc(MLX90641_WIDTH * MLX90641_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            fir_MLX90641_get_frame(&Ta, To);
+            mp_obj_t result = fir_get_ir(MLX90641_WIDTH, MLX90641_HEIGHT, Ta, To,
                                          arg_hmirror ^ true, arg_vflip, fir_transposed, false);
             fb_alloc_free_till_mark();
             return result;
@@ -1011,6 +1122,21 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
             break;
         }
         #endif
+        #if (OMV_ENABLE_FIR_MLX90641 == 1)
+        case FIR_MLX90641: {
+            float Ta, *To = fb_alloc(MLX90641_WIDTH * MLX90641_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
+            fir_MLX90641_get_frame(&Ta, To);
+
+            if (!scale_obj) {
+                fast_get_min_max(To, MLX90641_WIDTH * MLX90641_HEIGHT, &min, &max);
+            }
+
+            imlib_fill_image_from_float(&src_img, MLX90641_WIDTH, MLX90641_HEIGHT, To, min, max,
+                                        arg_hmirror ^ true, arg_vflip, arg_transpose, false);
+            fb_free();
+            break;
+        }
+        #endif
         #if (OMV_ENABLE_FIR_AMG8833 == 1)
         case FIR_AMG8833: {
             float Ta, *To = fb_alloc(AMG8833_WIDTH * AMG8833_HEIGHT * sizeof(float), FB_ALLOC_NO_HINT);
@@ -1057,6 +1183,9 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
 #endif
 #if (OMV_ENABLE_FIR_MLX90640 == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_MLX90640),        MP_ROM_INT(FIR_MLX90640)                    },
+#endif
+#if (OMV_ENABLE_FIR_MLX90641 == 1)
+    { MP_ROM_QSTR(MP_QSTR_FIR_MLX90641),        MP_ROM_INT(FIR_MLX90641)                    },
 #endif
 #if (OMV_ENABLE_FIR_AMG8833 == 1)
     { MP_ROM_QSTR(MP_QSTR_FIR_AMG8833),         MP_ROM_INT(FIR_AMG8833)                     },

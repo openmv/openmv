@@ -18,6 +18,9 @@ if (fir.type() == fir.FIR_MLX90621):
 elif (fir.type() == fir.FIR_MLX90640):
     w = w * 5
     h = h * 5
+elif (fir.type() == fir.FIR_MLX90641):
+    w = w * 5
+    h = h * 5
 elif (fir.type() == fir.FIR_AMG8833):
     w = w * 10
     h = h * 10

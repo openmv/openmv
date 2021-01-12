@@ -544,6 +544,7 @@
 // FIR Module
 #define OMV_ENABLE_FIR_MLX90621                 (1)
 #define OMV_ENABLE_FIR_MLX90640                 (1)
+#define OMV_ENABLE_FIR_MLX90641                 (1)
 #define OMV_ENABLE_FIR_AMG8833                  (1)
 #define OMV_ENABLE_FIR_LEPTON                   (1)
 
