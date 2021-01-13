@@ -20,8 +20,8 @@
   * the IDE will Not connect if the major version number is different.
   */
 #define FIRMWARE_VERSION_MAJOR      (3)
-#define FIRMWARE_VERSION_MINOR      (8)
-#define FIRMWARE_VERSION_PATCH      (1)
+#define FIRMWARE_VERSION_MINOR      (9)
+#define FIRMWARE_VERSION_PATCH      (0)
 
 /**
   * To add a new debugging command, increment the last command value used.
