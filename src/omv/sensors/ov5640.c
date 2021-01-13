@@ -1086,14 +1086,47 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
     return ret;
 }
 
+static int calc_pclk_freq(uint8_t sc_pll_ctrl_0, uint8_t sc_pll_ctrl_1, uint8_t sc_pll_ctrl_2, uint8_t sc_pll_ctrl_3, uint8_t sys_root_div)
+{
+    uint32_t pclk_freq = OV5640_XCLK_FREQ;
+    pclk_freq /= ((sc_pll_ctrl_3 & 0x10) != 0x00) ? 2 : 1;
+    pclk_freq /= ((sc_pll_ctrl_0 & 0x0F) == 0x0A) ? 10 : 8;
+    switch (sc_pll_ctrl_3 & 0x0F)
+    {
+        case  0: pclk_freq /= 1; break;
+        case  1: pclk_freq /= 2; break;
+        case  2: pclk_freq /= 3; break;
+        case  3: pclk_freq /= 4; break;
+        case  4: pclk_freq /= 6; break;
+        case  5: pclk_freq /= 8; break;
+        default: pclk_freq /= 3; break;
+    }
+    pclk_freq *= sc_pll_ctrl_2;
+    sc_pll_ctrl_1 >>= 4;
+    pclk_freq /= sc_pll_ctrl_1;
+    switch (sys_root_div & 0x30)
+    {
+        case 0x00: pclk_freq /= 1; break;
+        case 0x10: pclk_freq /= 2; break;
+        case 0x20: pclk_freq /= 4; break;
+        case 0x30: pclk_freq /= 8; break;
+        default:   pclk_freq /= 1; break;
+    }
+    return (int)pclk_freq;
+}
+
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
-    uint8_t reg, pll, hts_h, hts_l, vts_h, vts_l;
+    uint8_t reg, spc0, spc1, spc2, spc3, sysrootdiv, hts_h, hts_l, vts_h, vts_l;
     int ret = cambus_readb2(&sensor->bus, sensor->slv_addr, AEC_PK_MANUAL, &reg);
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AEC_PK_MANUAL, (reg & 0xFE) | ((enable == 0) << 0));
 
     if ((enable == 0) && (exposure_us >= 0)) {
-        ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL2, &pll);
+        ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL0, &spc0);
+        ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL1, &spc1);
+        ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL2, &spc2);
+        ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL3, &spc3);
+        ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SYSTEM_ROOT_DIVIDER, &sysrootdiv);
 
         ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, TIMING_HTS_H, &hts_h);
         ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, TIMING_HTS_L, &hts_l);
@@ -1104,12 +1137,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
         uint16_t hts = (hts_h << 8) | hts_l;
         uint16_t vts = (vts_h << 8) | vts_l;
 
-        // "/ 3" -> SC_PLL_CONTRL3[3:0] (pll pre-divider)
-        // "/ 1" -> SC_PLL_CONTRL1[7:4] (system clock divider)
-        // "/ 2" -> SC_PLL_CONTRL3[4] (pll root divider)
-        // "/ 10" -> SYSTEM_CTROL0[3:0] (bit mode)
-        // "/ 1" -> SYSTEM_ROOT_DIVIDER[5:4] (pclk root divider)
-        int pclk_freq = ((((((OV5640_XCLK_FREQ / 3) * pll) / 1) / 2) / 10) / 1) * 2;
+        int pclk_freq = calc_pclk_freq(spc0, spc1, spc2, spc3, sysrootdiv);
         int clocks_per_us = pclk_freq / 1000000;
         int exposure = IM_MAX(IM_MIN((exposure_us * clocks_per_us) / hts, 0xFFFF), 0x0000);
 
@@ -1128,8 +1156,14 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 
 static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 {
-    uint8_t pll, aec_0, aec_1, aec_2, hts_h, hts_l;
-    int ret = cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL2, &pll);
+    uint8_t spc0, spc1, spc2, spc3, sysrootdiv, aec_0, aec_1, aec_2, hts_h, hts_l;
+    int ret = 0;
+
+    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL0, &spc0);
+    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL1, &spc1);
+    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL2, &spc2);
+    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SC_PLL_CONTRL3, &spc3);
+    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, SYSTEM_ROOT_DIVIDER, &sysrootdiv);
 
     ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, AEC_PK_EXPOSURE_0, &aec_0);
     ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, AEC_PK_EXPOSURE_1, &aec_1);
@@ -1141,12 +1175,7 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     uint32_t aec = ((aec_0 << 16) | (aec_1 << 8) | aec_2) >> 4;
     uint16_t hts = (hts_h << 8) | hts_l;
 
-    // "/ 3" -> SC_PLL_CONTRL3[3:0] (pll pre-divider)
-    // "/ 1" -> SC_PLL_CONTRL1[7:4] (system clock divider)
-    // "/ 2" -> SC_PLL_CONTRL3[4] (pll root divider)
-    // "/ 10" -> SYSTEM_CTROL0[3:0] (bit mode)
-    // "/ 1" -> SYSTEM_ROOT_DIVIDER[5:4] (pclk root divider)
-    int pclk_freq = ((((((OV5640_XCLK_FREQ / 3) * pll) / 1) / 2) / 10) / 1) * 2;
+    int pclk_freq = calc_pclk_freq(spc0, spc1, spc2, spc3, sysrootdiv);
     int clocks_per_us = pclk_freq / 1000000;
     *exposure_us = (aec * hts) / clocks_per_us;
 
