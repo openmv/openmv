@@ -1,4 +1,22 @@
 # Change Log
+## [3.9.0](https://github.com/openmv/openmv/releases/tag/v3.9.0) (2020-01-13)
+* Fix H7 timer bug in new HAL. 
+* Fix pyb_spi bug from upstream.
+* Fix OV5640 PCLK calculation.
+* Add support for the MicroPython nRF port.
+* Add initial NANO 33 BLE sense board support.
+* Add support for OV5640 auto-focus feature.
+* Add support for the new MLX90641 FIR sensor.
+* Add the MLX90621 official driver library.
+* Update tinyusb submodule to 0.7.0
+* Update cambus code to work with all supported FIR sensors.
+* Update cambus to support auto-detection of FIR sensors.
+* Update read_ir() to support hmirror, vflip and tranpose.
+* Update draw_ir() to use the new drawing pipeline with bicubic scaling.
+* Add ImageIO type to support memory stream I/O.
+* Update example scripts.
+* Add new examples for NANO 33.
+
 ## [3.8.0](https://github.com/openmv/openmv/releases/tag/v3.8.0) (2020-12-06)
 * Update F4 HAL V1.7.1 -> V1.7.10
 * Update F7 HAL V1.2.2 -> V1.2.8
