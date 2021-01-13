@@ -28,6 +28,7 @@
 #define SC_PLL_CONTRL3      0x3037
 
 #define SCCB_SYSTEM_CTRL_1  0x3103
+#define SYSTEM_ROOT_DIVIDER 0x3108
 
 #define AWB_R_GAIN_H        0x3400
 #define AWB_R_GAIN_L        0x3401
