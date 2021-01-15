@@ -1076,7 +1076,9 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     if (copy_to_fb) {
         py_helper_set_to_framebuffer(&dst_img);
     } else if (arg_other) {
-        PY_ASSERT_TRUE_MSG((image_size(&dst_img) <= image_size(arg_other)),
+        bool fb = py_helper_is_equal_to_framebuffer(arg_other);
+        size_t size = fb ? framebuffer_get_buffer_size() : image_size(arg_other);
+        PY_ASSERT_TRUE_MSG((image_size(&dst_img) <= size),
                 "The new image won't fit in the target frame buffer!");
         arg_other->w = dst_img.w;
         arg_other->h = dst_img.h;
