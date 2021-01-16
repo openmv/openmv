@@ -439,7 +439,14 @@ void imlib_draw_string(image_t *img, int x_off, int y_off, const char *str, int 
 
 void imlib_draw_row_setup(imlib_draw_row_data_t *data)
 {
-    size_t image_row_size = image_size(data->dst_img) / data->dst_img->h;
+    image_t temp;
+    temp.w = data->dst_img->w;
+    temp.h = data->dst_img->h;
+    temp.bpp = data->src_img_bpp;
+
+    // Image Row Size should be the width of the destination image
+    // but with the bpp of the source image.
+    size_t image_row_size = image_size(&temp) / data->dst_img->h;
 
     data->toggle = 0;
     data->row_buffer[0] = fb_alloc(image_row_size, FB_ALLOC_NO_HINT);
@@ -2663,6 +2670,29 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
         color_palette = NULL;
     }
 
+    bool no_scaling_nearest_neighbor = (dst_delta_x == 1)
+            && (dst_x_start == 0) && (src_x_start == 0)
+            && (src_x_frac == 65536) && (src_y_frac == 65536);
+
+    // If we are scaling just make a deep copy.
+    bool is_scaling = (hint & (IMAGE_HINT_AREA | IMAGE_HINT_BICUBIC | IMAGE_HINT_BILINEAR))
+            || (!no_scaling_nearest_neighbor);
+
+    // Otherwise, we only have to do a deep copy if the image is growing.
+    size_t src_img_row_bytes = image_size(src_img) / src_img->h;
+    size_t dst_img_row_bytes = image_size(dst_img) / dst_img->h;
+
+    // In-place (by definition mutually exclusive to the above)...
+    if ((dst_img->data == src_img->data) && (is_scaling || (src_img_row_bytes < dst_img_row_bytes))) {
+        size_t size = image_size(src_img);
+        new_src_img.w = src_img->w; // same width as source image
+        new_src_img.h = src_img->h; // same height as source image
+        new_src_img.bpp = src_img->bpp;
+        new_src_img.data = fb_alloc(size, FB_ALLOC_NO_HINT);
+        memcpy(new_src_img.data, src_img->data, size);
+        src_img = &new_src_img;
+    }
+
     imlib_draw_row_data_t imlib_draw_row_data;
     imlib_draw_row_data.dst_img = dst_img;
     imlib_draw_row_data.src_img_bpp = src_img->bpp;
@@ -4360,52 +4390,162 @@ void imlib_draw_image(image_t *dst_img, image_t *src_img, int dst_x_start, int d
                 break;
             }
         }
-    } else if ((dst_delta_x == 1) && (dst_x_start == 0) && (src_x_start == 0) && (src_x_frac == 65536) && (src_y_frac == 65536)) { // copy
-        switch (src_img->bpp) {
-            case IMAGE_BPP_BINARY: {
-                while (y_not_done) {
-                    uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                    imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
-                    imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+    } else if (no_scaling_nearest_neighbor) { // copy
+        if (dst_img->data == src_img->data) { // In-Place
+            switch (src_img->bpp) {
+                case IMAGE_BPP_BINARY: {
+                    while (y_not_done) {
+                        uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint32_t *dst_row_ptr = (uint32_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
 
-                    // Increment offsets
-                    dst_y += dst_delta_y;
-                    src_y_accum += src_y_frac;
-                    next_src_y_index = src_y_accum >> 16;
-                    y_not_done = ++y < dst_y_end;
-                } // while y
-                break;
-            }
-            case IMAGE_BPP_GRAYSCALE: {
-                while (y_not_done) {
-                    uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                    imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
-                    imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
 
-                    // Increment offsets
-                    dst_y += dst_delta_y;
-                    src_y_accum += src_y_frac;
-                    next_src_y_index = src_y_accum >> 16;
-                    y_not_done = ++y < dst_y_end;
-                } // while y
-                break;
-            }
-            case IMAGE_BPP_RGB565: {
-                while (y_not_done) {
-                    uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
-                    imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
-                    imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+                        while (x_not_done) {
+                            int pixel = IMAGE_GET_BINARY_PIXEL_FAST(src_row_ptr, next_src_x_index);
+                            IMAGE_PUT_BINARY_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
 
-                    // Increment offsets
-                    dst_y += dst_delta_y;
-                    src_y_accum += src_y_frac;
-                    next_src_y_index = src_y_accum >> 16;
-                    y_not_done = ++y < dst_y_end;
-                } // while y
-                break;
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    while (y_not_done) {
+                        uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint8_t *dst_row_ptr = (uint8_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int pixel = IMAGE_GET_GRAYSCALE_PIXEL_FAST(src_row_ptr, next_src_x_index);
+                            IMAGE_PUT_GRAYSCALE_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    while (y_not_done) {
+                        uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                        // Must be called per loop to get the address of the temp buffer to blend with
+                        uint16_t *dst_row_ptr = (uint16_t *) imlib_draw_row_get_row_buffer(&imlib_draw_row_data);
+
+                        // X loop iteration variables
+                        int dst_x = dst_x_reset;
+                        long src_x_accum = src_x_accum_reset;
+                        int next_src_x_index = src_x_accum >> 16;
+                        int x = dst_x_start;
+                        bool x_not_done = x < dst_x_end;
+
+                        while (x_not_done) {
+                            int pixel = IMAGE_GET_RGB565_PIXEL_FAST(src_row_ptr, next_src_x_index);
+                            IMAGE_PUT_RGB565_PIXEL_FAST(dst_row_ptr, dst_x, pixel);
+
+                            // Increment offsets
+                            dst_x += dst_delta_x;
+                            src_x_accum += src_x_frac;
+                            next_src_x_index = src_x_accum >> 16;
+                            x_not_done = ++x < dst_x_end;
+                        } // while x
+
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                default: {
+                    break;
+                }
             }
-            default: {
-                break;
+        } else { // Out-of-Place
+            switch (src_img->bpp) {
+                case IMAGE_BPP_BINARY: {
+                    while (y_not_done) {
+                        uint32_t *src_row_ptr = IMAGE_COMPUTE_BINARY_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                        imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case IMAGE_BPP_GRAYSCALE: {
+                    while (y_not_done) {
+                        uint8_t *src_row_ptr = IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                        imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                case IMAGE_BPP_RGB565: {
+                    while (y_not_done) {
+                        uint16_t *src_row_ptr = IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(src_img, next_src_y_index);
+                        imlib_draw_row_put_row_buffer(&imlib_draw_row_data, src_row_ptr);
+                        imlib_draw_row(dst_x_start, dst_x_end, dst_y, &imlib_draw_row_data);
+
+                        // Increment offsets
+                        dst_y += dst_delta_y;
+                        src_y_accum += src_y_frac;
+                        next_src_y_index = src_y_accum >> 16;
+                        y_not_done = ++y < dst_y_end;
+                    } // while y
+                    break;
+                }
+                default: {
+                    break;
+                }
             }
         }
     } else { // nearest neighbor
