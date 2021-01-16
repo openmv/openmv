@@ -20,9 +20,12 @@
 #include "hm01b0_regs.h"
 #include "py/mphal.h"
 
-#define HIMAX_BOOT_RETRY        (10)
-#define HIMAX_LINE_LEN_PCK      0x172
-#define HIMAX_FRAME_LENGTH      0x232
+#define HIMAX_BOOT_RETRY            (10)
+#define HIMAX_LINE_LEN_PCK_QVGA     0x178
+#define HIMAX_FRAME_LENGTH_QVGA     0x104
+
+#define HIMAX_LINE_LEN_PCK_QQVGA    0x0D7
+#define HIMAX_FRAME_LENGTH_QQVGA    0x080
 
 static const uint16_t default_regs[][2] = {
     {BLC_TGT,              0x08},          //  BLC target :8  at 8 bit mode
@@ -76,8 +79,8 @@ static const uint16_t default_regs[][2] = {
     {AE_MIN_MEAN,          0x0A},          //AE min target mean      [Def: 0x0A]
     {CONVERGE_IN_TH,       0x03},          //Converge in threshold   [Def: 0x03]
     {CONVERGE_OUT_TH,      0x05},          //Converge out threshold  [Def: 0x05]
-    {MAX_INTG_H,           0x01},          //Maximum INTG High Byte  [Def: 0x01]
-    {MAX_INTG_L,           0x54},          //Maximum INTG Low Byte   [Def: 0x54]
+    {MAX_INTG_H,           (HIMAX_FRAME_LENGTH_QVGA-2)>>8},          //Maximum INTG High Byte  [Def: 0x01]
+    {MAX_INTG_L,           (HIMAX_FRAME_LENGTH_QVGA-2)&0xFF},        //Maximum INTG Low Byte   [Def: 0x54]
     {MAX_AGAIN_FULL,       0x03},          //Maximum Analog gain in full frame mode [Def: 0x03]
     {MAX_AGAIN_BIN2,       0x04},          //Maximum Analog gain in bin2 mode       [Def: 0x04]
     {MAX_DGAIN,            0xC0},
@@ -97,17 +100,17 @@ static const uint16_t default_regs[][2] = {
     {FS_50HZ_L,            0x32},
 
     {MD_CTRL,              0x30},
-    {FRAME_LEN_LINES_H,    HIMAX_FRAME_LENGTH>>8},
-    {FRAME_LEN_LINES_L,    HIMAX_FRAME_LENGTH&0xFF},
-    {LINE_LEN_PCK_H,       HIMAX_LINE_LEN_PCK>>8},
-    {LINE_LEN_PCK_L,       HIMAX_LINE_LEN_PCK&0xFF},
+    {FRAME_LEN_LINES_H,    HIMAX_FRAME_LENGTH_QVGA>>8},
+    {FRAME_LEN_LINES_L,    HIMAX_FRAME_LENGTH_QVGA&0xFF},
+    {LINE_LEN_PCK_H,       HIMAX_LINE_LEN_PCK_QVGA>>8},
+    {LINE_LEN_PCK_L,       HIMAX_LINE_LEN_PCK_QVGA&0xFF},
     {0x3010,               0x00},          // no full frame
     {0x0383,               0x01},
     {0x0387,               0x01},
     {0x0390,               0x00},
     {0x3011,               0x70},
     {0x3059,               0x02},
-    {0x3060,               0x0B},
+    {OSC_CLK_DIV,          0x0B},
     {IMG_ORIENTATION,      0x00},          // change the orientation
     {0x0104,               0x01},
 
@@ -177,18 +180,32 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
 }
 
 static const uint16_t QVGA_regs[][2] = {
-    {0x0383,            0x01},
-    {0x0387,            0x01},
-    {0x0390,            0x00},
+    {0x0383,                0x01},
+    {0x0387,                0x01},
+    {0x0390,                0x00},
+    {MAX_INTG_H,            (HIMAX_FRAME_LENGTH_QVGA-2)>>8},
+    {MAX_INTG_L,            (HIMAX_FRAME_LENGTH_QVGA-2)&0xFF},
+    {FRAME_LEN_LINES_H,     (HIMAX_FRAME_LENGTH_QVGA>>8)},
+    {FRAME_LEN_LINES_L,     (HIMAX_FRAME_LENGTH_QVGA&0xFF)},
+    {LINE_LEN_PCK_H,        (HIMAX_LINE_LEN_PCK_QVGA>>8)},
+    {LINE_LEN_PCK_L,        (HIMAX_LINE_LEN_PCK_QVGA&0xFF)},
+    {OSC_CLK_DIV,           0x0B},
         //============= End of regs marker ==================
     {0x0000,            0x00},
 
 };
 
 static const uint16_t QQVGA_regs[][2] = {
-    {0x0383,            0x03},
-    {0x0387,            0x03},
-    {0x0390,            0x03},
+    {0x0383,                0x03},
+    {0x0387,                0x03},
+    {0x0390,                0x03},
+    {MAX_INTG_H,            (HIMAX_FRAME_LENGTH_QQVGA-2)>>8},
+    {MAX_INTG_L,            (HIMAX_FRAME_LENGTH_QQVGA-2)&0xFF},
+    {FRAME_LEN_LINES_H,     (HIMAX_FRAME_LENGTH_QQVGA>>8)},
+    {FRAME_LEN_LINES_L,     (HIMAX_FRAME_LENGTH_QQVGA&0xFF)},
+    {LINE_LEN_PCK_H,        (HIMAX_LINE_LEN_PCK_QQVGA>>8)},
+    {LINE_LEN_PCK_L,        (HIMAX_LINE_LEN_PCK_QQVGA&0xFF)},
+    {OSC_CLK_DIV,           0x0A},
         //============= End of regs marker ==================
     {0x0000,            0x00},
 
@@ -272,9 +289,30 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     if (enable) {
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 1);
     } else {
-        int coarse_int = exposure_us*(OMV_XCLK_FREQUENCY/1000000)/LINE_LEN_PCK_H;
-        if (coarse_int<2) coarse_int = 2;
-        if (coarse_int>HIMAX_FRAME_LENGTH-2) coarse_int = HIMAX_FRAME_LENGTH-2;
+        uint32_t frame_len;
+        uint32_t line_len;
+        uint32_t coarse_int;
+        uint32_t vt_sys_div;
+
+        if (sensor->framesize == FRAMESIZE_QVGA) {
+            vt_sys_div = 1;
+            line_len = HIMAX_LINE_LEN_PCK_QVGA;
+            frame_len = HIMAX_FRAME_LENGTH_QVGA;
+        } else {
+            vt_sys_div = 2;
+            line_len = HIMAX_LINE_LEN_PCK_QQVGA;
+            frame_len = HIMAX_FRAME_LENGTH_QQVGA;
+        }
+
+        // vt_pix_clk = MCLK / vt_sys_div
+        coarse_int = exposure_us * (OMV_XCLK_FREQUENCY/1000000/vt_sys_div) / line_len;
+
+        if (coarse_int < 2) {
+            coarse_int = 2;
+        } else if (coarse_int > (frame_len-2)) {
+            coarse_int = frame_len-2;
+        }
+
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 0);
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, INTEGRATION_H, coarse_int>>8);
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, INTEGRATION_L, coarse_int&0xff);
