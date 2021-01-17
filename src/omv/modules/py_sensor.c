@@ -248,6 +248,20 @@ static mp_obj_t py_sensor_get_framesize() {
     return mp_obj_new_int(sensor.framesize);
 }
 
+static mp_obj_t py_sensor_set_framerate(mp_obj_t framerate) {
+    if (sensor_set_framerate(mp_obj_get_int(framerate)) != 0) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Failed to set framerate!"));
+    }
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_get_framerate() {
+    if (sensor.framerate == 0) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Frame rate not set yet!"));
+    }
+    return mp_obj_new_int(sensor.framerate);
+}
+
 static mp_obj_t py_sensor_set_windowing(mp_obj_t roi_obj)
 {
     int x, y, w, h;
@@ -755,6 +769,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_pixformat_obj,       py_sensor_get_pixformat);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framesize_obj,       py_sensor_set_framesize);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framesize_obj,       py_sensor_get_framesize);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framerate_obj,       py_sensor_set_framerate);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framerate_obj,       py_sensor_get_framerate);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_windowing_obj,       py_sensor_set_windowing);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_windowing_obj,       py_sensor_get_windowing);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_gainceiling_obj,     py_sensor_set_gainceiling);
@@ -893,6 +909,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_pixformat),       (mp_obj_t)&py_sensor_get_pixformat_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_framesize),       (mp_obj_t)&py_sensor_set_framesize_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_framesize),       (mp_obj_t)&py_sensor_get_framesize_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_framerate),       (mp_obj_t)&py_sensor_set_framerate_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_framerate),       (mp_obj_t)&py_sensor_get_framerate_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_windowing),       (mp_obj_t)&py_sensor_set_windowing_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_windowing),       (mp_obj_t)&py_sensor_get_windowing_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_gainceiling),     (mp_obj_t)&py_sensor_set_gainceiling_obj },

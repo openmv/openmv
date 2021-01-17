@@ -158,6 +158,7 @@ typedef struct _sensor {
     sde_t sde;                  // Special digital effects
     pixformat_t pixformat;      // Pixel format
     framesize_t framesize;      // Frame size
+    int framerate;              // Frame rate
     gainceiling_t gainceiling;  // AGC gainceiling
     bool hmirror;               // Horizontal Mirror
     bool vflip;                 // Vertical Flip
@@ -174,6 +175,7 @@ typedef struct _sensor {
     int  (*write_reg)           (sensor_t *sensor, uint16_t reg_addr, uint16_t reg_data);
     int  (*set_pixformat)       (sensor_t *sensor, pixformat_t pixformat);
     int  (*set_framesize)       (sensor_t *sensor, framesize_t framesize);
+    int  (*set_framerate)       (sensor_t *sensor, int framerate);
     int  (*set_contrast)        (sensor_t *sensor, int level);
     int  (*set_brightness)      (sensor_t *sensor, int level);
     int  (*set_saturation)      (sensor_t *sensor, int level);
@@ -229,6 +231,9 @@ int sensor_set_pixformat(pixformat_t pixformat);
 
 // Set the sensor frame size.
 int sensor_set_framesize(framesize_t framesize);
+
+// Set the sensor frame rate.
+int sensor_set_framerate(int framerate);
 
 // Set window size.
 int sensor_set_windowing(int x, int y, int w, int h);
