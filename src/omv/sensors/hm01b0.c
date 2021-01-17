@@ -24,8 +24,8 @@
 #define HIMAX_LINE_LEN_PCK_QVGA     0x178
 #define HIMAX_FRAME_LENGTH_QVGA     0x104
 
-#define HIMAX_LINE_LEN_PCK_QQVGA    0x0D7
-#define HIMAX_FRAME_LENGTH_QQVGA    0x080
+#define HIMAX_LINE_LEN_PCK_QQVGA    0x178
+#define HIMAX_FRAME_LENGTH_QQVGA    0x084
 
 static const uint16_t default_regs[][2] = {
     {BLC_TGT,              0x08},          //  BLC target :8  at 8 bit mode
@@ -104,7 +104,7 @@ static const uint16_t default_regs[][2] = {
     {FRAME_LEN_LINES_L,    HIMAX_FRAME_LENGTH_QVGA&0xFF},
     {LINE_LEN_PCK_H,       HIMAX_LINE_LEN_PCK_QVGA>>8},
     {LINE_LEN_PCK_L,       HIMAX_LINE_LEN_PCK_QVGA&0xFF},
-    {0x3010,               0x00},          // no full frame
+    {QVGA_WIN_EN,          0x01},          // Enable QVGA window readout
     {0x0383,               0x01},
     {0x0387,               0x01},
     {0x0390,               0x00},
@@ -189,8 +189,7 @@ static const uint16_t QVGA_regs[][2] = {
     {FRAME_LEN_LINES_L,     (HIMAX_FRAME_LENGTH_QVGA&0xFF)},
     {LINE_LEN_PCK_H,        (HIMAX_LINE_LEN_PCK_QVGA>>8)},
     {LINE_LEN_PCK_L,        (HIMAX_LINE_LEN_PCK_QVGA&0xFF)},
-    {OSC_CLK_DIV,           0x0B},
-        //============= End of regs marker ==================
+    //============= End of regs marker ==================
     {0x0000,            0x00},
 
 };
@@ -205,8 +204,7 @@ static const uint16_t QQVGA_regs[][2] = {
     {FRAME_LEN_LINES_L,     (HIMAX_FRAME_LENGTH_QQVGA&0xFF)},
     {LINE_LEN_PCK_H,        (HIMAX_LINE_LEN_PCK_QQVGA>>8)},
     {LINE_LEN_PCK_L,        (HIMAX_LINE_LEN_PCK_QQVGA&0xFF)},
-    {OSC_CLK_DIV,           0x0A},
-        //============= End of regs marker ==================
+    //============= End of regs marker ==================
     {0x0000,            0x00},
 
 };
@@ -235,6 +233,36 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     }
 
     return ret;
+}
+
+static int set_framerate(sensor_t *sensor, int framerate)
+{
+    uint8_t osc_div = 0;
+    uint32_t framesize = sensor->framesize;
+
+    if (framesize == FRAMESIZE_INVALID) {
+        // Use QVGA by default if the framesize is not set
+        framesize = FRAMESIZE_QVGA;
+    }
+
+    switch (framerate) {
+        case 15:
+            osc_div = (framesize == FRAMESIZE_QVGA) ? 0x01 : 0x00;
+            break;
+        case 30:
+            osc_div = (framesize == FRAMESIZE_QVGA) ? 0x02 : 0x01;
+            break;
+        case 60:
+            osc_div = (framesize == FRAMESIZE_QVGA) ? 0x03 : 0x02;
+            break;
+        case 120:
+            // Set to max FPS.
+            osc_div = 0x03;
+            break;
+        default:
+            return -1;
+    }
+    return cambus_writeb2(&sensor->bus, sensor->slv_addr, OSC_CLK_DIV, osc_div);
 }
 
 static int set_contrast(sensor_t *sensor, int level)
@@ -376,6 +404,7 @@ int hm01b0_init(sensor_t *sensor)
     sensor->write_reg           = write_reg;
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
+    sensor->set_framerate       = set_framerate;
     sensor->set_contrast        = set_contrast;
     sensor->set_brightness      = set_brightness;
     sensor->set_saturation      = set_saturation;
