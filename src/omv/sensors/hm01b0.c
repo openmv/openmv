@@ -282,6 +282,23 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
     return 0;
 }
 
+static int get_vt_pix_clk(sensor_t *sensor, uint32_t *vt_pix_clk)
+{
+    uint8_t reg;
+    if (cambus_readb2(&sensor->bus, sensor->slv_addr, OSC_CLK_DIV, &reg) != 0) {
+        return -1;
+    }
+    // 00 -> MCLK / 8
+    // 01 -> MCLK / 4
+    // 10 -> MCLK / 2
+    // 11 -> MCLK / 1
+    uint32_t vt_sys_div = 8 / (1 << (reg & 0x03));
+
+    // vt_pix_clk = MCLK / vt_sys_div
+    *vt_pix_clk = OMV_XCLK_FREQUENCY / vt_sys_div;
+    return 0;
+}
+
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
     int ret=0;
@@ -289,23 +306,21 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     if (enable) {
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 1);
     } else {
-        uint32_t frame_len;
         uint32_t line_len;
+        uint32_t frame_len;
         uint32_t coarse_int;
-        uint32_t vt_sys_div;
+        uint32_t vt_pix_clk = 0;
 
         if (sensor->framesize == FRAMESIZE_QVGA) {
-            vt_sys_div = 1;
             line_len = HIMAX_LINE_LEN_PCK_QVGA;
             frame_len = HIMAX_FRAME_LENGTH_QVGA;
         } else {
-            vt_sys_div = 2;
             line_len = HIMAX_LINE_LEN_PCK_QQVGA;
             frame_len = HIMAX_FRAME_LENGTH_QQVGA;
         }
 
-        // vt_pix_clk = MCLK / vt_sys_div
-        coarse_int = exposure_us * (OMV_XCLK_FREQUENCY/1000000/vt_sys_div) / line_len;
+        ret |= get_vt_pix_clk(sensor, &vt_pix_clk);
+        coarse_int = exposure_us * (vt_pix_clk / 1000000) / line_len;
 
         if (coarse_int < 2) {
             coarse_int = 2;
