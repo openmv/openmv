@@ -206,7 +206,6 @@ static const uint16_t QQVGA_regs[][2] = {
     {LINE_LEN_PCK_L,        (HIMAX_LINE_LEN_PCK_QQVGA&0xFF)},
     //============= End of regs marker ==================
     {0x0000,            0x00},
-
 };
 
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
@@ -262,7 +261,7 @@ static int set_framerate(sensor_t *sensor, int framerate)
         default:
             return -1;
     }
-    return cambus_writeb2(&sensor->bus, sensor->slv_addr, OSC_CLK_DIV, osc_div);
+    return cambus_writeb2(&sensor->bus, sensor->slv_addr, OSC_CLK_DIV, 0x08 | osc_div);
 }
 
 static int set_contrast(sensor_t *sensor, int level)
