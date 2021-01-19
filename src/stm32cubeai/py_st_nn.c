@@ -7,7 +7,7 @@
  * details.
  */
 
-#include "py/nlr.h"
+#include "py/runtime.h"
 #include "py/objlist.h"
 
 #include "omv_boardconfig.h"
