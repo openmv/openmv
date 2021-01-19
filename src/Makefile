@@ -63,9 +63,6 @@ MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
 MPY_LIB_DIR=$(TOP_DIR)/../scripts/libraries
 FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
 
-# Additional qstr definitions for OpenMV
-OMV_QSTR_DEFS = $(TOP_DIR)/$(OMV_DIR)/modules/qstrdefsomv.h
-
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
 CFLAGS += -Og -ggdb3 -Wno-maybe-uninitialized
@@ -95,8 +92,12 @@ include $(OMV_BOARD_CONFIG_DIR)/omv_boardconfig.mk
 # Include MicroPython board config.
 #include $(MP_BOARD_CONFIG_DIR)/mpconfigboard.mk
 
+# Additional qstr definitions for OpenMV
+OMV_SRC_QSTR := $(wildcard $(TOP_DIR)/$(OMV_DIR)/modules/*.c)
+OMV_SRC_QSTR += $(wildcard $(TOP_DIR)/$(OMV_DIR)/ports/$(PORT)/modules/*.c)
+
 # The following command line args are passed to MicroPython's top Makefile.
-MICROPY_ARGS = BOARD=$(TARGET) DEBUG=$(DEBUG) QSTR_DEFS="$(OMV_QSTR_DEFS)" MPY_LIB_DIR=$(MPY_LIB_DIR)
+MICROPY_ARGS = BOARD=$(TARGET) DEBUG=$(DEBUG) OMV_SRC_QSTR="$(OMV_SRC_QSTR)" MPY_LIB_DIR=$(MPY_LIB_DIR)
 
 # Configure additional built-in modules. Note must define both the CFLAGS and the Make command line args.
 ifeq ($(MICROPY_PY_SENSOR), 1)
