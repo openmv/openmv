@@ -71,7 +71,7 @@ ifeq ($(DEBUG), 1)
 CFLAGS += -Og -ggdb3 -Wno-maybe-uninitialized
 else
 DEBUG=0
-CFLAGS += -O2 -ggdb3 -DNDEBUG
+CFLAGS += -O2 -DNDEBUG
 endif
 
 # Enable debug printf
