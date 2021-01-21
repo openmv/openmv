@@ -62,6 +62,7 @@ OMV_BOARD_CONFIG_DIR=$(TOP_DIR)/$(OMV_DIR)/boards/$(TARGET)/
 MP_BOARD_CONFIG_DIR=$(TOP_DIR)/$(MICROPY_DIR)/ports/$(PORT)/boards/$(TARGET)/
 MPY_LIB_DIR=$(TOP_DIR)/../scripts/libraries
 FROZEN_MANIFEST=$(OMV_BOARD_CONFIG_DIR)/manifest.py
+OMV_COMMON_DIR=$(TOP_DIR)/$(OMV_DIR)/common
 
 # Debugging/Optimization
 ifeq ($(DEBUG), 1)
@@ -117,6 +118,7 @@ endif
 
 ifeq ($(MICROPY_PY_ULAB), 1)
 MPY_CFLAGS += -DMICROPY_PY_ULAB=1
+MPY_CFLAGS += -DULAB_CONFIG_FILE="\"$(OMV_COMMON_DIR)/ulab_config.h\""
 MICROPY_ARGS += MICROPY_PY_ULAB=1
 endif
 

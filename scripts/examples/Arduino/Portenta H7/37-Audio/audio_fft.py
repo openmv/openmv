@@ -1,10 +1,13 @@
-import image, audio, time, array, math, ulab as np
-from ulab import extras, numerical
+import image, audio, time
+from ulab import numpy as np
+from ulab import scipy as sp
 
-SIZE = 512//4
+CHANNELS = 2
+SIZE = 512//(2*CHANNELS)
+
 raw_buf = None
 fb = image.Image(SIZE+50, SIZE, image.RGB565, copy_to_fb=True)
-audio.init(channels=2, frequency=16000, gain=24, highpass=0.9883)
+audio.init(channels=CHANNELS, frequency=16000, gain_db=24, highpass=0.9883)
 
 def audio_callback(buf):
     # NOTE: do Not call any function that allocates memory.
@@ -17,7 +20,7 @@ audio.start_streaming(audio_callback)
 
 def draw_fft(img, fft_buf):
     fft_buf = (fft_buf / max(fft_buf)) * SIZE
-    fft_buf = np.vector.log10(fft_buf + 1) * 20
+    fft_buf = np.log10(fft_buf + 1) * 20
     color = (0xFF, 0x0F, 0x00)
     for i in range(0, SIZE):
         img.draw_line(i, SIZE, i, SIZE-int(fft_buf[i]), color, 1)
@@ -31,15 +34,22 @@ def draw_audio_bar(img, level, offset):
 
 while (True):
     if (raw_buf != None):
-        pcm_buf = pcm_buf = np.array(array.array('h', raw_buf))
+        pcm_buf = np.frombuffer(raw_buf, dtype=np.int16)
         raw_buf = None
-        fft_buf = extras.spectrogram(pcm_buf[0::2])
-        l_lvl = int((numerical.mean(abs(pcm_buf[1::2])) / 32768)*100)
-        r_lvl = int((numerical.mean(abs(pcm_buf[0::2])) / 32768)*100)
+
+        if CHANNELS == 1:
+            fft_buf = sp.signal.spectrogram(pcm_buf)
+            l_lvl = int((np.mean(abs(pcm_buf[1::2])) / 32768)*100)
+        else:
+            fft_buf = sp.signal.spectrogram(pcm_buf[0::2])
+            l_lvl = int((np.mean(abs(pcm_buf[1::2])) / 32768)*100)
+            r_lvl = int((np.mean(abs(pcm_buf[0::2])) / 32768)*100)
+
         fb.clear()
         draw_fft(fb, fft_buf)
         draw_audio_bar(fb, l_lvl, 0)
-        draw_audio_bar(fb, r_lvl, 25)
+        if CHANNELS == 2:
+            draw_audio_bar(fb, r_lvl, 25)
         fb.flush()
 
 # Stop streaming
