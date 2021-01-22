@@ -1,5 +1,15 @@
 # Change Log
-## [3.9.0](https://github.com/openmv/openmv/releases/tag/v3.9.0) (2020-01-13)
+## [3.9.1](https://github.com/openmv/openmv/releases/tag/v3.9.1) (2021-01-22)
+* Update ulab to 2.1.3
+* Add Portenta LoRa library.
+* Add set_framerate to sensor module.
+* Enable exFAT for Portenta.
+* Update HM01B0 sensor driver.
+* Improve low-power modes on QSPI boards.
+* Reduced firmware image size.
+* Faster firmware build.
+
+## [3.9.0](https://github.com/openmv/openmv/releases/tag/v3.9.0) (2021-01-13)
 * Fix H7 timer bug in new HAL. 
 * Fix pyb_spi bug from upstream.
 * Fix OV5640 PCLK calculation.
