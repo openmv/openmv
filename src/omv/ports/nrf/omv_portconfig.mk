@@ -296,18 +296,27 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/modules/,\
 
 ifeq ($(MICROPY_PY_ULAB), 1)
 FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/extmod/ulab/,\
-	code/fft.o          \
-	code/linalg.o       \
-	code/ndarray.o      \
-	code/numerical.o    \
-	code/poly.o         \
-	code/ulab.o         \
-	code/vectorise.o    \
-	code/create.o    	\
-	code/approx.o		\
-	code/filter.o		\
-	code/compare.o		\
-	code/extras.o		\
+	code/scipy/optimize/optimize.o      \
+	code/scipy/signal/signal.o          \
+	code/scipy/special/special.o        \
+	code/ndarray_operators.o            \
+	code/ulab_tools.o                   \
+	code/ndarray.o                      \
+	code/numpy/approx/approx.o          \
+	code/numpy/compare/compare.o        \
+	code/ulab_create.o                  \
+	code/numpy/fft/fft.o                \
+	code/numpy/fft/fft_tools.o          \
+	code/numpy/filter/filter.o          \
+	code/numpy/linalg/linalg.o          \
+	code/numpy/linalg/linalg_tools.o    \
+	code/numpy/numerical/numerical.o    \
+	code/numpy/poly/poly.o              \
+	code/numpy/vector/vector.o          \
+	code/user/user.o                    \
+	code/numpy/numpy.o                  \
+	code/scipy/scipy.o                  \
+	code/ulab.o                         \
 	)
 endif
 
