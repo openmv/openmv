@@ -274,13 +274,13 @@ color_thresholds_list_lnk_data_t;
     (__rb_pixel * 0x0801) + ((__pixel << 3) & 0x7E0); \
 })
 
-extern const int8_t lab_table[196608];
+extern const int8_t lab_table[196608/2];
 extern const int8_t yuv_table[196608];
 
 #ifdef IMLIB_ENABLE_LAB_LUT
-#define COLOR_RGB565_TO_L(pixel) lab_table[(pixel) * 3]
-#define COLOR_RGB565_TO_A(pixel) lab_table[((pixel) * 3) + 1]
-#define COLOR_RGB565_TO_B(pixel) lab_table[((pixel) * 3) + 2]
+#define COLOR_RGB565_TO_L(pixel) lab_table[((pixel>>1) * 3) + 0]
+#define COLOR_RGB565_TO_A(pixel) lab_table[((pixel>>1) * 3) + 1]
+#define COLOR_RGB565_TO_B(pixel) lab_table[((pixel>>1) * 3) + 2]
 #else
 #define COLOR_RGB565_TO_L(pixel) imlib_rgb565_to_l(pixel)
 #define COLOR_RGB565_TO_A(pixel) imlib_rgb565_to_a(pixel)
@@ -596,15 +596,15 @@ extern const int kernel_high_pass_3[9];
 
 #define IM_RGB5652L(p) \
     ({ __typeof__ (p) _p = (p); \
-       lab_table[_p * 3]; })
+       lab_table[((_p>>1) * 3) + 0]; })
 
 #define IM_RGB5652A(p) \
     ({ __typeof__ (p) _p = (p); \
-       lab_table[(_p * 3) + 1]; })
+       lab_table[((_p>>1) * 3) + 1]; })
 
 #define IM_RGB5652B(p) \
     ({ __typeof__ (p) _p = (p); \
-       lab_table[(_p * 3) + 2]; })
+       lab_table[((_p>>1) * 3) + 2]; })
 
 // Grayscale maxes
 #define IM_MAX_GS (255)

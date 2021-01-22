@@ -13,10 +13,12 @@
 def lin(c):
     return 100 * ((c/12.92) if (c<=0.04045) else pow((c+0.055)/1.055, 2.4))
 
-import sys
+import sys, math
 sys.stdout.write("#include <stdint.h>\n")
-
-sys.stdout.write("const int8_t lab_table[196608] = {\n") # 65536 * 3
+l_list = []
+a_list = []
+b_list = []
+sys.stdout.write("const int8_t lab_table[98304] = {\n") # 65536 * 3 / 2
 for i in range(65536):
 
     r = ((((i >> 11) & 31) * 255) + 15.5) // 31
@@ -45,10 +47,17 @@ for i in range(65536):
     a = int(round(500 * (x-y)));
     b = int(round(200 * (y-z)));
 
-    sys.stdout.write("    %4d, %4d, %4d" % (l, a, b))
+    l_list.append(int(round(116 * y)) - 16)
+    a_list.append(int(round(500 * (x-y))))
+    b_list.append(int(round(200 * (y-z))))
+
+lab = list(zip(l_list, a_list, b_list))
+for i, (x, y) in enumerate(zip(lab[0::2], lab[1::2])):
+    out = [(i1 + i2)/2.0 for i1, i2 in zip(x, y)]
+    sys.stdout.write(" %4d, %4d, %4d" % (out[0], out[1], out[2]))
     if (i + 1) % 4:
         sys.stdout.write(", ")
-    elif i != 65535:
+    elif i != 65535//2:
         sys.stdout.write(",\n")
     else:
         sys.stdout.write("\n};\n")
