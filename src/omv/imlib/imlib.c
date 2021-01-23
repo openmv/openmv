@@ -429,26 +429,6 @@ int8_t imlib_rgb565_to_b(uint16_t pixel)
     return fast_floorf(200 * (y-z));
 }
 
-int8_t imlib_rgb565_to_u(uint16_t pixel)
-{
-    int r = COLOR_RGB565_TO_R8(pixel);
-    int g = COLOR_RGB565_TO_G8(pixel);
-    int b = COLOR_RGB565_TO_B8(pixel);
-
-    return (int8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15); // -0.168736*r + -0.331264*g + 0.5*b
-//    return fast_floorf((r * -0.168736f) + (g * -0.331264f) + (b * +0.500000f));
-}
-
-int8_t imlib_rgb565_to_v(uint16_t pixel)
-{
-    int r = COLOR_RGB565_TO_R8(pixel);
-    int g = COLOR_RGB565_TO_G8(pixel);
-    int b = COLOR_RGB565_TO_B8(pixel);
-
-    return (int8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15); // 0.5*r + -0.418688*g + -0.081312*b
-//    return fast_floorf((r * +0.500000f) + (g * -0.418688f) + (b * -0.081312f));
-}
-
 // https://en.wikipedia.org/wiki/Lab_color_space -> CIELAB-CIEXYZ conversions
 // https://en.wikipedia.org/wiki/SRGB -> Specification of the transformation
 uint16_t imlib_lab_to_rgb(uint8_t l, int8_t a, int8_t b)
