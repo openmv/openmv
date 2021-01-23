@@ -163,6 +163,7 @@
 #define WRITE_GPIO 0x82
 #define READ_GPIO 0x84
 #define WRITE_MULTIIC 0xb8
+#define WRITE_BLOCKMVC1 0x34
 
 // Bit definitions
 #define VDCTRL1 0x2B
@@ -172,6 +173,7 @@
 #define VDCTRL2_LINECOUNT (1 << 0)
 #define VDCTRL2_PIXEL_WIDTH (1 << 10)
 #define VDCTRL2_ENABLE_VIDEO (1 << 15)
+#define BLOCKMVC1_PYF (1 << 4)
 
 // VS23 video commands
 #define PROGRAM 0x30
@@ -245,9 +247,18 @@ static void SpiClearRam()
     OMV_SPI_LCD_CS_HIGH();
 }
 
-static void SpiRamWriteProgram(int opcode, int data0, int data1, int data2, int data3)
+static void SpiRamWriteProgram(int data0, int data1, int data2, int data3)
 {
-    uint8_t packet[5] = {opcode, data3, data2, data1, data0};
+    uint8_t packet[5] = {PROGRAM, data3, data2, data1, data0};
+
+    OMV_SPI_LCD_CS_LOW();
+    HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, packet, sizeof(packet), HAL_MAX_DELAY);
+    OMV_SPI_LCD_CS_HIGH();
+}
+
+static void SpiRamWriteLowPassFilter(int data)
+{
+    uint8_t packet[6] = {WRITE_BLOCKMVC1, 0, 0, 0, 0, data};
 
     OMV_SPI_LCD_CS_LOW();
     HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, packet, sizeof(packet), HAL_MAX_DELAY);
@@ -320,7 +331,7 @@ static void SpiRamVideoInit()
     SpiRamWriteWordRegister(LINELEN, PLLCLKS_PER_LINE);
 
     // Set microcode program for picture lines
-    SpiRamWriteProgram(PROGRAM, OP1, OP2, OP3, OP4);
+    SpiRamWriteProgram(OP1, OP2, OP3, OP4);
 
     // Define where Line Indexes are stored in memory
     SpiRamWriteWordRegister(INDEXSTART, INDEX_START_LONGWORDS);
@@ -370,6 +381,9 @@ static void SpiRamVideoInit()
     SpiRamWriteWordRegister(VDCTRL2, (VDCTRL2_LINECOUNT * (TOTAL_LINES - 1))
     | (VDCTRL2_PIXEL_WIDTH * (PLLCLKS_PER_PIXEL - 1))
     | (VDCTRL2_ENABLE_VIDEO));
+
+    // Enable the low-pass Y filter.
+    SpiRamWriteLowPassFilter(BLOCKMVC1_PYF);
 }
 
 /////////////////////////////////////////////////////////////
@@ -539,8 +553,20 @@ static void spi_tv_callback(SPI_HandleTypeDef *hspi)
     }
 }
 
-// Convert a 16-bit RGB565 line of pixels to 12-bit YUV422 with padding.
-static void spi_tv_draw_image_cb_convert(uint16_t *row_pointer_i, uint8_t *row_pointer_o)
+// Convert a 8-bit Grayscale line of pixels to 12-bit YUV422 with padding (line is 16-bit per pixel).
+static void spi_tv_draw_image_cb_convert_grayscale(uint8_t *row_pointer_i, uint8_t *row_pointer_o)
+{
+    for (int i = TV_WIDTH - 2, j = ((TV_WIDTH * 3) / 2) - 3; i >= 0; i -= 2, j -= 3) {
+        int y0 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_pointer_i, i);
+        int y1 = IMAGE_GET_GRAYSCALE_PIXEL_FAST(row_pointer_i, i + 1);
+        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_pointer_o, j, 0);
+        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_pointer_o, j + 1, y0);
+        IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_pointer_o, j + 2, y1);
+    }
+}
+
+// Convert a 16-bit RGB565 line of pixels to 12-bit YUV422 with padding (line is 16-bit per pixel).
+static void spi_tv_draw_image_cb_convert_rgb565(uint16_t *row_pointer_i, uint8_t *row_pointer_o)
 {
     for (int i = 0, j = 0; i < TV_WIDTH; i += 2, j += 3) {
         #if defined(MCU_SERIES_F4) || defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
@@ -592,9 +618,15 @@ static void spi_tv_draw_image_cb_convert(uint16_t *row_pointer_i, uint8_t *row_p
     }
 }
 
-static void spi_tv_draw_image_cb(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data)
+static void spi_tv_draw_image_cb_grayscale(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data)
 {
-    spi_tv_draw_image_cb_convert((uint16_t *) data->dst_row_override, (uint8_t *) data->dst_row_override);
+    spi_tv_draw_image_cb_convert_grayscale((uint8_t *) data->dst_row_override, (uint8_t *) data->dst_row_override);
+    HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, data->dst_row_override, PICLINE_LENGTH_BYTES, HAL_MAX_DELAY);
+}
+
+static void spi_tv_draw_image_cb_rgb565(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data)
+{
+    spi_tv_draw_image_cb_convert_rgb565((uint16_t *) data->dst_row_override, (uint8_t *) data->dst_row_override);
     HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, data->dst_row_override, PICLINE_LENGTH_BYTES, HAL_MAX_DELAY);
 }
 
@@ -603,10 +635,13 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
                            const uint16_t *color_palette, const uint8_t *alpha_palette,
                            image_hint_t hint)
 {
+    bool rgb565 = src_img->bpp == IMAGE_BPP_RGB565;
+    imlib_draw_row_callback_t cb = rgb565 ? spi_tv_draw_image_cb_rgb565 : spi_tv_draw_image_cb_grayscale;
+
     image_t dst_img;
     dst_img.w = TV_WIDTH;
     dst_img.h = TV_HEIGHT;
-    dst_img.bpp = IMAGE_BPP_RGB565;
+    dst_img.bpp = rgb565 ? IMAGE_BPP_RGB565 : IMAGE_BPP_GRAYSCALE;
 
     int x0, x1, y0, y1;
     bool black = !imlib_draw_image_rectangle(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale,
@@ -631,7 +666,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
             // Transmits left/right parts already zeroed...
             imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi,
                              rgb_channel, alpha, color_palette, alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND,
-                             spi_tv_draw_image_cb, dst_img.data);
+                             cb, dst_img.data);
 
             // Zero the bottom rows
             if (y1 < TV_HEIGHT) {
@@ -655,41 +690,80 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
 
         dst_img.data = (uint8_t *) framebuffers[new_framebuffer_head];
 
-        if (black) { // zero the whole image
-            memset(dst_img.data, 0, TV_WIDTH * TV_HEIGHT * sizeof(uint16_t));
+        if (rgb565) {
+            if (black) { // zero the whole image
+                memset(dst_img.data, 0, TV_WIDTH * TV_HEIGHT * sizeof(uint16_t));
+            } else {
+                // Zero the top rows
+                if (y0) {
+                    memset(dst_img.data, 0, TV_WIDTH * y0 * sizeof(uint16_t));
+                }
+
+                if (x0) {
+                    for (int i = y0; i < y1; i++) { // Zero left
+                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i), 0, x0 * sizeof(uint16_t));
+                    }
+                }
+
+                imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi,
+                                rgb_channel, alpha, color_palette, alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND,
+                                NULL, NULL);
+
+                if (TV_WIDTH - x1) {
+                    for (int i = y0; i < y1; i++) { // Zero right
+                        memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i) + x1, 0,
+                            (TV_WIDTH - x1) * sizeof(uint16_t));
+                    }
+                }
+
+                // Zero the bottom rows
+                if (TV_HEIGHT - y1) {
+                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, y1), 0,
+                        TV_WIDTH * (TV_HEIGHT - y1) * sizeof(uint16_t));
+                }
+            }
+
+            for (int i = 0; i < TV_HEIGHT; i++) { // Convert the image.
+                spi_tv_draw_image_cb_convert_rgb565(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i),
+                                                    dst_img.data + (PICLINE_LENGTH_BYTES * i));
+            }
         } else {
-            // Zero the top rows
-            if (y0) {
-                memset(dst_img.data, 0, TV_WIDTH * y0 * sizeof(uint16_t));
-            }
+            if (black) { // zero the whole image
+                memset(dst_img.data, 0, TV_WIDTH * TV_HEIGHT * sizeof(uint8_t));
+            } else {
+                // Zero the top rows
+                if (y0) {
+                    memset(dst_img.data, 0, TV_WIDTH * y0 * sizeof(uint8_t));
+                }
 
-            if (x0) {
-                for (int i = y0; i < y1; i++) { // Zero left
-                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i), 0, x0 * sizeof(uint16_t));
+                if (x0) {
+                    for (int i = y0; i < y1; i++) { // Zero left
+                        memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, i), 0, x0 * sizeof(uint8_t));
+                    }
+                }
+
+                imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi,
+                                rgb_channel, alpha, color_palette, alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND,
+                                NULL, NULL);
+
+                if (TV_WIDTH - x1) {
+                    for (int i = y0; i < y1; i++) { // Zero right
+                        memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, i) + x1, 0,
+                            (TV_WIDTH - x1) * sizeof(uint8_t));
+                    }
+                }
+
+                // Zero the bottom rows
+                if (TV_HEIGHT - y1) {
+                    memset(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, y1), 0,
+                        TV_WIDTH * (TV_HEIGHT - y1) * sizeof(uint8_t));
                 }
             }
 
-            imlib_draw_image(&dst_img, src_img, dst_x_start, dst_y_start, x_scale, y_scale, roi,
-                             rgb_channel, alpha, color_palette, alpha_palette, hint | IMAGE_HINT_BLACK_BACKGROUND,
-                             NULL, NULL);
-
-            if (TV_WIDTH - x1) {
-                for (int i = y0; i < y1; i++) { // Zero right
-                    memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i) + x1, 0,
-                           (TV_WIDTH - x1) * sizeof(uint16_t));
-                }
+            for (int i = TV_HEIGHT - 1; i >= 0; i--) { // Convert the image.
+                spi_tv_draw_image_cb_convert_grayscale(IMAGE_COMPUTE_GRAYSCALE_PIXEL_ROW_PTR(&dst_img, i),
+                                                       dst_img.data + (PICLINE_LENGTH_BYTES * i));
             }
-
-            // Zero the bottom rows
-            if (TV_HEIGHT - y1) {
-                memset(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, y1), 0,
-                       TV_WIDTH * (TV_HEIGHT - y1) * sizeof(uint16_t));
-            }
-        }
-
-        for (int i = 0; i < TV_HEIGHT; i++) { // Convert the iamge.
-            spi_tv_draw_image_cb_convert(IMAGE_COMPUTE_RGB565_PIXEL_ROW_PTR(&dst_img, i),
-                                         dst_img.data + (PICLINE_LENGTH_BYTES * i));
         }
 
         #ifdef __DCACHE_PRESENT
