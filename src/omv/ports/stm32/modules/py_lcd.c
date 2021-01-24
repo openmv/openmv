@@ -67,7 +67,7 @@ static int lcd_refresh = 0;
 static int lcd_intensity = 0;
 
 #ifdef OMV_SPI_LCD_CONTROLLER
-DMA_HandleTypeDef spi_tx_dma = {};
+static DMA_HandleTypeDef spi_tx_dma = {};
 
 static volatile enum {
     SPI_TX_CB_IDLE,
@@ -99,7 +99,7 @@ static void spi_config_deinit()
     ///////////////////////////////////////////////////////////////////////
 }
 
-void spi_lcd_callback(SPI_HandleTypeDef *hspi);
+static void spi_lcd_callback(SPI_HandleTypeDef *hspi);
 
 static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, bool bgr)
 {
@@ -198,7 +198,11 @@ static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, 
 
 static bool spi_tx_cb_state_on[FRAMEBUFFER_COUNT] = {};
 
-void spi_lcd_callback(SPI_HandleTypeDef *hspi)
+static const uint8_t display_off[] = {0x28};
+static const uint8_t display_on[] = {0x29};
+static const uint8_t memory_write[] = {0x2C};
+
+static void spi_lcd_callback(SPI_HandleTypeDef *hspi)
 {
     if (lcd_type == LCD_SHIELD) {
         static uint16_t *spi_tx_cb_state_memory_write_addr = NULL;
@@ -208,27 +212,27 @@ void spi_lcd_callback(SPI_HandleTypeDef *hspi)
         switch (spi_tx_cb_state) {
             case SPI_TX_CB_MEMORY_WRITE_CMD: {
                 if (!spi_tx_cb_state_on[framebuffer_head]) {
-                    spi_tx_cb_state = SPI_TX_CB_DISPLAY_OFF;
-                    framebuffer_tail = framebuffer_head;
                     OMV_SPI_LCD_CS_HIGH();
                     OMV_SPI_LCD_RS_ON();
+                    spi_tx_cb_state = SPI_TX_CB_DISPLAY_OFF;
+                    framebuffer_tail = framebuffer_head;
                     OMV_SPI_LCD_CS_LOW();
-                    HAL_SPI_Transmit_IT(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t []) {0x28}, 1); // display off
+                    HAL_SPI_Transmit_IT(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) display_off, sizeof(display_off));
                 } else {
+                    OMV_SPI_LCD_CS_HIGH();
+                    OMV_SPI_LCD_RS_ON();
                     spi_tx_cb_state = SPI_TX_CB_MEMORY_WRITE;
                     spi_tx_cb_state_memory_write_addr = framebuffers[framebuffer_head];
                     spi_tx_cb_state_memory_write_count = lcd_width * lcd_height;
                     spi_tx_cb_state_memory_write_first = true;
                     framebuffer_tail = framebuffer_head;
-                    OMV_SPI_LCD_CS_HIGH();
-                    OMV_SPI_LCD_RS_ON();
                     OMV_SPI_LCD_CS_LOW();
                     // When starting the interrupt chain the first HAL_SPI_Transmit_IT is not executed
                     // in interrupt context. So, disable interrupts for the first HAL_SPI_Transmit_IT so
                     // that it completes first and unlocks the SPI bus before allowing the interrupt
                     // it causes to trigger starting the interrupt chain.
                     uint32_t irq_state = disable_irq();
-                    HAL_SPI_Transmit_IT(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t []) {0x2C}, 1); // memory write
+                    HAL_SPI_Transmit_IT(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) memory_write, sizeof(memory_write));
                     enable_irq(irq_state);
                 }
                 break;
@@ -240,10 +244,9 @@ void spi_lcd_callback(SPI_HandleTypeDef *hspi)
                 spi_tx_cb_state_memory_write_addr += count;
                 spi_tx_cb_state_memory_write_count -= count;
                 if (spi_tx_cb_state_memory_write_first) {
-                    spi_tx_cb_state_memory_write_first = false;
                     OMV_SPI_LCD_CS_HIGH();
                     OMV_SPI_LCD_RS_OFF();
-                    OMV_SPI_LCD_CS_LOW();
+                    spi_tx_cb_state_memory_write_first = false;
                     OMV_SPI_LCD_CONTROLLER->spi->Init.DataSize = SPI_DATASIZE_16BIT;
 #if defined(MCU_SERIES_H7)
                     OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
@@ -252,11 +255,14 @@ void spi_lcd_callback(SPI_HandleTypeDef *hspi)
 #elif defined(MCU_SERIES_F4)
                     OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
 #endif
+                    OMV_SPI_LCD_CS_LOW();
                 }
                 HAL_SPI_Transmit_DMA(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) addr, count);
                 break;
             }
             case SPI_TX_CB_DISPLAY_ON: {
+                OMV_SPI_LCD_CS_HIGH();
+                OMV_SPI_LCD_RS_ON();
                 spi_tx_cb_state = SPI_TX_CB_MEMORY_WRITE_CMD;
                 OMV_SPI_LCD_CONTROLLER->spi->Init.DataSize = SPI_DATASIZE_8BIT;
 #if defined(MCU_SERIES_H7)
@@ -266,15 +272,13 @@ void spi_lcd_callback(SPI_HandleTypeDef *hspi)
 #elif defined(MCU_SERIES_F4)
                 OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_8BIT;
 #endif
-                OMV_SPI_LCD_CS_HIGH();
-                OMV_SPI_LCD_RS_ON();
                 OMV_SPI_LCD_CS_LOW();
-                HAL_SPI_Transmit_IT(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t []) {0x29}, 1); // display on
+                HAL_SPI_Transmit_IT(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) display_on, sizeof(display_on));
                 break;
             }
             case SPI_TX_CB_DISPLAY_OFF: {
-                spi_tx_cb_state = SPI_TX_CB_IDLE;
                 OMV_SPI_LCD_CS_HIGH();
+                spi_tx_cb_state = SPI_TX_CB_IDLE;
                 break;
             }
             default: {
@@ -323,7 +327,7 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start, 
 
         OMV_SPI_LCD_RS_ON();
         OMV_SPI_LCD_CS_LOW();
-        HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t []) {0x2C}, 1, HAL_MAX_DELAY); // memory write
+        HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) memory_write, sizeof(memory_write), HAL_MAX_DELAY); // memory write
         OMV_SPI_LCD_CS_HIGH();
         OMV_SPI_LCD_RS_OFF();
 
@@ -364,7 +368,7 @@ static void spi_lcd_display(image_t *src_img, int dst_x_start, int dst_y_start, 
 
         OMV_SPI_LCD_RS_ON();
         OMV_SPI_LCD_CS_LOW();
-        HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t []) {0x29}, 1, HAL_MAX_DELAY); // display on
+        HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) display_on, sizeof(display_on), HAL_MAX_DELAY);
         OMV_SPI_LCD_CS_HIGH();
         OMV_SPI_LCD_RS_OFF();
 
@@ -418,7 +422,7 @@ static void spi_lcd_clear()
     if (!lcd_triple_buffer) {
         OMV_SPI_LCD_RS_ON();
         OMV_SPI_LCD_CS_LOW();
-        HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t []) {0x28}, 1, HAL_MAX_DELAY); // display off
+        HAL_SPI_Transmit(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) display_off, sizeof(display_off), HAL_MAX_DELAY);
         OMV_SPI_LCD_CS_HIGH();
         OMV_SPI_LCD_RS_OFF();
     } else {
@@ -1681,6 +1685,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__),                MP_OBJ_NEW_QSTR(MP_QSTR_lcd)                    },
     { MP_ROM_QSTR(MP_QSTR_LCD_NONE),                MP_ROM_INT(LCD_NONE)                            },
     { MP_ROM_QSTR(MP_QSTR_LCD_SHIELD),              MP_ROM_INT(LCD_SHIELD)                          },
+#ifdef OMV_DVI_PRESENT
     { MP_ROM_QSTR(MP_QSTR_LCD_DISPLAY),             MP_ROM_INT(LCD_DISPLAY)                         },
     { MP_ROM_QSTR(MP_QSTR_LCD_DISPLAY_WITH_HDMI),   MP_ROM_INT(LCD_DISPLAY_WITH_HDMI)               },
     { MP_ROM_QSTR(MP_QSTR_LCD_DISPLAY_ONLY_HDMI),   MP_ROM_INT(LCD_DISPLAY_ONLY_HDMI)               },
@@ -1702,6 +1707,7 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
     { MP_ROM_QSTR(MP_QSTR_UXGA),                    MP_ROM_INT(LCD_DISPLAY_UXGA)                    },
     { MP_ROM_QSTR(MP_QSTR_HD),                      MP_ROM_INT(LCD_DISPLAY_HD)                      },
     { MP_ROM_QSTR(MP_QSTR_FHD),                     MP_ROM_INT(LCD_DISPLAY_FHD)                     },
+#endif
 #ifdef OMV_TOUCH_PRESENT
     { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_MOVE_UP),     MP_ROM_INT(PY_LCD_TOUCH_GESTURE_MOVE_UP)        },
     { MP_ROM_QSTR(MP_QSTR_LCD_GESTURE_MOVE_LEFT),   MP_ROM_INT(PY_LCD_TOUCH_GESTURE_MOVE_LEFT)      },
