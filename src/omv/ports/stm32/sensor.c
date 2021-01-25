@@ -546,16 +546,28 @@ int sensor_sleep(int enable)
 
 int sensor_shutdown(int enable)
 {
+    int ret = 0;
     dcmi_abort();
 
     if (enable) {
-        DCMI_PWDN_HIGH();
+        if (sensor.pwdn_pol == ACTIVE_HIGH) {
+            DCMI_PWDN_HIGH();
+        } else {
+            DCMI_PWDN_LOW();
+        }
+        HAL_NVIC_DisableIRQ(DCMI_IRQn);
+        HAL_DCMI_DeInit(&DCMIHandle);
     } else {
-        DCMI_PWDN_LOW();
+        if (sensor.pwdn_pol == ACTIVE_HIGH) {
+            DCMI_PWDN_LOW();
+        } else {
+            DCMI_PWDN_HIGH();
+        }
+        ret = dcmi_config(DCMI_JPEG_DISABLE);
     }
 
     systick_sleep(10);
-    return 0;
+    return ret;
 }
 
 int sensor_read_reg(uint16_t reg_addr)

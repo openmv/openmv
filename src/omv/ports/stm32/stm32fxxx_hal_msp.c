@@ -139,23 +139,25 @@ void HAL_MspInit(void)
     #if defined(DCMI_RESET_PIN) || defined(DCMI_PWDN_PIN) || defined(DCMI_FSYNC_PIN)
     /* Configure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
 
     #if defined(DCMI_RESET_PIN)
     GPIO_InitStructure.Pin = DCMI_RESET_PIN;
+    GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
     HAL_GPIO_Init(DCMI_RESET_PORT, &GPIO_InitStructure);
-    #endif
-
-    #if defined(DCMI_PWDN_PIN)
-    GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
-    HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
     #endif
 
     #if defined(DCMI_FSYNC_PIN)
     GPIO_InitStructure.Pin = DCMI_FSYNC_PIN;
+    GPIO_InitStructure.Pull  = GPIO_PULLDOWN;
     HAL_GPIO_Init(DCMI_FSYNC_PORT, &GPIO_InitStructure);
+    #endif
+
+    #if defined(DCMI_PWDN_PIN)
+    GPIO_InitStructure.Pin = DCMI_PWDN_PIN;
+    GPIO_InitStructure.Pull  = GPIO_PULLUP;
+    HAL_GPIO_Init(DCMI_PWDN_PORT, &GPIO_InitStructure);
     #endif
 
     #endif // DCMI_RESET_PIN || DCMI_PWDN_PIN || DCMI_FSYNC_PIN
@@ -222,7 +224,7 @@ void HAL_TIM_PWM_MspInit(TIM_HandleTypeDef *htim)
         /* Timer GPIO configuration */
         GPIO_InitTypeDef  GPIO_InitStructure;
         GPIO_InitStructure.Pin       = DCMI_TIM_PIN;
-        GPIO_InitStructure.Pull      = GPIO_NOPULL;
+        GPIO_InitStructure.Pull      = GPIO_PULLUP;
         GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
         GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
         GPIO_InitStructure.Alternate = DCMI_TIM_AF;
@@ -255,7 +257,7 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
 
     /* DCMI GPIOs configuration */
     GPIO_InitTypeDef  GPIO_InitStructure;
-    GPIO_InitStructure.Pull      = GPIO_PULLDOWN;
+    GPIO_InitStructure.Pull      = GPIO_PULLUP;
     GPIO_InitStructure.Speed     = GPIO_SPEED_HIGH;
     GPIO_InitStructure.Alternate = GPIO_AF13_DCMI;
 
@@ -271,6 +273,16 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* hdcmi)
         HAL_GPIO_Init(dcmi_pins[i].port, &GPIO_InitStructure);
     }
 }
+
+void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi)
+{
+    /* DCMI clock enable */
+    __DCMI_CLK_DISABLE();
+    for (int i=0; i<NUM_DCMI_PINS; i++) {
+        HAL_GPIO_DeInit(dcmi_pins[i].port, dcmi_pins[i].pin);
+    }
+}
+
 
 void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi)
 {
