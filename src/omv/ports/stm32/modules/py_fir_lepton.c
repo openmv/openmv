@@ -55,7 +55,11 @@ static DMA_HandleTypeDef fir_lepton_spi_rx_dma = {};
 #define VOSPI_SEG_SIZE_PIXELS   (VOSPI_PIDS_PER_SEG * VOSPI_PID_SIZE_PIXELS) // 16-bits
 
 #define VOSPI_BUFFER_SIZE       (VOSPI_PACKET_SIZE * 2) // 16-bits
+#if defined(MCU_SERIES_H7)
 #define VOSPI_CLOCK_SPEED       10000000 // hz
+#else
+#define VOSPI_CLOCK_SPEED       20000000 // hz
+#endif
 #define VOSPI_SYNC_MS           200 // ms
 
 static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
