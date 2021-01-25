@@ -469,17 +469,35 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
     OMV_FIR_LEPTON_CONTROLLER->spi->hdmatx = NULL;
     OMV_FIR_LEPTON_CONTROLLER->spi->hdmarx = &fir_lepton_spi_rx_dma;
 
+    #if defined(MCU_SERIES_H7)
     fir_lepton_spi_rx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    #else
+    fir_lepton_spi_rx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+    #endif
+
+    #if defined(MCU_SERIES_H7)
     fir_lepton_spi_rx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    #else
+    fir_lepton_spi_rx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+    #endif
+
     fir_lepton_spi_rx_dma.Init.Mode = DMA_CIRCULAR;
 
     ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
         (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_PSIZE_Msk) |
+        #if defined(MCU_SERIES_H7)
         DMA_PDATAALIGN_WORD;
+        #else
+        DMA_PDATAALIGN_HALFWORD;
+        #endif
 
     ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
         (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_MSIZE_Msk) |
+        #if defined(MCU_SERIES_H7)
         DMA_MDATAALIGN_WORD;
+        #else
+        DMA_MDATAALIGN_HALFWORD;
+        #endif
 
     ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
         (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_CIRC_Msk) |
