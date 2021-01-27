@@ -85,7 +85,7 @@ class Lora():
         if not self.uart:
             self.uart = UART(8, 19200)
             #self.uart = UART(1, 19200) # Use external module
-            self.uart.init(19200, bits=8, parity=None, stop=1, timeout=250, timeout_char=100)
+            self.uart.init(19200, bits=8, parity=None, stop=2, timeout=250, timeout_char=100)
 
 
     def debug_print(self, data):
