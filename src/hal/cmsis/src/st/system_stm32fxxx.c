@@ -155,6 +155,7 @@ void SystemInit(void)
 
     #if defined(MCU_SERIES_H7)
     /* Change  the switch matrix read issuing capability to 1 for the AXI SRAM target (Target 7) */
+    // See Errata 2.2.9 "Reading from AXI SRAM may lead to data read corruption"
     *((__IO uint32_t*)0x51008108) = 0x00000001;
     #endif // defined(MCU_SERIES_H7)
 
