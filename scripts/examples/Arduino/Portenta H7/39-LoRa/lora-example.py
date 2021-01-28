@@ -12,7 +12,7 @@ appEui = "1234567890123456"
 appKey = "12345678901234567890123456789012"
 
 try:
-    lora.join_OTAA(appEui, appKey, timeout=20000)
+    lora.join_OTAA(appEui, appKey)
     # Or ABP:
     #lora.join_ABP(devAddr, nwkSKey, appSKey, timeout=5000)
 # You can catch individual errors like timeout, rx etc...
