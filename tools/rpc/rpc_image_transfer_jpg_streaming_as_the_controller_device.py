@@ -45,7 +45,10 @@ sys.stdout.flush()
 pygame.init()
 screen_w = 640
 screen_h = 480
-screen = pygame.display.set_mode((screen_w, screen_h), flags=pygame.RESIZABLE)
+try:
+    screen = pygame.display.set_mode((screen_w, screen_h), flags=pygame.RESIZABLE)
+except TypeError:
+    screen = pygame.display.set_mode((screen_w, screen_h))
 pygame.display.set_caption("Frame Buffer")
 clock = pygame.time.Clock()
 
