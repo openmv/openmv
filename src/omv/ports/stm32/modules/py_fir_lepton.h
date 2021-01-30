@@ -15,8 +15,10 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
 void fir_lepton_register_vsync_cb(mp_obj_t cb);
 mp_obj_t fir_lepton_get_radiometry();
 mp_obj_t fir_lepton_read_ta();
-mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose);
+mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose,
+                            bool wait_for_new_frame, int timeout);
 void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float min, float max,
-                           bool mirror, bool flip, bool transpose);
+                           bool mirror, bool flip, bool transpose,
+                           bool wait_for_new_frame, int timeout);
 void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args);
 #endif // __PY_FIR_LEPTON_H__

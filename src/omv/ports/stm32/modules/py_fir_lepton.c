@@ -530,9 +530,26 @@ mp_obj_t fir_lepton_get_radiometry()
     return mp_obj_new_bool(fir_lepton_rad_en);
 }
 
-static const uint16_t *fir_lepton_get_frame()
+static const uint16_t *fir_lepton_get_frame(bool wait_for_new_frame, uint32_t timeout)
 {
     int sampled_framebuffer_head = framebuffer_head;
+
+    if (wait_for_new_frame) {
+        for (uint32_t start = systick_current_millis();;) {
+            sampled_framebuffer_head = framebuffer_head;
+
+            if (framebuffer_tail != sampled_framebuffer_head) {
+                break;
+            }
+
+            if ((systick_current_millis() - start) >= timeout) {
+                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
+            }
+
+            systick_sleep(1);
+        }
+    }
+
     framebuffer_tail = sampled_framebuffer_head;
     return framebuffers[sampled_framebuffer_head];
 }
@@ -553,11 +570,12 @@ mp_obj_t fir_lepton_read_ta()
     return mp_obj_new_float((fir_lepton_get_temperature() * 0.01f) - 273.15f);
 }
 
-mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose)
+mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose,
+                            bool wait_for_new_frame, int timeout)
 {
     int kelvin = fir_lepton_get_temperature();
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
-    const uint16_t *data = fir_lepton_get_frame();
+    const uint16_t *data = fir_lepton_get_frame(wait_for_new_frame, timeout);
     float min = +FLT_MAX;
     float max = -FLT_MAX;
     int w_1 = w - 1;
@@ -606,10 +624,11 @@ mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose
 }
 
 void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float min, float max,
-                           bool mirror, bool flip, bool transpose)
+                           bool mirror, bool flip, bool transpose,
+                           bool wait_for_new_frame, int timeout)
 {
     int kelvin = fir_lepton_get_temperature();
-    const uint16_t *data = fir_lepton_get_frame();
+    const uint16_t *data = fir_lepton_get_frame(wait_for_new_frame, timeout);
     int new_min;
     int new_max;
 

@@ -757,6 +757,11 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
     fir_transposed = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
 
+    bool arg_wait_for_new_frame =
+            py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_wait_for_new_frame), false);
+    int arg_timeout =
+            py_helper_keyword_int(n_args, args, 4, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), 5000);
+
     switch(fir_sensor) {
         case FIR_NONE: {
             return mp_const_none;
@@ -807,7 +812,8 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         #endif
         #if (OMV_ENABLE_FIR_LEPTON == 1)
         case FIR_LEPTON: {
-            return fir_lepton_read_ir(fir_width, fir_height, arg_hmirror, arg_vflip, fir_transposed);
+            return fir_lepton_read_ir(fir_width, fir_height, arg_hmirror, arg_vflip, fir_transposed,
+                                      arg_wait_for_new_frame, arg_timeout);
         }
         #endif
     }
@@ -1089,6 +1095,11 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         dst_img.data = xalloc(image_size(&dst_img));
     }
 
+    bool arg_wait_for_new_frame =
+            py_helper_keyword_int(n_args, args, 16, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_wait_for_new_frame), false);
+    int arg_timeout =
+            py_helper_keyword_int(n_args, args, 17, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), 5000);
+
     fb_alloc_mark();
 
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
@@ -1157,7 +1168,8 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         #if (OMV_ENABLE_FIR_LEPTON == 1)
         case FIR_LEPTON: {
             fir_lepton_fill_image(&src_img, fir_width, fir_height, !scale_obj, min, max,
-                                  arg_hmirror, arg_vflip, arg_transpose);
+                                  arg_hmirror, arg_vflip, arg_transpose,
+                                  arg_wait_for_new_frame, arg_timeout);
             break;
         }
         #endif
