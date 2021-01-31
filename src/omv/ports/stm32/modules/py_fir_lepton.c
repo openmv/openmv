@@ -17,7 +17,7 @@
 #include "softtimer.h"
 #include "systick.h"
 
-#include "imlib.h"
+#include "py_helper.h"
 #include "omv_boardconfig.h"
 #include STM32_HAL_H
 
@@ -714,34 +714,32 @@ void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float mi
     }
 }
 
-void fir_lepton_trigger_ffc()
+void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (LEP_RunSysFFCNormalization(&fir_lepton_handle) != LEP_OK) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("FFC Error!"));
     }
-}
 
-void fir_lepton_wait_on_ffc(uint n_args, const mp_obj_t *args)
-{
-    uint32_t start = systick_current_millis();
-    uint32_t delay_ms = (n_args < 1) ? 5000 : mp_obj_get_int(args[0]);
+    int timeout = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
 
-    for (;;) {
-        LEP_SYS_STATUS_E status;
+    if (timeout >= 0) {
+        for (uint32_t start = systick_current_millis();;) {
+            LEP_SYS_STATUS_E status;
 
-        if (LEP_GetSysFFCStatus(&fir_lepton_handle, &status) != LEP_OK) {
-            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SYS Error!"));
+            if (LEP_GetSysFFCStatus(&fir_lepton_handle, &status) != LEP_OK) {
+                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SYS Error!"));
+            }
+
+            if (status == LEP_SYS_STATUS_READY) {
+                break;
+            }
+
+            if ((systick_current_millis() - start) >= timeout) {
+                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
+            }
+
+            systick_sleep(1);
         }
-
-        if (status == LEP_SYS_STATUS_READY) {
-            break;
-        }
-
-        if ((systick_current_millis() - start) >= delay_ms) {
-            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
-        }
-
-        systick_sleep(1);
     }
 }
 
