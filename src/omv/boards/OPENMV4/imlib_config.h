@@ -83,7 +83,7 @@
 #endif
 
 // Enable get_similarity()
-// #define IMLIB_ENABLE_GET_SIMILARITY
+#define IMLIB_ENABLE_GET_SIMILARITY
 
 // Enable find_lines()
 #define IMLIB_ENABLE_FIND_LINES
