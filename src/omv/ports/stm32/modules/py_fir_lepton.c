@@ -546,7 +546,7 @@ static const uint16_t *fir_lepton_get_frame(bool wait_for_new_frame, uint32_t ti
                 mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
             }
 
-            systick_sleep(1);
+            __WFI();
         }
     }
 
