@@ -1,4 +1,13 @@
 # Change Log
+## [3.9.2](https://github.com/openmv/openmv/releases/tag/v3.9.2) (2021-02-01)
+* Fix ImageIO RGB565 bug.
+* Update Portenta LoRa library.
+* Fix IDMA/DMA2 bus contention bug on newer cams.
+* Fix external Lepton driver on F4 and F7.
+* Fix issues with F7 LCD triple buffering.
+* Improve STOP mode power consumption.
+* Improve TV driver resolution, add scaling, and triple buffering
+
 ## [3.9.1](https://github.com/openmv/openmv/releases/tag/v3.9.1) (2021-01-22)
 * Update ulab to 2.1.3
 * Add Portenta LoRa library.
