@@ -547,11 +547,11 @@ mp_obj_t fir_lepton_get_frame_available()
     return mp_obj_new_bool(framebuffer_head != framebuffer_tail);
 }
 
-static const uint16_t *fir_lepton_get_frame(bool wait_for_new_frame, uint32_t timeout)
+static const uint16_t *fir_lepton_get_frame(int timeout)
 {
     int sampled_framebuffer_head = framebuffer_head;
 
-    if (wait_for_new_frame) {
+    if (timeout >= 0) {
         for (uint32_t start = systick_current_millis();;) {
             sampled_framebuffer_head = framebuffer_head;
 
@@ -587,12 +587,11 @@ mp_obj_t fir_lepton_read_ta()
     return mp_obj_new_float((fir_lepton_get_temperature() * 0.01f) - 273.15f);
 }
 
-mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose,
-                            bool wait_for_new_frame, int timeout)
+mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose, int timeout)
 {
     int kelvin = fir_lepton_get_temperature();
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
-    const uint16_t *data = fir_lepton_get_frame(wait_for_new_frame, timeout);
+    const uint16_t *data = fir_lepton_get_frame(timeout);
     float min = +FLT_MAX;
     float max = -FLT_MAX;
     int w_1 = w - 1;
@@ -641,11 +640,10 @@ mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose
 }
 
 void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float min, float max,
-                           bool mirror, bool flip, bool transpose,
-                           bool wait_for_new_frame, int timeout)
+                           bool mirror, bool flip, bool transpose, int timeout)
 {
     int kelvin = fir_lepton_get_temperature();
-    const uint16_t *data = fir_lepton_get_frame(wait_for_new_frame, timeout);
+    const uint16_t *data = fir_lepton_get_frame(timeout);
     int new_min;
     int new_max;
 
