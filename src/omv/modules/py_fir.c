@@ -680,6 +680,26 @@ static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb)
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_vsync_cb_obj, py_fir_register_vsync_cb);
 #endif
 
+static mp_obj_t py_fir_register_frame_cb(mp_obj_t cb)
+{
+    if (fir_sensor == FIR_LEPTON) {
+        fir_lepton_register_frame_cb(cb);
+    }
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_frame_cb_obj, py_fir_register_frame_cb);
+
+static mp_obj_t py_fir_get_frame_available()
+{
+    if (fir_sensor == FIR_LEPTON) {
+        return fir_lepton_get_frame_available();
+    }
+
+    return mp_const_true;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_get_frame_available_obj, py_fir_get_frame_available);
+
 static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (fir_sensor == FIR_LEPTON) {
@@ -1225,10 +1245,14 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
 #else
     { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
 #endif
+    { MP_ROM_QSTR(MP_QSTR_register_frame_cb),   MP_ROM_PTR(&py_fir_register_frame_cb_obj)   },
+    { MP_ROM_QSTR(MP_QSTR_get_frame_available), MP_ROM_PTR(&py_fir_get_frame_available_obj) },
     { MP_ROM_QSTR(MP_QSTR_trigger_ffc),         MP_ROM_PTR(&py_fir_trigger_ffc_obj)         },
 #else
     { MP_ROM_QSTR(MP_QSTR_radiometric),         MP_ROM_PTR(&py_func_unavailable_obj)        },
     { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
+    { MP_ROM_QSTR(MP_QSTR_register_frame_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
+    { MP_ROM_QSTR(MP_QSTR_get_frame_available), MP_ROM_PTR(&py_func_unavailable_obj)        },
     { MP_ROM_QSTR(MP_QSTR_trigger_ffc),         MP_ROM_PTR(&py_func_unavailable_obj)        },
 #endif
     { MP_ROM_QSTR(MP_QSTR_read_ta),             MP_ROM_PTR(&py_fir_read_ta_obj)             },

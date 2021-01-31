@@ -115,6 +115,8 @@ static bool fir_lepton_spi_check_crc(const uint16_t *base)
 }
 #endif
 
+static mp_obj_t fir_lepton_frame_cb = mp_const_none;
+
 void fir_lepton_spi_callback(const uint16_t *base)
 {
     #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
@@ -188,6 +190,11 @@ void fir_lepton_spi_callback(const uint16_t *base)
             fir_lepton_spi_rx_cb_head = (fir_lepton_spi_rx_cb_head + 1) % FRAMEBUFFER_COUNT;
             if (fir_lepton_spi_rx_cb_head == framebuffer_tail) {
                 fir_lepton_spi_rx_cb_head = (fir_lepton_spi_rx_cb_head + 1) % FRAMEBUFFER_COUNT;
+            }
+
+            // User should use micropython.schedule() in their callback to process the new frame.
+            if (fir_lepton_frame_cb != mp_const_none) {
+                mp_call_function_0(fir_lepton_frame_cb);
             }
         }
     }
@@ -528,6 +535,16 @@ void fir_lepton_register_vsync_cb(mp_obj_t cb)
 mp_obj_t fir_lepton_get_radiometry()
 {
     return mp_obj_new_bool(fir_lepton_rad_en);
+}
+
+void fir_lepton_register_frame_cb(mp_obj_t cb)
+{
+    fir_lepton_frame_cb = cb;
+}
+
+mp_obj_t fir_lepton_get_frame_available()
+{
+    return mp_obj_new_bool(framebuffer_head != framebuffer_tail);
 }
 
 static const uint16_t *fir_lepton_get_frame(bool wait_for_new_frame, uint32_t timeout)

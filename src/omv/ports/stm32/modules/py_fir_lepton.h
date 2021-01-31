@@ -14,6 +14,8 @@ void fir_lepton_deinit();
 int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution);
 void fir_lepton_register_vsync_cb(mp_obj_t cb);
 mp_obj_t fir_lepton_get_radiometry();
+void fir_lepton_register_frame_cb(mp_obj_t cb);
+mp_obj_t fir_lepton_get_frame_available();
 mp_obj_t fir_lepton_read_ta();
 mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose,
                             bool wait_for_new_frame, int timeout);
