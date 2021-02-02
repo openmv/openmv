@@ -17,7 +17,7 @@
 #include "softtimer.h"
 #include "systick.h"
 
-#include "imlib.h"
+#include "py_helper.h"
 #include "omv_boardconfig.h"
 #include STM32_HAL_H
 
@@ -115,6 +115,8 @@ static bool fir_lepton_spi_check_crc(const uint16_t *base)
 }
 #endif
 
+static mp_obj_t fir_lepton_frame_cb = mp_const_none;
+
 void fir_lepton_spi_callback(const uint16_t *base)
 {
     #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
@@ -188,6 +190,11 @@ void fir_lepton_spi_callback(const uint16_t *base)
             fir_lepton_spi_rx_cb_head = (fir_lepton_spi_rx_cb_head + 1) % FRAMEBUFFER_COUNT;
             if (fir_lepton_spi_rx_cb_head == framebuffer_tail) {
                 fir_lepton_spi_rx_cb_head = (fir_lepton_spi_rx_cb_head + 1) % FRAMEBUFFER_COUNT;
+            }
+
+            // User should use micropython.schedule() in their callback to process the new frame.
+            if (fir_lepton_frame_cb != mp_const_none) {
+                mp_call_function_0(fir_lepton_frame_cb);
             }
         }
     }
@@ -530,9 +537,36 @@ mp_obj_t fir_lepton_get_radiometry()
     return mp_obj_new_bool(fir_lepton_rad_en);
 }
 
-static const uint16_t *fir_lepton_get_frame()
+void fir_lepton_register_frame_cb(mp_obj_t cb)
+{
+    fir_lepton_frame_cb = cb;
+}
+
+mp_obj_t fir_lepton_get_frame_available()
+{
+    return mp_obj_new_bool(framebuffer_head != framebuffer_tail);
+}
+
+static const uint16_t *fir_lepton_get_frame(int timeout)
 {
     int sampled_framebuffer_head = framebuffer_head;
+
+    if (timeout >= 0) {
+        for (uint32_t start = systick_current_millis();;) {
+            sampled_framebuffer_head = framebuffer_head;
+
+            if (framebuffer_tail != sampled_framebuffer_head) {
+                break;
+            }
+
+            if ((systick_current_millis() - start) >= timeout) {
+                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
+            }
+
+            __WFI();
+        }
+    }
+
     framebuffer_tail = sampled_framebuffer_head;
     return framebuffers[sampled_framebuffer_head];
 }
@@ -553,11 +587,11 @@ mp_obj_t fir_lepton_read_ta()
     return mp_obj_new_float((fir_lepton_get_temperature() * 0.01f) - 273.15f);
 }
 
-mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose)
+mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose, int timeout)
 {
     int kelvin = fir_lepton_get_temperature();
     mp_obj_list_t *list = (mp_obj_list_t *) mp_obj_new_list(w * h, NULL);
-    const uint16_t *data = fir_lepton_get_frame();
+    const uint16_t *data = fir_lepton_get_frame(timeout);
     float min = +FLT_MAX;
     float max = -FLT_MAX;
     int w_1 = w - 1;
@@ -606,10 +640,10 @@ mp_obj_t fir_lepton_read_ir(int w, int h, bool mirror, bool flip, bool transpose
 }
 
 void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float min, float max,
-                           bool mirror, bool flip, bool transpose)
+                           bool mirror, bool flip, bool transpose, int timeout)
 {
     int kelvin = fir_lepton_get_temperature();
-    const uint16_t *data = fir_lepton_get_frame();
+    const uint16_t *data = fir_lepton_get_frame(timeout);
     int new_min;
     int new_max;
 
@@ -678,34 +712,32 @@ void fir_lepton_fill_image(image_t *img, int w, int h, bool auto_range, float mi
     }
 }
 
-void fir_lepton_trigger_ffc()
+void fir_lepton_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (LEP_RunSysFFCNormalization(&fir_lepton_handle) != LEP_OK) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("FFC Error!"));
     }
-}
 
-void fir_lepton_wait_on_ffc(uint n_args, const mp_obj_t *args)
-{
-    uint32_t start = systick_current_millis();
-    uint32_t delay_ms = (n_args < 1) ? 5000 : mp_obj_get_int(args[0]);
+    int timeout = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
 
-    for (;;) {
-        LEP_SYS_STATUS_E status;
+    if (timeout >= 0) {
+        for (uint32_t start = systick_current_millis();;) {
+            LEP_SYS_STATUS_E status;
 
-        if (LEP_GetSysFFCStatus(&fir_lepton_handle, &status) != LEP_OK) {
-            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SYS Error!"));
+            if (LEP_GetSysFFCStatus(&fir_lepton_handle, &status) != LEP_OK) {
+                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("SYS Error!"));
+            }
+
+            if (status == LEP_SYS_STATUS_READY) {
+                break;
+            }
+
+            if ((systick_current_millis() - start) >= timeout) {
+                mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
+            }
+
+            systick_sleep(1);
         }
-
-        if (status == LEP_SYS_STATUS_READY) {
-            break;
-        }
-
-        if ((systick_current_millis() - start) >= delay_ms) {
-            mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("Timeout!"));
-        }
-
-        systick_sleep(1);
     }
 }
 

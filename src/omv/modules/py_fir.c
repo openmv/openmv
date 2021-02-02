@@ -680,6 +680,26 @@ static mp_obj_t py_fir_register_vsync_cb(mp_obj_t cb)
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_vsync_cb_obj, py_fir_register_vsync_cb);
 #endif
 
+static mp_obj_t py_fir_register_frame_cb(mp_obj_t cb)
+{
+    if (fir_sensor == FIR_LEPTON) {
+        fir_lepton_register_frame_cb(cb);
+    }
+
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_fir_register_frame_cb_obj, py_fir_register_frame_cb);
+
+static mp_obj_t py_fir_get_frame_available()
+{
+    if (fir_sensor == FIR_LEPTON) {
+        return fir_lepton_get_frame_available();
+    }
+
+    return mp_const_true;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_fir_get_frame_available_obj, py_fir_get_frame_available);
+
 static mp_obj_t py_fir_trigger_ffc(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     if (fir_sensor == FIR_LEPTON) {
@@ -756,6 +776,9 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     bool arg_hmirror = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_hmirror), false);
     bool arg_vflip = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_vflip), false);
     fir_transposed = py_helper_keyword_int(n_args, args, 2, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_transpose), false);
+    #if (OMV_ENABLE_FIR_LEPTON == 1)
+    int arg_timeout = py_helper_keyword_int(n_args, args, 3, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
+    #endif
 
     switch(fir_sensor) {
         case FIR_NONE: {
@@ -807,7 +830,7 @@ mp_obj_t py_fir_read_ir(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         #endif
         #if (OMV_ENABLE_FIR_LEPTON == 1)
         case FIR_LEPTON: {
-            return fir_lepton_read_ir(fir_width, fir_height, arg_hmirror, arg_vflip, fir_transposed);
+            return fir_lepton_read_ir(fir_width, fir_height, arg_hmirror, arg_vflip, fir_transposed, arg_timeout);
         }
         #endif
     }
@@ -1089,8 +1112,11 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         dst_img.data = xalloc(image_size(&dst_img));
     }
 
-    fb_alloc_mark();
+    #if (OMV_ENABLE_FIR_LEPTON == 1)
+    int arg_timeout = py_helper_keyword_int(n_args, args, 16, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_timeout), -1);
+    #endif
 
+    fb_alloc_mark();
     src_img.data = fb_alloc(src_img.w * src_img.h * sizeof(uint8_t), FB_ALLOC_NO_HINT);
 
     switch(fir_sensor) {
@@ -1157,7 +1183,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
         #if (OMV_ENABLE_FIR_LEPTON == 1)
         case FIR_LEPTON: {
             fir_lepton_fill_image(&src_img, fir_width, fir_height, !scale_obj, min, max,
-                                  arg_hmirror, arg_vflip, arg_transpose);
+                                  arg_hmirror, arg_vflip, arg_transpose, arg_timeout);
             break;
         }
         #endif
@@ -1213,10 +1239,14 @@ STATIC const mp_rom_map_elem_t globals_dict_table[] = {
 #else
     { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
 #endif
+    { MP_ROM_QSTR(MP_QSTR_register_frame_cb),   MP_ROM_PTR(&py_fir_register_frame_cb_obj)   },
+    { MP_ROM_QSTR(MP_QSTR_get_frame_available), MP_ROM_PTR(&py_fir_get_frame_available_obj) },
     { MP_ROM_QSTR(MP_QSTR_trigger_ffc),         MP_ROM_PTR(&py_fir_trigger_ffc_obj)         },
 #else
     { MP_ROM_QSTR(MP_QSTR_radiometric),         MP_ROM_PTR(&py_func_unavailable_obj)        },
     { MP_ROM_QSTR(MP_QSTR_register_vsync_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
+    { MP_ROM_QSTR(MP_QSTR_register_frame_cb),   MP_ROM_PTR(&py_func_unavailable_obj)        },
+    { MP_ROM_QSTR(MP_QSTR_get_frame_available), MP_ROM_PTR(&py_func_unavailable_obj)        },
     { MP_ROM_QSTR(MP_QSTR_trigger_ffc),         MP_ROM_PTR(&py_func_unavailable_obj)        },
 #endif
     { MP_ROM_QSTR(MP_QSTR_read_ta),             MP_ROM_PTR(&py_fir_read_ta_obj)             },
