@@ -204,6 +204,7 @@ static uint8_t *get_mcu()
                     for (int x=jpeg_enc.x_offset; x<(jpeg_enc.x_offset + dx); x++) {
                         *Y0++ = COLOR_BINARY_TO_GRAYSCALE(IMAGE_GET_BINARY_PIXEL(jpeg_enc.img, x, y));
                     }
+                    Y0 += (MCU_W - dx);
                 }
             } else { // full sized (8x8) MCU
                 int iPitch = ((jpeg_enc.img->w + 31) >> 3) & 0xfffc; // dword align
