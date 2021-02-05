@@ -635,7 +635,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
                            const uint16_t *color_palette, const uint8_t *alpha_palette,
                            image_hint_t hint)
 {
-    bool rgb565 = (src_img->bpp == IMAGE_BPP_RGB565) || color_palette;
+    bool rgb565 = ((rgb_channel == -1) && (src_img->bpp == IMAGE_BPP_RGB565)) || color_palette;
     imlib_draw_row_callback_t cb = rgb565 ? spi_tv_draw_image_cb_rgb565 : spi_tv_draw_image_cb_grayscale;
 
     image_t dst_img;
