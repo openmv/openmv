@@ -745,6 +745,9 @@ soft_reset:
     #ifdef IMLIB_ENABLE_DMA2D
     imlib_draw_row_deinit_all();
     #endif
+    #if MICROPY_PY_LWIP
+    gc_sweep_all();
+    #endif
     first_soft_reset = false;
     goto soft_reset;
 }
