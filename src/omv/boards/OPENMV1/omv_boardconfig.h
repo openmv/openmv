@@ -42,6 +42,9 @@
 // HSE/HSI/CSI State
 #define OMV_OSC_HSE_STATE       (RCC_HSE_ON)
 
+// Clock Sources
+#define OMV_OSC_PLL_CLKSOURCE   RCC_PLLSOURCE_HSE
+
 // Flash Latency
 #define OMV_FLASH_LATENCY       (FLASH_LATENCY_5)
 

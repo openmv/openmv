@@ -86,12 +86,6 @@
 // USB IRQn.
 #define OMV_USB_IRQN                    (OTG_FS_IRQn)
 
-// Clock Sources
-#define OMV_OSC_USB_CLKSOURCE           RCC_USBCLKSOURCE_PLL
-#define OMV_OSC_RNG_CLKSOURCE           RCC_RNGCLKSOURCE_HSI48
-#define OMV_OSC_ADC_CLKSOURCE           RCC_ADCCLKSOURCE_PLL2
-#define OMV_OSC_SPI123_CLKSOURCE        RCC_SPI123CLKSOURCE_PLL2
-
 //PLL1 48MHz for USB, SDMMC and FDCAN
 #define OMV_OSC_PLL1M                   (3)
 #define OMV_OSC_PLL1N                   (240)
@@ -121,6 +115,13 @@
 #define OMV_OSC_PLL3VCI                 (RCC_PLL3VCIRANGE_2)
 #define OMV_OSC_PLL3VCO                 (RCC_PLL3VCOWIDE)
 #define OMV_OSC_PLL3FRAC                (0)
+
+// Clock Sources
+#define OMV_OSC_PLL_CLKSOURCE           RCC_PLLSOURCE_HSE
+#define OMV_OSC_USB_CLKSOURCE           RCC_USBCLKSOURCE_PLL
+#define OMV_OSC_RNG_CLKSOURCE           RCC_RNGCLKSOURCE_HSI48
+#define OMV_OSC_ADC_CLKSOURCE           RCC_ADCCLKSOURCE_PLL2
+#define OMV_OSC_SPI123_CLKSOURCE        RCC_SPI123CLKSOURCE_PLL2
 
 // HSE/HSI/CSI State
 #define OMV_OSC_HSE_STATE               (RCC_HSE_ON)
