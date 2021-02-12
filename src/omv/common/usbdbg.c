@@ -209,6 +209,10 @@ void usbdbg_data_out(void *buffer, int length)
 
                     // Clear interrupt traceback
                     mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
+
+                    // Remove the BASEPRI masking (if any)
+                    __set_BASEPRI(0);
+
                     // Interrupt running REPL
                     // Note: setting pendsv explicitly here because the VM is probably
                     // waiting in REPL and the soft interrupt flag will not be checked.
@@ -327,6 +331,10 @@ void usbdbg_control(void *buffer, uint8_t request, uint32_t length)
 
                 // interrupt running code by raising an exception
                 mp_obj_exception_clear_traceback(mp_const_ide_interrupt);
+
+                // Remove the BASEPRI masking (if any)
+                __set_BASEPRI(0);
+
                 pendsv_nlr_jump(mp_const_ide_interrupt);
             }
             cmd = USBDBG_NONE;
