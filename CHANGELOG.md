@@ -1,4 +1,13 @@
 # Change Log
+## [3.9.3](https://github.com/openmv/openmv/releases/tag/v3.9.3) (2021-02-13)
+* Fix issues with Portenta WiFi.
+* Fix JPEG Binary image compression.
+* Fix rgb_channel_extraction grayscale selection for TV.
+* Fix FLIR FFC with a timeout.
+* Add initial support for Bormio.
+* Add Portenta WiFi examples.
+* Update LWIP.
+
 ## [3.9.2](https://github.com/openmv/openmv/releases/tag/v3.9.2) (2021-02-01)
 * Fix ImageIO RGB565 bug.
 * Update Portenta LoRa library.
