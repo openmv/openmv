@@ -8,7 +8,7 @@
 #
 # NOTE: If the mosquitto broker is unreachable, try another broker (For example: broker.hivemq.com)
 import time, network
-from mqtt_update import MQTTClient
+from mqtt import MQTTClient
 
 SSID='' # Network SSID
 KEY=''  # Network key
