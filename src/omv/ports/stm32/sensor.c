@@ -239,6 +239,8 @@ void sensor_init0()
     cambus_init(&sensor.bus, ISC_I2C_ID, ISC_I2C_SPEED);
     #endif
 
+    // Disable VSYNC IRQ and callback
+    sensor_set_vsync_callback(NULL);
 }
 
 int sensor_init()
@@ -491,7 +493,7 @@ int sensor_reset()
     #else
     sensor.auto_rotation = false;
     #endif // MICROPY_PY_IMU
-    sensor.vsync_gpio    = NULL;
+    sensor.vsync_callback= NULL;
 
     // Reset default color palette.
     sensor.color_palette = rainbow_table;
@@ -959,13 +961,17 @@ int sensor_ioctl(int request, ... /* arg */)
     return ret;
 }
 
-int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin)
+int sensor_set_vsync_callback(vsync_cb_t vsync_cb)
 {
-    sensor.vsync_pin  = pin;
-    sensor.vsync_gpio = gpio;
-    // Enable VSYNC EXTI IRQ
-    NVIC_SetPriority(DCMI_VSYNC_IRQN, IRQ_PRI_EXTINT);
-    HAL_NVIC_EnableIRQ(DCMI_VSYNC_IRQN);
+    sensor.vsync_callback = vsync_cb;
+    if (sensor.vsync_callback == NULL) {
+        // Disable VSYNC EXTI IRQ
+        HAL_NVIC_DisableIRQ(DCMI_VSYNC_IRQN);
+    } else {
+        // Enable VSYNC EXTI IRQ
+        NVIC_SetPriority(DCMI_VSYNC_IRQN, IRQ_PRI_EXTINT);
+        HAL_NVIC_EnableIRQ(DCMI_VSYNC_IRQN);
+    }
     return 0;
 }
 
@@ -983,9 +989,8 @@ const uint16_t *sensor_get_color_palette()
 void DCMI_VsyncExtiCallback()
 {
     __HAL_GPIO_EXTI_CLEAR_FLAG(1 << DCMI_VSYNC_IRQ_LINE);
-    if (sensor.vsync_gpio != NULL) {
-        HAL_GPIO_WritePin(sensor.vsync_gpio, sensor.vsync_pin,
-                !HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
+    if (sensor.vsync_callback != NULL) {
+        sensor.vsync_callback(HAL_GPIO_ReadPin(DCMI_VSYNC_PORT, DCMI_VSYNC_PIN));
     }
 }
 
