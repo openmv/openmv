@@ -372,20 +372,16 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     // Set output size
     dst->bpp = jpeg_enc.out_size;
 
+    if (!jpeg_enc.overflow) {
+        // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
+        dst->bpp = jpeg_clean_trailing_bytes(dst->bpp, dst->data);
+    }
+
 #if (TIME_JPEG==1)
     printf("time: %u ms\n", mp_hal_ticks_ms() - start);
 #endif
 
     HAL_JPEG_DeInit(&JPEG_Handle);
-
-    if (!jpeg_enc.overflow) {
-        // Clean trailing data.
-        while ((dst->bpp >= 2)
-            && ((dst->pixels[dst->bpp-2] != 0xFF)
-            || (dst->pixels[dst->bpp-1] != 0xD9))) {
-            dst->bpp -= 1;
-        }
-    }
 
     return jpeg_enc.overflow;
 }
@@ -1290,6 +1286,15 @@ jpeg_overflow:
     return jpeg_buf.overflow;
 }
 #endif //defined OMV_HARDWARE_JPEG
+
+int jpeg_clean_trailing_bytes(int bpp, uint8_t *data)
+{
+    while ((bpp > 1) && ((data[bpp-2] != 0xFF) || (data[bpp-1] != 0xD9))) {
+        bpp -= 1;
+    }
+
+    return bpp;
+}
 
 #if defined(IMLIB_ENABLE_IMAGE_FILE_IO)
 // This function inits the geometry values of an image.
