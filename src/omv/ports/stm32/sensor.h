@@ -139,6 +139,7 @@ typedef enum {
 #define SENSOR_HW_FLAGS_CLR(s, x)    ((s)->hw_flags &= ~(1<<x))
 
 typedef bool (*streaming_cb_t)(image_t *image);
+typedef void (*vsync_cb_t)(uint32_t vsync);
 
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
@@ -148,9 +149,7 @@ typedef struct _sensor {
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)
     const uint16_t *color_palette;    // Color palette used for color lookup.
 
-    uint32_t vsync_pin;         // VSYNC GPIO output pin.
-    GPIO_TypeDef *vsync_gpio;   // VSYNC GPIO output port.
-
+    vsync_cb_t vsync_callback;  // VSYNC callback.
     polarity_t pwdn_pol;        // PWDN polarity (TODO move to hw_flags)
     polarity_t reset_pol;       // Reset polarity (TODO move to hw_flags)
 
@@ -308,8 +307,8 @@ int sensor_set_lens_correction(int enable, int radi, int coef);
 // IOCTL function
 int sensor_ioctl(int request, ...);
 
-// Set vsync output pin
-int sensor_set_vsync_output(GPIO_TypeDef *gpio, uint32_t pin);
+// Set vsync callback function.
+int sensor_set_vsync_callback(vsync_cb_t vsync_cb);
 
 // Set color palette
 int sensor_set_color_palette(const uint16_t *color_palette);
