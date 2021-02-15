@@ -137,7 +137,7 @@ void *fb_alloc(uint32_t size, int hints)
     #if __DCACHE_PRESENT
     if (hints & FB_ALLOC_CACHE_ALIGN) {
         size = ((size + __SCB_DCACHE_LINE_SIZE - 1) / __SCB_DCACHE_LINE_SIZE) * __SCB_DCACHE_LINE_SIZE;
-        size += __SCB_DCACHE_LINE_SIZE;
+        size += __SCB_DCACHE_LINE_SIZE - sizeof(uint32_t);
     }
     #endif
 
