@@ -18,6 +18,8 @@
 #include "omv_boardconfig.h"
 #include STM32_HAL_H
 
+#if MICROPY_PY_TV
+
 #define TV_WIDTH    352
 #define TV_HEIGHT   240
 #define TV_REFRESH  60
@@ -1063,3 +1065,5 @@ void py_tv_init0()
 {
     py_tv_deinit();
 }
+
+#endif // MICROPY_PY_TV

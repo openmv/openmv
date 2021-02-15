@@ -18,6 +18,8 @@
 #include "py_lcd_cec.h"
 #include "omv_boardconfig.h"
 
+#if MICROPY_PY_LCD
+
 #ifdef OMV_CEC_PRESENT
 static mp_obj_t lcd_cec_user_cb = NULL;
 
@@ -598,3 +600,5 @@ void lcd_cec_register_cec_receive_cb(mp_obj_t cb, mp_obj_t dst_addr)
     if (cb != mp_const_none) extint_enable(OMV_CEC_PIN->pin);
 }
 #endif // OMV_CEC_PRESENT
+
+#endif // MICROPY_PY_LCD

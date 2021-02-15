@@ -19,6 +19,8 @@
 #include "omv_boardconfig.h"
 #include STM32_HAL_H
 
+#if MICROPY_PY_LCD
+
 #ifdef OMV_TOUCH_PRESENT
 #define FT5X06_I2C_ADDR 0x38
 static mp_obj_base_t *lcd_touch_bus = NULL;
@@ -187,3 +189,5 @@ void lcd_touch_register_touch_cb(mp_obj_t cb)
     if (cb != mp_const_none) extint_enable(OMV_TOUCH_INT_PIN->pin);
 }
 #endif // OMV_TOUCH_PRESENT
+
+#endif // MICROPY_PY_LCD

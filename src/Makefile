@@ -142,6 +142,16 @@ MPY_CFLAGS += -DMICROPY_PY_MICRO_SPEECH=1
 MICROPY_ARGS += MICROPY_PY_MICRO_SPEECH=1
 endif
 
+ifeq ($(MICROPY_PY_LCD), 1)
+MPY_CFLAGS += -DMICROPY_PY_LCD=1
+MICROPY_ARGS += MICROPY_PY_LCD=1
+endif
+
+ifeq ($(MICROPY_PY_TV), 1)
+MPY_CFLAGS += -DMICROPY_PY_TV=1
+MICROPY_ARGS += MICROPY_PY_TV=1
+endif
+
 # Include the port Makefile.
 include $(OMV_DIR)/ports/$(PORT)/omv_portconfig.mk
 
