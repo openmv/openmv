@@ -107,6 +107,50 @@ int cambus_gencall(cambus_t *bus, uint8_t cmd)
     return 0;
 }
 
+int cambus_readb(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr, uint8_t *reg_data)
+{
+    int ret = 0;
+    slv_addr = slv_addr >> 1;
+
+    nrfx_twi_enable(&bus->i2c);
+    nrfx_twi_xfer_desc_t desc1 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_addr, 1);
+    if (nrfx_twi_xfer(&bus->i2c, &desc1, NRFX_TWI_FLAG_TX_NO_STOP) != NRFX_SUCCESS) {
+        ret = -1;
+        goto i2c_error;
+    }
+
+    nrfx_twi_xfer_desc_t desc2 = NRFX_TWI_XFER_DESC_RX(slv_addr, reg_data, 1);
+    if (nrfx_twi_xfer(&bus->i2c, &desc2, 0) != NRFX_SUCCESS) {
+        ret = -1;
+    }
+
+i2c_error:
+    nrfx_twi_disable(&bus->i2c);
+    return ret;
+}
+
+int cambus_writeb(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr, uint8_t reg_data)
+{
+    int ret = 0;
+    slv_addr = slv_addr >> 1;
+
+    nrfx_twi_enable(&bus->i2c);
+    nrfx_twi_xfer_desc_t desc1 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_addr, 1);
+    if (nrfx_twi_xfer(&bus->i2c, &desc1, NRFX_TWI_FLAG_SUSPEND) != NRFX_SUCCESS) {
+        ret = -1;
+        goto i2c_error;
+    }
+
+    nrfx_twi_xfer_desc_t desc2 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_data, 1);
+    if (nrfx_twi_xfer(&bus->i2c, &desc2, 0) != NRFX_SUCCESS) {
+        ret = -1;
+    }
+
+i2c_error:
+    nrfx_twi_disable(&bus->i2c);
+    return ret;
+}
+
 int cambus_read_bytes(cambus_t *bus, uint8_t slv_addr, uint8_t *buf, int len, uint32_t flags)
 {
     int ret = 0;
