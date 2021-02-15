@@ -22,6 +22,8 @@
 #include "omv_boardconfig.h"
 #include STM32_HAL_H
 
+#if MICROPY_PY_LCD
+
 #define FRAMEBUFFER_COUNT 3
 static int framebuffer_head = 0;
 static volatile int framebuffer_tail = 0;
@@ -1790,3 +1792,5 @@ void py_lcd_init0()
 {
     py_lcd_deinit();
 }
+
+#endif // MICROPY_PY_LCD
