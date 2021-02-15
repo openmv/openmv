@@ -21,8 +21,8 @@ typedef struct framebuffer {
     int32_t u,v;
     int32_t bpp;
     int32_t streaming_enabled;
-    // NOTE: This buffer must be aligned on a 16 byte boundary
-    OMV_ATTR_ALIGNED(uint8_t pixels[], 16);
+    // NOTE: This buffer must be aligned on a 32 byte boundary
+    OMV_ATTR_ALIGNED(uint8_t pixels[], 32);
 } framebuffer_t;
 
 extern framebuffer_t *framebuffer;
@@ -33,7 +33,8 @@ typedef struct jpegbuffer {
     int32_t enabled;
     int32_t quality;
     mutex_t lock;
-    uint8_t pixels[];
+    // NOTE: This buffer must be aligned on a 32 byte boundary
+    OMV_ATTR_ALIGNED(uint8_t pixels[], 32);
 } jpegbuffer_t;
 
 extern jpegbuffer_t *jpeg_framebuffer;

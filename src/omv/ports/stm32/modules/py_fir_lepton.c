@@ -455,22 +455,8 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
                                                  FB_ALLOC_NO_HINT);
     }
 
-    size_t size = VOSPI_BUFFER_SIZE * sizeof(uint16_t);
-
-    // The DMA buffer must not start/end partially on a cache line.
-    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    size = ((size + __SCB_DCACHE_LINE_SIZE - 1) / __SCB_DCACHE_LINE_SIZE) * __SCB_DCACHE_LINE_SIZE;
-    size += __SCB_DCACHE_LINE_SIZE;
-    #endif
-
-    fir_lepton_spi_rx_cb_dma_buffer = (uint16_t *) fb_alloc(size, FB_ALLOC_PREFER_SPEED);
-
-    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    int offset = ((uint32_t) fir_lepton_spi_rx_cb_dma_buffer) % __SCB_DCACHE_LINE_SIZE;
-    if (offset) {
-        fir_lepton_spi_rx_cb_dma_buffer += __SCB_DCACHE_LINE_SIZE - offset;
-    }
-    #endif
+    fir_lepton_spi_rx_cb_dma_buffer = (uint16_t *) fb_alloc(VOSPI_BUFFER_SIZE * sizeof(uint16_t),
+                                                            FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
     dma_init(&fir_lepton_spi_rx_dma,
              OMV_FIR_LEPTON_CONTROLLER->rx_dma_descr,

@@ -35,6 +35,19 @@
  * mark.
  *
  * Note that fb_free() and fb_free_all() do not respect any marks and permanent regions.
+ *
+ * Regardings the flags below:
+ * - FB_ALLOC_NO_HINT - fb_alloc doesn't do anything special.
+ * - FB_ALLOC_PREFER_SPEED - fb_alloc will make sure the allocated region is in the fatest possible
+ *                           memory. E.g. allocs will be in SRAM versus SDRAM if SDRAM is available.
+ *                           Setting this flag affects where fb_alloc_all() gets RAM from. If this
+ *                           flag is set then fb_alloc_all() will not use the SDRAM.
+ * - FB_ALLOC_PREFER_SIZE - fb_alloc will make sure the allocated region is the largest possible
+ *                          memory. E.g. allocs will be in SDRAM versus SRAM if SDRAM is available.
+ *                          Setting this flag affects where fb_alloc_all() gets RAM from. If this
+ *                          flag is set then fb_alloc_all() will use the SDRAM (default).
+ * - FB_ALLOC_CACHE_ALIGN - Aligns the starting address returned to a cache line and makes sure
+ *                          the amount of memory allocated is padded to the end of a cache line.
  */
 #ifndef __FB_ALLOC_H__
 #define __FB_ALLOC_H__
@@ -42,6 +55,7 @@
 #define FB_ALLOC_NO_HINT 0
 #define FB_ALLOC_PREFER_SPEED 1
 #define FB_ALLOC_PREFER_SIZE 2
+#define FB_ALLOC_CACHE_ALIGN 4
 char *fb_alloc_stack_pointer();
 void fb_alloc_fail();
 void fb_alloc_init0();
