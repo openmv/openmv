@@ -33,7 +33,6 @@ typedef struct jpegbuffer {
     int32_t enabled;
     int32_t quality;
     mutex_t lock;
-    int64_t __padding;
     // NOTE: This buffer must be aligned on a 32 byte boundary
     OMV_ATTR_ALIGNED(uint8_t pixels[], 32);
 } jpegbuffer_t;
