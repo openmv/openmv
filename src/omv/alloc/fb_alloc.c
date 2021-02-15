@@ -209,13 +209,6 @@ void *fb_alloc_all(uint32_t *size, int hints)
 
     *size = (temp / sizeof(uint32_t)) * sizeof(uint32_t); // Round Down
 
-    #if __DCACHE_PRESENT
-    if (hints & FB_ALLOC_CACHE_ALIGN) {
-        *size = ((*size + __SCB_DCACHE_LINE_SIZE - 1) / __SCB_DCACHE_LINE_SIZE) * __SCB_DCACHE_LINE_SIZE;
-        *size += __SCB_DCACHE_LINE_SIZE;
-    }
-    #endif
-
     char *result = pointer - *size;
     char *new_pointer = result - sizeof(uint32_t);
 
@@ -244,8 +237,11 @@ void *fb_alloc_all(uint32_t *size, int hints)
     if (hints & FB_ALLOC_CACHE_ALIGN) {
         int offset = ((uint32_t) result) % __SCB_DCACHE_LINE_SIZE;
         if (offset) {
-            result += __SCB_DCACHE_LINE_SIZE - offset;
+            int inc = __SCB_DCACHE_LINE_SIZE - offset;
+            result += inc;
+            *size -= inc;
         }
+        *size = (*size / __SCB_DCACHE_LINE_SIZE) * __SCB_DCACHE_LINE_SIZE;
     }
     #endif
 
