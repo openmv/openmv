@@ -17,6 +17,10 @@
 #define OMV_UNIQUE_ID_ADDR      0x1FF1E800
 #define OMV_UNIQUE_ID_SIZE      3 // 3 words
 
+// Flash sectors for the bootloader.
+// Flash FS sector, main FW sector, max sector.
+#define OMV_FLASH_LAYOUT        {1, 2, 15}
+
 #define OMV_XCLK_MCO            (0U)
 #define OMV_XCLK_TIM            (1U)
 #define OMV_XCLK_OSC            (2U)
@@ -74,7 +78,7 @@
 #define OMV_USB_IRQN            (OTG_FS_IRQn)
 
 // PLL1 48MHz for SDMMC and FDCAN
-#define OMV_OSC_PLL1M           (4)
+#define OMV_OSC_PLL1M           (16)
 #define OMV_OSC_PLL1N           (240)
 #define OMV_OSC_PLL1P           (2)
 #define OMV_OSC_PLL1Q           (20)
@@ -84,7 +88,7 @@
 #define OMV_OSC_PLL1FRAC        (0)
 
 // PLL2 200MHz for FMC and QSPI.
-#define OMV_OSC_PLL2M           (4)
+#define OMV_OSC_PLL2M           (16)
 #define OMV_OSC_PLL2N           (100)
 #define OMV_OSC_PLL2P           (2)
 #define OMV_OSC_PLL2Q           (2)
@@ -94,7 +98,7 @@
 #define OMV_OSC_PLL2FRAC        (0)
 
 // PLL3 160MHz for ADC and SPI123
-#define OMV_OSC_PLL3M           (4)
+#define OMV_OSC_PLL3M           (16)
 #define OMV_OSC_PLL3N           (80)
 #define OMV_OSC_PLL3P           (2)
 #define OMV_OSC_PLL3Q           (2)
@@ -111,7 +115,7 @@
 #define OMV_OSC_SPI123_CLKSOURCE    RCC_SPI123CLKSOURCE_PLL3
 
 // HSE/HSI/CSI State
-#define OMV_OSC_HSI_STATE       (RCC_HSI_DIV4)
+#define OMV_OSC_HSI_STATE       (RCC_HSI_DIV1)
 #define OMV_OSC_HSI48_STATE     (RCC_HSI48_ON)
 
 // Flash Latency
