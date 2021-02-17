@@ -318,6 +318,10 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     mp_uint_t start = mp_hal_ticks_ms();
 #endif
 
+    if (!dst->data) {
+        dst->data = fb_alloc_all((uint32_t *) &dst->bpp, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
+    }
+
     uint32_t pad_w = src->w;
     if (pad_w % 8 != 0) {
         pad_w += (8 - (pad_w % 8));
@@ -969,6 +973,10 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     uint32_t start = mp_hal_ticks_ms();
     #endif
 
+    if (!dst->data) {
+        dst->data = fb_alloc_all((uint32_t *) &dst->bpp, FB_ALLOC_PREFER_SIZE | FB_ALLOC_CACHE_ALIGN);
+    }
+
     // JPEG buffer
     jpeg_buf_t  jpeg_buf = {
         .idx =0,
@@ -1378,15 +1386,13 @@ void jpeg_write(image_t *img, const char *path, int quality)
     if (IM_IS_JPEG(img)) {
         write_data(&fp, img->pixels, img->bpp);
     } else {
-        uint32_t size;
-        uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
-        image_t out = { .w=img->w, .h=img->h, .bpp=size, .pixels=buffer };
+        image_t out = { .w=img->w, .h=img->h, .bpp=0, .pixels=NULL }; // alloc in jpeg compress
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
         jpeg_compress(img, &out, quality, false);
         write_data(&fp, out.pixels, out.bpp);
-        fb_free();
+        fb_free(); // frees alloc in jpeg_compress()
     }
     file_close(&fp);
 }
