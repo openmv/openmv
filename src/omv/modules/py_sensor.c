@@ -21,7 +21,9 @@
 #include "xalloc.h"
 #include "py_assert.h"
 #include "py_image.h"
+#if MICROPY_PY_IMU
 #include "py_imu.h"
+#endif
 #include "omv_boardconfig.h"
 #include "py_helper.h"
 #include "framebuffer.h"
