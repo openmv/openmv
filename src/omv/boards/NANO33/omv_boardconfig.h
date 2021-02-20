@@ -44,6 +44,7 @@
 // Enable sensor drivers
 #define OMV_ENABLE_OV2640       (0)
 #define OMV_ENABLE_OV5640       (0)
+#define OMV_ENABLE_OV7670       (1)
 #define OMV_ENABLE_OV7690       (0)
 #define OMV_ENABLE_OV7725       (0)
 #define OMV_ENABLE_OV9650       (0)
@@ -62,11 +63,7 @@
 
 // If buffer size is bigger than this threshold, the quality is reduced.
 // This is only used for JPEG images sent to the IDE not normal compression.
-#define JPEG_QUALITY_THRESH     (320*240*2)
-
-// Low and high JPEG QS.
-#define JPEG_QUALITY_LOW        50
-#define JPEG_QUALITY_HIGH       90
+#define JPEG_QUALITY_THRESH     (320*240)
 
 // Low and high JPEG QS.
 #define JPEG_QUALITY_LOW        50
@@ -103,6 +100,12 @@
 #define FIR_I2C_SDA_PIN         (31)
 #define FIR_I2C_SPEED           (CAMBUS_SPEED_FULL)
 
+// ISC I2C
+#define ISC_I2C_ID              (0)
+#define ISC_I2C_SCL_PIN         (2)
+#define ISC_I2C_SDA_PIN         (31)
+#define ISC_I2C_SPEED           (CAMBUS_SPEED_FULL)
+
 // I2C0
 #define TWI0_ID                 (0)
 #define TWI0_SCL_PIN            (2)
@@ -119,6 +122,40 @@
 #define PDM_DIN_PIN             (25)
 #define PDM_CLK_PIN             (26)
 #define PDM_PWR_PIN             (17)
+
+// DCMI
+#define DCMI_PWDN_PIN           (29)
+//#define DCMI_RESET_PIN          (30)
+
+#define DCMI_D0_PIN             (32+2)
+#define DCMI_D1_PIN             (32+3)
+#define DCMI_D2_PIN             (32+10)
+#define DCMI_D3_PIN             (32+11)
+#define DCMI_D4_PIN             (32+12)
+#define DCMI_D5_PIN             (32+13)
+#define DCMI_D6_PIN             (32+14)
+#define DCMI_D7_PIN             (32+15)
+
+#define DCMI_VSYNC_PIN          (21)
+#define DCMI_HSYNC_PIN          (5)
+#define DCMI_PXCLK_PIN          (4)
+#define DCMI_XCLK_PIN           (27)
+
+#if defined(DCMI_RESET_PIN)
+#define DCMI_RESET_LOW()        nrf_gpio_pin_clear(DCMI_RESET_PIN)
+#define DCMI_RESET_HIGH()       nrf_gpio_pin_set(DCMI_RESET_PIN)
+#else
+#define DCMI_RESET_LOW()
+#define DCMI_RESET_HIGH()
+#endif
+
+#if defined(DCMI_PWDN_PIN)
+#define DCMI_PWDN_LOW()        nrf_gpio_pin_clear(DCMI_PWDN_PIN)
+#define DCMI_PWDN_HIGH()       nrf_gpio_pin_set(DCMI_PWDN_PIN)
+#else
+#define DCMI_PWDN_LOW()
+#define DCMI_PWDN_HIGH()
+#endif
 
 // FIR Module
 #define OMV_ENABLE_FIR_MLX90621 (1)
