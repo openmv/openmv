@@ -81,6 +81,8 @@
 #include "py_audio.h"
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
+#include "cambus.h"
+#include "sensor.h"
 
 uint32_t HAL_GetHalVersion()
 {
@@ -151,7 +153,11 @@ soft_reset:
     uart_init0();
     #endif
 
+    #if MICROPY_PY_SENSOR
+    sensor_init();
+    #endif
     framebuffer_init0();
+    fb_alloc_init0();
 
     #if (MICROPY_PY_BLE_NUS == 0) && (MICROPY_HW_USB_CDC == 0)
     {
