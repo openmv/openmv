@@ -27,6 +27,7 @@ SRCS += $(addprefix common/,    \
 SRCS += $(addprefix sensors/,   \
 	ov2640.c                    \
 	ov5640.c                    \
+	ov7670.c                    \
 	ov7690.c                    \
 	ov7725.c                    \
 	ov9650.c                    \
