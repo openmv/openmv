@@ -18,6 +18,7 @@
 #include "ov2640.h"
 #include "ov5640.h"
 #include "ov7725.h"
+#include "ov7670.h"
 #include "ov7690.h"
 #include "ov9650.h"
 #include "mt9v034.h"
@@ -355,7 +356,7 @@ int sensor_init()
         case OV5640_SLV_ADDR:
             cambus_readb2(&sensor.bus, sensor.slv_addr, OV5640_CHIP_ID, &sensor.chip_id);
             break;
-        case OV7725_SLV_ADDR: // Or OV7690.
+        case OV7725_SLV_ADDR: // Or OV7690 or OV7670.
             cambus_readb(&sensor.bus, sensor.slv_addr, OV_CHIP_ID, &sensor.chip_id);
             break;
         case MT9V034_SLV_ADDR:
@@ -390,6 +391,15 @@ int sensor_init()
             init_ret = ov5640_init(&sensor);
             break;
         #endif // (OMV_ENABLE_OV5640 == 1)
+
+        #if (OMV_ENABLE_OV7670 == 1)
+        case OV7670_ID:
+            if (extclk_config(OV7670_XCLK_FREQ) != 0) {
+                return -3;
+            }
+            init_ret = ov7670_init(&sensor);
+            break;
+        #endif // (OMV_ENABLE_OV7670 == 1)
 
         #if (OMV_ENABLE_OV7690 == 1)
         case OV7690_ID:

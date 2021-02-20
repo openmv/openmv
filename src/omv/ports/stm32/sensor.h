@@ -29,6 +29,7 @@
 // Chip ID Values
 #define OV2640_ID           (0x26)
 #define OV5640_ID           (0x56)
+#define OV7670_ID           (0x76)
 #define OV7690_ID           (0x76)
 #define OV7725_ID           (0x77)
 #define OV9650_ID           (0x96)
