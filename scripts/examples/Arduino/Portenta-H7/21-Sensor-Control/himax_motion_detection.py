@@ -8,7 +8,7 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time=2000)
 
-# The sensor is less noisy are lower FPS.
+# The sensor is less noisy with lower FPS.
 sensor.set_framerate(15)
 
 # Configure and enable motion detection
