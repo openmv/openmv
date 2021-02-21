@@ -60,7 +60,7 @@ static const uint16_t default_regs[][2] = {
     {SINGLE_THR_HOT,       0x90},          //  single hot pixel th
     {SINGLE_THR_COLD,      0x40},          //  single cold pixel th
     {0x1012,               0x00},          //  Sync. shift disable
-    {0x2000,               0x07},
+    {STATISTIC_CTRL,       0x07},          //  AE stat en | MD LROI stat en | magic
     {0x2003,               0x00},
     {0x2004,               0x1C},
     {0x2007,               0x00},
@@ -99,7 +99,7 @@ static const uint16_t default_regs[][2] = {
     {FS_50HZ_H,            0x00},
     {FS_50HZ_L,            0x32},
 
-    {MD_CTRL,              0x30},
+    {MD_CTRL,              0x00},
     {FRAME_LEN_LINES_H,    HIMAX_FRAME_LENGTH_QVGA>>8},
     {FRAME_LEN_LINES_L,    HIMAX_FRAME_LENGTH_QVGA&0xFF},
     {LINE_LEN_PCK_H,       HIMAX_LINE_LEN_PCK_QVGA>>8},
@@ -394,6 +394,53 @@ static int set_vflip(sensor_t *sensor, int enable)
     return ret;
 }
 
+static int ioctl(sensor_t *sensor, int request, va_list ap)
+{
+    int ret = 0;
+
+    switch (request) {
+        case IOCTL_HIMAX_MD_ENABLE: {
+            uint32_t enable = va_arg(ap, uint32_t);
+            ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_CTRL, enable ? 1:0);
+            break;
+        }
+
+        case IOCTL_HIMAX_MD_WINDOW: {
+            uint32_t x1 = va_arg(ap, uint32_t);
+            uint32_t y1 = va_arg(ap, uint32_t);
+            uint32_t x2 = va_arg(ap, uint32_t) + x1;
+            uint32_t y2 = va_arg(ap, uint32_t) + y1;
+            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_X_START_H, (x1>>8));
+            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_X_START_L, (x1&0xff));
+            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_Y_START_H, (y1>>8));
+            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_Y_START_L, (y1&0xff));
+            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_X_END_H,   (x2>>8));
+            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_X_END_L,   (x2&0xff));
+            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_Y_END_H,   (y2>>8));
+            ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_LROI_Y_END_L,   (y2&0xff));
+            break;
+        }
+
+        case IOCTL_HIMAX_MD_THRESHOLD: {
+            uint32_t threshold = va_arg(ap, uint32_t);
+            ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_THL, threshold);
+            break;
+        }
+
+        case IOCTL_HIMAX_MD_CLEAR: {
+            ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, I2C_CLEAR, 1);
+            break;
+        }
+
+        default: {
+            ret = -1;
+            break;
+        }
+    }
+
+    return ret;
+}
+
 int hm01b0_init(sensor_t *sensor)
 {
     // Initialize sensor structure.
@@ -419,6 +466,7 @@ int hm01b0_init(sensor_t *sensor)
     sensor->get_rgb_gain_db     = get_rgb_gain_db;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
+    sensor->ioctl               = ioctl;
 
     // Set sensor flags
     SENSOR_HW_FLAGS_SET(sensor, SENSOR_HW_FLAGS_VSYNC, 0);
