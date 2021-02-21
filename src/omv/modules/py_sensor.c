@@ -759,6 +759,63 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             break;
         }
 
+        #if (OMV_ENABLE_HM01B0 == 1)
+        case IOCTL_HIMAX_MD_ENABLE: {
+            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            }
+            break;
+        }
+
+        case IOCTL_HIMAX_MD_WINDOW: {
+            if (n_args < 2) {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            }
+
+            int x, y, w, h;
+
+            mp_obj_t *array;
+            mp_uint_t array_len;
+            mp_obj_get_array(args[1], &array_len, &array);
+
+            if (array_len == 4) {
+                x = mp_obj_get_int(array[0]);
+                y = mp_obj_get_int(array[1]);
+                w = mp_obj_get_int(array[2]);
+                h = mp_obj_get_int(array[3]);
+            } else if (array_len == 2) {
+                w = mp_obj_get_int(array[0]);
+                h = mp_obj_get_int(array[1]);
+                x = 0;
+                y = 0;
+            } else {
+                mp_raise_msg(&mp_type_ValueError,
+                    MP_ERROR_TEXT("The tuple/list must either be (x, y, w, h) or (w, h)"));
+            }
+
+            if (sensor_ioctl(request, x, y, w, h) != 0) {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            }
+
+            break;
+        }
+
+        case IOCTL_HIMAX_MD_THRESHOLD: {
+            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            }
+            break;
+        }
+
+        case IOCTL_HIMAX_MD_CLEAR: {
+            if (sensor_ioctl(request) != 0) {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            }
+            break;
+        }
+
+        #endif // (OMV_ENABLE_HM01B0 == 1)
+
         default: {
             mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Operation not supported!"));
             break;
@@ -945,7 +1002,12 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_MEASUREMENT_MODE),   MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_MEASUREMENT_MODE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_SET_MEASUREMENT_RANGE),  MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_SET_MEASUREMENT_RANGE)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_LEPTON_GET_MEASUREMENT_RANGE),  MP_OBJ_NEW_SMALL_INT(IOCTL_LEPTON_GET_MEASUREMENT_RANGE)},
-
+    #if (OMV_ENABLE_HM01B0 == 1)
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_MD_ENABLE),               MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_MD_ENABLE)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_MD_WINDOW),               MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_MD_WINDOW)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_MD_THRESHOLD),            MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_MD_THRESHOLD)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_MD_CLEAR),                MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_MD_CLEAR)},
+    #endif
     // Sensor functions
     { MP_OBJ_NEW_QSTR(MP_QSTR___init__),            (mp_obj_t)&py_sensor__init__obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_reset),               (mp_obj_t)&py_sensor_reset_obj },
