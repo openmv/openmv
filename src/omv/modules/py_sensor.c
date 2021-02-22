@@ -814,6 +814,13 @@ static mp_obj_t py_sensor_ioctl(uint n_args, const mp_obj_t *args)
             break;
         }
 
+        case IOCTL_HIMAX_OSC_ENABLE: {
+            if (n_args < 2 || sensor_ioctl(request, mp_obj_get_int(args[1])) != 0) {
+                mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Sensor control failed!"));
+            }
+            break;
+        }
+
         #endif // (OMV_ENABLE_HM01B0 == 1)
 
         default: {
@@ -1007,6 +1014,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_MD_WINDOW),               MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_MD_WINDOW)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_MD_THRESHOLD),            MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_MD_THRESHOLD)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_MD_CLEAR),                MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_MD_CLEAR)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_OSC_ENABLE),              MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_OSC_ENABLE)},
     #endif
     // Sensor functions
     { MP_OBJ_NEW_QSTR(MP_QSTR___init__),            (mp_obj_t)&py_sensor__init__obj },

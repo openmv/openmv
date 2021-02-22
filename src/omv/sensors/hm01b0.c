@@ -45,6 +45,7 @@ static const uint16_t default_regs[][2] = {
     {0x3059,               0x1E},
     {0x3064,               0x00},
     {0x3065,               0x04},          //  pad pull 0
+    {ANA_Register_17,      0x00},          //  Disable internal oscillator
    
     {BLC_CFG,              0x43},          //  BLC_on, IIR
    
@@ -399,6 +400,13 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
     int ret = 0;
 
     switch (request) {
+        case IOCTL_HIMAX_OSC_ENABLE: {
+            uint32_t enable = va_arg(ap, uint32_t);
+            ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, ANA_Register_17, enable ? 1:0);
+            mp_hal_delay_ms(100);
+            break;
+        }
+
         case IOCTL_HIMAX_MD_ENABLE: {
             uint32_t enable = va_arg(ap, uint32_t);
             ret = cambus_writeb2(&sensor->bus, sensor->slv_addr, MD_CTRL, enable ? 1:0);

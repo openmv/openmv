@@ -131,6 +131,7 @@ typedef enum {
     IOCTL_HIMAX_MD_CLEAR,
     IOCTL_HIMAX_MD_WINDOW,
     IOCTL_HIMAX_MD_THRESHOLD,
+    IOCTL_HIMAX_OSC_ENABLE,
 } ioctl_t;
 
 #define SENSOR_HW_FLAGS_VSYNC        (0) // vertical sync polarity.
