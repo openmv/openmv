@@ -208,11 +208,11 @@ SECTIONS
   /* Make sure there is enough ram for the stack */
   ._stack (NOLOAD) :
   {
-    . = ALIGN(4);
+    . = ALIGN(8);
     _sstack  = .;
     . = . + _stack_size;
 
-    . = ALIGN(4);
+    . = ALIGN(8);
     _estack  = .;
   } >OMV_STACK_MEMORY
 
