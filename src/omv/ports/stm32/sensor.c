@@ -1533,12 +1533,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                     SCB_InvalidateDCache_by_Addr((uint32_t*)MAIN_FB()->pixels, size);
                     #endif
                 }
-                // Clean trailing data.
-                while ((MAIN_FB()->bpp >= 2)
-                   && ((MAIN_FB()->pixels[MAIN_FB()->bpp-2] != 0xFF)
-                    || (MAIN_FB()->pixels[MAIN_FB()->bpp-1] != 0xD9))) {
-                    MAIN_FB()->bpp -= 1;
-                }
+                // Clean trailing data after 0xFFD9 at the end of the jpeg byte stream.
+                MAIN_FB()->bpp = jpeg_clean_trailing_bytes(MAIN_FB()->bpp, MAIN_FB()->pixels);
                 break;
             default:
                 break;
