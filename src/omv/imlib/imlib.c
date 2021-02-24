@@ -19,6 +19,18 @@
 #include "common.h"
 #include "omv_boardconfig.h"
 
+void imlib_init_all()
+{
+    // Nothing for now.
+}
+
+void imlib_deinit_all()
+{
+    #ifdef IMLIB_ENABLE_DMA2D
+    imlib_draw_row_deinit_all();
+    #endif
+}
+
 /////////////////
 // Point Stuff //
 /////////////////

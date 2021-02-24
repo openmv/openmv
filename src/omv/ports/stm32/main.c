@@ -497,6 +497,7 @@ soft_reset:
     py_lcd_init0();
     py_fir_init0();
     py_tv_init0();
+    imlib_init_all();
     readline_init0();
     pin_init0();
     extint_init0();
@@ -753,9 +754,7 @@ soft_reset:
     #if MICROPY_PY_AUDIO
     py_audio_deinit();
     #endif
-    #ifdef IMLIB_ENABLE_DMA2D
-    imlib_draw_row_deinit_all();
-    #endif
+    imlib_deinit_all();
     first_soft_reset = false;
     goto soft_reset;
 }
