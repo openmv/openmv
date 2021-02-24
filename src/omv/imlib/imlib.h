@@ -1043,6 +1043,9 @@ typedef struct imlib_draw_row_data {
 
 typedef void (*imlib_draw_row_callback_t)(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data);
 
+void imlib_init_all();
+void imlib_deinit_all();
+
 // Generic Helper Functions
 void imlib_fill_image_from_float(image_t *img, int w, int h, float *data, float min, float max,
                                  bool mirror, bool flip, bool dst_transpose, bool src_transpose);
