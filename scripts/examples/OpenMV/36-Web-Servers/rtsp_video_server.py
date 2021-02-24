@@ -11,6 +11,8 @@ import network, omv, rtsp, sensor, time
 # Not all programs (e.g. VLC) implement the full JPEG standard for decoding any JPEG image
 # in RTP packets. Images JPEG compressed by the OpenMV Cam internally may not display.
 
+# FFPLAY will correctly handle JPEGs produced by OpenMV software.
+
 sensor.reset()
 
 sensor.set_pixformat(sensor.JPEG) # Only supported by the OV2640/OV5640.

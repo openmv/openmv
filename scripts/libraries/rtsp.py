@@ -94,6 +94,13 @@ class rtsp_server:
             if self.__pathname != '/' and self.__pathname.endswith('/'):
                 self.__pathname = self.__pathname[:-1]
             if line0[2] == "RTSP/1.0":
+                if len(s) >= 3 and s[1].split(' ')[0] != "CSeq:":
+                    for i in range(2, len(s)):
+                        if s[i].split(' ')[0] == "CSeq:":
+                            temp = s[i]
+                            s[i] = s[1]
+                            s[1] = temp
+                            break
                 line1 = s[1].split(' ')
                 if line1[0] == "CSeq:":
                     seq = int(line1[1])
@@ -134,6 +141,7 @@ class rtsp_server:
                                 if self.__setup_cb: self.__setup_cb(self.__pathname, self.__session)
                                 return
                     elif request == "PLAY":
+                         s = list(filter(lambda x: x and not x.startswith("Range"), s))
                          if len(s) >= 3:
                             m = re.match("Session: (\d+)", s[2])
                             if m:
