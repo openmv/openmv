@@ -103,9 +103,7 @@ void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, i
         write_data(fp, img->pixels, img->bpp + pad); // reading past okay
         *bytes += img->bpp + pad;
     } else {
-        uint32_t size;
-        uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
-        image_t out = { .w=img->w, .h=img->h, .bpp=size, .pixels=buffer };
+        image_t out = { .w=img->w, .h=img->h, .bpp=0, .pixels=NULL }; // alloc in jpeg compress
         // When jpeg_compress needs more memory than in currently allocated it
         // will try to realloc. MP will detect that the pointer is outside of
         // the heap and return NULL which will cause an out of memory error.
@@ -114,7 +112,7 @@ void mjpeg_add_frame(FIL *fp, uint32_t *frames, uint32_t *bytes, image_t *img, i
         write_long(fp, out.bpp + pad); // DWORD cb;
         write_data(fp, out.pixels, out.bpp + pad); // reading past okay
         *bytes += out.bpp + pad;
-        fb_free();
+        fb_free(); // frees alloc in jpeg_compress()
     }
 }
 

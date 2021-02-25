@@ -1063,10 +1063,8 @@ static mp_obj_t py_image_compress(uint n_args, const mp_obj_t *args, mp_map_t *k
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
-    uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
-    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=0, .data=NULL }; // alloc in jpeg compress
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     PY_ASSERT_TRUE_MSG(out.bpp <= image_size(arg_img), "Can't compress in place!");
     memcpy(arg_img->data, out.data, out.bpp);
@@ -1085,10 +1083,8 @@ static mp_obj_t py_image_compress_for_ide(uint n_args, const mp_obj_t *args, mp_
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
-    uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
-    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=0, .data=NULL }; // alloc in jpeg compress
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     int new_size = fb_encode_for_ide_new_size(&out);
     PY_ASSERT_TRUE_MSG(new_size <= image_size(arg_img), "Can't compress in place!");
@@ -1116,10 +1112,8 @@ static mp_obj_t py_image_compressed(uint n_args, const mp_obj_t *args, mp_map_t 
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
-    uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
-    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=0, .data=NULL }; // alloc in jpeg compress
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     uint8_t *temp = xalloc(out.bpp);
     memcpy(temp, out.data, out.bpp);
@@ -1138,10 +1132,8 @@ static mp_obj_t py_image_compressed_for_ide(uint n_args, const mp_obj_t *args, m
     int arg_q = py_helper_keyword_int(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_quality), 50);
     PY_ASSERT_TRUE_MSG((1 <= arg_q) && (arg_q <= 100), "Error: 1 <= quality <= 100!");
 
-    uint32_t size;
     fb_alloc_mark();
-    uint8_t *buffer = fb_alloc_all(&size, FB_ALLOC_PREFER_SIZE);
-    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=size, .data=buffer };
+    image_t out = { .w=arg_img->w, .h=arg_img->h, .bpp=0, .data=NULL }; // alloc in jpeg compress
     PY_ASSERT_FALSE_MSG(jpeg_compress(arg_img, &out, arg_q, false), "Out of Memory!");
     int new_size = fb_encode_for_ide_new_size(&out);
     uint8_t *temp = xalloc(new_size);
