@@ -180,7 +180,9 @@ typedef struct _jpeg_enc {
     };
 } jpeg_enc_t;
 
-static uint8_t mcubuf[512];
+static JPEG_HandleTypeDef JPEG_Handle = {.Instance = JPEG};
+static JPEG_ConfTypeDef JPEG_Config = {};
+static uint8_t mcubuf[192];
 static jpeg_enc_t jpeg_enc;
 
 static uint8_t *get_mcu()
@@ -316,11 +318,6 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     mp_uint_t start = mp_hal_ticks_ms();
 #endif
 
-    // Init the HAL JPEG driver
-    JPEG_HandleTypeDef JPEG_Handle = {0};
-    JPEG_Handle.Instance = JPEG;
-    HAL_JPEG_Init(&JPEG_Handle);
-
     uint32_t pad_w = src->w;
     if (pad_w % 8 != 0) {
         pad_w += (8 - (pad_w % 8));
@@ -344,23 +341,23 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     JPEG_Info.ImageQuality  = quality;
 
     switch (src->bpp) {
-        case 0:
-        case 1:
+        case IMAGE_BPP_BINARY:
+        case IMAGE_BPP_GRAYSCALE:
             jpeg_enc.mcu_size           = JPEG_444_GS_MCU_SIZE;
             JPEG_Info.ColorSpace        = JPEG_GRAYSCALE_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
             break;
-        case 2:
-        case 3:
+        case IMAGE_BPP_RGB565:
+        case IMAGE_BPP_BAYER:
             jpeg_enc.mcu_size           = JPEG_444_YCBCR_MCU_SIZE;
             JPEG_Info.ColorSpace        = JPEG_YCBCR_COLORSPACE;
             JPEG_Info.ChromaSubsampling = JPEG_444_SUBSAMPLING;
             break;
     }
 
-    if (HAL_JPEG_ConfigEncoding(&JPEG_Handle, &JPEG_Info) != HAL_OK) {
-        // Initialization error
-        return true;
+    if (memcmp(&JPEG_Config, &JPEG_Info, sizeof(JPEG_ConfTypeDef))) {
+        HAL_JPEG_ConfigEncoding(&JPEG_Handle, &JPEG_Info);
+        memcpy(&JPEG_Config, &JPEG_Info, sizeof(JPEG_ConfTypeDef));
     }
 
     // NOTE: output buffer size is stored in dst->bpp
@@ -381,9 +378,19 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
     printf("time: %u ms\n", mp_hal_ticks_ms() - start);
 #endif
 
-    HAL_JPEG_DeInit(&JPEG_Handle);
-
     return jpeg_enc.overflow;
+}
+
+void imlib_jpeg_compress_init()
+{
+    HAL_JPEG_Init(&JPEG_Handle);
+}
+
+void imlib_jpeg_compress_deinit()
+{
+    memset(&JPEG_Config, 0, sizeof(JPEG_ConfTypeDef));
+    HAL_JPEG_Abort(&JPEG_Handle);
+    HAL_JPEG_DeInit(&JPEG_Handle);
 }
 
 #else
