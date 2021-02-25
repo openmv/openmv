@@ -114,7 +114,7 @@ int cambus_readb(cambus_t *bus, uint8_t slv_addr, uint8_t reg_addr, uint8_t *reg
 
     nrfx_twi_enable(&bus->i2c);
     nrfx_twi_xfer_desc_t desc1 = NRFX_TWI_XFER_DESC_TX(slv_addr, &reg_addr, 1);
-    if (nrfx_twi_xfer(&bus->i2c, &desc1, NRFX_TWI_FLAG_TX_NO_STOP) != NRFX_SUCCESS) {
+    if (nrfx_twi_xfer(&bus->i2c, &desc1, 0) != NRFX_SUCCESS) {
         ret = -1;
         goto i2c_error;
     }
