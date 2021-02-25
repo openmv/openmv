@@ -104,7 +104,7 @@
 #define ISC_I2C_ID              (0)
 #define ISC_I2C_SCL_PIN         (2)
 #define ISC_I2C_SDA_PIN         (31)
-#define ISC_I2C_SPEED           (CAMBUS_SPEED_FULL)
+#define ISC_I2C_SPEED           (CAMBUS_SPEED_STANDARD)
 
 // I2C0
 #define TWI0_ID                 (0)
