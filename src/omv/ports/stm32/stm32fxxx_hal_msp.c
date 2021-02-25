@@ -117,11 +117,6 @@ void HAL_MspInit(void)
     __GPIOK_CLK_ENABLE();
     #endif
 
-    #if defined (OMV_HARDWARE_JPEG)
-    /* Enable JPEG clock */
-    __HAL_RCC_JPEG_CLK_ENABLE();
-    #endif
-
     /* Enable DMA clocks */
     __DMA1_CLK_ENABLE();
     __DMA2_CLK_ENABLE();
@@ -129,11 +124,6 @@ void HAL_MspInit(void)
     #if defined(MCU_SERIES_H7)
     // MDMA clock
     __HAL_RCC_MDMA_CLK_ENABLE();
-    #endif
-
-    #if defined(OMV_HARDWARE_JPEG)
-    // Enable JPEG clock
-    __HAL_RCC_JPGDECEN_CLK_ENABLE();
     #endif
 
     #if defined(DCMI_RESET_PIN) || defined(DCMI_PWDN_PIN) || defined(DCMI_FSYNC_PIN)
@@ -399,6 +389,20 @@ void HAL_DMA2D_MspDeInit(DMA2D_HandleTypeDef *hdma2d)
     __HAL_RCC_DMA2D_RELEASE_RESET();
     __HAL_RCC_DMA2D_CLK_DISABLE();
 }
+
+#if (OMV_HARDWARE_JPEG == 1)
+void HAL_JPEG_MspInit(JPEG_HandleTypeDef *hjpeg)
+{
+    __HAL_RCC_JPEG_CLK_ENABLE();
+}
+
+void HAL_JPEG_MspDeInit(JPEG_HandleTypeDef *hjpeg)
+{
+    __HAL_RCC_JPEG_FORCE_RESET();
+    __HAL_RCC_JPEG_RELEASE_RESET();
+    __HAL_RCC_JPEG_CLK_DISABLE();
+}
+#endif
 
 #if defined(OMV_LCD_CONTROLLER) && (!defined(OMV_DSI_CONTROLLER))
 typedef struct {
