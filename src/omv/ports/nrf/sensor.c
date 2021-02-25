@@ -144,20 +144,22 @@ static int dcmi_config()
     _hrefPort = portInputRegister(digitalPinToPort(DCMI_HSYNC_PIN));
     _pclkPort = portInputRegister(digitalPinToPort(DCMI_PXCLK_PIN));
 
-    #if defined(DCMI_PWDN_PIN)
-    nrf_gpio_cfg_output(DCMI_PWDN_PIN);
-    #endif
-
-    #if defined(DCMI_RESET_PIN)
-    nrf_gpio_cfg_output(DCMI_RESET_PIN);
-    #endif
-
     return 0;
 }
 
 int sensor_init()
 {
     int init_ret = 0;
+
+    #if defined(DCMI_PWDN_PIN)
+    nrf_gpio_cfg_output(DCMI_PWDN_PIN);
+    DCMI_PWDN_HIGH();
+    #endif
+
+    #if defined(DCMI_RESET_PIN)
+    nrf_gpio_cfg_output(DCMI_RESET_PIN);
+    DCMI_RESET_HIGH();
+    #endif
 
     /* Do a power cycle */
     DCMI_PWDN_HIGH();
