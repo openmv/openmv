@@ -125,7 +125,7 @@
 
 // DCMI
 #define DCMI_PWDN_PIN           (29)
-//#define DCMI_RESET_PIN          (30)
+#define DCMI_RESET_PIN          (30)
 
 #define DCMI_D0_PIN             (32+2)
 #define DCMI_D1_PIN             (32+3)
