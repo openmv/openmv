@@ -184,16 +184,48 @@ static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, 
         framebuffer_tail = 0;
 
         for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-            framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+            framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_NO_HINT | FB_ALLOC_CACHE_ALIGN);
         }
 
         dma_init(&spi_tx_dma, OMV_SPI_LCD_CONTROLLER->tx_dma_descr, DMA_MEMORY_TO_PERIPH, OMV_SPI_LCD_CONTROLLER->spi);
         OMV_SPI_LCD_CONTROLLER->spi->hdmatx = &spi_tx_dma;
         OMV_SPI_LCD_CONTROLLER->spi->hdmarx = NULL;
+#if defined(MCU_SERIES_H7)
+        spi_tx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+#else
         spi_tx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-        spi_tx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR = (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PSIZE_Msk) | DMA_PDATAALIGN_HALFWORD;
-        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR = (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_MSIZE_Msk) | DMA_MDATAALIGN_HALFWORD;
+#endif
+        spi_tx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+        spi_tx_dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+        spi_tx_dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
+        spi_tx_dma.Init.MemBurst = DMA_MBURST_INC4;
+#if defined(MCU_SERIES_H7)
+        spi_tx_dma.Init.PeriphBurst = DMA_PBURST_INC4;
+#else
+        spi_tx_dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
+#endif
+#if defined(MCU_SERIES_H7)
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+                (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PSIZE_Msk) | DMA_PDATAALIGN_WORD;
+#else
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+                (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PSIZE_Msk) | DMA_PDATAALIGN_HALFWORD;
+#endif
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_MSIZE_Msk) | DMA_MDATAALIGN_WORD;
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->FCR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->FCR & ~DMA_SxFCR_DMDIS_Msk) | DMA_FIFOMODE_ENABLE;
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->FCR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->FCR & ~DMA_SxFCR_FTH_Msk) | DMA_FIFO_THRESHOLD_FULL;
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_MBURST_Msk) | DMA_MBURST_INC4;
+#if defined(MCU_SERIES_H7)
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PBURST_Msk) | DMA_PBURST_INC4;
+#else
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PBURST_Msk) | DMA_PBURST_SINGLE;
+#endif
         fb_alloc_mark_permanent();
     }
 }
@@ -251,11 +283,16 @@ static void spi_lcd_callback(SPI_HandleTypeDef *hspi)
                     spi_tx_cb_state_memory_write_first = false;
                     OMV_SPI_LCD_CONTROLLER->spi->Init.DataSize = SPI_DATASIZE_16BIT;
 #if defined(MCU_SERIES_H7)
-                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
+                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
+                        (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_16BIT;
+                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
+                        (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | SPI_FIFO_THRESHOLD_08DATA;
 #elif defined(MCU_SERIES_F7)
-                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_16BIT;
+                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 =
+                        (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_16BIT;
 #elif defined(MCU_SERIES_F4)
-                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
+                    OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 =
+                        (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_16BIT;
 #endif
                     OMV_SPI_LCD_CS_LOW();
                 }
@@ -268,11 +305,16 @@ static void spi_lcd_callback(SPI_HandleTypeDef *hspi)
                 spi_tx_cb_state = SPI_TX_CB_MEMORY_WRITE_CMD;
                 OMV_SPI_LCD_CONTROLLER->spi->Init.DataSize = SPI_DATASIZE_8BIT;
 #if defined(MCU_SERIES_H7)
-                OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_8BIT;
+                OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
+                    (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_DSIZE_Msk) | SPI_DATASIZE_8BIT;
+                OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
+                    (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | SPI_FIFO_THRESHOLD_01DATA;
 #elif defined(MCU_SERIES_F7)
-                OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_8BIT;
+                OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 =
+                    (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR2 & ~SPI_CR2_DS_Msk) | SPI_DATASIZE_8BIT;
 #elif defined(MCU_SERIES_F4)
-                OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 = (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_8BIT;
+                OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 =
+                    (OMV_SPI_LCD_CONTROLLER->spi->Instance->CR1 & ~SPI_CR1_DFF_Msk) | SPI_DATASIZE_8BIT;
 #endif
                 OMV_SPI_LCD_CS_LOW();
                 HAL_SPI_Transmit_IT(OMV_SPI_LCD_CONTROLLER->spi, (uint8_t *) display_on, sizeof(display_on));
@@ -899,7 +941,7 @@ static void ltdc_config_init(int frame_size, int refresh_rate)
     framebuffer_tail = 0;
 
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-        framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_NO_HINT);
+        framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_NO_HINT | FB_ALLOC_CACHE_ALIGN);
         ltdc_framebuffer_layers[i].WindowX0 = 0;
         ltdc_framebuffer_layers[i].WindowX1 = w;
         ltdc_framebuffer_layers[i].WindowY0 = 0;
