@@ -497,12 +497,48 @@ static void spi_config_init(bool triple_buffer)
         framebuffer_tail = 0;
 
         for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-            framebuffers[i] = (uint16_t *) fb_alloc0(TV_WIDTH_RGB565 * TV_HEIGHT, FB_ALLOC_NO_HINT);
+            framebuffers[i] = (uint16_t *) fb_alloc0(TV_WIDTH_RGB565 * TV_HEIGHT, FB_ALLOC_CACHE_ALIGN);
         }
 
         dma_init(&spi_tx_dma, OMV_SPI_LCD_CONTROLLER->tx_dma_descr, DMA_MEMORY_TO_PERIPH, OMV_SPI_LCD_CONTROLLER->spi);
         OMV_SPI_LCD_CONTROLLER->spi->hdmatx = &spi_tx_dma;
         OMV_SPI_LCD_CONTROLLER->spi->hdmarx = NULL;
+#if defined(MCU_SERIES_H7)
+        spi_tx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+#else
+        spi_tx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+#endif
+        spi_tx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+        spi_tx_dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+        spi_tx_dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
+        spi_tx_dma.Init.MemBurst = DMA_MBURST_INC4;
+#if defined(MCU_SERIES_H7)
+        spi_tx_dma.Init.PeriphBurst = DMA_PBURST_INC4;
+#else
+        spi_tx_dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
+#endif
+#if defined(MCU_SERIES_H7)
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PSIZE_Msk) | DMA_PDATAALIGN_WORD;
+#else
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PSIZE_Msk) | DMA_PDATAALIGN_BYTE;
+#endif
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_MSIZE_Msk) | DMA_MDATAALIGN_WORD;
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->FCR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->FCR & ~DMA_SxFCR_DMDIS_Msk) | DMA_FIFOMODE_ENABLE;
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->FCR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->FCR & ~DMA_SxFCR_FTH_Msk) | DMA_FIFO_THRESHOLD_FULL;
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_MBURST_Msk) | DMA_MBURST_INC4;
+#if defined(MCU_SERIES_H7)
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PBURST_Msk) | DMA_PBURST_INC4;
+#else
+        ((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR =
+            (((DMA_Stream_TypeDef *) spi_tx_dma.Instance)->CR & ~DMA_SxCR_PBURST_Msk) | DMA_PBURST_SINGLE;
+#endif
         fb_alloc_mark_permanent();
     }
 }
@@ -527,6 +563,10 @@ static void spi_tv_callback(SPI_HandleTypeDef *hspi)
                 spi_tx_cb_state_memory_write_addr = (uint8_t *) framebuffers[framebuffer_head];
                 spi_tx_cb_state_memory_write_count = PICLINE_LENGTH_BYTES * TV_HEIGHT;
                 framebuffer_tail = framebuffer_head;
+#if defined(MCU_SERIES_H7)
+                OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
+                    (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | SPI_FIFO_THRESHOLD_01DATA;
+#endif
                 OMV_SPI_LCD_CS_LOW();
                 // When starting the interrupt chain the first HAL_SPI_Transmit_IT is not executed
                 // in interrupt context. So, disable interrupts for the first HAL_SPI_Transmit_IT so
@@ -539,12 +579,16 @@ static void spi_tv_callback(SPI_HandleTypeDef *hspi)
             }
             case SPI_TX_CB_MEMORY_WRITE: {
                 uint8_t *addr = spi_tx_cb_state_memory_write_addr;
-                size_t count = IM_MIN(spi_tx_cb_state_memory_write_count, 65535);
-                spi_tx_cb_state = (spi_tx_cb_state_memory_write_count > 65535)
+                size_t count = IM_MIN(spi_tx_cb_state_memory_write_count, (65536-16));
+                spi_tx_cb_state = (spi_tx_cb_state_memory_write_count > (65536-16))
                         ? SPI_TX_CB_MEMORY_WRITE
                         : SPI_TX_CB_MEMORY_WRITE_CMD;
                 spi_tx_cb_state_memory_write_addr += count;
                 spi_tx_cb_state_memory_write_count -= count;
+#if defined(MCU_SERIES_H7)
+                OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 =
+                    (OMV_SPI_LCD_CONTROLLER->spi->Instance->CFG1 & ~SPI_CFG1_FTHLV_Msk) | SPI_FIFO_THRESHOLD_16DATA;
+#endif
                 HAL_SPI_Transmit_DMA(OMV_SPI_LCD_CONTROLLER->spi, addr, count);
                 break;
             }
