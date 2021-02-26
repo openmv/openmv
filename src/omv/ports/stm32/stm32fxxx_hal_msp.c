@@ -11,6 +11,8 @@
 #include STM32_HAL_H
 #include "omv_boardconfig.h"
 
+#include "irq.h"
+
 /* GPIO struct */
 typedef struct {
     GPIO_TypeDef *port;
@@ -124,6 +126,8 @@ void HAL_MspInit(void)
     #if defined(MCU_SERIES_H7)
     // MDMA clock
     __HAL_RCC_MDMA_CLK_ENABLE();
+    NVIC_SetPriority(MDMA_IRQn, IRQ_PRI_MDMA);
+    HAL_NVIC_EnableIRQ(MDMA_IRQn);
     #endif
 
     #if defined(DCMI_RESET_PIN) || defined(DCMI_PWDN_PIN) || defined(DCMI_FSYNC_PIN)
@@ -535,4 +539,19 @@ void HAL_DAC_MspDeinit(DAC_HandleTypeDef *hdac)
 void HAL_MspDeInit(void)
 {
 
+}
+
+#if (OMV_HARDWARE_JPEG == 1)
+extern MDMA_HandleTypeDef JPEG_MDMA_Handle_In;
+extern MDMA_HandleTypeDef JPEG_MDMA_Handle_Out;
+#endif
+
+void MDMA_IRQHandler()
+{
+    IRQ_ENTER(MDMA_IRQn);
+    #if (OMV_HARDWARE_JPEG == 1)
+    HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_In);
+    HAL_MDMA_IRQHandler(&JPEG_MDMA_Handle_Out);
+    #endif
+    IRQ_EXIT(MDMA_IRQn);
 }
