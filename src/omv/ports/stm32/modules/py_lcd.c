@@ -184,7 +184,7 @@ static void spi_config_init(int w, int h, int refresh_rate, bool triple_buffer, 
         framebuffer_tail = 0;
 
         for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-            framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_NO_HINT | FB_ALLOC_CACHE_ALIGN);
+            framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_CACHE_ALIGN);
         }
 
         dma_init(&spi_tx_dma, OMV_SPI_LCD_CONTROLLER->tx_dma_descr, DMA_MEMORY_TO_PERIPH, OMV_SPI_LCD_CONTROLLER->spi);
@@ -273,8 +273,8 @@ static void spi_lcd_callback(SPI_HandleTypeDef *hspi)
             }
             case SPI_TX_CB_MEMORY_WRITE: {
                 uint16_t *addr = spi_tx_cb_state_memory_write_addr;
-                size_t count = IM_MIN(spi_tx_cb_state_memory_write_count, 65535);
-                spi_tx_cb_state = (spi_tx_cb_state_memory_write_count > 65535) ? SPI_TX_CB_MEMORY_WRITE : SPI_TX_CB_DISPLAY_ON;
+                size_t count = IM_MIN(spi_tx_cb_state_memory_write_count, (65536-16));
+                spi_tx_cb_state = (spi_tx_cb_state_memory_write_count > (65536-16)) ? SPI_TX_CB_MEMORY_WRITE : SPI_TX_CB_DISPLAY_ON;
                 spi_tx_cb_state_memory_write_addr += count;
                 spi_tx_cb_state_memory_write_count -= count;
                 if (spi_tx_cb_state_memory_write_first) {
@@ -941,7 +941,7 @@ static void ltdc_config_init(int frame_size, int refresh_rate)
     framebuffer_tail = 0;
 
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
-        framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_NO_HINT | FB_ALLOC_CACHE_ALIGN);
+        framebuffers[i] = (uint16_t *) fb_alloc0(w * h * sizeof(uint16_t), FB_ALLOC_CACHE_ALIGN);
         ltdc_framebuffer_layers[i].WindowX0 = 0;
         ltdc_framebuffer_layers[i].WindowX1 = w;
         ltdc_framebuffer_layers[i].WindowY0 = 0;
