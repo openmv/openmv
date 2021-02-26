@@ -12,6 +12,12 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
+#ifndef __DCACHE_PRESENT
+#define FB_ALLOC_ALIGNMENT 32 // Use 32-byte alignment on MCUs with no cache for DMA buffer alignment.
+#else
+#define FB_ALLOC_ALIGNMENT __SCB_DCACHE_LINE_SIZE
+#endif
+
 extern char _fballoc;
 static char *pointer = &_fballoc;
 
@@ -134,12 +140,10 @@ void *fb_alloc(uint32_t size, int hints)
 
     size = ((size + sizeof(uint32_t) - 1) / sizeof(uint32_t)) * sizeof(uint32_t); // Round Up
 
-    #if __DCACHE_PRESENT
     if (hints & FB_ALLOC_CACHE_ALIGN) {
-        size = ((size + __SCB_DCACHE_LINE_SIZE - 1) / __SCB_DCACHE_LINE_SIZE) * __SCB_DCACHE_LINE_SIZE;
-        size += __SCB_DCACHE_LINE_SIZE - sizeof(uint32_t);
+        size = ((size + FB_ALLOC_ALIGNMENT - 1) / FB_ALLOC_ALIGNMENT) * FB_ALLOC_ALIGNMENT;
+        size += FB_ALLOC_ALIGNMENT - sizeof(uint32_t);
     }
-    #endif
 
     char *result = pointer - size;
     char *new_pointer = result - sizeof(uint32_t);
@@ -171,14 +175,12 @@ void *fb_alloc(uint32_t size, int hints)
     }
     #endif
 
-    #if __DCACHE_PRESENT
     if (hints & FB_ALLOC_CACHE_ALIGN) {
-        int offset = ((uint32_t) result) % __SCB_DCACHE_LINE_SIZE;
+        int offset = ((uint32_t) result) % FB_ALLOC_ALIGNMENT;
         if (offset) {
-            result += __SCB_DCACHE_LINE_SIZE - offset;
+            result += FB_ALLOC_ALIGNMENT - offset;
         }
     }
-    #endif
 
     return result;
 }
@@ -233,17 +235,15 @@ void *fb_alloc_all(uint32_t *size, int hints)
     }
     #endif
 
-    #if __DCACHE_PRESENT
     if (hints & FB_ALLOC_CACHE_ALIGN) {
-        int offset = ((uint32_t) result) % __SCB_DCACHE_LINE_SIZE;
+        int offset = ((uint32_t) result) % FB_ALLOC_ALIGNMENT;
         if (offset) {
-            int inc = __SCB_DCACHE_LINE_SIZE - offset;
+            int inc = FB_ALLOC_ALIGNMENT - offset;
             result += inc;
             *size -= inc;
         }
-        *size = (*size / __SCB_DCACHE_LINE_SIZE) * __SCB_DCACHE_LINE_SIZE;
+        *size = (*size / FB_ALLOC_ALIGNMENT) * FB_ALLOC_ALIGNMENT;
     }
-    #endif
 
     return result;
 }
