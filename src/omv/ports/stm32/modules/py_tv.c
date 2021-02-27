@@ -622,17 +622,14 @@ static void spi_tv_draw_image_cb_convert_rgb565(uint16_t *row_pointer_i, uint8_t
         int g_pixels = ((pixels >> 3) & 0xfc00fc) | ((pixels >> 9) & 0x30003);
         int b_pixels = ((pixels << 3) & 0xf800f8) | ((pixels >> 2) & 0x70007);
 
-        int r_b_0 = __PKHBT(r_pixels, b_pixels, 16), r_b_1 = __PKHTB(b_pixels, r_pixels, 16);
-        int g_0 = g_pixels & 0xff, g_1 = (g_pixels >> 16) & 0xff;
+        int y = ((r_pixels * 38) + (g_pixels * 75) + (b_pixels * 15)) >> 7;
+        int u = __SSUB16(b_pixels * 64, (r_pixels * 21) + (g_pixels * 43));
+        int v = __SSUB16(r_pixels * 64, (g_pixels * 54) + (b_pixels * 10));
 
-        int y0 = __SMLAD(r_b_0, (15 << 16) | 38, g_0 * 75) >> 7;
-        int y1 = __SMLAD(r_b_1, (15 << 16) | 38, g_1 * 75) >> 7;
+        int y0 = __UXTB_RORn(y, 0), y1 = __UXTB_RORn(y, 16);
 
-        int u0 = __SMLAD(r_b_0, (64 << 16) | (-21 & 0xffff), g_0 * -43) >> 7;
-        int u1 = __SMLAD(r_b_1, (64 << 16) | (-21 & 0xffff), g_1 * -43) >> 7;
-
-        int v0 = __SMLAD(r_b_0, (-10 << 16) | 64, g_0 * -54) >> 7;
-        int v1 = __SMLAD(r_b_1, (-10 << 16) | 64, g_1 * -54) >> 7;
+        int u_avg = __SMUAD(u, 0x00010001) >> 7;
+        int v_avg = __SMUAD(v, 0x00010001) >> 7;
 
         #else
 
@@ -652,10 +649,11 @@ static void spi_tv_draw_image_cb_convert_rgb565(uint16_t *row_pointer_i, uint8_t
         int u1 = COLOR_RGB888_TO_U(r1, g1, b1);
         int v1 = COLOR_RGB888_TO_V(r1, g1, b1);
 
-        #endif
-
         int u_avg = u0 + u1;
         int v_avg = v0 + v1;
+
+        #endif
+
         int uv = ((u_avg >> 1) & 0xf0) | (((-v_avg) >> 5) & 0xf);
 
         IMAGE_PUT_GRAYSCALE_PIXEL_FAST(row_pointer_o, j, uv);

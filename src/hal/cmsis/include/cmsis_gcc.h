@@ -1889,6 +1889,22 @@ __STATIC_FORCEINLINE uint32_t __USADA8(uint32_t op1, uint32_t op2, uint32_t op3)
   __RES; \
  })
 
+__STATIC_FORCEINLINE uint32_t __UXTB(uint32_t op1)
+{
+  uint32_t result;
+
+  __ASM volatile ("uxtb %0, %1" : "=r" (result) : "r" (op1));
+  return(result);
+}
+
+__STATIC_FORCEINLINE uint32_t __UXTB_RORn(uint32_t op1, uint32_t rotate)
+{
+  uint32_t result;
+
+  __ASM volatile ("uxtb %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
+  return result;
+}
+
 __STATIC_FORCEINLINE uint32_t __UXTB16(uint32_t op1)
 {
   uint32_t result;
@@ -1918,6 +1934,22 @@ __STATIC_FORCEINLINE uint32_t __UXTAB_RORn(uint32_t op1, uint32_t op2, uint32_t 
   uint32_t result;
 
   __ASM volatile ("uxtab %0, %1, %2, ROR %3" : "=r" (result) : "r" (op1), "r" (op2), "i" (rotate) );
+  return result;
+}
+
+__STATIC_FORCEINLINE uint32_t __SXTB(uint32_t op1)
+{
+  uint32_t result;
+
+  __ASM volatile ("sxtb %0, %1" : "=r" (result) : "r" (op1));
+  return(result);
+}
+
+__STATIC_FORCEINLINE uint32_t __SXTB_RORn(uint32_t op1, uint32_t rotate)
+{
+  uint32_t result;
+
+  __ASM volatile ("sxtb %0, %1, ROR %2" : "=r" (result) : "r" (op1), "i" (rotate) );
   return result;
 }
 
