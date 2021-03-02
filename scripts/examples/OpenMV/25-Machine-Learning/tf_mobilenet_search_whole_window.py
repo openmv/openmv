@@ -11,6 +11,8 @@
 # NOTE: This example only works on the OpenMV Cam H7 Pro (that has SDRAM) and better!
 # To get the models please see the CNN Network library in OpenMV IDE under
 # Tools -> Machine Vision. The labels are there too.
+# You should insert a microSD card into your camera and copy-paste the mobilenet_labels.txt
+# file and your chosen model into the root folder for ths script to work.
 #
 # In this example we slide the detector window over the image and get a list
 # of activations. Note that use a CNN with a sliding window is extremely compute
