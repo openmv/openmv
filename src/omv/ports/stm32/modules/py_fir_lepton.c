@@ -55,11 +55,7 @@ static DMA_HandleTypeDef fir_lepton_spi_rx_dma = {};
 #define VOSPI_SEG_SIZE_PIXELS   (VOSPI_PIDS_PER_SEG * VOSPI_PID_SIZE_PIXELS) // 16-bits
 
 #define VOSPI_BUFFER_SIZE       (VOSPI_PACKET_SIZE * 2) // 16-bits
-#if defined(MCU_SERIES_H7)
-#define VOSPI_CLOCK_SPEED       10000000 // hz
-#else
 #define VOSPI_CLOCK_SPEED       20000000 // hz
-#endif
 #define VOSPI_SYNC_MS           200 // ms
 
 static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
@@ -472,13 +468,13 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
     fir_lepton_spi_rx_dma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
     #endif
 
-    #if defined(MCU_SERIES_H7)
     fir_lepton_spi_rx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-    #else
-    fir_lepton_spi_rx_dma.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-    #endif
 
     fir_lepton_spi_rx_dma.Init.Mode = DMA_CIRCULAR;
+    fir_lepton_spi_rx_dma.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+    fir_lepton_spi_rx_dma.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
+    fir_lepton_spi_rx_dma.Init.MemBurst = DMA_MBURST_SINGLE;
+    fir_lepton_spi_rx_dma.Init.PeriphBurst = DMA_PBURST_SINGLE;
 
     ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
         (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_PSIZE_Msk) |
@@ -490,15 +486,27 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
 
     ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
         (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_MSIZE_Msk) |
-        #if defined(MCU_SERIES_H7)
         DMA_MDATAALIGN_WORD;
-        #else
-        DMA_MDATAALIGN_HALFWORD;
-        #endif
 
     ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
         (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_CIRC_Msk) |
         DMA_CIRCULAR;
+
+    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->FCR =
+        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->FCR & ~DMA_SxFCR_DMDIS_Msk) |
+        DMA_FIFOMODE_ENABLE;
+
+    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->FCR =
+        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->FCR & ~DMA_SxFCR_FTH_Msk) |
+        DMA_FIFO_THRESHOLD_1QUARTERFULL;
+
+    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
+        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_MBURST_Msk) |
+        DMA_MBURST_SINGLE;
+
+    ((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR =
+        (((DMA_Stream_TypeDef *) fir_lepton_spi_rx_dma.Instance)->CR & ~DMA_SxCR_PBURST_Msk) |
+        DMA_PBURST_SINGLE;
 
     fb_alloc_mark_permanent();
     fir_lepton_spi_resync();
