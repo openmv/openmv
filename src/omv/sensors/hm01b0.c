@@ -76,13 +76,13 @@ static const uint16_t default_regs[][2] = {
     {0x2018,               0x9B},
    
     {AE_CTRL,              0x01},          //Automatic Exposure
-    {AE_TARGET_MEAN,       0x3C},          //AE target mean          [Def: 0x3C]
+    {AE_TARGET_MEAN,       0x64},          //AE target mean          [Def: 0x3C]
     {AE_MIN_MEAN,          0x0A},          //AE min target mean      [Def: 0x0A]
     {CONVERGE_IN_TH,       0x03},          //Converge in threshold   [Def: 0x03]
     {CONVERGE_OUT_TH,      0x05},          //Converge out threshold  [Def: 0x05]
     {MAX_INTG_H,           (HIMAX_FRAME_LENGTH_QVGA-2)>>8},          //Maximum INTG High Byte  [Def: 0x01]
     {MAX_INTG_L,           (HIMAX_FRAME_LENGTH_QVGA-2)&0xFF},        //Maximum INTG Low Byte   [Def: 0x54]
-    {MAX_AGAIN_FULL,       0x03},          //Maximum Analog gain in full frame mode [Def: 0x03]
+    {MAX_AGAIN_FULL,       0x04},          //Maximum Analog gain in full frame mode [Def: 0x03]
     {MAX_AGAIN_BIN2,       0x04},          //Maximum Analog gain in bin2 mode       [Def: 0x04]
     {MAX_DGAIN,            0xC0},
    
