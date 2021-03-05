@@ -45,6 +45,13 @@ MEMORY
 
 _ram_end    = ORIGIN(OMV_MAIN_MEMORY) + LENGTH(OMV_MAIN_MEMORY);
 
+#if defined(OMV_FB_OVERLAY_MEMORY)
+#if !defined(OMV_FB_OVERLAY_MEMORY_OFFSET)
+#define OMV_FB_OVERLAY_MEMORY_OFFSET    LENGTH(OMV_FB_OVERLAY_MEMORY)
+#endif
+_fballoc_overlay    = ORIGIN(OMV_FB_OVERLAY_MEMORY) + OMV_FB_OVERLAY_MEMORY_OFFSET;
+#endif
+
 #if defined(OMV_FFS_MEMORY)
 #if !defined(OMV_FFS_MEMORY_OFFSET)
 #define OMV_FFS_MEMORY_OFFSET           (0)
@@ -123,11 +130,6 @@ SECTIONS
   /* Misc DMA buffers kept in uncachable region */
   .dma_memory (NOLOAD) :
   {
-    #if defined(OMV_FB_OVERLAY_MEMORY)
-    . = ALIGN(4) + OMV_FB_OVERLAY_MEMORY_OFFSET;
-    _fballoc_overlay = .;
-    #endif
-
     . = ALIGN(4);
     _line_buf = .;      // Image line buffer.
     . = . + OMV_LINE_BUF_SIZE;

@@ -142,13 +142,12 @@
 #define OMV_FFS_MEMORY          DTCM        // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss and heap
 #define OMV_STACK_MEMORY        ITCM        // stack memory
-#define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
+#define OMV_DMA_MEMORY          SRAM3       // DMA buffers memory.
 #define OMV_FB_MEMORY           DRAM        // Framebuffer, fb_alloc
 #define OMV_JPEG_MEMORY         DRAM        // JPEG buffer memory buffer.
 #define OMV_JPEG_MEMORY_OFFSET  (31M)       // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
 #define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // _fballoc_overlay memory.
-#define OMV_FB_OVERLAY_MEMORY_OFFSET    (480*1024)  // _fballoc_overlay
 
 #define OMV_FB_SIZE             (20M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (11M)       // minimum fb alloc size
@@ -182,7 +181,7 @@
 #define OMV_FB_OVERLAY_MEMORY_ORIGIN    OMV_AXI_SRAM_ORIGIN
 
 // Use the MPU to set an uncacheable memory region.
-#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
+#define OMV_DMA_REGION_BASE     OMV_SRAM3_ORIGIN
 #define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_32KB
 
 // Image sensor I2C
