@@ -226,8 +226,8 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
                 ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, QQVGA_regs[i][0], QQVGA_regs[i][1]);
             }
             break;
-        default: 
-            if (w>320 || h>320) 
+        default:
+            if (w>320 || h>320)
                 ret = -1;
             
     }
@@ -265,48 +265,85 @@ static int set_framerate(sensor_t *sensor, int framerate)
     return cambus_writeb2(&sensor->bus, sensor->slv_addr, OSC_CLK_DIV, 0x08 | osc_div);
 }
 
-static int set_contrast(sensor_t *sensor, int level)
-{
-    return 0;
-}
-
 static int set_brightness(sensor_t *sensor, int level)
 {
-    return 0;
-}
-
-static int set_saturation(sensor_t *sensor, int level)
-{
-    return 0;
+    uint8_t ae_mean;
+    // Simulate brightness levels by setting AE loop target mean.
+    switch (level) {
+        case 0:
+            ae_mean = 60;
+            break;
+        case 1:
+            ae_mean = 80;
+            break;
+        case 2:
+            ae_mean = 100;
+            break;
+        case 3:
+            ae_mean = 127;
+            break;
+        default:
+            ae_mean = 60;
+    }
+    return cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_TARGET_MEAN, ae_mean);
 }
 
 static int set_gainceiling(sensor_t *sensor, gainceiling_t gainceiling)
 {
-    return 0;
-}
-
-static int set_quality(sensor_t *sensor, int quality)
-{
-    return 0;
+    int ret = 0;
+    int gain = 0x0;
+    switch (gainceiling) {
+        case GAINCEILING_2X:
+            gain = 0x01;
+            break;
+        case GAINCEILING_4X:
+            gain = 0x02;
+            break;
+        case GAINCEILING_8X:
+            gain = 0x03;
+            break;
+        case GAINCEILING_16X:
+            gain = 0x04;
+            break;
+        default:
+            return -1;
+    }
+    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MAX_AGAIN_FULL, gain);
+    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MAX_AGAIN_BIN2, gain);
+    return ret;
 }
 
 static int set_colorbar(sensor_t *sensor, int enable)
 {
-    return 0;
-}
-
-static int set_special_effect(sensor_t *sensor, sde_t sde)
-{
-    return 0;
+    return cambus_writeb2(&sensor->bus, sensor->slv_addr, TEST_PATTERN_MODE, enable & 0x1);
 }
 
 static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain_db_ceiling)
 {
-    return 0;
+    int ret = 0;
+    if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
+        gain_db = IM_MAX(IM_MIN(gain_db, 24.0f), 0.0f);
+        int gain = fast_ceilf(fast_log2(fast_expf((gain_db / 20.0f) * fast_log(10.0f))));
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 0); // Must disable AE
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, ANALOG_GAIN, ((gain&0x7)<<4));
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
+    } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
+        gain_db_ceiling = IM_MAX(IM_MIN(gain_db_ceiling, 24.0f), 0.0f);
+        int gain = fast_ceilf(fast_log2(fast_expf((gain_db_ceiling / 20.0f) * fast_log(10.0f))));
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MAX_AGAIN_FULL, (gain&0x7));
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, MAX_AGAIN_BIN2, (gain&0x7));
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 1);
+    }
+    return ret;
 }
 
 static int get_gain_db(sensor_t *sensor, float *gain_db)
 {
+    uint8_t gain;
+    if (cambus_readb2(&sensor->bus, sensor->slv_addr, ANALOG_GAIN, &gain) != 0) {
+        return -1;
+    }
+    *gain_db = fast_floorf(fast_log(1 << (gain>>4)) / fast_log(10.0f) * 20.0f);
     return 0;
 }
 
@@ -348,7 +385,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
         }
 
         ret |= get_vt_pix_clk(sensor, &vt_pix_clk);
-        coarse_int = exposure_us * (vt_pix_clk / 1000000) / line_len;
+        coarse_int = fast_roundf(exposure_us * (vt_pix_clk / 1000000.0f) / line_len);
 
         if (coarse_int < 2) {
             coarse_int = 2;
@@ -359,6 +396,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, AE_CTRL, 0);
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, INTEGRATION_H, coarse_int>>8);
         ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, INTEGRATION_L, coarse_int&0xff);
+        ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
     }
 
     return ret;
@@ -366,17 +404,20 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 
 static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 {
-    return 0;
-}
-
-static int set_auto_whitebal(sensor_t *sensor, int enable, float r_gain_db, float g_gain_db, float b_gain_db)
-{
-    return 0;
-}
-
-static int get_rgb_gain_db(sensor_t *sensor, float *r_gain_db, float *g_gain_db, float *b_gain_db)
-{
-    return 0;
+    int ret = 0;
+    uint32_t line_len;
+    uint32_t coarse_int = 0;
+    uint32_t vt_pix_clk = 0;
+    if (sensor->framesize == FRAMESIZE_QVGA) {
+        line_len = HIMAX_LINE_LEN_PCK_QVGA;
+    } else {
+        line_len = HIMAX_LINE_LEN_PCK_QQVGA;
+    }
+    ret |= get_vt_pix_clk(sensor, &vt_pix_clk);
+    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, INTEGRATION_H, &((uint8_t*)&coarse_int)[1]);
+    ret |= cambus_readb2(&sensor->bus, sensor->slv_addr, INTEGRATION_L, &((uint8_t*)&coarse_int)[0]);
+    *exposure_us = fast_roundf(coarse_int * line_len / (vt_pix_clk / 1000000.0f));
+    return ret;
 }
 
 static int set_hmirror(sensor_t *sensor, int enable)
@@ -459,19 +500,13 @@ int hm01b0_init(sensor_t *sensor)
     sensor->set_pixformat       = set_pixformat;
     sensor->set_framesize       = set_framesize;
     sensor->set_framerate       = set_framerate;
-    sensor->set_contrast        = set_contrast;
     sensor->set_brightness      = set_brightness;
-    sensor->set_saturation      = set_saturation;
     sensor->set_gainceiling     = set_gainceiling;
-    sensor->set_quality         = set_quality;
     sensor->set_colorbar        = set_colorbar;
-    sensor->set_special_effect  = set_special_effect;
     sensor->set_auto_gain       = set_auto_gain;
     sensor->get_gain_db         = get_gain_db;
     sensor->set_auto_exposure   = set_auto_exposure;
     sensor->get_exposure_us     = get_exposure_us;
-    sensor->set_auto_whitebal   = set_auto_whitebal;
-    sensor->get_rgb_gain_db     = get_rgb_gain_db;
     sensor->set_hmirror         = set_hmirror;
     sensor->set_vflip           = set_vflip;
     sensor->ioctl               = ioctl;
