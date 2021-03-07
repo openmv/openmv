@@ -149,7 +149,7 @@
 #define OMV_HEAP_SIZE           (244K)
 
 #define OMV_LINE_BUF_SIZE       (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
-#define OMV_MSC_BUF_SIZE        (12K)       // USB MSC bot data
+#define OMV_MSC_BUF_SIZE        (2K)        // USB MSC bot data
 #define OMV_VFS_BUF_SIZE        (1K)        // VFS sturct + FATFS file buffer (624 bytes)
 #define OMV_JPEG_BUF_SIZE       (32 * 1024) // IDE JPEG buffer (header + data).
 
@@ -170,9 +170,20 @@
 #define OMV_AXI_SRAM_ORIGIN     0x24000000
 #define OMV_AXI_SRAM_LENGTH     512K
 
-// Use the MPU to set an uncacheable memory region.
-#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+(496*1024))
-#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_16KB
+// Domain 1 DMA buffers region.
+#define OMV_DMA_MEMORY_D1       AXI_SRAM
+#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+(496*1024))
+#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_16KB
+
+// Domain 2 DMA buffers region.
+//#define OMV_DMA_MEMORY_D2       SRAM3
+//#define OMV_DMA_REGION_D2_BASE  (OMV_SRAM3_ORIGIN+(0*1024))
+//#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_32KB
+
+// Domain 3 DMA buffers region.
+//#define OMV_DMA_MEMORY_D3       SRAM4
+//#define OMV_DMA_REGION_D3_BASE  (OMV_SRAM4_ORIGIN+(0*1024))
+//#define OMV_DMA_REGION_D3_SIZE  MPU_REGION_SIZE_64KB
 
 // Image sensor I2C
 #define ISC_I2C                 (I2C1)
