@@ -126,7 +126,6 @@ SECTIONS
     . = ALIGN(4);
     _fballoc_overlay_start = .;
     . = . + OMV_FB_OVERLAY_MEMORY_OFFSET;
-    _fballoc_overlay = .;
     _fballoc_overlay_end = .;
   } >OMV_FB_OVERLAY_MEMORY
   #endif

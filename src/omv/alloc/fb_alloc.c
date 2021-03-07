@@ -28,8 +28,8 @@ static uint32_t alloc_bytes_peak;
 
 #if defined(OMV_FB_OVERLAY_MEMORY)
 #define FB_OVERLAY_MEMORY_FLAG 0x1
-extern char _fballoc_overlay;
-static char *pointer_overlay = &_fballoc_overlay;
+extern char _fballoc_overlay_end, _fballoc_overlay_start;
+static char *pointer_overlay = &_fballoc_overlay_end;
 #endif
 
 // fb_alloc_free_till_mark() will not free past this.
@@ -57,7 +57,7 @@ void fb_alloc_init0()
 {
     pointer = &_fballoc;
     #if defined(OMV_FB_OVERLAY_MEMORY)
-    pointer_overlay = &_fballoc_overlay;
+    pointer_overlay = &_fballoc_overlay_end;
     #endif
 }
 
@@ -167,7 +167,7 @@ void *fb_alloc(uint32_t size, int hints)
 
     #if defined(OMV_FB_OVERLAY_MEMORY)
     if ((!(hints & FB_ALLOC_PREFER_SIZE))
-    && (((uint32_t) (pointer_overlay - OMV_FB_OVERLAY_MEMORY_ORIGIN)) >= size)) {
+    && (((uint32_t) (pointer_overlay - &_fballoc_overlay_start)) >= size)) {
         // Return overlay memory instead.
         pointer_overlay -= size;
         result = pointer_overlay;
@@ -204,7 +204,7 @@ void *fb_alloc_all(uint32_t *size, int hints)
 
     #if defined(OMV_FB_OVERLAY_MEMORY)
     if (!(hints & FB_ALLOC_PREFER_SIZE)) {
-        *size = (uint32_t) (pointer_overlay - OMV_FB_OVERLAY_MEMORY_ORIGIN);
+        *size = (uint32_t) (pointer_overlay - &_fballoc_overlay_start);
         temp = IM_MIN(temp, *size);
     }
     #endif
