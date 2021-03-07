@@ -592,7 +592,7 @@ static const uint16_t resolution_w_h[][2] = {
 
 static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
     { // QVGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -607,7 +607,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // TQVGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -622,7 +622,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // FHVGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -637,7 +637,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // FHVGA2
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -652,7 +652,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // VGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -667,7 +667,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // THVGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -682,7 +682,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // FWVGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -697,7 +697,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // FWVGA2
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -712,7 +712,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // TFWVGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -727,7 +727,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // TFWVGA2
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -742,7 +742,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // SVGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -757,7 +757,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // WSVGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -772,7 +772,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // XGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -787,7 +787,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // SXGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -802,7 +802,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // SXGA2
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -817,7 +817,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // UXGA
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -832,7 +832,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // HD
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
@@ -847,7 +847,7 @@ static const LTDC_InitTypeDef resolution_cfg[] = { // CVT-RB ver 2
         .Backcolor = {.Blue=0, .Green=0, .Red=0}
     },
     { // FHD
-        .HSPolarity = LTDC_HSPOLARITY_AL,
+        .HSPolarity = LTDC_HSPOLARITY_AH,
         .VSPolarity = LTDC_VSPOLARITY_AL,
         .DEPolarity = LTDC_DEPOLARITY_AL,
         .PCPolarity = LTDC_PCPOLARITY_IPC,
