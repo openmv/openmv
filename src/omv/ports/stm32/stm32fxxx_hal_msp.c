@@ -43,29 +43,48 @@ void HAL_MspInit(void)
     /* Set the system clock */
     SystemClock_Config();
 
-    #if defined(OMV_DMA_REGION_BASE)
+    #if defined(OMV_DMA_REGION_D1_BASE)\
+     || defined(OMV_DMA_REGION_D2_BASE)\
+     || defined(OMV_DMA_REGION_D3_BASE)
     __DSB(); __ISB();
     HAL_MPU_Disable();
 
     /* Configure the MPU attributes to disable caching DMA buffers */
     MPU_Region_InitTypeDef MPU_InitStruct;
     MPU_InitStruct.Enable           = MPU_REGION_ENABLE;
-    MPU_InitStruct.BaseAddress      = OMV_DMA_REGION_BASE;
-    MPU_InitStruct.Size             = OMV_DMA_REGION_SIZE;
     MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
     MPU_InitStruct.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
     MPU_InitStruct.IsCacheable      = MPU_ACCESS_NOT_CACHEABLE;
     MPU_InitStruct.IsShareable      = MPU_ACCESS_NOT_SHAREABLE;
-    MPU_InitStruct.Number           = MPU_REGION_NUMBER15;
     MPU_InitStruct.TypeExtField     = MPU_TEX_LEVEL1;
     MPU_InitStruct.SubRegionDisable = 0x00;
     MPU_InitStruct.DisableExec      = MPU_INSTRUCTION_ACCESS_ENABLE;
+
+    #if defined(OMV_DMA_REGION_D1_BASE)
+    MPU_InitStruct.Number           = MPU_REGION_NUMBER15;
+    MPU_InitStruct.BaseAddress      = OMV_DMA_REGION_D1_BASE;
+    MPU_InitStruct.Size             = OMV_DMA_REGION_D1_SIZE;
     HAL_MPU_ConfigRegion(&MPU_InitStruct);
+    #endif // defined(OMV_DMA_REGION_D1_BASE)
+
+    #if defined(OMV_DMA_REGION_D2_BASE)
+    MPU_InitStruct.Number           = MPU_REGION_NUMBER14;
+    MPU_InitStruct.BaseAddress      = OMV_DMA_REGION_D2_BASE;
+    MPU_InitStruct.Size             = OMV_DMA_REGION_D2_SIZE;
+    HAL_MPU_ConfigRegion(&MPU_InitStruct);
+    #endif // defined(OMV_DMA_REGION_D2_BASE)
+
+    #if defined(OMV_DMA_REGION_D3_BASE)
+    MPU_InitStruct.Number           = MPU_REGION_NUMBER13;
+    MPU_InitStruct.BaseAddress      = OMV_DMA_REGION_D3_BASE;
+    MPU_InitStruct.Size             = OMV_DMA_REGION_D3_SIZE;
+    HAL_MPU_ConfigRegion(&MPU_InitStruct);
+    #endif // defined(OMV_DMA_REGION_D3_BASE)
 
     /* Enable the MPU */
     HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
     __DSB(); __ISB();
-    #endif
+    #endif // defined(OMV_DMA_REGION_D1_BASE || OMV_DMA_REGION_D2_BASE || OMV_DMA_REGION_D3_BASE)
 
     /* Enable I/D cache */
     #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)

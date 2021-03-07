@@ -166,9 +166,20 @@
 #define OMV_FLASH_EXT_ORIGIN    0x90000000
 #define OMV_FLASH_EXT_LENGTH    16M
 
-// Use the MPU to set an uncacheable memory region.
-#define OMV_DMA_REGION_BASE     (OMV_AXI_SRAM_ORIGIN+(496*1024))
-#define OMV_DMA_REGION_SIZE     MPU_REGION_SIZE_16KB
+// Domain 1 DMA buffers region.
+#define OMV_DMA_MEMORY_D1       AXI_SRAM
+#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+(496*1024))
+#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_16KB
+
+// Domain 2 DMA buffers region.
+//#define OMV_DMA_MEMORY_D2       SRAM3
+//#define OMV_DMA_REGION_D2_BASE  (OMV_SRAM3_ORIGIN+(0*1024))
+//#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_32KB
+
+// Domain 3 DMA buffers region.
+//#define OMV_DMA_MEMORY_D3       SRAM4
+//#define OMV_DMA_REGION_D3_BASE  (OMV_SRAM4_ORIGIN+(0*1024))
+//#define OMV_DMA_REGION_D3_SIZE  MPU_REGION_SIZE_64KB
 
 // Image sensor I2C
 #define ISC_I2C                 (I2C3)
