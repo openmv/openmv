@@ -139,7 +139,6 @@
 // Linker script constants (see the linker script template stm32fxxx.ld.S).
 // Note: fb_alloc is a stack-based, dynamically allocated memory on FB.
 // The maximum available fb_alloc memory = FB_ALLOC_SIZE + FB_SIZE - (w*h*bpp).
-#define OMV_FFS_MEMORY          DTCM        // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss and heap
 #define OMV_STACK_MEMORY        ITCM        // stack memory
 #define OMV_DMA_MEMORY          SRAM3       // Misc DMA buffers memory.
