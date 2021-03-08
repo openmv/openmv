@@ -142,18 +142,18 @@
 #define OMV_FFS_MEMORY          DTCM        // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss and heap
 #define OMV_STACK_MEMORY        ITCM        // stack memory
-#define OMV_DMA_MEMORY          AXI_SRAM    // Misc DMA buffers memory.
+#define OMV_DMA_MEMORY          SRAM3       // Misc DMA buffers memory.
 #define OMV_FB_MEMORY           DRAM        // Framebuffer, fb_alloc
 #define OMV_JPEG_MEMORY         DRAM        // JPEG buffer memory buffer.
 #define OMV_JPEG_MEMORY_OFFSET  (31M)       // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
 #define OMV_FB_OVERLAY_MEMORY   AXI_SRAM    // Fast fb_alloc memory.
-#define OMV_FB_OVERLAY_MEMORY_OFFSET    (496*1024) // Fast fb_alloc memory size.
+#define OMV_FB_OVERLAY_MEMORY_OFFSET    (508*1024) // Fast fb_alloc memory size.
 
 #define OMV_FB_SIZE             (20M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (11M)       // minimum fb alloc size
 #define OMV_STACK_SIZE          (64K)
-#define OMV_HEAP_SIZE           (244K)
+#define OMV_HEAP_SIZE           (256K)
 #define OMV_SDRAM_SIZE          (32 * 1024 * 1024) // This needs to be here for UVC firmware.
 
 #define OMV_LINE_BUF_SIZE       (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
@@ -170,9 +170,9 @@
 #define OMV_ITCM_ORIGIN         0x00000000
 #define OMV_ITCM_LENGTH         64K
 #define OMV_SRAM1_ORIGIN        0x30000000
-#define OMV_SRAM1_LENGTH        256K
-#define OMV_SRAM3_ORIGIN        0x30040000
-#define OMV_SRAM3_LENGTH        32K
+#define OMV_SRAM1_LENGTH        272K        // SRAM1 + SRAM2 + 1/2 SRAM3
+#define OMV_SRAM3_ORIGIN        0x30044000
+#define OMV_SRAM3_LENGTH        16K
 #define OMV_SRAM4_ORIGIN        0x38000000
 #define OMV_SRAM4_LENGTH        64K
 #define OMV_AXI_SRAM_ORIGIN     0x24000000
@@ -183,13 +183,13 @@
 
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1       AXI_SRAM
-#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+(496*1024))
-#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_16KB
+#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
+#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_4KB
 
 // Domain 2 DMA buffers region.
 #define OMV_DMA_MEMORY_D2       SRAM3
 #define OMV_DMA_REGION_D2_BASE  (OMV_SRAM3_ORIGIN+(0*1024))
-#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_32KB
+#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_16KB
 
 // Domain 3 DMA buffers region.
 #define OMV_DMA_MEMORY_D3       SRAM4

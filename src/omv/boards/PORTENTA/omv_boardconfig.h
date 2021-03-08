@@ -140,7 +140,7 @@
 #define OMV_FFS_MEMORY          DTCM        // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss and heap
 #define OMV_STACK_MEMORY        SRAM1       // stack memory
-#define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
+#define OMV_DMA_MEMORY          SRAM3       // DMA buffers memory.
 #define OMV_FB_MEMORY           DRAM        // Framebuffer, fb_alloc
 #define OMV_JPEG_MEMORY         DRAM        // JPEG buffer memory buffer.
 #define OMV_JPEG_MEMORY_OFFSET  (7M)        // JPEG buffer is placed after FB/fballoc memory.
@@ -183,7 +183,7 @@
 
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1       AXI_SRAM
-#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+(480*1024))
+#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
 #define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_32KB
 
 // Domain 2 DMA buffers region.

@@ -138,15 +138,15 @@
 #define OMV_FFS_MEMORY          DTCM        // Flash filesystem cache memory
 #define OMV_MAIN_MEMORY         SRAM1       // data, bss and heap memory
 #define OMV_STACK_MEMORY        ITCM        // stack memory
-#define OMV_DMA_MEMORY          AXI_SRAM    // DMA buffers memory.
+#define OMV_DMA_MEMORY          SRAM2       // DMA buffers memory.
 #define OMV_FB_MEMORY           AXI_SRAM    // Framebuffer, fb_alloc
 #define OMV_JPEG_MEMORY         SRAM3       // JPEG buffer memory.
 #define OMV_VOSPI_MEMORY        SRAM4       // VoSPI buffer memory.
 
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE       (96K)       // minimum fb alloc size
+#define OMV_FB_ALLOC_SIZE       (108K)      // minimum fb alloc size
 #define OMV_STACK_SIZE          (64K)
-#define OMV_HEAP_SIZE           (244K)
+#define OMV_HEAP_SIZE           (236K)
 
 #define OMV_LINE_BUF_SIZE       (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE        (2K)        // USB MSC bot data
@@ -162,7 +162,9 @@
 #define OMV_ITCM_ORIGIN         0x00000000
 #define OMV_ITCM_LENGTH         64K
 #define OMV_SRAM1_ORIGIN        0x30000000
-#define OMV_SRAM1_LENGTH        256K
+#define OMV_SRAM1_LENGTH        248K
+#define OMV_SRAM2_ORIGIN        0x3003E000  // 8KB of SRAM1
+#define OMV_SRAM2_LENGTH        8K
 #define OMV_SRAM3_ORIGIN        0x30040000
 #define OMV_SRAM3_LENGTH        32K
 #define OMV_SRAM4_ORIGIN        0x38000000
@@ -172,13 +174,13 @@
 
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1       AXI_SRAM
-#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+(496*1024))
-#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_16KB
+#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+(508*1024))
+#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_4KB
 
 // Domain 2 DMA buffers region.
-//#define OMV_DMA_MEMORY_D2       SRAM3
-//#define OMV_DMA_REGION_D2_BASE  (OMV_SRAM3_ORIGIN+(0*1024))
-//#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_32KB
+#define OMV_DMA_MEMORY_D2       SRAM2
+#define OMV_DMA_REGION_D2_BASE  (OMV_SRAM2_ORIGIN+(0*1024))
+#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_8KB
 
 // Domain 3 DMA buffers region.
 //#define OMV_DMA_MEMORY_D3       SRAM4
