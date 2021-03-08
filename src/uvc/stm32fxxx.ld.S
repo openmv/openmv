@@ -126,7 +126,7 @@ SECTIONS
     _vfs_buf  = .;      // VFS sturct + FATFS file buffer  (around 624 bytes)
     . = . + OMV_VFS_BUF_SIZE;
 
-    #if !defined(OMV_FFS_MEMORY)
+    #if !defined(OMV_FFS_MEMORY) && defined(OMV_FFS_BUF_SIZE)
     . = ALIGN(16);
     _ffs_cache = .;     // Flash filesystem cache
     . = . + OMV_FFS_BUF_SIZE;
