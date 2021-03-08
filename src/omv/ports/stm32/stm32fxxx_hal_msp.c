@@ -9,6 +9,7 @@
  * HAL MSP.
  */
 #include STM32_HAL_H
+#include "axiqos.h"
 #include "omv_boardconfig.h"
 
 #include "irq.h"
@@ -147,6 +148,44 @@ void HAL_MspInit(void)
     __HAL_RCC_MDMA_CLK_ENABLE();
     NVIC_SetPriority(MDMA_IRQn, IRQ_PRI_MDMA);
     HAL_NVIC_EnableIRQ(MDMA_IRQn);
+    #endif
+
+    /* Setup AXI QoS */
+    #if defined(OMV_AXI_QOS_D2_AHB_R_PRI)
+    OMV_AXI_QOS_D2_AHB_R_SET(OMV_AXI_QOS_D2_AHB_R_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_D2_AHB_W_PRI)
+    OMV_AXI_QOS_D2_AHB_W_SET(OMV_AXI_QOS_D2_AHB_W_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_C_M7_R_PRI)
+    OMV_AXI_QOS_C_M7_R_SET(OMV_AXI_QOS_C_M7_R_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_C_M7_W_PRI)
+    OMV_AXI_QOS_C_M7_W_SET(OMV_AXI_QOS_C_M7_W_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_SDMMC1_R_PRI)
+    OMV_AXI_QOS_SDMMC1_R_SET(OMV_AXI_QOS_SDMMC1_R_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_SDMMC1_W_PRI)
+    OMV_AXI_QOS_SDMMC1_W_SET(OMV_AXI_QOS_SDMMC1_W_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_MDMA_R_PRI)
+    OMV_AXI_QOS_MDMA_R_SET(OMV_AXI_QOS_MDMA_R_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_MDMA_W_PRI)
+    OMV_AXI_QOS_MDMA_W_SET(OMV_AXI_QOS_MDMA_W_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_DMA2D_R_PRI)
+    OMV_AXI_QOS_DMA2D_R_SET(OMV_AXI_QOS_DMA2D_R_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_DMA2D_W_PRI)
+    OMV_AXI_QOS_DMA2D_W_SET(OMV_AXI_QOS_DMA2D_W_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_LTDC_R_PRI)
+    OMV_AXI_QOS_LTDC_R_SET(OMV_AXI_QOS_LTDC_R_PRI);
+    #endif
+    #if defined(OMV_AXI_QOS_LTDC_W_PRI)
+    OMV_AXI_QOS_LTDC_W_SET(OMV_AXI_QOS_LTDC_W_PRI);
     #endif
 
     #if defined(DCMI_RESET_PIN) || defined(DCMI_PWDN_PIN) || defined(DCMI_FSYNC_PIN)

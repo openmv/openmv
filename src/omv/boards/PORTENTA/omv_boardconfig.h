@@ -195,6 +195,9 @@
 #define OMV_DMA_REGION_D3_BASE  (OMV_SRAM4_ORIGIN+(0*1024))
 #define OMV_DMA_REGION_D3_SIZE  MPU_REGION_SIZE_64KB
 
+// AXI QoS - Low-High (0:15) - default 0
+#define OMV_AXI_QOS_LTDC_R_PRI  15 // Max pri to read out the frame buffer.
+
 // Image sensor I2C
 #define ISC_I2C                 (I2C3)
 #define ISC_I2C_ID              (3)
