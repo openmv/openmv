@@ -104,6 +104,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/alloc/, \
 	xalloc.o                    \
 	fb_alloc.o                  \
 	umm_malloc.o                \
+	dma_alloc.o                 \
 	unaligned_memcpy.o          \
    )
 

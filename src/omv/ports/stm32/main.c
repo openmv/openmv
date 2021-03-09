@@ -59,6 +59,7 @@
 #include "wifidbg.h"
 #include "sdram.h"
 #include "fb_alloc.h"
+#include "dma_alloc.h"
 #include "ff_wrapper.h"
 
 #include "usbd_core.h"
@@ -511,6 +512,7 @@ soft_reset:
     sensor_init0();
     framebuffer_init0();
     fb_alloc_init0();
+    dma_alloc_init0();
     #ifdef IMLIB_ENABLE_IMAGE_FILE_IO
     file_buffer_init0();
     #endif
