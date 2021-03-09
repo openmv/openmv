@@ -62,7 +62,7 @@ static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
 static int fir_lepton_spi_rx_cb_head = 0;
 static int fir_lepton_spi_rx_cb_expected_pid = 0;
 static int fir_lepton_spi_rx_cb_expected_seg = 0;
-static uint16_t *fir_lepton_spi_rx_cb_dma_buffer = NULL;
+extern int _fir_lepton_buf;
 
 STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused)
 {
@@ -75,7 +75,7 @@ STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused)
 
     OMV_FIR_LEPTON_CS_LOW();
     HAL_SPI_Receive_DMA(OMV_FIR_LEPTON_CONTROLLER->spi,
-            (uint8_t *) fir_lepton_spi_rx_cb_dma_buffer,
+            (uint8_t *) &_fir_lepton_buf,
             VOSPI_BUFFER_SIZE);
 
     return mp_const_none;
@@ -115,10 +115,6 @@ static mp_obj_t fir_lepton_frame_cb = mp_const_none;
 
 void fir_lepton_spi_callback(const uint16_t *base)
 {
-    #if defined(MCU_SERIES_F7) || defined(MCU_SERIES_H7)
-    SCB_InvalidateDCache_by_Addr((uint32_t *) base, VOSPI_PACKET_SIZE * sizeof(uint16_t));
-    #endif
-
     int id = base[0];
 
     // Ignore don't care packets.
@@ -198,12 +194,12 @@ void fir_lepton_spi_callback(const uint16_t *base)
 
 static void fir_lepton_spi_callback_half(SPI_HandleTypeDef *hspi)
 {
-    fir_lepton_spi_callback(fir_lepton_spi_rx_cb_dma_buffer);
+    fir_lepton_spi_callback((uint16_t *) &_fir_lepton_buf);
 }
 
 static void fir_lepton_spi_callback_full(SPI_HandleTypeDef *hspi)
 {
-    fir_lepton_spi_callback(fir_lepton_spi_rx_cb_dma_buffer + VOSPI_PACKET_SIZE);
+    fir_lepton_spi_callback(((uint16_t *) &_fir_lepton_buf) + VOSPI_PACKET_SIZE);
 }
 
 #if defined(OMV_FIR_LEPTON_VSYNC_PRESENT)
@@ -450,9 +446,6 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
         framebuffers[i] = (uint16_t *) fb_alloc0(flir_w * flir_h * sizeof(uint16_t),
                                                  FB_ALLOC_NO_HINT);
     }
-
-    fir_lepton_spi_rx_cb_dma_buffer = (uint16_t *) fb_alloc(VOSPI_BUFFER_SIZE * sizeof(uint16_t),
-                                                            FB_ALLOC_PREFER_SPEED | FB_ALLOC_CACHE_ALIGN);
 
     dma_init(&fir_lepton_spi_rx_dma,
              OMV_FIR_LEPTON_CONTROLLER->rx_dma_descr,

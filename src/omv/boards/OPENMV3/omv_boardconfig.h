@@ -106,11 +106,12 @@
 #define OMV_FB_SIZE         (300K)  // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE   (84K)   // minimum fb alloc size
 #define OMV_STACK_SIZE      (16K)
-#define OMV_HEAP_SIZE       (56K)
+#define OMV_HEAP_SIZE       (55K)
 
 #define OMV_LINE_BUF_SIZE   (3 * 1024)  // Image line buffer round(640 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
 #define OMV_VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
+#define OMV_FIR_LEPTON_BUF_SIZE (1K) // FIR Lepton Packet Double Buffer (328 bytes)
 #define OMV_FFS_BUF_SIZE    (32K)   // Flash filesystem cache
 #define OMV_JPEG_BUF_SIZE   (22 * 1024) // IDE JPEG buffer (header + data).
 
