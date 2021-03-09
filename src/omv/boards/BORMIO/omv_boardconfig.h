@@ -137,7 +137,7 @@
 #define OMV_CYW43_MEMORY_OFFSET (0x90F00000)// Last Mbyte.
 
 #define OMV_FB_SIZE             (400K)      // FB memory: header + VGA/GS image
-#define OMV_FB_ALLOC_SIZE       (108K)      // minimum fb alloc size
+#define OMV_FB_ALLOC_SIZE       (100K)      // minimum fb alloc size
 #define OMV_STACK_SIZE          (64K)
 #define OMV_HEAP_SIZE           (200K)
 
@@ -169,11 +169,13 @@
 
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1       AXI_SRAM
-#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+(508*1024))
-#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_4KB
+#define OMV_DMA_MEMORY_D1_SIZE  (8*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+(500*1024))
+#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_8KB
 
 // Domain 2 DMA buffers region.
 #define OMV_DMA_MEMORY_D2       SRAM2
+#define OMV_DMA_MEMORY_D2_SIZE  (2*1024) // Reserved memory for DMA buffers
 #define OMV_DMA_REGION_D2_BASE  (OMV_SRAM2_ORIGIN+(0*1024))
 #define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_8KB
 

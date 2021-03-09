@@ -144,7 +144,7 @@
 #define OMV_JPEG_MEMORY_OFFSET          (63M)       // JPEG buffer is placed after FB/fballoc memory.
 #define OMV_VOSPI_MEMORY                SRAM4       // VoSPI buffer memory.
 #define OMV_FB_OVERLAY_MEMORY           AXI_SRAM    // Fast fb_alloc memory.
-#define OMV_FB_OVERLAY_MEMORY_OFFSET    (508*1024)  // Fast fb_alloc memory size.
+#define OMV_FB_OVERLAY_MEMORY_OFFSET    (496*1024)  // Fast fb_alloc memory size.
 
 #define OMV_FB_SIZE                     (32M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE               (31M)       // minimum fb alloc size
@@ -177,19 +177,22 @@
 #define OMV_DRAM_LENGTH                 64M
 
 // Domain 1 DMA buffers region.
-#define OMV_DMA_MEMORY_D1       AXI_SRAM
-#define OMV_DMA_REGION_D1_BASE  (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
-#define OMV_DMA_REGION_D1_SIZE  MPU_REGION_SIZE_4KB
+#define OMV_DMA_MEMORY_D1               AXI_SRAM
+#define OMV_DMA_MEMORY_D1_SIZE          (16*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_REGION_D1_BASE          (OMV_AXI_SRAM_ORIGIN+OMV_FB_OVERLAY_MEMORY_OFFSET)
+#define OMV_DMA_REGION_D1_SIZE          MPU_REGION_SIZE_16KB
 
 // Domain 2 DMA buffers region.
-#define OMV_DMA_MEMORY_D2       SRAM3
-#define OMV_DMA_REGION_D2_BASE  (OMV_SRAM3_ORIGIN+(0*1024))
-#define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_16KB
+#define OMV_DMA_MEMORY_D2               SRAM3
+#define OMV_DMA_MEMORY_D2_SIZE          (2*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_REGION_D2_BASE          (OMV_SRAM3_ORIGIN+(0*1024))
+#define OMV_DMA_REGION_D2_SIZE          MPU_REGION_SIZE_16KB
 
 // Domain 3 DMA buffers region.
-#define OMV_DMA_MEMORY_D3       SRAM4
-#define OMV_DMA_REGION_D3_BASE  (OMV_SRAM4_ORIGIN+(0*1024))
-#define OMV_DMA_REGION_D3_SIZE  MPU_REGION_SIZE_64KB
+#define OMV_DMA_MEMORY_D3               SRAM4
+#define OMV_DMA_MEMORY_D3_SIZE          (64*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_REGION_D3_BASE          (OMV_SRAM4_ORIGIN+(0*1024))
+#define OMV_DMA_REGION_D3_SIZE          MPU_REGION_SIZE_64KB
 
 // AXI QoS - Low-High (0:15) - default 0
 #define OMV_AXI_QOS_LTDC_R_PRI  15 // Max pri to read out the frame buffer.
