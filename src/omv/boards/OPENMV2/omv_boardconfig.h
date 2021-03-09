@@ -104,13 +104,14 @@
 #define OMV_DMA_MEMORY      SRAM2   // Misc DMA buffers
 
 #define OMV_FB_SIZE         (150K)  // FB memory: header + QVGA/GS image
-#define OMV_FB_ALLOC_SIZE   (13K)   // minimum fb alloc size
+#define OMV_FB_ALLOC_SIZE   (12K)   // minimum fb alloc size
 #define OMV_STACK_SIZE      (4K)
 #define OMV_HEAP_SIZE       (51K)
 
 #define OMV_LINE_BUF_SIZE   (2 * 1024)  // Image line buffer round(320 * 2BPP * 2 buffers).
 #define OMV_MSC_BUF_SIZE    (2K)    // USB MSC bot data
 #define OMV_VFS_BUF_SIZE    (1K)    // VFS sturct + FATFS file buffer (624 bytes)
+#define OMV_FIR_LEPTON_BUF_SIZE (1K) // FIR Lepton Packet Double Buffer (328 bytes)
 #define OMV_FFS_BUF_SIZE    (16K)   // Flash filesystem cache
 #define OMV_JPEG_BUF_SIZE   (8 * 1024)  // IDE JPEG buffer size (header + data).
 
@@ -121,9 +122,9 @@
 #define OMV_DTCM_ORIGIN     0x10000000
 #define OMV_DTCM_LENGTH     64K
 #define OMV_SRAM1_ORIGIN    0x20000000
-#define OMV_SRAM1_LENGTH    163K
-#define OMV_SRAM2_ORIGIN    0x20028C00
-#define OMV_SRAM2_LENGTH    29K
+#define OMV_SRAM1_LENGTH    162K
+#define OMV_SRAM2_ORIGIN    0x20028800
+#define OMV_SRAM2_LENGTH    30K
 
 // Image sensor I2C
 #define ISC_I2C                 (I2C1)
