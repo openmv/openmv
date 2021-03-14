@@ -154,6 +154,8 @@
 #define MT9V034_MAX_EXPOSE                      (0xAD)
 
 #define MT9V034_PIXEL_COUNT                     (0xB0)
+#define MT9V034_AGC_GAIN_OUTPUT                 (0xBA)
+#define MT9V034_AEC_EXPOSURE_OUTPUT             (0xBB)
 
 #define MT9V034_FINE_SHUTTER_WIDTH_TOTAL        (0xD5)
 #define MT9V034_FINE_SHUTTER_WIDTH_TOTAL_B      (0xD8)

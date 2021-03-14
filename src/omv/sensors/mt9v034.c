@@ -236,43 +236,59 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
 
 static int get_gain_db(sensor_t *sensor, float *gain_db)
 {
-    uint16_t gain;
-    int ret = cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_ANALOG_GAIN, &gain);
+    uint16_t chip_control, reg, gain;
+    int ret = cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    int context = chip_control & MT9V034_CHIP_CONTROL_CONTEXT;
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
+
+    if (reg & (context ? MT9V034_AGC_ENABLE_B : MT9V034_AGC_ENABLE)) {
+        ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_AGC_GAIN_OUTPUT, &gain);
+    } else {
+        int analog_gain = context ? MT9V034_ANALOG_GAIN_B : MT9V034_ANALOG_GAIN;
+        ret |= cambus_readw(&sensor->bus, sensor->slv_addr, analog_gain, &gain);
+    }
+
     *gain_db = 20.0 * (fast_log((gain & 0x7F) / 16.0f) / fast_log(10.0f));
     return ret;
 }
 
 static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 {
-    uint16_t reg, row_time_0, row_time_1;
-    int ret = cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
+    uint16_t chip_control, reg, read_mode_reg, row_time_0, row_time_1;
+    int ret = cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    int context = chip_control & MT9V034_CHIP_CONTROL_CONTEXT;
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_AEC_AGC_ENABLE,
             (reg & (~(MT9V034_AEC_ENABLE | MT9V034_AEC_ENABLE_B))) |
             ((enable != 0) ? (MT9V034_AEC_ENABLE | MT9V034_AEC_ENABLE_B) : 0));
     ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
 
+    int read_mode = context ? MT9V034_READ_MODE_B : MT9V034_READ_MODE;
+    int window_width = context ? MT9V034_WINDOW_WIDTH_B : MT9V034_WINDOW_WIDTH;
+    int horizontal_blanking = context ? MT9V034_HORIZONTAL_BLANKING_B : MT9V034_HORIZONTAL_BLANKING;
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, read_mode, &read_mode_reg);
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, window_width, &row_time_0);
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, horizontal_blanking, &row_time_1);
+
+    int clock = MT9V034_XCLK_FREQ;
+    if (read_mode_reg & MT9V034_READ_MODE_COL_BIN_2) clock /= 2;
+    if (read_mode_reg & MT9V034_READ_MODE_COL_BIN_4) clock /= 4;
+
+    int exposure = IM_MIN(exposure_us, MICROSECOND_CLKS / 2) * (clock / MICROSECOND_CLKS);
+    int row_time = row_time_0 + row_time_1;
+    int coarse_time = exposure / row_time;
+    int fine_time = exposure % row_time;
+
+    // Fine shutter time is global.
     if ((enable == 0) && (exposure_us >= 0)) {
-        ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_WINDOW_WIDTH, &row_time_0);
-        ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING, &row_time_1);
-
-        int exposure = IM_MIN(exposure_us, MICROSECOND_CLKS / 2) * (MT9V034_XCLK_FREQ / MICROSECOND_CLKS);
-        int row_time = row_time_0 + row_time_1;
-        int coarse_time = exposure / row_time;
-        int fine_time = exposure % row_time;
-
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_TOTAL_SHUTTER_WIDTH, coarse_time);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_TOTAL_SHUTTER_WIDTH_B, coarse_time);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL, fine_time);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL_B, fine_time);
     } else if ((enable != 0) && (exposure_us >= 0)) {
-        ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_WINDOW_WIDTH, &row_time_0);
-        ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING, &row_time_1);
-
-        int exposure = IM_MIN(exposure_us, MICROSECOND_CLKS / 2) * (MT9V034_XCLK_FREQ / MICROSECOND_CLKS);
-        int row_time = row_time_0 + row_time_1;
-        int coarse_time = exposure / row_time;
-
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_MAX_EXPOSE, coarse_time);
+        ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL, fine_time);
+        ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL_B, fine_time);
     }
 
     return ret;
@@ -280,12 +296,32 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
 
 static int get_exposure_us(sensor_t *sensor, int *exposure_us)
 {
-    uint16_t int_rows, int_pixels, row_time_0, row_time_1;
-    int ret = cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_TOTAL_SHUTTER_WIDTH, &int_rows);
-    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL, &int_pixels);
-    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_WINDOW_WIDTH, &row_time_0);
-    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING, &row_time_1);
-    *exposure_us = ((int_rows * (row_time_0 + row_time_1)) + int_pixels) / (MT9V034_XCLK_FREQ / MICROSECOND_CLKS);
+    uint16_t chip_control, reg, read_mode_reg, row_time_0, row_time_1, int_pixels, int_rows;
+    int ret = cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_CHIP_CONTROL, &chip_control);
+    int context = chip_control & MT9V034_CHIP_CONTROL_CONTEXT;
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_AEC_AGC_ENABLE, &reg);
+
+    int read_mode = context ? MT9V034_READ_MODE_B : MT9V034_READ_MODE;
+    int window_width = context ? MT9V034_WINDOW_WIDTH_B : MT9V034_WINDOW_WIDTH;
+    int horizontal_blanking = context ? MT9V034_HORIZONTAL_BLANKING_B : MT9V034_HORIZONTAL_BLANKING;
+    int fine_shutter_width_total = context ? MT9V034_FINE_SHUTTER_WIDTH_TOTAL_B : MT9V034_FINE_SHUTTER_WIDTH_TOTAL;
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, read_mode, &read_mode_reg);
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, window_width, &row_time_0);
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, horizontal_blanking, &row_time_1);
+    ret |= cambus_readw(&sensor->bus, sensor->slv_addr, fine_shutter_width_total, &int_pixels);
+
+    int clock = MT9V034_XCLK_FREQ;
+    if (read_mode_reg & MT9V034_READ_MODE_COL_BIN_2) clock /= 2;
+    if (read_mode_reg & MT9V034_READ_MODE_COL_BIN_4) clock /= 4;
+
+    if (reg & (context ? MT9V034_AEC_ENABLE_B : MT9V034_AEC_ENABLE)) {
+        ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_AEC_EXPOSURE_OUTPUT, &int_rows);
+    } else {
+        int total_shutter_width = context ? MT9V034_TOTAL_SHUTTER_WIDTH_B : MT9V034_TOTAL_SHUTTER_WIDTH;
+        ret |= cambus_readw(&sensor->bus, sensor->slv_addr, total_shutter_width, &int_rows);
+    }
+
+    *exposure_us = ((int_rows * (row_time_0 + row_time_1)) + int_pixels) / (clock / MICROSECOND_CLKS);
     return ret;
 }
 

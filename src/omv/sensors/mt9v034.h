@@ -10,6 +10,6 @@
  */
 #ifndef __MT9V034_H__
 #define __MT9V034_H__
-#define MT9V034_XCLK_FREQ 27000000
+#define MT9V034_XCLK_FREQ 26666666
 int mt9v034_init(sensor_t *sensor);
 #endif // __MT9V034_H__
