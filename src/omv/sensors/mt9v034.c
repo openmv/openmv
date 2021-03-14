@@ -218,14 +218,14 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
-        int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0) * fast_log(10.0)) * 16.0), 127), 0);
+        int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0f) * fast_log(10.0f)) * 16.0f), 64), 16);
 
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_ANALOG_GAIN, &reg);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_ANALOG_GAIN, (reg & 0xFF80) | gain);
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_ANALOG_GAIN_B, &reg);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_ANALOG_GAIN_B, (reg & 0xFF80) | gain);
     } else if ((enable != 0) && (!isnanf(gain_db_ceiling)) && (!isinff(gain_db_ceiling))) {
-        int gain_ceiling = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db_ceiling / 20.0) * fast_log(10.0)) * 16.0), 127), 16);
+        int gain_ceiling = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db_ceiling / 20.0f) * fast_log(10.0f)) * 16.0f), 64), 16);
 
         ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_MAX_GAIN, &reg);
         ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_MAX_GAIN, (reg & 0xFF80) | gain_ceiling);
@@ -238,9 +238,7 @@ static int get_gain_db(sensor_t *sensor, float *gain_db)
 {
     uint16_t gain;
     int ret = cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_ANALOG_GAIN, &gain);
-
-    *gain_db = 20.0 * (fast_log((gain & 0x7F) / 16.0) / fast_log(10.0));
-
+    *gain_db = 20.0 * (fast_log((gain & 0x7F) / 16.0f) / fast_log(10.0f));
     return ret;
 }
 
@@ -287,9 +285,7 @@ static int get_exposure_us(sensor_t *sensor, int *exposure_us)
     ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_FINE_SHUTTER_WIDTH_TOTAL, &int_pixels);
     ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_WINDOW_WIDTH, &row_time_0);
     ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_HORIZONTAL_BLANKING, &row_time_1);
-
     *exposure_us = ((int_rows * (row_time_0 + row_time_1)) + int_pixels) / (MT9V034_XCLK_FREQ / MICROSECOND_CLKS);
-
     return ret;
 }
 
