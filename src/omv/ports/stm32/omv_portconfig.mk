@@ -66,6 +66,21 @@ UVC_LDFLAGS = -mcpu=$(CPU) -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=ha
                -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(UVC_DIR)/stm32fxxx.lds
 endif
 
+ifeq ($(OMV_ENABLE_CM4), 1)
+CFLAGS     += -DM4_APP_ADDR=$(M4_APP_ADDR)
+CM4_CFLAGS += -std=gnu99 -Wall -Werror -Warray-bounds -mthumb -nostartfiles -fdata-sections -ffunction-sections
+CM4_CFLAGS += -D$(MCU) -D$(CFLAGS_MCU) -D$(ARM_MATH) -DARM_NN_TRUNCATE -DCORE_CM4\
+              -fsingle-precision-constant -Wdouble-promotion -mcpu=cortex-m4 -mtune=cortex-m4 -mfpu=$(FPU) -mfloat-abi=hard
+CM4_CFLAGS += -D__FPU_PRESENT=1 -D__VFP_FP__ -DHSE_VALUE=$(OMV_HSE_VALUE)\
+              -D$(TARGET) -DVECT_TAB_OFFSET=$(M4_VECT_TAB_OFFSET) -DMAIN_APP_ADDR=$(M4_APP_ADDR) -DSTM32_HAL_H=$(HAL_INC)
+CM4_CFLAGS += $(HAL_CFLAGS)
+CM4_CFLAGS += -I$(OMV_BOARD_CONFIG_DIR)
+CM4_CFLAGS += -I$(TOP_DIR)/$(CM4_DIR)/include/
+# Linker Flags
+CM4_LDFLAGS = -mcpu=cortex-m4 -mabi=aapcs-linux -mthumb -mfpu=$(FPU) -mfloat-abi=hard\
+               -nostdlib -Wl,--gc-sections -Wl,-T$(BUILD)/$(CM4_DIR)/stm32fxxx.lds
+endif
+
 CFLAGS += $(HAL_CFLAGS) $(MPY_CFLAGS) $(OMV_CFLAGS)
 
 # Linker Flags
@@ -498,6 +513,17 @@ UVC_OBJ += $(wildcard $(BUILD)/$(MLX90640_DIR)/src/*.o)
 UVC_OBJ += $(wildcard $(BUILD)/$(MLX90641_DIR)/src/*.o)
 endif
 
+ifeq ($(OMV_ENABLE_CM4), 1)
+CM4 = cm4
+# CM4 object files
+CM4_OBJ += $(wildcard $(BUILD)/$(CM4_DIR)/src/*.o)
+CM4_OBJ += $(wildcard $(BUILD)/$(CM4_DIR)/$(HAL_DIR)/src/*.o)
+CM4_OBJ += $(addprefix $(BUILD)/$(CM4_DIR)/$(CMSIS_DIR)/src/, \
+	$(STARTUP).o                \
+	$(SYSTEM).o                 \
+)
+endif
+
 ###################################################
 #Export Variables
 export Q
@@ -519,6 +545,8 @@ export STARTUP
 export SYSTEM
 export FROZEN_MANIFEST
 export PORT
+export HAL_DIR
+export CMSIS_DIR
 ###################################################
 all: $(OPENMV)
 
@@ -550,9 +578,13 @@ ifeq ($(OMV_ENABLE_UVC), 1)
 UVC_OBJS: FIRMWARE_OBJS
 	$(MAKE)  -C $(UVC_DIR)                   BUILD=$(BUILD)/$(UVC_DIR)      CFLAGS="$(UVC_CFLAGS) -MMD"
 endif
+ifeq ($(OMV_ENABLE_CM4), 1)
+CM4_OBJS: FIRMWARE_OBJS
+	$(MAKE)  -C $(CM4_DIR)                   BUILD=$(BUILD)/$(CM4_DIR)      CFLAGS="$(CM4_CFLAGS) -MMD"
+endif
 ifeq ($(OMV_ENABLE_BL), 1)
 BOOTLOADER_OBJS: FIRMWARE_OBJS
-	$(MAKE)  -C $(BOOTLDR_DIR)              BUILD=$(BUILD)/$(BOOTLDR_DIR)  CFLAGS="$(BL_CFLAGS) -MMD"
+	$(MAKE)  -C $(BOOTLDR_DIR)               BUILD=$(BUILD)/$(BOOTLDR_DIR)  CFLAGS="$(BL_CFLAGS) -MMD"
 endif
 
 # This target generates the main/app firmware image located at 0x08010000
@@ -580,8 +612,17 @@ $(UVC): FIRMWARE_OBJS UVC_OBJS
 	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(MAIN_APP_ADDR):$(FW_DIR)/$(UVC).bin $(FW_DIR)/$(UVC).dfu
 endif
 
+ifeq ($(OMV_ENABLE_CM4), 1)
+# This target generates CM4 firmware for dual core micros.
+$(CM4): FIRMWARE_OBJS CM4_OBJS
+	$(CPP) -P -E -I$(OMV_BOARD_CONFIG_DIR) $(CM4_DIR)/stm32fxxx.ld.S > $(BUILD)/$(CM4_DIR)/stm32fxxx.lds
+	$(CC) $(CM4_LDFLAGS) $(CM4_OBJ) -o $(FW_DIR)/$(CM4).elf -lgcc
+	$(OBJCOPY) -Obinary $(FW_DIR)/$(CM4).elf $(FW_DIR)/$(CM4).bin
+	$(PYTHON) $(MKDFU) -D $(DFU_DEVICE) -b $(M4_APP_ADDR):$(FW_DIR)/$(CM4).bin $(FW_DIR)/$(CM4).dfu
+endif
+
 # This target generates the uvc, bootloader and firmware images.
-$(OPENMV): $(BOOTLOADER) $(UVC) $(FIRMWARE)
+$(OPENMV): $(BOOTLOADER) $(UVC) $(CM4) $(FIRMWARE)
 ifeq ($(OMV_ENABLE_BL), 1)
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
 endif
