@@ -1095,17 +1095,21 @@ static void ltdc_set_backlight(int intensity)
         HAL_GPIO_Init(OMV_LCD_BL_PORT, &GPIO_InitStructure);
 
         lcd_tim_handle.Instance = OMV_LCD_BL_TIM;
-        lcd_tim_handle.Init.Period = period;
-        lcd_tim_handle.Init.Prescaler = TIM_ETRPRESCALER_DIV1;
+        lcd_tim_handle.Init.Prescaler = 0;
         lcd_tim_handle.Init.CounterMode = TIM_COUNTERMODE_UP;
+        lcd_tim_handle.Init.Period = period;
         lcd_tim_handle.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+        lcd_tim_handle.Init.RepetitionCounter = 0;
+        lcd_tim_handle.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
         TIM_OC_InitTypeDef lcd_tim_oc_handle;
         lcd_tim_oc_handle.Pulse = (period * intensity) / 255;
         lcd_tim_oc_handle.OCMode = TIM_OCMODE_PWM1;
         lcd_tim_oc_handle.OCPolarity = TIM_OCPOLARITY_HIGH;
+        lcd_tim_oc_handle.OCNPolarity = TIM_OCNPOLARITY_HIGH;
         lcd_tim_oc_handle.OCFastMode = TIM_OCFAST_DISABLE;
         lcd_tim_oc_handle.OCIdleState = TIM_OCIDLESTATE_RESET;
+        lcd_tim_oc_handle.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
         HAL_TIM_PWM_Init(&lcd_tim_handle);
         HAL_TIM_PWM_ConfigChannel(&lcd_tim_handle, &lcd_tim_oc_handle, OMV_LCD_BL_TIM_CHANNEL);
