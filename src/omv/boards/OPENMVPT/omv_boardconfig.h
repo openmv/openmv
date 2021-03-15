@@ -620,6 +620,20 @@
 #define OMV_FIR_LEPTON_MCLK_TIM_RELEASE_RESET() __HAL_RCC_TIM15_RELEASE_RESET()
 #define OMV_FIR_LEPTON_MCLK_TIM_PCLK_FREQ()     HAL_RCC_GetPCLK2Freq()
 
+// Buzzer
+#define OMV_BUZZER_PIN                          (GPIO_PIN_1)
+#define OMV_BUZZER_PORT                         (GPIOA)
+#define OMV_BUZZER_ALT                          (GPIO_AF1_TIM2)
+#define OMV_BUZZER_FREQ                         (4000)
+
+#define OMV_BUZZER_TIM                          (TIM2)
+#define OMV_BUZZER_TIM_CHANNEL                  (TIM_CHANNEL_2)
+#define OMV_BUZZER_TIM_CLK_ENABLE()             __HAL_RCC_TIM2_CLK_ENABLE()
+#define OMV_BUZZER_TIM_CLK_DISABLE()            __HAL_RCC_TIM2_CLK_DISABLE()
+#define OMV_BUZZER_TIM_FORCE_RESET()            __HAL_RCC_TIM2_FORCE_RESET()
+#define OMV_BUZZER_TIM_RELEASE_RESET()          __HAL_RCC_TIM2_RELEASE_RESET()
+#define OMV_BUZZER_TIM_PCLK_FREQ()              HAL_RCC_GetPCLK1Freq()
+
 // Enable additional GPIO banks for DRAM...
 #define OMV_ENABLE_GPIO_BANK_F
 #define OMV_ENABLE_GPIO_BANK_G
