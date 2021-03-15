@@ -234,11 +234,9 @@ void sensor_init0()
 {
     dcmi_abort();
 
-    #if defined(PORTENTA) || defined(OPENMVPT)
-    // These boards use the same I2C bus for the sensor and
-    // user scripts. The I2C bus must be reinitialized on soft-reset.
+    // Always reinit cambus after soft reset which could have terminated the cambus in the middle
+    // of an I2C read/write.
     cambus_init(&sensor.bus, ISC_I2C_ID, ISC_I2C_SPEED);
-    #endif
 
     // Disable VSYNC IRQ and callback
     sensor_set_vsync_callback(NULL);
