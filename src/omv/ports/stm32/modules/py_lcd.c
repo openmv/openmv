@@ -896,7 +896,7 @@ static void ltdc_pll_config_init(int frame_size, int refresh_rate)
             uint32_t pll_clk = pixel_clock * divr;
 
             uint32_t vco = 0;
-            if (150000 <= pll_clk && pll_clk <= 42000) vco = RCC_PLL3VCOMEDIUM;
+            if (150000 <= pll_clk && pll_clk <= 420000) vco = RCC_PLL3VCOMEDIUM;
             else if (192000 <= pll_clk && pll_clk <= 836000) vco = RCC_PLL3VCOWIDE;
             else continue;
 
