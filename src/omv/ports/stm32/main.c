@@ -71,6 +71,7 @@
 #include "py_lcd.h"
 #include "py_fir.h"
 #include "py_tv.h"
+#include "py_buzzer.h"
 #include "py_imu.h"
 #include "py_audio.h"
 
@@ -498,6 +499,9 @@ soft_reset:
     py_lcd_init0();
     py_fir_init0();
     py_tv_init0();
+    #if MICROPY_PY_BUZZER
+    py_buzzer_init0();
+    #endif // MICROPY_PY_BUZZER
     imlib_init_all();
     readline_init0();
     pin_init0();
