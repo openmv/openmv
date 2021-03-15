@@ -46,6 +46,7 @@ BUILD=$(TOP_DIR)/build
 FW_DIR=$(BUILD)/bin
 OMV_DIR=omv
 UVC_DIR=uvc
+CM4_DIR=cm4
 BOOTLDR_DIR=bootloader
 CUBEAI_DIR=stm32cubeai
 CMSIS_DIR=hal/cmsis

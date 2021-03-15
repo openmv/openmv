@@ -38,8 +38,8 @@
 #define OMV_OV7725_BANDING      (0x7F)
 
 // Bootloader LED GPIO port/pin
-#define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_1)
-#define OMV_BOOTLDR_LED_PORT    (GPIOC)
+#define OMV_BOOTLDR_LED_PIN     (GPIO_PIN_6)
+#define OMV_BOOTLDR_LED_PORT    (GPIOK)
 
 // RAW buffer size
 #define OMV_RAW_BUF_SIZE        (4*1024*1024)
@@ -152,7 +152,7 @@
 #define OMV_FB_SIZE             (4M)       // FB memory: header + VGA/GS image
 #define OMV_FB_ALLOC_SIZE       (3M)       // minimum fb alloc size
 #define OMV_STACK_SIZE          (64K)
-#define OMV_HEAP_SIZE           (196K)
+#define OMV_HEAP_SIZE           (180K)
 #define OMV_SDRAM_SIZE          (8 * 1024 * 1024) // This needs to be here for UVC firmware.
 
 #define OMV_LINE_BUF_SIZE       (11 * 1024) // Image line buffer round(2592 * 2BPP * 2 buffers).
@@ -168,8 +168,8 @@
 #define OMV_DTCM_ORIGIN         0x20000000  // Note accessible by CPU and MDMA only.
 #define OMV_DTCM_LENGTH         128K
 #define OMV_SRAM1_ORIGIN        0x30000000
-#define OMV_SRAM1_LENGTH        272K        // SRAM1 + SRAM2 + 1/2 SRAM3
-#define OMV_SRAM3_ORIGIN        0x30044000
+#define OMV_SRAM1_LENGTH        256K        // SRAM1 + SRAM2
+#define OMV_SRAM3_ORIGIN        0x30040000  // Second half of SRAM3 reserved for M4.
 #define OMV_SRAM3_LENGTH        16K
 #define OMV_SRAM4_ORIGIN        0x38000000
 #define OMV_SRAM4_LENGTH        64K
@@ -179,6 +179,10 @@
 #define OMV_DRAM_LENGTH         8M
 #define OMV_FLASH_EXT_ORIGIN    0x90000000
 #define OMV_FLASH_EXT_LENGTH    16M
+#define OMV_CM4_RAM_ORIGIN      0x30044000  // Cortex-M4 memory.
+#define OMV_CM4_RAM_LENGTH      16K
+#define OMV_CM4_FLASH_ORIGIN    0x08020000
+#define OMV_CM4_FLASH_LENGTH    128K
 
 // Domain 1 DMA buffers region.
 #define OMV_DMA_MEMORY_D1       AXI_SRAM

@@ -97,8 +97,13 @@ void SystemInit(void)
     #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
       SCB->CPACR |= ((3UL << 10*2)|(3UL << 11*2));  /* set CP10 and CP11 Full Access */
     #endif
-    /* Reset the RCC clock configuration to the default reset state ------------*/
 
+    /*SEVONPEND enabled so that an interrupt coming from the CPU(n) interrupt
+      signal is detectable by the CPU after a WFI/WFE instruction. */
+    //SCB->SCR |= SCB_SCR_SEVONPEND_Msk;
+
+    #if !defined(CORE_CM4)
+    /* Reset the RCC clock configuration to the default reset state ------------*/
     /* Set HSION bit */
     RCC->CR |= CONFIG_RCC_CR_1ST;
 
@@ -159,13 +164,6 @@ void SystemInit(void)
     *((__IO uint32_t*)0x51008108) = 0x00000001;
     #endif // defined(MCU_SERIES_H7)
 
-    /* Configure the Vector Table location add offset address ------------------*/
-    #ifdef VECT_TAB_SRAM
-    SCB->VTOR = SRAM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
-    #else
-    SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
-    #endif
-
     /* dpgeorge: enable 8-byte stack alignment for IRQ handlers, in accord with EABI */
     SCB->CCR |= SCB_CCR_STKALIGN_Msk;
 
@@ -177,6 +175,15 @@ void SystemInit(void)
     DBGMCU->CR |= DBGMCU_CR_DBG_STOPD1;
     DBGMCU->CR |= DBGMCU_CR_DBG_STANDBYD1;
     #endif
+    #endif
+
+    #endif // !defined(CORE_CM4)
+
+    /* Configure the Vector Table location add offset address ------------------*/
+    #ifdef VECT_TAB_SRAM
+    SCB->VTOR = SRAM_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
+    #else
+    SCB->VTOR = FLASH_BASE | VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
     #endif
 }
 
@@ -365,5 +372,10 @@ void SystemClock_Config(void)
 
     // Enable the USB voltage level detector
     HAL_PWREx_EnableUSBVoltageDetector();
+    #endif
+
+    #if defined(CORE_CM7) && defined(M4_APP_ADDR)
+    HAL_SYSCFG_CM4BootAddConfig(SYSCFG_BOOT_ADDR0, M4_APP_ADDR);
+    HAL_RCCEx_EnableBootCore(RCC_BOOT_C2);
     #endif
 }
