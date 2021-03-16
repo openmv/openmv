@@ -67,8 +67,6 @@ static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0
             int w2 = pitch/2; // pitch for a uint16_t pointer
             int prev_offset, next_offset;
             x_end = -1; // assume we don't need this
-            if (x_offset + 8 >= img->w) // right edge of Bayer data
-               x_end = 6; // keep it from reading past right edge
             if (bYUV) {
                 u8YDelta = 0x80;
                 u8UVDelta = 0x00;
@@ -76,81 +74,136 @@ static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0
                 u8YDelta = 0x00;
                 u8UVDelta = 0x80;
             }
-            if (y_offset+dy > img->h) // don't let it go beyond bottom line
-               dy = img->h - y_offset;
-            for (y=0, idx=0; y<dy; y++) {
-                s = (uint16_t*)&img->pixels[(y_offset+y) * pitch + x_offset];
-                prev_offset = -w2; next_offset = w2; // default values
-                if (y+y_offset == 0) // top line, don't read the line below
-                   prev_offset = w2; // use the next line twice
-                else if (y+y_offset == img->h-1) // bottom line
-                   next_offset = -w2; // use previous line twice
-                // Prepare current pixels
-                if (x_offset == 0) { // left edge, don't read beyond it
-                    l0 = s[prev_offset];
-                    l1 = s[0];
-                    l2 = s[next_offset];
-                    l0 |= (l0 << 16); // use them twice
-                    l1 |= (l1 << 16);
-                    l2 |= (l2 << 16); // since we're missing the actual ones
-                } else { // the rest of the image is ok to read the -1 pixel
-                    l0 = s[prev_offset-1] | (s[prev_offset] << 16);
-                    l1 = s[-1] | (s[0] << 16);
-                    l2 = s[next_offset-1] | (s[next_offset] << 16);
-                }
-                s++;
-                if (y & 1) { // odd line
-                    for (x=0; x<8; x+=2, idx+=2) {
-                        g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
-                        b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
-                        r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
-                        // faster to keep all calculations in integer math with 15-bit fractions
-                        Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                        CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                        CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                        l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
-                        if (x == x_end) {
-                            l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
-                        } else {
-                            l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
-                            l1 |= (s[0] << 16);
-                            l2 |= (s[next_offset] << 16);
-                        }
-                        s++;
-                        r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
-                        g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
-                        b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
-                        Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                        CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                        CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                    } // for x
-                } else { // even line
-                    for (x=0; x<8; x+=2, idx+=2) {
-                        b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel at current-right
-                        g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
-                        r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
-                        Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                        CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                        CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                        // prepare for the next set of source pixels
-                        l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
-                        if (x == x_end) { // check for right edge
-                            l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
-                        } else {
-                            l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
-                            l1 |= (s[0] << 16);
-                            l2 |= (s[next_offset] << 16);
-                        }
-                        s++;
-                        g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
-                        b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
-                        r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
-                        Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                        CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                        CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                    } // for x
-                } // even line
-            } // for y
+
+            if (x_offset == 0 || y_offset == 0 || x_offset + 8 >= img->w || y_offset + 8 >= img->h) { // slower bounds checking version
+               if (y_offset+dy > img->h) // don't let it go beyond bottom line
+                  dy = img->h - y_offset;
+               if (x_offset + 8 >= img->w) // right edge of Bayer data
+                  x_end = 6; // keep it from reading past right edge
+                for (y=0, idx=0; y<dy; y++) {
+                    s = (uint16_t*)&img->pixels[(y_offset+y) * pitch + x_offset];
+                    prev_offset = -w2; next_offset = w2; // default values
+                    if (y+y_offset == 0) // top line, don't read the line below
+                       prev_offset = w2; // use the next line twice
+                    else if (y+y_offset == img->h-1) // bottom line
+                       next_offset = -w2; // use previous line twice
+                    // Prepare current pixels
+                    if (x_offset == 0) { // left edge, don't read beyond it
+                        l0 = s[prev_offset];
+                        l1 = s[0];
+                        l2 = s[next_offset];
+                        l0 |= (l0 << 16); // use them twice
+                        l1 |= (l1 << 16);
+                        l2 |= (l2 << 16); // since we're missing the actual ones
+                    } else { // the rest of the image is ok to read the -1 pixel
+                        l0 = *(uint32_t *)&s[prev_offset-1];
+                        l1 = *(uint32_t *)&s[-1];
+                        l2 = *(uint32_t *)&s[next_offset-1];
+                    }
+                    s++;
+                    if (y & 1) { // odd line
+                        for (x=0; x<8; x+=2, idx+=2) {
+                            g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
+                            b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                            r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                            // faster to keep all calculations in integer math with 15-bit fractions
+                            Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                            CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                            CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                            l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                            if (x == x_end) {
+                                l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
+                            } else {
+                                l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                                l1 |= (s[0] << 16);
+                                l2 |= (s[next_offset] << 16);
+                            }
+                            s++;
+                            r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
+                            g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
+                            b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                            Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                            CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                            CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                        } // for x
+                    } else { // even line
+                        for (x=0; x<8; x+=2, idx+=2) {
+                            b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel at current-right
+                            g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                            r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                            Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                            CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                            CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                            // prepare for the next set of source pixels
+                            l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                            if (x == x_end) { // check for right edge
+                                l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
+                            } else {
+                                l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                                l1 |= (s[0] << 16);
+                                l2 |= (s[next_offset] << 16);
+                            }
+                            s++;
+                            g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
+                            b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
+                            r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
+                            Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                            CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                            CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                        } // for x
+                    } // even line
+                } // for y
+            } else { // faster code without bounds checking
+                for (y=0, idx=0; y<dy; y++) {
+                    s = (uint16_t*)&img->pixels[(y_offset+y) * pitch + x_offset];
+                    // Prepare current pixels
+                    l0 = *(uint32_t *)&s[-w2-1];
+                    l1 = *(uint32_t *)&s[-1];
+                    l2 = *(uint32_t *)&s[w2-1];
+                    s++;
+                    if (y & 1) { // odd line
+                        for (x=0; x<8; x+=2, idx+=2) {
+                            g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
+                            b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                            r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                            // faster to keep all calculations in integer math with 15-bit fractions
+                            Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                            CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                            CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                            l0 = *(uint32_t *)&s[-w2-1];
+                            l1 = *(uint32_t *)&s[-1];
+                            l2 = *(uint32_t *)&s[w2-1];
+                            s++;
+                            r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
+                            g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
+                            b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                            Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                            CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                            CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                        } // for x
+                    } else { // even line
+                        for (x=0; x<8; x+=2, idx+=2) {
+                            b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel at current-right
+                            g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                            r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                            Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                            CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                            CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                            // load next set
+                            l0 = *(uint32_t *)&s[-w2-1];
+                            l1 = *(uint32_t *)&s[-1];
+                            l2 = *(uint32_t *)&s[w2-1];
+                            s++;
+                            g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
+                            b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
+                            r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
+                            Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                            CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                            CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                        } // for x
+                    } // even line
+                } // for y
+            } // faster version
 } /* bayer_to_ycbcr() */
 
 #if (OMV_HARDWARE_JPEG == 1)
