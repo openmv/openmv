@@ -320,17 +320,21 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
     HAL_GPIO_Init(OMV_FIR_LEPTON_MCLK_PORT, &GPIO_InitStructure);
 
     fir_lepton_mclk_tim_handle.Instance = OMV_FIR_LEPTON_MCLK_TIM;
-    fir_lepton_mclk_tim_handle.Init.Period = period;
-    fir_lepton_mclk_tim_handle.Init.Prescaler = TIM_ETRPRESCALER_DIV1;
+    fir_lepton_mclk_tim_handle.Init.Prescaler = 0;
     fir_lepton_mclk_tim_handle.Init.CounterMode = TIM_COUNTERMODE_UP;
+    fir_lepton_mclk_tim_handle.Init.Period = period;
     fir_lepton_mclk_tim_handle.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    fir_lepton_mclk_tim_handle.Init.RepetitionCounter = 0;
+    fir_lepton_mclk_tim_handle.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
     TIM_OC_InitTypeDef fir_lepton_mclk_tim_oc_handle;
     fir_lepton_mclk_tim_oc_handle.Pulse = period / 2;
     fir_lepton_mclk_tim_oc_handle.OCMode = TIM_OCMODE_PWM1;
     fir_lepton_mclk_tim_oc_handle.OCPolarity = TIM_OCPOLARITY_HIGH;
+    fir_lepton_mclk_tim_oc_handle.OCNPolarity = TIM_OCNPOLARITY_HIGH;
     fir_lepton_mclk_tim_oc_handle.OCFastMode = TIM_OCFAST_DISABLE;
     fir_lepton_mclk_tim_oc_handle.OCIdleState = TIM_OCIDLESTATE_RESET;
+    fir_lepton_mclk_tim_oc_handle.OCNIdleState = TIM_OCNIDLESTATE_RESET;
 
     OMV_FIR_LEPTON_MCLK_TIM_CLK_ENABLE();
     HAL_TIM_PWM_Init(&fir_lepton_mclk_tim_handle);
