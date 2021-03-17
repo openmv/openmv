@@ -11,7 +11,6 @@ sensor.set_framesize(sensor.VGA) # High Res!
 sensor.set_windowing((640, 80)) # V Res of 80 == less work (40 for 2X the speed).
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False)  # must turn this off to prevent image washout...
-sensor.set_auto_whitebal(False)  # must turn this off to prevent image washout...
 clock = time.clock()
 
 # Barcode detection can run at the full 640x480 resolution of your OpenMV Cam's

@@ -9,7 +9,6 @@ sensor.set_pixformat(sensor.GRAYSCALE) # or RGB565.
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must be turned off for color tracking
-sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
 
 while(True):

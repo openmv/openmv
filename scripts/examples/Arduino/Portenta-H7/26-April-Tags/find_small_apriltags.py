@@ -21,7 +21,6 @@ elif omv.board_type() == "M7": sensor.set_framesize(sensor.QVGA)
 else: raise Exception("You need a more powerful OpenMV Cam to run this script")
 sensor.skip_frames(time = 200) # increase this to let the auto methods run for longer
 sensor.set_auto_gain(False) # must be turned off for color tracking
-sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
 
 # The apriltag code supports up to 6 tag families which can be processed at the same time.

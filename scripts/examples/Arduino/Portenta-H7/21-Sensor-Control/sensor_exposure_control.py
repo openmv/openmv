@@ -34,7 +34,6 @@ clock = time.clock()                # Create a clock object to track the FPS.
 # otherwise they will change the image gains to undo any exposure settings
 # that you put in place...
 sensor.set_auto_gain(False)
-sensor.set_auto_whitebal(False)
 # Need to let the above settings get in...
 sensor.skip_frames(time = 500)
 

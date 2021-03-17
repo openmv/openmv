@@ -12,7 +12,6 @@ sensor.reset() # Initialize the camera sensor.
 sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
 sensor.skip_frames(time = 2000) # Let new settings take affect.
-sensor.set_auto_whitebal(False) # Turn off white balance.
 clock = time.clock() # Tracks FPS.
 
 # Take from the main frame buffer's RAM to allocate a second frame buffer.
