@@ -11,10 +11,7 @@
  * DCT implementation is based on Arai, Agui, and Nakajima's algorithm for scaled DCT.
  */
 #include <stdio.h>
-#include <arm_math.h>
 
-#include "xalloc.h"
-#include "fb_alloc.h"
 #include "ff_wrapper.h"
 #include "imlib.h"
 #include "omv_boardconfig.h"
@@ -24,187 +21,10 @@
 #include "py/mphal.h"
 #endif
 
-// Expand 4 bits to 32 for binary to grayscale; process 4 pixels at a time
-const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
+// Expand 4 bits to 32 for binary to grayscale - process 4 pixels at a time
+static const uint32_t u32Expand[16] = {0x0, 0xff, 0xff00, 0xffff, 0xff0000,
     0xff00ff, 0xffff00, 0xffffff, 0xff000000, 0xff0000ff, 0xff00ff00,
     0xff00ffff, 0xffff0000, 0xffff00ff, 0xffffff00, 0xffffffff};
-
-//
-// Convert 8x8 Bayer source pixels directly into YCbCr for JPEG encoding
-//
-// Theory of operation:
-// The Bayer pattern from the sensor looks like this:
-// +---+---+---+---+---+---+
-// | B | G | B | G | B | G |
-// +---+---+---+---+---+---+
-// | G |*R*|*G*| R | G | R | * = Example of current pair of pixels being processed
-// +---+---+---+---+---+---+ Each iteration below will advance 2 pixels to the right
-// | B | G | B | G | B | G |
-// +---+---+---+---+---+---+
-// | G | R | G | R | G | R |
-// +---+---+---+---+---+---+
-// Each of the color stimuli above is stored as 1 byte
-// The slower algorithm above reads each byte around the current pixel individually to
-// average the colors together to simulate the colors not present at the current pixel
-// e.g. At location 0,0, only the blue value is present; red and green must be estimated from
-// neighboring pixels
-//
-// The optimized algorithm below minimizes memory accesses by reading 2 bytes at a time
-// and re-using the last pair as it progresses from left to right. Since the ARM CPU enforces a
-// memory policy of generating an exception on unaligned reads, we read 16-bits at a time and
-// OR them into a 32-bit variable to hold on to the pixels left and right of the current pair.
-// This way we can work on 2 pixels at a time from 3 32-bit variables containing 3 lines of 4 pixels.
-// The variables l0,l1,l2 hold the 4 pixels (left, current left, current_right, right)
-// in lines above the current (l0), current (l1) and below (l2)
-//
-static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0, uint8_t *CB, uint8_t *CR, int bYUV)
-{
-            uint16_t *s;
-            uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
-            uint8_t u8YDelta, u8UVDelta;
-            int x, y, dy=8, idx, x_end, r, g, b;
-            int pitch = img->w; // keep in local var
-            int w2 = pitch/2; // pitch for a uint16_t pointer
-            int prev_offset, next_offset;
-            x_end = -1; // assume we don't need this
-            if (bYUV) {
-                u8YDelta = 0x80;
-                u8UVDelta = 0x00;
-            } else { // YCbCr
-                u8YDelta = 0x00;
-                u8UVDelta = 0x80;
-            }
-
-            if (x_offset == 0 || y_offset == 0 || x_offset + 8 >= img->w || y_offset + 8 >= img->h) { // slower bounds checking version
-               if (y_offset+dy > img->h) // don't let it go beyond bottom line
-                  dy = img->h - y_offset;
-               if (x_offset + 8 >= img->w) // right edge of Bayer data
-                  x_end = 6; // keep it from reading past right edge
-                for (y=0, idx=0; y<dy; y++) {
-                    s = (uint16_t*)&img->pixels[(y_offset+y) * pitch + x_offset];
-                    prev_offset = -w2; next_offset = w2; // default values
-                    if (y+y_offset == 0) // top line, don't read the line below
-                       prev_offset = w2; // use the next line twice
-                    else if (y+y_offset == img->h-1) // bottom line
-                       next_offset = -w2; // use previous line twice
-                    // Prepare current pixels
-                    if (x_offset == 0) { // left edge, don't read beyond it
-                        l0 = s[prev_offset];
-                        l1 = s[0];
-                        l2 = s[next_offset];
-                        l0 |= (l0 << 16); // use them twice
-                        l1 |= (l1 << 16);
-                        l2 |= (l2 << 16); // since we're missing the actual ones
-                    } else { // the rest of the image is ok to read the -1 pixel
-                        l0 = *(uint32_t *)&s[prev_offset-1];
-                        l1 = *(uint32_t *)&s[-1];
-                        l2 = *(uint32_t *)&s[next_offset-1];
-                    }
-                    s++;
-                    if (y & 1) { // odd line
-                        for (x=0; x<8; x+=2, idx+=2) {
-                            g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
-                            b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
-                            r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
-                            // faster to keep all calculations in integer math with 15-bit fractions
-                            Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                            CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                            CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                            l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
-                            if (x == x_end) {
-                                l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
-                            } else {
-                                l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
-                                l1 |= (s[0] << 16);
-                                l2 |= (s[next_offset] << 16);
-                            }
-                            s++;
-                            r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
-                            g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
-                            b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
-                            Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                            CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                            CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                        } // for x
-                    } else { // even line
-                        for (x=0; x<8; x+=2, idx+=2) {
-                            b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel at current-right
-                            g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
-                            r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
-                            Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                            CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                            CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                            // prepare for the next set of source pixels
-                            l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
-                            if (x == x_end) { // check for right edge
-                                l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
-                            } else {
-                                l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
-                                l1 |= (s[0] << 16);
-                                l2 |= (s[next_offset] << 16);
-                            }
-                            s++;
-                            g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
-                            b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
-                            r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
-                            Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                            CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                            CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                        } // for x
-                    } // even line
-                } // for y
-            } else { // faster code without bounds checking
-                for (y=0, idx=0; y<dy; y++) {
-                    s = (uint16_t*)&img->pixels[(y_offset+y) * pitch + x_offset];
-                    // Prepare current pixels
-                    l0 = *(uint32_t *)&s[-w2-1];
-                    l1 = *(uint32_t *)&s[-1];
-                    l2 = *(uint32_t *)&s[w2-1];
-                    s++;
-                    if (y & 1) { // odd line
-                        for (x=0; x<8; x+=2, idx+=2) {
-                            g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
-                            b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
-                            r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
-                            // faster to keep all calculations in integer math with 15-bit fractions
-                            Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                            CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                            CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                            l0 = *(uint32_t *)&s[-w2-1];
-                            l1 = *(uint32_t *)&s[-1];
-                            l2 = *(uint32_t *)&s[w2-1];
-                            s++;
-                            r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
-                            g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
-                            b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
-                            Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                            CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                            CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                        } // for x
-                    } else { // even line
-                        for (x=0; x<8; x+=2, idx+=2) {
-                            b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel at current-right
-                            g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
-                            r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
-                            Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                            CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                            CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                            // load next set
-                            l0 = *(uint32_t *)&s[-w2-1];
-                            l1 = *(uint32_t *)&s[-1];
-                            l2 = *(uint32_t *)&s[w2-1];
-                            s++;
-                            g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
-                            b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
-                            r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
-                            Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
-                            CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
-                            CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
-                        } // for x
-                    } // even line
-                } // for y
-            } // faster version
-} /* bayer_to_ycbcr() */
 
 #if (OMV_HARDWARE_JPEG == 1)
 #include STM32_HAL_H
@@ -493,7 +313,191 @@ bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc)
                     break;
                 }
                 case IMAGE_BPP_BAYER: {
-                    bayer_to_ycbcr(src, x_offset, y_offset, Y0, CB, CR, 0);
+                    if ((dx != MCU_W) || (dy != MCU_H)) { // partial MCU, fill with 0's to start
+                        memset(Y0, 0, JPEG_444_YCBCR_MCU_SIZE);
+                    }
+
+                    int src_w = src->w, w_limit = src_w - 1, w_limit_m_1 = w_limit - 1;
+                    int src_h = src->h, h_limit = src_h - 1, h_limit_m_1 = h_limit - 1;
+
+                    if (x_offset && y_offset && (x_offset < (src_w - MCU_W)) && (y_offset < (src_h - MCU_H))) {
+                        for (int y = y_offset - 1, yy = y + MCU_H - 1, index_e = 0, index_o = MCU_W; y < yy; y += 2,
+                                index_e += MCU_W,
+                                index_o += MCU_W) {
+                            uint8_t *rowptr_grgr_0 = src->data + (y * src_w);
+                            uint8_t *rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
+                            uint8_t *rowptr_grgr_2 = rowptr_bgbg_1 + src_w;
+                            uint8_t *rowptr_bgbg_3 = rowptr_grgr_2 + src_w;
+
+                            for (int x = x_offset - 1, xx = x + MCU_W - 1; x < xx; x += 2, index_e += 2, index_o += 2) {
+                                uint32_t row_grgr_0 = *((uint32_t *) (rowptr_grgr_0 + x));
+                                uint32_t row_bgbg_1 = *((uint32_t *) (rowptr_bgbg_1 + x));
+                                uint32_t row_grgr_2 = *((uint32_t *) (rowptr_grgr_2 + x));
+                                uint32_t row_bgbg_3 = *((uint32_t *) (rowptr_bgbg_3 + x));
+
+                                int row_01 = __UHADD8(row_grgr_0, row_grgr_2);
+                                int row_1g = __UHADD8(row_bgbg_1, __PKHTB(row_bgbg_1, row_bgbg_1, 16));
+
+                                int r_pixels_0 = __UXTB16(__UHADD8(row_01, __PKHTB(row_01, row_01, 16)));
+                                int g_pixels_0 = __UXTB16(__UHADD8(row_1g, __PKHTB(row_1g, row_01, 8)));
+                                int b_pixels_0 = __UXTB16_RORn(__UHADD8(row_bgbg_1, __PKHBT(row_bgbg_1, row_bgbg_1, 16)), 8);
+
+                                int y0 = ((r_pixels_0 * 38) + (g_pixels_0 * 75) + (b_pixels_0 * 15)) >> 7;
+                                Y0[index_e] = y0, Y0[index_e + 1] = y0 >> 16;
+
+                                int u0 = (__SSUB16(b_pixels_0 * 64, (r_pixels_0 * 21) + (g_pixels_0 * 43)) >> 7) ^ 0x800080;
+                                CB[index_e] = u0, CB[index_e + 1] = u0 >> 16;
+
+                                int v0 = (__SSUB16(r_pixels_0 * 64, (g_pixels_0 * 54) + (b_pixels_0 * 10)) >> 7) ^ 0x800080;
+                                CR[index_e] = v0, CR[index_e + 1] = v0 >> 16;
+
+                                int row_13 = __UHADD8(row_bgbg_1, row_bgbg_3);
+                                int row_2g = __UHADD8(row_grgr_2, __PKHBT(row_grgr_2, row_grgr_2, 16));
+
+                                int r_pixels_1 = __UXTB16(__UHADD8(row_grgr_2, __PKHTB(row_grgr_2, row_grgr_2, 16)));
+                                int g_pixels_1 = __UXTB16_RORn(__UHADD8(row_2g, __PKHBT(row_2g, row_13, 8)), 8);
+                                int b_pixels_1 = __UXTB16_RORn(__UHADD8(row_13, __PKHBT(row_13, row_13, 16)), 8);
+
+                                int y1 = ((r_pixels_1 * 38) + (g_pixels_1 * 75) + (b_pixels_1 * 15)) >> 7;
+                                Y0[index_o] = y1, Y0[index_o + 1] = y1 >> 16;
+
+                                int u1 = (__SSUB16(b_pixels_1 * 64, (r_pixels_1 * 21) + (g_pixels_1 * 43)) >> 7) ^ 0x800080;
+                                CB[index_o] = u1, CB[index_o + 1] = u1 >> 16;
+
+                                int v1 = (__SSUB16(r_pixels_1 * 64, (g_pixels_1 * 54) + (b_pixels_1 * 10)) >> 7) ^ 0x800080;
+                                CR[index_o] = v1, CR[index_o + 1] = v1 >> 16;
+                            }
+                        }
+                    } else {
+                        // If dy is odd this loop will produce 1 extra boundary row in the MCU.
+                        // This is okay given the boundary checking code below.
+                        for (int y = y_offset, yy = y + dy, index_e = 0, index_o = MCU_W; y < yy; y += 2) {
+                            uint8_t *rowptr_grgr_0, *rowptr_bgbg_1, *rowptr_grgr_2, *rowptr_bgbg_3;
+
+                            // keep row pointers in bounds
+                            if (y == 0) {
+                                rowptr_bgbg_1 = src->data;
+                                rowptr_grgr_2 = rowptr_bgbg_1 + ((src_h >= 2) ? src_w : 0);
+                                rowptr_bgbg_3 = rowptr_bgbg_1 + ((src_h >= 3) ? (src_w * 2) : 0);
+                                rowptr_grgr_0 = rowptr_grgr_2;
+                            } else if (y == h_limit_m_1) {
+                                rowptr_grgr_0 = src->data + ((y - 1) * src_w);
+                                rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
+                                rowptr_grgr_2 = rowptr_bgbg_1 + src_w;
+                                rowptr_bgbg_3 = rowptr_bgbg_1;
+                            } else if (y >= h_limit) {
+                                rowptr_grgr_0 = src->data + ((y - 1) * src_w);
+                                rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
+                                rowptr_grgr_2 = rowptr_grgr_0;
+                                rowptr_bgbg_3 = rowptr_bgbg_1;
+                            } else { // get 4 neighboring rows
+                                rowptr_grgr_0 = src->data + ((y - 1) * src_w);
+                                rowptr_bgbg_1 = rowptr_grgr_0 + src_w;
+                                rowptr_grgr_2 = rowptr_bgbg_1 + src_w;
+                                rowptr_bgbg_3 = rowptr_grgr_2 + src_w;
+                            }
+
+                            // If dx is odd this loop will produce 1 extra boundary column in the MCU.
+                            // This is okay given the boundary checking code below.
+                            for (int x = x_offset, xx = x + dx; x < xx; x += 2, index_e += 2, index_o += 2) {
+                                uint32_t row_grgr_0, row_bgbg_1, row_grgr_2, row_bgbg_3;
+
+                                // keep pixels in bounds
+                                if (x == 0) {
+                                    if (src_w >= 4) {
+                                        row_grgr_0 = *((uint32_t *) rowptr_grgr_0);
+                                        row_bgbg_1 = *((uint32_t *) rowptr_bgbg_1);
+                                        row_grgr_2 = *((uint32_t *) rowptr_grgr_2);
+                                        row_bgbg_3 = *((uint32_t *) rowptr_bgbg_3);
+                                    } else if (src_w >= 3) {
+                                        row_grgr_0 = *((uint16_t *) rowptr_grgr_0) | (*(rowptr_grgr_0 + 2) << 16);
+                                        row_bgbg_1 = *((uint16_t *) rowptr_bgbg_1) | (*(rowptr_bgbg_1 + 2) << 16);
+                                        row_grgr_2 = *((uint16_t *) rowptr_grgr_2) | (*(rowptr_grgr_2 + 2) << 16);
+                                        row_bgbg_3 = *((uint16_t *) rowptr_bgbg_3) | (*(rowptr_bgbg_3 + 2) << 16);
+                                    } else if (src_w >= 2) {
+                                        row_grgr_0 = *((uint16_t *) rowptr_grgr_0);
+                                        row_grgr_0 = (row_grgr_0 << 16) | row_grgr_0;
+                                        row_bgbg_1 = *((uint16_t *) rowptr_bgbg_1);
+                                        row_bgbg_1 = (row_bgbg_1 << 16) | row_bgbg_1;
+                                        row_grgr_2 = *((uint16_t *) rowptr_grgr_2);
+                                        row_grgr_2 = (row_grgr_2 << 16) | row_grgr_2;
+                                        row_bgbg_3 = *((uint16_t *) rowptr_bgbg_3);
+                                        row_bgbg_3 = (row_bgbg_3 << 16) | row_bgbg_3;
+                                    } else {
+                                        row_grgr_0 = *(rowptr_grgr_0) * 0x01010101;
+                                        row_bgbg_1 = *(rowptr_bgbg_1) * 0x01010101;
+                                        row_grgr_2 = *(rowptr_grgr_2) * 0x01010101;
+                                        row_bgbg_3 = *(rowptr_bgbg_3) * 0x01010101;
+                                    }
+                                    // The starting point needs to be offset by 1. The below patterns are actually
+                                    // rgrg, gbgb, rgrg, and gbgb. So, shift left and backfill the missing border pixel.
+                                    row_grgr_0 = (row_grgr_0 << 8) | __UXTB_RORn(row_grgr_0, 8);
+                                    row_bgbg_1 = (row_bgbg_1 << 8) | __UXTB_RORn(row_bgbg_1, 8);
+                                    row_grgr_2 = (row_grgr_2 << 8) | __UXTB_RORn(row_grgr_2, 8);
+                                    row_bgbg_3 = (row_bgbg_3 << 8) | __UXTB_RORn(row_bgbg_3, 8);
+                                } else if (x == w_limit_m_1) {
+                                    row_grgr_0 = *((uint32_t *) (rowptr_grgr_0 + x - 2));
+                                    row_grgr_0 = (row_grgr_0 >> 8) | ((row_grgr_0 << 8) & 0xff000000);
+                                    row_bgbg_1 = *((uint32_t *) (rowptr_bgbg_1 + x - 2));
+                                    row_bgbg_1 = (row_bgbg_1 >> 8) | ((row_bgbg_1 << 8) & 0xff000000);
+                                    row_grgr_2 = *((uint32_t *) (rowptr_grgr_2 + x - 2));
+                                    row_grgr_2 = (row_grgr_2 >> 8) | ((row_grgr_2 << 8) & 0xff000000);
+                                    row_bgbg_3 = *((uint32_t *) (rowptr_bgbg_3 + x - 2));
+                                    row_bgbg_3 = (row_bgbg_3 >> 8) | ((row_bgbg_1 << 8) & 0xff000000);
+                                } else if (x >= w_limit) {
+                                    row_grgr_0 = *((uint16_t *) (rowptr_grgr_0 + x - 1));
+                                    row_grgr_0 = (row_grgr_0 << 16) | row_grgr_0;
+                                    row_bgbg_1 = *((uint16_t *) (rowptr_bgbg_1 + x - 1));
+                                    row_bgbg_1 = (row_bgbg_1 << 16) | row_bgbg_1;
+                                    row_grgr_2 = *((uint16_t *) (rowptr_grgr_2 + x - 1));
+                                    row_grgr_2 = (row_grgr_2 << 16) | row_grgr_2;
+                                    row_bgbg_3 = *((uint16_t *) (rowptr_bgbg_3 + x - 1));
+                                    row_bgbg_3 = (row_bgbg_3 << 16) | row_bgbg_3;
+                                } else { // get 4 neighboring rows
+                                    row_grgr_0 = *((uint32_t *) (rowptr_grgr_0 + x - 1));
+                                    row_bgbg_1 = *((uint32_t *) (rowptr_bgbg_1 + x - 1));
+                                    row_grgr_2 = *((uint32_t *) (rowptr_grgr_2 + x - 1));
+                                    row_bgbg_3 = *((uint32_t *) (rowptr_bgbg_3 + x - 1));
+                                }
+
+                                int row_01 = __UHADD8(row_grgr_0, row_grgr_2);
+                                int row_1g = __UHADD8(row_bgbg_1, __PKHTB(row_bgbg_1, row_bgbg_1, 16));
+
+                                int r_pixels_0 = __UXTB16(__UHADD8(row_01, __PKHTB(row_01, row_01, 16)));
+                                int g_pixels_0 = __UXTB16(__UHADD8(row_1g, __PKHTB(row_1g, row_01, 8)));
+                                int b_pixels_0 = __UXTB16_RORn(__UHADD8(row_bgbg_1, __PKHBT(row_bgbg_1, row_bgbg_1, 16)), 8);
+
+                                int y0 = ((r_pixels_0 * 38) + (g_pixels_0 * 75) + (b_pixels_0 * 15)) >> 7;
+                                Y0[index_e] = y0, Y0[index_e + 1] = y0 >> 16;
+
+                                int u0 = (__SSUB16(b_pixels_0 * 64, (r_pixels_0 * 21) + (g_pixels_0 * 43)) >> 7) ^ 0x800080;
+                                CB[index_e] = u0, CB[index_e + 1] = u0 >> 16;
+
+                                int v0 = (__SSUB16(r_pixels_0 * 64, (g_pixels_0 * 54) + (b_pixels_0 * 10)) >> 7) ^ 0x800080;
+                                CR[index_e] = v0, CR[index_e + 1] = v0 >> 16;
+
+                                int row_13 = __UHADD8(row_bgbg_1, row_bgbg_3);
+                                int row_2g = __UHADD8(row_grgr_2, __PKHBT(row_grgr_2, row_grgr_2, 16));
+
+                                int r_pixels_1 = __UXTB16(__UHADD8(row_grgr_2, __PKHTB(row_grgr_2, row_grgr_2, 16)));
+                                int g_pixels_1 = __UXTB16_RORn(__UHADD8(row_2g, __PKHBT(row_2g, row_13, 8)), 8);
+                                int b_pixels_1 = __UXTB16_RORn(__UHADD8(row_13, __PKHBT(row_13, row_13, 16)), 8);
+
+                                int y1 = ((r_pixels_1 * 38) + (g_pixels_1 * 75) + (b_pixels_1 * 15)) >> 7;
+                                Y0[index_o] = y1, Y0[index_o + 1] = y1 >> 16;
+
+                                int u1 = (__SSUB16(b_pixels_1 * 64, (r_pixels_1 * 21) + (g_pixels_1 * 43)) >> 7) ^ 0x800080;
+                                CB[index_o] = u1, CB[index_o + 1] = u1 >> 16;
+
+                                int v1 = (__SSUB16(r_pixels_1 * 64, (g_pixels_1 * 54) + (b_pixels_1 * 10)) >> 7) ^ 0x800080;
+                                CR[index_o] = v1, CR[index_o + 1] = v1 >> 16;
+                            }
+
+                            int inc = (MCU_W * 2) - (((dx + 1) / 2) * 2); // Handle boundary column.
+                            index_e += inc;
+                            index_o += inc;
+                        }
+                    }
                     break;
                 }
             }
@@ -636,6 +640,183 @@ void imlib_jpeg_compress_deinit()
 }
 
 #else
+
+//
+// Convert 8x8 Bayer source pixels directly into YCbCr for JPEG encoding
+//
+// Theory of operation:
+// The Bayer pattern from the sensor looks like this:
+// +---+---+---+---+---+---+
+// | B | G | B | G | B | G |
+// +---+---+---+---+---+---+
+// | G |*R*|*G*| R | G | R | * = Example of current pair of pixels being processed
+// +---+---+---+---+---+---+ Each iteration below will advance 2 pixels to the right
+// | B | G | B | G | B | G |
+// +---+---+---+---+---+---+
+// | G | R | G | R | G | R |
+// +---+---+---+---+---+---+
+// Each of the color stimuli above is stored as 1 byte
+// The slower algorithm above reads each byte around the current pixel individually to
+// average the colors together to simulate the colors not present at the current pixel
+// e.g. At location 0,0, only the blue value is present; red and green must be estimated from
+// neighboring pixels
+//
+// The optimized algorithm below minimizes memory accesses by reading 2 bytes at a time
+// and re-using the last pair as it progresses from left to right. Since the ARM CPU enforces a
+// memory policy of generating an exception on unaligned reads, we read 16-bits at a time and
+// OR them into a 32-bit variable to hold on to the pixels left and right of the current pair.
+// This way we can work on 2 pixels at a time from 3 32-bit variables containing 3 lines of 4 pixels.
+// The variables l0,l1,l2 hold the 4 pixels (left, current left, current_right, right)
+// in lines above the current (l0), current (l1) and below (l2)
+//
+static void bayer_to_ycbcr(image_t *img, int x_offset, int y_offset, uint8_t *Y0, uint8_t *CB, uint8_t *CR, int bYUV)
+{
+    uint16_t *s;
+    uint32_t l0, l1, l2; // current, prev and next lines of current pixel(s)
+    uint8_t u8YDelta, u8UVDelta;
+    int x, y, dy=8, idx, x_end, r, g, b;
+    int pitch = img->w; // keep in local var
+    int w2 = pitch/2; // pitch for a uint16_t pointer
+    int prev_offset, next_offset;
+    x_end = -1; // assume we don't need this
+    if (bYUV) {
+        u8YDelta = 0x80;
+        u8UVDelta = 0x00;
+    } else { // YCbCr
+        u8YDelta = 0x00;
+        u8UVDelta = 0x80;
+    }
+    if (x_offset == 0 || y_offset == 0 || x_offset + 8 >= img->w || y_offset + 8 >= img->h) { // slower bounds checking version
+        if (y_offset+dy > img->h) // don't let it go beyond bottom line
+            dy = img->h - y_offset;
+        if (x_offset + 8 >= img->w) // right edge of Bayer data
+            x_end = 6; // keep it from reading past right edge
+        for (y=0, idx=0; y<dy; y++) {
+            s = (uint16_t*)&img->pixels[(y_offset+y) * pitch + x_offset];
+            prev_offset = -w2; next_offset = w2; // default values
+            if (y+y_offset == 0) // top line, don't read the line below
+                prev_offset = w2; // use the next line twice
+            else if (y+y_offset == img->h-1) // bottom line
+                next_offset = -w2; // use previous line twice
+            // Prepare current pixels
+            if (x_offset == 0) { // left edge, don't read beyond it
+                l0 = s[prev_offset];
+                l1 = s[0];
+                l2 = s[next_offset];
+                l0 |= (l0 << 16); // use them twice
+                l1 |= (l1 << 16);
+                l2 |= (l2 << 16); // since we're missing the actual ones
+            } else { // the rest of the image is ok to read the -1 pixel
+                l0 = *(uint32_t *)&s[prev_offset-1];
+                l1 = *(uint32_t *)&s[-1];
+                l2 = *(uint32_t *)&s[next_offset-1];
+            }
+            s++;
+            if (y & 1) { // odd line
+                for (x=0; x<8; x+=2, idx+=2) {
+                    g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    // faster to keep all calculations in integer math with 15-bit fractions
+                    Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                    CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    if (x == x_end) {
+                        l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
+                    } else {
+                        l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                        l1 |= (s[0] << 16);
+                        l2 |= (s[next_offset] << 16);
+                    }
+                    s++;
+                    r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
+                    g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
+                    b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                    CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                } // for x
+            } else { // even line
+                for (x=0; x<8; x+=2, idx+=2) {
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel at current-right
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                    CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                    // prepare for the next set of source pixels
+                    l0 >>= 16; l1 >>= 16; l2 >>= 16; // L-CL-CR-R becomes L-CL-0-0
+                    if (x == x_end) { // check for right edge
+                        l0 |= (l0 << 16); l1 |= (l1 << 16); l2 |= (l2 << 16);
+                    } else {
+                        l0 |= (s[prev_offset] << 16); // grab 3 more pairs of pixels and put in upper 16-bits
+                        l1 |= (s[0] << 16);
+                        l2 |= (s[next_offset] << 16);
+                    }
+                    s++;
+                    g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
+                    b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
+                    r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
+                    Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                    CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                } // for x
+            } // even line
+        } // for y
+    } else { // faster code without bounds checking
+        for (y=0, idx=0; y<dy; y++) {
+            s = (uint16_t*)&img->pixels[(y_offset+y) * pitch + x_offset];
+            // Prepare current pixels
+            l0 = *(uint32_t *)&s[-w2-1];
+            l1 = *(uint32_t *)&s[-1];
+            l2 = *(uint32_t *)&s[w2-1];
+            s++;
+            if (y & 1) { // odd line
+                for (x=0; x<8; x+=2, idx+=2) {
+                    g = (l1 & 0xff0000) >> 16; // (0,0) green pixel
+                    b = ((l0 & 0xff0000) + (l2 & 0xff0000)) >> 17;
+                    r = (((l1 >> 8) & 0xff) + (l1 >> 24)) >> 1;
+                    // faster to keep all calculations in integer math with 15-bit fractions
+                    Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                    CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                    l0 = *(uint32_t *)&s[-w2-1];
+                    l1 = *(uint32_t *)&s[-1];
+                    l2 = *(uint32_t *)&s[w2-1];
+                    s++;
+                    r = (l1 & 0xff00) >> 8; // (1, 0) red pixel
+                    g = (((l1 >> 16) & 0xff) + (l1 & 0xff) + ((l0 >> 8) & 0xff) + ((l2 >> 8) & 0xff)) >> 2;
+                    b = ((l0 & 0xff) + (l2 & 0xff) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                    CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                } // for x
+            } else { // even line
+                for (x=0; x<8; x+=2, idx+=2) {
+                    b = (l1 & 0xff0000) >> 16; // (0,0) blue pixel at current-right
+                    g = (((l1 >> 8) & 0xff) + (l1 >> 24) + ((l0 >> 16) & 0xff) + ((l2 >> 16) & 0xff)) >> 2;
+                    r = (((l0 >> 8) & 0xff) + (l0 >> 24) + ((l2 >> 8) & 0xff) + (l2 >> 24)) >> 2;
+                    Y0[idx] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                    CB[idx] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                    // load next set
+                    l0 = *(uint32_t *)&s[-w2-1];
+                    l1 = *(uint32_t *)&s[-1];
+                    l2 = *(uint32_t *)&s[w2-1];
+                    s++;
+                    g = (l1 & 0xff00) >> 8; // (1, 0) green pixel
+                    b = ((l1 & 0xff) + ((l1 >> 16) & 0xff)) >> 1;
+                    r = ((l0 & 0xff00) + (l2 & 0xff00)) >> 9;
+                    Y0[idx+1] = (uint8_t)(((r * 9770) + (g * 19182) + (b * 3736)) >> 15) - u8YDelta; // .299*r + .587*g + .114*b
+                    CB[idx+1] = (uint8_t)(((b << 14) - (r * 5529) - (g * 10855)) >> 15) - u8UVDelta; // -0.168736*r + -0.331264*g + 0.5*b
+                    CR[idx+1] = (uint8_t)(((r << 14) - (g * 13682) - (b * 2664)) >> 15) - u8UVDelta; // 0.5*r + -0.418688*g + -0.081312*b
+                } // for x
+            } // even line
+        } // for y
+    } // faster version
+} /* bayer_to_ycbcr() */
+
 // Software JPEG implementation.
 #define FIX_0_382683433  ((int32_t)   98)
 #define FIX_0_541196100  ((int32_t)  139)
