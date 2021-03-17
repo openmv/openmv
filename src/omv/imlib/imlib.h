@@ -1079,6 +1079,7 @@ void bmp_write_subimg(image_t *img, const char *path, rectangle_t *r);
 void imlib_jpeg_compress_init();
 void imlib_jpeg_compress_deinit();
 #endif
+bool jpeg_decompress(image_t *src, image_t *dst);
 bool jpeg_compress(image_t *src, image_t *dst, int quality, bool realloc);
 int jpeg_clean_trailing_bytes(int bpp, uint8_t *data);
 void jpeg_read_geometry(FIL *fp, image_t *img, const char *path, jpg_read_settings_t *rs);

@@ -190,6 +190,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	imlib.o                     \
 	integral.o                  \
 	integral_mw.o               \
+	jpeg_dec.o                  \
 	jpeg.o                      \
 	kmeans.o                    \
 	lab_tab.o                   \
