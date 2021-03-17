@@ -8,7 +8,7 @@ import sensor, image, time
 N_FRAMES = 500
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 
 # This frame size must match the image size passed to ImageIO

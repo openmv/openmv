@@ -6,7 +6,7 @@ import sensor, image, time
 print("Letting auto algorithms run. Don't put anything in front of the camera!")
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must be turned off for color tracking

@@ -6,7 +6,7 @@
 import sensor, image, time, math
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA) # we run out of memory if the resolution is much bigger...
 sensor.set_windowing((160, 120)) # Look at center 160x120 pixels of the VGA resolution.
 sensor.skip_frames(time = 2000)

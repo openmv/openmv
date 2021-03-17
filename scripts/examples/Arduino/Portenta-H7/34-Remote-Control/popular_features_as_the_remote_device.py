@@ -9,7 +9,7 @@
 import image, network, math, rpc, sensor, struct, tf
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time = 2000)
 
@@ -116,7 +116,7 @@ def face_detection(data):
 #
 # data is unused
 def person_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.QVGA)
     scores = tf.classify("person_detection", sensor.snapshot())[0].output()
     return ['unsure', 'person', 'no_person'][scores.index(max(scores))].encode()
@@ -126,7 +126,7 @@ def person_detection(data):
 #
 # data is unused
 def qrcode_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.VGA)
     sensor.set_windowing((320, 240))
     codes = sensor.snapshot().find_qrcodes()
@@ -138,7 +138,7 @@ def qrcode_detection(data):
 #
 # data is unused
 def all_qrcode_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.VGA)
     sensor.set_windowing((320, 240))
     codes = sensor.snapshot().find_qrcodes()
@@ -151,7 +151,7 @@ def all_qrcode_detection(data):
 #
 # data is unused
 def apriltag_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.QQVGA)
     tags = sensor.snapshot().find_apriltags()
     if not tags: return bytes() # No detections.
@@ -164,7 +164,7 @@ def apriltag_detection(data):
 #
 # data is unused
 def all_apriltag_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.QQVGA)
     tags = sensor.snapshot().find_apriltags()
     if not tags: return bytes() # No detections.
@@ -176,7 +176,7 @@ def all_apriltag_detection(data):
 #
 # data is unused
 def datamatrix_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.VGA)
     sensor.set_windowing((320, 240))
     codes = sensor.snapshot().find_datamatrices()
@@ -188,7 +188,7 @@ def datamatrix_detection(data):
 #
 # data is unused
 def all_datamatrix_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.VGA)
     sensor.set_windowing((320, 240))
     codes = sensor.snapshot().find_datamatrices()
@@ -224,7 +224,7 @@ def all_barcode_detection(data):
 #
 # data is the 6-byte color tracking threshold tuple of L_MIN, L_MAX, A_MIN, A_MAX, B_MIN, B_MAX.
 def color_detection(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.QVGA)
     thresholds = struct.unpack("<bbbbbb", data)
     blobs = sensor.snapshot().find_blobs([thresholds],
@@ -244,7 +244,7 @@ def color_detection(data):
 #
 # data is unused
 def jpeg_snapshot(data):
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     sensor.set_framesize(sensor.QVGA)
     return sensor.snapshot().compress(quality=90).bytearray()
 

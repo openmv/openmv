@@ -8,12 +8,12 @@
 import sensor, image, time
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 
 hint = image.BICUBIC # image.BILINEAR image.BICUBIC
 
-small_img = image.Image(4, 4, sensor.RGB565)
+small_img = image.Image(4, 4, sensor.GRAYSCALE)
 small_img.set_pixel(0, 0, (0,   0,   127))
 small_img.set_pixel(1, 0, (47,  255, 199))
 small_img.set_pixel(2, 0, (0,   188, 255))
@@ -33,7 +33,7 @@ small_img.set_pixel(3, 3, (50,  255, 195))
 #small_img.to_grayscale()
 #small_img.to_bitmap()
 
-big_img = image.Image(128, 128, sensor.RGB565)
+big_img = image.Image(128, 128, sensor.GRAYSCALE)
 big_img.draw_image(small_img, 0, 0, x_scale=32, y_scale=32, hint=hint)
 #big_img.to_grayscale()
 #big_img.to_bitmap()

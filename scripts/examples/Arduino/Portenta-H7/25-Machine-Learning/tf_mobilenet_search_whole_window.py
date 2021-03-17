@@ -21,7 +21,7 @@
 import sensor, image, time, os, tf
 
 sensor.reset()                         # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565)    # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_pixformat(sensor.GRAYSCALE)    # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)      # Set frame size to QVGA (320x240)
 sensor.set_windowing((240, 240))       # Set 240x240 window.
 sensor.skip_frames(time=2000)          # Let the camera adjust.

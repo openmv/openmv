@@ -24,7 +24,7 @@ while(True):
         img.binary([grayscale_thres])
         img.dilate(2)
 
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
     for i in range(20):
         img = sensor.snapshot()
         img.binary([rgb565_thres])

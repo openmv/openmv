@@ -31,7 +31,7 @@ def test_color_bars():
 
     # Set sensor pixel format
     sensor.set_framesize(sensor.QVGA)
-    sensor.set_pixformat(sensor.RGB565)
+    sensor.set_pixformat(sensor.GRAYSCALE)
 
     # Enable colorbar test mode
     sensor.set_colorbar(True)

@@ -7,7 +7,7 @@ import sensor, image, time
 thresholds = (100, 100, 0, 0, 0, 0) # thresholds for bright white light from IR.
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA)
 sensor.set_windowing((240, 240)) # 240x240 center pixels of VGA
 sensor.skip_frames(time = 2000)
