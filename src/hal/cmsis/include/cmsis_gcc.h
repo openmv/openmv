@@ -2174,9 +2174,25 @@ __STATIC_FORCEINLINE int32_t __SMMLA (int32_t op1, int32_t op2, int32_t op3)
  return(result);
 }
 
+#else
+
+__STATIC_FORCEINLINE uint32_t __UXTB(uint32_t op1)
+{
+  return op1 & 0xFF;
+}
+
+__STATIC_FORCEINLINE uint32_t __UXTB_RORn(uint32_t op1, uint32_t rotate)
+{
+  return (op1 >> rotate) & 0xFF;
+}
+
+__STATIC_FORCEINLINE uint32_t __SSUB16(uint32_t op1, uint32_t op2)
+{
+  return ((op1 & 0xFFFF0000) - (op2 & 0xFFFF0000)) | ((op1 - op2) & 0xFFFF);
+}
+
 #endif /* (__ARM_FEATURE_DSP == 1) */
 /*@} end of group CMSIS_SIMD_intrinsics */
-
 
 #pragma GCC diagnostic pop
 
