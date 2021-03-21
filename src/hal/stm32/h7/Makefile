@@ -24,6 +24,7 @@ stm32h7xx_hal_flash.c\
 stm32h7xx_hal_flash_ex.c\
 stm32h7xx_hal_gpio.c\
 stm32h7xx_hal_hcd.c\
+stm32h7xx_hal_hsem.c\
 stm32h7xx_hal_i2c.c\
 stm32h7xx_hal_i2c_ex.c\
 stm32h7xx_hal_ltdc.c\

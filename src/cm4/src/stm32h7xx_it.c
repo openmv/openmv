@@ -125,9 +125,13 @@ void SysTick_Handler(void)
   */
 void HSEM2_IRQHandler(void)
 {
-
+    HAL_HSEM_IRQHandler();
 }
 
+void RTC_WKUP_IRQHandler(void)
+{
+
+}
 /**
   * @}
   */ 

@@ -17,6 +17,7 @@ SRC_C += $(addprefix $(HAL_DIR)/src/,   \
 	stm32h7xx_hal_rcc_ex.c              \
 	stm32h7xx_hal_rtc.c                 \
 	stm32h7xx_hal_rtc_ex.c              \
+	stm32h7xx_hal_hsem.c                \
 )
 #SRCS += $(addprefix $(HAL_DIR)/src/, $(notdir $(wildcard ../$(HAL_DIR)/src/*.c)))
 
