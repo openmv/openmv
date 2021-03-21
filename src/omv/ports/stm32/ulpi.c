@@ -145,7 +145,7 @@ void ulpi_enter_low_power(void)
     }
 
     /* Delay 4 ms */
-    HAL_Delay(4);
+    HAL_Delay(10);
 }
 
 /**
@@ -157,7 +157,7 @@ void ulpi_leave_low_power(void)
 {
     GPIO_InitTypeDef  GPIO_InitStruct;
 
-    /* Enable GPIO clock for OTG USB STP pin (optional, clock should already be enabled at this phase) */
+    /* Enable GPIO clock for OTG USB STP pin */
     __HAL_RCC_GPIOC_CLK_ENABLE();
 
     /* Set OTG STP pin as GP Output  */
@@ -171,18 +171,11 @@ void ulpi_leave_low_power(void)
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
 
     /* Delay 4 ms */
-    HAL_Delay(4);
+    HAL_Delay(10);
 
     GPIO_InitStruct.Pin = GPIO_PIN_0;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Alternate = GPIO_AF10_OTG_HS;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-    __IO uint32_t regval = 0;
-    /* read FunctionControl reg */
-    regval = USB_ULPI_Read(0x04);
-    if(regval != 0x40) {
-        __fatal_error("ULPI Error 0x04 != 0x40");
-    }
 }
 #endif // defined(STM32F7) || defined(STM32H7)
