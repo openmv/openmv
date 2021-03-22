@@ -709,7 +709,7 @@ STATIC mp_obj_t py_image_get_pixel(uint n_args, const mp_obj_t *args, mp_map_t *
         }
         case IMAGE_BPP_BAYER:
             if (arg_rgbtuple) {
-                uint16_t pixel; imlib_bayer_to_rgb565(arg_img, 1, 1, arg_x, arg_y, &pixel);
+                uint16_t pixel; imlib_debayer_line_to_rgb565(arg_x, arg_x + 1, arg_y, &pixel, arg_img);
                 mp_obj_t pixel_tuple[3];
                 pixel_tuple[0] = mp_obj_new_int(COLOR_RGB565_TO_R8(pixel));
                 pixel_tuple[1] = mp_obj_new_int(COLOR_RGB565_TO_G8(pixel));
@@ -870,7 +870,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midp
 static mp_obj_t py_image_to(int bpp, const uint16_t *default_color_palette, bool copy_to_fb,
                             uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *src_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *src_img = py_helper_arg_to_image_mutable_bayer(args[0]);
 
     float arg_x_scale = 1.f;
     bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
@@ -935,7 +935,7 @@ static mp_obj_t py_image_to(int bpp, const uint16_t *default_color_palette, bool
         if (mp_obj_is_integer(copy_obj)) {
             copy = mp_obj_get_int(copy_obj);
         } else {
-            arg_other = py_helper_arg_to_image_mutable(copy_obj);
+            arg_other = py_helper_arg_to_image_mutable_bayer(copy_obj);
         }
     }
 
@@ -947,6 +947,23 @@ static mp_obj_t py_image_to(int bpp, const uint16_t *default_color_palette, bool
     dst_img.w = fast_floorf(arg_roi.w * arg_x_scale);
     dst_img.h = fast_floorf(arg_roi.h * arg_y_scale);
     dst_img.bpp = (bpp >= 0) ? bpp : src_img->bpp;
+
+    if (dst_img.bpp == IMAGE_BPP_BAYER) {
+        if (((arg_x_scale != 1) && (arg_x_scale != -1)) ||
+            ((arg_y_scale != 1) && (arg_y_scale != -1)) ||
+            (arg_rgb_channel != -1) ||
+            (arg_alpha != 256) ||
+            (color_palette != NULL) ||
+            (alpha_palette != NULL)) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only bayer copying/cropping is supported!"));
+        } else {
+            hint &= ~(IMAGE_HINT_AREA |
+                      IMAGE_HINT_BICUBIC |
+                      IMAGE_HINT_BILINEAR |
+                      IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST |
+                      IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST);
+        }
+    }
 
     if (copy) {
         if (copy_to_fb) {
@@ -1437,7 +1454,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_draw_edges_obj, 2, py_image_draw_edge
 STATIC mp_obj_t py_image_draw_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
     image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
-    image_t *arg_other = py_helper_arg_to_image_mutable(args[1]);
+    image_t *arg_other = py_helper_arg_to_image_mutable_bayer(args[1]);
 
     const mp_obj_t *arg_vec;
     uint offset = py_helper_consume_array(n_args, args, 2, 2, &arg_vec);
@@ -5147,7 +5164,7 @@ static const mp_obj_type_t py_apriltag_type = {
 
 static mp_obj_t py_image_find_apriltags(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
 
     rectangle_t roi;
     py_helper_keyword_rectangle_roi(arg_img, n_args, args, 1, kw_args, &roi);

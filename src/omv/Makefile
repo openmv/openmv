@@ -53,6 +53,7 @@ SRCS += $(addprefix modules/,   \
 SRCS += $(addprefix imlib/,     \
 	agast.c                     \
 	apriltag.c                  \
+	bayer.c                     \
 	binary.c                    \
 	blob.c                      \
 	bmp.c                       \
