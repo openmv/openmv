@@ -14,10 +14,9 @@ BG_UPDATE_FRAMES = 50 # How many frames before blending.
 BG_UPDATE_BLEND = 128 # How much to blend by... ([0-256]==[0.0-1.0]).
 
 sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.RGB565
+sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.RGB565
 sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
 sensor.skip_frames(time = 2000) # Let new settings take affect.
-sensor.set_auto_whitebal(False) # Turn off white balance.
 clock = time.clock() # Tracks FPS.
 
 if not "temp" in os.listdir(): os.mkdir("temp") # Make a temp directory

@@ -3,7 +3,7 @@ import sensor, image, time
 
 sensor.reset() # Initialize the camera sensor.
 sensor.set_framesize(sensor.QQVGA) # or sensor.QQVGA (or others)
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
+sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.GRAYSCALE
 sensor.set_colorbar(True)   # Enable colorbars output
 
 clock = time.clock() # Tracks FPS.

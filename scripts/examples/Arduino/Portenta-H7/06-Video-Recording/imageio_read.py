@@ -13,7 +13,7 @@ import sensor, image, time
 snapshot_source = False # Set to true once finished to pull data from sensor.
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QQVGA)
 sensor.skip_frames(time = 2000)
 clock = time.clock()

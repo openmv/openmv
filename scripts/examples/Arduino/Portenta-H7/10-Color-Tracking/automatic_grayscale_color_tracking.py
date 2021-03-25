@@ -10,7 +10,6 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must be turned off for color tracking
-sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
 
 # Capture the color thresholds for whatever was in the center of the image.

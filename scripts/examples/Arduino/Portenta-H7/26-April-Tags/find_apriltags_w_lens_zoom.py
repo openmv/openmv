@@ -6,12 +6,11 @@
 import sensor, image, time, math
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA) # we run out of memory if the resolution is much bigger...
 sensor.set_windowing((160, 120)) # Look at center 160x120 pixels of the VGA resolution.
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False)  # must turn this off to prevent image washout...
-sensor.set_auto_whitebal(False)  # must turn this off to prevent image washout...
 clock = time.clock()
 
 # Note! Unlike find_qrcodes the find_apriltags method does not need lens correction on the image to work.

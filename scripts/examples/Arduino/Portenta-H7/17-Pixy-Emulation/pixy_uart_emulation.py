@@ -65,11 +65,10 @@ import image, math, pyb, sensor, struct, time
 # Camera Setup
 
 sensor.reset()
-sensor.set_pixformat(sensor.RGB565)
+sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False)
-sensor.set_auto_whitebal(False)
 
 # LED Setup
 

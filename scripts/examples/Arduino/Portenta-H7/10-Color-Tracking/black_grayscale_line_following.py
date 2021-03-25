@@ -35,7 +35,6 @@ sensor.set_pixformat(sensor.GRAYSCALE) # use grayscale.
 sensor.set_framesize(sensor.QQVGA) # use QQVGA for speed.
 sensor.skip_frames(time = 2000) # Let new settings take affect.
 sensor.set_auto_gain(False) # must be turned off for color tracking
-sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock() # Tracks FPS.
 
 while(True):

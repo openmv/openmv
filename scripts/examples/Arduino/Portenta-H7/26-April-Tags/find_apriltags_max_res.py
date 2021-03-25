@@ -14,7 +14,6 @@ elif omv.board_type() == "M7": sensor.set_windowing((200, 200))
 else: raise Exception("You need a more powerful OpenMV Cam to run this script")
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False)  # must turn this off to prevent image washout...
-sensor.set_auto_whitebal(False)  # must turn this off to prevent image washout...
 clock = time.clock()
 
 # Note! Unlike find_qrcodes the find_apriltags method does not need lens correction on the image to work.

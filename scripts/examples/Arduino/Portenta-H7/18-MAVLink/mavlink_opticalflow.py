@@ -82,7 +82,7 @@ def send_optical_flow_packet(x, y, c):
     update_led()
 
 sensor.reset()                      # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.B64X32) # Set frame size to 64x32... (or 64x64)...
 sensor.skip_frames(time = 2000)     # Wait for settings take effect.
 clock = time.clock()                # Create a clock object to track the FPS.
@@ -91,7 +91,7 @@ clock = time.clock()                # Create a clock object to track the FPS.
 # There's a lot more RAM in the frame buffer than in the MicroPython heap.
 # However, after doing this you have a lot less RAM for some algorithms...
 # So, be aware that it's a lot easier to get out of RAM issues now.
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
+extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
 extra_fb.replace(sensor.snapshot())
 
 while(True):

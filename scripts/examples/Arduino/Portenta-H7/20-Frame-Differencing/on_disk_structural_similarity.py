@@ -13,10 +13,9 @@ import sensor, image, pyb, os, time
 MIN_TRIGGER_THRESHOLD = -0.4
 
 sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
+sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.QVGA) # or sensor.QQVGA (or others)
 sensor.skip_frames(time = 2000) # Let new settings take affect.
-sensor.set_auto_whitebal(False) # Turn off white balance.
 clock = time.clock() # Tracks FPS.
 
 if not "temp" in os.listdir(): os.mkdir("temp") # Make a temp directory

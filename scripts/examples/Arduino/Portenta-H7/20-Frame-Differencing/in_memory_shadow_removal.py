@@ -8,12 +8,11 @@ import sensor, image, pyb, os, time
 TRIGGER_THRESHOLD = 5
 
 sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # or sensor.GRAYSCALE
+sensor.set_pixformat(sensor.GRAYSCALE) # or sensor.GRAYSCALE
 sensor.set_framesize(sensor.QQVGA) # or sensor.QVGA (or others)
 if sensor.get_id() == sensor.OV7725: # Reduce sensor PLL from 6x to 4x.
     sensor.__write_reg(0x0D, (sensor.__read_reg(0x0D) & 0x3F) | 0x40)
 sensor.skip_frames(time = 2000) # Let new settings take affect.
-sensor.set_auto_whitebal(False) # Turn off white balance.
 sensor.set_auto_gain(False) # Turn this off too.
 clock = time.clock() # Tracks FPS.
 
@@ -23,7 +22,7 @@ clock = time.clock() # Tracks FPS.
 # So, be aware that it's a lot easier to get out of RAM issues now. However,
 # frame differencing doesn't use a lot of the extra space in the frame buffer.
 # But, things like AprilTags do and won't work if you do this...
-extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.RGB565)
+extra_fb = sensor.alloc_extra_fb(sensor.width(), sensor.height(), sensor.GRAYSCALE)
 
 print("About to save background image...")
 sensor.skip_frames(time = 2000) # Give the user time to get ready.

@@ -13,7 +13,6 @@ sensor.set_pixformat(sensor.GRAYSCALE)
 sensor.set_framesize(sensor.VGA)
 sensor.skip_frames(time = 2000)
 sensor.set_auto_gain(False) # must be turned off for color tracking
-sensor.set_auto_whitebal(False) # must be turned off for color tracking
 clock = time.clock()
 
 # Only blobs that with more pixels than "pixel_threshold" and more area than "area_threshold" are

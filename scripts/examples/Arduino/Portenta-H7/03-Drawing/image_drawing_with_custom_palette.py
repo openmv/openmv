@@ -15,12 +15,12 @@ clock = time.clock()
 
 # Initialise palette source colors into an image
 palette_source_colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 0, 255)]
-palette_source_color_image = image.Image(len(palette_source_colors), 1, sensor.RGB565)
+palette_source_color_image = image.Image(len(palette_source_colors), 1, sensor.GRAYSCALE)
 for i, color in enumerate(palette_source_colors):
     palette_source_color_image[i] = color
 
 # Scale the image to palette width and smooth them
-palette = image.Image(256,1, sensor.RGB565)
+palette = image.Image(256,1, sensor.GRAYSCALE)
 palette.draw_image(palette_source_color_image, 0, 0, x_scale=palette.width() / palette_source_color_image.width())
 palette.mean(int(palette.width() / palette_source_color_image.width()/2))
 

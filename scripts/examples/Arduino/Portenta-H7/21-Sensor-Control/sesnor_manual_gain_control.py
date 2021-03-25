@@ -21,7 +21,7 @@ import sensor, image, time
 GAIN_SCALE = 1.0
 
 sensor.reset()                      # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)   # Set frame size to QVGA (320x240)
 
 # Print out the initial gain for comparison.
@@ -34,7 +34,6 @@ clock = time.clock()                # Create a clock object to track the FPS.
 # otherwise they will change the image exposure to undo any gain settings
 # that you put in place...
 sensor.set_auto_exposure(False)
-sensor.set_auto_whitebal(False)
 # Need to let the above settings get in...
 sensor.skip_frames(time = 500)
 

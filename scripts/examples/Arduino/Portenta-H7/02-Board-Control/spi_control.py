@@ -59,7 +59,7 @@ write_command(0x3A, 0x05)
 write_command(0x29)
 
 sensor.reset() # Initialize the camera sensor.
-sensor.set_pixformat(sensor.RGB565) # must be this
+sensor.set_pixformat(sensor.GRAYSCALE) # must be this
 sensor.set_framesize(sensor.QQVGA2) # must be this
 sensor.skip_frames(time = 2000) # Let new settings take affect.
 clock = time.clock() # Tracks FPS.

@@ -6,7 +6,7 @@ import sensor, image, time
 from pyb import Pin
 
 sensor.reset()                      # Reset and initialize the sensor.
-sensor.set_pixformat(sensor.RGB565) # Set pixel format to RGB565 (or GRAYSCALE)
+sensor.set_pixformat(sensor.GRAYSCALE) # Set pixel format to RGB565 (or GRAYSCALE)
 sensor.set_framesize(sensor.QVGA)   # Set frame size to QVGA (320x240)
 
 # This pin will be toggled on/off on VSYNC rising and falling edges.
