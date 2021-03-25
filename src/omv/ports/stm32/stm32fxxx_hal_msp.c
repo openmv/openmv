@@ -52,7 +52,6 @@ void HAL_MspInit(void)
 
     /* Configure the MPU attributes to disable caching DMA buffers */
     MPU_Region_InitTypeDef MPU_InitStruct;
-    MPU_InitStruct.Enable           = MPU_REGION_ENABLE;
     MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
     MPU_InitStruct.IsBufferable     = MPU_ACCESS_NOT_BUFFERABLE;
     MPU_InitStruct.IsCacheable      = MPU_ACCESS_NOT_CACHEABLE;
@@ -61,6 +60,14 @@ void HAL_MspInit(void)
     MPU_InitStruct.SubRegionDisable = 0x00;
     MPU_InitStruct.DisableExec      = MPU_INSTRUCTION_ACCESS_ENABLE;
 
+    // Disable all regions.
+    for (int i=MPU_REGION_NUMBER0; i<MPU_REGION_NUMBER15; i++) {
+        MPU_InitStruct.Number = i;
+        MPU_InitStruct.Enable = MPU_REGION_DISABLE;
+        HAL_MPU_ConfigRegion(&MPU_InitStruct);
+    }
+
+    MPU_InitStruct.Enable           = MPU_REGION_ENABLE;
     #if defined(OMV_DMA_REGION_D1_BASE)
     MPU_InitStruct.Number           = MPU_REGION_NUMBER15;
     MPU_InitStruct.BaseAddress      = OMV_DMA_REGION_D1_BASE;
