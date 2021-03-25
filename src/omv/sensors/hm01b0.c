@@ -21,6 +21,9 @@
 #include "py/mphal.h"
 
 #define HIMAX_BOOT_RETRY            (10)
+#define HIMAX_LINE_LEN_PCK_FULL     0x178
+#define HIMAX_FRAME_LENGTH_FULL     0x109
+
 #define HIMAX_LINE_LEN_PCK_QVGA     0x178
 #define HIMAX_FRAME_LENGTH_QVGA     0x104
 
@@ -180,16 +183,35 @@ static int set_pixformat(sensor_t *sensor, pixformat_t pixformat)
     return ret;
 }
 
+static const uint16_t FULL_regs[][2] = {
+    {0x0383,                0x01},
+    {0x0387,                0x01},
+    {0x0390,                0x00},
+    {QVGA_WIN_EN,           0x00},// Disable QVGA window readout
+    {MAX_INTG_H,            (HIMAX_FRAME_LENGTH_FULL-2)>>8},
+    {MAX_INTG_L,            (HIMAX_FRAME_LENGTH_FULL-2)&0xFF},
+    {FRAME_LEN_LINES_H,     (HIMAX_FRAME_LENGTH_FULL>>8)},
+    {FRAME_LEN_LINES_L,     (HIMAX_FRAME_LENGTH_FULL&0xFF)},
+    {LINE_LEN_PCK_H,        (HIMAX_LINE_LEN_PCK_FULL>>8)},
+    {LINE_LEN_PCK_L,        (HIMAX_LINE_LEN_PCK_FULL&0xFF)},
+    {GRP_PARAM_HOLD,        0x01},
+    //============= End of regs marker ==================
+    {0x0000,            0x00},
+
+};
+
 static const uint16_t QVGA_regs[][2] = {
     {0x0383,                0x01},
     {0x0387,                0x01},
     {0x0390,                0x00},
+    {QVGA_WIN_EN,           0x01},// Enable QVGA window readout
     {MAX_INTG_H,            (HIMAX_FRAME_LENGTH_QVGA-2)>>8},
     {MAX_INTG_L,            (HIMAX_FRAME_LENGTH_QVGA-2)&0xFF},
     {FRAME_LEN_LINES_H,     (HIMAX_FRAME_LENGTH_QVGA>>8)},
     {FRAME_LEN_LINES_L,     (HIMAX_FRAME_LENGTH_QVGA&0xFF)},
     {LINE_LEN_PCK_H,        (HIMAX_LINE_LEN_PCK_QVGA>>8)},
     {LINE_LEN_PCK_L,        (HIMAX_LINE_LEN_PCK_QVGA&0xFF)},
+    {GRP_PARAM_HOLD,        0x01},
     //============= End of regs marker ==================
     {0x0000,            0x00},
 
@@ -199,12 +221,14 @@ static const uint16_t QQVGA_regs[][2] = {
     {0x0383,                0x03},
     {0x0387,                0x03},
     {0x0390,                0x03},
+    {QVGA_WIN_EN,           0x01},// Enable QVGA window readout
     {MAX_INTG_H,            (HIMAX_FRAME_LENGTH_QQVGA-2)>>8},
     {MAX_INTG_L,            (HIMAX_FRAME_LENGTH_QQVGA-2)&0xFF},
     {FRAME_LEN_LINES_H,     (HIMAX_FRAME_LENGTH_QQVGA>>8)},
     {FRAME_LEN_LINES_L,     (HIMAX_FRAME_LENGTH_QQVGA&0xFF)},
     {LINE_LEN_PCK_H,        (HIMAX_LINE_LEN_PCK_QQVGA>>8)},
     {LINE_LEN_PCK_L,        (HIMAX_LINE_LEN_PCK_QQVGA&0xFF)},
+    {GRP_PARAM_HOLD,        0x01},
     //============= End of regs marker ==================
     {0x0000,            0x00},
 };
@@ -216,6 +240,11 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     uint16_t h = resolution[framesize][1];
 
     switch (framesize) {
+        case FRAMESIZE_320X320:
+            for (int i=0; FULL_regs[i][0] && ret == 0; i++) {
+                ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, FULL_regs[i][0], FULL_regs[i][1]);
+            }
+            break;
         case FRAMESIZE_QVGA:
             for (int i=0; QVGA_regs[i][0] && ret == 0; i++) {
                 ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, QVGA_regs[i][0], QVGA_regs[i][1]);
@@ -238,25 +267,26 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
 static int set_framerate(sensor_t *sensor, int framerate)
 {
     uint8_t osc_div = 0;
-    uint32_t framesize = sensor->framesize;
+    bool    highres = false;
 
-    if (framesize == FRAMESIZE_INVALID) {
-        // Use QVGA by default if the framesize is not set
-        framesize = FRAMESIZE_QVGA;
+    if (sensor->framesize == FRAMESIZE_INVALID
+            || sensor->framesize == FRAMESIZE_QVGA
+            || sensor->framesize == FRAMESIZE_320X320) {
+        highres = true;
     }
 
     switch (framerate) {
         case 15:
-            osc_div = (framesize == FRAMESIZE_QVGA) ? 0x01 : 0x00;
+            osc_div = (highres == true) ? 0x01 : 0x00;
             break;
         case 30:
-            osc_div = (framesize == FRAMESIZE_QVGA) ? 0x02 : 0x01;
+            osc_div = (highres == true) ? 0x02 : 0x01;
             break;
         case 60:
-            osc_div = (framesize == FRAMESIZE_QVGA) ? 0x03 : 0x02;
+            osc_div = (highres == true) ? 0x03 : 0x02;
             break;
         case 120:
-            // Set to max FPS.
+            // Set to the max possible FPS at this resolution.
             osc_div = 0x03;
             break;
         default:
@@ -376,12 +406,21 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
         uint32_t coarse_int;
         uint32_t vt_pix_clk = 0;
 
-        if (sensor->framesize == FRAMESIZE_QVGA) {
-            line_len = HIMAX_LINE_LEN_PCK_QVGA;
-            frame_len = HIMAX_FRAME_LENGTH_QVGA;
-        } else {
-            line_len = HIMAX_LINE_LEN_PCK_QQVGA;
-            frame_len = HIMAX_FRAME_LENGTH_QQVGA;
+        switch (sensor->framesize) {
+            case FRAMESIZE_320X320:
+                line_len = HIMAX_LINE_LEN_PCK_FULL;
+                frame_len = HIMAX_FRAME_LENGTH_FULL;
+                break;
+            case FRAMESIZE_QVGA:
+                line_len = HIMAX_LINE_LEN_PCK_QVGA;
+                frame_len = HIMAX_FRAME_LENGTH_QVGA;
+                break;
+            case FRAMESIZE_QQVGA:
+                line_len = HIMAX_LINE_LEN_PCK_QQVGA;
+                frame_len = HIMAX_FRAME_LENGTH_QQVGA;
+                break;
+            default:
+                return -1;
         }
 
         ret |= get_vt_pix_clk(sensor, &vt_pix_clk);

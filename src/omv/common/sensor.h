@@ -60,6 +60,7 @@ typedef enum {
     FRAMESIZE_64X64,    // 64x64
     FRAMESIZE_128X64,   // 128x64
     FRAMESIZE_128X128,  // 128x128
+    FRAMESIZE_320X320,  // 320x320
     // Other
     FRAMESIZE_LCD,      // 128x160
     FRAMESIZE_QQVGA2,   // 128x160
