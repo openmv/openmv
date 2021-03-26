@@ -630,6 +630,10 @@ endif
 # This target generates the uvc, bootloader and firmware images.
 $(OPENMV): $(BOOTLOADER) $(UVC) $(CM4) $(FIRMWARE)
 ifeq ($(OMV_ENABLE_BL), 1)
+	# Generate a contiguous firmware image for factory programming
+	$(OBJCOPY) -Obinary --pad-to=$(MAIN_APP_ADDR) --gap-fill=0xFF $(FW_DIR)/$(BOOTLOADER).elf $(FW_DIR)/$(BOOTLOADER)_padded.bin
+	$(CAT) $(FW_DIR)/$(BOOTLOADER)_padded.bin $(FW_DIR)/$(FIRMWARE).bin > $(FW_DIR)/$(OPENMV).bin
+	$(RM) $(FW_DIR)/$(BOOTLOADER)_padded.bin
 	$(SIZE) $(FW_DIR)/$(BOOTLOADER).elf
 endif
 	$(SIZE) $(FW_DIR)/$(FIRMWARE).elf
