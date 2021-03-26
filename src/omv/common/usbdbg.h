@@ -11,17 +11,12 @@
 #ifndef __USBDBG_H__
 #define __USBDBG_H__
 /**
-  * Firmware major, minor and patch versions.
-  * Increment the major version if the ABI has changed.
-  * Increment the minor version when a new command is added.
-  * Increment the patch version for fixes that don't affect the ABI.
+  * Firmware version (major, minor and patch numbers).
   *
-  * Note: incrementing the major version will require a fw upgrade,
-  * the IDE will Not connect if the major version number is different.
   */
 #define FIRMWARE_VERSION_MAJOR      (3)
 #define FIRMWARE_VERSION_MINOR      (9)
-#define FIRMWARE_VERSION_PATCH      (4)
+#define FIRMWARE_VERSION_PATCH      (5)
 
 /**
   * To add a new debugging command, increment the last command value used.
