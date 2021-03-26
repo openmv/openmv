@@ -188,11 +188,11 @@ void HAL_MspInit(void)
     OMV_AXI_QOS_LTDC_W_SET(OMV_AXI_QOS_LTDC_W_PRI);
     #endif
 
-    #if defined(DCMI_RESET_PIN) || defined(DCMI_PWDN_PIN) || defined(DCMI_FSYNC_PIN)
-    /* Configure DCMI GPIO */
     GPIO_InitTypeDef  GPIO_InitStructure;
     GPIO_InitStructure.Speed = GPIO_SPEED_LOW;
     GPIO_InitStructure.Mode  = GPIO_MODE_OUTPUT_PP;
+
+    #if defined(DCMI_RESET_PIN) || defined(DCMI_PWDN_PIN) || defined(DCMI_FSYNC_PIN)
 
     #if defined(DCMI_RESET_PIN)
     GPIO_InitStructure.Pin = DCMI_RESET_PIN;
@@ -213,6 +213,20 @@ void HAL_MspInit(void)
     #endif
 
     #endif // DCMI_RESET_PIN || DCMI_PWDN_PIN || DCMI_FSYNC_PIN
+
+    #if defined(OMV_FIR_LEPTON_RST_PIN_PRESENT)
+    GPIO_InitStructure.Pin       = OMV_FIR_LEPTON_RST_PIN;
+    GPIO_InitStructure.Pull      = GPIO_NOPULL;
+    HAL_GPIO_Init(OMV_FIR_LEPTON_RST_PORT, &GPIO_InitStructure);
+    OMV_FIR_LEPTON_RST_HIGH();
+    #endif
+
+    #if defined(OMV_FIR_LEPTON_PWDN_PIN_PRESENT)
+    GPIO_InitStructure.Pin       = OMV_FIR_LEPTON_PWDN_PIN;
+    GPIO_InitStructure.Pull      = GPIO_NOPULL;
+    HAL_GPIO_Init(OMV_FIR_LEPTON_PWDN_PORT, &GPIO_InitStructure);
+    OMV_FIR_LEPTON_PWDN_HIGH();
+    #endif
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
