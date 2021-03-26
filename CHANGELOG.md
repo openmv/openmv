@@ -1,4 +1,22 @@
 # Change Log
+## [3.9.4](https://github.com/openmv/openmv/releases/tag/v3.9.4) (2021-03-26)
+* Add new buzzer Python module.
+* Add Ethernet low-power mode functions.
+* Add ULPI/Phy low-power mode functions.
+* Add initial OV767x sensor driver.
+* Optimized DMA buffers allocation to reduce bus contention.
+* Update MT9V034 manual AEC/AEG, manual gain/exposure and implement readout control.
+* Update HM01B0 driver, add support for motion detection, manual exposure and 320x320 mode.
+* Optimize software and hardware JPEG compression.
+* Improve FLIR module DMA bandwidth usage.
+* Optimize TV driver DMA bandwidth usage.
+* Fix Portenta low-power modes (stop and standby modes).
+* Fix OV5640 autofocus logic.
+* Fix linker script stack alignment for boards with SRAM stack.
+* Fix Portenta MPU regions to default state on reset.
+* Update RTSP server and examples to work with FFPLAY.
+* Update Portenta examples, add Himax low-power/motion detection example.
+
 ## [3.9.3](https://github.com/openmv/openmv/releases/tag/v3.9.3) (2021-02-13)
 * Fix issues with Portenta WiFi.
 * Fix JPEG Binary image compression.
