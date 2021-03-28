@@ -679,9 +679,7 @@ static void spi_tv_display(image_t *src_img, int dst_x_start, int dst_y_start, f
                            const uint16_t *color_palette, const uint8_t *alpha_palette,
                            image_hint_t hint)
 {
-    bool rgb565 = ((rgb_channel == -1) &&
-            ((src_img->bpp == IMAGE_BPP_RGB565) || src_img->bpp == IMAGE_BPP_BAYER))
-            || color_palette;
+    bool rgb565 = ((rgb_channel == -1) && IMAGE_IS_COLOR(src_img)) || color_palette;
     imlib_draw_row_callback_t cb = rgb565 ? spi_tv_draw_image_cb_rgb565 : spi_tv_draw_image_cb_grayscale;
 
     image_t dst_img;
@@ -959,7 +957,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(py_tv_channel_obj, 0, 1, py_tv_channe
 
 STATIC mp_obj_t py_tv_display(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *arg_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *arg_img = py_helper_arg_to_image_mutable_bayer_jpeg(args[0]);
 
     int arg_x_off = 0;
     int arg_y_off = 0;

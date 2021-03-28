@@ -28,6 +28,8 @@
 #include "py/mphal.h"
 #endif
 
+// API OUTDATED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//
 // src -> Image object with data pointing to jpeg data and bpp equal to the data size. Width/Height
 //        may be invalid and should be ignored...
 // dst -> Output image object, all fields are invalid. jpeg_decompress() sets the width/height/bpp
@@ -45,4 +47,25 @@ bool jpeg_decompress(image_t *src, image_t *dst)
 #endif
 
     return false;
+}
+
+// Dst is an already allocated BINARY image. Fill it with JPEG data from source. On error fill
+// remaining pixels with 0.
+void imlib_jpeg_decompress_image_to_binary(image_t *dst, image_t *src)
+{
+
+}
+
+// Dst is an already allocated GRAYSCALE image. Fill it with JPEG data from source. On error fill
+// remaining pixels with 0.
+void imlib_jpeg_decompress_image_to_grayscale(image_t *dst, image_t *src)
+{
+
+}
+
+// Dst is an already allocated RGB565 image. Fill it with JPEG data from source. On error fill
+// remaining pixels with 0.
+void imlib_jpeg_decompress_image_to_rgb565(image_t *dst, image_t *src)
+{
+
 }
