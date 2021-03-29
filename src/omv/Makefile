@@ -99,7 +99,6 @@ SRCS += $(addprefix imlib/,     \
 	stats.c                     \
 	template.c                  \
 	xyz_tab.c                   \
-	yuv_tab.c                   \
 	zbar.c                      \
    )
 
