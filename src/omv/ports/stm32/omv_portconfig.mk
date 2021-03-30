@@ -213,7 +213,6 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/, \
 	stats.o                     \
 	template.o                  \
 	xyz_tab.o                   \
-	yuv_tab.o                   \
 	zbar.o                      \
    )
 
@@ -497,7 +496,6 @@ UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/, \
 UVC_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/imlib/,\
 	lab_tab.o                               \
 	xyz_tab.o                               \
-	yuv_tab.o                               \
 	rainbow_tab.o                           \
 	jpeg.o                                  \
 	fmath.o                                 \

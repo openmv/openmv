@@ -296,7 +296,6 @@ color_thresholds_list_lnk_data_t;
 })
 
 extern const int8_t lab_table[196608/2];
-extern const int8_t yuv_table[196608];
 
 #ifdef IMLIB_ENABLE_LAB_LUT
 #define COLOR_RGB565_TO_L(pixel) lab_table[((pixel>>1) * 3) + 0]
@@ -310,60 +309,6 @@ extern const int8_t yuv_table[196608];
 
 #define COLOR_LAB_TO_RGB565(l, a, b) imlib_lab_to_rgb(l, a, b)
 #define COLOR_YUV_TO_RGB565(y, u, v) imlib_yuv_to_rgb((y) + 128, u, v)
-
-#define COLOR_BAYER_TO_RGB565(img, x, y, r, g, b)            \
-({                                                           \
-    __typeof__ (x) __x = (x);                                \
-    __typeof__ (y) __y = (y);                                \
-    if ((__y % 2) == 0) {                                    \
-        if ((__x % 2) == 0) {                                \
-            r = (IM_GET_RAW_PIXEL(img, __x-1, __y-1)  +      \
-                 IM_GET_RAW_PIXEL(img, __x+1, __y-1)  +      \
-                 IM_GET_RAW_PIXEL(img, __x-1, __y+1)  +      \
-                 IM_GET_RAW_PIXEL(img, __x+1, __y+1)) >> 2;  \
-                                                             \
-            g = (IM_GET_RAW_PIXEL(img, __x,   __y-1)  +      \
-                 IM_GET_RAW_PIXEL(img, __x,   __y+1)  +      \
-                 IM_GET_RAW_PIXEL(img, __x-1, __y)    +      \
-                 IM_GET_RAW_PIXEL(img, __x+1, __y))   >> 2;  \
-                                                             \
-            b = IM_GET_RAW_PIXEL(img,  __x, __y);            \
-        } else {                                             \
-            r = (IM_GET_RAW_PIXEL(img, __x, __y-1)  +        \
-                 IM_GET_RAW_PIXEL(img, __x, __y+1)) >> 1;    \
-                                                             \
-            b = (IM_GET_RAW_PIXEL(img, __x-1, __y)  +        \
-                 IM_GET_RAW_PIXEL(img, __x+1, __y)) >> 1;    \
-                                                             \
-            g =  IM_GET_RAW_PIXEL(img, __x, __y);            \
-        }                                                    \
-    } else {                                                 \
-        if ((__x % 2) == 0) {                                \
-            r = (IM_GET_RAW_PIXEL(img, __x-1, __y)  +        \
-                 IM_GET_RAW_PIXEL(img, __x+1, __y)) >> 1;    \
-                                                             \
-            g =  IM_GET_RAW_PIXEL(img, __x, __y);            \
-                                                             \
-            b = (IM_GET_RAW_PIXEL(img, __x, __y-1)  +        \
-                 IM_GET_RAW_PIXEL(img, __x, __y+1)) >> 1;    \
-        } else {                                             \
-            r = IM_GET_RAW_PIXEL(img,  __x, __y);            \
-                                                             \
-            g = (IM_GET_RAW_PIXEL(img, __x, __y-1)    +      \
-                 IM_GET_RAW_PIXEL(img, __x, __y+1)    +      \
-                 IM_GET_RAW_PIXEL(img, __x-1, __y)    +      \
-                 IM_GET_RAW_PIXEL(img, __x+1, __y))   >> 2;  \
-                                                             \
-            b = (IM_GET_RAW_PIXEL(img, __x-1, __y-1)  +      \
-                 IM_GET_RAW_PIXEL(img, __x+1, __y-1)  +      \
-                 IM_GET_RAW_PIXEL(img, __x-1, __y+1)  +      \
-                 IM_GET_RAW_PIXEL(img, __x+1, __y+1)) >> 2;  \
-        }                                                    \
-    }                                                        \
-    r  = r >> 3;                                             \
-    g  = g >> 2;                                             \
-    b  = b >> 3;                                             \
-})
 
 #define COLOR_BINARY_TO_GRAYSCALE(pixel) ((pixel) * COLOR_GRAYSCALE_MAX)
 #define COLOR_BINARY_TO_RGB565(pixel) COLOR_YUV_TO_RGB565(((pixel) ? 127 : -128), 0, 0)
@@ -607,37 +552,8 @@ extern const int8_t kernel_gauss_5[25];
 extern const int kernel_laplacian_3[9];
 extern const int kernel_high_pass_3[9];
 
-#define IM_RGB5652L(p) \
-    ({ __typeof__ (p) _p = (p); \
-       lab_table[((_p>>1) * 3) + 0]; })
-
-#define IM_RGB5652A(p) \
-    ({ __typeof__ (p) _p = (p); \
-       lab_table[((_p>>1) * 3) + 1]; })
-
-#define IM_RGB5652B(p) \
-    ({ __typeof__ (p) _p = (p); \
-       lab_table[((_p>>1) * 3) + 2]; })
-
 // Grayscale maxes
 #define IM_MAX_GS (255)
-
-// RGB565 maxes
-#define IM_MAX_R5 (31)
-#define IM_MAX_G6 (63)
-#define IM_MAX_B5 (31)
-
-// Grayscale histogram
-#define IM_G_HIST_SIZE (256)
-#define IM_G_HIST_OFFSET (0)
-
-// LAB histogram
-#define IM_L_HIST_SIZE (256)
-#define IM_L_HIST_OFFSET (0)
-#define IM_A_HIST_SIZE (256)
-#define IM_A_HIST_OFFSET (256)
-#define IM_B_HIST_SIZE (256)
-#define IM_B_HIST_OFFSET (512)
 
 #define IM_IS_BINARY(img) \
     ({ __typeof__ (img) _img = (img); \
@@ -659,10 +575,6 @@ extern const int kernel_high_pass_3[9];
     ({ __typeof__ (img) _img = (img); \
        _img->bpp >= 4; })
 
-#define IM_IS_MUTABLE(img) \
-    ({ __typeof__ (img) _img = (img); \
-       (_img->bpp == 1 || _img->bpp == 2); })
-
 #define IM_X_INSIDE(img, x) \
     ({ __typeof__ (img) _img = (img); \
        __typeof__ (x) _x = (x); \
@@ -677,34 +589,6 @@ extern const int kernel_high_pass_3[9];
     ({ __typeof__ (img) _img = (img); \
        __typeof__ (x) _x = (x); \
        __typeof__ (y) _y = (y); \
-       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
-
-#define IM_GET_RAW_PIXEL(img, x, y) \
-    ({ __typeof__ (img) _img = (img); \
-       __typeof__ (x) _x = (x); \
-       __typeof__ (y) _y = (y); \
-       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
-
-#define IM_GET_RAW_PIXEL_CHECK_BOUNDS_X(img, x, y) \
-    ({ __typeof__ (img) _img = (img); \
-       __typeof__ (x) _x = (x); \
-       __typeof__ (y) _y = (y); \
-       _x = (_x < 0) ? 0 : (_x >= img->w) ? (img->w -1): _x; \
-       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
-
-#define IM_GET_RAW_PIXEL_CHECK_BOUNDS_Y(img, x, y) \
-    ({ __typeof__ (img) _img = (img); \
-       __typeof__ (x) _x = (x); \
-       __typeof__ (y) _y = (y); \
-       _y = (_y < 0) ? 0 : (_y >= img->h) ? (img->h -1): _y; \
-       ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
-
-#define IM_GET_RAW_PIXEL_CHECK_BOUNDS_XY(img, x, y) \
-    ({ __typeof__ (img) _img = (img); \
-       __typeof__ (x) _x = (x); \
-       __typeof__ (y) _y = (y); \
-       _x = (_x < 0) ? 0 : (_x >= img->w) ? (img->w -1): _x; \
-       _y = (_y < 0) ? 0 : (_y >= img->h) ? (img->h -1): _y; \
        ((uint8_t*)_img->pixels)[(_y*_img->w)+_x]; })
 
 #define IM_GET_RGB565_PIXEL(img, x, y) \
@@ -1044,6 +928,7 @@ typedef struct imlib_draw_row_data {
 
 typedef void (*imlib_draw_row_callback_t)(int x_start, int x_end, int y_row, imlib_draw_row_data_t *data);
 
+// Library Hardware Init
 void imlib_init_all();
 void imlib_deinit_all();
 

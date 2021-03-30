@@ -93,13 +93,12 @@ void gif_add_frame(FIL *fp, image_t *img, uint16_t delay)
             int block_size = IM_MIN(BLOCK_SIZE, bytes - (y*BLOCK_SIZE));
             write_byte(fp, 1 + block_size);
             write_byte(fp, 0x80); // clear code
+            uint16_t pixels[block_size];
+            imlib_debayer_line_to_rgb565(0, block_size, y, pixels, img);
             for (int x=0; x<block_size; x++) {
-                int r=0, g=0, b=0;
-                int x_offs = ((y*BLOCK_SIZE) + x) % img->w;
-                int y_offs = (y*BLOCK_SIZE) / img->w;
-                if (x_offs > 0 && y_offs > 0 && x_offs < img->w-1 && y_offs < img->h-1) {
-                    COLOR_BAYER_TO_RGB565(img, x_offs, y_offs, r, g, b);
-                }
+                int r = COLOR_RGB565_TO_R8(pixels[x]);
+                int g = COLOR_RGB565_TO_G8(pixels[x]);
+                int b = COLOR_RGB565_TO_B8(pixels[x]);
                 r >>=3; g >>=3; b >>=3;
                 write_byte(fp, (r<<5) | (g<<2) | b);
             }
