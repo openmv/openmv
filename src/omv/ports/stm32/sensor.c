@@ -22,6 +22,7 @@
 #include "ov7690.h"
 #include "ov9650.h"
 #include "mt9v034.h"
+#include "mt9m114.h"
 #include "lepton.h"
 #include "hm01b0.h"
 #include "systick.h"
@@ -361,6 +362,9 @@ int sensor_init()
         case MT9V034_SLV_ADDR:
             cambus_readb(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id);
             break;
+        case MT9M114_SLV_ADDR:
+            cambus_readw2(&sensor.bus, sensor.slv_addr, ON_CHIP_ID, &sensor.chip_id_w);
+            break;
         case LEPTON_SLV_ADDR:
             sensor.chip_id = LEPTON_ID;
             break;
@@ -429,6 +433,15 @@ int sensor_init()
             init_ret = mt9v034_init(&sensor);
             break;
         #endif //(OMV_ENABLE_MT9V034 == 1)
+
+        #if (OMV_ENABLE_MT9M114 == 1)
+        case MT9M114_ID:
+            if (extclk_config(MT9M114_XCLK_FREQ) != 0) {
+                return -3;
+            }
+            init_ret = mt9m114_init(&sensor);
+            break;
+        #endif //(OMV_ENABLE_MT9M114 == 1)
 
         #if (OMV_ENABLE_LEPTON == 1)
         case LEPTON_ID:

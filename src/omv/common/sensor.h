@@ -17,6 +17,7 @@
 #define OV5640_SLV_ADDR     (0x78)
 #define OV7725_SLV_ADDR     (0x42)
 #define MT9V034_SLV_ADDR    (0xB8)
+#define MT9M114_SLV_ADDR    (0x90)
 #define LEPTON_SLV_ADDR     (0x54)
 #define HM01B0_SLV_ADDR     (0x48)
 
@@ -34,6 +35,7 @@
 #define OV7725_ID           (0x77)
 #define OV9650_ID           (0x96)
 #define MT9V034_ID          (0x13)
+#define MT9M114_ID          (0x81)
 #define LEPTON_ID           (0x54)
 #define HM01B0_ID           (0xB0)
 
@@ -150,7 +152,10 @@ typedef void (*vsync_cb_t)(uint32_t vsync);
 
 typedef struct _sensor sensor_t;
 typedef struct _sensor {
+    union {
     uint8_t  chip_id;           // Sensor ID.
+    uint16_t chip_id_w;         // Sensor ID 16 bits.
+    };
     uint8_t  slv_addr;          // Sensor I2C slave address.
     uint16_t gs_bpp;            // Grayscale bytes per pixel.
     uint32_t hw_flags;          // Hardware flags (clock polarities/hw capabilities)

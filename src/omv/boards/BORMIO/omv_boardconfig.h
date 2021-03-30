@@ -48,6 +48,7 @@
 #define OMV_ENABLE_OV7725       (0)
 #define OMV_ENABLE_OV9650       (0)
 #define OMV_ENABLE_MT9V034      (0)
+#define OMV_ENABLE_MT9M114      (1)
 #define OMV_ENABLE_LEPTON       (0)
 #define OMV_ENABLE_HM01B0       (0)
 
@@ -176,7 +177,7 @@
 
 // Domain 2 DMA buffers region.
 #define OMV_DMA_MEMORY_D2       SRAM2
-#define OMV_DMA_MEMORY_D2_SIZE  (2*1024) // Reserved memory for DMA buffers
+#define OMV_DMA_MEMORY_D2_SIZE  (1*1024) // Reserved memory for DMA buffers
 #define OMV_DMA_REGION_D2_BASE  (OMV_SRAM2_ORIGIN+(0*1024))
 #define OMV_DMA_REGION_D2_SIZE  MPU_REGION_SIZE_8KB
 

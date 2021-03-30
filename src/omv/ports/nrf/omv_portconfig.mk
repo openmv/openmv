@@ -116,6 +116,7 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(OMV_DIR)/sensors/,   \
 	ov7725.o                    \
 	ov9650.o                    \
 	mt9v034.o                   \
+	mt9m114.o                   \
 	lepton.o                    \
 	hm01b0.o                    \
    )
