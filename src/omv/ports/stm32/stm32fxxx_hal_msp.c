@@ -220,6 +220,15 @@ void HAL_MspInit(void)
     #endif
 
     #endif // DCMI_RESET_PIN || DCMI_PWDN_PIN || DCMI_FSYNC_PIN
+
+    // This disconnects PA0/PA1/PC2/PC3 from PA0_C/PA1_C/PC2_C/PC3_C.
+    // PA0_C/PA1_C connect to ADC1/2 Channels P0/P1. PC2_C/PC3_C connect to ADC3 Channels P0/P1.
+    #if defined(MCU_SERIES_H7)
+    HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PA0, SYSCFG_SWITCH_PA0_OPEN);
+    HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PA1, SYSCFG_SWITCH_PA1_OPEN);
+    HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PC2, SYSCFG_SWITCH_PC2_OPEN);
+    HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PC3, SYSCFG_SWITCH_PC3_OPEN);
+    #endif
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c)
