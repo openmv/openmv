@@ -464,6 +464,7 @@ static int set_hmirror(sensor_t *sensor, int enable)
     uint8_t reg;
     int ret = cambus_readb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, &reg);
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_HMIRROR(reg, enable)) ;
+    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
     return ret;
 }
 
@@ -472,6 +473,7 @@ static int set_vflip(sensor_t *sensor, int enable)
     uint8_t reg;
     int ret = cambus_readb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, &reg);
     ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, IMG_ORIENTATION, HIMAX_SET_VMIRROR(reg, enable)) ;
+    ret |= cambus_writeb2(&sensor->bus, sensor->slv_addr, GRP_PARAM_HOLD, 0x01);
     return ret;
 }
 
