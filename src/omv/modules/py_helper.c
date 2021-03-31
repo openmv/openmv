@@ -37,6 +37,13 @@ image_t *py_helper_arg_to_image_mutable_bayer(const mp_obj_t arg)
     return arg_img;
 }
 
+image_t *py_helper_arg_to_image_mutable_bayer_jpeg(const mp_obj_t arg)
+{
+    image_t *arg_img = py_image_cobj(arg);
+    PY_ASSERT_TRUE_MSG(IMAGE_IS_MUTABLE_BAYER_JPEG(arg_img), "Image is not mutable!");
+    return arg_img;
+}
+
 image_t *py_helper_arg_to_image_grayscale(const mp_obj_t arg)
 {
     image_t *arg_img = py_image_cobj(arg);

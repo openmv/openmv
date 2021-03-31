@@ -870,7 +870,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_midpoint_pooled_obj, 3, py_image_midp
 static mp_obj_t py_image_to(int bpp, const uint16_t *default_color_palette, bool copy_to_fb,
                             uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
 {
-    image_t *src_img = py_helper_arg_to_image_mutable_bayer(args[0]);
+    image_t *src_img = py_helper_arg_to_image_mutable_bayer_jpeg(args[0]);
 
     float arg_x_scale = 1.f;
     bool got_x_scale = py_helper_keyword_float_maybe(n_args, args, 1, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_x_scale), &arg_x_scale);
@@ -963,6 +963,19 @@ static mp_obj_t py_image_to(int bpp, const uint16_t *default_color_palette, bool
                       IMAGE_HINT_EXTRACT_RGB_CHANNEL_FIRST |
                       IMAGE_HINT_APPLY_COLOR_PALETTE_FIRST);
         }
+    } else if (dst_img.bpp >= IMAGE_BPP_JPEG) {
+        if ((arg_x_scale != 1) ||
+            (arg_y_scale != 1) ||
+            (arg_roi.x != 0) ||
+            (arg_roi.y != 0) ||
+            (arg_roi.w != src_img->w) ||
+            (arg_roi.h != src_img->h) ||
+            (arg_rgb_channel != -1) ||
+            (arg_alpha != 256) ||
+            (color_palette != NULL) ||
+            (alpha_palette != NULL)) {
+            mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Only jpeg copying is supported!"));
+        }
     }
 
     if (copy) {
@@ -983,11 +996,17 @@ static mp_obj_t py_image_to(int bpp, const uint16_t *default_color_palette, bool
         dst_img.data = xalloc(image_size(&dst_img));
     }
 
-    fb_alloc_mark();
-    imlib_draw_image(&dst_img, src_img, 0, 0, arg_x_scale, arg_y_scale, &arg_roi,
-                     arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
-                     (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
-    fb_alloc_free_till_mark();
+    if (dst_img.bpp >= IMAGE_BPP_JPEG) {
+        if (dst_img.data != src_img->data) {
+            memcpy(dst_img.data, src_img->data, dst_img.bpp);
+        }
+    } else {
+        fb_alloc_mark();
+        imlib_draw_image(&dst_img, src_img, 0, 0, arg_x_scale, arg_y_scale, &arg_roi,
+                        arg_rgb_channel, arg_alpha, color_palette, alpha_palette,
+                        (hint & (~IMAGE_HINT_CENTER)) | IMAGE_HINT_BLACK_BACKGROUND, NULL, NULL);
+        fb_alloc_free_till_mark();
+    }
 
     if (arg_other) {
         arg_other->w = dst_img.w;

@@ -437,6 +437,24 @@ bool image_get_mask_pixel(image_t *ptr, int x, int y);
     (_image->bpp == IMAGE_BPP_BAYER); \
 })
 
+#define IMAGE_IS_MUTABLE_BAYER_JPEG(image) \
+({ \
+    __typeof__ (image) _image = (image); \
+    (_image->bpp == IMAGE_BPP_BINARY) || \
+    (_image->bpp == IMAGE_BPP_GRAYSCALE) || \
+    (_image->bpp == IMAGE_BPP_RGB565) || \
+    (_image->bpp == IMAGE_BPP_BAYER) || \
+    (_image->bpp >= IMAGE_BPP_JPEG); \
+})
+
+#define IMAGE_IS_COLOR(image) \
+({ \
+    __typeof__ (image) _image = (image); \
+    (_image->bpp == IMAGE_BPP_RGB565) || \
+    (_image->bpp == IMAGE_BPP_BAYER) || \
+    (_image->bpp >= IMAGE_BPP_JPEG); \
+})
+
 #define IMAGE_BINARY_LINE_LEN(image) (((image)->w + UINT32_T_MASK) >> UINT32_T_SHIFT)
 #define IMAGE_BINARY_LINE_LEN_BYTES(image) (IMAGE_BINARY_LINE_LEN(image) * sizeof(uint32_t))
 
