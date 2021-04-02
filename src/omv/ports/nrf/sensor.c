@@ -984,7 +984,7 @@ void sensor_check_buffsize()
 }
 
 // This is the default snapshot function, which can be replaced in sensor_init functions.
-int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
+int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 {
     uint8_t *b = MAIN_FB()->pixels;
     uint32_t _width  = MAIN_FB()->w;

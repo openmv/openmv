@@ -116,7 +116,7 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
 
     mp_obj_t image = py_image(0, 0, 0, 0);
     // Note: OV2640 JPEG mode can __fatal_error().
-    int ret = sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), NULL);
+    int ret = sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), 0);
 
     if (ret < 0) {
         mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Capture Failed: %d"), ret);

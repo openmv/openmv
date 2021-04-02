@@ -147,7 +147,6 @@ typedef enum {
 #define SENSOR_HW_FLAGS_SET(s, x, v) ((s)->hw_flags |= (v<<x))
 #define SENSOR_HW_FLAGS_CLR(s, x)    ((s)->hw_flags &= ~(1<<x))
 
-typedef bool (*streaming_cb_t)(image_t *image);
 typedef void (*vsync_cb_t)(uint32_t vsync);
 
 typedef struct _sensor sensor_t;
@@ -204,7 +203,7 @@ typedef struct _sensor {
     int  (*set_special_effect)  (sensor_t *sensor, sde_t sde);
     int  (*set_lens_correction) (sensor_t *sensor, int enable, int radi, int coef);
     int  (*ioctl)               (sensor_t *sensor, int request, va_list ap);
-    int  (*snapshot)            (sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+    int  (*snapshot)            (sensor_t *sensor, image_t *image, uint32_t flags);
 } sensor_t;
 
 // Resolution table
@@ -329,5 +328,5 @@ int sensor_set_color_palette(const uint16_t *color_palette);
 const uint16_t *sensor_get_color_palette();
 
 // Default snapshot function.
-int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb);
+int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags);
 #endif /* __SENSOR_H__ */

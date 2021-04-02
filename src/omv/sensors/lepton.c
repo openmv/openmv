@@ -482,7 +482,7 @@ static int sensor_check_buffsize(sensor_t *sensor)
     return 0;
 }
 
-static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_cb)
+static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 {
     fb_update_jpeg_buffer();
 
@@ -494,147 +494,138 @@ static int snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         return -1;
     }
 
-    bool frame_ready = false;
-    bool streaming = (streaming_cb != NULL); // Streaming mode.
+    // The SPI DMA device is always clocking the FLIR Lepton in the background.
+    // The code below resets the vospi control values to let data be pulled in.
+    // If we need to re-sync we do it. Otherwise, after we finish pulling data
+    // in we exit and let the SPI bus keep running. Then on the next call to
+    // snapshot we read in more data and pull in the next frame.
+    HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
+    vospi_pid = VOSPI_FIRST_PACKET;
+    vospi_seg = VOSPI_FIRST_SEGMENT;
+    HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
+
+    // Snapshot start tick
+    mp_uint_t tick_start = mp_hal_ticks_ms();
+    bool reset_tried = false;
 
     do {
-        // The SPI DMA device is always clocking the FLIR Lepton in the background.
-        // The code below resets the vospi control values to let data be pulled in.
-        // If we need to re-sync we do it. Otherwise, after we finish pulling data
-        // in we exit and let the SPI bus keep running. Then on the next call to
-        // snapshot we read in more data and pull in the next frame.
-        HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
-        vospi_pid = VOSPI_FIRST_PACKET;
-        vospi_seg = VOSPI_FIRST_SEGMENT;
-        HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
-
-        // Snapshot start tick
-        mp_uint_t tick_start = mp_hal_ticks_ms();
-        bool reset_tried = false;
-
-        do {
-            if (vospi_resync == true) {
-                lepton_sync();
-            }
-            if (frame_ready == true && streaming_cb != NULL) {
-                // Start streaming the frame while a new one is captured.
-                streaming = streaming_cb(image);
-                frame_ready = false;
-            } else {
-                __WFI();
-            }
-            if ((mp_hal_ticks_ms() - tick_start) >= 20000) {
-                // Timeout error.
-                return -1;
-            }
-            if ((!reset_tried) && ((mp_hal_ticks_ms() - tick_start) >= 10000)) {
-                reset_tried = true;
-
-                // The FLIR lepton might have crashed so reset it (it does this).
-                bool temp_h_mirror = h_mirror;
-                bool temp_v_flip = v_flip;
-                int ret = lepton_reset(sensor, measurement_mode);
-                h_mirror = temp_h_mirror;
-                v_flip = temp_v_flip;
-
-                if (ret < 0) {
-                    return -1;
-                }
-
-                // Reset the VOSPI interface again.
-                HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
-                vospi_pid = VOSPI_FIRST_PACKET;
-                vospi_seg = VOSPI_FIRST_SEGMENT;
-                HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
-            }
-        } while (vospi_pid < vospi_packets); // only checking one volatile var so atomic.
-
-        MAIN_FB()->w = MAIN_FB()->u;
-        MAIN_FB()->h = MAIN_FB()->v;
-
-        switch (sensor->pixformat) {
-            case PIXFORMAT_GRAYSCALE: {
-                MAIN_FB()->bpp = IMAGE_BPP_GRAYSCALE;
-                break;
-            }
-            case PIXFORMAT_RGB565: {
-                MAIN_FB()->bpp = IMAGE_BPP_RGB565;
-                break;
-            }
-            default: {
-                break;
-            }
+        if (vospi_resync == true) {
+            lepton_sync();
         }
 
-        image->w = MAIN_FB()->u;
-        image->h = MAIN_FB()->v;
-        image->bpp = MAIN_FB()->bpp; // invalid
-        image->data = MAIN_FB()->pixels; // valid
+        __WFI();
 
-        uint16_t *src = (uint16_t*) vospi_buffer;
-
-        float x_scale = resolution[sensor->framesize][0] / ((float) h_res);
-        float y_scale = resolution[sensor->framesize][1] / ((float) v_res);
-        // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
-        float scale = IM_MAX(x_scale, y_scale), scale_inv = 1.0f / scale;
-        int x_offset = (resolution[sensor->framesize][0] - (h_res * scale)) / 2;
-        int y_offset = (resolution[sensor->framesize][1] - (v_res * scale)) / 2;
-        // The code below upscales the source image to the requested frame size
-        // and then crops it to the window set by the user.
-
-        LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
-        if (measurement_mode && (!radiometry)) {
-            if (LEP_GetSysFpaTemperatureKelvin(&LEPHandle, &kelvin) != LEP_OK) {
-                return -1;
-            }
+        if ((mp_hal_ticks_ms() - tick_start) >= 20000) {
+            // Timeout error.
+            return -1;
         }
 
-        for (int y = y_offset, yy = fast_ceilf(v_res * scale) + y_offset; y < yy; y++) {
-            if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) { // user window cropping
+        if ((!reset_tried) && ((mp_hal_ticks_ms() - tick_start) >= 10000)) {
+            reset_tried = true;
 
-                uint16_t *row_ptr = src + (fast_floorf(y * scale_inv) * h_res);
+            // The FLIR lepton might have crashed so reset it (it does this).
+            bool temp_h_mirror = h_mirror;
+            bool temp_v_flip = v_flip;
+            int ret = lepton_reset(sensor, measurement_mode);
+            h_mirror = temp_h_mirror;
+            v_flip = temp_v_flip;
 
-                for (int x = x_offset, xx = fast_ceilf(h_res * scale) + x_offset; x < xx; x++) {
-                    if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) { // user window cropping
+            if (ret < 0) {
+                return -1;
+            }
 
-                        // Value is the 14/16-bit value from the FLIR IR camera.
-                        // However, with AGC enabled only the bottom 8-bits are non-zero.
-                        int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]);
+            // Reset the VOSPI interface again.
+            HAL_NVIC_DisableIRQ(LEPTON_SPI_DMA_IRQn);
+            vospi_pid = VOSPI_FIRST_PACKET;
+            vospi_seg = VOSPI_FIRST_SEGMENT;
+            HAL_NVIC_EnableIRQ(LEPTON_SPI_DMA_IRQn);
+        }
+    } while (vospi_pid < vospi_packets); // only checking one volatile var so atomic.
 
-                        if (measurement_mode) {
-                            // Need to convert 14/16-bits to 8-bits ourselves...
-                            if (!radiometry) value = (value - 8192) + kelvin;
-                            float celsius = (value * 0.01f) - 273.15f;
-                            celsius = IM_MAX(IM_MIN(celsius, max_temp), min_temp);
-                            value = IM_MAX(IM_MIN(IM_DIV(((celsius - min_temp) * 255), (max_temp - min_temp)), 255), 0);
+    MAIN_FB()->w = MAIN_FB()->u;
+    MAIN_FB()->h = MAIN_FB()->v;
+
+    switch (sensor->pixformat) {
+        case PIXFORMAT_GRAYSCALE: {
+            MAIN_FB()->bpp = IMAGE_BPP_GRAYSCALE;
+            break;
+        }
+        case PIXFORMAT_RGB565: {
+            MAIN_FB()->bpp = IMAGE_BPP_RGB565;
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    image->w = MAIN_FB()->u;
+    image->h = MAIN_FB()->v;
+    image->bpp = MAIN_FB()->bpp; // invalid
+    image->data = MAIN_FB()->pixels; // valid
+
+    uint16_t *src = (uint16_t*) vospi_buffer;
+
+    float x_scale = resolution[sensor->framesize][0] / ((float) h_res);
+    float y_scale = resolution[sensor->framesize][1] / ((float) v_res);
+    // MAX == KeepAspectRationByExpanding - MIN == KeepAspectRatio
+    float scale = IM_MAX(x_scale, y_scale), scale_inv = 1.0f / scale;
+    int x_offset = (resolution[sensor->framesize][0] - (h_res * scale)) / 2;
+    int y_offset = (resolution[sensor->framesize][1] - (v_res * scale)) / 2;
+    // The code below upscales the source image to the requested frame size
+    // and then crops it to the window set by the user.
+
+    LEP_SYS_FPA_TEMPERATURE_KELVIN_T kelvin;
+    if (measurement_mode && (!radiometry)) {
+        if (LEP_GetSysFpaTemperatureKelvin(&LEPHandle, &kelvin) != LEP_OK) {
+            return -1;
+        }
+    }
+
+    for (int y = y_offset, yy = fast_ceilf(v_res * scale) + y_offset; y < yy; y++) {
+        if ((MAIN_FB()->y <= y) && (y < (MAIN_FB()->y + MAIN_FB()->v))) { // user window cropping
+
+            uint16_t *row_ptr = src + (fast_floorf(y * scale_inv) * h_res);
+
+            for (int x = x_offset, xx = fast_ceilf(h_res * scale) + x_offset; x < xx; x++) {
+                if ((MAIN_FB()->x <= x) && (x < (MAIN_FB()->x + MAIN_FB()->u))) { // user window cropping
+
+                    // Value is the 14/16-bit value from the FLIR IR camera.
+                    // However, with AGC enabled only the bottom 8-bits are non-zero.
+                    int value = __REV16(row_ptr[fast_floorf(x * scale_inv)]);
+
+                    if (measurement_mode) {
+                        // Need to convert 14/16-bits to 8-bits ourselves...
+                        if (!radiometry) value = (value - 8192) + kelvin;
+                        float celsius = (value * 0.01f) - 273.15f;
+                        celsius = IM_MAX(IM_MIN(celsius, max_temp), min_temp);
+                        value = IM_MAX(IM_MIN(IM_DIV(((celsius - min_temp) * 255), (max_temp - min_temp)), 255), 0);
+                    }
+
+                    int t_x = x - MAIN_FB()->x;
+                    int t_y = y - MAIN_FB()->y;
+
+                    if (h_mirror) t_x = MAIN_FB()->u - t_x - 1;
+                    if (v_flip) t_y = MAIN_FB()->v - t_y - 1;
+
+                    switch (sensor->pixformat) {
+                        case PIXFORMAT_GRAYSCALE: {
+                            IMAGE_PUT_GRAYSCALE_PIXEL(image, t_x, t_y, value & 0xFF);
+                            break;
                         }
-
-                        int t_x = x - MAIN_FB()->x;
-                        int t_y = y - MAIN_FB()->y;
-
-                        if (h_mirror) t_x = MAIN_FB()->u - t_x - 1;
-                        if (v_flip) t_y = MAIN_FB()->v - t_y - 1;
-
-                        switch (sensor->pixformat) {
-                            case PIXFORMAT_GRAYSCALE: {
-                                IMAGE_PUT_GRAYSCALE_PIXEL(image, t_x, t_y, value & 0xFF);
-                                break;
-                            }
-                            case PIXFORMAT_RGB565: {
-                                IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, sensor->color_palette[value & 0xFF]);
-                                break;
-                            }
-                            default: {
-                                break;
-                            }
+                        case PIXFORMAT_RGB565: {
+                            IMAGE_PUT_RGB565_PIXEL(image, t_x, t_y, sensor->color_palette[value & 0xFF]);
+                            break;
+                        }
+                        default: {
+                            break;
                         }
                     }
                 }
             }
         }
+    }
 
-        frame_ready = true;
-    } while (streaming && streaming_cb != NULL);
     return 0;
 }
 
