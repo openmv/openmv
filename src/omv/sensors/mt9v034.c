@@ -204,7 +204,7 @@ static int set_colorbar(sensor_t *sensor, int enable)
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_TEST_PATTERN,
             (test & (~(MT9V034_TEST_PATTERN_ENABLE | MT9V034_TEST_PATTERN_GRAY_MASK)))
           | ((enable != 0) ? (MT9V034_TEST_PATTERN_ENABLE | MT9V034_TEST_PATTERN_GRAY_VERTICAL) : 0));
-    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
     return ret;
 }
 
@@ -215,7 +215,7 @@ static int set_auto_gain(sensor_t *sensor, int enable, float gain_db, float gain
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_AEC_AGC_ENABLE,
             (reg & (~(MT9V034_AGC_ENABLE | MT9V034_AGC_ENABLE_B))) |
             ((enable != 0) ? (MT9V034_AGC_ENABLE | MT9V034_AGC_ENABLE_B) : 0));
-    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
 
     if ((enable == 0) && (!isnanf(gain_db)) && (!isinff(gain_db))) {
         int gain = IM_MAX(IM_MIN(fast_roundf(fast_expf((gain_db / 20.0f) * fast_log(10.0f)) * 16.0f), 64), 16);
@@ -261,7 +261,7 @@ static int set_auto_exposure(sensor_t *sensor, int enable, int exposure_us)
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_AEC_AGC_ENABLE,
             (reg & (~(MT9V034_AEC_ENABLE | MT9V034_AEC_ENABLE_B))) |
             ((enable != 0) ? (MT9V034_AEC_ENABLE | MT9V034_AEC_ENABLE_B) : 0));
-    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
 
     int read_mode = context ? MT9V034_READ_MODE_B : MT9V034_READ_MODE;
     int window_width = context ? MT9V034_WINDOW_WIDTH_B : MT9V034_WINDOW_WIDTH;
@@ -334,7 +334,7 @@ static int set_hmirror(sensor_t *sensor, int enable)
     ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_READ_MODE_B, &read_mode);
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_READ_MODE_B, // inverted behavior
             (read_mode & (~MT9V034_READ_MODE_COL_FLIP)) | ((enable == 0) ? MT9V034_READ_MODE_COL_FLIP : 0));
-    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
     return ret;
 }
 
@@ -347,7 +347,7 @@ static int set_vflip(sensor_t *sensor, int enable)
     ret |= cambus_readw(&sensor->bus, sensor->slv_addr, MT9V034_READ_MODE_B, &read_mode);
     ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_READ_MODE_B, // inverted behavior
             (read_mode & (~MT9V034_READ_MODE_ROW_FLIP)) | ((enable == 0) ? MT9V034_READ_MODE_ROW_FLIP : 0));
-    ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+    ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
     return ret;
 }
 
@@ -403,7 +403,7 @@ static int ioctl(sensor_t *sensor, int request, va_list ap)
             ret |= cambus_writew(&sensor->bus, sensor->slv_addr, MT9V034_CHIP_CONTROL,
                     (chip_control & (~MT9V034_CHIP_CONTROL_MODE_MASK))
                     | ((enable != 0) ? MT9V034_CHIP_CONTROL_SNAP_MODE : MT9V034_CHIP_CONTROL_MASTER_MODE));
-            ret |= sensor->snapshot(sensor, NULL, NULL); // Force shadow mode register to update...
+            ret |= sensor->snapshot(sensor, NULL, 0); // Force shadow mode register to update...
             break;
         }
         case IOCTL_GET_TRIGGERED_MODE: {
