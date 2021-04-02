@@ -38,6 +38,9 @@ sensor_t sensor = {0};
 static TIM_HandleTypeDef  TIMHandle  = {0};
 static DMA_HandleTypeDef  DMAHandle  = {0};
 static DCMI_HandleTypeDef DCMIHandle = {0};
+#if defined(MCU_SERIES_H7)
+MDMA_HandleTypeDef DCMI_MDMA_Handle = {0};
+#endif
 
 extern uint8_t _line_buf;
 static uint8_t *dest_fb = NULL;
@@ -68,7 +71,7 @@ const int resolution[][2] = {
     {64,   64  },    /* 64x64     */
     {128,  64  },    /* 128x64    */
     {128,  128 },    /* 128x128   */
-    {320,  320 },    /* 128x128   */
+    {320,  320 },    /* 320x320   */
     // Other
     {128,  160 },    /* LCD       */
     {128,  160 },    /* QQVGA2    */
@@ -150,7 +153,7 @@ static int dma_config()
     DMAHandle.Init.PeriphInc            = DMA_PINC_DISABLE;         /* Peripheral increment mode Enable */
     DMAHandle.Init.PeriphDataAlignment  = DMA_PDATAALIGN_WORD;      /* Peripheral data alignment : Word */
     DMAHandle.Init.MemDataAlignment     = DMA_MDATAALIGN_WORD;      /* Memory data alignment : Word     */
-    DMAHandle.Init.Mode                 = DMA_NORMAL;               /* Normal DMA mode                  */
+    DMAHandle.Init.Mode                 = DMA_CIRCULAR;             /* Circular DMA mode                */
     DMAHandle.Init.Priority             = DMA_PRIORITY_HIGH;        /* Priority level : high            */
     DMAHandle.Init.FIFOMode             = DMA_FIFOMODE_ENABLE;      /* FIFO mode enabled                */
     DMAHandle.Init.FIFOThreshold        = DMA_FIFO_THRESHOLD_FULL;  /* FIFO threshold full              */
@@ -220,6 +223,14 @@ static void dcmi_abort()
             DCMI->CR & DCMI_CR_ENABLE) {
         DCMI->CR &= ~DCMI_CR_ENABLE;
         HAL_DMA_Abort(&DMAHandle);
+        #if defined(MCU_SERIES_H7)
+        HAL_MDMA_Abort(&DCMI_MDMA_Handle);
+        HAL_MDMA_DeInit(&DCMI_MDMA_Handle);
+        // Clear DBM bit to reset DMA back to circular mode.
+        ((DMA_Stream_TypeDef *) DMAHandle.Instance)->CR &= ~DMA_SxCR_DBM;
+        // Re-enable DMA IRQ if it was turned off.
+        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+        #endif
     }
 }
 
@@ -1107,6 +1118,17 @@ static void sensor_check_buffsize()
     if (MAIN_FB()->y % 2) MAIN_FB()->y -= 1;
 }
 
+#if defined(MCU_SERIES_H7)
+// Because MDMA is now taking care of the transfer in the background HAL_DMA_IRQHandler,
+// DCMI_DMAXferCplt, and DCMI_DMAConvCpltUser will not be called by the DMA transfer complete
+// interrupt. So, we have to manually cleanup DMA state and DCMI state in this interrupt handler
+// at the end of the MDMA transfer...
+void DCMI_MDMA_XFER_CPLT_CB(MDMA_HandleTypeDef *hmdma)
+{
+    __HAL_DCMI_ENABLE_IT(&DCMIHandle, DCMI_IT_FRAME);
+}
+#endif
+
 // Stop allowing new data in on the end of the frame and let snapshot know that the frame has been
 // received. Note that DCMI_DMAConvCpltUser() is called before DCMI_IT_FRAME is enabled by
 // DCMI_DMAXferCplt() so this means that the last line of data is *always* transferred before
@@ -1376,6 +1398,96 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         // Clear jpeg error flag before we allow more data to be received.
         jpeg_buffer_overflow = false;
 
+        #if defined(MCU_SERIES_H7)
+        int width_words = (length / 4) / h;
+
+        if (sensor->pixformat != PIXFORMAT_JPEG) {
+            DCMI_MDMA_Handle.Instance                   = MDMA_Channel0; // highest pri
+            DCMI_MDMA_Handle.Init.Request               = MDMA_REQUEST_DMA2_Stream1_TC;
+            DCMI_MDMA_Handle.Init.TransferTriggerMode   = MDMA_BLOCK_TRANSFER;
+            DCMI_MDMA_Handle.Init.Priority              = MDMA_PRIORITY_VERY_HIGH;
+
+            if (SENSOR_HW_FLAGS_GET(sensor, SWNSOR_HW_FLAGS_RGB565_REV)) {
+                DCMI_MDMA_Handle.Init.Endianness = MDMA_LITTLE_BYTE_ENDIANNESS_EXCHANGE;
+            } else {
+                DCMI_MDMA_Handle.Init.Endianness = MDMA_LITTLE_ENDIANNESS_PRESERVE;
+            }
+
+            // YUV422 Source -> Y Destination
+            if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->gs_bpp == 2)) {
+                width_words /= 2;
+            }
+
+            int width_bytes = width_words * 4;
+            int buffer_size_bytes = 128;
+
+            while (width_bytes % buffer_size_bytes) {
+                buffer_size_bytes /= 2;
+            }
+
+            int buffer_size_words = buffer_size_bytes / 4;
+            int buffer_size_doublewords = buffer_size_words / 2;
+
+            if (buffer_size_words % 2) { // odd number of words
+                DCMI_MDMA_Handle.Init.SourceInc         = MDMA_SRC_INC_WORD;
+                DCMI_MDMA_Handle.Init.DestinationInc    = MDMA_DEST_INC_WORD;
+                DCMI_MDMA_Handle.Init.SourceDataSize    = MDMA_SRC_DATASIZE_WORD;
+                DCMI_MDMA_Handle.Init.DestDataSize      = MDMA_DEST_DATASIZE_WORD;
+                DCMI_MDMA_Handle.Init.SourceBurst       = MDMA_SOURCE_BURST_SINGLE;
+                DCMI_MDMA_Handle.Init.DestBurst         = MDMA_DEST_BURST_SINGLE;
+            } else { // even number of words
+                DCMI_MDMA_Handle.Init.SourceInc         = MDMA_SRC_INC_DOUBLEWORD;
+                DCMI_MDMA_Handle.Init.DestinationInc    = MDMA_DEST_INC_DOUBLEWORD;
+                DCMI_MDMA_Handle.Init.SourceDataSize    = MDMA_SRC_DATASIZE_DOUBLEWORD;
+                DCMI_MDMA_Handle.Init.DestDataSize      = MDMA_DEST_DATASIZE_DOUBLEWORD;
+                if (!(buffer_size_doublewords % 128)) {
+                    DCMI_MDMA_Handle.Init.SourceBurst   = MDMA_SOURCE_BURST_128BEATS;
+                    DCMI_MDMA_Handle.Init.DestBurst     = MDMA_DEST_BURST_128BEATS;
+                } else if (!(buffer_size_doublewords % 64)) {
+                    DCMI_MDMA_Handle.Init.SourceBurst   = MDMA_SOURCE_BURST_64BEATS;
+                    DCMI_MDMA_Handle.Init.DestBurst     = MDMA_DEST_BURST_64BEATS;
+                } else if (!(buffer_size_doublewords % 32)) {
+                    DCMI_MDMA_Handle.Init.SourceBurst   = MDMA_SOURCE_BURST_32BEATS;
+                    DCMI_MDMA_Handle.Init.DestBurst     = MDMA_DEST_BURST_32BEATS;
+                } else if (!(buffer_size_doublewords % 16)) {
+                    DCMI_MDMA_Handle.Init.SourceBurst   = MDMA_SOURCE_BURST_16BEATS;
+                    DCMI_MDMA_Handle.Init.DestBurst     = MDMA_DEST_BURST_16BEATS;
+                } else if (!(buffer_size_doublewords % 8)) {
+                    DCMI_MDMA_Handle.Init.SourceBurst   = MDMA_SOURCE_BURST_8BEATS;
+                    DCMI_MDMA_Handle.Init.DestBurst     = MDMA_DEST_BURST_8BEATS;
+                } else if (!(buffer_size_doublewords % 4)) {
+                    DCMI_MDMA_Handle.Init.SourceBurst   = MDMA_SOURCE_BURST_4BEATS;
+                    DCMI_MDMA_Handle.Init.DestBurst     = MDMA_DEST_BURST_4BEATS;
+                } else if (!(buffer_size_doublewords % 2)) {
+                    DCMI_MDMA_Handle.Init.SourceBurst   = MDMA_SOURCE_BURST_2BEATS;
+                    DCMI_MDMA_Handle.Init.DestBurst     = MDMA_DEST_BURST_2BEATS;
+                } else {
+                    DCMI_MDMA_Handle.Init.SourceBurst   = MDMA_SOURCE_BURST_SINGLE;
+                    DCMI_MDMA_Handle.Init.DestBurst     = MDMA_DEST_BURST_SINGLE;
+                }
+            }
+
+            // YUV422 Source -> Y Destination
+            if ((sensor->pixformat == PIXFORMAT_GRAYSCALE) && (sensor->gs_bpp == 2)) {
+                DCMI_MDMA_Handle.Init.SourceInc         = MDMA_SRC_INC_HALFWORD;
+                DCMI_MDMA_Handle.Init.SourceDataSize    = MDMA_SRC_DATASIZE_BYTE;
+                DCMI_MDMA_Handle.Init.SourceBurst       = MDMA_SOURCE_BURST_SINGLE;
+            }
+
+            DCMI_MDMA_Handle.Init.DataAlignment             = MDMA_DATAALIGN_PACKENABLE;
+            DCMI_MDMA_Handle.Init.BufferTransferLength      = buffer_size_bytes;
+            DCMI_MDMA_Handle.Init.SourceBlockAddressOffset  = -width_bytes;
+            DCMI_MDMA_Handle.Init.DestBlockAddressOffset    = 0;
+
+            HAL_MDMA_Init(&DCMI_MDMA_Handle);
+            HAL_MDMA_ConfigPostRequestMask(&DCMI_MDMA_Handle, (uint32_t) &DMA2->LIFCR, DMA_FLAG_TCIF1_5);
+            HAL_MDMA_RegisterCallback(&DCMI_MDMA_Handle, HAL_MDMA_XFER_CPLT_CB_ID, &DCMI_MDMA_XFER_CPLT_CB);
+
+            HAL_NVIC_DisableIRQ(DMA2_Stream1_IRQn); // MDMA will receive interrupts.
+            HAL_MDMA_Start_IT(&DCMI_MDMA_Handle, addr, (uint32_t) dest_fb, width_bytes, h);
+        }
+        #endif
+
         // If DCMI_DMAConvCpltUser() happens before waiting_for_data = true; below then the
         // transfer is stopped and it will be re-enabled again right afterwards. We know the
         // transfer was stopped by checking DCMI_CR_ENABLE.
@@ -1412,6 +1524,16 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
                         DCMI_MODE_SNAPSHOT, addr, length/4);
                 // In this mode the DMA hardware is just treating the frame buffer as two large
                 // DMA buffers. At the end of the frame less data may be transferred than requested.
+            #if defined(MCU_SERIES_H7)
+            } else if (sensor->pixformat != PIXFORMAT_JPEG) {
+                // Start a transfer where DMA writes a line of pixels to the same address over and
+                // over again and generates a transfer complete interrupt after each line is moved.
+                // MDMA will listen to the transfer complete interrupt and move the line of pixels
+                // to the frame buffer.
+                HAL_DCMI_Start_DMA(&DCMIHandle, DCMI_MODE_CONTINUOUS, addr, width_words);
+            #endif
+            // The mode below will be used for PIXFORMAT_JPEG with the OV5640_ID as the data stream
+            // has to be moved by the processor manually.
             } else {
                 // Start a multibuffer transfer (line by line). The DMA hardware will ping-pong
                 // transferring data between the uncached line buffers. Since data is continuously
@@ -1476,6 +1598,11 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, streaming_cb_t streaming_c
         if ((sensor->pixformat == PIXFORMAT_JPEG) && (sensor->chip_id != OV5640_ID)) {
             dcmi_abort();
         }
+
+        #if defined(MCU_SERIES_H7)
+        HAL_MDMA_DeInit(&DCMI_MDMA_Handle);
+        HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+        #endif
 
         // We're done receiving data.
         #if defined(DCMI_FSYNC_PIN)
