@@ -49,12 +49,6 @@ void fb_encode_for_ide(uint8_t *ptr, image_t *img);
 
 void framebuffer_init0();
 
-// Initializes an image_t struct with the frame buffer.
-void framebuffer_initialize_image(image_t *img);
-
-// Transfers the frame buffer to the jpeg frame buffer if not locked.
-void fb_update_jpeg_buffer();
-
 int32_t framebuffer_get_x();
 int32_t framebuffer_get_y();
 int32_t framebuffer_get_u();
@@ -74,6 +68,14 @@ uint32_t framebuffer_get_buffer_size();
 
 // Return the current buffer address.
 uint8_t *framebuffer_get_buffer();
+
+// Initializes an image_t struct with the frame buffer.
+void framebuffer_initialize_image(image_t *img);
+
+// Compress src image to the JPEG buffer if src is mutable, otherwise copy src to the JPEG buffer
+// if the src is JPEG and fits in the JPEG buffer, or encode and stream src image to the IDE if not.
+// If src == NULL use main framebuffer as source image.
+void framebuffer_update_jpeg_buffer(image_t *src);
 
 // Set the framebuffer w, h and bpp.
 void framebuffer_set(int32_t w, int32_t h, int32_t bpp);

@@ -484,7 +484,7 @@ static int sensor_check_buffsize(sensor_t *sensor)
 
 static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 {
-    fb_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(NULL);
 
     if (sensor_check_buffsize(sensor) == -1) {
         return -1;
