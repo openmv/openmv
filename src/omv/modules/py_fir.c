@@ -1088,7 +1088,7 @@ mp_obj_t py_fir_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     if (copy_to_fb) {
-        fb_update_jpeg_buffer();
+        framebuffer_update_jpeg_buffer(NULL);
     }
 
     image_t dst_img;

@@ -100,7 +100,7 @@ static mp_obj_t py_sensor_shutdown(mp_obj_t enable)
 
 static mp_obj_t py_sensor_flush()
 {
-    fb_update_jpeg_buffer();
+    framebuffer_update_jpeg_buffer(NULL);
     return mp_const_none;
 }
 
