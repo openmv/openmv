@@ -14,21 +14,26 @@
 #include "omv_boardconfig.h"
 
 #define CONSERVATIVE_JPEG_BUF_SIZE  (OMV_JPEG_BUF_SIZE-64)
+#define N_BUFFERS       (2)
+#define FB_ALIGNMENT    (32)
+#define FB_ALIGN_SIZE(x) (((x + FB_ALIGNMENT - 1) / FB_ALIGNMENT) * FB_ALIGNMENT)
 
-extern char _fb_base;
-framebuffer_t *framebuffer = (framebuffer_t *) &_fb_base;
+extern uint8_t _fb_base;            // Pointer to the raw buffer.
+static bool streaming_enabled = false;
+static framebuffer_t buffers[N_BUFFERS];
+framebuffer_t *framebuffer = NULL;  // Current framebuffer pointer.
 
 extern char _jpeg_buf;
 jpegbuffer_t *jpeg_framebuffer = (jpegbuffer_t *) &_jpeg_buf;
 
 void fb_set_streaming_enabled(bool enable)
 {
-    framebuffer->streaming_enabled = enable;
+    streaming_enabled = enable;
 }
 
 bool fb_get_streaming_enabled()
 {
-    return framebuffer->streaming_enabled;
+    return streaming_enabled;
 }
 
 int fb_encode_for_ide_new_size(image_t *img)
@@ -72,32 +77,49 @@ void fb_encode_for_ide(uint8_t *ptr, image_t *img)
 
 void framebuffer_init0()
 {
-    // Save fb_enabled flag state
+    // Save last JPEG FB enabled flag state
     int fb_enabled = JPEG_FB()->enabled;
 
-    // Clear framebuffers
-    memset(MAIN_FB(), 0, sizeof(*MAIN_FB()));
+    // Init JPEG framebuffer.
     memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
-
-    // Skip the first frame.
-    MAIN_FB()->bpp = -1;
-
-    // Enable streaming.
-    MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
 
     // Set default quality
     JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
 
-    // Set fb_enabled
-    JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
+    // Restore the JPEG buffer enabled state. Note this flag is controlled by the IDE.
+    JPEG_FB()->enabled = fb_enabled;
+
+    // Init camera framebuffers
+    memset(buffers, 0, sizeof(framebuffer_t) * N_BUFFERS);
+
+    for (int i=0; i<N_BUFFERS; i++) {
+        // Skip the first frame.
+        buffers[i].bpp = -1;
+        // Set all buffers to point to the start of FB initially.
+        buffers[i].pixels = &_fb_base;
+    }
+
+    // Set framebuffer pointer to first buffer by default.
+    framebuffer = &buffers[0];
+
+    // Enable streaming by default. Note this flag is controlled by the OpenMV Cam.
+    streaming_enabled = true;
 }
 
 void framebuffer_initialize_image(image_t *img)
 {
-    img->w = framebuffer->w;
-    img->h = framebuffer->h;
-    img->bpp = framebuffer->bpp;
-    img->data = framebuffer->pixels;
+    img->w      = framebuffer->w;
+    img->h      = framebuffer->h;
+    img->bpp    = framebuffer->bpp;
+    img->data   = framebuffer->pixels;
+}
+
+void framebuffer_initialize_image_from_fb(image_t *img, framebuffer_t *fb)
+{
+    img->w      = fb->w;
+    img->h      = fb->h;
+    img->bpp    = fb->bpp;
+    img->data   = fb->pixels;
 }
 
 static void initialize_jpeg_buf_from_image(image_t *img)
@@ -117,21 +139,31 @@ void framebuffer_update_jpeg_buffer()
 {
     static int overflow_count = 0;
 
-    image_t main_fb_src;
-    framebuffer_initialize_image(&main_fb_src);
-    image_t *src = &main_fb_src;
+    // Find the last used framebuffer and compress it, if no frame
+    // is set to dirty, use the first/main frame buffer by default.
+    framebuffer_t *fb = framebuffer;
+    for (int i=0; i<N_BUFFERS; i++) {
+        if (FB_GET_FLAG(&buffers[i], FB_DIRTY)) {
+            fb = &buffers[i];
+            FB_CLR_FLAG(fb, FB_DIRTY);
+            break;
+        }
+    }
+    image_t src;
+    framebuffer_initialize_image_from_fb(&src, fb);
+    debug_printf("compress fb:%d buf:%p bpp:%d \n", fb == &buffers[0] ? 0 : 1, fb->pixels, src.bpp);
 
-    if (framebuffer->streaming_enabled && jpeg_framebuffer->enabled) {
-        if (src->bpp > 3) {
+    if (streaming_enabled && jpeg_framebuffer->enabled) {
+        if (src.bpp > 3) {
             bool does_not_fit = false;
 
             if (mutex_try_lock(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
-                if(CONSERVATIVE_JPEG_BUF_SIZE < src->bpp) {
+                if(CONSERVATIVE_JPEG_BUF_SIZE < src.bpp) {
                     initialize_jpeg_buf_from_image(NULL);
                     does_not_fit = true;
                 } else {
-                    initialize_jpeg_buf_from_image(src);
-                    memcpy(jpeg_framebuffer->pixels, src->pixels, src->bpp);
+                    initialize_jpeg_buf_from_image(&src);
+                    memcpy(jpeg_framebuffer->pixels, src.pixels, src.bpp);
                 }
 
                 mutex_unlock(&jpeg_framebuffer->lock, MUTEX_TID_OMV);
@@ -139,18 +171,18 @@ void framebuffer_update_jpeg_buffer()
 
             if (does_not_fit) {
                 printf("Warning: JPEG too big! Trying framebuffer transfer using fallback method!\n");
-                int new_size = fb_encode_for_ide_new_size(src);
+                int new_size = fb_encode_for_ide_new_size(&src);
                 fb_alloc_mark();
                 uint8_t *temp = fb_alloc(new_size, FB_ALLOC_NO_HINT);
-                fb_encode_for_ide(temp, src);
+                fb_encode_for_ide(temp, &src);
                 (MP_PYTHON_PRINTER)->print_strn((MP_PYTHON_PRINTER)->data, (const char *) temp, new_size);
                 fb_alloc_free_till_mark();
             }
-        } else if (src->bpp >= 0) {
+        } else if (src.bpp >= 0) {
             if (mutex_try_lock(&jpeg_framebuffer->lock, MUTEX_TID_OMV)) {
-                image_t dst = {.w=src->w, .h=src->h, .bpp=CONSERVATIVE_JPEG_BUF_SIZE, .pixels=jpeg_framebuffer->pixels};
+                image_t dst = {.w=src.w, .h=src.h, .bpp=CONSERVATIVE_JPEG_BUF_SIZE, .pixels=jpeg_framebuffer->pixels};
                 // Note: lower quality saves USB bandwidth and results in a faster IDE FPS.
-                bool overflow = jpeg_compress(src, &dst, jpeg_framebuffer->quality, false);
+                bool overflow = jpeg_compress(&src, &dst, jpeg_framebuffer->quality, false);
 
                 if (overflow) {
                     // JPEG buffer overflowed, reduce JPEG quality for the next frame
@@ -168,7 +200,7 @@ void framebuffer_update_jpeg_buffer()
                     }
 
                     // Dynamically adjust our quality if the image is huge.
-                    bool big_frame_buffer = image_size(src) > JPEG_QUALITY_THRESH;
+                    bool big_frame_buffer = image_size(&src) > JPEG_QUALITY_THRESH;
                     int jpeg_quality_max = big_frame_buffer ? JPEG_QUALITY_LOW : JPEG_QUALITY_HIGH;
 
                     // No buffer overflow, increase quality up to max quality based on frame size...
@@ -220,11 +252,24 @@ int32_t framebuffer_get_depth()
     return framebuffer->bpp;
 }
 
-uint32_t framebuffer_get_frame_size()
+void framebuffer_set(int32_t w, int32_t h, int32_t bpp)
+{
+    framebuffer->w = w;
+    framebuffer->h = h;
+    framebuffer->bpp = bpp;
+}
+
+uint8_t *framebuffer_get_buffer()
+{
+    return framebuffer->pixels;
+}
+
+uint8_t *framebuffer_get_buffer_end()
 {
     image_t img;
-    framebuffer_initialize_image(&img);
-    return image_size(&img);
+    framebuffer_t *fb = &buffers[N_BUFFERS-1];
+    framebuffer_initialize_image_from_fb(&img, fb);
+    return fb->pixels + FB_ALIGN_SIZE(image_size(&img));
 }
 
 uint32_t framebuffer_get_buffer_size()
@@ -237,14 +282,46 @@ uint32_t framebuffer_get_buffer_size()
     return (size / 32) * 32;
 }
 
-uint8_t *framebuffer_get_buffer()
+framebuffer_t *framebuffer_get_framebuffer()
 {
-    return framebuffer->pixels;
+   return framebuffer;
 }
 
-void framebuffer_set(int32_t w, int32_t h, int32_t bpp)
+void framebuffer_swap_buffers(uint32_t offset)
 {
-    framebuffer->w = w;
-    framebuffer->h = h;
-    framebuffer->bpp = bpp;
+    // Save the current frame buffer before swapping.
+    framebuffer_t *old_fb = framebuffer;
+
+    // Set/Clear frame buffer flags.
+    FB_CLR_FLAG(old_fb, FB_USED);
+    FB_SET_FLAG(old_fb, FB_DIRTY);
+
+    // Swap the main frame buffer pointer.
+    for (int i=0; i<N_BUFFERS; i++) {
+        if (framebuffer != &buffers[i]) {
+            framebuffer = &buffers[i];
+            break;
+        }
+    }
+
+    // Initialize from the first buffer, copying x,y,w,h,u,v, etc...
+    framebuffer->x = old_fb->x;
+    framebuffer->y = old_fb->y;
+    framebuffer->w = old_fb->w;
+    framebuffer->h = old_fb->h;
+    framebuffer->u = old_fb->u;
+    framebuffer->v = old_fb->v;
+    framebuffer->x = old_fb->x;
+    framebuffer->bpp  = -1;
+
+    // The second buffer needs to be initialized from fb0
+    if (framebuffer != &buffers[0] && framebuffer->pixels == &_fb_base) {
+        // If this is first time this buffer is used, adjust its pixels pointer
+        // offset within the raw buffer to point just after the first frame buffer.
+        framebuffer->pixels = &_fb_base + FB_ALIGN_SIZE(offset);
+    }
+
+    // Set/Clear frame buffer flags.
+    FB_CLR_FLAG(framebuffer, FB_DIRTY);
+    FB_SET_FLAG(framebuffer, FB_USED);
 }

@@ -111,7 +111,7 @@ SECTIONS
   /* Main framebuffer memory */
   .fb_memory (NOLOAD) :
   {
-    . = ALIGN(4);
+    . = ALIGN(32);
     _fb_base = .;
     . = . + OMV_FB_SIZE + OMV_FB_ALLOC_SIZE;
 

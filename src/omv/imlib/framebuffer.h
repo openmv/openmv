@@ -15,14 +15,23 @@
 #include "mutex.h"
 #include "common.h"
 
+typedef enum {
+    FB_NOFLAGS =  (0<<0),
+    FB_DIRTY   =  (1<<0),
+    FB_USED    =  (1<<1),
+} framebuffer_flags_t;
+
+#define FB_SET_FLAG(x, f)  ((x)->flags |= (f))
+#define FB_GET_FLAG(x, f)  ((x)->flags & (f))
+#define FB_CLR_FLAG(x, f)  ((x)->flags &= (~f))
+
 typedef struct framebuffer {
     int32_t x,y;
     int32_t w,h;
     int32_t u,v;
     int32_t bpp;
-    int32_t streaming_enabled;
-    // NOTE: This buffer must be aligned on a 32 byte boundary
-    OMV_ATTR_ALIGNED(uint8_t pixels[], 32);
+    uint32_t flags;
+    uint8_t *pixels;
 } framebuffer_t;
 
 extern framebuffer_t *framebuffer;
@@ -58,26 +67,33 @@ int32_t framebuffer_get_width();
 int32_t framebuffer_get_height();
 int32_t framebuffer_get_depth();
 
-// Return the size of the current frame (w * h * bpp) if the framebuffer is initialized,
-// otherwise return 0 if the framebuffer is unintialized or invalid (e.g. first frame).
-uint32_t framebuffer_get_frame_size();
+// Sets the frame buffer w, h and bpp.
+void framebuffer_set(int32_t w, int32_t h, int32_t bpp);
 
-// Return the max frame size that fits the framebuffer
-// (i.e OMV_RAW_BUF_SIZE - sizeof(framebuffer_t))
-uint32_t framebuffer_get_buffer_size();
-
-// Return the current buffer address.
+// Returns a pointer to the start of the current frame buffer.
 uint8_t *framebuffer_get_buffer();
 
-// Initializes an image_t struct with the frame buffer.
+// Returns a pointer to the end of the last frame buffer.
+uint8_t *framebuffer_get_buffer_end();
+
+// Returns the max frame size that could fit in the frame buffer.
+uint32_t framebuffer_get_buffer_size();
+
+// Returns the currently used frame buffer.
+framebuffer_t *framebuffer_get_framebuffer();
+
+// Initializes an image_t struct from the current frame buffer.
 void framebuffer_initialize_image(image_t *img);
 
-// Compress src image to the JPEG buffer if src is mutable, otherwise copy src to the JPEG buffer
-// if the src is JPEG and fits in the JPEG buffer, or encode and stream src image to the IDE if not.
+// Initializes an image_t struct from the target frame buffer (fb).
+void framebuffer_initialize_image_from_fb(image_t *img, framebuffer_t *fb);
+
+// Copy the last used frame buffer to the JPEG buffer (compressing it first if needed), if
+// the JPEG buffer is large enough, otherwise encode and stream the frame buffer to the IDE.
 void framebuffer_update_jpeg_buffer();
 
-// Set the framebuffer w, h and bpp.
-void framebuffer_set(int32_t w, int32_t h, int32_t bpp);
+// Swaps the target frame buffer in double buffering mode.
+void framebuffer_swap_buffers(uint32_t offset);
 
 // Use these macros to get a pointer to main or JPEG framebuffer.
 #define MAIN_FB()           (framebuffer)

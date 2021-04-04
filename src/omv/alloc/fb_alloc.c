@@ -38,7 +38,7 @@ static char *pointer_overlay = &_fballoc_overlay_end;
 
 static char *fb_alloc_min_address()
 {
-    return (char *) (framebuffer_get_buffer() + framebuffer_get_frame_size());
+    return (char *) framebuffer_get_buffer_end();
 }
 
 char *fb_alloc_stack_pointer()

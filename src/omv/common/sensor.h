@@ -137,6 +137,11 @@ typedef enum {
     IOCTL_HIMAX_OSC_ENABLE,
 } ioctl_t;
 
+typedef enum {
+    SNAPSHOT_NOFLAGS =  (0<<0),
+    SNAPSHOT_DBLBUF  =  (1<<0),
+} snapshot_flags_t;
+
 #define SENSOR_HW_FLAGS_VSYNC        (0) // vertical sync polarity.
 #define SENSOR_HW_FLAGS_HSYNC        (1) // horizontal sync polarity.
 #define SENSOR_HW_FLAGS_PIXCK        (2) // pixel clock edge.
