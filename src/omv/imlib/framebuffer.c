@@ -85,6 +85,9 @@ void framebuffer_init0()
     // Enable streaming.
     MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
 
+    // Clear double buffering
+    MAIN_FB()->doublebuf = false;
+
     // Set default quality
     JPEG_FB()->quality = ((JPEG_QUALITY_HIGH - JPEG_QUALITY_LOW) / 2) + JPEG_QUALITY_LOW;
 
@@ -226,7 +229,7 @@ uint32_t framebuffer_get_frame_size()
 {
     image_t img;
     framebuffer_initialize_image(&img);
-    return image_size(&img);
+    return (image_size(&img) * ((framebuffer->doublebuf == true) ? 2 : 1));
 }
 
 uint32_t framebuffer_get_buffer_size()
@@ -249,4 +252,9 @@ void framebuffer_set(int32_t w, int32_t h, int32_t bpp)
     framebuffer->w = w;
     framebuffer->h = h;
     framebuffer->bpp = bpp;
+}
+
+void framebuffer_set_doublebuf(bool doublebuf)
+{
+    framebuffer->doublebuf = doublebuf;
 }

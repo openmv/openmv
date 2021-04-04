@@ -20,7 +20,8 @@ typedef struct framebuffer {
     int32_t w,h;
     int32_t u,v;
     int32_t bpp;
-    int32_t streaming_enabled;
+    int8_t streaming_enabled;
+    int8_t doublebuf;
     // NOTE: This buffer must be aligned on a 32 byte boundary
     OMV_ATTR_ALIGNED(uint8_t pixels[], 32);
 } framebuffer_t;
@@ -79,6 +80,8 @@ void framebuffer_update_jpeg_buffer(image_t *src);
 
 // Set the framebuffer w, h and bpp.
 void framebuffer_set(int32_t w, int32_t h, int32_t bpp);
+
+void framebuffer_set_doublebuf(bool doublebuf);
 
 // Use these macros to get a pointer to main or JPEG framebuffer.
 #define MAIN_FB()           (framebuffer)

@@ -115,8 +115,16 @@ static mp_obj_t py_sensor_snapshot(uint n_args, const mp_obj_t *args, mp_map_t *
 #endif // MICROPY_PY_IMU
 
     mp_obj_t image = py_image(0, 0, 0, 0);
+
+    // Try to use double buffering by default if there's enough memory,
+    // but still allow users to override this and force single buffer mode.
+    bool doublebuf = true;
+    if (kw_args) {
+        doublebuf = py_helper_keyword_int(n_args, args, 0, kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_doublebuf), true);
+    }
+
     // Note: OV2640 JPEG mode can __fatal_error().
-    int ret = sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), 0);
+    int ret = sensor.snapshot(&sensor, (image_t *) py_image_cobj(image), doublebuf ? SNAPSHOT_DBLBUF:0);
 
     if (ret < 0) {
         mp_raise_msg_varg(&mp_type_RuntimeError, MP_ERROR_TEXT("Capture Failed: %d"), ret);
