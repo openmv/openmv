@@ -940,7 +940,7 @@ static mp_obj_t py_image_to(int bpp, const uint16_t *default_color_palette, bool
     }
 
     if (copy_to_fb && copy) {
-        framebuffer_update_jpeg_buffer(false);
+        framebuffer_update_jpeg_buffer();
     }
 
     image_t dst_img;
@@ -1205,7 +1205,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_KW(py_image_save_obj, 2, py_image_save);
 
 static mp_obj_t py_image_flush(mp_obj_t img_obj)
 {
-    framebuffer_update_jpeg_buffer(false);
+    framebuffer_update_jpeg_buffer();
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_image_flush_obj, py_image_flush);
@@ -6574,7 +6574,7 @@ mp_obj_t py_image_load_image(uint n_args, const mp_obj_t *args, mp_map_t *kw_arg
     }
 
     if (copy_to_fb) {
-        framebuffer_update_jpeg_buffer(false);
+        framebuffer_update_jpeg_buffer();
     }
 
     return py_image_from_struct(&image);

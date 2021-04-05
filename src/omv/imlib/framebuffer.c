@@ -113,7 +113,7 @@ static void initialize_jpeg_buf_from_image(image_t *img)
     }
 }
 
-void framebuffer_update_jpeg_buffer(bool swapfb)
+void framebuffer_update_jpeg_buffer()
 {
     static int overflow_count = 0;
 

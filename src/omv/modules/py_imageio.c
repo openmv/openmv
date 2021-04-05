@@ -156,7 +156,7 @@ mp_obj_t py_imageio_read(uint n_args, const mp_obj_t *args, mp_map_t *kw_args)
     }
 
     if (copy_to_fb) {
-        framebuffer_update_jpeg_buffer(false);
+        framebuffer_update_jpeg_buffer();
     }
 
     if (0) {
