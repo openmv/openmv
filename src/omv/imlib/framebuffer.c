@@ -113,15 +113,13 @@ static void initialize_jpeg_buf_from_image(image_t *img)
     }
 }
 
-void framebuffer_update_jpeg_buffer(image_t *src)
+void framebuffer_update_jpeg_buffer(bool swapfb)
 {
-    image_t main_fb_src;
     static int overflow_count = 0;
 
-    if (src == NULL) {
-        framebuffer_initialize_image(&main_fb_src);
-        src = &main_fb_src;
-    }
+    image_t main_fb_src;
+    framebuffer_initialize_image(&main_fb_src);
+    image_t *src = &main_fb_src;
 
     if (framebuffer->streaming_enabled && jpeg_framebuffer->enabled) {
         if (src->bpp > 3) {
