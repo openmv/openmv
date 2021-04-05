@@ -1282,7 +1282,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     // Compress the framebuffer for the IDE preview, only if it's not the first frame,
     // the framebuffer is enabled and the image sensor does not support JPEG encoding.
     // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
-    framebuffer_update_jpeg_buffer(false);
+    framebuffer_update_jpeg_buffer();
 
     // Make sure the raw frame fits into the FB. It will be switched from RGB565 to BAYER
     // first to save space before being cropped until it fits.
