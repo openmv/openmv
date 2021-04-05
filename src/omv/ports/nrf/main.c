@@ -153,11 +153,12 @@ soft_reset:
     uart_init0();
     #endif
 
+    framebuffer_init0();
+    fb_alloc_init0();
+
     #if MICROPY_PY_SENSOR
     sensor_init();
     #endif
-    framebuffer_init0();
-    fb_alloc_init0();
 
     #if (MICROPY_PY_BLE_NUS == 0) && (MICROPY_HW_USB_CDC == 0)
     {
