@@ -153,8 +153,8 @@ soft_reset:
     uart_init0();
     #endif
 
-    framebuffer_init0();
     fb_alloc_init0();
+    framebuffer_init0();
 
     #if MICROPY_PY_SENSOR
     sensor_init();
@@ -166,7 +166,7 @@ soft_reset:
             MP_OBJ_NEW_SMALL_INT(0),
             MP_OBJ_NEW_SMALL_INT(115200),
         };
-        MP_STATE_PORT(board_stdio_uart) = 
+        MP_STATE_PORT(board_stdio_uart) =
             machine_hard_uart_type.make_new((mp_obj_t)&machine_hard_uart_type, MP_ARRAY_SIZE(args), 0, args);
     }
     #endif

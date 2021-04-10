@@ -11,6 +11,7 @@
 #ifndef __SENSOR_H__
 #define __SENSOR_H__
 #include <stdarg.h>
+#include "cambus.h"
 #include "imlib.h"
 
 #define OV2640_SLV_ADDR     (0x60)
@@ -309,6 +310,9 @@ int sensor_set_auto_rotation(bool enable);
 // Get transpose mode state.
 bool sensor_get_auto_rotation();
 
+// Set the number of virtual frame buffers.
+int sensor_set_framebuffers(int count);
+
 // Set special digital effects (SDE).
 int sensor_set_special_effect(sde_t sde);
 
@@ -329,4 +333,5 @@ const uint16_t *sensor_get_color_palette();
 
 // Default snapshot function.
 int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags);
+
 #endif /* __SENSOR_H__ */

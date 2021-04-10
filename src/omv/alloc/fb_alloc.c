@@ -36,11 +36,6 @@ static char *pointer_overlay = &_fballoc_overlay_end;
 // Use fb_alloc_free_till_mark_permanent() instead.
 #define FB_PERMANENT_FLAG 0x2
 
-static char *fb_alloc_min_address()
-{
-    return (char *) (framebuffer_get_buffer() + framebuffer_get_frame_size());
-}
-
 char *fb_alloc_stack_pointer()
 {
     return pointer;
@@ -63,7 +58,7 @@ void fb_alloc_init0()
 
 uint32_t fb_avail()
 {
-    uint32_t temp = pointer - fb_alloc_min_address() - sizeof(uint32_t);
+    uint32_t temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
     return (temp < sizeof(uint32_t)) ? 0 : temp;
 }
 
@@ -72,7 +67,7 @@ void fb_alloc_mark()
     char *new_pointer = pointer - sizeof(uint32_t);
 
     // Check if allocation overwrites the framebuffer pixels
-    if (new_pointer < fb_alloc_min_address()) {
+    if (new_pointer < framebuffer_get_buffers_end()) {
         nlr_raise_for_fb_alloc_mark(mp_obj_new_exception_msg(&mp_type_MemoryError,
             MP_ERROR_TEXT("Out of fast Frame Buffer Stack Memory!"
             " Please reduce the resolution of the image you are running this algorithm on to bypass this issue!")));
@@ -149,7 +144,7 @@ void *fb_alloc(uint32_t size, int hints)
     char *new_pointer = result - sizeof(uint32_t);
 
     // Check if allocation overwrites the framebuffer pixels
-    if (new_pointer < fb_alloc_min_address()) {
+    if (new_pointer < framebuffer_get_buffers_end()) {
         fb_alloc_fail();
     }
 
@@ -195,7 +190,7 @@ void *fb_alloc0(uint32_t size, int hints)
 
 void *fb_alloc_all(uint32_t *size, int hints)
 {
-    uint32_t temp = pointer - fb_alloc_min_address() - sizeof(uint32_t);
+    uint32_t temp = pointer - framebuffer_get_buffers_end() - sizeof(uint32_t);
 
     if (temp < sizeof(uint32_t)) {
         *size = 0;

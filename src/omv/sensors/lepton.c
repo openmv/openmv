@@ -461,6 +461,10 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 
 static int sensor_check_buffsize(sensor_t *sensor)
 {
+    if (MAIN_FB()->n_buffers != 1) {
+        framebuffer_set_buffers(1);
+    }
+
     int bpp=0;
     switch (sensor->pixformat) {
         case PIXFORMAT_BAYER:
@@ -475,7 +479,7 @@ static int sensor_check_buffsize(sensor_t *sensor)
             break;
     }
 
-    if ((MAIN_FB()->w * MAIN_FB()->h * bpp) > framebuffer_get_buffer_size()) {
+    if ((MAIN_FB()->u * MAIN_FB()->v * bpp) > framebuffer_get_buffer_size()) {
         return -1;
     }
 
@@ -491,6 +495,13 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     }
 
     if ((!h_res) || (!v_res) || (!sensor->framesize) || (!sensor->pixformat)) {
+        return -1;
+    }
+
+    framebuffer_free_current_buffer();
+    vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
+
+    if (!buffer) {
         return -1;
     }
 
@@ -562,7 +573,7 @@ static int snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     image->w = MAIN_FB()->u;
     image->h = MAIN_FB()->v;
     image->bpp = MAIN_FB()->bpp; // invalid
-    image->data = MAIN_FB()->pixels; // valid
+    image->data = buffer->data; // valid
 
     uint16_t *src = (uint16_t*) vospi_buffer;
 
