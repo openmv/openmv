@@ -221,13 +221,17 @@ void HAL_MspInit(void)
 
     #endif // DCMI_RESET_PIN || DCMI_PWDN_PIN || DCMI_FSYNC_PIN
 
-    // This disconnects PA0/PA1/PC2/PC3 from PA0_C/PA1_C/PC2_C/PC3_C.
-    // PA0_C/PA1_C connect to ADC1/2 Channels P0/P1. PC2_C/PC3_C connect to ADC3 Channels P0/P1.
     #if defined(MCU_SERIES_H7)
+    // This disconnects PA0/PA1 from PA0_C/PA1_C.
+    // PA0_C/PA1_C connect to ADC1/2 Channels P0/P1
     HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PA0, SYSCFG_SWITCH_PA0_OPEN);
     HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PA1, SYSCFG_SWITCH_PA1_OPEN);
-    HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PC2, SYSCFG_SWITCH_PC2_OPEN);
-    HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PC3, SYSCFG_SWITCH_PC3_OPEN);
+    // This connects PC2/PC3 from PC2_C/PC3_C.
+    // PC2_C/PC3_C connect to ADC3 Channels P0/P1.
+    // PC2_C is connected to the blue LED on the OpenMV Cam H7.
+    // PC3_C is unused.
+    HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PC2, SYSCFG_SWITCH_PC2_CLOSE);
+    HAL_SYSCFG_AnalogSwitchConfig(SYSCFG_SWITCH_PC3, SYSCFG_SWITCH_PC3_CLOSE);
     #endif
 }
 
