@@ -174,7 +174,7 @@ void fir_lepton_spi_callback(const uint16_t *base)
         }
 
         if (frame_ready) {
-            // Update head which means a new image is ready.
+            // Update tail which means a new image is ready.
             framebuffer_tail = fir_lepton_spi_rx_cb_tail;
 
             // For triple buffering we are never drawing where tail or head
