@@ -33,8 +33,8 @@
 #if (OMV_ENABLE_FIR_LEPTON == 1)
 
 #define FRAMEBUFFER_COUNT 3
-static volatile int framebuffer_head = 0;
-static int framebuffer_tail = 0;
+static volatile int framebuffer_tail = 0;
+static int framebuffer_head = 0;
 static uint16_t *framebuffers[FRAMEBUFFER_COUNT] = {};
 
 static int fir_lepton_rad_en = false;
@@ -59,18 +59,18 @@ static DMA_HandleTypeDef fir_lepton_spi_rx_dma = {};
 #define VOSPI_SYNC_MS           200 // ms
 
 static soft_timer_entry_t flir_lepton_spi_rx_timer = {};
-static int fir_lepton_spi_rx_cb_head = 0;
+static int fir_lepton_spi_rx_cb_tail = 0;
 static int fir_lepton_spi_rx_cb_expected_pid = 0;
 static int fir_lepton_spi_rx_cb_expected_seg = 0;
 extern int _fir_lepton_buf;
 
 STATIC mp_obj_t fir_lepton_spi_resync_callback(mp_obj_t unused)
 {
-    // For triple buffering we are never drawing where head or tail
-    // (which may instantly update to be equal to head) is.
-    fir_lepton_spi_rx_cb_head = (framebuffer_head + 1) % FRAMEBUFFER_COUNT;
-    if (fir_lepton_spi_rx_cb_head == framebuffer_tail) {
-        fir_lepton_spi_rx_cb_head = (fir_lepton_spi_rx_cb_head + 1) % FRAMEBUFFER_COUNT;
+    // For triple buffering we are never drawing where tail or head
+    // (which may instantly update to be equal to tail) is.
+    fir_lepton_spi_rx_cb_tail = (framebuffer_tail + 1) % FRAMEBUFFER_COUNT;
+    if (fir_lepton_spi_rx_cb_tail == framebuffer_head) {
+        fir_lepton_spi_rx_cb_tail = (fir_lepton_spi_rx_cb_tail + 1) % FRAMEBUFFER_COUNT;
     }
 
     OMV_FIR_LEPTON_CS_LOW();
@@ -150,7 +150,7 @@ void fir_lepton_spi_callback(const uint16_t *base)
         return;
     }
 
-    memcpy(framebuffers[fir_lepton_spi_rx_cb_head]
+    memcpy(framebuffers[fir_lepton_spi_rx_cb_tail]
         + (fir_lepton_spi_rx_cb_expected_pid * VOSPI_PID_SIZE_PIXELS)
         + (fir_lepton_spi_rx_cb_expected_seg * VOSPI_SEG_SIZE_PIXELS),
         base + VOSPI_HEADER_WORDS, VOSPI_PID_SIZE_PIXELS * sizeof(uint16_t));
@@ -174,14 +174,14 @@ void fir_lepton_spi_callback(const uint16_t *base)
         }
 
         if (frame_ready) {
-            // Update head which means a new image is ready.
-            framebuffer_head = fir_lepton_spi_rx_cb_head;
+            // Update tail which means a new image is ready.
+            framebuffer_tail = fir_lepton_spi_rx_cb_tail;
 
-            // For triple buffering we are never drawing where head or tail
-            // (which may instantly update to be equal to head) is.
-            fir_lepton_spi_rx_cb_head = (fir_lepton_spi_rx_cb_head + 1) % FRAMEBUFFER_COUNT;
-            if (fir_lepton_spi_rx_cb_head == framebuffer_tail) {
-                fir_lepton_spi_rx_cb_head = (fir_lepton_spi_rx_cb_head + 1) % FRAMEBUFFER_COUNT;
+            // For triple buffering we are never drawing where tail or head
+            // (which may instantly update to be equal to tail) is.
+            fir_lepton_spi_rx_cb_tail = (fir_lepton_spi_rx_cb_tail + 1) % FRAMEBUFFER_COUNT;
+            if (fir_lepton_spi_rx_cb_tail == framebuffer_head) {
+                fir_lepton_spi_rx_cb_tail = (fir_lepton_spi_rx_cb_tail + 1) % FRAMEBUFFER_COUNT;
             }
 
             // User should use micropython.schedule() in their callback to process the new frame.
@@ -443,8 +443,8 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
 
     fb_alloc_mark();
 
-    framebuffer_head = 0;
     framebuffer_tail = 0;
+    framebuffer_head = 0;
 
     for (int i = 0; i < FRAMEBUFFER_COUNT; i++) {
         framebuffers[i] = (uint16_t *) fb_alloc0(flir_w * flir_h * sizeof(uint16_t),
@@ -535,18 +535,18 @@ void fir_lepton_register_frame_cb(mp_obj_t cb)
 
 mp_obj_t fir_lepton_get_frame_available()
 {
-    return mp_obj_new_bool(framebuffer_head != framebuffer_tail);
+    return mp_obj_new_bool(framebuffer_tail != framebuffer_head);
 }
 
 static const uint16_t *fir_lepton_get_frame(int timeout)
 {
-    int sampled_framebuffer_head = framebuffer_head;
+    int sampled_framebuffer_tail = framebuffer_tail;
 
     if (timeout >= 0) {
         for (uint32_t start = systick_current_millis();;) {
-            sampled_framebuffer_head = framebuffer_head;
+            sampled_framebuffer_tail = framebuffer_tail;
 
-            if (framebuffer_tail != sampled_framebuffer_head) {
+            if (framebuffer_head != sampled_framebuffer_tail) {
                 break;
             }
 
@@ -558,8 +558,8 @@ static const uint16_t *fir_lepton_get_frame(int timeout)
         }
     }
 
-    framebuffer_tail = sampled_framebuffer_head;
-    return framebuffers[sampled_framebuffer_head];
+    framebuffer_head = sampled_framebuffer_tail;
+    return framebuffers[sampled_framebuffer_tail];
 }
 
 static int fir_lepton_get_temperature()
