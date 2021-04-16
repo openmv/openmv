@@ -13,6 +13,8 @@
 #include "framebuffer.h"
 #include "omv_boardconfig.h"
 
+#define FB_ALIGN_SIZE_ROUND_DOWN(x) (((x) / FRAMEBUFFER_ALIGNMENT) * FRAMEBUFFER_ALIGNMENT)
+#define FB_ALIGN_SIZE_ROUND_UP(x)   FB_ALIGN_SIZE_ROUND_DOWN(((x) + FRAMEBUFFER_ALIGNMENT - 1))
 #define CONSERVATIVE_JPEG_BUF_SIZE  (OMV_JPEG_BUF_SIZE-64)
 
 extern char _fb_base;
@@ -79,9 +81,6 @@ void framebuffer_init0()
     memset(MAIN_FB(), 0, sizeof(*MAIN_FB()));
     memset(JPEG_FB(), 0, sizeof(*JPEG_FB()));
 
-    // Skip the first frame.
-    MAIN_FB()->bpp = -1;
-
     // Enable streaming.
     MAIN_FB()->streaming_enabled = true; // controlled by the OpenMV Cam.
 
@@ -90,6 +89,9 @@ void framebuffer_init0()
 
     // Set fb_enabled
     JPEG_FB()->enabled = fb_enabled; // controlled by the IDE.
+
+    // Setup buffering.
+    framebuffer_set_buffers(1);
 }
 
 void framebuffer_initialize_image(image_t *img)
@@ -97,7 +99,7 @@ void framebuffer_initialize_image(image_t *img)
     img->w = framebuffer->w;
     img->h = framebuffer->h;
     img->bpp = framebuffer->bpp;
-    img->data = framebuffer->pixels;
+    img->data = framebuffer_get_buffer(framebuffer->head)->data;
 }
 
 static void initialize_jpeg_buf_from_image(image_t *img)
@@ -220,26 +222,51 @@ int32_t framebuffer_get_depth()
     return framebuffer->bpp;
 }
 
-uint32_t framebuffer_get_frame_size()
+// Returns the number of bytes the frame buffer could be at the current moment it time.
+static uint32_t framebuffer_raw_buffer_size()
 {
-    image_t img;
-    framebuffer_initialize_image(&img);
-    return image_size(&img);
+    uint32_t size = (uint32_t) (fb_alloc_stack_pointer() - ((char *) framebuffer->data));
+    // We don't want to give all of the frame buffer RAM to the frame buffer. So, we will limit
+    // the maximum amount of RAM we return.
+    return IM_MIN(size, OMV_RAW_BUF_SIZE);
 }
 
 uint32_t framebuffer_get_buffer_size()
 {
-    uint32_t size = (uint32_t) (fb_alloc_stack_pointer() - ((char *) framebuffer->pixels));
-    // We don't want to give all of the frame buffer RAM to the frame buffer. So, we will limit the
-    // maximum amount of RAM we return.
-    size = IM_MIN(size, OMV_RAW_BUF_SIZE);
-    // Needs to be a multiple of 32 for DMA transfers...
-    return (size / 32) * 32;
+    uint32_t size;
+
+    if (framebuffer->n_buffers == 1) {
+        // With only 1 vbuffer it's fine to allow the frame buffer size to change given fb_alloc().
+        size = framebuffer_raw_buffer_size();
+    } else {
+        // Whatever the raw size was when the number of buffers were set is locked in...
+        size = framebuffer->raw_buffer_size;
+    }
+
+    // Remove the size of the state header plus alignment padding.
+    size -= sizeof(vbuffer_t);
+
+    // Do we have an estimate on the frame size with mutliple buffers? If so, we can reduce the
+    // RAM each buffer takes up giving some space back to fb_alloc().
+    if ((framebuffer->n_buffers != 1) && framebuffer->u && framebuffer->v) {
+        // Typically a framebuffer will not need more than u*v*2 bytes.
+        uint32_t size_guess = framebuffer->u * framebuffer->v * 2;
+        // Add in extra bytes to prevent round down from shrinking buffer too small.
+        size_guess += FRAMEBUFFER_ALIGNMENT - 1;
+        // Limit the frame buffer size.
+        size = IM_MIN(size, size_guess);
+    }
+
+    // Needs to be a multiple of FRAMEBUFFER_ALIGNMENT for DMA transfers...
+    return FB_ALIGN_SIZE_ROUND_DOWN(size);
 }
 
-uint8_t *framebuffer_get_buffer()
+// Each raw frame buffer is split into two parts. The vbuffer_t struct followed by
+// padding and then the pixel array starting at the next 32-byte offset.
+vbuffer_t *framebuffer_get_buffer(int32_t index)
 {
-    return framebuffer->pixels;
+    uint32_t offset = (sizeof(vbuffer_t) + framebuffer_get_buffer_size()) * index;
+    return (vbuffer_t *) (framebuffer->data + offset);
 }
 
 void framebuffer_set(int32_t w, int32_t h, int32_t bpp)
@@ -247,4 +274,196 @@ void framebuffer_set(int32_t w, int32_t h, int32_t bpp)
     framebuffer->w = w;
     framebuffer->h = h;
     framebuffer->bpp = bpp;
+}
+
+void framebuffer_flush_buffers()
+{
+    // Move the tail pointer to the head which empties the virtual fifo while keeping the same
+    // position of the current frame for the rest of the code.
+    framebuffer->tail = framebuffer->head;
+    framebuffer->check_head = true;
+    framebuffer->sampled_head = 0;
+}
+
+void framebuffer_reset_buffers()
+{
+    for (int32_t i = 0; i < framebuffer->n_buffers; i++) {
+        memset(framebuffer_get_buffer(i), 0, sizeof(vbuffer_t));
+    }
+
+    framebuffer_flush_buffers();
+}
+
+int framebuffer_set_buffers(int32_t n_buffers)
+{
+    uint32_t total_size = framebuffer_raw_buffer_size();
+    uint32_t size = total_size / n_buffers;
+
+    // Error out if frame buffers are smaller than this...
+    if (size < (sizeof(vbuffer_t) + FRAMEBUFFER_ALIGNMENT)) {
+        return -1;
+    }
+
+    // Invalidate frame.
+    framebuffer->bpp = -1;
+
+    // Cache the maximum size we can allocate for the frame buffer when vbuffers are greater than 1.
+    framebuffer->raw_buffer_size = size;
+    framebuffer->n_buffers = n_buffers;
+    framebuffer->head = 0;
+
+    framebuffer_reset_buffers();
+
+    return 0;
+}
+
+// Returns the real size of bytes in the frame buffer.
+static uint32_t framebuffer_total_buffer_size()
+{
+    if (framebuffer->n_buffers == 1) {
+        // Allow fb_alloc to use frame buffer space up until the image size.
+        image_t img;
+        framebuffer_initialize_image(&img);
+        return sizeof(vbuffer_t) + FB_ALIGN_SIZE_ROUND_UP(image_size(&img));
+    } else {
+        // fb_alloc may only use up to the size of all the virtual buffers...
+        return (sizeof(vbuffer_t) + framebuffer_get_buffer_size()) * framebuffer->n_buffers;
+    }
+}
+
+void framebuffer_auto_adjust_buffers()
+{
+     // Keep same buffer count in video fifo mode but resize buffer sizes.
+    if (framebuffer->n_buffers > 3) {
+        framebuffer_set_buffers(framebuffer->n_buffers);
+        return;
+    }
+
+    for (int i = 3; i > 0; i--) {
+        framebuffer_set_buffers(i);
+
+        // Find a buffering size automatically that doesn't use more than half.
+        if (fb_avail() >= framebuffer_total_buffer_size()) {
+            return;
+        }
+    }
+}
+
+void framebuffer_free_current_buffer()
+{
+    // Invalidate frame.
+    framebuffer->bpp = -1;
+
+    // Allow frame to be updated in single buffer mode...
+    if (framebuffer->n_buffers == 1) {
+        framebuffer_get_buffer(framebuffer->head)->waiting_for_data = true;
+    }
+}
+
+vbuffer_t *framebuffer_get_head(framebuffer_flags_t flags)
+{
+    int32_t new_head = (framebuffer->head + 1) % framebuffer->n_buffers;
+
+    // Single Buffer Mode.
+    if (framebuffer->n_buffers == 1) {
+        if (framebuffer_get_buffer(framebuffer->head)->waiting_for_data) {
+            return NULL;
+        }
+    // Double Buffer Mode.
+    } else if (framebuffer->n_buffers == 2) {
+        if (framebuffer->head == framebuffer->tail) {
+            return NULL;
+        }
+    // Triple Buffer Mode.
+    } else if (framebuffer->n_buffers == 3) {
+        int32_t sampled_tail = framebuffer->tail;
+        if (framebuffer->head == sampled_tail) {
+            return NULL;
+        } else {
+            new_head = sampled_tail;
+        }
+    // Video FIFO Mode.
+    } else {
+        if (framebuffer->head == framebuffer->tail) {
+            return NULL;
+        }
+    }
+
+    if (!(flags & FB_PEEK)) {
+        framebuffer->head = new_head;
+    }
+
+    return framebuffer_get_buffer(new_head);
+}
+
+vbuffer_t *framebuffer_get_tail(framebuffer_flags_t flags)
+{
+    // Sample head on the first line of a new frame.
+    if (framebuffer->check_head) {
+        framebuffer->check_head = false;
+        framebuffer->sampled_head = framebuffer->head;
+    }
+
+    int32_t new_tail = (framebuffer->tail + 1) % framebuffer->n_buffers;
+
+    // Single Buffer Mode.
+    if (framebuffer->n_buffers == 1) {
+        if (!framebuffer_get_buffer(new_tail)->waiting_for_data) {
+            // Setup to check head again.
+            framebuffer->check_head = true;
+            return NULL;
+        }
+    // Double Buffer Mode.
+    } else if (framebuffer->n_buffers == 2) {
+        if (new_tail == framebuffer->sampled_head) {
+            // Setup to check head again.
+            framebuffer->check_head = true;
+            return NULL;
+        }
+    // Triple Buffer Mode.
+    } else if (framebuffer->n_buffers == 3) {
+        // For triple buffering we are never writing where tail or head
+        // (which may instantly update to be equal to tail) is.
+        if (new_tail == framebuffer->sampled_head) {
+            new_tail = (new_tail + 1) % framebuffer->n_buffers;
+        }
+    // Video FIFO Mode.
+    } else {
+        if (new_tail == framebuffer->sampled_head) {
+            // Setup to check head again.
+            framebuffer->check_head = true;
+            return NULL;
+        }
+    }
+
+    vbuffer_t *buffer = framebuffer_get_buffer(new_tail);
+
+    // Reset on start versus the end so offset and jpeg_buffer_overflow are valid after FB_COMMIT.
+    if (buffer->reset_state) {
+        buffer->reset_state = false;
+        buffer->offset = 0;
+        buffer->jpeg_buffer_overflow = false;
+    }
+
+    if (!(flags & FB_PEEK)) {
+        // Trigger reset on the frame buffer the next time it is used.
+        buffer->reset_state = true;
+
+        // Mark the frame buffer ready in single buffer mode.
+        if (framebuffer->n_buffers == 1) {
+            buffer->waiting_for_data = false;
+        }
+
+        framebuffer->tail = new_tail;
+
+        // Setup to check head again.
+        framebuffer->check_head = true;
+    }
+
+    return buffer;
+}
+
+char *framebuffer_get_buffers_end()
+{
+    return (char *) (framebuffer->data + framebuffer_total_buffer_size());
 }

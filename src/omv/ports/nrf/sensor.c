@@ -392,6 +392,8 @@ int sensor_init()
 
 int sensor_reset()
 {
+    framebuffer_reset_buffers();
+
     // Reset the sensor state
     sensor.sde           = 0;
     sensor.pixformat     = 0;
@@ -812,6 +814,11 @@ bool sensor_get_auto_rotation()
     return sensor.auto_rotation;
 }
 
+int sensor_set_framebuffers(int count)
+{
+    return framebuffer_set_buffers(count);
+}
+
 int sensor_set_special_effect(sde_t sde)
 {
     if (sensor.sde == sde) {
@@ -890,6 +897,10 @@ void VsyncExtiCallback()
 // within the RAM we have onboard the system.
 void sensor_check_buffsize()
 {
+    if (MAIN_FB()->n_buffers != 1) {
+        framebuffer_set_buffers(1);
+    }
+
     uint32_t size = framebuffer_get_buffer_size();
     uint32_t bpp;
 
@@ -986,7 +997,19 @@ void sensor_check_buffsize()
 // This is the default snapshot function, which can be replaced in sensor_init functions.
 int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 {
-    uint8_t *b = MAIN_FB()->pixels;
+    // Compress the framebuffer for the IDE preview, only if it's not the first frame,
+    // the framebuffer is enabled and the image sensor does not support JPEG encoding.
+    // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
+    framebuffer_update_jpeg_buffer();
+
+    framebuffer_free_current_buffer();
+    vbuffer_t *buffer = framebuffer_get_tail(FB_NO_FLAGS);
+
+    if (!buffer) {
+        return -1;
+    }
+
+    uint8_t *b = buffer->data;
     uint32_t _width  = MAIN_FB()->w;
     uint32_t _height = MAIN_FB()->h;
     int bytesPerRow  = _width * 2; // Always read 2 BPP
@@ -994,11 +1017,6 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
 
     uint32_t ulPin = 32; // P1.xx set of GPIO is in 'pin' 32 and above
     NRF_GPIO_Type *port = nrf_gpio_pin_port_decode(&ulPin);
-
-    // Compress the framebuffer for the IDE preview, only if it's not the first frame,
-    // the framebuffer is enabled and the image sensor does not support JPEG encoding.
-    // Note: This doesn't run unless the IDE is connected and the framebuffer is enabled.
-    framebuffer_update_jpeg_buffer();
 
     noInterrupts();
 
@@ -1009,7 +1027,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
     for (int i = 0; i < _height; i++) {
         // rising edge indicates start of line
         while ((*_hrefPort & _hrefMask) == 0); // wait for HIGH
-            
+
         for (int j = 0; j < bytesPerRow; j++) {
             // rising edges clock each data byte
             while ((*_pclkPort & _pclkMask) != 0); // wait for LOW
@@ -1039,7 +1057,7 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         case PIXFORMAT_RGB565: {
             MAIN_FB()->bpp = 2;
             if (SENSOR_HW_FLAGS_GET(sensor, SWNSOR_HW_FLAGS_RGB565_REV)) {
-                unaligned_memcpy_rev16(MAIN_FB()->pixels, MAIN_FB()->pixels, _width*_height);
+                unaligned_memcpy_rev16(buffer->data, buffer->data, _width*_height);
             }
             break;
         }
@@ -1056,7 +1074,8 @@ int sensor_snapshot(sensor_t *sensor, image_t *image, uint32_t flags)
         image->w = MAIN_FB()->w;
         image->h = MAIN_FB()->h;
         image->bpp = MAIN_FB()->bpp;
-        image->pixels = MAIN_FB()->pixels;
+        image->pixels = buffer->data;
     }
+
     return 0;
 }

@@ -179,15 +179,15 @@ int main()
     }
     #endif
 
-    sensor_init0();
-    framebuffer_init0();
     fb_alloc_init0();
+    framebuffer_init0();
+    sensor_init0();
 
     // Initialize the sensor
     if (sensor_init() != 0) {
         __fatal_error();
     }
-    
+
     sensor_reset();
 
     /* Init Device Library */

@@ -179,6 +179,11 @@ static mp_obj_t py_sensor_get_id()
     return mp_obj_new_int(sensor_get_id());
 }
 
+static mp_obj_t py_sensor_get_frame_available()
+{
+    return mp_obj_new_bool(framebuffer->tail != framebuffer->head);
+}
+
 static mp_obj_t py_sensor_alloc_extra_fb(mp_obj_t w_obj, mp_obj_t h_obj, mp_obj_t type_obj)
 {
     int w = mp_obj_get_int(w_obj);
@@ -516,6 +521,26 @@ static mp_obj_t py_sensor_set_auto_rotation(mp_obj_t enable)
 static mp_obj_t py_sensor_get_auto_rotation()
 {
     return mp_obj_new_bool(sensor_get_auto_rotation());
+}
+
+static mp_obj_t py_sensor_set_framebuffers(mp_obj_t count)
+{
+    mp_int_t c = mp_obj_get_int(count);
+
+    if (framebuffer->n_buffers == c) {
+        return mp_const_none;
+    }
+
+    if ((c < 1) || (sensor_set_framebuffers(c) != 0)) {
+        mp_raise_msg(&mp_type_ValueError, MP_ERROR_TEXT("Invalid framebuffer count!"));
+    }
+
+    return mp_const_none;
+}
+
+static mp_obj_t py_sensor_get_framebuffers()
+{
+    return mp_obj_new_int(framebuffer->n_buffers);
 }
 
 static mp_obj_t py_sensor_set_special_effect(mp_obj_t sde)
@@ -881,6 +906,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_width_obj,               py_sensor_wi
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_height_obj,              py_sensor_height);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_fb_obj,              py_sensor_get_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_id_obj,              py_sensor_get_id);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_frame_available_obj, py_sensor_get_frame_available);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_alloc_extra_fb_obj,      py_sensor_alloc_extra_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_dealloc_extra_fb_obj,    py_sensor_dealloc_extra_fb);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_pixformat_obj,       py_sensor_set_pixformat);
@@ -911,6 +937,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_transpose_obj,       py_sensor_se
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_transpose_obj,       py_sensor_get_transpose);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_auto_rotation_obj,   py_sensor_set_auto_rotation);
 STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_auto_rotation_obj,   py_sensor_get_auto_rotation);
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_framebuffers_obj,    py_sensor_set_framebuffers);
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(py_sensor_get_framebuffers_obj,    py_sensor_get_framebuffers);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_special_effect_obj,  py_sensor_set_special_effect);
 STATIC MP_DEFINE_CONST_FUN_OBJ_3(py_sensor_set_lens_correction_obj, py_sensor_set_lens_correction);
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(py_sensor_set_vsync_callback_obj,  py_sensor_set_vsync_callback);
@@ -1017,6 +1045,13 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_MD_CLEAR),                MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_MD_CLEAR)},
     { MP_OBJ_NEW_QSTR(MP_QSTR_IOCTL_HIMAX_OSC_ENABLE),              MP_OBJ_NEW_SMALL_INT(IOCTL_HIMAX_OSC_ENABLE)},
     #endif
+
+    // Framebuffer Sizes
+    { MP_OBJ_NEW_QSTR(MP_QSTR_SINGLE_BUFFER),                       MP_OBJ_NEW_SMALL_INT(1)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_DOUBLE_BUFFER),                       MP_OBJ_NEW_SMALL_INT(2)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_TRIPPLE_BUFFER),                      MP_OBJ_NEW_SMALL_INT(3)},
+    { MP_OBJ_NEW_QSTR(MP_QSTR_VIDEO_FIFO),                          MP_OBJ_NEW_SMALL_INT(4)},
+
     // Sensor functions
     { MP_OBJ_NEW_QSTR(MP_QSTR___init__),            (mp_obj_t)&py_sensor__init__obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_reset),               (mp_obj_t)&py_sensor_reset_obj },
@@ -1029,6 +1064,7 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_height),              (mp_obj_t)&py_sensor_height_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_fb),              (mp_obj_t)&py_sensor_get_fb_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_id),              (mp_obj_t)&py_sensor_get_id_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_frame_available), (mp_obj_t)&py_sensor_get_frame_available_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_alloc_extra_fb),      (mp_obj_t)&py_sensor_alloc_extra_fb_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_dealloc_extra_fb),    (mp_obj_t)&py_sensor_dealloc_extra_fb_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_pixformat),       (mp_obj_t)&py_sensor_set_pixformat_obj },
@@ -1059,6 +1095,8 @@ STATIC const mp_map_elem_t globals_dict_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_transpose),       (mp_obj_t)&py_sensor_get_transpose_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_auto_rotation),   (mp_obj_t)&py_sensor_set_auto_rotation_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_get_auto_rotation),   (mp_obj_t)&py_sensor_get_auto_rotation_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_set_framebuffers),    (mp_obj_t)&py_sensor_set_framebuffers_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_get_framebuffers),    (mp_obj_t)&py_sensor_get_framebuffers_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_special_effect),  (mp_obj_t)&py_sensor_set_special_effect_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_lens_correction), (mp_obj_t)&py_sensor_set_lens_correction_obj },
     { MP_OBJ_NEW_QSTR(MP_QSTR_set_vsync_callback),  (mp_obj_t)&py_sensor_set_vsync_callback_obj },
@@ -1075,4 +1113,5 @@ const mp_obj_module_t sensor_module = {
     .base = { &mp_type_module },
     .globals = (mp_obj_t)&globals_dict,
 };
-#endif  //MICROPY_PY_SENSOR
+
+#endif // MICROPY_PY_SENSOR

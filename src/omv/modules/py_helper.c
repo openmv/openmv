@@ -11,6 +11,7 @@
 #include "py/obj.h"
 #include "py/runtime.h"
 #include "framebuffer.h"
+#include "sensor.h"
 #include "py_helper.h"
 #include "py_assert.h"
 
@@ -483,7 +484,7 @@ const uint8_t *py_helper_keyword_alpha_palette(uint n_args, const mp_obj_t *args
 
 bool py_helper_is_equal_to_framebuffer(image_t *img)
 {
-    return framebuffer_get_buffer() == img->data;
+    return framebuffer_get_buffer(framebuffer->head)->data == img->data;
 }
 
 void py_helper_update_framebuffer(image_t *img)
@@ -495,8 +496,14 @@ void py_helper_update_framebuffer(image_t *img)
 
 void py_helper_set_to_framebuffer(image_t *img)
 {
+    #if MICROPY_PY_SENSOR
+    sensor_set_framebuffers(1);
+    #else
+    framebuffer_set_buffers(1);
+    #endif
+
     PY_ASSERT_TRUE_MSG((image_size(img) <= framebuffer_get_buffer_size()),
             "The image doesn't fit in the frame buffer!");
     framebuffer_set(img->w, img->h, img->bpp);
-    img->data = framebuffer_get_buffer();
+    img->data = framebuffer_get_buffer(framebuffer->head)->data;
 }
