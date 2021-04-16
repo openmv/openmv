@@ -422,9 +422,9 @@ const uint16_t *py_helper_keyword_color_palette(uint n_args, const mp_obj_t *arg
     mp_map_elem_t *kw_arg =
         mp_map_lookup(kw_args, MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), MP_MAP_LOOKUP);
 
-    if (kw_arg && MP_OBJ_IS_TYPE(kw_arg->value, mp_const_none)) {
+    if (kw_arg && (kw_arg->value == mp_const_none)) {
         default_color_palette = NULL;
-    } else if ((n_args > arg_index) && MP_OBJ_IS_TYPE(args[arg_index], mp_const_none)) {
+    } else if ((n_args > arg_index) && (args[arg_index] == mp_const_none)) {
         default_color_palette = NULL;
     } else if (py_helper_keyword_int_maybe(n_args, args, arg_index, kw_args,
             MP_OBJ_NEW_QSTR(MP_QSTR_color_palette), &palette)) {
