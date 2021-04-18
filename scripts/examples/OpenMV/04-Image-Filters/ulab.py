@@ -4,8 +4,8 @@
 # NOTE: ndarrays cause the heap to be fragmented easily. If you run out of memory,
 # there's not much that can be done about it, lowering the resolution might help.
 
-import sensor, image, time, ulab as np
-from ulab import numerical
+import sensor, image, time
+from ulab import numpy as np
 
 sensor.reset()                          # Reset and initialize the sensor.
 sensor.set_pixformat(sensor.GRAYSCALE)  # Set pixel format to RGB565 (or GRAYSCALE)
@@ -15,4 +15,5 @@ clock = time.clock()                    # Create a clock object to track the FPS
 while (True):
     img = sensor.snapshot()         # Take a picture and return the image.
     a = np.array(img, dtype=np.uint8)
-    print("mean: %d std:%d"%(numerical.mean(a), numerical.std(a)))
+    print("mean: %d std:%d"%(np.mean(a), np.std(a)))
+    
