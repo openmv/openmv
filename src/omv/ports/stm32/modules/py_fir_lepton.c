@@ -272,7 +272,7 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
     // Do not put in HAL_SPI_MspInit as other modules share the SPI2/3 bus.
 
     GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Pull      = GPIO_NOPULL;
+    GPIO_InitStructure.Pull      = GPIO_PULLUP;
     GPIO_InitStructure.Mode      = GPIO_MODE_AF_PP;
     GPIO_InitStructure.Speed     = GPIO_SPEED_FREQ_MEDIUM;
 
@@ -312,7 +312,7 @@ int fir_lepton_init(cambus_t *bus, int *w, int *h, int *refresh, int *resolution
     int period = (tclk / OMV_FIR_LEPTON_MCLK_FREQ) - 1;
 
     // GPIO_InitTypeDef GPIO_InitStructure;
-    GPIO_InitStructure.Pull = GPIO_NOPULL;
+    GPIO_InitStructure.Pull = GPIO_PULLUP;
     GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStructure.Speed = GPIO_SPEED_FREQ_MEDIUM;
     GPIO_InitStructure.Alternate = OMV_FIR_LEPTON_MCLK_ALT;
