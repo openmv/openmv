@@ -278,11 +278,12 @@ void framebuffer_set(int32_t w, int32_t h, int32_t bpp)
 
 void framebuffer_flush_buffers()
 {
-    // Move the tail pointer to the head which empties the virtual fifo while keeping the same
-    // position of the current frame for the rest of the code.
+    // Move the tail pointer to the head which empties the frame buffers fifo while
+    // keeping the same position of the current frame for the rest of the code.
     framebuffer->tail = framebuffer->head;
     framebuffer->check_head = true;
     framebuffer->sampled_head = 0;
+    framebuffer->bpp = -1;
 }
 
 void framebuffer_reset_buffers()
