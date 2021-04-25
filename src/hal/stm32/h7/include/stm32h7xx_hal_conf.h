@@ -462,6 +462,7 @@
 
 #ifdef HAL_USART_MODULE_ENABLED
  #include "stm32h7xx_hal_usart.h"
+ #include "stm32h7xx_ll_usart.h"
 #endif /* HAL_USART_MODULE_ENABLED */
 
 #ifdef HAL_IRDA_MODULE_ENABLED
