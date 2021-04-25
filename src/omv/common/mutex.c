@@ -10,6 +10,7 @@
  */
 #include "mutex.h"
 #include "cmsis_gcc.h"
+#include "py/mphal.h"
 
 // This is a standard implementation of mutexs on ARM processors following the ARM guide.
 // http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0321a/BIHEJCHB.html
@@ -45,8 +46,8 @@ int mutex_try_lock(mutex_t *mutex, uint32_t tid)
 {
     volatile int locked = 1;
 
-    // If mutex is already locked by the current thread then
-    // release the Kraken err.. the mutex, else attempt to lock it.
+    // If mutex is already locked by the current thread
+    // then release the the mutex, else attempt to lock it.
     if (mutex->tid == tid) {
         mutex_unlock(mutex, tid);
     } else if (__LDREXW(&mutex->lock) == 0) {
@@ -61,6 +62,18 @@ int mutex_try_lock(mutex_t *mutex, uint32_t tid)
     }
 
     return (locked == 0);
+}
+
+int mutex_lock_timeout(mutex_t *mutex, uint32_t tid, uint32_t timeout)
+{
+    mp_uint_t tick_start = mp_hal_ticks_ms();
+    while ((mp_hal_ticks_ms() - tick_start) >= timeout) {
+        if (mutex_try_lock(mutex, tid)) {
+            return 1;
+        }
+        __WFI();
+    }
+    return 0;
 }
 
 void mutex_unlock(mutex_t *mutex, uint32_t tid)
