@@ -201,7 +201,7 @@ static void nonmax_suppression(corner_t *corners, int num_corners, array_t *keyp
     }
 }
 
-static int fast9_corner_score(const byte* p, int bstart)
+static int fast9_corner_score(const uint8_t *p, int bstart)
 {    
     int bmin = bstart;
     int bmax = 255;
