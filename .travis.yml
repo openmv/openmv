@@ -74,13 +74,6 @@ jobs:
           paths: ~/build/$TARGET
 
     - stage: build
-      env: TARGET=OPENMVPT
-      workspaces:
-        create:
-          name: OPENMVPT_WORKSPACE # workspace names are escaped.
-          paths: ~/build/$TARGET
-
-    - stage: build
       env: TARGET=NANO33
       workspaces:
         create:
@@ -115,12 +108,11 @@ jobs:
           - OPENMV4_WORKSPACE
           - OPENMV4P_WORKSPACE
           - PORTENTA_WORKSPACE
-          - OPENMVPT_WORKSPACE
           - NANO33_WORKSPACE
           - WINC1500_WORKSPACE
           - CYW4343_WORKSPACE
       script:
-        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA OPENMVPT NANO33 WINC1500 CYW4343
+        - zip -r firmware_${TRAVIS_TAG}.zip OPENMV2 OPENMV3 OPENMV4 OPENMV4P PORTENTA NANO33 WINC1500 CYW4343
       deploy:
         provider: releases
         api_key:
