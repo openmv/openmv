@@ -444,6 +444,27 @@ FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
 LIBS += $(MICROPY_DIR)/drivers/cyw43/libcyw43.a
 endif
 
+ifeq ($(MICROPY_BLUETOOTH_NIMBLE),1)
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/lib/mynewt-nimble/,\
+	ext/tinycrypt/src/*.o                   \
+	nimble/host/services/gap/src/*.o        \
+	nimble/host/services/gatt/src/*.o       \
+	nimble/host/src/*.o                     \
+	nimble/host/util/src/*.o                \
+	nimble/transport/uart/src/*.o           \
+	porting/nimble/src/*.o                  \
+	)
+
+FIRM_OBJ += $(addprefix $(BUILD)/$(MICROPY_DIR)/,\
+	mpbthciport.o                               \
+	mpnimbleport.o                              \
+	extmod/nimble/modbluetooth_nimble.o         \
+	extmod/nimble/nimble/nimble_npl_os.o        \
+	extmod/nimble/hal/hal_uart.o                \
+	extmod/modbluetooth.o                       \
+	)
+endif
+
 #------------- CubeAI Objects -------------------#
 ifeq ($(CUBEAI), 1)
 include $(TOP_DIR)/stm32cubeai/cube.mk
