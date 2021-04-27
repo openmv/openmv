@@ -86,6 +86,10 @@
 #include "drivers/cyw43/cyw43.h"
 #endif
 
+#if MICROPY_PY_BLUETOOTH
+#include "extmod/modbluetooth.h"
+#endif
+
 int errno;
 extern char _vfs_buf;
 static fs_user_mount_t *vfs_fat = (fs_user_mount_t *) &_vfs_buf;
@@ -542,6 +546,10 @@ soft_reset:
     }
     systick_enable_dispatch(SYSTICK_DISPATCH_LWIP, mod_network_lwip_poll_wrapper);
     #endif
+    #if MICROPY_PY_BLUETOOTH
+    extern void mp_bluetooth_hci_systick(uint32_t ticks_ms);
+    systick_enable_dispatch(SYSTICK_DISPATCH_BLUETOOTH_HCI, mp_bluetooth_hci_systick);
+    #endif
 
     #if MICROPY_PY_NETWORK_CYW43
     if (first_soft_reset) {
@@ -750,6 +758,9 @@ soft_reset:
 
     // soft reset
     storage_flush();
+    #if MICROPY_PY_BLUETOOTH
+    mp_bluetooth_deinit();
+    #endif
     mod_network_deinit();
     timer_deinit();
     i2c_deinit_all();
