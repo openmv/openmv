@@ -8,6 +8,7 @@
  *
  * WINC1500 Python module.
  */
+#if MICROPY_PY_WINC1500
 #include <string.h>
 #include <stdarg.h>
 #include "mperrno.h"
@@ -30,7 +31,6 @@
 #include "socket/include/socket.h"
 #include "driver/include/m2m_wifi.h"
 
-#if MICROPY_PY_WINC1500
 typedef struct _winc_obj_t {
     mp_obj_base_t base;
 } winc_obj_t;
