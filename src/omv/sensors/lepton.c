@@ -55,12 +55,12 @@ static float max_temp = DEFAULT_MAX_TEMP;
 static SPI_HandleTypeDef SPIHandle;
 static DMA_HandleTypeDef DMAHandle;
 LEP_CAMERA_PORT_DESC_T   LEPHandle;
-extern uint8_t _line_buf;
-extern uint8_t _vospi_buf;
+extern uint8_t _line_buf[];
+extern uint8_t _vospi_buf[];
 
 static bool vospi_resync = true;
-static uint8_t *vospi_packet = &_line_buf;
-static uint8_t *vospi_buffer = &_vospi_buf;
+static uint8_t *vospi_packet = _line_buf;
+static uint8_t *vospi_buffer = _vospi_buf;
 static volatile uint32_t vospi_pid = 0;
 static volatile uint32_t vospi_seg = 1;
 static uint32_t vospi_packets = 60;
