@@ -10,5 +10,5 @@
  */
 #ifndef __PY_CLOCK_H__
 #define __PY_CLOCK_H__
-const mp_obj_type_t py_clock_type;
+extern const mp_obj_type_t py_clock_type;
 #endif // __PY_CLOCK_H__
