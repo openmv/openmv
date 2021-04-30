@@ -912,6 +912,11 @@ bool sensor_get_vflip()
 
 int sensor_set_transpose(bool enable)
 {
+    if (sensor.transpose == enable) {
+        /* no change */
+        return 0;
+    }
+
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         return -1;
     }
@@ -927,6 +932,11 @@ bool sensor_get_transpose()
 
 int sensor_set_auto_rotation(bool enable)
 {
+    if (sensor.auto_rotation == enable) {
+        /* no change */
+        return 0;
+    }
+
     if (sensor.pixformat == PIXFORMAT_JPEG) {
         return -1;
     }
