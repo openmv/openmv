@@ -74,8 +74,8 @@ mp_obj_t lcd_touch_get_point_y_position(mp_obj_t index)
 
 mp_obj_t lcd_touch_update_touch_points()
 {
-    mp_obj_base_t *bus = lcd_touch_bus ? lcd_touch_bus : ((mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 0, (const mp_obj_t []) {
-        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_TOUCH_SCL_PIN, (mp_obj_t) OMV_TOUCH_SDA_PIN
+    mp_obj_base_t *bus = lcd_touch_bus ? lcd_touch_bus : ((mp_obj_base_t *) mp_machine_soft_i2c_type.make_new(&mp_machine_soft_i2c_type, 2, 0, (const mp_obj_t []) {
+        (mp_obj_t) OMV_TOUCH_SCL_PIN, (mp_obj_t) OMV_TOUCH_SDA_PIN
     }));
 
     if (mp_machine_soft_i2c_transfer(bus, FT5X06_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
@@ -169,8 +169,8 @@ void lcd_touch_init()
     HAL_GPIO_WritePin(OMV_TOUCH_RESET_PIN->gpio, OMV_TOUCH_RESET_PIN->pin_mask, GPIO_PIN_SET);
     HAL_Delay(39);
 
-    lcd_touch_bus = (mp_obj_base_t *) machine_i2c_type.make_new(&machine_i2c_type, 3, 0, (const mp_obj_t []) {
-        MP_OBJ_NEW_SMALL_INT(-1), (mp_obj_t) OMV_TOUCH_SCL_PIN, (mp_obj_t) OMV_TOUCH_SDA_PIN
+    lcd_touch_bus = (mp_obj_base_t *) mp_machine_soft_i2c_type.make_new(&mp_machine_soft_i2c_type, 2, 0, (const mp_obj_t []) {
+        (mp_obj_t) OMV_TOUCH_SCL_PIN, (mp_obj_t) OMV_TOUCH_SDA_PIN
     });
 
     if (mp_machine_soft_i2c_transfer(lcd_touch_bus, FT5X06_I2C_ADDR, 1, &((mp_machine_i2c_buf_t) {
