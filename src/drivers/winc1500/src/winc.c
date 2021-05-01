@@ -353,8 +353,8 @@ static void wifi_callback_sta(uint8_t msg_type, void *msg)
             memcpy(netinfo->mac_addr, con_info->au8MACAddress, WINC_MAC_ADDR_LEN);
 
             // Copy SSID.
+            con_info->acSSID[WINC_MAX_SSID_LEN-1] = 0;
             strncpy(netinfo->ssid, con_info->acSSID, WINC_MAX_SSID_LEN);
-            netinfo->ssid[WINC_MAX_SSID_LEN-1] = 0;
 
             async_request_done = true;
 			break;
