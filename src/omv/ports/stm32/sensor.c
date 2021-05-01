@@ -41,8 +41,8 @@ static TIM_HandleTypeDef  TIMHandle  = {.Instance = DCMI_TIM};
 static DMA_HandleTypeDef  DMAHandle  = {.Instance = DMA2_Stream1};
 static DCMI_HandleTypeDef DCMIHandle = {.Instance = DCMI};
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
-MDMA_HandleTypeDef DCMI_MDMA_Handle0 = {.Instance = MDMA_Channel0};
-MDMA_HandleTypeDef DCMI_MDMA_Handle1 = {.Instance = MDMA_Channel1};
+static MDMA_HandleTypeDef DCMI_MDMA_Handle0 = {.Instance = MDMA_Channel0};
+static MDMA_HandleTypeDef DCMI_MDMA_Handle1 = {.Instance = MDMA_Channel1};
 #endif
 
 extern uint8_t _line_buf;
