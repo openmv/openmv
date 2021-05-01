@@ -1141,7 +1141,7 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 }
 
 #if (OMV_ENABLE_SENSOR_MDMA == 1)
-void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool transposed)
+static void mdma_memcpy(vbuffer_t *buffer, void *dst, void *src, int bpp, bool transposed)
 {
     // We're using two handles to give each channel the maximum amount of time possible to do the line
     // transfer. In most situations only one channel will be running at a time. However, if SDRAM is
